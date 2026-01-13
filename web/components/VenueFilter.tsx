@@ -20,6 +20,9 @@ export default function VenueFilter({ venues }: Props) {
     ? venues.find((v) => v.id.toString() === currentVenueId)
     : null;
 
+  // Top 5 venues by event count (already sorted)
+  const topVenues = venues.slice(0, 5);
+
   // Close dropdown when clicking outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -51,10 +54,14 @@ export default function VenueFilter({ venues }: Props) {
     [router, searchParams]
   );
 
-  const filteredVenues = venues.filter((v) =>
-    v.name.toLowerCase().includes(search.toLowerCase()) ||
-    (v.neighborhood && v.neighborhood.toLowerCase().includes(search.toLowerCase()))
-  );
+  const filteredVenues = search.trim()
+    ? venues.filter((v) =>
+        v.name.toLowerCase().includes(search.toLowerCase()) ||
+        (v.neighborhood && v.neighborhood.toLowerCase().includes(search.toLowerCase()))
+      )
+    : [];
+
+  const isSearching = search.trim().length > 0;
 
   return (
     <div className="relative" ref={dropdownRef}>
@@ -93,7 +100,8 @@ export default function VenueFilter({ venues }: Props) {
           </div>
 
           {/* Venue list */}
-          <div className="max-h-64 overflow-y-auto">
+          <div className="max-h-72 overflow-y-auto">
+            {/* Clear filter option */}
             {currentVenue && (
               <button
                 onClick={() => setVenue(null)}
@@ -106,36 +114,82 @@ export default function VenueFilter({ venues }: Props) {
               </button>
             )}
 
-            {filteredVenues.length === 0 ? (
-              <div className="px-3 py-4 text-center text-orange-100/50 text-sm">
-                No venues found
-              </div>
+            {isSearching ? (
+              // Search results
+              filteredVenues.length === 0 ? (
+                <div className="px-3 py-4 text-center text-orange-100/50 text-sm">
+                  No venues found
+                </div>
+              ) : (
+                filteredVenues.slice(0, 20).map((venue) => (
+                  <VenueRow
+                    key={venue.id}
+                    venue={venue}
+                    isSelected={currentVenueId === venue.id.toString()}
+                    onSelect={() => setVenue(venue.id.toString())}
+                  />
+                ))
+              )
             ) : (
-              filteredVenues.slice(0, 50).map((venue) => (
-                <button
-                  key={venue.id}
-                  onClick={() => setVenue(venue.id.toString())}
-                  className={`w-full px-3 py-2 text-left hover:bg-white/10 transition-colors ${
-                    currentVenueId === venue.id.toString() ? "bg-white/10" : ""
-                  }`}
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="min-w-0">
-                      <div className="text-sm text-white truncate">{venue.name}</div>
-                      {venue.neighborhood && (
-                        <div className="text-xs text-orange-100/50">{venue.neighborhood}</div>
-                      )}
-                    </div>
-                    <span className="flex-shrink-0 text-xs text-orange-100/40 bg-white/5 px-2 py-0.5 rounded-full">
-                      {venue.event_count}
-                    </span>
-                  </div>
-                </button>
-              ))
+              // Default view: Top 5 popular venues
+              <>
+                <div className="px-3 py-2 text-xs font-medium text-orange-100/50 uppercase tracking-wider bg-white/5">
+                  Popular Venues
+                </div>
+                {topVenues.map((venue) => (
+                  <VenueRow
+                    key={venue.id}
+                    venue={venue}
+                    isSelected={currentVenueId === venue.id.toString()}
+                    onSelect={() => setVenue(venue.id.toString())}
+                    showBadge
+                  />
+                ))}
+                <div className="px-3 py-2 text-xs text-orange-100/40 text-center border-t border-white/10">
+                  Search to find more venues
+                </div>
+              </>
             )}
           </div>
         </div>
       )}
     </div>
+  );
+}
+
+function VenueRow({
+  venue,
+  isSelected,
+  onSelect,
+  showBadge = false,
+}: {
+  venue: VenueWithCount;
+  isSelected: boolean;
+  onSelect: () => void;
+  showBadge?: boolean;
+}) {
+  return (
+    <button
+      onClick={onSelect}
+      className={`w-full px-3 py-2.5 text-left hover:bg-white/10 transition-colors ${
+        isSelected ? "bg-white/10" : ""
+      }`}
+    >
+      <div className="flex items-center justify-between gap-2">
+        <div className="min-w-0">
+          <div className="text-sm text-white truncate">{venue.name}</div>
+          {venue.neighborhood && (
+            <div className="text-xs text-orange-100/50">{venue.neighborhood}</div>
+          )}
+        </div>
+        <span className={`flex-shrink-0 text-xs px-2 py-0.5 rounded-full ${
+          showBadge
+            ? "bg-gradient-to-r from-orange-500/20 to-pink-500/20 text-orange-300 font-medium"
+            : "bg-white/5 text-orange-100/40"
+        }`}>
+          {venue.event_count} events
+        </span>
+      </div>
+    </button>
   );
 }
