@@ -28,6 +28,18 @@
   --cat-nightlife: #E879F9;
   --cat-family: #A78BFA;
 
+  /* Spot type colors */
+  --spot-music_venue: #F9A8D4;
+  --spot-bar: #FDBA74;
+  --spot-restaurant: #FB923C;
+  --spot-coffee_shop: #D4A574;
+  --spot-brewery: #FCD34D;
+  --spot-gallery: #C4B5FD;
+  --spot-club: #E879F9;
+  --spot-arena: #7DD3FC;
+  --spot-comedy_club: #FCD34D;
+  --spot-theater: #F0ABFC;
+
   /* UI colors */
   --background: var(--void);
   --foreground: var(--cream);

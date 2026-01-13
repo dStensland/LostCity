@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Spot } from "@/lib/spots";
-import { SPOT_TYPES, type SpotType, formatPriceLevel, getSpotTypeLabel } from "@/lib/spots";
+import { formatPriceLevel } from "@/lib/spots";
+import CategoryIcon, { getCategoryLabel } from "./CategoryIcon";
 
 interface Props {
   spot: Spot;
@@ -10,11 +11,8 @@ interface Props {
 export default function SpotCard({ spot, index = 0 }: Props) {
   // Stagger animation class
   const staggerClass = index < 10 ? `stagger-${index + 1}` : "";
-
-  // Get primary spot type info
-  const primaryType = spot.spot_type as SpotType | null;
-  const typeInfo = primaryType ? SPOT_TYPES[primaryType] : null;
   const priceDisplay = formatPriceLevel(spot.price_level);
+  const spotType = spot.spot_type || "music_venue";
 
   return (
     <Link
@@ -22,8 +20,8 @@ export default function SpotCard({ spot, index = 0 }: Props) {
       className={`event-item animate-fade-in ${staggerClass} group`}
     >
       {/* Icon column */}
-      <div className="text-2xl w-8 flex-shrink-0">
-        {typeInfo?.icon || "📍"}
+      <div className="w-10 flex-shrink-0 flex items-center justify-center">
+        <CategoryIcon type={spotType} size={24} />
       </div>
 
       {/* Content column */}
@@ -32,7 +30,7 @@ export default function SpotCard({ spot, index = 0 }: Props) {
           {spot.name}
         </h3>
         <p className="font-serif text-sm text-[var(--soft)] mt-0.5">
-          {getSpotTypeLabel(spot.spot_type)}
+          {getCategoryLabel(spotType)}
           {spot.neighborhood && (
             <span className="text-[var(--muted)]"> · {spot.neighborhood}</span>
           )}
@@ -53,7 +51,7 @@ export default function SpotCard({ spot, index = 0 }: Props) {
             </span>
           )}
           {spot.event_count !== undefined && spot.event_count > 0 && (
-            <span className="font-mono text-xs text-[var(--cat-music)]">
+            <span className="font-mono text-xs text-[var(--cat-community)]">
               {spot.event_count} upcoming
             </span>
           )}
@@ -68,7 +66,7 @@ export default function SpotCard({ spot, index = 0 }: Props) {
           </span>
         )}
         {spot.event_count !== undefined && spot.event_count > 0 && (
-          <span className="font-mono text-xs text-[var(--cat-music)] whitespace-nowrap">
+          <span className="font-mono text-xs text-[var(--cat-community)] whitespace-nowrap">
             {spot.event_count} upcoming
           </span>
         )}

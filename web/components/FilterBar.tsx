@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useState, useRef, useEffect, type ReactNode } from "react";
 import { CATEGORIES, SUBCATEGORIES, DATE_FILTERS, type VenueWithCount } from "@/lib/search";
 import VenueFilter from "./VenueFilter";
+import CategoryIcon, { CATEGORY_CONFIG, type CategoryType } from "./CategoryIcon";
 
 interface Props {
   venues: VenueWithCount[];
@@ -178,8 +179,17 @@ export default function FilterBar({ venues }: Props) {
                   toggleCategory(cat.value);
                 }
               }}
-              className={`filter-btn flex items-center gap-1 ${currentCategories.includes(cat.value) ? "active" : ""}`}
+              className={`filter-btn flex items-center gap-1.5 ${currentCategories.includes(cat.value) ? "active" : ""}`}
             >
+              <CategoryIcon
+                type={cat.value}
+                size={14}
+                style={{
+                  color: currentCategories.includes(cat.value)
+                    ? "var(--void)"
+                    : CATEGORY_CONFIG[cat.value as CategoryType]?.color
+                }}
+              />
               {cat.label}
               {hasSubcategories(cat.value) && (
                 <svg

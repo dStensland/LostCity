@@ -1,9 +1,24 @@
-import { getSpotsWithEventCounts, SPOT_TYPES, type SpotType } from "@/lib/spots";
+import { getSpotsWithEventCounts } from "@/lib/spots";
 import SpotCard from "@/components/SpotCard";
 import ModeToggle from "@/components/ModeToggle";
+import CategoryIcon, { CATEGORY_CONFIG, getCategoryLabel } from "@/components/CategoryIcon";
 import Link from "next/link";
 
 export const revalidate = 60;
+
+// Spot types to show in filter
+const SPOT_TYPE_KEYS = [
+  "music_venue",
+  "theater",
+  "comedy_club",
+  "bar",
+  "restaurant",
+  "coffee_shop",
+  "brewery",
+  "gallery",
+  "club",
+  "arena",
+] as const;
 
 type Props = {
   searchParams: Promise<{
@@ -16,8 +31,6 @@ export default async function SpotsPage({ searchParams }: Props) {
   const selectedType = params.type || "all";
 
   const spots = await getSpotsWithEventCounts(selectedType);
-
-  const spotTypes = Object.entries(SPOT_TYPES) as [SpotType, { label: string; icon: string }][];
 
   return (
     <div className="min-h-screen">
@@ -59,7 +72,7 @@ export default async function SpotsPage({ searchParams }: Props) {
           <div className="flex gap-2 overflow-x-auto scrollbar-hide -mx-4 px-4">
             <Link
               href="/spots"
-              className={`px-3 py-1.5 rounded-full font-mono text-xs font-medium whitespace-nowrap transition-colors ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full font-mono text-xs font-medium whitespace-nowrap transition-colors ${
                 selectedType === "all"
                   ? "bg-[var(--cream)] text-[var(--void)]"
                   : "bg-[var(--twilight)] text-[var(--muted)] hover:text-[var(--cream)]"
@@ -67,17 +80,22 @@ export default async function SpotsPage({ searchParams }: Props) {
             >
               All
             </Link>
-            {spotTypes.map(([type, { label, icon }]) => (
+            {SPOT_TYPE_KEYS.map((type) => (
               <Link
                 key={type}
                 href={`/spots?type=${type}`}
-                className={`px-3 py-1.5 rounded-full font-mono text-xs font-medium whitespace-nowrap transition-colors ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full font-mono text-xs font-medium whitespace-nowrap transition-colors ${
                   selectedType === type
                     ? "bg-[var(--cream)] text-[var(--void)]"
                     : "bg-[var(--twilight)] text-[var(--muted)] hover:text-[var(--cream)]"
                 }`}
               >
-                {icon} {label}
+                <CategoryIcon
+                  type={type}
+                  size={14}
+                  style={{ color: selectedType === type ? "var(--void)" : CATEGORY_CONFIG[type]?.color }}
+                />
+                {getCategoryLabel(type)}
               </Link>
             ))}
           </div>
@@ -88,7 +106,7 @@ export default async function SpotsPage({ searchParams }: Props) {
       <div className="max-w-3xl mx-auto px-4 border-b border-[var(--twilight)]">
         <p className="font-mono text-xs text-[var(--muted)] py-3">
           <span className="text-[var(--soft)]">{spots.length}</span>{" "}
-          {selectedType !== "all" ? `${SPOT_TYPES[selectedType as SpotType]?.label.toLowerCase() || selectedType}s` : "spots"}
+          {selectedType !== "all" ? `${getCategoryLabel(selectedType).toLowerCase()}s` : "spots"}
         </p>
       </div>
 

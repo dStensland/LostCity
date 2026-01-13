@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Event } from "@/lib/supabase";
 import type { EventWithLocation } from "@/lib/search";
+import CategoryIcon from "./CategoryIcon";
 
 function formatTime(time: string | null, isAllDay?: boolean): { time: string; period: string } {
   if (isAllDay) return { time: "All", period: "Day" };
@@ -110,9 +111,7 @@ export default function EventCard({ event, index = 0 }: Props) {
         {/* Meta row */}
         <div className="flex items-center gap-3 mt-2">
           {event.category && (
-            <span className={`cat-tag ${event.category}`}>
-              {event.category.replace("_", " ")}
-            </span>
+            <CategoryIcon type={event.category} size={14} showLabel />
           )}
           {/* Mobile: show price inline */}
           <span
