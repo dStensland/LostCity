@@ -1,0 +1,139 @@
+import { createClient } from "@supabase/supabase-js";
+import type { Database } from "./types";
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+
+export const supabase = createClient<Database>(supabaseUrl, supabaseKey);
+
+export type Event = {
+  id: number;
+  title: string;
+  description: string | null;
+  start_date: string;
+  start_time: string | null;
+  end_date: string | null;
+  end_time: string | null;
+  is_all_day: boolean;
+  category: string | null;
+  subcategory: string | null;
+  tags: string[] | null;
+  price_min: number | null;
+  price_max: number | null;
+  price_note: string | null;
+  is_free: boolean;
+  source_url: string;
+  ticket_url: string | null;
+  image_url: string | null;
+  venue: Venue | null;
+};
+
+export type Venue = {
+  id: number;
+  name: string;
+  slug: string;
+  address: string | null;
+  neighborhood: string | null;
+  city: string;
+  state: string;
+};
+
+export async function getUpcomingEvents(limit = 50): Promise<Event[]> {
+  const today = new Date().toISOString().split("T")[0];
+
+  const { data, error } = await supabase
+    .from("events")
+    .select(
+      `
+      *,
+      venue:venues(id, name, slug, address, neighborhood, city, state)
+    `
+    )
+    .gte("start_date", today)
+    .order("start_date", { ascending: true })
+    .order("start_time", { ascending: true })
+    .limit(limit);
+
+  if (error) {
+    console.error("Error fetching events:", error);
+    return [];
+  }
+
+  return data as Event[];
+}
+
+export async function getUpcomingEventsPaginated(
+  page = 1,
+  pageSize = 20
+): Promise<{ events: Event[]; total: number }> {
+  const today = new Date().toISOString().split("T")[0];
+  const offset = (page - 1) * pageSize;
+
+  const { data, error, count } = await supabase
+    .from("events")
+    .select(
+      `
+      *,
+      venue:venues(id, name, slug, address, neighborhood, city, state)
+    `,
+      { count: "exact" }
+    )
+    .gte("start_date", today)
+    .order("start_date", { ascending: true })
+    .order("start_time", { ascending: true })
+    .range(offset, offset + pageSize - 1);
+
+  if (error) {
+    console.error("Error fetching events:", error);
+    return { events: [], total: 0 };
+  }
+
+  return { events: data as Event[], total: count ?? 0 };
+}
+
+export async function getEventById(id: number): Promise<Event | null> {
+  const { data, error } = await supabase
+    .from("events")
+    .select(
+      `
+      *,
+      venue:venues(id, name, slug, address, neighborhood, city, state)
+    `
+    )
+    .eq("id", id)
+    .single();
+
+  if (error) {
+    console.error("Error fetching event:", error);
+    return null;
+  }
+
+  return data as Event;
+}
+
+export async function getEventsByCategory(
+  category: string,
+  limit = 50
+): Promise<Event[]> {
+  const today = new Date().toISOString().split("T")[0];
+
+  const { data, error } = await supabase
+    .from("events")
+    .select(
+      `
+      *,
+      venue:venues(id, name, slug, address, neighborhood, city, state)
+    `
+    )
+    .eq("category", category)
+    .gte("start_date", today)
+    .order("start_date", { ascending: true })
+    .limit(limit);
+
+  if (error) {
+    console.error("Error fetching events:", error);
+    return [];
+  }
+
+  return data as Event[];
+}
