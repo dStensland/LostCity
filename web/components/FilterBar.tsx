@@ -62,12 +62,12 @@ export default function FilterBar() {
   );
 
   return (
-    <div className="flex-1 space-y-2">
-      {/* Category chips row */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide">
+    <div className="flex-1 space-y-1.5 sm:space-y-2">
+      {/* Category chips row - single scrollable row on mobile */}
+      <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto pb-1 scrollbar-hide -mx-1 px-1">
         <button
           onClick={clearCategories}
-          className={`px-3 py-1.5 text-sm font-medium rounded-full whitespace-nowrap transition-all ${
+          className={`px-2.5 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm font-medium rounded-full whitespace-nowrap transition-all ${
             currentCategories.length === 0
               ? "chip-active"
               : "chip hover:bg-white/15"
@@ -79,7 +79,7 @@ export default function FilterBar() {
           <button
             key={cat.value}
             onClick={() => toggleCategory(cat.value)}
-            className={`px-3 py-1.5 text-sm font-medium rounded-full whitespace-nowrap transition-all ${
+            className={`px-2.5 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm font-medium rounded-full whitespace-nowrap transition-all ${
               currentCategories.includes(cat.value)
                 ? "chip-active"
                 : "chip hover:bg-white/15"
@@ -91,38 +91,36 @@ export default function FilterBar() {
       </div>
 
       {/* Date and Free filters row */}
-      <div className="flex items-center gap-2 flex-wrap">
+      <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto scrollbar-hide -mx-1 px-1">
         {/* Date filters */}
-        <div className="flex items-center gap-1.5">
-          {DATE_FILTERS.map((df) => (
-            <button
-              key={df.value}
-              onClick={() => setDateFilter(df.value)}
-              className={`px-3 py-1.5 text-sm font-medium rounded-full whitespace-nowrap transition-all ${
-                currentDateFilter === df.value
-                  ? "bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg shadow-purple-500/20"
-                  : "chip hover:bg-white/15"
-              }`}
-            >
-              {df.label}
-            </button>
-          ))}
-        </div>
+        {DATE_FILTERS.map((df) => (
+          <button
+            key={df.value}
+            onClick={() => setDateFilter(df.value)}
+            className={`px-2.5 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm font-medium rounded-full whitespace-nowrap transition-all ${
+              currentDateFilter === df.value
+                ? "bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg shadow-purple-500/20"
+                : "chip hover:bg-white/15"
+            }`}
+          >
+            {df.label}
+          </button>
+        ))}
 
-        {/* Divider */}
-        <div className="h-5 w-px bg-white/20 mx-1" />
+        {/* Divider - hidden on very small screens */}
+        <div className="hidden xs:block h-4 sm:h-5 w-px bg-white/20 mx-0.5 sm:mx-1 flex-shrink-0" />
 
         {/* Free toggle */}
         <button
           onClick={toggleFree}
-          className={`px-3 py-1.5 text-sm font-medium rounded-full whitespace-nowrap transition-all flex items-center gap-1.5 ${
+          className={`px-2.5 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm font-medium rounded-full whitespace-nowrap transition-all flex items-center gap-1 sm:gap-1.5 flex-shrink-0 ${
             isFreeOnly
               ? "bg-gradient-to-r from-emerald-400 to-teal-400 text-white shadow-lg shadow-emerald-500/20"
               : "chip hover:bg-white/15"
           }`}
         >
           {isFreeOnly && (
-            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+            <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="currentColor" viewBox="0 0 20 20">
               <path
                 fillRule="evenodd"
                 d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
