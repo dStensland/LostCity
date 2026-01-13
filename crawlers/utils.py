@@ -179,3 +179,111 @@ def get_date_range(days_ahead: int = 14) -> Tuple[str, str]:
     today = datetime.now().date()
     end_date = today + timedelta(days=days_ahead)
     return today.isoformat(), end_date.isoformat()
+
+
+# Categories that commonly have late-night/early-morning events
+NIGHTLIFE_CATEGORIES = {"nightlife", "music", "comedy", "theater"}
+
+
+def validate_event_time(
+    time_str: Optional[str],
+    category: Optional[str] = None,
+    title: str = ""
+) -> Tuple[Optional[str], bool]:
+    """
+    Validate an event time string and flag suspicious times.
+
+    Times between 1am-5am are suspicious unless the event is
+    tagged as nightlife, music, comedy, or theater.
+
+    Args:
+        time_str: Time in "HH:MM" 24-hour format
+        category: Event category (e.g., "music", "community")
+        title: Event title for logging
+
+    Returns:
+        Tuple of (validated_time_or_none, is_suspicious)
+        - If time is valid and not suspicious: (time_str, False)
+        - If time is suspicious but category allows: (time_str, True)
+        - If time is suspicious and category doesn't allow: (None, True)
+    """
+    if not time_str:
+        return None, False
+
+    try:
+        # Parse the time
+        parts = time_str.split(":")
+        hour = int(parts[0])
+        minute = int(parts[1]) if len(parts) > 1 else 0
+
+        # Check if time is in the suspicious 1am-5am range
+        if 1 <= hour < 6:
+            cat_lower = (category or "").lower()
+
+            # Allow early AM times for nightlife categories
+            if cat_lower in NIGHTLIFE_CATEGORIES:
+                logger.debug(f"Early AM time {time_str} allowed for {cat_lower}: {title}")
+                return time_str, True
+
+            # For other categories, this is likely a parsing error
+            logger.warning(
+                f"Suspicious time {time_str} for category '{category}': {title}. "
+                f"Rejecting time (likely parsing error)."
+            )
+            return None, True
+
+        # Time looks valid
+        return time_str, False
+
+    except (ValueError, IndexError) as e:
+        logger.warning(f"Invalid time format '{time_str}': {e}")
+        return None, False
+
+
+def normalize_time_format(time_str: str) -> Optional[str]:
+    """
+    Normalize various time formats to HH:MM (24-hour).
+
+    Handles:
+    - "7:00 PM" -> "19:00"
+    - "19:00:00" -> "19:00"
+    - "7pm" -> "19:00"
+    - "7:30pm" -> "19:30"
+
+    Args:
+        time_str: Time string in various formats
+
+    Returns:
+        Normalized time in "HH:MM" format, or None if unparseable
+    """
+    if not time_str:
+        return None
+
+    time_str = time_str.strip().upper()
+
+    # Handle "HH:MM:SS" format - strip seconds
+    if re.match(r"^\d{1,2}:\d{2}:\d{2}$", time_str):
+        time_str = ":".join(time_str.split(":")[:2])
+        return time_str
+
+    # Handle "HH:MM" 24-hour format (already correct)
+    if re.match(r"^\d{1,2}:\d{2}$", time_str):
+        parts = time_str.split(":")
+        return f"{int(parts[0]):02d}:{parts[1]}"
+
+    # Handle "7:00 PM", "7:00PM", "7PM", "7 PM" formats
+    match = re.match(r"^(\d{1,2})(?::(\d{2}))?\s*(AM|PM)$", time_str)
+    if match:
+        hour = int(match.group(1))
+        minute = match.group(2) or "00"
+        period = match.group(3)
+
+        if period == "PM" and hour != 12:
+            hour += 12
+        elif period == "AM" and hour == 12:
+            hour = 0
+
+        return f"{hour:02d}:{minute}"
+
+    logger.debug(f"Could not normalize time format: {time_str}")
+    return None

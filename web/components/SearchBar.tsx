@@ -35,9 +35,9 @@ export default function SearchBar() {
 
   return (
     <div className="relative w-full">
-      <div className="absolute inset-y-0 left-0 pl-3 sm:pl-4 flex items-center pointer-events-none">
+      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
         <svg
-          className="h-4 w-4 sm:h-5 sm:w-5 text-orange-300/60"
+          className="h-4 w-4 text-[var(--muted)]"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -55,15 +55,15 @@ export default function SearchBar() {
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         placeholder="Search events, venues..."
-        className="block w-full pl-9 sm:pl-11 pr-9 sm:pr-10 py-2.5 sm:py-3 bg-white/10 backdrop-blur-md border border-white/20 rounded-full text-white placeholder-orange-100/50 focus:outline-none focus:ring-2 focus:ring-orange-400/50 focus:border-transparent text-sm transition-all hover:bg-white/15"
+        className="block w-full pl-11 pr-10 py-3 bg-[var(--night)] border border-[var(--twilight)] rounded-lg text-[var(--cream)] placeholder-[var(--muted)] text-sm focus:outline-none focus:border-[var(--soft)] transition-colors"
       />
       {query && (
         <button
           onClick={handleClear}
-          className="absolute inset-y-0 right-0 pr-3 sm:pr-4 flex items-center group"
+          className="absolute inset-y-0 right-0 pr-4 flex items-center group"
         >
           <svg
-            className="h-4 w-4 sm:h-5 sm:w-5 text-orange-200/50 group-hover:text-orange-200 transition-colors"
+            className="h-4 w-4 text-[var(--muted)] group-hover:text-[var(--cream)] transition-colors"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"

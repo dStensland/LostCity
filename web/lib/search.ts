@@ -1,10 +1,9 @@
 import { supabase, type Event } from "./supabase";
 import {
   startOfDay,
-  endOfDay,
+  addDays,
   nextSaturday,
   nextSunday,
-  addDays,
   isSaturday,
   isSunday,
   format,
@@ -13,6 +12,7 @@ import {
 export interface SearchFilters {
   search?: string;
   categories?: string[];
+  subcategories?: string[];
   is_free?: boolean;
   date_filter?: "today" | "weekend" | "week";
   venue_id?: number;
@@ -23,6 +23,21 @@ export type EventWithLocation = Event & {
     lat: number | null;
     lng: number | null;
   } | null;
+};
+
+export type Category = {
+  id: string;
+  name: string;
+  display_order: number;
+  icon: string | null;
+  color: string | null;
+};
+
+export type Subcategory = {
+  id: string;
+  category_id: string;
+  name: string;
+  display_order: number;
 };
 
 function getDateRange(filter: "today" | "weekend" | "week"): {
@@ -40,8 +55,6 @@ function getDateRange(filter: "today" | "weekend" | "week"): {
       };
 
     case "weekend": {
-      // If today is Saturday or Sunday, use this weekend
-      // Otherwise, get next Saturday-Sunday
       let satDate: Date;
       let sunDate: Date;
 
@@ -84,7 +97,6 @@ export async function getFilteredEventsWithSearch(
   const today = new Date().toISOString().split("T")[0];
   const offset = (page - 1) * pageSize;
 
-  // Build the query
   let query = supabase
     .from("events")
     .select(
@@ -96,15 +108,20 @@ export async function getFilteredEventsWithSearch(
     )
     .gte("start_date", today);
 
-  // Apply search filter (title or description contains search term)
+  // Apply search filter
   if (filters.search && filters.search.trim()) {
     const searchTerm = `%${filters.search.trim()}%`;
     query = query.or(`title.ilike.${searchTerm},description.ilike.${searchTerm}`);
   }
 
-  // Apply category filter
+  // Apply category filter (using category_id)
   if (filters.categories && filters.categories.length > 0) {
-    query = query.in("category", filters.categories);
+    query = query.in("category_id", filters.categories);
+  }
+
+  // Apply subcategory filter
+  if (filters.subcategories && filters.subcategories.length > 0) {
+    query = query.in("subcategory_id", filters.subcategories);
   }
 
   // Apply free filter
@@ -139,7 +156,7 @@ export async function getFilteredEventsWithSearch(
   return { events: data as EventWithLocation[], total: count ?? 0 };
 }
 
-// Get all events for map view (no pagination, but with location data)
+// Get all events for map view
 export async function getEventsForMap(
   filters: SearchFilters,
   limit = 500
@@ -154,7 +171,7 @@ export async function getEventsForMap(
       title,
       start_date,
       start_time,
-      category,
+      category_id,
       is_free,
       venue:venues!inner(id, name, slug, address, neighborhood, city, state, lat, lng)
     `
@@ -163,14 +180,17 @@ export async function getEventsForMap(
     .not("venues.lat", "is", null)
     .not("venues.lng", "is", null);
 
-  // Apply same filters as main query
   if (filters.search && filters.search.trim()) {
     const searchTerm = `%${filters.search.trim()}%`;
     query = query.or(`title.ilike.${searchTerm},description.ilike.${searchTerm}`);
   }
 
   if (filters.categories && filters.categories.length > 0) {
-    query = query.in("category", filters.categories);
+    query = query.in("category_id", filters.categories);
+  }
+
+  if (filters.subcategories && filters.subcategories.length > 0) {
+    query = query.in("subcategory_id", filters.subcategories);
   }
 
   if (filters.is_free) {
@@ -186,9 +206,7 @@ export async function getEventsForMap(
     query = query.eq("venue_id", filters.venue_id);
   }
 
-  query = query
-    .order("start_date", { ascending: true })
-    .limit(limit);
+  query = query.order("start_date", { ascending: true }).limit(limit);
 
   const { data, error } = await query;
 
@@ -200,7 +218,43 @@ export async function getEventsForMap(
   return data as EventWithLocation[];
 }
 
-// Available categories for filter UI
+// Fetch categories from database
+export async function getCategories(): Promise<Category[]> {
+  const { data, error } = await supabase
+    .from("categories")
+    .select("*")
+    .order("display_order", { ascending: true });
+
+  if (error) {
+    console.error("Error fetching categories:", error);
+    return [];
+  }
+
+  return data as Category[];
+}
+
+// Fetch subcategories from database
+export async function getSubcategories(categoryId?: string): Promise<Subcategory[]> {
+  let query = supabase
+    .from("subcategories")
+    .select("*")
+    .order("display_order", { ascending: true });
+
+  if (categoryId) {
+    query = query.eq("category_id", categoryId);
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    console.error("Error fetching subcategories:", error);
+    return [];
+  }
+
+  return data as Subcategory[];
+}
+
+// Static categories for initial render (matches database)
 export const CATEGORIES = [
   { value: "music", label: "Music" },
   { value: "film", label: "Film" },
@@ -215,6 +269,49 @@ export const CATEGORIES = [
   { value: "family", label: "Family" },
 ] as const;
 
+// Subcategories grouped by category for UI dropdowns
+export const SUBCATEGORIES: Record<string, { value: string; label: string }[]> = {
+  music: [
+    { value: "music.live", label: "Live Music" },
+    { value: "music.live.rock", label: "Rock / Indie" },
+    { value: "music.live.hiphop", label: "Hip-Hop / R&B" },
+    { value: "music.live.electronic", label: "Electronic / DJ" },
+    { value: "music.live.jazz", label: "Jazz / Blues" },
+    { value: "music.live.country", label: "Country / Folk" },
+    { value: "music.live.metal", label: "Metal / Punk" },
+    { value: "music.classical", label: "Classical" },
+    { value: "music.openmic", label: "Open Mic" },
+  ],
+  film: [
+    { value: "film.new", label: "New Release" },
+    { value: "film.repertory", label: "Repertory" },
+    { value: "film.documentary", label: "Documentary" },
+    { value: "film.festival", label: "Film Festival" },
+  ],
+  comedy: [
+    { value: "comedy.standup", label: "Stand-Up" },
+    { value: "comedy.improv", label: "Improv" },
+    { value: "comedy.openmic", label: "Open Mic" },
+  ],
+  theater: [
+    { value: "theater.play", label: "Play" },
+    { value: "theater.musical", label: "Musical" },
+    { value: "theater.dance", label: "Dance / Ballet" },
+    { value: "theater.opera", label: "Opera" },
+  ],
+  community: [
+    { value: "community.volunteer", label: "Volunteer" },
+    { value: "community.meetup", label: "Meetup" },
+    { value: "community.networking", label: "Networking" },
+    { value: "community.lgbtq", label: "LGBTQ+" },
+  ],
+  nightlife: [
+    { value: "nightlife.dj", label: "DJ Night" },
+    { value: "nightlife.drag", label: "Drag / Cabaret" },
+    { value: "nightlife.trivia", label: "Trivia" },
+  ],
+};
+
 export const DATE_FILTERS = [
   { value: "today", label: "Today" },
   { value: "weekend", label: "This Weekend" },
@@ -228,11 +325,10 @@ export interface VenueWithCount {
   event_count: number;
 }
 
-// Get venues that have upcoming events (for filter dropdown)
+// Get venues that have upcoming events
 export async function getVenuesWithEvents(): Promise<VenueWithCount[]> {
   const today = new Date().toISOString().split("T")[0];
 
-  // Get all upcoming events with venue info
   const { data: events, error } = await supabase
     .from("events")
     .select("venue_id, venue:venues(id, name, neighborhood)")
@@ -244,7 +340,6 @@ export async function getVenuesWithEvents(): Promise<VenueWithCount[]> {
     return [];
   }
 
-  // Count events per venue
   const venueMap = new Map<number, VenueWithCount>();
 
   type EventWithVenue = {
@@ -269,7 +364,6 @@ export async function getVenuesWithEvents(): Promise<VenueWithCount[]> {
     }
   }
 
-  // Sort by event count (descending), then by name
   return Array.from(venueMap.values()).sort((a, b) => {
     if (b.event_count !== a.event_count) return b.event_count - a.event_count;
     return a.name.localeCompare(b.name);

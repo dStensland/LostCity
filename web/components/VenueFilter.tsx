@@ -72,17 +72,13 @@ export default function VenueFilter({ venues }: Props) {
           e.stopPropagation();
           setIsOpen(!isOpen);
         }}
-        className={`px-2.5 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm font-medium rounded-full whitespace-nowrap transition-all flex items-center gap-1.5 ${
-          currentVenue
-            ? "bg-gradient-to-r from-sky-500 to-blue-500 text-white shadow-lg shadow-sky-500/20"
-            : "chip hover:bg-white/15"
-        }`}
+        className={`filter-btn flex items-center gap-1.5 ${currentVenue ? "active" : ""}`}
       >
-        <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
         </svg>
-        <span className="max-w-[100px] sm:max-w-[150px] truncate">
+        <span className="max-w-[80px] sm:max-w-[120px] truncate">
           {currentVenue ? currentVenue.name : "Venue"}
         </span>
         <svg className={`w-3 h-3 transition-transform ${isOpen ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -91,15 +87,15 @@ export default function VenueFilter({ venues }: Props) {
       </button>
 
       {isOpen && (
-        <div className="absolute top-full left-0 sm:left-0 right-0 sm:right-auto mt-2 w-auto sm:w-80 min-w-[280px] bg-[#1E1B4B] border border-white/20 rounded-xl shadow-2xl shadow-black/50 z-50 overflow-hidden">
+        <div className="absolute top-full left-0 mt-2 w-72 sm:w-80 bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg shadow-2xl shadow-black/50 z-50 overflow-hidden">
           {/* Search input */}
-          <div className="p-2 border-b border-white/10">
+          <div className="p-2 border-b border-[var(--twilight)]">
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search venues..."
-              className="w-full px-3 py-2 bg-white/10 border border-white/10 rounded-lg text-white placeholder-orange-100/40 text-sm focus:outline-none focus:ring-1 focus:ring-orange-400/50"
+              className="w-full px-3 py-2 bg-[var(--night)] border border-[var(--twilight)] rounded text-[var(--cream)] placeholder-[var(--muted)] text-sm focus:outline-none focus:border-[var(--soft)]"
               autoFocus
             />
           </div>
@@ -111,7 +107,7 @@ export default function VenueFilter({ venues }: Props) {
               <button
                 type="button"
                 onClick={() => setVenue(null)}
-                className="w-full px-3 py-2 text-left text-sm text-orange-300 hover:bg-white/10 flex items-center gap-2 border-b border-white/10"
+                className="w-full px-3 py-2 text-left text-sm text-[var(--coral)] hover:bg-[var(--twilight)] flex items-center gap-2 border-b border-[var(--twilight)]"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -123,7 +119,7 @@ export default function VenueFilter({ venues }: Props) {
             {isSearching ? (
               // Search results
               filteredVenues.length === 0 ? (
-                <div className="px-3 py-4 text-center text-orange-100/50 text-sm">
+                <div className="px-3 py-4 text-center text-[var(--muted)] text-sm">
                   No venues found
                 </div>
               ) : (
@@ -139,7 +135,7 @@ export default function VenueFilter({ venues }: Props) {
             ) : (
               // Default view: Top 5 popular venues
               <>
-                <div className="px-3 py-2 text-xs font-medium text-orange-100/50 uppercase tracking-wider bg-white/5">
+                <div className="px-3 py-2 text-xs font-mono font-medium text-[var(--muted)] uppercase tracking-widest bg-[var(--night)]">
                   Popular Venues
                 </div>
                 {topVenues.map((venue) => (
@@ -151,7 +147,7 @@ export default function VenueFilter({ venues }: Props) {
                     showBadge
                   />
                 ))}
-                <div className="px-3 py-2 text-xs text-orange-100/40 text-center border-t border-white/10">
+                <div className="px-3 py-2 text-xs text-[var(--muted)] text-center border-t border-[var(--twilight)]">
                   Search to find more venues
                 </div>
               </>
@@ -178,23 +174,23 @@ function VenueRow({
     <button
       type="button"
       onClick={onSelect}
-      className={`w-full px-3 py-2.5 text-left hover:bg-white/10 transition-colors ${
-        isSelected ? "bg-white/10" : ""
+      className={`w-full px-3 py-2.5 text-left hover:bg-[var(--twilight)] transition-colors ${
+        isSelected ? "bg-[var(--twilight)]" : ""
       }`}
     >
       <div className="flex items-center justify-between gap-2">
         <div className="min-w-0">
-          <div className="text-sm text-white truncate">{venue.name}</div>
+          <div className="text-sm text-[var(--cream)] truncate">{venue.name}</div>
           {venue.neighborhood && (
-            <div className="text-xs text-orange-100/50">{venue.neighborhood}</div>
+            <div className="text-xs text-[var(--muted)]">{venue.neighborhood}</div>
           )}
         </div>
-        <span className={`flex-shrink-0 text-xs px-2 py-0.5 rounded-full ${
+        <span className={`flex-shrink-0 text-xs font-mono px-2 py-0.5 rounded ${
           showBadge
-            ? "bg-gradient-to-r from-orange-500/20 to-pink-500/20 text-orange-300 font-medium"
-            : "bg-white/5 text-orange-100/40"
+            ? "bg-[var(--twilight)] text-[var(--coral)] font-medium"
+            : "text-[var(--muted)]"
         }`}>
-          {venue.event_count} events
+          {venue.event_count}
         </span>
       </div>
     </button>

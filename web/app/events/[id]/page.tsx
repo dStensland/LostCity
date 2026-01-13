@@ -2,37 +2,130 @@ import { getEventById } from "@/lib/supabase";
 import { format, parseISO } from "date-fns";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import type { Metadata } from "next";
+import AddToCalendar from "@/components/AddToCalendar";
 
 export const revalidate = 60;
 
-function formatTime(time: string | null): string {
-  if (!time) return "";
+type Props = {
+  params: Promise<{ id: string }>;
+};
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { id } = await params;
+  const event = await getEventById(parseInt(id, 10));
+
+  if (!event) {
+    return {
+      title: "Event Not Found | Lost City",
+    };
+  }
+
+  const dateObj = parseISO(event.start_date);
+  const formattedDate = format(dateObj, "EEEE, MMMM d, yyyy");
+  const venueName = event.venue?.name || "Atlanta";
+  const description = event.description
+    ? event.description.slice(0, 160)
+    : `${event.title} at ${venueName} on ${formattedDate}. Discover more events in Atlanta with Lost City.`;
+
+  return {
+    title: `${event.title} | ${venueName} | Lost City`,
+    description,
+    openGraph: {
+      title: event.title,
+      description,
+      type: "website",
+      images: event.image_url ? [{ url: event.image_url }] : [],
+    },
+    twitter: {
+      card: event.image_url ? "summary_large_image" : "summary",
+      title: event.title,
+      description,
+      images: event.image_url ? [event.image_url] : [],
+    },
+  };
+}
+
+function formatTime(time: string | null, isAllDay?: boolean): { time: string; period: string } {
+  if (isAllDay) return { time: "All", period: "Day" };
+  if (!time) return { time: "TBA", period: "" };
+
   const [hours, minutes] = time.split(":");
   const hour = parseInt(hours, 10);
   const ampm = hour >= 12 ? "PM" : "AM";
   const hour12 = hour % 12 || 12;
-  return `${hour12}:${minutes} ${ampm}`;
+  return { time: `${hour12}:${minutes}`, period: ampm };
 }
 
 function formatPrice(event: {
   is_free: boolean;
   price_min: number | null;
   price_max: number | null;
-  price_note: string | null;
 }): string {
   if (event.is_free) return "Free";
-  if (event.price_min === null) return "Price TBD";
+  if (event.price_min === null) return "TBD";
   if (event.price_min === event.price_max || event.price_max === null) {
     return `$${event.price_min}`;
   }
-  return `$${event.price_min} - $${event.price_max}`;
+  return `$${event.price_min}-$${event.price_max}`;
 }
 
-export default async function EventPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
+function generateEventSchema(event: NonNullable<Awaited<ReturnType<typeof getEventById>>>) {
+  const startDateTime = event.start_time
+    ? `${event.start_date}T${event.start_time}:00`
+    : event.start_date;
+
+  const schema: Record<string, unknown> = {
+    "@context": "https://schema.org",
+    "@type": "Event",
+    name: event.title,
+    startDate: startDateTime,
+    eventStatus: "https://schema.org/EventScheduled",
+    eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
+  };
+
+  if (event.description) {
+    schema.description = event.description;
+  }
+
+  if (event.image_url) {
+    schema.image = event.image_url;
+  }
+
+  if (event.venue) {
+    schema.location = {
+      "@type": "Place",
+      name: event.venue.name,
+      address: {
+        "@type": "PostalAddress",
+        streetAddress: event.venue.address,
+        addressLocality: event.venue.city,
+        addressRegion: event.venue.state,
+        addressCountry: "US",
+      },
+    };
+  }
+
+  if (event.is_free) {
+    schema.isAccessibleForFree = true;
+  } else if (event.price_min !== null) {
+    schema.offers = {
+      "@type": "Offer",
+      price: event.price_min,
+      priceCurrency: "USD",
+      availability: "https://schema.org/InStock",
+      url: event.ticket_url || event.source_url,
+    };
+  }
+
+  if (event.ticket_url) {
+    schema.url = event.ticket_url;
+  }
+
+  return schema;
+}
+
+export default async function EventPage({ params }: Props) {
   const { id } = await params;
   const event = await getEventById(parseInt(id, 10));
 
@@ -42,26 +135,44 @@ export default async function EventPage({
 
   const dateObj = parseISO(event.start_date);
   const formattedDate = format(dateObj, "EEEE, MMMM d, yyyy");
+  const shortDate = format(dateObj, "MMM d");
+  const dayOfWeek = format(dateObj, "EEE");
+  const { time, period } = formatTime(event.start_time, event.is_all_day);
+  const eventSchema = generateEventSchema(event);
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white border-b border-gray-200">
-        <div className="max-w-4xl mx-auto px-4 py-4">
-          <Link
-            href="/"
-            className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-          >
-            &larr; Back to events
-          </Link>
-        </div>
-      </header>
+    <>
+      {/* Schema.org JSON-LD */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(eventSchema) }}
+      />
 
-      <main className="max-w-4xl mx-auto px-4 py-8">
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+      <div className="min-h-screen">
+        {/* Header */}
+        <header className="px-4 sm:px-6 py-4 flex justify-between items-center border-b border-[var(--twilight)]">
+          <div className="flex items-baseline gap-3">
+            <Link href="/" className="gradient-text text-xl font-bold tracking-tight">
+              Lost City
+            </Link>
+            <span className="font-mono text-[0.65rem] font-medium text-[var(--muted)] uppercase tracking-widest hidden sm:inline">
+              Atlanta
+            </span>
+          </div>
+          <nav>
+            <Link
+              href="/"
+              className="font-mono text-[0.7rem] font-medium text-[var(--muted)] uppercase tracking-wide hover:text-[var(--cream)] transition-colors"
+            >
+              &larr; Back
+            </Link>
+          </nav>
+        </header>
+
+        <main className="max-w-3xl mx-auto px-4 py-8">
           {/* Event image */}
           {event.image_url && (
-            <div className="aspect-video bg-gray-100">
+            <div className="aspect-video bg-[var(--night)] rounded-lg overflow-hidden mb-6 border border-[var(--twilight)]">
               <img
                 src={event.image_url}
                 alt={event.title}
@@ -70,59 +181,72 @@ export default async function EventPage({
             </div>
           )}
 
-          <div className="p-6 sm:p-8">
+          {/* Main event info card */}
+          <div className="bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg p-6 sm:p-8">
             {/* Category badge */}
             {event.category && (
-              <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800 mb-4">
+              <span className={`category-${event.category} inline-block px-2 py-0.5 rounded text-xs font-mono uppercase tracking-wider mb-4`}>
                 {event.category}
               </span>
             )}
 
             {/* Title */}
-            <h1 className="text-3xl font-bold text-gray-900">{event.title}</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold text-[var(--cream)] leading-tight">
+              {event.title}
+            </h1>
 
             {/* Venue */}
             {event.venue && (
-              <p className="mt-2 text-lg text-gray-600">
+              <p className="mt-2 text-[var(--soft)] font-serif text-lg">
                 {event.venue.name}
                 {event.venue.neighborhood && (
-                  <span className="text-gray-400">
-                    {" "}
-                    &middot; {event.venue.neighborhood}
-                  </span>
+                  <span className="text-[var(--muted)]"> &middot; {event.venue.neighborhood}</span>
                 )}
               </p>
             )}
 
-            {/* Date/Time/Price */}
-            <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="bg-gray-50 rounded-lg p-4">
-                <div className="text-sm font-medium text-gray-500">Date</div>
-                <div className="mt-1 text-lg font-semibold text-gray-900">
-                  {formattedDate}
+            {/* Date/Time/Price grid */}
+            <div className="mt-6 grid grid-cols-3 gap-3 sm:gap-4">
+              <div className="bg-[var(--night)] rounded-lg p-3 sm:p-4 text-center border border-[var(--twilight)]">
+                <div className="font-mono text-[0.6rem] text-[var(--muted)] uppercase tracking-widest mb-1">
+                  Date
                 </div>
+                <div className="font-mono text-lg sm:text-xl font-semibold text-[var(--coral)]">
+                  {shortDate}
+                </div>
+                <div className="font-mono text-xs text-[var(--muted)]">{dayOfWeek}</div>
               </div>
 
-              <div className="bg-gray-50 rounded-lg p-4">
-                <div className="text-sm font-medium text-gray-500">Time</div>
-                <div className="mt-1 text-lg font-semibold text-gray-900">
-                  {event.start_time ? formatTime(event.start_time) : "TBD"}
+              <div className="bg-[var(--night)] rounded-lg p-3 sm:p-4 text-center border border-[var(--twilight)]">
+                <div className="font-mono text-[0.6rem] text-[var(--muted)] uppercase tracking-widest mb-1">
+                  Time
                 </div>
+                <div className="font-mono text-lg sm:text-xl font-semibold text-[var(--coral)]">
+                  {time}
+                </div>
+                <div className="font-mono text-xs text-[var(--muted)]">{period}</div>
               </div>
 
-              <div className="bg-gray-50 rounded-lg p-4">
-                <div className="text-sm font-medium text-gray-500">Price</div>
-                <div className="mt-1 text-lg font-semibold text-gray-900">
+              <div className="bg-[var(--night)] rounded-lg p-3 sm:p-4 text-center border border-[var(--twilight)]">
+                <div className="font-mono text-[0.6rem] text-[var(--muted)] uppercase tracking-widest mb-1">
+                  Price
+                </div>
+                <div className={`font-mono text-lg sm:text-xl font-semibold ${event.is_free ? "text-green-400" : "text-[var(--gold)]"}`}>
                   {formatPrice(event)}
+                </div>
+                <div className="font-mono text-xs text-[var(--muted)]">
+                  {event.is_free ? "No cover" : "Per ticket"}
                 </div>
               </div>
             </div>
 
             {/* Description */}
             {event.description && (
-              <div className="mt-6">
-                <h2 className="text-lg font-semibold text-gray-900">About</h2>
-                <p className="mt-2 text-gray-600 whitespace-pre-wrap">
+              <div className="mt-6 pt-6 border-t border-[var(--twilight)]">
+                <h2 className="font-mono text-[0.65rem] font-medium text-[var(--muted)] uppercase tracking-widest mb-3">
+                  About
+                </h2>
+                <p className="text-[var(--soft)] whitespace-pre-wrap leading-relaxed">
                   {event.description}
                 </p>
               </div>
@@ -130,15 +254,15 @@ export default async function EventPage({
 
             {/* Tags */}
             {event.tags && event.tags.length > 0 && (
-              <div className="mt-6">
-                <h2 className="text-lg font-semibold text-gray-900 mb-2">
-                  Also featuring
+              <div className="mt-6 pt-6 border-t border-[var(--twilight)]">
+                <h2 className="font-mono text-[0.65rem] font-medium text-[var(--muted)] uppercase tracking-widest mb-3">
+                  Also Featuring
                 </h2>
                 <div className="flex flex-wrap gap-2">
                   {event.tags.map((tag) => (
                     <span
                       key={tag}
-                      className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm"
+                      className="px-3 py-1 bg-[var(--night)] text-[var(--soft)] rounded border border-[var(--twilight)] text-sm"
                     >
                       {tag}
                     </span>
@@ -147,12 +271,14 @@ export default async function EventPage({
               </div>
             )}
 
-            {/* Venue details */}
+            {/* Location */}
             {event.venue && event.venue.address && (
-              <div className="mt-6">
-                <h2 className="text-lg font-semibold text-gray-900">Location</h2>
-                <p className="mt-2 text-gray-600">
-                  {event.venue.name}
+              <div className="mt-6 pt-6 border-t border-[var(--twilight)]">
+                <h2 className="font-mono text-[0.65rem] font-medium text-[var(--muted)] uppercase tracking-widest mb-3">
+                  Location
+                </h2>
+                <p className="text-[var(--soft)]">
+                  <span className="text-[var(--cream)] font-medium">{event.venue.name}</span>
                   <br />
                   {event.venue.address}
                   <br />
@@ -162,31 +288,61 @@ export default async function EventPage({
             )}
 
             {/* Action buttons */}
-            <div className="mt-8 flex flex-col sm:flex-row gap-3">
+            <div className="mt-8 pt-6 border-t border-[var(--twilight)] flex flex-col sm:flex-row gap-3">
               {event.ticket_url && (
                 <a
                   href={event.ticket_url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center justify-center px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors"
+                  className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-[var(--rose)] to-[var(--coral)] text-[var(--void)] font-semibold rounded-lg hover:opacity-90 transition-opacity"
                 >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+                  </svg>
                   Get Tickets
                 </a>
               )}
+
+              <AddToCalendar
+                title={event.title}
+                date={event.start_date}
+                time={event.start_time}
+                venue={event.venue?.name}
+                address={event.venue?.address}
+                city={event.venue?.city}
+                state={event.venue?.state}
+              />
+
               {event.source_url && (
                 <a
                   href={event.source_url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center justify-center px-6 py-3 border border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 transition-colors"
+                  className="inline-flex items-center justify-center gap-2 px-6 py-3 border border-[var(--twilight)] text-[var(--soft)] font-medium rounded-lg hover:bg-[var(--twilight)] hover:text-[var(--cream)] transition-colors"
                 >
-                  View Original
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                  </svg>
+                  View Source
                 </a>
               )}
             </div>
           </div>
-        </div>
-      </main>
-    </div>
+        </main>
+
+        {/* Footer */}
+        <footer className="border-t border-[var(--twilight)] bg-[var(--night)] mt-12">
+          <div className="max-w-3xl mx-auto px-4 py-8 text-center">
+            <Link href="/" className="gradient-text text-lg font-bold">
+              Lost City
+            </Link>
+            <p className="font-serif text-[var(--muted)] mt-1">The real Atlanta, found</p>
+            <p className="font-mono text-[0.6rem] text-[var(--muted)] mt-4 opacity-60">
+              AI-powered &middot; Updated continuously
+            </p>
+          </div>
+        </footer>
+      </div>
+    </>
   );
 }

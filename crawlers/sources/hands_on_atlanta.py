@@ -13,7 +13,7 @@ from typing import Optional
 
 import requests
 
-from utils import slugify
+from utils import slugify, validate_event_time
 from db import get_or_create_venue, insert_event, find_event_by_hash
 from dedupe import generate_content_hash
 
@@ -303,6 +303,14 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             events_found += 1
 
+            # Validate time (1-5 AM is suspicious for volunteer events)
+            validated_time, is_suspicious = validate_event_time(
+                parsed.get("start_time"),
+                category=parsed.get("category"),
+                title=parsed.get("title", "")
+            )
+            parsed["start_time"] = validated_time
+
             # Create venue
             venue_data = {
                 "name": parsed["venue_name"],
@@ -337,10 +345,10 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 "title": parsed["title"],
                 "description": parsed.get("description"),
                 "start_date": parsed["start_date"],
-                "start_time": parsed.get("start_time"),
+                "start_time": validated_time,
                 "end_date": None,
                 "end_time": None,
-                "is_all_day": parsed.get("start_time") is None,
+                "is_all_day": False,  # Volunteer events have specific times
                 "category": parsed["category"],
                 "subcategory": "volunteer",
                 "tags": tags,

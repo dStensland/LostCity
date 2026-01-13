@@ -49,6 +49,8 @@ export default async function PortalPage({ params, searchParams }: Props) {
     is_all_day: !ce.content?.start_time,
     category: ce.content?.category || null,
     subcategory: null,
+    category_id: ce.content?.category || null,
+    subcategory_id: null,
     tags: null,
     price_min: null,
     price_max: null,

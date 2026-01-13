@@ -17,6 +17,8 @@ export type Event = {
   is_all_day: boolean;
   category: string | null;
   subcategory: string | null;
+  category_id: string | null;
+  subcategory_id: string | null;
   tags: string[] | null;
   price_min: number | null;
   price_max: number | null;
@@ -112,7 +114,7 @@ export async function getEventById(id: number): Promise<Event | null> {
 }
 
 export async function getEventsByCategory(
-  category: string,
+  categoryId: string,
   limit = 50
 ): Promise<Event[]> {
   const today = new Date().toISOString().split("T")[0];
@@ -125,7 +127,7 @@ export async function getEventsByCategory(
       venue:venues(id, name, slug, address, neighborhood, city, state)
     `
     )
-    .eq("category", category)
+    .eq("category_id", categoryId)
     .gte("start_date", today)
     .order("start_date", { ascending: true })
     .limit(limit);

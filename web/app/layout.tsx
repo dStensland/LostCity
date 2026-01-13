@@ -1,15 +1,21 @@
 import type { Metadata } from "next";
-import { Righteous, Outfit } from "next/font/google";
+import { Outfit, Instrument_Serif, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
-
-const righteous = Righteous({
-  weight: "400",
-  variable: "--font-righteous",
-  subsets: ["latin"],
-});
 
 const outfit = Outfit({
   variable: "--font-outfit",
+  subsets: ["latin"],
+});
+
+const instrumentSerif = Instrument_Serif({
+  weight: "400",
+  style: "italic",
+  variable: "--font-instrument",
+  subsets: ["latin"],
+});
+
+const jetbrainsMono = JetBrains_Mono({
+  variable: "--font-mono",
   subsets: ["latin"],
 });
 
@@ -30,7 +36,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${righteous.variable} ${outfit.variable} antialiased`}>
+      <body className={`${outfit.variable} ${instrumentSerif.variable} ${jetbrainsMono.variable} antialiased`}>
+        {/* Ambient glow effect */}
+        <div className="ambient-glow" aria-hidden="true" />
         {children}
       </body>
     </html>

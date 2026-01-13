@@ -54,6 +54,8 @@ SOURCE_MODULES = {
     "atlanta-film-society": "sources.atlanta_film_society",
     "atlanta-film-series": "sources.atlanta_film_series",
     "buried-alive": "sources.buried_alive",
+    # Phase 4 - Additional Music Venues
+    "529": "sources.five29",
 }
 
 

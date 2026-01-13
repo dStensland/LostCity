@@ -1,8 +1,8 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback } from "react";
-import { CATEGORIES, DATE_FILTERS, type VenueWithCount } from "@/lib/search";
+import { useCallback, useState, useRef, useEffect } from "react";
+import { CATEGORIES, SUBCATEGORIES, DATE_FILTERS, type VenueWithCount } from "@/lib/search";
 import VenueFilter from "./VenueFilter";
 
 interface Props {
@@ -12,10 +12,24 @@ interface Props {
 export default function FilterBar({ venues }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const [openDropdown, setOpenDropdown] = useState<string | null>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   const currentCategories = searchParams.get("categories")?.split(",").filter(Boolean) || [];
+  const currentSubcategories = searchParams.get("subcategories")?.split(",").filter(Boolean) || [];
   const isFreeOnly = searchParams.get("free") === "true";
   const currentDateFilter = searchParams.get("date") || "";
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setOpenDropdown(null);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const updateParams = useCallback(
     (updates: Record<string, string | null>) => {
@@ -44,15 +58,32 @@ export default function FilterBar({ venues }: Props) {
         ? currentCategories.filter((c) => c !== category)
         : [...currentCategories, category];
 
+      // Clear subcategories when category changes
       updateParams({
         categories: newCategories.length > 0 ? newCategories.join(",") : null,
+        subcategories: null,
       });
+      setOpenDropdown(null);
     },
     [currentCategories, updateParams]
   );
 
+  const toggleSubcategory = useCallback(
+    (subcategory: string) => {
+      const newSubcategories = currentSubcategories.includes(subcategory)
+        ? currentSubcategories.filter((s) => s !== subcategory)
+        : [...currentSubcategories, subcategory];
+
+      updateParams({
+        subcategories: newSubcategories.length > 0 ? newSubcategories.join(",") : null,
+      });
+    },
+    [currentSubcategories, updateParams]
+  );
+
   const clearCategories = useCallback(() => {
-    updateParams({ categories: null });
+    updateParams({ categories: null, subcategories: null });
+    setOpenDropdown(null);
   }, [updateParams]);
 
   const toggleFree = useCallback(() => {
@@ -66,72 +97,114 @@ export default function FilterBar({ venues }: Props) {
     [currentDateFilter, updateParams]
   );
 
+  // Check if a category has subcategories
+  const hasSubcategories = (category: string) => {
+    return SUBCATEGORIES[category] && SUBCATEGORIES[category].length > 0;
+  };
+
   return (
-    <div className="flex-1 space-y-1.5 sm:space-y-2">
-      {/* Category chips row - single scrollable row on mobile */}
-      <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto pb-1 scrollbar-hide -mx-1 px-1">
+    <div className="flex-1 space-y-2" ref={dropdownRef}>
+      {/* Category filters row */}
+      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-hide -mx-1 px-1">
         <button
+          type="button"
           onClick={clearCategories}
-          className={`px-2.5 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm font-medium rounded-full whitespace-nowrap transition-all ${
-            currentCategories.length === 0
-              ? "chip-active"
-              : "chip hover:bg-white/15"
-          }`}
+          className={`filter-btn ${currentCategories.length === 0 && currentSubcategories.length === 0 ? "active" : ""}`}
         >
           All
         </button>
         {CATEGORIES.map((cat) => (
-          <button
-            key={cat.value}
-            onClick={() => toggleCategory(cat.value)}
-            className={`px-2.5 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm font-medium rounded-full whitespace-nowrap transition-all ${
-              currentCategories.includes(cat.value)
-                ? "chip-active"
-                : "chip hover:bg-white/15"
-            }`}
-          >
-            {cat.label}
-          </button>
+          <div key={cat.value} className="relative">
+            <button
+              type="button"
+              onClick={() => {
+                if (hasSubcategories(cat.value)) {
+                  // Toggle dropdown, also select the category
+                  if (!currentCategories.includes(cat.value)) {
+                    toggleCategory(cat.value);
+                  }
+                  setOpenDropdown(openDropdown === cat.value ? null : cat.value);
+                } else {
+                  toggleCategory(cat.value);
+                }
+              }}
+              className={`filter-btn flex items-center gap-1 ${currentCategories.includes(cat.value) ? "active" : ""}`}
+            >
+              {cat.label}
+              {hasSubcategories(cat.value) && (
+                <svg
+                  className={`w-3 h-3 transition-transform ${openDropdown === cat.value ? "rotate-180" : ""}`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              )}
+            </button>
+
+            {/* Subcategory dropdown */}
+            {openDropdown === cat.value && hasSubcategories(cat.value) && (
+              <div className="absolute top-full left-0 mt-1 w-56 bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg shadow-2xl shadow-black/50 z-50 overflow-hidden">
+                <div className="max-h-64 overflow-y-auto py-1">
+                  {SUBCATEGORIES[cat.value].map((sub) => (
+                    <button
+                      key={sub.value}
+                      type="button"
+                      onClick={() => toggleSubcategory(sub.value)}
+                      className={`w-full text-left px-3 py-2 text-sm transition-colors flex items-center gap-2 ${
+                        currentSubcategories.includes(sub.value)
+                          ? "bg-[var(--ember)] text-[var(--cream)]"
+                          : "text-[var(--soft)] hover:bg-[var(--twilight)] hover:text-[var(--cream)]"
+                      }`}
+                    >
+                      {currentSubcategories.includes(sub.value) && (
+                        <svg className="w-3 h-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                          <path
+                            fillRule="evenodd"
+                            d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                            clipRule="evenodd"
+                          />
+                        </svg>
+                      )}
+                      <span className={currentSubcategories.includes(sub.value) ? "" : "ml-5"}>{sub.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         ))}
       </div>
 
       {/* Date, Venue, and Free filters row */}
-      <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto scrollbar-hide -mx-1 px-1">
+      <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide -mx-1 px-1">
         {/* Date filters */}
         {DATE_FILTERS.map((df) => (
           <button
+            type="button"
             key={df.value}
             onClick={() => setDateFilter(df.value)}
-            className={`px-2.5 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm font-medium rounded-full whitespace-nowrap transition-all ${
-              currentDateFilter === df.value
-                ? "bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg shadow-purple-500/20"
-                : "chip hover:bg-white/15"
-            }`}
+            className={`time-tab ${currentDateFilter === df.value ? "active" : ""}`}
           >
             {df.label}
           </button>
         ))}
 
         {/* Divider */}
-        <div className="h-4 sm:h-5 w-px bg-white/20 mx-0.5 sm:mx-1 flex-shrink-0" />
+        <div className="h-5 w-px bg-[var(--twilight)] mx-1 flex-shrink-0" />
 
         {/* Venue filter */}
         <VenueFilter venues={venues} />
 
-        {/* Divider */}
-        <div className="h-4 sm:h-5 w-px bg-white/20 mx-0.5 sm:mx-1 flex-shrink-0" />
-
         {/* Free toggle */}
         <button
+          type="button"
           onClick={toggleFree}
-          className={`px-2.5 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm font-medium rounded-full whitespace-nowrap transition-all flex items-center gap-1 sm:gap-1.5 flex-shrink-0 ${
-            isFreeOnly
-              ? "bg-gradient-to-r from-emerald-400 to-teal-400 text-white shadow-lg shadow-emerald-500/20"
-              : "chip hover:bg-white/15"
-          }`}
+          className={`filter-btn flex items-center gap-1.5 ${isFreeOnly ? "active" : ""}`}
         >
           {isFreeOnly && (
-            <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="currentColor" viewBox="0 0 20 20">
+            <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
               <path
                 fillRule="evenodd"
                 d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"

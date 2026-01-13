@@ -2,12 +2,10 @@ import { getFilteredEventsWithSearch, getEventsForMap, getVenuesWithEvents, type
 import EventCard from "@/components/EventCard";
 import SearchBar from "@/components/SearchBar";
 import FilterBar from "@/components/FilterBar";
-import VenueFilter from "@/components/VenueFilter";
 import ViewToggle from "@/components/ViewToggle";
 import MapViewWrapper from "@/components/MapViewWrapper";
-import AtlantaSkyline from "@/components/AtlantaSkyline";
 import Link from "next/link";
-import { format, parseISO, isToday, isTomorrow, isThisWeek } from "date-fns";
+import { format, parseISO, isToday, isTomorrow } from "date-fns";
 import { Suspense } from "react";
 
 export const revalidate = 60;
@@ -19,6 +17,7 @@ type Props = {
     page?: string;
     search?: string;
     categories?: string;
+    subcategories?: string;
     free?: string;
     date?: string;
     venue?: string;
@@ -34,6 +33,7 @@ export default async function Home({ searchParams }: Props) {
   const filters: SearchFilters = {
     search: params.search || undefined,
     categories: params.categories?.split(",").filter(Boolean) || undefined,
+    subcategories: params.subcategories?.split(",").filter(Boolean) || undefined,
     is_free: params.free === "true" || undefined,
     date_filter: (params.date as "today" | "weekend" | "week") || undefined,
     venue_id: params.venue ? parseInt(params.venue, 10) : undefined,
@@ -62,8 +62,7 @@ export default async function Home({ searchParams }: Props) {
     const date = parseISO(dateStr);
     if (isToday(date)) return "Today";
     if (isTomorrow(date)) return "Tomorrow";
-    if (isThisWeek(date)) return format(date, "EEEE");
-    return format(date, "EEEE, MMMM d");
+    return format(date, "EEEE, MMM d");
   }
 
   function buildPageUrl(page: number): string {
@@ -71,6 +70,7 @@ export default async function Home({ searchParams }: Props) {
     urlParams.set("page", page.toString());
     if (params.search) urlParams.set("search", params.search);
     if (params.categories) urlParams.set("categories", params.categories);
+    if (params.subcategories) urlParams.set("subcategories", params.subcategories);
     if (params.free) urlParams.set("free", params.free);
     if (params.date) urlParams.set("date", params.date);
     if (params.venue) urlParams.set("venue", params.venue);
@@ -78,86 +78,123 @@ export default async function Home({ searchParams }: Props) {
     return `/?${urlParams.toString()}`;
   }
 
-  const hasActiveFilters = !!(params.search || params.categories || params.free || params.date || params.venue);
+  const hasActiveFilters = !!(params.search || params.categories || params.subcategories || params.free || params.date || params.venue);
 
   return (
-    <div className="min-h-screen relative">
-      {/* Hero with Skyline */}
-      <div className="relative h-[280px] sm:h-[320px] md:h-[380px]">
-        <AtlantaSkyline />
+    <div className="min-h-screen">
+      {/* Header */}
+      <header className="px-4 sm:px-6 py-4 flex justify-between items-center border-b border-[var(--twilight)]">
+        <div className="flex items-baseline gap-3">
+          <Link href="/" className="gradient-text text-xl font-bold tracking-tight">
+            Lost City
+          </Link>
+          <span className="font-mono text-[0.65rem] font-medium text-[var(--muted)] uppercase tracking-widest hidden sm:inline">
+            Atlanta
+          </span>
+        </div>
+        <nav className="flex gap-4 sm:gap-6">
+          <Link href="/?view=map" className="font-mono text-[0.7rem] font-medium text-[var(--muted)] uppercase tracking-wide hover:text-[var(--cream)] transition-colors">
+            Map
+          </Link>
+          <a href="mailto:hello@lostcity.ai" className="font-mono text-[0.7rem] font-medium text-[var(--muted)] uppercase tracking-wide hover:text-[var(--cream)] transition-colors">
+            Submit
+          </a>
+        </nav>
+      </header>
 
-        {/* Hero Content */}
-        <div className="relative z-10 h-full flex flex-col justify-center items-center px-4 pt-6 sm:pt-8">
-          <h1 className="font-[family-name:var(--font-righteous)] text-4xl sm:text-5xl md:text-7xl text-white text-glow tracking-wide">
-            LOST CITY
-          </h1>
-          <p className="mt-1 sm:mt-2 text-base sm:text-lg md:text-xl text-orange-100/90 font-medium">
-            Discover Atlanta
-          </p>
+      {/* Hero */}
+      <section className="py-8 sm:py-12 text-center border-b border-[var(--twilight)]">
+        <p className="font-mono text-[0.65rem] font-medium text-[var(--muted)] uppercase tracking-[0.2em] mb-3">
+          Discover Atlanta
+        </p>
+        <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight text-[var(--cream)]">
+          Lost City
+        </h1>
+        <p className="font-serif text-lg sm:text-xl text-[var(--soft)] mt-2">
+          Every show, every gathering, every hidden gem
+        </p>
 
-          {/* Search Bar in Hero */}
-          <div className="mt-4 sm:mt-6 w-full max-w-xl px-2">
-            <Suspense fallback={<div className="h-11 sm:h-12 bg-white/10 rounded-full animate-pulse" />}>
-              <SearchBar />
-            </Suspense>
+        {/* Stats */}
+        <div className="flex justify-center gap-8 sm:gap-12 mt-6 sm:mt-8">
+          <div className="text-center">
+            <div className="font-mono text-xl sm:text-2xl font-semibold gradient-text-stats">{total.toLocaleString()}</div>
+            <div className="font-mono text-[0.6rem] text-[var(--muted)] uppercase tracking-widest mt-1">Events</div>
+          </div>
+          <div className="text-center">
+            <div className="font-mono text-xl sm:text-2xl font-semibold gradient-text-stats">{venues.length}</div>
+            <div className="font-mono text-[0.6rem] text-[var(--muted)] uppercase tracking-widest mt-1">Venues</div>
+          </div>
+          <div className="text-center">
+            <div className="font-mono text-xl sm:text-2xl font-semibold gradient-text-stats">20+</div>
+            <div className="font-mono text-[0.6rem] text-[var(--muted)] uppercase tracking-widest mt-1">Sources</div>
           </div>
         </div>
-      </div>
 
-      {/* Filter Bar */}
-      <div className="sticky top-0 z-30 bg-[#1E1B4B]/95 backdrop-blur-md border-b border-white/10">
-        <div className="max-w-5xl mx-auto px-3 sm:px-4 py-2 sm:py-3">
-          {/* Mobile: Stack filters and view toggle */}
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4">
-            <Suspense fallback={<div className="h-10 flex-1 bg-white/5 rounded animate-pulse" />}>
+        {/* Search Bar */}
+        <div className="mt-6 sm:mt-8 max-w-xl mx-auto px-4">
+          <Suspense fallback={<div className="h-11 bg-[var(--night)] rounded-lg animate-pulse" />}>
+            <SearchBar />
+          </Suspense>
+        </div>
+      </section>
+
+      {/* Filters */}
+      <section className="sticky top-0 z-30 bg-[var(--night)] border-b border-[var(--twilight)]">
+        <div className="max-w-3xl mx-auto px-4 py-3">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <Suspense fallback={<div className="h-10 flex-1 bg-[var(--twilight)] rounded animate-pulse" />}>
               <FilterBar venues={venues} />
             </Suspense>
-            <Suspense fallback={<div className="w-full sm:w-28 h-9 bg-white/5 rounded animate-pulse" />}>
+            <Suspense fallback={<div className="w-full sm:w-28 h-9 bg-[var(--twilight)] rounded animate-pulse" />}>
               <ViewToggle currentView={currentView} />
             </Suspense>
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* Stats Bar */}
-      <div className="bg-[#1E1B4B] border-b border-white/5">
-        <div className="max-w-5xl mx-auto px-3 sm:px-4 py-2 sm:py-3">
-          <p className="text-xs sm:text-sm text-orange-100/70">
-            <span className="font-semibold text-orange-200">{total}</span>{" "}
-            {hasActiveFilters ? "matching events" : "upcoming events"}
-          </p>
-        </div>
+      {/* Event count */}
+      <div className="max-w-3xl mx-auto px-4 py-3 border-b border-[var(--twilight)]">
+        <p className="font-mono text-xs text-[var(--muted)]">
+          <span className="text-[var(--soft)]">{total}</span>{" "}
+          {hasActiveFilters ? "matching events" : "upcoming events"}
+        </p>
       </div>
 
       {/* Main Content */}
-      <main className="max-w-5xl mx-auto px-3 sm:px-4 py-4 sm:py-8">
+      <main className="max-w-3xl mx-auto px-4 pb-12">
         {currentView === "map" ? (
-          <div className="rounded-xl overflow-hidden border border-white/10 h-[60vh] sm:h-[70vh]">
+          <div className="mt-4 rounded-lg overflow-hidden border border-[var(--twilight)] h-[60vh] sm:h-[70vh]">
             <MapViewWrapper events={mapEvents} />
           </div>
         ) : (
           <>
             {dates.length === 0 ? (
-              <div className="text-center py-12 sm:py-16">
-                <p className="text-orange-100/60 text-base sm:text-lg">
+              <div className="text-center py-16">
+                <p className="text-[var(--muted)] text-lg">
                   {hasActiveFilters ? "No events match your filters." : "No upcoming events found."}
                 </p>
                 {hasActiveFilters && (
-                  <Link href="/" className="mt-4 inline-block text-orange-400 hover:text-orange-300 transition-colors">
+                  <Link href="/" className="mt-4 inline-block text-[var(--coral)] hover:text-[var(--rose)] transition-colors font-mono text-sm">
                     Clear all filters
                   </Link>
                 )}
               </div>
             ) : (
-              <div className="space-y-6 sm:space-y-10">
+              <div>
                 {dates.map((date) => (
                   <section key={date}>
-                    <h2 className="font-[family-name:var(--font-righteous)] text-lg sm:text-xl text-orange-300 mb-3 sm:mb-4 sticky top-[88px] sm:top-[72px] bg-[#1E1B4B] py-2 z-20 -mx-3 sm:-mx-4 px-3 sm:px-4">
-                      {getDateLabel(date)}
-                    </h2>
-                    <div className="space-y-2 sm:space-y-3">
-                      {eventsByDate[date].map((event) => (
-                        <EventCard key={event.id} event={event} />
+                    {/* Date header - classified style */}
+                    <div className="flex items-center gap-4 py-4 sticky top-[60px] sm:top-[52px] bg-[var(--void)] z-20">
+                      <span className="font-mono text-[0.65rem] font-medium text-[var(--muted)] uppercase tracking-widest whitespace-nowrap">
+                        {getDateLabel(date)}
+                      </span>
+                      <div className="flex-1 h-px bg-[var(--twilight)]" />
+                    </div>
+
+                    {/* Events */}
+                    <div>
+                      {eventsByDate[date].map((event, idx) => (
+                        <EventCard key={event.id} event={event} index={idx} />
                       ))}
                     </div>
                   </section>
@@ -167,31 +204,26 @@ export default async function Home({ searchParams }: Props) {
 
             {/* Pagination */}
             {totalPages > 1 && (
-              <nav className="mt-8 sm:mt-12 flex items-center justify-between border-t border-white/10 pt-4 sm:pt-6 gap-2">
+              <nav className="mt-12 flex items-center justify-between border-t border-[var(--twilight)] pt-6 gap-2">
                 <div className="flex-shrink-0">
                   {currentPage > 1 && (
                     <Link
                       href={buildPageUrl(currentPage - 1)}
-                      className="chip hover:bg-white/15 text-xs sm:text-sm px-2 sm:px-3 py-1 sm:py-1.5"
+                      className="filter-btn text-xs"
                     >
-                      <span className="hidden sm:inline">Previous</span>
-                      <span className="sm:hidden">Prev</span>
+                      Previous
                     </Link>
                   )}
                 </div>
                 <div className="flex items-center gap-1 sm:gap-2 overflow-x-auto">
                   {generatePageNumbers(currentPage, totalPages).map((pageNum, idx) =>
                     pageNum === "..." ? (
-                      <span key={`ellipsis-${idx}`} className="px-1 sm:px-2 text-orange-100/50 text-sm">...</span>
+                      <span key={`ellipsis-${idx}`} className="px-2 text-[var(--muted)] text-sm">...</span>
                     ) : (
                       <Link
                         key={pageNum}
                         href={buildPageUrl(pageNum as number)}
-                        className={`px-2 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm font-medium rounded-full transition-all ${
-                          pageNum === currentPage
-                            ? "bg-gradient-to-r from-orange-500 to-pink-500 text-white"
-                            : "chip"
-                        }`}
+                        className={`filter-btn text-xs ${pageNum === currentPage ? "active" : ""}`}
                       >
                         {pageNum}
                       </Link>
@@ -202,7 +234,7 @@ export default async function Home({ searchParams }: Props) {
                   {currentPage < totalPages && (
                     <Link
                       href={buildPageUrl(currentPage + 1)}
-                      className="chip hover:bg-white/15 text-xs sm:text-sm px-2 sm:px-3 py-1 sm:py-1.5"
+                      className="filter-btn text-xs"
                     >
                       Next
                     </Link>
@@ -215,13 +247,14 @@ export default async function Home({ searchParams }: Props) {
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-white/10 mt-8 sm:mt-12">
-        <div className="max-w-5xl mx-auto px-4 py-6 sm:py-8 text-center">
-          <p className="font-[family-name:var(--font-righteous)] text-xl sm:text-2xl text-orange-400/80 mb-2">
-            LOST CITY
+      <footer className="border-t border-[var(--twilight)] bg-[var(--night)]">
+        <div className="max-w-3xl mx-auto px-4 py-8 text-center">
+          <div className="gradient-text text-lg font-bold">Lost City</div>
+          <p className="font-serif text-[var(--muted)] mt-1">
+            The real Atlanta, found
           </p>
-          <p className="text-xs sm:text-sm text-orange-100/50">
-            AI-powered event discovery for Atlanta
+          <p className="font-mono text-[0.6rem] text-[var(--muted)] mt-4 opacity-60">
+            AI-powered · Updated continuously
           </p>
         </div>
       </footer>
@@ -230,7 +263,6 @@ export default async function Home({ searchParams }: Props) {
 }
 
 function generatePageNumbers(current: number, total: number): (number | "...")[] {
-  // Show fewer pages on mobile
   if (total <= 5) return Array.from({ length: total }, (_, i) => i + 1);
 
   const pages: (number | "...")[] = [1];

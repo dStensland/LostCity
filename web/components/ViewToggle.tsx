@@ -28,16 +28,17 @@ export default function ViewToggle({ currentView }: Props) {
   );
 
   return (
-    <div className="flex items-center bg-white/10 backdrop-blur-md rounded-full p-0.5 border border-white/10 w-full sm:w-auto justify-center sm:justify-start">
+    <div className="flex items-center bg-[var(--dusk)] rounded p-0.5 w-full sm:w-auto justify-center sm:justify-start">
       <button
+        type="button"
         onClick={() => setView("list")}
-        className={`flex-1 sm:flex-initial px-3 sm:px-3 py-1.5 text-xs sm:text-sm font-medium rounded-full transition-all flex items-center justify-center gap-1.5 ${
+        className={`flex-1 sm:flex-initial px-3 py-1.5 text-xs font-medium rounded transition-all flex items-center justify-center gap-1.5 ${
           currentView === "list"
-            ? "bg-gradient-to-r from-orange-500 to-pink-500 text-white shadow-lg"
-            : "text-orange-100/70 hover:text-white hover:bg-white/10"
+            ? "bg-[var(--cream)] text-[var(--void)]"
+            : "text-[var(--muted)] hover:text-[var(--cream)]"
         }`}
       >
-        <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -48,14 +49,15 @@ export default function ViewToggle({ currentView }: Props) {
         List
       </button>
       <button
+        type="button"
         onClick={() => setView("map")}
-        className={`flex-1 sm:flex-initial px-3 sm:px-3 py-1.5 text-xs sm:text-sm font-medium rounded-full transition-all flex items-center justify-center gap-1.5 ${
+        className={`flex-1 sm:flex-initial px-3 py-1.5 text-xs font-medium rounded transition-all flex items-center justify-center gap-1.5 ${
           currentView === "map"
-            ? "bg-gradient-to-r from-orange-500 to-pink-500 text-white shadow-lg"
-            : "text-orange-100/70 hover:text-white hover:bg-white/10"
+            ? "bg-[var(--cream)] text-[var(--void)]"
+            : "text-[var(--muted)] hover:text-[var(--cream)]"
         }`}
       >
-        <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path
             strokeLinecap="round"
             strokeLinejoin="round"
