@@ -1,9 +1,7 @@
-import { getFilteredEventsWithSearch, getEventsForMap, getVenuesWithEvents, type SearchFilters } from "@/lib/search";
+import { getFilteredEventsWithSearch, getVenuesWithEvents, type SearchFilters } from "@/lib/search";
 import SearchBar from "@/components/SearchBar";
 import FilterBar from "@/components/FilterBar";
 import ActiveFilters from "@/components/ActiveFilters";
-import ViewToggle from "@/components/ViewToggle";
-import MapViewWrapper from "@/components/MapViewWrapper";
 import EventList from "@/components/EventList";
 import Link from "next/link";
 import { Suspense } from "react";
@@ -20,13 +18,11 @@ type Props = {
     free?: string;
     date?: string;
     venue?: string;
-    view?: string;
   }>;
 };
 
 export default async function Home({ searchParams }: Props) {
   const params = await searchParams;
-  const currentView = (params.view === "map" ? "map" : "list") as "list" | "map";
 
   const filters: SearchFilters = {
     search: params.search || undefined,
@@ -42,7 +38,6 @@ export default async function Home({ searchParams }: Props) {
     getFilteredEventsWithSearch(filters, 1, PAGE_SIZE),
     getVenuesWithEvents(),
   ]);
-  const mapEvents = currentView === "map" ? await getEventsForMap(filters) : [];
 
   const hasActiveFilters = !!(params.search || params.categories || params.subcategories || params.free || params.date || params.venue);
 
@@ -89,14 +84,9 @@ export default async function Home({ searchParams }: Props) {
       {/* Filters */}
       <section className="sticky top-0 z-30 bg-[var(--night)] border-b border-[var(--twilight)]">
         <div className="max-w-3xl mx-auto px-4 py-3">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <Suspense fallback={<div className="h-10 flex-1 bg-[var(--twilight)] rounded animate-pulse" />}>
-              <FilterBar venues={venues} />
-            </Suspense>
-            <Suspense fallback={<div className="w-full sm:w-28 h-9 bg-[var(--twilight)] rounded animate-pulse" />}>
-              <ViewToggle currentView={currentView} />
-            </Suspense>
-          </div>
+          <Suspense fallback={<div className="h-10 flex-1 bg-[var(--twilight)] rounded animate-pulse" />}>
+            <FilterBar venues={venues} />
+          </Suspense>
         </div>
       </section>
 
@@ -113,19 +103,13 @@ export default async function Home({ searchParams }: Props) {
 
       {/* Main Content */}
       <main className="max-w-3xl mx-auto px-4 pb-12">
-        {currentView === "map" ? (
-          <div className="mt-4 rounded-lg overflow-hidden border border-[var(--twilight)] h-[60vh] sm:h-[70vh]">
-            <MapViewWrapper events={mapEvents} />
-          </div>
-        ) : (
-          <Suspense fallback={<div className="py-16 text-center text-[var(--muted)]">Loading events...</div>}>
-            <EventList
-              initialEvents={events}
-              initialTotal={total}
-              hasActiveFilters={hasActiveFilters}
-            />
-          </Suspense>
-        )}
+        <Suspense fallback={<div className="py-16 text-center text-[var(--muted)]">Loading events...</div>}>
+          <EventList
+            initialEvents={events}
+            initialTotal={total}
+            hasActiveFilters={hasActiveFilters}
+          />
+        </Suspense>
       </main>
 
       {/* Footer */}
