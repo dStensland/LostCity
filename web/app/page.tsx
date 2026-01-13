@@ -1,7 +1,8 @@
-import { getFilteredEventsWithSearch, getEventsForMap, type SearchFilters } from "@/lib/search";
+import { getFilteredEventsWithSearch, getEventsForMap, getVenuesWithEvents, type SearchFilters } from "@/lib/search";
 import EventCard from "@/components/EventCard";
 import SearchBar from "@/components/SearchBar";
 import FilterBar from "@/components/FilterBar";
+import VenueFilter from "@/components/VenueFilter";
 import ViewToggle from "@/components/ViewToggle";
 import MapViewWrapper from "@/components/MapViewWrapper";
 import AtlantaSkyline from "@/components/AtlantaSkyline";
@@ -38,7 +39,10 @@ export default async function Home({ searchParams }: Props) {
     venue_id: params.venue ? parseInt(params.venue, 10) : undefined,
   };
 
-  const { events, total } = await getFilteredEventsWithSearch(filters, currentPage, PAGE_SIZE);
+  const [{ events, total }, venues] = await Promise.all([
+    getFilteredEventsWithSearch(filters, currentPage, PAGE_SIZE),
+    getVenuesWithEvents(),
+  ]);
   const mapEvents = currentView === "map" ? await getEventsForMap(filters) : [];
   const totalPages = Math.ceil(total / PAGE_SIZE);
 
@@ -106,7 +110,7 @@ export default async function Home({ searchParams }: Props) {
           {/* Mobile: Stack filters and view toggle */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4">
             <Suspense fallback={<div className="h-10 flex-1 bg-white/5 rounded animate-pulse" />}>
-              <FilterBar />
+              <FilterBar venues={venues} />
             </Suspense>
             <Suspense fallback={<div className="w-full sm:w-28 h-9 bg-white/5 rounded animate-pulse" />}>
               <ViewToggle currentView={currentView} />

@@ -2,9 +2,14 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback } from "react";
-import { CATEGORIES, DATE_FILTERS } from "@/lib/search";
+import { CATEGORIES, DATE_FILTERS, type VenueWithCount } from "@/lib/search";
+import VenueFilter from "./VenueFilter";
 
-export default function FilterBar() {
+interface Props {
+  venues: VenueWithCount[];
+}
+
+export default function FilterBar({ venues }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -90,7 +95,7 @@ export default function FilterBar() {
         ))}
       </div>
 
-      {/* Date and Free filters row */}
+      {/* Date, Venue, and Free filters row */}
       <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto scrollbar-hide -mx-1 px-1">
         {/* Date filters */}
         {DATE_FILTERS.map((df) => (
@@ -107,8 +112,14 @@ export default function FilterBar() {
           </button>
         ))}
 
-        {/* Divider - hidden on very small screens */}
-        <div className="hidden xs:block h-4 sm:h-5 w-px bg-white/20 mx-0.5 sm:mx-1 flex-shrink-0" />
+        {/* Divider */}
+        <div className="h-4 sm:h-5 w-px bg-white/20 mx-0.5 sm:mx-1 flex-shrink-0" />
+
+        {/* Venue filter */}
+        <VenueFilter venues={venues} />
+
+        {/* Divider */}
+        <div className="h-4 sm:h-5 w-px bg-white/20 mx-0.5 sm:mx-1 flex-shrink-0" />
 
         {/* Free toggle */}
         <button

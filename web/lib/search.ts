@@ -220,3 +220,58 @@ export const DATE_FILTERS = [
   { value: "weekend", label: "This Weekend" },
   { value: "week", label: "This Week" },
 ] as const;
+
+export interface VenueWithCount {
+  id: number;
+  name: string;
+  neighborhood: string | null;
+  event_count: number;
+}
+
+// Get venues that have upcoming events (for filter dropdown)
+export async function getVenuesWithEvents(): Promise<VenueWithCount[]> {
+  const today = new Date().toISOString().split("T")[0];
+
+  // Get all upcoming events with venue info
+  const { data: events, error } = await supabase
+    .from("events")
+    .select("venue_id, venue:venues(id, name, neighborhood)")
+    .gte("start_date", today)
+    .not("venue_id", "is", null);
+
+  if (error || !events) {
+    console.error("Error fetching venues with events:", error);
+    return [];
+  }
+
+  // Count events per venue
+  const venueMap = new Map<number, VenueWithCount>();
+
+  type EventWithVenue = {
+    venue_id: number | null;
+    venue: { id: number; name: string; neighborhood: string | null } | null;
+  };
+
+  for (const event of events as EventWithVenue[]) {
+    const venue = event.venue;
+    if (!venue) continue;
+
+    const existing = venueMap.get(venue.id);
+    if (existing) {
+      existing.event_count++;
+    } else {
+      venueMap.set(venue.id, {
+        id: venue.id,
+        name: venue.name,
+        neighborhood: venue.neighborhood,
+        event_count: 1,
+      });
+    }
+  }
+
+  // Sort by event count (descending), then by name
+  return Array.from(venueMap.values()).sort((a, b) => {
+    if (b.event_count !== a.event_count) return b.event_count - a.event_count;
+    return a.name.localeCompare(b.name);
+  });
+}
