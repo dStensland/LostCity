@@ -53,7 +53,7 @@ export default function FilterBar({ venues }: Props) {
   );
 
   const toggleCategory = useCallback(
-    (category: string) => {
+    (category: string, keepDropdownOpen = false) => {
       const newCategories = currentCategories.includes(category)
         ? currentCategories.filter((c) => c !== category)
         : [...currentCategories, category];
@@ -63,7 +63,9 @@ export default function FilterBar({ venues }: Props) {
         categories: newCategories.length > 0 ? newCategories.join(",") : null,
         subcategories: null,
       });
-      setOpenDropdown(null);
+      if (!keepDropdownOpen) {
+        setOpenDropdown(null);
+      }
     },
     [currentCategories, updateParams]
   );
@@ -121,7 +123,7 @@ export default function FilterBar({ venues }: Props) {
                 if (hasSubcategories(cat.value)) {
                   // Toggle dropdown, also select the category
                   if (!currentCategories.includes(cat.value)) {
-                    toggleCategory(cat.value);
+                    toggleCategory(cat.value, true); // Keep dropdown open
                   }
                   setOpenDropdown(openDropdown === cat.value ? null : cat.value);
                 } else {
