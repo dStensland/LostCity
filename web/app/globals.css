@@ -1,26 +1,161 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Sunset palette */
+  --sunset-yellow: #FFD93D;
+  --sunset-orange: #FF8C42;
+  --sunset-coral: #FF6B6B;
+  --sunset-pink: #F472B6;
+  --sunset-purple: #9333EA;
+  --sunset-deep: #581C87;
+  --sunset-night: #1E1B4B;
+
+  /* UI colors */
+  --background: #1E1B4B;
+  --foreground: #FFF7ED;
+  --card-bg: rgba(255, 255, 255, 0.08);
+  --card-border: rgba(255, 255, 255, 0.12);
+  --text-muted: rgba(255, 247, 237, 0.7);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-outfit);
+  --font-display: var(--font-righteous);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* Sunset gradient background */
+.sunset-bg {
+  background: linear-gradient(
+    to bottom,
+    #FF8C42 0%,
+    #FF6B6B 25%,
+    #F472B6 45%,
+    #9333EA 70%,
+    #581C87 85%,
+    #1E1B4B 100%
+  );
+}
+
+/* Subtle animated gradient for hero */
+.sunset-animated {
+  background: linear-gradient(
+    -45deg,
+    #FF8C42,
+    #FF6B6B,
+    #F472B6,
+    #9333EA
+  );
+  background-size: 400% 400%;
+  animation: gradient 15s ease infinite;
+}
+
+@keyframes gradient {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* Glass card effect */
+.glass-card {
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.glass-card:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+/* Retro button style */
+.retro-btn {
+  background: linear-gradient(135deg, var(--sunset-orange), var(--sunset-coral));
+  color: white;
+  font-weight: 600;
+  padding: 0.5rem 1rem;
+  border-radius: 9999px;
+  transition: all 0.2s;
+  box-shadow: 0 4px 14px rgba(255, 107, 107, 0.4);
+}
+
+.retro-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(255, 107, 107, 0.5);
+}
+
+/* Chip styles */
+.chip {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: var(--foreground);
+  padding: 0.375rem 0.875rem;
+  border-radius: 9999px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.chip:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.chip-active {
+  background: linear-gradient(135deg, var(--sunset-orange), var(--sunset-coral));
+  border-color: transparent;
+  box-shadow: 0 2px 8px rgba(255, 107, 107, 0.3);
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* Hide scrollbar for filter row */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), system-ui, sans-serif;
+  min-height: 100vh;
 }
+
+/* Text glow effect */
+.text-glow {
+  text-shadow: 0 0 40px rgba(255, 140, 66, 0.5);
+}
+
+/* Category colors */
+.cat-music { --cat-color: #FF6B6B; }
+.cat-comedy { --cat-color: #FFD93D; }
+.cat-film { --cat-color: #9333EA; }
+.cat-theater { --cat-color: #F472B6; }
+.cat-art { --cat-color: #34D399; }
+.cat-sports { --cat-color: #FF8C42; }
+.cat-food_drink { --cat-color: #FB923C; }
+.cat-community { --cat-color: #60A5FA; }
+.cat-family { --cat-color: #A78BFA; }

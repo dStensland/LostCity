@@ -62,78 +62,76 @@ export default function FilterBar() {
   );
 
   return (
-    <div className="bg-white border-b border-gray-200">
-      <div className="max-w-4xl mx-auto px-4 py-3 space-y-3">
-        {/* Category chips row */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide">
+    <div className="flex-1 space-y-2">
+      {/* Category chips row */}
+      <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide">
+        <button
+          onClick={clearCategories}
+          className={`px-3 py-1.5 text-sm font-medium rounded-full whitespace-nowrap transition-all ${
+            currentCategories.length === 0
+              ? "chip-active"
+              : "chip hover:bg-white/15"
+          }`}
+        >
+          All
+        </button>
+        {CATEGORIES.map((cat) => (
           <button
-            onClick={clearCategories}
-            className={`px-3 py-1.5 text-sm font-medium rounded-full whitespace-nowrap transition-colors ${
-              currentCategories.length === 0
-                ? "bg-gray-900 text-white"
-                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+            key={cat.value}
+            onClick={() => toggleCategory(cat.value)}
+            className={`px-3 py-1.5 text-sm font-medium rounded-full whitespace-nowrap transition-all ${
+              currentCategories.includes(cat.value)
+                ? "chip-active"
+                : "chip hover:bg-white/15"
             }`}
           >
-            All
+            {cat.label}
           </button>
-          {CATEGORIES.map((cat) => (
+        ))}
+      </div>
+
+      {/* Date and Free filters row */}
+      <div className="flex items-center gap-2 flex-wrap">
+        {/* Date filters */}
+        <div className="flex items-center gap-1.5">
+          {DATE_FILTERS.map((df) => (
             <button
-              key={cat.value}
-              onClick={() => toggleCategory(cat.value)}
-              className={`px-3 py-1.5 text-sm font-medium rounded-full whitespace-nowrap transition-colors ${
-                currentCategories.includes(cat.value)
-                  ? "bg-blue-600 text-white"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+              key={df.value}
+              onClick={() => setDateFilter(df.value)}
+              className={`px-3 py-1.5 text-sm font-medium rounded-full whitespace-nowrap transition-all ${
+                currentDateFilter === df.value
+                  ? "bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg shadow-purple-500/20"
+                  : "chip hover:bg-white/15"
               }`}
             >
-              {cat.label}
+              {df.label}
             </button>
           ))}
         </div>
 
-        {/* Date and Free filters row */}
-        <div className="flex items-center gap-2 flex-wrap">
-          {/* Date filters */}
-          <div className="flex items-center gap-1.5">
-            {DATE_FILTERS.map((df) => (
-              <button
-                key={df.value}
-                onClick={() => setDateFilter(df.value)}
-                className={`px-3 py-1.5 text-sm font-medium rounded-full whitespace-nowrap transition-colors ${
-                  currentDateFilter === df.value
-                    ? "bg-green-600 text-white"
-                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                }`}
-              >
-                {df.label}
-              </button>
-            ))}
-          </div>
+        {/* Divider */}
+        <div className="h-5 w-px bg-white/20 mx-1" />
 
-          {/* Divider */}
-          <div className="h-6 w-px bg-gray-200 mx-1" />
-
-          {/* Free toggle */}
-          <button
-            onClick={toggleFree}
-            className={`px-3 py-1.5 text-sm font-medium rounded-full whitespace-nowrap transition-colors flex items-center gap-1.5 ${
-              isFreeOnly
-                ? "bg-amber-500 text-white"
-                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-            }`}
-          >
-            {isFreeOnly && (
-              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                <path
-                  fillRule="evenodd"
-                  d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                  clipRule="evenodd"
-                />
-              </svg>
-            )}
-            Free
-          </button>
-        </div>
+        {/* Free toggle */}
+        <button
+          onClick={toggleFree}
+          className={`px-3 py-1.5 text-sm font-medium rounded-full whitespace-nowrap transition-all flex items-center gap-1.5 ${
+            isFreeOnly
+              ? "bg-gradient-to-r from-emerald-400 to-teal-400 text-white shadow-lg shadow-emerald-500/20"
+              : "chip hover:bg-white/15"
+          }`}
+        >
+          {isFreeOnly && (
+            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+              <path
+                fillRule="evenodd"
+                d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                clipRule="evenodd"
+              />
+            </svg>
+          )}
+          Free
+        </button>
       </div>
     </div>
   );

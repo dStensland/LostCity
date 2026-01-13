@@ -28,13 +28,13 @@ export default function ViewToggle({ currentView }: Props) {
   );
 
   return (
-    <div className="flex items-center bg-gray-100 rounded-lg p-0.5">
+    <div className="flex items-center bg-white/10 backdrop-blur-md rounded-full p-0.5 border border-white/10">
       <button
         onClick={() => setView("list")}
-        className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors flex items-center gap-1.5 ${
+        className={`px-3 py-1.5 text-sm font-medium rounded-full transition-all flex items-center gap-1.5 ${
           currentView === "list"
-            ? "bg-white text-gray-900 shadow-sm"
-            : "text-gray-600 hover:text-gray-900"
+            ? "bg-gradient-to-r from-orange-500 to-pink-500 text-white shadow-lg"
+            : "text-orange-100/70 hover:text-white hover:bg-white/10"
         }`}
       >
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -49,10 +49,10 @@ export default function ViewToggle({ currentView }: Props) {
       </button>
       <button
         onClick={() => setView("map")}
-        className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors flex items-center gap-1.5 ${
+        className={`px-3 py-1.5 text-sm font-medium rounded-full transition-all flex items-center gap-1.5 ${
           currentView === "map"
-            ? "bg-white text-gray-900 shadow-sm"
-            : "text-gray-600 hover:text-gray-900"
+            ? "bg-gradient-to-r from-orange-500 to-pink-500 text-white shadow-lg"
+            : "text-orange-100/70 hover:text-white hover:bg-white/10"
         }`}
       >
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

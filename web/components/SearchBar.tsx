@@ -34,10 +34,10 @@ export default function SearchBar() {
   }, []);
 
   return (
-    <div className="relative flex-1 max-w-md">
-      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+    <div className="relative w-full">
+      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
         <svg
-          className="h-5 w-5 text-gray-400"
+          className="h-5 w-5 text-orange-300/60"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -54,16 +54,16 @@ export default function SearchBar() {
         type="text"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
-        placeholder="Search events..."
-        className="block w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+        placeholder="Search events, venues, artists..."
+        className="block w-full pl-11 pr-10 py-3 bg-white/10 backdrop-blur-md border border-white/20 rounded-full text-white placeholder-orange-100/50 focus:outline-none focus:ring-2 focus:ring-orange-400/50 focus:border-transparent text-sm transition-all hover:bg-white/15"
       />
       {query && (
         <button
           onClick={handleClear}
-          className="absolute inset-y-0 right-0 pr-3 flex items-center"
+          className="absolute inset-y-0 right-0 pr-4 flex items-center group"
         >
           <svg
-            className="h-5 w-5 text-gray-400 hover:text-gray-600"
+            className="h-5 w-5 text-orange-200/50 group-hover:text-orange-200 transition-colors"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
