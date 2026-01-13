@@ -66,7 +66,12 @@ export default function VenueFilter({ venues }: Props) {
   return (
     <div className="relative" ref={dropdownRef}>
       <button
-        onClick={() => setIsOpen(!isOpen)}
+        type="button"
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setIsOpen(!isOpen);
+        }}
         className={`px-2.5 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm font-medium rounded-full whitespace-nowrap transition-all flex items-center gap-1.5 ${
           currentVenue
             ? "bg-gradient-to-r from-sky-500 to-blue-500 text-white shadow-lg shadow-sky-500/20"
@@ -104,6 +109,7 @@ export default function VenueFilter({ venues }: Props) {
             {/* Clear filter option */}
             {currentVenue && (
               <button
+                type="button"
                 onClick={() => setVenue(null)}
                 className="w-full px-3 py-2 text-left text-sm text-orange-300 hover:bg-white/10 flex items-center gap-2 border-b border-white/10"
               >
@@ -170,6 +176,7 @@ function VenueRow({
 }) {
   return (
     <button
+      type="button"
       onClick={onSelect}
       className={`w-full px-3 py-2.5 text-left hover:bg-white/10 transition-colors ${
         isSelected ? "bg-white/10" : ""
