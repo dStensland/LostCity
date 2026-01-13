@@ -86,7 +86,7 @@ export default function VenueFilter({ venues }: Props) {
       </button>
 
       {isOpen && (
-        <div className="absolute top-full left-0 mt-2 w-72 sm:w-80 bg-[#1E1B4B] border border-white/20 rounded-xl shadow-2xl shadow-black/50 z-50 overflow-hidden">
+        <div className="absolute top-full left-0 sm:left-0 right-0 sm:right-auto mt-2 w-auto sm:w-80 min-w-[280px] bg-[#1E1B4B] border border-white/20 rounded-xl shadow-2xl shadow-black/50 z-50 overflow-hidden">
           {/* Search input */}
           <div className="p-2 border-b border-white/10">
             <input
