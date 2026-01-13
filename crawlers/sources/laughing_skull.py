@@ -12,7 +12,6 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright
 
-from utils import slugify
 from db import get_or_create_venue, insert_event, find_event_by_hash
 from dedupe import generate_content_hash
 
@@ -33,50 +32,60 @@ VENUE_DATA = {
 }
 
 
-def parse_date(date_text: str) -> Optional[str]:
-    """Parse date from 'Thursday, Jan 15' or 'Jan 15' format."""
+def parse_calendar_date(date_text: str) -> Optional[str]:
+    """Parse date from 'Tuesday, January 13, 8:00 pm' format."""
     try:
-        current_year = datetime.now().year
-
-        # "Thursday, Jan 15" or "Jan 15"
-        match = re.search(r"(\w{3,9}),?\s+(\w{3})\s+(\d+)", date_text)
+        # "Tuesday, January 13, 8:00 pm"
+        match = re.match(
+            r"(\w+),\s+(\w+)\s+(\d+),\s+(\d+):(\d+)\s*(am|pm)",
+            date_text,
+            re.IGNORECASE
+        )
         if match:
-            _, month, day = match.groups()
-        else:
-            match = re.search(r"(\w{3})\s+(\d+)", date_text)
-            if match:
-                month, day = match.groups()
-            else:
-                return None
+            _, month, day, hour, minute, period = match.groups()
+            current_year = datetime.now().year
 
-        for fmt in ["%b %d %Y", "%B %d %Y"]:
-            try:
-                dt = datetime.strptime(f"{month} {day} {current_year}", fmt)
-                if dt < datetime.now():
-                    dt = datetime.strptime(f"{month} {day} {current_year + 1}", fmt)
-                return dt.strftime("%Y-%m-%d")
-            except ValueError:
-                continue
+            for fmt in ["%B %d %Y", "%b %d %Y"]:
+                try:
+                    dt = datetime.strptime(f"{month} {day} {current_year}", fmt)
+                    if dt < datetime.now():
+                        dt = datetime.strptime(f"{month} {day} {current_year + 1}", fmt)
+                    return dt.strftime("%Y-%m-%d")
+                except ValueError:
+                    continue
         return None
     except Exception:
         return None
 
 
-def parse_time(time_text: str) -> Optional[str]:
-    """Parse time from '8:00PM' format."""
+def parse_calendar_time(date_text: str) -> Optional[str]:
+    """Parse time from 'Tuesday, January 13, 8:00 pm' format."""
     try:
-        match = re.search(r"(\d{1,2}):(\d{2})\s*(AM|PM)", time_text, re.IGNORECASE)
+        match = re.search(r"(\d+):(\d+)\s*(am|pm)", date_text, re.IGNORECASE)
         if match:
             hour, minute, period = match.groups()
             hour = int(hour)
-            if period.upper() == "PM" and hour != 12:
+            if period.lower() == "pm" and hour != 12:
                 hour += 12
-            elif period.upper() == "AM" and hour == 12:
+            elif period.lower() == "am" and hour == 12:
                 hour = 0
             return f"{hour:02d}:{minute}"
         return None
     except Exception:
         return None
+
+
+def parse_price(price_text: str) -> tuple[Optional[float], Optional[float]]:
+    """Parse price from '$25.00 – $35.00' or '$15.00' format."""
+    try:
+        prices = re.findall(r"\$(\d+(?:\.\d{2})?)", price_text)
+        if len(prices) >= 2:
+            return float(prices[0]), float(prices[1])
+        elif len(prices) == 1:
+            return float(prices[0]), float(prices[0])
+        return None, None
+    except Exception:
+        return None, None
 
 
 def crawl(source: dict) -> tuple[int, int, int]:
@@ -103,50 +112,66 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             body_text = page.inner_text("body")
 
-            # Pattern: Show Title\nDay, Mon DD\nTime\nGET TICKETS
-            # Split by "GET TICKETS"
-            blocks = re.split(r"GET TICKETS", body_text, flags=re.IGNORECASE)
+            # Calendar format:
+            # TUE
+            # 13
+            # Open Mic Night Every Monday - Wednesday
+            # Tuesday, January 13, 8:00 pm
+            # Description...
+            # Get Tickets $15.00
 
-            for block in blocks:
-                lines = [l.strip() for l in block.strip().split("\n") if l.strip()]
-                if len(lines) < 2:
+            # Split by day markers (MON, TUE, WED, etc.)
+            day_pattern = r"\n(MON|TUE|WED|THU|FRI|SAT|SUN)\n(\d{1,2})\n"
+            parts = re.split(day_pattern, body_text)
+
+            # Skip the first part (before first day marker)
+            # Then process in groups of 3: day_abbrev, day_num, content
+            i = 1
+            while i + 2 < len(parts):
+                day_abbrev = parts[i]
+                day_num = parts[i + 1]
+                content = parts[i + 2]
+                i += 3
+
+                lines = [l.strip() for l in content.split("\n") if l.strip()]
+                if not lines:
                     continue
 
-                title = None
-                date_text = None
-                time_text = None
+                # First line is typically the event title
+                title = lines[0]
 
-                for line in lines:
-                    # Time pattern
-                    if re.match(r"\d{1,2}:\d{2}\s*(AM|PM)$", line, re.IGNORECASE):
-                        time_text = line
-                        continue
-
-                    # Date pattern
-                    if re.search(r"(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday),?\s+\w{3}\s+\d+", line, re.IGNORECASE):
-                        date_text = line
-                        continue
-                    if re.match(r"\w{3}\s+\d+$", line):
-                        date_text = line
-                        continue
-
-                    # Title - substantial text, not navigation
-                    skip_words = ["UPCOMING SHOWS", "TONIGHT", "Calendar", "Open Mics", "About Us", "Show Time"]
-                    if not title and len(line) > 5 and not any(w in line for w in skip_words):
-                        title = line
-
-                if not title or not date_text:
+                # Skip navigation/header items
+                skip_words = ["PAST EVENT", "View All", "Select date", "Event Views"]
+                if any(w.lower() in title.lower() for w in skip_words):
                     continue
 
-                start_date = parse_date(date_text)
+                # Look for date/time line: "Tuesday, January 13, 8:00 pm"
+                date_line = None
+                price_line = None
+                description = None
+
+                for line in lines[1:]:
+                    if re.match(r"\w+,\s+\w+\s+\d+,\s+\d+:\d+\s*(am|pm)", line, re.IGNORECASE):
+                        date_line = line
+                    elif "Get Tickets" in line or "$" in line:
+                        price_line = line
+                    elif len(line) > 20 and not description:
+                        # Likely description
+                        description = line
+
+                if not date_line:
+                    continue
+
+                start_date = parse_calendar_date(date_line)
                 if not start_date:
                     continue
 
-                start_time = parse_time(time_text or "")
+                start_time = parse_calendar_time(date_line)
+                price_min, price_max = parse_price(price_line or "")
 
                 events_found += 1
 
-                content_hash = generate_content_hash(title, "Laughing Skull Lounge", start_date)
+                content_hash = generate_content_hash(title, "Laughing Skull Lounge", start_date + (start_time or ""))
 
                 existing = find_event_by_hash(content_hash)
                 if existing:
@@ -157,7 +182,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     "source_id": source_id,
                     "venue_id": venue_id,
                     "title": title,
-                    "description": None,
+                    "description": description,
                     "start_date": start_date,
                     "start_time": start_time,
                     "end_date": None,
@@ -166,15 +191,15 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     "category": "comedy",
                     "subcategory": "standup",
                     "tags": ["comedy", "standup", "laughing-skull"],
-                    "price_min": None,
-                    "price_max": None,
+                    "price_min": price_min,
+                    "price_max": price_max,
                     "price_note": None,
                     "is_free": False,
                     "source_url": BASE_URL,
                     "ticket_url": None,
                     "image_url": None,
                     "raw_text": None,
-                    "extraction_confidence": 0.85,
+                    "extraction_confidence": 0.90,
                     "is_recurring": False,
                     "recurrence_rule": None,
                     "content_hash": content_hash,
@@ -183,7 +208,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 try:
                     insert_event(event_record)
                     events_new += 1
-                    logger.info(f"Added: {title} on {start_date}")
+                    logger.info(f"Added: {title} on {start_date} at {start_time}")
                 except Exception as e:
                     logger.error(f"Failed to insert: {title}: {e}")
 
