@@ -1,5 +1,6 @@
-import { getFilteredEventsWithSearch, getEventsForMap, getVenuesWithEvents, type SearchFilters } from "@/lib/search";
+import { getFilteredEventsWithSearch, getEventsForMap, getVenuesWithEvents, type SearchFilters, type EventWithLocation } from "@/lib/search";
 import EventCard from "@/components/EventCard";
+import EventGroup from "@/components/EventGroup";
 import SearchBar from "@/components/SearchBar";
 import FilterBar from "@/components/FilterBar";
 import ViewToggle from "@/components/ViewToggle";
@@ -7,6 +8,96 @@ import MapViewWrapper from "@/components/MapViewWrapper";
 import Link from "next/link";
 import { format, parseISO, isToday, isTomorrow } from "date-fns";
 import { Suspense } from "react";
+
+// Rollup thresholds
+const VENUE_ROLLUP_THRESHOLD = 4; // Collapse if venue has 4+ events
+const CATEGORY_ROLLUP_THRESHOLD = 5; // Collapse if category has 5+ events
+const ROLLUP_CATEGORIES = ["community"]; // Categories that get rolled up
+
+type DisplayItem =
+  | { type: "event"; event: EventWithLocation }
+  | { type: "venue-group"; venueId: number; venueName: string; neighborhood: string | null; events: EventWithLocation[] }
+  | { type: "category-group"; categoryId: string; categoryName: string; events: EventWithLocation[] };
+
+function groupEventsForDisplay(events: EventWithLocation[]): DisplayItem[] {
+  const items: DisplayItem[] = [];
+  const usedEventIds = new Set<number>();
+
+  // First pass: Find venue clusters
+  const venueGroups = new Map<number, EventWithLocation[]>();
+  for (const event of events) {
+    if (event.venue?.id) {
+      const existing = venueGroups.get(event.venue.id) || [];
+      existing.push(event);
+      venueGroups.set(event.venue.id, existing);
+    }
+  }
+
+  // Create venue groups for venues with enough events
+  for (const [venueId, venueEvents] of venueGroups) {
+    if (venueEvents.length >= VENUE_ROLLUP_THRESHOLD) {
+      const venue = venueEvents[0].venue!;
+      items.push({
+        type: "venue-group",
+        venueId,
+        venueName: venue.name,
+        neighborhood: venue.neighborhood,
+        events: venueEvents.sort((a, b) => (a.start_time || "").localeCompare(b.start_time || "")),
+      });
+      venueEvents.forEach((e) => usedEventIds.add(e.id));
+    }
+  }
+
+  // Second pass: Find category clusters (only for specific categories)
+  const categoryGroups = new Map<string, EventWithLocation[]>();
+  for (const event of events) {
+    if (usedEventIds.has(event.id)) continue;
+    if (event.category_id && ROLLUP_CATEGORIES.includes(event.category_id)) {
+      const existing = categoryGroups.get(event.category_id) || [];
+      existing.push(event);
+      categoryGroups.set(event.category_id, existing);
+    }
+  }
+
+  // Create category groups
+  for (const [categoryId, catEvents] of categoryGroups) {
+    if (catEvents.length >= CATEGORY_ROLLUP_THRESHOLD) {
+      const categoryNames: Record<string, string> = {
+        community: "Volunteer & Community",
+      };
+      items.push({
+        type: "category-group",
+        categoryId,
+        categoryName: categoryNames[categoryId] || categoryId,
+        events: catEvents.sort((a, b) => (a.start_time || "").localeCompare(b.start_time || "")),
+      });
+      catEvents.forEach((e) => usedEventIds.add(e.id));
+    }
+  }
+
+  // Third pass: Add remaining events as individual items
+  for (const event of events) {
+    if (!usedEventIds.has(event.id)) {
+      items.push({ type: "event", event });
+    }
+  }
+
+  // Sort: groups first (by earliest event time), then individual events by time
+  items.sort((a, b) => {
+    const getFirstTime = (item: DisplayItem): string => {
+      if (item.type === "event") return item.event.start_time || "99:99";
+      return item.events[0]?.start_time || "99:99";
+    };
+    // Groups go to the end of their time slot
+    const aIsGroup = a.type !== "event";
+    const bIsGroup = b.type !== "event";
+    if (aIsGroup && !bIsGroup) return 1;
+    if (!aIsGroup && bIsGroup) return -1;
+    return getFirstTime(a).localeCompare(getFirstTime(b));
+  });
+
+  return items;
+}
 
 export const revalidate = 60;
 
@@ -193,9 +284,30 @@ export default async function Home({ searchParams }: Props) {
 
                     {/* Events */}
                     <div>
-                      {eventsByDate[date].map((event, idx) => (
-                        <EventCard key={event.id} event={event} index={idx} />
-                      ))}
+                      {groupEventsForDisplay(eventsByDate[date]).map((item, idx) => {
+                        if (item.type === "venue-group") {
+                          return (
+                            <EventGroup
+                              key={`venue-${item.venueId}`}
+                              type="venue"
+                              title={item.venueName}
+                              subtitle={item.neighborhood || undefined}
+                              events={item.events}
+                            />
+                          );
+                        }
+                        if (item.type === "category-group") {
+                          return (
+                            <EventGroup
+                              key={`cat-${item.categoryId}`}
+                              type="category"
+                              title={item.categoryName}
+                              events={item.events}
+                            />
+                          );
+                        }
+                        return <EventCard key={item.event.id} event={item.event} index={idx} />;
+                      })}
                     </div>
                   </section>
                 ))}
