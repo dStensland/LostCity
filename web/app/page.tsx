@@ -3,6 +3,7 @@ import SearchBar from "@/components/SearchBar";
 import FilterBar from "@/components/FilterBar";
 import ActiveFilters from "@/components/ActiveFilters";
 import EventList from "@/components/EventList";
+import ModeToggle from "@/components/ModeToggle";
 import Link from "next/link";
 import { Suspense } from "react";
 
@@ -63,14 +64,11 @@ export default async function Home({ searchParams }: Props) {
         </nav>
       </header>
 
-      {/* Compact Hero with Search */}
+      {/* Mode Toggle + Search */}
       <section className="py-4 sm:py-6 border-b border-[var(--twilight)]">
         <div className="max-w-3xl mx-auto px-4">
           <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-            {/* Tagline - hidden on mobile for compactness */}
-            <p className="hidden sm:block font-serif text-[var(--soft)] whitespace-nowrap">
-              Every show, every gathering, every hidden gem
-            </p>
+            <ModeToggle />
             {/* Search Bar */}
             <div className="flex-1 max-w-md">
               <Suspense fallback={<div className="h-10 bg-[var(--night)] rounded-lg animate-pulse" />}>
