@@ -139,3 +139,49 @@ export async function getEventsByCategory(
 
   return data as Event[];
 }
+
+export async function getRelatedEvents(
+  event: Event,
+  limit = 4
+): Promise<{ venueEvents: Event[]; sameDateEvents: Event[] }> {
+  const today = new Date().toISOString().split("T")[0];
+  const venueId = event.venue?.id;
+
+  // Get other events at the same venue
+  let venueEvents: Event[] = [];
+  if (venueId) {
+    const { data } = await supabase
+      .from("events")
+      .select(
+        `
+        *,
+        venue:venues(id, name, slug, address, neighborhood, city, state)
+      `
+      )
+      .eq("venue_id", venueId)
+      .neq("id", event.id)
+      .gte("start_date", today)
+      .order("start_date", { ascending: true })
+      .limit(limit);
+
+    venueEvents = (data as Event[]) || [];
+  }
+
+  // Get other events on the same date
+  const { data: sameDateData } = await supabase
+    .from("events")
+    .select(
+      `
+      *,
+      venue:venues(id, name, slug, address, neighborhood, city, state)
+    `
+    )
+    .eq("start_date", event.start_date)
+    .neq("id", event.id)
+    .order("start_time", { ascending: true })
+    .limit(limit);
+
+  const sameDateEvents = (sameDateData as Event[]) || [];
+
+  return { venueEvents, sameDateEvents };
+}

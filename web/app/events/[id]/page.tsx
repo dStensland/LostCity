@@ -1,4 +1,4 @@
-import { getEventById } from "@/lib/supabase";
+import { getEventById, getRelatedEvents, type Event } from "@/lib/supabase";
 import { format, parseISO } from "date-fns";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -133,6 +133,7 @@ export default async function EventPage({ params }: Props) {
     notFound();
   }
 
+  const { venueEvents, sameDateEvents } = await getRelatedEvents(event);
   const dateObj = parseISO(event.start_date);
   const formattedDate = format(dateObj, "EEEE, MMMM d, yyyy");
   const shortDate = format(dateObj, "MMM d");
@@ -328,6 +329,81 @@ export default async function EventPage({ params }: Props) {
               )}
             </div>
           </div>
+
+          {/* Related Events */}
+          {(venueEvents.length > 0 || sameDateEvents.length > 0) && (
+            <div className="mt-8 space-y-8">
+              {/* More at this venue */}
+              {venueEvents.length > 0 && event.venue && (
+                <div>
+                  <h2 className="font-mono text-[0.65rem] font-medium text-[var(--muted)] uppercase tracking-widest mb-4">
+                    More at {event.venue.name}
+                  </h2>
+                  <div className="space-y-2">
+                    {venueEvents.map((relatedEvent) => (
+                      <Link
+                        key={relatedEvent.id}
+                        href={`/events/${relatedEvent.id}`}
+                        className="block p-4 bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg hover:bg-[var(--twilight)] transition-colors group"
+                      >
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex-1 min-w-0">
+                            <h3 className="text-[var(--cream)] font-medium truncate group-hover:text-[var(--coral)] transition-colors">
+                              {relatedEvent.title}
+                            </h3>
+                            <p className="text-sm text-[var(--muted)] mt-1">
+                              {format(parseISO(relatedEvent.start_date), "EEE, MMM d")}
+                              {relatedEvent.start_time && ` · ${formatTime(relatedEvent.start_time).time} ${formatTime(relatedEvent.start_time).period}`}
+                            </p>
+                          </div>
+                          <span className="text-[var(--muted)] group-hover:text-[var(--coral)] transition-colors">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                            </svg>
+                          </span>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Same night */}
+              {sameDateEvents.length > 0 && (
+                <div>
+                  <h2 className="font-mono text-[0.65rem] font-medium text-[var(--muted)] uppercase tracking-widest mb-4">
+                    That same night
+                  </h2>
+                  <div className="space-y-2">
+                    {sameDateEvents.map((relatedEvent) => (
+                      <Link
+                        key={relatedEvent.id}
+                        href={`/events/${relatedEvent.id}`}
+                        className="block p-4 bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg hover:bg-[var(--twilight)] transition-colors group"
+                      >
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex-1 min-w-0">
+                            <h3 className="text-[var(--cream)] font-medium truncate group-hover:text-[var(--coral)] transition-colors">
+                              {relatedEvent.title}
+                            </h3>
+                            <p className="text-sm text-[var(--muted)] mt-1">
+                              {relatedEvent.venue?.name || "Venue TBA"}
+                              {relatedEvent.start_time && ` · ${formatTime(relatedEvent.start_time).time} ${formatTime(relatedEvent.start_time).period}`}
+                            </p>
+                          </div>
+                          <span className="text-[var(--muted)] group-hover:text-[var(--coral)] transition-colors">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                            </svg>
+                          </span>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </main>
 
         {/* Footer */}

@@ -3,6 +3,7 @@ import EventCard from "@/components/EventCard";
 import EventGroup from "@/components/EventGroup";
 import SearchBar from "@/components/SearchBar";
 import FilterBar from "@/components/FilterBar";
+import ActiveFilters from "@/components/ActiveFilters";
 import ViewToggle from "@/components/ViewToggle";
 import MapViewWrapper from "@/components/MapViewWrapper";
 import Link from "next/link";
@@ -193,39 +194,21 @@ export default async function Home({ searchParams }: Props) {
         </nav>
       </header>
 
-      {/* Hero */}
-      <section className="py-8 sm:py-12 text-center border-b border-[var(--twilight)]">
-        <p className="font-mono text-[0.65rem] font-medium text-[var(--muted)] uppercase tracking-[0.2em] mb-3">
-          Discover Atlanta
-        </p>
-        <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight text-[var(--cream)]">
-          Lost City
-        </h1>
-        <p className="font-serif text-lg sm:text-xl text-[var(--soft)] mt-2">
-          Every show, every gathering, every hidden gem
-        </p>
-
-        {/* Stats */}
-        <div className="flex justify-center gap-8 sm:gap-12 mt-6 sm:mt-8">
-          <div className="text-center">
-            <div className="font-mono text-xl sm:text-2xl font-semibold gradient-text-stats">{total.toLocaleString()}</div>
-            <div className="font-mono text-[0.6rem] text-[var(--muted)] uppercase tracking-widest mt-1">Events</div>
+      {/* Compact Hero with Search */}
+      <section className="py-4 sm:py-6 border-b border-[var(--twilight)]">
+        <div className="max-w-3xl mx-auto px-4">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+            {/* Tagline - hidden on mobile for compactness */}
+            <p className="hidden sm:block font-serif text-[var(--soft)] whitespace-nowrap">
+              Every show, every gathering, every hidden gem
+            </p>
+            {/* Search Bar */}
+            <div className="flex-1 max-w-md">
+              <Suspense fallback={<div className="h-10 bg-[var(--night)] rounded-lg animate-pulse" />}>
+                <SearchBar />
+              </Suspense>
+            </div>
           </div>
-          <div className="text-center">
-            <div className="font-mono text-xl sm:text-2xl font-semibold gradient-text-stats">{venues.length}</div>
-            <div className="font-mono text-[0.6rem] text-[var(--muted)] uppercase tracking-widest mt-1">Venues</div>
-          </div>
-          <div className="text-center">
-            <div className="font-mono text-xl sm:text-2xl font-semibold gradient-text-stats">20+</div>
-            <div className="font-mono text-[0.6rem] text-[var(--muted)] uppercase tracking-widest mt-1">Sources</div>
-          </div>
-        </div>
-
-        {/* Search Bar */}
-        <div className="mt-6 sm:mt-8 max-w-xl mx-auto px-4">
-          <Suspense fallback={<div className="h-11 bg-[var(--night)] rounded-lg animate-pulse" />}>
-            <SearchBar />
-          </Suspense>
         </div>
       </section>
 
@@ -243,9 +226,12 @@ export default async function Home({ searchParams }: Props) {
         </div>
       </section>
 
-      {/* Event count */}
-      <div className="max-w-3xl mx-auto px-4 py-3 border-b border-[var(--twilight)]">
-        <p className="font-mono text-xs text-[var(--muted)]">
+      {/* Active filters + Event count */}
+      <div className="max-w-3xl mx-auto px-4 border-b border-[var(--twilight)]">
+        <Suspense fallback={null}>
+          <ActiveFilters />
+        </Suspense>
+        <p className="font-mono text-xs text-[var(--muted)] py-3">
           <span className="text-[var(--soft)]">{total}</span>{" "}
           {hasActiveFilters ? "matching events" : "upcoming events"}
         </p>

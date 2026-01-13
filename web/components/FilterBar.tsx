@@ -1,12 +1,60 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useState, useRef, useEffect } from "react";
+import { useCallback, useState, useRef, useEffect, type ReactNode } from "react";
 import { CATEGORIES, SUBCATEGORIES, DATE_FILTERS, type VenueWithCount } from "@/lib/search";
 import VenueFilter from "./VenueFilter";
 
 interface Props {
   venues: VenueWithCount[];
+}
+
+function ScrollableRow({ children }: { children: ReactNode }) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [showLeftFade, setShowLeftFade] = useState(false);
+  const [showRightFade, setShowRightFade] = useState(false);
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+
+    const checkScroll = () => {
+      const { scrollLeft, scrollWidth, clientWidth } = el;
+      setShowLeftFade(scrollLeft > 0);
+      setShowRightFade(scrollLeft < scrollWidth - clientWidth - 1);
+    };
+
+    checkScroll();
+    el.addEventListener("scroll", checkScroll);
+    window.addEventListener("resize", checkScroll);
+    return () => {
+      el.removeEventListener("scroll", checkScroll);
+      window.removeEventListener("resize", checkScroll);
+    };
+  }, []);
+
+  return (
+    <div className="relative">
+      {/* Left fade */}
+      <div
+        className={`absolute left-0 top-0 bottom-0 w-6 bg-gradient-to-r from-[var(--night)] to-transparent z-10 pointer-events-none transition-opacity ${
+          showLeftFade ? "opacity-100" : "opacity-0"
+        }`}
+      />
+      {/* Right fade */}
+      <div
+        className={`absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-[var(--night)] to-transparent z-10 pointer-events-none transition-opacity ${
+          showRightFade ? "opacity-100" : "opacity-0"
+        }`}
+      />
+      <div
+        ref={scrollRef}
+        className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-hide -mx-1 px-1"
+      >
+        {children}
+      </div>
+    </div>
+  );
 }
 
 export default function FilterBar({ venues }: Props) {
@@ -107,7 +155,7 @@ export default function FilterBar({ venues }: Props) {
   return (
     <div className="flex-1 space-y-2" ref={dropdownRef}>
       {/* Category filters row */}
-      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-hide -mx-1 px-1">
+      <ScrollableRow>
         <button
           type="button"
           onClick={clearCategories}
@@ -177,10 +225,10 @@ export default function FilterBar({ venues }: Props) {
             )}
           </div>
         ))}
-      </div>
+      </ScrollableRow>
 
       {/* Date, Venue, and Free filters row */}
-      <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide -mx-1 px-1">
+      <ScrollableRow>
         {/* Date filters */}
         {DATE_FILTERS.map((df) => (
           <button
@@ -216,7 +264,7 @@ export default function FilterBar({ venues }: Props) {
           )}
           Free
         </button>
-      </div>
+      </ScrollableRow>
     </div>
   );
 }
