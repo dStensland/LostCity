@@ -22,6 +22,12 @@ export type EventWithLocation = Event & {
   venue: Event["venue"] & {
     lat: number | null;
     lng: number | null;
+    typical_price_min: number | null;
+    typical_price_max: number | null;
+  } | null;
+  category_data: {
+    typical_price_min: number | null;
+    typical_price_max: number | null;
   } | null;
 };
 
@@ -102,7 +108,8 @@ export async function getFilteredEventsWithSearch(
     .select(
       `
       *,
-      venue:venues(id, name, slug, address, neighborhood, city, state, lat, lng)
+      venue:venues(id, name, slug, address, neighborhood, city, state, lat, lng, typical_price_min, typical_price_max),
+      category_data:categories(typical_price_min, typical_price_max)
     `,
       { count: "exact" }
     )

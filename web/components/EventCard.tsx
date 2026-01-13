@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { Event } from "@/lib/supabase";
+import type { EventWithLocation } from "@/lib/search";
 
 function formatTime(time: string | null, isAllDay?: boolean): { time: string; period: string } {
   if (isAllDay) return { time: "All", period: "Day" };
@@ -12,23 +13,66 @@ function formatTime(time: string | null, isAllDay?: boolean): { time: string; pe
   return { time: `${hour12}:${minutes}`, period };
 }
 
-function formatPrice(event: Event): { text: string; isFree: boolean } {
-  if (event.is_free) return { text: "Free", isFree: true };
-  if (event.price_min === null) return { text: "TBD", isFree: false };
-  if (event.price_min === event.price_max || event.price_max === null) {
-    return { text: `$${event.price_min}`, isFree: false };
+type EventWithPriceEstimate = Event & {
+  venue?: Event["venue"] & {
+    typical_price_min?: number | null;
+    typical_price_max?: number | null;
+  } | null;
+  category_data?: {
+    typical_price_min: number | null;
+    typical_price_max: number | null;
+  } | null;
+};
+
+function formatPrice(event: EventWithPriceEstimate): { text: string; isFree: boolean; isEstimate: boolean } {
+  // Explicit free
+  if (event.is_free) return { text: "Free", isFree: true, isEstimate: false };
+
+  // Has explicit price
+  if (event.price_min !== null) {
+    if (event.price_min === event.price_max || event.price_max === null) {
+      return { text: `$${event.price_min}`, isFree: false, isEstimate: false };
+    }
+    return { text: `$${event.price_min}–${event.price_max}`, isFree: false, isEstimate: false };
   }
-  return { text: `$${event.price_min}+`, isFree: false };
+
+  // Try venue typical price first (more specific)
+  const venueMin = event.venue?.typical_price_min;
+  const venueMax = event.venue?.typical_price_max;
+  if (venueMin !== null && venueMin !== undefined) {
+    if (venueMin === 0 && venueMax === 0) {
+      return { text: "Free", isFree: true, isEstimate: true };
+    }
+    if (venueMin === venueMax || venueMax === null || venueMax === undefined) {
+      return { text: `~$${venueMin}`, isFree: false, isEstimate: true };
+    }
+    return { text: `~$${venueMin}–${venueMax}`, isFree: false, isEstimate: true };
+  }
+
+  // Fall back to category typical price
+  const catMin = event.category_data?.typical_price_min;
+  const catMax = event.category_data?.typical_price_max;
+  if (catMin !== null && catMin !== undefined) {
+    if (catMin === 0 && catMax === 0) {
+      return { text: "Free", isFree: true, isEstimate: true };
+    }
+    if (catMin === catMax || catMax === null || catMax === undefined) {
+      return { text: `~$${catMin}`, isFree: false, isEstimate: true };
+    }
+    return { text: `~$${catMin}–${catMax}`, isFree: false, isEstimate: true };
+  }
+
+  return { text: "—", isFree: false, isEstimate: false };
 }
 
 interface Props {
-  event: Event;
+  event: EventWithPriceEstimate;
   index?: number;
 }
 
 export default function EventCard({ event, index = 0 }: Props) {
   const { time, period } = formatTime(event.start_time, event.is_all_day);
-  const { text: priceText, isFree } = formatPrice(event);
+  const { text: priceText, isFree, isEstimate } = formatPrice(event);
 
   // Stagger animation class
   const staggerClass = index < 10 ? `stagger-${index + 1}` : "";
@@ -66,14 +110,20 @@ export default function EventCard({ event, index = 0 }: Props) {
             </span>
           )}
           {/* Mobile: show price inline */}
-          <span className={`sm:hidden font-mono text-xs font-medium ${isFree ? "text-[var(--cat-community)]" : "text-[var(--muted)]"}`}>
+          <span
+            className={`sm:hidden font-mono text-xs font-medium ${isFree ? "text-[var(--cat-community)]" : "text-[var(--muted)]"} ${isEstimate ? "italic opacity-70" : ""}`}
+            title={isEstimate ? "Estimated price range" : undefined}
+          >
             {priceText}
           </span>
         </div>
       </div>
 
       {/* Price column - desktop only */}
-      <div className={`hidden sm:block font-mono text-sm font-medium text-right whitespace-nowrap ${isFree ? "text-[var(--cat-community)]" : "text-[var(--muted)]"}`}>
+      <div
+        className={`hidden sm:block font-mono text-sm font-medium text-right whitespace-nowrap ${isFree ? "text-[var(--cat-community)]" : "text-[var(--muted)]"} ${isEstimate ? "italic opacity-70" : ""}`}
+        title={isEstimate ? "Estimated price range" : undefined}
+      >
         {priceText}
       </div>
     </Link>
