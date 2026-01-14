@@ -17,6 +17,43 @@ export const SPOT_TYPES = {
   games: { label: "Games", icon: "🎯" },
 } as const;
 
+export const VIBES = [
+  { value: "late-night", label: "Late Night" },
+  { value: "date-spot", label: "Date Spot" },
+  { value: "outdoor-seating", label: "Outdoor" },
+  { value: "divey", label: "Divey" },
+  { value: "craft-cocktails", label: "Cocktails" },
+  { value: "live-music", label: "Live Music" },
+  { value: "dog-friendly", label: "Dog Friendly" },
+  { value: "good-for-groups", label: "Groups" },
+] as const;
+
+export type Vibe = (typeof VIBES)[number]["value"];
+
+export const NEIGHBORHOODS = [
+  "Midtown",
+  "Downtown",
+  "Buckhead",
+  "East Atlanta",
+  "Inman Park",
+  "Virginia-Highland",
+  "Decatur",
+  "Little Five Points",
+  "Old Fourth Ward",
+  "West End",
+  "Westside",
+  "Poncey-Highland",
+  "Grant Park",
+  "Edgewood",
+  "Kirkwood",
+  "Druid Hills",
+  "Sweet Auburn",
+  "Castleberry Hill",
+  "Peachtree Hills",
+] as const;
+
+export type Neighborhood = (typeof NEIGHBORHOODS)[number];
+
 export type SpotType = keyof typeof SPOT_TYPES;
 
 export type Spot = {
@@ -64,7 +101,11 @@ export async function getSpots(type?: string): Promise<Spot[]> {
   return (data || []) as Spot[];
 }
 
-export async function getSpotsWithEventCounts(type?: string): Promise<Spot[]> {
+export async function getSpotsWithEventCounts(
+  type?: string,
+  vibe?: string,
+  neighborhood?: string
+): Promise<Spot[]> {
   const today = new Date().toISOString().split("T")[0];
 
   // Get all venues
@@ -72,6 +113,18 @@ export async function getSpotsWithEventCounts(type?: string): Promise<Spot[]> {
 
   if (type && type !== "all") {
     venueQuery = venueQuery.or(`spot_type.eq.${type},spot_types.cs.{${type}}`);
+  }
+
+  if (vibe) {
+    // Support multiple vibes separated by comma
+    const vibes = vibe.split(",").filter(Boolean);
+    for (const v of vibes) {
+      venueQuery = venueQuery.contains("vibes", [v]);
+    }
+  }
+
+  if (neighborhood && neighborhood !== "all") {
+    venueQuery = venueQuery.eq("neighborhood", neighborhood);
   }
 
   const { data: venues, error: venueError } = await venueQuery;
@@ -176,4 +229,35 @@ export function getSpotTypeLabels(types: string[] | null): string {
   return types
     .map((t) => SPOT_TYPES[t as SpotType]?.label || t)
     .join(" + ");
+}
+
+export async function getNearbySpots(
+  venueId: number,
+  limit = 6
+): Promise<Spot[]> {
+  // Get the venue's neighborhood
+  const { data: venue } = await supabase
+    .from("venues")
+    .select("neighborhood")
+    .eq("id", venueId)
+    .single<{ neighborhood: string | null }>();
+
+  if (!venue?.neighborhood) return [];
+
+  // Get nearby spots in same neighborhood (excluding the event venue)
+  const { data, error } = await supabase
+    .from("venues")
+    .select("*")
+    .eq("neighborhood", venue.neighborhood)
+    .neq("id", venueId)
+    .in("spot_type", ["bar", "restaurant", "coffee_shop", "brewery"])
+    .eq("active", true)
+    .limit(limit);
+
+  if (error) {
+    console.error("Error fetching nearby spots:", error);
+    return [];
+  }
+
+  return (data || []) as Spot[];
 }

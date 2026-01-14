@@ -1,4 +1,6 @@
 import { getEventById, getRelatedEvents, type Event } from "@/lib/supabase";
+import { getNearbySpots, getSpotTypeLabel } from "@/lib/spots";
+import CategoryIcon from "@/components/CategoryIcon";
 import { format, parseISO } from "date-fns";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -134,6 +136,7 @@ export default async function EventPage({ params }: Props) {
   }
 
   const { venueEvents, sameDateEvents } = await getRelatedEvents(event);
+  const nearbySpots = event.venue?.id ? await getNearbySpots(event.venue.id) : [];
   const dateObj = parseISO(event.start_date);
   const formattedDate = format(dateObj, "EEEE, MMMM d, yyyy");
   const shortDate = format(dateObj, "MMM d");
@@ -329,6 +332,40 @@ export default async function EventPage({ params }: Props) {
               )}
             </div>
           </div>
+
+          {/* Before & After - Nearby Spots */}
+          {nearbySpots.length > 0 && event.venue?.neighborhood && (
+            <div className="mt-8">
+              <h2 className="font-mono text-[0.65rem] font-medium text-[var(--muted)] uppercase tracking-widest mb-4">
+                Before & After in {event.venue.neighborhood}
+              </h2>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {nearbySpots.map((spot) => (
+                  <Link
+                    key={spot.id}
+                    href={`/spots/${spot.slug}`}
+                    className="group p-3 bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg hover:bg-[var(--twilight)] transition-colors"
+                  >
+                    <div className="flex items-start gap-2">
+                      <CategoryIcon
+                        type={spot.spot_type || "bar"}
+                        size={16}
+                        className="mt-0.5 flex-shrink-0"
+                      />
+                      <div className="min-w-0 flex-1">
+                        <h3 className="text-[var(--cream)] text-sm font-medium truncate group-hover:text-[var(--coral)] transition-colors">
+                          {spot.name}
+                        </h3>
+                        <p className="text-[0.65rem] text-[var(--muted)] font-mono uppercase tracking-wider mt-0.5">
+                          {getSpotTypeLabel(spot.spot_type)}
+                        </p>
+                      </div>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Related Events */}
           {(venueEvents.length > 0 || sameDateEvents.length > 0) && (
