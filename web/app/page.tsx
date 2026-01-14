@@ -4,6 +4,7 @@ import FilterBar from "@/components/FilterBar";
 import EventList from "@/components/EventList";
 import ModeToggle from "@/components/ModeToggle";
 import Logo from "@/components/Logo";
+import UserMenu from "@/components/UserMenu";
 import Link from "next/link";
 import { Suspense } from "react";
 
@@ -16,6 +17,7 @@ type Props = {
     search?: string;
     categories?: string;
     subcategories?: string;
+    tags?: string;
     price?: string;
     date?: string;
   }>;
@@ -33,6 +35,7 @@ export default async function Home({ searchParams }: Props) {
     search: params.search || undefined,
     categories: params.categories?.split(",").filter(Boolean) || undefined,
     subcategories: params.subcategories?.split(",").filter(Boolean) || undefined,
+    tags: params.tags?.split(",").filter(Boolean) || undefined,
     is_free: isFree || undefined,
     price_max: priceMax,
     date_filter: (params.date as "today" | "weekend" | "week") || undefined,
@@ -41,7 +44,7 @@ export default async function Home({ searchParams }: Props) {
   // Always fetch page 1 on server for initial SSR
   const { events, total } = await getFilteredEventsWithSearch(filters, 1, PAGE_SIZE);
 
-  const hasActiveFilters = !!(params.search || params.categories || params.subcategories || params.price || params.date);
+  const hasActiveFilters = !!(params.search || params.categories || params.subcategories || params.tags || params.price || params.date);
 
   return (
     <div className="min-h-screen">
@@ -53,13 +56,14 @@ export default async function Home({ searchParams }: Props) {
             Atlanta
           </span>
         </div>
-        <nav className="flex gap-4 sm:gap-6">
+        <nav className="flex items-center gap-4 sm:gap-6">
           <Link href="/?view=map" className="font-mono text-[0.7rem] font-medium text-[var(--muted)] uppercase tracking-wide hover:text-[var(--cream)] transition-colors">
             Map
           </Link>
           <a href="mailto:hello@lostcity.ai" className="font-mono text-[0.7rem] font-medium text-[var(--muted)] uppercase tracking-wide hover:text-[var(--cream)] transition-colors">
             Submit
           </a>
+          <UserMenu />
         </nav>
       </header>
 

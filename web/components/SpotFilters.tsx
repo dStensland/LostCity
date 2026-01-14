@@ -3,6 +3,7 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback } from "react";
 import CategoryIcon, { CATEGORY_CONFIG, getCategoryLabel } from "./CategoryIcon";
+import { VIBE_GROUPS, VIBES } from "@/lib/spots";
 
 const SPOT_TYPES = [
   "music_venue",
@@ -32,17 +33,6 @@ const NEIGHBORHOODS = [
   "Old Fourth Ward",
   "West End",
   "Westside",
-] as const;
-
-const VIBES = [
-  { value: "late-night", label: "Late Night" },
-  { value: "date-spot", label: "Date Spot" },
-  { value: "outdoor-seating", label: "Outdoor" },
-  { value: "divey", label: "Divey" },
-  { value: "craft-cocktails", label: "Cocktails" },
-  { value: "live-music", label: "Live Music" },
-  { value: "dog-friendly", label: "Dog Friendly" },
-  { value: "good-for-groups", label: "Groups" },
 ] as const;
 
 export default function SpotFilters() {
@@ -144,29 +134,36 @@ export default function SpotFilters() {
         </div>
       </div>
 
-      {/* Vibe Filter Row */}
+      {/* Vibe Filter Row - Grouped */}
       <div className="border-b border-[var(--twilight)]">
         <div className="max-w-3xl mx-auto px-4 py-2">
-          <div className="flex gap-2 overflow-x-auto scrollbar-hide -mx-4 px-4 items-center">
-            <span className="font-mono text-[0.6rem] text-[var(--muted)] uppercase tracking-wider flex-shrink-0 mr-1">
+          <div className="flex gap-3 overflow-x-auto scrollbar-hide -mx-4 px-4 items-center">
+            <span className="font-mono text-[0.6rem] text-[var(--muted)] uppercase tracking-wider flex-shrink-0">
               Vibe
             </span>
-            {VIBES.map((vibe) => {
-              const isActive = selectedVibes.includes(vibe.value);
-              return (
-                <button
-                  key={vibe.value}
-                  onClick={() => toggleVibe(vibe.value)}
-                  className={`px-2.5 py-1 rounded-full font-mono text-[0.65rem] font-medium whitespace-nowrap transition-colors ${
-                    isActive
-                      ? "bg-[var(--rose)] text-[var(--void)]"
-                      : "bg-[var(--dusk)] text-[var(--muted)] hover:text-[var(--cream)] border border-[var(--twilight)]"
-                  }`}
-                >
-                  {vibe.label}
-                </button>
-              );
-            })}
+            {Object.entries(VIBE_GROUPS).map(([group, vibes]) => (
+              <div key={group} className="flex gap-1.5 items-center">
+                <span className="font-mono text-[0.55rem] text-[var(--twilight)] uppercase tracking-wider">
+                  {group}:
+                </span>
+                {vibes.map((vibe) => {
+                  const isActive = selectedVibes.includes(vibe.value);
+                  return (
+                    <button
+                      key={vibe.value}
+                      onClick={() => toggleVibe(vibe.value)}
+                      className={`px-2 py-0.5 rounded-full font-mono text-[0.6rem] font-medium whitespace-nowrap transition-colors ${
+                        isActive
+                          ? "bg-[var(--rose)] text-[var(--void)]"
+                          : "bg-[var(--dusk)] text-[var(--muted)] hover:text-[var(--cream)] border border-[var(--twilight)]"
+                      }`}
+                    >
+                      {vibe.label}
+                    </button>
+                  );
+                })}
+              </div>
+            ))}
           </div>
         </div>
       </div>

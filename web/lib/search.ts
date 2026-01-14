@@ -13,6 +13,7 @@ export interface SearchFilters {
   search?: string;
   categories?: string[];
   subcategories?: string[];
+  tags?: string[];
   is_free?: boolean;
   price_max?: number;
   date_filter?: "today" | "weekend" | "week";
@@ -182,6 +183,11 @@ export async function getFilteredEventsWithSearch(
     query = query.in("subcategory_id", filters.subcategories);
   }
 
+  // Apply tag filter (events with ANY of the selected tags)
+  if (filters.tags && filters.tags.length > 0) {
+    query = query.overlaps("tags", filters.tags);
+  }
+
   // Apply price filters
   if (filters.is_free) {
     query = query.eq("is_free", true);
@@ -279,6 +285,10 @@ export async function getEventsForMap(
 
   if (filters.subcategories && filters.subcategories.length > 0) {
     query = query.in("subcategory_id", filters.subcategories);
+  }
+
+  if (filters.tags && filters.tags.length > 0) {
+    query = query.overlaps("tags", filters.tags);
   }
 
   if (filters.is_free) {
@@ -437,6 +447,39 @@ export const PRICE_FILTERS = [
   { value: "under25", label: "Under $25", max: 25 },
   { value: "under50", label: "Under $50", max: 50 },
   { value: "under100", label: "Under $100", max: 100 },
+] as const;
+
+// Event tags for filtering
+export const TAG_GROUPS = {
+  Vibe: [
+    { value: "date-night", label: "Date Night" },
+    { value: "chill", label: "Chill" },
+    { value: "high-energy", label: "High Energy" },
+    { value: "intimate", label: "Intimate" },
+  ],
+  Access: [
+    { value: "free", label: "Free" },
+    { value: "all-ages", label: "All Ages" },
+    { value: "21+", label: "21+" },
+    { value: "family-friendly", label: "Family" },
+    { value: "accessible", label: "Accessible" },
+    { value: "outdoor", label: "Outdoor" },
+  ],
+  Special: [
+    { value: "local-artist", label: "Local Artist" },
+    { value: "touring", label: "Touring" },
+    { value: "album-release", label: "Album Release" },
+    { value: "one-night-only", label: "One Night Only" },
+    { value: "opening-night", label: "Opening Night" },
+    { value: "holiday", label: "Holiday" },
+  ],
+} as const;
+
+// Flat array of all tags
+export const ALL_TAGS = [
+  ...TAG_GROUPS.Vibe,
+  ...TAG_GROUPS.Access,
+  ...TAG_GROUPS.Special,
 ] as const;
 
 export interface VenueWithCount {

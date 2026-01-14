@@ -7,6 +7,7 @@ from datetime import datetime
 from typing import Optional
 from supabase import create_client, Client
 from config import get_config
+from tag_inference import infer_tags
 
 
 _client: Optional[Client] = None
@@ -61,9 +62,29 @@ def get_or_create_venue(venue_data: dict) -> int:
     return result.data[0]["id"]
 
 
-def insert_event(event_data: dict) -> int:
-    """Insert a new event. Returns event ID."""
+def get_venue_by_id(venue_id: int) -> Optional[dict]:
+    """Fetch a venue by its ID."""
     client = get_client()
+    result = client.table("venues").select("*").eq("id", venue_id).execute()
+    if result.data and len(result.data) > 0:
+        return result.data[0]
+    return None
+
+
+def insert_event(event_data: dict) -> int:
+    """Insert a new event with inferred tags. Returns event ID."""
+    client = get_client()
+
+    # Get venue vibes for tag inheritance
+    venue_vibes = []
+    if event_data.get("venue_id"):
+        venue = get_venue_by_id(event_data["venue_id"])
+        if venue:
+            venue_vibes = venue.get("vibes") or []
+
+    # Infer and merge tags
+    event_data["tags"] = infer_tags(event_data, venue_vibes)
+
     result = client.table("events").insert(event_data).execute()
     return result.data[0]["id"]
 
@@ -105,6 +126,25 @@ def create_crawl_log(source_id: int) -> int:
         "status": "running"
     }).execute()
     return result.data[0]["id"]
+
+
+def get_all_events(limit: int = 1000, offset: int = 0) -> list[dict]:
+    """Fetch events with pagination."""
+    client = get_client()
+    result = (
+        client.table("events")
+        .select("*")
+        .order("id")
+        .range(offset, offset + limit - 1)
+        .execute()
+    )
+    return result.data or []
+
+
+def update_event_tags(event_id: int, tags: list[str]) -> None:
+    """Update only the tags field of an event."""
+    client = get_client()
+    client.table("events").update({"tags": tags}).eq("id", event_id).execute()
 
 
 def update_crawl_log(

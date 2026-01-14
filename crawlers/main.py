@@ -67,6 +67,8 @@ SOURCE_MODULES = {
     # Libraries
     "fulton-library": "sources.fulton_library",
     "dekalb-library": "sources.dekalb_library",
+    # Electronic/DJ
+    "resident-advisor": "sources.resident_advisor",
 }
 
 

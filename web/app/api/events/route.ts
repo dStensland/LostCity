@@ -13,6 +13,7 @@ export async function GET(request: Request) {
     search: searchParams.get("search") || undefined,
     categories: searchParams.get("categories")?.split(",").filter(Boolean) || undefined,
     subcategories: searchParams.get("subcategories")?.split(",").filter(Boolean) || undefined,
+    tags: searchParams.get("tags")?.split(",").filter(Boolean) || undefined,
     is_free: isFree,
     price_max: priceMax,
     date_filter: (searchParams.get("date") as "today" | "weekend" | "week") || undefined,

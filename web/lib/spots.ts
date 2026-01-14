@@ -15,17 +15,51 @@ export const SPOT_TYPES = {
   museum: { label: "Museum", icon: "🏛️" },
   convention_center: { label: "Convention", icon: "🏢" },
   games: { label: "Games", icon: "🎯" },
+  park: { label: "Park", icon: "🌳" },
+  library: { label: "Library", icon: "📚" },
+  bookstore: { label: "Bookstore", icon: "📖" },
 } as const;
 
+// Vibes organized by category for UI grouping
+export const VIBE_GROUPS = {
+  Atmosphere: [
+    { value: "late-night", label: "Late Night" },
+    { value: "date-spot", label: "Date Spot" },
+    { value: "divey", label: "Divey" },
+    { value: "intimate", label: "Intimate" },
+    { value: "upscale", label: "Upscale" },
+    { value: "casual", label: "Casual" },
+    { value: "artsy", label: "Artsy" },
+    { value: "historic", label: "Historic" },
+  ],
+  Amenities: [
+    { value: "outdoor-seating", label: "Outdoor" },
+    { value: "craft-cocktails", label: "Cocktails" },
+    { value: "live-music", label: "Live Music" },
+    { value: "good-for-groups", label: "Groups" },
+    { value: "rooftop", label: "Rooftop" },
+    { value: "patio", label: "Patio" },
+    { value: "free-parking", label: "Free Parking" },
+  ],
+  Accessibility: [
+    { value: "all-ages", label: "All Ages" },
+    { value: "family-friendly", label: "Family Friendly" },
+    { value: "dog-friendly", label: "Dog Friendly" },
+    { value: "wheelchair-accessible", label: "Accessible" },
+  ],
+  Identity: [
+    { value: "lgbtq-friendly", label: "LGBTQ+" },
+    { value: "black-owned", label: "Black-Owned" },
+    { value: "woman-owned", label: "Woman-Owned" },
+  ],
+} as const;
+
+// Flat array of all vibes for compatibility
 export const VIBES = [
-  { value: "late-night", label: "Late Night" },
-  { value: "date-spot", label: "Date Spot" },
-  { value: "outdoor-seating", label: "Outdoor" },
-  { value: "divey", label: "Divey" },
-  { value: "craft-cocktails", label: "Cocktails" },
-  { value: "live-music", label: "Live Music" },
-  { value: "dog-friendly", label: "Dog Friendly" },
-  { value: "good-for-groups", label: "Groups" },
+  ...VIBE_GROUPS.Atmosphere,
+  ...VIBE_GROUPS.Amenities,
+  ...VIBE_GROUPS.Accessibility,
+  ...VIBE_GROUPS.Identity,
 ] as const;
 
 export type Vibe = (typeof VIBES)[number]["value"];
@@ -35,6 +69,7 @@ export const NEIGHBORHOODS = [
   "Downtown",
   "Buckhead",
   "East Atlanta",
+  "East Atlanta Village",
   "Inman Park",
   "Virginia-Highland",
   "Decatur",
@@ -50,6 +85,11 @@ export const NEIGHBORHOODS = [
   "Sweet Auburn",
   "Castleberry Hill",
   "Peachtree Hills",
+  "Candler Park",
+  "Chastain Park",
+  "Cascade Heights",
+  "Dunwoody",
+  "West Midtown",
 ] as const;
 
 export type Neighborhood = (typeof NEIGHBORHOODS)[number];

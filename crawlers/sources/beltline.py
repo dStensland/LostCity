@@ -19,7 +19,7 @@ from dedupe import generate_content_hash
 logger = logging.getLogger(__name__)
 
 BASE_URL = "https://beltline.org"
-EVENTS_URL = f"{BASE_URL}/visit/events/"
+EVENTS_URL = f"{BASE_URL}/events"
 
 BELTLINE_VENUE = {
     "name": "Atlanta BeltLine",
@@ -147,48 +147,65 @@ def crawl(source: dict) -> tuple[int, int, int]:
             # Get venue ID
             venue_id = get_or_create_venue(BELTLINE_VENUE)
 
-            # Find event cards
-            cards = page.query_selector_all("article, [class*='event'], [class*='card']")
-            logger.info(f"Found {len(cards)} potential event cards")
+            # Find event links - format: JAN | 15 | CATEGORY | | Title | | TIME
+            event_links = page.query_selector_all("a[href*='/events/']")
+            logger.info(f"Found {len(event_links)} event links")
 
-            for card in cards:
+            current_year = datetime.now().year
+            seen_hrefs = set()
+
+            for link in event_links:
                 try:
-                    text = card.inner_text().strip()
+                    href = link.get_attribute("href")
+                    if not href or href in seen_hrefs or href == "/events":
+                        continue
+                    seen_hrefs.add(href)
+
+                    text = link.inner_text().strip()
+                    # Split by newlines - format:
+                    # JAN / 15 / CATEGORY / / Title / / TIME / IN-PERSON / LOCATION
                     lines = [l.strip() for l in text.split("\n") if l.strip()]
 
-                    if len(lines) < 2:
+                    if len(lines) < 4:
                         continue
 
+                    # First line is month abbrev, second is day
+                    month_abbr = lines[0][:3].upper()
+                    day = lines[1]
+
+                    # Find title and time from remaining lines
                     title = None
-                    date_text = None
                     time_text = None
-
-                    for line in lines:
-                        # Date patterns
-                        if re.search(r"\w+\s+\d+,?\s*\d{4}", line):
-                            date_text = line
-                            continue
-                        if re.search(r"\d{1,2}/\d{1,2}/\d{2,4}", line):
-                            date_text = line
-                            continue
-
+                    for line in lines[2:]:
                         # Time pattern
-                        if re.search(r"\d{1,2}:\d{2}\s*(am|pm)", line, re.IGNORECASE):
+                        if re.search(r"\d{1,2}:\d{2}(AM|PM)", line, re.IGNORECASE):
                             time_text = line
                             continue
-
-                        # Title - first substantial line
-                        if not title and len(line) > 5 and len(line) < 100:
+                        # Skip category labels (ALL CAPS) and short text
+                        if line.isupper() or len(line) < 10:
+                            continue
+                        # Skip IN-PERSON/VIRTUAL labels
+                        if line in ["IN-PERSON", "VIRTUAL"]:
+                            continue
+                        # First mixed-case line with decent length is title
+                        if not title:
                             title = line
+                            break
 
                     if not title:
                         continue
 
-                    start_date, end_date = parse_date(date_text or "")
-                    if not start_date:
+                    # Build date
+                    try:
+                        month_num = datetime.strptime(month_abbr, "%b").month
+                        event_date = datetime(current_year, month_num, int(day))
+                        if event_date < datetime.now():
+                            event_date = datetime(current_year + 1, month_num, int(day))
+                        start_date = event_date.strftime("%Y-%m-%d")
+                    except (ValueError, TypeError):
                         continue
 
-                    start_time = parse_time(time_text or date_text or "")
+                    start_time = parse_time(time_text or "")
 
                     events_found += 1
 
@@ -204,10 +221,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         events_updated += 1
                         continue
 
-                    # Get link
-                    link = card.query_selector("a[href]")
-                    href = link.get_attribute("href") if link else None
-                    source_url = href if href and href.startswith("http") else f"{BASE_URL}{href}" if href else EVENTS_URL
+                    # Build source URL
+                    source_url = f"{BASE_URL}{href}" if href.startswith("/") else href
 
                     event_record = {
                         "source_id": source_id,
@@ -216,7 +231,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "description": None,
                         "start_date": start_date,
                         "start_time": start_time,
-                        "end_date": end_date,
+                        "end_date": None,
                         "end_time": None,
                         "is_all_day": start_time is None,
                         "category": category,

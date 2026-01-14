@@ -147,32 +147,24 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
                 page.wait_for_timeout(1000)
 
-            # Find event cards - they contain title, date, venue
-            # Look for links that have event info
-            event_links = page.query_selector_all("a[href*='/event/']")
-            logger.info(f"Found {len(event_links)} event links")
+            # Find event cards - they use home-card--event class
+            event_cards = page.query_selector_all(".home-card--event")
+            logger.info(f"Found {len(event_cards)} event cards")
 
-            seen_urls = set()
+            seen_titles = set()
 
-            for link in event_links:
+            for card in event_cards:
                 try:
-                    href = link.get_attribute("href")
-                    if not href or href in seen_urls:
-                        continue
-                    seen_urls.add(href)
-
-                    # Get parent container for full event info
-                    parent = link.evaluate_handle("el => el.closest('article, div, li') || el.parentElement")
-                    parent_el = parent.as_element()
-
-                    if not parent_el:
-                        continue
-
-                    text = parent_el.inner_text().strip()
+                    # Get full text of card
+                    text = card.inner_text().strip()
                     lines = [l.strip() for l in text.split("\n") if l.strip()]
 
                     if len(lines) < 2:
                         continue
+
+                    # Get link for event URL
+                    link = card.query_selector("a[href*='/cal/']")
+                    href = link.get_attribute("href") if link else None
 
                     # Title is usually the first substantial line
                     title = None
@@ -194,12 +186,13 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             title = line
                             continue
 
-                        # Next line after title might be venue
-                        if title and not venue_name and not date_text:
+                        # Line after title is venue
+                        if title and not venue_name and len(line) > 2:
                             venue_name = line
 
-                    if not title:
+                    if not title or title in seen_titles:
                         continue
+                    seen_titles.add(title)
 
                     start_date, end_date = parse_date(date_text or "")
                     if not start_date:
@@ -232,7 +225,10 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         events_updated += 1
                         continue
 
-                    source_url = href if href.startswith("http") else f"{BASE_URL}{href}"
+                    if href:
+                        source_url = f"https:{href}" if href.startswith("//") else (href if href.startswith("http") else f"{BASE_URL}{href}")
+                    else:
+                        source_url = BASE_URL
 
                     event_record = {
                         "source_id": source_id,

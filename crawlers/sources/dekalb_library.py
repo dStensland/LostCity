@@ -9,8 +9,8 @@ import re
 import logging
 from datetime import datetime
 from typing import Optional
-import httpx
-from bs4 import BeautifulSoup
+
+from playwright.sync_api import sync_playwright
 
 from db import get_or_create_venue, insert_event, find_event_by_hash
 from dedupe import generate_content_hash
@@ -18,7 +18,7 @@ from dedupe import generate_content_hash
 logger = logging.getLogger(__name__)
 
 BASE_URL = "https://events.dekalblibrary.org"
-EVENTS_URL = f"{BASE_URL}/events"
+EVENTS_URL = f"{BASE_URL}/events?v=list"
 
 # Map branch names to venue data
 BRANCH_VENUES = {
@@ -94,148 +94,141 @@ def parse_time(time_str: str) -> Optional[str]:
 
 
 def crawl(source: dict) -> tuple[int, int, int]:
-    """Crawl DeKalb County Library events."""
+    """Crawl DeKalb County Library events using Playwright."""
     source_id = source["id"]
     events_found = 0
     events_new = 0
     events_updated = 0
 
     try:
-        headers = {
-            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
-        }
+        with sync_playwright() as p:
+            browser = p.chromium.launch(headless=True)
+            context = browser.new_context(
+                user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
+            )
+            page = context.new_page()
 
-        response = httpx.get(
-            EVENTS_URL,
-            headers=headers,
-            timeout=30,
-            follow_redirects=True,
-            params={"v": "grid"}
-        )
-        response.raise_for_status()
+            logger.info(f"Fetching DeKalb Library events: {EVENTS_URL}")
+            page.goto(EVENTS_URL, wait_until="networkidle", timeout=30000)
+            page.wait_for_timeout(3000)
 
-        soup = BeautifulSoup(response.text, 'html.parser')
+            # Get full page text and parse events
+            body_text = page.inner_text("body")
+            lines = [l.strip() for l in body_text.split("\n") if l.strip()]
 
-        # Find event cards - Communico uses various class patterns
-        event_elements = soup.find_all(['div', 'article', 'li'], class_=re.compile(r'event|card|listing', re.I))
+            # Find event links for URLs
+            event_links = page.query_selector_all("a[href*='/event/']")
+            event_urls = {}
+            for link in event_links:
+                title = link.inner_text().strip()
+                href = link.get_attribute("href")
+                if title and href:
+                    event_urls[title] = href
 
-        for event_el in event_elements:
-            try:
-                # Get title
-                title_el = event_el.find(['h2', 'h3', 'h4', 'a'], class_=re.compile(r'title|name|heading', re.I))
-                if not title_el:
-                    title_el = event_el.find(['h2', 'h3', 'h4'])
-                if not title_el:
-                    continue
+            logger.info(f"Found {len(event_urls)} unique event titles")
 
-                title = title_el.get_text(strip=True)
-                if not title or len(title) < 3:
-                    continue
+            seen_titles = set()
+            current_year = datetime.now().year
+            i = 0
 
-                # Skip non-events
-                if any(skip in title.lower() for skip in ['view all', 'subscribe', 'newsletter', 'ongoing']):
-                    continue
+            while i < len(lines):
+                line = lines[i]
 
-                # Get date from various possible elements
-                date_el = event_el.find(['time', 'span', 'div'], class_=re.compile(r'date', re.I))
-                if not date_el:
-                    date_el = event_el.find(string=re.compile(r'(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d', re.I))
+                # Look for event titles (lines that match our URL dict)
+                if line in event_urls and line not in seen_titles:
+                    title = line
+                    seen_titles.add(title)
 
-                if not date_el:
-                    continue
+                    # Next line should have date/time: "Wednesday, January 14: 9:30am - 10:00am"
+                    date_line = lines[i + 1] if i + 1 < len(lines) else ""
+                    location_line = lines[i + 2] if i + 2 < len(lines) else ""
 
-                date_text = date_el.get_text(strip=True) if hasattr(date_el, 'get_text') else str(date_el)
+                    # Parse date - format: "Wednesday, January 14: 9:30am"
+                    date_match = re.search(r"(\w+)\s+(\d{1,2}):", date_line)
+                    if not date_match:
+                        i += 1
+                        continue
 
-                # Extract just the date part
-                date_match = re.search(r'(\w+\s+\d{1,2},?\s*\d{0,4})', date_text)
-                if date_match:
-                    date_text = date_match.group(1)
+                    month_str, day = date_match.groups()
+                    start_date = parse_date(f"{month_str} {day}")
+                    if not start_date:
+                        i += 1
+                        continue
 
-                start_date = parse_date(date_text)
-                if not start_date:
-                    continue
+                    # Parse time
+                    time_match = re.search(r"(\d{1,2}:\d{2}\s*(am|pm))", date_line, re.I)
+                    start_time = parse_time(time_match.group()) if time_match else None
 
-                # Get time
-                time_text = event_el.get_text()
-                time_match = re.search(r'(\d{1,2}:\d{2}\s*(am|pm))', time_text, re.I)
-                start_time = parse_time(time_match.group()) if time_match else None
+                    # Get location from the line after date/time
+                    venue_data = find_branch_venue(location_line)
+                    venue_id = get_or_create_venue(venue_data)
 
-                # Get location/branch
-                location_el = event_el.find(['span', 'div'], class_=re.compile(r'location|branch|venue', re.I))
-                location_text = location_el.get_text(strip=True) if location_el else ""
-                venue_data = find_branch_venue(location_text)
-                venue_id = get_or_create_venue(venue_data)
+                    href = event_urls.get(title, "")
 
-                # Get description
-                desc_el = event_el.find(['p', 'div'], class_=re.compile(r'desc|summary|teaser', re.I))
-                description = desc_el.get_text(strip=True)[:500] if desc_el else None
+                    events_found += 1
 
-                # Get event URL
-                link_el = title_el if title_el.name == 'a' else event_el.find('a', href=True)
-                event_url = ''
-                if link_el and link_el.get('href'):
-                    event_url = link_el['href']
-                    if not event_url.startswith('http'):
-                        event_url = f"{BASE_URL}{event_url}"
+                    content_hash = generate_content_hash(title, venue_data['name'], start_date)
 
-                events_found += 1
+                    existing = find_event_by_hash(content_hash)
+                    if existing:
+                        events_updated += 1
+                        i += 1
+                        continue
 
-                content_hash = generate_content_hash(title, venue_data['name'], start_date)
+                    # Determine subcategory
+                    title_lower = title.lower()
+                    if 'book club' in title_lower or 'reading group' in title_lower:
+                        subcategory = 'words.bookclub'
+                    elif 'story' in title_lower or 'storytime' in title_lower:
+                        subcategory = 'words.storytelling'
+                    elif 'author' in title_lower or 'signing' in title_lower:
+                        subcategory = 'words.reading'
+                    elif 'poetry' in title_lower:
+                        subcategory = 'words.poetry'
+                    elif 'writing' in title_lower or 'workshop' in title_lower:
+                        subcategory = 'words.workshop'
+                    else:
+                        subcategory = 'words.lecture'
 
-                existing = find_event_by_hash(content_hash)
-                if existing:
-                    events_updated += 1
-                    continue
+                    event_url = f"{BASE_URL}{href}" if href and href.startswith("/") else (href or EVENTS_URL)
 
-                # Determine subcategory
-                title_lower = title.lower()
-                if 'book club' in title_lower or 'reading group' in title_lower:
-                    subcategory = 'words.bookclub'
-                elif 'story' in title_lower or 'storytime' in title_lower:
-                    subcategory = 'words.storytelling'
-                elif 'author' in title_lower or 'signing' in title_lower:
-                    subcategory = 'words.reading'
-                elif 'poetry' in title_lower:
-                    subcategory = 'words.poetry'
-                elif 'writing' in title_lower or 'workshop' in title_lower:
-                    subcategory = 'words.workshop'
-                else:
-                    subcategory = 'words.lecture'
+                    event_record = {
+                        "source_id": source_id,
+                        "venue_id": venue_id,
+                        "title": title,
+                        "description": None,
+                        "start_date": start_date,
+                        "start_time": start_time,
+                        "end_date": None,
+                        "end_time": None,
+                        "is_all_day": start_time is None,
+                        "category": "words",
+                        "subcategory": subcategory,
+                        "tags": ["library", "free", "dekalb"],
+                        "price_min": None,
+                        "price_max": None,
+                        "price_note": None,
+                        "is_free": True,
+                        "source_url": event_url,
+                        "ticket_url": None,
+                        "image_url": None,
+                        "raw_text": None,
+                        "extraction_confidence": 0.8,
+                        "is_recurring": False,
+                        "recurrence_rule": None,
+                        "content_hash": content_hash,
+                    }
 
-                event_record = {
-                    "source_id": source_id,
-                    "venue_id": venue_id,
-                    "title": title,
-                    "description": description,
-                    "start_date": start_date,
-                    "start_time": start_time,
-                    "end_date": None,
-                    "end_time": None,
-                    "is_all_day": False,
-                    "category": "words",
-                    "subcategory": subcategory,
-                    "tags": ["library", "free", "dekalb"],
-                    "price_min": None,
-                    "price_max": None,
-                    "price_note": None,
-                    "is_free": True,
-                    "source_url": event_url or EVENTS_URL,
-                    "ticket_url": None,
-                    "image_url": None,
-                    "raw_text": None,
-                    "extraction_confidence": 0.8,
-                    "is_recurring": False,
-                    "recurrence_rule": None,
-                    "content_hash": content_hash,
-                }
+                    try:
+                        insert_event(event_record)
+                        events_new += 1
+                        logger.info(f"Added: {title} on {start_date}")
+                    except Exception as e:
+                        logger.error(f"Failed to insert: {title}: {e}")
 
-                insert_event(event_record)
-                events_new += 1
-                logger.info(f"Added: {title} on {start_date}")
+                i += 1
 
-            except Exception as e:
-                logger.debug(f"Error processing event: {e}")
-                continue
+            browser.close()
 
         logger.info(f"DeKalb Library crawl complete: {events_found} found, {events_new} new")
 

@@ -2,7 +2,7 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback } from "react";
-import { CATEGORIES, SUBCATEGORIES, DATE_FILTERS, PRICE_FILTERS } from "@/lib/search";
+import { CATEGORIES, SUBCATEGORIES, DATE_FILTERS, PRICE_FILTERS, TAG_GROUPS, ALL_TAGS } from "@/lib/search";
 import CategoryIcon, { CATEGORY_CONFIG, type CategoryType } from "./CategoryIcon";
 
 export default function FilterBar() {
@@ -11,6 +11,7 @@ export default function FilterBar() {
 
   const currentCategories = searchParams.get("categories")?.split(",").filter(Boolean) || [];
   const currentSubcategories = searchParams.get("subcategories")?.split(",").filter(Boolean) || [];
+  const currentTags = searchParams.get("tags")?.split(",").filter(Boolean) || [];
   const currentPriceFilter = searchParams.get("price") || "";
   const currentDateFilter = searchParams.get("date") || "";
 
@@ -67,10 +68,24 @@ export default function FilterBar() {
     [currentSubcategories, updateParams]
   );
 
+  const toggleTag = useCallback(
+    (tag: string) => {
+      const newTags = currentTags.includes(tag)
+        ? currentTags.filter((t) => t !== tag)
+        : [...currentTags, tag];
+
+      updateParams({
+        tags: newTags.length > 0 ? newTags.join(",") : null,
+      });
+    },
+    [currentTags, updateParams]
+  );
+
   const clearAll = useCallback(() => {
     updateParams({
       categories: null,
       subcategories: null,
+      tags: null,
       date: null,
       price: null,
     });
@@ -95,7 +110,7 @@ export default function FilterBar() {
     SUBCATEGORIES[cat]?.map((sub) => ({ ...sub, category: cat })) || []
   );
 
-  const hasFilters = currentCategories.length > 0 || currentSubcategories.length > 0 || currentPriceFilter || currentDateFilter;
+  const hasFilters = currentCategories.length > 0 || currentSubcategories.length > 0 || currentTags.length > 0 || currentPriceFilter || currentDateFilter;
 
   return (
     <div className="sticky top-0 z-30 bg-[var(--night)]">
@@ -212,6 +227,40 @@ export default function FilterBar() {
         </div>
       </div>
 
+      {/* Tag Filter Row */}
+      <div className="border-b border-[var(--twilight)]">
+        <div className="max-w-3xl mx-auto px-4 py-2">
+          <div className="flex gap-3 overflow-x-auto scrollbar-hide -mx-4 px-4 items-center">
+            <span className="font-mono text-[0.6rem] text-[var(--muted)] uppercase tracking-wider flex-shrink-0">
+              Tags
+            </span>
+            {Object.entries(TAG_GROUPS).map(([group, tags]) => (
+              <div key={group} className="flex gap-1.5 items-center">
+                <span className="font-mono text-[0.55rem] text-[var(--twilight)] uppercase tracking-wider">
+                  {group}:
+                </span>
+                {tags.map((tag) => {
+                  const isActive = currentTags.includes(tag.value);
+                  return (
+                    <button
+                      key={tag.value}
+                      onClick={() => toggleTag(tag.value)}
+                      className={`px-2 py-0.5 rounded-full font-mono text-[0.6rem] font-medium whitespace-nowrap transition-colors ${
+                        isActive
+                          ? "bg-[var(--lavender)] text-[var(--void)]"
+                          : "bg-[var(--dusk)] text-[var(--muted)] hover:text-[var(--cream)] border border-[var(--twilight)]"
+                      }`}
+                    >
+                      {tag.label}
+                    </button>
+                  );
+                })}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
       {/* Active Filters Summary */}
       {hasFilters && (
         <div className="border-b border-[var(--twilight)] bg-[var(--void)]">
@@ -242,6 +291,18 @@ export default function FilterBar() {
                   {availableSubcategories.find((s) => s.value === sub)?.label ||
                    Object.values(SUBCATEGORIES).flat().find((s) => s.value === sub)?.label ||
                    sub}
+                  <svg className="w-3 h-3 ml-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              ))}
+              {currentTags.map((tag) => (
+                <button
+                  key={tag}
+                  onClick={() => toggleTag(tag)}
+                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-[var(--lavender)] text-[var(--void)] font-mono text-[0.65rem] hover:opacity-80 transition-colors"
+                >
+                  {ALL_TAGS.find((t) => t.value === tag)?.label || tag}
                   <svg className="w-3 h-3 ml-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
