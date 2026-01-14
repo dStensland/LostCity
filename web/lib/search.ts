@@ -14,6 +14,7 @@ export interface SearchFilters {
   categories?: string[];
   subcategories?: string[];
   is_free?: boolean;
+  price_max?: number;
   date_filter?: "today" | "weekend" | "week";
   venue_id?: number;
 }
@@ -131,9 +132,12 @@ export async function getFilteredEventsWithSearch(
     query = query.in("subcategory_id", filters.subcategories);
   }
 
-  // Apply free filter
+  // Apply price filters
   if (filters.is_free) {
     query = query.eq("is_free", true);
+  } else if (filters.price_max) {
+    // Include free events and events with price_min under the threshold
+    query = query.or(`is_free.eq.true,price_min.lte.${filters.price_max}`);
   }
 
   // Apply date filter
@@ -202,6 +206,8 @@ export async function getEventsForMap(
 
   if (filters.is_free) {
     query = query.eq("is_free", true);
+  } else if (filters.price_max) {
+    query = query.or(`is_free.eq.true,price_min.lte.${filters.price_max}`);
   }
 
   if (filters.date_filter) {
@@ -323,6 +329,13 @@ export const DATE_FILTERS = [
   { value: "today", label: "Today" },
   { value: "weekend", label: "This Weekend" },
   { value: "week", label: "This Week" },
+] as const;
+
+export const PRICE_FILTERS = [
+  { value: "free", label: "Free", max: null },
+  { value: "under25", label: "Under $25", max: 25 },
+  { value: "under50", label: "Under $50", max: 50 },
+  { value: "under100", label: "Under $100", max: 100 },
 ] as const;
 
 export interface VenueWithCount {

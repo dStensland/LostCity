@@ -1,4 +1,4 @@
-import { getFilteredEventsWithSearch, getVenuesWithEvents, type SearchFilters } from "@/lib/search";
+import { getFilteredEventsWithSearch, PRICE_FILTERS, type SearchFilters } from "@/lib/search";
 import SearchBar from "@/components/SearchBar";
 import FilterBar from "@/components/FilterBar";
 import EventList from "@/components/EventList";
@@ -16,31 +16,32 @@ type Props = {
     search?: string;
     categories?: string;
     subcategories?: string;
-    free?: string;
+    price?: string;
     date?: string;
-    venue?: string;
   }>;
 };
 
 export default async function Home({ searchParams }: Props) {
   const params = await searchParams;
 
+  // Parse price filter
+  const priceFilter = PRICE_FILTERS.find(p => p.value === params.price);
+  const isFree = params.price === "free";
+  const priceMax = priceFilter?.max || undefined;
+
   const filters: SearchFilters = {
     search: params.search || undefined,
     categories: params.categories?.split(",").filter(Boolean) || undefined,
     subcategories: params.subcategories?.split(",").filter(Boolean) || undefined,
-    is_free: params.free === "true" || undefined,
+    is_free: isFree || undefined,
+    price_max: priceMax,
     date_filter: (params.date as "today" | "weekend" | "week") || undefined,
-    venue_id: params.venue ? parseInt(params.venue, 10) : undefined,
   };
 
   // Always fetch page 1 on server for initial SSR
-  const [{ events, total }, venues] = await Promise.all([
-    getFilteredEventsWithSearch(filters, 1, PAGE_SIZE),
-    getVenuesWithEvents(),
-  ]);
+  const { events, total } = await getFilteredEventsWithSearch(filters, 1, PAGE_SIZE);
 
-  const hasActiveFilters = !!(params.search || params.categories || params.subcategories || params.free || params.date || params.venue);
+  const hasActiveFilters = !!(params.search || params.categories || params.subcategories || params.price || params.date);
 
   return (
     <div className="min-h-screen">
@@ -79,7 +80,7 @@ export default async function Home({ searchParams }: Props) {
 
       {/* Filters */}
       <Suspense fallback={<div className="h-24 bg-[var(--night)]" />}>
-        <FilterBar venues={venues} />
+        <FilterBar />
       </Suspense>
 
       {/* Event count */}

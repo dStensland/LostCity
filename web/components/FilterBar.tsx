@@ -2,23 +2,17 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback } from "react";
-import { CATEGORIES, SUBCATEGORIES, DATE_FILTERS, type VenueWithCount } from "@/lib/search";
-import VenueFilter from "./VenueFilter";
+import { CATEGORIES, SUBCATEGORIES, DATE_FILTERS, PRICE_FILTERS } from "@/lib/search";
 import CategoryIcon, { CATEGORY_CONFIG, type CategoryType } from "./CategoryIcon";
 
-interface Props {
-  venues: VenueWithCount[];
-}
-
-export default function FilterBar({ venues }: Props) {
+export default function FilterBar() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
   const currentCategories = searchParams.get("categories")?.split(",").filter(Boolean) || [];
   const currentSubcategories = searchParams.get("subcategories")?.split(",").filter(Boolean) || [];
-  const isFreeOnly = searchParams.get("free") === "true";
+  const currentPriceFilter = searchParams.get("price") || "";
   const currentDateFilter = searchParams.get("date") || "";
-  const currentVenue = searchParams.get("venue") || "";
 
   const updateParams = useCallback(
     (updates: Record<string, string | null>) => {
@@ -78,14 +72,16 @@ export default function FilterBar({ venues }: Props) {
       categories: null,
       subcategories: null,
       date: null,
-      free: null,
-      venue: null,
+      price: null,
     });
   }, [updateParams]);
 
-  const toggleFree = useCallback(() => {
-    updateParams({ free: isFreeOnly ? null : "true" });
-  }, [isFreeOnly, updateParams]);
+  const setPriceFilter = useCallback(
+    (price: string) => {
+      updateParams({ price: currentPriceFilter === price ? null : price });
+    },
+    [currentPriceFilter, updateParams]
+  );
 
   const setDateFilter = useCallback(
     (date: string) => {
@@ -99,7 +95,7 @@ export default function FilterBar({ venues }: Props) {
     SUBCATEGORIES[cat]?.map((sub) => ({ ...sub, category: cat })) || []
   );
 
-  const hasFilters = currentCategories.length > 0 || currentSubcategories.length > 0 || isFreeOnly || currentDateFilter || currentVenue;
+  const hasFilters = currentCategories.length > 0 || currentSubcategories.length > 0 || currentPriceFilter || currentDateFilter;
 
   return (
     <div className="sticky top-0 z-30 bg-[var(--night)]">
@@ -172,7 +168,7 @@ export default function FilterBar({ venues }: Props) {
         </div>
       )}
 
-      {/* Date / Venue / Free Filter Row */}
+      {/* Date / Price Filter Row */}
       <div className="border-b border-[var(--twilight)]">
         <div className="max-w-3xl mx-auto px-4 py-2">
           <div className="flex gap-2 overflow-x-auto scrollbar-hide -mx-4 px-4 items-center">
@@ -196,20 +192,22 @@ export default function FilterBar({ venues }: Props) {
             {/* Divider */}
             <div className="h-4 w-px bg-[var(--twilight)] mx-1 flex-shrink-0" />
 
-            {/* Venue filter */}
-            <VenueFilter venues={venues} />
-
-            {/* Free toggle */}
-            <button
-              onClick={toggleFree}
-              className={`px-2.5 py-1 rounded-full font-mono text-[0.65rem] font-medium whitespace-nowrap transition-colors ${
-                isFreeOnly
-                  ? "bg-[var(--rose)] text-[var(--void)]"
-                  : "bg-[var(--dusk)] text-[var(--muted)] hover:text-[var(--cream)] border border-[var(--twilight)]"
-              }`}
-            >
-              Free
-            </button>
+            <span className="font-mono text-[0.6rem] text-[var(--muted)] uppercase tracking-wider flex-shrink-0 mr-1">
+              Price
+            </span>
+            {PRICE_FILTERS.map((pf) => (
+              <button
+                key={pf.value}
+                onClick={() => setPriceFilter(pf.value)}
+                className={`px-2.5 py-1 rounded-full font-mono text-[0.65rem] font-medium whitespace-nowrap transition-colors ${
+                  currentPriceFilter === pf.value
+                    ? "bg-[var(--rose)] text-[var(--void)]"
+                    : "bg-[var(--dusk)] text-[var(--muted)] hover:text-[var(--cream)] border border-[var(--twilight)]"
+                }`}
+              >
+                {pf.label}
+              </button>
+            ))}
           </div>
         </div>
       </div>
@@ -260,12 +258,12 @@ export default function FilterBar({ venues }: Props) {
                   </svg>
                 </button>
               )}
-              {isFreeOnly && (
+              {currentPriceFilter && (
                 <button
-                  onClick={toggleFree}
+                  onClick={() => setPriceFilter(currentPriceFilter)}
                   className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-[var(--twilight)] text-[var(--cream)] font-mono text-[0.65rem] hover:bg-[var(--dusk)] transition-colors"
                 >
-                  Free
+                  {PRICE_FILTERS.find((p) => p.value === currentPriceFilter)?.label}
                   <svg className="w-3 h-3 ml-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
