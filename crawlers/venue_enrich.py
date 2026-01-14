@@ -12,7 +12,11 @@ import requests
 from dataclasses import dataclass
 from typing import Optional
 from datetime import datetime
+from dotenv import load_dotenv
 from db import get_client
+
+# Load .env file
+load_dotenv()
 
 # Google Places API (New) configuration
 GOOGLE_API_KEY = os.getenv("GOOGLE_PLACES_API_KEY", "")
