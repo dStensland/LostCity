@@ -4,6 +4,7 @@ import SpotCard from "@/components/SpotCard";
 import ModeToggle from "@/components/ModeToggle";
 import SpotFilters from "@/components/SpotFilters";
 import { getCategoryLabel } from "@/components/CategoryIcon";
+import Logo from "@/components/Logo";
 import Link from "next/link";
 
 export const revalidate = 60;
@@ -29,9 +30,7 @@ export default async function SpotsPage({ searchParams }: Props) {
       {/* Header */}
       <header className="px-4 sm:px-6 py-4 flex justify-between items-center border-b border-[var(--twilight)]">
         <div className="flex items-baseline gap-3">
-          <Link href="/" className="gradient-text text-xl font-bold tracking-tight">
-            Lost City
-          </Link>
+          <Logo />
           <span className="font-mono text-[0.65rem] font-medium text-[var(--muted)] uppercase tracking-widest hidden sm:inline">
             Atlanta
           </span>
@@ -96,7 +95,7 @@ export default async function SpotsPage({ searchParams }: Props) {
       {/* Footer */}
       <footer className="border-t border-[var(--twilight)] bg-[var(--night)]">
         <div className="max-w-3xl mx-auto px-4 py-8 text-center">
-          <div className="gradient-text text-lg font-bold">Lost City</div>
+          <Logo size="md" href={undefined} />
           <p className="font-serif text-[var(--muted)] mt-1">
             The real Atlanta, found
           </p>

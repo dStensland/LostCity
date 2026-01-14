@@ -108,6 +108,39 @@ body::after {
   background-clip: text;
 }
 
+/* Animated logo */
+@keyframes gradient-flow {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.logo-text {
+  background: linear-gradient(
+    90deg,
+    var(--rose),
+    var(--coral),
+    var(--gold),
+    var(--coral),
+    var(--rose)
+  );
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: gradient-flow 4s ease-in-out infinite;
+}
+
+.logo-text:hover {
+  animation-duration: 1.5s;
+}
+
 .gradient-text-stats {
   background: linear-gradient(135deg, var(--rose), var(--coral));
   -webkit-background-clip: text;
