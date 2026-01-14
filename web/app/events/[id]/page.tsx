@@ -1,6 +1,10 @@
 import { getEventById, getRelatedEvents, type Event } from "@/lib/supabase";
 import { getNearbySpots, getSpotTypeLabel } from "@/lib/spots";
 import CategoryIcon from "@/components/CategoryIcon";
+import RSVPButton from "@/components/RSVPButton";
+import RecommendButton from "@/components/RecommendButton";
+import FriendsGoing from "@/components/FriendsGoing";
+import UserMenu from "@/components/UserMenu";
 import { format, parseISO } from "date-fns";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -163,13 +167,14 @@ export default async function EventPage({ params }: Props) {
               Atlanta
             </span>
           </div>
-          <nav>
+          <nav className="flex items-center gap-4 sm:gap-6">
             <Link
               href="/"
               className="font-mono text-[0.7rem] font-medium text-[var(--muted)] uppercase tracking-wide hover:text-[var(--cream)] transition-colors"
             >
               &larr; Back
             </Link>
+            <UserMenu />
           </nav>
         </header>
 
@@ -208,6 +213,9 @@ export default async function EventPage({ params }: Props) {
                 )}
               </p>
             )}
+
+            {/* Friends going */}
+            <FriendsGoing eventId={event.id} className="mt-3" />
 
             {/* Date/Time/Price grid */}
             <div className="mt-6 grid grid-cols-3 gap-3 sm:gap-4">
@@ -291,8 +299,14 @@ export default async function EventPage({ params }: Props) {
               </div>
             )}
 
+            {/* RSVP and Recommend */}
+            <div className="mt-8 pt-6 border-t border-[var(--twilight)] flex flex-wrap items-center gap-3">
+              <RSVPButton eventId={event.id} />
+              <RecommendButton eventId={event.id} />
+            </div>
+
             {/* Action buttons */}
-            <div className="mt-8 pt-6 border-t border-[var(--twilight)] flex flex-col sm:flex-row gap-3">
+            <div className="mt-4 flex flex-col sm:flex-row gap-3">
               {event.ticket_url && (
                 <a
                   href={event.ticket_url}

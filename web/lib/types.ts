@@ -63,6 +63,204 @@ export type Database = {
           created_at: string;
         };
       };
+      profiles: {
+        Row: {
+          id: string;
+          username: string;
+          display_name: string | null;
+          avatar_url: string | null;
+          bio: string | null;
+          location: string | null;
+          website: string | null;
+          is_public: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id: string;
+          username: string;
+          display_name?: string | null;
+          avatar_url?: string | null;
+          bio?: string | null;
+          location?: string | null;
+          website?: string | null;
+          is_public?: boolean;
+        };
+        Update: {
+          username?: string;
+          display_name?: string | null;
+          avatar_url?: string | null;
+          bio?: string | null;
+          location?: string | null;
+          website?: string | null;
+          is_public?: boolean;
+        };
+      };
+      user_preferences: {
+        Row: {
+          user_id: string;
+          favorite_categories: string[] | null;
+          favorite_neighborhoods: string[] | null;
+          favorite_vibes: string[] | null;
+          price_preference: string | null;
+          notification_settings: Record<string, unknown>;
+          updated_at: string;
+        };
+        Insert: {
+          user_id: string;
+          favorite_categories?: string[] | null;
+          favorite_neighborhoods?: string[] | null;
+          favorite_vibes?: string[] | null;
+          price_preference?: string | null;
+          notification_settings?: Record<string, unknown>;
+        };
+        Update: {
+          favorite_categories?: string[] | null;
+          favorite_neighborhoods?: string[] | null;
+          favorite_vibes?: string[] | null;
+          price_preference?: string | null;
+          notification_settings?: Record<string, unknown>;
+        };
+      };
+      follows: {
+        Row: {
+          id: string;
+          follower_id: string;
+          followed_user_id: string | null;
+          followed_venue_id: number | null;
+          followed_org_id: number | null;
+          created_at: string;
+        };
+        Insert: {
+          follower_id: string;
+          followed_user_id?: string | null;
+          followed_venue_id?: number | null;
+          followed_org_id?: number | null;
+        };
+      };
+      user_blocks: {
+        Row: {
+          id: string;
+          blocker_id: string;
+          blocked_id: string;
+          is_muted: boolean;
+          created_at: string;
+        };
+        Insert: {
+          blocker_id: string;
+          blocked_id: string;
+          is_muted?: boolean;
+        };
+      };
+      event_rsvps: {
+        Row: {
+          id: string;
+          user_id: string;
+          event_id: number;
+          status: string;
+          visibility: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          user_id: string;
+          event_id: number;
+          status: string;
+          visibility?: string;
+        };
+        Update: {
+          status?: string;
+          visibility?: string;
+        };
+      };
+      recommendations: {
+        Row: {
+          id: string;
+          user_id: string;
+          event_id: number | null;
+          venue_id: number | null;
+          org_id: number | null;
+          note: string | null;
+          visibility: string;
+          created_at: string;
+        };
+        Insert: {
+          user_id: string;
+          event_id?: number | null;
+          venue_id?: number | null;
+          org_id?: number | null;
+          note?: string | null;
+          visibility?: string;
+        };
+      };
+      saved_items: {
+        Row: {
+          id: string;
+          user_id: string;
+          event_id: number | null;
+          venue_id: number | null;
+          created_at: string;
+        };
+        Insert: {
+          user_id: string;
+          event_id?: number | null;
+          venue_id?: number | null;
+        };
+      };
+      activities: {
+        Row: {
+          id: string;
+          user_id: string;
+          activity_type: string;
+          visibility: string;
+          event_id: number | null;
+          venue_id: number | null;
+          target_user_id: string | null;
+          org_id: number | null;
+          metadata: Record<string, unknown>;
+          created_at: string;
+        };
+        Insert: {
+          user_id: string;
+          activity_type: string;
+          visibility?: string;
+          event_id?: number | null;
+          venue_id?: number | null;
+          target_user_id?: string | null;
+          org_id?: number | null;
+          metadata?: Record<string, unknown>;
+        };
+      };
+      notifications: {
+        Row: {
+          id: string;
+          user_id: string;
+          type: string;
+          actor_id: string | null;
+          event_id: number | null;
+          venue_id: number | null;
+          message: string | null;
+          read_at: string | null;
+          created_at: string;
+        };
+        Insert: {
+          user_id: string;
+          type: string;
+          actor_id?: string | null;
+          event_id?: number | null;
+          venue_id?: number | null;
+          message?: string | null;
+        };
+        Update: {
+          read_at?: string | null;
+        };
+      };
+      organizations: {
+        Row: {
+          id: number;
+          name: string;
+        };
+      };
     };
   };
 };

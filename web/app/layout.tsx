@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Outfit, Instrument_Serif, JetBrains_Mono } from "next/font/google";
+import { AuthProvider } from "@/lib/auth-context";
 import "./globals.css";
 
 const outfit = Outfit({
@@ -39,7 +40,7 @@ export default function RootLayout({
       <body className={`${outfit.variable} ${instrumentSerif.variable} ${jetbrainsMono.variable} antialiased`}>
         {/* Ambient glow effect */}
         <div className="ambient-glow" aria-hidden="true" />
-        {children}
+        <AuthProvider>{children}</AuthProvider>
       </body>
     </html>
   );

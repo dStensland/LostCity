@@ -1,10 +1,55 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createServerClient } from "@supabase/ssr";
 
 /**
- * Middleware for subdomain routing.
- * Rewrites requests from {slug}.lostcity.ai to /portal/{slug}
+ * Middleware for subdomain routing and auth session management.
+ * - Refreshes Supabase auth sessions on each request
+ * - Protects auth-required routes
+ * - Rewrites requests from {slug}.lostcity.ai to /portal/{slug}
  */
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
+  // Create response that will be modified for auth
+  let response = NextResponse.next({ request });
+
+  // Create Supabase client for session management
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll();
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value }) =>
+            request.cookies.set(name, value)
+          );
+          response = NextResponse.next({ request });
+          cookiesToSet.forEach(({ name, value, options }) =>
+            response.cookies.set(name, value, options)
+          );
+        },
+      },
+    }
+  );
+
+  // Refresh session if expired
+  const { data: { user } } = await supabase.auth.getUser();
+
+  // Protected routes - redirect to login if not authenticated
+  const protectedPaths = ["/settings", "/foryou"];
+  const isProtectedPath = protectedPaths.some((path) =>
+    request.nextUrl.pathname.startsWith(path)
+  );
+
+  if (isProtectedPath && !user) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/auth/login";
+    url.searchParams.set("redirect", request.nextUrl.pathname);
+    return NextResponse.redirect(url);
+  }
+
+  // Continue with subdomain routing logic
   const host = request.headers.get("host") || "";
   const url = request.nextUrl.clone();
 
@@ -33,12 +78,12 @@ export function middleware(request: NextRequest) {
   if (subdomain) {
     // Don't rewrite if already on a portal route
     if (url.pathname.startsWith("/portal/")) {
-      return NextResponse.next();
+      return response;
     }
 
     // Don't rewrite API routes
     if (url.pathname.startsWith("/api/")) {
-      return NextResponse.next();
+      return response;
     }
 
     // Rewrite: / -> /portal/atlanta
@@ -48,10 +93,16 @@ export function middleware(request: NextRequest) {
     // Remove the portal query param if present
     url.searchParams.delete("portal");
 
-    return NextResponse.rewrite(url);
+    // Create rewrite response with auth cookies
+    const rewriteResponse = NextResponse.rewrite(url);
+    // Copy auth cookies to rewrite response
+    response.cookies.getAll().forEach((cookie) => {
+      rewriteResponse.cookies.set(cookie.name, cookie.value);
+    });
+    return rewriteResponse;
   }
 
-  return NextResponse.next();
+  return response;
 }
 
 export const config = {
