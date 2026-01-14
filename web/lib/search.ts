@@ -96,6 +96,23 @@ function getDateRange(filter: "today" | "weekend" | "week"): {
   }
 }
 
+// Score an event for relevance ranking
+function scoreEvent(event: EventWithLocation, searchTerm: string): number {
+  const term = searchTerm.toLowerCase();
+  let score = 0;
+
+  const title = event.title.toLowerCase();
+  if (title.includes(term)) {
+    score += 10;
+    if (title.startsWith(term)) score += 5;
+  }
+
+  if (event.venue?.name?.toLowerCase().includes(term)) score += 8;
+  if (event.description?.toLowerCase().includes(term)) score += 2;
+
+  return score;
+}
+
 export async function getFilteredEventsWithSearch(
   filters: SearchFilters,
   page = 1,
@@ -116,10 +133,25 @@ export async function getFilteredEventsWithSearch(
     )
     .gte("start_date", today);
 
-  // Apply search filter
+  // Apply search filter (includes venue name search)
   if (filters.search && filters.search.trim()) {
     const searchTerm = `%${filters.search.trim()}%`;
-    query = query.or(`title.ilike.${searchTerm},description.ilike.${searchTerm}`);
+
+    // Find matching venue IDs first (Supabase .or() doesn't work across relations)
+    const { data: matchingVenues } = await supabase
+      .from("venues")
+      .select("id")
+      .ilike("name", searchTerm);
+
+    const venueIds = (matchingVenues as { id: number }[] | null)?.map((v) => v.id) || [];
+
+    if (venueIds.length > 0) {
+      query = query.or(
+        `title.ilike.${searchTerm},description.ilike.${searchTerm},venue_id.in.(${venueIds.join(",")})`
+      );
+    } else {
+      query = query.or(`title.ilike.${searchTerm},description.ilike.${searchTerm}`);
+    }
   }
 
   // Apply category filter (using category_id)
@@ -164,7 +196,19 @@ export async function getFilteredEventsWithSearch(
     return { events: [], total: 0 };
   }
 
-  return { events: data as EventWithLocation[], total: count ?? 0 };
+  let events = data as EventWithLocation[];
+
+  // Sort by relevance when search is active
+  if (filters.search?.trim()) {
+    const term = filters.search.trim();
+    events = events.sort((a, b) => {
+      const scoreDiff = scoreEvent(b, term) - scoreEvent(a, term);
+      if (scoreDiff !== 0) return scoreDiff;
+      return a.start_date.localeCompare(b.start_date);
+    });
+  }
+
+  return { events, total: count ?? 0 };
 }
 
 // Get all events for map view
@@ -191,9 +235,24 @@ export async function getEventsForMap(
     .not("venues.lat", "is", null)
     .not("venues.lng", "is", null);
 
+  // Apply search filter (includes venue name search)
   if (filters.search && filters.search.trim()) {
     const searchTerm = `%${filters.search.trim()}%`;
-    query = query.or(`title.ilike.${searchTerm},description.ilike.${searchTerm}`);
+
+    const { data: matchingVenues } = await supabase
+      .from("venues")
+      .select("id")
+      .ilike("name", searchTerm);
+
+    const venueIds = (matchingVenues as { id: number }[] | null)?.map((v) => v.id) || [];
+
+    if (venueIds.length > 0) {
+      query = query.or(
+        `title.ilike.${searchTerm},description.ilike.${searchTerm},venue_id.in.(${venueIds.join(",")})`
+      );
+    } else {
+      query = query.or(`title.ilike.${searchTerm},description.ilike.${searchTerm}`);
+    }
   }
 
   if (filters.categories && filters.categories.length > 0) {
@@ -280,6 +339,8 @@ export const CATEGORIES = [
   { value: "community", label: "Community" },
   { value: "fitness", label: "Fitness" },
   { value: "family", label: "Family" },
+  { value: "meetup", label: "Meetup" },
+  { value: "words", label: "Words" },
 ] as const;
 
 // Subcategories grouped by category for UI dropdowns
@@ -322,6 +383,28 @@ export const SUBCATEGORIES: Record<string, { value: string; label: string }[]> =
     { value: "nightlife.dj", label: "DJ Night" },
     { value: "nightlife.drag", label: "Drag / Cabaret" },
     { value: "nightlife.trivia", label: "Trivia" },
+  ],
+  meetup: [
+    { value: "meetup.tech", label: "Tech & Science" },
+    { value: "meetup.professional", label: "Professional" },
+    { value: "meetup.social", label: "Social" },
+    { value: "meetup.hobbies", label: "Hobbies" },
+    { value: "meetup.outdoors", label: "Outdoors" },
+    { value: "meetup.learning", label: "Learning" },
+    { value: "meetup.health", label: "Health & Wellness" },
+    { value: "meetup.creative", label: "Arts & Creative" },
+    { value: "meetup.sports", label: "Sports & Fitness" },
+    { value: "meetup.food", label: "Food & Drink" },
+    { value: "meetup.parents", label: "Parents & Family" },
+    { value: "meetup.lgbtq", label: "LGBTQ+" },
+  ],
+  words: [
+    { value: "words.reading", label: "Reading / Signing" },
+    { value: "words.bookclub", label: "Book Club" },
+    { value: "words.poetry", label: "Poetry" },
+    { value: "words.storytelling", label: "Storytelling" },
+    { value: "words.workshop", label: "Writing Workshop" },
+    { value: "words.lecture", label: "Author Talk" },
   ],
 };
 
@@ -388,4 +471,30 @@ export async function getVenuesWithEvents(): Promise<VenueWithCount[]> {
     if (b.event_count !== a.event_count) return b.event_count - a.event_count;
     return a.name.localeCompare(b.name);
   });
+}
+
+// Get search suggestions for autocomplete
+export async function getSearchSuggestions(prefix: string): Promise<string[]> {
+  if (prefix.length < 2) return [];
+
+  const searchTerm = `${prefix}%`;
+  const today = new Date().toISOString().split("T")[0];
+
+  const [venueResult, eventResult] = await Promise.all([
+    supabase.from("venues").select("name").ilike("name", searchTerm).limit(3),
+    supabase
+      .from("events")
+      .select("title")
+      .ilike("title", searchTerm)
+      .gte("start_date", today)
+      .limit(3),
+  ]);
+
+  const suggestions = [
+    ...((venueResult.data as { name: string }[] | null)?.map((v) => v.name) || []),
+    ...((eventResult.data as { title: string }[] | null)?.map((e) => e.title) || []),
+  ];
+
+  // Dedupe and limit
+  return [...new Set(suggestions)].slice(0, 5);
 }

@@ -3,6 +3,7 @@ import { getSpotsWithEventCounts } from "@/lib/spots";
 import SpotCard from "@/components/SpotCard";
 import ModeToggle from "@/components/ModeToggle";
 import SpotFilters from "@/components/SpotFilters";
+import SpotSearchBar from "@/components/SpotSearchBar";
 import { getCategoryLabel } from "@/components/CategoryIcon";
 import Logo from "@/components/Logo";
 import Link from "next/link";
@@ -14,6 +15,7 @@ type Props = {
     type?: string;
     hood?: string;
     vibe?: string;
+    search?: string;
   }>;
 };
 
@@ -22,8 +24,9 @@ export default async function SpotsPage({ searchParams }: Props) {
   const selectedType = params.type || "all";
   const selectedHood = params.hood || "all";
   const selectedVibe = params.vibe || "";
+  const searchQuery = params.search || "";
 
-  const spots = await getSpotsWithEventCounts(selectedType, selectedVibe, selectedHood);
+  const spots = await getSpotsWithEventCounts(selectedType, selectedVibe, selectedHood, searchQuery);
 
   return (
     <div className="min-h-screen">
@@ -57,6 +60,15 @@ export default async function SpotsPage({ searchParams }: Props) {
         </div>
       </section>
 
+      {/* Search Bar */}
+      <section className="py-4 border-b border-[var(--twilight)]">
+        <div className="max-w-3xl mx-auto px-4">
+          <Suspense fallback={<div className="h-10 bg-[var(--night)] rounded-lg animate-pulse" />}>
+            <SpotSearchBar />
+          </Suspense>
+        </div>
+      </section>
+
       {/* Filters */}
       <Suspense fallback={<div className="h-24 bg-[var(--night)]" />}>
         <SpotFilters />
@@ -68,6 +80,7 @@ export default async function SpotsPage({ searchParams }: Props) {
           <span className="text-[var(--soft)]">{spots.length}</span>{" "}
           {selectedType !== "all" ? `${getCategoryLabel(selectedType).toLowerCase()}s` : "spots"}
           {selectedHood !== "all" && ` in ${selectedHood}`}
+          {searchQuery && ` matching "${searchQuery}"`}
         </p>
       </div>
 

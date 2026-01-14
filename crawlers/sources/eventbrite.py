@@ -1,6 +1,10 @@
 """
 Crawler for Eventbrite events in Atlanta.
 Scrapes JSON-LD data from Eventbrite's search pages.
+
+Note: Eventbrite's public event discovery API requires partner access.
+The free API only allows managing your own events. Scraping JSON-LD
+from public search pages is the only option for discovery.
 """
 
 import json
@@ -12,7 +16,7 @@ from bs4 import BeautifulSoup
 
 from utils import fetch_page, slugify
 from db import get_or_create_venue, insert_event, find_event_by_hash
-from dedupe import generate_content_hash, is_duplicate
+from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
 

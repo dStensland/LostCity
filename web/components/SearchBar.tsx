@@ -2,13 +2,38 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useEffect, useCallback, useRef } from "react";
+import { getSearchSuggestions } from "@/lib/search";
+import { getRecentSearches, addRecentSearch } from "@/lib/searchHistory";
 
 export default function SearchBar() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [query, setQuery] = useState(searchParams.get("search") || "");
   const [isSearching, setIsSearching] = useState(false);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [recentSearches, setRecentSearches] = useState<string[]>([]);
   const currentSearchParam = searchParams.get("search") || "";
+  const inputRef = useRef<HTMLInputElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Load recent searches on mount
+  useEffect(() => {
+    setRecentSearches(getRecentSearches());
+  }, []);
+
+  // Fetch suggestions as user types
+  useEffect(() => {
+    if (query.length >= 2) {
+      const timer = setTimeout(async () => {
+        const results = await getSearchSuggestions(query);
+        setSuggestions(results);
+      }, 100);
+      return () => clearTimeout(timer);
+    } else {
+      setSuggestions([]);
+    }
+  }, [query]);
 
   // Debounced search update
   useEffect(() => {
@@ -22,6 +47,9 @@ export default function SearchBar() {
 
       if (query.trim()) {
         params.set("search", query.trim());
+        // Save to recent searches when search is executed
+        addRecentSearch(query.trim());
+        setRecentSearches(getRecentSearches());
       } else {
         params.delete("search");
       }
@@ -32,17 +60,37 @@ export default function SearchBar() {
       const newUrl = params.toString() ? `/?${params.toString()}` : "/";
       router.push(newUrl, { scroll: false });
       setIsSearching(false);
-    }, 300);
+    }, 150); // Reduced from 300ms
 
     return () => clearTimeout(timer);
   }, [query, router, searchParams, currentSearchParam]);
 
   const handleClear = useCallback(() => {
     setQuery("");
+    setShowDropdown(false);
   }, []);
 
+  const handleFocus = useCallback(() => {
+    setShowDropdown(true);
+  }, []);
+
+  const handleBlur = useCallback(() => {
+    // Delay to allow click on dropdown items
+    setTimeout(() => setShowDropdown(false), 200);
+  }, []);
+
+  const selectSuggestion = useCallback((term: string) => {
+    setQuery(term);
+    setShowDropdown(false);
+    inputRef.current?.blur();
+  }, []);
+
+  const showRecent = query.length < 2 && recentSearches.length > 0;
+  const showSuggestions = query.length >= 2 && suggestions.length > 0;
+  const shouldShowDropdown = showDropdown && (showRecent || showSuggestions);
+
   return (
-    <div className="relative w-full">
+    <div className="relative w-full" ref={dropdownRef}>
       <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
         {isSearching ? (
           <svg
@@ -81,9 +129,12 @@ export default function SearchBar() {
         )}
       </div>
       <input
+        ref={inputRef}
         type="text"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
+        onFocus={handleFocus}
+        onBlur={handleBlur}
         placeholder="Search events, venues..."
         className="block w-full pl-11 pr-10 py-2.5 bg-[var(--night)] border border-[var(--twilight)] rounded-lg text-[var(--cream)] placeholder-[var(--muted)] text-sm focus:outline-none focus:border-[var(--coral)] focus:ring-1 focus:ring-[var(--coral)] transition-colors"
       />
@@ -108,6 +159,71 @@ export default function SearchBar() {
             />
           </svg>
         </button>
+      )}
+
+      {/* Suggestions Dropdown */}
+      {shouldShowDropdown && (
+        <div className="absolute top-full left-0 right-0 mt-1 bg-[var(--night)] border border-[var(--twilight)] rounded-lg shadow-lg z-50 overflow-hidden">
+          {showRecent && (
+            <div className="p-2">
+              <p className="text-xs text-[var(--muted)] px-2 pb-1 font-medium">
+                Recent
+              </p>
+              {recentSearches.map((term) => (
+                <button
+                  key={term}
+                  onMouseDown={() => selectSuggestion(term)}
+                  className="flex items-center gap-2 w-full text-left px-2 py-1.5 text-sm text-[var(--cream)] hover:bg-[var(--twilight)] rounded transition-colors"
+                >
+                  <svg
+                    className="h-3 w-3 text-[var(--muted)]"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                  {term}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {showSuggestions && (
+            <div className={`p-2 ${showRecent ? "border-t border-[var(--twilight)]" : ""}`}>
+              <p className="text-xs text-[var(--muted)] px-2 pb-1 font-medium">
+                Suggestions
+              </p>
+              {suggestions.map((suggestion) => (
+                <button
+                  key={suggestion}
+                  onMouseDown={() => selectSuggestion(suggestion)}
+                  className="flex items-center gap-2 w-full text-left px-2 py-1.5 text-sm text-[var(--cream)] hover:bg-[var(--twilight)] rounded transition-colors"
+                >
+                  <svg
+                    className="h-3 w-3 text-[var(--muted)]"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                    />
+                  </svg>
+                  {suggestion}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       )}
     </div>
   );

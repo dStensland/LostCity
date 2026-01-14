@@ -56,6 +56,17 @@ SOURCE_MODULES = {
     "buried-alive": "sources.buried_alive",
     # Phase 4 - Additional Music Venues
     "529": "sources.five29",
+    # Meetups
+    "meetup": "sources.meetup",
+    # Bookstores
+    "a-cappella-books": "sources.a_cappella_books",
+    "charis-books": "sources.charis_books",
+    "little-shop-of-stories": "sources.little_shop_of_stories",
+    "eagle-eye-books": "sources.eagle_eye_books",
+    "foxtale-books": "sources.foxtale_books",
+    # Libraries
+    "fulton-library": "sources.fulton_library",
+    "dekalb-library": "sources.dekalb_library",
 }
 
 

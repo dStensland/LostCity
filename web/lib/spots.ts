@@ -104,7 +104,8 @@ export async function getSpots(type?: string): Promise<Spot[]> {
 export async function getSpotsWithEventCounts(
   type?: string,
   vibe?: string,
-  neighborhood?: string
+  neighborhood?: string,
+  search?: string
 ): Promise<Spot[]> {
   const today = new Date().toISOString().split("T")[0];
 
@@ -125,6 +126,14 @@ export async function getSpotsWithEventCounts(
 
   if (neighborhood && neighborhood !== "all") {
     venueQuery = venueQuery.eq("neighborhood", neighborhood);
+  }
+
+  // Apply text search filter
+  if (search?.trim()) {
+    const searchTerm = `%${search.trim()}%`;
+    venueQuery = venueQuery.or(
+      `name.ilike.${searchTerm},description.ilike.${searchTerm},neighborhood.ilike.${searchTerm}`
+    );
   }
 
   const { data: venues, error: venueError } = await venueQuery;

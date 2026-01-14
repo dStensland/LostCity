@@ -40,7 +40,9 @@ INSERT INTO categories (id, name, display_order, icon, color) VALUES
   ('learning', 'Learning', 12, 'book', '#A8E6CF'),
   ('other', 'Other', 99, 'star', '#888888'),
   ('dance', 'Dance', 13, 'music', '#C38D9E'),
-  ('tours', 'Tours', 14, 'map', '#7FDBFF')
+  ('tours', 'Tours', 14, 'map', '#7FDBFF'),
+  ('meetup', 'Meetup', 15, 'users', '#ED1C40'),
+  ('words', 'Words', 16, 'book', '#93C5FD')
 ON CONFLICT (id) DO UPDATE SET
   name = EXCLUDED.name,
   display_order = EXCLUDED.display_order,
@@ -203,6 +205,36 @@ INSERT INTO subcategories (id, category_id, name, display_order) VALUES
   ('learning.tour', 'learning', 'Tour', 4),
   ('learning.conference', 'learning', 'Conference / Summit', 5),
   ('learning.skillshare', 'learning', 'Skill Share', 6)
+ON CONFLICT (id) DO UPDATE SET
+  name = EXCLUDED.name,
+  display_order = EXCLUDED.display_order;
+
+-- MEETUP subcategories
+INSERT INTO subcategories (id, category_id, name, display_order) VALUES
+  ('meetup.tech', 'meetup', 'Tech & Science', 1),
+  ('meetup.professional', 'meetup', 'Professional & Career', 2),
+  ('meetup.social', 'meetup', 'Social & Networking', 3),
+  ('meetup.hobbies', 'meetup', 'Hobbies & Interests', 4),
+  ('meetup.outdoors', 'meetup', 'Outdoors & Adventure', 5),
+  ('meetup.learning', 'meetup', 'Learning & Development', 6),
+  ('meetup.health', 'meetup', 'Health & Wellness', 7),
+  ('meetup.creative', 'meetup', 'Arts & Creative', 8),
+  ('meetup.sports', 'meetup', 'Sports & Fitness', 9),
+  ('meetup.food', 'meetup', 'Food & Drink', 10),
+  ('meetup.parents', 'meetup', 'Parents & Family', 11),
+  ('meetup.lgbtq', 'meetup', 'LGBTQ+', 12)
+ON CONFLICT (id) DO UPDATE SET
+  name = EXCLUDED.name,
+  display_order = EXCLUDED.display_order;
+
+-- WORDS subcategories
+INSERT INTO subcategories (id, category_id, name, display_order) VALUES
+  ('words.reading', 'words', 'Reading / Signing', 1),
+  ('words.bookclub', 'words', 'Book Club', 2),
+  ('words.poetry', 'words', 'Poetry', 3),
+  ('words.storytelling', 'words', 'Storytelling', 4),
+  ('words.workshop', 'words', 'Writing Workshop', 5),
+  ('words.lecture', 'words', 'Author Talk', 6)
 ON CONFLICT (id) DO UPDATE SET
   name = EXCLUDED.name,
   display_order = EXCLUDED.display_order;

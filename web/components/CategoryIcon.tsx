@@ -14,6 +14,8 @@ export const CATEGORY_CONFIG = {
   fitness: { label: "Fitness", color: "#5EEAD4" },
   nightlife: { label: "Nightlife", color: "#E879F9" },
   family: { label: "Family", color: "#A78BFA" },
+  meetup: { label: "Meetup", color: "#ED1C40" },
+  words: { label: "Words", color: "#93C5FD" },
 
   // Spot types (reuse some colors, add new ones)
   music_venue: { label: "Music Venue", color: "#F9A8D4" },
@@ -28,6 +30,8 @@ export const CATEGORY_CONFIG = {
   museum: { label: "Museum", color: "#94A3B8" },
   convention_center: { label: "Convention", color: "#38BDF8" },
   games: { label: "Games", color: "#4ADE80" },
+  bookstore: { label: "Bookstore", color: "#93C5FD" },
+  library: { label: "Library", color: "#60A5FA" },
 } as const;
 
 export type CategoryType = keyof typeof CATEGORY_CONFIG;
@@ -240,6 +244,41 @@ const iconPaths: Record<string, ReactNode> = {
       <circle cx="15" cy="10" r="1" fill="currentColor" />
       <circle cx="17" cy="12" r="1" fill="currentColor" />
       <path d="M2 10a4 4 0 014-4h12a4 4 0 014 4v4a4 4 0 01-4 4H6a4 4 0 01-4-4v-4z" strokeWidth={2} fill="none" stroke="currentColor" />
+    </>
+  ),
+
+  // Meetup - group of people
+  meetup: (
+    <>
+      <circle cx="9" cy="7" r="3" strokeWidth={2} fill="none" stroke="currentColor" />
+      <circle cx="17" cy="7" r="3" strokeWidth={2} fill="none" stroke="currentColor" />
+      <path d="M3 21v-2a4 4 0 014-4h4" strokeWidth={2} strokeLinecap="round" fill="none" stroke="currentColor" />
+      <path d="M21 21v-2a4 4 0 00-4-4h-4" strokeWidth={2} strokeLinecap="round" fill="none" stroke="currentColor" />
+    </>
+  ),
+
+  // Words - open book
+  words: (
+    <>
+      <path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2V3z" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" fill="none" stroke="currentColor" />
+      <path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7V3z" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" fill="none" stroke="currentColor" />
+    </>
+  ),
+
+  // Bookstore - spot type
+  bookstore: (
+    <>
+      <path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2V3z" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" fill="none" stroke="currentColor" />
+      <path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7V3z" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" fill="none" stroke="currentColor" />
+    </>
+  ),
+
+  // Library - building with book
+  library: (
+    <>
+      <path d="M4 19V6a2 2 0 012-2h12a2 2 0 012 2v13" strokeWidth={2} fill="none" stroke="currentColor" />
+      <path d="M2 19h20M2 22h20" strokeWidth={2} strokeLinecap="round" stroke="currentColor" />
+      <path d="M9 4v15M15 4v15" strokeWidth={2} stroke="currentColor" opacity={0.5} />
     </>
   ),
 };
