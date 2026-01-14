@@ -1,7 +1,6 @@
 import { getFilteredEventsWithSearch, getVenuesWithEvents, type SearchFilters } from "@/lib/search";
 import SearchBar from "@/components/SearchBar";
 import FilterBar from "@/components/FilterBar";
-import ActiveFilters from "@/components/ActiveFilters";
 import EventList from "@/components/EventList";
 import ModeToggle from "@/components/ModeToggle";
 import Logo from "@/components/Logo";
@@ -79,19 +78,12 @@ export default async function Home({ searchParams }: Props) {
       </section>
 
       {/* Filters */}
-      <section className="sticky top-0 z-30 bg-[var(--night)] border-b border-[var(--twilight)]">
-        <div className="max-w-3xl mx-auto px-4 py-3">
-          <Suspense fallback={<div className="h-10 flex-1 bg-[var(--twilight)] rounded animate-pulse" />}>
-            <FilterBar venues={venues} />
-          </Suspense>
-        </div>
-      </section>
+      <Suspense fallback={<div className="h-24 bg-[var(--night)]" />}>
+        <FilterBar venues={venues} />
+      </Suspense>
 
-      {/* Active filters + Event count */}
+      {/* Event count */}
       <div className="max-w-3xl mx-auto px-4 border-b border-[var(--twilight)]">
-        <Suspense fallback={null}>
-          <ActiveFilters />
-        </Suspense>
         <p className="font-mono text-xs text-[var(--muted)] py-3">
           <span className="text-[var(--soft)]">{total}</span>{" "}
           {hasActiveFilters ? "matching events" : "upcoming events"}
