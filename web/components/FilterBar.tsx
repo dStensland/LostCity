@@ -62,7 +62,9 @@ export default function FilterBar({ venues }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
-  const dropdownRef = useRef<HTMLDivElement>(null);
+  const [dropdownPosition, setDropdownPosition] = useState<{ top: number; left: number } | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const buttonRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
 
   const currentCategories = searchParams.get("categories")?.split(",").filter(Boolean) || [];
   const currentSubcategories = searchParams.get("subcategories")?.split(",").filter(Boolean) || [];
@@ -72,12 +74,23 @@ export default function FilterBar({ venues }: Props) {
   // Close dropdown when clicking outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
         setOpenDropdown(null);
+        setDropdownPosition(null);
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // Close dropdown on scroll
+  useEffect(() => {
+    function handleScroll() {
+      setOpenDropdown(null);
+      setDropdownPosition(null);
+    }
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
   const updateParams = useCallback(
@@ -114,6 +127,7 @@ export default function FilterBar({ venues }: Props) {
       });
       if (!keepDropdownOpen) {
         setOpenDropdown(null);
+        setDropdownPosition(null);
       }
     },
     [currentCategories, updateParams]
@@ -135,6 +149,7 @@ export default function FilterBar({ venues }: Props) {
   const clearCategories = useCallback(() => {
     updateParams({ categories: null, subcategories: null });
     setOpenDropdown(null);
+    setDropdownPosition(null);
   }, [updateParams]);
 
   const toggleFree = useCallback(() => {
@@ -153,8 +168,35 @@ export default function FilterBar({ venues }: Props) {
     return SUBCATEGORIES[category] && SUBCATEGORIES[category].length > 0;
   };
 
+  const handleCategoryClick = useCallback((catValue: string) => {
+    if (hasSubcategories(catValue)) {
+      // Toggle dropdown, also select the category
+      if (!currentCategories.includes(catValue)) {
+        toggleCategory(catValue, true); // Keep dropdown open
+      }
+
+      // Toggle dropdown
+      if (openDropdown === catValue) {
+        setOpenDropdown(null);
+        setDropdownPosition(null);
+      } else {
+        const button = buttonRefs.current.get(catValue);
+        if (button) {
+          const rect = button.getBoundingClientRect();
+          setDropdownPosition({
+            top: rect.bottom + 4,
+            left: rect.left,
+          });
+        }
+        setOpenDropdown(catValue);
+      }
+    } else {
+      toggleCategory(catValue);
+    }
+  }, [currentCategories, openDropdown, toggleCategory]);
+
   return (
-    <div className="flex-1 space-y-2" ref={dropdownRef}>
+    <div className="flex-1 space-y-2" ref={containerRef}>
       {/* Category filters row */}
       <ScrollableRow>
         <button
@@ -165,77 +207,72 @@ export default function FilterBar({ venues }: Props) {
           All
         </button>
         {CATEGORIES.map((cat) => (
-          <div key={cat.value} className="relative">
-            <button
-              type="button"
-              onClick={() => {
-                if (hasSubcategories(cat.value)) {
-                  // Toggle dropdown, also select the category
-                  if (!currentCategories.includes(cat.value)) {
-                    toggleCategory(cat.value, true); // Keep dropdown open
-                  }
-                  setOpenDropdown(openDropdown === cat.value ? null : cat.value);
-                } else {
-                  toggleCategory(cat.value);
-                }
+          <button
+            key={cat.value}
+            ref={(el) => {
+              if (el) buttonRefs.current.set(cat.value, el);
+            }}
+            type="button"
+            onClick={() => handleCategoryClick(cat.value)}
+            className={`filter-btn flex items-center gap-1.5 ${currentCategories.includes(cat.value) ? "active" : ""}`}
+          >
+            <CategoryIcon
+              type={cat.value}
+              size={14}
+              style={{
+                color: currentCategories.includes(cat.value)
+                  ? "var(--void)"
+                  : CATEGORY_CONFIG[cat.value as CategoryType]?.color
               }}
-              className={`filter-btn flex items-center gap-1.5 ${currentCategories.includes(cat.value) ? "active" : ""}`}
-            >
-              <CategoryIcon
-                type={cat.value}
-                size={14}
-                style={{
-                  color: currentCategories.includes(cat.value)
-                    ? "var(--void)"
-                    : CATEGORY_CONFIG[cat.value as CategoryType]?.color
-                }}
-              />
-              {cat.label}
-              {hasSubcategories(cat.value) && (
-                <svg
-                  className={`w-3 h-3 transition-transform ${openDropdown === cat.value ? "rotate-180" : ""}`}
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
-              )}
-            </button>
-
-            {/* Subcategory dropdown */}
-            {openDropdown === cat.value && hasSubcategories(cat.value) && (
-              <div className="absolute top-full left-0 mt-1 w-56 bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg shadow-2xl shadow-black/50 z-50 overflow-hidden">
-                <div className="max-h-64 overflow-y-auto py-1">
-                  {SUBCATEGORIES[cat.value].map((sub) => (
-                    <button
-                      key={sub.value}
-                      type="button"
-                      onClick={() => toggleSubcategory(sub.value)}
-                      className={`w-full text-left px-3 py-2 text-sm transition-colors flex items-center gap-2 ${
-                        currentSubcategories.includes(sub.value)
-                          ? "bg-[var(--ember)] text-[var(--cream)]"
-                          : "text-[var(--soft)] hover:bg-[var(--twilight)] hover:text-[var(--cream)]"
-                      }`}
-                    >
-                      {currentSubcategories.includes(sub.value) && (
-                        <svg className="w-3 h-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                          <path
-                            fillRule="evenodd"
-                            d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                            clipRule="evenodd"
-                          />
-                        </svg>
-                      )}
-                      <span className={currentSubcategories.includes(sub.value) ? "" : "ml-5"}>{sub.label}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
+            />
+            {cat.label}
+            {hasSubcategories(cat.value) && (
+              <svg
+                className={`w-3 h-3 transition-transform ${openDropdown === cat.value ? "rotate-180" : ""}`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
             )}
-          </div>
+          </button>
         ))}
       </ScrollableRow>
+
+      {/* Subcategory dropdown - rendered outside ScrollableRow */}
+      {openDropdown && hasSubcategories(openDropdown) && dropdownPosition && (
+        <div
+          className="fixed w-56 bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg shadow-2xl shadow-black/50 z-50 overflow-hidden"
+          style={{ top: dropdownPosition.top, left: dropdownPosition.left }}
+        >
+          <div className="max-h-64 overflow-y-auto py-1">
+            {SUBCATEGORIES[openDropdown].map((sub) => (
+              <button
+                key={sub.value}
+                type="button"
+                onClick={() => toggleSubcategory(sub.value)}
+                className={`w-full text-left px-3 py-2 text-sm transition-colors flex items-center gap-2 ${
+                  currentSubcategories.includes(sub.value)
+                    ? "bg-[var(--ember)] text-[var(--cream)]"
+                    : "text-[var(--soft)] hover:bg-[var(--twilight)] hover:text-[var(--cream)]"
+                }`}
+              >
+                {currentSubcategories.includes(sub.value) && (
+                  <svg className="w-3 h-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                    <path
+                      fillRule="evenodd"
+                      d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                )}
+                <span className={currentSubcategories.includes(sub.value) ? "" : "ml-5"}>{sub.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Date, Venue, and Free filters row */}
       <ScrollableRow>
