@@ -103,6 +103,89 @@ const vibesData: { slug: string; vibes: string[] }[] = [
   { slug: 'atlanta-beltline', vibes: ['outdoor-seating', 'dog-friendly'] },
   { slug: 'centennial-olympic-park', vibes: ['outdoor-seating', 'good-for-groups'] },
   { slug: 'atlanta-botanical-garden', vibes: ['outdoor-seating', 'date-spot'] },
+
+  // ===== PHASE 2 =====
+
+  // Convention centers
+  { slug: 'georgia-world-congress-center', vibes: ['good-for-groups'] },
+  { slug: 'americasmart-convention-center', vibes: ['good-for-groups'] },
+  { slug: 'cobb-galleria-centre', vibes: ['good-for-groups'] },
+  { slug: 'gas-south-convention-center', vibes: ['good-for-groups'] },
+  { slug: 'georgia-international-convention-center', vibes: ['good-for-groups'] },
+  { slug: 'infinite-energy-arena', vibes: ['good-for-groups'] },
+
+  // The Masquerade complex
+  { slug: 'the-masquerade-heaven', vibes: ['late-night', 'live-music'] },
+  { slug: 'the-masquerade-hell', vibes: ['late-night', 'live-music'] },
+  { slug: 'the-masquerade-purgatory', vibes: ['late-night', 'live-music'] },
+  { slug: 'the-masquerade-altar', vibes: ['late-night', 'live-music'] },
+  { slug: 'the-masquerade-music-park', vibes: ['late-night', 'live-music', 'outdoor-seating'] },
+
+  // Large music venues
+  { slug: 'terminal-west', vibes: ['late-night', 'live-music'] },
+  { slug: 'variety-playhouse', vibes: ['late-night', 'live-music'] },
+  { slug: 'vinyl', vibes: ['late-night', 'live-music'] },
+  { slug: 'the-loft', vibes: ['late-night', 'live-music'] },
+  { slug: 'aisle-5', vibes: ['late-night', 'live-music'] },
+  { slug: 'smiths-olde-bar', vibes: ['late-night', 'live-music', 'divey'] },
+  { slug: 'center-stage-theater', vibes: ['live-music', 'late-night'] },
+  { slug: 'the-eastern-ga', vibes: ['live-music', 'late-night'] },
+  { slug: 'district-ga', vibes: ['live-music', 'late-night'] },
+  { slug: 'buckhead-theatre', vibes: ['live-music', 'late-night'] },
+  { slug: 'coca-cola-roxy', vibes: ['live-music', 'late-night'] },
+  { slug: 'tabernacle', vibes: ['live-music', 'late-night'] },
+
+  // Concert halls / Performing arts
+  { slug: 'fox-theatre-atlanta', vibes: ['date-spot', 'good-for-groups'] },
+  { slug: 'atlanta-symphony-hall', vibes: ['date-spot', 'good-for-groups'] },
+  { slug: 'symphony-hall', vibes: ['date-spot', 'good-for-groups'] },
+  { slug: 'cobb-energy-performing-arts-centre', vibes: ['date-spot', 'good-for-groups'] },
+  { slug: 'alliance-theatre', vibes: ['date-spot', 'good-for-groups'] },
+
+  // Arenas / Stadiums
+  { slug: 'state-farm-arena', vibes: ['good-for-groups'] },
+  { slug: 'mercedes-benz-stadium', vibes: ['good-for-groups'] },
+  { slug: 'truist-park', vibes: ['good-for-groups', 'outdoor-seating'] },
+  { slug: 'gas-south-arena', vibes: ['good-for-groups'] },
+  { slug: 'gas-south-theater', vibes: ['good-for-groups'] },
+
+  // Bars & Lounges
+  { slug: 'jojos-beloved-cocktail-lounge', vibes: ['craft-cocktails', 'date-spot', 'late-night'] },
+  { slug: 'buckhead-saloon', vibes: ['divey', 'late-night'] },
+  { slug: 'ponce-sports-lounge', vibes: ['good-for-groups', 'late-night'] },
+  { slug: 'opium-nightclub', vibes: ['late-night', 'good-for-groups'] },
+  { slug: 'domaine-atl', vibes: ['late-night', 'good-for-groups'] },
+  { slug: 'revel-atlanta', vibes: ['late-night', 'good-for-groups'] },
+  { slug: 'soho-lounge', vibes: ['late-night'] },
+  { slug: 'bliss-lounge', vibes: ['late-night'] },
+
+  // Breweries
+  { slug: 'monday-night-brewing-the-grove', vibes: ['outdoor-seating', 'dog-friendly', 'good-for-groups'] },
+  { slug: 'atlantucky-brewing', vibes: ['outdoor-seating', 'dog-friendly', 'good-for-groups'] },
+  { slug: 'three-taverns-imaginarium', vibes: ['outdoor-seating', 'dog-friendly', 'good-for-groups'] },
+
+  // Restaurants & Cafes
+  { slug: 'cafe-circa', vibes: ['date-spot', 'craft-cocktails'] },
+  { slug: 'cafe-circa-restaurant-lounge', vibes: ['date-spot', 'craft-cocktails'] },
+  { slug: 'taste-wine-bar-and-market', vibes: ['date-spot'] },
+  { slug: 'bosk-coffee-wine-tapas', vibes: ['date-spot'] },
+  { slug: 'chattahoochee-food-works', vibes: ['good-for-groups', 'outdoor-seating'] },
+
+  // Additional theaters
+  { slug: '7-stages-theater', vibes: ['date-spot'] },
+  { slug: 'alliance-theatre-coca-cola-stage', vibes: ['date-spot'] },
+
+  // Film festivals
+  { slug: 'atlanta-film-festival', vibes: ['date-spot'] },
+  { slug: 'atlanta-film-society', vibes: ['date-spot'] },
+  { slug: 'atlanta-jewish-film-festival', vibes: ['date-spot'] },
+  { slug: 'out-on-film', vibes: ['date-spot'] },
+  { slug: 'buried-alive-film-fest', vibes: ['date-spot'] },
+
+  // Additional museums
+  { slug: 'the-breman-museum', vibes: ['date-spot'] },
+  { slug: 'atlanta-monetary-museum', vibes: ['date-spot'] },
+  { slug: 'national-infantry-museum', vibes: ['good-for-groups'] },
 ];
 
 async function main() {

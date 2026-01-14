@@ -126,14 +126,127 @@ UPDATE venues SET vibes = ARRAY['outdoor-seating', 'good-for-groups'] WHERE slug
 UPDATE venues SET vibes = ARRAY['outdoor-seating', 'date-spot'] WHERE slug = 'atlanta-botanical-garden';
 
 -- =====================================================
--- Summary
+-- CONVENTION CENTERS
 -- =====================================================
--- Games venues: ~24 venues with vibes
--- Music venues: ~4 venues with vibes
--- Comedy clubs: ~2 venues with vibes
--- Theaters: ~1 venue with vibes
--- Cinemas: ~3 venues with vibes
--- Galleries: ~14 venues with vibes
--- Museums: ~19 venues with vibes
--- Outdoor: ~3 venues with vibes
--- Total: ~70 venues with vibes assigned
+
+UPDATE venues SET vibes = ARRAY['good-for-groups'] WHERE slug = 'georgia-world-congress-center';
+UPDATE venues SET vibes = ARRAY['good-for-groups'] WHERE slug = 'americasmart-convention-center';
+UPDATE venues SET vibes = ARRAY['good-for-groups'] WHERE slug = 'cobb-galleria-centre';
+UPDATE venues SET vibes = ARRAY['good-for-groups'] WHERE slug = 'gas-south-convention-center';
+UPDATE venues SET vibes = ARRAY['good-for-groups'] WHERE slug = 'georgia-international-convention-center';
+UPDATE venues SET vibes = ARRAY['good-for-groups'] WHERE slug = 'infinite-energy-arena';
+
+-- =====================================================
+-- LARGE MUSIC VENUES / CONCERT HALLS
+-- =====================================================
+
+-- The Masquerade complex (late-night, live-music)
+UPDATE venues SET vibes = ARRAY['late-night', 'live-music'] WHERE slug = 'the-masquerade-heaven';
+UPDATE venues SET vibes = ARRAY['late-night', 'live-music'] WHERE slug = 'the-masquerade-hell';
+UPDATE venues SET vibes = ARRAY['late-night', 'live-music'] WHERE slug = 'the-masquerade-purgatory';
+UPDATE venues SET vibes = ARRAY['late-night', 'live-music'] WHERE slug = 'the-masquerade-altar';
+UPDATE venues SET vibes = ARRAY['late-night', 'live-music', 'outdoor-seating'] WHERE slug = 'the-masquerade-music-park';
+
+-- Other music venues
+UPDATE venues SET vibes = ARRAY['late-night', 'live-music'] WHERE slug = 'terminal-west';
+UPDATE venues SET vibes = ARRAY['late-night', 'live-music'] WHERE slug = 'variety-playhouse';
+UPDATE venues SET vibes = ARRAY['late-night', 'live-music'] WHERE slug = 'vinyl';
+UPDATE venues SET vibes = ARRAY['late-night', 'live-music'] WHERE slug = 'the-loft';
+UPDATE venues SET vibes = ARRAY['late-night', 'live-music'] WHERE slug = 'aisle-5';
+UPDATE venues SET vibes = ARRAY['late-night', 'live-music', 'divey'] WHERE slug = 'smiths-olde-bar';
+UPDATE venues SET vibes = ARRAY['live-music', 'late-night'] WHERE slug = 'center-stage-theater';
+UPDATE venues SET vibes = ARRAY['live-music', 'late-night'] WHERE slug = 'the-eastern-ga';
+UPDATE venues SET vibes = ARRAY['live-music', 'late-night'] WHERE slug = 'district-ga';
+UPDATE venues SET vibes = ARRAY['live-music', 'late-night'] WHERE slug = 'buckhead-theatre';
+UPDATE venues SET vibes = ARRAY['live-music', 'late-night'] WHERE slug = 'coca-cola-roxy';
+UPDATE venues SET vibes = ARRAY['live-music', 'late-night'] WHERE slug = 'tabernacle';
+
+-- Concert halls / Performing arts (date-spot, good-for-groups)
+UPDATE venues SET vibes = ARRAY['date-spot', 'good-for-groups'] WHERE slug = 'fox-theatre-atlanta';
+UPDATE venues SET vibes = ARRAY['date-spot', 'good-for-groups'] WHERE slug = 'atlanta-symphony-hall';
+UPDATE venues SET vibes = ARRAY['date-spot', 'good-for-groups'] WHERE slug = 'symphony-hall';
+UPDATE venues SET vibes = ARRAY['date-spot', 'good-for-groups'] WHERE slug = 'cobb-energy-performing-arts-centre';
+UPDATE venues SET vibes = ARRAY['date-spot', 'good-for-groups'] WHERE slug = 'alliance-theatre';
+
+-- =====================================================
+-- ARENAS / STADIUMS (good-for-groups)
+-- =====================================================
+
+UPDATE venues SET vibes = ARRAY['good-for-groups'] WHERE slug = 'state-farm-arena';
+UPDATE venues SET vibes = ARRAY['good-for-groups'] WHERE slug = 'mercedes-benz-stadium';
+UPDATE venues SET vibes = ARRAY['good-for-groups', 'outdoor-seating'] WHERE slug = 'truist-park';
+UPDATE venues SET vibes = ARRAY['good-for-groups'] WHERE slug = 'gas-south-arena';
+UPDATE venues SET vibes = ARRAY['good-for-groups'] WHERE slug = 'gas-south-theater';
+
+-- =====================================================
+-- BARS & LOUNGES
+-- =====================================================
+
+-- Cocktail bars / Upscale lounges (craft-cocktails, date-spot)
+UPDATE venues SET vibes = ARRAY['craft-cocktails', 'date-spot', 'late-night'] WHERE slug = 'jojos-beloved-cocktail-lounge';
+
+-- Dive bars / Neighborhood spots (divey, late-night)
+UPDATE venues SET vibes = ARRAY['divey', 'late-night'] WHERE slug = 'buckhead-saloon';
+
+-- Sports bars / Casual spots (good-for-groups, late-night)
+UPDATE venues SET vibes = ARRAY['good-for-groups', 'late-night'] WHERE slug = 'ponce-sports-lounge';
+
+-- Nightclubs (late-night, good-for-groups)
+UPDATE venues SET vibes = ARRAY['late-night', 'good-for-groups'] WHERE slug = 'opium-nightclub';
+UPDATE venues SET vibes = ARRAY['late-night', 'good-for-groups'] WHERE slug = 'domaine-atl';
+UPDATE venues SET vibes = ARRAY['late-night', 'good-for-groups'] WHERE slug = 'revel-atlanta';
+UPDATE venues SET vibes = ARRAY['late-night'] WHERE slug = 'soho-lounge';
+UPDATE venues SET vibes = ARRAY['late-night'] WHERE slug = 'bliss-lounge';
+
+-- =====================================================
+-- BREWERIES
+-- =====================================================
+
+UPDATE venues SET vibes = ARRAY['outdoor-seating', 'dog-friendly', 'good-for-groups'] WHERE slug = 'monday-night-brewing-the-grove';
+UPDATE venues SET vibes = ARRAY['outdoor-seating', 'dog-friendly', 'good-for-groups'] WHERE slug = 'atlantucky-brewing';
+UPDATE venues SET vibes = ARRAY['outdoor-seating', 'dog-friendly', 'good-for-groups'] WHERE slug = 'three-taverns-imaginarium';
+
+-- =====================================================
+-- RESTAURANTS & CAFES
+-- =====================================================
+
+-- Upscale / Date spots
+UPDATE venues SET vibes = ARRAY['date-spot', 'craft-cocktails'] WHERE slug = 'cafe-circa';
+UPDATE venues SET vibes = ARRAY['date-spot', 'craft-cocktails'] WHERE slug = 'cafe-circa-restaurant-lounge';
+UPDATE venues SET vibes = ARRAY['date-spot'] WHERE slug = 'taste-wine-bar-and-market';
+UPDATE venues SET vibes = ARRAY['date-spot'] WHERE slug = 'bosk-coffee-wine-tapas';
+
+-- Food halls (good-for-groups, outdoor-seating)
+UPDATE venues SET vibes = ARRAY['good-for-groups', 'outdoor-seating'] WHERE slug = 'chattahoochee-food-works';
+
+-- =====================================================
+-- THEATERS
+-- =====================================================
+
+UPDATE venues SET vibes = ARRAY['date-spot'] WHERE slug = '7-stages-theater';
+UPDATE venues SET vibes = ARRAY['date-spot'] WHERE slug = 'alliance-theatre-coca-cola-stage';
+
+-- =====================================================
+-- FILM FESTIVALS
+-- =====================================================
+
+UPDATE venues SET vibes = ARRAY['date-spot'] WHERE slug = 'atlanta-film-festival';
+UPDATE venues SET vibes = ARRAY['date-spot'] WHERE slug = 'atlanta-film-society';
+UPDATE venues SET vibes = ARRAY['date-spot'] WHERE slug = 'atlanta-jewish-film-festival';
+UPDATE venues SET vibes = ARRAY['date-spot'] WHERE slug = 'out-on-film';
+UPDATE venues SET vibes = ARRAY['date-spot'] WHERE slug = 'buried-alive-film-fest';
+
+-- =====================================================
+-- ADDITIONAL MUSEUMS
+-- =====================================================
+
+UPDATE venues SET vibes = ARRAY['date-spot'] WHERE slug = 'the-breman-museum';
+UPDATE venues SET vibes = ARRAY['date-spot'] WHERE slug = 'atlanta-monetary-museum';
+UPDATE venues SET vibes = ARRAY['good-for-groups'] WHERE slug = 'national-infantry-museum';
+
+-- =====================================================
+-- Summary (Updated)
+-- =====================================================
+-- Phase 1: ~70 venues
+-- Phase 2: ~60 additional venues
+-- Total: ~130 venues with vibes assigned
