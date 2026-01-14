@@ -16,6 +16,9 @@ const SPOT_TYPE_KEYS = [
   "coffee_shop",
   "brewery",
   "gallery",
+  "museum",
+  "convention_center",
+  "games",
   "club",
   "arena",
 ] as const;

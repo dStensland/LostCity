@@ -12,6 +12,9 @@ export const SPOT_TYPES = {
   gallery: { label: "Gallery", icon: "🖼️" },
   club: { label: "Club", icon: "🪩" },
   arena: { label: "Arena", icon: "🏟️" },
+  museum: { label: "Museum", icon: "🏛️" },
+  convention_center: { label: "Convention", icon: "🏢" },
+  games: { label: "Games", icon: "🎯" },
 } as const;
 
 export type SpotType = keyof typeof SPOT_TYPES;

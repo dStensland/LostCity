@@ -25,6 +25,9 @@ export const CATEGORY_CONFIG = {
   club: { label: "Club", color: "#E879F9" },
   arena: { label: "Arena", color: "#7DD3FC" },
   comedy_club: { label: "Comedy Club", color: "#FCD34D" },
+  museum: { label: "Museum", color: "#94A3B8" },
+  convention_center: { label: "Convention", color: "#38BDF8" },
+  games: { label: "Games", color: "#4ADE80" },
 } as const;
 
 export type CategoryType = keyof typeof CATEGORY_CONFIG;
@@ -208,6 +211,35 @@ const iconPaths: Record<string, ReactNode> = {
       <path d="M3 10.5L12 3l9 7.5" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" fill="none" stroke="currentColor" />
       <path d="M5 9v10a2 2 0 002 2h10a2 2 0 002-2V9" strokeWidth={2} fill="none" stroke="currentColor" />
       <path d="M12 12.5l2.5 2.5L12 17.5 9.5 15l2.5-2.5z" fill="currentColor" />
+    </>
+  ),
+
+  // Museum - classical building with columns
+  museum: (
+    <>
+      <path d="M3 21h18M4 21V10M20 21V10M12 3L2 9h20L12 3z" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" fill="none" stroke="currentColor" />
+      <path d="M7 21v-8M12 21v-8M17 21v-8" strokeWidth={2} strokeLinecap="round" stroke="currentColor" />
+    </>
+  ),
+
+  // Convention Center - large building
+  convention_center: (
+    <>
+      <rect x="3" y="8" width="18" height="13" rx="1" strokeWidth={2} fill="none" stroke="currentColor" />
+      <path d="M3 12h18" strokeWidth={2} stroke="currentColor" />
+      <path d="M8 3h8l2 5H6l2-5z" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" fill="none" stroke="currentColor" />
+      <rect x="7" y="15" width="3" height="6" fill="currentColor" opacity={0.5} />
+      <rect x="14" y="15" width="3" height="6" fill="currentColor" opacity={0.5} />
+    </>
+  ),
+
+  // Games - game controller
+  games: (
+    <>
+      <path d="M6 11h4M8 9v4" strokeWidth={2} strokeLinecap="round" stroke="currentColor" />
+      <circle cx="15" cy="10" r="1" fill="currentColor" />
+      <circle cx="17" cy="12" r="1" fill="currentColor" />
+      <path d="M2 10a4 4 0 014-4h12a4 4 0 014 4v4a4 4 0 01-4 4H6a4 4 0 01-4-4v-4z" strokeWidth={2} fill="none" stroke="currentColor" />
     </>
   ),
 };

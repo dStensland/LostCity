@@ -39,6 +39,9 @@
   --spot-arena: #7DD3FC;
   --spot-comedy_club: #FCD34D;
   --spot-theater: #F0ABFC;
+  --spot-museum: #94A3B8;
+  --spot-convention_center: #38BDF8;
+  --spot-games: #4ADE80;
 
   /* UI colors */
   --background: var(--void);
