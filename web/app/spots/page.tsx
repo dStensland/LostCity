@@ -12,6 +12,7 @@ type Props = {
   searchParams: Promise<{
     type?: string;
     hood?: string;
+    vibe?: string;
   }>;
 };
 
@@ -19,8 +20,9 @@ export default async function SpotsPage({ searchParams }: Props) {
   const params = await searchParams;
   const selectedType = params.type || "all";
   const selectedHood = params.hood || "all";
+  const selectedVibe = params.vibe || "";
 
-  const spots = await getSpotsWithEventCounts(selectedType, undefined, selectedHood);
+  const spots = await getSpotsWithEventCounts(selectedType, selectedVibe, selectedHood);
 
   return (
     <div className="min-h-screen">
