@@ -8,13 +8,16 @@ import {
   calculateGoogleScore,
 } from "@/lib/google-places";
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+function getSupabase() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
+}
 
 // This endpoint should be protected in production (add auth check)
 export async function POST(req: NextRequest) {
+  const supabase = getSupabase();
   // Check for API key or admin auth
   const authHeader = req.headers.get("authorization");
   const expectedKey = process.env.PLACES_REFRESH_API_KEY;

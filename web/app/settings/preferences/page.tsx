@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Logo from "@/components/Logo";
@@ -18,7 +18,7 @@ import type { Database } from "@/lib/types";
 
 type UserPreferences = Database["public"]["Tables"]["user_preferences"]["Row"];
 
-export default function PreferencesPage() {
+function PreferencesContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const isWelcome = searchParams.get("welcome") === "true";
@@ -278,5 +278,17 @@ export default function PreferencesPage() {
         )}
       </main>
     </div>
+  );
+}
+
+export default function PreferencesPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-pulse text-[var(--muted)]">Loading...</div>
+      </div>
+    }>
+      <PreferencesContent />
+    </Suspense>
   );
 }

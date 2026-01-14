@@ -4,7 +4,8 @@ import { SPOT_TYPES, VIBES, NEIGHBORHOODS } from "@/lib/spots";
 import { ITP_NEIGHBORHOODS } from "@/config/neighborhoods";
 import { PLACE_CATEGORIES } from "@/config/categories";
 
-export const revalidate = 3600; // Revalidate every hour
+// Prevent static generation - page fetches from database
+export const dynamic = "force-dynamic";
 
 type Source = {
   name: string;

@@ -1,10 +1,55 @@
-import { createClient } from "@supabase/supabase-js";
+import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "./types";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+// Lazy-load Supabase client to avoid build-time errors
+let _supabase: SupabaseClient<Database> | null = null;
 
-export const supabase = createClient<Database>(supabaseUrl, supabaseKey);
+// Mock client for build time
+const mockClient = {
+  from: () => ({
+    select: () => ({
+      eq: () => ({
+        single: async () => ({ data: null, error: null }),
+        neq: () => ({
+          gte: () => ({
+            order: () => ({
+              limit: async () => ({ data: [], error: null }),
+            }),
+          }),
+        }),
+      }),
+      gte: () => ({
+        order: () => ({
+          order: () => ({
+            limit: async () => ({ data: [], error: null }),
+            range: async () => ({ data: [], error: null, count: 0 }),
+          }),
+        }),
+      }),
+    }),
+  }),
+} as unknown as SupabaseClient<Database>;
+
+function getSupabase(): SupabaseClient<Database> {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  // Return mock client during build when env vars are not available
+  if (!supabaseUrl || !supabaseKey) {
+    return mockClient;
+  }
+
+  if (!_supabase) {
+    _supabase = createClient<Database>(supabaseUrl, supabaseKey);
+  }
+  return _supabase;
+}
+
+export const supabase = new Proxy({} as SupabaseClient<Database>, {
+  get(_, prop) {
+    return (getSupabase() as unknown as Record<string, unknown>)[prop as string];
+  },
+});
 
 export type Event = {
   id: number;

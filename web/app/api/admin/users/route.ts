@@ -4,11 +4,16 @@ import { createClient as createServerClient, getUser } from "@/lib/supabase/serv
 
 // Create admin client with service role for auth operations
 function createAdminClient() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_KEY!,
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  );
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_KEY;
+
+  if (!url || !key) {
+    throw new Error("Missing Supabase admin credentials");
+  }
+
+  return createClient(url, key, {
+    auth: { autoRefreshToken: false, persistSession: false }
+  });
 }
 
 // Check if current user is admin

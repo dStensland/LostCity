@@ -2,6 +2,9 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 
+// Prevent static generation - admin pages require auth
+export const dynamic = "force-dynamic";
+
 export default async function AdminLayout({
   children,
 }: {
