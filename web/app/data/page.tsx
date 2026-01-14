@@ -10,8 +10,8 @@ type Source = {
   name: string;
   slug: string;
   source_type: string;
-  base_url: string;
-  active: boolean;
+  url: string;
+  is_active: boolean;
 };
 
 type Venue = {
@@ -35,7 +35,7 @@ async function getData() {
   // Fetch sources
   const { data: sources } = await supabase
     .from("sources")
-    .select("name, slug, source_type, base_url, active")
+    .select("name, slug, source_type, url, is_active")
     .order("name");
 
   // Fetch venues/spots with counts
@@ -71,8 +71,8 @@ export default async function DataPage() {
       name: s.name,
       slug: s.slug,
       type: s.source_type,
-      url: s.base_url,
-      active: s.active,
+      url: s.url,
+      active: s.is_active,
     })),
     eventCategories: {
       main: CATEGORIES.map((c) => ({ id: c.value, label: c.label })),
@@ -112,7 +112,7 @@ export default async function DataPage() {
     })),
     stats: {
       totalSources: sources?.length || 0,
-      activeSources: sources?.filter((s) => s.active).length || 0,
+      activeSources: sources?.filter((s) => s.is_active).length || 0,
       totalVenues: venues?.length || 0,
       totalNeighborhoods: ITP_NEIGHBORHOODS.length,
       totalEventCategories: CATEGORIES.length,
