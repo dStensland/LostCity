@@ -17,6 +17,24 @@ export interface SearchFilters {
   price_max?: number;
   date_filter?: "today" | "weekend" | "week";
   venue_id?: number;
+  include_rollups?: boolean;
+}
+
+// Rollup types for collapsed event groups
+export interface EventGroup {
+  type: "venue" | "source";
+  id: string;
+  title: string;
+  subtitle: string;
+  previewEvents: EventWithLocation[];
+  totalCount: number;
+  expandUrl: string;
+}
+
+export type EventOrGroup = EventWithLocation | EventGroup;
+
+export function isEventGroup(item: EventOrGroup): item is EventGroup {
+  return "type" in item && (item.type === "venue" || item.type === "source");
 }
 
 export type EventWithLocation = Event & {
@@ -497,4 +515,234 @@ export async function getSearchSuggestions(prefix: string): Promise<string[]> {
 
   // Dedupe and limit
   return [...new Set(suggestions)].slice(0, 5);
+}
+
+// ============================================================================
+// ROLLUP SUPPORT - Collapse repeated events from same venue/source
+// ============================================================================
+
+interface RollupStats {
+  venueRollups: {
+    venueId: number;
+    venueName: string;
+    venueSlug: string;
+    count: number;
+  }[];
+  sourceRollups: {
+    sourceId: number;
+    sourceName: string;
+    count: number;
+  }[];
+}
+
+// Get rollup statistics for a date range
+async function getRollupStats(
+  dateStart: string,
+  dateEnd: string,
+  categoryId?: string
+): Promise<RollupStats> {
+  // Get events with source rollup behavior
+  let query = supabase
+    .from("events")
+    .select(
+      `
+      venue_id,
+      source_id,
+      venues(id, name, slug),
+      sources(id, name, rollup_behavior)
+    `
+    )
+    .gte("start_date", dateStart)
+    .lte("start_date", dateEnd);
+
+  if (categoryId) {
+    query = query.eq("category_id", categoryId);
+  }
+
+  const { data, error } = await query;
+
+  if (error || !data) {
+    return { venueRollups: [], sourceRollups: [] };
+  }
+
+  // Count events by venue for 'venue' rollup behavior
+  const venueCounts = new Map<
+    number,
+    { venueId: number; venueName: string; venueSlug: string; count: number }
+  >();
+
+  // Count events by source for 'collapse' rollup behavior
+  const sourceCounts = new Map<
+    number,
+    { sourceId: number; sourceName: string; count: number }
+  >();
+
+  type EventWithJoins = {
+    venue_id: number | null;
+    source_id: number | null;
+    venues: { id: number; name: string; slug: string } | null;
+    sources: { id: number; name: string; rollup_behavior: string } | null;
+  };
+
+  for (const event of data as EventWithJoins[]) {
+    const venue = event.venues;
+    const source = event.sources;
+    const rollupBehavior = source?.rollup_behavior || "normal";
+
+    if (rollupBehavior === "venue" && venue) {
+      const existing = venueCounts.get(venue.id);
+      if (existing) {
+        existing.count++;
+      } else {
+        venueCounts.set(venue.id, {
+          venueId: venue.id,
+          venueName: venue.name,
+          venueSlug: venue.slug,
+          count: 1,
+        });
+      }
+    }
+
+    if (rollupBehavior === "collapse" && source) {
+      const existing = sourceCounts.get(source.id);
+      if (existing) {
+        existing.count++;
+      } else {
+        sourceCounts.set(source.id, {
+          sourceId: source.id,
+          sourceName: source.name,
+          count: 1,
+        });
+      }
+    }
+  }
+
+  // Filter to only those exceeding thresholds
+  const venueRollups = Array.from(venueCounts.values()).filter((v) => v.count > 3);
+  const sourceRollups = Array.from(sourceCounts.values()).filter((s) => s.count > 5);
+
+  return { venueRollups, sourceRollups };
+}
+
+// Get events with rollup support
+export async function getFilteredEventsWithRollups(
+  filters: SearchFilters,
+  page = 1,
+  pageSize = 20
+): Promise<{ items: EventOrGroup[]; total: number }> {
+  const today = new Date().toISOString().split("T")[0];
+
+  // Get date range for rollup calculation
+  const dateRange = filters.date_filter
+    ? getDateRange(filters.date_filter)
+    : { start: today, end: format(addDays(new Date(), 365), "yyyy-MM-dd") };
+
+  // Get rollup stats
+  const rollupStats = await getRollupStats(
+    dateRange.start,
+    dateRange.end,
+    filters.categories?.[0]
+  );
+
+  const venueIdsToExclude = rollupStats.venueRollups.map((v) => v.venueId);
+  const sourceIdsToExclude = rollupStats.sourceRollups.map((s) => s.sourceId);
+
+  // Get regular events (excluding those that will be rolled up)
+  const { events, total } = await getFilteredEventsWithSearch(
+    {
+      ...filters,
+      // We'll handle exclusion in a separate step since Supabase can't easily do NOT IN
+    },
+    page,
+    pageSize
+  );
+
+  // Filter out events that should be rolled up
+  const filteredEvents = events.filter((event) => {
+    // Check if venue should be rolled up
+    if (event.venue && venueIdsToExclude.includes(event.venue.id)) {
+      return false;
+    }
+    // Check source_id - need to get it from the event
+    // For now, we don't have source_id in the event select, so skip source exclusion
+    return true;
+  });
+
+  // Build rollup groups
+  const groups: EventGroup[] = [];
+
+  for (const vr of rollupStats.venueRollups) {
+    // Get preview events for this venue
+    const { data: previewData } = await supabase
+      .from("events")
+      .select(
+        `
+        *,
+        venue:venues(id, name, slug, address, neighborhood, city, state, lat, lng, typical_price_min, typical_price_max)
+      `
+      )
+      .eq("venue_id", vr.venueId)
+      .gte("start_date", dateRange.start)
+      .lte("start_date", dateRange.end)
+      .order("start_date")
+      .order("start_time")
+      .limit(3);
+
+    groups.push({
+      type: "venue",
+      id: `venue-${vr.venueId}`,
+      title: vr.venueName,
+      subtitle: `${vr.count} events`,
+      previewEvents: (previewData || []) as EventWithLocation[],
+      totalCount: vr.count,
+      expandUrl: `/spots/${vr.venueSlug}`,
+    });
+  }
+
+  for (const sr of rollupStats.sourceRollups) {
+    // Get preview events for this source
+    const { data: previewData } = await supabase
+      .from("events")
+      .select(
+        `
+        *,
+        venue:venues(id, name, slug, address, neighborhood, city, state, lat, lng, typical_price_min, typical_price_max)
+      `
+      )
+      .eq("source_id", sr.sourceId)
+      .gte("start_date", dateRange.start)
+      .lte("start_date", dateRange.end)
+      .order("start_date")
+      .order("start_time")
+      .limit(3);
+
+    groups.push({
+      type: "source",
+      id: `source-${sr.sourceId}`,
+      title: sr.sourceName,
+      subtitle: `${sr.count} opportunities`,
+      previewEvents: (previewData || []) as EventWithLocation[],
+      totalCount: sr.count,
+      expandUrl: `/events?source=${sr.sourceId}`,
+    });
+  }
+
+  // Combine and sort by date
+  const items: EventOrGroup[] = [...filteredEvents, ...groups];
+
+  // Sort: events by date, groups by their first preview event date
+  items.sort((a, b) => {
+    const dateA = isEventGroup(a)
+      ? a.previewEvents[0]?.start_date || "9999-99-99"
+      : a.start_date;
+    const dateB = isEventGroup(b)
+      ? b.previewEvents[0]?.start_date || "9999-99-99"
+      : b.start_date;
+    return dateA.localeCompare(dateB);
+  });
+
+  return {
+    items,
+    total: total - venueIdsToExclude.length * 3 + groups.length, // Approximate
+  };
 }
