@@ -45,7 +45,7 @@ CREATE TABLE IF NOT EXISTS follows (
   -- Polymorphic: exactly one of these will be set
   followed_user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
   followed_venue_id INT REFERENCES venues(id) ON DELETE CASCADE,
-  followed_org_id INT REFERENCES organizations(id) ON DELETE CASCADE,
+  followed_org_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
   created_at TIMESTAMPTZ DEFAULT now(),
 
   -- Ensure exactly one follow target
@@ -96,7 +96,7 @@ CREATE TABLE IF NOT EXISTS recommendations (
   -- Polymorphic target
   event_id INT REFERENCES events(id) ON DELETE CASCADE,
   venue_id INT REFERENCES venues(id) ON DELETE CASCADE,
-  org_id INT REFERENCES organizations(id) ON DELETE CASCADE,
+  org_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
   note TEXT,  -- Optional comment/reason
   visibility TEXT DEFAULT 'public' CHECK (visibility IN ('public', 'friends', 'private')),
   created_at TIMESTAMPTZ DEFAULT now(),
@@ -141,7 +141,7 @@ CREATE TABLE IF NOT EXISTS activities (
   event_id INT REFERENCES events(id) ON DELETE CASCADE,
   venue_id INT REFERENCES venues(id) ON DELETE CASCADE,
   target_user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
-  org_id INT REFERENCES organizations(id) ON DELETE CASCADE,
+  org_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
   metadata JSONB DEFAULT '{}',  -- Additional context (e.g., RSVP status, note text)
   created_at TIMESTAMPTZ DEFAULT now()
 );
