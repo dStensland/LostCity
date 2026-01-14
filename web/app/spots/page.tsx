@@ -1,64 +1,26 @@
-import { getSpotsWithEventCounts, VIBES, NEIGHBORHOODS } from "@/lib/spots";
+import { Suspense } from "react";
+import { getSpotsWithEventCounts } from "@/lib/spots";
 import SpotCard from "@/components/SpotCard";
 import ModeToggle from "@/components/ModeToggle";
-import CategoryIcon, { CATEGORY_CONFIG, getCategoryLabel } from "@/components/CategoryIcon";
-import NeighborhoodSelect from "@/components/NeighborhoodSelect";
+import SpotFilters from "@/components/SpotFilters";
+import { getCategoryLabel } from "@/components/CategoryIcon";
 import Link from "next/link";
 
 export const revalidate = 60;
 
-// Spot types to show in filter
-const SPOT_TYPE_KEYS = [
-  "music_venue",
-  "theater",
-  "comedy_club",
-  "bar",
-  "restaurant",
-  "coffee_shop",
-  "brewery",
-  "gallery",
-  "museum",
-  "convention_center",
-  "games",
-  "club",
-  "arena",
-] as const;
-
 type Props = {
   searchParams: Promise<{
     type?: string;
-    vibe?: string;
-    neighborhood?: string;
+    hood?: string;
   }>;
 };
-
-// Build URL with current filters
-function buildFilterUrl(
-  currentType: string,
-  currentVibe: string,
-  currentNeighborhood: string,
-  changes: { type?: string; vibe?: string; neighborhood?: string }
-) {
-  const newType = changes.type ?? currentType;
-  const newVibe = changes.vibe ?? currentVibe;
-  const newNeighborhood = changes.neighborhood ?? currentNeighborhood;
-
-  const params = new URLSearchParams();
-  if (newType && newType !== "all") params.set("type", newType);
-  if (newVibe) params.set("vibe", newVibe);
-  if (newNeighborhood && newNeighborhood !== "all") params.set("neighborhood", newNeighborhood);
-
-  const query = params.toString();
-  return `/spots${query ? `?${query}` : ""}`;
-}
 
 export default async function SpotsPage({ searchParams }: Props) {
   const params = await searchParams;
   const selectedType = params.type || "all";
-  const selectedVibe = params.vibe || "";
-  const selectedNeighborhood = params.neighborhood || "all";
+  const selectedHood = params.hood || "all";
 
-  const spots = await getSpotsWithEventCounts(selectedType, selectedVibe, selectedNeighborhood);
+  const spots = await getSpotsWithEventCounts(selectedType, undefined, selectedHood);
 
   return (
     <div className="min-h-screen">
@@ -94,102 +56,18 @@ export default async function SpotsPage({ searchParams }: Props) {
         </div>
       </section>
 
-      {/* Type Filter */}
-      <section className="sticky top-0 z-30 bg-[var(--night)] border-b border-[var(--twilight)]">
-        <div className="max-w-3xl mx-auto px-4 py-3">
-          <div className="flex gap-2 overflow-x-auto scrollbar-hide -mx-4 px-4">
-            <Link
-              href={buildFilterUrl(selectedType, selectedVibe, selectedNeighborhood, { type: "all" })}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full font-mono text-xs font-medium whitespace-nowrap transition-colors ${
-                selectedType === "all"
-                  ? "bg-[var(--cream)] text-[var(--void)]"
-                  : "bg-[var(--twilight)] text-[var(--muted)] hover:text-[var(--cream)]"
-              }`}
-            >
-              All
-            </Link>
-            {SPOT_TYPE_KEYS.map((type) => (
-              <Link
-                key={type}
-                href={buildFilterUrl(selectedType, selectedVibe, selectedNeighborhood, { type })}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full font-mono text-xs font-medium whitespace-nowrap transition-colors ${
-                  selectedType === type
-                    ? "bg-[var(--cream)] text-[var(--void)]"
-                    : "bg-[var(--twilight)] text-[var(--muted)] hover:text-[var(--cream)]"
-                }`}
-              >
-                <CategoryIcon
-                  type={type}
-                  size={14}
-                  style={{ color: selectedType === type ? "var(--void)" : CATEGORY_CONFIG[type]?.color }}
-                />
-                {getCategoryLabel(type)}
-              </Link>
-            ))}
-          </div>
-        </div>
-      </section>
+      {/* Filters */}
+      <Suspense fallback={<div className="h-24 bg-[var(--night)]" />}>
+        <SpotFilters />
+      </Suspense>
 
-      {/* Vibe & Neighborhood Filters */}
-      <section className="border-b border-[var(--twilight)]">
-        <div className="max-w-3xl mx-auto px-4 py-3">
-          <div className="flex flex-wrap gap-4 items-center">
-            {/* Neighborhood Dropdown */}
-            <div className="flex items-center gap-2">
-              <span className="font-mono text-[0.65rem] text-[var(--muted)] uppercase tracking-wider">Hood</span>
-              <NeighborhoodSelect
-                neighborhoods={NEIGHBORHOODS}
-                selected={selectedNeighborhood}
-                currentType={selectedType}
-                currentVibe={selectedVibe}
-              />
-            </div>
-
-            {/* Vibe Pills */}
-            <div className="flex gap-2 overflow-x-auto scrollbar-hide flex-1">
-              {VIBES.map((vibe) => {
-                const isActive = selectedVibe.split(",").includes(vibe.value);
-                // Toggle vibe on/off
-                const newVibe = isActive
-                  ? selectedVibe.split(",").filter((v) => v !== vibe.value).join(",")
-                  : selectedVibe ? `${selectedVibe},${vibe.value}` : vibe.value;
-
-                return (
-                  <Link
-                    key={vibe.value}
-                    href={buildFilterUrl(selectedType, selectedVibe, selectedNeighborhood, { vibe: newVibe })}
-                    className={`px-2.5 py-1 rounded-full font-mono text-[0.65rem] font-medium whitespace-nowrap transition-colors ${
-                      isActive
-                        ? "bg-[var(--coral)] text-[var(--void)]"
-                        : "bg-[var(--dusk)] text-[var(--muted)] hover:text-[var(--cream)] border border-[var(--twilight)]"
-                    }`}
-                  >
-                    {vibe.label}
-                  </Link>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Active Filters & Spot count */}
+      {/* Results Count */}
       <div className="max-w-3xl mx-auto px-4 border-b border-[var(--twilight)]">
-        <div className="flex items-center justify-between py-3">
-          <p className="font-mono text-xs text-[var(--muted)]">
-            <span className="text-[var(--soft)]">{spots.length}</span>{" "}
-            {selectedType !== "all" ? `${getCategoryLabel(selectedType).toLowerCase()}s` : "spots"}
-            {selectedNeighborhood !== "all" && ` in ${selectedNeighborhood}`}
-          </p>
-          {(selectedType !== "all" || selectedVibe || selectedNeighborhood !== "all") && (
-            <Link
-              href="/spots"
-              className="font-mono text-[0.65rem] text-[var(--coral)] hover:text-[var(--rose)] transition-colors"
-            >
-              Clear filters
-            </Link>
-          )}
-        </div>
+        <p className="font-mono text-xs text-[var(--muted)] py-3">
+          <span className="text-[var(--soft)]">{spots.length}</span>{" "}
+          {selectedType !== "all" ? `${getCategoryLabel(selectedType).toLowerCase()}s` : "spots"}
+          {selectedHood !== "all" && ` in ${selectedHood}`}
+        </p>
       </div>
 
       {/* Spots List */}
@@ -203,6 +81,12 @@ export default async function SpotsPage({ searchParams }: Props) {
         ) : (
           <div className="py-16 text-center">
             <p className="text-[var(--muted)]">No spots found</p>
+            <Link
+              href="/spots"
+              className="inline-block mt-4 font-mono text-sm text-[var(--coral)] hover:text-[var(--rose)]"
+            >
+              Clear filters
+            </Link>
           </div>
         )}
       </main>
