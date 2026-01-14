@@ -140,7 +140,8 @@ export default async function SpotsPage({ searchParams }: Props) {
               <NeighborhoodSelect
                 neighborhoods={NEIGHBORHOODS}
                 selected={selectedNeighborhood}
-                buildUrl={(neighborhood) => buildFilterUrl(selectedType, selectedVibe, selectedNeighborhood, { neighborhood })}
+                currentType={selectedType}
+                currentVibe={selectedVibe}
               />
             </div>
 
