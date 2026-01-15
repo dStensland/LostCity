@@ -11,10 +11,18 @@ export async function middleware(request: NextRequest) {
   // Create response that will be modified for auth
   let response = NextResponse.next({ request });
 
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  // Skip auth if Supabase isn't configured
+  if (!supabaseUrl || !supabaseKey) {
+    return handleSubdomainRouting(request, response, null);
+  }
+
   // Create Supabase client for session management
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    supabaseUrl,
+    supabaseKey,
     {
       cookies: {
         getAll() {
@@ -49,7 +57,14 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // Continue with subdomain routing logic
+  return handleSubdomainRouting(request, response, user);
+}
+
+function handleSubdomainRouting(
+  request: NextRequest,
+  response: NextResponse,
+  _user: unknown
+) {
   const host = request.headers.get("host") || "";
   const url = request.nextUrl.clone();
 
