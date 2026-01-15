@@ -71,6 +71,15 @@ def get_venue_by_id(venue_id: int) -> Optional[dict]:
     return None
 
 
+def get_venue_by_slug(slug: str) -> Optional[dict]:
+    """Fetch a venue by its slug."""
+    client = get_client()
+    result = client.table("venues").select("*").eq("slug", slug).execute()
+    if result.data and len(result.data) > 0:
+        return result.data[0]
+    return None
+
+
 def insert_event(event_data: dict) -> int:
     """Insert a new event with inferred tags. Returns event ID."""
     client = get_client()

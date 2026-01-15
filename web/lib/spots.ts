@@ -18,6 +18,7 @@ export const SPOT_TYPES = {
   park: { label: "Park", icon: "🌳" },
   library: { label: "Library", icon: "📚" },
   bookstore: { label: "Bookstore", icon: "📖" },
+  farmers_market: { label: "Farmers Market", icon: "🥬" },
 } as const;
 
 // Vibes organized by category for UI grouping

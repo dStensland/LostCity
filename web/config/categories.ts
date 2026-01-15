@@ -95,8 +95,14 @@ export const PLACE_CATEGORIES: PlaceCategory[] = [
   {
     id: "grocery",
     name: "Grocery & Markets",
-    googleTypes: ["grocery_store", "supermarket", "market", "farmers_market"],
+    googleTypes: ["grocery_store", "supermarket", "market"],
     refreshDays: 30,
+  },
+  {
+    id: "farmers_markets",
+    name: "Farmers Markets",
+    googleTypes: ["farmers_market"],
+    refreshDays: 7, // Weekly since they operate on schedules
   },
   {
     id: "pharmacies",

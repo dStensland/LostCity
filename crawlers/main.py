@@ -69,6 +69,8 @@ SOURCE_MODULES = {
     "dekalb-library": "sources.dekalb_library",
     # Electronic/DJ
     "resident-advisor": "sources.resident_advisor",
+    # Farmers Markets
+    "farmers-markets": "sources.farmers_markets",
 }
 
 
