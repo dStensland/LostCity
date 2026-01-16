@@ -1,4 +1,5 @@
 import { supabase, type Event } from "./supabase";
+import { createServiceClient } from "./supabase/service";
 import {
   startOfDay,
   addDays,
@@ -19,6 +20,8 @@ export interface SearchFilters {
   date_filter?: "today" | "weekend" | "week";
   venue_id?: number;
   include_rollups?: boolean;
+  vibes?: string[];
+  neighborhoods?: string[];
 }
 
 // Rollup types for collapsed event groups
@@ -49,6 +52,10 @@ export type EventWithLocation = Event & {
     typical_price_min: number | null;
     typical_price_max: number | null;
   } | null;
+  // Social proof counts (optional, added when requested)
+  going_count?: number;
+  interested_count?: number;
+  recommendation_count?: number;
 };
 
 export type Category = {
@@ -188,6 +195,38 @@ export async function getFilteredEventsWithSearch(
     query = query.overlaps("tags", filters.tags);
   }
 
+  // Apply vibes filter (venue attribute) - OR logic
+  if (filters.vibes && filters.vibes.length > 0) {
+    const { data: matchingVenues } = await supabase
+      .from("venues")
+      .select("id")
+      .overlaps("vibes", filters.vibes);
+
+    const venueIds = (matchingVenues as { id: number }[] | null)?.map((v) => v.id) || [];
+    if (venueIds.length > 0) {
+      query = query.in("venue_id", venueIds);
+    } else {
+      // No venues match, return empty results
+      return { events: [], total: 0 };
+    }
+  }
+
+  // Apply neighborhoods filter - OR logic
+  if (filters.neighborhoods && filters.neighborhoods.length > 0) {
+    const { data: matchingVenues } = await supabase
+      .from("venues")
+      .select("id")
+      .in("neighborhood", filters.neighborhoods);
+
+    const venueIds = (matchingVenues as { id: number }[] | null)?.map((v) => v.id) || [];
+    if (venueIds.length > 0) {
+      query = query.in("venue_id", venueIds);
+    } else {
+      // No venues match, return empty results
+      return { events: [], total: 0 };
+    }
+  }
+
   // Apply price filters
   if (filters.is_free) {
     query = query.eq("is_free", true);
@@ -289,6 +328,36 @@ export async function getEventsForMap(
 
   if (filters.tags && filters.tags.length > 0) {
     query = query.overlaps("tags", filters.tags);
+  }
+
+  // Apply vibes filter (venue attribute) - OR logic
+  if (filters.vibes && filters.vibes.length > 0) {
+    const { data: matchingVenues } = await supabase
+      .from("venues")
+      .select("id")
+      .overlaps("vibes", filters.vibes);
+
+    const venueIds = (matchingVenues as { id: number }[] | null)?.map((v) => v.id) || [];
+    if (venueIds.length > 0) {
+      query = query.in("venue_id", venueIds);
+    } else {
+      return [];
+    }
+  }
+
+  // Apply neighborhoods filter - OR logic
+  if (filters.neighborhoods && filters.neighborhoods.length > 0) {
+    const { data: matchingVenues } = await supabase
+      .from("venues")
+      .select("id")
+      .in("neighborhood", filters.neighborhoods);
+
+    const venueIds = (matchingVenues as { id: number }[] | null)?.map((v) => v.id) || [];
+    if (venueIds.length > 0) {
+      query = query.in("venue_id", venueIds);
+    } else {
+      return [];
+    }
   }
 
   if (filters.is_free) {
@@ -788,4 +857,91 @@ export async function getFilteredEventsWithRollups(
     items,
     total: total - venueIdsToExclude.length * 3 + groups.length, // Approximate
   };
+}
+
+// Fetch social proof counts for a list of events
+export async function fetchSocialProofCounts(
+  eventIds: number[]
+): Promise<Map<number, { going: number; interested: number; recommendations: number }>> {
+  if (eventIds.length === 0) {
+    return new Map();
+  }
+
+  const counts = new Map<number, { going: number; interested: number; recommendations: number }>();
+
+  // Initialize all events with 0 counts
+  eventIds.forEach((id) => {
+    counts.set(id, { going: 0, interested: 0, recommendations: 0 });
+  });
+
+  // Use service client to bypass RLS for aggregation queries
+  // This is server-side only and safe for reading public social data
+  let serviceClient;
+  try {
+    serviceClient = createServiceClient();
+  } catch {
+    // Service key not available (e.g., during build), return empty counts
+    return counts;
+  }
+
+  // Fetch RSVP counts grouped by event and status
+  // Only count public RSVPs for social proof
+  const { data: rsvpData } = await serviceClient
+    .from("event_rsvps")
+    .select("event_id, status")
+    .in("event_id", eventIds)
+    .in("status", ["going", "interested"])
+    .eq("visibility", "public");
+
+  if (rsvpData) {
+    for (const rsvp of rsvpData as { event_id: number; status: string }[]) {
+      const current = counts.get(rsvp.event_id);
+      if (current) {
+        if (rsvp.status === "going") {
+          current.going++;
+        } else if (rsvp.status === "interested") {
+          current.interested++;
+        }
+      }
+    }
+  }
+
+  // Fetch recommendation counts (only public ones)
+  const { data: recData } = await serviceClient
+    .from("recommendations")
+    .select("event_id")
+    .in("event_id", eventIds)
+    .eq("visibility", "public")
+    .not("event_id", "is", null);
+
+  if (recData) {
+    for (const rec of recData as { event_id: number | null }[]) {
+      if (rec.event_id) {
+        const current = counts.get(rec.event_id);
+        if (current) {
+          current.recommendations++;
+        }
+      }
+    }
+  }
+
+  return counts;
+}
+
+// Enrich events with social proof counts
+export async function enrichEventsWithSocialProof(
+  events: EventWithLocation[]
+): Promise<EventWithLocation[]> {
+  const eventIds = events.map((e) => e.id);
+  const counts = await fetchSocialProofCounts(eventIds);
+
+  return events.map((event) => {
+    const eventCounts = counts.get(event.id);
+    return {
+      ...event,
+      going_count: eventCounts?.going || 0,
+      interested_count: eventCounts?.interested || 0,
+      recommendation_count: eventCounts?.recommendations || 0,
+    };
+  });
 }

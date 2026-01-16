@@ -42,6 +42,7 @@ export default function MapView({ events }: Props) {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Client-side hydration pattern
     setMounted(true);
   }, []);
 

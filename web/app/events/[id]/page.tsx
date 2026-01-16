@@ -1,4 +1,4 @@
-import { getEventById, getRelatedEvents, type Event } from "@/lib/supabase";
+import { getEventById, getRelatedEvents } from "@/lib/supabase";
 import { getNearbySpots, getSpotTypeLabel } from "@/lib/spots";
 import CategoryIcon from "@/components/CategoryIcon";
 import RSVPButton from "@/components/RSVPButton";
@@ -10,6 +10,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import AddToCalendar from "@/components/AddToCalendar";
+import { formatTimeSplit, formatPrice } from "@/lib/formats";
 
 export const revalidate = 60;
 
@@ -52,29 +53,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-function formatTime(time: string | null, isAllDay?: boolean): { time: string; period: string } {
-  if (isAllDay) return { time: "All", period: "Day" };
-  if (!time) return { time: "TBA", period: "" };
-
-  const [hours, minutes] = time.split(":");
-  const hour = parseInt(hours, 10);
-  const ampm = hour >= 12 ? "PM" : "AM";
-  const hour12 = hour % 12 || 12;
-  return { time: `${hour12}:${minutes}`, period: ampm };
-}
-
-function formatPrice(event: {
-  is_free: boolean;
-  price_min: number | null;
-  price_max: number | null;
-}): string {
-  if (event.is_free) return "Free";
-  if (event.price_min === null) return "TBD";
-  if (event.price_min === event.price_max || event.price_max === null) {
-    return `$${event.price_min}`;
-  }
-  return `$${event.price_min}-$${event.price_max}`;
-}
 
 function generateEventSchema(event: NonNullable<Awaited<ReturnType<typeof getEventById>>>) {
   const startDateTime = event.start_time
@@ -145,7 +123,7 @@ export default async function EventPage({ params }: Props) {
   const formattedDate = format(dateObj, "EEEE, MMMM d, yyyy");
   const shortDate = format(dateObj, "MMM d");
   const dayOfWeek = format(dateObj, "EEE");
-  const { time, period } = formatTime(event.start_time, event.is_all_day);
+  const { time, period } = formatTimeSplit(event.start_time, event.is_all_day);
   const eventSchema = generateEventSchema(event);
 
   return (
@@ -404,7 +382,7 @@ export default async function EventPage({ params }: Props) {
                             </h3>
                             <p className="text-sm text-[var(--muted)] mt-1">
                               {format(parseISO(relatedEvent.start_date), "EEE, MMM d")}
-                              {relatedEvent.start_time && ` · ${formatTime(relatedEvent.start_time).time} ${formatTime(relatedEvent.start_time).period}`}
+                              {relatedEvent.start_time && ` · ${formatTimeSplit(relatedEvent.start_time).time} ${formatTimeSplit(relatedEvent.start_time).period}`}
                             </p>
                           </div>
                           <span className="text-[var(--muted)] group-hover:text-[var(--coral)] transition-colors">
@@ -439,7 +417,7 @@ export default async function EventPage({ params }: Props) {
                             </h3>
                             <p className="text-sm text-[var(--muted)] mt-1">
                               {relatedEvent.venue?.name || "Venue TBA"}
-                              {relatedEvent.start_time && ` · ${formatTime(relatedEvent.start_time).time} ${formatTime(relatedEvent.start_time).period}`}
+                              {relatedEvent.start_time && ` · ${formatTimeSplit(relatedEvent.start_time).time} ${formatTimeSplit(relatedEvent.start_time).period}`}
                             </p>
                           </div>
                           <span className="text-[var(--muted)] group-hover:text-[var(--coral)] transition-colors">

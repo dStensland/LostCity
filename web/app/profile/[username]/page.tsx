@@ -4,6 +4,7 @@ import Logo from "@/components/Logo";
 import UserMenu from "@/components/UserMenu";
 import FollowButton from "@/components/FollowButton";
 import { createClient } from "@/lib/supabase/server";
+import { formatDistanceToNow } from "date-fns";
 import type { Database } from "@/lib/types";
 
 type Profile = Database["public"]["Tables"]["profiles"]["Row"];
@@ -229,11 +230,13 @@ export default async function ProfilePage({ params }: Props) {
   );
 }
 
-function ActivityItem({ activity }: { activity: any }) {
+function ActivityItem({ activity }: { activity: Activity }) {
+  const metadata = activity.metadata as { status?: string; note?: string } | null;
+
   const getActivityText = () => {
     switch (activity.activity_type) {
-      case "rsvp":
-        const status = activity.metadata?.status;
+      case "rsvp": {
+        const status = metadata?.status;
         return (
           <>
             {status === "going" ? "is going to" : status === "interested" ? "is interested in" : "went to"}{" "}
@@ -244,6 +247,7 @@ function ActivityItem({ activity }: { activity: any }) {
             )}
           </>
         );
+      }
       case "recommendation":
         return (
           <>
@@ -258,9 +262,9 @@ function ActivityItem({ activity }: { activity: any }) {
                 {activity.venue.name}
               </Link>
             )}
-            {activity.metadata?.note && (
+            {metadata?.note && (
               <span className="block mt-1 text-[var(--soft)] italic">
-                &ldquo;{activity.metadata.note}&rdquo;
+                &ldquo;{metadata.note}&rdquo;
               </span>
             )}
           </>
@@ -281,18 +285,6 @@ function ActivityItem({ activity }: { activity: any }) {
     }
   };
 
-  const timeAgo = (date: string) => {
-    const seconds = Math.floor((Date.now() - new Date(date).getTime()) / 1000);
-    if (seconds < 60) return "just now";
-    const minutes = Math.floor(seconds / 60);
-    if (minutes < 60) return `${minutes}m ago`;
-    const hours = Math.floor(minutes / 60);
-    if (hours < 24) return `${hours}h ago`;
-    const days = Math.floor(hours / 24);
-    if (days < 7) return `${days}d ago`;
-    return new Date(date).toLocaleDateString();
-  };
-
   return (
     <div className="flex gap-3 py-3 border-b border-[var(--twilight)]">
       <div className="w-2 h-2 rounded-full bg-[var(--coral)] mt-2 flex-shrink-0" />
@@ -301,7 +293,7 @@ function ActivityItem({ activity }: { activity: any }) {
           {getActivityText()}
         </p>
         <p className="font-mono text-xs text-[var(--muted)] mt-1">
-          {timeAgo(activity.created_at)}
+          {formatDistanceToNow(new Date(activity.created_at), { addSuffix: true })}
         </p>
       </div>
     </div>

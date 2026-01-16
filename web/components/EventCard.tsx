@@ -1,18 +1,8 @@
 import Link from "next/link";
 import type { Event } from "@/lib/supabase";
-import type { EventWithLocation } from "@/lib/search";
+import { formatTimeSplit, formatPriceDetailed, type PriceableEvent } from "@/lib/formats";
 import CategoryIcon from "./CategoryIcon";
-
-function formatTime(time: string | null, isAllDay?: boolean): { time: string; period: string } {
-  if (isAllDay) return { time: "All", period: "Day" };
-  if (!time) return { time: "TBA", period: "" };
-
-  const [hours, minutes] = time.split(":");
-  const hour = parseInt(hours, 10);
-  const period = hour >= 12 ? "pm" : "am";
-  const hour12 = hour % 12 || 12;
-  return { time: `${hour12}:${minutes}`, period };
-}
+import SaveButton from "./SaveButton";
 
 type EventWithPriceEstimate = Event & {
   venue?: Event["venue"] & {
@@ -23,48 +13,11 @@ type EventWithPriceEstimate = Event & {
     typical_price_min: number | null;
     typical_price_max: number | null;
   } | null;
-};
-
-function formatPrice(event: EventWithPriceEstimate): { text: string; isFree: boolean; isEstimate: boolean } {
-  // Explicit free
-  if (event.is_free) return { text: "Free", isFree: true, isEstimate: false };
-
-  // Has explicit price
-  if (event.price_min !== null) {
-    if (event.price_min === event.price_max || event.price_max === null) {
-      return { text: `$${event.price_min}`, isFree: false, isEstimate: false };
-    }
-    return { text: `$${event.price_min}–${event.price_max}`, isFree: false, isEstimate: false };
-  }
-
-  // Try venue typical price first (more specific)
-  const venueMin = event.venue?.typical_price_min;
-  const venueMax = event.venue?.typical_price_max;
-  if (venueMin !== null && venueMin !== undefined) {
-    if (venueMin === 0 && venueMax === 0) {
-      return { text: "Free", isFree: true, isEstimate: true };
-    }
-    if (venueMin === venueMax || venueMax === null || venueMax === undefined) {
-      return { text: `~$${venueMin}`, isFree: false, isEstimate: true };
-    }
-    return { text: `~$${venueMin}–${venueMax}`, isFree: false, isEstimate: true };
-  }
-
-  // Fall back to category typical price
-  const catMin = event.category_data?.typical_price_min;
-  const catMax = event.category_data?.typical_price_max;
-  if (catMin !== null && catMin !== undefined) {
-    if (catMin === 0 && catMax === 0) {
-      return { text: "Free", isFree: true, isEstimate: true };
-    }
-    if (catMin === catMax || catMax === null || catMax === undefined) {
-      return { text: `~$${catMin}`, isFree: false, isEstimate: true };
-    }
-    return { text: `~$${catMin}–${catMax}`, isFree: false, isEstimate: true };
-  }
-
-  return { text: "—", isFree: false, isEstimate: false };
-}
+  // Social proof counts (optional)
+  going_count?: number;
+  interested_count?: number;
+  recommendation_count?: number;
+} & PriceableEvent;
 
 interface Props {
   event: EventWithPriceEstimate;
@@ -72,8 +25,8 @@ interface Props {
 }
 
 export default function EventCard({ event, index = 0 }: Props) {
-  const { time, period } = formatTime(event.start_time, event.is_all_day);
-  const { text: priceText, isFree, isEstimate } = formatPrice(event);
+  const { time, period } = formatTimeSplit(event.start_time, event.is_all_day);
+  const { text: priceText, isFree, isEstimate } = formatPriceDetailed(event);
   const hasTickets = !!event.ticket_url;
 
   // Stagger animation class
@@ -81,6 +34,11 @@ export default function EventCard({ event, index = 0 }: Props) {
 
   // Category color for left accent
   const categoryColor = event.category ? `var(--cat-${event.category === 'food_drink' ? 'food' : event.category})` : 'var(--twilight)';
+
+  // Social proof
+  const goingCount = event.going_count || 0;
+  const recommendCount = event.recommendation_count || 0;
+  const hasSocialProof = goingCount > 0 || recommendCount > 0;
 
   return (
     <Link
@@ -113,6 +71,20 @@ export default function EventCard({ event, index = 0 }: Props) {
           {event.category && (
             <CategoryIcon type={event.category} size={14} showLabel />
           )}
+          {/* Social proof */}
+          {hasSocialProof && (
+            <span className="font-mono text-xs text-[var(--soft)]">
+              {goingCount > 0 && (
+                <span className="text-[var(--lavender)]">{goingCount} going</span>
+              )}
+              {goingCount > 0 && recommendCount > 0 && (
+                <span className="text-[var(--muted)]"> · </span>
+              )}
+              {recommendCount > 0 && (
+                <span className="text-[var(--gold)]">{recommendCount} rec</span>
+              )}
+            </span>
+          )}
           {/* Mobile: show price inline */}
           <span
             className={`sm:hidden font-mono text-xs font-medium ${isFree ? "text-[var(--cat-community)]" : "text-[var(--muted)]"} ${isEstimate ? "italic opacity-70" : ""}`}
@@ -120,17 +92,23 @@ export default function EventCard({ event, index = 0 }: Props) {
           >
             {priceText}
           </span>
+          {/* Mobile: save button */}
+          <div className="sm:hidden ml-auto">
+            <SaveButton eventId={event.id} size="sm" />
+          </div>
         </div>
       </div>
 
       {/* Price + Action column - desktop only */}
-      <div className="hidden sm:flex items-center gap-3">
+      <div className="hidden sm:flex items-center gap-2">
         <div
           className={`font-mono text-sm font-medium text-right whitespace-nowrap ${isFree ? "text-[var(--cat-community)]" : "text-[var(--muted)]"} ${isEstimate ? "italic opacity-70" : ""}`}
           title={isEstimate ? "Estimated price range" : undefined}
         >
           {priceText}
         </div>
+        {/* Save button */}
+        <SaveButton eventId={event.id} size="sm" />
         {/* Arrow indicator */}
         <div className="w-5 h-5 flex items-center justify-center text-[var(--muted)] group-hover:text-[var(--coral)] transition-colors">
           {hasTickets ? (

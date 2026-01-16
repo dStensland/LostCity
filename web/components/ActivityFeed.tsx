@@ -53,90 +53,105 @@ export default function ActivityFeed({ limit = 20, className = "" }: ActivityFee
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let isMounted = true;
+
     async function loadFeed() {
       if (!user) {
-        setLoading(false);
+        if (isMounted) setLoading(false);
         return;
       }
 
-      // Get users we follow
-      const { data: followsData } = await supabase
-        .from("follows")
-        .select("followed_user_id")
-        .eq("follower_id", user.id)
-        .not("followed_user_id", "is", null);
+      try {
+        // Get users we follow
+        const { data: followsData } = await supabase
+          .from("follows")
+          .select("followed_user_id")
+          .eq("follower_id", user.id)
+          .not("followed_user_id", "is", null);
 
-      const follows = followsData as { followed_user_id: string | null }[] | null;
-      if (!follows || follows.length === 0) {
+        if (!isMounted) return;
+
+        const follows = followsData as { followed_user_id: string | null }[] | null;
+        if (!follows || follows.length === 0) {
+          setLoading(false);
+          return;
+        }
+
+        const followedIds = follows
+          .map((f) => f.followed_user_id)
+          .filter(Boolean) as string[];
+
+        // Get activities from followed users
+        const { data: activityData } = await supabase
+          .from("activities")
+          .select(`
+            id,
+            activity_type,
+            created_at,
+            metadata,
+            user:profiles!activities_user_id_fkey(
+              id, username, display_name, avatar_url
+            ),
+            event:events(
+              id, title, start_date,
+              venue:venues(name)
+            ),
+            venue:venues(id, name, neighborhood),
+            target_user:profiles!activities_target_user_id_fkey(
+              id, username, display_name
+            )
+          `)
+          .in("user_id", followedIds)
+          .in("visibility", ["public", "friends"])
+          .order("created_at", { ascending: false })
+          .limit(limit);
+
+        if (!isMounted) return;
+
+        type ActivityQueryResult = {
+          id: string;
+          activity_type: string;
+          created_at: string;
+          metadata: Record<string, unknown> | null;
+          user: ActivityItem["user"] | null;
+          event: ActivityItem["event"] | null;
+          venue: ActivityItem["venue"] | null;
+          target_user: ActivityItem["target_user"] | null;
+        };
+
+        const rawActivities = activityData as ActivityQueryResult[] | null;
+        if (!rawActivities) {
+          setLoading(false);
+          return;
+        }
+
+        // Filter out activities where user data is missing and transform
+        const validActivities: ActivityItem[] = rawActivities
+          .filter((a) => a.user !== null)
+          .map((a) => ({
+            id: a.id,
+            activity_type: a.activity_type as ActivityType,
+            created_at: a.created_at,
+            user: a.user!,
+            event: a.event,
+            venue: a.venue,
+            target_user: a.target_user,
+            metadata: a.metadata as ActivityItem["metadata"],
+          }));
+
+        setActivities(validActivities);
         setLoading(false);
-        return;
+      } catch (error) {
+        console.error("Failed to load activity feed:", error);
+        if (isMounted) setLoading(false);
       }
-
-      const followedIds = follows
-        .map((f) => f.followed_user_id)
-        .filter(Boolean) as string[];
-
-      // Get activities from followed users
-      const { data: activityData } = await supabase
-        .from("activities")
-        .select(`
-          id,
-          activity_type,
-          created_at,
-          metadata,
-          user:profiles!activities_user_id_fkey(
-            id, username, display_name, avatar_url
-          ),
-          event:events(
-            id, title, start_date,
-            venue:venues(name)
-          ),
-          venue:venues(id, name, neighborhood),
-          target_user:profiles!activities_target_user_id_fkey(
-            id, username, display_name
-          )
-        `)
-        .in("user_id", followedIds)
-        .in("visibility", ["public", "friends"])
-        .order("created_at", { ascending: false })
-        .limit(limit);
-
-      type ActivityQueryResult = {
-        id: string;
-        activity_type: string;
-        created_at: string;
-        metadata: Record<string, unknown> | null;
-        user: ActivityItem["user"] | null;
-        event: ActivityItem["event"] | null;
-        venue: ActivityItem["venue"] | null;
-        target_user: ActivityItem["target_user"] | null;
-      };
-
-      const rawActivities = activityData as ActivityQueryResult[] | null;
-      if (!rawActivities) {
-        setLoading(false);
-        return;
-      }
-
-      // Filter out activities where user data is missing and transform
-      const validActivities: ActivityItem[] = rawActivities
-        .filter((a) => a.user !== null)
-        .map((a) => ({
-          id: a.id,
-          activity_type: a.activity_type as ActivityType,
-          created_at: a.created_at,
-          user: a.user!,
-          event: a.event,
-          venue: a.venue,
-          target_user: a.target_user,
-          metadata: a.metadata as ActivityItem["metadata"],
-        }));
-
-      setActivities(validActivities);
-      setLoading(false);
     }
 
     loadFeed();
+
+    return () => {
+      isMounted = false;
+    };
   }, [user, supabase, limit]);
 
   if (loading) {

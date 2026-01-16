@@ -8,17 +8,21 @@ import { getRecentSearches, addRecentSearch } from "@/lib/searchHistory";
 export default function SearchBar() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [query, setQuery] = useState(searchParams.get("search") || "");
-  const [isSearching, setIsSearching] = useState(false);
+  const currentSearchParam = searchParams.get("search") || "";
+  const [query, setQuery] = useState(currentSearchParam);
   const [showDropdown, setShowDropdown] = useState(false);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
-  const currentSearchParam = searchParams.get("search") || "";
   const inputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Derive isSearching from query vs URL mismatch
+  const isSearching = query.trim() !== currentSearchParam;
 
   // Load recent searches on mount
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Initial data load
     setRecentSearches(getRecentSearches());
   }, []);
 
@@ -31,18 +35,19 @@ export default function SearchBar() {
       }, 100);
       return () => clearTimeout(timer);
     } else {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Clear on condition
       setSuggestions([]);
     }
   }, [query]);
 
   // Debounced search update
   useEffect(() => {
-    // Only show loading if query differs from URL
-    if (query.trim() !== currentSearchParam) {
-      setIsSearching(true);
+    // Clear existing timer
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
     }
 
-    const timer = setTimeout(() => {
+    debounceRef.current = setTimeout(() => {
       const params = new URLSearchParams(searchParams.toString());
 
       if (query.trim()) {
@@ -59,11 +64,14 @@ export default function SearchBar() {
 
       const newUrl = params.toString() ? `/?${params.toString()}` : "/";
       router.push(newUrl, { scroll: false });
-      setIsSearching(false);
-    }, 150); // Reduced from 300ms
+    }, 150);
 
-    return () => clearTimeout(timer);
-  }, [query, router, searchParams, currentSearchParam]);
+    return () => {
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current);
+      }
+    };
+  }, [query, router, searchParams]);
 
   const handleClear = useCallback(() => {
     setQuery("");

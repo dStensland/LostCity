@@ -1,0 +1,28 @@
+import { createClient } from "@supabase/supabase-js";
+import type { Database } from "../types";
+
+/**
+ * Service-level Supabase client that bypasses RLS
+ * Use ONLY for server-side operations that need to read all data
+ * (e.g., aggregation queries for social proof counts)
+ *
+ * This client is safe to import in any file because it doesn't
+ * use next/headers or other server-only imports.
+ */
+
+let _serviceClient: ReturnType<typeof createClient<Database>> | null = null;
+
+export function createServiceClient() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY;
+
+  if (!supabaseUrl || !supabaseServiceKey) {
+    throw new Error("Missing SUPABASE_SERVICE_KEY for service client");
+  }
+
+  if (!_serviceClient) {
+    _serviceClient = createClient<Database>(supabaseUrl, supabaseServiceKey);
+  }
+
+  return _serviceClient;
+}

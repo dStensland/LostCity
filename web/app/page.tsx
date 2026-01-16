@@ -1,4 +1,4 @@
-import { getFilteredEventsWithSearch, PRICE_FILTERS, type SearchFilters } from "@/lib/search";
+import { getFilteredEventsWithSearch, enrichEventsWithSocialProof, PRICE_FILTERS, type SearchFilters } from "@/lib/search";
 import SearchBar from "@/components/SearchBar";
 import FilterBar from "@/components/FilterBar";
 import EventList from "@/components/EventList";
@@ -18,6 +18,8 @@ type Props = {
     categories?: string;
     subcategories?: string;
     tags?: string;
+    vibes?: string;
+    neighborhoods?: string;
     price?: string;
     date?: string;
   }>;
@@ -36,15 +38,20 @@ export default async function Home({ searchParams }: Props) {
     categories: params.categories?.split(",").filter(Boolean) || undefined,
     subcategories: params.subcategories?.split(",").filter(Boolean) || undefined,
     tags: params.tags?.split(",").filter(Boolean) || undefined,
+    vibes: params.vibes?.split(",").filter(Boolean) || undefined,
+    neighborhoods: params.neighborhoods?.split(",").filter(Boolean) || undefined,
     is_free: isFree || undefined,
     price_max: priceMax,
     date_filter: (params.date as "today" | "weekend" | "week") || undefined,
   };
 
   // Always fetch page 1 on server for initial SSR
-  const { events, total } = await getFilteredEventsWithSearch(filters, 1, PAGE_SIZE);
+  const { events: rawEvents, total } = await getFilteredEventsWithSearch(filters, 1, PAGE_SIZE);
 
-  const hasActiveFilters = !!(params.search || params.categories || params.subcategories || params.tags || params.price || params.date);
+  // Enrich with social proof counts (RSVPs, recommendations)
+  const events = await enrichEventsWithSocialProof(rawEvents);
+
+  const hasActiveFilters = !!(params.search || params.categories || params.subcategories || params.tags || params.vibes || params.neighborhoods || params.price || params.date);
 
   return (
     <div className="min-h-screen">

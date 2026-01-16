@@ -11,6 +11,16 @@ export function createClient() {
   if (!supabaseUrl || !supabaseKey) {
     // Return a mock client during build to prevent errors
     // The real client will be created at runtime in the browser
+    const mockChain = {
+      select: () => mockChain,
+      eq: () => mockChain,
+      in: () => mockChain,
+      single: async () => ({ data: null, error: null }),
+      update: () => mockChain,
+      insert: () => mockChain,
+      delete: () => mockChain,
+      overlaps: () => mockChain,
+    };
     return {
       auth: {
         getSession: async () => ({ data: { session: null }, error: null }),
@@ -19,14 +29,10 @@ export function createClient() {
         signInWithPassword: async () => ({ data: { user: null, session: null }, error: null }),
         signUp: async () => ({ data: { user: null, session: null }, error: null }),
         signInWithOAuth: async () => ({ data: { url: null }, error: null }),
+        resetPasswordForEmail: async () => ({ data: {}, error: null }),
+        updateUser: async () => ({ data: { user: null }, error: null }),
       },
-      from: () => ({
-        select: () => ({
-          eq: () => ({
-            single: async () => ({ data: null, error: null }),
-          }),
-        }),
-      }),
+      from: () => mockChain,
     } as unknown as ReturnType<typeof createBrowserClient<Database>>;
   }
 

@@ -1,7 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { NextRequest, NextResponse } from "next/server";
 import { ITP_NEIGHBORHOODS, getNeighborhoodsByTier } from "@/config/neighborhoods";
-import { PLACE_CATEGORIES, getCategoryById } from "@/config/categories";
+import { PLACE_CATEGORIES } from "@/config/categories";
 import {
   searchNearbyPlaces,
   mapGooglePlaceToDb,
@@ -15,14 +15,15 @@ function getSupabase() {
   );
 }
 
-// This endpoint should be protected in production (add auth check)
+// This endpoint requires PLACES_REFRESH_API_KEY to be set
 export async function POST(req: NextRequest) {
   const supabase = getSupabase();
-  // Check for API key or admin auth
+  // Check for API key - must be configured and must match
   const authHeader = req.headers.get("authorization");
   const expectedKey = process.env.PLACES_REFRESH_API_KEY;
 
-  if (expectedKey && authHeader !== `Bearer ${expectedKey}`) {
+  // SECURITY: Fail if key not configured OR doesn't match
+  if (!expectedKey || authHeader !== `Bearer ${expectedKey}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -33,14 +34,14 @@ export async function POST(req: NextRequest) {
   const dryRun = body.dryRun === true;
 
   // Filter neighborhoods
-  let neighborhoods = tier
+  const neighborhoods = tier
     ? getNeighborhoodsByTier(tier)
     : neighborhoodId
       ? ITP_NEIGHBORHOODS.filter((n) => n.id === neighborhoodId)
       : ITP_NEIGHBORHOODS;
 
   // Filter categories
-  let categories = categoryId
+  const categories = categoryId
     ? PLACE_CATEGORIES.filter((c) => c.id === categoryId)
     : PLACE_CATEGORIES;
 

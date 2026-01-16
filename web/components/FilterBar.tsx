@@ -3,6 +3,7 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback } from "react";
 import { CATEGORIES, SUBCATEGORIES, DATE_FILTERS, PRICE_FILTERS, TAG_GROUPS, ALL_TAGS } from "@/lib/search";
+import { PREFERENCE_VIBES, PREFERENCE_NEIGHBORHOODS } from "@/lib/preferences";
 import CategoryIcon, { CATEGORY_CONFIG, type CategoryType } from "./CategoryIcon";
 
 export default function FilterBar() {
@@ -12,6 +13,8 @@ export default function FilterBar() {
   const currentCategories = searchParams.get("categories")?.split(",").filter(Boolean) || [];
   const currentSubcategories = searchParams.get("subcategories")?.split(",").filter(Boolean) || [];
   const currentTags = searchParams.get("tags")?.split(",").filter(Boolean) || [];
+  const currentVibes = searchParams.get("vibes")?.split(",").filter(Boolean) || [];
+  const currentNeighborhoods = searchParams.get("neighborhoods")?.split(",").filter(Boolean) || [];
   const currentPriceFilter = searchParams.get("price") || "";
   const currentDateFilter = searchParams.get("date") || "";
 
@@ -81,11 +84,39 @@ export default function FilterBar() {
     [currentTags, updateParams]
   );
 
+  const toggleVibe = useCallback(
+    (vibe: string) => {
+      const newVibes = currentVibes.includes(vibe)
+        ? currentVibes.filter((v) => v !== vibe)
+        : [...currentVibes, vibe];
+
+      updateParams({
+        vibes: newVibes.length > 0 ? newVibes.join(",") : null,
+      });
+    },
+    [currentVibes, updateParams]
+  );
+
+  const toggleNeighborhood = useCallback(
+    (neighborhood: string) => {
+      const newNeighborhoods = currentNeighborhoods.includes(neighborhood)
+        ? currentNeighborhoods.filter((n) => n !== neighborhood)
+        : [...currentNeighborhoods, neighborhood];
+
+      updateParams({
+        neighborhoods: newNeighborhoods.length > 0 ? newNeighborhoods.join(",") : null,
+      });
+    },
+    [currentNeighborhoods, updateParams]
+  );
+
   const clearAll = useCallback(() => {
     updateParams({
       categories: null,
       subcategories: null,
       tags: null,
+      vibes: null,
+      neighborhoods: null,
       date: null,
       price: null,
     });
@@ -110,7 +141,7 @@ export default function FilterBar() {
     SUBCATEGORIES[cat]?.map((sub) => ({ ...sub, category: cat })) || []
   );
 
-  const hasFilters = currentCategories.length > 0 || currentSubcategories.length > 0 || currentTags.length > 0 || currentPriceFilter || currentDateFilter;
+  const hasFilters = currentCategories.length > 0 || currentSubcategories.length > 0 || currentTags.length > 0 || currentVibes.length > 0 || currentNeighborhoods.length > 0 || currentPriceFilter || currentDateFilter;
 
   return (
     <div className="sticky top-0 z-30 bg-[var(--night)]">
@@ -261,6 +292,67 @@ export default function FilterBar() {
         </div>
       </div>
 
+      {/* Vibes Filter Row */}
+      <div className="border-b border-[var(--twilight)]">
+        <div className="max-w-3xl mx-auto px-4 py-2">
+          <div className="flex gap-3 overflow-x-auto scrollbar-hide -mx-4 px-4 items-center">
+            <span className="font-mono text-[0.6rem] text-[var(--muted)] uppercase tracking-wider flex-shrink-0">
+              Vibes
+            </span>
+            {["Atmosphere", "Amenities", "Access"].map((group) => (
+              <div key={group} className="flex gap-1.5 items-center">
+                <span className="font-mono text-[0.55rem] text-[var(--twilight)] uppercase tracking-wider">
+                  {group}:
+                </span>
+                {PREFERENCE_VIBES.filter((v) => v.group === group).map((vibe) => {
+                  const isActive = currentVibes.includes(vibe.value);
+                  return (
+                    <button
+                      key={vibe.value}
+                      onClick={() => toggleVibe(vibe.value)}
+                      className={`px-2 py-0.5 rounded-full font-mono text-[0.6rem] font-medium whitespace-nowrap transition-colors ${
+                        isActive
+                          ? "bg-[var(--sage)] text-[var(--void)]"
+                          : "bg-[var(--dusk)] text-[var(--muted)] hover:text-[var(--cream)] border border-[var(--twilight)]"
+                      }`}
+                    >
+                      {vibe.label}
+                    </button>
+                  );
+                })}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Neighborhoods Filter Row */}
+      <div className="border-b border-[var(--twilight)]">
+        <div className="max-w-3xl mx-auto px-4 py-2">
+          <div className="flex gap-2 overflow-x-auto scrollbar-hide -mx-4 px-4 items-center">
+            <span className="font-mono text-[0.6rem] text-[var(--muted)] uppercase tracking-wider flex-shrink-0 mr-1">
+              Where
+            </span>
+            {PREFERENCE_NEIGHBORHOODS.map((neighborhood) => {
+              const isActive = currentNeighborhoods.includes(neighborhood);
+              return (
+                <button
+                  key={neighborhood}
+                  onClick={() => toggleNeighborhood(neighborhood)}
+                  className={`px-2.5 py-1 rounded-full font-mono text-[0.65rem] font-medium whitespace-nowrap transition-colors ${
+                    isActive
+                      ? "bg-[var(--coral)] text-[var(--void)]"
+                      : "bg-[var(--dusk)] text-[var(--muted)] hover:text-[var(--cream)] border border-[var(--twilight)]"
+                  }`}
+                >
+                  {neighborhood}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
       {/* Active Filters Summary */}
       {hasFilters && (
         <div className="border-b border-[var(--twilight)] bg-[var(--void)]">
@@ -303,6 +395,30 @@ export default function FilterBar() {
                   className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-[var(--lavender)] text-[var(--void)] font-mono text-[0.65rem] hover:opacity-80 transition-colors"
                 >
                   {ALL_TAGS.find((t) => t.value === tag)?.label || tag}
+                  <svg className="w-3 h-3 ml-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              ))}
+              {currentVibes.map((vibe) => (
+                <button
+                  key={vibe}
+                  onClick={() => toggleVibe(vibe)}
+                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-[var(--sage)] text-[var(--void)] font-mono text-[0.65rem] hover:opacity-80 transition-colors"
+                >
+                  {PREFERENCE_VIBES.find((v) => v.value === vibe)?.label || vibe}
+                  <svg className="w-3 h-3 ml-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              ))}
+              {currentNeighborhoods.map((neighborhood) => (
+                <button
+                  key={neighborhood}
+                  onClick={() => toggleNeighborhood(neighborhood)}
+                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-[var(--coral)] text-[var(--void)] font-mono text-[0.65rem] hover:opacity-80 transition-colors"
+                >
+                  {neighborhood}
                   <svg className="w-3 h-3 ml-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>

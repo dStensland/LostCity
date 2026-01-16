@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Logo from "@/components/Logo";
@@ -9,6 +9,7 @@ import CategoryIcon from "@/components/CategoryIcon";
 import ActivityFeed from "@/components/ActivityFeed";
 import { useAuth } from "@/lib/auth-context";
 import { format, parseISO } from "date-fns";
+import { formatTime } from "@/lib/formats";
 
 type Event = {
   id: number;
@@ -40,37 +41,50 @@ export default function ForYouPage() {
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [hasPreferences, setHasPreferences] = useState(false);
-
-  // Redirect if not logged in
-  useEffect(() => {
-    if (!authLoading && !user) {
-      router.push("/auth/login?redirect=/foryou");
-    }
-  }, [user, authLoading, router]);
+  const [error, setError] = useState<string | null>(null);
 
   // Load personalized events
-  useEffect(() => {
-    async function loadFeed() {
-      if (!user) return;
-
-      try {
-        const res = await fetch("/api/feed?limit=20");
-        if (res.ok) {
-          const data = await res.json();
-          setEvents(data.events || []);
-          setHasPreferences(data.hasPreferences);
-        }
-      } catch (error) {
-        console.error("Failed to load feed:", error);
-      } finally {
+  const loadFeed = useCallback(async (signal: AbortSignal) => {
+    try {
+      setError(null);
+      const res = await fetch("/api/feed?limit=20", { signal });
+      if (!res.ok) {
+        throw new Error("Failed to load feed");
+      }
+      const data = await res.json();
+      if (!signal.aborted) {
+        setEvents(data.events || []);
+        setHasPreferences(data.hasPreferences);
+        setLoading(false);
+      }
+    } catch (err) {
+      if (err instanceof Error && err.name === "AbortError") {
+        return;
+      }
+      console.error("Failed to load feed:", err);
+      if (!signal.aborted) {
+        setError("Failed to load feed");
         setLoading(false);
       }
     }
+  }, []);
 
-    if (user) {
-      loadFeed();
+  useEffect(() => {
+    // Don't do anything while auth is loading
+    if (authLoading) return;
+
+    // Redirect if not logged in
+    if (!user) {
+      router.push("/auth/login?redirect=/foryou");
+      return;
     }
-  }, [user]);
+
+    // User is logged in, load the feed
+    const controller = new AbortController();
+    loadFeed(controller.signal);
+
+    return () => controller.abort();
+  }, [user, authLoading, router, loadFeed]);
 
   if (authLoading) {
     return (
@@ -81,7 +95,12 @@ export default function ForYouPage() {
   }
 
   if (!user) {
-    return null; // Will redirect
+    // Show loading while redirect happens
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-[var(--coral)] border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
   }
 
   return (
@@ -179,6 +198,20 @@ export default function ForYouPage() {
                 </div>
               ))}
             </div>
+          ) : error ? (
+            <div className="p-6 bg-[var(--dusk)] border border-[var(--coral)] rounded-lg text-center">
+              <p className="text-[var(--coral)] font-mono text-sm">{error}</p>
+              <button
+                onClick={() => {
+                  setLoading(true);
+                  const controller = new AbortController();
+                  loadFeed(controller.signal);
+                }}
+                className="mt-3 px-4 py-2 bg-[var(--coral)] text-[var(--void)] font-mono text-xs font-medium rounded-lg hover:bg-[var(--rose)] transition-colors"
+              >
+                Try Again
+              </button>
+            </div>
           ) : events.length === 0 ? (
             <div className="p-6 bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg text-center">
               <p className="text-[var(--soft)] font-mono text-sm">No events found</p>
@@ -257,13 +290,3 @@ function EventCard({ event }: { event: Event }) {
   );
 }
 
-function formatTime(time: string | null, isAllDay?: boolean): string {
-  if (isAllDay) return "All Day";
-  if (!time) return "TBA";
-
-  const [hours, minutes] = time.split(":");
-  const hour = parseInt(hours, 10);
-  const period = hour >= 12 ? "pm" : "am";
-  const hour12 = hour % 12 || 12;
-  return `${hour12}:${minutes}${period}`;
-}

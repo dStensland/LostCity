@@ -3,34 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import type { EventWithLocation } from "@/lib/search";
-
-function formatTime(time: string | null): string {
-  if (!time) return "TBA";
-  const [hours, minutes] = time.split(":");
-  const hour = parseInt(hours, 10);
-  const period = hour >= 12 ? "pm" : "am";
-  const hour12 = hour % 12 || 12;
-  return `${hour12}:${minutes}${period}`;
-}
-
-function formatPrice(event: EventWithLocation): string {
-  if (event.is_free) return "Free";
-  if (event.price_min === null) {
-    // Try venue estimate
-    const venueMin = event.venue?.typical_price_min;
-    const venueMax = event.venue?.typical_price_max;
-    if (venueMin != null) {
-      if (venueMin === 0) return "Free";
-      if (venueMin === venueMax) return `~$${venueMin}`;
-      return `~$${venueMin}–${venueMax}`;
-    }
-    return "—";
-  }
-  if (event.price_min === event.price_max || event.price_max === null) {
-    return `$${event.price_min}`;
-  }
-  return `$${event.price_min}–${event.price_max}`;
-}
+import { formatTime, formatPrice } from "@/lib/formats";
 
 interface Props {
   type: "venue" | "category";

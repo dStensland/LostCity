@@ -5,10 +5,18 @@ import type { Database } from "@/lib/types";
 type ProfileInsert = Database["public"]["Tables"]["profiles"]["Insert"];
 type PreferencesInsert = Database["public"]["Tables"]["user_preferences"]["Insert"];
 
+// Validate redirect URL to prevent Open Redirect attacks
+function isValidRedirect(redirect: string): boolean {
+  // Only allow relative URLs starting with / (not //)
+  return redirect.startsWith("/") && !redirect.startsWith("//") && !redirect.includes(":");
+}
+
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get("code");
-  const redirect = requestUrl.searchParams.get("redirect") || "/";
+  const rawRedirect = requestUrl.searchParams.get("redirect") || "/";
+  // Validate redirect to prevent Open Redirect vulnerability
+  const redirect = isValidRedirect(rawRedirect) ? rawRedirect : "/";
   const isNewUser = requestUrl.searchParams.get("new") === "true";
   const origin = requestUrl.origin;
 

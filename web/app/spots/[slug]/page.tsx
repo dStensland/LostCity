@@ -1,8 +1,9 @@
-import { getSpotBySlug, getUpcomingEventsForSpot, formatPriceLevel, getSpotTypeLabel, getSpotTypeLabels, SPOT_TYPES, type SpotType } from "@/lib/spots";
+import { getSpotBySlug, getUpcomingEventsForSpot, formatPriceLevel, getSpotTypeLabels, SPOT_TYPES, type SpotType } from "@/lib/spots";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { format, parseISO } from "date-fns";
+import { formatTimeSplit } from "@/lib/formats";
 
 export const revalidate = 60;
 
@@ -36,15 +37,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-function formatTime(time: string | null): { time: string; period: string } {
-  if (!time) return { time: "TBA", period: "" };
-
-  const [hours, minutes] = time.split(":");
-  const hour = parseInt(hours, 10);
-  const ampm = hour >= 12 ? "PM" : "AM";
-  const hour12 = hour % 12 || 12;
-  return { time: `${hour12}:${minutes}`, period: ampm };
-}
 
 export default async function SpotPage({ params }: Props) {
   const { slug } = await params;
@@ -254,7 +246,7 @@ export default async function SpotPage({ params }: Props) {
               <div className="space-y-2">
                 {upcomingEvents.map((event) => {
                   const dateObj = parseISO(event.start_date);
-                  const { time, period } = formatTime(event.start_time);
+                  const { time, period } = formatTimeSplit(event.start_time);
 
                   return (
                     <Link

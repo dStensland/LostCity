@@ -6,10 +6,16 @@ import Link from "next/link";
 import Logo from "@/components/Logo";
 import { createClient } from "@/lib/supabase/client";
 
+// Validate redirect URL to prevent Open Redirect attacks
+function isValidRedirect(redirect: string): boolean {
+  return redirect.startsWith("/") && !redirect.startsWith("//") && !redirect.includes(":");
+}
+
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirect = searchParams.get("redirect") || "/";
+  const rawRedirect = searchParams.get("redirect") || "/";
+  const redirect = isValidRedirect(rawRedirect) ? rawRedirect : "/";
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -154,6 +160,14 @@ function LoginForm() {
                 className="w-full px-3 py-2.5 rounded-lg bg-[var(--dusk)] border border-[var(--twilight)] text-[var(--cream)] font-mono text-sm focus:outline-none focus:border-[var(--coral)] transition-colors"
                 placeholder="••••••••"
               />
+              <div className="mt-1.5 text-right">
+                <Link
+                  href="/auth/forgot-password"
+                  className="font-mono text-xs text-[var(--coral)] hover:text-[var(--rose)] transition-colors"
+                >
+                  Forgot password?
+                </Link>
+              </div>
             </div>
 
             <button

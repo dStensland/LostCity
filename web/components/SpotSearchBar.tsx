@@ -1,21 +1,19 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 
 export default function SpotSearchBar() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [query, setQuery] = useState(searchParams.get("search") || "");
-  const [isSearching, setIsSearching] = useState(false);
   const currentSearchParam = searchParams.get("search") || "";
+  const [query, setQuery] = useState(currentSearchParam);
+
+  // Derive isSearching from query vs URL mismatch
+  const isSearching = query.trim() !== currentSearchParam;
 
   // Debounced search update
   useEffect(() => {
-    if (query.trim() !== currentSearchParam) {
-      setIsSearching(true);
-    }
-
     const timer = setTimeout(() => {
       const params = new URLSearchParams(searchParams.toString());
 
@@ -27,11 +25,10 @@ export default function SpotSearchBar() {
 
       const newUrl = params.toString() ? `/spots?${params.toString()}` : "/spots";
       router.push(newUrl, { scroll: false });
-      setIsSearching(false);
     }, 150);
 
     return () => clearTimeout(timer);
-  }, [query, router, searchParams, currentSearchParam]);
+  }, [query, router, searchParams]);
 
   const handleClear = useCallback(() => {
     setQuery("");

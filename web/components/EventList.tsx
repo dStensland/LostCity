@@ -250,7 +250,7 @@ export default function EventList({ initialEvents, initialTotal, hasActiveFilter
         )}
         {!hasMore && events.length > 0 && (
           <p className="text-center text-[var(--muted)] font-mono text-xs">
-            You've reached the end
+            You&apos;ve reached the end
           </p>
         )}
       </div>
