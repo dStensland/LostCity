@@ -22,6 +22,7 @@ export interface SearchFilters {
   include_rollups?: boolean;
   vibes?: string[];
   neighborhoods?: string[];
+  city?: string; // Portal city filter
 }
 
 // Rollup types for collapsed event groups
@@ -225,6 +226,20 @@ export async function getFilteredEventsWithSearch(
       // No venues match, return empty results
       return { events: [], total: 0 };
     }
+  }
+
+  // Apply city filter (for portal scoping)
+  if (filters.city) {
+    const { data: matchingVenues } = await supabase
+      .from("venues")
+      .select("id")
+      .ilike("city", filters.city);
+
+    const venueIds = (matchingVenues as { id: number }[] | null)?.map((v) => v.id) || [];
+    if (venueIds.length > 0) {
+      query = query.in("venue_id", venueIds);
+    }
+    // If no venues match the city, we still continue (events might have no venue)
   }
 
   // Apply price filters
