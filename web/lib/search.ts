@@ -945,3 +945,49 @@ export async function enrichEventsWithSocialProof(
     };
   });
 }
+
+// Get popular events this week based on RSVPs and recommendations
+export async function getPopularEvents(limit = 6): Promise<EventWithLocation[]> {
+  const today = new Date().toISOString().split("T")[0];
+  const weekFromNow = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+
+  // Get upcoming events this week (use imported supabase client)
+  const { data: events } = await supabase
+    .from("events")
+    .select(`
+      *,
+      venue:venues(*),
+      source:sources(name, url)
+    `)
+    .gte("start_date", today)
+    .lte("start_date", weekFromNow)
+    .eq("is_active", true)
+    .order("start_date", { ascending: true })
+    .limit(100);
+
+  if (!events || events.length === 0) {
+    return [];
+  }
+
+  // Get social proof counts for all these events
+  const enrichedEvents = await enrichEventsWithSocialProof(events as EventWithLocation[]);
+
+  // Calculate popularity score and sort
+  const scoredEvents = enrichedEvents.map((event) => {
+    const goingCount = event.going_count || 0;
+    const interestedCount = event.interested_count || 0;
+    const recCount = event.recommendation_count || 0;
+    // Weight: going=3, interested=2, recommendations=2
+    const score = goingCount * 3 + interestedCount * 2 + recCount * 2;
+    return { event, score };
+  });
+
+  // Sort by score descending, filter to only events with engagement
+  const popularEvents = scoredEvents
+    .filter((e) => e.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, limit)
+    .map((e) => e.event);
+
+  return popularEvents;
+}

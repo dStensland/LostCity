@@ -5,6 +5,8 @@ import EventList from "@/components/EventList";
 import ModeToggle from "@/components/ModeToggle";
 import Logo from "@/components/Logo";
 import UserMenu from "@/components/UserMenu";
+import HomeFriendsActivity from "@/components/HomeFriendsActivity";
+import PopularThisWeek from "@/components/PopularThisWeek";
 import Link from "next/link";
 import { Suspense } from "react";
 
@@ -94,6 +96,11 @@ export default async function Home({ searchParams }: Props) {
         <FilterBar />
       </Suspense>
 
+      {/* Popular This Week - only shows if events have engagement */}
+      <Suspense fallback={null}>
+        <PopularThisWeek />
+      </Suspense>
+
       {/* Event count */}
       <div className="max-w-3xl mx-auto px-4 border-b border-[var(--twilight)]">
         <p className="font-mono text-xs text-[var(--muted)] py-3">
@@ -104,6 +111,11 @@ export default async function Home({ searchParams }: Props) {
 
       {/* Main Content */}
       <main className="max-w-3xl mx-auto px-4 pb-12">
+        {/* Friends Activity - only shows for logged-in users with friends */}
+        <div className="pt-4">
+          <HomeFriendsActivity />
+        </div>
+
         <Suspense fallback={<div className="py-16 text-center text-[var(--muted)]">Loading events...</div>}>
           <EventList
             initialEvents={events}
