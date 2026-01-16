@@ -1,6 +1,10 @@
 import Link from "next/link";
 import Logo from "@/components/Logo";
 
+// Disable caching for this page
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export default function Home() {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-4">
