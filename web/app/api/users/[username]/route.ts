@@ -1,6 +1,19 @@
 import { NextResponse } from "next/server";
 import { createClient, getUser } from "@/lib/supabase/server";
 
+type ProfileData = {
+  id: string;
+  username: string;
+  display_name: string | null;
+  avatar_url: string | null;
+  bio: string | null;
+  location: string | null;
+  is_public: boolean;
+};
+
+type FollowRow = { follower_id: string; followed_user_id: string };
+type FriendRequestRow = { id: string; inviter_id: string; invitee_id: string; status: string };
+
 // GET /api/users/[username] - Get public profile by username
 export async function GET(
   request: Request,
@@ -16,11 +29,13 @@ export async function GET(
   const currentUser = await getUser();
 
   // Fetch the profile
-  const { data: profile, error } = await supabase
+  const { data, error } = await supabase
     .from("profiles")
     .select("id, username, display_name, avatar_url, bio, location, is_public")
     .eq("username", username.toLowerCase())
     .single();
+
+  const profile = data as ProfileData | null;
 
   if (error || !profile) {
     return NextResponse.json({ error: "User not found" }, { status: 404 });
@@ -42,10 +57,11 @@ export async function GET(
         `and(follower_id.eq.${currentUser.id},followed_user_id.eq.${profile.id}),and(follower_id.eq.${profile.id},followed_user_id.eq.${currentUser.id})`
       );
 
-    const currentFollowsProfile = follows?.some(
+    const followsData = follows as FollowRow[] | null;
+    const currentFollowsProfile = followsData?.some(
       (f) => f.follower_id === currentUser.id && f.followed_user_id === profile.id
     );
-    const profileFollowsCurrent = follows?.some(
+    const profileFollowsCurrent = followsData?.some(
       (f) => f.follower_id === profile.id && f.followed_user_id === currentUser.id
     );
 
@@ -60,7 +76,7 @@ export async function GET(
     // Check for pending friend request
     if (!relationship || relationship === "following" || relationship === "followed_by") {
       const { data: pendingRequest } = await supabase
-        .from("friend_requests")
+        .from("friend_requests" as never)
         .select("id, inviter_id, invitee_id, status")
         .eq("status", "pending")
         .or(
@@ -68,8 +84,10 @@ export async function GET(
         )
         .single();
 
-      if (pendingRequest) {
-        if (pendingRequest.inviter_id === currentUser.id) {
+      const pendingReq = pendingRequest as FriendRequestRow | null;
+
+      if (pendingReq) {
+        if (pendingReq.inviter_id === currentUser.id) {
           relationship = "request_sent";
         } else {
           relationship = "request_received";

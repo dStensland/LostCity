@@ -1,6 +1,13 @@
 import { NextResponse } from "next/server";
 import { createClient, getUser } from "@/lib/supabase/server";
 
+type FriendRequest = {
+  id: string;
+  inviter_id: string;
+  invitee_id: string;
+  status: "pending" | "accepted" | "declined";
+};
+
 // PATCH /api/friend-requests/[id] - Accept or decline a friend request
 export async function PATCH(
   request: Request,
@@ -26,11 +33,13 @@ export async function PATCH(
   const supabase = await createClient();
 
   // Get the friend request
-  const { data: friendRequest, error: fetchError } = await supabase
-    .from("friend_requests")
+  const { data, error: fetchError } = await supabase
+    .from("friend_requests" as never)
     .select("id, inviter_id, invitee_id, status")
     .eq("id", id)
     .single();
+
+  const friendRequest = data as FriendRequest | null;
 
   if (fetchError || !friendRequest) {
     return NextResponse.json(
@@ -58,8 +67,8 @@ export async function PATCH(
   // Update the request status
   const newStatus = action === "accept" ? "accepted" : "declined";
   const { error: updateError } = await supabase
-    .from("friend_requests")
-    .update({ status: newStatus })
+    .from("friend_requests" as never)
+    .update({ status: newStatus } as never)
     .eq("id", id);
 
   if (updateError) {
@@ -88,11 +97,13 @@ export async function DELETE(
   const supabase = await createClient();
 
   // Get the friend request to verify ownership
-  const { data: friendRequest, error: fetchError } = await supabase
-    .from("friend_requests")
+  const { data: data2, error: fetchError } = await supabase
+    .from("friend_requests" as never)
     .select("id, inviter_id, invitee_id")
     .eq("id", id)
     .single();
+
+  const friendRequest = data2 as FriendRequest | null;
 
   if (fetchError || !friendRequest) {
     return NextResponse.json(
@@ -111,7 +122,7 @@ export async function DELETE(
 
   // Delete the request
   const { error: deleteError } = await supabase
-    .from("friend_requests")
+    .from("friend_requests" as never)
     .delete()
     .eq("id", id);
 
