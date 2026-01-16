@@ -1,8 +1,7 @@
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import Logo from "@/components/Logo";
-import UserMenu from "@/components/UserMenu";
+import PageHeader from "@/components/PageHeader";
 import CategoryIcon from "@/components/CategoryIcon";
 import { formatTimeSplit } from "@/lib/formats";
 import { format, parseISO } from "date-fns";
@@ -107,7 +106,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   return {
     title: `${data.collection.title} | Lost City`,
-    description: data.collection.description || `A curated collection of ${data.items.length} events in Atlanta.`,
+    description: data.collection.description || `A curated collection of ${data.items.length} events.`,
     openGraph: {
       title: data.collection.title,
       description: data.collection.description || undefined,
@@ -129,21 +128,7 @@ export default async function CollectionPage({ params }: Props) {
 
   return (
     <div className="min-h-screen">
-      {/* Header */}
-      <header className="px-4 sm:px-6 py-4 flex justify-between items-center border-b border-[var(--twilight)]">
-        <div className="flex items-baseline gap-3">
-          <Logo />
-          <span className="font-mono text-[0.65rem] font-medium text-[var(--muted)] uppercase tracking-widest hidden sm:inline">
-            Atlanta
-          </span>
-        </div>
-        <nav className="flex items-center gap-4 sm:gap-6">
-          <Link href="/collections" className="font-mono text-[0.7rem] font-medium text-[var(--muted)] uppercase tracking-wide hover:text-[var(--cream)] transition-colors">
-            Collections
-          </Link>
-          <UserMenu />
-        </nav>
-      </header>
+      <PageHeader showCollections />
 
       <main className="max-w-3xl mx-auto px-4 py-8">
         {/* Back link */}

@@ -4,7 +4,8 @@ import CategoryIcon from "@/components/CategoryIcon";
 import RSVPButton from "@/components/RSVPButton";
 import RecommendButton from "@/components/RecommendButton";
 import FriendsGoing from "@/components/FriendsGoing";
-import UserMenu from "@/components/UserMenu";
+import PageHeader from "@/components/PageHeader";
+import PageFooter from "@/components/PageFooter";
 import { format, parseISO } from "date-fns";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -30,10 +31,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   const dateObj = parseISO(event.start_date);
   const formattedDate = format(dateObj, "EEEE, MMMM d, yyyy");
-  const venueName = event.venue?.name || "Atlanta";
+  const venueName = event.venue?.name || "TBA";
   const description = event.description
     ? event.description.slice(0, 160)
-    : `${event.title} at ${venueName} on ${formattedDate}. Discover more events in Atlanta with Lost City.`;
+    : `${event.title} at ${venueName} on ${formattedDate}. Discover more events with Lost City.`;
 
   return {
     title: `${event.title} | ${venueName} | Lost City`,
@@ -135,26 +136,7 @@ export default async function EventPage({ params }: Props) {
       />
 
       <div className="min-h-screen">
-        {/* Header */}
-        <header className="px-4 sm:px-6 py-4 flex justify-between items-center border-b border-[var(--twilight)]">
-          <div className="flex items-baseline gap-3">
-            <Link href="/" className="gradient-text text-xl font-bold tracking-tight">
-              Lost City
-            </Link>
-            <span className="font-mono text-[0.65rem] font-medium text-[var(--muted)] uppercase tracking-widest hidden sm:inline">
-              Atlanta
-            </span>
-          </div>
-          <nav className="flex items-center gap-4 sm:gap-6">
-            <Link
-              href="/"
-              className="font-mono text-[0.7rem] font-medium text-[var(--muted)] uppercase tracking-wide hover:text-[var(--cream)] transition-colors"
-            >
-              &larr; Back
-            </Link>
-            <UserMenu />
-          </nav>
-        </header>
+        <PageHeader showEvents />
 
         <main className="max-w-3xl mx-auto px-4 py-8">
           {/* Event image */}
@@ -435,18 +417,7 @@ export default async function EventPage({ params }: Props) {
           )}
         </main>
 
-        {/* Footer */}
-        <footer className="border-t border-[var(--twilight)] bg-[var(--night)] mt-12">
-          <div className="max-w-3xl mx-auto px-4 py-8 text-center">
-            <Link href="/" className="gradient-text text-lg font-bold">
-              Lost City
-            </Link>
-            <p className="font-serif text-[var(--muted)] mt-1">The real Atlanta, found</p>
-            <p className="font-mono text-[0.6rem] text-[var(--muted)] mt-4 opacity-60">
-              AI-powered &middot; Updated continuously
-            </p>
-          </div>
-        </footer>
+        <PageFooter />
       </div>
     </>
   );

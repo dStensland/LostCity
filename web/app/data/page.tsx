@@ -64,7 +64,7 @@ export default async function DataPage() {
 
   const data = {
     _meta: {
-      description: "Lost City Atlanta - Configuration Data",
+      description: "Lost City - Configuration Data",
       updated: new Date().toISOString(),
       note: "This page is for internal reference only",
     },

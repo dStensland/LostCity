@@ -71,6 +71,15 @@ SOURCE_MODULES = {
     "resident-advisor": "sources.resident_advisor",
     # Farmers Markets
     "farmers-markets": "sources.farmers_markets",
+    # New Venues - Phase 1
+    "the-masquerade": "sources.the_masquerade",
+    "fox-theatre": "sources.fox_theatre",
+    "monday-night": "sources.monday_night",
+    "atlanta-pride": "sources.atlanta_pride",
+    "alliance-theatre": "sources.alliance_theatre",
+    "creative-loafing": "sources.creative_loafing",
+    "variety-playhouse": "sources.variety_playhouse",
+    "tabernacle": "sources.tabernacle",
 }
 
 

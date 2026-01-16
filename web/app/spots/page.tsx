@@ -5,7 +5,8 @@ import ModeToggle from "@/components/ModeToggle";
 import SpotFilters from "@/components/SpotFilters";
 import SpotSearchBar from "@/components/SpotSearchBar";
 import { getCategoryLabel } from "@/components/CategoryIcon";
-import Logo from "@/components/Logo";
+import PageHeader from "@/components/PageHeader";
+import PageFooter from "@/components/PageFooter";
 import Link from "next/link";
 
 export const revalidate = 60;
@@ -30,23 +31,7 @@ export default async function SpotsPage({ searchParams }: Props) {
 
   return (
     <div className="min-h-screen">
-      {/* Header */}
-      <header className="px-4 sm:px-6 py-4 flex justify-between items-center border-b border-[var(--twilight)]">
-        <div className="flex items-baseline gap-3">
-          <Logo />
-          <span className="font-mono text-[0.65rem] font-medium text-[var(--muted)] uppercase tracking-widest hidden sm:inline">
-            Atlanta
-          </span>
-        </div>
-        <nav className="flex gap-4 sm:gap-6">
-          <Link href="/spots?view=map" className="font-mono text-[0.7rem] font-medium text-[var(--muted)] uppercase tracking-wide hover:text-[var(--cream)] transition-colors">
-            Map
-          </Link>
-          <a href="mailto:hello@lostcity.ai" className="font-mono text-[0.7rem] font-medium text-[var(--muted)] uppercase tracking-wide hover:text-[var(--cream)] transition-colors">
-            Submit
-          </a>
-        </nav>
-      </header>
+      <PageHeader showEvents showSubmit />
 
       {/* Mode Toggle + Tagline */}
       <section className="py-4 sm:py-6 border-b border-[var(--twilight)]">
@@ -105,18 +90,7 @@ export default async function SpotsPage({ searchParams }: Props) {
         )}
       </main>
 
-      {/* Footer */}
-      <footer className="border-t border-[var(--twilight)] bg-[var(--night)]">
-        <div className="max-w-3xl mx-auto px-4 py-8 text-center">
-          <Logo size="md" href={undefined} />
-          <p className="font-serif text-[var(--muted)] mt-1">
-            The real Atlanta, found
-          </p>
-          <p className="font-mono text-[0.6rem] text-[var(--muted)] mt-4 opacity-60">
-            AI-powered · Updated continuously
-          </p>
-        </div>
-      </footer>
+      <PageFooter />
     </div>
   );
 }

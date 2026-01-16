@@ -3,16 +3,40 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import Logo from "@/components/Logo";
-import UserMenu from "@/components/UserMenu";
+import PageHeader from "@/components/PageHeader";
+import FriendRequestCard from "@/components/FriendRequestCard";
 import { useAuth } from "@/lib/auth-context";
 import { formatDistanceToNow } from "date-fns";
+
+type FriendRequest = {
+  id: string;
+  inviter_id: string;
+  invitee_id: string;
+  status: "pending" | "accepted" | "declined";
+  created_at: string;
+  inviter?: {
+    id: string;
+    username: string;
+    display_name: string | null;
+    avatar_url: string | null;
+    bio: string | null;
+  } | null;
+  invitee?: {
+    id: string;
+    username: string;
+    display_name: string | null;
+    avatar_url: string | null;
+    bio: string | null;
+  } | null;
+};
 
 type NotificationType =
   | "new_follower"
   | "friend_rsvp"
   | "recommendation"
-  | "event_reminder";
+  | "event_reminder"
+  | "friend_request"
+  | "friend_request_accepted";
 
 type Notification = {
   id: string;
@@ -41,8 +65,10 @@ export default function NotificationsPage() {
   const { user, loading: authLoading } = useAuth();
 
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [friendRequests, setFriendRequests] = useState<FriendRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [pendingRequestCount, setPendingRequestCount] = useState(0);
 
   // Redirect if not logged in
   useEffect(() => {
@@ -51,17 +77,31 @@ export default function NotificationsPage() {
     }
   }, [user, authLoading, router]);
 
-  // Load notifications
+  // Load notifications and friend requests
   useEffect(() => {
-    async function loadNotifications() {
+    async function loadData() {
       if (!user) return;
 
       try {
-        const res = await fetch("/api/notifications?limit=50");
-        if (res.ok) {
-          const data = await res.json();
+        // Load both in parallel
+        const [notifRes, requestsRes] = await Promise.all([
+          fetch("/api/notifications?limit=50"),
+          fetch("/api/friend-requests?type=received"),
+        ]);
+
+        if (notifRes.ok) {
+          const data = await notifRes.json();
           setNotifications(data.notifications || []);
           setUnreadCount(data.unreadCount || 0);
+        }
+
+        if (requestsRes.ok) {
+          const data = await requestsRes.json();
+          const pending = (data.requests || []).filter(
+            (r: FriendRequest) => r.status === "pending"
+          );
+          setFriendRequests(pending);
+          setPendingRequestCount(data.pendingCount || 0);
         }
       } catch (error) {
         console.error("Failed to load notifications:", error);
@@ -71,7 +111,7 @@ export default function NotificationsPage() {
     }
 
     if (user) {
-      loadNotifications();
+      loadData();
     }
   }, [user]);
 
@@ -127,24 +167,7 @@ export default function NotificationsPage() {
 
   return (
     <div className="min-h-screen">
-      {/* Header */}
-      <header className="px-4 sm:px-6 py-4 flex justify-between items-center border-b border-[var(--twilight)]">
-        <div className="flex items-baseline gap-3">
-          <Logo />
-          <span className="font-mono text-[0.65rem] font-medium text-[var(--muted)] uppercase tracking-widest hidden sm:inline">
-            Atlanta
-          </span>
-        </div>
-        <nav className="flex items-center gap-4 sm:gap-6">
-          <Link
-            href="/"
-            className="font-mono text-[0.7rem] font-medium text-[var(--muted)] uppercase tracking-wide hover:text-[var(--cream)] transition-colors"
-          >
-            Events
-          </Link>
-          <UserMenu />
-        </nav>
-      </header>
+      <PageHeader />
 
       {/* Main */}
       <main className="max-w-2xl mx-auto px-4 py-6">
@@ -160,6 +183,36 @@ export default function NotificationsPage() {
             </button>
           )}
         </div>
+
+        {/* Friend Requests Section */}
+        {!loading && friendRequests.length > 0 && user && (
+          <div className="mb-6">
+            <h2 className="font-mono text-sm text-[var(--soft)] mb-3">
+              Friend Requests ({pendingRequestCount})
+            </h2>
+            <div className="space-y-2">
+              {friendRequests.map((request) => (
+                <FriendRequestCard
+                  key={request.id}
+                  request={request}
+                  currentUserId={user.id}
+                  onAccept={() => {
+                    setFriendRequests((prev) =>
+                      prev.filter((r) => r.id !== request.id)
+                    );
+                    setPendingRequestCount((prev) => Math.max(0, prev - 1));
+                  }}
+                  onDecline={() => {
+                    setFriendRequests((prev) =>
+                      prev.filter((r) => r.id !== request.id)
+                    );
+                    setPendingRequestCount((prev) => Math.max(0, prev - 1));
+                  }}
+                />
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Notifications list */}
         {loading ? (
@@ -274,6 +327,26 @@ function NotificationCard({
           </>
         );
 
+      case "friend_request":
+        return (
+          <>
+            <span className="font-medium text-[var(--cream)]">
+              {notification.actor?.display_name || notification.actor?.username || "Someone"}
+            </span>{" "}
+            sent you a friend request
+          </>
+        );
+
+      case "friend_request_accepted":
+        return (
+          <>
+            <span className="font-medium text-[var(--cream)]">
+              {notification.actor?.display_name || notification.actor?.username || "Someone"}
+            </span>{" "}
+            accepted your friend request
+          </>
+        );
+
       default:
         return notification.message || "You have a notification";
     }
@@ -281,6 +354,12 @@ function NotificationCard({
 
   const getNotificationLink = (): string => {
     if (notification.type === "new_follower" && notification.actor) {
+      return `/profile/${notification.actor.username}`;
+    }
+    if (notification.type === "friend_request" && notification.actor) {
+      return `/notifications`; // Stay on notifications page to handle request
+    }
+    if (notification.type === "friend_request_accepted" && notification.actor) {
       return `/profile/${notification.actor.username}`;
     }
     if (notification.event) {
@@ -364,6 +443,20 @@ function NotificationIcon({ type }: { type: NotificationType }) {
       return (
         <svg className={iconClasses} fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      );
+
+    case "friend_request":
+      return (
+        <svg className={iconClasses} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+        </svg>
+      );
+
+    case "friend_request_accepted":
+      return (
+        <svg className={iconClasses} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
       );
 

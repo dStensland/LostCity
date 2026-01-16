@@ -4,6 +4,8 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { format, parseISO } from "date-fns";
 import { formatTimeSplit } from "@/lib/formats";
+import PageHeader from "@/components/PageHeader";
+import PageFooter from "@/components/PageFooter";
 
 export const revalidate = 60;
 
@@ -23,7 +25,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   const description = spot.description
     ? spot.description.slice(0, 160)
-    : `${spot.name} in ${spot.neighborhood || spot.city}. Discover more spots in Atlanta with Lost City.`;
+    : `${spot.name} in ${spot.neighborhood || spot.city}. Discover more spots with Lost City.`;
 
   return {
     title: `${spot.name} | Lost City`,
@@ -77,25 +79,7 @@ export default async function SpotPage({ params }: Props) {
       />
 
       <div className="min-h-screen">
-        {/* Header */}
-        <header className="px-4 sm:px-6 py-4 flex justify-between items-center border-b border-[var(--twilight)]">
-          <div className="flex items-baseline gap-3">
-            <Link href="/" className="gradient-text text-xl font-bold tracking-tight">
-              Lost City
-            </Link>
-            <span className="font-mono text-[0.65rem] font-medium text-[var(--muted)] uppercase tracking-widest hidden sm:inline">
-              Atlanta
-            </span>
-          </div>
-          <nav>
-            <Link
-              href="/spots"
-              className="font-mono text-[0.7rem] font-medium text-[var(--muted)] uppercase tracking-wide hover:text-[var(--cream)] transition-colors"
-            >
-              &larr; All Spots
-            </Link>
-          </nav>
-        </header>
+        <PageHeader showSpots />
 
         <main className="max-w-3xl mx-auto px-4 py-8">
           {/* Spot image */}
@@ -278,18 +262,7 @@ export default async function SpotPage({ params }: Props) {
           )}
         </main>
 
-        {/* Footer */}
-        <footer className="border-t border-[var(--twilight)] bg-[var(--night)] mt-12">
-          <div className="max-w-3xl mx-auto px-4 py-8 text-center">
-            <Link href="/" className="gradient-text text-lg font-bold">
-              Lost City
-            </Link>
-            <p className="font-serif text-[var(--muted)] mt-1">The real Atlanta, found</p>
-            <p className="font-mono text-[0.6rem] text-[var(--muted)] mt-4 opacity-60">
-              AI-powered &middot; Updated continuously
-            </p>
-          </div>
-        </footer>
+        <PageFooter />
       </div>
     </>
   );

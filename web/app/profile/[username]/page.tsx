@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import Logo from "@/components/Logo";
-import UserMenu from "@/components/UserMenu";
+import PageHeader from "@/components/PageHeader";
+import PageFooter from "@/components/PageFooter";
 import FollowButton from "@/components/FollowButton";
 import { createClient } from "@/lib/supabase/server";
 import { formatDistanceToNow } from "date-fns";
@@ -87,21 +87,7 @@ export default async function ProfilePage({ params }: Props) {
 
   return (
     <div className="min-h-screen">
-      {/* Header */}
-      <header className="px-4 sm:px-6 py-4 flex justify-between items-center border-b border-[var(--twilight)]">
-        <div className="flex items-baseline gap-3">
-          <Logo />
-          <span className="font-mono text-[0.65rem] font-medium text-[var(--muted)] uppercase tracking-widest hidden sm:inline">
-            Atlanta
-          </span>
-        </div>
-        <nav className="flex items-center gap-4 sm:gap-6">
-          <Link href="/" className="font-mono text-[0.7rem] font-medium text-[var(--muted)] uppercase tracking-wide hover:text-[var(--cream)] transition-colors">
-            Events
-          </Link>
-          <UserMenu />
-        </nav>
-      </header>
+      <PageHeader />
 
       {/* Profile Header */}
       <section className="max-w-3xl mx-auto px-4 py-8 border-b border-[var(--twilight)]">
@@ -217,15 +203,7 @@ export default async function ProfilePage({ params }: Props) {
         )}
       </main>
 
-      {/* Footer */}
-      <footer className="border-t border-[var(--twilight)] bg-[var(--night)]">
-        <div className="max-w-3xl mx-auto px-4 py-8 text-center">
-          <Logo size="md" href="/" />
-          <p className="font-serif text-[var(--muted)] mt-1">
-            The real Atlanta, found
-          </p>
-        </div>
-      </footer>
+      <PageFooter />
     </div>
   );
 }

@@ -3,8 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import Logo from "@/components/Logo";
-import UserMenu from "@/components/UserMenu";
+import PageHeader from "@/components/PageHeader";
 import CategoryIcon from "@/components/CategoryIcon";
 import ActivityFeed from "@/components/ActivityFeed";
 import { useAuth } from "@/lib/auth-context";
@@ -105,30 +104,7 @@ export default function ForYouPage() {
 
   return (
     <div className="min-h-screen">
-      {/* Header */}
-      <header className="px-4 sm:px-6 py-4 flex justify-between items-center border-b border-[var(--twilight)]">
-        <div className="flex items-baseline gap-3">
-          <Logo />
-          <span className="font-mono text-[0.65rem] font-medium text-[var(--muted)] uppercase tracking-widest hidden sm:inline">
-            Atlanta
-          </span>
-        </div>
-        <nav className="flex items-center gap-4 sm:gap-6">
-          <Link
-            href="/"
-            className="font-mono text-[0.7rem] font-medium text-[var(--muted)] uppercase tracking-wide hover:text-[var(--cream)] transition-colors"
-          >
-            Events
-          </Link>
-          <Link
-            href="/spots"
-            className="font-mono text-[0.7rem] font-medium text-[var(--muted)] uppercase tracking-wide hover:text-[var(--cream)] transition-colors"
-          >
-            Spots
-          </Link>
-          <UserMenu />
-        </nav>
-      </header>
+      <PageHeader showSpots />
 
       {/* Main */}
       <main className="max-w-2xl mx-auto px-4 py-6">

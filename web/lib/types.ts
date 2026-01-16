@@ -258,6 +258,24 @@ export type Database = {
           read_at?: string | null;
         };
       };
+      friend_requests: {
+        Row: {
+          id: string;
+          inviter_id: string;
+          invitee_id: string;
+          status: "pending" | "accepted" | "declined";
+          created_at: string;
+          responded_at: string | null;
+        };
+        Insert: {
+          inviter_id: string;
+          invitee_id: string;
+          status?: "pending" | "accepted" | "declined";
+        };
+        Update: {
+          status?: "pending" | "accepted" | "declined";
+        };
+      };
       organizations: {
         Row: {
           id: number;

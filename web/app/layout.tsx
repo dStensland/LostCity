@@ -21,11 +21,11 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Lost City - Atlanta Events",
-  description: "Discover events in Atlanta. AI-powered event aggregation from 20+ sources.",
+  title: "Lost City - Discover Local Events",
+  description: "Discover local events near you. AI-powered event aggregation from 20+ sources.",
   openGraph: {
-    title: "Lost City - Atlanta Events",
-    description: "Discover events in Atlanta",
+    title: "Lost City - Discover Local Events",
+    description: "Discover local events near you",
     images: ["/og-image.png"],
   },
 };

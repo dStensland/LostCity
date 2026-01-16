@@ -151,7 +151,7 @@ function SignupForm() {
               Join Lost City
             </h1>
             <p className="font-mono text-xs text-[var(--muted)] mt-2">
-              Discover Atlanta&apos;s hidden gems
+              Discover your city&apos;s hidden gems
             </p>
           </div>
 
