@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 import NotificationDropdown from "./NotificationDropdown";
+import ShareInviteLink from "./ShareInviteLink";
 
 export default function UserMenu() {
   const { user, profile, loading, signOut } = useAuth();
@@ -51,6 +52,9 @@ export default function UserMenu() {
     <div className="flex items-center gap-2">
       {/* Notifications */}
       <NotificationDropdown />
+
+      {/* Invite Friends */}
+      <ShareInviteLink variant="icon" />
 
       {/* Avatar and dropdown */}
       <div className="relative flex items-center" ref={menuRef}>
