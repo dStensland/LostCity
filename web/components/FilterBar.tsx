@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useCallback } from "react";
 import { CATEGORIES, SUBCATEGORIES, DATE_FILTERS, PRICE_FILTERS, TAG_GROUPS, ALL_TAGS } from "@/lib/search";
 import { PREFERENCE_VIBES, PREFERENCE_NEIGHBORHOODS } from "@/lib/preferences";
@@ -8,6 +8,7 @@ import CategoryIcon, { CATEGORY_CONFIG, type CategoryType } from "./CategoryIcon
 
 export default function FilterBar() {
   const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
 
   const currentCategories = searchParams.get("categories")?.split(",").filter(Boolean) || [];
@@ -33,10 +34,10 @@ export default function FilterBar() {
       // Reset to page 1 when filters change
       params.delete("page");
 
-      const newUrl = params.toString() ? `/?${params.toString()}` : "/";
+      const newUrl = params.toString() ? `${pathname}?${params.toString()}` : pathname;
       router.push(newUrl, { scroll: false });
     },
-    [router, searchParams]
+    [router, pathname, searchParams]
   );
 
   const toggleCategory = useCallback(

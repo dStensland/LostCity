@@ -252,7 +252,7 @@ function PreferencesContent() {
               </button>
               {isWelcome && (
                 <Link
-                  href="/"
+                  href="/atlanta"
                   className="px-4 py-2.5 rounded-lg font-mono text-sm text-[var(--muted)] hover:text-[var(--cream)] transition-colors"
                 >
                   Skip for now

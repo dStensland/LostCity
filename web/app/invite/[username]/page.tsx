@@ -129,7 +129,7 @@ export default function InvitePage({ params }: Props) {
             This invite link is no longer valid or the user doesn&apos;t exist.
           </p>
           <Link
-            href="/"
+            href="/atlanta"
             className="inline-block bg-[var(--coral)] text-[var(--night)] px-6 py-3 rounded font-medium hover:opacity-90"
           >
             Go to Home
@@ -293,7 +293,7 @@ export default function InvitePage({ params }: Props) {
                   {inviter.display_name || `@${inviter.username}`}
                 </p>
                 <Link
-                  href="/"
+                  href="/atlanta"
                   className="inline-block bg-[var(--coral)] text-[var(--night)] px-6 py-3 rounded font-medium hover:opacity-90"
                 >
                   Explore Events

@@ -230,7 +230,7 @@ export default function SavedPage() {
               Save events by clicking the bookmark icon
             </p>
             <Link
-              href="/"
+              href="/atlanta"
               className="inline-block mt-4 px-4 py-2 bg-[var(--coral)] text-[var(--void)] font-mono text-xs font-medium rounded-lg hover:bg-[var(--rose)] transition-colors"
             >
               Browse Events

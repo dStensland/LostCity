@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, usePathname } from "next/navigation";
 import { format, parseISO, isToday, isTomorrow } from "date-fns";
 import Link from "next/link";
 import EventCard from "./EventCard";
@@ -116,6 +116,7 @@ export default function EventList({ initialEvents, initialTotal, hasActiveFilter
   const [hasMore, setHasMore] = useState(initialEvents.length < initialTotal);
   const [isLoading, setIsLoading] = useState(false);
   const searchParams = useSearchParams();
+  const pathname = usePathname();
   const loaderRef = useRef<HTMLDivElement>(null);
 
   // Reset when filters change (initialEvents will change from server)
@@ -189,7 +190,7 @@ export default function EventList({ initialEvents, initialTotal, hasActiveFilter
         </p>
         {hasActiveFilters && (
           <Link
-            href="/"
+            href={pathname}
             className="mt-4 inline-block text-[var(--coral)] hover:text-[var(--rose)] transition-colors font-mono text-sm"
           >
             Clear all filters

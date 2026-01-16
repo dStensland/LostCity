@@ -184,7 +184,7 @@ export default function InviteCompletePage({ params }: Props) {
         )}
 
         <Link
-          href="/"
+          href="/atlanta"
           className="inline-block bg-[var(--coral)] text-[var(--night)] px-6 py-3 rounded font-medium hover:opacity-90"
         >
           Explore Events
