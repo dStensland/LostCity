@@ -1,12 +1,12 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  async redirects() {
+  async rewrites() {
     return [
       {
+        // Rewrite / to /atlanta internally (no redirect, keeps URL as /)
         source: "/",
         destination: "/atlanta",
-        permanent: false,
       },
     ];
   },

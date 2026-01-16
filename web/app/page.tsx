@@ -1,6 +1,6 @@
-// Root page - redirects to Atlanta via next.config.ts
-// This component should never render due to the redirect,
-// but exists as a fallback
+// This file exists as a placeholder.
+// The root path "/" is rewritten to "/atlanta" via next.config.ts
+// so this component should never actually render.
 export default function Home() {
   return null;
 }
