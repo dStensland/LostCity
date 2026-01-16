@@ -1,12 +1,13 @@
 "use client";
 
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { getSearchSuggestions, type SearchSuggestion } from "@/lib/search";
 import { getRecentSearches, addRecentSearch } from "@/lib/searchHistory";
 
 export default function SearchBar() {
   const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const currentSearchParam = searchParams.get("search") || "";
   const [query, setQuery] = useState(currentSearchParam);
@@ -17,6 +18,7 @@ export default function SearchBar() {
   const inputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isInitialMount = useRef(true);
 
   // Derive isSearching from query vs URL mismatch
   const isSearching = query.trim() !== currentSearchParam;
@@ -41,8 +43,14 @@ export default function SearchBar() {
     }
   }, [query]);
 
-  // Debounced search update
+  // Debounced search update - only when query changes from user input
   useEffect(() => {
+    // Skip the initial mount to avoid redirect loop
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+
     if (debounceRef.current) {
       clearTimeout(debounceRef.current);
     }
@@ -59,7 +67,8 @@ export default function SearchBar() {
       }
 
       params.delete("page");
-      const newUrl = params.toString() ? `/?${params.toString()}` : "/";
+      // Stay on current path instead of going to /
+      const newUrl = params.toString() ? `${pathname}?${params.toString()}` : pathname;
       router.push(newUrl, { scroll: false });
     }, 150);
 
@@ -68,7 +77,7 @@ export default function SearchBar() {
         clearTimeout(debounceRef.current);
       }
     };
-  }, [query, router, searchParams]);
+  }, [query, router, searchParams, pathname]);
 
   const handleClear = useCallback(() => {
     setQuery("");

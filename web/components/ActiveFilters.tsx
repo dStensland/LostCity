@@ -1,11 +1,12 @@
 "use client";
 
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useCallback } from "react";
 import { CATEGORIES, SUBCATEGORIES } from "@/lib/search";
 
 export default function ActiveFilters() {
   const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
 
   const search = searchParams.get("search");
@@ -42,15 +43,15 @@ export default function ActiveFilters() {
       }
 
       params.delete("page");
-      const newUrl = params.toString() ? `/?${params.toString()}` : "/";
+      const newUrl = params.toString() ? `${pathname}?${params.toString()}` : pathname;
       router.push(newUrl, { scroll: false });
     },
-    [router, searchParams, categories, subcategories]
+    [router, pathname, searchParams, categories, subcategories]
   );
 
   const clearAll = useCallback(() => {
-    router.push("/", { scroll: false });
-  }, [router]);
+    router.push(pathname, { scroll: false });
+  }, [router, pathname]);
 
   if (!hasFilters) return null;
 
