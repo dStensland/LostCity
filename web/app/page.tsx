@@ -1,7 +1,6 @@
-import { redirect } from "next/navigation";
-
-// Redirect root to Atlanta portal
-// In the future, this can be a landing page about Lost City
+// Root page - redirects to Atlanta via next.config.ts
+// This component should never render due to the redirect,
+// but exists as a fallback
 export default function Home() {
-  redirect("/atlanta");
+  return null;
 }
