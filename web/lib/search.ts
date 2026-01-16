@@ -604,13 +604,18 @@ export async function getVenuesWithEvents(): Promise<VenueWithCount[]> {
 }
 
 // Get search suggestions for autocomplete
-export async function getSearchSuggestions(prefix: string): Promise<string[]> {
+export type SearchSuggestion = {
+  text: string;
+  type: "venue" | "event" | "neighborhood";
+};
+
+export async function getSearchSuggestions(prefix: string): Promise<SearchSuggestion[]> {
   if (prefix.length < 2) return [];
 
   const searchTerm = `${prefix}%`;
   const today = new Date().toISOString().split("T")[0];
 
-  const [venueResult, eventResult] = await Promise.all([
+  const [venueResult, eventResult, neighborhoodResult] = await Promise.all([
     supabase.from("venues").select("name").ilike("name", searchTerm).limit(3),
     supabase
       .from("events")
@@ -618,15 +623,42 @@ export async function getSearchSuggestions(prefix: string): Promise<string[]> {
       .ilike("title", searchTerm)
       .gte("start_date", today)
       .limit(3),
+    supabase
+      .from("venues")
+      .select("neighborhood")
+      .ilike("neighborhood", searchTerm)
+      .not("neighborhood", "is", null)
+      .limit(3),
   ]);
 
-  const suggestions = [
-    ...((venueResult.data as { name: string }[] | null)?.map((v) => v.name) || []),
-    ...((eventResult.data as { title: string }[] | null)?.map((e) => e.title) || []),
-  ];
+  const suggestions: SearchSuggestion[] = [];
 
-  // Dedupe and limit
-  return [...new Set(suggestions)].slice(0, 5);
+  // Add venues
+  const venues = (venueResult.data as { name: string }[] | null) || [];
+  for (const v of venues) {
+    if (!suggestions.some((s) => s.text === v.name)) {
+      suggestions.push({ text: v.name, type: "venue" });
+    }
+  }
+
+  // Add unique neighborhoods
+  const neighborhoods = (neighborhoodResult.data as { neighborhood: string | null }[] | null) || [];
+  const uniqueNeighborhoods = [...new Set(neighborhoods.map((n) => n.neighborhood).filter(Boolean))];
+  for (const n of uniqueNeighborhoods) {
+    if (n && !suggestions.some((s) => s.text === n)) {
+      suggestions.push({ text: n, type: "neighborhood" });
+    }
+  }
+
+  // Add events
+  const events = (eventResult.data as { title: string }[] | null) || [];
+  for (const e of events) {
+    if (!suggestions.some((s) => s.text === e.title)) {
+      suggestions.push({ text: e.title, type: "event" });
+    }
+  }
+
+  return suggestions.slice(0, 6);
 }
 
 // ============================================================================
