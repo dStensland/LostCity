@@ -1,0 +1,133 @@
+import { createClient } from "@/lib/supabase/server";
+import { NextRequest, NextResponse } from "next/server";
+
+export const dynamic = "force-dynamic";
+
+type Props = {
+  params: Promise<{ slug: string }>;
+};
+
+type CollectionData = {
+  id: number;
+  slug: string;
+  title: string;
+  description: string | null;
+  cover_image_url: string | null;
+  user_id: string | null;
+  visibility: string;
+  is_featured: boolean;
+  created_at: string;
+  updated_at: string;
+  owner: { username: string; display_name: string | null; avatar_url: string | null } | null;
+};
+
+// GET /api/collections/[slug] - Get collection with items
+export async function GET(request: NextRequest, { params }: Props) {
+  const { slug } = await params;
+  const supabase = await createClient();
+
+  // Get collection (use any for new table)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: collectionData, error: collectionError } = await (supabase as any)
+    .from("collections")
+    .select(`
+      id,
+      slug,
+      title,
+      description,
+      cover_image_url,
+      user_id,
+      visibility,
+      is_featured,
+      created_at,
+      updated_at,
+      owner:profiles!collections_user_id_fkey(username, display_name, avatar_url)
+    `)
+    .eq("slug", slug)
+    .single();
+
+  const collection = collectionData as CollectionData | null;
+
+  if (collectionError || !collection) {
+    return NextResponse.json({ error: "Collection not found" }, { status: 404 });
+  }
+
+  // Get items with event details
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: items } = await (supabase as any)
+    .from("collection_items")
+    .select(`
+      id,
+      note,
+      position,
+      added_at,
+      event:events(
+        id,
+        title,
+        start_date,
+        start_time,
+        is_all_day,
+        is_free,
+        price_min,
+        price_max,
+        category,
+        image_url,
+        venue:venues(name, slug, neighborhood)
+      )
+    `)
+    .eq("collection_id", collection.id)
+    .order("position", { ascending: true });
+
+  // Filter out items with null events (deleted events)
+  type ItemWithEvent = { id: number; note: string | null; position: number; added_at: string; event: unknown };
+  const validItems = ((items || []) as ItemWithEvent[]).filter((item) => item.event !== null);
+
+  return NextResponse.json({
+    collection: {
+      ...collection,
+      item_count: validItems.length,
+    },
+    items: validItems,
+  });
+}
+
+// DELETE /api/collections/[slug] - Delete collection
+export async function DELETE(request: NextRequest, { params }: Props) {
+  const { slug } = await params;
+  const supabase = await createClient();
+
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  // Verify ownership
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: collectionData } = await (supabase as any)
+    .from("collections")
+    .select("id, user_id")
+    .eq("slug", slug)
+    .single();
+
+  const collection = collectionData as { id: number; user_id: string | null } | null;
+
+  if (!collection) {
+    return NextResponse.json({ error: "Collection not found" }, { status: 404 });
+  }
+
+  if (collection.user_id !== user.id) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (supabase as any)
+    .from("collections")
+    .delete()
+    .eq("id", collection.id);
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  return NextResponse.json({ success: true });
+}
