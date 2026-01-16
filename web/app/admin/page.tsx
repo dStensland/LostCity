@@ -47,6 +47,28 @@ export default async function AdminDashboard() {
         Admin Dashboard
       </h1>
 
+      {/* Quick Links */}
+      <div className="flex gap-3 mb-6">
+        <Link
+          href="/admin/portals"
+          className="px-4 py-2 bg-[var(--coral)] text-[var(--void)] font-mono text-sm rounded hover:opacity-90 transition-opacity"
+        >
+          Manage Portals
+        </Link>
+        <Link
+          href="/admin/sources"
+          className="px-4 py-2 bg-[var(--twilight)] text-[var(--cream)] font-mono text-sm rounded hover:bg-[var(--dusk)] transition-colors"
+        >
+          Source Health
+        </Link>
+        <Link
+          href="/admin/users"
+          className="px-4 py-2 bg-[var(--twilight)] text-[var(--cream)] font-mono text-sm rounded hover:bg-[var(--dusk)] transition-colors"
+        >
+          Users
+        </Link>
+      </div>
+
       {/* Stats Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
         {stats.map((stat) => (
