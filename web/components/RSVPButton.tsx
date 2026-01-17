@@ -39,6 +39,11 @@ export default function RSVPButton({
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [isAnimating, setIsAnimating] = useState(false);
+  const [focusedIndex, setFocusedIndex] = useState(0);
+
+  const statusOptions = (Object.keys(STATUS_CONFIG) as NonNullable<RSVPStatus>[]);
+  const menuItemCount = statusOptions.length + (status ? 1 : 0); // +1 for "Remove RSVP"
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -50,6 +55,47 @@ export default function RSVPButton({
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  // Keyboard navigation
+  useEffect(() => {
+    if (!menuOpen) return;
+
+    function handleKeyDown(event: KeyboardEvent) {
+      switch (event.key) {
+        case "ArrowDown":
+          event.preventDefault();
+          setFocusedIndex((prev) => (prev + 1) % menuItemCount);
+          break;
+        case "ArrowUp":
+          event.preventDefault();
+          setFocusedIndex((prev) => (prev - 1 + menuItemCount) % menuItemCount);
+          break;
+        case "Enter":
+        case " ":
+          event.preventDefault();
+          if (focusedIndex < statusOptions.length) {
+            handleStatusChange(statusOptions[focusedIndex]);
+          } else if (status) {
+            handleStatusChange(null);
+          }
+          break;
+        case "Escape":
+          event.preventDefault();
+          setMenuOpen(false);
+          break;
+      }
+    }
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [menuOpen, focusedIndex, menuItemCount, statusOptions, status]);
+
+  // Reset focus when menu opens
+  useEffect(() => {
+    if (menuOpen) {
+      setFocusedIndex(0);
+    }
+  }, [menuOpen]);
 
   // Load existing RSVP
   useEffect(() => {
@@ -85,6 +131,10 @@ export default function RSVPButton({
 
     setActionLoading(true);
     const previousStatus = status;
+
+    // Trigger pop animation
+    setIsAnimating(true);
+    setTimeout(() => setIsAnimating(false), 150);
 
     // Optimistic update
     setStatus(newStatus);
@@ -169,11 +219,13 @@ export default function RSVPButton({
       <button
         onClick={() => setMenuOpen(!menuOpen)}
         disabled={actionLoading}
-        className={`font-mono font-medium rounded-lg transition-colors flex items-center gap-2 ${sizeClasses[size]} ${
+        aria-haspopup="menu"
+        aria-expanded={menuOpen}
+        className={`font-mono font-medium rounded-lg transition-all duration-150 flex items-center gap-2 ${sizeClasses[size]} ${
           status
             ? `${currentConfig?.color} text-[var(--void)]`
             : "bg-[var(--dusk)] text-[var(--muted)] hover:text-[var(--cream)] border border-[var(--twilight)]"
-        }`}
+        } ${isAnimating ? "scale-95" : "scale-100"}`}
       >
         {actionLoading ? (
           <span className="inline-block w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
@@ -197,21 +249,29 @@ export default function RSVPButton({
 
       {/* Dropdown Menu */}
       {menuOpen && (
-        <div className="absolute top-full mt-2 right-0 w-48 bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg shadow-lg z-50 overflow-hidden">
+        <div
+          className="absolute top-full mt-2 right-0 w-48 bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg shadow-lg z-50 overflow-hidden"
+          role="menu"
+          aria-orientation="vertical"
+        >
           {/* Status Options */}
           <div className="p-1">
-            {(Object.keys(STATUS_CONFIG) as RSVPStatus[]).filter(Boolean).map((s) => (
+            {statusOptions.map((s, index) => (
               <button
                 key={s}
                 onClick={() => handleStatusChange(s)}
+                role="menuitem"
+                tabIndex={focusedIndex === index ? 0 : -1}
                 className={`w-full flex items-center gap-2 px-3 py-2 rounded font-mono text-xs transition-colors ${
+                  focusedIndex === index ? "ring-1 ring-[var(--coral)] ring-inset" : ""
+                } ${
                   status === s
                     ? "bg-[var(--twilight)] text-[var(--cream)]"
                     : "text-[var(--muted)] hover:text-[var(--cream)] hover:bg-[var(--twilight)]"
                 }`}
               >
-                <StatusIcon status={s!} />
-                {STATUS_CONFIG[s!].label}
+                <StatusIcon status={s} />
+                {STATUS_CONFIG[s].label}
                 {status === s && (
                   <svg className="w-3 h-3 ml-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -223,7 +283,11 @@ export default function RSVPButton({
             {status && (
               <button
                 onClick={() => handleStatusChange(null)}
-                className="w-full flex items-center gap-2 px-3 py-2 rounded font-mono text-xs text-[var(--coral)] hover:bg-[var(--twilight)] transition-colors"
+                role="menuitem"
+                tabIndex={focusedIndex === statusOptions.length ? 0 : -1}
+                className={`w-full flex items-center gap-2 px-3 py-2 rounded font-mono text-xs text-[var(--coral)] hover:bg-[var(--twilight)] transition-colors ${
+                  focusedIndex === statusOptions.length ? "ring-1 ring-[var(--coral)] ring-inset" : ""
+                }`}
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />

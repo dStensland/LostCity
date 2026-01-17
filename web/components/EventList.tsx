@@ -221,7 +221,7 @@ export default function EventList({ initialEvents, initialTotal, hasActiveFilter
       {dates.map((date) => (
         <section key={date}>
           {/* Date header - classified style */}
-          <div className="flex items-center gap-4 py-4 sticky top-[60px] sm:top-[52px] bg-[var(--void)] z-20">
+          <div className="flex items-center gap-4 py-4 sticky top-36 bg-[var(--void)] z-20">
             <span className="font-mono text-[0.65rem] font-medium text-[var(--muted)] uppercase tracking-widest whitespace-nowrap">
               {getDateLabel(date)}
             </span>

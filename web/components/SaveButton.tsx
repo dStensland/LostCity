@@ -29,6 +29,7 @@ export default function SaveButton({
   const [isSaved, setIsSaved] = useState(false);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
+  const [isAnimating, setIsAnimating] = useState(false);
 
   // Load existing saved state
   useEffect(() => {
@@ -68,6 +69,10 @@ export default function SaveButton({
 
     setActionLoading(true);
     const previousState = isSaved;
+
+    // Trigger pop animation
+    setIsAnimating(true);
+    setTimeout(() => setIsAnimating(false), 200);
 
     // Optimistic update
     setIsSaved(!isSaved);
@@ -151,7 +156,7 @@ export default function SaveButton({
         <span className={`inline-block ${iconSizes[size]} border-2 border-current border-t-transparent rounded-full animate-spin`} />
       ) : (
         <svg
-          className={iconSizes[size]}
+          className={`${iconSizes[size]} transition-transform duration-200 ${isAnimating ? "scale-125" : "scale-100"}`}
           fill={isSaved ? "currentColor" : "none"}
           stroke="currentColor"
           viewBox="0 0 24 24"

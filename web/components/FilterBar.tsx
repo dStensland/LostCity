@@ -160,7 +160,7 @@ export default function FilterBar() {
   const hasFilters = currentCategories.length > 0 || currentSubcategories.length > 0 || currentTags.length > 0 || currentVibes.length > 0 || currentNeighborhoods.length > 0 || currentPriceFilter || currentDateFilter;
 
   return (
-    <div className="sticky top-0 z-30 bg-[var(--night)]">
+    <div className="sticky top-16 z-30 bg-[var(--night)]">
       {/* Category Filter Row */}
       <div className="border-b border-[var(--twilight)]">
         <div className="max-w-3xl mx-auto px-4 py-3">

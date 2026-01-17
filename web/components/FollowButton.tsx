@@ -29,6 +29,7 @@ export default function FollowButton({
   const [isFollowing, setIsFollowing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
+  const [isAnimating, setIsAnimating] = useState(false);
 
   // Check if already following
   useEffect(() => {
@@ -73,6 +74,10 @@ export default function FollowButton({
     }
 
     setActionLoading(true);
+
+    // Trigger pop animation
+    setIsAnimating(true);
+    setTimeout(() => setIsAnimating(false), 150);
 
     if (isFollowing) {
       // Unfollow
@@ -144,11 +149,11 @@ export default function FollowButton({
     <button
       onClick={handleClick}
       disabled={actionLoading}
-      className={`font-mono font-medium rounded-full transition-colors disabled:opacity-50 ${sizeClasses[size]} ${
+      className={`font-mono font-medium rounded-full transition-all duration-150 disabled:opacity-50 ${sizeClasses[size]} ${
         isFollowing
           ? "bg-[var(--twilight)] text-[var(--cream)] hover:bg-[var(--coral)] hover:text-[var(--void)]"
           : "bg-[var(--coral)] text-[var(--void)] hover:bg-[var(--rose)]"
-      } ${className}`}
+      } ${isAnimating ? "scale-95" : "scale-100"} ${className}`}
     >
       {actionLoading ? (
         <span className="inline-block w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />

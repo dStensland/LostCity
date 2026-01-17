@@ -131,7 +131,7 @@ export default function FriendRequestCard({
   };
 
   return (
-    <div className="flex items-center gap-4 p-4 bg-[var(--charcoal)] rounded-lg">
+    <div className="flex items-center gap-4 p-4 bg-[var(--dusk)] rounded-lg">
       {/* Avatar */}
       <Link href={`/profile/${otherUser.username}`}>
         {otherUser.avatar_url ? (
@@ -157,7 +157,7 @@ export default function FriendRequestCard({
         >
           {otherUser.display_name || `@${otherUser.username}`}
         </Link>
-        <p className="text-sm text-[var(--clay)] truncate">
+        <p className="text-sm text-[var(--muted)] truncate">
           @{otherUser.username}
         </p>
         {error && <p className="text-sm text-red-400 mt-1">{error}</p>}
@@ -171,14 +171,14 @@ export default function FriendRequestCard({
               <button
                 onClick={handleAccept}
                 disabled={!!actionLoading}
-                className="px-4 py-2 bg-[var(--coral)] text-[var(--night)] rounded text-sm font-medium hover:opacity-90 disabled:opacity-50"
+                className="px-4 py-2 bg-[var(--coral)] text-[var(--void)] rounded-lg text-sm font-medium hover:bg-[var(--rose)] disabled:opacity-50 transition-colors"
               >
                 {actionLoading === "accept" ? "..." : "Accept"}
               </button>
               <button
                 onClick={handleDecline}
                 disabled={!!actionLoading}
-                className="px-4 py-2 bg-transparent border border-[var(--clay)] text-[var(--clay)] rounded text-sm font-medium hover:bg-[var(--clay)]/10 disabled:opacity-50"
+                className="px-4 py-2 bg-transparent border border-[var(--muted)] text-[var(--muted)] rounded-lg text-sm font-medium hover:bg-[var(--muted)]/10 disabled:opacity-50 transition-colors"
               >
                 {actionLoading === "decline" ? "..." : "Decline"}
               </button>
@@ -200,7 +200,7 @@ export default function FriendRequestCard({
       )}
 
       {request.status === "declined" && (
-        <span className="text-sm text-[var(--clay)]">Declined</span>
+        <span className="text-sm text-[var(--muted)]">Declined</span>
       )}
     </div>
   );
