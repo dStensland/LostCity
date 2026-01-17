@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useAuth } from "@/lib/auth-context";
 import NotificationDropdown from "./NotificationDropdown";
 import ShareInviteLink from "./ShareInviteLink";
@@ -64,9 +65,11 @@ export default function UserMenu() {
           className="focus:outline-none"
         >
           {profile?.avatar_url && !imgError ? (
-            <img
+            <Image
               src={profile.avatar_url}
               alt={profile.display_name || profile.username}
+              width={32}
+              height={32}
               className="w-8 h-8 rounded-full object-cover border border-[var(--twilight)] hover:border-[var(--coral)] transition-colors"
               onError={() => setImgError(true)}
             />

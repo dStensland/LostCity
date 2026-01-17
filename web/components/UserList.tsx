@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import FollowButton from "./FollowButton";
 
 type UserListItem = {
@@ -31,9 +32,11 @@ export default function UserList({ users, emptyMessage = "No users found" }: Use
         <div key={user.id} className="py-4 flex items-center gap-4">
           <Link href={`/profile/${user.username}`} className="flex-shrink-0">
             {user.avatar_url ? (
-              <img
+              <Image
                 src={user.avatar_url}
                 alt={user.display_name || user.username}
+                width={48}
+                height={48}
                 className="w-12 h-12 rounded-full object-cover border border-[var(--twilight)]"
               />
             ) : (

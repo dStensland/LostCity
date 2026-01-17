@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient, getUser } from "@/lib/supabase/server";
+import { errorResponse, isValidUUID, validationError } from "@/lib/api-utils";
 
 type FriendRequest = {
   id: string;
@@ -14,6 +15,11 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
+
+  // Validate UUID format
+  if (!isValidUUID(id)) {
+    return validationError("Invalid request ID format");
+  }
 
   const user = await getUser();
   if (!user) {
@@ -72,7 +78,7 @@ export async function PATCH(
     .eq("id", id);
 
   if (updateError) {
-    return NextResponse.json({ error: updateError.message }, { status: 500 });
+    return errorResponse(updateError, "friend-requests:PATCH");
   }
 
   return NextResponse.json({
@@ -88,6 +94,11 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
+
+  // Validate UUID format
+  if (!isValidUUID(id)) {
+    return validationError("Invalid request ID format");
+  }
 
   const user = await getUser();
   if (!user) {
@@ -127,7 +138,7 @@ export async function DELETE(
     .eq("id", id);
 
   if (deleteError) {
-    return NextResponse.json({ error: deleteError.message }, { status: 500 });
+    return errorResponse(deleteError, "friend-requests:DELETE");
   }
 
   return NextResponse.json({ success: true });

@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import PageHeader from "@/components/PageHeader";
 import PageFooter from "@/components/PageFooter";
 import FollowButton from "@/components/FollowButton";
@@ -94,9 +95,11 @@ export default async function ProfilePage({ params }: Props) {
         <div className="flex items-start gap-6">
           {/* Avatar */}
           {profile.avatar_url ? (
-            <img
+            <Image
               src={profile.avatar_url}
               alt={profile.display_name || profile.username}
+              width={96}
+              height={96}
               className="w-20 h-20 sm:w-24 sm:h-24 rounded-full object-cover border-2 border-[var(--twilight)]"
             />
           ) : (

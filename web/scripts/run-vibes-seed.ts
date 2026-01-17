@@ -192,10 +192,9 @@ async function main() {
   console.log(`Updating vibes for ${vibesData.length} venues...`);
 
   let updated = 0;
-  const notFound = 0;
 
   for (const { slug, vibes } of vibesData) {
-    const { error, count } = await supabase
+    const { error } = await supabase
       .from('venues')
       .update({ vibes })
       .eq('slug', slug);

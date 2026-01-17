@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useAuth } from "@/lib/auth-context";
 import { formatDistanceToNow } from "date-fns";
 
@@ -87,7 +88,7 @@ export default function NotificationDropdown() {
           const data = await res.json();
           setUnreadCount(data.unreadCount || 0);
         }
-      } catch (error) {
+      } catch {
         // Silent fail for polling
       }
     }
@@ -131,7 +132,7 @@ export default function NotificationDropdown() {
         )
       );
       setUnreadCount((prev) => Math.max(0, prev - 1));
-    } catch (error) {
+    } catch {
       // Silent fail
     }
   };
@@ -317,9 +318,11 @@ function NotificationItem({
         {/* Avatar or icon */}
         <div className="flex-shrink-0">
           {notification.actor?.avatar_url ? (
-            <img
+            <Image
               src={notification.actor.avatar_url}
-              alt=""
+              alt={`${notification.actor.display_name || notification.actor.username}'s profile photo`}
+              width={32}
+              height={32}
               className="w-8 h-8 rounded-full object-cover"
             />
           ) : (

@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { createClient, isAdmin } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
@@ -20,6 +20,11 @@ type PortalRow = {
 
 // GET /api/admin/portals - List all portals with stats
 export async function GET() {
+  // Verify admin
+  if (!(await isAdmin())) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+  }
+
   const supabase = await createClient();
 
   // Get all portals with member count
@@ -96,12 +101,15 @@ export async function GET() {
 
 // POST /api/admin/portals - Create a new portal
 export async function POST(request: NextRequest) {
-  const supabase = await createClient();
-
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  // Verify admin
+  if (!(await isAdmin())) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
   }
+
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  // user is guaranteed non-null since isAdmin() passed
+  const userId = user!.id;
 
   const body = await request.json();
   const { slug, name, tagline, portal_type, visibility = "public", filters = {}, branding = {}, settings = {} } = body;
@@ -129,7 +137,7 @@ export async function POST(request: NextRequest) {
       branding,
       settings,
       owner_type: "user",
-      owner_id: user.id,
+      owner_id: userId,
     })
     .select()
     .single();
@@ -145,7 +153,7 @@ export async function POST(request: NextRequest) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   await (supabase as any).from("portal_members").insert({
     portal_id: data.id,
-    user_id: user.id,
+    user_id: userId,
     role: "owner",
   });
 

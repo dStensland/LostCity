@@ -1,5 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
+import Image from "next/image";
 import { notFound } from "next/navigation";
 import PageHeader from "@/components/PageHeader";
 import CategoryIcon from "@/components/CategoryIcon";
@@ -145,11 +146,12 @@ export default async function CollectionPage({ params }: Props) {
         {/* Collection Header */}
         <div className="mb-8">
           {collection.cover_image_url && (
-            <div className="aspect-[3/1] mb-4 rounded-lg overflow-hidden bg-[var(--twilight)]">
-              <img
+            <div className="aspect-[3/1] mb-4 rounded-lg overflow-hidden bg-[var(--twilight)] relative">
+              <Image
                 src={collection.cover_image_url}
-                alt=""
-                className="w-full h-full object-cover"
+                alt={`Cover image for ${collection.title} collection`}
+                fill
+                className="object-cover"
               />
             </div>
           )}
@@ -175,7 +177,7 @@ export default async function CollectionPage({ params }: Props) {
                 className="flex items-center gap-2 font-mono text-xs text-[var(--muted)] hover:text-[var(--cream)] transition-colors"
               >
                 {owner.avatar_url ? (
-                  <img src={owner.avatar_url} alt="" className="w-5 h-5 rounded-full" />
+                  <Image src={owner.avatar_url} alt={`${owner.display_name || owner.username}'s profile photo`} width={20} height={20} className="w-5 h-5 rounded-full" />
                 ) : (
                   <div className="w-5 h-5 rounded-full bg-[var(--coral)] flex items-center justify-center">
                     <span className="text-[0.5rem] font-bold text-[var(--void)]">
@@ -218,9 +220,9 @@ function CollectionEventCard({ item }: { item: CollectionItem }) {
       className="flex gap-4 p-4 bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg hover:border-[var(--coral)] transition-colors group"
     >
       {/* Image or Category Icon */}
-      <div className="flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden bg-[var(--twilight)] flex items-center justify-center">
+      <div className="flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden bg-[var(--twilight)] flex items-center justify-center relative">
         {event.image_url ? (
-          <img src={event.image_url} alt="" className="w-full h-full object-cover" />
+          <Image src={event.image_url} alt={`${event.title} event image`} fill className="object-cover" />
         ) : (
           <CategoryIcon type={event.category || "other"} size={24} />
         )}

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient, getUser } from "@/lib/supabase/server";
+import { errorResponse, isValidUUID, isValidString, validationError } from "@/lib/api-utils";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyQuery = any;
@@ -45,7 +46,7 @@ export async function GET(request: Request) {
   const { data, error } = await query;
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return errorResponse(error, "friend-requests:GET");
   }
 
   // Get pending count (received only)
@@ -73,6 +74,14 @@ export async function POST(request: Request) {
     inviter_id?: string;
     inviter_username?: string;
   };
+
+  // Validate input
+  if (inviter_id && !isValidUUID(inviter_id)) {
+    return validationError("Invalid inviter_id format");
+  }
+  if (inviter_username && !isValidString(inviter_username, 3, 30)) {
+    return validationError("Invalid username format");
+  }
 
   const supabase = await createClient();
 
@@ -168,7 +177,7 @@ export async function POST(request: Request) {
         .eq("id", existingReq.id);
 
       if (acceptError) {
-        return NextResponse.json({ error: acceptError.message }, { status: 500 });
+        return errorResponse(acceptError, "friend-requests:POST:accept");
       }
 
       return NextResponse.json({
@@ -198,7 +207,7 @@ export async function POST(request: Request) {
     .single();
 
   if (insertError) {
-    return NextResponse.json({ error: insertError.message }, { status: 500 });
+    return errorResponse(insertError, "friend-requests:POST:create");
   }
 
   return NextResponse.json({

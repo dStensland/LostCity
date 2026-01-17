@@ -1,9 +1,12 @@
 import { getEventById, getRelatedEvents } from "@/lib/supabase";
 import { getNearbySpots, getSpotTypeLabel } from "@/lib/spots";
+import Image from "next/image";
 import CategoryIcon from "@/components/CategoryIcon";
 import RSVPButton from "@/components/RSVPButton";
 import RecommendButton from "@/components/RecommendButton";
 import FriendsGoing from "@/components/FriendsGoing";
+import WhosGoing from "@/components/WhosGoing";
+import LiveIndicator from "@/components/LiveIndicator";
 import PageHeader from "@/components/PageHeader";
 import PageFooter from "@/components/PageFooter";
 import { format, parseISO } from "date-fns";
@@ -121,7 +124,6 @@ export default async function EventPage({ params }: Props) {
   const { venueEvents, sameDateEvents } = await getRelatedEvents(event);
   const nearbySpots = event.venue?.id ? await getNearbySpots(event.venue.id) : [];
   const dateObj = parseISO(event.start_date);
-  const formattedDate = format(dateObj, "EEEE, MMMM d, yyyy");
   const shortDate = format(dateObj, "MMM d");
   const dayOfWeek = format(dateObj, "EEE");
   const { time, period } = formatTimeSplit(event.start_time, event.is_all_day);
@@ -141,23 +143,33 @@ export default async function EventPage({ params }: Props) {
         <main className="max-w-3xl mx-auto px-4 py-8">
           {/* Event image */}
           {event.image_url && (
-            <div className="aspect-video bg-[var(--night)] rounded-lg overflow-hidden mb-6 border border-[var(--twilight)]">
-              <img
+            <div className="aspect-video bg-[var(--night)] rounded-lg overflow-hidden mb-6 border border-[var(--twilight)] relative">
+              <Image
                 src={event.image_url}
                 alt={event.title}
-                className="w-full h-full object-cover"
+                fill
+                className="object-cover"
               />
             </div>
           )}
 
           {/* Main event info card */}
           <div className="bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg p-6 sm:p-8">
-            {/* Category badge */}
-            {event.category && (
-              <span className={`category-${event.category} inline-block px-2 py-0.5 rounded text-xs font-mono uppercase tracking-wider mb-4`}>
-                {event.category}
-              </span>
-            )}
+            {/* Badges row */}
+            <div className="flex flex-wrap items-center gap-2 mb-4">
+              {/* Category badge */}
+              {event.category && (
+                <span className={`category-${event.category} inline-block px-2 py-0.5 rounded text-xs font-mono uppercase tracking-wider`}>
+                  {event.category}
+                </span>
+              )}
+              {/* Real-time live indicator */}
+              <LiveIndicator
+                eventId={event.id}
+                initialIsLive={(event as { is_live?: boolean }).is_live || false}
+                size="md"
+              />
+            </div>
 
             {/* Title */}
             <h1 className="text-2xl sm:text-3xl font-bold text-[var(--cream)] leading-tight">
@@ -258,6 +270,9 @@ export default async function EventPage({ params }: Props) {
                 </p>
               </div>
             )}
+
+            {/* Who's Going section */}
+            <WhosGoing eventId={event.id} className="mt-6 pt-6 border-t border-[var(--twilight)]" />
 
             {/* RSVP and Recommend */}
             <div className="mt-8 pt-6 border-t border-[var(--twilight)] flex flex-wrap items-center gap-3">

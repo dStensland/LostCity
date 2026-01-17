@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import Logo from "@/components/Logo";
-import { formatDistanceToNow } from "date-fns";
 
 type Portal = {
   id: string;

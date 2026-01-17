@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Logo from "@/components/Logo";
 import { createClient } from "@/lib/supabase/client";
+import { getAuthErrorMessage } from "@/lib/auth-errors";
 import type { Database } from "@/lib/types";
 
 type ProfileInsert = Database["public"]["Tables"]["profiles"]["Insert"];
@@ -86,7 +87,7 @@ function SignupForm() {
     });
 
     if (signUpError) {
-      setError(signUpError.message);
+      setError(getAuthErrorMessage(signUpError.message));
       setLoading(false);
       return;
     }
@@ -131,7 +132,7 @@ function SignupForm() {
     });
 
     if (oauthError) {
-      setError(oauthError.message);
+      setError(getAuthErrorMessage(oauthError.message));
       setLoading(false);
     }
   };
@@ -219,6 +220,8 @@ function SignupForm() {
                   onChange={(e) => handleUsernameChange(e.target.value)}
                   onBlur={() => username.length >= 3 && checkUsername(username)}
                   required
+                  aria-describedby={username && !isValidUsername(username) ? "username-error" : undefined}
+                  aria-invalid={username && !isValidUsername(username) ? true : undefined}
                   className="w-full pl-7 pr-10 py-2.5 rounded-lg bg-[var(--dusk)] border border-[var(--twilight)] text-[var(--cream)] font-mono text-sm focus:outline-none focus:border-[var(--coral)] transition-colors"
                   placeholder="yourname"
                 />
@@ -242,7 +245,7 @@ function SignupForm() {
                 )}
               </div>
               {username && !isValidUsername(username) && (
-                <p className="mt-1 font-mono text-[0.65rem] text-[var(--coral)]">
+                <p id="username-error" role="alert" className="mt-1 font-mono text-[0.65rem] text-[var(--coral)]">
                   3-30 characters, lowercase letters, numbers, underscores
                 </p>
               )}
@@ -280,10 +283,11 @@ function SignupForm() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 minLength={6}
+                aria-describedby="password-hint"
                 className="w-full px-3 py-2.5 rounded-lg bg-[var(--dusk)] border border-[var(--twilight)] text-[var(--cream)] font-mono text-sm focus:outline-none focus:border-[var(--coral)] transition-colors"
                 placeholder="••••••••"
               />
-              <p className="mt-1 font-mono text-[0.65rem] text-[var(--muted)]">
+              <p id="password-hint" className="mt-1 font-mono text-[0.65rem] text-[var(--muted)]">
                 At least 6 characters
               </p>
             </div>

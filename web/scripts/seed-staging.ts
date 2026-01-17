@@ -168,8 +168,9 @@ const testVenues = [
   },
 ];
 
-// Categories for events
-const categories = ["music", "art", "comedy", "theater", "film", "sports", "food_drink", "nightlife", "community", "fitness", "family"];
+// Categories for events (kept for documentation/reference)
+const _categories = ["music", "art", "comedy", "theater", "film", "sports", "food_drink", "nightlife", "community", "fitness", "family"];
+void _categories;
 
 // Test events - will be assigned venue IDs after venues are created
 function generateTestEvents(venueIds: number[]) {
@@ -551,8 +552,9 @@ const testUsers = [
   },
 ];
 
-// Will store created user IDs
-let testUserIds: string[] = [];
+// Will store created user IDs (for potential future use)
+let _testUserIds: string[] = [];
+void _testUserIds;
 
 async function clearTestData() {
   console.log("Clearing existing test data...");
@@ -661,7 +663,7 @@ async function seedProfiles(): Promise<string[]> {
     }
   }
 
-  testUserIds = userIds;
+  _testUserIds = userIds;
   console.log(`Seeded ${userIds.length} users and profiles`);
   return userIds;
 }

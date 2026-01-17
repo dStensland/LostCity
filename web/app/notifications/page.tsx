@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import PageHeader from "@/components/PageHeader";
 import FriendRequestCard from "@/components/FriendRequestCard";
@@ -148,7 +149,7 @@ export default function NotificationsPage() {
         )
       );
       setUnreadCount((prev) => Math.max(0, prev - 1));
-    } catch (error) {
+    } catch {
       // Silent fail
     }
   };
@@ -385,9 +386,11 @@ function NotificationCard({
         {/* Avatar */}
         <div className="flex-shrink-0">
           {notification.actor?.avatar_url ? (
-            <img
+            <Image
               src={notification.actor.avatar_url}
-              alt=""
+              alt={`${notification.actor.display_name || notification.actor.username}'s profile photo`}
+              width={40}
+              height={40}
               className="w-10 h-10 rounded-full object-cover border border-[var(--twilight)]"
             />
           ) : (

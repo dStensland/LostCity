@@ -1,21 +1,25 @@
-import { getFilteredEventsWithSearch, enrichEventsWithSocialProof, PRICE_FILTERS, type SearchFilters } from "@/lib/search";
+import { getFilteredEventsWithSearch, enrichEventsWithSocialProof, getEventsForMap, PRICE_FILTERS, type SearchFilters } from "@/lib/search";
 import { getPortalBySlug, DEFAULT_PORTAL } from "@/lib/portal";
+import { getSpotsWithEventCounts } from "@/lib/spots";
 import SearchBar from "@/components/SearchBar";
 import FilterBar from "@/components/FilterBar";
 import EventList from "@/components/EventList";
 import ModeToggle from "@/components/ModeToggle";
+import ViewToggle from "@/components/ViewToggle";
+import SpotCard from "@/components/SpotCard";
+import MapViewWrapper from "@/components/MapViewWrapper";
 import Logo from "@/components/Logo";
-import UserMenu from "@/components/UserMenu";
 import HomeFriendsActivity from "@/components/HomeFriendsActivity";
 import PopularThisWeek from "@/components/PopularThisWeek";
-import HeaderSearchButton from "@/components/HeaderSearchButton";
-import Link from "next/link";
+import GlassHeader from "@/components/GlassHeader";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 
 export const revalidate = 60;
 
 const PAGE_SIZE = 20;
+
+type ViewMode = "events" | "venues" | "map";
 
 type Props = {
   params: Promise<{ portal: string }>;
@@ -28,6 +32,7 @@ type Props = {
     neighborhoods?: string;
     price?: string;
     date?: string;
+    view?: ViewMode;
   }>;
 };
 
@@ -47,6 +52,9 @@ export default async function PortalPage({ params, searchParams }: Props) {
     notFound();
   }
 
+  // Current view mode
+  const viewMode: ViewMode = searchParamsData.view || "events";
+
   // Parse price filter
   const priceFilter = PRICE_FILTERS.find(p => p.value === searchParamsData.price);
   const isFree = searchParamsData.price === "free";
@@ -62,46 +70,43 @@ export default async function PortalPage({ params, searchParams }: Props) {
     neighborhoods: searchParamsData.neighborhoods?.split(",").filter(Boolean) || undefined,
     is_free: isFree || undefined,
     price_max: priceMax,
-    date_filter: (searchParamsData.date as "today" | "weekend" | "week") || undefined,
+    date_filter: (searchParamsData.date as "now" | "today" | "weekend" | "week") || undefined,
     // Apply portal city filter
     city: portal.filters.city || undefined,
   };
 
-  // Always fetch page 1 on server for initial SSR
-  const { events: rawEvents, total } = await getFilteredEventsWithSearch(filters, 1, PAGE_SIZE);
+  // Fetch data based on view mode
+  let events: Awaited<ReturnType<typeof enrichEventsWithSocialProof>> = [];
+  let total = 0;
+  let spots: Awaited<ReturnType<typeof getSpotsWithEventCounts>> = [];
+  let mapEvents: Awaited<ReturnType<typeof getEventsForMap>> = [];
 
-  // Enrich with social proof counts (RSVPs, recommendations)
-  const events = await enrichEventsWithSocialProof(rawEvents);
+  if (viewMode === "events") {
+    const { events: rawEvents, total: eventTotal } = await getFilteredEventsWithSearch(filters, 1, PAGE_SIZE);
+    events = await enrichEventsWithSocialProof(rawEvents);
+    total = eventTotal;
+  } else if (viewMode === "venues") {
+    spots = await getSpotsWithEventCounts("all", "", "all", searchParamsData.search || "");
+  } else if (viewMode === "map") {
+    mapEvents = await getEventsForMap(filters);
+  }
 
   const hasActiveFilters = !!(searchParamsData.search || searchParamsData.categories || searchParamsData.subcategories || searchParamsData.tags || searchParamsData.vibes || searchParamsData.neighborhoods || searchParamsData.price || searchParamsData.date);
 
   return (
     <div className="min-h-screen">
-      {/* Header */}
-      <header className="px-4 sm:px-6 py-4 flex justify-between items-center border-b border-[var(--twilight)]">
-        <div className="flex items-baseline gap-3">
-          <Logo href={`/${portal.slug}`} />
-          <span className="font-mono text-[0.65rem] font-medium text-[var(--muted)] uppercase tracking-widest hidden sm:inline">
-            {portal.name}
-          </span>
-        </div>
-        <nav className="flex items-center gap-3 sm:gap-4">
-          <HeaderSearchButton />
-          <Link href="/collections" className="font-mono text-[0.7rem] font-medium text-[var(--muted)] uppercase tracking-wide hover:text-[var(--cream)] transition-colors hidden sm:inline">
-            Collections
-          </Link>
-          <a href="mailto:hello@lostcity.ai" className="font-mono text-[0.7rem] font-medium text-[var(--muted)] uppercase tracking-wide hover:text-[var(--cream)] transition-colors hidden sm:inline">
-            Submit
-          </a>
-          <UserMenu />
-        </nav>
-      </header>
+      {/* Header with glass effect on scroll */}
+      <GlassHeader portalSlug={portal.slug} portalName={portal.name} />
 
-      {/* Mode Toggle + Search */}
+      {/* Mode Toggle + View Toggle + Search */}
       <section className="py-4 sm:py-6 border-b border-[var(--twilight)]">
         <div className="max-w-3xl mx-auto px-4">
           <div className="flex flex-col sm:flex-row sm:items-center gap-4">
             <ModeToggle />
+            {/* View Toggle */}
+            <Suspense fallback={null}>
+              <ViewToggle />
+            </Suspense>
             {/* Search Bar */}
             <div className="flex-1 max-w-md">
               <Suspense fallback={<div className="h-10 bg-[var(--night)] rounded-lg animate-pulse" />}>
@@ -112,38 +117,77 @@ export default async function PortalPage({ params, searchParams }: Props) {
         </div>
       </section>
 
-      {/* Filters */}
-      <Suspense fallback={<div className="h-24 bg-[var(--night)]" />}>
-        <FilterBar />
-      </Suspense>
+      {/* Filters - only show for events view */}
+      {viewMode === "events" && (
+        <Suspense fallback={<div className="h-24 bg-[var(--night)]" />}>
+          <FilterBar />
+        </Suspense>
+      )}
 
-      {/* Popular This Week - only shows if events have engagement */}
-      <Suspense fallback={null}>
-        <PopularThisWeek />
-      </Suspense>
+      {/* Popular This Week - only shows for events view */}
+      {viewMode === "events" && (
+        <Suspense fallback={null}>
+          <PopularThisWeek />
+        </Suspense>
+      )}
 
-      {/* Event count */}
+      {/* Count indicator */}
       <div className="max-w-3xl mx-auto px-4 border-b border-[var(--twilight)]">
         <p className="font-mono text-xs text-[var(--muted)] py-3">
-          <span className="text-[var(--soft)]">{total}</span>{" "}
-          {hasActiveFilters ? "matching events" : "upcoming events"}
+          <span className="text-[var(--soft)]">
+            {viewMode === "events" ? total : viewMode === "venues" ? spots.length : mapEvents.length}
+          </span>{" "}
+          {viewMode === "events"
+            ? hasActiveFilters ? "matching events" : "upcoming events"
+            : viewMode === "venues"
+            ? "venues"
+            : "events on map"}
         </p>
       </div>
 
       {/* Main Content */}
-      <main className="max-w-3xl mx-auto px-4 pb-12">
-        {/* Friends Activity - only shows for logged-in users with friends */}
-        <div className="pt-4">
-          <HomeFriendsActivity />
-        </div>
+      <main className={viewMode === "map" ? "" : "max-w-3xl mx-auto px-4 pb-12"}>
+        {/* Events View */}
+        {viewMode === "events" && (
+          <>
+            {/* Friends Activity - only shows for logged-in users with friends */}
+            <div className="pt-4">
+              <HomeFriendsActivity />
+            </div>
 
-        <Suspense fallback={<div className="py-16 text-center text-[var(--muted)]">Loading events...</div>}>
-          <EventList
-            initialEvents={events}
-            initialTotal={total}
-            hasActiveFilters={hasActiveFilters}
-          />
-        </Suspense>
+            <Suspense fallback={<div className="py-16 text-center text-[var(--muted)]">Loading events...</div>}>
+              <EventList
+                initialEvents={events}
+                initialTotal={total}
+                hasActiveFilters={hasActiveFilters}
+              />
+            </Suspense>
+          </>
+        )}
+
+        {/* Venues View */}
+        {viewMode === "venues" && (
+          <div className="pt-4">
+            {spots.length > 0 ? (
+              spots.map((spot, index) => (
+                <SpotCard key={spot.id} spot={spot} index={index} />
+              ))
+            ) : (
+              <div className="py-16 text-center text-[var(--muted)]">
+                No venues found
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Map View */}
+        {viewMode === "map" && (
+          <div className="h-[calc(100vh-200px)] min-h-[400px]">
+            <Suspense fallback={<div className="h-full bg-[var(--night)] animate-pulse" />}>
+              <MapViewWrapper events={mapEvents} />
+            </Suspense>
+          </div>
+        )}
       </main>
 
       {/* Footer */}

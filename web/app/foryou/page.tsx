@@ -4,8 +4,9 @@ import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import PageHeader from "@/components/PageHeader";
-import CategoryIcon from "@/components/CategoryIcon";
 import ActivityFeed from "@/components/ActivityFeed";
+import CategoryIcon from "@/components/CategoryIcon";
+import Image from "next/image";
 import { useAuth } from "@/lib/auth-context";
 import { format, parseISO } from "date-fns";
 import { formatTime } from "@/lib/formats";
@@ -223,11 +224,12 @@ function EventCard({ event }: { event: Event }) {
       <div className="flex gap-4">
         {/* Image thumbnail */}
         {event.image_url && (
-          <div className="w-20 h-20 flex-shrink-0 rounded-lg overflow-hidden bg-[var(--night)]">
-            <img
+          <div className="w-20 h-20 flex-shrink-0 rounded-lg overflow-hidden bg-[var(--night)] relative">
+            <Image
               src={event.image_url}
               alt={event.title}
-              className="w-full h-full object-cover"
+              fill
+              className="object-cover"
             />
           </div>
         )}

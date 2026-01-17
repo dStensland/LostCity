@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/lib/auth-context";
+import { useToast } from "@/components/Toast";
 
 type FollowButtonProps = {
   targetUserId?: string;
@@ -23,6 +24,7 @@ export default function FollowButton({
   const router = useRouter();
   const { user } = useAuth();
   const supabase = createClient();
+  const { showToast } = useToast();
 
   const [isFollowing, setIsFollowing] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -91,6 +93,9 @@ export default function FollowButton({
 
       if (!error) {
         setIsFollowing(false);
+        showToast("Unfollowed");
+      } else {
+        showToast("Failed to unfollow", "error");
       }
     } else {
       // Follow
@@ -112,6 +117,9 @@ export default function FollowButton({
 
       if (!error) {
         setIsFollowing(true);
+        showToast("Following");
+      } else {
+        showToast("Failed to follow", "error");
       }
     }
 

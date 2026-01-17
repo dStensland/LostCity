@@ -63,8 +63,9 @@ export async function middleware(request: NextRequest) {
 function handleSubdomainRouting(
   request: NextRequest,
   response: NextResponse,
-  _user: unknown
+  user: unknown
 ) {
+  void user; // Reserved for future user-specific subdomain logic
   const host = request.headers.get("host") || "";
   const url = request.nextUrl.clone();
 

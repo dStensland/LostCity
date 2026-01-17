@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, use } from "react";
+import { useState, useEffect, use, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Logo from "@/components/Logo";
@@ -47,11 +47,7 @@ export default function EditPortalPage({ params }: { params: Promise<{ id: strin
   const [filters, setFilters] = useState<Record<string, unknown>>({});
   const [branding, setBranding] = useState<Record<string, unknown>>({});
 
-  useEffect(() => {
-    loadPortal();
-  }, [id]);
-
-  async function loadPortal() {
+  const loadPortal = useCallback(async () => {
     try {
       const res = await fetch(`/api/admin/portals/${id}`);
       if (!res.ok) throw new Error("Portal not found");
@@ -68,7 +64,11 @@ export default function EditPortalPage({ params }: { params: Promise<{ id: strin
     } finally {
       setLoading(false);
     }
-  }
+  }, [id]);
+
+  useEffect(() => {
+    loadPortal();
+  }, [loadPortal]);
 
   async function handleSave() {
     setSaving(true);

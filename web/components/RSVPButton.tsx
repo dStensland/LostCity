@@ -89,46 +89,68 @@ export default function RSVPButton({
     }
 
     setActionLoading(true);
+    const previousStatus = status;
 
-    if (newStatus === null) {
-      // Remove RSVP
-      await supabase
-        .from("event_rsvps")
-        .delete()
-        .eq("user_id", user.id)
-        .eq("event_id", eventId);
-    } else if (status === null) {
-      // Create new RSVP
-      await supabase.from("event_rsvps").insert({
-        user_id: user.id,
-        event_id: eventId,
-        status: newStatus,
-        visibility,
-      } as never);
-    } else {
-      // Update existing RSVP
-      await supabase
-        .from("event_rsvps")
-        .update({ status: newStatus } as never)
-        .eq("user_id", user.id)
-        .eq("event_id", eventId);
-    }
-
+    // Optimistic update
     setStatus(newStatus);
-    setMenuOpen(false);
-    setActionLoading(false);
+
+    try {
+      if (newStatus === null) {
+        // Remove RSVP
+        const { error } = await supabase
+          .from("event_rsvps")
+          .delete()
+          .eq("user_id", user.id)
+          .eq("event_id", eventId);
+        if (error) throw error;
+      } else if (previousStatus === null) {
+        // Create new RSVP
+        const { error } = await supabase.from("event_rsvps").insert({
+          user_id: user.id,
+          event_id: eventId,
+          status: newStatus,
+          visibility,
+        } as never);
+        if (error) throw error;
+      } else {
+        // Update existing RSVP
+        const { error } = await supabase
+          .from("event_rsvps")
+          .update({ status: newStatus } as never)
+          .eq("user_id", user.id)
+          .eq("event_id", eventId);
+        if (error) throw error;
+      }
+      setMenuOpen(false);
+    } catch (error) {
+      // Rollback on error
+      setStatus(previousStatus);
+      console.error("Failed to update RSVP:", error);
+    } finally {
+      setActionLoading(false);
+    }
   };
 
   const handleVisibilityChange = async (newVisibility: Visibility) => {
     if (!user || status === null) return;
 
-    await supabase
-      .from("event_rsvps")
-      .update({ visibility: newVisibility } as never)
-      .eq("user_id", user.id)
-      .eq("event_id", eventId);
+    const previousVisibility = visibility;
 
+    // Optimistic update
     setVisibility(newVisibility);
+
+    try {
+      const { error } = await supabase
+        .from("event_rsvps")
+        .update({ visibility: newVisibility } as never)
+        .eq("user_id", user.id)
+        .eq("event_id", eventId);
+      if (error) throw error;
+    } catch (error) {
+      // Rollback on error
+      setVisibility(previousVisibility);
+      console.error("Failed to update visibility:", error);
+    }
   };
 
   const sizeClasses = {

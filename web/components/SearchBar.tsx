@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { getSearchSuggestions, type SearchSuggestion } from "@/lib/search";
 import { getRecentSearches, addRecentSearch } from "@/lib/searchHistory";
 
@@ -13,7 +13,13 @@ export default function SearchBar() {
   const [query, setQuery] = useState(currentSearchParam);
   const [showDropdown, setShowDropdown] = useState(false);
   const [suggestions, setSuggestions] = useState<SearchSuggestion[]>([]);
-  const [recentSearches, setRecentSearches] = useState<string[]>([]);
+  const [recentSearches, setRecentSearches] = useState<string[]>(() => {
+    // Initialize with recent searches from localStorage (client-side only)
+    if (typeof window !== "undefined") {
+      return getRecentSearches();
+    }
+    return [];
+  });
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const inputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -23,25 +29,33 @@ export default function SearchBar() {
   // Derive isSearching from query vs URL mismatch
   const isSearching = query.trim() !== currentSearchParam;
 
-  // Load recent searches on mount
-  useEffect(() => {
-    setRecentSearches(getRecentSearches());
-  }, []);
-
   // Fetch suggestions as user types
   useEffect(() => {
-    if (query.length >= 2) {
-      const timer = setTimeout(async () => {
-        const results = await getSearchSuggestions(query);
+    // Clear suggestions for short queries immediately via cleanup pattern
+    if (query.length < 2) {
+      return;
+    }
+
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      const results = await getSearchSuggestions(query);
+      if (!cancelled) {
         setSuggestions(results);
         setSelectedIndex(-1);
-      }, 100);
-      return () => clearTimeout(timer);
-    } else {
-      setSuggestions([]);
-      setSelectedIndex(-1);
-    }
+      }
+    }, 100);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
   }, [query]);
+
+  // Clear suggestions when query is too short (derived state approach)
+  const activeSuggestions = useMemo(
+    () => (query.length >= 2 ? suggestions : []),
+    [query.length, suggestions]
+  );
 
   // Debounced search update - only when query changes from user input
   useEffect(() => {
@@ -105,12 +119,16 @@ export default function SearchBar() {
 
   // Build flat list of all selectable items
   const showRecent = query.length < 2 && recentSearches.length > 0;
-  const showSuggestions = query.length >= 2 && suggestions.length > 0;
-  const allItems = showRecent
-    ? recentSearches.map((t) => ({ text: t, type: "recent" as const }))
-    : showSuggestions
-    ? suggestions
-    : [];
+  const showSuggestions = query.length >= 2 && activeSuggestions.length > 0;
+  const allItems = useMemo(
+    () =>
+      showRecent
+        ? recentSearches.map((t) => ({ text: t, type: "recent" as const }))
+        : showSuggestions
+        ? activeSuggestions
+        : [],
+    [showRecent, showSuggestions, recentSearches, activeSuggestions]
+  );
 
   // Keyboard navigation
   const handleKeyDown = useCallback(
@@ -203,7 +221,7 @@ export default function SearchBar() {
           {showSuggestions && (
             <div className="p-2">
               <p className="text-xs text-[var(--muted)] px-2 pb-1 font-medium">Suggestions</p>
-              {suggestions.map((suggestion, idx) => (
+              {activeSuggestions.map((suggestion, idx) => (
                 <button
                   key={`${suggestion.type}-${suggestion.text}`}
                   onMouseDown={() => selectSuggestion(suggestion.text)}

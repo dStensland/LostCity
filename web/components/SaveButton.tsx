@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/lib/auth-context";
+import { useToast } from "@/components/Toast";
 
 type SaveButtonProps = {
   eventId?: number;
@@ -23,6 +24,7 @@ export default function SaveButton({
   const router = useRouter();
   const { user } = useAuth();
   const supabase = createClient();
+  const { showToast } = useToast();
 
   const [isSaved, setIsSaved] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -65,39 +67,53 @@ export default function SaveButton({
     }
 
     setActionLoading(true);
+    const previousState = isSaved;
 
-    if (isSaved) {
-      // Remove saved item
-      let query = supabase
-        .from("saved_items")
-        .delete()
-        .eq("user_id", user.id);
+    // Optimistic update
+    setIsSaved(!isSaved);
 
-      if (eventId) {
-        query = query.eq("event_id", eventId);
-      } else if (venueId) {
-        query = query.eq("venue_id", venueId);
+    try {
+      if (previousState) {
+        // Remove saved item
+        let query = supabase
+          .from("saved_items")
+          .delete()
+          .eq("user_id", user.id);
+
+        if (eventId) {
+          query = query.eq("event_id", eventId);
+        } else if (venueId) {
+          query = query.eq("venue_id", venueId);
+        }
+
+        const { error } = await query;
+        if (error) throw error;
+      } else {
+        // Add saved item
+        const insertData: { user_id: string; event_id?: number; venue_id?: number } = {
+          user_id: user.id,
+        };
+
+        if (eventId) {
+          insertData.event_id = eventId;
+        } else if (venueId) {
+          insertData.venue_id = venueId;
+        }
+
+        const { error } = await supabase.from("saved_items").insert(insertData as never);
+        if (error) throw error;
       }
 
-      await query;
-      setIsSaved(false);
-    } else {
-      // Add saved item
-      const insertData: { user_id: string; event_id?: number; venue_id?: number } = {
-        user_id: user.id,
-      };
-
-      if (eventId) {
-        insertData.event_id = eventId;
-      } else if (venueId) {
-        insertData.venue_id = venueId;
-      }
-
-      await supabase.from("saved_items").insert(insertData as never);
-      setIsSaved(true);
+      // Show success toast
+      showToast(previousState ? "Removed from saved" : "Saved for later");
+    } catch (error) {
+      // Rollback on error
+      setIsSaved(previousState);
+      showToast("Failed to save. Please try again.", "error");
+      console.error("Failed to update saved state:", error);
+    } finally {
+      setActionLoading(false);
     }
-
-    setActionLoading(false);
   };
 
   const sizeClasses = {

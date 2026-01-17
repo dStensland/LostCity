@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/lib/auth-context";
 
@@ -26,7 +27,6 @@ export default function FriendsGoing({ eventId, className = "" }: FriendsGoingPr
 
   const [friends, setFriends] = useState<FriendRSVP[]>([]);
   const [loading, setLoading] = useState(true);
-  const [totalCount, setTotalCount] = useState(0);
 
   useEffect(() => {
     async function loadFriendsGoing() {
@@ -73,36 +73,40 @@ export default function FriendsGoing({ eventId, className = "" }: FriendsGoingPr
       };
 
       const rsvps = rsvpData as RSVPQueryResult[] | null;
-      if (!rsvps) {
+      if (!rsvps || rsvps.length === 0) {
         setLoading(false);
         return;
       }
 
-      // Filter to only mutual follows (friends)
-      const friendRsvps: FriendRSVP[] = [];
+      // Get user IDs from RSVPs to check mutual follows in batch
+      const rsvpUserIds = rsvps
+        .map((r) => r.user?.id)
+        .filter((id): id is string => !!id);
 
-      for (const rsvp of rsvps) {
-        const rsvpUser = rsvp.user;
-        if (!rsvpUser) continue;
-
-        // Check if they follow back (mutual follow = friend)
-        const { data: followsBack } = await supabase
-          .from("follows")
-          .select("id")
-          .eq("follower_id", rsvpUser.id)
-          .eq("followed_user_id", user.id)
-          .single();
-
-        if (followsBack) {
-          friendRsvps.push({
-            user: rsvpUser,
-            status: rsvp.status,
-          });
-        }
+      if (rsvpUserIds.length === 0) {
+        setLoading(false);
+        return;
       }
 
+      // Batch query: get all users from RSVPs who follow back (mutual = friends)
+      const { data: mutualFollows } = await supabase
+        .from("follows")
+        .select("follower_id")
+        .in("follower_id", rsvpUserIds)
+        .eq("followed_user_id", user.id);
+
+      const mutualFollowData = mutualFollows as { follower_id: string }[] | null;
+      const mutualFollowerIds = new Set(mutualFollowData?.map((f) => f.follower_id) || []);
+
+      // Filter RSVPs to only mutual follows (friends)
+      const friendRsvps: FriendRSVP[] = rsvps
+        .filter((rsvp) => rsvp.user && mutualFollowerIds.has(rsvp.user.id))
+        .map((rsvp) => ({
+          user: rsvp.user!,
+          status: rsvp.status,
+        }));
+
       setFriends(friendRsvps);
-      setTotalCount(friendRsvps.length);
       setLoading(false);
     }
 
@@ -128,9 +132,11 @@ export default function FriendsGoing({ eventId, className = "" }: FriendsGoingPr
             title={friend.user.display_name || friend.user.username}
           >
             {friend.user.avatar_url ? (
-              <img
+              <Image
                 src={friend.user.avatar_url}
                 alt={friend.user.display_name || friend.user.username}
+                width={24}
+                height={24}
                 className="w-6 h-6 rounded-full object-cover border-2 border-[var(--night)] hover:border-[var(--coral)] transition-colors"
               />
             ) : (

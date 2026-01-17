@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function AdminDashboard() {
@@ -36,7 +37,7 @@ export default async function AdminDashboard() {
 
   const stats = [
     { label: "Total Users", value: userCount || 0, href: "/admin/users" },
-    { label: "Events", value: eventCount || 0, href: "#" },
+    { label: "Events", value: eventCount || 0, href: "/admin/events" },
     { label: "Venues", value: venueCount || 0, href: "#" },
     { label: "RSVPs", value: rsvpCount || 0, href: "#" },
   ];
@@ -48,12 +49,18 @@ export default async function AdminDashboard() {
       </h1>
 
       {/* Quick Links */}
-      <div className="flex gap-3 mb-6">
+      <div className="flex flex-wrap gap-3 mb-6">
         <Link
           href="/admin/portals"
           className="px-4 py-2 bg-[var(--coral)] text-[var(--void)] font-mono text-sm rounded hover:opacity-90 transition-opacity"
         >
           Manage Portals
+        </Link>
+        <Link
+          href="/admin/events"
+          className="px-4 py-2 bg-[var(--neon-amber)] text-[var(--void)] font-mono text-sm rounded hover:opacity-90 transition-opacity"
+        >
+          Featured Events
         </Link>
         <Link
           href="/admin/sources"
@@ -108,9 +115,11 @@ export default async function AdminDashboard() {
               className="flex items-center gap-3 p-4 hover:bg-[var(--twilight)] transition-colors"
             >
               {user.avatar_url ? (
-                <img
+                <Image
                   src={user.avatar_url}
-                  alt=""
+                  alt={`${user.display_name || user.username}'s profile photo`}
+                  width={32}
+                  height={32}
                   className="w-8 h-8 rounded-full object-cover"
                 />
               ) : (

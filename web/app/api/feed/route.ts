@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient, getUser } from "@/lib/supabase/server";
+import { errorResponse } from "@/lib/api-utils";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -70,7 +71,7 @@ export async function GET(request: Request) {
   const { data: eventsData, error } = await query;
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return errorResponse(error, "feed:GET");
   }
 
   type EventResult = {

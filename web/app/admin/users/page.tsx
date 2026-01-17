@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 import { formatDistanceToNow } from "date-fns";
 
@@ -58,9 +59,10 @@ export default function AdminUsersPage() {
 
   // Load user details when selected
   useEffect(() => {
-    async function loadUserDetails() {
-      if (!selectedUser) return;
+    if (!selectedUser?.id) return;
+    const userId = selectedUser.id;
 
+    async function loadUserDetails() {
       // Get follower/following/rsvp counts
       const [
         { count: followerCount },
@@ -70,15 +72,15 @@ export default function AdminUsersPage() {
         supabase
           .from("follows")
           .select("*", { count: "exact", head: true })
-          .eq("followed_user_id", selectedUser.id),
+          .eq("followed_user_id", userId),
         supabase
           .from("follows")
           .select("*", { count: "exact", head: true })
-          .eq("follower_id", selectedUser.id),
+          .eq("follower_id", userId),
         supabase
           .from("event_rsvps")
           .select("*", { count: "exact", head: true })
-          .eq("user_id", selectedUser.id),
+          .eq("user_id", userId),
       ]);
 
       setSelectedUser((prev) =>
@@ -204,9 +206,11 @@ export default function AdminUsersPage() {
                     }`}
                   >
                     {user.avatar_url ? (
-                      <img
+                      <Image
                         src={user.avatar_url}
-                        alt=""
+                        alt={`${user.display_name || user.username}'s profile photo`}
+                        width={32}
+                        height={32}
                         className="w-8 h-8 rounded-full object-cover"
                       />
                     ) : (
@@ -283,9 +287,11 @@ export default function AdminUsersPage() {
                 {/* Avatar & Username */}
                 <div className="flex items-center gap-4">
                   {selectedUser.avatar_url ? (
-                    <img
+                    <Image
                       src={selectedUser.avatar_url}
-                      alt=""
+                      alt={`${selectedUser.display_name || selectedUser.username}'s profile photo`}
+                      width={64}
+                      height={64}
                       className="w-16 h-16 rounded-full object-cover"
                     />
                   ) : (

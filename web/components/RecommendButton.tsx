@@ -29,7 +29,6 @@ export default function RecommendButton({
   const modalRef = useRef<HTMLDivElement>(null);
 
   const [isRecommended, setIsRecommended] = useState(false);
-  const [existingNote, setExistingNote] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
@@ -71,7 +70,6 @@ export default function RecommendButton({
 
       if (rec) {
         setIsRecommended(true);
-        setExistingNote(rec.note);
         setNote(rec.note || "");
         setVisibility(rec.visibility as Visibility);
       }
@@ -134,7 +132,6 @@ export default function RecommendButton({
     }
 
     setIsRecommended(true);
-    setExistingNote(note.trim() || null);
     setModalOpen(false);
     setActionLoading(false);
   };
@@ -158,7 +155,6 @@ export default function RecommendButton({
     await query;
 
     setIsRecommended(false);
-    setExistingNote(null);
     setNote("");
     setModalOpen(false);
     setActionLoading(false);

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import PageHeader from "@/components/PageHeader";
-import { getUser, getUserProfile } from "@/lib/supabase/server";
+import { getUser } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 
 export const metadata = {
@@ -13,8 +13,6 @@ export default async function SettingsPage() {
   if (!user) {
     redirect("/auth/login?redirect=/settings");
   }
-
-  const profile = await getUserProfile();
 
   return (
     <div className="min-h-screen">

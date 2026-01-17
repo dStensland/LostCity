@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Logo from "@/components/Logo";
 import { createClient } from "@/lib/supabase/client";
+import { getAuthErrorMessage } from "@/lib/auth-errors";
 
 // Validate redirect URL to prevent Open Redirect attacks
 function isValidRedirect(redirect: string): boolean {
@@ -35,7 +36,7 @@ function LoginForm() {
     });
 
     if (signInError) {
-      setError(signInError.message);
+      setError(getAuthErrorMessage(signInError.message));
       setLoading(false);
       return;
     }
@@ -56,7 +57,7 @@ function LoginForm() {
     });
 
     if (oauthError) {
-      setError(oauthError.message);
+      setError(getAuthErrorMessage(oauthError.message));
       setLoading(false);
     }
   };

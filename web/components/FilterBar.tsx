@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import { CATEGORIES, SUBCATEGORIES, DATE_FILTERS, PRICE_FILTERS, TAG_GROUPS, ALL_TAGS } from "@/lib/search";
 import { PREFERENCE_VIBES, PREFERENCE_NEIGHBORHOODS } from "@/lib/preferences";
 import CategoryIcon, { CATEGORY_CONFIG, type CategoryType } from "./CategoryIcon";
@@ -11,11 +11,26 @@ export default function FilterBar() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  const currentCategories = searchParams.get("categories")?.split(",").filter(Boolean) || [];
-  const currentSubcategories = searchParams.get("subcategories")?.split(",").filter(Boolean) || [];
-  const currentTags = searchParams.get("tags")?.split(",").filter(Boolean) || [];
-  const currentVibes = searchParams.get("vibes")?.split(",").filter(Boolean) || [];
-  const currentNeighborhoods = searchParams.get("neighborhoods")?.split(",").filter(Boolean) || [];
+  const currentCategories = useMemo(
+    () => searchParams.get("categories")?.split(",").filter(Boolean) || [],
+    [searchParams]
+  );
+  const currentSubcategories = useMemo(
+    () => searchParams.get("subcategories")?.split(",").filter(Boolean) || [],
+    [searchParams]
+  );
+  const currentTags = useMemo(
+    () => searchParams.get("tags")?.split(",").filter(Boolean) || [],
+    [searchParams]
+  );
+  const currentVibes = useMemo(
+    () => searchParams.get("vibes")?.split(",").filter(Boolean) || [],
+    [searchParams]
+  );
+  const currentNeighborhoods = useMemo(
+    () => searchParams.get("neighborhoods")?.split(",").filter(Boolean) || [],
+    [searchParams]
+  );
   const currentPriceFilter = searchParams.get("price") || "";
   const currentDateFilter = searchParams.get("date") || "";
 

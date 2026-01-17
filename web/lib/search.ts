@@ -17,7 +17,7 @@ export interface SearchFilters {
   tags?: string[];
   is_free?: boolean;
   price_max?: number;
-  date_filter?: "today" | "weekend" | "week";
+  date_filter?: "now" | "today" | "weekend" | "week";
   venue_id?: number;
   include_rollups?: boolean;
   vibes?: string[];
@@ -81,7 +81,22 @@ export type Subcategory = {
   display_order: number;
 };
 
-function getDateRange(filter: "today" | "weekend" | "week"): {
+// Escape special characters for PostgREST filter strings
+// Prevents injection in .or() and .filter() query parameters
+function escapePostgrestValue(value: string): string {
+  // Escape characters that have special meaning in PostgREST filters
+  // Parentheses, commas, periods, and quotes can break the query syntax
+  return value
+    .replace(/\\/g, "\\\\")  // Escape backslashes first
+    .replace(/"/g, '\\"')    // Escape double quotes
+    .replace(/'/g, "''")     // Escape single quotes (SQL style)
+    .replace(/\(/g, "\\(")   // Escape opening parenthesis
+    .replace(/\)/g, "\\)")   // Escape closing parenthesis
+    .replace(/,/g, "\\,")    // Escape commas
+    .replace(/\./g, "\\.");  // Escape periods
+}
+
+function getDateRange(filter: "now" | "today" | "weekend" | "week"): {
   start: string;
   end: string;
 } {
@@ -89,6 +104,7 @@ function getDateRange(filter: "today" | "weekend" | "week"): {
   const today = startOfDay(now);
 
   switch (filter) {
+    case "now":
     case "today":
       return {
         start: format(today, "yyyy-MM-dd"),
@@ -169,13 +185,16 @@ export async function getFilteredEventsWithSearch(
 
   // Apply search filter (includes venue name search)
   if (filters.search && filters.search.trim()) {
-    const searchTerm = `%${filters.search.trim()}%`;
+    const rawSearch = filters.search.trim();
+    const escapedSearch = escapePostgrestValue(rawSearch);
+    const searchTerm = `%${escapedSearch}%`;
 
     // Find matching venue IDs first (Supabase .or() doesn't work across relations)
+    // Use raw search for .ilike() since Supabase parameterizes these
     const { data: matchingVenues } = await supabase
       .from("venues")
       .select("id")
-      .ilike("name", searchTerm);
+      .ilike("name", `%${rawSearch}%`);
 
     const venueIds = (matchingVenues as { id: number }[] | null)?.map((v) => v.id) || [];
 
@@ -261,6 +280,11 @@ export async function getFilteredEventsWithSearch(
   if (filters.date_filter) {
     const { start, end } = getDateRange(filters.date_filter);
     query = query.gte("start_date", start).lte("start_date", end);
+
+    // For "now" filter, also require is_live to be true
+    if (filters.date_filter === "now") {
+      query = query.eq("is_live", true);
+    }
   }
 
   // Apply venue filter
@@ -322,12 +346,14 @@ export async function getEventsForMap(
 
   // Apply search filter (includes venue name search)
   if (filters.search && filters.search.trim()) {
-    const searchTerm = `%${filters.search.trim()}%`;
+    const rawSearch = filters.search.trim();
+    const escapedSearch = escapePostgrestValue(rawSearch);
+    const searchTerm = `%${escapedSearch}%`;
 
     const { data: matchingVenues } = await supabase
       .from("venues")
       .select("id")
-      .ilike("name", searchTerm);
+      .ilike("name", `%${rawSearch}%`);
 
     const venueIds = (matchingVenues as { id: number }[] | null)?.map((v) => v.id) || [];
 
@@ -391,6 +417,11 @@ export async function getEventsForMap(
   if (filters.date_filter) {
     const { start, end } = getDateRange(filters.date_filter);
     query = query.gte("start_date", start).lte("start_date", end);
+
+    // For "now" filter, also require is_live to be true
+    if (filters.date_filter === "now") {
+      query = query.eq("is_live", true);
+    }
   }
 
   if (filters.venue_id) {
@@ -528,6 +559,7 @@ export const SUBCATEGORIES: Record<string, { value: string; label: string }[]> =
 };
 
 export const DATE_FILTERS = [
+  { value: "now", label: "Happening Now" },
   { value: "today", label: "Today" },
   { value: "weekend", label: "This Weekend" },
   { value: "week", label: "This Week" },
@@ -811,7 +843,8 @@ export async function getFilteredEventsWithRollups(
   );
 
   const venueIdsToExclude = rollupStats.venueRollups.map((v) => v.venueId);
-  const sourceIdsToExclude = rollupStats.sourceRollups.map((s) => s.sourceId);
+  // Note: sourceIdsToExclude would be used for source-based rollups if implemented
+  void rollupStats.sourceRollups; // Acknowledge unused for now
 
   // Get regular events (excluding those that will be rolled up)
   const { events, total } = await getFilteredEventsWithSearch(

@@ -21,7 +21,7 @@ function PreferencesContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const isWelcome = searchParams.get("welcome") === "true";
-  const { user, profile } = useAuth();
+  const { user } = useAuth();
   const supabase = createClient();
 
   const [loading, setLoading] = useState(true);

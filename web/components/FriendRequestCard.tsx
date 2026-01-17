@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 
 type Profile = {
   id: string;
@@ -134,9 +135,11 @@ export default function FriendRequestCard({
       {/* Avatar */}
       <Link href={`/profile/${otherUser.username}`}>
         {otherUser.avatar_url ? (
-          <img
+          <Image
             src={otherUser.avatar_url}
             alt={otherUser.display_name || otherUser.username}
+            width={48}
+            height={48}
             className="w-12 h-12 rounded-full object-cover"
           />
         ) : (

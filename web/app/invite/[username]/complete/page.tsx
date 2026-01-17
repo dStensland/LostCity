@@ -15,7 +15,6 @@ export default function InviteCompletePage({ params }: Props) {
   const { user, loading: authLoading } = useAuth();
   const [status, setStatus] = useState<"loading" | "success" | "accepted" | "error">("loading");
   const [message, setMessage] = useState("");
-  const [inviterName, setInviterName] = useState("");
 
   useEffect(() => {
     async function completeInvite() {
@@ -40,7 +39,7 @@ export default function InviteCompletePage({ params }: Props) {
         }
 
         const profileData = await profileResponse.json();
-        setInviterName(profileData.profile.display_name || `@${profileData.profile.username}`);
+        const displayName = profileData.profile.display_name || `@${profileData.profile.username}`;
 
         // Check if same user
         if (profileData.profile.id === user.id) {
@@ -52,7 +51,7 @@ export default function InviteCompletePage({ params }: Props) {
         // Already friends
         if (profileData.relationship === "friends") {
           setStatus("success");
-          setMessage(`You're already friends with ${profileData.profile.display_name || `@${profileData.profile.username}`}!`);
+          setMessage(`You're already friends with ${displayName}!`);
           return;
         }
 
@@ -68,7 +67,7 @@ export default function InviteCompletePage({ params }: Props) {
         if (!response.ok) {
           if (data.error === "You are already friends") {
             setStatus("success");
-            setMessage(`You're already friends with ${inviterName}!`);
+            setMessage(`You're already friends with ${displayName}!`);
           } else if (data.error === "Friend request already pending") {
             setStatus("success");
             setMessage("Friend request already sent!");
@@ -81,10 +80,10 @@ export default function InviteCompletePage({ params }: Props) {
 
         if (data.accepted) {
           setStatus("accepted");
-          setMessage(`You are now friends with ${inviterName}!`);
+          setMessage(`You are now friends with ${displayName}!`);
         } else {
           setStatus("success");
-          setMessage(`Friend request sent to ${inviterName}!`);
+          setMessage(`Friend request sent to ${displayName}!`);
         }
       } catch {
         setStatus("error");

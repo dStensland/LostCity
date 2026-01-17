@@ -115,6 +115,7 @@ export default function EventList({ initialEvents, initialTotal, hasActiveFilter
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(initialEvents.length < initialTotal);
   const [isLoading, setIsLoading] = useState(false);
+  const isLoadingRef = useRef(false); // Sync ref to prevent race conditions
   const searchParams = useSearchParams();
   const pathname = usePathname();
   const loaderRef = useRef<HTMLDivElement>(null);
@@ -127,8 +128,10 @@ export default function EventList({ initialEvents, initialTotal, hasActiveFilter
   }, [initialEvents, initialTotal]);
 
   const loadMore = useCallback(async () => {
-    if (isLoading || !hasMore) return;
+    // Use ref for synchronous check to prevent race conditions
+    if (isLoadingRef.current || !hasMore) return;
 
+    isLoadingRef.current = true;
     setIsLoading(true);
     const nextPage = page + 1;
     const params = new URLSearchParams(searchParams.toString());
@@ -145,9 +148,10 @@ export default function EventList({ initialEvents, initialTotal, hasActiveFilter
     } catch (error) {
       console.error("Failed to load more events:", error);
     } finally {
+      isLoadingRef.current = false;
       setIsLoading(false);
     }
-  }, [page, searchParams, isLoading, hasMore]);
+  }, [page, searchParams, hasMore]);
 
   // Intersection Observer for infinite scroll
   useEffect(() => {

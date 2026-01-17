@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Logo from "@/components/Logo";
 import { createClient } from "@/lib/supabase/client";
+import { getAuthErrorMessage } from "@/lib/auth-errors";
 
 export default function ResetPasswordPage() {
   const router = useRouter();
@@ -62,7 +63,7 @@ export default function ResetPasswordPage() {
     setLoading(false);
 
     if (updateError) {
-      setError(updateError.message);
+      setError(getAuthErrorMessage(updateError.message));
       return;
     }
 
@@ -191,10 +192,11 @@ export default function ResetPasswordPage() {
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   minLength={6}
+                  aria-describedby="password-hint"
                   className="w-full px-3 py-2.5 rounded-lg bg-[var(--dusk)] border border-[var(--twilight)] text-[var(--cream)] font-mono text-sm focus:outline-none focus:border-[var(--coral)] transition-colors"
                   placeholder="••••••••"
                 />
-                <p className="font-mono text-xs text-[var(--muted)] mt-1">
+                <p id="password-hint" className="font-mono text-xs text-[var(--muted)] mt-1">
                   Minimum 6 characters
                 </p>
               </div>

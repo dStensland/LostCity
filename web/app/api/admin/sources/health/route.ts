@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { isAdmin } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
@@ -29,6 +30,11 @@ type SourceRow = {
 };
 
 export async function GET() {
+  // Verify admin
+  if (!(await isAdmin())) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+  }
+
   // Get all sources
   const { data: sourcesData, error: sourcesError } = await supabase
     .from("sources")

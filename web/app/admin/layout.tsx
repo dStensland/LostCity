@@ -50,6 +50,12 @@ export default async function AdminLayout({
             Dashboard
           </Link>
           <Link
+            href="/admin/events"
+            className="font-mono text-xs text-[var(--muted)] hover:text-[var(--cream)] transition-colors"
+          >
+            Events
+          </Link>
+          <Link
             href="/admin/users"
             className="font-mono text-xs text-[var(--muted)] hover:text-[var(--cream)] transition-colors"
           >

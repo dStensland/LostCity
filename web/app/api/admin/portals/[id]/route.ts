@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { createClient, isAdmin, canManagePortal } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
@@ -27,6 +27,12 @@ type PortalData = {
 // GET /api/admin/portals/[id] - Get portal details
 export async function GET(request: NextRequest, { params }: Props) {
   const { id } = await params;
+
+  // Verify admin or portal owner
+  if (!(await canManagePortal(id))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+  }
+
   const supabase = await createClient();
 
   const { data: portalData, error } = await supabase
@@ -93,12 +99,13 @@ export async function GET(request: NextRequest, { params }: Props) {
 // PATCH /api/admin/portals/[id] - Update portal
 export async function PATCH(request: NextRequest, { params }: Props) {
   const { id } = await params;
-  const supabase = await createClient();
 
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  // Verify admin or portal owner
+  if (!(await canManagePortal(id))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
   }
+
+  const supabase = await createClient();
 
   const body = await request.json();
   const allowedFields = ["name", "tagline", "status", "visibility", "filters", "branding", "settings"];
@@ -134,12 +141,13 @@ export async function PATCH(request: NextRequest, { params }: Props) {
 // DELETE /api/admin/portals/[id] - Delete portal
 export async function DELETE(request: NextRequest, { params }: Props) {
   const { id } = await params;
-  const supabase = await createClient();
 
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  // Verify admin or portal owner
+  if (!(await canManagePortal(id))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
   }
+
+  const supabase = await createClient();
 
   // Check if portal exists
   const { data: portalData } = await supabase

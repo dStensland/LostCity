@@ -1,10 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import Logo from "@/components/Logo";
-import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/lib/auth-context";
 
 type InviterProfile = {
@@ -21,7 +20,6 @@ type Props = {
 };
 
 export default function InvitePage({ params }: Props) {
-  const router = useRouter();
   const { user, loading: authLoading } = useAuth();
   const [inviter, setInviter] = useState<InviterProfile | null>(null);
   const [relationship, setRelationship] = useState<string | null>(null);
@@ -30,8 +28,6 @@ export default function InvitePage({ params }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [username, setUsername] = useState<string>("");
-
-  const supabase = createClient();
 
   useEffect(() => {
     async function loadInviter() {
@@ -149,9 +145,11 @@ export default function InvitePage({ params }: Props) {
           {/* Inviter Profile */}
           <div className="text-center mb-8">
             {inviter.avatar_url ? (
-              <img
+              <Image
                 src={inviter.avatar_url}
                 alt={inviter.display_name || inviter.username}
+                width={96}
+                height={96}
                 className="w-24 h-24 rounded-full mx-auto mb-4 object-cover"
               />
             ) : (
@@ -246,9 +244,11 @@ export default function InvitePage({ params }: Props) {
           {/* Inviter Profile */}
           <div className="text-center mb-8">
             {inviter.avatar_url ? (
-              <img
+              <Image
                 src={inviter.avatar_url}
                 alt={inviter.display_name || inviter.username}
+                width={96}
+                height={96}
                 className="w-24 h-24 rounded-full mx-auto mb-4 object-cover"
               />
             ) : (

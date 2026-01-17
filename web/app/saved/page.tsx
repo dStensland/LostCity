@@ -4,8 +4,9 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import PageHeader from "@/components/PageHeader";
-import CategoryIcon from "@/components/CategoryIcon";
 import SaveButton from "@/components/SaveButton";
+import CategoryIcon from "@/components/CategoryIcon";
+import Image from "next/image";
 import { useAuth } from "@/lib/auth-context";
 import { createClient } from "@/lib/supabase/client";
 import { format, parseISO, startOfDay } from "date-fns";
@@ -113,11 +114,6 @@ export default function SavedPage() {
     if (tab === "past") return isEventPast;
     return true;
   });
-
-  // Handle unsave
-  const handleUnsave = (itemId: string) => {
-    setSavedItems((items) => items.filter((item) => item.id !== itemId));
-  };
 
   if (authLoading) {
     return (
@@ -243,7 +239,6 @@ export default function SavedPage() {
                 <SavedEventCard
                   key={item.id}
                   savedItem={item}
-                  onUnsave={() => handleUnsave(item.id)}
                 />
               ) : null
             )}
@@ -256,10 +251,8 @@ export default function SavedPage() {
 
 function SavedEventCard({
   savedItem,
-  onUnsave,
 }: {
   savedItem: SavedEvent;
-  onUnsave: () => void;
 }) {
   const event = savedItem.event!;
   const dateObj = parseISO(event.start_date);
@@ -276,11 +269,12 @@ function SavedEventCard({
         <div className="flex gap-4">
           {/* Image thumbnail */}
           {event.image_url && (
-            <div className="w-20 h-20 flex-shrink-0 rounded-lg overflow-hidden bg-[var(--night)]">
-              <img
+            <div className="w-20 h-20 flex-shrink-0 rounded-lg overflow-hidden bg-[var(--night)] relative">
+              <Image
                 src={event.image_url}
                 alt={event.title}
-                className="w-full h-full object-cover"
+                fill
+                className="object-cover"
               />
             </div>
           )}

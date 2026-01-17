@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/lib/auth-context";
 import { formatDistanceToNow } from "date-fns";
@@ -223,9 +224,11 @@ function ActivityCard({ activity }: { activity: ActivityItem }) {
           className="flex-shrink-0"
         >
           {activity.user.avatar_url ? (
-            <img
+            <Image
               src={activity.user.avatar_url}
               alt={activity.user.display_name || activity.user.username}
+              width={40}
+              height={40}
               className="w-10 h-10 rounded-full object-cover border border-[var(--twilight)] hover:border-[var(--coral)] transition-colors"
             />
           ) : (

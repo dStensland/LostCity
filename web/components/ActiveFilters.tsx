@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import { CATEGORIES, SUBCATEGORIES } from "@/lib/search";
 
 export default function ActiveFilters() {
@@ -10,8 +10,14 @@ export default function ActiveFilters() {
   const searchParams = useSearchParams();
 
   const search = searchParams.get("search");
-  const categories = searchParams.get("categories")?.split(",").filter(Boolean) || [];
-  const subcategories = searchParams.get("subcategories")?.split(",").filter(Boolean) || [];
+  const categories = useMemo(
+    () => searchParams.get("categories")?.split(",").filter(Boolean) || [],
+    [searchParams]
+  );
+  const subcategories = useMemo(
+    () => searchParams.get("subcategories")?.split(",").filter(Boolean) || [],
+    [searchParams]
+  );
   const isFree = searchParams.get("free") === "true";
   const dateFilter = searchParams.get("date");
   const venueId = searchParams.get("venue");

@@ -1,5 +1,6 @@
 import { getSpotBySlug, getUpcomingEventsForSpot, formatPriceLevel, getSpotTypeLabels, SPOT_TYPES, type SpotType } from "@/lib/spots";
 import Link from "next/link";
+import Image from "next/image";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { format, parseISO } from "date-fns";
@@ -84,11 +85,12 @@ export default async function SpotPage({ params }: Props) {
         <main className="max-w-3xl mx-auto px-4 py-8">
           {/* Spot image */}
           {spot.image_url && (
-            <div className="aspect-video bg-[var(--night)] rounded-lg overflow-hidden mb-6 border border-[var(--twilight)]">
-              <img
+            <div className="aspect-video bg-[var(--night)] rounded-lg overflow-hidden mb-6 border border-[var(--twilight)] relative">
+              <Image
                 src={spot.image_url}
                 alt={spot.name}
-                className="w-full h-full object-cover"
+                fill
+                className="object-cover"
               />
             </div>
           )}

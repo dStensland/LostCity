@@ -11,7 +11,7 @@ Features from the Lovable redesign to implement in the Next.js codebase.
 - [x] Live event indicator with pulsing dot
 - [x] Category-colored badges using new neon palette
 - [x] "Featured" and "Trending" badge indicators
-- [ ] Friends going avatar stack
+- [x] Friends going avatar stack
 - [x] Hover glow effect using `.card-interactive`
 - [x] Price display integration
 
@@ -30,9 +30,9 @@ Features from the Lovable redesign to implement in the Next.js codebase.
 - [x] ESC to close keyboard hint
 
 ### Header Updates
-- [ ] Glass effect on scroll
-- [ ] Gradient underline on logo
-- [ ] Pill-style navigation (Events | Collections)
+- [x] Glass effect on scroll
+- [x] Gradient underline on logo
+- [x] Pill-style navigation (Events | Collections)
 - [x] Icon buttons: Search, Map, Bookmarks, User
 
 ---
@@ -42,28 +42,28 @@ Features from the Lovable redesign to implement in the Next.js codebase.
 ### Social Proof
 - [x] Add `attendee_count` to events table
 - [x] "X interested" display on event cards
-- [ ] Friends going feature (requires follow system integration)
-- [ ] "Who's Going" section on event detail page
+- [x] Friends going feature (requires follow system integration)
+- [x] "Who's Going" section on event detail page
 
 ### Live Events
 - [x] Add `is_live` field to events
 - [x] Pulsing live indicator badge
-- [ ] Filter for "Happening Now"
-- [ ] Real-time status updates
+- [x] Filter for "Happening Now"
+- [x] Real-time status updates
 
 ### Featured & Trending
 - [x] Add `is_featured` and `is_trending` fields
-- [ ] Admin UI to mark events as featured
+- [x] Admin UI to mark events as featured
 - [x] Trending algorithm based on saves/views
 - [x] Featured badge with star icon
 - [x] Trending badge with fire icon
 
 ### Collections Enhancement
-- [ ] Collection cover images
-- [ ] Collection descriptions
-- [ ] Public/private toggle
-- [ ] Browse collections page
-- [ ] "Date Night Picks", "Free This Week" etc.
+- [x] Collection cover images
+- [x] Collection descriptions
+- [x] Public/private toggle
+- [x] Browse collections page
+- [x] "Date Night Picks", "Free This Week" etc.
 
 ### Venue Pages
 - [x] Dedicated venue detail page (`/spots/[slug]`)
@@ -73,9 +73,9 @@ Features from the Lovable redesign to implement in the Next.js codebase.
 - [x] Related events at venue
 
 ### View Toggle
-- [ ] Events / Venues / Map view toggle
-- [ ] Persist view preference
-- [ ] Map view with event markers
+- [x] Events / Venues / Map view toggle
+- [x] Persist view preference
+- [x] Map view with event markers
 
 ---
 
@@ -99,7 +99,7 @@ ALTER TABLE venues ADD COLUMN IF NOT EXISTS description TEXT;
 
 ## Animation & Polish
 
-- [ ] Add Framer Motion for page transitions
+- [x] Add Framer Motion for page transitions
 - [x] Staggered fade-up on event list load
 - [x] Smooth drawer open/close animations
 - [x] Search overlay transitions
@@ -119,10 +119,10 @@ ALTER TABLE venues ADD COLUMN IF NOT EXISTS description TEXT;
    - ~~Venue pages~~
    - ~~Social proof (attendee counts)~~
 
-3. **Medium Impact, Higher Effort** - PARTIAL
+3. **Medium Impact, Higher Effort** - DONE
    - ~~Full filter drawer~~
-   - [ ] Friends going feature
-   - [ ] Map view
+   - ~~Friends going feature~~
+   - ~~Map view~~
 
 ---
 
@@ -143,16 +143,16 @@ ALTER TABLE venues ADD COLUMN IF NOT EXISTS description TEXT;
 ## Remaining Items
 
 ### Quick Wins
-- [ ] Glass effect on header scroll
-- [ ] Gradient underline on logo hover
-- [ ] Filter for "Happening Now" (live events)
+- [x] Glass effect on header scroll
+- [x] Gradient underline on logo hover
+- [x] Filter for "Happening Now" (live events)
 
 ### Medium Effort
-- [ ] Friends going avatar stack on event cards
-- [ ] "Who's Going" section on event detail
-- [ ] Admin UI to mark events as featured
+- [x] Friends going avatar stack on event cards
+- [x] "Who's Going" section on event detail
+- [x] Admin UI to mark events as featured
 
 ### Larger Features
-- [ ] Framer Motion page transitions
-- [ ] View toggle (Events/Venues/Map)
-- [ ] Collections enhancements
+- [x] Framer Motion page transitions
+- [x] View toggle (Events/Venues/Map)
+- [x] Collections enhancements

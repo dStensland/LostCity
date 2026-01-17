@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { createClient as createServerClient, getUser } from "@/lib/supabase/server";
+import { getUser, isAdmin } from "@/lib/supabase/server";
 
 // Create admin client with service role for auth operations
 function createAdminClient() {
@@ -14,22 +14,6 @@ function createAdminClient() {
   return createClient(url, key, {
     auth: { autoRefreshToken: false, persistSession: false }
   });
-}
-
-// Check if current user is admin
-async function isAdmin(): Promise<boolean> {
-  const user = await getUser();
-  if (!user) return false;
-
-  const supabase = await createServerClient();
-  const { data } = await supabase
-    .from("profiles")
-    .select("is_admin")
-    .eq("id", user.id)
-    .single();
-
-  const profile = data as { is_admin: boolean } | null;
-  return profile?.is_admin === true;
 }
 
 // DELETE /api/admin/users - Delete a user

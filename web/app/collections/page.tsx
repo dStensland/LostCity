@@ -1,6 +1,8 @@
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
+import Image from "next/image";
 import PageHeader from "@/components/PageHeader";
+import CreateCollectionButton from "@/components/CreateCollectionButton";
 
 export const dynamic = "force-dynamic";
 
@@ -67,6 +69,7 @@ export default async function CollectionsPage() {
       <main className="max-w-4xl mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-8">
           <h1 className="font-serif text-2xl text-[var(--cream)] italic">Collections</h1>
+          <CreateCollectionButton />
         </div>
 
         {/* Featured Collections */}
@@ -111,21 +114,38 @@ function CollectionCard({ collection, featured }: { collection: Collection; feat
   return (
     <Link
       href={`/collections/${collection.slug}`}
-      className={`block p-4 bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg hover:border-[var(--coral)] transition-colors group ${
+      className={`card-interactive block p-4 rounded-xl group ${
         featured ? "sm:p-6" : ""
       }`}
     >
-      {collection.cover_image_url && (
-        <div className="aspect-[2/1] mb-3 rounded overflow-hidden bg-[var(--twilight)]">
-          <img
+      {collection.cover_image_url ? (
+        <div className="aspect-[2/1] mb-3 rounded-lg overflow-hidden bg-[var(--twilight)] relative">
+          <Image
             src={collection.cover_image_url}
-            alt=""
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+            alt={`Cover image for ${collection.title} collection`}
+            fill
+            className="object-cover group-hover:scale-105 transition-transform duration-300"
           />
+        </div>
+      ) : (
+        <div className="aspect-[2/1] mb-3 rounded-lg bg-gradient-to-br from-[var(--neon-magenta)]/20 to-[var(--neon-cyan)]/20 flex items-center justify-center">
+          <svg className="w-8 h-8 text-[var(--muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+          </svg>
         </div>
       )}
 
-      <h3 className={`font-sans font-medium text-[var(--cream)] group-hover:text-[var(--coral)] transition-colors ${
+      {/* Featured badge */}
+      {featured && (
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 mb-2 text-[0.6rem] font-mono font-medium bg-[var(--neon-amber)]/20 text-[var(--neon-amber)] rounded">
+          <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+          </svg>
+          Featured
+        </span>
+      )}
+
+      <h3 className={`font-display font-semibold text-[var(--cream)] group-hover:text-[var(--neon-magenta)] transition-colors ${
         featured ? "text-lg" : "text-base"
       }`}>
         {collection.title}

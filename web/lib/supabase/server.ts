@@ -84,3 +84,40 @@ export async function getUserProfile() {
 
   return profile;
 }
+
+// Check if current user is an admin
+export async function isAdmin(): Promise<boolean> {
+  const user = await getUser();
+  if (!user) return false;
+
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("profiles")
+    .select("is_admin")
+    .eq("id", user.id)
+    .single();
+
+  const profile = data as { is_admin: boolean } | null;
+  return profile?.is_admin === true;
+}
+
+// Check if user owns or is admin of a portal
+export async function canManagePortal(portalId: string): Promise<boolean> {
+  const user = await getUser();
+  if (!user) return false;
+
+  // Check if admin first
+  if (await isAdmin()) return true;
+
+  // Check if owner of portal
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("portal_members")
+    .select("role")
+    .eq("portal_id", portalId)
+    .eq("user_id", user.id)
+    .single();
+
+  const member = data as { role: string } | null;
+  return member?.role === "owner";
+}

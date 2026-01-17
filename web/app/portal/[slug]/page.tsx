@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { format, parseISO, isToday, isTomorrow, isThisWeek } from "date-fns";
 import { getPortalBySlug, getPortalCustomEvents } from "@/lib/portals";
 import { getFilteredEvents } from "@/lib/filters";
@@ -72,10 +73,6 @@ export default async function PortalPage({ params, searchParams }: Props) {
       : null,
   }));
 
-  // Merge custom events with regular events (custom first if pinned)
-  const pinnedCustom = customEventsRaw.filter((ce) => ce.is_pinned);
-  const unpinnedCustom = customEventsRaw.filter((ce) => !ce.is_pinned);
-
   // Only show custom events on first page
   const allEvents =
     currentPage === 1
@@ -112,10 +109,12 @@ export default async function PortalPage({ params, searchParams }: Props) {
       <header className="bg-white border-b border-gray-200">
         <div className="max-w-4xl mx-auto px-4 py-6">
           {portal.branding.logo_url ? (
-            <img
+            <Image
               src={portal.branding.logo_url}
               alt={portal.name}
-              className="h-10"
+              width={160}
+              height={40}
+              className="h-10 w-auto"
             />
           ) : (
             <>

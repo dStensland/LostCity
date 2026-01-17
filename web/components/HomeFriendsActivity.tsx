@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/lib/auth-context";
 import { formatDistanceToNow } from "date-fns";
@@ -144,9 +145,11 @@ export default function HomeFriendsActivity() {
             {/* Mini avatar */}
             <Link href={`/profile/${activity.user.username}`} className="flex-shrink-0">
               {activity.user.avatar_url ? (
-                <img
+                <Image
                   src={activity.user.avatar_url}
-                  alt=""
+                  alt={`${activity.user.display_name || activity.user.username}'s profile photo`}
+                  width={24}
+                  height={24}
                   className="w-6 h-6 rounded-full object-cover"
                 />
               ) : (
