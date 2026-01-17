@@ -12,14 +12,28 @@ export type Portal = {
   visibility: string;
   filters: {
     city?: string;
+    geo_center?: [number, number];
+    geo_radius_km?: number;
     categories?: string[];
+    exclude_categories?: string[];
     neighborhoods?: string[];
-    date_range?: [string, string];
+    date_range_start?: string;
+    date_range_end?: string;
+    price_max?: number;
+    venue_ids?: number[];
+    tags?: string[];
   };
   branding: {
     logo_url?: string;
-    primary_color?: string;
+    hero_image_url?: string;
+    favicon_url?: string;
     og_image_url?: string;
+    primary_color?: string;
+    secondary_color?: string;
+    background_color?: string;
+    font_heading?: string;
+    font_body?: string;
+    [key: string]: unknown;
   };
   settings: Record<string, unknown>;
 };

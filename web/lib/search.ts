@@ -18,11 +18,17 @@ export interface SearchFilters {
   is_free?: boolean;
   price_max?: number;
   date_filter?: "now" | "today" | "weekend" | "week";
+  date_range_start?: string; // Portal date range filter
+  date_range_end?: string;   // Portal date range filter
   venue_id?: number;
+  venue_ids?: number[];      // Portal venue filter
   include_rollups?: boolean;
   vibes?: string[];
   neighborhoods?: string[];
-  city?: string; // Portal city filter
+  city?: string;             // Portal city filter
+  exclude_categories?: string[]; // Portal exclude filter
+  geo_center?: [number, number]; // Portal geo filter [lat, lng]
+  geo_radius_km?: number;    // Portal geo radius in km
 }
 
 // Rollup types for collapsed event groups
@@ -290,6 +296,55 @@ export async function getFilteredEventsWithSearch(
   // Apply venue filter
   if (filters.venue_id) {
     query = query.eq("venue_id", filters.venue_id);
+  }
+
+  // Apply multiple venues filter (portal filter)
+  if (filters.venue_ids && filters.venue_ids.length > 0) {
+    query = query.in("venue_id", filters.venue_ids);
+  }
+
+  // Apply exclude categories filter (portal filter)
+  if (filters.exclude_categories && filters.exclude_categories.length > 0) {
+    // Supabase doesn't have a direct "not in" for text, so we use not.in
+    for (const cat of filters.exclude_categories) {
+      query = query.neq("category_id", cat);
+    }
+  }
+
+  // Apply date range filter (portal filter) - overrides date_filter if set
+  if (filters.date_range_start) {
+    query = query.gte("start_date", filters.date_range_start);
+  }
+  if (filters.date_range_end) {
+    query = query.lte("start_date", filters.date_range_end);
+  }
+
+  // Apply geo filter (portal filter) - find venues within radius of center point
+  if (filters.geo_center && filters.geo_radius_km) {
+    const [lat, lng] = filters.geo_center;
+    const radiusKm = filters.geo_radius_km;
+
+    // Use Haversine formula approximation for filtering
+    // 1 degree of latitude ≈ 111 km
+    // 1 degree of longitude ≈ 111 * cos(lat) km
+    const latDelta = radiusKm / 111;
+    const lngDelta = radiusKm / (111 * Math.cos(lat * Math.PI / 180));
+
+    const { data: nearbyVenues } = await supabase
+      .from("venues")
+      .select("id")
+      .gte("lat", lat - latDelta)
+      .lte("lat", lat + latDelta)
+      .gte("lng", lng - lngDelta)
+      .lte("lng", lng + lngDelta);
+
+    const venueIds = (nearbyVenues as { id: number }[] | null)?.map((v) => v.id) || [];
+    if (venueIds.length > 0) {
+      query = query.in("venue_id", venueIds);
+    } else {
+      // No venues in range, return empty results
+      return { events: [], total: 0 };
+    }
   }
 
   // Order and paginate

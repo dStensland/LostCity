@@ -3,16 +3,24 @@
 import { useState, useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import Logo from "./Logo";
 import UserMenu from "./UserMenu";
 import HeaderSearchButton from "./HeaderSearchButton";
 
+interface PortalBranding {
+  logo_url?: string;
+  primary_color?: string;
+  [key: string]: unknown;
+}
+
 interface GlassHeaderProps {
   portalSlug: string;
   portalName: string;
+  branding?: PortalBranding;
 }
 
-export default function GlassHeader({ portalSlug, portalName }: GlassHeaderProps) {
+export default function GlassHeader({ portalSlug, portalName, branding }: GlassHeaderProps) {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
@@ -55,11 +63,25 @@ export default function GlassHeader({ portalSlug, portalName }: GlassHeaderProps
           : "bg-transparent border-[var(--twilight)]"
       }`}
     >
-      <div className="flex items-baseline gap-3">
-        <Logo href={`/${portalSlug}`} />
-        <span className="font-mono text-[0.65rem] font-medium text-[var(--muted)] uppercase tracking-widest hidden sm:inline">
-          {portalName}
-        </span>
+      <div className="flex items-center gap-3">
+        {branding?.logo_url ? (
+          <Link href={`/${portalSlug}`} className="flex items-center gap-2">
+            <Image
+              src={branding.logo_url}
+              alt={portalName}
+              width={120}
+              height={32}
+              className="h-8 w-auto object-contain"
+            />
+          </Link>
+        ) : (
+          <>
+            <Logo href={`/${portalSlug}`} />
+            <span className="font-mono text-[0.65rem] font-medium text-[var(--muted)] uppercase tracking-widest hidden sm:inline">
+              {portalName}
+            </span>
+          </>
+        )}
       </div>
       <nav className="flex items-center gap-3 sm:gap-4">
         {/* Pill-style navigation toggle - desktop */}

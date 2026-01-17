@@ -1,5 +1,6 @@
 import { getFilteredEventsWithSearch, enrichEventsWithSocialProof, getEventsForMap, PRICE_FILTERS, type SearchFilters } from "@/lib/search";
 import { getPortalBySlug, DEFAULT_PORTAL } from "@/lib/portal";
+import { getPortalSections } from "@/lib/portal-sections";
 import { getSpotsWithEventCounts } from "@/lib/spots";
 import SearchBar from "@/components/SearchBar";
 import FilterBar from "@/components/FilterBar";
@@ -12,6 +13,7 @@ import Logo from "@/components/Logo";
 import HomeFriendsActivity from "@/components/HomeFriendsActivity";
 import PopularThisWeek from "@/components/PopularThisWeek";
 import GlassHeader from "@/components/GlassHeader";
+import { PortalSection } from "@/components/PortalSection";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 
@@ -61,18 +63,29 @@ export default async function PortalPage({ params, searchParams }: Props) {
   const priceMax = priceFilter?.max || undefined;
 
   // Build filters, incorporating portal-specific filters
+  // User's search params can override portal defaults for categories/neighborhoods
   const filters: SearchFilters = {
     search: searchParamsData.search || undefined,
+    // Categories: user selection overrides portal default
     categories: searchParamsData.categories?.split(",").filter(Boolean) || portal.filters.categories || undefined,
     subcategories: searchParamsData.subcategories?.split(",").filter(Boolean) || undefined,
-    tags: searchParamsData.tags?.split(",").filter(Boolean) || undefined,
+    // Tags: combine user and portal tags
+    tags: searchParamsData.tags?.split(",").filter(Boolean) || portal.filters.tags || undefined,
     vibes: searchParamsData.vibes?.split(",").filter(Boolean) || undefined,
-    neighborhoods: searchParamsData.neighborhoods?.split(",").filter(Boolean) || undefined,
+    // Neighborhoods: user selection overrides portal default
+    neighborhoods: searchParamsData.neighborhoods?.split(",").filter(Boolean) || portal.filters.neighborhoods || undefined,
     is_free: isFree || undefined,
-    price_max: priceMax,
+    // Price: user selection overrides portal default
+    price_max: priceMax || portal.filters.price_max || undefined,
     date_filter: (searchParamsData.date as "now" | "today" | "weekend" | "week") || undefined,
-    // Apply portal city filter
+    // Portal-specific filters (cannot be overridden by user)
     city: portal.filters.city || undefined,
+    exclude_categories: portal.filters.exclude_categories || undefined,
+    date_range_start: portal.filters.date_range_start || undefined,
+    date_range_end: portal.filters.date_range_end || undefined,
+    venue_ids: portal.filters.venue_ids || undefined,
+    geo_center: portal.filters.geo_center || undefined,
+    geo_radius_km: portal.filters.geo_radius_km || undefined,
   };
 
   // Fetch data based on view mode
@@ -80,11 +93,16 @@ export default async function PortalPage({ params, searchParams }: Props) {
   let total = 0;
   let spots: Awaited<ReturnType<typeof getSpotsWithEventCounts>> = [];
   let mapEvents: Awaited<ReturnType<typeof getEventsForMap>> = [];
+  let sections: Awaited<ReturnType<typeof getPortalSections>> = [];
 
   if (viewMode === "events") {
     const { events: rawEvents, total: eventTotal } = await getFilteredEventsWithSearch(filters, 1, PAGE_SIZE);
     events = await enrichEventsWithSocialProof(rawEvents);
     total = eventTotal;
+    // Fetch curated sections (only if no active filters applied)
+    if (!searchParamsData.search && !searchParamsData.categories) {
+      sections = await getPortalSections(portal.id);
+    }
   } else if (viewMode === "venues") {
     spots = await getSpotsWithEventCounts("all", "", "all", searchParamsData.search || "");
   } else if (viewMode === "map") {
@@ -96,7 +114,11 @@ export default async function PortalPage({ params, searchParams }: Props) {
   return (
     <div className="min-h-screen">
       {/* Header with glass effect on scroll */}
-      <GlassHeader portalSlug={portal.slug} portalName={portal.name} />
+      <GlassHeader
+        portalSlug={portal.slug}
+        portalName={portal.name}
+        branding={portal.branding}
+      />
 
       {/* Mode Toggle + View Toggle + Search */}
       <section className="py-4 sm:py-6 border-b border-[var(--twilight)]">
@@ -129,6 +151,15 @@ export default async function PortalPage({ params, searchParams }: Props) {
         <Suspense fallback={null}>
           <PopularThisWeek />
         </Suspense>
+      )}
+
+      {/* Curated Sections - only show on events view without filters */}
+      {viewMode === "events" && sections.length > 0 && (
+        <div className="border-b border-[var(--twilight)]">
+          {sections.map((section) => (
+            <PortalSection key={section.id} section={section} />
+          ))}
+        </div>
       )}
 
       {/* Count indicator */}

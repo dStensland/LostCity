@@ -16,8 +16,8 @@ export default function Logo({ size = "md", href = "/", className = "" }: LogoPr
   const content = (
     <span className={`logo-text font-bold tracking-tight ${sizeClasses[size]} relative inline-block`}>
       Lost City
-      {/* Gradient underline */}
-      <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-gradient-to-r from-[var(--neon-magenta)] to-[var(--neon-cyan)] transition-all duration-300 group-hover:w-full" />
+      {/* Gradient underline - uses portal primary if set */}
+      <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-gradient-to-r from-[var(--portal-primary,var(--neon-magenta))] to-[var(--neon-cyan)] transition-all duration-300 group-hover:w-full" />
     </span>
   );
 

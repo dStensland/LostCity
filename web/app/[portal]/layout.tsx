@@ -1,7 +1,9 @@
 import { notFound } from "next/navigation";
 import { getPortalBySlug, DEFAULT_PORTAL } from "@/lib/portal";
 import { PortalProvider } from "@/lib/portal-context";
+import { PortalTheme } from "@/components/PortalTheme";
 import type { Metadata } from "next";
+import type { Portal } from "@/lib/portal-context";
 
 type Props = {
   children: React.ReactNode;
@@ -16,14 +18,17 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     return { title: "Not Found | Lost City" };
   }
 
+  const branding = portal.branding || {};
+
   return {
     title: `${portal.name} Events | Lost City`,
     description: portal.tagline || `Discover events in ${portal.name}. ${portal.portal_type === "city" ? "Concerts, shows, food, nightlife and more." : ""}`,
     openGraph: {
       title: `${portal.name} | Lost City`,
       description: portal.tagline || `Discover events in ${portal.name}`,
-      images: portal.branding.og_image_url ? [{ url: portal.branding.og_image_url }] : [],
+      images: branding.og_image_url ? [{ url: branding.og_image_url as string }] : [],
     },
+    icons: branding.favicon_url ? { icon: branding.favicon_url as string } : undefined,
   };
 }
 
@@ -43,6 +48,7 @@ export default async function PortalLayout({ children, params }: Props) {
     if (slug === "atlanta") {
       return (
         <PortalProvider portal={DEFAULT_PORTAL}>
+          <PortalTheme portal={DEFAULT_PORTAL} />
           {children}
         </PortalProvider>
       );
@@ -52,6 +58,7 @@ export default async function PortalLayout({ children, params }: Props) {
 
   return (
     <PortalProvider portal={portal}>
+      <PortalTheme portal={portal} />
       {children}
     </PortalProvider>
   );
