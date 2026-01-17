@@ -59,10 +59,11 @@ export default function ViewToggle({ className = "" }: Props) {
     [router, searchParams, pathname]
   );
 
-  const views: { value: ViewMode; label: string; icon: React.ReactNode }[] = [
+  const views: { value: ViewMode; label: string; shortLabel: string; icon: React.ReactNode }[] = [
     {
       value: "events",
       label: "Events",
+      shortLabel: "List",
       icon: (
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path
@@ -77,6 +78,7 @@ export default function ViewToggle({ className = "" }: Props) {
     {
       value: "venues",
       label: "Venues",
+      shortLabel: "Spots",
       icon: (
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path
@@ -91,6 +93,7 @@ export default function ViewToggle({ className = "" }: Props) {
     {
       value: "map",
       label: "Map",
+      shortLabel: "Map",
       icon: (
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path
@@ -118,6 +121,7 @@ export default function ViewToggle({ className = "" }: Props) {
           }`}
         >
           {view.icon}
+          <span className="sm:hidden text-[0.65rem]">{view.shortLabel}</span>
           <span className="hidden sm:inline">{view.label}</span>
         </button>
       ))}

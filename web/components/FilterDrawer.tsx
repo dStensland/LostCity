@@ -2,8 +2,8 @@
 
 import { useEffect } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
-import { CATEGORIES, DATE_FILTERS, PRICE_FILTERS } from "@/lib/search";
-import { PREFERENCE_NEIGHBORHOODS } from "@/lib/preferences";
+import { CATEGORIES, SUBCATEGORIES, DATE_FILTERS, PRICE_FILTERS, ALL_TAGS } from "@/lib/search";
+import { PREFERENCE_VIBES, PREFERENCE_NEIGHBORHOODS } from "@/lib/preferences";
 import CategoryIcon, { CATEGORY_CONFIG, type CategoryType } from "./CategoryIcon";
 
 interface FilterDrawerProps {
@@ -17,6 +17,9 @@ export default function FilterDrawer({ isOpen, onClose }: FilterDrawerProps) {
   const searchParams = useSearchParams();
 
   const currentCategories = searchParams.get("categories")?.split(",").filter(Boolean) || [];
+  const currentSubcategories = searchParams.get("subcategories")?.split(",").filter(Boolean) || [];
+  const currentTags = searchParams.get("tags")?.split(",").filter(Boolean) || [];
+  const currentVibes = searchParams.get("vibes")?.split(",").filter(Boolean) || [];
   const currentNeighborhoods = searchParams.get("neighborhoods")?.split(",").filter(Boolean) || [];
   const currentPriceFilter = searchParams.get("price") || "";
   const currentDateFilter = searchParams.get("date") || "";
@@ -64,6 +67,27 @@ export default function FilterDrawer({ isOpen, onClose }: FilterDrawerProps) {
     updateParams({ neighborhoods: newNeighborhoods.length > 0 ? newNeighborhoods.join(",") : null });
   };
 
+  const toggleSubcategory = (subcategory: string) => {
+    const newSubcategories = currentSubcategories.includes(subcategory)
+      ? currentSubcategories.filter((s) => s !== subcategory)
+      : [...currentSubcategories, subcategory];
+    updateParams({ subcategories: newSubcategories.length > 0 ? newSubcategories.join(",") : null });
+  };
+
+  const toggleTag = (tag: string) => {
+    const newTags = currentTags.includes(tag)
+      ? currentTags.filter((t) => t !== tag)
+      : [...currentTags, tag];
+    updateParams({ tags: newTags.length > 0 ? newTags.join(",") : null });
+  };
+
+  const toggleVibe = (vibe: string) => {
+    const newVibes = currentVibes.includes(vibe)
+      ? currentVibes.filter((v) => v !== vibe)
+      : [...currentVibes, vibe];
+    updateParams({ vibes: newVibes.length > 0 ? newVibes.join(",") : null });
+  };
+
   const setDateFilter = (date: string) => {
     updateParams({ date: currentDateFilter === date ? null : date });
   };
@@ -75,6 +99,9 @@ export default function FilterDrawer({ isOpen, onClose }: FilterDrawerProps) {
   const clearAll = () => {
     updateParams({
       categories: null,
+      subcategories: null,
+      tags: null,
+      vibes: null,
       neighborhoods: null,
       date: null,
       price: null,
@@ -86,8 +113,16 @@ export default function FilterDrawer({ isOpen, onClose }: FilterDrawerProps) {
     onClose();
   };
 
+  // Get available subcategories for selected categories
+  const availableSubcategories = currentCategories.flatMap((cat) =>
+    SUBCATEGORIES[cat]?.map((sub) => ({ ...sub, category: cat })) || []
+  );
+
   const activeFilterCount =
     currentCategories.length +
+    currentSubcategories.length +
+    currentTags.length +
+    currentVibes.length +
     currentNeighborhoods.length +
     (currentDateFilter ? 1 : 0) +
     (currentPriceFilter ? 1 : 0);
@@ -175,6 +210,50 @@ export default function FilterDrawer({ isOpen, onClose }: FilterDrawerProps) {
               ))}
             </div>
           </FilterSection>
+
+          {/* Subcategories - only show when categories with subcategories are selected */}
+          {availableSubcategories.length > 0 && (
+            <FilterSection title="Genre" icon="music">
+              <div className="grid grid-cols-2 gap-2">
+                {availableSubcategories.map((sub) => (
+                  <FilterOption
+                    key={sub.value}
+                    label={sub.label}
+                    checked={currentSubcategories.includes(sub.value)}
+                    onChange={() => toggleSubcategory(sub.value)}
+                  />
+                ))}
+              </div>
+            </FilterSection>
+          )}
+
+          {/* Tags */}
+          <FilterSection title="Tags" icon="tag">
+            <div className="grid grid-cols-2 gap-2">
+              {ALL_TAGS.map((tag) => (
+                <FilterOption
+                  key={tag.value}
+                  label={tag.label}
+                  checked={currentTags.includes(tag.value)}
+                  onChange={() => toggleTag(tag.value)}
+                />
+              ))}
+            </div>
+          </FilterSection>
+
+          {/* Vibes */}
+          <FilterSection title="Vibes" icon="sparkles">
+            <div className="grid grid-cols-2 gap-2">
+              {PREFERENCE_VIBES.map((vibe) => (
+                <FilterOption
+                  key={vibe.value}
+                  label={vibe.label}
+                  checked={currentVibes.includes(vibe.value)}
+                  onChange={() => toggleVibe(vibe.value)}
+                />
+              ))}
+            </div>
+          </FilterSection>
         </div>
 
         {/* Footer */}
@@ -203,7 +282,7 @@ function FilterSection({
   children,
 }: {
   title: string;
-  icon: "calendar" | "grid" | "map" | "dollar";
+  icon: "calendar" | "grid" | "map" | "dollar" | "tag" | "sparkles" | "music";
   children: React.ReactNode;
 }) {
   const icons = {
@@ -226,6 +305,21 @@ function FilterSection({
     dollar: (
       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+    ),
+    tag: (
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+      </svg>
+    ),
+    sparkles: (
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+      </svg>
+    ),
+    music: (
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
       </svg>
     ),
   };

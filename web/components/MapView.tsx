@@ -6,9 +6,38 @@ import L from "leaflet";
 import Link from "next/link";
 import { format, parseISO } from "date-fns";
 import type { EventWithLocation } from "@/lib/search";
+import { DARK_MAP_TILES } from "@/lib/map-config";
 
 // Fix for default marker icons in Leaflet with webpack
 import "leaflet/dist/leaflet.css";
+
+// Dark theme styles for Leaflet popups
+const mapStyles = `
+  .leaflet-popup-content-wrapper {
+    background: var(--dusk);
+    border: 1px solid var(--twilight);
+    border-radius: 8px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.4);
+  }
+  .leaflet-popup-tip {
+    background: var(--dusk);
+    border-left: 1px solid var(--twilight);
+    border-bottom: 1px solid var(--twilight);
+  }
+  .leaflet-popup-close-button {
+    color: var(--muted) !important;
+  }
+  .leaflet-popup-close-button:hover {
+    color: var(--cream) !important;
+  }
+  .leaflet-control-attribution {
+    background: var(--night) !important;
+    color: var(--muted) !important;
+  }
+  .leaflet-control-attribution a {
+    color: var(--soft) !important;
+  }
+`;
 
 // Custom marker icon
 const createIcon = (color: string) =>
@@ -48,8 +77,8 @@ export default function MapView({ events }: Props) {
 
   if (!mounted) {
     return (
-      <div className="w-full h-[600px] bg-gray-100 rounded-lg flex items-center justify-center">
-        <p className="text-gray-500">Loading map...</p>
+      <div className="w-full h-[600px] bg-[var(--night)] rounded-lg flex items-center justify-center border border-[var(--twilight)]">
+        <p className="text-[var(--muted)] font-mono text-sm">Loading map...</p>
       </div>
     );
   }
@@ -71,8 +100,10 @@ export default function MapView({ events }: Props) {
       : null;
 
   return (
-    <div className="w-full h-[600px] rounded-lg overflow-hidden border border-gray-200">
-      <MapContainer
+    <>
+      <style dangerouslySetInnerHTML={{ __html: mapStyles }} />
+      <div className="w-full h-[600px] rounded-lg overflow-hidden border border-[var(--twilight)]">
+        <MapContainer
         center={atlantaCenter}
         zoom={12}
         bounds={bounds || undefined}
@@ -81,8 +112,8 @@ export default function MapView({ events }: Props) {
         scrollWheelZoom={true}
       >
         <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          attribution={DARK_MAP_TILES.attribution}
+          url={DARK_MAP_TILES.url}
         />
         {mappableEvents.map((event) => (
           <Marker
@@ -90,25 +121,25 @@ export default function MapView({ events }: Props) {
             position={[event.venue!.lat!, event.venue!.lng!]}
             icon={createIcon(categoryColors[event.category || ""] || "#6B7280")}
           >
-            <Popup>
-              <div className="min-w-[200px]">
+            <Popup className="dark-popup">
+              <div className="min-w-[200px] p-1">
                 <Link
                   href={`/events/${event.id}`}
-                  className="font-semibold text-blue-600 hover:underline block mb-1"
+                  className="font-serif text-[var(--coral)] hover:text-[var(--rose)] block mb-1 transition-colors"
                 >
                   {event.title}
                 </Link>
-                <p className="text-sm text-gray-600 mb-1">
+                <p className="font-mono text-xs text-[var(--muted)] mb-1">
                   {event.venue?.name}
-                  {event.venue?.neighborhood && ` • ${event.venue.neighborhood}`}
+                  {event.venue?.neighborhood && ` · ${event.venue.neighborhood}`}
                 </p>
-                <p className="text-sm text-gray-500">
+                <p className="font-mono text-xs text-[var(--soft)]">
                   {format(parseISO(event.start_date), "EEE, MMM d")}
                   {event.start_time && ` at ${event.start_time}`}
                 </p>
                 {event.is_free && (
-                  <span className="inline-block mt-1 px-2 py-0.5 text-xs font-medium bg-green-100 text-green-700 rounded-full">
-                    Free
+                  <span className="inline-block mt-1.5 px-2 py-0.5 text-[0.6rem] font-mono font-medium bg-[var(--neon-green)]/20 text-[var(--neon-green)] rounded">
+                    FREE
                   </span>
                 )}
               </div>
@@ -117,10 +148,11 @@ export default function MapView({ events }: Props) {
         ))}
       </MapContainer>
       {mappableEvents.length === 0 && (
-        <div className="absolute inset-0 flex items-center justify-center bg-gray-50/80">
-          <p className="text-gray-500">No events with map locations</p>
+        <div className="absolute inset-0 flex items-center justify-center bg-[var(--void)]/80">
+          <p className="text-[var(--muted)] font-mono text-sm">No events with map locations</p>
         </div>
       )}
     </div>
+    </>
   );
 }

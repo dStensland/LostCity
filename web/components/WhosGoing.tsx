@@ -127,7 +127,16 @@ export default function WhosGoing({ eventId, className = "" }: WhosGoingProps) {
   }
 
   if (attendees.length === 0) {
-    return null;
+    return (
+      <div className={`${className}`}>
+        <h2 className="font-mono text-[0.65rem] font-medium text-[var(--muted)] uppercase tracking-widest mb-4">
+          Who&apos;s Going
+        </h2>
+        <p className="text-sm text-[var(--muted)] italic">
+          Be the first to RSVP!
+        </p>
+      </div>
+    );
   }
 
   const displayLimit = expanded ? attendees.length : 12;
@@ -140,18 +149,28 @@ export default function WhosGoing({ eventId, className = "" }: WhosGoingProps) {
         Who&apos;s Going
       </h2>
 
-      {/* Stats */}
-      <div className="flex items-center gap-4 mb-4">
+      {/* Stats with accessible indicators */}
+      <div className="flex items-center gap-4 mb-4 flex-wrap">
         {goingCount > 0 && (
           <span className="flex items-center gap-1.5 text-sm">
-            <span className="w-2 h-2 rounded-full bg-[var(--neon-green)]" />
+            <span
+              className="w-4 h-4 rounded-full bg-[var(--neon-green)] flex items-center justify-center text-[0.55rem] font-bold text-[var(--void)]"
+              aria-label="Going indicator"
+            >
+              G
+            </span>
             <span className="text-[var(--cream)] font-medium">{goingCount}</span>
             <span className="text-[var(--muted)]">going</span>
           </span>
         )}
         {interestedCount > 0 && (
           <span className="flex items-center gap-1.5 text-sm">
-            <span className="w-2 h-2 rounded-full bg-[var(--neon-amber)]" />
+            <span
+              className="w-4 h-4 rounded-full bg-[var(--neon-amber)] flex items-center justify-center text-[0.55rem] font-bold text-[var(--void)]"
+              aria-label="Interested indicator"
+            >
+              I
+            </span>
             <span className="text-[var(--cream)] font-medium">{interestedCount}</span>
             <span className="text-[var(--muted)]">interested</span>
           </span>
@@ -190,12 +209,17 @@ export default function WhosGoing({ eventId, className = "" }: WhosGoingProps) {
                 </div>
               )}
             </div>
-            {/* Status indicator dot */}
+            {/* Status indicator with letter for accessibility */}
             <span
-              className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-[var(--dusk)] ${
-                attendee.status === "going" ? "bg-[var(--neon-green)]" : "bg-[var(--neon-amber)]"
+              className={`absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full border-2 border-[var(--dusk)] flex items-center justify-center text-[0.5rem] font-bold ${
+                attendee.status === "going"
+                  ? "bg-[var(--neon-green)] text-[var(--void)]"
+                  : "bg-[var(--neon-amber)] text-[var(--void)]"
               }`}
-            />
+              title={attendee.status === "going" ? "Going" : "Interested"}
+            >
+              {attendee.status === "going" ? "G" : "I"}
+            </span>
           </Link>
         ))}
 

@@ -4,10 +4,10 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/lib/auth-context";
+import { VISIBILITY_OPTIONS, DEFAULT_VISIBILITY, type Visibility } from "@/lib/visibility";
 import type { Database } from "@/lib/types";
 
 type RSVPStatus = "going" | "interested" | "went" | null;
-type Visibility = "public" | "friends" | "private";
 
 type RSVPButtonProps = {
   eventId: number;
@@ -23,11 +23,6 @@ const STATUS_CONFIG = {
   went: { label: "Went", icon: "check-double", color: "bg-[var(--lavender)]" },
 };
 
-const VISIBILITY_OPTIONS: { value: Visibility; label: string; icon: string }[] = [
-  { value: "public", label: "Public", icon: "globe" },
-  { value: "friends", label: "Friends only", icon: "users" },
-  { value: "private", label: "Only me", icon: "lock" },
-];
 
 export default function RSVPButton({
   eventId,
@@ -40,7 +35,7 @@ export default function RSVPButton({
   const menuRef = useRef<HTMLDivElement>(null);
 
   const [status, setStatus] = useState<RSVPStatus>(null);
-  const [visibility, setVisibility] = useState<Visibility>("friends");
+  const [visibility, setVisibility] = useState<Visibility>(DEFAULT_VISIBILITY);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);

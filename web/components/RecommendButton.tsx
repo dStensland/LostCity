@@ -4,9 +4,8 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/lib/auth-context";
+import { VISIBILITY_OPTIONS, DEFAULT_VISIBILITY, type Visibility } from "@/lib/visibility";
 import type { Database } from "@/lib/types";
-
-type Visibility = "public" | "friends" | "private";
 
 type RecommendButtonProps = {
   eventId?: number;
@@ -33,7 +32,7 @@ export default function RecommendButton({
   const [actionLoading, setActionLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [note, setNote] = useState("");
-  const [visibility, setVisibility] = useState<Visibility>("public");
+  const [visibility, setVisibility] = useState<Visibility>(DEFAULT_VISIBILITY);
 
   // Close modal when clicking outside
   useEffect(() => {
@@ -238,17 +237,17 @@ export default function RecommendButton({
                   Who can see this
                 </label>
                 <div className="flex gap-2">
-                  {(["public", "friends", "private"] as Visibility[]).map((v) => (
+                  {VISIBILITY_OPTIONS.map((opt) => (
                     <button
-                      key={v}
-                      onClick={() => setVisibility(v)}
+                      key={opt.value}
+                      onClick={() => setVisibility(opt.value)}
                       className={`flex-1 px-3 py-2 rounded-lg font-mono text-xs transition-colors ${
-                        visibility === v
+                        visibility === opt.value
                           ? "bg-[var(--coral)] text-[var(--void)]"
                           : "bg-[var(--night)] text-[var(--muted)] border border-[var(--twilight)] hover:text-[var(--cream)]"
                       }`}
                     >
-                      {v === "public" ? "Public" : v === "friends" ? "Friends" : "Private"}
+                      {opt.label}
                     </button>
                   ))}
                 </div>

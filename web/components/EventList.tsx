@@ -81,16 +81,12 @@ function groupEventsForDisplay(events: EventWithLocation[]): DisplayItem[] {
     }
   }
 
-  // Sort: groups first (by earliest event time), then individual events by time
+  // Sort by earliest start time (chronological order for both groups and individual events)
   items.sort((a, b) => {
     const getFirstTime = (item: DisplayItem): string => {
-      if (item.type === "event") return item.event.start_time || "99:99";
-      return item.events[0]?.start_time || "99:99";
+      if (item.type === "event") return item.event.start_time || "00:00";
+      return item.events[0]?.start_time || "00:00";
     };
-    const aIsGroup = a.type !== "event";
-    const bIsGroup = b.type !== "event";
-    if (aIsGroup && !bIsGroup) return 1;
-    if (!aIsGroup && bIsGroup) return -1;
     return getFirstTime(a).localeCompare(getFirstTime(b));
   });
 
@@ -116,9 +112,12 @@ export default function EventList({ initialEvents, initialTotal, hasActiveFilter
   const [hasMore, setHasMore] = useState(initialEvents.length < initialTotal);
   const [isLoading, setIsLoading] = useState(false);
   const isLoadingRef = useRef(false); // Sync ref to prevent race conditions
+  const lastLoadTime = useRef(0); // Debounce protection
   const searchParams = useSearchParams();
   const pathname = usePathname();
   const loaderRef = useRef<HTMLDivElement>(null);
+
+  const DEBOUNCE_MS = 300;
 
   // Reset when filters change (initialEvents will change from server)
   useEffect(() => {
@@ -128,9 +127,14 @@ export default function EventList({ initialEvents, initialTotal, hasActiveFilter
   }, [initialEvents, initialTotal]);
 
   const loadMore = useCallback(async () => {
+    // Debounce: prevent rapid successive calls
+    const now = Date.now();
+    if (now - lastLoadTime.current < DEBOUNCE_MS) return;
+
     // Use ref for synchronous check to prevent race conditions
     if (isLoadingRef.current || !hasMore) return;
 
+    lastLoadTime.current = now;
     isLoadingRef.current = true;
     setIsLoading(true);
     const nextPage = page + 1;
@@ -142,7 +146,14 @@ export default function EventList({ initialEvents, initialTotal, hasActiveFilter
       const res = await fetch(`/api/events?${params}`);
       const data = await res.json();
 
-      setEvents((prev) => [...prev, ...data.events]);
+      // Prevent duplicate events
+      setEvents((prev) => {
+        const existingIds = new Set(prev.map((e) => e.id));
+        const newEvents = (data.events as EventWithLocation[]).filter(
+          (e) => !existingIds.has(e.id)
+        );
+        return [...prev, ...newEvents];
+      });
       setPage(nextPage);
       setHasMore(data.hasMore);
     } catch (error) {
@@ -157,7 +168,8 @@ export default function EventList({ initialEvents, initialTotal, hasActiveFilter
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting && hasMore && !isLoading) {
+        // Use ref-based check only to avoid stale state issues
+        if (entries[0].isIntersecting && hasMore && !isLoadingRef.current) {
           loadMore();
         }
       },
@@ -169,7 +181,7 @@ export default function EventList({ initialEvents, initialTotal, hasActiveFilter
     return () => {
       if (currentRef) observer.unobserve(currentRef);
     };
-  }, [hasMore, isLoading, loadMore]);
+  }, [hasMore, loadMore]);
 
   // Group events by date
   const eventsByDate = useMemo(() => {
