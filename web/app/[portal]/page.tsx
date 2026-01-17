@@ -8,6 +8,7 @@ import Logo from "@/components/Logo";
 import UserMenu from "@/components/UserMenu";
 import HomeFriendsActivity from "@/components/HomeFriendsActivity";
 import PopularThisWeek from "@/components/PopularThisWeek";
+import HeaderSearchButton from "@/components/HeaderSearchButton";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
@@ -84,8 +85,9 @@ export default async function PortalPage({ params, searchParams }: Props) {
             {portal.name}
           </span>
         </div>
-        <nav className="flex items-center gap-4 sm:gap-6">
-          <Link href="/collections" className="font-mono text-[0.7rem] font-medium text-[var(--muted)] uppercase tracking-wide hover:text-[var(--cream)] transition-colors">
+        <nav className="flex items-center gap-3 sm:gap-4">
+          <HeaderSearchButton />
+          <Link href="/collections" className="font-mono text-[0.7rem] font-medium text-[var(--muted)] uppercase tracking-wide hover:text-[var(--cream)] transition-colors hidden sm:inline">
             Collections
           </Link>
           <a href="mailto:hello@lostcity.ai" className="font-mono text-[0.7rem] font-medium text-[var(--muted)] uppercase tracking-wide hover:text-[var(--cream)] transition-colors hidden sm:inline">

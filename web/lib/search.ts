@@ -48,6 +48,8 @@ export type EventWithLocation = Event & {
     lng: number | null;
     typical_price_min: number | null;
     typical_price_max: number | null;
+    vibes?: string[] | null;
+    description?: string | null;
   } | null;
   category_data: {
     typical_price_min: number | null;
@@ -57,6 +59,11 @@ export type EventWithLocation = Event & {
   going_count?: number;
   interested_count?: number;
   recommendation_count?: number;
+  // Status indicators
+  attendee_count?: number;
+  is_live?: boolean;
+  is_featured?: boolean;
+  is_trending?: boolean;
 };
 
 export type Category = {

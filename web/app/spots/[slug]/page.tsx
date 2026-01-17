@@ -94,7 +94,7 @@ export default async function SpotPage({ params }: Props) {
           )}
 
           {/* Main spot info card */}
-          <div className="bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg p-6 sm:p-8">
+          <div className="card-elevated rounded-xl p-6 sm:p-8">
             {/* Type badge with icon */}
             {typeInfo && (
               <span className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-[var(--night)] border border-[var(--twilight)] rounded text-sm mb-4">
@@ -149,7 +149,7 @@ export default async function SpotPage({ params }: Props) {
                   {spot.vibes.map((vibe) => (
                     <span
                       key={vibe}
-                      className="px-3 py-1 bg-[var(--night)] text-[var(--soft)] rounded border border-[var(--twilight)] text-sm"
+                      className="px-3 py-1.5 bg-[var(--neon-cyan)]/10 text-[var(--neon-cyan)] rounded-full border border-[var(--neon-cyan)]/20 text-sm font-mono"
                     >
                       {vibe.replace(/-/g, " ")}
                     </span>
@@ -179,7 +179,7 @@ export default async function SpotPage({ params }: Props) {
                   href={spot.website}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-[var(--rose)] to-[var(--coral)] text-[var(--void)] font-semibold rounded-lg hover:opacity-90 transition-opacity"
+                  className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-[var(--neon-magenta)] text-[var(--void)] font-semibold rounded-lg hover:opacity-90 transition-opacity glow-sm"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
@@ -236,11 +236,11 @@ export default async function SpotPage({ params }: Props) {
                     <Link
                       key={event.id}
                       href={`/events/${event.id}`}
-                      className="block p-4 bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg hover:bg-[var(--twilight)] transition-colors group"
+                      className="block p-4 card-interactive rounded-xl group"
                     >
                       <div className="flex items-start justify-between gap-4">
                         <div className="flex-1 min-w-0">
-                          <h3 className="text-[var(--cream)] font-medium truncate group-hover:text-[var(--coral)] transition-colors">
+                          <h3 className="text-[var(--cream)] font-medium truncate group-hover:text-[var(--neon-magenta)] transition-colors">
                             {event.title}
                           </h3>
                           <p className="text-sm text-[var(--muted)] mt-1">
@@ -248,7 +248,7 @@ export default async function SpotPage({ params }: Props) {
                             {event.start_time && ` · ${time} ${period}`}
                           </p>
                         </div>
-                        <span className="text-[var(--muted)] group-hover:text-[var(--coral)] transition-colors">
+                        <span className="text-[var(--muted)] group-hover:text-[var(--neon-magenta)] transition-colors">
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                           </svg>

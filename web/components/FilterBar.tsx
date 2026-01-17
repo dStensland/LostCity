@@ -152,10 +152,10 @@ export default function FilterBar() {
           <div className="flex gap-2 overflow-x-auto scrollbar-hide -mx-4 px-4">
             <button
               onClick={clearAll}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full font-mono text-xs font-medium whitespace-nowrap transition-colors ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full font-mono text-xs font-medium whitespace-nowrap transition-all ${
                 !hasFilters
-                  ? "bg-[var(--cream)] text-[var(--void)]"
-                  : "bg-[var(--twilight)] text-[var(--muted)] hover:text-[var(--cream)]"
+                  ? "bg-[var(--neon-magenta)] text-[var(--void)] glow-sm"
+                  : "bg-[var(--twilight)] text-[var(--muted)] hover:text-[var(--cream)] hover:border-[var(--muted)] border border-transparent"
               }`}
             >
               All
@@ -164,10 +164,10 @@ export default function FilterBar() {
               <button
                 key={cat.value}
                 onClick={() => toggleCategory(cat.value)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full font-mono text-xs font-medium whitespace-nowrap transition-colors ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full font-mono text-xs font-medium whitespace-nowrap transition-all ${
                   currentCategories.includes(cat.value)
-                    ? "bg-[var(--cream)] text-[var(--void)]"
-                    : "bg-[var(--twilight)] text-[var(--muted)] hover:text-[var(--cream)]"
+                    ? "bg-[var(--neon-magenta)] text-[var(--void)] glow-sm"
+                    : "bg-[var(--twilight)] text-[var(--muted)] hover:text-[var(--cream)] hover:border-[var(--muted)] border border-transparent"
                 }`}
               >
                 <CategoryIcon
