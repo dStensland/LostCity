@@ -5,7 +5,8 @@ import { createServerClient } from "@supabase/ssr";
  * Middleware for subdomain routing and auth session management.
  * - Refreshes Supabase auth sessions on each request
  * - Protects auth-required routes
- * - Rewrites requests from {slug}.lostcity.ai to /portal/{slug}
+ * - Rewrites root requests from {slug}.lostcity.ai to /{slug} portal page
+ * - Other routes (events, collections, etc.) work globally on any subdomain
  */
 export async function middleware(request: NextRequest) {
   // Create response that will be modified for auth
@@ -90,32 +91,33 @@ function handleSubdomainRouting(
     subdomain = request.nextUrl.searchParams.get("portal");
   }
 
-  // If we have a subdomain, rewrite to portal route
+  // If we have a subdomain, rewrite root to portal page
   if (subdomain) {
-    // Don't rewrite if already on a portal route
-    if (url.pathname.startsWith("/portal/")) {
-      return response;
-    }
-
     // Don't rewrite API routes
     if (url.pathname.startsWith("/api/")) {
       return response;
     }
 
-    // Rewrite: / -> /portal/atlanta
-    // Rewrite: /events/123 -> /portal/atlanta/events/123
-    url.pathname = `/portal/${subdomain}${url.pathname}`;
+    // Only rewrite root path to portal page
+    // atlanta.lostcity.ai/ -> /atlanta
+    // Other paths like /events/123 work as-is (global routes)
+    if (url.pathname === "/" || url.pathname === "") {
+      url.pathname = `/${subdomain}`;
 
-    // Remove the portal query param if present
-    url.searchParams.delete("portal");
+      // Remove the portal query param if present
+      url.searchParams.delete("portal");
 
-    // Create rewrite response with auth cookies
-    const rewriteResponse = NextResponse.rewrite(url);
-    // Copy auth cookies to rewrite response
-    response.cookies.getAll().forEach((cookie) => {
-      rewriteResponse.cookies.set(cookie.name, cookie.value);
-    });
-    return rewriteResponse;
+      // Create rewrite response with auth cookies
+      const rewriteResponse = NextResponse.rewrite(url);
+      response.cookies.getAll().forEach((cookie) => {
+        rewriteResponse.cookies.set(cookie.name, cookie.value);
+      });
+      return rewriteResponse;
+    }
+
+    // For non-root paths, just pass through but store subdomain context
+    // This allows events, collections, etc. to work on subdomains
+    response.headers.set("x-portal-slug", subdomain);
   }
 
   return response;
