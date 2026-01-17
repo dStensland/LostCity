@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/lib/auth-context";
 import { VISIBILITY_OPTIONS, DEFAULT_VISIBILITY, type Visibility } from "@/lib/visibility";
 import type { Database } from "@/lib/types";
+import Confetti from "./ui/Confetti";
 
 type RSVPStatus = "going" | "interested" | "went" | null;
 
@@ -41,6 +42,7 @@ export default function RSVPButton({
   const [menuOpen, setMenuOpen] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
   const [focusedIndex, setFocusedIndex] = useState(0);
+  const [showConfetti, setShowConfetti] = useState(false);
 
   const statusOptions = (Object.keys(STATUS_CONFIG) as NonNullable<RSVPStatus>[]);
   const menuItemCount = statusOptions.length + (status ? 1 : 0); // +1 for "Remove RSVP"
@@ -136,6 +138,12 @@ export default function RSVPButton({
     setIsAnimating(true);
     setTimeout(() => setIsAnimating(false), 150);
 
+    // Trigger confetti for "going" status
+    if (newStatus === "going" && status !== "going") {
+      setShowConfetti(true);
+      setTimeout(() => setShowConfetti(false), 100);
+    }
+
     // Optimistic update
     setStatus(newStatus);
 
@@ -216,6 +224,7 @@ export default function RSVPButton({
 
   return (
     <div className={`relative ${className}`} ref={menuRef}>
+      <Confetti isActive={showConfetti} />
       <button
         onClick={() => setMenuOpen(!menuOpen)}
         disabled={actionLoading}

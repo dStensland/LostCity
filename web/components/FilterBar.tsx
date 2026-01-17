@@ -5,6 +5,7 @@ import { useCallback, useMemo } from "react";
 import { CATEGORIES, SUBCATEGORIES, DATE_FILTERS, PRICE_FILTERS, TAG_GROUPS, ALL_TAGS } from "@/lib/search";
 import { PREFERENCE_VIBES, PREFERENCE_NEIGHBORHOODS } from "@/lib/preferences";
 import CategoryIcon, { CATEGORY_CONFIG, type CategoryType } from "./CategoryIcon";
+import ScrollableRow from "./ui/ScrollableRow";
 
 export default function FilterBar() {
   const router = useRouter();
@@ -164,7 +165,7 @@ export default function FilterBar() {
       {/* Category Filter Row */}
       <div className="border-b border-[var(--twilight)]">
         <div className="max-w-3xl mx-auto px-4 py-3">
-          <div className="flex gap-2 overflow-x-auto scrollbar-hide -mx-4 px-4">
+          <ScrollableRow className="-mx-4 px-4">
             <button
               onClick={clearAll}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full font-mono text-xs font-medium whitespace-nowrap transition-all ${
@@ -197,7 +198,7 @@ export default function FilterBar() {
                 {cat.label}
               </button>
             ))}
-          </div>
+          </ScrollableRow>
         </div>
       </div>
 
@@ -205,7 +206,7 @@ export default function FilterBar() {
       {availableSubcategories.length > 0 && (
         <div className="border-b border-[var(--twilight)]">
           <div className="max-w-3xl mx-auto px-4 py-2">
-            <div className="flex gap-2 overflow-x-auto scrollbar-hide -mx-4 px-4 items-center">
+            <ScrollableRow className="-mx-4 px-4 items-center">
               <span className="font-mono text-[0.6rem] text-[var(--muted)] uppercase tracking-wider flex-shrink-0 mr-1">
                 Genre
               </span>
@@ -225,7 +226,7 @@ export default function FilterBar() {
                   </button>
                 );
               })}
-            </div>
+            </ScrollableRow>
           </div>
         </div>
       )}
@@ -233,7 +234,7 @@ export default function FilterBar() {
       {/* Date / Price Filter Row */}
       <div className="border-b border-[var(--twilight)]">
         <div className="max-w-3xl mx-auto px-4 py-2">
-          <div className="flex gap-2 overflow-x-auto scrollbar-hide -mx-4 px-4 items-center">
+          <ScrollableRow className="-mx-4 px-4 items-center">
             <span className="font-mono text-[0.6rem] text-[var(--muted)] uppercase tracking-wider flex-shrink-0 mr-1">
               When
             </span>
@@ -270,14 +271,14 @@ export default function FilterBar() {
                 {pf.label}
               </button>
             ))}
-          </div>
+          </ScrollableRow>
         </div>
       </div>
 
       {/* Tag Filter Row */}
       <div className="border-b border-[var(--twilight)]">
         <div className="max-w-3xl mx-auto px-4 py-2">
-          <div className="flex gap-3 overflow-x-auto scrollbar-hide -mx-4 px-4 items-center">
+          <ScrollableRow className="-mx-4 px-4 items-center">
             <span className="font-mono text-[0.6rem] text-[var(--muted)] uppercase tracking-wider flex-shrink-0">
               Tags
             </span>
@@ -304,14 +305,14 @@ export default function FilterBar() {
                 })}
               </div>
             ))}
-          </div>
+          </ScrollableRow>
         </div>
       </div>
 
       {/* Vibes Filter Row */}
       <div className="border-b border-[var(--twilight)]">
         <div className="max-w-3xl mx-auto px-4 py-2">
-          <div className="flex gap-3 overflow-x-auto scrollbar-hide -mx-4 px-4 items-center">
+          <ScrollableRow className="-mx-4 px-4 items-center">
             <span className="font-mono text-[0.6rem] text-[var(--muted)] uppercase tracking-wider flex-shrink-0">
               Vibes
             </span>
@@ -338,14 +339,14 @@ export default function FilterBar() {
                 })}
               </div>
             ))}
-          </div>
+          </ScrollableRow>
         </div>
       </div>
 
       {/* Neighborhoods Filter Row */}
       <div className="border-b border-[var(--twilight)]">
         <div className="max-w-3xl mx-auto px-4 py-2">
-          <div className="flex gap-2 overflow-x-auto scrollbar-hide -mx-4 px-4 items-center">
+          <ScrollableRow className="-mx-4 px-4 items-center">
             <span className="font-mono text-[0.6rem] text-[var(--muted)] uppercase tracking-wider flex-shrink-0 mr-1">
               Where
             </span>
@@ -365,7 +366,7 @@ export default function FilterBar() {
                 </button>
               );
             })}
-          </div>
+          </ScrollableRow>
         </div>
       </div>
 
