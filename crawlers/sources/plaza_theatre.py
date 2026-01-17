@@ -20,6 +20,7 @@ logger = logging.getLogger(__name__)
 BASE_URL = "https://www.plazaatlanta.com"
 NOW_SHOWING_URL = f"{BASE_URL}/now-showing"
 COMING_SOON_URL = f"{BASE_URL}/coming-soon"
+SPECIAL_EVENTS_URL = f"{BASE_URL}/special-events/"
 
 VENUE_DATA = {
     "name": "Plaza Theatre",
@@ -173,8 +174,8 @@ def extract_movies_for_date(page: Page, target_date: datetime, source_id: int, v
     return events_found, events_new, events_updated
 
 
-def extract_coming_soon(page: Page, source_id: int, venue_id: int) -> tuple[int, int, int]:
-    """Extract movies from the Coming Soon page."""
+def extract_upcoming_movies(page: Page, source_id: int, venue_id: int, source_url: str, page_type: str = "coming-soon") -> tuple[int, int, int]:
+    """Extract movies from Coming Soon or Special Events pages."""
     events_found = 0
     events_new = 0
     events_updated = 0
@@ -207,6 +208,13 @@ def extract_coming_soon(page: Page, source_id: int, venue_id: int) -> tuple[int,
         "Info, Parking", "Lodging", "Drive-In Movie Tribute",
         "Letterboxd", "Shaped by INDY", "ACCEPT", "DISMISS",
         "Movies", "Explore Movies",
+        # Special events page specific
+        "SERIES & RETROSPECTIVES", "SPECIAL EVENTS", "COMMUNITY EVENTS",
+        "Signature events", "contests, raffles", "special guests",
+        "continuing series", "Trivia:", "Doors ", "Movie:",
+        "Presented by WABE", "More details to come", "Videodrome's",
+        "97 ESTORIA", "EVERY 2ND", "Join Mailing List",
+        "First Name", "Last Name", "TRASH & TRIVIA",
         # Other
         "TBA", "OPENS", "Opens", "©", "Copyright", "All Rights Reserved"
     ]
@@ -239,7 +247,8 @@ def extract_coming_soon(page: Page, source_id: int, venue_id: int) -> tuple[int,
             re.match(r"^\d+\s*(hr|min)", line) or
             re.match(r"^\d{3}[-.\s]?\d{3}[-.\s]?\d{4}$", line) or  # Phone number
             re.match(r"^(Mon|Tue|Wed|Thu|Fri|Sat|Sun)", line, re.IGNORECASE) or
-            re.match(r"^(January|February|March|April|May|June|July|August|September|October|November|December)", line, re.IGNORECASE)):
+            re.match(r"^(January|February|March|April|May|June|July|August|September|October|November|December)", line, re.IGNORECASE) or
+            re.match(r"^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{1,2}$", line, re.IGNORECASE)):  # "Feb 8" etc
             continue
 
         # Skip ratings and genre-only lines
@@ -278,9 +287,17 @@ def extract_coming_soon(page: Page, source_id: int, venue_id: int) -> tuple[int,
 
             # Determine if this is a special series event
             is_special = any(movie_title.startswith(prefix) for prefix in special_prefixes)
-            description = "Coming Soon"
+
+            # Set description based on page type
+            if page_type == "special-events":
+                description = "Special Event" if not is_special else "Special Event Series"
+            else:
+                description = "Coming Soon" if not is_special else "Coming Soon - Special Event Series"
+
+            # Build tags list
+            tags = ["film", "cinema", "independent", "plaza-theatre", page_type]
             if is_special:
-                description = "Coming Soon - Special Event Series"
+                tags.append("special-series")
 
             event_record = {
                 "source_id": source_id,
@@ -294,16 +311,16 @@ def extract_coming_soon(page: Page, source_id: int, venue_id: int) -> tuple[int,
                 "is_all_day": True,
                 "category": "film",
                 "subcategory": "cinema",
-                "tags": ["film", "cinema", "independent", "plaza-theatre", "coming-soon"],
+                "tags": tags,
                 "price_min": None,
                 "price_max": None,
                 "price_note": None,
                 "is_free": False,
-                "source_url": COMING_SOON_URL,
+                "source_url": source_url,
                 "ticket_url": None,
                 "image_url": None,
                 "raw_text": None,
-                "extraction_confidence": 0.75,  # Lower confidence for coming soon
+                "extraction_confidence": 0.75,
                 "is_recurring": False,
                 "recurrence_rule": None,
                 "content_hash": content_hash,
@@ -312,9 +329,9 @@ def extract_coming_soon(page: Page, source_id: int, venue_id: int) -> tuple[int,
             try:
                 insert_event(event_record)
                 events_new += 1
-                logger.info(f"Added coming soon: {movie_title}")
+                logger.info(f"Added {page_type}: {movie_title}")
             except Exception as e:
-                logger.error(f"Failed to insert coming soon: {movie_title}: {e}")
+                logger.error(f"Failed to insert {page_type}: {movie_title}: {e}")
 
     return events_found, events_new, events_updated
 
@@ -421,12 +438,24 @@ def crawl(source: dict) -> tuple[int, int, int]:
             page.goto(COMING_SOON_URL, wait_until="domcontentloaded", timeout=30000)
             page.wait_for_timeout(3000)  # Wait for JS to load
 
-            found, new, updated = extract_coming_soon(page, source_id, venue_id)
+            found, new, updated = extract_upcoming_movies(page, source_id, venue_id, COMING_SOON_URL, "coming-soon")
             total_found += found
             total_new += new
             total_updated += updated
             if found > 0:
                 logger.info(f"Coming Soon: {found} movies found, {new} new")
+
+            # Now scrape the Special Events page
+            logger.info(f"Fetching Special Events: {SPECIAL_EVENTS_URL}")
+            page.goto(SPECIAL_EVENTS_URL, wait_until="domcontentloaded", timeout=30000)
+            page.wait_for_timeout(3000)  # Wait for JS to load
+
+            found, new, updated = extract_upcoming_movies(page, source_id, venue_id, SPECIAL_EVENTS_URL, "special-events")
+            total_found += found
+            total_new += new
+            total_updated += updated
+            if found > 0:
+                logger.info(f"Special Events: {found} movies found, {new} new")
 
             browser.close()
 
