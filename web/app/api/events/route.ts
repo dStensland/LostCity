@@ -1,4 +1,5 @@
 import { getFilteredEventsWithSearch, enrichEventsWithSocialProof, PRICE_FILTERS, type SearchFilters } from "@/lib/search";
+import type { MoodId } from "@/lib/moods";
 
 // Helper to safely parse integers with validation
 function safeParseInt(value: string | null, defaultValue: number, min = 1, max = 1000): number {
@@ -33,6 +34,7 @@ export async function GET(request: Request) {
       price_max: priceMax,
       date_filter: (searchParams.get("date") as "today" | "weekend" | "week") || undefined,
       venue_id: venueId || undefined,
+      mood: (searchParams.get("mood") as MoodId) || undefined,
     };
 
     const page = safeParseInt(searchParams.get("page"), 1, 1, 100);

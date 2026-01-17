@@ -9,6 +9,7 @@ import {
   isSunday,
   format,
 } from "date-fns";
+import { getMoodById, type MoodId } from "./moods";
 
 export interface SearchFilters {
   search?: string;
@@ -29,6 +30,7 @@ export interface SearchFilters {
   exclude_categories?: string[]; // Portal exclude filter
   geo_center?: [number, number]; // Portal geo filter [lat, lng]
   geo_radius_km?: number;    // Portal geo radius in km
+  mood?: MoodId;             // Mood-based filtering (expands to vibes/categories)
 }
 
 // Rollup types for collapsed event groups
@@ -210,6 +212,44 @@ export async function getFilteredEventsWithSearch(
       );
     } else {
       query = query.or(`title.ilike.${searchTerm},description.ilike.${searchTerm}`);
+    }
+  }
+
+  // Apply mood filter (expands to vibes and categories)
+  // Mood filter is combined with OR logic: event matches if it has matching vibes OR category
+  if (filters.mood) {
+    const mood = getMoodById(filters.mood);
+    if (mood) {
+      const moodVenueIds: number[] = [];
+
+      // Get venues matching mood vibes
+      if (mood.vibes.length > 0) {
+        const { data: matchingVenues } = await supabase
+          .from("venues")
+          .select("id")
+          .overlaps("vibes", mood.vibes);
+
+        const venueIds = (matchingVenues as { id: number }[] | null)?.map((v) => v.id) || [];
+        moodVenueIds.push(...venueIds);
+      }
+
+      // Build OR condition: category matches OR venue has matching vibes
+      const conditions: string[] = [];
+
+      if (mood.categories.length > 0) {
+        conditions.push(`category_id.in.(${mood.categories.join(",")})`);
+      }
+
+      if (moodVenueIds.length > 0) {
+        conditions.push(`venue_id.in.(${moodVenueIds.join(",")})`);
+      }
+
+      if (conditions.length > 0) {
+        query = query.or(conditions.join(","));
+      } else {
+        // No matching conditions, return empty
+        return { events: [], total: 0 };
+      }
     }
   }
 

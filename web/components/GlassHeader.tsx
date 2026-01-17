@@ -7,6 +7,7 @@ import Image from "next/image";
 import Logo from "./Logo";
 import UserMenu from "./UserMenu";
 import HeaderSearchButton from "./HeaderSearchButton";
+import { useLiveEventCount } from "@/lib/hooks/useLiveEvents";
 
 interface PortalBranding {
   logo_url?: string;
@@ -25,10 +26,12 @@ export default function GlassHeader({ portalSlug, portalName, branding }: GlassH
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
+  const liveEventCount = useLiveEventCount();
 
   // Determine active nav item
   const isCollections = pathname?.startsWith("/collections");
-  const isEvents = !isCollections;
+  const isHappeningNow = pathname?.startsWith("/happening-now");
+  const isEvents = !isCollections && !isHappeningNow;
 
   // Close mobile menu when clicking outside
   useEffect(() => {
@@ -97,6 +100,22 @@ export default function GlassHeader({ portalSlug, portalName, branding }: GlassH
             Events
           </Link>
           <Link
+            href="/happening-now"
+            className={`px-3 py-1 font-mono text-[0.65rem] font-medium uppercase tracking-wide rounded-full transition-all flex items-center gap-1.5 ${
+              isHappeningNow
+                ? "bg-[var(--neon-magenta)] text-white shadow-[0_0_10px_hsl(var(--neon-magenta-hsl)/0.4)]"
+                : "text-[var(--muted)] hover:text-[var(--cream)]"
+            }`}
+          >
+            {liveEventCount > 0 && (
+              <span
+                className="w-1.5 h-1.5 rounded-full bg-[var(--neon-red)] animate-pulse"
+                style={{ boxShadow: "0 0 4px var(--neon-red)" }}
+              />
+            )}
+            Live
+          </Link>
+          <Link
             href="/collections"
             className={`px-3 py-1 font-mono text-[0.65rem] font-medium uppercase tracking-wide rounded-full transition-all ${
               isCollections
@@ -146,6 +165,21 @@ export default function GlassHeader({ portalSlug, portalName, branding }: GlassH
                 }`}
               >
                 Events
+              </Link>
+              <Link
+                href="/happening-now"
+                onClick={() => setMobileMenuOpen(false)}
+                className={`flex items-center gap-2 px-4 py-2 font-mono text-sm ${
+                  isHappeningNow ? "text-[var(--coral)]" : "text-[var(--cream)] hover:bg-[var(--twilight)]"
+                }`}
+              >
+                {liveEventCount > 0 && (
+                  <span
+                    className="w-1.5 h-1.5 rounded-full bg-[var(--neon-red)] animate-pulse"
+                    style={{ boxShadow: "0 0 4px var(--neon-red)" }}
+                  />
+                )}
+                Happening Now
               </Link>
               <Link
                 href="/collections"

@@ -94,11 +94,11 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 
             <span>{toast.message}</span>
 
-            {/* Dismiss button */}
+            {/* Dismiss button - minimum 44px touch target */}
             <button
               onClick={() => dismissToast(toast.id)}
-              className="ml-2 p-1 rounded hover:bg-white/20 transition-colors"
-              aria-label="Dismiss"
+              className="ml-1 p-2.5 -m-1 rounded-lg hover:bg-white/20 transition-colors"
+              aria-label="Dismiss notification"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />

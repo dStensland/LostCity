@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 
@@ -14,12 +15,65 @@ interface CreateCollectionModalProps {
 export default function CreateCollectionModal({ isOpen, onClose }: CreateCollectionModalProps) {
   const router = useRouter();
   const { user } = useAuth();
+  const modalRef = useRef<HTMLDivElement>(null);
+  const titleInputRef = useRef<HTMLInputElement>(null);
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [visibility, setVisibility] = useState<Visibility>("public");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Focus trap and keyboard handling
+  useEffect(() => {
+    if (!isOpen) return;
+
+    // Focus the title input when modal opens
+    titleInputRef.current?.focus();
+
+    // Lock body scroll
+    document.body.style.overflow = "hidden";
+
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape" && !loading) {
+        onClose();
+        return;
+      }
+
+      // Focus trap
+      if (e.key === "Tab" && modalRef.current) {
+        const focusableElements = modalRef.current.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), input:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+        );
+        const firstElement = focusableElements[0];
+        const lastElement = focusableElements[focusableElements.length - 1];
+
+        if (e.shiftKey && document.activeElement === firstElement) {
+          e.preventDefault();
+          lastElement?.focus();
+        } else if (!e.shiftKey && document.activeElement === lastElement) {
+          e.preventDefault();
+          firstElement?.focus();
+        }
+      }
+    }
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = "";
+    };
+  }, [isOpen, loading, onClose]);
+
+  // Handle backdrop click
+  const handleBackdropClick = useCallback(
+    (e: React.MouseEvent) => {
+      if (e.target === e.currentTarget && !loading) {
+        onClose();
+      }
+    },
+    [loading, onClose]
+  );
 
   if (!isOpen) return null;
 
@@ -51,32 +105,52 @@ export default function CreateCollectionModal({ isOpen, onClose }: CreateCollect
   }
 
   if (!user) {
-    return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center">
-        <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-        <div className="relative bg-[var(--night)] border border-[var(--twilight)] rounded-xl p-6 max-w-md w-full mx-4">
+    const notLoggedInContent = (
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center p-4"
+        onClick={handleBackdropClick}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="create-collection-title"
+      >
+        <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+        <div className="relative bg-[var(--night)] border border-[var(--twilight)] rounded-xl p-6 max-w-md w-full">
           <p className="text-[var(--soft)] text-center mb-4">
             You need to be logged in to create a collection.
           </p>
           <button
             onClick={onClose}
-            className="w-full py-2 bg-[var(--twilight)] text-[var(--cream)] rounded-lg font-mono text-sm"
+            className="w-full py-2 bg-[var(--twilight)] text-[var(--cream)] rounded-lg font-mono text-sm hover:bg-[var(--dusk)] transition-colors"
           >
             Close
           </button>
         </div>
       </div>
     );
+
+    if (typeof document !== "undefined") {
+      return createPortal(notLoggedInContent, document.body);
+    }
+    return null;
   }
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+  const modalContent = (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      onClick={handleBackdropClick}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="create-collection-title"
+    >
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
 
       {/* Modal */}
-      <div className="relative bg-[var(--night)] border border-[var(--twilight)] rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl">
-        <h2 className="font-serif text-xl text-[var(--cream)] italic mb-6">
+      <div
+        ref={modalRef}
+        className="relative bg-[var(--night)] border border-[var(--twilight)] rounded-xl p-6 max-w-md w-full shadow-2xl animate-in fade-in scale-in"
+      >
+        <h2 id="create-collection-title" className="font-serif text-xl text-[var(--cream)] italic mb-6">
           Create Collection
         </h2>
 
@@ -87,6 +161,7 @@ export default function CreateCollectionModal({ isOpen, onClose }: CreateCollect
               Title
             </label>
             <input
+              ref={titleInputRef}
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
@@ -164,4 +239,10 @@ export default function CreateCollectionModal({ isOpen, onClose }: CreateCollect
       </div>
     </div>
   );
+
+  if (typeof document !== "undefined") {
+    return createPortal(modalContent, document.body);
+  }
+
+  return null;
 }

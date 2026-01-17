@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Outfit, Instrument_Serif, JetBrains_Mono, Space_Grotesk } from "next/font/google";
 import { AuthProvider } from "@/lib/auth-context";
 import { ToastProvider } from "@/components/Toast";
+import DarkHoursTheme from "@/components/DarkHoursTheme";
 import "./globals.css";
 
 const outfit = Outfit({
@@ -47,6 +48,7 @@ export default function RootLayout({
         {/* Ambient glow effect */}
         <div className="ambient-glow" aria-hidden="true" />
         <AuthProvider>
+          <DarkHoursTheme />
           <ToastProvider>{children}</ToastProvider>
         </AuthProvider>
       </body>

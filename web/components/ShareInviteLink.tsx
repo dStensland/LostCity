@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { useAuth } from "@/lib/auth-context";
 
 type ShareInviteLinkProps = {
@@ -16,23 +17,63 @@ export default function ShareInviteLink({
   const [copied, setCopied] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const modalRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const inviteUrl = profile?.username
     ? `${typeof window !== "undefined" ? window.location.origin : ""}/invite/${profile.username}`
     : "";
 
+  // Focus trap and keyboard handling
   useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (modalRef.current && !modalRef.current.contains(event.target as Node)) {
+    if (!showModal) return;
+
+    // Focus the input when modal opens
+    inputRef.current?.focus();
+    inputRef.current?.select();
+
+    // Lock body scroll
+    document.body.style.overflow = "hidden";
+
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") {
         setShowModal(false);
+        return;
+      }
+
+      // Focus trap
+      if (e.key === "Tab" && modalRef.current) {
+        const focusableElements = modalRef.current.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])'
+        );
+        const firstElement = focusableElements[0];
+        const lastElement = focusableElements[focusableElements.length - 1];
+
+        if (e.shiftKey && document.activeElement === firstElement) {
+          e.preventDefault();
+          lastElement?.focus();
+        } else if (!e.shiftKey && document.activeElement === lastElement) {
+          e.preventDefault();
+          firstElement?.focus();
+        }
       }
     }
 
-    if (showModal) {
-      document.addEventListener("mousedown", handleClickOutside);
-      return () => document.removeEventListener("mousedown", handleClickOutside);
-    }
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = "";
+    };
   }, [showModal]);
+
+  // Handle backdrop click
+  const handleBackdropClick = useCallback(
+    (e: React.MouseEvent) => {
+      if (e.target === e.currentTarget) {
+        setShowModal(false);
+      }
+    },
+    []
+  );
 
   if (!user || !profile) {
     return null;
@@ -73,19 +114,66 @@ export default function ShareInviteLink({
     }
   };
 
+  const modalContent = showModal ? (
+    <div
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+      onClick={handleBackdropClick}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="invite-modal-title"
+    >
+      <div
+        ref={modalRef}
+        className="bg-[var(--dusk)] border border-[var(--twilight)] rounded-xl p-6 max-w-md w-full shadow-2xl animate-in fade-in scale-in"
+      >
+        <h3 id="invite-modal-title" className="font-serif text-lg text-[var(--cream)] italic mb-4">
+          Invite Friends
+        </h3>
+        <p className="text-[var(--muted)] font-mono text-sm mb-4">
+          Share your personal invite link with friends. When they sign up, you&apos;ll receive a friend request to connect!
+        </p>
+
+        <div className="flex gap-2 mb-4">
+          <input
+            ref={inputRef}
+            type="text"
+            value={inviteUrl}
+            readOnly
+            className="flex-1 bg-[var(--night)] border border-[var(--twilight)] rounded-lg px-3 py-2.5 text-[var(--cream)] font-mono text-sm"
+          />
+          <button
+            onClick={handleCopy}
+            className="px-4 py-2.5 bg-[var(--coral)] text-[var(--void)] rounded-lg font-mono font-medium text-sm hover:bg-[var(--rose)] transition-colors"
+          >
+            {copied ? "Copied!" : "Copy"}
+          </button>
+        </div>
+
+        <button
+          onClick={() => setShowModal(false)}
+          className="w-full py-2.5 text-[var(--muted)] hover:text-[var(--cream)] font-mono text-sm transition-colors"
+        >
+          Close
+        </button>
+      </div>
+    </div>
+  ) : null;
+
   if (variant === "icon") {
     return (
       <>
         <button
           onClick={handleShare}
-          className={`p-2 rounded-full hover:bg-[var(--charcoal)] transition-colors ${className}`}
+          className={`p-2.5 rounded-lg hover:bg-[var(--twilight)] transition-colors ${className}`}
           title="Invite friends"
+          aria-label="Invite friends"
         >
           <svg
             className="w-5 h-5 text-[var(--cream)]"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
+            aria-hidden="true"
           >
             <path
               strokeLinecap="round"
@@ -96,44 +184,7 @@ export default function ShareInviteLink({
           </svg>
         </button>
 
-        {/* Modal */}
-        {showModal && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div
-              ref={modalRef}
-              className="bg-[var(--charcoal)] rounded-lg p-6 max-w-md w-full"
-            >
-              <h3 className="text-lg font-bold text-[var(--cream)] mb-4">
-                Invite Friends
-              </h3>
-              <p className="text-[var(--clay)] text-sm mb-4">
-                Share your personal invite link with friends
-              </p>
-
-              <div className="flex gap-2 mb-4">
-                <input
-                  type="text"
-                  value={inviteUrl}
-                  readOnly
-                  className="flex-1 bg-[var(--night)] border border-[var(--twilight)] rounded px-3 py-2 text-[var(--cream)] text-sm"
-                />
-                <button
-                  onClick={handleCopy}
-                  className="px-4 py-2 bg-[var(--coral)] text-[var(--night)] rounded font-medium text-sm hover:opacity-90"
-                >
-                  {copied ? "Copied!" : "Copy"}
-                </button>
-              </div>
-
-              <button
-                onClick={() => setShowModal(false)}
-                className="w-full py-2 text-[var(--clay)] hover:text-[var(--cream)] text-sm"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        )}
+        {showModal && typeof document !== "undefined" && createPortal(modalContent, document.body)}
       </>
     );
   }
@@ -142,13 +193,14 @@ export default function ShareInviteLink({
     <>
       <button
         onClick={handleShare}
-        className={`flex items-center gap-2 px-4 py-2 bg-[var(--charcoal)] border border-[var(--twilight)] rounded-lg hover:bg-[var(--twilight)] transition-colors ${className}`}
+        className={`flex items-center gap-2 px-4 py-2.5 bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg hover:bg-[var(--twilight)] transition-colors ${className}`}
       >
         <svg
           className="w-4 h-4 text-[var(--cream)]"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
+          aria-hidden="true"
         >
           <path
             strokeLinecap="round"
@@ -157,48 +209,10 @@ export default function ShareInviteLink({
             d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"
           />
         </svg>
-        <span className="text-sm text-[var(--cream)]">Invite Friends</span>
+        <span className="font-mono text-sm text-[var(--cream)]">Invite Friends</span>
       </button>
 
-      {/* Modal */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div
-            ref={modalRef}
-            className="bg-[var(--charcoal)] rounded-lg p-6 max-w-md w-full"
-          >
-            <h3 className="text-lg font-bold text-[var(--cream)] mb-4">
-              Invite Friends
-            </h3>
-            <p className="text-[var(--clay)] text-sm mb-4">
-              Share your personal invite link with friends. When they sign up,
-              you&apos;ll receive a friend request to connect!
-            </p>
-
-            <div className="flex gap-2 mb-4">
-              <input
-                type="text"
-                value={inviteUrl}
-                readOnly
-                className="flex-1 bg-[var(--night)] border border-[var(--twilight)] rounded px-3 py-2 text-[var(--cream)] text-sm"
-              />
-              <button
-                onClick={handleCopy}
-                className="px-4 py-2 bg-[var(--coral)] text-[var(--night)] rounded font-medium text-sm hover:opacity-90"
-              >
-                {copied ? "Copied!" : "Copy"}
-              </button>
-            </div>
-
-            <button
-              onClick={() => setShowModal(false)}
-              className="w-full py-2 text-[var(--clay)] hover:text-[var(--cream)] text-sm"
-            >
-              Close
-            </button>
-          </div>
-        </div>
-      )}
+      {showModal && typeof document !== "undefined" && createPortal(modalContent, document.body)}
     </>
   );
 }

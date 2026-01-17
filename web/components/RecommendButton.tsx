@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/lib/auth-context";
@@ -26,6 +27,7 @@ export default function RecommendButton({
   const { user } = useAuth();
   const supabase = createClient();
   const modalRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const [isRecommended, setIsRecommended] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -34,16 +36,56 @@ export default function RecommendButton({
   const [note, setNote] = useState("");
   const [visibility, setVisibility] = useState<Visibility>(DEFAULT_VISIBILITY);
 
-  // Close modal when clicking outside
+  // Focus trap and keyboard handling
   useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (modalRef.current && !modalRef.current.contains(event.target as Node)) {
+    if (!modalOpen) return;
+
+    // Focus the textarea when modal opens
+    textareaRef.current?.focus();
+
+    // Lock body scroll
+    document.body.style.overflow = "hidden";
+
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape" && !actionLoading) {
         setModalOpen(false);
+        return;
+      }
+
+      // Focus trap
+      if (e.key === "Tab" && modalRef.current) {
+        const focusableElements = modalRef.current.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+        );
+        const firstElement = focusableElements[0];
+        const lastElement = focusableElements[focusableElements.length - 1];
+
+        if (e.shiftKey && document.activeElement === firstElement) {
+          e.preventDefault();
+          lastElement?.focus();
+        } else if (!e.shiftKey && document.activeElement === lastElement) {
+          e.preventDefault();
+          firstElement?.focus();
+        }
       }
     }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = "";
+    };
+  }, [modalOpen, actionLoading]);
+
+  // Handle backdrop click
+  const handleBackdropClick = useCallback(
+    (e: React.MouseEvent) => {
+      if (e.target === e.currentTarget && !actionLoading) {
+        setModalOpen(false);
+      }
+    },
+    [actionLoading]
+  );
 
   // Load existing recommendation
   useEffect(() => {
@@ -200,14 +242,20 @@ export default function RecommendButton({
       </button>
 
       {/* Modal */}
-      {modalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+      {modalOpen && typeof document !== "undefined" && createPortal(
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+          onClick={handleBackdropClick}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="recommend-modal-title"
+        >
           <div
             ref={modalRef}
-            className="w-full max-w-md bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg shadow-xl"
+            className="w-full max-w-md bg-[var(--dusk)] border border-[var(--twilight)] rounded-xl shadow-2xl animate-in fade-in scale-in"
           >
             <div className="p-4 border-b border-[var(--twilight)]">
-              <h3 className="font-mono text-sm font-medium text-[var(--cream)]">
+              <h3 id="recommend-modal-title" className="font-serif text-lg text-[var(--cream)] italic">
                 {isRecommended ? "Edit Recommendation" : "Add Recommendation"}
               </h3>
             </div>
@@ -215,16 +263,18 @@ export default function RecommendButton({
             <div className="p-4 space-y-4">
               {/* Note */}
               <div>
-                <label className="block font-mono text-xs text-[var(--muted)] uppercase tracking-wider mb-1.5">
+                <label htmlFor="recommend-note" className="block font-mono text-xs text-[var(--muted)] uppercase tracking-wider mb-1.5">
                   Note (optional)
                 </label>
                 <textarea
+                  id="recommend-note"
+                  ref={textareaRef}
                   value={note}
                   onChange={(e) => setNote(e.target.value)}
                   placeholder="Why do you recommend this?"
                   rows={3}
                   maxLength={280}
-                  className="w-full px-3 py-2 rounded-lg bg-[var(--night)] border border-[var(--twilight)] text-[var(--cream)] font-mono text-sm focus:outline-none focus:border-[var(--coral)] transition-colors resize-none"
+                  className="w-full px-3 py-2.5 rounded-lg bg-[var(--night)] border border-[var(--twilight)] text-[var(--cream)] font-mono text-sm focus:outline-none focus:border-[var(--coral)] transition-colors resize-none"
                 />
                 <p className="mt-1 font-mono text-[0.6rem] text-[var(--muted)] text-right">
                   {note.length}/280
@@ -241,7 +291,8 @@ export default function RecommendButton({
                     <button
                       key={opt.value}
                       onClick={() => setVisibility(opt.value)}
-                      className={`flex-1 px-3 py-2 rounded-lg font-mono text-xs transition-colors ${
+                      type="button"
+                      className={`flex-1 px-3 py-2.5 rounded-lg font-mono text-xs transition-colors ${
                         visibility === opt.value
                           ? "bg-[var(--coral)] text-[var(--void)]"
                           : "bg-[var(--night)] text-[var(--muted)] border border-[var(--twilight)] hover:text-[var(--cream)]"
@@ -259,7 +310,8 @@ export default function RecommendButton({
                 <button
                   onClick={handleRemove}
                   disabled={actionLoading}
-                  className="px-4 py-2 font-mono text-xs text-[var(--coral)] hover:text-[var(--rose)] transition-colors disabled:opacity-50"
+                  type="button"
+                  className="px-4 py-2.5 font-mono text-xs text-[var(--coral)] hover:text-[var(--rose)] transition-colors disabled:opacity-50"
                 >
                   Remove
                 </button>
@@ -267,20 +319,23 @@ export default function RecommendButton({
               <div className="flex-1" />
               <button
                 onClick={() => setModalOpen(false)}
-                className="px-4 py-2 font-mono text-xs text-[var(--muted)] hover:text-[var(--cream)] transition-colors"
+                type="button"
+                className="px-4 py-2.5 font-mono text-xs text-[var(--muted)] hover:text-[var(--cream)] transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={handleSubmit}
                 disabled={actionLoading}
-                className="px-4 py-2 rounded-lg bg-[var(--coral)] text-[var(--void)] font-mono text-xs font-medium hover:bg-[var(--rose)] transition-colors disabled:opacity-50"
+                type="button"
+                className="px-4 py-2.5 rounded-lg bg-[var(--coral)] text-[var(--void)] font-mono text-xs font-medium hover:bg-[var(--rose)] transition-colors disabled:opacity-50"
               >
                 {actionLoading ? "Saving..." : isRecommended ? "Update" : "Recommend"}
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );

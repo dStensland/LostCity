@@ -36,9 +36,11 @@ export default function WhosGoing({ eventId, className = "" }: WhosGoingProps) {
   const interestedCount = attendees.filter((a) => a.status === "interested").length;
 
   useEffect(() => {
+    let isMounted = true;
+
     async function loadAttendees() {
-      // Get all public RSVPs for this event
-      const { data: rsvpData } = await supabase
+      // Run RSVP query and friend queries in parallel
+      const rsvpPromise = supabase
         .from("event_rsvps")
         .select(`
           status,
@@ -50,6 +52,42 @@ export default function WhosGoing({ eventId, className = "" }: WhosGoingProps) {
         .eq("visibility", "public")
         .in("status", ["going", "interested"]);
 
+      // Get current user's friend IDs in parallel (only if logged in)
+      const friendIdsPromise = user
+        ? (async () => {
+            const friendIds: Set<string> = new Set();
+
+            const { data: myFollows } = await supabase
+              .from("follows")
+              .select("followed_user_id")
+              .eq("follower_id", user.id)
+              .not("followed_user_id", "is", null);
+
+            const followsData = myFollows as { followed_user_id: string | null }[] | null;
+            if (followsData && followsData.length > 0) {
+              const followedIds = followsData.map((f) => f.followed_user_id).filter(Boolean) as string[];
+
+              // Batch query: get all who follow back (mutual = friends)
+              const { data: mutualFollows } = await supabase
+                .from("follows")
+                .select("follower_id")
+                .in("follower_id", followedIds)
+                .eq("followed_user_id", user.id);
+
+              const mutualData = mutualFollows as { follower_id: string }[] | null;
+              if (mutualData) {
+                mutualData.forEach((f) => friendIds.add(f.follower_id));
+              }
+            }
+            return friendIds;
+          })()
+        : Promise.resolve(new Set<string>());
+
+      // Wait for both queries in parallel
+      const [{ data: rsvpData }, friendIds] = await Promise.all([rsvpPromise, friendIdsPromise]);
+
+      if (!isMounted) return;
+
       type RSVPQueryResult = {
         status: string;
         user: AttendeeProfile | null;
@@ -59,33 +97,6 @@ export default function WhosGoing({ eventId, className = "" }: WhosGoingProps) {
       if (!rsvps || rsvps.length === 0) {
         setLoading(false);
         return;
-      }
-
-      // Get current user's friend IDs for highlighting (mutual follows)
-      const friendIds: Set<string> = new Set();
-      if (user) {
-        const { data: myFollows } = await supabase
-          .from("follows")
-          .select("followed_user_id")
-          .eq("follower_id", user.id)
-          .not("followed_user_id", "is", null);
-
-        const followsData = myFollows as { followed_user_id: string | null }[] | null;
-        if (followsData && followsData.length > 0) {
-          const followedIds = followsData.map((f) => f.followed_user_id).filter(Boolean) as string[];
-
-          // Batch query: get all who follow back (mutual = friends)
-          const { data: mutualFollows } = await supabase
-            .from("follows")
-            .select("follower_id")
-            .in("follower_id", followedIds)
-            .eq("followed_user_id", user.id);
-
-          const mutualData = mutualFollows as { follower_id: string }[] | null;
-          if (mutualData) {
-            mutualData.forEach((f) => friendIds.add(f.follower_id));
-          }
-        }
       }
 
       // Build attendee list
@@ -109,6 +120,10 @@ export default function WhosGoing({ eventId, className = "" }: WhosGoingProps) {
     }
 
     loadAttendees();
+
+    return () => {
+      isMounted = false;
+    };
   }, [user, eventId, supabase]);
 
   if (loading) {

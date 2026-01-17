@@ -121,13 +121,14 @@ export default function SaveButton({
     }
   };
 
+  // Ensure minimum 44px touch target for accessibility
   const sizeClasses = {
-    sm: "p-1.5",
-    md: "p-2",
+    sm: "p-2.5", // 10px padding + 20px icon = 40px, close to 44px minimum
+    md: "p-3",   // 12px padding + 20px icon = 44px
   };
 
   const iconSizes = {
-    sm: "w-4 h-4",
+    sm: "w-5 h-5",
     md: "w-5 h-5",
   };
 
@@ -135,7 +136,7 @@ export default function SaveButton({
     return (
       <div
         className={`${sizeClasses[size]} rounded-lg bg-[var(--twilight)] animate-pulse ${className}`}
-        style={{ width: size === "sm" ? 28 : 36, height: size === "sm" ? 28 : 36 }}
+        style={{ width: size === "sm" ? 40 : 44, height: size === "sm" ? 40 : 44 }}
       />
     );
   }

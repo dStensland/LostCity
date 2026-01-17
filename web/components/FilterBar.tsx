@@ -4,6 +4,7 @@ import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useCallback, useMemo } from "react";
 import { CATEGORIES, SUBCATEGORIES, DATE_FILTERS, PRICE_FILTERS, TAG_GROUPS, ALL_TAGS } from "@/lib/search";
 import { PREFERENCE_VIBES, PREFERENCE_NEIGHBORHOODS } from "@/lib/preferences";
+import { MOODS, getMoodById, type MoodId } from "@/lib/moods";
 import CategoryIcon, { CATEGORY_CONFIG, type CategoryType } from "./CategoryIcon";
 import ScrollableRow from "./ui/ScrollableRow";
 
@@ -34,6 +35,7 @@ export default function FilterBar() {
   );
   const currentPriceFilter = searchParams.get("price") || "";
   const currentDateFilter = searchParams.get("date") || "";
+  const currentMood = (searchParams.get("mood") as MoodId) || null;
 
   const updateParams = useCallback(
     (updates: Record<string, string | null>) => {
@@ -127,6 +129,18 @@ export default function FilterBar() {
     [currentNeighborhoods, updateParams]
   );
 
+  const setMood = useCallback(
+    (mood: MoodId | null) => {
+      if (mood === currentMood) {
+        // Toggle off
+        updateParams({ mood: null });
+      } else {
+        updateParams({ mood });
+      }
+    },
+    [currentMood, updateParams]
+  );
+
   const clearAll = useCallback(() => {
     updateParams({
       categories: null,
@@ -136,6 +150,7 @@ export default function FilterBar() {
       neighborhoods: null,
       date: null,
       price: null,
+      mood: null,
     });
   }, [updateParams]);
 
@@ -158,10 +173,53 @@ export default function FilterBar() {
     SUBCATEGORIES[cat]?.map((sub) => ({ ...sub, category: cat })) || []
   );
 
-  const hasFilters = currentCategories.length > 0 || currentSubcategories.length > 0 || currentTags.length > 0 || currentVibes.length > 0 || currentNeighborhoods.length > 0 || currentPriceFilter || currentDateFilter;
+  const hasFilters = currentMood || currentCategories.length > 0 || currentSubcategories.length > 0 || currentTags.length > 0 || currentVibes.length > 0 || currentNeighborhoods.length > 0 || currentPriceFilter || currentDateFilter;
 
   return (
     <div className="sticky top-16 z-30 bg-[var(--night)]">
+      {/* Mood Selector Row */}
+      <div className="border-b border-[var(--twilight)]">
+        <div className="max-w-3xl mx-auto px-4 py-3">
+          <div className="flex items-center gap-3">
+            <span className="font-serif text-sm text-[var(--cream)] italic flex-shrink-0">
+              I&apos;m feeling...
+            </span>
+            <ScrollableRow className="-mx-1 px-1">
+              {MOODS.map((mood) => {
+                const isSelected = currentMood === mood.id;
+                return (
+                  <button
+                    key={mood.id}
+                    onClick={() => setMood(mood.id)}
+                    className={`
+                      px-3 py-1.5 rounded-full font-mono text-xs font-medium
+                      transition-all duration-200 flex items-center gap-1.5 whitespace-nowrap
+                      ${
+                        isSelected
+                          ? "text-[var(--void)] scale-105"
+                          : "bg-[var(--twilight)] text-[var(--muted)] hover:text-[var(--cream)] hover:bg-[var(--dusk)]"
+                      }
+                    `}
+                    style={
+                      isSelected
+                        ? {
+                            backgroundColor: mood.color,
+                            boxShadow: `0 0 15px ${mood.color}, 0 0 30px ${mood.color}50`,
+                          }
+                        : undefined
+                    }
+                    title={mood.description}
+                  >
+                    <span aria-hidden="true">{mood.emoji}</span>
+                    <span>{mood.name}</span>
+                  </button>
+                );
+              })}
+            </ScrollableRow>
+          </div>
+        </div>
+      </div>
+
       {/* Category Filter Row */}
       <div className="border-b border-[var(--twilight)]">
         <div className="max-w-3xl mx-auto px-4 py-3">
@@ -378,6 +436,22 @@ export default function FilterBar() {
               <span className="font-mono text-[0.6rem] text-[var(--muted)] uppercase tracking-wider">
                 Filtering:
               </span>
+              {currentMood && (() => {
+                const mood = getMoodById(currentMood);
+                return mood ? (
+                  <button
+                    onClick={() => setMood(null)}
+                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[var(--void)] font-mono text-[0.65rem] hover:opacity-80 transition-colors"
+                    style={{ backgroundColor: mood.color }}
+                  >
+                    <span aria-hidden="true">{mood.emoji}</span>
+                    {mood.name}
+                    <svg className="w-3 h-3 ml-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                ) : null;
+              })()}
               {currentCategories.map((cat) => (
                 <button
                   key={cat}
