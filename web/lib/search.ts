@@ -56,6 +56,7 @@ export type EventWithLocation = Event & {
     lng: number | null;
     typical_price_min: number | null;
     typical_price_max: number | null;
+    spot_type?: string | null;
     vibes?: string[] | null;
     description?: string | null;
   } | null;
@@ -154,6 +155,112 @@ function getDateRange(filter: "now" | "today" | "weekend" | "week"): {
   }
 }
 
+// Batch fetch venue IDs for multiple filter types in parallel
+// This eliminates N+1 queries when multiple filters are applied
+async function batchFetchVenueIds(filters: {
+  searchTerm?: string;
+  moodVibes?: string[];
+  vibes?: string[];
+  neighborhoods?: string[];
+  city?: string;
+}): Promise<{
+  searchVenueIds: number[];
+  moodVenueIds: number[];
+  vibesVenueIds: number[];
+  neighborhoodVenueIds: number[];
+  cityVenueIds: number[];
+}> {
+  const queries: Promise<{ type: string; ids: number[] }>[] = [];
+
+  // Queue all needed venue queries (wrapped in Promise.resolve for proper typing)
+  if (filters.searchTerm) {
+    queries.push(
+      Promise.resolve(
+        supabase
+          .from("venues")
+          .select("id")
+          .ilike("name", `%${filters.searchTerm}%`)
+      ).then(({ data }) => ({
+        type: "search",
+        ids: (data as { id: number }[] | null)?.map((v) => v.id) || [],
+      }))
+    );
+  }
+
+  if (filters.moodVibes && filters.moodVibes.length > 0) {
+    queries.push(
+      Promise.resolve(
+        supabase
+          .from("venues")
+          .select("id")
+          .overlaps("vibes", filters.moodVibes)
+      ).then(({ data }) => ({
+        type: "mood",
+        ids: (data as { id: number }[] | null)?.map((v) => v.id) || [],
+      }))
+    );
+  }
+
+  if (filters.vibes && filters.vibes.length > 0) {
+    queries.push(
+      Promise.resolve(
+        supabase
+          .from("venues")
+          .select("id")
+          .overlaps("vibes", filters.vibes)
+      ).then(({ data }) => ({
+        type: "vibes",
+        ids: (data as { id: number }[] | null)?.map((v) => v.id) || [],
+      }))
+    );
+  }
+
+  if (filters.neighborhoods && filters.neighborhoods.length > 0) {
+    queries.push(
+      Promise.resolve(
+        supabase
+          .from("venues")
+          .select("id")
+          .in("neighborhood", filters.neighborhoods)
+      ).then(({ data }) => ({
+        type: "neighborhoods",
+        ids: (data as { id: number }[] | null)?.map((v) => v.id) || [],
+      }))
+    );
+  }
+
+  if (filters.city) {
+    queries.push(
+      Promise.resolve(
+        supabase
+          .from("venues")
+          .select("id")
+          .ilike("city", filters.city)
+      ).then(({ data }) => ({
+        type: "city",
+        ids: (data as { id: number }[] | null)?.map((v) => v.id) || [],
+      }))
+    );
+  }
+
+  // Execute all queries in parallel
+  const results = await Promise.all(queries);
+
+  // Map results back to types
+  const resultMap: Record<string, number[]> = {};
+  for (const result of results) {
+    resultMap[result.type] = result.ids;
+  }
+
+  return {
+    searchVenueIds: resultMap["search"] || [],
+    moodVenueIds: resultMap["mood"] || [],
+    vibesVenueIds: resultMap["vibes"] || [],
+    neighborhoodVenueIds: resultMap["neighborhoods"] || [],
+    cityVenueIds: resultMap["city"] || [],
+  };
+}
+
 // Score an event for relevance ranking
 function scoreEvent(event: EventWithLocation, searchTerm: string): number {
   const term = searchTerm.toLowerCase();
@@ -176,7 +283,9 @@ export async function getFilteredEventsWithSearch(
   page = 1,
   pageSize = 20
 ): Promise<{ events: EventWithLocation[]; total: number }> {
-  const today = new Date().toISOString().split("T")[0];
+  const now = new Date();
+  const today = now.toISOString().split("T")[0];
+  const currentTime = now.toTimeString().split(" ")[0]; // HH:MM:SS format
   const offset = (page - 1) * pageSize;
 
   let query = supabase
@@ -184,31 +293,45 @@ export async function getFilteredEventsWithSearch(
     .select(
       `
       *,
-      venue:venues(id, name, slug, address, neighborhood, city, state, lat, lng, typical_price_min, typical_price_max),
+      venue:venues(id, name, slug, address, neighborhood, city, state, lat, lng, typical_price_min, typical_price_max, spot_type),
       category_data:categories(typical_price_min, typical_price_max)
     `,
       { count: "exact" }
     )
-    .gte("start_date", today);
+    .gte("start_date", today)
+    // Hide past events for today:
+    // - Show if future date
+    // - Show if end_time exists and hasn't passed yet
+    // - Show if end_time is null but start_time hasn't passed yet
+    // - Show all-day events
+    .or(`start_date.gt.${today},end_time.gte.${currentTime},and(end_time.is.null,start_time.gte.${currentTime}),is_all_day.eq.true`);
+
+  // Get mood data for potential vibes lookup
+  const mood = filters.mood ? getMoodById(filters.mood) : null;
+
+  // Batch all venue queries in parallel (eliminates N+1 sequential queries)
+  const {
+    searchVenueIds,
+    moodVenueIds,
+    vibesVenueIds,
+    neighborhoodVenueIds,
+    cityVenueIds,
+  } = await batchFetchVenueIds({
+    searchTerm: filters.search?.trim() || undefined,
+    moodVibes: mood?.vibes,
+    vibes: filters.vibes,
+    neighborhoods: filters.neighborhoods,
+    city: filters.city,
+  });
 
   // Apply search filter (includes venue name search)
   if (filters.search && filters.search.trim()) {
-    const rawSearch = filters.search.trim();
-    const escapedSearch = escapePostgrestValue(rawSearch);
+    const escapedSearch = escapePostgrestValue(filters.search.trim());
     const searchTerm = `%${escapedSearch}%`;
 
-    // Find matching venue IDs first (Supabase .or() doesn't work across relations)
-    // Use raw search for .ilike() since Supabase parameterizes these
-    const { data: matchingVenues } = await supabase
-      .from("venues")
-      .select("id")
-      .ilike("name", `%${rawSearch}%`);
-
-    const venueIds = (matchingVenues as { id: number }[] | null)?.map((v) => v.id) || [];
-
-    if (venueIds.length > 0) {
+    if (searchVenueIds.length > 0) {
       query = query.or(
-        `title.ilike.${searchTerm},description.ilike.${searchTerm},venue_id.in.(${venueIds.join(",")})`
+        `title.ilike.${searchTerm},description.ilike.${searchTerm},venue_id.in.(${searchVenueIds.join(",")})`
       );
     } else {
       query = query.or(`title.ilike.${searchTerm},description.ilike.${searchTerm}`);
@@ -216,40 +339,21 @@ export async function getFilteredEventsWithSearch(
   }
 
   // Apply mood filter (expands to vibes and categories)
-  // Mood filter is combined with OR logic: event matches if it has matching vibes OR category
-  if (filters.mood) {
-    const mood = getMoodById(filters.mood);
-    if (mood) {
-      const moodVenueIds: number[] = [];
+  if (mood) {
+    const conditions: string[] = [];
 
-      // Get venues matching mood vibes
-      if (mood.vibes.length > 0) {
-        const { data: matchingVenues } = await supabase
-          .from("venues")
-          .select("id")
-          .overlaps("vibes", mood.vibes);
+    if (mood.categories.length > 0) {
+      conditions.push(`category_id.in.(${mood.categories.join(",")})`);
+    }
 
-        const venueIds = (matchingVenues as { id: number }[] | null)?.map((v) => v.id) || [];
-        moodVenueIds.push(...venueIds);
-      }
+    if (moodVenueIds.length > 0) {
+      conditions.push(`venue_id.in.(${moodVenueIds.join(",")})`);
+    }
 
-      // Build OR condition: category matches OR venue has matching vibes
-      const conditions: string[] = [];
-
-      if (mood.categories.length > 0) {
-        conditions.push(`category_id.in.(${mood.categories.join(",")})`);
-      }
-
-      if (moodVenueIds.length > 0) {
-        conditions.push(`venue_id.in.(${moodVenueIds.join(",")})`);
-      }
-
-      if (conditions.length > 0) {
-        query = query.or(conditions.join(","));
-      } else {
-        // No matching conditions, return empty
-        return { events: [], total: 0 };
-      }
+    if (conditions.length > 0) {
+      query = query.or(conditions.join(","));
+    } else {
+      return { events: [], total: 0 };
     }
   }
 
@@ -268,50 +372,27 @@ export async function getFilteredEventsWithSearch(
     query = query.overlaps("tags", filters.tags);
   }
 
-  // Apply vibes filter (venue attribute) - OR logic
+  // Apply vibes filter (venue attribute) - uses pre-fetched IDs
   if (filters.vibes && filters.vibes.length > 0) {
-    const { data: matchingVenues } = await supabase
-      .from("venues")
-      .select("id")
-      .overlaps("vibes", filters.vibes);
-
-    const venueIds = (matchingVenues as { id: number }[] | null)?.map((v) => v.id) || [];
-    if (venueIds.length > 0) {
-      query = query.in("venue_id", venueIds);
+    if (vibesVenueIds.length > 0) {
+      query = query.in("venue_id", vibesVenueIds);
     } else {
-      // No venues match, return empty results
       return { events: [], total: 0 };
     }
   }
 
-  // Apply neighborhoods filter - OR logic
+  // Apply neighborhoods filter - uses pre-fetched IDs
   if (filters.neighborhoods && filters.neighborhoods.length > 0) {
-    const { data: matchingVenues } = await supabase
-      .from("venues")
-      .select("id")
-      .in("neighborhood", filters.neighborhoods);
-
-    const venueIds = (matchingVenues as { id: number }[] | null)?.map((v) => v.id) || [];
-    if (venueIds.length > 0) {
-      query = query.in("venue_id", venueIds);
+    if (neighborhoodVenueIds.length > 0) {
+      query = query.in("venue_id", neighborhoodVenueIds);
     } else {
-      // No venues match, return empty results
       return { events: [], total: 0 };
     }
   }
 
-  // Apply city filter (for portal scoping)
-  if (filters.city) {
-    const { data: matchingVenues } = await supabase
-      .from("venues")
-      .select("id")
-      .ilike("city", filters.city);
-
-    const venueIds = (matchingVenues as { id: number }[] | null)?.map((v) => v.id) || [];
-    if (venueIds.length > 0) {
-      query = query.in("venue_id", venueIds);
-    }
-    // If no venues match the city, we still continue (events might have no venue)
+  // Apply city filter - uses pre-fetched IDs
+  if (filters.city && cityVenueIds.length > 0) {
+    query = query.in("venue_id", cityVenueIds);
   }
 
   // Apply price filters
@@ -432,7 +513,7 @@ export async function getEventsForMap(
       start_time,
       category_id,
       is_free,
-      venue:venues!inner(id, name, slug, address, neighborhood, city, state, lat, lng)
+      venue:venues!inner(id, name, slug, address, neighborhood, city, state, lat, lng, spot_type)
     `
     )
     .gte("start_date", today)
@@ -584,8 +665,17 @@ export const CATEGORIES = [
   { value: "community", label: "Community" },
   { value: "fitness", label: "Fitness" },
   { value: "family", label: "Family" },
+  { value: "learning", label: "Learning" },
+  { value: "dance", label: "Dance" },
+  { value: "tours", label: "Tours" },
   { value: "meetup", label: "Meetup" },
   { value: "words", label: "Words" },
+  { value: "religious", label: "Religious" },
+  { value: "markets", label: "Markets" },
+  { value: "wellness", label: "Wellness" },
+  { value: "gaming", label: "Gaming" },
+  { value: "outdoors", label: "Outdoors" },
+  { value: "other", label: "Other" },
 ] as const;
 
 // Subcategories grouped by category for UI dropdowns
@@ -972,7 +1062,7 @@ export async function getFilteredEventsWithRollups(
       .select(
         `
         *,
-        venue:venues(id, name, slug, address, neighborhood, city, state, lat, lng, typical_price_min, typical_price_max)
+        venue:venues(id, name, slug, address, neighborhood, city, state, lat, lng, typical_price_min, typical_price_max, spot_type)
       `
       )
       .eq("venue_id", vr.venueId)
@@ -1000,7 +1090,7 @@ export async function getFilteredEventsWithRollups(
       .select(
         `
         *,
-        venue:venues(id, name, slug, address, neighborhood, city, state, lat, lng, typical_price_min, typical_price_max)
+        venue:venues(id, name, slug, address, neighborhood, city, state, lat, lng, typical_price_min, typical_price_max, spot_type)
       `
       )
       .eq("source_id", sr.sourceId)

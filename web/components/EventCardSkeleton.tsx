@@ -1,42 +1,27 @@
+"use client";
+
 export default function EventCardSkeleton() {
   return (
-    <div className="card-interactive rounded-xl p-4 animate-pulse">
-      <div className="flex gap-4">
-        {/* Time Column Skeleton */}
-        <div className="flex-shrink-0 w-16 text-center pt-1">
-          <div className="h-6 w-12 mx-auto bg-[var(--twilight)] rounded" />
-          <div className="h-3 w-8 mx-auto mt-1 bg-[var(--twilight)] rounded" />
-        </div>
+    <div
+      className="flex items-center gap-3 px-3 py-2.5 rounded-lg border border-[var(--twilight)] bg-[var(--dusk)]/30 mb-2 animate-pulse"
+      style={{ borderLeftWidth: "3px", borderLeftColor: "var(--twilight)" }}
+    >
+      {/* Time placeholder */}
+      <div className="flex-shrink-0 w-12 h-4 bg-[var(--twilight)]/50 rounded" />
 
-        {/* Content Skeleton */}
-        <div className="flex-1 min-w-0">
-          {/* Badge placeholder */}
-          <div className="flex gap-1.5 mb-2">
-            <div className="h-4 w-14 bg-[var(--twilight)] rounded" />
-          </div>
+      {/* Icon placeholder */}
+      <div className="flex-shrink-0 w-4 h-4 bg-[var(--twilight)]/50 rounded" />
 
-          {/* Title placeholder - two lines */}
-          <div className="space-y-2 mb-3">
-            <div className="h-5 w-full bg-[var(--twilight)] rounded" />
-            <div className="h-5 w-3/4 bg-[var(--twilight)] rounded" />
-          </div>
+      {/* Content */}
+      <div className="flex-1 min-w-0 space-y-1.5">
+        {/* Title row */}
+        <div className="h-4 bg-[var(--twilight)]/50 rounded w-3/4" />
 
-          {/* Venue placeholder */}
-          <div className="flex items-center gap-2 mt-1.5">
-            <div className="w-3.5 h-3.5 bg-[var(--twilight)] rounded" />
-            <div className="h-4 w-32 bg-[var(--twilight)] rounded" />
-            <div className="h-4 w-20 bg-[var(--twilight)] rounded opacity-50" />
-          </div>
-
-          {/* Price & Actions placeholder */}
-          <div className="flex items-center justify-between mt-3">
-            <div className="flex items-center gap-3">
-              <div className="h-4 w-16 bg-[var(--twilight)] rounded" />
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-[var(--twilight)] rounded-lg" />
-            </div>
-          </div>
+        {/* Details row */}
+        <div className="flex gap-2">
+          <div className="h-3 bg-[var(--twilight)]/30 rounded w-24" />
+          <div className="h-3 bg-[var(--twilight)]/30 rounded w-16" />
+          <div className="h-3 bg-[var(--twilight)]/30 rounded w-12" />
         </div>
       </div>
     </div>
@@ -45,7 +30,7 @@ export default function EventCardSkeleton() {
 
 export function EventCardSkeletonList({ count = 5 }: { count?: number }) {
   return (
-    <div className="space-y-2">
+    <div>
       {Array.from({ length: count }).map((_, i) => (
         <EventCardSkeleton key={i} />
       ))}

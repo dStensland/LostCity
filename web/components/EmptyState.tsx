@@ -6,7 +6,12 @@ type EmptyStateProps = {
   title?: string;
   message: string;
   icon?: ReactNode;
+  suggestions?: string[];
   action?: {
+    label: string;
+    onClick: () => void;
+  };
+  secondaryAction?: {
     label: string;
     onClick: () => void;
   };
@@ -17,7 +22,9 @@ export default function EmptyState({
   title,
   message,
   icon,
+  suggestions,
   action,
+  secondaryAction,
   className = "",
 }: EmptyStateProps) {
   return (
@@ -28,18 +35,45 @@ export default function EmptyState({
         </div>
       )}
       {title && (
-        <h3 className="font-serif text-lg text-[var(--cream)] italic mb-2">
+        <h3 className="font-serif text-xl text-[var(--cream)] italic mb-2">
           {title}
         </h3>
       )}
-      <p className="font-mono text-sm text-[var(--muted)]">{message}</p>
-      {action && (
-        <button
-          onClick={action.onClick}
-          className="mt-4 px-4 py-2 rounded-lg bg-[var(--coral)] text-[var(--void)] font-mono text-sm font-medium hover:bg-[var(--rose)] transition-colors"
-        >
-          {action.label}
-        </button>
+      <p className="font-mono text-sm text-[var(--muted)] max-w-sm mx-auto">{message}</p>
+
+      {suggestions && suggestions.length > 0 && (
+        <div className="mt-4 text-left max-w-xs mx-auto">
+          <p className="font-mono text-[0.65rem] text-[var(--muted)] uppercase tracking-wider mb-2">Try:</p>
+          <ul className="space-y-1">
+            {suggestions.map((suggestion, i) => (
+              <li key={i} className="flex items-start gap-2 text-sm text-[var(--soft)]">
+                <span className="text-[var(--muted)]">•</span>
+                {suggestion}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {(action || secondaryAction) && (
+        <div className="mt-6 flex items-center justify-center gap-3">
+          {action && (
+            <button
+              onClick={action.onClick}
+              className="px-4 py-2 rounded-lg bg-[var(--neon-magenta)] text-[var(--void)] font-mono text-sm font-medium hover:bg-[var(--neon-magenta)]/80 transition-colors"
+            >
+              {action.label}
+            </button>
+          )}
+          {secondaryAction && (
+            <button
+              onClick={secondaryAction.onClick}
+              className="px-4 py-2 rounded-lg border border-[var(--twilight)] text-[var(--soft)] font-mono text-sm hover:bg-[var(--twilight)] hover:text-[var(--cream)] transition-colors"
+            >
+              {secondaryAction.label}
+            </button>
+          )}
+        </div>
       )}
     </div>
   );

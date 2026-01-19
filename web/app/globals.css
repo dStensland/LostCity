@@ -639,6 +639,22 @@ body::after {
   animation: neon-spin 1s linear infinite, neon-pulse 1.5s ease-in-out infinite;
 }
 
+/* Page transition animation (replaces framer-motion) */
+@keyframes page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-page-enter {
+  animation: page-enter 0.3s cubic-bezier(0.25, 0.1, 0.25, 1) forwards;
+}
+
 /* Reduced motion support */
 @media (prefers-reduced-motion: reduce) {
   *,
@@ -653,7 +669,8 @@ body::after {
   .animate-fade-up,
   .animate-scale-in,
   .animate-slide-in-right,
-  .animate-confetti-fall {
+  .animate-confetti-fall,
+  .animate-page-enter {
     animation: none !important;
     opacity: 1 !important;
     transform: none !important;
@@ -786,4 +803,9 @@ textarea:focus-visible {
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border: 0;
+}
+
+/* Safe area for iOS devices with home indicator */
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0);
 }

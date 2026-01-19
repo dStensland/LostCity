@@ -14,6 +14,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import AddToCalendar from "@/components/AddToCalendar";
+import DirectionsDropdown from "@/components/DirectionsDropdown";
+import EventStickyBar from "@/components/EventStickyBar";
 import { formatTimeSplit, formatPrice } from "@/lib/formats";
 
 export const revalidate = 60;
@@ -258,9 +260,17 @@ export default async function EventPage({ params }: Props) {
             {/* Location */}
             {event.venue && event.venue.address && (
               <div className="mt-6 pt-6 border-t border-[var(--twilight)]">
-                <h2 className="font-mono text-[0.65rem] font-medium text-[var(--muted)] uppercase tracking-widest mb-3">
-                  Location
-                </h2>
+                <div className="flex items-center justify-between mb-3">
+                  <h2 className="font-mono text-[0.65rem] font-medium text-[var(--muted)] uppercase tracking-widest">
+                    Location
+                  </h2>
+                  <DirectionsDropdown
+                    venueName={event.venue.name}
+                    address={event.venue.address}
+                    city={event.venue.city}
+                    state={event.venue.state}
+                  />
+                </div>
                 <p className="text-[var(--soft)]">
                   <span className="text-[var(--cream)] font-medium">{event.venue.name}</span>
                   <br />
@@ -434,6 +444,13 @@ export default async function EventPage({ params }: Props) {
 
         <PageFooter />
       </div>
+
+      {/* Sticky bottom bar with CTAs */}
+      <EventStickyBar
+        eventId={event.id}
+        eventTitle={event.title}
+        ticketUrl={event.ticket_url}
+      />
     </>
   );
 }

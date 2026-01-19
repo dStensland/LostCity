@@ -1,55 +1,21 @@
 "use client";
 
-import { motion, AnimatePresence, type Variants } from "framer-motion";
-import { usePathname } from "next/navigation";
 import { ReactNode } from "react";
 
 type PageTransitionProps = {
   children: ReactNode;
 };
 
-const variants: Variants = {
-  initial: {
-    opacity: 0,
-    y: 8,
-  },
-  enter: {
-    opacity: 1,
-    y: 0,
-    transition: {
-      duration: 0.3,
-      ease: [0.25, 0.1, 0.25, 1] as const,
-    },
-  },
-  exit: {
-    opacity: 0,
-    y: -8,
-    transition: {
-      duration: 0.2,
-      ease: [0.25, 0.1, 0.25, 1] as const,
-    },
-  },
-};
-
 /**
  * Wraps page content with smooth fade/slide transitions.
  * Use in layout.tsx or template.tsx to animate page changes.
+ * Uses CSS animations for better performance (no framer-motion dependency).
  */
 export default function PageTransition({ children }: PageTransitionProps) {
-  const pathname = usePathname();
-
   return (
-    <AnimatePresence mode="wait" initial={false}>
-      <motion.div
-        key={pathname}
-        variants={variants}
-        initial="initial"
-        animate="enter"
-        exit="exit"
-      >
-        {children}
-      </motion.div>
-    </AnimatePresence>
+    <div className="animate-page-enter">
+      {children}
+    </div>
   );
 }
 
@@ -60,58 +26,37 @@ export default function PageTransition({ children }: PageTransitionProps) {
 export function StaggerContainer({
   children,
   className = "",
-  staggerDelay = 0.05,
 }: {
   children: ReactNode;
   className?: string;
-  staggerDelay?: number;
 }) {
   return (
-    <motion.div
-      className={className}
-      initial="initial"
-      animate="enter"
-      variants={{
-        initial: {},
-        enter: {
-          transition: {
-            staggerChildren: staggerDelay,
-          },
-        },
-      }}
-    >
+    <div className={`animate-fade-in ${className}`}>
       {children}
-    </motion.div>
+    </div>
   );
 }
 
 /**
  * Individual item for stagger animation.
+ * Use with stagger-N classes for delays.
  */
 export function StaggerItem({
   children,
   className = "",
+  index = 0,
 }: {
   children: ReactNode;
   className?: string;
+  index?: number;
 }) {
+  // Cap at 10 for stagger classes
+  const staggerClass = index > 0 && index <= 10 ? `stagger-${index}` : "";
+
   return (
-    <motion.div
-      className={className}
-      variants={{
-        initial: { opacity: 0, y: 12 },
-        enter: {
-          opacity: 1,
-          y: 0,
-          transition: {
-            duration: 0.4,
-            ease: [0.25, 0.1, 0.25, 1] as const,
-          },
-        },
-      }}
-    >
+    <div className={`animate-fade-in ${staggerClass} ${className}`}>
       {children}
-    </motion.div>
+    </div>
   );
 }
 
@@ -122,22 +67,20 @@ export function FadeIn({
   children,
   className = "",
   delay = 0,
-  duration = 0.4,
 }: {
   children: ReactNode;
   className?: string;
   delay?: number;
-  duration?: number;
 }) {
+  const delayClass = delay > 0 ? `delay-${Math.round(delay * 1000)}` : "";
+
   return (
-    <motion.div
-      className={className}
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration, delay, ease: [0.25, 0.1, 0.25, 1] as const }}
+    <div
+      className={`animate-fade-in ${delayClass} ${className}`}
+      style={delay > 0 && delay % 0.1 !== 0 ? { animationDelay: `${delay}s` } : undefined}
     >
       {children}
-    </motion.div>
+    </div>
   );
 }
 
@@ -154,17 +97,11 @@ export function SlideUp({
   delay?: number;
 }) {
   return (
-    <motion.div
-      className={className}
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{
-        duration: 0.5,
-        delay,
-        ease: [0.25, 0.1, 0.25, 1] as const,
-      }}
+    <div
+      className={`animate-fade-up ${className}`}
+      style={delay > 0 ? { animationDelay: `${delay}s` } : undefined}
     >
       {children}
-    </motion.div>
+    </div>
   );
 }

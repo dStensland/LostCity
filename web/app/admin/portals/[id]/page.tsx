@@ -17,6 +17,15 @@ type PortalBranding = {
   font_body?: string;
 };
 
+type FeedSettings = {
+  feed_type: "default" | "sections" | "custom";
+  featured_event_id?: number;
+  featured_section_ids?: string[];
+  section_order?: string[];
+  show_activity_tab?: boolean;
+  items_per_section?: number;
+};
+
 type PortalFilters = {
   city?: string;
   geo_center?: [number, number]; // [lat, lng]
@@ -45,6 +54,15 @@ const ALL_CATEGORIES = [
   { id: "family", label: "Family" },
 ];
 
+type PortalSection = {
+  id: string;
+  title: string;
+  slug: string;
+  section_type: "auto" | "curated" | "mixed";
+  is_visible: boolean;
+  display_order: number;
+};
+
 type Portal = {
   id: string;
   slug: string;
@@ -57,12 +75,13 @@ type Portal = {
   visibility: "public" | "unlisted" | "private";
   filters: PortalFilters;
   branding: PortalBranding;
-  settings: Record<string, unknown>;
+  settings: Record<string, unknown> & { feed?: FeedSettings };
   members: Array<{
     id: string;
     role: string;
     user: { id: string; username: string; display_name: string | null; avatar_url: string | null } | null;
   }>;
+  sections?: PortalSection[];
   member_count: number;
   content_count: number;
   section_count: number;
@@ -86,12 +105,22 @@ export default function EditPortalPage({ params }: { params: Promise<{ id: strin
   const [visibility, setVisibility] = useState<"public" | "unlisted" | "private">("public");
   const [filters, setFilters] = useState<PortalFilters>({});
   const [branding, setBranding] = useState<PortalBranding>({});
+  const [feedSettings, setFeedSettings] = useState<FeedSettings>({
+    feed_type: "default",
+    show_activity_tab: true,
+    items_per_section: 5,
+  });
+  const [sections, setSections] = useState<PortalSection[]>([]);
 
   const loadPortal = useCallback(async () => {
     try {
-      const res = await fetch(`/api/admin/portals/${id}`);
-      if (!res.ok) throw new Error("Portal not found");
-      const data = await res.json();
+      const [portalRes, sectionsRes] = await Promise.all([
+        fetch(`/api/admin/portals/${id}`),
+        fetch(`/api/admin/portals/${id}/sections`),
+      ]);
+
+      if (!portalRes.ok) throw new Error("Portal not found");
+      const data = await portalRes.json();
       setPortal(data.portal);
       setName(data.portal.name);
       setTagline(data.portal.tagline || "");
@@ -99,6 +128,16 @@ export default function EditPortalPage({ params }: { params: Promise<{ id: strin
       setVisibility(data.portal.visibility);
       setFilters(data.portal.filters || {});
       setBranding(data.portal.branding || {});
+      setFeedSettings(data.portal.settings?.feed || {
+        feed_type: "default",
+        show_activity_tab: true,
+        items_per_section: 5,
+      });
+
+      if (sectionsRes.ok) {
+        const sectionsData = await sectionsRes.json();
+        setSections(sectionsData.sections || []);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load");
     } finally {
@@ -126,6 +165,10 @@ export default function EditPortalPage({ params }: { params: Promise<{ id: strin
           visibility,
           filters,
           branding,
+          settings: {
+            ...portal?.settings,
+            feed: feedSettings,
+          },
         }),
       });
 
@@ -696,6 +739,165 @@ export default function EditPortalPage({ params }: { params: Promise<{ id: strin
                 </div>
               </div>
             )}
+          </section>
+
+          {/* Feed Configuration */}
+          <section className="bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg p-6">
+            <h2 className="font-mono text-xs text-[var(--muted)] uppercase tracking-wider mb-4">Feed Configuration</h2>
+            <p className="font-mono text-xs text-[var(--soft)] mb-4">
+              Configure how the portal feed displays content to visitors.
+            </p>
+
+            {/* Feed Type */}
+            <div className="mb-6">
+              <label className="block font-mono text-xs text-[var(--muted)] uppercase mb-2">Feed Type</label>
+              <div className="space-y-2">
+                <label className="flex items-start gap-3 cursor-pointer group">
+                  <input
+                    type="radio"
+                    name="feed_type"
+                    value="default"
+                    checked={feedSettings.feed_type === "default"}
+                    onChange={() => setFeedSettings({ ...feedSettings, feed_type: "default" })}
+                    className="mt-1 w-4 h-4 text-[var(--coral)] border-[var(--twilight)] bg-[var(--night)] focus:ring-[var(--coral)]"
+                  />
+                  <div>
+                    <div className="font-mono text-sm text-[var(--cream)] group-hover:text-[var(--coral)]">Default Feed</div>
+                    <div className="font-mono text-xs text-[var(--muted)]">User-personalized events based on their preferences</div>
+                  </div>
+                </label>
+                <label className="flex items-start gap-3 cursor-pointer group">
+                  <input
+                    type="radio"
+                    name="feed_type"
+                    value="sections"
+                    checked={feedSettings.feed_type === "sections"}
+                    onChange={() => setFeedSettings({ ...feedSettings, feed_type: "sections" })}
+                    className="mt-1 w-4 h-4 text-[var(--coral)] border-[var(--twilight)] bg-[var(--night)] focus:ring-[var(--coral)]"
+                  />
+                  <div>
+                    <div className="font-mono text-sm text-[var(--cream)] group-hover:text-[var(--coral)]">Section-Based Feed</div>
+                    <div className="font-mono text-xs text-[var(--muted)]">Display curated sections you&apos;ve created</div>
+                  </div>
+                </label>
+                <label className="flex items-start gap-3 cursor-pointer group">
+                  <input
+                    type="radio"
+                    name="feed_type"
+                    value="custom"
+                    checked={feedSettings.feed_type === "custom"}
+                    onChange={() => setFeedSettings({ ...feedSettings, feed_type: "custom" })}
+                    className="mt-1 w-4 h-4 text-[var(--coral)] border-[var(--twilight)] bg-[var(--night)] focus:ring-[var(--coral)]"
+                  />
+                  <div>
+                    <div className="font-mono text-sm text-[var(--cream)] group-hover:text-[var(--coral)]">Hybrid Feed</div>
+                    <div className="font-mono text-xs text-[var(--muted)]">Featured sections + personalized recommendations</div>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            {/* Section Selection - show when sections or custom feed type */}
+            {(feedSettings.feed_type === "sections" || feedSettings.feed_type === "custom") && (
+              <div className="mb-6 pt-4 border-t border-[var(--twilight)]">
+                <label className="block font-mono text-xs text-[var(--muted)] uppercase mb-2">Featured Sections</label>
+                {sections.length === 0 ? (
+                  <div className="p-4 bg-[var(--night)] rounded border border-[var(--twilight)] text-center">
+                    <p className="font-mono text-xs text-[var(--muted)] mb-2">No sections created yet</p>
+                    <Link
+                      href={`/admin/portals/${id}/sections`}
+                      className="font-mono text-xs text-[var(--coral)] hover:underline"
+                    >
+                      Create sections first
+                    </Link>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {sections.map((section) => {
+                      const isSelected = feedSettings.featured_section_ids?.includes(section.id) || false;
+                      return (
+                        <label
+                          key={section.id}
+                          className={`flex items-center gap-3 p-3 rounded border cursor-pointer transition-colors ${
+                            isSelected
+                              ? "bg-[var(--coral)]/10 border-[var(--coral)]"
+                              : "bg-[var(--night)] border-[var(--twilight)] hover:border-[var(--muted)]"
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={(e) => {
+                              const current = feedSettings.featured_section_ids || [];
+                              if (e.target.checked) {
+                                setFeedSettings({
+                                  ...feedSettings,
+                                  featured_section_ids: [...current, section.id],
+                                });
+                              } else {
+                                setFeedSettings({
+                                  ...feedSettings,
+                                  featured_section_ids: current.filter((id) => id !== section.id),
+                                });
+                              }
+                            }}
+                            className="w-4 h-4 rounded border-[var(--twilight)] bg-[var(--night)] text-[var(--coral)] focus:ring-[var(--coral)]"
+                          />
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <span className="font-mono text-sm text-[var(--cream)]">{section.title}</span>
+                              <span className={`px-1.5 py-0.5 rounded text-[0.6rem] font-mono ${
+                                section.section_type === "curated"
+                                  ? "bg-[var(--coral)]/20 text-[var(--coral)]"
+                                  : "bg-[var(--neon-cyan)]/20 text-[var(--neon-cyan)]"
+                              }`}>
+                                {section.section_type}
+                              </span>
+                              {!section.is_visible && (
+                                <span className="px-1.5 py-0.5 rounded text-[0.6rem] font-mono bg-[var(--twilight)] text-[var(--muted)]">
+                                  hidden
+                                </span>
+                              )}
+                            </div>
+                            <div className="font-mono text-[0.6rem] text-[var(--muted)]">/{section.slug}</div>
+                          </div>
+                        </label>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Feed Options */}
+            <div className="pt-4 border-t border-[var(--twilight)]">
+              <label className="block font-mono text-xs text-[var(--muted)] uppercase mb-3">Options</label>
+              <div className="space-y-3">
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={feedSettings.show_activity_tab ?? true}
+                    onChange={(e) => setFeedSettings({ ...feedSettings, show_activity_tab: e.target.checked })}
+                    className="w-4 h-4 rounded border-[var(--twilight)] bg-[var(--night)] text-[var(--coral)] focus:ring-[var(--coral)]"
+                  />
+                  <span className="font-mono text-sm text-[var(--cream)]">Show Activity/Friends tab</span>
+                </label>
+
+                <div>
+                  <label className="block font-mono text-xs text-[var(--muted)] uppercase mb-1">Items per Section</label>
+                  <select
+                    value={feedSettings.items_per_section || 5}
+                    onChange={(e) => setFeedSettings({ ...feedSettings, items_per_section: parseInt(e.target.value) })}
+                    className="px-3 py-2 bg-[var(--night)] border border-[var(--twilight)] rounded font-mono text-sm text-[var(--cream)] focus:outline-none focus:border-[var(--coral)]"
+                  >
+                    <option value={3}>3 items</option>
+                    <option value={5}>5 items</option>
+                    <option value={10}>10 items</option>
+                    <option value={15}>15 items</option>
+                  </select>
+                </div>
+              </div>
+            </div>
           </section>
 
           {/* Content Management */}

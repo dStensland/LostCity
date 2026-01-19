@@ -6,7 +6,9 @@ import { format, parseISO, isToday, isTomorrow } from "date-fns";
 import Link from "next/link";
 import EventCard from "./EventCard";
 import EventGroup from "./EventGroup";
+import { EventCardSkeletonList } from "./EventCardSkeleton";
 import type { EventWithLocation } from "@/lib/search";
+import { useLiveEventCount } from "@/lib/hooks/useLiveEvents";
 
 // Rollup thresholds
 const VENUE_ROLLUP_THRESHOLD = 4;
@@ -97,7 +99,42 @@ function getDateLabel(dateStr: string): string {
   const date = parseISO(dateStr);
   if (isToday(date)) return "Today";
   if (isTomorrow(date)) return "Tomorrow";
-  return format(date, "EEEE, MMM d");
+  return format(date, "EEE, MMM d");
+}
+
+type TimePeriod = "morning" | "afternoon" | "evening" | "latenight";
+
+function getTimePeriod(time: string | null): TimePeriod {
+  if (!time) return "morning";
+  const hour = parseInt(time.split(":")[0], 10);
+  if (hour < 12) return "morning";
+  if (hour < 17) return "afternoon";
+  if (hour < 21) return "evening";
+  return "latenight";
+}
+
+const TIME_PERIOD_LABELS: Record<TimePeriod, string> = {
+  morning: "Morning",
+  afternoon: "Afternoon",
+  evening: "Evening",
+  latenight: "Late Night",
+};
+
+function groupByTimePeriod(items: DisplayItem[]): { period: TimePeriod; items: DisplayItem[] }[] {
+  const groups: Map<TimePeriod, DisplayItem[]> = new Map();
+  const periods: TimePeriod[] = ["morning", "afternoon", "evening", "latenight"];
+
+  for (const item of items) {
+    const time = item.type === "event" ? item.event.start_time : item.events[0]?.start_time;
+    const period = getTimePeriod(time || null);
+    if (!groups.has(period)) groups.set(period, []);
+    groups.get(period)!.push(item);
+  }
+
+  // Return in order, only non-empty periods
+  return periods
+    .filter((p) => groups.has(p) && groups.get(p)!.length > 0)
+    .map((p) => ({ period: p, items: groups.get(p)! }));
 }
 
 interface Props {
@@ -115,6 +152,9 @@ export default function EventList({ initialEvents, initialTotal, hasActiveFilter
   const lastLoadTime = useRef(0); // Debounce protection
   const searchParams = useSearchParams();
   const pathname = usePathname();
+
+  // Live events count for "Now" banner
+  const liveEventCount = useLiveEventCount();
   const loaderRef = useRef<HTMLDivElement>(null);
 
   const DEBOUNCE_MS = 300;
@@ -198,19 +238,61 @@ export default function EventList({ initialEvents, initialTotal, hasActiveFilter
 
   const dates = Object.keys(eventsByDate).sort();
 
+  // Popular categories for suggestions
+  const suggestedCategories = [
+    { value: "music", label: "Music" },
+    { value: "comedy", label: "Comedy" },
+    { value: "art", label: "Art" },
+    { value: "food_drink", label: "Food & Drink" },
+    { value: "film", label: "Film" },
+  ];
+
   if (dates.length === 0) {
     return (
-      <div className="text-center py-16">
-        <p className="text-[var(--muted)] text-lg">
-          {hasActiveFilters ? "No events match your filters." : "No upcoming events found."}
+      <div className="text-center py-12">
+        {/* Icon */}
+        <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-[var(--twilight)]/30 flex items-center justify-center">
+          <svg className="w-8 h-8 text-[var(--muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+          </svg>
+        </div>
+
+        <p className="text-[var(--muted)] text-lg mb-2">
+          {hasActiveFilters ? "No events match your filters" : "No upcoming events found"}
         </p>
-        {hasActiveFilters && (
-          <Link
-            href={pathname}
-            className="mt-4 inline-block text-[var(--coral)] hover:text-[var(--rose)] transition-colors font-mono text-sm"
-          >
-            Clear all filters
-          </Link>
+
+        {hasActiveFilters ? (
+          <div className="space-y-4">
+            <p className="text-[var(--muted)]/60 text-sm">
+              Try adjusting your filters or exploring a different category
+            </p>
+            <Link
+              href={pathname}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[var(--twilight)]/30 text-[var(--cream)] hover:bg-[var(--twilight)]/50 transition-colors font-mono text-sm"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+              Clear all filters
+            </Link>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <p className="text-[var(--muted)]/60 text-sm">
+              Explore what&apos;s happening in your city
+            </p>
+            <div className="flex flex-wrap justify-center gap-2">
+              {suggestedCategories.map((cat) => (
+                <Link
+                  key={cat.value}
+                  href={`${pathname}?categories=${cat.value}`}
+                  className="px-3 py-1.5 rounded-full bg-[var(--twilight)]/30 text-[var(--muted)] hover:bg-[var(--twilight)]/50 hover:text-[var(--cream)] transition-colors text-sm"
+                >
+                  {cat.label}
+                </Link>
+              ))}
+            </div>
+          </div>
         )}
       </div>
     );
@@ -218,58 +300,93 @@ export default function EventList({ initialEvents, initialTotal, hasActiveFilter
 
   return (
     <div>
-      {dates.map((date) => (
-        <section key={date}>
-          {/* Date header - classified style */}
-          <div className="flex items-center gap-4 py-4 sticky top-36 bg-[var(--void)] z-20">
-            <span className="font-mono text-[0.65rem] font-medium text-[var(--muted)] uppercase tracking-widest whitespace-nowrap">
-              {getDateLabel(date)}
-            </span>
-            <div className="flex-1 h-px bg-[var(--twilight)]" />
-          </div>
+      {/* Live Events Banner */}
+      {liveEventCount > 0 && (
+        <Link
+          href="/happening-now"
+          className="group flex items-center gap-3 mb-4 px-4 py-3 rounded-lg bg-gradient-to-r from-[var(--neon-magenta)]/10 to-[var(--neon-cyan)]/10 border border-[var(--neon-magenta)]/30 hover:border-[var(--neon-magenta)]/60 transition-colors"
+        >
+          {/* Pulsing live indicator */}
+          <span className="relative flex h-3 w-3">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--neon-magenta)] opacity-75" />
+            <span className="relative inline-flex rounded-full h-3 w-3 bg-[var(--neon-magenta)]" />
+          </span>
+          <span className="font-medium text-[var(--cream)]">
+            {liveEventCount} {liveEventCount === 1 ? "thing" : "things"} happening right now
+          </span>
+          <svg
+            className="w-4 h-4 text-[var(--muted)] group-hover:text-[var(--cream)] group-hover:translate-x-1 transition-all ml-auto"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+        </Link>
+      )}
 
-          {/* Events */}
-          <div>
-            {groupEventsForDisplay(eventsByDate[date]).map((item, idx) => {
-              if (item.type === "venue-group") {
-                return (
-                  <EventGroup
-                    key={`venue-${item.venueId}`}
-                    type="venue"
-                    title={item.venueName}
-                    subtitle={item.neighborhood || undefined}
-                    events={item.events}
-                  />
-                );
-              }
-              if (item.type === "category-group") {
-                return (
-                  <EventGroup
-                    key={`cat-${item.categoryId}`}
-                    type="category"
-                    title={item.categoryName}
-                    events={item.events}
-                  />
-                );
-              }
-              return <EventCard key={item.event.id} event={item.event} index={idx} />;
-            })}
-          </div>
-        </section>
-      ))}
+      {dates.map((date) => {
+        const displayItems = groupEventsForDisplay(eventsByDate[date]);
+        const timePeriods = groupByTimePeriod(displayItems);
 
-      {/* Loading indicator / end message */}
-      <div ref={loaderRef} className="py-8">
-        {isLoading && (
-          <div className="flex justify-center">
-            <div className="animate-spin h-6 w-6 border-2 border-[var(--coral)] border-t-transparent rounded-full" />
-          </div>
-        )}
-        {!hasMore && events.length > 0 && (
-          <p className="text-center text-[var(--muted)] font-mono text-xs">
-            You&apos;ve reached the end
-          </p>
-        )}
+        return (
+          <section key={date}>
+            {/* Date header */}
+            <div className="sticky top-[92px] bg-[var(--void)] z-20 py-2 -mx-4 px-4">
+              <span className="font-mono text-[0.6rem] font-medium text-[var(--muted)] uppercase tracking-wider">
+                {getDateLabel(date)}
+              </span>
+            </div>
+
+            {/* Events grouped by time period */}
+            <div>
+              {timePeriods.map(({ period, items }, periodIdx) => (
+                <div key={period}>
+                  {/* Time period divider - only show if multiple periods */}
+                  {timePeriods.length > 1 && (
+                    <div className="flex items-center gap-2 py-2 mt-2">
+                      <span className="font-mono text-[0.55rem] text-[var(--muted)]/60 uppercase tracking-wider">
+                        {TIME_PERIOD_LABELS[period]}
+                      </span>
+                      <div className="flex-1 h-px bg-[var(--twilight)]/30" />
+                    </div>
+                  )}
+
+                  {/* Events in this period */}
+                  {items.map((item, idx) => {
+                    if (item.type === "venue-group") {
+                      return (
+                        <EventGroup
+                          key={`venue-${item.venueId}`}
+                          type="venue"
+                          title={item.venueName}
+                          subtitle={item.neighborhood || undefined}
+                          events={item.events}
+                        />
+                      );
+                    }
+                    if (item.type === "category-group") {
+                      return (
+                        <EventGroup
+                          key={`cat-${item.categoryId}`}
+                          type="category"
+                          title={item.categoryName}
+                          events={item.events}
+                        />
+                      );
+                    }
+                    return <EventCard key={item.event.id} event={item.event} index={idx} />;
+                  })}
+                </div>
+              ))}
+            </div>
+          </section>
+        );
+      })}
+
+      {/* Loading indicator / Skeleton */}
+      <div ref={loaderRef} className="py-4">
+        {isLoading && <EventCardSkeletonList count={3} />}
       </div>
     </div>
   );

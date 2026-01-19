@@ -11,7 +11,7 @@ import { useDarkHours } from "@/lib/hooks/useDarkHours";
  * Respects prefers-reduced-motion.
  */
 export default function DarkHoursTheme() {
-  const isDarkHours = useDarkHours();
+  const { isDarkHours } = useDarkHours();
 
   if (!isDarkHours) {
     return null;

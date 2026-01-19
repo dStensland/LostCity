@@ -38,7 +38,9 @@ export default function ParallaxImage({
   useEffect(() => {
     if (isReducedMotion) return;
 
-    const handleScroll = () => {
+    let ticking = false;
+
+    const updateParallax = () => {
       if (!containerRef.current) return;
 
       const rect = containerRef.current.getBoundingClientRect();
@@ -54,8 +56,19 @@ export default function ParallaxImage({
       setOffset(parallaxOffset);
     };
 
+    const handleScroll = () => {
+      // Throttle with requestAnimationFrame to prevent jank
+      if (!ticking) {
+        requestAnimationFrame(() => {
+          updateParallax();
+          ticking = false;
+        });
+        ticking = true;
+      }
+    };
+
     window.addEventListener("scroll", handleScroll, { passive: true });
-    handleScroll(); // Initial calculation
+    updateParallax(); // Initial calculation
 
     return () => window.removeEventListener("scroll", handleScroll);
   }, [parallaxSpeed, isReducedMotion]);

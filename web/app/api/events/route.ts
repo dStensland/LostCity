@@ -45,11 +45,19 @@ export async function GET(request: Request) {
     // Enrich with social proof counts (RSVPs, recommendations)
     const events = await enrichEventsWithSocialProof(rawEvents);
 
-    return Response.json({
-      events,
-      hasMore: page * pageSize < total,
-      total,
-    });
+    return Response.json(
+      {
+        events,
+        hasMore: page * pageSize < total,
+        total,
+      },
+      {
+        headers: {
+          // Cache for 30 seconds, allow stale content for 60s while revalidating
+          "Cache-Control": "public, s-maxage=30, stale-while-revalidate=60",
+        },
+      }
+    );
   } catch (error) {
     console.error("Events API error:", error);
     return Response.json(

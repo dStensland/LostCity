@@ -1,11 +1,10 @@
 import Link from "next/link";
 import type { Event } from "@/lib/supabase";
-import { formatTimeSplit, formatPriceDetailed, type PriceableEvent } from "@/lib/formats";
-import SaveButton from "./SaveButton";
-import FriendsGoing from "./FriendsGoing";
-import LiveIndicator from "./LiveIndicator";
+import { formatTimeSplit } from "@/lib/formats";
+import CategoryIcon, { getCategoryColor } from "./CategoryIcon";
 
-type EventWithPriceEstimate = Event & {
+type EventCardEvent = Event & {
+  is_live?: boolean;
   venue?: Event["venue"] & {
     typical_price_min?: number | null;
     typical_price_max?: number | null;
@@ -14,153 +13,143 @@ type EventWithPriceEstimate = Event & {
     typical_price_min: number | null;
     typical_price_max: number | null;
   } | null;
-  // Social proof counts
-  going_count?: number;
-  interested_count?: number;
-  recommendation_count?: number;
-  attendee_count?: number;
-  // Status indicators
-  is_live?: boolean;
-  is_featured?: boolean;
-  is_trending?: boolean;
-} & PriceableEvent;
+};
 
 interface Props {
-  event: EventWithPriceEstimate;
+  event: EventCardEvent;
   index?: number;
+}
+
+interface PriceDisplay {
+  text: string;
+  isEstimate: boolean;
+  isFree: boolean;
+}
+
+function formatPrice(
+  isFree: boolean,
+  min: number | null,
+  max: number | null,
+  venueMin: number | null | undefined,
+  venueMax: number | null | undefined,
+  catMin: number | null | undefined,
+  catMax: number | null | undefined
+): PriceDisplay | null {
+  // Check explicit free flag or $0 pricing
+  if (isFree || (min === 0 && (max === 0 || max === null))) {
+    return { text: "Free", isEstimate: false, isFree: true };
+  }
+
+  // Use explicit event pricing if available
+  if (min !== null || max !== null) {
+    let text: string;
+    if (min !== null && max !== null && min === max) {
+      text = `$${min}`;
+    } else if (min !== null && max !== null) {
+      text = `$${min}-${max}`;
+    } else if (min !== null) {
+      text = `$${min}+`;
+    } else {
+      text = `Up to $${max}`;
+    }
+    return { text, isEstimate: false, isFree: false };
+  }
+
+  // Fall back to venue typical pricing
+  if (venueMin !== null && venueMin !== undefined) {
+    if (venueMin === 0) {
+      return { text: "Free", isEstimate: true, isFree: true };
+    }
+    const text = venueMax && venueMax !== venueMin
+      ? `~$${venueMin}-${venueMax}`
+      : `~$${venueMin}`;
+    return { text, isEstimate: true, isFree: false };
+  }
+
+  // Fall back to category typical pricing
+  if (catMin !== null && catMin !== undefined) {
+    if (catMin === 0) {
+      return { text: "Usually Free", isEstimate: true, isFree: true };
+    }
+    const text = catMax && catMax !== catMin
+      ? `~$${catMin}-${catMax}`
+      : `~$${catMin}`;
+    return { text, isEstimate: true, isFree: false };
+  }
+
+  return null;
 }
 
 export default function EventCard({ event, index = 0 }: Props) {
   const { time, period } = formatTimeSplit(event.start_time, event.is_all_day);
-  const { text: priceText, isFree, isEstimate } = formatPriceDetailed(event);
-  const hasTickets = !!event.ticket_url;
-
-  // Stagger animation class
-  const staggerClass = index < 10 ? `stagger-${index + 1}` : "";
-
-  // Category color for badge
-  const categoryColor = event.category ? `var(--cat-${event.category === 'food_drink' ? 'food' : event.category})` : 'var(--muted)';
-
-  // Social proof
-  const goingCount = event.going_count || 0;
-  const attendeeCount = event.attendee_count || 0;
-  const displayCount = attendeeCount || goingCount;
-
-  // Status flags
   const isLive = event.is_live || false;
-  const isFeatured = event.is_featured || false;
-  const isTrending = event.is_trending || false;
+  const staggerClass = index < 10 ? `stagger-${index + 1}` : "";
+  const categoryColor = event.category ? getCategoryColor(event.category) : null;
+
+  const price = formatPrice(
+    event.is_free,
+    event.price_min,
+    event.price_max,
+    event.venue?.typical_price_min,
+    event.venue?.typical_price_max,
+    event.category_data?.typical_price_min,
+    event.category_data?.typical_price_max
+  );
 
   return (
     <Link
       href={`/events/${event.id}`}
-      className={`card-interactive rounded-xl p-4 animate-fade-in ${staggerClass} group block`}
+      className={`block p-3 mb-2 rounded-lg border border-[var(--twilight)] bg-[var(--dusk)]/30 hover:bg-[var(--dusk)]/50 hover:border-[var(--twilight)]/80 transition-all animate-fade-in ${staggerClass} group overflow-hidden`}
+      style={{
+        borderLeftWidth: categoryColor ? "3px" : undefined,
+        borderLeftColor: categoryColor || undefined,
+      }}
     >
-      <div className="flex gap-4">
-        {/* Time Column */}
-        <div className="flex-shrink-0 w-16 text-center pt-1">
-          <div className="text-lg font-semibold text-[var(--cream)] font-mono">
+      <div className="flex gap-3">
+        {/* Time cell */}
+        <div className="flex-shrink-0 w-12 flex flex-col items-center justify-center">
+          <span className="font-mono text-sm text-[var(--muted)] leading-none">
             {time}
-          </div>
+          </span>
           {period && (
-            <div className="text-xs text-[var(--muted)] font-mono uppercase">
-              {period}
-            </div>
+            <span className="font-mono text-[0.5rem] text-[var(--muted)] opacity-60">{period}</span>
           )}
-          {/* Real-time live indicator */}
-          <div className="mt-2">
-            <LiveIndicator eventId={event.id} initialIsLive={isLive} />
-          </div>
         </div>
 
         {/* Content */}
         <div className="flex-1 min-w-0">
-          {/* Badges Row */}
-          <div className="flex flex-wrap gap-1.5 mb-2">
-            {/* Category badge */}
+          {/* Title row */}
+          <div className="flex items-center gap-2">
             {event.category && (
-              <span
-                className="cat-tag text-[0.6rem] font-mono font-semibold uppercase tracking-wide px-2 py-0.5 rounded"
-                style={{ color: categoryColor }}
-              >
-                {event.category.replace('_', ' ')}
-              </span>
+              <CategoryIcon type={event.category} size={14} className="flex-shrink-0 opacity-60" />
             )}
-            {/* Featured badge */}
-            {isFeatured && (
-              <span className="badge-featured text-[0.6rem] font-mono font-medium px-2 py-0.5 rounded inline-flex items-center gap-1">
-                <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
-                  <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                </svg>
-                Featured
-              </span>
-            )}
-            {/* Trending badge */}
-            {isTrending && (
-              <span className="badge-trending text-[0.6rem] font-mono font-medium px-2 py-0.5 rounded inline-flex items-center gap-1">
-                <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
-                  <path fillRule="evenodd" d="M12.395 2.553a1 1 0 00-1.45-.385c-.345.23-.614.558-.822.88-.214.33-.403.713-.57 1.116-.334.804-.614 1.768-.84 2.734a31.365 31.365 0 00-.613 3.58 2.64 2.64 0 01-.945-1.067c-.328-.68-.398-1.534-.398-2.654A1 1 0 005.05 6.05 6.981 6.981 0 003 11a7 7 0 1011.95-4.95c-.592-.591-.98-.985-1.348-1.467-.363-.476-.724-1.063-1.207-2.03zM12.12 15.12A3 3 0 017 13s.879.5 2.5.5c0-1 .5-4 1.25-4.5.5 1 .786 1.293 1.371 1.879A2.99 2.99 0 0113 13a2.99 2.99 0 01-.879 2.121z" clipRule="evenodd" />
-                </svg>
-                Trending
-              </span>
-            )}
-            {/* Free badge */}
-            {isFree && (
-              <span className="badge-free text-[0.6rem] font-mono font-medium px-2 py-0.5 rounded">
-                Free
-              </span>
+            <span className="text-[var(--cream)] group-hover:text-[var(--neon-magenta)] transition-colors truncate">
+              {event.title}
+            </span>
+            {isLive && (
+              <span className="flex-shrink-0 w-2 h-2 rounded-full bg-[var(--neon-red)] animate-pulse" />
             )}
           </div>
 
-          {/* Title */}
-          <h3 className="font-display text-lg font-semibold text-[var(--cream)] leading-snug line-clamp-2 group-hover:text-[var(--neon-magenta)] transition-colors">
-            {event.title}
-          </h3>
-
-          {/* Venue & Location */}
-          {event.venue && (
-            <div className="flex items-center gap-2 mt-1.5 text-sm text-[var(--muted)]">
-              <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-              </svg>
-              <span className="truncate">{event.venue.name}</span>
-              {event.venue.neighborhood && (
-                <>
-                  <span className="text-[var(--twilight)]">·</span>
-                  <span className="text-[var(--muted)] opacity-70">{event.venue.neighborhood}</span>
-                </>
-              )}
-            </div>
-          )}
-
-          {/* Price & Social Proof */}
-          <div className="flex items-center justify-between mt-3">
-            <div className="flex items-center gap-3">
-              {!isFree && (
-                <span
-                  className={`font-mono text-sm font-medium ${isEstimate ? "text-[var(--muted)] italic opacity-70" : "text-[var(--cream)]"}`}
-                  title={isEstimate ? "Estimated price range" : undefined}
-                >
-                  {priceText}
+          {/* Details row */}
+          <div className="flex items-center gap-1.5 text-xs text-[var(--muted)] mt-1">
+            {event.venue && (
+              <span className="truncate max-w-[40%]">{event.venue.name}</span>
+            )}
+            {event.venue?.neighborhood && (
+              <>
+                <span className="opacity-40">·</span>
+                <span className="truncate">{event.venue.neighborhood}</span>
+              </>
+            )}
+            {price && (
+              <>
+                <span className="opacity-40">·</span>
+                <span className={`${price.isFree ? "text-[var(--neon-green)]" : ""} ${price.isEstimate ? "opacity-60" : ""}`}>
+                  {price.text}
                 </span>
-              )}
-              {/* Friends going avatar stack (shows friends if logged in, otherwise shows general count) */}
-              <FriendsGoing eventId={event.id} fallbackCount={displayCount} />
-            </div>
-
-            {/* Actions */}
-            <div className="flex items-center gap-2">
-              <SaveButton eventId={event.id} size="sm" />
-              {hasTickets && (
-                <span className="text-[var(--muted)] group-hover:text-[var(--neon-magenta)] transition-colors" title="Tickets available">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
-                  </svg>
-                  <span className="sr-only">Tickets available</span>
-                </span>
-              )}
-            </div>
+              </>
+            )}
           </div>
         </div>
       </div>

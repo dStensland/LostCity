@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import Logo from "./Logo";
@@ -16,31 +16,30 @@ interface PortalBranding {
 }
 
 interface GlassHeaderProps {
-  portalSlug: string;
-  portalName: string;
+  portalSlug?: string;
+  portalName?: string;
   branding?: PortalBranding;
 }
 
-export default function GlassHeader({ portalSlug, portalName, branding }: GlassHeaderProps) {
+export default function GlassHeader({ portalSlug = "atlanta", portalName = "Atlanta", branding }: GlassHeaderProps) {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const liveEventCount = useLiveEventCount();
 
-  // Determine active nav item
-  const isCollections = pathname?.startsWith("/collections");
   const isHappeningNow = pathname?.startsWith("/happening-now");
-  const isEvents = !isCollections && !isHappeningNow;
+  const currentView = searchParams?.get("view") || "events";
+  const isMap = currentView === "map";
+  const isFeed = currentView === "feed";
 
-  // Close mobile menu when clicking outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (mobileMenuRef.current && !mobileMenuRef.current.contains(event.target as Node)) {
         setMobileMenuOpen(false);
       }
     }
-
     if (mobileMenuOpen) {
       document.addEventListener("mousedown", handleClickOutside);
       return () => document.removeEventListener("mousedown", handleClickOutside);
@@ -48,98 +47,145 @@ export default function GlassHeader({ portalSlug, portalName, branding }: GlassH
   }, [mobileMenuOpen]);
 
   useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 10);
-    };
-
+    const handleScroll = () => setIsScrolled(window.scrollY > 10);
     window.addEventListener("scroll", handleScroll, { passive: true });
-    handleScroll(); // Check initial state
-
+    handleScroll();
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
   return (
     <header
-      className={`sticky top-0 z-40 px-4 sm:px-6 py-4 flex justify-between items-center border-b transition-all duration-300 ${
-        isScrolled
-          ? "glass border-[var(--twilight)]/50"
-          : "bg-transparent border-[var(--twilight)]"
+      className={`sticky top-0 z-40 px-4 py-3 flex justify-between items-center border-b transition-all duration-300 ${
+        isScrolled ? "glass border-[var(--twilight)]/50" : "bg-transparent border-[var(--twilight)]"
       }`}
     >
-      <div className="flex items-center gap-3">
+      {/* Logo */}
+      <div className="flex items-center">
         {branding?.logo_url ? (
-          <Link href={`/${portalSlug}`} className="flex items-center gap-2">
-            <Image
-              src={branding.logo_url}
-              alt={portalName}
-              width={120}
-              height={32}
-              className="h-8 w-auto object-contain"
-            />
+          <Link href={`/${portalSlug}`}>
+            <Image src={branding.logo_url} alt={portalName} width={100} height={28} className="h-7 w-auto object-contain" />
           </Link>
         ) : (
-          <>
-            <Logo href={`/${portalSlug}`} />
-            <span className="font-mono text-[0.65rem] font-medium text-[var(--muted)] uppercase tracking-widest hidden sm:inline">
-              {portalName}
-            </span>
-          </>
+          <Logo href={`/${portalSlug}`} size="sm" />
         )}
       </div>
-      <nav className="flex items-center gap-3 sm:gap-4">
-        {/* Pill-style navigation toggle - desktop */}
-        <div className="hidden sm:flex items-center bg-[var(--twilight)]/50 rounded-full p-0.5">
-          <Link
-            href={`/${portalSlug}`}
-            className={`px-3 py-1 font-mono text-[0.65rem] font-medium uppercase tracking-wide rounded-full transition-all ${
-              isEvents
-                ? "bg-[var(--neon-magenta)] text-white shadow-[0_0_10px_hsl(var(--neon-magenta-hsl)/0.4)]"
-                : "text-[var(--muted)] hover:text-[var(--cream)]"
-            }`}
-          >
-            Events
-          </Link>
+
+      {/* Right side */}
+      <nav className="flex items-center gap-2">
+        {/* Live indicator - only show when events are live */}
+        {liveEventCount > 0 && (
           <Link
             href="/happening-now"
-            className={`px-3 py-1 font-mono text-[0.65rem] font-medium uppercase tracking-wide rounded-full transition-all flex items-center gap-1.5 ${
+            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full font-mono text-[0.65rem] font-medium transition-all ${
               isHappeningNow
-                ? "bg-[var(--neon-magenta)] text-white shadow-[0_0_10px_hsl(var(--neon-magenta-hsl)/0.4)]"
-                : "text-[var(--muted)] hover:text-[var(--cream)]"
+                ? "bg-[var(--neon-red)] text-white"
+                : "bg-[var(--neon-red)]/20 text-[var(--neon-red)] hover:bg-[var(--neon-red)]/30"
             }`}
           >
-            {liveEventCount > 0 && (
-              <span
-                className="w-1.5 h-1.5 rounded-full bg-[var(--neon-red)] animate-pulse"
-                style={{ boxShadow: "0 0 4px var(--neon-red)" }}
-              />
-            )}
-            Live
+            <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse" />
+            {liveEventCount} Live
           </Link>
+        )}
+
+        {/* View toggles */}
+        <div className="hidden sm:flex items-center bg-[var(--twilight)]/30 rounded-full p-0.5 gap-0.5">
+          {/* Events view */}
           <Link
-            href="/collections"
-            className={`px-3 py-1 font-mono text-[0.65rem] font-medium uppercase tracking-wide rounded-full transition-all ${
-              isCollections
-                ? "bg-[var(--neon-magenta)] text-white shadow-[0_0_10px_hsl(var(--neon-magenta-hsl)/0.4)]"
+            href={`/${portalSlug}`}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-mono transition-all ${
+              !isMap && !isFeed
+                ? "bg-[var(--cream)] text-[var(--void)]"
                 : "text-[var(--muted)] hover:text-[var(--cream)]"
             }`}
           >
-            Collections
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+            </svg>
+            <span>List</span>
+          </Link>
+
+          {/* Feed view */}
+          <Link
+            href={`/${portalSlug}?view=feed`}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-mono transition-all ${
+              isFeed
+                ? "bg-[var(--neon-magenta)] text-[var(--void)]"
+                : "text-[var(--muted)] hover:text-[var(--cream)]"
+            }`}
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+            </svg>
+            <span>For You</span>
+          </Link>
+
+          {/* Map view */}
+          <Link
+            href={`/${portalSlug}?view=map`}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-mono transition-all ${
+              isMap
+                ? "bg-[var(--neon-cyan)] text-[var(--void)]"
+                : "text-[var(--muted)] hover:text-[var(--cream)]"
+            }`}
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+            </svg>
+            <span>Map</span>
           </Link>
         </div>
+
+        {/* Mobile view toggles (icons only) */}
+        <div className="flex sm:hidden items-center bg-[var(--twilight)]/30 rounded-full p-0.5">
+          <Link
+            href={`/${portalSlug}`}
+            className={`flex items-center justify-center w-8 h-8 rounded-full transition-all ${
+              !isMap && !isFeed
+                ? "bg-[var(--cream)] text-[var(--void)]"
+                : "text-[var(--muted)] hover:text-[var(--cream)]"
+            }`}
+            aria-label="List view"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+            </svg>
+          </Link>
+          <Link
+            href={`/${portalSlug}?view=feed`}
+            className={`flex items-center justify-center w-8 h-8 rounded-full transition-all ${
+              isFeed
+                ? "bg-[var(--neon-magenta)] text-[var(--void)]"
+                : "text-[var(--muted)] hover:text-[var(--cream)]"
+            }`}
+            aria-label="For You feed"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+            </svg>
+          </Link>
+          <Link
+            href={`/${portalSlug}?view=map`}
+            className={`flex items-center justify-center w-8 h-8 rounded-full transition-all ${
+              isMap
+                ? "bg-[var(--neon-cyan)] text-[var(--void)]"
+                : "text-[var(--muted)] hover:text-[var(--cream)]"
+            }`}
+            aria-label="Map view"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+            </svg>
+          </Link>
+        </div>
+
         <HeaderSearchButton />
-        <a
-          href="mailto:hello@lostcity.ai"
-          className="font-mono text-[0.7rem] font-medium text-[var(--muted)] uppercase tracking-wide hover:text-[var(--cream)] transition-colors hidden sm:inline"
-        >
-          Submit
-        </a>
         <UserMenu />
 
-        {/* Mobile menu toggle */}
+        {/* Mobile menu */}
         <div className="relative sm:hidden" ref={mobileMenuRef}>
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="p-2 text-[var(--muted)] hover:text-[var(--cream)] transition-colors"
+            className="p-1.5 text-[var(--muted)] hover:text-[var(--cream)] transition-colors"
             aria-expanded={mobileMenuOpen}
             aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
           >
@@ -154,50 +200,95 @@ export default function GlassHeader({ portalSlug, portalName, branding }: GlassH
             )}
           </button>
 
-          {/* Mobile dropdown menu */}
           {mobileMenuOpen && (
             <div className="absolute right-0 top-full mt-2 w-48 py-2 bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg shadow-xl">
+              <div className="px-3 py-1.5 text-[0.65rem] font-mono text-[var(--muted)] uppercase tracking-wider">
+                Views
+              </div>
               <Link
                 href={`/${portalSlug}`}
                 onClick={() => setMobileMenuOpen(false)}
-                className={`block px-4 py-2 font-mono text-sm ${
-                  isEvents ? "text-[var(--coral)]" : "text-[var(--cream)] hover:bg-[var(--twilight)]"
+                className={`flex items-center gap-2 px-3 py-2 font-mono text-sm hover:bg-[var(--twilight)] ${
+                  !isMap && !isFeed ? "text-[var(--cream)] bg-[var(--twilight)]/50" : "text-[var(--muted)]"
                 }`}
               >
-                Events
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+                </svg>
+                List
+              </Link>
+              <Link
+                href={`/${portalSlug}?view=feed`}
+                onClick={() => setMobileMenuOpen(false)}
+                className={`flex items-center gap-2 px-3 py-2 font-mono text-sm hover:bg-[var(--twilight)] ${
+                  isFeed ? "text-[var(--neon-magenta)] bg-[var(--twilight)]/50" : "text-[var(--muted)]"
+                }`}
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+                </svg>
+                For You
+              </Link>
+              <Link
+                href={`/${portalSlug}?view=map`}
+                onClick={() => setMobileMenuOpen(false)}
+                className={`flex items-center gap-2 px-3 py-2 font-mono text-sm hover:bg-[var(--twilight)] ${
+                  isMap ? "text-[var(--neon-cyan)] bg-[var(--twilight)]/50" : "text-[var(--muted)]"
+                }`}
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                </svg>
+                Map
+              </Link>
+
+              <div className="my-2 border-t border-[var(--twilight)]" />
+
+              <div className="px-3 py-1.5 text-[0.65rem] font-mono text-[var(--muted)] uppercase tracking-wider">
+                Explore
+              </div>
+              <Link
+                href="/spots"
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center gap-2 px-3 py-2 font-mono text-sm text-[var(--muted)] hover:bg-[var(--twilight)] hover:text-[var(--cream)]"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                Spots
               </Link>
               <Link
                 href="/happening-now"
                 onClick={() => setMobileMenuOpen(false)}
-                className={`flex items-center gap-2 px-4 py-2 font-mono text-sm ${
-                  isHappeningNow ? "text-[var(--coral)]" : "text-[var(--cream)] hover:bg-[var(--twilight)]"
+                className={`flex items-center gap-2 px-3 py-2 font-mono text-sm hover:bg-[var(--twilight)] ${
+                  isHappeningNow ? "text-[var(--neon-red)]" : "text-[var(--muted)] hover:text-[var(--cream)]"
                 }`}
               >
-                {liveEventCount > 0 && (
-                  <span
-                    className="w-1.5 h-1.5 rounded-full bg-[var(--neon-red)] animate-pulse"
-                    style={{ boxShadow: "0 0 4px var(--neon-red)" }}
-                  />
+                {liveEventCount > 0 ? (
+                  <span className="w-4 h-4 flex items-center justify-center">
+                    <span className="w-2 h-2 rounded-full bg-[var(--neon-red)] animate-pulse" />
+                  </span>
+                ) : (
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                  </svg>
                 )}
                 Happening Now
+                {liveEventCount > 0 && (
+                  <span className="ml-auto text-[0.65rem] text-[var(--neon-red)]">{liveEventCount}</span>
+                )}
               </Link>
               <Link
-                href="/collections"
+                href="/saved"
                 onClick={() => setMobileMenuOpen(false)}
-                className={`block px-4 py-2 font-mono text-sm ${
-                  isCollections ? "text-[var(--coral)]" : "text-[var(--cream)] hover:bg-[var(--twilight)]"
-                }`}
+                className="flex items-center gap-2 px-3 py-2 font-mono text-sm text-[var(--muted)] hover:bg-[var(--twilight)] hover:text-[var(--cream)]"
               >
-                Collections
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                </svg>
+                Saved
               </Link>
-              <div className="border-t border-[var(--twilight)] my-2" />
-              <a
-                href="mailto:hello@lostcity.ai"
-                onClick={() => setMobileMenuOpen(false)}
-                className="block px-4 py-2 font-mono text-sm text-[var(--muted)] hover:text-[var(--cream)] hover:bg-[var(--twilight)]"
-              >
-                Submit Event
-              </a>
             </div>
           )}
         </div>

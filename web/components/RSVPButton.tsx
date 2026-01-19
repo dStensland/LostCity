@@ -13,6 +13,7 @@ type RSVPStatus = "going" | "interested" | "went" | null;
 type RSVPButtonProps = {
   eventId: number;
   size?: "sm" | "md";
+  variant?: "default" | "compact" | "primary";
   className?: string;
 };
 
@@ -28,6 +29,7 @@ const STATUS_CONFIG = {
 export default function RSVPButton({
   eventId,
   size = "md",
+  variant = "default",
   className = "",
 }: RSVPButtonProps) {
   const router = useRouter();
@@ -211,7 +213,41 @@ export default function RSVPButton({
     md: "px-4 py-2 text-sm",
   };
 
+  // Variant-specific styles
+  const getButtonClasses = () => {
+    const baseClasses = "font-mono font-medium rounded-lg transition-all duration-150 flex items-center gap-2";
+    const animationClass = isAnimating ? "scale-95" : "scale-100";
+
+    if (variant === "compact") {
+      // Icon-only button for sticky bar
+      return `${baseClasses} w-11 h-11 justify-center border ${
+        status
+          ? `${currentConfig?.color} text-[var(--void)] border-transparent`
+          : "bg-[var(--dusk)] text-[var(--muted)] hover:text-[var(--cream)] border-[var(--twilight)]"
+      } ${animationClass}`;
+    }
+
+    if (variant === "primary") {
+      // Full-width primary button for sticky bar
+      return `${baseClasses} px-6 py-3 ${
+        status
+          ? `${currentConfig?.color} text-[var(--void)]`
+          : "bg-[var(--coral)] text-[var(--void)] hover:bg-[var(--rose)]"
+      } ${animationClass}`;
+    }
+
+    // Default variant
+    return `${baseClasses} ${sizeClasses[size]} ${
+      status
+        ? `${currentConfig?.color} text-[var(--void)]`
+        : "bg-[var(--dusk)] text-[var(--muted)] hover:text-[var(--cream)] border border-[var(--twilight)]"
+    } ${animationClass}`;
+  };
+
   if (loading) {
+    if (variant === "compact") {
+      return <div className={`w-11 h-11 rounded-lg bg-[var(--twilight)] animate-pulse ${className}`} />;
+    }
     return (
       <div
         className={`${sizeClasses[size]} rounded-lg bg-[var(--twilight)] animate-pulse ${className}`}
@@ -222,6 +258,58 @@ export default function RSVPButton({
 
   const currentConfig = status ? STATUS_CONFIG[status] : null;
 
+  // Render button content based on variant
+  const renderButtonContent = () => {
+    if (actionLoading) {
+      return <span className="inline-block w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />;
+    }
+
+    if (variant === "compact") {
+      // Icon only
+      return status ? (
+        <StatusIcon status={status} />
+      ) : (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+        </svg>
+      );
+    }
+
+    if (variant === "primary") {
+      return status ? (
+        <>
+          <StatusIcon status={status} />
+          {currentConfig?.label}
+        </>
+      ) : (
+        <>
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+          </svg>
+          RSVP
+        </>
+      );
+    }
+
+    // Default variant
+    return status ? (
+      <>
+        <StatusIcon status={status} />
+        {currentConfig?.label}
+        <svg className="w-3 h-3 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      </>
+    ) : (
+      <>
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+        </svg>
+        RSVP
+      </>
+    );
+  };
+
   return (
     <div className={`relative ${className}`} ref={menuRef}>
       <Confetti isActive={showConfetti} />
@@ -230,30 +318,9 @@ export default function RSVPButton({
         disabled={actionLoading}
         aria-haspopup="menu"
         aria-expanded={menuOpen}
-        className={`font-mono font-medium rounded-lg transition-all duration-150 flex items-center gap-2 ${sizeClasses[size]} ${
-          status
-            ? `${currentConfig?.color} text-[var(--void)]`
-            : "bg-[var(--dusk)] text-[var(--muted)] hover:text-[var(--cream)] border border-[var(--twilight)]"
-        } ${isAnimating ? "scale-95" : "scale-100"}`}
+        className={getButtonClasses()}
       >
-        {actionLoading ? (
-          <span className="inline-block w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-        ) : status ? (
-          <>
-            <StatusIcon status={status} />
-            {currentConfig?.label}
-            <svg className="w-3 h-3 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-            </svg>
-          </>
-        ) : (
-          <>
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-            </svg>
-            RSVP
-          </>
-        )}
+        {renderButtonContent()}
       </button>
 
       {/* Dropdown Menu */}

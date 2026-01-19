@@ -150,13 +150,21 @@ export async function GET(request: Request) {
     return new Date(a.start_date).getTime() - new Date(b.start_date).getTime();
   });
 
-  // Return top results
-  return NextResponse.json({
-    events: events.slice(0, limit),
-    hasPreferences: !!(
-      prefs?.favorite_categories?.length ||
-      prefs?.favorite_neighborhoods?.length ||
-      prefs?.favorite_vibes?.length
-    ),
-  });
+  // Return top results with private caching (user-specific)
+  return NextResponse.json(
+    {
+      events: events.slice(0, limit),
+      hasPreferences: !!(
+        prefs?.favorite_categories?.length ||
+        prefs?.favorite_neighborhoods?.length ||
+        prefs?.favorite_vibes?.length
+      ),
+    },
+    {
+      headers: {
+        // Private cache for user-specific content
+        "Cache-Control": "private, max-age=60, stale-while-revalidate=120",
+      },
+    }
+  );
 }

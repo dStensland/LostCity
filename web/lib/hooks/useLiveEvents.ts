@@ -58,10 +58,26 @@ export function useLiveEvents(): UseLiveEventsResult {
           table: "events",
         },
         (payload) => {
-          const newData = payload.new as { id: number; is_live?: boolean };
+          const newData = payload.new as { id: number; is_live?: boolean; title?: string };
           if (typeof newData.is_live === "boolean") {
-            // Refetch when any event's live status changes
-            fetchLiveEvents();
+            // Update single event in state instead of refetching entire list
+            setEvents((prev) => {
+              if (newData.is_live) {
+                // Event went live - add if not present, update if exists
+                const exists = prev.some((e) => e.id === newData.id);
+                if (exists) {
+                  return prev.map((e) =>
+                    e.id === newData.id ? { ...e, is_live: true } : e
+                  );
+                }
+                // New live event - need to fetch its full data
+                fetchLiveEvents();
+                return prev;
+              } else {
+                // Event ended - remove from list
+                return prev.filter((e) => e.id !== newData.id);
+              }
+            });
           }
         }
       )

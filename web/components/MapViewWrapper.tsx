@@ -17,8 +17,9 @@ const MapView = dynamic(() => import("./MapView"), {
 
 interface Props {
   events: EventWithLocation[];
+  userLocation?: { lat: number; lng: number } | null;
 }
 
-export default function MapViewWrapper({ events }: Props) {
-  return <MapView events={events} />;
+export default function MapViewWrapper({ events, userLocation }: Props) {
+  return <MapView events={events} userLocation={userLocation} />;
 }

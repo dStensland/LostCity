@@ -56,46 +56,63 @@ export default function NotificationDropdown() {
 
   // Fetch notifications when dropdown opens
   useEffect(() => {
-    async function fetchNotifications() {
-      if (!user || !isOpen) return;
+    if (!user || !isOpen) return;
 
+    const controller = new AbortController();
+
+    async function fetchNotifications() {
       setLoading(true);
       try {
-        const res = await fetch("/api/notifications?limit=10");
+        const res = await fetch("/api/notifications?limit=10", {
+          signal: controller.signal,
+        });
         if (res.ok) {
           const data = await res.json();
           setNotifications(data.notifications || []);
           setUnreadCount(data.unreadCount || 0);
         }
       } catch (error) {
+        if (error instanceof Error && error.name === "AbortError") return;
         console.error("Failed to fetch notifications:", error);
       } finally {
-        setLoading(false);
+        if (!controller.signal.aborted) {
+          setLoading(false);
+        }
       }
     }
 
     fetchNotifications();
+    return () => controller.abort();
   }, [user, isOpen]);
 
   // Poll for unread count periodically
   useEffect(() => {
-    async function fetchUnreadCount() {
-      if (!user) return;
+    if (!user) return;
 
+    const controller = new AbortController();
+
+    async function fetchUnreadCount() {
       try {
-        const res = await fetch("/api/notifications?limit=1&unread=true");
+        const res = await fetch("/api/notifications?limit=1&unread=true", {
+          signal: controller.signal,
+        });
         if (res.ok) {
           const data = await res.json();
           setUnreadCount(data.unreadCount || 0);
         }
-      } catch {
-        // Silent fail for polling
+      } catch (err) {
+        // Ignore abort errors (expected during unmount/navigation)
+        if (err instanceof Error && err.name === "AbortError") return;
+        // Silent fail for other polling errors
       }
     }
 
     fetchUnreadCount();
     const interval = setInterval(fetchUnreadCount, 60000); // Poll every minute
-    return () => clearInterval(interval);
+    return () => {
+      controller.abort();
+      clearInterval(interval);
+    };
   }, [user]);
 
   const handleMarkAllRead = async () => {

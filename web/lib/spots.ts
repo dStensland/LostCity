@@ -281,6 +281,79 @@ export function getSpotTypeLabels(types: string[] | null): string {
     .join(" + ");
 }
 
+// Check if a spot is currently open based on hours data
+type HoursData = Record<string, { open: string; close: string } | null>;
+
+export function isSpotOpen(hours: HoursData | null, is24Hours?: boolean): { isOpen: boolean; closesAt?: string } {
+  if (is24Hours) return { isOpen: true };
+  if (!hours) return { isOpen: false };
+
+  const now = new Date();
+  const dayNames = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
+  const today = dayNames[now.getDay()];
+  const currentTime = `${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}`;
+
+  const todayHours = hours[today];
+  if (!todayHours) return { isOpen: false };
+
+  const { open, close } = todayHours;
+
+  // Handle overnight hours (e.g., open 18:00, close 02:00)
+  if (close < open) {
+    // Check if we're after opening time today or before closing time (from yesterday)
+    if (currentTime >= open || currentTime < close) {
+      return { isOpen: true, closesAt: close };
+    }
+  } else {
+    // Normal hours
+    if (currentTime >= open && currentTime < close) {
+      return { isOpen: true, closesAt: close };
+    }
+  }
+
+  return { isOpen: false };
+}
+
+// Get spots that are currently open
+export async function getOpenSpots(
+  spotTypes?: string[],
+  neighborhood?: string,
+  limit = 20
+): Promise<Spot[]> {
+  let query = supabase
+    .from("venues")
+    .select("*")
+    .eq("active", true)
+    .order("name");
+
+  if (spotTypes && spotTypes.length > 0) {
+    // Filter by spot types
+    const typeFilters = spotTypes.map(t => `spot_type.eq.${t},spot_types.cs.{${t}}`).join(",");
+    query = query.or(typeFilters);
+  }
+
+  if (neighborhood) {
+    query = query.eq("neighborhood", neighborhood);
+  }
+
+  query = query.limit(limit * 2); // Fetch extra since we'll filter by open status
+
+  const { data, error } = await query;
+
+  if (error) {
+    console.error("Error fetching spots:", error);
+    return [];
+  }
+
+  // Filter to only open spots
+  const openSpots = (data || []).filter((spot: Spot & { hours?: HoursData; is_24_hours?: boolean }) => {
+    const { isOpen } = isSpotOpen(spot.hours || null, spot.is_24_hours);
+    return isOpen;
+  });
+
+  return openSpots.slice(0, limit) as Spot[];
+}
+
 export async function getNearbySpots(
   venueId: number,
   limit = 6

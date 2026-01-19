@@ -21,7 +21,7 @@ function PreferencesContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const isWelcome = searchParams.get("welcome") === "true";
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const supabase = createClient();
 
   const [loading, setLoading] = useState(true);
@@ -102,7 +102,18 @@ function PreferencesContent() {
     }
   };
 
+  // Show loading while auth is checking
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-[var(--coral)] border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  // Redirect to login if not authenticated
   if (!user) {
+    router.push("/login?redirect=/settings/preferences");
     return null;
   }
 

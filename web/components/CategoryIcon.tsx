@@ -14,8 +14,17 @@ export const CATEGORY_CONFIG = {
   fitness: { label: "Fitness", color: "#5EEAD4" },
   nightlife: { label: "Nightlife", color: "#E879F9" },
   family: { label: "Family", color: "#A78BFA" },
+  learning: { label: "Learning", color: "#A8E6CF" },
+  dance: { label: "Dance", color: "#F9A8D4" },
+  tours: { label: "Tours", color: "#7DD3FC" },
   meetup: { label: "Meetup", color: "#ED1C40" },
   words: { label: "Words", color: "#93C5FD" },
+  religious: { label: "Religious", color: "#DDD6FE" },
+  markets: { label: "Markets", color: "#FCA5A5" },
+  wellness: { label: "Wellness", color: "#99F6E4" },
+  gaming: { label: "Gaming", color: "#86EFAC" },
+  outdoors: { label: "Outdoors", color: "#BEF264" },
+  other: { label: "Other", color: "#8B8B94" },
 
   // Spot types (reuse some colors, add new ones)
   music_venue: { label: "Music Venue", color: "#F9A8D4" },
@@ -32,6 +41,29 @@ export const CATEGORY_CONFIG = {
   games: { label: "Games", color: "#4ADE80" },
   bookstore: { label: "Bookstore", color: "#93C5FD" },
   library: { label: "Library", color: "#60A5FA" },
+  venue: { label: "Venue", color: "#A78BFA" },
+  organization: { label: "Organization", color: "#6EE7B7" },
+  festival: { label: "Festival", color: "#FBBF24" },
+  cinema: { label: "Cinema", color: "#A5B4FC" },
+  park: { label: "Park", color: "#86EFAC" },
+  garden: { label: "Garden", color: "#4ADE80" },
+  outdoor: { label: "Outdoor", color: "#BEF264" },
+  food_hall: { label: "Food Hall", color: "#FB923C" },
+  farmers_market: { label: "Farmers Market", color: "#FCA5A5" },
+
+  // New categories for expanded crawlers
+  haunted: { label: "Haunted", color: "#9333EA" },
+  cooking: { label: "Cooking", color: "#F97316" },
+  eatertainment: { label: "Eatertainment", color: "#22D3EE" },
+  yoga: { label: "Yoga", color: "#A3E635" },
+  coworking: { label: "Coworking", color: "#60A5FA" },
+  record_store: { label: "Record Store", color: "#EC4899" },
+  lgbtq: { label: "LGBTQ+", color: "#F472B6" },
+  sports_bar: { label: "Sports Bar", color: "#38BDF8" },
+  attraction: { label: "Attraction", color: "#FBBF24" },
+  studio: { label: "Studio", color: "#A3E635" },
+  cooking_school: { label: "Cooking School", color: "#F97316" },
+  community_center: { label: "Community Center", color: "#6EE7B7" },
 } as const;
 
 export type CategoryType = keyof typeof CATEGORY_CONFIG;
@@ -279,6 +311,301 @@ const iconPaths: Record<string, ReactNode> = {
       <path d="M4 19V6a2 2 0 012-2h12a2 2 0 012 2v13" strokeWidth={2} fill="none" stroke="currentColor" />
       <path d="M2 19h20M2 22h20" strokeWidth={2} strokeLinecap="round" stroke="currentColor" />
       <path d="M9 4v15M15 4v15" strokeWidth={2} stroke="currentColor" opacity={0.5} />
+    </>
+  ),
+
+  // Learning - graduation cap
+  learning: (
+    <>
+      <path d="M22 10l-10-5L2 10l10 5 10-5z" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" fill="none" stroke="currentColor" />
+      <path d="M6 12v5c3 3 9 3 12 0v-5" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" fill="none" stroke="currentColor" />
+      <path d="M22 10v6" strokeWidth={2} strokeLinecap="round" stroke="currentColor" />
+    </>
+  ),
+
+  // Dance - dancing figure
+  dance: (
+    <>
+      <circle cx="12" cy="4" r="2" strokeWidth={2} fill="none" stroke="currentColor" />
+      <path d="M12 6v6" strokeWidth={2} strokeLinecap="round" stroke="currentColor" />
+      <path d="M12 12l4 4M12 12l-4 4" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" fill="none" stroke="currentColor" />
+      <path d="M8 8l4 4 4-4" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" fill="none" stroke="currentColor" />
+      <path d="M12 18v3" strokeWidth={2} strokeLinecap="round" stroke="currentColor" />
+    </>
+  ),
+
+  // Tours - compass/map marker
+  tours: (
+    <>
+      <circle cx="12" cy="12" r="10" strokeWidth={2} fill="none" stroke="currentColor" />
+      <polygon points="12,2 15,10 12,8 9,10" fill="currentColor" />
+      <polygon points="12,22 9,14 12,16 15,14" fill="currentColor" opacity={0.5} />
+      <circle cx="12" cy="12" r="2" fill="currentColor" />
+    </>
+  ),
+
+  // Other - generic star
+  other: (
+    <>
+      <polygon points="12,2 15,9 22,9 17,14 19,22 12,17 5,22 7,14 2,9 9,9" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" fill="none" stroke="currentColor" />
+    </>
+  ),
+
+  // Religious - church/hands in prayer
+  religious: (
+    <>
+      <path d="M12 2v4M12 22v-6" strokeWidth={2} strokeLinecap="round" stroke="currentColor" />
+      <path d="M4 10l8-4 8 4" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" fill="none" stroke="currentColor" />
+      <path d="M4 10v12h16V10" strokeWidth={2} fill="none" stroke="currentColor" />
+      <path d="M9 22v-6h6v6" strokeWidth={2} fill="none" stroke="currentColor" />
+    </>
+  ),
+
+  // Markets - shopping bag/stall
+  markets: (
+    <>
+      <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" fill="none" stroke="currentColor" />
+      <path d="M3 6h18" strokeWidth={2} stroke="currentColor" />
+      <path d="M16 10a4 4 0 01-8 0" strokeWidth={2} strokeLinecap="round" fill="none" stroke="currentColor" />
+    </>
+  ),
+
+  // Wellness - lotus/meditation
+  wellness: (
+    <>
+      <circle cx="12" cy="8" r="3" strokeWidth={2} fill="none" stroke="currentColor" />
+      <path d="M12 11c-4 0-6 3-6 5s2 4 6 4 6-2 6-4-2-5-6-5z" strokeWidth={2} fill="none" stroke="currentColor" />
+      <path d="M8 16c0-2 2-3 4-3s4 1 4 3" strokeWidth={2} strokeLinecap="round" fill="none" stroke="currentColor" />
+    </>
+  ),
+
+  // Gaming - game controller
+  gaming: (
+    <>
+      <path d="M6 11h4M8 9v4" strokeWidth={2} strokeLinecap="round" stroke="currentColor" />
+      <circle cx="15" cy="10" r="1" fill="currentColor" />
+      <circle cx="17" cy="12" r="1" fill="currentColor" />
+      <path d="M2 10a4 4 0 014-4h12a4 4 0 014 4v4a4 4 0 01-4 4H6a4 4 0 01-4-4v-4z" strokeWidth={2} fill="none" stroke="currentColor" />
+    </>
+  ),
+
+  // Outdoors - mountain/sun
+  outdoors: (
+    <>
+      <path d="M8 21l4-10 4 10" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" fill="none" stroke="currentColor" />
+      <path d="M2 21h20" strokeWidth={2} strokeLinecap="round" stroke="currentColor" />
+      <path d="M14 21l3-6 5 6" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" fill="none" stroke="currentColor" />
+      <circle cx="18" cy="5" r="3" strokeWidth={2} fill="none" stroke="currentColor" />
+    </>
+  ),
+
+  // Venue - generic building
+  venue: (
+    <>
+      <rect x="3" y="8" width="18" height="13" rx="1" strokeWidth={2} fill="none" stroke="currentColor" />
+      <path d="M3 12h18" strokeWidth={2} stroke="currentColor" />
+      <path d="M12 3v5" strokeWidth={2} strokeLinecap="round" stroke="currentColor" />
+      <path d="M8 3h8" strokeWidth={2} strokeLinecap="round" stroke="currentColor" />
+    </>
+  ),
+
+  // Organization - building with people
+  organization: (
+    <>
+      <rect x="4" y="4" width="16" height="17" rx="1" strokeWidth={2} fill="none" stroke="currentColor" />
+      <path d="M9 21v-4h6v4" strokeWidth={2} fill="none" stroke="currentColor" />
+      <circle cx="12" cy="10" r="2" strokeWidth={2} fill="none" stroke="currentColor" />
+      <path d="M8 8h2M14 8h2" strokeWidth={2} strokeLinecap="round" stroke="currentColor" />
+    </>
+  ),
+
+  // Festival - tent
+  festival: (
+    <>
+      <path d="M12 2L2 12h20L12 2z" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" fill="none" stroke="currentColor" />
+      <path d="M12 2v10" strokeWidth={2} stroke="currentColor" />
+      <path d="M4 22V12h16v10" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" fill="none" stroke="currentColor" />
+      <path d="M9 22v-5h6v5" strokeWidth={2} fill="none" stroke="currentColor" />
+    </>
+  ),
+
+  // Cinema - projector/screen
+  cinema: (
+    <>
+      <rect x="2" y="4" width="20" height="12" rx="2" strokeWidth={2} fill="none" stroke="currentColor" />
+      <path d="M8 20h8" strokeWidth={2} strokeLinecap="round" stroke="currentColor" />
+      <path d="M12 16v4" strokeWidth={2} strokeLinecap="round" stroke="currentColor" />
+      <circle cx="8" cy="10" r="2" fill="currentColor" opacity={0.5} />
+      <circle cx="16" cy="10" r="2" fill="currentColor" opacity={0.5} />
+    </>
+  ),
+
+  // Park - tree
+  park: (
+    <>
+      <path d="M12 22v-6" strokeWidth={2} strokeLinecap="round" stroke="currentColor" />
+      <path d="M12 2l-6 8h4l-4 6h12l-4-6h4L12 2z" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" fill="none" stroke="currentColor" />
+    </>
+  ),
+
+  // Garden - flower
+  garden: (
+    <>
+      <circle cx="12" cy="8" r="3" strokeWidth={2} fill="none" stroke="currentColor" />
+      <path d="M12 11v11" strokeWidth={2} strokeLinecap="round" stroke="currentColor" />
+      <path d="M9 5c-2-2-5-1-5 2s3 4 5 2" strokeWidth={2} fill="none" stroke="currentColor" />
+      <path d="M15 5c2-2 5-1 5 2s-3 4-5 2" strokeWidth={2} fill="none" stroke="currentColor" />
+      <path d="M8 17c-2 0-3 2-2 4h12c1-2 0-4-2-4" strokeWidth={2} fill="none" stroke="currentColor" />
+    </>
+  ),
+
+  // Outdoor - same as outdoors
+  outdoor: (
+    <>
+      <path d="M8 21l4-10 4 10" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" fill="none" stroke="currentColor" />
+      <path d="M2 21h20" strokeWidth={2} strokeLinecap="round" stroke="currentColor" />
+      <path d="M14 21l3-6 5 6" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" fill="none" stroke="currentColor" />
+      <circle cx="18" cy="5" r="3" strokeWidth={2} fill="none" stroke="currentColor" />
+    </>
+  ),
+
+  // Food Hall - multiple food items
+  food_hall: (
+    <>
+      <rect x="2" y="6" width="20" height="14" rx="2" strokeWidth={2} fill="none" stroke="currentColor" />
+      <path d="M2 10h20" strokeWidth={2} stroke="currentColor" />
+      <path d="M8 6V4M12 6V4M16 6V4" strokeWidth={2} strokeLinecap="round" stroke="currentColor" />
+      <circle cx="7" cy="14" r="2" fill="currentColor" opacity={0.5} />
+      <circle cx="12" cy="14" r="2" fill="currentColor" opacity={0.5} />
+      <circle cx="17" cy="14" r="2" fill="currentColor" opacity={0.5} />
+    </>
+  ),
+
+  // Farmers Market - produce stand
+  farmers_market: (
+    <>
+      <path d="M3 11l9-7 9 7" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" fill="none" stroke="currentColor" />
+      <path d="M5 9v12h14V9" strokeWidth={2} fill="none" stroke="currentColor" />
+      <circle cx="9" cy="15" r="2" fill="currentColor" />
+      <circle cx="15" cy="15" r="2" fill="currentColor" />
+      <circle cx="12" cy="13" r="2" fill="currentColor" opacity={0.6} />
+    </>
+  ),
+
+  // Haunted - ghost
+  haunted: (
+    <>
+      <path d="M12 2C8 2 5 5.5 5 9.5V22l2.5-2 2 2 2.5-2 2.5 2 2-2 2.5 2V9.5C19 5.5 16 2 12 2z" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" fill="none" stroke="currentColor" />
+      <circle cx="9" cy="10" r="1.5" fill="currentColor" />
+      <circle cx="15" cy="10" r="1.5" fill="currentColor" />
+      <path d="M9 15c1.5 1 4.5 1 6 0" strokeWidth={2} strokeLinecap="round" fill="none" stroke="currentColor" />
+    </>
+  ),
+  attraction: (
+    <>
+      <path d="M12 2C8 2 5 5.5 5 9.5V22l2.5-2 2 2 2.5-2 2.5 2 2-2 2.5 2V9.5C19 5.5 16 2 12 2z" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" fill="none" stroke="currentColor" />
+      <circle cx="9" cy="10" r="1.5" fill="currentColor" />
+      <circle cx="15" cy="10" r="1.5" fill="currentColor" />
+      <path d="M9 15c1.5 1 4.5 1 6 0" strokeWidth={2} strokeLinecap="round" fill="none" stroke="currentColor" />
+    </>
+  ),
+
+  // Cooking - chef hat
+  cooking: (
+    <>
+      <path d="M6 13c-1.7 0-3-1.3-3-3 0-1.4 1-2.6 2.3-2.9C5.6 4.6 7.6 3 10 3c1.4 0 2.6.6 3.5 1.5.5-.3 1-.5 1.5-.5 1.7 0 3 1.3 3 3 0 .3 0 .6-.1.9 1.4.5 2.1 1.6 2.1 3.1 0 1.7-1.3 3-3 3" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" fill="none" stroke="currentColor" />
+      <rect x="6" y="13" width="12" height="8" rx="1" strokeWidth={2} fill="none" stroke="currentColor" />
+      <path d="M10 17h4" strokeWidth={2} strokeLinecap="round" stroke="currentColor" />
+    </>
+  ),
+  cooking_school: (
+    <>
+      <path d="M6 13c-1.7 0-3-1.3-3-3 0-1.4 1-2.6 2.3-2.9C5.6 4.6 7.6 3 10 3c1.4 0 2.6.6 3.5 1.5.5-.3 1-.5 1.5-.5 1.7 0 3 1.3 3 3 0 .3 0 .6-.1.9 1.4.5 2.1 1.6 2.1 3.1 0 1.7-1.3 3-3 3" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" fill="none" stroke="currentColor" />
+      <rect x="6" y="13" width="12" height="8" rx="1" strokeWidth={2} fill="none" stroke="currentColor" />
+      <path d="M10 17h4" strokeWidth={2} strokeLinecap="round" stroke="currentColor" />
+    </>
+  ),
+
+  // Eatertainment - bowling pin + fork
+  eatertainment: (
+    <>
+      <path d="M8 4c0-1 .5-2 2-2s2 1 2 2c0 2-1 3-1 5h-2c0-2-1-3-1-5z" strokeWidth={2} fill="none" stroke="currentColor" />
+      <ellipse cx="10" cy="11" rx="2.5" ry="2" strokeWidth={2} fill="none" stroke="currentColor" />
+      <path d="M7.5 13c-.5 1-.5 3 0 4 .5 1 2 2 2.5 2s2-1 2.5-2c.5-1 .5-3 0-4" strokeWidth={2} fill="none" stroke="currentColor" />
+      <path d="M17 3v8M17 14v4M14 6h6" strokeWidth={2} strokeLinecap="round" stroke="currentColor" />
+    </>
+  ),
+
+  // Yoga - person in lotus pose
+  yoga: (
+    <>
+      <circle cx="12" cy="5" r="2.5" strokeWidth={2} fill="none" stroke="currentColor" />
+      <path d="M12 8v4" strokeWidth={2} strokeLinecap="round" stroke="currentColor" />
+      <path d="M8 10l4 2 4-2" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" fill="none" stroke="currentColor" />
+      <path d="M4 18c2-2 4-3 8-3s6 1 8 3" strokeWidth={2} strokeLinecap="round" fill="none" stroke="currentColor" />
+      <path d="M8 15l-2 4M16 15l2 4" strokeWidth={2} strokeLinecap="round" stroke="currentColor" />
+    </>
+  ),
+  studio: (
+    <>
+      <circle cx="12" cy="5" r="2.5" strokeWidth={2} fill="none" stroke="currentColor" />
+      <path d="M12 8v4" strokeWidth={2} strokeLinecap="round" stroke="currentColor" />
+      <path d="M8 10l4 2 4-2" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" fill="none" stroke="currentColor" />
+      <path d="M4 18c2-2 4-3 8-3s6 1 8 3" strokeWidth={2} strokeLinecap="round" fill="none" stroke="currentColor" />
+      <path d="M8 15l-2 4M16 15l2 4" strokeWidth={2} strokeLinecap="round" stroke="currentColor" />
+    </>
+  ),
+
+  // Coworking - laptop/desk
+  coworking: (
+    <>
+      <rect x="3" y="4" width="18" height="12" rx="2" strokeWidth={2} fill="none" stroke="currentColor" />
+      <path d="M7 8h10" strokeWidth={2} strokeLinecap="round" stroke="currentColor" opacity={0.5} />
+      <path d="M7 11h6" strokeWidth={2} strokeLinecap="round" stroke="currentColor" opacity={0.5} />
+      <path d="M1 20h22" strokeWidth={2} strokeLinecap="round" stroke="currentColor" />
+      <path d="M6 16l-1 4M18 16l1 4" strokeWidth={2} strokeLinecap="round" stroke="currentColor" />
+    </>
+  ),
+
+  // Record Store - vinyl record
+  record_store: (
+    <>
+      <circle cx="12" cy="12" r="9" strokeWidth={2} fill="none" stroke="currentColor" />
+      <circle cx="12" cy="12" r="3" strokeWidth={2} fill="none" stroke="currentColor" />
+      <circle cx="12" cy="12" r="1" fill="currentColor" />
+      <path d="M12 3v2M12 19v2" strokeWidth={1.5} stroke="currentColor" opacity={0.3} />
+      <path d="M3 12h2M19 12h2" strokeWidth={1.5} stroke="currentColor" opacity={0.3} />
+    </>
+  ),
+
+  // LGBTQ+ - rainbow/pride flag
+  lgbtq: (
+    <>
+      <rect x="3" y="4" width="18" height="16" rx="1" strokeWidth={2} fill="none" stroke="currentColor" />
+      <path d="M3 7h18" strokeWidth={2} stroke="currentColor" />
+      <path d="M3 10h18" strokeWidth={2} stroke="currentColor" opacity={0.8} />
+      <path d="M3 13h18" strokeWidth={2} stroke="currentColor" opacity={0.6} />
+      <path d="M3 16h18" strokeWidth={2} stroke="currentColor" opacity={0.4} />
+    </>
+  ),
+
+  // Sports Bar - TV with ball
+  sports_bar: (
+    <>
+      <rect x="2" y="4" width="16" height="10" rx="1" strokeWidth={2} fill="none" stroke="currentColor" />
+      <path d="M6 18h8M10 14v4" strokeWidth={2} strokeLinecap="round" stroke="currentColor" />
+      <circle cx="18" cy="14" r="4" strokeWidth={2} fill="none" stroke="currentColor" />
+      <path d="M16 14c0-1.1.9-2 2-2M18 12v4" strokeWidth={1.5} stroke="currentColor" />
+    </>
+  ),
+
+  // Community Center - building with people
+  community_center: (
+    <>
+      <path d="M3 21h18" strokeWidth={2} strokeLinecap="round" stroke="currentColor" />
+      <path d="M5 21V7l7-4 7 4v14" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" fill="none" stroke="currentColor" />
+      <rect x="9" y="13" width="6" height="8" strokeWidth={2} fill="none" stroke="currentColor" />
+      <path d="M9 9h6" strokeWidth={2} strokeLinecap="round" stroke="currentColor" />
     </>
   ),
 };
