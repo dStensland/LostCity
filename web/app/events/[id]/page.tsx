@@ -156,7 +156,7 @@ export default async function EventPage({ params }: Props) {
           )}
 
           {/* Main event info card */}
-          <div className="bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg p-6 sm:p-8">
+          <div className="border border-[var(--twilight)] rounded-lg p-6 sm:p-8" style={{ backgroundColor: "var(--card-bg)" }}>
             {/* Badges row */}
             <div className="flex flex-wrap items-center gap-2 mb-4">
               {/* Category badge */}
@@ -193,7 +193,7 @@ export default async function EventPage({ params }: Props) {
 
             {/* Date/Time/Price grid */}
             <div className="mt-6 grid grid-cols-3 gap-3 sm:gap-4">
-              <div className="bg-[var(--night)] rounded-lg p-3 sm:p-4 text-center border border-[var(--twilight)]">
+              <div className="rounded-lg p-3 sm:p-4 text-center border border-[var(--twilight)]" style={{ backgroundColor: "var(--void)" }}>
                 <div className="font-mono text-[0.6rem] text-[var(--muted)] uppercase tracking-widest mb-1">
                   Date
                 </div>
@@ -203,7 +203,7 @@ export default async function EventPage({ params }: Props) {
                 <div className="font-mono text-xs text-[var(--muted)]">{dayOfWeek}</div>
               </div>
 
-              <div className="bg-[var(--night)] rounded-lg p-3 sm:p-4 text-center border border-[var(--twilight)]">
+              <div className="rounded-lg p-3 sm:p-4 text-center border border-[var(--twilight)]" style={{ backgroundColor: "var(--void)" }}>
                 <div className="font-mono text-[0.6rem] text-[var(--muted)] uppercase tracking-widest mb-1">
                   Time
                 </div>
@@ -213,7 +213,7 @@ export default async function EventPage({ params }: Props) {
                 <div className="font-mono text-xs text-[var(--muted)]">{period}</div>
               </div>
 
-              <div className="bg-[var(--night)] rounded-lg p-3 sm:p-4 text-center border border-[var(--twilight)]">
+              <div className="rounded-lg p-3 sm:p-4 text-center border border-[var(--twilight)]" style={{ backgroundColor: "var(--void)" }}>
                 <div className="font-mono text-[0.6rem] text-[var(--muted)] uppercase tracking-widest mb-1">
                   Price
                 </div>
@@ -248,7 +248,8 @@ export default async function EventPage({ params }: Props) {
                   {event.tags.map((tag) => (
                     <span
                       key={tag}
-                      className="px-3 py-1 bg-[var(--night)] text-[var(--soft)] rounded border border-[var(--twilight)] text-sm"
+                      className="px-3 py-1 text-[var(--soft)] rounded border border-[var(--twilight)] text-sm"
+                      style={{ backgroundColor: "var(--void)" }}
                     >
                       {tag}
                     </span>
@@ -343,7 +344,8 @@ export default async function EventPage({ params }: Props) {
                   <Link
                     key={spot.id}
                     href={`/spots/${spot.slug}`}
-                    className="group p-3 bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg hover:bg-[var(--twilight)] transition-colors"
+                    className="group p-3 border border-[var(--twilight)] rounded-lg transition-colors"
+                    style={{ backgroundColor: "var(--card-bg)" }}
                   >
                     <div className="flex items-start gap-2">
                       <CategoryIcon
@@ -380,7 +382,8 @@ export default async function EventPage({ params }: Props) {
                       <Link
                         key={relatedEvent.id}
                         href={`/events/${relatedEvent.id}`}
-                        className="block p-4 bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg hover:bg-[var(--twilight)] transition-colors group"
+                        className="block p-4 border border-[var(--twilight)] rounded-lg transition-colors group"
+                        style={{ backgroundColor: "var(--card-bg)" }}
                       >
                         <div className="flex items-start justify-between gap-4">
                           <div className="flex-1 min-w-0">
@@ -415,7 +418,8 @@ export default async function EventPage({ params }: Props) {
                       <Link
                         key={relatedEvent.id}
                         href={`/events/${relatedEvent.id}`}
-                        className="block p-4 bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg hover:bg-[var(--twilight)] transition-colors group"
+                        className="block p-4 border border-[var(--twilight)] rounded-lg transition-colors group"
+                        style={{ backgroundColor: "var(--card-bg)" }}
                       >
                         <div className="flex items-start justify-between gap-4">
                           <div className="flex-1 min-w-0">

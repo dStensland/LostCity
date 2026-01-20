@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { supabase } from "@/lib/supabase";
 import CategoryIcon, { getCategoryLabel } from "./CategoryIcon";
 
 type Spot = {
@@ -27,71 +26,21 @@ export default function PortalSpotsView({ portalId, portalSlug, isExclusive = fa
 
   useEffect(() => {
     async function fetchSpots() {
-      // Get venues that have events for this portal
-      const today = new Date().toISOString().split("T")[0];
+      try {
+        const params = new URLSearchParams();
+        if (portalId) params.set("portal_id", portalId);
+        if (isExclusive) params.set("exclusive", "true");
 
-      // First get venue IDs with events
-      let query = supabase
-        .from("events")
-        .select("venue_id")
-        .gte("start_date", today)
-        .not("venue_id", "is", null);
+        const res = await fetch(`/api/spots?${params}`);
+        const data = await res.json();
 
-      // For exclusive portals (business), only show their venues
-      // For city portals, show all venues with events (including public events)
-      if (isExclusive) {
-        query = query.eq("portal_id", portalId);
-      } else if (portalId === "default") {
-        // Default portal - show all public events
-        query = query.is("portal_id", null);
-      } else {
-        // For city portals, show venues with events for this portal OR public events
-        query = query.or(`portal_id.eq.${portalId},portal_id.is.null`);
-      }
-
-      const { data: events } = await query;
-
-      const typedEvents = events as { venue_id: number | null }[] | null;
-
-      if (!typedEvents || typedEvents.length === 0) {
+        setSpots(data.spots || []);
+      } catch (error) {
+        console.error("Failed to fetch spots:", error);
         setSpots([]);
+      } finally {
         setLoading(false);
-        return;
       }
-
-      // Get unique venue IDs and count events per venue
-      const venueEventCounts = new Map<number, number>();
-      for (const event of typedEvents) {
-        if (event.venue_id) {
-          venueEventCounts.set(
-            event.venue_id,
-            (venueEventCounts.get(event.venue_id) || 0) + 1
-          );
-        }
-      }
-
-      const venueIds = Array.from(venueEventCounts.keys());
-
-      // Fetch venue details
-      const { data: venues } = await supabase
-        .from("venues")
-        .select("id, name, slug, address, neighborhood, spot_type")
-        .in("id", venueIds);
-
-      const typedVenues = venues as Spot[] | null;
-
-      if (typedVenues) {
-        const spotsWithCounts = typedVenues.map((venue) => ({
-          ...venue,
-          event_count: venueEventCounts.get(venue.id) || 0,
-        }));
-
-        // Sort by event count descending
-        spotsWithCounts.sort((a, b) => (b.event_count || 0) - (a.event_count || 0));
-        setSpots(spotsWithCounts);
-      }
-
-      setLoading(false);
     }
 
     fetchSpots();

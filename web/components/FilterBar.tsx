@@ -579,7 +579,7 @@ export default function FilterBar({ variant = "full" }: FilterBarProps) {
               {showDatePicker && (
                 <>
                   <div className="fixed inset-0 z-[1100]" onClick={() => setShowDatePicker(false)} />
-                  <div className="absolute top-full left-0 mt-1 z-[1101] bg-[var(--night)] border border-[var(--twilight)] rounded-lg shadow-xl p-2 min-w-[200px]">
+                  <div className="absolute top-full left-0 mt-1 z-[1101] border border-[var(--twilight)] rounded-lg shadow-xl p-2 min-w-[200px]" style={{ backgroundColor: "var(--card-bg)" }}>
                     <div className="grid grid-cols-2 gap-1">
                       {quickDates.map((d) => (
                         <button
@@ -652,9 +652,10 @@ export default function FilterBar({ variant = "full" }: FilterBarProps) {
 
       {/* Drawer */}
       <div
-        className={`fixed inset-y-0 left-0 z-[1101] w-80 max-w-[85vw] bg-[var(--night)] border-r border-[var(--twilight)] transform transition-transform duration-200 ${
+        className={`fixed inset-y-0 left-0 z-[1101] w-80 max-w-[85vw] border-r border-[var(--twilight)] transform transition-transform duration-200 ${
           drawerOpen ? "translate-x-0" : "-translate-x-full"
         }`}
+        style={{ backgroundColor: "var(--void)" }}
       >
         <div className="flex flex-col h-full">
           {/* Header */}
@@ -771,7 +772,7 @@ export default function FilterBar({ variant = "full" }: FilterBarProps) {
                 </button>
               </div>
               {showDateRange && (
-                <div className="mt-2 p-3 bg-[var(--dusk)] rounded-lg space-y-2">
+                <div className="mt-2 p-3 rounded-lg space-y-2" style={{ backgroundColor: "var(--card-bg)" }}>
                   <div className="flex gap-2">
                     <div className="flex-1">
                       <label className="block text-[0.55rem] text-[var(--muted)] mb-1">From</label>
@@ -825,7 +826,7 @@ export default function FilterBar({ variant = "full" }: FilterBarProps) {
                 </button>
               </div>
               {showPriceRange && (
-                <div className="mt-2 p-3 bg-[var(--dusk)] rounded-lg space-y-2">
+                <div className="mt-2 p-3 rounded-lg space-y-2" style={{ backgroundColor: "var(--card-bg)" }}>
                   <div className="flex gap-2 items-center">
                     <div className="flex-1">
                       <label className="block text-[0.55rem] text-[var(--muted)] mb-1">Min ($)</label>
@@ -876,7 +877,7 @@ export default function FilterBar({ variant = "full" }: FilterBarProps) {
                 </button>
               </div>
               {hasGeoFilter && (
-                <div className="mb-3 p-3 bg-[var(--dusk)] rounded-lg">
+                <div className="mb-3 p-3 rounded-lg" style={{ backgroundColor: "var(--card-bg)" }}>
                   <label className="block text-[0.55rem] text-[var(--muted)] mb-2">Distance (km)</label>
                   <div className="flex items-center gap-2">
                     <input

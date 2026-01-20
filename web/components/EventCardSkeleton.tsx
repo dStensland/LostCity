@@ -3,8 +3,8 @@
 export default function EventCardSkeleton() {
   return (
     <div
-      className="flex items-center gap-3 px-3 py-2.5 rounded-lg border border-[var(--twilight)] bg-[var(--dusk)]/30 mb-2 animate-pulse"
-      style={{ borderLeftWidth: "3px", borderLeftColor: "var(--twilight)" }}
+      className="flex items-center gap-3 px-3 py-2.5 rounded-lg border border-[var(--twilight)] mb-2 animate-pulse"
+      style={{ borderLeftWidth: "3px", borderLeftColor: "var(--twilight)", backgroundColor: "var(--card-bg)" }}
     >
       {/* Time placeholder */}
       <div className="flex-shrink-0 w-12 h-4 bg-[var(--twilight)]/50 rounded" />

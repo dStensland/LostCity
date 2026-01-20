@@ -107,10 +107,11 @@ export default function EventGroup({
 
   return (
     <div
-      className="rounded-lg border border-[var(--twilight)] bg-[var(--dusk)]/30 mb-2 overflow-hidden"
+      className="rounded-lg border border-[var(--twilight)] mb-2 overflow-hidden"
       style={{
         borderLeftWidth: categoryColor ? "3px" : undefined,
         borderLeftColor: categoryColor || undefined,
+        backgroundColor: "var(--card-bg)",
       }}
     >
       {/* Header - clickable to expand/collapse */}

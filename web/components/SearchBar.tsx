@@ -177,7 +177,8 @@ export default function SearchBar() {
         onBlur={handleBlur}
         onKeyDown={handleKeyDown}
         placeholder="Search events, venues, neighborhoods..."
-        className="block w-full pl-11 pr-10 py-2.5 bg-[var(--night)] border border-[var(--twilight)] rounded-lg text-[var(--cream)] placeholder-[var(--muted)] text-sm focus:outline-none focus:border-[var(--coral)] focus:ring-1 focus:ring-[var(--coral)] transition-colors"
+        className="block w-full pl-11 pr-10 py-2.5 border border-[var(--twilight)] rounded-lg text-[var(--cream)] placeholder-[var(--muted)] text-sm focus:outline-none focus:border-[var(--coral)] focus:ring-1 focus:ring-[var(--coral)] transition-colors"
+        style={{ backgroundColor: "var(--card-bg)" }}
       />
       {query && (
         <button
@@ -194,7 +195,7 @@ export default function SearchBar() {
 
       {/* Suggestions Dropdown */}
       {shouldShowDropdown && (
-        <div className="absolute top-full left-0 right-0 mt-1 bg-[var(--night)] border border-[var(--twilight)] rounded-lg shadow-lg z-50 overflow-hidden">
+        <div className="absolute top-full left-0 right-0 mt-1 border border-[var(--twilight)] rounded-lg shadow-lg z-50 overflow-hidden" style={{ backgroundColor: "var(--card-bg)" }}>
           {showRecent && (
             <div className="p-2">
               <p className="text-xs text-[var(--muted)] px-2 pb-1 font-medium">Recent</p>
@@ -241,12 +242,12 @@ export default function SearchBar() {
           )}
 
           {/* Keyboard hint */}
-          <div className="px-3 py-1.5 bg-[var(--dusk)] border-t border-[var(--twilight)]">
+          <div className="px-3 py-1.5 border-t border-[var(--twilight)]" style={{ backgroundColor: "var(--twilight)", opacity: 0.5 }}>
             <p className="text-[0.6rem] text-[var(--muted)]">
-              <kbd className="px-1 py-0.5 bg-[var(--twilight)] rounded text-[var(--soft)]">↑</kbd>
-              <kbd className="px-1 py-0.5 bg-[var(--twilight)] rounded text-[var(--soft)] ml-1">↓</kbd>
+              <kbd className="px-1 py-0.5 bg-[var(--card-bg)] rounded text-[var(--soft)]">↑</kbd>
+              <kbd className="px-1 py-0.5 bg-[var(--card-bg)] rounded text-[var(--soft)] ml-1">↓</kbd>
               <span className="ml-1">to navigate</span>
-              <kbd className="px-1 py-0.5 bg-[var(--twilight)] rounded text-[var(--soft)] ml-2">↵</kbd>
+              <kbd className="px-1 py-0.5 bg-[var(--card-bg)] rounded text-[var(--soft)] ml-2">↵</kbd>
               <span className="ml-1">to select</span>
             </p>
           </div>
