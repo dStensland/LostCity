@@ -254,9 +254,9 @@ function HeroBanner({ section, portalSlug, hideImages }: { section: FeedSectionD
         className="block relative rounded-2xl overflow-hidden group"
         aria-label={`Featured event: ${event.title}`}
       >
-        {/* Background with enhanced gradient for accessibility */}
+        {/* Background - use brand color gradient when hiding images */}
         <div
-          className="absolute inset-0 bg-gradient-to-br from-[var(--twilight)] to-[var(--void)]"
+          className={`absolute inset-0 ${hideImages ? "bg-gradient-to-br from-[var(--coral)] to-[var(--coral)]/80" : "bg-gradient-to-br from-[var(--twilight)] to-[var(--void)]"}`}
           style={{
             backgroundImage: !hideImages && event.image_url ? `url(${event.image_url})` : undefined,
             backgroundSize: "cover",
@@ -265,11 +265,11 @@ function HeroBanner({ section, portalSlug, hideImages }: { section: FeedSectionD
           role="img"
           aria-label={event.title}
         />
-        {/* Stronger gradient overlay for WCAG AA contrast */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/60 to-black/30" />
+        {/* Gradient overlay - lighter when using brand color background */}
+        <div className={`absolute inset-0 ${hideImages ? "bg-gradient-to-t from-black/40 to-transparent" : "bg-gradient-to-t from-black/95 via-black/60 to-black/30"}`} />
 
         {/* Content */}
-        <div className="relative p-6 pt-36 sm:pt-44">
+        <div className={`relative p-6 ${hideImages ? "pt-24 sm:pt-32" : "pt-36 sm:pt-44"}`}>
           {/* Featured + Category badges */}
           <div className="flex flex-wrap items-center gap-2 mb-3">
             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[var(--gold)] text-[var(--void)] text-xs font-mono font-medium">
@@ -502,49 +502,51 @@ function EventCard({ event, isCarousel, hideImages }: { event: FeedEvent; isCaro
       } ${isPopular ? "border-[var(--coral)]/20" : "border-[var(--twilight)]"}`}
       style={{ backgroundColor: "var(--card-bg)" }}
     >
-      {/* Image with loading state */}
-      <div className="h-36 bg-[var(--twilight)] relative overflow-hidden rounded-t-xl">
-        {showImage && !imageError && (
-          <>
-            {/* Blur placeholder */}
-            {!imageLoaded && (
-              <div className="absolute inset-0 bg-[var(--twilight)] animate-pulse" />
-            )}
-            {/* Actual image */}
-            <img
-              src={event.image_url!}
-              alt=""
-              className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${
-                imageLoaded ? "opacity-100" : "opacity-0"
-              }`}
-              onLoad={() => setImageLoaded(true)}
-              onError={() => {
-                setImageError(true);
-                setImageLoaded(true);
-              }}
-              loading="lazy"
-            />
-          </>
-        )}
-        {(!showImage || imageError) && event.category && (
-          <div className="h-full flex items-center justify-center">
-            <CategoryIcon
-              type={event.category}
-              size={48}
-              style={{ color: categoryColor || "var(--muted)", opacity: 0.2 }}
-            />
-          </div>
-        )}
+      {/* Image with loading state - only show if images are enabled */}
+      {!hideImages && (
+        <div className="h-36 bg-[var(--twilight)] relative overflow-hidden rounded-t-xl">
+          {showImage && !imageError && (
+            <>
+              {/* Blur placeholder */}
+              {!imageLoaded && (
+                <div className="absolute inset-0 bg-[var(--twilight)] animate-pulse" />
+              )}
+              {/* Actual image */}
+              <img
+                src={event.image_url!}
+                alt=""
+                className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${
+                  imageLoaded ? "opacity-100" : "opacity-0"
+                }`}
+                onLoad={() => setImageLoaded(true)}
+                onError={() => {
+                  setImageError(true);
+                  setImageLoaded(true);
+                }}
+                loading="lazy"
+              />
+            </>
+          )}
+          {(!showImage || imageError) && event.category && (
+            <div className="h-full flex items-center justify-center">
+              <CategoryIcon
+                type={event.category}
+                size={48}
+                style={{ color: categoryColor || "var(--muted)", opacity: 0.2 }}
+              />
+            </div>
+          )}
 
-        {/* Popular indicator */}
-        {isPopular && (
-          <div className="absolute top-2 right-2">
-            <span className="flex items-center gap-1 px-2 py-1 rounded-full bg-[var(--coral)] text-[var(--void)] text-[0.6rem] font-mono font-medium shadow-lg">
-              🔥 Popular
-            </span>
-          </div>
-        )}
-      </div>
+          {/* Popular indicator */}
+          {isPopular && (
+            <div className="absolute top-2 right-2">
+              <span className="flex items-center gap-1 px-2 py-1 rounded-full bg-[var(--coral)] text-[var(--void)] text-[0.6rem] font-mono font-medium shadow-lg">
+                🔥 Popular
+              </span>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Content */}
       <div className="flex-1 p-3">
