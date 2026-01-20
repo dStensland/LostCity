@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { useState, useEffect, useMemo, useCallback } from "react";
+// Note: useCallback still needed for getDistance and requestLocation
 import { useLiveEvents } from "@/lib/hooks/useLiveEvents";
 import Link from "next/link";
 import { formatTime } from "@/lib/formats";
@@ -48,30 +49,42 @@ export default function HappeningNowPage() {
   }, []);
 
   // Fetch open spots when location changes
-  const fetchOpenSpots = useCallback(async () => {
-    setSpotsLoading(true);
-    try {
-      const params = new URLSearchParams();
-      if (userLocation) {
-        params.set("lat", userLocation.lat.toString());
-        params.set("lng", userLocation.lng.toString());
-      }
-      params.set("limit", "20");
-
-      const res = await fetch(`/api/spots/open?${params}`);
-      const data = await res.json();
-      setOpenSpots(data.spots || []);
-    } catch (error) {
-      console.error("Error fetching open spots:", error);
-      setOpenSpots([]);
-    } finally {
-      setSpotsLoading(false);
-    }
-  }, [userLocation]);
-
   useEffect(() => {
+    const abortController = new AbortController();
+
+    async function fetchOpenSpots() {
+      setSpotsLoading(true);
+      try {
+        const params = new URLSearchParams();
+        if (userLocation) {
+          params.set("lat", userLocation.lat.toString());
+          params.set("lng", userLocation.lng.toString());
+        }
+        params.set("limit", "20");
+
+        const res = await fetch(`/api/spots/open?${params}`, {
+          signal: abortController.signal,
+        });
+        const data = await res.json();
+        setOpenSpots(data.spots || []);
+      } catch (error) {
+        // Ignore abort errors
+        if (error instanceof Error && error.name === "AbortError") {
+          return;
+        }
+        console.error("Error fetching open spots:", error);
+        setOpenSpots([]);
+      } finally {
+        setSpotsLoading(false);
+      }
+    }
+
     fetchOpenSpots();
-  }, [fetchOpenSpots]);
+
+    return () => {
+      abortController.abort();
+    };
+  }, [userLocation]);
 
   // Request user location
   const requestLocation = () => {

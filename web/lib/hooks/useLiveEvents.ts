@@ -27,16 +27,21 @@ export function useLiveEvents(): UseLiveEventsResult {
   const [error, setError] = useState<Error | null>(null);
   const supabase = createClient();
   const channelRef = useRef<RealtimeChannel | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
-  const fetchLiveEvents = useCallback(async () => {
+  const fetchLiveEvents = useCallback(async (signal?: AbortSignal) => {
     try {
-      const response = await fetch("/api/events/live");
+      const response = await fetch("/api/events/live", { signal });
       if (!response.ok) throw new Error("Failed to fetch live events");
 
       const data = await response.json();
       setEvents(data.events);
       setError(null);
     } catch (err) {
+      // Ignore abort errors - they're expected during cleanup
+      if (err instanceof Error && err.name === "AbortError") {
+        return;
+      }
       setError(err instanceof Error ? err : new Error("Unknown error"));
     } finally {
       setLoading(false);
@@ -44,8 +49,12 @@ export function useLiveEvents(): UseLiveEventsResult {
   }, []);
 
   useEffect(() => {
+    // Create abort controller for cleanup
+    abortControllerRef.current = new AbortController();
+    const signal = abortControllerRef.current.signal;
+
     // Initial fetch
-    fetchLiveEvents();
+    fetchLiveEvents(signal);
 
     // Subscribe to real-time updates for is_live changes
     channelRef.current = supabase
@@ -84,6 +93,10 @@ export function useLiveEvents(): UseLiveEventsResult {
       .subscribe();
 
     return () => {
+      // Abort any in-flight requests
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
       if (channelRef.current) {
         supabase.removeChannel(channelRef.current);
       }
