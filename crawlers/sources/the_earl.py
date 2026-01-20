@@ -1,24 +1,26 @@
 """
 Crawler for The Earl (badearl.com/show-calendar/).
-A music venue in East Atlanta.
+
+Site uses JavaScript rendering - must use Playwright.
 """
+
+from __future__ import annotations
 
 import re
 import logging
 from datetime import datetime
-from bs4 import BeautifulSoup
 from typing import Optional
 
-from utils import fetch_page, slugify
+from playwright.sync_api import sync_playwright
+
 from db import get_or_create_venue, insert_event, find_event_by_hash
-from dedupe import generate_content_hash, is_duplicate
+from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
 
 BASE_URL = "https://badearl.com"
-CALENDAR_URL = f"{BASE_URL}/show-calendar/"
+EVENTS_URL = "https://badearl.com"
 
-# Venue info (static - it's always The Earl)
 VENUE_DATA = {
     "name": "The Earl",
     "slug": "the-earl",
@@ -28,284 +30,163 @@ VENUE_DATA = {
     "state": "GA",
     "zip": "30316",
     "venue_type": "music_venue",
-    "website": BASE_URL
+    "website": BASE_URL,
 }
 
 
-def parse_date(date_text: str) -> Optional[str]:
-    """
-    Parse date from format like 'Thursday, Jan. 15, 2026' to 'YYYY-MM-DD'.
-    """
-    try:
-        # Clean up the text
-        date_text = date_text.strip()
-        # Handle abbreviated months with periods
-        date_text = re.sub(r'(\w{3})\.', r'\1', date_text)
-        # Parse the date
-        dt = datetime.strptime(date_text, "%A, %b %d, %Y")
-        return dt.strftime("%Y-%m-%d")
-    except ValueError as e:
-        logger.warning(f"Failed to parse date '{date_text}': {e}")
-        return None
-
-
 def parse_time(time_text: str) -> Optional[str]:
-    """
-    Parse time from format like '8:00 pm doors' or '8:30pm show' to 'HH:MM'.
-    """
-    try:
-        # Extract time portion
-        match = re.search(r'(\d{1,2}):(\d{2})\s*(am|pm)', time_text.lower())
-        if not match:
-            return None
-
-        hour = int(match.group(1))
-        minute = int(match.group(2))
-        period = match.group(3)
-
-        if period == 'pm' and hour != 12:
+    """Parse time from '7:00 PM' format."""
+    match = re.search(r"(\d{1,2}):(\d{2})\s*(am|pm)", time_text, re.IGNORECASE)
+    if match:
+        hour, minute, period = match.groups()
+        hour = int(hour)
+        if period.lower() == "pm" and hour != 12:
             hour += 12
-        elif period == 'am' and hour == 12:
+        elif period.lower() == "am" and hour == 12:
             hour = 0
-
-        return f"{hour:02d}:{minute:02d}"
-    except Exception as e:
-        logger.warning(f"Failed to parse time '{time_text}': {e}")
-        return None
-
-
-def parse_price(price_text: str) -> tuple[Optional[float], Optional[float]]:
-    """
-    Parse price from format like '$15 ADV' or '$17 DOS'.
-    Returns (price_min, price_max) - ADV is min, DOS is max.
-    """
-    try:
-        match = re.search(r'\$(\d+)', price_text)
-        if match:
-            return float(match.group(1)), None
-        return None, None
-    except Exception:
-        return None, None
-
-
-def extract_events_from_html(html: str) -> list[dict]:
-    """
-    Extract event data from The Earl's calendar page HTML.
-    """
-    soup = BeautifulSoup(html, "lxml")
-    events = []
-
-    # Find all event items
-    event_items = soup.select(".cl-layout__item")
-
-    for item in event_items:
-        try:
-            event = {}
-
-            # Get headliner (main artist)
-            headliner_el = item.select_one(".show-listing-headliner")
-            if not headliner_el:
-                continue
-            event["title"] = headliner_el.get_text(strip=True)
-
-            # Get supporting acts
-            support_els = item.select(".show-listing-support")
-            support_acts = [el.get_text(strip=True) for el in support_els if el.get_text(strip=True)]
-            if support_acts:
-                event["description"] = f"With: {', '.join(support_acts)}"
-                event["tags"] = support_acts
-            else:
-                event["description"] = None
-                event["tags"] = []
-
-            # Get date
-            date_el = item.select_one(".show-listing-date")
-            if date_el:
-                event["start_date"] = parse_date(date_el.get_text(strip=True))
-            else:
-                continue  # Skip events without dates
-
-            if not event["start_date"]:
-                continue
-
-            # Get times (doors and show)
-            time_els = item.select(".show-listing-time")
-            door_time = None
-            show_time = None
-            for time_el in time_els:
-                time_text = time_el.get_text(strip=True).lower()
-                if "door" in time_text:
-                    door_time = parse_time(time_text)
-                elif "show" in time_text:
-                    show_time = parse_time(time_text)
-
-            event["start_time"] = show_time or door_time
-            event["door_time"] = door_time
-
-            # Get prices
-            price_els = item.select(".show-listing-price")
-            price_min = None
-            price_max = None
-            for price_el in price_els:
-                price_text = price_el.get_text(strip=True).upper()
-                amount, _ = parse_price(price_text)
-                if amount is not None:
-                    if "ADV" in price_text:
-                        price_min = amount
-                    elif "DOS" in price_text:
-                        price_max = amount
-
-            event["price_min"] = price_min
-            event["price_max"] = price_max or price_min
-            event["is_free"] = price_min == 0 if price_min is not None else False
-
-            # Check for free show indicator
-            free_el = item.select_one(".listing-free-show-contain")
-            if free_el and free_el.get_text(strip=True):
-                event["is_free"] = True
-                event["price_min"] = 0
-                event["price_max"] = 0
-
-            # Get detail page URL
-            detail_link = item.select_one("a.cl-element-featured_media__anchor")
-            if detail_link:
-                href = detail_link.get("href", "")
-                event["source_url"] = href if href.startswith("http") else BASE_URL + href
-            else:
-                event["source_url"] = CALENDAR_URL
-
-            # Get ticket URL
-            ticket_link = item.select_one(".show-btn a[href*='freshtix']")
-            if ticket_link:
-                event["ticket_url"] = ticket_link.get("href")
-            else:
-                event["ticket_url"] = None
-
-            # Get image URL
-            img_el = item.select_one(".cl-element-featured_media__image")
-            if img_el:
-                event["image_url"] = img_el.get("src")
-            else:
-                event["image_url"] = None
-
-            # Set category
-            event["category"] = "music"
-            event["subcategory"] = None
-
-            events.append(event)
-
-        except Exception as e:
-            logger.error(f"Failed to parse event item: {e}")
-            continue
-
-    return events
+        return f"{hour:02d}:{minute}"
+    return None
 
 
 def crawl(source: dict) -> tuple[int, int, int]:
-    """
-    Crawl The Earl events.
-
-    Args:
-        source: Source record from database
-
-    Returns:
-        Tuple of (events_found, events_new, events_updated)
-    """
+    """Crawl The Earl events using Playwright."""
     source_id = source["id"]
     events_found = 0
     events_new = 0
     events_updated = 0
 
     try:
-        # Fetch all pages of events
-        all_events = []
-        page = 1
-        max_pages = 5  # Safety limit
-
-        while page <= max_pages:
-            url = CALENDAR_URL if page == 1 else f"{CALENDAR_URL}?sf_paged={page}"
-            logger.info(f"Fetching The Earl page {page}: {url}")
-
-            html = fetch_page(url)
-            page_events = extract_events_from_html(html)
-
-            if not page_events:
-                break  # No more events
-
-            all_events.extend(page_events)
-            page += 1
-
-        logger.info(f"Found {len(all_events)} events on The Earl")
-
-        # Get or create venue
-        venue_id = get_or_create_venue(VENUE_DATA)
-
-        for event_data in all_events:
-            events_found += 1
-
-            # Generate content hash for deduplication
-            content_hash = generate_content_hash(
-                event_data["title"],
-                "The Earl",
-                event_data["start_date"]
+        with sync_playwright() as p:
+            browser = p.chromium.launch(headless=True)
+            context = browser.new_context(
+                user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+                viewport={"width": 1920, "height": 1080},
             )
+            page = context.new_page()
 
-            # Check for existing event
-            existing = find_event_by_hash(content_hash)
-            if existing:
-                logger.debug(f"Skipping duplicate: {event_data['title']}")
-                events_updated += 1
-                continue
+            venue_id = get_or_create_venue(VENUE_DATA)
 
-            # Check fuzzy duplicate
-            canonical_id = is_duplicate(
-                type("Event", (), {
-                    "title": event_data["title"],
-                    "venue": type("Venue", (), {"name": "The Earl"})(),
-                    "start_date": event_data["start_date"]
-                })(),
-                venue_id
-            )
+            logger.info(f"Fetching The Earl: {EVENTS_URL}")
+            page.goto(EVENTS_URL, wait_until="domcontentloaded", timeout=30000)
+            page.wait_for_timeout(3000)
 
-            if canonical_id:
-                logger.debug(f"Skipping fuzzy duplicate: {event_data['title']}")
-                events_updated += 1
-                continue
+            # Scroll to load all content
+            for _ in range(5):
+                page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+                page.wait_for_timeout(1000)
 
-            # Insert new event
-            event_record = {
-                "source_id": source_id,
-                "venue_id": venue_id,
-                "title": event_data["title"],
-                "description": event_data.get("description"),
-                "start_date": event_data["start_date"],
-                "start_time": event_data.get("start_time"),
-                "end_date": None,
-                "end_time": None,
-                "is_all_day": False,
-                "category": event_data["category"],
-                "subcategory": event_data.get("subcategory"),
-                "tags": event_data.get("tags", []),
-                "price_min": event_data.get("price_min"),
-                "price_max": event_data.get("price_max"),
-                "price_note": None,
-                "is_free": event_data.get("is_free", False),
-                "source_url": event_data["source_url"],
-                "ticket_url": event_data.get("ticket_url"),
-                "image_url": event_data.get("image_url"),
-                "raw_text": None,
-                "extraction_confidence": 0.95,  # High confidence - structured HTML
-                "is_recurring": False,
-                "recurrence_rule": None,
-                "content_hash": content_hash
-            }
+            # Get page text and parse line by line
+            body_text = page.inner_text("body")
+            lines = [l.strip() for l in body_text.split("\n") if l.strip()]
 
-            try:
-                insert_event(event_record)
-                events_new += 1
-                logger.info(f"Added: {event_data['title']} on {event_data['start_date']}")
-            except Exception as e:
-                logger.error(f"Failed to insert event {event_data['title']}: {e}")
+            # Parse events - look for date patterns
+            i = 0
+            while i < len(lines):
+                line = lines[i]
+
+                # Skip navigation items
+                if len(line) < 3:
+                    i += 1
+                    continue
+
+                # Look for date patterns
+                date_match = re.match(
+                    r"(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)?,?\s*(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{1,2})(?:,?\s+(\d{4}))?",
+                    line,
+                    re.IGNORECASE
+                )
+
+                if date_match:
+                    month = date_match.group(1)
+                    day = date_match.group(2)
+                    year = date_match.group(3) if date_match.group(3) else str(datetime.now().year)
+
+                    # Look for title in surrounding lines
+                    title = None
+                    start_time = None
+
+                    for offset in [-2, -1, 1, 2, 3]:
+                        idx = i + offset
+                        if 0 <= idx < len(lines):
+                            check_line = lines[idx]
+                            if re.match(r"(January|February|March)", check_line, re.IGNORECASE):
+                                continue
+                            if not start_time:
+                                time_result = parse_time(check_line)
+                                if time_result:
+                                    start_time = time_result
+                                    continue
+                            if not title and len(check_line) > 5:
+                                if not re.match(r"\d{1,2}[:/]", check_line):
+                                    if not re.match(r"(free|tickets|register|\$|more info)", check_line.lower()):
+                                        title = check_line
+                                        break
+
+                    if not title:
+                        i += 1
+                        continue
+
+                    # Parse date
+                    try:
+                        month_str = month[:3] if len(month) > 3 else month
+                        dt = datetime.strptime(f"{month_str} {day} {year}", "%b %d %Y")
+                        if dt.date() < datetime.now().date():
+                            dt = datetime.strptime(f"{month_str} {day} {int(year) + 1}", "%b %d %Y")
+                        start_date = dt.strftime("%Y-%m-%d")
+                    except ValueError:
+                        i += 1
+                        continue
+
+                    events_found += 1
+
+                    content_hash = generate_content_hash(title, "The Earl", start_date)
+
+                    if find_event_by_hash(content_hash):
+                        events_updated += 1
+                        i += 1
+                        continue
+
+                    event_record = {
+                        "source_id": source_id,
+                        "venue_id": venue_id,
+                        "title": title,
+                        "description": "Event at The Earl",
+                        "start_date": start_date,
+                        "start_time": start_time,
+                        "end_date": None,
+                        "end_time": None,
+                        "is_all_day": start_time is None,
+                        "category": "community",
+                        "subcategory": None,
+                        "tags": ["event"],
+                        "price_min": None,
+                        "price_max": None,
+                        "price_note": None,
+                        "is_free": False,
+                        "source_url": EVENTS_URL,
+                        "ticket_url": EVENTS_URL,
+                        "image_url": None,
+                        "raw_text": f"{title} - {start_date}",
+                        "extraction_confidence": 0.80,
+                        "is_recurring": False,
+                        "recurrence_rule": None,
+                        "content_hash": content_hash,
+                    }
+
+                    try:
+                        insert_event(event_record)
+                        events_new += 1
+                        logger.info(f"Added: {title} on {start_date}")
+                    except Exception as e:
+                        logger.error(f"Failed to insert: {title}: {e}")
+
+                i += 1
+
+            browser.close()
+
+        logger.info(
+            f"The Earl crawl complete: {events_found} found, {events_new} new, {events_updated} updated"
+        )
 
     except Exception as e:
         logger.error(f"Failed to crawl The Earl: {e}")

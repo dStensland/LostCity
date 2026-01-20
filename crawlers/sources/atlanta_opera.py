@@ -41,7 +41,7 @@ def parse_date_range(date_text: str) -> tuple[Optional[str], Optional[str]]:
         range_match = re.match(
             r"(\w+)\s+(\d+),?\s*(\d{4})\s*[-–]\s*(\w+)\s+(\d+),?\s*(\d{4})",
             date_text,
-            re.IGNORECASE
+            re.IGNORECASE,
         )
         if range_match:
             m1, d1, y1, m2, d2, y2 = range_match.groups()
@@ -91,7 +91,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             # Accept cookies if popup appears
             try:
-                accept_btn = page.query_selector("[class*='accept'], button:has-text('Accept')")
+                accept_btn = page.query_selector(
+                    "[class*='accept'], button:has-text('Accept')"
+                )
                 if accept_btn:
                     accept_btn.click()
                     page.wait_for_timeout(1000)
@@ -103,7 +105,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
             body_text = page.inner_text("body")
 
             # Pattern: OPERA NAME\nDATE RANGE\nVENUE\nBUY TICKETS
-            blocks = re.split(r"(?:BUY TICKETS|LEARN MORE)", body_text, flags=re.IGNORECASE)
+            blocks = re.split(
+                r"(?:BUY TICKETS|LEARN MORE)", body_text, flags=re.IGNORECASE
+            )
 
             for block in blocks:
                 lines = [l.strip() for l in block.strip().split("\n") if l.strip()]
@@ -121,7 +125,11 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     # Title - usually all caps opera name
                     skip = ["PERFORMANCES", "UPCOMING", "PAST", "COBB ENERGY"]
-                    if not title and len(line) > 3 and not any(w in line.upper() for w in skip):
+                    if (
+                        not title
+                        and len(line) > 3
+                        and not any(w in line.upper() for w in skip)
+                    ):
                         title = line
 
                 if not title or not date_text:
@@ -176,7 +184,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             browser.close()
 
-        logger.info(f"Atlanta Opera crawl complete: {events_found} found, {events_new} new")
+        logger.info(
+            f"Atlanta Opera crawl complete: {events_found} found, {events_new} new"
+        )
 
     except Exception as e:
         logger.error(f"Failed to crawl Atlanta Opera: {e}")

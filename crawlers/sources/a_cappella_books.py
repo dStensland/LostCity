@@ -38,8 +38,8 @@ def parse_date(date_str: str) -> Optional[str]:
     date_str = date_str.strip()
 
     # Remove day of week if present (only match actual day names, not month names)
-    day_pattern = r'^(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday),?\s*'
-    date_str = re.sub(day_pattern, '', date_str, flags=re.I)
+    day_pattern = r"^(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday),?\s*"
+    date_str = re.sub(day_pattern, "", date_str, flags=re.I)
 
     # Try full date formats with year
     for fmt in ["%B %d, %Y", "%B %d %Y", "%b %d, %Y", "%b %d %Y"]:
@@ -67,13 +67,13 @@ def parse_date(date_str: str) -> Optional[str]:
 def parse_time(time_str: str) -> Optional[str]:
     """Parse time from format like '7:00 PM'."""
     try:
-        match = re.search(r'(\d{1,2}):(\d{2})\s*(AM|PM)', time_str, re.IGNORECASE)
+        match = re.search(r"(\d{1,2}):(\d{2})\s*(AM|PM)", time_str, re.IGNORECASE)
         if match:
             hour, minute, period = match.groups()
             hour = int(hour)
-            if period.upper() == 'PM' and hour != 12:
+            if period.upper() == "PM" and hour != 12:
                 hour += 12
-            elif period.upper() == 'AM' and hour == 12:
+            elif period.upper() == "AM" and hour == 12:
                 hour = 0
             return f"{hour:02d}:{minute}"
     except Exception:
@@ -106,17 +106,18 @@ def crawl(source: dict) -> tuple[int, int, int]:
             text = page.inner_text("body")
 
             # Split by "READ MORE" to get individual event blocks
-            blocks = re.split(r'READ MORE', text)
+            blocks = re.split(r"READ MORE", text)
 
             for block in blocks:
                 try:
                     # Pattern: Title line, then date line, then description, then location
                     # "Wednesday January 14, 2026 7:00 PM"
                     date_match = re.search(
-                        r'(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)\s+'
-                        r'(January|February|March|April|May|June|July|August|September|October|November|December)\s+'
-                        r'(\d{1,2}),?\s*(\d{4})\s+(\d{1,2}:\d{2}\s*(AM|PM))',
-                        block, re.I
+                        r"(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)\s+"
+                        r"(January|February|March|April|May|June|July|August|September|October|November|December)\s+"
+                        r"(\d{1,2}),?\s*(\d{4})\s+(\d{1,2}:\d{2}\s*(AM|PM))",
+                        block,
+                        re.I,
                     )
 
                     if not date_match:
@@ -136,7 +137,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     # Title is the line before the date line
                     # Split block into lines
-                    lines = [l.strip() for l in block.split('\n') if l.strip()]
+                    lines = [l.strip() for l in block.split("\n") if l.strip()]
 
                     title = None
                     description = None
@@ -144,7 +145,11 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     # Find the line index that contains the date
                     date_line_idx = None
                     for i, line in enumerate(lines):
-                        if re.match(r'(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)', line, re.I):
+                        if re.match(
+                            r"(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)",
+                            line,
+                            re.I,
+                        ):
                             date_line_idx = i
                             break
 
@@ -155,22 +160,32 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     if date_line_idx > 0:
                         potential_title = lines[date_line_idx - 1]
                         # Must have author name pattern (contains – or - or "in conversation")
-                        if ' – ' in potential_title or ' - ' in potential_title or 'in conversation' in potential_title.lower():
+                        if (
+                            " – " in potential_title
+                            or " - " in potential_title
+                            or "in conversation" in potential_title.lower()
+                        ):
                             title = potential_title
 
                     if not title:
                         continue
 
                     # Description is after the date line (usually starts with quote)
-                    for i in range(date_line_idx + 1, min(date_line_idx + 5, len(lines))):
+                    for i in range(
+                        date_line_idx + 1, min(date_line_idx + 5, len(lines))
+                    ):
                         line = lines[i]
-                        if line.startswith('"') or (len(line) > 30 and not line.startswith('Location')):
-                            description = line.strip('"').strip('...')[:500]
+                        if line.startswith('"') or (
+                            len(line) > 30 and not line.startswith("Location")
+                        ):
+                            description = line.strip('"').strip("...")[:500]
                             break
 
                     events_found += 1
 
-                    content_hash = generate_content_hash(title, VENUE_DATA['name'], start_date)
+                    content_hash = generate_content_hash(
+                        title, VENUE_DATA["name"], start_date
+                    )
 
                     existing = find_event_by_hash(content_hash)
                     if existing:
@@ -179,14 +194,14 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     # Determine subcategory
                     title_lower = title.lower()
-                    if 'book club' in title_lower:
-                        subcategory = 'words.bookclub'
-                    elif 'poetry' in title_lower or 'poet' in title_lower:
-                        subcategory = 'words.poetry'
-                    elif 'workshop' in title_lower or 'writing' in title_lower:
-                        subcategory = 'words.workshop'
+                    if "book club" in title_lower:
+                        subcategory = "words.bookclub"
+                    elif "poetry" in title_lower or "poet" in title_lower:
+                        subcategory = "words.poetry"
+                    elif "workshop" in title_lower or "writing" in title_lower:
+                        subcategory = "words.workshop"
                     else:
-                        subcategory = 'words.reading'
+                        subcategory = "words.reading"
 
                     event_record = {
                         "source_id": source_id,
@@ -225,7 +240,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             browser.close()
 
-        logger.info(f"A Cappella Books crawl complete: {events_found} found, {events_new} new")
+        logger.info(
+            f"A Cappella Books crawl complete: {events_found} found, {events_new} new"
+        )
 
     except Exception as e:
         logger.error(f"Failed to crawl A Cappella Books: {e}")

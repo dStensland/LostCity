@@ -6,6 +6,7 @@ Uses the Golden Volunteer API.
 
 from __future__ import annotations
 
+import os
 import re
 import logging
 from datetime import datetime, timedelta
@@ -20,10 +21,9 @@ from dedupe import generate_content_hash
 logger = logging.getLogger(__name__)
 
 # Golden Volunteer API configuration
-# Found from the volunteer.handsonatlanta.org page source
 API_BASE = "https://api.goldenvolunteer.com/v1"
 ORG_ID = "L5kJQOKdEl"
-API_KEY = "WSCp_r4FUJjgMbaL9Rw5PEE5fA2G6oZ6MxajomkM"
+GOLDEN_VOLUNTEER_API_KEY = os.environ.get("GOLDEN_VOLUNTEER_API_KEY", "")
 
 # Default location for Atlanta
 ATLANTA_LAT = 33.748461
@@ -45,8 +45,12 @@ INTEREST_MAP = {
 
 def fetch_opportunities(page: int = 1, per_page: int = 50) -> dict:
     """Fetch volunteer opportunities from Golden Volunteer API."""
+    if not GOLDEN_VOLUNTEER_API_KEY:
+        logger.debug("GOLDEN_VOLUNTEER_API_KEY not set, skipping API fetch")
+        return {}
+
     headers = {
-        "Authorization": f"Bearer {API_KEY}",
+        "Authorization": f"Bearer {GOLDEN_VOLUNTEER_API_KEY}",
         "Content-Type": "application/json",
         "Accept": "application/json",
     }
@@ -70,10 +74,7 @@ def fetch_opportunities(page: int = 1, per_page: int = 50) -> dict:
     for endpoint in endpoints:
         try:
             response = requests.get(
-                endpoint,
-                headers=headers,
-                params=params,
-                timeout=30
+                endpoint, headers=headers, params=params, timeout=30
             )
             if response.status_code == 200:
                 return response.json()
@@ -105,7 +106,7 @@ def fetch_opportunities_via_page() -> list[dict]:
             page.goto(
                 "https://volunteer.handsonatlanta.org",
                 wait_until="domcontentloaded",
-                timeout=30000
+                timeout=30000,
             )
             page.wait_for_timeout(5000)  # Wait for JS to render
 
@@ -190,10 +191,7 @@ def parse_opportunity(opp: dict) -> Optional[dict]:
 
         if date_text:
             # Try to extract date: "Mon, Jan 19, 2026: 9:00AM"
-            date_match = re.search(
-                r"(\w+),?\s+(\w+)\s+(\d+),?\s+(\d{4})",
-                date_text
-            )
+            date_match = re.search(r"(\w+),?\s+(\w+)\s+(\d+),?\s+(\d{4})", date_text)
             if date_match:
                 _, month, day, year = date_match.groups()
                 for fmt in ["%B %d %Y", "%b %d %Y"]:
@@ -205,7 +203,9 @@ def parse_opportunity(opp: dict) -> Optional[dict]:
                         continue
 
             # Extract time: "9:00AM" or "9:00 AM"
-            time_match = re.search(r"(\d{1,2}):(\d{2})\s*(AM|PM)", date_text, re.IGNORECASE)
+            time_match = re.search(
+                r"(\d{1,2}):(\d{2})\s*(AM|PM)", date_text, re.IGNORECASE
+            )
             if time_match:
                 hour, minute, period = time_match.groups()
                 hour = int(hour)
@@ -307,7 +307,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             validated_time, is_suspicious = validate_event_time(
                 parsed.get("start_time"),
                 category=parsed.get("category"),
-                title=parsed.get("title", "")
+                title=parsed.get("title", ""),
             )
             parsed["start_time"] = validated_time
 
@@ -324,9 +324,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             # Generate content hash
             content_hash = generate_content_hash(
-                parsed["title"],
-                parsed["venue_name"],
-                parsed["start_date"]
+                parsed["title"], parsed["venue_name"], parsed["start_date"]
             )
 
             # Check for existing

@@ -91,7 +91,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             # Pattern: Performance Name\nDate Range\nBUY TICKETS
             # Split by "BUY TICKETS" or "MORE INFO"
-            blocks = re.split(r"(?:BUY TICKETS|MORE INFO)", body_text, flags=re.IGNORECASE)
+            blocks = re.split(
+                r"(?:BUY TICKETS|MORE INFO)", body_text, flags=re.IGNORECASE
+            )
 
             for block in blocks:
                 lines = [l.strip() for l in block.strip().split("\n") if l.strip()]
@@ -109,7 +111,11 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     # Title
                     skip_words = ["PERFORMANCES", "Season", "Header Image", "Photo by"]
-                    if not title and len(line) > 3 and not any(w in line for w in skip_words):
+                    if (
+                        not title
+                        and len(line) > 3
+                        and not any(w in line for w in skip_words)
+                    ):
                         title = line
 
                 if not title or not date_text:
@@ -121,7 +127,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                 events_found += 1
 
-                content_hash = generate_content_hash(title, "Atlanta Ballet", start_date)
+                content_hash = generate_content_hash(
+                    title, "Atlanta Ballet", start_date
+                )
 
                 existing = find_event_by_hash(content_hash)
                 if existing:
@@ -164,7 +172,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             browser.close()
 
-        logger.info(f"Atlanta Ballet crawl complete: {events_found} found, {events_new} new")
+        logger.info(
+            f"Atlanta Ballet crawl complete: {events_found} found, {events_new} new"
+        )
 
     except Exception as e:
         logger.error(f"Failed to crawl Atlanta Ballet: {e}")

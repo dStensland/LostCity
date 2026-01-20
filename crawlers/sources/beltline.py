@@ -101,7 +101,9 @@ def determine_category(text: str) -> str:
     """Determine category from event text."""
     text_lower = text.lower()
 
-    if any(w in text_lower for w in ["art", "mural", "sculpture", "gallery", "exhibit"]):
+    if any(
+        w in text_lower for w in ["art", "mural", "sculpture", "gallery", "exhibit"]
+    ):
         return "art"
     if any(w in text_lower for w in ["run", "walk", "bike", "fitness", "yoga"]):
         return "fitness"
@@ -213,7 +215,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     category = determine_category(f"{title} {text}")
 
                     # Content hash
-                    content_hash = generate_content_hash(title, "Atlanta BeltLine", start_date)
+                    content_hash = generate_content_hash(
+                        title, "Atlanta BeltLine", start_date
+                    )
 
                     # Check for existing
                     existing = find_event_by_hash(content_hash)

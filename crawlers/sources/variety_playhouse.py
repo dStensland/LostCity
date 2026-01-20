@@ -1,6 +1,9 @@
 """
 Crawler for Variety Playhouse (variety-playhouse.com/calendar).
 Atlanta's beloved Little Five Points music venue since 1940.
+
+Site uses JavaScript rendering - must use Playwright.
+Format: TITLE, (opener), DAY MON DD, YYYY H:MM PM, TICKETS/SOLD OUT
 """
 
 from __future__ import annotations
@@ -10,8 +13,7 @@ import logging
 from datetime import datetime
 from typing import Optional
 
-import requests
-from bs4 import BeautifulSoup
+from playwright.sync_api import sync_playwright
 
 from db import get_or_create_venue, insert_event, find_event_by_hash
 from dedupe import generate_content_hash
@@ -34,57 +36,8 @@ VENUE_DATA = {
 }
 
 
-def parse_date(date_text: str) -> Optional[str]:
-    """Parse date from various formats like 'Fri Jan 17' or 'January 17, 2026'."""
-    date_text = date_text.strip()
-
-    # Try "Fri Jan 17" format (with or without year)
-    match = re.search(r"(\w{3})\s+(\w{3})\s+(\d{1,2})(?:,?\s*(\d{4}))?", date_text)
-    if match:
-        _, month, day, year = match.groups()
-        if not year:
-            year = str(datetime.now().year)
-        try:
-            dt = datetime.strptime(f"{month} {day} {year}", "%b %d %Y")
-            if dt < datetime.now():
-                dt = datetime.strptime(f"{month} {day} {int(year) + 1}", "%b %d %Y")
-            return dt.strftime("%Y-%m-%d")
-        except ValueError:
-            pass
-
-    # Try "Jan 17, 2026" format
-    match = re.search(r"(\w{3})\s+(\d{1,2}),?\s*(\d{4})?", date_text)
-    if match:
-        month, day, year = match.groups()
-        if not year:
-            year = str(datetime.now().year)
-        try:
-            dt = datetime.strptime(f"{month} {day} {year}", "%b %d %Y")
-            if dt < datetime.now():
-                dt = datetime.strptime(f"{month} {day} {int(year) + 1}", "%b %d %Y")
-            return dt.strftime("%Y-%m-%d")
-        except ValueError:
-            pass
-
-    # Try "January 17, 2026" format
-    match = re.search(r"(\w+)\s+(\d{1,2}),?\s*(\d{4})?", date_text)
-    if match:
-        month, day, year = match.groups()
-        if not year:
-            year = str(datetime.now().year)
-        try:
-            dt = datetime.strptime(f"{month} {day} {year}", "%B %d %Y")
-            if dt < datetime.now():
-                dt = datetime.strptime(f"{month} {day} {int(year) + 1}", "%B %d %Y")
-            return dt.strftime("%Y-%m-%d")
-        except ValueError:
-            pass
-
-    return None
-
-
 def parse_time(time_text: str) -> Optional[str]:
-    """Parse time from '7:30 PM' or 'Doors: 7:00 PM' format."""
+    """Parse time from '8:00 PM' format."""
     match = re.search(r"(\d{1,2}):(\d{2})\s*(am|pm)", time_text, re.IGNORECASE)
     if match:
         hour, minute, period = match.groups()
@@ -98,133 +51,183 @@ def parse_time(time_text: str) -> Optional[str]:
 
 
 def crawl(source: dict) -> tuple[int, int, int]:
-    """Crawl Variety Playhouse events."""
+    """Crawl Variety Playhouse events using Playwright."""
     source_id = source["id"]
     events_found = 0
     events_new = 0
     events_updated = 0
 
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-        "Accept-Language": "en-US,en;q=0.5",
-    }
-
     try:
-        logger.info(f"Fetching Variety Playhouse: {CALENDAR_URL}")
-        response = requests.get(CALENDAR_URL, headers=headers, timeout=30)
-        response.raise_for_status()
-
-        soup = BeautifulSoup(response.text, "html.parser")
-        venue_id = get_or_create_venue(VENUE_DATA)
-
-        # Try AXS event card selectors first
-        event_cards = soup.find_all(class_=re.compile(r"c-axs-event-card"))
-
-        if not event_cards:
-            # Fallback: look for event containers
-            event_cards = soup.find_all(class_=re.compile(r"event"))
-
-        if not event_cards:
-            # Another fallback: find by structure
-            event_cards = soup.find_all("article")
-
-        for card in event_cards:
-            # Find title
-            title_el = (
-                card.find(class_=re.compile(r"title"))
-                or card.find(["h2", "h3", "h4"])
+        with sync_playwright() as p:
+            browser = p.chromium.launch(headless=True)
+            context = browser.new_context(
+                user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+                viewport={"width": 1920, "height": 1080},
             )
-            if not title_el:
-                continue
+            page = context.new_page()
 
-            title = title_el.get_text(strip=True)
-            if not title or len(title) < 3:
-                continue
+            venue_id = get_or_create_venue(VENUE_DATA)
 
-            # Skip navigation items
-            skip_words = ["buy tickets", "view all", "calendar", "more"]
-            if title.lower() in skip_words:
-                continue
+            logger.info(f"Fetching Variety Playhouse: {CALENDAR_URL}")
+            page.goto(CALENDAR_URL, wait_until="domcontentloaded", timeout=30000)
+            page.wait_for_timeout(3000)
 
-            # Find date
-            date_el = card.find(class_=re.compile(r"date"))
-            if date_el:
-                date_text = date_el.get_text(strip=True)
-            else:
-                date_text = card.get_text(" ", strip=True)
+            # Scroll to load all content
+            for _ in range(5):
+                page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+                page.wait_for_timeout(1000)
 
-            start_date = parse_date(date_text)
-            if not start_date:
-                continue
+            # Get page text and parse line by line
+            body_text = page.inner_text("body")
+            lines = [l.strip() for l in body_text.split("\n") if l.strip()]
 
-            # Find time
-            time_el = card.find(class_=re.compile(r"doors|time"))
-            if time_el:
-                time_text = time_el.get_text(strip=True)
-            else:
-                time_text = card.get_text(" ", strip=True)
+            # Parse events - format is:
+            # TITLE (all caps or mixed case)
+            # OPENER (optional, if present)
+            # DAY, MON DD, YYYY H:MM PM
+            # TICKETS / SOLD OUT / CANCELLED
 
-            start_time = parse_time(time_text)
+            i = 0
+            current_month_year = None
 
-            events_found += 1
+            while i < len(lines):
+                line = lines[i]
 
-            # Generate content hash
-            content_hash = generate_content_hash(title, "Variety Playhouse", start_date)
+                # Skip navigation/header items
+                skip_items = ["calendar", "the venue", "getting here", "newsletter",
+                             "rental info", "search", "our shows", "if you are using"]
+                if line.lower() in skip_items or len(line) < 3:
+                    i += 1
+                    continue
 
-            # Check for existing
-            existing = find_event_by_hash(content_hash)
-            if existing:
-                events_updated += 1
-                continue
+                # Check for month header like "JANUARY  2026"
+                month_match = re.match(r"(JANUARY|FEBRUARY|MARCH|APRIL|MAY|JUNE|JULY|AUGUST|SEPTEMBER|OCTOBER|NOVEMBER|DECEMBER)\s+(\d{4})", line, re.IGNORECASE)
+                if month_match:
+                    current_month_year = f"{month_match.group(1)} {month_match.group(2)}"
+                    i += 1
+                    continue
 
-            # Find event URL
-            link_el = card.find("a", href=True)
-            if link_el:
-                href = link_el.get("href", "")
-                event_url = href if href.startswith("http") else f"{BASE_URL}{href}"
-            else:
-                event_url = CALENDAR_URL
+                # Look for date pattern: "SAT, JAN 24, 2026 8:00 PM"
+                date_match = re.match(
+                    r"([A-Z]{3}),\s+([A-Z]{3})\s+(\d{1,2}),\s+(\d{4})\s+(\d{1,2}:\d{2}\s*[AP]M)",
+                    line,
+                    re.IGNORECASE
+                )
 
-            # Extract supporting text/opener
-            support_el = card.find(class_=re.compile(r"support"))
-            supporting = support_el.get_text(strip=True) if support_el else None
+                if date_match:
+                    # We found a date line - look back for title
+                    day_name, month, day, year, time_str = date_match.groups()
 
-            event_record = {
-                "source_id": source_id,
-                "venue_id": venue_id,
-                "title": title,
-                "description": supporting,
-                "start_date": start_date,
-                "start_time": start_time,
-                "end_date": None,
-                "end_time": None,
-                "is_all_day": False,
-                "category": "music",
-                "subcategory": "concert",
-                "tags": ["music", "concert", "variety-playhouse", "little-five-points"],
-                "price_min": None,
-                "price_max": None,
-                "price_note": None,
-                "is_free": False,
-                "source_url": event_url,
-                "ticket_url": event_url,
-                "image_url": None,
-                "raw_text": card.get_text(" ", strip=True)[:500],
-                "extraction_confidence": 0.85,
-                "is_recurring": False,
-                "recurrence_rule": None,
-                "content_hash": content_hash,
-            }
+                    # Title should be 1-3 lines before this
+                    title = None
+                    opener = None
 
-            try:
-                insert_event(event_record)
-                events_new += 1
-                logger.info(f"Added: {title} on {start_date}")
-            except Exception as e:
-                logger.error(f"Failed to insert: {title}: {e}")
+                    # Check previous lines for title
+                    for back in range(1, 4):
+                        if i - back >= 0:
+                            prev_line = lines[i - back]
+                            # Skip if it's a status word or month header
+                            if prev_line.upper() in ["TICKETS", "SOLD OUT", "CANCELLED"]:
+                                continue
+                            if re.match(r"(JANUARY|FEBRUARY|MARCH|APRIL|MAY|JUNE|JULY|AUGUST|SEPTEMBER|OCTOBER|NOVEMBER|DECEMBER)\s+\d{4}", prev_line, re.IGNORECASE):
+                                continue
+                            # This could be title or opener
+                            if title is None:
+                                # Check if next line back exists and could be main title
+                                if i - back - 1 >= 0:
+                                    prev_prev = lines[i - back - 1]
+                                    if not prev_prev.upper() in ["TICKETS", "SOLD OUT", "CANCELLED"] and not re.match(r"(JANUARY|FEBRUARY)", prev_prev, re.IGNORECASE):
+                                        # prev_line might be opener, prev_prev might be title
+                                        opener = prev_line
+                                        title = prev_prev
+                                        break
+                                title = prev_line
+                                break
 
-        logger.info(f"Variety Playhouse crawl complete: {events_found} found, {events_new} new")
+                    if not title:
+                        i += 1
+                        continue
+
+                    # Parse date
+                    try:
+                        dt = datetime.strptime(f"{month} {day} {year}", "%b %d %Y")
+                        start_date = dt.strftime("%Y-%m-%d")
+                    except ValueError:
+                        i += 1
+                        continue
+
+                    # Parse time
+                    start_time = parse_time(time_str)
+
+                    # Check next line for status
+                    status = "available"
+                    if i + 1 < len(lines):
+                        next_line = lines[i + 1].upper()
+                        if "SOLD OUT" in next_line:
+                            status = "sold_out"
+                        elif "CANCELLED" in next_line:
+                            status = "cancelled"
+                            i += 1
+                            continue  # Skip cancelled shows
+
+                    events_found += 1
+
+                    # Generate content hash
+                    content_hash = generate_content_hash(title, "Variety Playhouse", start_date)
+
+                    # Check for existing
+                    existing = find_event_by_hash(content_hash)
+                    if existing:
+                        events_updated += 1
+                        i += 1
+                        continue
+
+                    # Build description
+                    description = None
+                    if opener:
+                        description = f"With {opener}"
+
+                    event_record = {
+                        "source_id": source_id,
+                        "venue_id": venue_id,
+                        "title": title,
+                        "description": description,
+                        "start_date": start_date,
+                        "start_time": start_time,
+                        "end_date": None,
+                        "end_time": None,
+                        "is_all_day": False,
+                        "category": "music",
+                        "subcategory": "concert",
+                        "tags": ["music", "concert", "variety-playhouse", "little-five-points"],
+                        "price_min": None,
+                        "price_max": None,
+                        "price_note": "Sold Out" if status == "sold_out" else None,
+                        "is_free": False,
+                        "source_url": CALENDAR_URL,
+                        "ticket_url": CALENDAR_URL,
+                        "image_url": None,
+                        "raw_text": f"{title} - {opener}" if opener else title,
+                        "extraction_confidence": 0.90,
+                        "is_recurring": False,
+                        "recurrence_rule": None,
+                        "content_hash": content_hash,
+                    }
+
+                    try:
+                        insert_event(event_record)
+                        events_new += 1
+                        logger.info(f"Added: {title} on {start_date}")
+                    except Exception as e:
+                        logger.error(f"Failed to insert: {title}: {e}")
+
+                i += 1
+
+            browser.close()
+
+        logger.info(
+            f"Variety Playhouse crawl complete: {events_found} found, {events_new} new, {events_updated} updated"
+        )
 
     except Exception as e:
         logger.error(f"Failed to crawl Variety Playhouse: {e}")

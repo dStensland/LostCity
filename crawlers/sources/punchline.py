@@ -47,8 +47,12 @@ def parse_date_range(date_text: str) -> tuple[Optional[str], Optional[str]]:
                     start = datetime.strptime(f"{month} {day1} {current_year}", fmt)
                     end = datetime.strptime(f"{month} {day2} {current_year}", fmt)
                     if start < datetime.now():
-                        start = datetime.strptime(f"{month} {day1} {current_year + 1}", fmt)
-                        end = datetime.strptime(f"{month} {day2} {current_year + 1}", fmt)
+                        start = datetime.strptime(
+                            f"{month} {day1} {current_year + 1}", fmt
+                        )
+                        end = datetime.strptime(
+                            f"{month} {day2} {current_year + 1}", fmt
+                        )
                     return start.strftime("%Y-%m-%d"), end.strftime("%Y-%m-%d")
                 except ValueError:
                     continue
@@ -109,14 +113,26 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                 for line in lines:
                     # Date pattern with location: "Jan 15 - 17 | Atlanta"
-                    date_match = re.match(r"(\w{3}\s+\d+(?:\s*[-–]\s*\d+)?)\s*\|\s*Atlanta", line)
+                    date_match = re.match(
+                        r"(\w{3}\s+\d+(?:\s*[-–]\s*\d+)?)\s*\|\s*Atlanta", line
+                    )
                     if date_match:
                         date_text = date_match.group(1)
                         continue
 
                     # Title - comedian name (may have description after dash)
-                    skip_words = ["Upcoming Shows", "HOME", "SHOWS", "COMEDIANS", "GIFT CARDS"]
-                    if not title and len(line) > 3 and not any(w in line for w in skip_words):
+                    skip_words = [
+                        "Upcoming Shows",
+                        "HOME",
+                        "SHOWS",
+                        "COMEDIANS",
+                        "GIFT CARDS",
+                    ]
+                    if (
+                        not title
+                        and len(line) > 3
+                        and not any(w in line for w in skip_words)
+                    ):
                         # Clean up - often format is "Name - Description"
                         title = line.split(" - ")[0].strip() if " - " in line else line
                         if len(title) < 3:
@@ -131,7 +147,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                 events_found += 1
 
-                content_hash = generate_content_hash(title, "Punchline Comedy Club", start_date)
+                content_hash = generate_content_hash(
+                    title, "Punchline Comedy Club", start_date
+                )
 
                 existing = find_event_by_hash(content_hash)
                 if existing:

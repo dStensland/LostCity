@@ -52,7 +52,9 @@ def parse_time(time_text: str) -> Optional[str]:
         return None
 
 
-def extract_movies_for_date(page: Page, target_date: datetime, source_id: int, venue_id: int) -> tuple[int, int, int]:
+def extract_movies_for_date(
+    page: Page, target_date: datetime, source_id: int, venue_id: int
+) -> tuple[int, int, int]:
     """Extract movies and showtimes for a specific date."""
     events_found = 0
     events_new = 0
@@ -71,15 +73,45 @@ def extract_movies_for_date(page: Page, target_date: datetime, source_id: int, v
 
     # Skip words for navigation/UI elements
     skip_words = [
-        "NOW PLAYING", "COMING SOON", "SPECIAL PROGRAMS", "START DATES",
-        "RENTALS", "NEWS", "VISIT US", "STORE", "Today", "COMING SOON TO PLAZA",
-        "expand_more", "arrow_drop_down", "calendar_today",
-        "PLAZA THEATRE", "The Tara", "Digital", "accessible",
-        "headphones", "closed_caption", "CAPTION", "SUBTITLED",
-        "Not Rated", "Select", "Loading", "Popping", "Starting",
-        "SHOWTIMES", "announced", "Tuesday", "rental event",
-        "Buy Tickets", "More Info", "Trash & Trivia", "Silver Scream",
-        "WussyVision", "SUBSCRIBE", "Email", "Facebook", "Instagram"
+        "NOW PLAYING",
+        "COMING SOON",
+        "SPECIAL PROGRAMS",
+        "START DATES",
+        "RENTALS",
+        "NEWS",
+        "VISIT US",
+        "STORE",
+        "Today",
+        "COMING SOON TO PLAZA",
+        "expand_more",
+        "arrow_drop_down",
+        "calendar_today",
+        "PLAZA THEATRE",
+        "The Tara",
+        "Digital",
+        "accessible",
+        "headphones",
+        "closed_caption",
+        "CAPTION",
+        "SUBTITLED",
+        "Not Rated",
+        "Select",
+        "Loading",
+        "Popping",
+        "Starting",
+        "SHOWTIMES",
+        "announced",
+        "Tuesday",
+        "rental event",
+        "Buy Tickets",
+        "More Info",
+        "Trash & Trivia",
+        "Silver Scream",
+        "WussyVision",
+        "SUBSCRIBE",
+        "Email",
+        "Facebook",
+        "Instagram",
     ]
 
     i = 0
@@ -108,7 +140,9 @@ def extract_movies_for_date(page: Page, target_date: datetime, source_id: int, v
                 continue
 
             # Check if next line is a rating (Not Rated, PG, R, etc.) and duration is line after
-            if i + 2 < len(lines) and re.match(r"^(Not Rated|G|PG|PG-13|R|NC-17|NR|Unrated)$", next_line, re.IGNORECASE):
+            if i + 2 < len(lines) and re.match(
+                r"^(Not Rated|G|PG|PG-13|R|NC-17|NR|Unrated)$", next_line, re.IGNORECASE
+            ):
                 line_after = lines[i + 2]
                 duration_match = re.match(r"(\d+)\s*hr\s*(\d+)?\s*min", line_after)
                 if duration_match:
@@ -129,7 +163,10 @@ def extract_movies_for_date(page: Page, target_date: datetime, source_id: int, v
                 seen_movies.add(movie_key)
                 events_found += 1
 
-                content_hash = generate_content_hash(current_movie, "Plaza Theatre", date_str)
+                # Include time in hash so each showtime is unique
+                content_hash = generate_content_hash(
+                    current_movie, "Plaza Theatre", f"{date_str}|{start_time}"
+                )
 
                 existing = find_event_by_hash(content_hash)
                 if existing:
@@ -165,7 +202,9 @@ def extract_movies_for_date(page: Page, target_date: datetime, source_id: int, v
                     try:
                         insert_event(event_record)
                         events_new += 1
-                        logger.info(f"Added: {current_movie} on {date_str} at {start_time}")
+                        logger.info(
+                            f"Added: {current_movie} on {date_str} at {start_time}"
+                        )
                     except Exception as e:
                         logger.error(f"Failed to insert: {current_movie}: {e}")
 
@@ -174,7 +213,13 @@ def extract_movies_for_date(page: Page, target_date: datetime, source_id: int, v
     return events_found, events_new, events_updated
 
 
-def extract_upcoming_movies(page: Page, source_id: int, venue_id: int, source_url: str, page_type: str = "coming-soon") -> tuple[int, int, int]:
+def extract_upcoming_movies(
+    page: Page,
+    source_id: int,
+    venue_id: int,
+    source_url: str,
+    page_type: str = "coming-soon",
+) -> tuple[int, int, int]:
     """Extract movies from Coming Soon or Special Events pages."""
     events_found = 0
     events_new = 0
@@ -186,44 +231,111 @@ def extract_upcoming_movies(page: Page, source_id: int, venue_id: int, source_ur
     # Skip navigation/UI elements - be comprehensive
     skip_patterns = [
         # Navigation
-        "NOW PLAYING", "COMING SOON", "SPECIAL PROGRAMS", "START DATES",
-        "RENTALS", "NEWS", "VISIT US", "STORE", "COMING SOON TO PLAZA",
+        "NOW PLAYING",
+        "COMING SOON",
+        "SPECIAL PROGRAMS",
+        "START DATES",
+        "RENTALS",
+        "NEWS",
+        "VISIT US",
+        "STORE",
+        "COMING SOON TO PLAZA",
         # Icons and UI
-        "expand_more", "arrow_drop_down", "calendar_today", "swap_vert",
-        "keyboard_arrow", "chevron", "arrow_",
+        "expand_more",
+        "arrow_drop_down",
+        "calendar_today",
+        "swap_vert",
+        "keyboard_arrow",
+        "chevron",
+        "arrow_",
         # Site elements
-        "PLAZA THEATRE", "The Tara", "Digital", "accessible",
-        "headphones", "closed_caption", "CAPTION", "SUBTITLED",
-        "Select", "Loading", "Popping", "Starting",
-        "SHOWTIMES", "announced", "rental event",
-        "Buy Tickets", "More Info",
+        "PLAZA THEATRE",
+        "The Tara",
+        "Digital",
+        "accessible",
+        "headphones",
+        "closed_caption",
+        "CAPTION",
+        "SUBTITLED",
+        "Select",
+        "Loading",
+        "Popping",
+        "Starting",
+        "SHOWTIMES",
+        "announced",
+        "rental event",
+        "Buy Tickets",
+        "More Info",
         # Social/footer
-        "SUBSCRIBE", "Email", "Facebook", "Instagram", "Twitter",
+        "SUBSCRIBE",
+        "Email",
+        "Facebook",
+        "Instagram",
+        "Twitter",
         # Headers
-        "Title, genre", "actor, date", "Release Date",
+        "Title, genre",
+        "actor, date",
+        "Release Date",
         # Accessibility
-        "screen-reader", "Option+", "Accessibility", "Feedback", "Issue Reporting",
+        "screen-reader",
+        "Option+",
+        "Accessibility",
+        "Feedback",
+        "Issue Reporting",
         # Address/footer
-        "Ponce DeLeon Ave", "Ponce De Leon", "Atlanta, GA", "30306",
-        "Info, Parking", "Lodging", "Drive-In Movie Tribute",
-        "Letterboxd", "Shaped by INDY", "ACCEPT", "DISMISS",
-        "Movies", "Explore Movies",
+        "Ponce DeLeon Ave",
+        "Ponce De Leon",
+        "Atlanta, GA",
+        "30306",
+        "Info, Parking",
+        "Lodging",
+        "Drive-In Movie Tribute",
+        "Letterboxd",
+        "Shaped by INDY",
+        "ACCEPT",
+        "DISMISS",
+        "Movies",
+        "Explore Movies",
         # Special events page specific
-        "SERIES & RETROSPECTIVES", "SPECIAL EVENTS", "COMMUNITY EVENTS",
-        "Signature events", "contests, raffles", "special guests",
-        "continuing series", "Trivia:", "Doors ", "Movie:",
-        "Presented by WABE", "More details to come", "Videodrome's",
-        "97 ESTORIA", "EVERY 2ND", "Join Mailing List",
-        "First Name", "Last Name", "TRASH & TRIVIA",
+        "SERIES & RETROSPECTIVES",
+        "SPECIAL EVENTS",
+        "COMMUNITY EVENTS",
+        "Signature events",
+        "contests, raffles",
+        "special guests",
+        "continuing series",
+        "Trivia:",
+        "Doors ",
+        "Movie:",
+        "Presented by WABE",
+        "More details to come",
+        "Videodrome's",
+        "97 ESTORIA",
+        "EVERY 2ND",
+        "Join Mailing List",
+        "First Name",
+        "Last Name",
+        "TRASH & TRIVIA",
         # Other
-        "TBA", "OPENS", "Opens", "©", "Copyright", "All Rights Reserved"
+        "TBA",
+        "OPENS",
+        "Opens",
+        "©",
+        "Copyright",
+        "All Rights Reserved",
     ]
 
     # Known special event series prefixes to preserve
     special_prefixes = [
-        "Trash & Trivia:", "Silver Scream Spookshow:", "WussyVision:",
-        "Soul Cinema Sunday:", "Plazadrome:", "Plazamania:",
-        "Shane Morton Presents:", "WABE Cinema Social:", "Behind the Slate:"
+        "Trash & Trivia:",
+        "Silver Scream Spookshow:",
+        "WussyVision:",
+        "Soul Cinema Sunday:",
+        "Plazadrome:",
+        "Plazamania:",
+        "Shane Morton Presents:",
+        "WABE Cinema Social:",
+        "Behind the Slate:",
     ]
 
     seen_movies = set()
@@ -238,21 +350,33 @@ def extract_upcoming_movies(page: Page, source_id: int, venue_id: int, source_ur
             continue
 
         # Skip lines that look like icons, dates, times, or phone numbers
-        if (line.startswith("·") or
-            line.startswith("_") or
-            re.match(r"^[a-z_]+$", line) or
-            re.match(r"^\d{1,2}$", line) or
-            re.match(r"^\d{1,2}/\d{1,2}", line) or
-            re.match(r"^\d{1,2}:\d{2}", line) or
-            re.match(r"^\d+\s*(hr|min)", line) or
-            re.match(r"^\d{3}[-.\s]?\d{3}[-.\s]?\d{4}$", line) or  # Phone number
-            re.match(r"^(Mon|Tue|Wed|Thu|Fri|Sat|Sun)", line, re.IGNORECASE) or
-            re.match(r"^(January|February|March|April|May|June|July|August|September|October|November|December)", line, re.IGNORECASE) or
-            re.match(r"^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{1,2}$", line, re.IGNORECASE)):  # "Feb 8" etc
+        if (
+            line.startswith("·")
+            or line.startswith("_")
+            or re.match(r"^[a-z_]+$", line)
+            or re.match(r"^\d{1,2}$", line)
+            or re.match(r"^\d{1,2}/\d{1,2}", line)
+            or re.match(r"^\d{1,2}:\d{2}", line)
+            or re.match(r"^\d+\s*(hr|min)", line)
+            or re.match(r"^\d{3}[-.\s]?\d{3}[-.\s]?\d{4}$", line)  # Phone number
+            or re.match(r"^(Mon|Tue|Wed|Thu|Fri|Sat|Sun)", line, re.IGNORECASE)
+            or re.match(
+                r"^(January|February|March|April|May|June|July|August|September|October|November|December)",
+                line,
+                re.IGNORECASE,
+            )
+            or re.match(
+                r"^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{1,2}$",
+                line,
+                re.IGNORECASE,
+            )
+        ):  # "Feb 8" etc
             continue
 
         # Skip ratings and genre-only lines
-        if re.match(r"^(Not Rated|G|PG|PG-13|R|NC-17|NR|Unrated)$", line, re.IGNORECASE):
+        if re.match(
+            r"^(Not Rated|G|PG|PG-13|R|NC-17|NR|Unrated)$", line, re.IGNORECASE
+        ):
             continue
         if re.match(r"^[A-Z][a-z]+(\s*·\s*[A-Z][a-z]+)+$", line):  # "Horror · Drama"
             continue
@@ -276,23 +400,35 @@ def extract_upcoming_movies(page: Page, source_id: int, venue_id: int, source_ur
         events_found += 1
 
         # Use "coming-soon" as date identifier for hash
-        content_hash = generate_content_hash(movie_title, "Plaza Theatre", "coming-soon")
+        content_hash = generate_content_hash(
+            movie_title, "Plaza Theatre", "coming-soon"
+        )
 
         existing = find_event_by_hash(content_hash)
         if existing:
             events_updated += 1
         else:
             # Use date 30 days from now as placeholder
-            placeholder_date = (datetime.now() + timedelta(days=30)).strftime("%Y-%m-%d")
+            placeholder_date = (datetime.now() + timedelta(days=30)).strftime(
+                "%Y-%m-%d"
+            )
 
             # Determine if this is a special series event
-            is_special = any(movie_title.startswith(prefix) for prefix in special_prefixes)
+            is_special = any(
+                movie_title.startswith(prefix) for prefix in special_prefixes
+            )
 
             # Set description based on page type
             if page_type == "special-events":
-                description = "Special Event" if not is_special else "Special Event Series"
+                description = (
+                    "Special Event" if not is_special else "Special Event Series"
+                )
             else:
-                description = "Coming Soon" if not is_special else "Coming Soon - Special Event Series"
+                description = (
+                    "Coming Soon"
+                    if not is_special
+                    else "Coming Soon - Special Event Series"
+                )
 
             # Build tags list
             tags = ["film", "cinema", "independent", "plaza-theatre", page_type]
@@ -363,14 +499,15 @@ def crawl(source: dict) -> tuple[int, int, int]:
             # First, get today's showtimes (default view)
             logger.info(f"Scraping Today ({today.strftime('%Y-%m-%d')})")
             found, new, updated = extract_movies_for_date(
-                page, datetime.combine(today, datetime.min.time()),
-                source_id, venue_id
+                page, datetime.combine(today, datetime.min.time()), source_id, venue_id
             )
             total_found += found
             total_new += new
             total_updated += updated
             if found > 0:
-                logger.info(f"  {today.strftime('%Y-%m-%d')}: {found} movies found, {new} new")
+                logger.info(
+                    f"  {today.strftime('%Y-%m-%d')}: {found} movies found, {new} new"
+                )
 
             # Click through the quick-select day buttons (Sat, Sun, Mon, Tue, etc.)
             # weekday(): Monday=0, Tuesday=1, ..., Sunday=6
@@ -419,8 +556,10 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                 logger.info(f"Scraping {day_name} {day_num} ({date_str})")
                 found, new, updated = extract_movies_for_date(
-                    page, datetime.combine(target_date, datetime.min.time()),
-                    source_id, venue_id
+                    page,
+                    datetime.combine(target_date, datetime.min.time()),
+                    source_id,
+                    venue_id,
                 )
                 total_found += found
                 total_new += new
@@ -438,7 +577,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
             page.goto(COMING_SOON_URL, wait_until="domcontentloaded", timeout=30000)
             page.wait_for_timeout(3000)  # Wait for JS to load
 
-            found, new, updated = extract_upcoming_movies(page, source_id, venue_id, COMING_SOON_URL, "coming-soon")
+            found, new, updated = extract_upcoming_movies(
+                page, source_id, venue_id, COMING_SOON_URL, "coming-soon"
+            )
             total_found += found
             total_new += new
             total_updated += updated
@@ -450,7 +591,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
             page.goto(SPECIAL_EVENTS_URL, wait_until="domcontentloaded", timeout=30000)
             page.wait_for_timeout(3000)  # Wait for JS to load
 
-            found, new, updated = extract_upcoming_movies(page, source_id, venue_id, SPECIAL_EVENTS_URL, "special-events")
+            found, new, updated = extract_upcoming_movies(
+                page, source_id, venue_id, SPECIAL_EVENTS_URL, "special-events"
+            )
             total_found += found
             total_new += new
             total_updated += updated
@@ -459,7 +602,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             browser.close()
 
-        logger.info(f"Plaza Theatre crawl complete: {total_found} found, {total_new} new, {total_updated} updated")
+        logger.info(
+            f"Plaza Theatre crawl complete: {total_found} found, {total_new} new, {total_updated} updated"
+        )
 
     except Exception as e:
         logger.error(f"Failed to crawl Plaza Theatre: {e}")

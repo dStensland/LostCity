@@ -1,5 +1,5 @@
 """
-Crawler for Alliance Theatre (alliancetheatre.org/season).
+Crawler for Alliance Theatre (alliancetheatre.org/shows).
 Atlanta's flagship theater company at Woodruff Arts Center.
 """
 
@@ -10,8 +10,7 @@ import logging
 from datetime import datetime
 from typing import Optional
 
-import requests
-from bs4 import BeautifulSoup
+from playwright.sync_api import sync_playwright
 
 from db import get_or_create_venue, insert_event, find_event_by_hash
 from dedupe import generate_content_hash
@@ -19,7 +18,7 @@ from dedupe import generate_content_hash
 logger = logging.getLogger(__name__)
 
 BASE_URL = "https://www.alliancetheatre.org"
-SEASON_URL = f"{BASE_URL}/season/"
+SHOWS_URL = f"{BASE_URL}/shows/"
 
 VENUE_DATA = {
     "name": "Alliance Theatre",
@@ -33,200 +32,279 @@ VENUE_DATA = {
     "website": BASE_URL,
 }
 
+# Date pattern: MM/DD/YYYY – MM/DD/YYYY or MM/DD/YYYY
+DATE_PATTERN = re.compile(r"(\d{2}/\d{2}/\d{4})\s*[–-]\s*(\d{2}/\d{2}/\d{4})")
+SINGLE_DATE_PATTERN = re.compile(r"(\d{2}/\d{2}/\d{4})")
 
-def parse_date_range(date_text: str) -> tuple[Optional[str], Optional[str]]:
-    """Parse date range from 'JAN 31 – JUN 27' or similar format."""
-    date_text = date_text.strip().upper()
+# Stage patterns to identify venue lines
+STAGE_PATTERN = re.compile(r"on the\s+(.+(?:STAGE|THEATRE|ANYWHERE))", re.IGNORECASE)
 
-    # Month abbreviation mapping
-    months = {
-        "JAN": 1, "FEB": 2, "MAR": 3, "APR": 4, "MAY": 5, "JUN": 6,
-        "JUL": 7, "AUG": 8, "SEP": 9, "OCT": 10, "NOV": 11, "DEC": 12
-    }
 
-    # Try "MON DD – MON DD" format
-    match = re.search(
-        r"([A-Z]{3})\s+(\d{1,2})\s*[–-]\s*([A-Z]{3})\s+(\d{1,2})",
-        date_text
-    )
+def parse_date(date_str: str) -> Optional[str]:
+    """Parse MM/DD/YYYY to YYYY-MM-DD."""
+    try:
+        dt = datetime.strptime(date_str.strip(), "%m/%d/%Y")
+        return dt.strftime("%Y-%m-%d")
+    except ValueError:
+        return None
+
+
+def parse_date_range(line: str) -> tuple[Optional[str], Optional[str]]:
+    """Parse date range from line like '01/17/2026 – 02/22/2026'."""
+    # Try range first
+    match = DATE_PATTERN.search(line)
     if match:
-        start_month, start_day, end_month, end_day = match.groups()
-        year = datetime.now().year
+        start = parse_date(match.group(1))
+        end = parse_date(match.group(2))
+        return start, end
 
-        if start_month in months and end_month in months:
-            start_m = months[start_month]
-            end_m = months[end_month]
-
-            # Handle year rollover
-            start_year = year
-            end_year = year
-            if start_m > end_m:
-                end_year = year + 1
-
-            try:
-                start_dt = datetime(start_year, start_m, int(start_day))
-                end_dt = datetime(end_year, end_m, int(end_day))
-
-                # If start is in the past, bump both years
-                if start_dt < datetime.now():
-                    start_dt = datetime(start_year + 1, start_m, int(start_day))
-                    end_dt = datetime(end_year + 1, end_m, int(end_day))
-
-                return start_dt.strftime("%Y-%m-%d"), end_dt.strftime("%Y-%m-%d")
-            except ValueError:
-                pass
-
-    # Try single date "MON DD"
-    match = re.search(r"([A-Z]{3})\s+(\d{1,2})", date_text)
+    # Try single date
+    match = SINGLE_DATE_PATTERN.search(line)
     if match:
-        month_str, day = match.groups()
-        if month_str in months:
-            month = months[month_str]
-            year = datetime.now().year
-            try:
-                dt = datetime(year, month, int(day))
-                if dt < datetime.now():
-                    dt = datetime(year + 1, month, int(day))
-                return dt.strftime("%Y-%m-%d"), None
-            except ValueError:
-                pass
+        start = parse_date(match.group(1))
+        return start, None
 
     return None, None
 
 
+def is_date_line(line: str) -> bool:
+    """Check if line contains a date pattern."""
+    return bool(SINGLE_DATE_PATTERN.search(line))
+
+
+def is_stage_line(line: str) -> bool:
+    """Check if line describes a stage/venue."""
+    return bool(STAGE_PATTERN.search(line))
+
+
+def is_section_header(line: str) -> bool:
+    """Check if line is a section header to skip."""
+    skip_phrases = [
+        "COMING UP THIS SEASON",
+        "PREVIOUSLY THIS SEASON",
+        "NOW STREAMING",
+        "SPECIAL EVENTS",
+        "GO BEYOND",
+        "EXPLORE",
+        "ACCESS FOR ALL",
+        "ANNUAL MEMBERSHIP",
+        "OUR GENEROUS",
+        "FIRST TIME OR RETURNING",
+        "FOLLOW US",
+        "SUPPORTED BY",
+        "1280 Peachtree",
+        "Box Office:",
+        "404.733",
+        "Plan Your Visit",
+        "Contact Us",
+        "Privacy Policy",
+        "Skip to Main",
+    ]
+    return any(phrase in line for phrase in skip_phrases)
+
+
 def crawl(source: dict) -> tuple[int, int, int]:
-    """Crawl Alliance Theatre shows."""
+    """Crawl Alliance Theatre shows using Playwright."""
     source_id = source["id"]
     events_found = 0
     events_new = 0
     events_updated = 0
 
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36"
-    }
-
     try:
-        logger.info(f"Fetching Alliance Theatre: {SEASON_URL}")
-        response = requests.get(SEASON_URL, headers=headers, timeout=30)
-        response.raise_for_status()
+        with sync_playwright() as p:
+            browser = p.chromium.launch(headless=True)
+            context = browser.new_context(
+                user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+                viewport={"width": 1920, "height": 1080},
+            )
+            page = context.new_page()
 
-        soup = BeautifulSoup(response.text, "html.parser")
-        venue_id = get_or_create_venue(VENUE_DATA)
+            logger.info(f"Fetching Alliance Theatre: {SHOWS_URL}")
+            page.goto(SHOWS_URL, wait_until="domcontentloaded", timeout=30000)
+            page.wait_for_timeout(3000)
 
-        # Find production links
-        production_links = soup.find_all("a", href=re.compile(r"/production/"))
+            # Scroll to load dynamic content
+            for _ in range(5):
+                page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+                page.wait_for_timeout(1000)
 
-        seen_urls = set()
-
-        for link in production_links:
-            href = link.get("href", "")
-            if href in seen_urls:
-                continue
-            seen_urls.add(href)
-
-            # Get container for this production
-            parent = link.find_parent("div") or link.find_parent("article")
-            if not parent:
-                continue
-
-            # Find title
-            title_el = link.find(["h2", "h3", "h4"]) or parent.find(["h2", "h3", "h4"])
-            if not title_el:
-                # Title might be the link text itself
-                title = link.get_text(strip=True)
-            else:
-                title = title_el.get_text(strip=True)
-
-            if not title or len(title) < 3:
-                continue
-
-            # Skip non-show links
-            skip_words = ["learn more", "buy tickets", "subscribe", "donate", "gift"]
-            if title.lower() in skip_words:
-                continue
-
-            # Get all text from parent for date parsing
-            parent_text = parent.get_text(" ", strip=True)
-
-            # Extract dates
-            start_date, end_date = parse_date_range(parent_text)
-            if not start_date:
-                # Try looking in siblings
-                for sibling in parent.find_next_siblings()[:2]:
-                    sibling_text = sibling.get_text(" ", strip=True)
-                    start_date, end_date = parse_date_range(sibling_text)
-                    if start_date:
-                        break
-
-            if not start_date:
-                continue
-
-            events_found += 1
-
-            # Generate content hash
-            content_hash = generate_content_hash(title, "Alliance Theatre", start_date)
-
-            # Check for existing
-            existing = find_event_by_hash(content_hash)
-            if existing:
-                events_updated += 1
-                continue
-
-            # Build event URL
-            event_url = href if href.startswith("http") else f"{BASE_URL}{href}"
-
-            # Determine subcategory
-            title_lower = title.lower()
-            subcategory = None
-            tags = ["theater", "alliance-theatre"]
-
-            if any(w in title_lower for w in ["musical", "broadway"]):
-                subcategory = "musical"
-                tags.append("musical")
-            elif any(w in title_lower for w in ["comedy", "funny"]):
-                subcategory = "comedy"
-            elif any(w in title_lower for w in ["drama"]):
-                subcategory = "drama"
-
-            # Extract description if available
-            desc_el = parent.find("p")
-            description = desc_el.get_text(strip=True) if desc_el else None
-
-            event_record = {
-                "source_id": source_id,
-                "venue_id": venue_id,
-                "title": title,
-                "description": description,
-                "start_date": start_date,
-                "start_time": None,  # Shows typically have multiple showtimes
-                "end_date": end_date,
-                "end_time": None,
-                "is_all_day": False,
-                "category": "theater",
-                "subcategory": subcategory,
-                "tags": tags,
-                "price_min": None,
-                "price_max": None,
-                "price_note": None,
-                "is_free": False,
-                "source_url": event_url,
-                "ticket_url": event_url,
-                "image_url": None,
-                "raw_text": parent_text[:500] if parent_text else None,
-                "extraction_confidence": 0.8,
-                "is_recurring": True,  # Theater shows run multiple dates
-                "recurrence_rule": None,
-                "content_hash": content_hash,
-            }
-
+            # Accept cookies if popup appears
             try:
-                insert_event(event_record)
-                events_new += 1
-                logger.info(f"Added: {title} ({start_date} to {end_date})")
-            except Exception as e:
-                logger.error(f"Failed to insert: {title}: {e}")
+                ok_btn = page.query_selector("button:has-text('OK')")
+                if ok_btn:
+                    ok_btn.click()
+                    page.wait_for_timeout(500)
+            except Exception:
+                pass
 
-        logger.info(f"Alliance Theatre crawl complete: {events_found} found, {events_new} new")
+            venue_id = get_or_create_venue(VENUE_DATA)
+
+            body_text = page.inner_text("body")
+            lines = [l.strip() for l in body_text.split("\n") if l.strip()]
+
+            # Track section state
+            in_upcoming = False
+            in_streaming = False
+            in_past = False
+
+            # Parse shows: Title, Date, Stage appear on consecutive lines
+            i = 0
+            while i < len(lines):
+                line = lines[i]
+
+                # Track which section we're in
+                if "COMING UP THIS SEASON" in line:
+                    in_upcoming = True
+                    in_streaming = False
+                    in_past = False
+                    i += 1
+                    continue
+                elif "NOW STREAMING" in line:
+                    in_upcoming = False
+                    in_streaming = True
+                    in_past = False
+                    i += 1
+                    continue
+                elif "PREVIOUSLY THIS SEASON" in line:
+                    in_upcoming = False
+                    in_streaming = False
+                    in_past = True
+                    i += 1
+                    continue
+                elif "SPECIAL EVENTS" in line or "GO BEYOND" in line:
+                    # Stop processing when we hit special events or footer
+                    break
+
+                # Skip if in past section or not in a valid section
+                if in_past or (not in_upcoming and not in_streaming):
+                    i += 1
+                    continue
+
+                # Skip section headers and navigation
+                if is_section_header(line):
+                    i += 1
+                    continue
+
+                # Look for pattern: Title, Date, Stage
+                # Title line: not a date, not a stage, reasonable length
+                if (
+                    not is_date_line(line)
+                    and not is_stage_line(line)
+                    and len(line) > 3
+                    and len(line) < 100
+                    and i + 1 < len(lines)
+                ):
+                    potential_title = line
+
+                    # Check next line for date
+                    if i + 1 < len(lines) and is_date_line(lines[i + 1]):
+                        date_line = lines[i + 1]
+                        start_date, end_date = parse_date_range(date_line)
+
+                        if start_date:
+                            # Found a valid show
+                            title = potential_title
+
+                            # Check for stage info
+                            stage = None
+                            if i + 2 < len(lines) and is_stage_line(lines[i + 2]):
+                                stage_match = STAGE_PATTERN.search(lines[i + 2])
+                                if stage_match:
+                                    stage = stage_match.group(1).strip()
+
+                            events_found += 1
+
+                            content_hash = generate_content_hash(
+                                title, "Alliance Theatre", start_date
+                            )
+
+                            existing = find_event_by_hash(content_hash)
+                            if existing:
+                                events_updated += 1
+                                i += 3 if stage else 2
+                                continue
+
+                            # Determine subcategory and tags
+                            title_lower = title.lower()
+                            subcategory = "play"
+                            tags = ["theater", "alliance-theatre", "woodruff-arts-center"]
+
+                            if any(
+                                w in title_lower
+                                for w in ["musical", "rock experience", "christmas carol"]
+                            ):
+                                subcategory = "musical"
+                                tags.append("musical")
+                            elif "(stream)" in title_lower:
+                                subcategory = "streaming"
+                                tags.append("streaming")
+
+                            # Add family tag for family shows
+                            if stage and "GOIZUETA" in stage.upper():
+                                tags.append("family")
+                            if stage and "VERY YOUNG" in stage.upper():
+                                tags.append("family")
+                                tags.append("kids")
+
+                            # Build event URL slug
+                            event_slug = (
+                                title.lower()
+                                .replace(" ", "-")
+                                .replace(":", "")
+                                .replace("'", "")
+                                .replace("(", "")
+                                .replace(")", "")
+                                .replace("!", "")
+                            )
+                            event_slug = re.sub(r"-+", "-", event_slug).strip("-")
+
+                            event_record = {
+                                "source_id": source_id,
+                                "venue_id": venue_id,
+                                "title": title,
+                                "description": f"At Alliance Theatre{f' - {stage}' if stage else ''}",
+                                "start_date": start_date,
+                                "start_time": None,
+                                "end_date": end_date,
+                                "end_time": None,
+                                "is_all_day": False,
+                                "category": "theater",
+                                "subcategory": subcategory,
+                                "tags": tags,
+                                "price_min": None,
+                                "price_max": None,
+                                "price_note": None,
+                                "is_free": False,
+                                "source_url": SHOWS_URL,
+                                "ticket_url": SHOWS_URL,
+                                "image_url": None,
+                                "raw_text": f"{title} | {date_line} | {stage or 'Alliance Theatre'}",
+                                "extraction_confidence": 0.90,
+                                "is_recurring": True,
+                                "recurrence_rule": None,
+                                "content_hash": content_hash,
+                            }
+
+                            try:
+                                insert_event(event_record)
+                                events_new += 1
+                                logger.info(
+                                    f"Added: {title} ({start_date} to {end_date or 'N/A'})"
+                                )
+                            except Exception as e:
+                                logger.error(f"Failed to insert: {title}: {e}")
+
+                            # Skip past the lines we processed
+                            i += 3 if stage else 2
+                            continue
+
+                i += 1
+
+            browser.close()
+
+        logger.info(
+            f"Alliance Theatre crawl complete: {events_found} found, {events_new} new"
+        )
 
     except Exception as e:
         logger.error(f"Failed to crawl Alliance Theatre: {e}")

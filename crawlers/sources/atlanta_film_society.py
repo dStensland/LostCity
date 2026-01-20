@@ -39,8 +39,7 @@ def parse_date(date_str: str) -> tuple[Optional[str], Optional[str]]:
 
     # Range format: "Feb 7, 2026 – Feb 28, 2026"
     range_match = re.match(
-        r"(\w+)\s+(\d+),?\s*(\d{4})\s*[–-]\s*(\w+)\s+(\d+),?\s*(\d{4})",
-        date_str
+        r"(\w+)\s+(\d+),?\s*(\d{4})\s*[–-]\s*(\w+)\s+(\d+),?\s*(\d{4})", date_str
     )
     if range_match:
         m1, d1, y1, m2, d2, y2 = range_match.groups()
@@ -99,14 +98,26 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 line = lines[i]
 
                 # Look for date patterns
-                date_match = re.match(r"^(\w{3}\s+\d+,?\s*\d{4}(?:\s*[–-]\s*\w{3}\s+\d+,?\s*\d{4})?)", line)
+                date_match = re.match(
+                    r"^(\w{3}\s+\d+,?\s*\d{4}(?:\s*[–-]\s*\w{3}\s+\d+,?\s*\d{4})?)",
+                    line,
+                )
                 if date_match and i + 1 < len(lines):
                     date_str = date_match.group(1)
                     title = lines[i + 1]
 
                     # Skip navigation items
-                    skip_words = ["SKIP TO", "ABOUT", "SCREENINGS", "EDUCATION",
-                                  "SUPPORT", "DONATE", "LOGIN", "ACCOUNT", "UPCOMING"]
+                    skip_words = [
+                        "SKIP TO",
+                        "ABOUT",
+                        "SCREENINGS",
+                        "EDUCATION",
+                        "SUPPORT",
+                        "DONATE",
+                        "LOGIN",
+                        "ACCOUNT",
+                        "UPCOMING",
+                    ]
                     if any(w.lower() in title.lower() for w in skip_words):
                         i += 1
                         continue
@@ -124,12 +135,16 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     description = None
                     if i + 2 < len(lines):
                         desc_line = lines[i + 2]
-                        if len(desc_line) > 20 and not re.match(r"^\w{3}\s+\d+", desc_line):
+                        if len(desc_line) > 20 and not re.match(
+                            r"^\w{3}\s+\d+", desc_line
+                        ):
                             description = desc_line[:300]
 
                     events_found += 1
 
-                    content_hash = generate_content_hash(title, "Atlanta Film Society", start_date)
+                    content_hash = generate_content_hash(
+                        title, "Atlanta Film Society", start_date
+                    )
 
                     existing = find_event_by_hash(content_hash)
                     if existing:
@@ -175,7 +190,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             browser.close()
 
-        logger.info(f"Atlanta Film Society crawl complete: {events_found} found, {events_new} new")
+        logger.info(
+            f"Atlanta Film Society crawl complete: {events_found} found, {events_new} new"
+        )
 
     except Exception as e:
         logger.error(f"Failed to crawl Atlanta Film Society: {e}")

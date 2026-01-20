@@ -1,14 +1,18 @@
 """
 Crawler for Atlanta Botanical Garden (atlantabg.org/events).
+
+Site uses JavaScript rendering - must use Playwright.
 """
+
+from __future__ import annotations
 
 import re
 import logging
 from datetime import datetime
-from bs4 import BeautifulSoup
 from typing import Optional
 
-from utils import fetch_page, slugify
+from playwright.sync_api import sync_playwright
+
 from db import get_or_create_venue, insert_event, find_event_by_hash
 from dedupe import generate_content_hash
 
@@ -26,194 +30,163 @@ VENUE_DATA = {
     "state": "GA",
     "zip": "30309",
     "venue_type": "garden",
-    "website": BASE_URL
+    "website": BASE_URL,
 }
 
 
-def parse_date_range(date_text: str) -> tuple[Optional[str], Optional[str]]:
-    """
-    Parse date like 'January 13 - February 10' or 'January 17'.
-    Returns (start_date, end_date).
-    """
-    try:
-        date_text = date_text.strip()
-        now = datetime.now()
-        year = now.year
-
-        # Check for date range
-        if " - " in date_text:
-            parts = date_text.split(" - ")
-            start_str = parts[0].strip()
-            end_str = parts[1].strip()
-
-            # Parse start
-            try:
-                start_dt = datetime.strptime(start_str, "%B %d")
-                start_dt = start_dt.replace(year=year)
-            except ValueError:
-                return None, None
-
-            # Parse end - might just have day number
-            if end_str.isdigit():
-                end_dt = start_dt.replace(day=int(end_str))
-            else:
-                try:
-                    end_dt = datetime.strptime(end_str, "%B %d")
-                    end_dt = end_dt.replace(year=year)
-                except ValueError:
-                    end_dt = start_dt
-
-            # Adjust year if dates are in the past
-            if start_dt < now:
-                start_dt = start_dt.replace(year=year + 1)
-                end_dt = end_dt.replace(year=year + 1)
-
-            return start_dt.strftime("%Y-%m-%d"), end_dt.strftime("%Y-%m-%d")
-
-        else:
-            # Single date
-            try:
-                dt = datetime.strptime(date_text, "%B %d")
-                dt = dt.replace(year=year)
-                if dt < now:
-                    dt = dt.replace(year=year + 1)
-                return dt.strftime("%Y-%m-%d"), None
-            except ValueError:
-                return None, None
-
-    except Exception as e:
-        logger.warning(f"Failed to parse date '{date_text}': {e}")
-        return None, None
-
-
-def extract_events(html: str) -> list[dict]:
-    """Extract events from Atlanta Botanical Garden page."""
-    soup = BeautifulSoup(html, 'lxml')
-    events = []
-
-    # Find event cards
-    event_cards = soup.select('.eventCard, [class*="eventCard"]')
-
-    for card in event_cards:
-        try:
-            # Title - try multiple selectors
-            title_el = card.select_one('h3, h4, .eventCard-title, [class*="title"]')
-            title = title_el.get_text(strip=True) if title_el else None
-
-            # If no title, try getting from link
-            if not title:
-                link = card.select_one('a')
-                if link:
-                    title = link.get('title') or link.get_text(strip=True)
-
-            if not title:
-                continue
-
-            # Date
-            date_el = card.select_one('.eventCard-date, [class*="date"]')
-            start_date = None
-            end_date = None
-            if date_el:
-                date_text = date_el.get_text(strip=True)
-                start_date, end_date = parse_date_range(date_text)
-
-            if not start_date:
-                continue
-
-            # URL
-            link = card.select_one('a')
-            source_url = BASE_URL + link.get('href') if link and link.get('href', '').startswith('/') else EVENTS_URL
-            if link and link.get('href', '').startswith('http'):
-                source_url = link.get('href')
-
-            # Image
-            img = card.select_one('img')
-            image_url = img.get('src') or img.get('data-src') if img else None
-
-            # Location within garden
-            location_el = card.select_one('.eventCard-content-location, [class*="location"]')
-            location_note = location_el.get_text(strip=True) if location_el else None
-
-            events.append({
-                "title": title,
-                "description": location_note,
-                "start_date": start_date,
-                "end_date": end_date,
-                "source_url": source_url,
-                "image_url": image_url,
-                "is_recurring": end_date is not None,
-            })
-
-        except Exception as e:
-            logger.warning(f"Failed to parse event card: {e}")
-            continue
-
-    return events
+def parse_time(time_text: str) -> Optional[str]:
+    """Parse time from '7:00 PM' format."""
+    match = re.search(r"(\d{1,2}):(\d{2})\s*(am|pm)", time_text, re.IGNORECASE)
+    if match:
+        hour, minute, period = match.groups()
+        hour = int(hour)
+        if period.lower() == "pm" and hour != 12:
+            hour += 12
+        elif period.lower() == "am" and hour == 12:
+            hour = 0
+        return f"{hour:02d}:{minute}"
+    return None
 
 
 def crawl(source: dict) -> tuple[int, int, int]:
-    """Crawl Atlanta Botanical Garden events."""
+    """Crawl Atlanta Botanical Garden events using Playwright."""
     source_id = source["id"]
     events_found = 0
     events_new = 0
     events_updated = 0
 
     try:
-        logger.info(f"Fetching Atlanta Botanical Garden: {EVENTS_URL}")
-        html = fetch_page(EVENTS_URL)
-        all_events = extract_events(html)
-
-        logger.info(f"Found {len(all_events)} events at Atlanta Botanical Garden")
-
-        venue_id = get_or_create_venue(VENUE_DATA)
-
-        for event_data in all_events:
-            events_found += 1
-
-            content_hash = generate_content_hash(
-                event_data["title"],
-                "Atlanta Botanical Garden",
-                event_data["start_date"]
+        with sync_playwright() as p:
+            browser = p.chromium.launch(headless=True)
+            context = browser.new_context(
+                user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+                viewport={"width": 1920, "height": 1080},
             )
+            page = context.new_page()
 
-            existing = find_event_by_hash(content_hash)
-            if existing:
-                events_updated += 1
-                continue
+            venue_id = get_or_create_venue(VENUE_DATA)
 
-            event_record = {
-                "source_id": source_id,
-                "venue_id": venue_id,
-                "title": event_data["title"],
-                "description": event_data.get("description"),
-                "start_date": event_data["start_date"],
-                "start_time": None,
-                "end_date": event_data.get("end_date"),
-                "end_time": None,
-                "is_all_day": True,
-                "category": "community",
-                "subcategory": "garden",
-                "tags": ["garden", "nature", "outdoor"],
-                "price_min": None,
-                "price_max": None,
-                "price_note": "Garden admission required",
-                "is_free": False,
-                "source_url": event_data["source_url"],
-                "ticket_url": event_data["source_url"],
-                "image_url": event_data.get("image_url"),
-                "raw_text": None,
-                "extraction_confidence": 0.85,
-                "is_recurring": event_data.get("is_recurring", False),
-                "recurrence_rule": None,
-                "content_hash": content_hash,
-            }
+            logger.info(f"Fetching Atlanta Botanical Garden: {EVENTS_URL}")
+            page.goto(EVENTS_URL, wait_until="domcontentloaded", timeout=30000)
+            page.wait_for_timeout(3000)
 
-            try:
-                insert_event(event_record)
-                events_new += 1
-                logger.debug(f"Added: {event_data['title']}")
-            except Exception as e:
-                logger.error(f"Failed to insert: {event_data['title']}: {e}")
+            # Scroll to load all content
+            for _ in range(5):
+                page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+                page.wait_for_timeout(1000)
+
+            # Get page text and parse line by line
+            body_text = page.inner_text("body")
+            lines = [l.strip() for l in body_text.split("\n") if l.strip()]
+
+            # Parse events - look for date patterns
+            i = 0
+            while i < len(lines):
+                line = lines[i]
+
+                # Skip navigation items
+                if len(line) < 3:
+                    i += 1
+                    continue
+
+                # Look for date patterns
+                date_match = re.match(
+                    r"(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)?,?\s*(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{1,2})(?:,?\s+(\d{4}))?",
+                    line,
+                    re.IGNORECASE
+                )
+
+                if date_match:
+                    month = date_match.group(1)
+                    day = date_match.group(2)
+                    year = date_match.group(3) if date_match.group(3) else str(datetime.now().year)
+
+                    # Look for title in surrounding lines
+                    title = None
+                    start_time = None
+
+                    for offset in [-2, -1, 1, 2, 3]:
+                        idx = i + offset
+                        if 0 <= idx < len(lines):
+                            check_line = lines[idx]
+                            if re.match(r"(January|February|March)", check_line, re.IGNORECASE):
+                                continue
+                            if not start_time:
+                                time_result = parse_time(check_line)
+                                if time_result:
+                                    start_time = time_result
+                                    continue
+                            if not title and len(check_line) > 5:
+                                if not re.match(r"\d{1,2}[:/]", check_line):
+                                    if not re.match(r"(free|tickets|register|\$|more info)", check_line.lower()):
+                                        title = check_line
+                                        break
+
+                    if not title:
+                        i += 1
+                        continue
+
+                    # Parse date
+                    try:
+                        month_str = month[:3] if len(month) > 3 else month
+                        dt = datetime.strptime(f"{month_str} {day} {year}", "%b %d %Y")
+                        if dt.date() < datetime.now().date():
+                            dt = datetime.strptime(f"{month_str} {day} {int(year) + 1}", "%b %d %Y")
+                        start_date = dt.strftime("%Y-%m-%d")
+                    except ValueError:
+                        i += 1
+                        continue
+
+                    events_found += 1
+
+                    content_hash = generate_content_hash(title, "Atlanta Botanical Garden", start_date)
+
+                    if find_event_by_hash(content_hash):
+                        events_updated += 1
+                        i += 1
+                        continue
+
+                    event_record = {
+                        "source_id": source_id,
+                        "venue_id": venue_id,
+                        "title": title,
+                        "description": "Event at Atlanta Botanical Garden",
+                        "start_date": start_date,
+                        "start_time": start_time,
+                        "end_date": None,
+                        "end_time": None,
+                        "is_all_day": start_time is None,
+                        "category": "community",
+                        "subcategory": None,
+                        "tags": ["garden", "nature", "outdoor"],
+                        "price_min": None,
+                        "price_max": None,
+                        "price_note": None,
+                        "is_free": False,
+                        "source_url": EVENTS_URL,
+                        "ticket_url": EVENTS_URL,
+                        "image_url": None,
+                        "raw_text": f"{title} - {start_date}",
+                        "extraction_confidence": 0.80,
+                        "is_recurring": False,
+                        "recurrence_rule": None,
+                        "content_hash": content_hash,
+                    }
+
+                    try:
+                        insert_event(event_record)
+                        events_new += 1
+                        logger.info(f"Added: {title} on {start_date}")
+                    except Exception as e:
+                        logger.error(f"Failed to insert: {title}: {e}")
+
+                i += 1
+
+            browser.close()
+
+        logger.info(
+            f"Atlanta Botanical Garden crawl complete: {events_found} found, {events_new} new, {events_updated} updated"
+        )
 
     except Exception as e:
         logger.error(f"Failed to crawl Atlanta Botanical Garden: {e}")

@@ -1,6 +1,9 @@
 """
 Crawler for The Masquerade (masqueradeatlanta.com/events).
 Atlanta's legendary multi-room music venue with Heaven, Hell, Purgatory, and Altar.
+
+Site uses JavaScript rendering - must use Playwright.
+Format: THU, 22, JAN, 2026, "presents", TITLE, opener, "Room at The Masquerade", "Doors X:XX pm"
 """
 
 from __future__ import annotations
@@ -10,8 +13,7 @@ import logging
 from datetime import datetime
 from typing import Optional
 
-import requests
-from bs4 import BeautifulSoup
+from playwright.sync_api import sync_playwright
 
 from db import get_or_create_venue, insert_event, find_event_by_hash
 from dedupe import generate_content_hash
@@ -34,41 +36,8 @@ VENUE_DATA = {
 }
 
 
-def parse_date(date_text: str) -> Optional[str]:
-    """Parse date from 'Thu 15 Jan 2026' or 'Jan 15, 2026' format."""
-    # Clean up text
-    date_text = date_text.strip()
-
-    # Try "Thu 15 Jan 2026" format
-    match = re.search(r"(\d{1,2})\s+(\w{3})\s+(\d{4})", date_text)
-    if match:
-        day, month, year = match.groups()
-        try:
-            dt = datetime.strptime(f"{day} {month} {year}", "%d %b %Y")
-            return dt.strftime("%Y-%m-%d")
-        except ValueError:
-            pass
-
-    # Try "Jan 15, 2026" format
-    match = re.search(r"(\w{3})\s+(\d{1,2}),?\s*(\d{4})?", date_text)
-    if match:
-        month, day, year = match.groups()
-        if not year:
-            year = str(datetime.now().year)
-        try:
-            dt = datetime.strptime(f"{month} {day} {year}", "%b %d %Y")
-            # If date is in past, assume next year
-            if dt < datetime.now():
-                dt = datetime.strptime(f"{month} {day} {int(year) + 1}", "%b %d %Y")
-            return dt.strftime("%Y-%m-%d")
-        except ValueError:
-            pass
-
-    return None
-
-
 def parse_time(time_text: str) -> Optional[str]:
-    """Parse time from 'Doors 7:00 pm' or '7:00 PM' format."""
+    """Parse time from 'Doors 7:00 pm' format."""
     match = re.search(r"(\d{1,2}):(\d{2})\s*(am|pm)", time_text, re.IGNORECASE)
     if match:
         hour, minute, period = match.groups()
@@ -81,139 +50,212 @@ def parse_time(time_text: str) -> Optional[str]:
     return None
 
 
+MONTHS = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"]
+DAYS = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"]
+
+
 def crawl(source: dict) -> tuple[int, int, int]:
-    """Crawl The Masquerade events."""
+    """Crawl The Masquerade events using Playwright."""
     source_id = source["id"]
     events_found = 0
     events_new = 0
     events_updated = 0
 
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36"
-    }
-
     try:
-        logger.info(f"Fetching The Masquerade: {EVENTS_URL}")
-        response = requests.get(EVENTS_URL, headers=headers, timeout=30)
-        response.raise_for_status()
-
-        soup = BeautifulSoup(response.text, "html.parser")
-        venue_id = get_or_create_venue(VENUE_DATA)
-
-        # Find all event containers - look for links with event titles
-        # The page uses event cards with h3 headings for artist names
-        event_cards = soup.find_all("a", href=True)
-
-        for card in event_cards:
-            # Skip non-event links
-            href = card.get("href", "")
-            if "/event/" not in href and "/events/" not in href.replace(EVENTS_URL, ""):
-                continue
-
-            # Find title (h3 inside link or strong text)
-            title_el = card.find("h3") or card.find("strong")
-            if not title_el:
-                continue
-
-            title = title_el.get_text(strip=True)
-            if not title or len(title) < 3:
-                continue
-
-            # Skip navigation items
-            skip_words = ["buy tickets", "sold out", "calendar", "venue info", "more info"]
-            if title.lower() in skip_words:
-                continue
-
-            # Find date - look for text patterns in the card
-            card_text = card.get_text(" ", strip=True)
-
-            # Try to find date pattern
-            date_match = re.search(
-                r"(Mon|Tue|Wed|Thu|Fri|Sat|Sun)?\s*(\d{1,2})\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{4})",
-                card_text,
-                re.IGNORECASE
+        with sync_playwright() as p:
+            browser = p.chromium.launch(headless=True)
+            context = browser.new_context(
+                user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+                viewport={"width": 1920, "height": 1080},
             )
+            page = context.new_page()
 
-            if not date_match:
-                # Try alternate format: "Jan 15, 2026"
-                date_match = re.search(
-                    r"(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{1,2}),?\s*(\d{4})?",
-                    card_text,
-                    re.IGNORECASE
-                )
+            venue_id = get_or_create_venue(VENUE_DATA)
 
-            if not date_match:
-                continue
+            logger.info(f"Fetching The Masquerade: {EVENTS_URL}")
+            page.goto(EVENTS_URL, wait_until="domcontentloaded", timeout=30000)
+            page.wait_for_timeout(5000)
 
-            # Parse the date
-            start_date = parse_date(card_text)
-            if not start_date:
-                continue
+            # Scroll to load all content
+            for _ in range(5):
+                page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+                page.wait_for_timeout(1000)
 
-            # Find time - look for "Doors X:XX pm" pattern
-            start_time = parse_time(card_text)
+            # Get page text and parse line by line
+            body_text = page.inner_text("body")
+            lines = [l.strip() for l in body_text.split("\n") if l.strip()]
 
-            # Determine the room (Heaven, Hell, Purgatory, Altar)
-            room = None
-            for r in ["Heaven", "Hell", "Purgatory", "Altar"]:
-                if r.lower() in card_text.lower():
-                    room = r
-                    break
+            # Parse events - format is:
+            # THU (day of week)
+            # 22 (day number)
+            # JAN (month)
+            # 2026 (year)
+            # "The Masquerade presents"
+            # ARTIST NAME (title)
+            # opener
+            # "Room at The Masquerade"
+            # "Doors X:XX pm / All Ages"
+            # BUY TICKETS / SOLD OUT / CANCELED
 
-            events_found += 1
+            i = 0
+            while i < len(lines):
+                line = lines[i].upper()
 
-            # Generate content hash for deduplication
-            content_hash = generate_content_hash(title, "The Masquerade", start_date)
+                # Look for day-of-week pattern starting an event block
+                if line in DAYS and i + 3 < len(lines):
+                    # Check if next lines follow the pattern: day number, month, year
+                    day_num = lines[i + 1]
+                    month = lines[i + 2].upper()
+                    year = lines[i + 3]
 
-            # Check for existing event
-            existing = find_event_by_hash(content_hash)
-            if existing:
-                events_updated += 1
-                continue
+                    if (day_num.isdigit() and
+                        month in MONTHS and
+                        year.isdigit() and len(year) == 4):
 
-            # Build event URL
-            event_url = href if href.startswith("http") else f"{BASE_URL}{href}"
+                        # Valid date block found
+                        day = int(day_num)
+                        month_idx = MONTHS.index(month) + 1
+                        year_int = int(year)
 
-            # Build tags
-            tags = ["music", "concert", "the-masquerade"]
-            if room:
-                tags.append(f"masquerade-{room.lower()}")
+                        # Look ahead for title, room, time
+                        title = None
+                        opener = None
+                        room = None
+                        start_time = None
+                        is_cancelled = False
+                        is_sold_out = False
 
-            event_record = {
-                "source_id": source_id,
-                "venue_id": venue_id,
-                "title": title,
-                "description": f"Live at The Masquerade{f' - {room}' if room else ''}",
-                "start_date": start_date,
-                "start_time": start_time,
-                "end_date": None,
-                "end_time": None,
-                "is_all_day": False,
-                "category": "music",
-                "subcategory": "concert",
-                "tags": tags,
-                "price_min": None,
-                "price_max": None,
-                "price_note": None,
-                "is_free": False,
-                "source_url": event_url,
-                "ticket_url": event_url,
-                "image_url": None,
-                "raw_text": card_text[:500] if card_text else None,
-                "extraction_confidence": 0.85,
-                "is_recurring": False,
-                "recurrence_rule": None,
-                "content_hash": content_hash,
-            }
+                        # Scan next ~10 lines for event details
+                        for j in range(i + 4, min(i + 15, len(lines))):
+                            check_line = lines[j]
+                            check_upper = check_line.upper()
 
-            try:
-                insert_event(event_record)
-                events_new += 1
-                logger.info(f"Added: {title} on {start_date}")
-            except Exception as e:
-                logger.error(f"Failed to insert: {title}: {e}")
+                            # Skip "The Masquerade presents" header
+                            if "masquerade presents" in check_line.lower():
+                                continue
 
-        logger.info(f"The Masquerade crawl complete: {events_found} found, {events_new} new")
+                            # Check for room
+                            if not room:
+                                for r in ["Heaven", "Hell", "Purgatory", "Altar"]:
+                                    if f"{r} at The Masquerade" in check_line:
+                                        room = r
+                                        break
+
+                            # Check for time (Doors X:XX pm)
+                            if not start_time and "doors" in check_line.lower():
+                                start_time = parse_time(check_line)
+
+                            # Check status
+                            if check_upper == "CANCELED" or check_upper == "CANCELLED":
+                                is_cancelled = True
+                            if "SOLD OUT" in check_upper:
+                                is_sold_out = True
+
+                            # Check for end of event block (next event starts)
+                            if check_upper in DAYS:
+                                break
+
+                            # Skip navigation/status items
+                            skip = ["BUY TICKETS", "MORE INFO", "SOLD OUT", "CANCELED", "CANCELLED",
+                                   "FILTER BY", "SEARCH BY", "SUBMIT", "UPCOMING SHOWS"]
+                            if check_upper in skip or any(s in check_upper for s in skip):
+                                continue
+
+                            # Get title (first substantial line after date that's not skipped)
+                            if not title and len(check_line) > 2:
+                                if not any(s.lower() in check_line.lower() for s in
+                                          ["masquerade", "doors", "all ages", "heaven at", "hell at", "purgatory at", "altar at"]):
+                                    title = check_line
+                                    continue
+
+                            # Get opener (line after title, before room)
+                            if title and not opener and not room and len(check_line) > 2:
+                                if not any(s.lower() in check_line.lower() for s in
+                                          ["masquerade", "doors", "all ages"]):
+                                    opener = check_line
+
+                        # Skip cancelled events
+                        if is_cancelled:
+                            i += 1
+                            continue
+
+                        if not title:
+                            i += 1
+                            continue
+
+                        # Build date
+                        try:
+                            dt = datetime(year_int, month_idx, day)
+                            start_date = dt.strftime("%Y-%m-%d")
+                        except ValueError:
+                            i += 1
+                            continue
+
+                        events_found += 1
+
+                        # Generate content hash
+                        content_hash = generate_content_hash(title, "The Masquerade", start_date)
+
+                        # Check for existing
+                        existing = find_event_by_hash(content_hash)
+                        if existing:
+                            events_updated += 1
+                            i += 1
+                            continue
+
+                        # Build tags
+                        tags = ["music", "concert", "the-masquerade", "downtown"]
+                        if room:
+                            tags.append(f"masquerade-{room.lower()}")
+
+                        # Build description
+                        description = f"Live at The Masquerade"
+                        if room:
+                            description += f" - {room}"
+                        if opener:
+                            description += f". With {opener}"
+
+                        event_record = {
+                            "source_id": source_id,
+                            "venue_id": venue_id,
+                            "title": title,
+                            "description": description,
+                            "start_date": start_date,
+                            "start_time": start_time,
+                            "end_date": None,
+                            "end_time": None,
+                            "is_all_day": False,
+                            "category": "music",
+                            "subcategory": "concert",
+                            "tags": tags,
+                            "price_min": None,
+                            "price_max": None,
+                            "price_note": "Sold Out" if is_sold_out else None,
+                            "is_free": False,
+                            "source_url": EVENTS_URL,
+                            "ticket_url": EVENTS_URL,
+                            "image_url": None,
+                            "raw_text": f"{title} - {start_date}",
+                            "extraction_confidence": 0.90,
+                            "is_recurring": False,
+                            "recurrence_rule": None,
+                            "content_hash": content_hash,
+                        }
+
+                        try:
+                            insert_event(event_record)
+                            events_new += 1
+                            logger.info(f"Added: {title} on {start_date}")
+                        except Exception as e:
+                            logger.error(f"Failed to insert: {title}: {e}")
+
+                i += 1
+
+            browser.close()
+
+        logger.info(
+            f"The Masquerade crawl complete: {events_found} found, {events_new} new, {events_updated} updated"
+        )
 
     except Exception as e:
         logger.error(f"Failed to crawl The Masquerade: {e}")

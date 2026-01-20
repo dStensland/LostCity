@@ -35,10 +35,7 @@ VENUE_DATA = {
 def parse_dates(text: str) -> tuple[Optional[str], Optional[str]]:
     """Parse dates from 'November 5-8, 2026' format."""
     # Range: "November 5-8, 2026"
-    range_match = re.search(
-        r"(\w+)\s+(\d+)\s*[-–]\s*(\d+),?\s*(\d{4})",
-        text
-    )
+    range_match = re.search(r"(\w+)\s+(\d+)\s*[-–]\s*(\d+),?\s*(\d{4})", text)
     if range_match:
         month, day1, day2, year = range_match.groups()
         for fmt in ["%B %d, %Y", "%b %d, %Y"]:
@@ -82,7 +79,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 events_found += 1
 
                 title = "Buried Alive Film Festival 2026"
-                content_hash = generate_content_hash(title, "Buried Alive Film Festival", start_date)
+                content_hash = generate_content_hash(
+                    title, "Buried Alive Film Festival", start_date
+                )
 
                 existing = find_event_by_hash(content_hash)
                 if existing:
@@ -100,7 +99,13 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "is_all_day": False,
                         "category": "film",
                         "subcategory": "festival",
-                        "tags": ["film", "festival", "horror", "independent", "buried-alive"],
+                        "tags": [
+                            "film",
+                            "festival",
+                            "horror",
+                            "independent",
+                            "buried-alive",
+                        ],
                         "price_min": None,
                         "price_max": None,
                         "price_note": None,
@@ -124,7 +129,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             browser.close()
 
-        logger.info(f"Buried Alive crawl complete: {events_found} found, {events_new} new")
+        logger.info(
+            f"Buried Alive crawl complete: {events_found} found, {events_new} new"
+        )
 
     except Exception as e:
         logger.error(f"Failed to crawl Buried Alive: {e}")

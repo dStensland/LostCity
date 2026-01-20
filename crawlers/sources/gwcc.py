@@ -91,10 +91,7 @@ def parse_date_range(date_text: str) -> tuple[Optional[str], Optional[str]]:
             return None
 
         # Handle range like "January 8-11, 2026" or "Jan 8-11, 2026"
-        range_match = re.match(
-            r"(\w+)\s+(\d+)-(\d+),?\s*(\d{4})",
-            date_text
-        )
+        range_match = re.match(r"(\w+)\s+(\d+)-(\d+),?\s*(\d{4})", date_text)
         if range_match:
             month, start_day, end_day, year = range_match.groups()
             start = try_parse(f"{month} {start_day}, {year}")
@@ -104,8 +101,7 @@ def parse_date_range(date_text: str) -> tuple[Optional[str], Optional[str]]:
 
         # Handle range across months like "January 30 - February 2, 2026"
         cross_month_match = re.match(
-            r"(\w+)\s+(\d+)\s*[-–]\s*(\w+)\s+(\d+),?\s*(\d{4})",
-            date_text
+            r"(\w+)\s+(\d+)\s*[-–]\s*(\w+)\s+(\d+),?\s*(\d{4})", date_text
         )
         if cross_month_match:
             month1, day1, month2, day2, year = cross_month_match.groups()
@@ -134,7 +130,9 @@ def determine_category(title: str, description: str = "") -> str:
 
     if any(w in text for w in ["concert", "music", "festival", "band", "live"]):
         return "music"
-    if any(w in text for w in ["expo", "convention", "conference", "trade show", "summit"]):
+    if any(
+        w in text for w in ["expo", "convention", "conference", "trade show", "summit"]
+    ):
         return "community"
     if any(w in text for w in ["boat", "auto", "car", "home", "garden"]):
         return "community"
@@ -214,7 +212,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     if i < len(dates):
                         date_text = dates[i].inner_text().strip()
                         # Clean up format like "16 Jan. 16, 2026" -> "Jan 16, 2026"
-                        date_match = re.search(r"(\w+)\.?\s*(\d+),?\s*(\d{4})", date_text)
+                        date_match = re.search(
+                            r"(\w+)\.?\s*(\d+),?\s*(\d{4})", date_text
+                        )
                         if date_match:
                             month, day, year = date_match.groups()
                             date_text = f"{month} {day}, {year}"
@@ -225,7 +225,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         continue
 
                     # Get parent element for more details
-                    parent = heading_el.evaluate_handle("el => el.closest('.event-card, .w-dyn-item, div')")
+                    parent = heading_el.evaluate_handle(
+                        "el => el.closest('.event-card, .w-dyn-item, div')"
+                    )
 
                     # Get URL from parent
                     source_url = CALENDAR_URL
@@ -234,7 +236,11 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         if link:
                             href = link.get_attribute("href")
                             if href:
-                                source_url = href if href.startswith("http") else f"{BASE_URL}{href}"
+                                source_url = (
+                                    href
+                                    if href.startswith("http")
+                                    else f"{BASE_URL}{href}"
+                                )
                     except Exception:
                         pass
 
@@ -263,9 +269,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     # Generate content hash
                     content_hash = generate_content_hash(
-                        title,
-                        venue_data["name"],
-                        start_date
+                        title, venue_data["name"], start_date
                     )
 
                     # Check for existing

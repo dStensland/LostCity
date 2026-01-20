@@ -54,10 +54,7 @@ def parse_date(date_text: str) -> tuple[Optional[str], Optional[str]]:
         date_text = date_text.strip()
 
         # "Jan 15, 2026" or "January 15, 2026"
-        single_match = re.match(
-            r"(\w{3,9})\.?\s+(\d{1,2}),?\s*(\d{4})",
-            date_text
-        )
+        single_match = re.match(r"(\w{3,9})\.?\s+(\d{1,2}),?\s*(\d{4})", date_text)
         if single_match:
             month, day, year = single_match.groups()
             for fmt in ["%B %d, %Y", "%b %d, %Y"]:
@@ -70,7 +67,7 @@ def parse_date(date_text: str) -> tuple[Optional[str], Optional[str]]:
         # "Jan 15 - Jan 18, 2026"
         range_match = re.match(
             r"(\w{3,9})\.?\s+(\d{1,2})\s*[-–]\s*(\w{3,9})\.?\s+(\d{1,2}),?\s*(\d{4})",
-            date_text
+            date_text,
         )
         if range_match:
             month1, day1, month2, day2, year = range_match.groups()
@@ -84,8 +81,7 @@ def parse_date(date_text: str) -> tuple[Optional[str], Optional[str]]:
 
         # "Jan 15-18, 2026" (same month)
         same_month_match = re.match(
-            r"(\w{3,9})\.?\s+(\d{1,2})\s*[-–]\s*(\d{1,2}),?\s*(\d{4})",
-            date_text
+            r"(\w{3,9})\.?\s+(\d{1,2})\s*[-–]\s*(\d{1,2}),?\s*(\d{4})", date_text
         )
         if same_month_match:
             month, day1, day2, year = same_month_match.groups()
@@ -222,7 +218,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         # Check for date range: 1/13/26 - 1/15/26
                         date_range = re.match(
                             r"(\d{1,2})/(\d{1,2})/(\d{2})\s*[-–]\s*(\d{1,2})/(\d{1,2})/(\d{2})",
-                            line
+                            line,
                         )
                         if date_range:
                             m1, d1, y1, m2, d2, y2 = date_range.groups()
@@ -255,7 +251,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     img = card.query_selector("img")
                     image_url = None
                     if img:
-                        image_url = img.get_attribute("src") or img.get_attribute("data-src")
+                        image_url = img.get_attribute("src") or img.get_attribute(
+                            "data-src"
+                        )
                         if image_url and not image_url.startswith("http"):
                             image_url = f"{BASE_URL}{image_url}"
 

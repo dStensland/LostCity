@@ -37,9 +37,7 @@ def parse_calendar_date(date_text: str) -> Optional[str]:
     try:
         # "Tuesday, January 13, 8:00 pm"
         match = re.match(
-            r"(\w+),\s+(\w+)\s+(\d+),\s+(\d+):(\d+)\s*(am|pm)",
-            date_text,
-            re.IGNORECASE
+            r"(\w+),\s+(\w+)\s+(\d+),\s+(\d+):(\d+)\s*(am|pm)", date_text, re.IGNORECASE
         )
         if match:
             _, month, day, hour, minute, period = match.groups()
@@ -151,7 +149,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 description = None
 
                 for line in lines[1:]:
-                    if re.match(r"\w+,\s+\w+\s+\d+,\s+\d+:\d+\s*(am|pm)", line, re.IGNORECASE):
+                    if re.match(
+                        r"\w+,\s+\w+\s+\d+,\s+\d+:\d+\s*(am|pm)", line, re.IGNORECASE
+                    ):
                         date_line = line
                     elif "Get Tickets" in line or "$" in line:
                         price_line = line
@@ -171,7 +171,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                 events_found += 1
 
-                content_hash = generate_content_hash(title, "Laughing Skull Lounge", start_date + (start_time or ""))
+                content_hash = generate_content_hash(
+                    title, "Laughing Skull Lounge", start_date + (start_time or "")
+                )
 
                 existing = find_event_by_hash(content_hash)
                 if existing:
@@ -214,7 +216,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             browser.close()
 
-        logger.info(f"Laughing Skull crawl complete: {events_found} found, {events_new} new")
+        logger.info(
+            f"Laughing Skull crawl complete: {events_found} found, {events_new} new"
+        )
 
     except Exception as e:
         logger.error(f"Failed to crawl Laughing Skull: {e}")

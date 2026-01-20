@@ -97,7 +97,20 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             # Events follow pattern: JAN\n13\nEVENT TITLE\nDay, Mon DD, Time
             # Split by JAN/FEB/etc markers
-            months = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"]
+            months = [
+                "JAN",
+                "FEB",
+                "MAR",
+                "APR",
+                "MAY",
+                "JUN",
+                "JUL",
+                "AUG",
+                "SEP",
+                "OCT",
+                "NOV",
+                "DEC",
+            ]
 
             # Find all month markers and their positions
             lines = body_text.split("\n")
@@ -119,14 +132,20 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                 # Event title (usually starts with SOBATL PRESENTS or similar)
                 if current_event.get("month") and not current_event.get("title"):
-                    if len(line) > 10 and line not in ["ATLANTA ROOM", "Tickets", "MENU"]:
+                    if len(line) > 10 and line not in [
+                        "ATLANTA ROOM",
+                        "Tickets",
+                        "MENU",
+                    ]:
                         current_event["title"] = line
                         i += 1
                         continue
 
                 # Date/time line
                 if current_event.get("title"):
-                    time_match = re.search(r"(\d{1,2}):(\d{2})\s*(am|pm)", line, re.IGNORECASE)
+                    time_match = re.search(
+                        r"(\d{1,2}):(\d{2})\s*(am|pm)", line, re.IGNORECASE
+                    )
                     if time_match:
                         current_event["time"] = line
 
@@ -136,14 +155,18 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         title = current_event["title"]
 
                         # Clean up title
-                        title = re.sub(r"^SOBATL PRESENTS\s*", "", title, flags=re.IGNORECASE)
+                        title = re.sub(
+                            r"^SOBATL PRESENTS\s*", "", title, flags=re.IGNORECASE
+                        )
 
                         year = datetime.now().year
                         for fmt in ["%b %d %Y", "%B %d %Y"]:
                             try:
                                 dt = datetime.strptime(f"{month} {day} {year}", fmt)
                                 if dt < datetime.now():
-                                    dt = datetime.strptime(f"{month} {day} {year + 1}", fmt)
+                                    dt = datetime.strptime(
+                                        f"{month} {day} {year + 1}", fmt
+                                    )
                                 start_date = dt.strftime("%Y-%m-%d")
                                 break
                             except ValueError:
@@ -154,7 +177,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                             events_found += 1
 
-                            content_hash = generate_content_hash(title, "Smith's Olde Bar", start_date)
+                            content_hash = generate_content_hash(
+                                title, "Smith's Olde Bar", start_date
+                            )
 
                             existing = find_event_by_hash(content_hash)
                             if existing:
@@ -200,7 +225,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             browser.close()
 
-        logger.info(f"Smith's Olde Bar crawl complete: {events_found} found, {events_new} new")
+        logger.info(
+            f"Smith's Olde Bar crawl complete: {events_found} found, {events_new} new"
+        )
 
     except Exception as e:
         logger.error(f"Failed to crawl Smith's Olde Bar: {e}")

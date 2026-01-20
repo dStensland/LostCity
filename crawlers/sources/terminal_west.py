@@ -117,7 +117,10 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             # Parse events - format: TITLE / (supporting) / DATE TIME / TICKETS
             # Date pattern: FRI, JAN 16, 2026 8:00 PM
-            date_pattern = re.compile(r"(MON|TUE|WED|THU|FRI|SAT|SUN),\s+(\w{3})\s+(\d+),\s+(\d{4})\s+(\d{1,2}:\d{2})\s*(AM|PM)", re.IGNORECASE)
+            date_pattern = re.compile(
+                r"(MON|TUE|WED|THU|FRI|SAT|SUN),\s+(\w{3})\s+(\d+),\s+(\d{4})\s+(\d{1,2}:\d{2})\s*(AM|PM)",
+                re.IGNORECASE,
+            )
 
             i = 0
             while i < len(lines):
@@ -132,7 +135,18 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     for j in range(i - 1, max(i - 6, -1), -1):
                         prev_line = lines[j]
                         # Skip navigation, tickets, etc.
-                        skip_words = ["TICKETS", "CANCELLED", "SOLD OUT", "CALENDAR", "VENUE", "UPCOMING", "GETTING HERE", "DINING", "RENTAL", "SEARCH"]
+                        skip_words = [
+                            "TICKETS",
+                            "CANCELLED",
+                            "SOLD OUT",
+                            "CALENDAR",
+                            "VENUE",
+                            "UPCOMING",
+                            "GETTING HERE",
+                            "DINING",
+                            "RENTAL",
+                            "SEARCH",
+                        ]
                         if any(w in prev_line.upper() for w in skip_words):
                             continue
                         # Skip short lines
@@ -160,7 +174,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                         events_found += 1
 
-                        content_hash = generate_content_hash(title, "Terminal West", start_date)
+                        content_hash = generate_content_hash(
+                            title, "Terminal West", start_date
+                        )
 
                         existing = find_event_by_hash(content_hash)
                         if existing:
@@ -206,7 +222,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             browser.close()
 
-        logger.info(f"Terminal West crawl complete: {events_found} found, {events_new} new")
+        logger.info(
+            f"Terminal West crawl complete: {events_found} found, {events_new} new"
+        )
 
     except Exception as e:
         logger.error(f"Failed to crawl Terminal West: {e}")

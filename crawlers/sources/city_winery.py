@@ -43,7 +43,7 @@ def parse_datetime(text: str) -> tuple[Optional[str], Optional[str]]:
         match = re.search(
             r"(\w{3}),?\s+(\w{3})\s+(\d+)\s*@\s*(\d{1,2}):(\d{2})\s*(am|pm)",
             text,
-            re.IGNORECASE
+            re.IGNORECASE,
         )
         if match:
             _, month, day, hour, minute, period = match.groups()
@@ -106,7 +106,11 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             # Pattern: Title / "Tue, Jan 13 @ 6:00 pm" / "City Winery Atlanta" / "Get Tickets"
             # Split by ticket action buttons
-            blocks = re.split(r"(?:Get Tickets|Join Waitlist|Sold out)", body_text, flags=re.IGNORECASE)
+            blocks = re.split(
+                r"(?:Get Tickets|Join Waitlist|Sold out)",
+                body_text,
+                flags=re.IGNORECASE,
+            )
 
             for block in blocks:
                 lines = [l.strip() for l in block.strip().split("\n") if l.strip()]
@@ -118,21 +122,47 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                 for line in lines:
                     # Date/time pattern: "Tue, Jan 13 @ 6:00 pm"
-                    if re.search(r"\w{3},?\s+\w{3}\s+\d+\s*@\s*\d{1,2}:\d{2}\s*(am|pm)", line, re.IGNORECASE):
+                    if re.search(
+                        r"\w{3},?\s+\w{3}\s+\d+\s*@\s*\d{1,2}:\d{2}\s*(am|pm)",
+                        line,
+                        re.IGNORECASE,
+                    ):
                         datetime_text = line
                         continue
 
                     # Skip venue name and navigation
-                    skip_words = ["City Winery", "Atlanta Concerts", "Check out", "Date", "Sort",
-                                  "All Shows", "Blues", "Comedy", "Global", "Gospel", "Hip-Hop",
-                                  "Podcast", "Pop", "R&B", "Rock", "Tribute", "Wine", "Pre-Sale",
-                                  "Low Ticket Alert", "This Weekend", "events", "Skip to content"]
+                    skip_words = [
+                        "City Winery",
+                        "Atlanta Concerts",
+                        "Check out",
+                        "Date",
+                        "Sort",
+                        "All Shows",
+                        "Blues",
+                        "Comedy",
+                        "Global",
+                        "Gospel",
+                        "Hip-Hop",
+                        "Podcast",
+                        "Pop",
+                        "R&B",
+                        "Rock",
+                        "Tribute",
+                        "Wine",
+                        "Pre-Sale",
+                        "Low Ticket Alert",
+                        "This Weekend",
+                        "events",
+                        "Skip to content",
+                    ]
                     if any(w.lower() in line.lower() for w in skip_words):
                         continue
 
                     # Title - substantial text that's not a date
                     if not title and len(line) > 3 and len(line) < 120:
-                        if not re.match(r"^\d+$", line):  # Skip numbers like "148 events"
+                        if not re.match(
+                            r"^\d+$", line
+                        ):  # Skip numbers like "148 events"
                             title = line
 
                 if not title or not datetime_text:
@@ -144,7 +174,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                 events_found += 1
 
-                content_hash = generate_content_hash(title, "City Winery Atlanta", start_date)
+                content_hash = generate_content_hash(
+                    title, "City Winery Atlanta", start_date
+                )
 
                 existing = find_event_by_hash(content_hash)
                 if existing:
@@ -187,7 +219,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             browser.close()
 
-        logger.info(f"City Winery crawl complete: {events_found} found, {events_new} new")
+        logger.info(
+            f"City Winery crawl complete: {events_found} found, {events_new} new"
+        )
 
     except Exception as e:
         logger.error(f"Failed to crawl City Winery: {e}")

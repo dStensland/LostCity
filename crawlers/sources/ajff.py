@@ -92,10 +92,22 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         title = line
 
                         # Skip navigation and UI
-                        skip_words = ["Browse All", "Learn more", "Film Highlights",
-                                      "Virtual Cinema", "The Annual", "Events",
-                                      "Volunteer", "Support", "My Account", "Cart",
-                                      "DAYS", "HOURS", "MINS", "SECS"]
+                        skip_words = [
+                            "Browse All",
+                            "Learn more",
+                            "Film Highlights",
+                            "Virtual Cinema",
+                            "The Annual",
+                            "Events",
+                            "Volunteer",
+                            "Support",
+                            "My Account",
+                            "Cart",
+                            "DAYS",
+                            "HOURS",
+                            "MINS",
+                            "SECS",
+                        ]
                         if any(w.lower() in title.lower() for w in skip_words):
                             i += 1
                             continue
@@ -111,7 +123,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                         events_found += 1
 
-                        content_hash = generate_content_hash(title, "Atlanta Jewish Film Festival", start_date)
+                        content_hash = generate_content_hash(
+                            title, "Atlanta Jewish Film Festival", start_date
+                        )
 
                         existing = find_event_by_hash(content_hash)
                         if existing:
@@ -120,7 +134,11 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             # Get description
                             description = None
                             if i + 1 < len(lines) and "Read more" not in lines[i + 1]:
-                                description = lines[i + 1][:200] if len(lines[i + 1]) > 10 else None
+                                description = (
+                                    lines[i + 1][:200]
+                                    if len(lines[i + 1]) > 10
+                                    else None
+                                )
 
                             event_record = {
                                 "source_id": source_id,

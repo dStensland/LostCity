@@ -207,42 +207,52 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     if any(sw.lower() in title.lower() for sw in skip_words):
                         continue
 
-                    event_data.append({
-                        "title": title.split("\n")[0].strip(),  # Take first line as title
-                        "url": event_url,
-                    })
+                    event_data.append(
+                        {
+                            "title": title.split("\n")[
+                                0
+                            ].strip(),  # Take first line as title
+                            "url": event_url,
+                        }
+                    )
 
                 except Exception as e:
                     logger.debug(f"Error extracting event link: {e}")
                     continue
 
-            logger.info(f"Found {len(event_data)} potential events, fetching details...")
+            logger.info(
+                f"Found {len(event_data)} potential events, fetching details..."
+            )
 
             # Now visit each event page to get full details
             for idx, event in enumerate(event_data[:50]):  # Limit to 50 events per run
                 try:
-                    page.goto(event["url"], wait_until="domcontentloaded", timeout=30000)
+                    page.goto(
+                        event["url"], wait_until="domcontentloaded", timeout=30000
+                    )
                     page.wait_for_timeout(1000)
 
                     # Extract structured data from the page
                     title = event["title"]
 
                     # Try to get better title from page
-                    title_el = page.query_selector('h1')
+                    title_el = page.query_selector("h1")
                     if title_el:
                         page_title = title_el.inner_text().strip()
                         if page_title and len(page_title) > 3:
                             title = page_title
 
                     # Get datetime from time element
-                    time_el = page.query_selector('time[datetime]')
+                    time_el = page.query_selector("time[datetime]")
                     start_date = None
                     start_time = None
 
                     if time_el:
                         datetime_attr = time_el.get_attribute("datetime")
                         if datetime_attr:
-                            start_date, start_time = parse_meetup_datetime(datetime_attr)
+                            start_date, start_time = parse_meetup_datetime(
+                                datetime_attr
+                            )
 
                     if not start_date:
                         logger.debug(f"Skipping event without date: {title}")
@@ -250,7 +260,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     # Get group name (organizer)
                     group_name = None
-                    group_el = page.query_selector('a[href*="/groups/"], a[href*="/meetup/"]')
+                    group_el = page.query_selector(
+                        'a[href*="/groups/"], a[href*="/meetup/"]'
+                    )
                     if group_el:
                         group_name = group_el.inner_text().strip()
 
@@ -259,25 +271,33 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     is_online = False
 
                     # Check for online event
-                    if page.query_selector('[data-testid="online-event-badge"]') or \
-                       "online" in page.inner_text("body").lower()[:1000]:
+                    if (
+                        page.query_selector('[data-testid="online-event-badge"]')
+                        or "online" in page.inner_text("body").lower()[:1000]
+                    ):
                         is_online = True
                         location_text = "Online Event"
 
                     # Try to get physical location
-                    location_el = page.query_selector('[data-testid="venue-name"], .venueDisplay')
+                    location_el = page.query_selector(
+                        '[data-testid="venue-name"], .venueDisplay'
+                    )
                     if location_el and not is_online:
                         location_text = location_el.inner_text().strip()
 
                     # Get description
                     description = None
-                    desc_el = page.query_selector('[data-testid="event-description"], .event-description')
+                    desc_el = page.query_selector(
+                        '[data-testid="event-description"], .event-description'
+                    )
                     if desc_el:
                         description = desc_el.inner_text().strip()[:2000]
 
                     # Get topics/tags for subcategory mapping
                     topics = []
-                    topic_els = page.query_selector_all('[data-testid="event-topics"] a, .event-topics a')
+                    topic_els = page.query_selector_all(
+                        '[data-testid="event-topics"] a, .event-topics a'
+                    )
                     for tel in topic_els:
                         topic_text = tel.inner_text().strip()
                         if topic_text:
@@ -297,7 +317,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     if location_text and not is_online:
                         venue_data = {
                             "name": location_text,
-                            "slug": re.sub(r'[^a-z0-9]+', '-', location_text.lower()).strip('-'),
+                            "slug": re.sub(
+                                r"[^a-z0-9]+", "-", location_text.lower()
+                            ).strip("-"),
                             "city": "Atlanta",
                             "state": "GA",
                         }
@@ -308,7 +330,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     # Generate content hash
                     venue_for_hash = location_text or group_name or "Meetup"
-                    content_hash = generate_content_hash(title, venue_for_hash, start_date)
+                    content_hash = generate_content_hash(
+                        title, venue_for_hash, start_date
+                    )
 
                     # Check for existing event
                     existing = find_event_by_hash(content_hash)
@@ -357,7 +381,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             browser.close()
 
-        logger.info(f"Meetup crawl complete: {events_found} found, {events_new} new, {events_updated} existing")
+        logger.info(
+            f"Meetup crawl complete: {events_found} found, {events_new} new, {events_updated} existing"
+        )
 
     except Exception as e:
         logger.error(f"Failed to crawl Meetup: {e}")

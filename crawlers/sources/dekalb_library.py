@@ -79,13 +79,13 @@ def parse_date(date_str: str) -> Optional[str]:
 def parse_time(time_str: str) -> Optional[str]:
     """Parse time from various formats."""
     try:
-        match = re.search(r'(\d{1,2}):(\d{2})\s*(am|pm)', time_str, re.IGNORECASE)
+        match = re.search(r"(\d{1,2}):(\d{2})\s*(am|pm)", time_str, re.IGNORECASE)
         if match:
             hour, minute, period = match.groups()
             hour = int(hour)
-            if period.lower() == 'pm' and hour != 12:
+            if period.lower() == "pm" and hour != 12:
                 hour += 12
-            elif period.lower() == 'am' and hour == 12:
+            elif period.lower() == "am" and hour == 12:
                 hour = 0
             return f"{hour:02d}:{minute}"
     except Exception:
@@ -156,7 +156,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         continue
 
                     # Parse time
-                    time_match = re.search(r"(\d{1,2}:\d{2}\s*(am|pm))", date_line, re.I)
+                    time_match = re.search(
+                        r"(\d{1,2}:\d{2}\s*(am|pm))", date_line, re.I
+                    )
                     start_time = parse_time(time_match.group()) if time_match else None
 
                     # Get location from the line after date/time
@@ -167,7 +169,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     events_found += 1
 
-                    content_hash = generate_content_hash(title, venue_data['name'], start_date)
+                    content_hash = generate_content_hash(
+                        title, venue_data["name"], start_date
+                    )
 
                     existing = find_event_by_hash(content_hash)
                     if existing:
@@ -177,20 +181,24 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     # Determine subcategory
                     title_lower = title.lower()
-                    if 'book club' in title_lower or 'reading group' in title_lower:
-                        subcategory = 'words.bookclub'
-                    elif 'story' in title_lower or 'storytime' in title_lower:
-                        subcategory = 'words.storytelling'
-                    elif 'author' in title_lower or 'signing' in title_lower:
-                        subcategory = 'words.reading'
-                    elif 'poetry' in title_lower:
-                        subcategory = 'words.poetry'
-                    elif 'writing' in title_lower or 'workshop' in title_lower:
-                        subcategory = 'words.workshop'
+                    if "book club" in title_lower or "reading group" in title_lower:
+                        subcategory = "words.bookclub"
+                    elif "story" in title_lower or "storytime" in title_lower:
+                        subcategory = "words.storytelling"
+                    elif "author" in title_lower or "signing" in title_lower:
+                        subcategory = "words.reading"
+                    elif "poetry" in title_lower:
+                        subcategory = "words.poetry"
+                    elif "writing" in title_lower or "workshop" in title_lower:
+                        subcategory = "words.workshop"
                     else:
-                        subcategory = 'words.lecture'
+                        subcategory = "words.lecture"
 
-                    event_url = f"{BASE_URL}{href}" if href and href.startswith("/") else (href or EVENTS_URL)
+                    event_url = (
+                        f"{BASE_URL}{href}"
+                        if href and href.startswith("/")
+                        else (href or EVENTS_URL)
+                    )
 
                     event_record = {
                         "source_id": source_id,
@@ -230,7 +238,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             browser.close()
 
-        logger.info(f"DeKalb Library crawl complete: {events_found} found, {events_new} new")
+        logger.info(
+            f"DeKalb Library crawl complete: {events_found} found, {events_new} new"
+        )
 
     except Exception as e:
         logger.error(f"Failed to crawl DeKalb Library: {e}")

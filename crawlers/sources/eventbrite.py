@@ -92,9 +92,7 @@ def extract_events_from_page(html: str, search_url: str) -> list[dict]:
             if isinstance(data, list):
                 for item in data:
                     if item.get("@type") == "ItemList":
-                        events.extend(
-                            process_item_list(item, search_url)
-                        )
+                        events.extend(process_item_list(item, search_url))
             # Handle object format
             elif data.get("@type") == "ItemList":
                 events.extend(process_item_list(data, search_url))
@@ -245,9 +243,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             # Generate content hash
             venue_name = venue_info.get("name", "") if venue_info else ""
             content_hash = generate_content_hash(
-                event_data["title"],
-                venue_name,
-                event_data["start_date"]
+                event_data["title"], venue_name, event_data["start_date"]
             )
 
             # Check for existing event
@@ -275,7 +271,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 "price_note": None,
                 "is_free": event_data.get("is_free", False),
                 "source_url": event_data["source_url"],
-                "ticket_url": event_data["source_url"],  # Eventbrite URL is the ticket URL
+                "ticket_url": event_data[
+                    "source_url"
+                ],  # Eventbrite URL is the ticket URL
                 "image_url": event_data.get("image_url"),
                 "raw_text": None,
                 "extraction_confidence": 0.90,

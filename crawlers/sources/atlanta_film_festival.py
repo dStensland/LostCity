@@ -79,7 +79,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 date_match = re.search(
                     r"(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{1,2}),?\s*(\d{4})?",
                     line,
-                    re.IGNORECASE
+                    re.IGNORECASE,
                 )
 
                 if date_match:
@@ -92,8 +92,17 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     # Check previous lines for title
                     if i > 0:
                         prev_line = lines[i - 1]
-                        skip_words = ["Schedule", "Program", "Buy", "Badge", "Submit", "ATLFF"]
-                        if len(prev_line) > 5 and not any(w.lower() in prev_line.lower() for w in skip_words):
+                        skip_words = [
+                            "Schedule",
+                            "Program",
+                            "Buy",
+                            "Badge",
+                            "Submit",
+                            "ATLFF",
+                        ]
+                        if len(prev_line) > 5 and not any(
+                            w.lower() in prev_line.lower() for w in skip_words
+                        ):
                             if not re.search(r"\d{1,2}:\d{2}", prev_line):  # Not a time
                                 title = prev_line
 
@@ -101,12 +110,17 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         # Parse date
                         for fmt in ["%B %d, %Y", "%b %d, %Y", "%B %d %Y", "%b %d %Y"]:
                             try:
-                                dt = datetime.strptime(f"{month} {day}, {year}", fmt.replace(" %Y", ", %Y"))
+                                dt = datetime.strptime(
+                                    f"{month} {day}, {year}", fmt.replace(" %Y", ", %Y")
+                                )
                                 start_date = dt.strftime("%Y-%m-%d")
                                 break
                             except ValueError:
                                 try:
-                                    dt = datetime.strptime(f"{month} {day} {year}", fmt.replace(", %Y", " %Y"))
+                                    dt = datetime.strptime(
+                                        f"{month} {day} {year}",
+                                        fmt.replace(", %Y", " %Y"),
+                                    )
                                     start_date = dt.strftime("%Y-%m-%d")
                                     break
                                 except ValueError:
@@ -117,7 +131,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                         events_found += 1
 
-                        content_hash = generate_content_hash(title, "Atlanta Film Festival", start_date)
+                        content_hash = generate_content_hash(
+                            title, "Atlanta Film Festival", start_date
+                        )
 
                         existing = find_event_by_hash(content_hash)
                         if existing:
@@ -135,7 +151,12 @@ def crawl(source: dict) -> tuple[int, int, int]:
                                 "is_all_day": False,
                                 "category": "film",
                                 "subcategory": "festival",
-                                "tags": ["film", "festival", "independent", "atlanta-film-festival"],
+                                "tags": [
+                                    "film",
+                                    "festival",
+                                    "independent",
+                                    "atlanta-film-festival",
+                                ],
                                 "price_min": None,
                                 "price_max": None,
                                 "price_note": "Requires festival badge or individual tickets",
@@ -161,11 +182,15 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             # If no schedule found, note that festival may not be active
             if events_found == 0:
-                logger.info("No current festival schedule found - festival may be between seasons")
+                logger.info(
+                    "No current festival schedule found - festival may be between seasons"
+                )
 
             browser.close()
 
-        logger.info(f"Atlanta Film Festival crawl complete: {events_found} found, {events_new} new")
+        logger.info(
+            f"Atlanta Film Festival crawl complete: {events_found} found, {events_new} new"
+        )
 
     except Exception as e:
         logger.error(f"Failed to crawl Atlanta Film Festival: {e}")

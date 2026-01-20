@@ -130,7 +130,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     for line in lines:
                         # Date pattern - "Sat, 18 Jan" or day names
-                        if re.match(r"(Mon|Tue|Wed|Thu|Fri|Sat|Sun)", line, re.IGNORECASE):
+                        if re.match(
+                            r"(Mon|Tue|Wed|Thu|Fri|Sat|Sun)", line, re.IGNORECASE
+                        ):
                             date_text = line
                             continue
 
@@ -142,14 +144,31 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         # Title - usually the longest/first substantial line
                         if not title and len(line) > 3 and len(line) < 200:
                             # Skip common non-titles
-                            if line.lower() in ["tickets", "going", "interested", "free", "sold out"]:
+                            if line.lower() in [
+                                "tickets",
+                                "going",
+                                "interested",
+                                "free",
+                                "sold out",
+                            ]:
                                 continue
                             title = line
                             continue
 
                         # Venue - after title
-                        if title and not venue_name and len(line) > 2 and len(line) < 100:
-                            if line.lower() not in ["tickets", "going", "interested", "free", "sold out"]:
+                        if (
+                            title
+                            and not venue_name
+                            and len(line) > 2
+                            and len(line) < 100
+                        ):
+                            if line.lower() not in [
+                                "tickets",
+                                "going",
+                                "interested",
+                                "free",
+                                "sold out",
+                            ]:
                                 venue_name = line
 
                     if not title or not date_text:
@@ -165,7 +184,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     if venue_name:
                         venue_data = {
                             "name": venue_name,
-                            "slug": re.sub(r"[^a-z0-9]+", "-", venue_name.lower()).strip("-"),
+                            "slug": re.sub(
+                                r"[^a-z0-9]+", "-", venue_name.lower()
+                            ).strip("-"),
                             "city": "Atlanta",
                             "state": "GA",
                             "spot_type": "club",
@@ -181,7 +202,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     venue_id = get_or_create_venue(venue_data)
                     events_found += 1
 
-                    content_hash = generate_content_hash(title, venue_name or "Atlanta", start_date)
+                    content_hash = generate_content_hash(
+                        title, venue_name or "Atlanta", start_date
+                    )
 
                     existing = find_event_by_hash(content_hash)
                     if existing:
@@ -228,7 +251,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             browser.close()
 
-        logger.info(f"Resident Advisor crawl complete: {events_found} found, {events_new} new")
+        logger.info(
+            f"Resident Advisor crawl complete: {events_found} found, {events_new} new"
+        )
 
     except Exception as e:
         logger.error(f"Failed to crawl Resident Advisor: {e}")

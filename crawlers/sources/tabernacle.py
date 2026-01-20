@@ -1,17 +1,17 @@
 """
 Crawler for The Tabernacle (tabernacleatl.com/shows).
 Historic Downtown Atlanta concert venue, former church converted for the '96 Olympics.
+
+Site uses JavaScript rendering - must use Playwright.
+Format: DAY (3-letter), DD, MON (3-letter), TITLE
 """
 
 from __future__ import annotations
 
-import re
 import logging
 from datetime import datetime
-from typing import Optional
 
-import requests
-from bs4 import BeautifulSoup
+from playwright.sync_api import sync_playwright
 
 from db import get_or_create_venue, insert_event, find_event_by_hash
 from dedupe import generate_content_hash
@@ -33,198 +33,206 @@ VENUE_DATA = {
     "website": BASE_URL,
 }
 
+# 3-letter day names for validation
+DAY_NAMES = {"MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"}
 
-def parse_date(date_text: str) -> Optional[str]:
-    """Parse date from various formats."""
-    date_text = date_text.strip()
-
-    # Try "Jan 24" or "January 24" format (without year)
-    match = re.search(r"(\w{3,9})\s+(\d{1,2})(?:,?\s*(\d{4}))?", date_text)
-    if match:
-        month, day, year = match.groups()
-        if not year:
-            year = str(datetime.now().year)
-
-        for fmt in ["%b %d %Y", "%B %d %Y"]:
-            try:
-                dt = datetime.strptime(f"{month} {day} {year}", fmt)
-                if dt < datetime.now():
-                    dt = datetime.strptime(f"{month} {day} {int(year) + 1}", fmt)
-                return dt.strftime("%Y-%m-%d")
-            except ValueError:
-                continue
-
-    # Try "01/24/2026" format
-    match = re.search(r"(\d{1,2})/(\d{1,2})/(\d{4})", date_text)
-    if match:
-        month, day, year = match.groups()
-        try:
-            dt = datetime(int(year), int(month), int(day))
-            return dt.strftime("%Y-%m-%d")
-        except ValueError:
-            pass
-
-    return None
-
-
-def parse_time(time_text: str) -> Optional[str]:
-    """Parse time from '7:00 PM' format."""
-    match = re.search(r"(\d{1,2}):(\d{2})\s*(am|pm)", time_text, re.IGNORECASE)
-    if match:
-        hour, minute, period = match.groups()
-        hour = int(hour)
-        if period.lower() == "pm" and hour != 12:
-            hour += 12
-        elif period.lower() == "am" and hour == 12:
-            hour = 0
-        return f"{hour:02d}:{minute}"
-    return None
+# 3-letter month names to full month numbers
+MONTH_MAP = {
+    "JAN": 1,
+    "FEB": 2,
+    "MAR": 3,
+    "APR": 4,
+    "MAY": 5,
+    "JUN": 6,
+    "JUL": 7,
+    "AUG": 8,
+    "SEP": 9,
+    "OCT": 10,
+    "NOV": 11,
+    "DEC": 12,
+}
 
 
 def crawl(source: dict) -> tuple[int, int, int]:
-    """Crawl The Tabernacle events."""
+    """Crawl The Tabernacle events using Playwright."""
     source_id = source["id"]
     events_found = 0
     events_new = 0
     events_updated = 0
 
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-    }
-
     try:
-        logger.info(f"Fetching The Tabernacle: {SHOWS_URL}")
-        response = requests.get(SHOWS_URL, headers=headers, timeout=30)
-        response.raise_for_status()
+        with sync_playwright() as p:
+            browser = p.chromium.launch(headless=True)
+            context = browser.new_context(
+                user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+                viewport={"width": 1920, "height": 1080},
+            )
+            page = context.new_page()
 
-        soup = BeautifulSoup(response.text, "html.parser")
-        venue_id = get_or_create_venue(VENUE_DATA)
+            venue_id = get_or_create_venue(VENUE_DATA)
 
-        # Find event listings - try multiple approaches
-        # Approach 1: Look for event/show containers
-        event_items = soup.find_all(class_=re.compile(r"event|show|concert"))
+            logger.info(f"Fetching The Tabernacle: {SHOWS_URL}")
+            page.goto(SHOWS_URL, wait_until="domcontentloaded", timeout=30000)
+            page.wait_for_timeout(3000)
 
-        if not event_items:
-            # Approach 2: Find article tags
-            event_items = soup.find_all("article")
+            # Scroll to load all content
+            for _ in range(5):
+                page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+                page.wait_for_timeout(1000)
 
-        if not event_items:
-            # Approach 3: Find divs with links containing event info
-            event_items = soup.find_all("div", class_=re.compile(r"card|item|listing"))
+            # Get page text
+            body_text = page.inner_text("body")
+            lines = [line.strip() for line in body_text.split("\n") if line.strip()]
 
-        if not event_items:
-            # Approach 4: Find by event links
-            event_links = soup.find_all("a", href=re.compile(r"/shows/|/event/"))
-            event_items = []
-            seen = set()
-            for link in event_links:
-                parent = link.find_parent("div") or link.find_parent("article")
-                if parent and id(parent) not in seen:
-                    seen.add(id(parent))
-                    event_items.append(parent)
+            # Skip navigation items
+            skip_items = [
+                "skip to content",
+                "shows",
+                "filter",
+                "list",
+                "calendar",
+                "the tabernacle",
+                "get tickets",
+                "about",
+                "contact",
+                "privacy policy",
+                "terms of use",
+            ]
 
-        for item in event_items:
-            # Find title
-            title_el = item.find(["h2", "h3", "h4"]) or item.find(class_=re.compile(r"title|name"))
-            if not title_el:
-                # Try finding title in links
-                link = item.find("a")
-                if link:
-                    title_el = link
-                else:
+            i = 0
+            seen_events = set()
+            current_year = datetime.now().year
+
+            while i < len(lines):
+                line = lines[i].upper()
+
+                # Skip nav/UI items
+                if line.lower() in skip_items or len(line) < 2:
+                    i += 1
                     continue
 
-            title = title_el.get_text(strip=True)
-            if not title or len(title) < 3:
-                continue
+                # Look for 3-letter day name (SAT, TUE, etc.)
+                if line in DAY_NAMES:
+                    # Next lines should be: day number, month, title
+                    if i + 3 < len(lines):
+                        day_num = lines[i + 1].strip()
+                        month = lines[i + 2].strip().upper()
+                        title = lines[i + 3].strip()
 
-            # Skip navigation/UI items
-            skip_patterns = ["buy tickets", "more info", "view all", "subscribe"]
-            if any(p in title.lower() for p in skip_patterns):
-                continue
+                        # Validate day number (1-31)
+                        if not day_num.isdigit() or not (1 <= int(day_num) <= 31):
+                            i += 1
+                            continue
 
-            # Get all text for date/time parsing
-            item_text = item.get_text(" ", strip=True)
+                        # Validate month
+                        if month not in MONTH_MAP:
+                            i += 1
+                            continue
 
-            # Parse date
-            date_el = item.find(class_=re.compile(r"date"))
-            if date_el:
-                date_text = date_el.get_text(strip=True)
-            else:
-                date_text = item_text
+                        # Skip if title is another day name (malformed data)
+                        if title.upper() in DAY_NAMES:
+                            i += 1
+                            continue
 
-            start_date = parse_date(date_text)
-            if not start_date:
-                continue
+                        # Build date
+                        day = int(day_num)
+                        month_num = MONTH_MAP[month]
 
-            # Parse time
-            time_el = item.find(class_=re.compile(r"time|doors"))
-            if time_el:
-                time_text = time_el.get_text(strip=True)
-            else:
-                time_text = item_text
+                        # Determine year - if month is in the past, use next year
+                        year = current_year
+                        try:
+                            event_date = datetime(year, month_num, day)
+                            if event_date < datetime.now():
+                                year += 1
+                                event_date = datetime(year, month_num, day)
+                            start_date = event_date.strftime("%Y-%m-%d")
+                        except ValueError:
+                            i += 1
+                            continue
 
-            start_time = parse_time(time_text)
+                        # Check for duplicates (same show on multiple dates)
+                        event_key = f"{title}|{start_date}"
+                        if event_key in seen_events:
+                            i += 4
+                            continue
+                        seen_events.add(event_key)
 
-            events_found += 1
+                        events_found += 1
 
-            # Generate content hash
-            content_hash = generate_content_hash(title, "The Tabernacle", start_date)
+                        # Generate content hash
+                        content_hash = generate_content_hash(
+                            title, "The Tabernacle", start_date
+                        )
 
-            # Check for existing
-            existing = find_event_by_hash(content_hash)
-            if existing:
-                events_updated += 1
-                continue
+                        # Check for existing
+                        existing = find_event_by_hash(content_hash)
+                        if existing:
+                            events_updated += 1
+                            i += 4
+                            continue
 
-            # Find event URL
-            link_el = item.find("a", href=True)
-            if link_el:
-                href = link_el.get("href", "")
-                event_url = href if href.startswith("http") else f"{BASE_URL}{href}"
-            else:
-                event_url = SHOWS_URL
+                        # Determine category based on title
+                        category = "music"
+                        subcategory = "concert"
+                        tags = ["music", "concert", "tabernacle", "downtown"]
 
-            # Extract description if available
-            desc_el = item.find("p") or item.find(class_=re.compile(r"desc|support"))
-            description = desc_el.get_text(strip=True) if desc_el else None
+                        title_lower = title.lower()
+                        if any(
+                            w in title_lower
+                            for w in ["comedy", "comedian", "stand-up", "stand up"]
+                        ):
+                            category = "comedy"
+                            subcategory = None
+                            tags = ["comedy", "tabernacle", "downtown"]
+                        elif any(w in title_lower for w in ["murder", "podcast"]):
+                            category = "community"
+                            subcategory = "podcast"
+                            tags = ["podcast", "tabernacle", "downtown"]
 
-            event_record = {
-                "source_id": source_id,
-                "venue_id": venue_id,
-                "title": title,
-                "description": description,
-                "start_date": start_date,
-                "start_time": start_time,
-                "end_date": None,
-                "end_time": None,
-                "is_all_day": False,
-                "category": "music",
-                "subcategory": "concert",
-                "tags": ["music", "concert", "tabernacle", "downtown"],
-                "price_min": None,
-                "price_max": None,
-                "price_note": None,
-                "is_free": False,
-                "source_url": event_url,
-                "ticket_url": event_url,
-                "image_url": None,
-                "raw_text": item_text[:500] if item_text else None,
-                "extraction_confidence": 0.85,
-                "is_recurring": False,
-                "recurrence_rule": None,
-                "content_hash": content_hash,
-            }
+                        event_record = {
+                            "source_id": source_id,
+                            "venue_id": venue_id,
+                            "title": title,
+                            "description": None,
+                            "start_date": start_date,
+                            "start_time": None,
+                            "end_date": None,
+                            "end_time": None,
+                            "is_all_day": False,
+                            "category": category,
+                            "subcategory": subcategory,
+                            "tags": tags,
+                            "price_min": None,
+                            "price_max": None,
+                            "price_note": None,
+                            "is_free": False,
+                            "source_url": SHOWS_URL,
+                            "ticket_url": SHOWS_URL,
+                            "image_url": None,
+                            "raw_text": f"{line} {day_num} {month} - {title}",
+                            "extraction_confidence": 0.90,
+                            "is_recurring": False,
+                            "recurrence_rule": None,
+                            "content_hash": content_hash,
+                        }
 
-            try:
-                insert_event(event_record)
-                events_new += 1
-                logger.info(f"Added: {title} on {start_date}")
-            except Exception as e:
-                logger.error(f"Failed to insert: {title}: {e}")
+                        try:
+                            insert_event(event_record)
+                            events_new += 1
+                            logger.info(f"Added: {title} on {start_date}")
+                        except Exception as e:
+                            logger.error(f"Failed to insert: {title}: {e}")
 
-        logger.info(f"The Tabernacle crawl complete: {events_found} found, {events_new} new")
+                        i += 4
+                        continue
+
+                i += 1
+
+            browser.close()
+
+        logger.info(
+            f"The Tabernacle crawl complete: {events_found} found, {events_new} new, {events_updated} updated"
+        )
 
     except Exception as e:
         logger.error(f"Failed to crawl The Tabernacle: {e}")

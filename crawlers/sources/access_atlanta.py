@@ -56,10 +56,7 @@ def parse_date(date_text: str) -> tuple[Optional[str], Optional[str]]:
         current_year = datetime.now().year
 
         # Range: "Dec 11 - Feb 7 @ 12:00am" or "Nov 21 - Jan 18"
-        range_match = re.match(
-            r"(\w+)\s+(\d+)\s*[-–]\s*(\w+)\s+(\d+)",
-            date_text
-        )
+        range_match = re.match(r"(\w+)\s+(\d+)\s*[-–]\s*(\w+)\s+(\d+)", date_text)
         if range_match:
             m1, d1, m2, d2 = range_match.groups()
             for fmt in ["%b %d %Y", "%B %d %Y"]:
@@ -67,7 +64,10 @@ def parse_date(date_text: str) -> tuple[Optional[str], Optional[str]]:
                     # Guess year - if end month < start month, end is next year
                     start = datetime.strptime(f"{m1} {d1} {current_year}", fmt)
                     end_year = current_year
-                    if datetime.strptime(m2, "%b").month < datetime.strptime(m1, "%b").month:
+                    if (
+                        datetime.strptime(m2, "%b").month
+                        < datetime.strptime(m1, "%b").month
+                    ):
                         end_year = current_year + 1
                     end = datetime.strptime(f"{m2} {d2} {end_year}", fmt)
                     return start.strftime("%Y-%m-%d"), end.strftime("%Y-%m-%d")
@@ -177,7 +177,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             continue
 
                         # Date pattern: "Jan 15 @ 8:00pm" or "Nov 21 - Jan 18"
-                        if re.search(r"\w{3}\s+\d+\s*[@-]", line) or re.search(r"\w{3}\s+\d+$", line):
+                        if re.search(r"\w{3}\s+\d+\s*[@-]", line) or re.search(
+                            r"\w{3}\s+\d+$", line
+                        ):
                             date_text = line
                             continue
 
@@ -226,7 +228,13 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         continue
 
                     if href:
-                        source_url = f"https:{href}" if href.startswith("//") else (href if href.startswith("http") else f"{BASE_URL}{href}")
+                        source_url = (
+                            f"https:{href}"
+                            if href.startswith("//")
+                            else (
+                                href if href.startswith("http") else f"{BASE_URL}{href}"
+                            )
+                        )
                     else:
                         source_url = BASE_URL
 
@@ -270,7 +278,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             browser.close()
 
-        logger.info(f"Access Atlanta crawl complete: {events_found} found, {events_new} new")
+        logger.info(
+            f"Access Atlanta crawl complete: {events_found} found, {events_new} new"
+        )
 
     except PlaywrightTimeout as e:
         logger.error(f"Timeout fetching Access Atlanta: {e}")

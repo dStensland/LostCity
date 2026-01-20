@@ -21,7 +21,7 @@ MARKET_SCHEDULES = [
         "start_time": "08:30",
         "end_time": "12:00",
         "season_start": 3,  # March
-        "season_end": 12,   # December
+        "season_end": 12,  # December
         "website": "https://freedomfarmersmkt.com",
         "description": "Shop 100+ vendors offering organic produce, pasture-raised meats, artisan cheeses, fresh bread, prepared foods, and more at Atlanta's largest organic farmers market.",
     },
@@ -32,7 +32,7 @@ MARKET_SCHEDULES = [
         "start_time": "09:00",
         "end_time": "13:00",
         "season_start": 4,  # April
-        "season_end": 11,   # November
+        "season_end": 11,  # November
         "website": "https://cfmatl.org/grant-park",
         "description": "Community farmers market featuring fresh local produce, baked goods, prepared foods, live music, and family activities in historic Grant Park.",
     },
@@ -54,7 +54,7 @@ MARKET_SCHEDULES = [
         "start_time": "08:00",
         "end_time": "12:00",
         "season_start": 4,  # April
-        "season_end": 12,   # December
+        "season_end": 12,  # December
         "website": "https://peachtreeroadfarmersmarket.com",
         "description": "Buckhead's farmers market at the Cathedral of St. Philip featuring local farmers, artisan bakers, and specialty food vendors.",
     },
@@ -65,7 +65,7 @@ MARKET_SCHEDULES = [
         "start_time": "16:00",
         "end_time": "20:00",
         "season_start": 4,  # April
-        "season_end": 10,   # October
+        "season_end": 10,  # October
         "website": "https://www.eastatlantavillage.com/farmers-market",
         "description": "Evening market in East Atlanta Village with local produce, prepared foods, crafts, and community vibes.",
     },
@@ -76,7 +76,7 @@ MARKET_SCHEDULES = [
         "start_time": "16:00",
         "end_time": "19:00",
         "season_start": 4,  # April
-        "season_end": 11,   # November
+        "season_end": 11,  # November
         "website": "https://cfmatl.org/decatur",
         "description": "Award-winning farmers market in downtown Decatur with 50+ vendors offering produce, meats, dairy, baked goods, and more.",
     },
@@ -87,7 +87,7 @@ MARKET_SCHEDULES = [
         "start_time": "09:00",
         "end_time": "13:00",
         "season_start": 4,  # April
-        "season_end": 11,   # November
+        "season_end": 11,  # November
         "website": "https://cfmatl.org/decatur",
         "description": "Award-winning Saturday farmers market in downtown Decatur with 50+ vendors offering produce, meats, dairy, baked goods, and more.",
     },
@@ -98,7 +98,7 @@ MARKET_SCHEDULES = [
         "start_time": "08:00",
         "end_time": "11:30",
         "season_start": 4,  # April
-        "season_end": 11,   # November
+        "season_end": 11,  # November
         "website": "https://morningsidemarket.com",
         "description": "Neighborhood Saturday market featuring local and organic produce, artisan foods, and community gathering.",
     },
@@ -109,7 +109,7 @@ MARKET_SCHEDULES = [
         "start_time": "10:00",
         "end_time": "14:00",
         "season_start": 5,  # May
-        "season_end": 10,   # October
+        "season_end": 10,  # October
         "website": "https://www.communityfarmersmarkets.com",
         "description": "Community-focused market in historic West End offering fresh produce, prepared foods, and local crafts.",
     },
@@ -120,7 +120,7 @@ MARKET_SCHEDULES = [
         "start_time": "09:00",
         "end_time": "13:00",
         "season_start": 4,  # April
-        "season_end": 10,   # October
+        "season_end": 10,  # October
         "website": "https://poncecitymarket.com",
         "description": "Seasonal farmers market at Ponce City Market on the Beltline featuring local vendors and fresh produce.",
     },
@@ -171,16 +171,18 @@ def generate_market_events(market: dict, weeks_ahead: int = 8) -> list[dict]:
 
     for _ in range(weeks_ahead):
         if is_in_season(market, next_date):
-            events.append({
-                "venue_slug": market["venue_slug"],
-                "title": market["name"],
-                "description": market["description"],
-                "start_date": next_date.strftime("%Y-%m-%d"),
-                "start_time": market["start_time"],
-                "end_time": market["end_time"],
-                "source_url": market["website"],
-                "is_free": True,
-            })
+            events.append(
+                {
+                    "venue_slug": market["venue_slug"],
+                    "title": market["name"],
+                    "description": market["description"],
+                    "start_date": next_date.strftime("%Y-%m-%d"),
+                    "start_time": market["start_time"],
+                    "end_time": market["end_time"],
+                    "source_url": market["website"],
+                    "is_free": True,
+                }
+            )
         next_date += timedelta(days=7)
 
     return events
@@ -219,9 +221,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             venue_name = venue["name"]
 
             content_hash = generate_content_hash(
-                event_data["title"],
-                venue_name,
-                event_data["start_date"]
+                event_data["title"], venue_name, event_data["start_date"]
             )
 
             existing = find_event_by_hash(content_hash)
@@ -243,7 +243,13 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 "subcategory": "farmers_market",
                 "category_id": "food_drink",
                 "subcategory_id": "farmers_market",
-                "tags": ["farmers market", "local", "produce", "outdoor", "family-friendly"],
+                "tags": [
+                    "farmers market",
+                    "local",
+                    "produce",
+                    "outdoor",
+                    "family-friendly",
+                ],
                 "price_min": None,
                 "price_max": None,
                 "price_note": "Free admission",
@@ -261,7 +267,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
             try:
                 insert_event(event_record)
                 events_new += 1
-                logger.debug(f"Added: {event_data['title']} on {event_data['start_date']}")
+                logger.debug(
+                    f"Added: {event_data['title']} on {event_data['start_date']}"
+                )
             except Exception as e:
                 logger.error(f"Failed to insert: {event_data['title']}: {e}")
 

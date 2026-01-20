@@ -48,10 +48,7 @@ def parse_date(date_text: str) -> tuple[Optional[str], Optional[str]]:
         current_year = datetime.now().year
 
         # Range: "23 - 25 Jan 2026"
-        range_match = re.match(
-            r"(\d+)\s*[-–]\s*(\d+)\s+(\w+)\s+(\d{4})",
-            date_text
-        )
+        range_match = re.match(r"(\d+)\s*[-–]\s*(\d+)\s+(\w+)\s+(\d{4})", date_text)
         if range_match:
             day1, day2, month, year = range_match.groups()
             for fmt in ["%d %b %Y", "%d %B %Y"]:
@@ -127,7 +124,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 page.wait_for_timeout(1500)
 
             # Find event cards
-            cards = page.query_selector_all("[class*='event-card'], [class*='card'], article")
+            cards = page.query_selector_all(
+                "[class*='event-card'], [class*='card'], article"
+            )
             logger.info(f"Found {len(cards)} potential event cards")
 
             for card in cards:
@@ -197,7 +196,11 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     # Get link
                     link = card.query_selector("a[href]")
                     href = link.get_attribute("href") if link else None
-                    source_url = href if href and href.startswith("http") else f"{BASE_URL}{href}" if href else ATLANTA_URL
+                    source_url = (
+                        href
+                        if href and href.startswith("http")
+                        else f"{BASE_URL}{href}" if href else ATLANTA_URL
+                    )
 
                     event_record = {
                         "source_id": source_id,

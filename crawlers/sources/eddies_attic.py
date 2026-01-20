@@ -100,7 +100,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             # Pattern: ARTIST NAME\nDay, Mon DD Time\n
             # Split by "More info" or "Buy tickets" to separate events
-            blocks = re.split(r"(?:Buy tickets|More info|Sold out)", body_text, flags=re.IGNORECASE)
+            blocks = re.split(
+                r"(?:Buy tickets|More info|Sold out)", body_text, flags=re.IGNORECASE
+            )
 
             for block in blocks:
                 lines = [l.strip() for l in block.strip().split("\n") if l.strip()]
@@ -127,7 +129,12 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         continue
 
                     # Title - all caps or substantial text
-                    if not title and len(line) > 3 and line not in ["UPCOMING SHOWS", "ATLANTA'S LEGENDARY LISTENING ROOM"]:
+                    if (
+                        not title
+                        and len(line) > 3
+                        and line
+                        not in ["UPCOMING SHOWS", "ATLANTA'S LEGENDARY LISTENING ROOM"]
+                    ):
                         title = line
 
                 if not title or not date_text:
@@ -184,7 +191,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             browser.close()
 
-        logger.info(f"Eddie's Attic crawl complete: {events_found} found, {events_new} new")
+        logger.info(
+            f"Eddie's Attic crawl complete: {events_found} found, {events_new} new"
+        )
 
     except Exception as e:
         logger.error(f"Failed to crawl Eddie's Attic: {e}")

@@ -148,7 +148,9 @@ def parse_event(event_data: dict) -> Optional[dict]:
         image_url = None
         if images:
             # Sort by width descending and get largest
-            sorted_images = sorted(images, key=lambda x: x.get("width", 0), reverse=True)
+            sorted_images = sorted(
+                images, key=lambda x: x.get("width", 0), reverse=True
+            )
             image_url = sorted_images[0].get("url")
 
         # URLs
@@ -202,7 +204,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             # Get pagination info
             page_info = data.get("page", {})
-            total_pages = min(page_info.get("totalPages", 1), 5)  # Limit to 5 pages (1000 events)
+            total_pages = min(
+                page_info.get("totalPages", 1), 5
+            )  # Limit to 5 pages (1000 events)
 
             # Get events
             embedded = data.get("_embedded", {})
@@ -233,14 +237,14 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     try:
                         venue_id = get_or_create_venue(venue_info)
                     except Exception as e:
-                        logger.warning(f"Failed to create venue {venue_info['name']}: {e}")
+                        logger.warning(
+                            f"Failed to create venue {venue_info['name']}: {e}"
+                        )
 
                 # Generate content hash
                 venue_name = venue_info.get("name", "") if venue_info else ""
                 content_hash = generate_content_hash(
-                    parsed["title"],
-                    venue_name,
-                    parsed["start_date"]
+                    parsed["title"], venue_name, parsed["start_date"]
                 )
 
                 # Check for existing
@@ -270,7 +274,11 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     "price_min": parsed.get("price_min"),
                     "price_max": parsed.get("price_max"),
                     "price_note": None,
-                    "is_free": parsed.get("price_min") == 0 if parsed.get("price_min") is not None else False,
+                    "is_free": (
+                        parsed.get("price_min") == 0
+                        if parsed.get("price_min") is not None
+                        else False
+                    ),
                     "source_url": parsed["source_url"],
                     "ticket_url": parsed["ticket_url"],
                     "image_url": parsed.get("image_url"),
@@ -290,7 +298,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             page += 1
 
-        logger.info(f"Ticketmaster crawl complete: {events_found} found, {events_new} new")
+        logger.info(
+            f"Ticketmaster crawl complete: {events_found} found, {events_new} new"
+        )
 
     except Exception as e:
         logger.error(f"Failed to crawl Ticketmaster: {e}")

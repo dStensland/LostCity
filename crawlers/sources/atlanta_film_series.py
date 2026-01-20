@@ -53,10 +53,7 @@ FESTIVALS = [
 def parse_festival_dates(text: str) -> tuple[Optional[str], Optional[str]]:
     """Parse dates from festival description text."""
     # Range: "March 20 - 22, 2026" or "August 7–9, 2026"
-    range_match = re.search(
-        r"(\w+)\s+(\d+)\s*[-–]\s*(\d+),?\s*(\d{4})",
-        text
-    )
+    range_match = re.search(r"(\w+)\s+(\d+)\s*[-–]\s*(\d+),?\s*(\d{4})", text)
     if range_match:
         month, day1, day2, year = range_match.groups()
         for fmt in ["%B %d, %Y", "%b %d, %Y"]:
@@ -122,7 +119,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                         if start_date:
                             events_found += 1
-                            content_hash = generate_content_hash(current_festival, "Atlanta Film Series", start_date)
+                            content_hash = generate_content_hash(
+                                current_festival, "Atlanta Film Series", start_date
+                            )
 
                             existing = find_event_by_hash(content_hash)
                             if existing:
@@ -132,7 +131,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
                                     "source_id": source_id,
                                     "venue_id": venue_id,
                                     "title": current_festival,
-                                    "description": desc_text[:500] if desc_text else None,
+                                    "description": (
+                                        desc_text[:500] if desc_text else None
+                                    ),
                                     "start_date": start_date,
                                     "start_time": None,
                                     "end_date": end_date,
@@ -140,7 +141,12 @@ def crawl(source: dict) -> tuple[int, int, int]:
                                     "is_all_day": False,
                                     "category": "film",
                                     "subcategory": "festival",
-                                    "tags": ["film", "festival", "independent", "atlanta-film-series"],
+                                    "tags": [
+                                        "film",
+                                        "festival",
+                                        "independent",
+                                        "atlanta-film-series",
+                                    ],
                                     "price_min": None,
                                     "price_max": None,
                                     "price_note": None,
@@ -158,9 +164,13 @@ def crawl(source: dict) -> tuple[int, int, int]:
                                 try:
                                     insert_event(event_record)
                                     events_new += 1
-                                    logger.info(f"Added: {current_festival} on {start_date}")
+                                    logger.info(
+                                        f"Added: {current_festival} on {start_date}"
+                                    )
                                 except Exception as e:
-                                    logger.error(f"Failed to insert: {current_festival}: {e}")
+                                    logger.error(
+                                        f"Failed to insert: {current_festival}: {e}"
+                                    )
 
                     # Start new festival
                     current_festival = line
@@ -176,7 +186,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                 if start_date:
                     events_found += 1
-                    content_hash = generate_content_hash(current_festival, "Atlanta Film Series", start_date)
+                    content_hash = generate_content_hash(
+                        current_festival, "Atlanta Film Series", start_date
+                    )
 
                     existing = find_event_by_hash(content_hash)
                     if not existing:
@@ -192,7 +204,12 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             "is_all_day": False,
                             "category": "film",
                             "subcategory": "festival",
-                            "tags": ["film", "festival", "independent", "atlanta-film-series"],
+                            "tags": [
+                                "film",
+                                "festival",
+                                "independent",
+                                "atlanta-film-series",
+                            ],
                             "price_min": None,
                             "price_max": None,
                             "price_note": None,
@@ -216,7 +233,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             browser.close()
 
-        logger.info(f"Atlanta Film Series crawl complete: {events_found} found, {events_new} new")
+        logger.info(
+            f"Atlanta Film Series crawl complete: {events_found} found, {events_new} new"
+        )
 
     except Exception as e:
         logger.error(f"Failed to crawl Atlanta Film Series: {e}")

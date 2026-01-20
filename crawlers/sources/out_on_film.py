@@ -37,8 +37,18 @@ def parse_date(date_str: str) -> Optional[str]:
     """Parse date from various formats."""
     current_year = datetime.now().year
     months = {
-        "JAN": 1, "FEB": 2, "MAR": 3, "APR": 4, "MAY": 5, "JUN": 6,
-        "JUL": 7, "AUG": 8, "SEP": 9, "OCT": 10, "NOV": 11, "DEC": 12
+        "JAN": 1,
+        "FEB": 2,
+        "MAR": 3,
+        "APR": 4,
+        "MAY": 5,
+        "JUN": 6,
+        "JUL": 7,
+        "AUG": 8,
+        "SEP": 9,
+        "OCT": 10,
+        "NOV": 11,
+        "DEC": 12,
     }
 
     # Format: "FEB 4"
@@ -87,7 +97,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 line = lines[i]
 
                 # Month abbreviation
-                if re.match(r"^(JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)$", line.upper()):
+                if re.match(
+                    r"^(JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)$", line.upper()
+                ):
                     if i + 2 < len(lines):
                         day_line = lines[i + 1]
                         title_line = lines[i + 2]
@@ -102,14 +114,21 @@ def crawl(source: dict) -> tuple[int, int, int]:
                                 title = title_line.strip('"').strip("'")
 
                                 # Skip navigation items
-                                skip_words = ["VIEW MORE", "LEARN MORE", "SUBMIT", "UPCOMING"]
+                                skip_words = [
+                                    "VIEW MORE",
+                                    "LEARN MORE",
+                                    "SUBMIT",
+                                    "UPCOMING",
+                                ]
                                 if any(w.lower() in title.lower() for w in skip_words):
                                     i += 1
                                     continue
 
                                 events_found += 1
 
-                                content_hash = generate_content_hash(title, "Out on Film", start_date)
+                                content_hash = generate_content_hash(
+                                    title, "Out on Film", start_date
+                                )
 
                                 existing = find_event_by_hash(content_hash)
                                 if existing:
@@ -127,7 +146,12 @@ def crawl(source: dict) -> tuple[int, int, int]:
                                         "is_all_day": False,
                                         "category": "film",
                                         "subcategory": "festival",
-                                        "tags": ["film", "festival", "lgbtq", "out-on-film"],
+                                        "tags": [
+                                            "film",
+                                            "festival",
+                                            "lgbtq",
+                                            "out-on-film",
+                                        ],
                                         "price_min": None,
                                         "price_max": None,
                                         "price_note": None,
@@ -153,7 +177,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             browser.close()
 
-        logger.info(f"Out on Film crawl complete: {events_found} found, {events_new} new")
+        logger.info(
+            f"Out on Film crawl complete: {events_found} found, {events_new} new"
+        )
 
     except Exception as e:
         logger.error(f"Failed to crawl Out on Film: {e}")

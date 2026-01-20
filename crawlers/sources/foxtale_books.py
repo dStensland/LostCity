@@ -38,7 +38,7 @@ def parse_date(date_str: str) -> Optional[str]:
     date_str = date_str.strip()
 
     # Remove day of week prefix
-    date_str = re.sub(r'^[A-Za-z]+,\s*', '', date_str)
+    date_str = re.sub(r"^[A-Za-z]+,\s*", "", date_str)
 
     for fmt in ["%m/%d/%Y", "%m/%d/%y", "%B %d, %Y", "%b %d, %Y"]:
         try:
@@ -52,13 +52,13 @@ def parse_date(date_str: str) -> Optional[str]:
 def parse_time(time_str: str) -> Optional[str]:
     """Parse time from format like '11:00am'."""
     try:
-        match = re.search(r'(\d{1,2}):(\d{2})\s*(am|pm)', time_str, re.IGNORECASE)
+        match = re.search(r"(\d{1,2}):(\d{2})\s*(am|pm)", time_str, re.IGNORECASE)
         if match:
             hour, minute, period = match.groups()
             hour = int(hour)
-            if period.lower() == 'pm' and hour != 12:
+            if period.lower() == "pm" and hour != 12:
                 hour += 12
-            elif period.lower() == 'am' and hour == 12:
+            elif period.lower() == "am" and hour == 12:
                 hour = 0
             return f"{hour:02d}:{minute}"
     except Exception:
@@ -91,16 +91,21 @@ def crawl(source: dict) -> tuple[int, int, int]:
             text = page.inner_text("body")
 
             # Split by month+day pattern to get event blocks
-            blocks = re.split(r'(?=JAN\s+\d|FEB\s+\d|MAR\s+\d|APR\s+\d|MAY\s+\d|JUN\s+\d|JUL\s+\d|AUG\s+\d|SEP\s+\d|OCT\s+\d|NOV\s+\d|DEC\s+\d)', text)
+            blocks = re.split(
+                r"(?=JAN\s+\d|FEB\s+\d|MAR\s+\d|APR\s+\d|MAY\s+\d|JUN\s+\d|JUL\s+\d|AUG\s+\d|SEP\s+\d|OCT\s+\d|NOV\s+\d|DEC\s+\d)",
+                text,
+            )
 
             for block in blocks:
                 try:
                     # Skip navigation blocks
-                    if 'SUB-NAVIGATION' in block or 'Events Calendar' in block:
+                    if "SUB-NAVIGATION" in block or "Events Calendar" in block:
                         continue
 
                     # Extract date from DATE: line
-                    date_match = re.search(r'DATE:\s*\n?\s*([A-Za-z]+,?\s*\d{1,2}/\d{1,2}/\d{2,4})', block)
+                    date_match = re.search(
+                        r"DATE:\s*\n?\s*([A-Za-z]+,?\s*\d{1,2}/\d{1,2}/\d{2,4})", block
+                    )
                     if not date_match:
                         continue
 
@@ -109,32 +114,46 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         continue
 
                     # Extract time from TIME: line
-                    time_match = re.search(r'TIME:\s*\n?\s*(\d{1,2}:\d{2}\s*(am|pm))', block, re.I)
+                    time_match = re.search(
+                        r"TIME:\s*\n?\s*(\d{1,2}:\d{2}\s*(am|pm))", block, re.I
+                    )
                     start_time = parse_time(time_match.group(1)) if time_match else None
 
                     # Extract title - it's right after the month/day at start of block
-                    lines = [l.strip() for l in block.split('\n') if l.strip()]
+                    lines = [l.strip() for l in block.split("\n") if l.strip()]
 
                     title = None
                     description = None
 
                     for i, line in enumerate(lines):
                         # Skip month abbreviations and day numbers
-                        if re.match(r'^(JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)$', line):
+                        if re.match(
+                            r"^(JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)$", line
+                        ):
                             continue
-                        if re.match(r'^\d{1,2}$', line):
+                        if re.match(r"^\d{1,2}$", line):
                             continue
                         # Skip navigation/metadata
-                        if any(skip in line for skip in ['DATE:', 'TIME:', 'PLACE:', 'VIEW EVENT', 'ABOUT', 'RSVP']):
+                        if any(
+                            skip in line
+                            for skip in [
+                                "DATE:",
+                                "TIME:",
+                                "PLACE:",
+                                "VIEW EVENT",
+                                "ABOUT",
+                                "RSVP",
+                            ]
+                        ):
                             break
                         # Skip address lines
-                        if re.match(r'^\d+\s+(E\.|W\.|Main|Oak)', line, re.I):
+                        if re.match(r"^\d+\s+(E\.|W\.|Main|Oak)", line, re.I):
                             continue
-                        if re.match(r'^(Woodstock|Atlanta),?\s*GA', line, re.I):
+                        if re.match(r"^(Woodstock|Atlanta),?\s*GA", line, re.I):
                             continue
-                        if 'FoxTale Book Shoppe' in line:
+                        if "FoxTale Book Shoppe" in line:
                             continue
-                        if 'Deep Roots' in line:
+                        if "Deep Roots" in line:
                             continue
                         # Title is the first substantial line
                         if not title and len(line) > 10:
@@ -149,13 +168,15 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         continue
 
                     # Clean up title
-                    title = re.sub(r'\s+', ' ', title).strip()
+                    title = re.sub(r"\s+", " ", title).strip()
                     if len(title) < 5:
                         continue
 
                     events_found += 1
 
-                    content_hash = generate_content_hash(title, VENUE_DATA['name'], start_date)
+                    content_hash = generate_content_hash(
+                        title, VENUE_DATA["name"], start_date
+                    )
 
                     existing = find_event_by_hash(content_hash)
                     if existing:
@@ -164,14 +185,14 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     # Determine subcategory
                     title_lower = title.lower()
-                    if 'book club' in title_lower:
-                        subcategory = 'words.bookclub'
-                    elif 'writing' in title_lower or 'workshop' in title_lower:
-                        subcategory = 'words.workshop'
-                    elif 'storytime' in title_lower:
-                        subcategory = 'words.storytelling'
+                    if "book club" in title_lower:
+                        subcategory = "words.bookclub"
+                    elif "writing" in title_lower or "workshop" in title_lower:
+                        subcategory = "words.workshop"
+                    elif "storytime" in title_lower:
+                        subcategory = "words.storytelling"
                     else:
-                        subcategory = 'words.reading'
+                        subcategory = "words.reading"
 
                     event_record = {
                         "source_id": source_id,
@@ -210,7 +231,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             browser.close()
 
-        logger.info(f"FoxTale Book Shoppe crawl complete: {events_found} found, {events_new} new")
+        logger.info(
+            f"FoxTale Book Shoppe crawl complete: {events_found} found, {events_new} new"
+        )
 
     except Exception as e:
         logger.error(f"Failed to crawl FoxTale Book Shoppe: {e}")
