@@ -69,10 +69,10 @@ export default function MainNav({ portalSlug = "atlanta" }: Props) {
               <Link
                 key={tab.key}
                 href={getHref(tab)}
-                className={`px-4 py-2 rounded-lg font-mono text-sm whitespace-nowrap transition-all ${
+                className={`px-4 py-2 rounded-lg font-mono text-sm whitespace-nowrap transition-all border-2 ${
                   active
-                    ? "bg-[var(--coral)] text-white font-medium shadow-sm"
-                    : "text-[var(--muted)] hover:text-[var(--cream)] hover:bg-[var(--twilight)]/50"
+                    ? "bg-[var(--coral)] text-white font-medium shadow-sm border-[var(--coral-light,#D4A59A)]"
+                    : "text-[var(--muted)] hover:text-[var(--cream)] hover:bg-[var(--twilight)]/50 border-transparent"
                 }`}
               >
                 {tab.label}

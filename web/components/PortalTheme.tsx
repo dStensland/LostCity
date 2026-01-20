@@ -15,6 +15,7 @@ export function PortalTheme({ portal }: PortalThemeProps) {
 
   // Extract branding values with defaults
   const primaryColor = (branding.primary_color as string) || null;
+  const primaryLight = (branding.primary_light as string) || null;
   const secondaryColor = (branding.secondary_color as string) || null;
   const accentColor = (branding.accent_color as string) || null;
   const backgroundColor = (branding.background_color as string) || null;
@@ -43,6 +44,12 @@ export function PortalTheme({ portal }: PortalThemeProps) {
     cssVars.push(`--portal-primary: ${primaryColor};`);
     cssVars.push(`--neon-magenta: ${primaryColor};`);
     cssVars.push(`--portal-primary-rgb: ${hexToRgb(primaryColor)};`);
+    cssVars.push(`--coral: ${primaryColor};`);
+  }
+
+  if (primaryLight) {
+    cssVars.push(`--coral-light: ${primaryLight};`);
+    cssVars.push(`--portal-primary-light: ${primaryLight};`);
   }
 
   if (secondaryColor) {
