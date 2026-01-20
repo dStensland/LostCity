@@ -493,9 +493,10 @@ function EventCard({ event, isCarousel }: { event: FeedEvent; isCarousel?: boole
   return (
     <Link
       href={`/events/${event.id}`}
-      className={`group flex flex-col rounded-xl overflow-hidden border bg-[var(--dusk)]/30 hover:bg-[var(--dusk)]/60 transition-all hover:border-[var(--coral)]/30 ${
+      className={`group flex flex-col rounded-xl overflow-hidden border transition-all hover:border-[var(--coral)]/30 ${
         isCarousel ? "flex-shrink-0 w-72 snap-start" : ""
       } ${isPopular ? "border-[var(--coral)]/20" : "border-[var(--twilight)]"}`}
+      style={{ backgroundColor: "var(--card-bg)" }}
     >
       {/* Image with loading state */}
       <div className="h-36 bg-[var(--twilight)] relative overflow-hidden rounded-t-xl">
@@ -651,11 +652,12 @@ function EventListItem({ event, isAlternate, showDate = true }: { event: FeedEve
       href={`/events/${event.id}`}
       className={`flex items-center gap-3 px-3 py-3 rounded-lg border transition-all group hover:border-[var(--coral)]/30 ${
         isPopular
-          ? "border-[var(--coral)]/20 bg-[var(--coral)]/5"
+          ? "border-[var(--coral)]/20"
           : isAlternate
-            ? "border-transparent bg-[var(--dusk)]/20"
-            : "border-[var(--twilight)] bg-[var(--dusk)]/30"
-      } hover:bg-[var(--dusk)]/60`}
+            ? "border-transparent"
+            : "border-[var(--twilight)]"
+      }`}
+      style={{ backgroundColor: isPopular ? "var(--coral-bg, rgba(190, 53, 39, 0.05))" : "var(--card-bg)" }}
       style={{
         borderLeftWidth: categoryColor ? "3px" : undefined,
         borderLeftColor: categoryColor || undefined,
@@ -745,7 +747,8 @@ function CategoryGrid({ section, portalSlug, isFirst }: { section: FeedSectionDa
             <Link
               key={cat.id}
               href={`/${portalSlug}?categories=${cat.id}`}
-              className="flex flex-col items-center gap-2 p-4 rounded-xl bg-[var(--dusk)]/30 border border-[var(--twilight)] hover:border-[var(--coral)]/50 hover:bg-[var(--dusk)]/60 transition-all group min-h-[80px] relative"
+              className="flex flex-col items-center gap-2 p-4 rounded-xl border border-[var(--twilight)] hover:border-[var(--coral)]/50 transition-all group min-h-[80px] relative"
+              style={{ backgroundColor: "var(--card-bg)" }}
             >
               <CategoryIcon
                 type={cat.id}
@@ -876,7 +879,8 @@ function VenueList({ section, portalSlug }: { section: FeedSectionData; portalSl
           return (
             <div
               key={venue.id}
-              className="rounded-lg border border-[var(--twilight)] bg-[var(--dusk)]/30 overflow-hidden"
+              className="rounded-lg border border-[var(--twilight)] overflow-hidden"
+              style={{ backgroundColor: "var(--card-bg)" }}
               style={{
                 borderLeftWidth: categoryColor ? "3px" : undefined,
                 borderLeftColor: categoryColor || undefined,
@@ -1073,7 +1077,8 @@ function ExternalLink({ section }: { section: FeedSectionData }) {
         href={content.url}
         target="_blank"
         rel="noopener noreferrer"
-        className="flex items-center gap-4 p-4 rounded-xl border border-[var(--twilight)] bg-[var(--dusk)]/30 hover:bg-[var(--dusk)]/60 hover:border-[var(--coral)]/30 transition-all group"
+        className="flex items-center gap-4 p-4 rounded-xl border border-[var(--twilight)] hover:border-[var(--coral)]/30 transition-all group"
+        style={{ backgroundColor: "var(--card-bg)" }}
         aria-label={`${section.title} (opens in new tab)`}
       >
         {content.image_url && (

@@ -64,17 +64,17 @@ export default function FeedView() {
     return (
       <div className="py-6 space-y-10">
         {/* Hero banner skeleton */}
-        <div className="rounded-2xl bg-[var(--dusk)] h-56 sm:h-64 animate-pulse" />
+        <div className="rounded-2xl bg-[var(--twilight)]/50 h-56 sm:h-64 animate-pulse" />
 
         {/* Carousel section skeleton */}
         <div>
           <div className="flex items-center justify-between mb-4">
-            <div className="h-6 w-36 bg-[var(--dusk)] rounded animate-pulse" />
-            <div className="h-6 w-16 bg-[var(--dusk)] rounded-full animate-pulse" />
+            <div className="h-6 w-36 bg-[var(--twilight)]/50 rounded animate-pulse" />
+            <div className="h-6 w-16 bg-[var(--twilight)]/50 rounded-full animate-pulse" />
           </div>
           <div className="flex gap-3 overflow-hidden -mx-4 px-4">
             {[...Array(4)].map((_, j) => (
-              <div key={j} className="flex-shrink-0 w-72 rounded-xl bg-[var(--dusk)] h-52 animate-pulse" />
+              <div key={j} className="flex-shrink-0 w-72 rounded-xl bg-[var(--twilight)]/50 h-52 animate-pulse" />
             ))}
           </div>
         </div>
@@ -82,12 +82,12 @@ export default function FeedView() {
         {/* Grid section skeleton */}
         <div>
           <div className="flex items-center justify-between mb-4">
-            <div className="h-6 w-32 bg-[var(--dusk)] rounded animate-pulse" />
-            <div className="h-6 w-16 bg-[var(--dusk)] rounded-full animate-pulse" />
+            <div className="h-6 w-32 bg-[var(--twilight)]/50 rounded animate-pulse" />
+            <div className="h-6 w-16 bg-[var(--twilight)]/50 rounded-full animate-pulse" />
           </div>
           <div className="grid grid-cols-2 gap-3">
             {[...Array(4)].map((_, j) => (
-              <div key={j} className="rounded-xl bg-[var(--dusk)] h-52 animate-pulse" />
+              <div key={j} className="rounded-xl bg-[var(--twilight)]/50 h-52 animate-pulse" />
             ))}
           </div>
         </div>
@@ -95,12 +95,12 @@ export default function FeedView() {
         {/* List section skeleton */}
         <div>
           <div className="flex items-center justify-between mb-4">
-            <div className="h-6 w-28 bg-[var(--dusk)] rounded animate-pulse" />
-            <div className="h-6 w-16 bg-[var(--dusk)] rounded-full animate-pulse" />
+            <div className="h-6 w-28 bg-[var(--twilight)]/50 rounded animate-pulse" />
+            <div className="h-6 w-16 bg-[var(--twilight)]/50 rounded-full animate-pulse" />
           </div>
           <div className="space-y-2">
             {[...Array(5)].map((_, j) => (
-              <div key={j} className="rounded-lg bg-[var(--dusk)] h-16 animate-pulse" />
+              <div key={j} className="rounded-lg bg-[var(--twilight)]/50 h-16 animate-pulse" />
             ))}
           </div>
         </div>
@@ -112,7 +112,7 @@ export default function FeedView() {
   if (error) {
     return (
       <div className="py-16 text-center">
-        <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-[var(--twilight)]/30 flex items-center justify-center">
+        <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-[var(--twilight)]/50 flex items-center justify-center">
           <svg className="w-8 h-8 text-[var(--coral)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
           </svg>
@@ -136,7 +136,7 @@ export default function FeedView() {
   if (sections.length === 0) {
     return (
       <div className="py-16 text-center">
-        <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-[var(--twilight)]/30 flex items-center justify-center">
+        <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-[var(--twilight)]/50 flex items-center justify-center">
           <svg className="w-8 h-8 text-[var(--muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
           </svg>

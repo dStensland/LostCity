@@ -132,7 +132,8 @@ export default function PortalSpotsView({ portalId, portalSlug, isExclusive = fa
           <Link
             key={spot.id}
             href={`/spots/${spot.slug}`}
-            className="block p-4 rounded-lg border border-[var(--twilight)] bg-[var(--dusk)]/30 hover:bg-[var(--dusk)]/60 transition-colors group"
+            className="block p-4 rounded-lg border border-[var(--twilight)] transition-colors group"
+            style={{ backgroundColor: "var(--card-bg)" }}
           >
             <div className="flex items-start gap-3">
               {spot.spot_type && (
