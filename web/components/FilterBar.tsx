@@ -1,18 +1,23 @@
 "use client";
 
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
-import { useCallback, useMemo, useState, useRef } from "react";
+import { useCallback, useMemo, useState, useRef, useEffect } from "react";
 import { format, addDays, isToday, isTomorrow, isThisWeek, parseISO } from "date-fns";
 import { CATEGORIES, SUBCATEGORIES, DATE_FILTERS, PRICE_FILTERS, TAG_GROUPS } from "@/lib/search";
 import { PREFERENCE_VIBES, PREFERENCE_NEIGHBORHOODS } from "@/lib/preferences";
 import { MOODS, getMoodById, type MoodId } from "@/lib/moods";
 import CategoryIcon, { CATEGORY_CONFIG, type CategoryType } from "./CategoryIcon";
 
-export default function FilterBar() {
+type FilterBarProps = {
+  variant?: "full" | "compact";
+};
+
+export default function FilterBar({ variant = "full" }: FilterBarProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
   // Custom range states
   const [showDateRange, setShowDateRange] = useState(false);
@@ -45,6 +50,12 @@ export default function FilterBar() {
   const currentPriceFilter = searchParams.get("price") || "";
   const currentDateFilter = searchParams.get("date") || "";
   const currentMood = (searchParams.get("mood") as MoodId) || null;
+
+  useEffect(() => {
+    if (currentMood || currentVibes.length > 0 || currentTags.length > 0) {
+      setShowAdvanced(true);
+    }
+  }, [currentMood, currentTags.length, currentVibes.length]);
 
   // Custom ranges
   const currentDateStart = searchParams.get("date_start") || "";
@@ -239,6 +250,39 @@ export default function FilterBar() {
     setShowGeoRange(false);
   }, [updateParams]);
 
+  const quickPicks = [
+    {
+      label: "Happening Now",
+      onClick: () => setDateFilter("now"),
+      isActive: currentDateFilter === "now",
+    },
+    {
+      label: "Today",
+      onClick: () => setDateFilter("today"),
+      isActive: currentDateFilter === "today",
+    },
+    {
+      label: "Free",
+      onClick: () => setPriceFilter("free"),
+      isActive: currentPriceFilter === "free",
+    },
+    {
+      label: "Live Music",
+      onClick: () => toggleCategory("music"),
+      isActive: currentCategories.includes("music"),
+    },
+    {
+      label: "Family",
+      onClick: () => toggleTag("family-friendly"),
+      isActive: currentTags.includes("family-friendly"),
+    },
+    {
+      label: "Outdoors",
+      onClick: () => toggleTag("outdoor"),
+      isActive: currentTags.includes("outdoor"),
+    },
+  ];
+
   const jumpToDate = useCallback(
     (date: string) => {
       updateParams({
@@ -303,11 +347,142 @@ export default function FilterBar() {
   const hasCustomPriceRange = currentPriceMin || currentPriceMax;
   const hasGeoFilter = currentGeoLat && currentGeoLng;
 
+  const activeChips = useMemo(() => {
+    const chips: { label: string; onClick: () => void; className: string; style?: { backgroundColor?: string } }[] = [];
+
+    currentCategories.forEach((cat) => {
+      const label = CATEGORIES.find((c) => c.value === cat)?.label || cat;
+      chips.push({
+        label,
+        onClick: () => toggleCategory(cat),
+        className: "bg-[var(--twilight)] text-[var(--cream)]",
+      });
+    });
+
+    if (currentDateFilter) {
+      chips.push({
+        label: DATE_FILTERS.find((d) => d.value === currentDateFilter)?.label || currentDateFilter,
+        onClick: () => setDateFilter(currentDateFilter),
+        className: "bg-[var(--gold)] text-[var(--void)]",
+      });
+    }
+
+    if (hasCustomDateRange) {
+      chips.push({
+        label:
+          currentDateStart && currentDateEnd
+            ? `${currentDateStart} - ${currentDateEnd}`
+            : currentDateStart
+            ? `From ${currentDateStart}`
+            : `Until ${currentDateEnd}`,
+        onClick: () => setCustomDateRange("", ""),
+        className: "bg-[var(--gold)] text-[var(--void)]",
+      });
+    }
+
+    if (currentPriceFilter) {
+      chips.push({
+        label: PRICE_FILTERS.find((p) => p.value === currentPriceFilter)?.label || currentPriceFilter,
+        onClick: () => setPriceFilter(currentPriceFilter),
+        className: "bg-[var(--neon-green)] text-[var(--void)]",
+      });
+    }
+
+    if (hasCustomPriceRange) {
+      chips.push({
+        label:
+          currentPriceMin && currentPriceMax
+            ? `$${currentPriceMin}-${currentPriceMax}`
+            : currentPriceMin
+            ? `$${currentPriceMin}+`
+            : `Under $${currentPriceMax}`,
+        onClick: () => setCustomPriceRange("", ""),
+        className: "bg-[var(--neon-green)] text-[var(--void)]",
+      });
+    }
+
+    if (hasGeoFilter) {
+      chips.push({
+        label: `Near me (${currentGeoRadius}km)`,
+        onClick: clearGeo,
+        className: "bg-[var(--neon-magenta)] text-[var(--void)]",
+      });
+    }
+
+    currentNeighborhoods.forEach((n) => {
+      chips.push({
+        label: n,
+        onClick: () => toggleNeighborhood(n),
+        className: "bg-[var(--twilight)] text-[var(--cream)]",
+      });
+    });
+
+    if (currentMood) {
+      const mood = getMoodById(currentMood);
+      if (mood) {
+        chips.push({
+          label: `${mood.emoji} ${mood.name}`,
+          onClick: () => setMood(null),
+          className: "text-[var(--void)]",
+          style: { backgroundColor: mood.color },
+        });
+      }
+    }
+
+    currentVibes.forEach((v) => {
+      chips.push({
+        label: PREFERENCE_VIBES.find((pv) => pv.value === v)?.label || v,
+        onClick: () => toggleVibe(v),
+        className: "bg-[var(--sage)] text-[var(--void)]",
+      });
+    });
+
+    currentTags.forEach((t) => {
+      chips.push({
+        label:
+          [...TAG_GROUPS.Vibe, ...TAG_GROUPS.Access, ...TAG_GROUPS.Special].find((tg) => tg.value === t)?.label || t,
+        onClick: () => toggleTag(t),
+        className: "bg-[var(--lavender)] text-[var(--void)]",
+      });
+    });
+
+    return chips;
+  }, [
+    clearGeo,
+    currentCategories,
+    currentDateFilter,
+    currentDateEnd,
+    currentDateStart,
+    currentGeoRadius,
+    currentMood,
+    currentNeighborhoods,
+    currentPriceFilter,
+    currentPriceMax,
+    currentPriceMin,
+    currentTags,
+    currentVibes,
+    hasCustomDateRange,
+    hasCustomPriceRange,
+    hasGeoFilter,
+    setCustomDateRange,
+    setCustomPriceRange,
+    setDateFilter,
+    setMood,
+    setPriceFilter,
+    toggleCategory,
+    toggleNeighborhood,
+    toggleTag,
+    toggleVibe,
+  ]);
+
+  const visibleChips = activeChips.slice(0, 3);
+  const extraChipCount = Math.max(activeChips.length - visibleChips.length, 0);
+
   return (
     <>
       {/* Filter bar */}
-      <div className="sticky top-[52px] z-30 bg-[var(--night)] border-b border-[var(--twilight)]">
-        <div className="max-w-3xl mx-auto px-4 py-2">
+      <div className="sticky top-[104px] z-30 bg-[var(--night)] border-b border-[var(--twilight)]">
+        <div className={`max-w-3xl mx-auto px-4 ${variant === "compact" ? "py-1.5" : "py-2"}`}>
           <div className="flex items-center gap-2">
             {/* Filters button */}
             <button
@@ -386,132 +561,36 @@ export default function FilterBar() {
               )}
             </div>
 
-            {/* Active filter chips */}
-            {hasFilters && !drawerOpen && (
+            {/* Active filter chips (compact summary) */}
+            {hasFilters && !drawerOpen && variant === "full" && (
               <div className="flex items-center gap-1.5 overflow-x-auto flex-1 scrollbar-hide">
-                {currentCategories.map((cat) => (
+                <button
+                  onClick={() => setDrawerOpen(true)}
+                  className="flex items-center gap-1 px-2 py-1 rounded-full bg-[var(--twilight)] text-[0.65rem] font-mono font-medium text-[var(--cream)] whitespace-nowrap"
+                >
+                  Active {filterCount}
+                </button>
+                {visibleChips.map((chip) => (
                   <button
-                    key={cat}
-                    onClick={() => toggleCategory(cat)}
-                    className="flex items-center gap-1 px-2 py-1 rounded-full bg-[var(--twilight)] text-[0.65rem] font-mono font-medium text-[var(--cream)] whitespace-nowrap"
+                    key={chip.label}
+                    onClick={chip.onClick}
+                    className={`flex items-center gap-1 px-2 py-1 rounded-full text-[0.65rem] font-mono font-medium whitespace-nowrap ${chip.className}`}
+                    style={chip.style}
                   >
-                    <CategoryIcon type={cat} size={10} />
-                    {CATEGORIES.find((c) => c.value === cat)?.label}
+                    {chip.label}
                     <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                     </svg>
                   </button>
                 ))}
-                {currentDateFilter && (
+                {extraChipCount > 0 && (
                   <button
-                    onClick={() => setDateFilter(currentDateFilter)}
-                    className="flex items-center gap-1 px-2 py-1 rounded-full bg-[var(--gold)] text-[0.65rem] font-mono font-medium text-[var(--void)] whitespace-nowrap"
+                    onClick={() => setDrawerOpen(true)}
+                    className="px-2 py-1 rounded-full bg-[var(--twilight)] text-[0.65rem] font-mono font-medium text-[var(--muted)] whitespace-nowrap"
                   >
-                    {DATE_FILTERS.find((d) => d.value === currentDateFilter)?.label}
-                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
+                    +{extraChipCount} more
                   </button>
                 )}
-                {hasCustomDateRange && (
-                  <button
-                    onClick={() => setCustomDateRange("", "")}
-                    className="flex items-center gap-1 px-2 py-1 rounded-full bg-[var(--gold)] text-[0.65rem] font-mono font-medium text-[var(--void)] whitespace-nowrap"
-                  >
-                    {currentDateStart && currentDateEnd
-                      ? `${currentDateStart} - ${currentDateEnd}`
-                      : currentDateStart ? `From ${currentDateStart}` : `Until ${currentDateEnd}`}
-                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-                )}
-                {currentPriceFilter && (
-                  <button
-                    onClick={() => setPriceFilter(currentPriceFilter)}
-                    className="flex items-center gap-1 px-2 py-1 rounded-full bg-[var(--neon-green)] text-[0.65rem] font-mono font-medium text-[var(--void)] whitespace-nowrap"
-                  >
-                    {PRICE_FILTERS.find((p) => p.value === currentPriceFilter)?.label}
-                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-                )}
-                {hasCustomPriceRange && (
-                  <button
-                    onClick={() => setCustomPriceRange("", "")}
-                    className="flex items-center gap-1 px-2 py-1 rounded-full bg-[var(--neon-green)] text-[0.65rem] font-mono font-medium text-[var(--void)] whitespace-nowrap"
-                  >
-                    {currentPriceMin && currentPriceMax
-                      ? `$${currentPriceMin}-$${currentPriceMax}`
-                      : currentPriceMin ? `$${currentPriceMin}+` : `Under $${currentPriceMax}`}
-                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-                )}
-                {hasGeoFilter && (
-                  <button
-                    onClick={clearGeo}
-                    className="flex items-center gap-1 px-2 py-1 rounded-full bg-[var(--neon-magenta)] text-[0.65rem] font-mono font-medium text-[var(--void)] whitespace-nowrap"
-                  >
-                    Near me ({currentGeoRadius}km)
-                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-                )}
-                {currentNeighborhoods.map((n) => (
-                  <button
-                    key={n}
-                    onClick={() => toggleNeighborhood(n)}
-                    className="flex items-center gap-1 px-2 py-1 rounded-full bg-[var(--twilight)] text-[0.65rem] font-mono font-medium text-[var(--cream)] whitespace-nowrap"
-                  >
-                    {n}
-                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-                ))}
-                {currentMood && (() => {
-                  const mood = getMoodById(currentMood);
-                  return mood ? (
-                    <button
-                      onClick={() => setMood(null)}
-                      className="flex items-center gap-1 px-2 py-1 rounded-full text-[0.65rem] font-mono font-medium text-[var(--void)] whitespace-nowrap"
-                      style={{ backgroundColor: mood.color }}
-                    >
-                      {mood.emoji} {mood.name}
-                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
-                  ) : null;
-                })()}
-                {currentVibes.map((v) => (
-                  <button
-                    key={v}
-                    onClick={() => toggleVibe(v)}
-                    className="flex items-center gap-1 px-2 py-1 rounded-full bg-[var(--sage)] text-[0.65rem] font-mono font-medium text-[var(--void)] whitespace-nowrap"
-                  >
-                    {PREFERENCE_VIBES.find((pv) => pv.value === v)?.label || v}
-                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-                ))}
-                {currentTags.map((t) => (
-                  <button
-                    key={t}
-                    onClick={() => toggleTag(t)}
-                    className="flex items-center gap-1 px-2 py-1 rounded-full bg-[var(--lavender)] text-[0.65rem] font-mono font-medium text-[var(--void)] whitespace-nowrap"
-                  >
-                    {[...TAG_GROUPS.Vibe, ...TAG_GROUPS.Access, ...TAG_GROUPS.Special].find((tg) => tg.value === t)?.label || t}
-                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-                ))}
                 <button
                   onClick={clearAll}
                   className="px-2 py-1 font-mono text-[0.65rem] text-[var(--coral)] hover:text-[var(--rose)] whitespace-nowrap"
@@ -551,6 +630,26 @@ export default function FilterBar() {
 
           {/* Content */}
           <div className="flex-1 overflow-y-auto p-4 space-y-5">
+            {/* Quick Picks */}
+            <div>
+              <div className="font-mono text-[0.6rem] text-[var(--muted)] uppercase tracking-wider mb-2">Quick Picks</div>
+              <div className="flex flex-wrap gap-1.5">
+                {quickPicks.map((pick) => (
+                  <button
+                    key={pick.label}
+                    onClick={pick.onClick}
+                    className={`px-2.5 py-1 rounded-full font-mono text-xs font-medium transition-colors ${
+                      pick.isActive
+                        ? "bg-[var(--cream)] text-[var(--void)]"
+                        : "bg-[var(--twilight)] text-[var(--muted)] hover:text-[var(--cream)]"
+                    }`}
+                  >
+                    {pick.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             {/* 1. Categories */}
             <div>
               <div className="font-mono text-[0.6rem] text-[var(--muted)] uppercase tracking-wider mb-2">Category</div>
@@ -768,138 +867,152 @@ export default function FilterBar() {
               </div>
             </div>
 
-            {/* 5. Vibe (consolidated mood + vibes + tags) */}
+            {/* Advanced filters toggle */}
             <div>
-              <div className="font-mono text-[0.6rem] text-[var(--muted)] uppercase tracking-wider mb-2">Vibe</div>
-
-              {/* Mood quick-picks */}
-              <div className="mb-3">
-                <div className="font-mono text-[0.55rem] text-[var(--muted)] mb-1.5">I'm feeling...</div>
-                <div className="flex flex-wrap gap-1.5">
-                  {MOODS.map((mood) => {
-                    const isSelected = currentMood === mood.id;
-                    return (
-                      <button
-                        key={mood.id}
-                        onClick={() => setMood(mood.id)}
-                        className={`px-2.5 py-1 rounded-full font-mono text-xs font-medium transition-all ${
-                          isSelected ? "text-[var(--void)]" : "bg-[var(--twilight)] text-[var(--muted)] hover:text-[var(--cream)]"
-                        }`}
-                        style={isSelected ? { backgroundColor: mood.color } : undefined}
-                      >
-                        {mood.emoji} {mood.name}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Atmosphere vibes */}
-              <div className="mb-3">
-                <div className="font-mono text-[0.55rem] text-[var(--muted)] mb-1.5">Atmosphere</div>
-                <div className="flex flex-wrap gap-1.5">
-                  {PREFERENCE_VIBES.filter(v => v.group === "Atmosphere").map((v) => (
-                    <button
-                      key={v.value}
-                      onClick={() => toggleVibe(v.value)}
-                      className={`px-2.5 py-1 rounded-full font-mono text-xs font-medium transition-colors ${
-                        currentVibes.includes(v.value)
-                          ? "bg-[var(--sage)] text-[var(--void)]"
-                          : "bg-[var(--twilight)] text-[var(--muted)] hover:text-[var(--cream)]"
-                      }`}
-                    >
-                      {v.label}
-                    </button>
-                  ))}
-                  {TAG_GROUPS.Vibe.map((t) => (
-                    <button
-                      key={t.value}
-                      onClick={() => toggleTag(t.value)}
-                      className={`px-2.5 py-1 rounded-full font-mono text-xs font-medium transition-colors ${
-                        currentTags.includes(t.value)
-                          ? "bg-[var(--lavender)] text-[var(--void)]"
-                          : "bg-[var(--twilight)] text-[var(--muted)] hover:text-[var(--cream)]"
-                      }`}
-                    >
-                      {t.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Access tags */}
-              <div className="mb-3">
-                <div className="font-mono text-[0.55rem] text-[var(--muted)] mb-1.5">Access</div>
-                <div className="flex flex-wrap gap-1.5">
-                  {TAG_GROUPS.Access.map((t) => (
-                    <button
-                      key={t.value}
-                      onClick={() => toggleTag(t.value)}
-                      className={`px-2.5 py-1 rounded-full font-mono text-xs font-medium transition-colors ${
-                        currentTags.includes(t.value)
-                          ? "bg-[var(--lavender)] text-[var(--void)]"
-                          : "bg-[var(--twilight)] text-[var(--muted)] hover:text-[var(--cream)]"
-                      }`}
-                    >
-                      {t.label}
-                    </button>
-                  ))}
-                  {PREFERENCE_VIBES.filter(v => v.group === "Access").map((v) => (
-                    <button
-                      key={v.value}
-                      onClick={() => toggleVibe(v.value)}
-                      className={`px-2.5 py-1 rounded-full font-mono text-xs font-medium transition-colors ${
-                        currentVibes.includes(v.value)
-                          ? "bg-[var(--sage)] text-[var(--void)]"
-                          : "bg-[var(--twilight)] text-[var(--muted)] hover:text-[var(--cream)]"
-                      }`}
-                    >
-                      {v.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Amenities */}
-              <div className="mb-3">
-                <div className="font-mono text-[0.55rem] text-[var(--muted)] mb-1.5">Amenities</div>
-                <div className="flex flex-wrap gap-1.5">
-                  {PREFERENCE_VIBES.filter(v => v.group === "Amenities").map((v) => (
-                    <button
-                      key={v.value}
-                      onClick={() => toggleVibe(v.value)}
-                      className={`px-2.5 py-1 rounded-full font-mono text-xs font-medium transition-colors ${
-                        currentVibes.includes(v.value)
-                          ? "bg-[var(--sage)] text-[var(--void)]"
-                          : "bg-[var(--twilight)] text-[var(--muted)] hover:text-[var(--cream)]"
-                      }`}
-                    >
-                      {v.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Special tags */}
-              <div>
-                <div className="font-mono text-[0.55rem] text-[var(--muted)] mb-1.5">Special</div>
-                <div className="flex flex-wrap gap-1.5">
-                  {TAG_GROUPS.Special.map((t) => (
-                    <button
-                      key={t.value}
-                      onClick={() => toggleTag(t.value)}
-                      className={`px-2.5 py-1 rounded-full font-mono text-xs font-medium transition-colors ${
-                        currentTags.includes(t.value)
-                          ? "bg-[var(--lavender)] text-[var(--void)]"
-                          : "bg-[var(--twilight)] text-[var(--muted)] hover:text-[var(--cream)]"
-                      }`}
-                    >
-                      {t.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
+              <button
+                onClick={() => setShowAdvanced((prev) => !prev)}
+                className="w-full flex items-center justify-between px-3 py-2 rounded-lg bg-[var(--twilight)]/40 text-[var(--muted)] hover:text-[var(--cream)] transition-colors font-mono text-xs"
+              >
+                <span>More filters (mood, vibe, amenities)</span>
+                <svg className={`w-4 h-4 transition-transform ${showAdvanced ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
             </div>
+
+            {showAdvanced && (
+              <div>
+                <div className="font-mono text-[0.6rem] text-[var(--muted)] uppercase tracking-wider mb-2">Vibe</div>
+
+                {/* Mood quick-picks */}
+                <div className="mb-3">
+                  <div className="font-mono text-[0.55rem] text-[var(--muted)] mb-1.5">I'm feeling...</div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {MOODS.map((mood) => {
+                      const isSelected = currentMood === mood.id;
+                      return (
+                        <button
+                          key={mood.id}
+                          onClick={() => setMood(mood.id)}
+                          className={`px-2.5 py-1 rounded-full font-mono text-xs font-medium transition-all ${
+                            isSelected ? "text-[var(--void)]" : "bg-[var(--twilight)] text-[var(--muted)] hover:text-[var(--cream)]"
+                          }`}
+                          style={isSelected ? { backgroundColor: mood.color } : undefined}
+                        >
+                          {mood.emoji} {mood.name}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Atmosphere vibes */}
+                <div className="mb-3">
+                  <div className="font-mono text-[0.55rem] text-[var(--muted)] mb-1.5">Atmosphere</div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {PREFERENCE_VIBES.filter(v => v.group === "Atmosphere").map((v) => (
+                      <button
+                        key={v.value}
+                        onClick={() => toggleVibe(v.value)}
+                        className={`px-2.5 py-1 rounded-full font-mono text-xs font-medium transition-colors ${
+                          currentVibes.includes(v.value)
+                            ? "bg-[var(--sage)] text-[var(--void)]"
+                            : "bg-[var(--twilight)] text-[var(--muted)] hover:text-[var(--cream)]"
+                        }`}
+                      >
+                        {v.label}
+                      </button>
+                    ))}
+                    {TAG_GROUPS.Vibe.map((t) => (
+                      <button
+                        key={t.value}
+                        onClick={() => toggleTag(t.value)}
+                        className={`px-2.5 py-1 rounded-full font-mono text-xs font-medium transition-colors ${
+                          currentTags.includes(t.value)
+                            ? "bg-[var(--lavender)] text-[var(--void)]"
+                            : "bg-[var(--twilight)] text-[var(--muted)] hover:text-[var(--cream)]"
+                        }`}
+                      >
+                        {t.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Access tags */}
+                <div className="mb-3">
+                  <div className="font-mono text-[0.55rem] text-[var(--muted)] mb-1.5">Access</div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {TAG_GROUPS.Access.map((t) => (
+                      <button
+                        key={t.value}
+                        onClick={() => toggleTag(t.value)}
+                        className={`px-2.5 py-1 rounded-full font-mono text-xs font-medium transition-colors ${
+                          currentTags.includes(t.value)
+                            ? "bg-[var(--lavender)] text-[var(--void)]"
+                            : "bg-[var(--twilight)] text-[var(--muted)] hover:text-[var(--cream)]"
+                        }`}
+                      >
+                        {t.label}
+                      </button>
+                    ))}
+                    {PREFERENCE_VIBES.filter(v => v.group === "Access").map((v) => (
+                      <button
+                        key={v.value}
+                        onClick={() => toggleVibe(v.value)}
+                        className={`px-2.5 py-1 rounded-full font-mono text-xs font-medium transition-colors ${
+                          currentVibes.includes(v.value)
+                            ? "bg-[var(--sage)] text-[var(--void)]"
+                            : "bg-[var(--twilight)] text-[var(--muted)] hover:text-[var(--cream)]"
+                        }`}
+                      >
+                        {v.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Amenities */}
+                <div className="mb-3">
+                  <div className="font-mono text-[0.55rem] text-[var(--muted)] mb-1.5">Amenities</div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {PREFERENCE_VIBES.filter(v => v.group === "Amenities").map((v) => (
+                      <button
+                        key={v.value}
+                        onClick={() => toggleVibe(v.value)}
+                        className={`px-2.5 py-1 rounded-full font-mono text-xs font-medium transition-colors ${
+                          currentVibes.includes(v.value)
+                            ? "bg-[var(--sage)] text-[var(--void)]"
+                            : "bg-[var(--twilight)] text-[var(--muted)] hover:text-[var(--cream)]"
+                        }`}
+                      >
+                        {v.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Special tags */}
+                <div>
+                  <div className="font-mono text-[0.55rem] text-[var(--muted)] mb-1.5">Special</div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {TAG_GROUPS.Special.map((t) => (
+                      <button
+                        key={t.value}
+                        onClick={() => toggleTag(t.value)}
+                        className={`px-2.5 py-1 rounded-full font-mono text-xs font-medium transition-colors ${
+                          currentTags.includes(t.value)
+                            ? "bg-[var(--lavender)] text-[var(--void)]"
+                            : "bg-[var(--twilight)] text-[var(--muted)] hover:text-[var(--cream)]"
+                        }`}
+                      >
+                        {t.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Footer */}

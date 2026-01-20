@@ -332,7 +332,7 @@ export default function EventList({ initialEvents, initialTotal, hasActiveFilter
         return (
           <section key={date}>
             {/* Date header */}
-            <div className="sticky top-[92px] bg-[var(--void)] z-20 py-2 -mx-4 px-4">
+            <div className="sticky top-[148px] bg-[var(--void)] z-20 py-2 -mx-4 px-4">
               <span className="font-mono text-[0.6rem] font-medium text-[var(--muted)] uppercase tracking-wider">
                 {getDateLabel(date)}
               </span>

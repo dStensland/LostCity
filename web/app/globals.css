@@ -112,6 +112,23 @@ body::after {
   z-index: -1;
 }
 
+/* Glass panel utility (map overlays, chips) */
+.glass-panel {
+  background: linear-gradient(135deg, rgba(15, 15, 20, 0.9), rgba(20, 20, 30, 0.8));
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow:
+    0 10px 30px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(12px);
+}
+
+.glass-panel-compact {
+  background: rgba(15, 15, 20, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(10px);
+}
+
 /* Typography utilities */
 .font-serif {
   font-family: var(--font-instrument), serif;

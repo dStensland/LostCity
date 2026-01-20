@@ -25,7 +25,7 @@ RULES:
 8. For all-day events (no specific time), set is_all_day to true and start_time to null.
 
 CATEGORIES (pick one):
-music, art, comedy, theater, film, sports, food_drink, nightlife, community, fitness, family, meetup, words, other
+music, art, comedy, theater, film, sports, food_drink, nightlife, community, fitness, family, learning, dance, tours, meetup, words, religious, markets, wellness, gaming, outdoors, other
 
 OUTPUT FORMAT:
 Return valid JSON matching this schema:

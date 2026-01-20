@@ -8,10 +8,12 @@ interface Props {
 }
 
 const TABS = [
-  { label: "Feed", href: "feed", isView: true },
-  { label: "Events", href: "events", isView: true },
+  { label: "List", href: "events", isView: true },
+  { label: "For You", href: "feed", isView: true },
+  { label: "Map", href: "map", isView: true },
   { label: "Spots", href: "/spots", isView: false },
   { label: "Happening Now", href: "/happening-now", isView: false },
+  { label: "Collections", href: "/collections", isView: false },
 ] as const;
 
 export default function MainNav({ portalSlug = "atlanta" }: Props) {
@@ -21,6 +23,9 @@ export default function MainNav({ portalSlug = "atlanta" }: Props) {
 
   const getHref = (tab: typeof TABS[number]) => {
     if (tab.isView) {
+      if (tab.href === "events") {
+        return `/${portalSlug}`;
+      }
       return `/${portalSlug}?view=${tab.href}`;
     }
     return tab.href;
@@ -30,6 +35,9 @@ export default function MainNav({ portalSlug = "atlanta" }: Props) {
     if (tab.isView) {
       // Check if we're on the portal page with this view
       const isPortalPage = pathname === `/${portalSlug}` || pathname === "/atlanta";
+      if (tab.href === "events") {
+        return isPortalPage && currentView === "events";
+      }
       return isPortalPage && currentView === tab.href;
     }
     // For non-view tabs, check pathname
@@ -39,7 +47,7 @@ export default function MainNav({ portalSlug = "atlanta" }: Props) {
   return (
     <nav className="sticky top-14 z-30 bg-[var(--night)]/95 backdrop-blur-sm border-b border-[var(--twilight)]/50">
       <div className="max-w-3xl mx-auto px-4">
-        <div className="flex gap-1 py-2">
+        <div className="flex gap-1 py-2 overflow-x-auto scrollbar-hide">
           {TABS.map((tab) => {
             const active = isActive(tab);
             return (

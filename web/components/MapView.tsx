@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import L from "leaflet";
 import Link from "next/link";
@@ -179,8 +179,17 @@ interface Props {
   userLocation?: { lat: number; lng: number } | null;
 }
 
+function applyLiveFilter(events: EventWithLocation[], liveOnly: boolean) {
+  if (!liveOnly) return events;
+  return events.filter((event) => event.is_live);
+}
+
 export default function MapView({ events, userLocation }: Props) {
   const [mounted, setMounted] = useState(false);
+  const [localUserLocation, setLocalUserLocation] = useState<{ lat: number; lng: number } | null>(userLocation || null);
+  const [locating, setLocating] = useState(false);
+  const [locationDenied, setLocationDenied] = useState(false);
+  const [liveOnly, setLiveOnly] = useState(false);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- Client-side hydration pattern
@@ -189,20 +198,32 @@ export default function MapView({ events, userLocation }: Props) {
 
   if (!mounted) {
     return (
-      <div className="w-full h-[600px] bg-[var(--night)] rounded-lg flex items-center justify-center border border-[var(--twilight)]">
+      <div className="w-full h-full bg-[var(--night)] rounded-lg flex items-center justify-center border border-[var(--twilight)]">
         <p className="text-[var(--muted)] font-mono text-sm">Loading map...</p>
       </div>
     );
   }
 
+  useEffect(() => {
+    if (userLocation) {
+      setLocalUserLocation(userLocation);
+    }
+  }, [userLocation]);
+
+  const filteredEvents = useMemo(
+    () => applyLiveFilter(events, liveOnly),
+    [events, liveOnly]
+  );
+
   // Filter events with valid coordinates
-  const mappableEvents = events.filter(
-    (e) => e.venue?.lat && e.venue?.lng
+  const mappableEvents = useMemo(
+    () => filteredEvents.filter((e) => e.venue?.lat && e.venue?.lng),
+    [filteredEvents]
   );
 
   // Use user location or Atlanta center as default
-  const mapCenter: [number, number] = userLocation
-    ? [userLocation.lat, userLocation.lng]
+  const mapCenter: [number, number] = localUserLocation
+    ? [localUserLocation.lat, localUserLocation.lng]
     : [33.749, -84.388]; // Atlanta center
 
   // Calculate bounds if we have events
@@ -213,13 +234,39 @@ export default function MapView({ events, userLocation }: Props) {
         )
       : null;
 
+  const requestUserLocation = useCallback(() => {
+    if (!navigator.geolocation) {
+      setLocationDenied(true);
+      return;
+    }
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setLocalUserLocation({ lat: position.coords.latitude, lng: position.coords.longitude });
+        setLocating(false);
+      },
+      () => {
+        setLocating(false);
+        setLocationDenied(true);
+      }
+    );
+  }, []);
+
+  const categoryLegend = [
+    { key: "music", label: "Music", color: CATEGORY_CONFIG.music.color },
+    { key: "food_drink", label: "Food & Drink", color: CATEGORY_CONFIG.food_drink.color },
+    { key: "art", label: "Art", color: CATEGORY_CONFIG.art.color },
+    { key: "comedy", label: "Comedy", color: CATEGORY_CONFIG.comedy.color },
+    { key: "community", label: "Community", color: CATEGORY_CONFIG.community.color },
+  ];
+
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: mapStyles }} />
-      <div className="w-full h-[600px] rounded-lg overflow-hidden border border-[var(--twilight)] relative">
+      <div className="w-full h-full rounded-lg overflow-hidden border border-[var(--twilight)] relative">
         <MapContainer
           center={mapCenter}
-          zoom={userLocation ? 14 : 12}
+          zoom={localUserLocation ? 14 : 12}
           bounds={bounds || undefined}
           boundsOptions={{ padding: [50, 50] }}
           className="w-full h-full"
@@ -229,6 +276,18 @@ export default function MapView({ events, userLocation }: Props) {
           <TileLayer
             attribution={DARK_MAP_TILES.attribution}
             url={DARK_MAP_TILES.url}
+          />
+          <MapOverlay
+            totalEvents={filteredEvents.length}
+            mappableCount={mappableEvents.length}
+            bounds={bounds}
+            hasUserLocation={!!localUserLocation}
+            locating={locating}
+            locationDenied={locationDenied}
+            onRequestLocation={requestUserLocation}
+            legend={categoryLegend}
+            liveOnly={liveOnly}
+            onToggleLiveOnly={() => setLiveOnly((prev) => !prev)}
           />
           {mappableEvents.map((event) => {
             // Prefer venue spot_type for icon, fall back to event category
@@ -294,9 +353,9 @@ export default function MapView({ events, userLocation }: Props) {
             );
           })}
           {/* User location marker */}
-          {userLocation && (
+          {localUserLocation && (
             <Marker
-              position={[userLocation.lat, userLocation.lng]}
+              position={[localUserLocation.lat, localUserLocation.lng]}
               icon={L.divIcon({
                 className: "user-location-marker",
                 html: `<div style="
@@ -318,6 +377,110 @@ export default function MapView({ events, userLocation }: Props) {
             <p className="text-[var(--muted)] font-mono text-sm">No events with map locations</p>
           </div>
         )}
+      </div>
+    </>
+  );
+}
+
+function MapOverlay({
+  totalEvents,
+  mappableCount,
+  bounds,
+  hasUserLocation,
+  locating,
+  locationDenied,
+  onRequestLocation,
+  legend,
+  liveOnly,
+  onToggleLiveOnly,
+}: {
+  totalEvents: number;
+  mappableCount: number;
+  bounds: L.LatLngBounds | null;
+  hasUserLocation: boolean;
+  locating: boolean;
+  locationDenied: boolean;
+  onRequestLocation: () => void;
+  legend: { key: string; label: string; color: string }[];
+  liveOnly: boolean;
+  onToggleLiveOnly: () => void;
+}) {
+  const map = useMap();
+
+  const fitToEvents = useCallback(() => {
+    if (bounds) {
+      map.fitBounds(bounds, { padding: [60, 60] });
+    } else {
+      map.setView([33.749, -84.388], 12);
+    }
+  }, [bounds, map]);
+
+  useEffect(() => {
+    if (bounds) {
+      map.fitBounds(bounds, { padding: [60, 60] });
+    }
+  }, [bounds, map]);
+
+  return (
+    <>
+      <div className="absolute top-4 left-4 z-[1000] rounded-lg px-3 py-2 glass-panel">
+        <div className="text-xs font-mono text-[var(--muted)] uppercase tracking-wider">
+          Map View
+        </div>
+        <div className="text-sm text-[var(--cream)]">
+          {mappableCount} of {totalEvents} events mapped
+        </div>
+        {mappableCount === 0 && (
+          <div className="text-[0.65rem] text-[var(--muted)] mt-1">
+            Try broadening filters
+          </div>
+        )}
+      </div>
+
+      <div className="absolute top-4 right-4 z-[1000] flex flex-col gap-2">
+        <button
+          onClick={fitToEvents}
+          className="rounded-lg px-3 py-2 text-[0.65rem] font-mono text-[var(--muted)] hover:text-[var(--cream)] glass-panel-compact"
+        >
+          Fit to events
+        </button>
+        <button
+          onClick={onToggleLiveOnly}
+          className={`rounded-lg px-3 py-2 text-[0.65rem] font-mono glass-panel-compact ${
+            liveOnly ? "text-[var(--neon-red)]" : "text-[var(--muted)] hover:text-[var(--cream)]"
+          }`}
+        >
+          {liveOnly ? "Live only: On" : "Live only: Off"}
+        </button>
+        <button
+          onClick={onRequestLocation}
+          className="rounded-lg px-3 py-2 text-[0.65rem] font-mono text-[var(--muted)] hover:text-[var(--cream)] glass-panel-compact"
+          disabled={locating}
+        >
+          {locating ? "Locating..." : hasUserLocation ? "Update location" : "Use my location"}
+        </button>
+        {locationDenied && (
+          <div className="rounded-lg px-3 py-2 text-[0.6rem] font-mono text-[var(--muted)] glass-panel-compact">
+            Location blocked
+          </div>
+        )}
+      </div>
+
+      <div className="absolute bottom-4 left-4 z-[1000] rounded-lg px-3 py-2 glass-panel">
+        <div className="text-[0.6rem] font-mono text-[var(--muted)] uppercase tracking-wider mb-2">
+          Legend
+        </div>
+        <div className="flex items-center gap-3 flex-wrap">
+          {legend.map((item) => (
+            <div key={item.key} className="flex items-center gap-1.5 text-[0.65rem] text-[var(--soft)] font-mono">
+              <span
+                className="inline-block w-2 h-2 rounded-full"
+                style={{ backgroundColor: item.color }}
+              />
+              {item.label}
+            </div>
+          ))}
+        </div>
       </div>
     </>
   );

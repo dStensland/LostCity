@@ -6,6 +6,7 @@ import EventList from "@/components/EventList";
 import MapViewWrapper from "@/components/MapViewWrapper";
 import FeedView from "@/components/FeedView";
 import GlassHeader from "@/components/GlassHeader";
+import SearchBar from "@/components/SearchBar";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 
@@ -103,9 +104,22 @@ export default async function PortalPage({ params, searchParams }: Props) {
         <MainNav portalSlug={portal.slug} />
       </Suspense>
 
+      {viewMode !== "feed" && (
+        <div className="border-b border-[var(--twilight)] bg-[var(--night)]/95 backdrop-blur-sm">
+          <div className="max-w-3xl mx-auto px-4 py-2">
+            <SearchBar />
+          </div>
+        </div>
+      )}
+
       {viewMode === "events" && (
         <Suspense fallback={<div className="h-10 bg-[var(--night)]" />}>
           <FilterBar />
+        </Suspense>
+      )}
+      {viewMode === "map" && (
+        <Suspense fallback={<div className="h-10 bg-[var(--night)]" />}>
+          <FilterBar variant="compact" />
         </Suspense>
       )}
 
@@ -127,7 +141,7 @@ export default async function PortalPage({ params, searchParams }: Props) {
         )}
 
         {viewMode === "map" && (
-          <div className="h-[calc(100vh-56px)]">
+          <div className="h-[calc(100vh-180px)]">
             <Suspense fallback={<div className="h-full bg-[var(--night)] animate-pulse" />}>
               <MapViewWrapper events={mapEvents} />
             </Suspense>
