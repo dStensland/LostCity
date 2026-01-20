@@ -7,6 +7,8 @@ import MapViewWrapper from "@/components/MapViewWrapper";
 import FeedView from "@/components/FeedView";
 import GlassHeader from "@/components/GlassHeader";
 import SearchBar from "@/components/SearchBar";
+import PortalSpotsView from "@/components/PortalSpotsView";
+import PortalHappeningNow from "@/components/PortalHappeningNow";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 
@@ -14,7 +16,7 @@ export const revalidate = 60;
 
 const PAGE_SIZE = 20;
 
-type ViewMode = "events" | "map" | "feed";
+type ViewMode = "events" | "map" | "feed" | "spots" | "happening-now";
 
 type Props = {
   params: Promise<{ portal: string }>;
@@ -27,7 +29,7 @@ type Props = {
     neighborhoods?: string;
     price?: string;
     date?: string;
-    view?: ViewMode;
+    view?: string;
     mood?: string;
   }>;
 };
@@ -48,8 +50,14 @@ export default async function PortalPage({ params, searchParams }: Props) {
     notFound();
   }
 
-  // Current view mode (events, map, or feed)
-  const viewMode: ViewMode = searchParamsData.view === "map" ? "map" : searchParamsData.view === "feed" ? "feed" : "events";
+  // Current view mode
+  const view = searchParamsData.view;
+  const viewMode: ViewMode =
+    view === "map" ? "map" :
+    view === "feed" ? "feed" :
+    view === "spots" ? "spots" :
+    view === "happening-now" ? "happening-now" :
+    "events";
 
   // Parse price filter
   const priceFilter = PRICE_FILTERS.find(p => p.value === searchParamsData.price);
@@ -75,6 +83,8 @@ export default async function PortalPage({ params, searchParams }: Props) {
     venue_ids: portal.filters.venue_ids || undefined,
     geo_center: portal.filters.geo_center || undefined,
     geo_radius_km: portal.filters.geo_radius_km || undefined,
+    portal_id: portal.id,  // Pass portal ID to filter portal-restricted events
+    portal_exclusive: portal.portal_type === "business",  // Business portals only show their own events
   };
 
   // Fetch data based on view mode
@@ -112,14 +122,9 @@ export default async function PortalPage({ params, searchParams }: Props) {
         </div>
       )}
 
-      {viewMode === "events" && (
+      {(viewMode === "events" || viewMode === "map") && (
         <Suspense fallback={<div className="h-10 bg-[var(--night)]" />}>
-          <FilterBar />
-        </Suspense>
-      )}
-      {viewMode === "map" && (
-        <Suspense fallback={<div className="h-10 bg-[var(--night)]" />}>
-          <FilterBar variant="compact" />
+          <FilterBar variant={viewMode === "map" ? "compact" : "full"} />
         </Suspense>
       )}
 
@@ -130,6 +135,8 @@ export default async function PortalPage({ params, searchParams }: Props) {
               initialEvents={events}
               initialTotal={total}
               hasActiveFilters={hasActiveFilters}
+              portalId={portal.id}
+              portalExclusive={portal.portal_type === "business"}
             />
           </Suspense>
         )}
@@ -146,6 +153,18 @@ export default async function PortalPage({ params, searchParams }: Props) {
               <MapViewWrapper events={mapEvents} />
             </Suspense>
           </div>
+        )}
+
+        {viewMode === "spots" && (
+          <Suspense fallback={<div className="py-16 text-center text-[var(--muted)]">Loading spots...</div>}>
+            <PortalSpotsView portalId={portal.id} portalSlug={portal.slug} isExclusive={portal.portal_type === "business"} />
+          </Suspense>
+        )}
+
+        {viewMode === "happening-now" && (
+          <Suspense fallback={<div className="py-16 text-center text-[var(--muted)]">Loading live events...</div>}>
+            <PortalHappeningNow portalId={portal.id} portalSlug={portal.slug} isExclusive={portal.portal_type === "business"} />
+          </Suspense>
         )}
       </main>
     </div>

@@ -60,11 +60,19 @@ export default function GlassHeader({ portalSlug = "atlanta", portalName = "Atla
       }`}
     >
       {/* Logo */}
-      <div className="flex items-center">
+      <div className="flex items-center gap-3">
         {branding?.logo_url ? (
-          <Link href={`/${portalSlug}`}>
-            <Image src={branding.logo_url} alt={portalName} width={100} height={28} className="h-7 w-auto object-contain" />
-          </Link>
+          <>
+            <Link href={`/${portalSlug}`}>
+              <Image src={branding.logo_url} alt={portalName} width={120} height={32} className="h-8 w-auto object-contain" />
+            </Link>
+            <div className="hidden sm:flex items-center gap-1 text-[0.6rem] text-[var(--muted)] font-mono">
+              <span>powered by</span>
+              <Link href="/atlanta" className="text-[var(--coral)] hover:opacity-80 transition-opacity">
+                Lost City
+              </Link>
+            </div>
+          </>
         ) : (
           <Logo href={`/${portalSlug}`} size="sm" />
         )}

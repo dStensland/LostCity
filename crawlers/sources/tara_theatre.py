@@ -18,7 +18,7 @@ from dedupe import generate_content_hash
 logger = logging.getLogger(__name__)
 
 BASE_URL = "https://www.taraatlanta.com"
-NOW_SHOWING_URL = f"{BASE_URL}/now-showing"
+HOME_URL = f"{BASE_URL}/home"
 COMING_SOON_URL = f"{BASE_URL}/coming-soon"
 
 VENUE_DATA = {
@@ -181,7 +181,7 @@ def extract_movies_for_date(
                         "price_max": None,
                         "price_note": None,
                         "is_free": False,
-                        "source_url": NOW_SHOWING_URL,
+                        "source_url": HOME_URL,
                         "ticket_url": None,
                         "image_url": None,
                         "raw_text": None,
@@ -404,8 +404,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
             today = datetime.now().date()
 
             # Load the now-showing page
-            logger.info(f"Fetching Tara Theatre: {NOW_SHOWING_URL}")
-            page.goto(NOW_SHOWING_URL, wait_until="domcontentloaded", timeout=30000)
+            logger.info(f"Fetching Tara Theatre: {HOME_URL}")
+            page.goto(HOME_URL, wait_until="domcontentloaded", timeout=30000)
             page.wait_for_timeout(4000)  # Wait for JS to load
 
             # First, get today's showtimes (default view)

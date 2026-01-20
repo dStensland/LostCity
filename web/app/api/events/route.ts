@@ -35,6 +35,8 @@ export async function GET(request: Request) {
       date_filter: (searchParams.get("date") as "today" | "weekend" | "week") || undefined,
       venue_id: venueId || undefined,
       mood: (searchParams.get("mood") as MoodId) || undefined,
+      portal_id: searchParams.get("portal_id") || undefined,
+      portal_exclusive: searchParams.get("portal_exclusive") === "true" || undefined,
     };
 
     const page = safeParseInt(searchParams.get("page"), 1, 1, 100);

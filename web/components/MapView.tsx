@@ -5,7 +5,8 @@ import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import L from "leaflet";
 import Link from "next/link";
 import type { EventWithLocation } from "@/lib/search";
-import { DARK_MAP_TILES } from "@/lib/map-config";
+import { getMapTiles } from "@/lib/map-config";
+import { usePortal } from "@/lib/portal-context";
 import { CATEGORY_CONFIG } from "./CategoryIcon";
 import { formatTime } from "@/lib/formats";
 
@@ -60,40 +61,40 @@ const ICON_PATHS: Record<string, string> = {
   farmers_market: "M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z",
 };
 
-// Dark theme styles for Leaflet popups with neon enhancements
-const mapStyles = `
+// Theme-aware styles for Leaflet popups
+const getMapStyles = (isLight: boolean) => `
   .leaflet-popup-content-wrapper {
-    background: var(--dusk);
-    border: 1px solid var(--twilight);
+    background: var(--dusk, ${isLight ? '#F9FAFB' : '#18181F'});
+    border: 1px solid var(--twilight, ${isLight ? '#E5E7EB' : '#252530'});
     border-radius: 8px;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.4);
+    box-shadow: 0 4px 6px -1px ${isLight ? 'rgba(0, 0, 0, 0.1)' : 'rgba(0, 0, 0, 0.4)'};
     padding: 0;
   }
   .leaflet-popup-content {
     margin: 0 !important;
   }
   .leaflet-popup-tip {
-    background: var(--dusk);
-    border-left: 1px solid var(--twilight);
-    border-bottom: 1px solid var(--twilight);
+    background: var(--dusk, ${isLight ? '#F9FAFB' : '#18181F'});
+    border-left: 1px solid var(--twilight, ${isLight ? '#E5E7EB' : '#252530'});
+    border-bottom: 1px solid var(--twilight, ${isLight ? '#E5E7EB' : '#252530'});
   }
   .leaflet-popup-close-button {
-    color: var(--muted) !important;
+    color: var(--muted, ${isLight ? '#6b7280' : '#8B8B94'}) !important;
     top: 4px !important;
     right: 4px !important;
   }
   .leaflet-popup-close-button:hover {
-    color: var(--cream) !important;
+    color: var(--cream, ${isLight ? '#1a1a1a' : '#FAFAF9'}) !important;
   }
   .leaflet-control-attribution {
-    background: var(--night) !important;
-    color: var(--muted) !important;
+    background: var(--night, ${isLight ? '#F3F4F6' : '#0F0F14'}) !important;
+    color: var(--muted, ${isLight ? '#6b7280' : '#8B8B94'}) !important;
   }
   .leaflet-control-attribution a {
-    color: var(--soft) !important;
+    color: var(--soft, ${isLight ? '#4b5563' : '#A1A1AA'}) !important;
   }
 
-  /* Neon marker styles */
+  /* Marker styles */
   .neon-marker {
     transition: transform 0.2s ease;
   }
@@ -185,30 +186,45 @@ function applyLiveFilter(events: EventWithLocation[], liveOnly: boolean) {
 }
 
 export default function MapView({ events, userLocation }: Props) {
+  const { portal } = usePortal();
+  const isLightTheme = (portal.branding?.theme_mode as string) === "light";
+  const mapTiles = getMapTiles(isLightTheme);
+  const mapStyles = getMapStyles(isLightTheme);
+
   const [mounted, setMounted] = useState(false);
   const [localUserLocation, setLocalUserLocation] = useState<{ lat: number; lng: number } | null>(userLocation || null);
   const [locating, setLocating] = useState(false);
   const [locationDenied, setLocationDenied] = useState(false);
   const [liveOnly, setLiveOnly] = useState(false);
 
+  // All hooks must be called before any early returns
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- Client-side hydration pattern
     setMounted(true);
   }, []);
-
-  if (!mounted) {
-    return (
-      <div className="w-full h-full bg-[var(--night)] rounded-lg flex items-center justify-center border border-[var(--twilight)]">
-        <p className="text-[var(--muted)] font-mono text-sm">Loading map...</p>
-      </div>
-    );
-  }
 
   useEffect(() => {
     if (userLocation) {
       setLocalUserLocation(userLocation);
     }
   }, [userLocation]);
+
+  const requestUserLocation = useCallback(() => {
+    if (!navigator.geolocation) {
+      setLocationDenied(true);
+      return;
+    }
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setLocalUserLocation({ lat: position.coords.latitude, lng: position.coords.longitude });
+        setLocating(false);
+      },
+      () => {
+        setLocating(false);
+        setLocationDenied(true);
+      }
+    );
+  }, []);
 
   const filteredEvents = useMemo(
     () => applyLiveFilter(events, liveOnly),
@@ -234,24 +250,6 @@ export default function MapView({ events, userLocation }: Props) {
         )
       : null;
 
-  const requestUserLocation = useCallback(() => {
-    if (!navigator.geolocation) {
-      setLocationDenied(true);
-      return;
-    }
-    setLocating(true);
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        setLocalUserLocation({ lat: position.coords.latitude, lng: position.coords.longitude });
-        setLocating(false);
-      },
-      () => {
-        setLocating(false);
-        setLocationDenied(true);
-      }
-    );
-  }, []);
-
   const categoryLegend = [
     { key: "music", label: "Music", color: CATEGORY_CONFIG.music.color },
     { key: "food_drink", label: "Food & Drink", color: CATEGORY_CONFIG.food_drink.color },
@@ -259,6 +257,15 @@ export default function MapView({ events, userLocation }: Props) {
     { key: "comedy", label: "Comedy", color: CATEGORY_CONFIG.comedy.color },
     { key: "community", label: "Community", color: CATEGORY_CONFIG.community.color },
   ];
+
+  // Early return AFTER all hooks
+  if (!mounted) {
+    return (
+      <div className="w-full h-full bg-[var(--night)] rounded-lg flex items-center justify-center border border-[var(--twilight)]">
+        <p className="text-[var(--muted)] font-mono text-sm">Loading map...</p>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -274,8 +281,8 @@ export default function MapView({ events, userLocation }: Props) {
         >
           <MapResizer />
           <TileLayer
-            attribution={DARK_MAP_TILES.attribution}
-            url={DARK_MAP_TILES.url}
+            attribution={mapTiles.attribution}
+            url={mapTiles.url}
           />
           <MapOverlay
             totalEvents={filteredEvents.length}

@@ -99,10 +99,11 @@ export default function EventCard({ event, index = 0 }: Props) {
   return (
     <Link
       href={`/events/${event.id}`}
-      className={`block p-3 mb-2 rounded-lg border border-[var(--twilight)] bg-[var(--dusk)]/30 hover:bg-[var(--dusk)]/50 hover:border-[var(--twilight)]/80 transition-all animate-fade-in ${staggerClass} group overflow-hidden`}
+      className={`block p-3 mb-2 rounded-lg border border-[var(--twilight)] transition-all animate-fade-in ${staggerClass} group overflow-hidden`}
       style={{
         borderLeftWidth: categoryColor ? "3px" : undefined,
         borderLeftColor: categoryColor || undefined,
+        backgroundColor: "var(--card-bg)",
       }}
     >
       <div className="flex gap-3">

@@ -32,6 +32,15 @@ def get_source_by_slug(slug: str) -> Optional[dict]:
     return result.data
 
 
+def get_portal_id_by_slug(slug: str) -> Optional[str]:
+    """Fetch a portal's UUID by its slug."""
+    client = get_client()
+    result = client.table("portals").select("id").eq("slug", slug).single().execute()
+    if result.data:
+        return result.data["id"]
+    return None
+
+
 def get_active_sources() -> list[dict]:
     """Fetch all active sources."""
     client = get_client()

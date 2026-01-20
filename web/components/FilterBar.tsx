@@ -19,6 +19,9 @@ export default function FilterBar({ variant = "full" }: FilterBarProps) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
 
+  // View mode (list or map)
+  const currentView = searchParams.get("view") || "events";
+
   // Custom range states
   const [showDateRange, setShowDateRange] = useState(false);
   const [showPriceRange, setShowPriceRange] = useState(false);
@@ -249,6 +252,13 @@ export default function FilterBar({ variant = "full" }: FilterBarProps) {
     });
     setShowGeoRange(false);
   }, [updateParams]);
+
+  const setViewMode = useCallback(
+    (view: "events" | "map") => {
+      updateParams({ view: view === "events" ? null : view });
+    },
+    [updateParams]
+  );
 
   const quickPicks = [
     {
@@ -484,6 +494,38 @@ export default function FilterBar({ variant = "full" }: FilterBarProps) {
       <div className="sticky top-[104px] z-30 bg-[var(--night)] border-b border-[var(--twilight)]">
         <div className={`max-w-3xl mx-auto px-4 ${variant === "compact" ? "py-1.5" : "py-2"}`}>
           <div className="flex items-center gap-2">
+            {/* List/Map view toggle */}
+            <div className="flex rounded-full bg-[var(--twilight)] p-0.5">
+              <button
+                onClick={() => setViewMode("events")}
+                className={`flex items-center gap-1 px-2.5 py-1 rounded-full font-mono text-xs font-medium transition-all ${
+                  currentView === "events" || currentView === "list"
+                    ? "bg-[var(--cream)] text-[var(--void)]"
+                    : "text-[var(--muted)] hover:text-[var(--cream)]"
+                }`}
+                aria-label="List view"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+                </svg>
+                <span className="hidden sm:inline">List</span>
+              </button>
+              <button
+                onClick={() => setViewMode("map")}
+                className={`flex items-center gap-1 px-2.5 py-1 rounded-full font-mono text-xs font-medium transition-all ${
+                  currentView === "map"
+                    ? "bg-[var(--cream)] text-[var(--void)]"
+                    : "text-[var(--muted)] hover:text-[var(--cream)]"
+                }`}
+                aria-label="Map view"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                </svg>
+                <span className="hidden sm:inline">Map</span>
+              </button>
+            </div>
+
             {/* Filters button */}
             <button
               onClick={() => setDrawerOpen(true)}
@@ -536,8 +578,8 @@ export default function FilterBar({ variant = "full" }: FilterBarProps) {
               {/* Date picker dropdown */}
               {showDatePicker && (
                 <>
-                  <div className="fixed inset-0 z-40" onClick={() => setShowDatePicker(false)} />
-                  <div className="absolute top-full left-0 mt-1 z-50 bg-[var(--night)] border border-[var(--twilight)] rounded-lg shadow-xl p-2 min-w-[200px]">
+                  <div className="fixed inset-0 z-[1100]" onClick={() => setShowDatePicker(false)} />
+                  <div className="absolute top-full left-0 mt-1 z-[1101] bg-[var(--night)] border border-[var(--twilight)] rounded-lg shadow-xl p-2 min-w-[200px]">
                     <div className="grid grid-cols-2 gap-1">
                       {quickDates.map((d) => (
                         <button
@@ -605,12 +647,12 @@ export default function FilterBar({ variant = "full" }: FilterBarProps) {
 
       {/* Drawer overlay */}
       {drawerOpen && (
-        <div className="fixed inset-0 z-50 bg-black/60" onClick={() => setDrawerOpen(false)} />
+        <div className="fixed inset-0 z-[1100] bg-black/60" onClick={() => setDrawerOpen(false)} />
       )}
 
       {/* Drawer */}
       <div
-        className={`fixed inset-y-0 left-0 z-50 w-80 max-w-[85vw] bg-[var(--night)] border-r border-[var(--twilight)] transform transition-transform duration-200 ${
+        className={`fixed inset-y-0 left-0 z-[1101] w-80 max-w-[85vw] bg-[var(--night)] border-r border-[var(--twilight)] transform transition-transform duration-200 ${
           drawerOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >

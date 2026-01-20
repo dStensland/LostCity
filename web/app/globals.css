@@ -68,6 +68,10 @@
   --background: var(--void);
   --foreground: var(--cream);
 
+  /* Card background - semi-transparent for depth */
+  --card-bg: rgba(24, 24, 31, 0.3);
+  --card-bg-hover: rgba(24, 24, 31, 0.5);
+
   /* Focus ring */
   --focus-ring: var(--coral);
 }
@@ -88,15 +92,15 @@ body {
   font-feature-settings: 'ss01' on, 'cv01' on;
 }
 
-/* Subtle grain texture overlay */
+/* Subtle grain texture overlay - can be disabled via --grain-opacity: 0 */
 body::after {
   content: '';
   position: fixed;
   inset: 0;
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
-  opacity: 0.015;
+  opacity: var(--grain-opacity, 0.015);
   pointer-events: none;
-  z-index: 10000;
+  z-index: 50; /* Lower z-index to avoid blocking map controls */
 }
 
 /* Ambient glow */
@@ -112,20 +116,18 @@ body::after {
   z-index: -1;
 }
 
-/* Glass panel utility (map overlays, chips) */
+/* Glass panel utility (map overlays, chips) - uses CSS variables for theme support */
 .glass-panel {
-  background: linear-gradient(135deg, rgba(15, 15, 20, 0.9), rgba(20, 20, 30, 0.8));
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  box-shadow:
-    0 10px 30px rgba(0, 0, 0, 0.35),
-    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  background: var(--glass-bg, linear-gradient(135deg, rgba(15, 15, 20, 0.9), rgba(20, 20, 30, 0.8)));
+  border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.06));
+  box-shadow: var(--glass-shadow, 0 10px 30px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.04));
   backdrop-filter: blur(12px);
 }
 
 .glass-panel-compact {
-  background: rgba(15, 15, 20, 0.7);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
+  background: var(--glass-bg-compact, rgba(15, 15, 20, 0.7));
+  border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.06));
+  box-shadow: var(--glass-shadow-compact, 0 6px 16px rgba(0, 0, 0, 0.35));
   backdrop-filter: blur(10px);
 }
 
@@ -825,4 +827,50 @@ textarea:focus-visible {
 /* Safe area for iOS devices with home indicator */
 .safe-area-bottom {
   padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+/* Leaflet CSS fixes for Tailwind compatibility */
+.leaflet-container {
+  /* Ensure map container fills its parent */
+  width: 100%;
+  height: 100%;
+  /* Reset any font styles */
+  font-family: inherit;
+}
+
+/* Fix Tailwind's image max-width breaking map tiles */
+.leaflet-container img {
+  max-width: none !important;
+  max-height: none !important;
+}
+
+/* Fix Tailwind's border-box affecting Leaflet */
+.leaflet-container * {
+  box-sizing: content-box;
+}
+
+/* Restore proper layering for Leaflet */
+.leaflet-pane,
+.leaflet-tile,
+.leaflet-marker-icon,
+.leaflet-marker-shadow,
+.leaflet-tile-container,
+.leaflet-pane > svg,
+.leaflet-pane > canvas,
+.leaflet-zoom-box,
+.leaflet-image-layer,
+.leaflet-layer {
+  position: absolute;
+  left: 0;
+  top: 0;
+}
+
+/* Ensure Leaflet controls stay above the grain overlay */
+.leaflet-control-container {
+  z-index: 999;
+}
+
+/* Ensure map popups are above grain overlay */
+.leaflet-popup {
+  z-index: 1001;
 }

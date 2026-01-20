@@ -12,9 +12,13 @@ type PortalBranding = {
   og_image_url?: string;
   primary_color?: string;
   secondary_color?: string;
+  accent_color?: string;
   background_color?: string;
+  text_color?: string;
+  muted_color?: string;
   font_heading?: string;
   font_body?: string;
+  theme_mode?: "dark" | "light";
 };
 
 type FeedSettings = {
@@ -24,6 +28,13 @@ type FeedSettings = {
   section_order?: string[];
   show_activity_tab?: boolean;
   items_per_section?: number;
+};
+
+type NavLabels = {
+  feed?: string;
+  events?: string;
+  spots?: string;
+  happening_now?: string;
 };
 
 type PortalFilters = {
@@ -42,16 +53,27 @@ type PortalFilters = {
 
 const ALL_CATEGORIES = [
   { id: "music", label: "Music" },
-  { id: "art", label: "Art" },
+  { id: "film", label: "Film" },
   { id: "comedy", label: "Comedy" },
   { id: "theater", label: "Theater" },
-  { id: "film", label: "Film" },
+  { id: "art", label: "Art" },
   { id: "sports", label: "Sports" },
   { id: "food_drink", label: "Food & Drink" },
   { id: "nightlife", label: "Nightlife" },
   { id: "community", label: "Community" },
   { id: "fitness", label: "Fitness" },
   { id: "family", label: "Family" },
+  { id: "learning", label: "Learning" },
+  { id: "dance", label: "Dance" },
+  { id: "tours", label: "Tours" },
+  { id: "meetup", label: "Meetup" },
+  { id: "words", label: "Words" },
+  { id: "religious", label: "Religious" },
+  { id: "markets", label: "Markets" },
+  { id: "wellness", label: "Wellness" },
+  { id: "gaming", label: "Gaming" },
+  { id: "outdoors", label: "Outdoors" },
+  { id: "other", label: "Other" },
 ];
 
 type PortalSection = {
@@ -110,6 +132,7 @@ export default function EditPortalPage({ params }: { params: Promise<{ id: strin
     show_activity_tab: true,
     items_per_section: 5,
   });
+  const [navLabels, setNavLabels] = useState<NavLabels>({});
   const [sections, setSections] = useState<PortalSection[]>([]);
 
   const loadPortal = useCallback(async () => {
@@ -133,6 +156,7 @@ export default function EditPortalPage({ params }: { params: Promise<{ id: strin
         show_activity_tab: true,
         items_per_section: 5,
       });
+      setNavLabels(data.portal.settings?.nav_labels || {});
 
       if (sectionsRes.ok) {
         const sectionsData = await sectionsRes.json();
@@ -168,6 +192,7 @@ export default function EditPortalPage({ params }: { params: Promise<{ id: strin
           settings: {
             ...portal?.settings,
             feed: feedSettings,
+            nav_labels: navLabels,
           },
         }),
       });
@@ -327,6 +352,79 @@ export default function EditPortalPage({ params }: { params: Promise<{ id: strin
                     <option value="private">Private</option>
                   </select>
                 </div>
+              </div>
+            </div>
+          </section>
+
+          {/* Navigation Labels */}
+          <section className="bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg p-6">
+            <h2 className="font-mono text-xs text-[var(--muted)] uppercase tracking-wider mb-4">Navigation</h2>
+            <p className="font-mono text-xs text-[var(--soft)] mb-4">
+              Customize the navigation tab labels for this portal. Leave empty to use defaults.
+            </p>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block font-mono text-xs text-[var(--muted)] uppercase mb-1">Feed Tab</label>
+                <input
+                  type="text"
+                  value={navLabels.feed || ""}
+                  onChange={(e) => setNavLabels({ ...navLabels, feed: e.target.value || undefined })}
+                  placeholder="Feed"
+                  className="w-full px-3 py-2 bg-[var(--night)] border border-[var(--twilight)] rounded font-mono text-sm text-[var(--cream)] focus:outline-none focus:border-[var(--coral)]"
+                />
+              </div>
+
+              <div>
+                <label className="block font-mono text-xs text-[var(--muted)] uppercase mb-1">Events Tab</label>
+                <input
+                  type="text"
+                  value={navLabels.events || ""}
+                  onChange={(e) => setNavLabels({ ...navLabels, events: e.target.value || undefined })}
+                  placeholder="Events"
+                  className="w-full px-3 py-2 bg-[var(--night)] border border-[var(--twilight)] rounded font-mono text-sm text-[var(--cream)] focus:outline-none focus:border-[var(--coral)]"
+                />
+              </div>
+
+              <div>
+                <label className="block font-mono text-xs text-[var(--muted)] uppercase mb-1">Spots Tab</label>
+                <input
+                  type="text"
+                  value={navLabels.spots || ""}
+                  onChange={(e) => setNavLabels({ ...navLabels, spots: e.target.value || undefined })}
+                  placeholder="Spots"
+                  className="w-full px-3 py-2 bg-[var(--night)] border border-[var(--twilight)] rounded font-mono text-sm text-[var(--cream)] focus:outline-none focus:border-[var(--coral)]"
+                />
+              </div>
+
+              <div>
+                <label className="block font-mono text-xs text-[var(--muted)] uppercase mb-1">Happening Now Tab</label>
+                <input
+                  type="text"
+                  value={navLabels.happening_now || ""}
+                  onChange={(e) => setNavLabels({ ...navLabels, happening_now: e.target.value || undefined })}
+                  placeholder="Happening Now"
+                  className="w-full px-3 py-2 bg-[var(--night)] border border-[var(--twilight)] rounded font-mono text-sm text-[var(--cream)] focus:outline-none focus:border-[var(--coral)]"
+                />
+              </div>
+            </div>
+
+            <div className="mt-4 p-3 bg-[var(--night)] rounded border border-[var(--twilight)]">
+              <div className="font-mono text-[0.65rem] text-[var(--muted)] uppercase mb-2">Preview</div>
+              <div className="flex gap-2">
+                {[
+                  { key: "feed", default: "Feed" },
+                  { key: "events", default: "Events" },
+                  { key: "spots", default: "Spots" },
+                  { key: "happening_now", default: "Happening Now" },
+                ].map((tab) => (
+                  <span
+                    key={tab.key}
+                    className="px-3 py-1.5 rounded-md font-mono text-xs bg-[var(--twilight)] text-[var(--cream)]"
+                  >
+                    {navLabels[tab.key as keyof NavLabels] || tab.default}
+                  </span>
+                ))}
               </div>
             </div>
           </section>
@@ -551,12 +649,100 @@ export default function EditPortalPage({ params }: { params: Promise<{ id: strin
           <section className="bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg p-6">
             <h2 className="font-mono text-xs text-[var(--muted)] uppercase tracking-wider mb-4">Branding</h2>
 
+            {/* Theme Mode */}
+            <div className="mb-6">
+              <h3 className="font-mono text-xs text-[var(--soft)] mb-3">Theme Mode</h3>
+              <div className="flex gap-4">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="theme_mode"
+                    value="dark"
+                    checked={!branding.theme_mode || branding.theme_mode === "dark"}
+                    onChange={() => setBranding({ ...branding, theme_mode: "dark" })}
+                    className="w-4 h-4 text-[var(--coral)] border-[var(--twilight)] bg-[var(--night)] focus:ring-[var(--coral)]"
+                  />
+                  <span className="font-mono text-sm text-[var(--cream)]">Dark</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="theme_mode"
+                    value="light"
+                    checked={branding.theme_mode === "light"}
+                    onChange={() => setBranding({ ...branding, theme_mode: "light" })}
+                    className="w-4 h-4 text-[var(--coral)] border-[var(--twilight)] bg-[var(--night)] focus:ring-[var(--coral)]"
+                  />
+                  <span className="font-mono text-sm text-[var(--cream)]">Light</span>
+                </label>
+              </div>
+            </div>
+
             {/* Colors */}
             <div className="mb-6">
               <h3 className="font-mono text-xs text-[var(--soft)] mb-3">Colors</h3>
+              <div className="grid grid-cols-3 gap-4 mb-4">
+                <div>
+                  <label className="block font-mono text-xs text-[var(--muted)] uppercase mb-1">Background</label>
+                  <div className="flex gap-2">
+                    <input
+                      type="color"
+                      value={branding.background_color || (branding.theme_mode === "light" ? "#ffffff" : "#0a0a12")}
+                      onChange={(e) => setBranding({ ...branding, background_color: e.target.value })}
+                      className="w-10 h-10 rounded border border-[var(--twilight)] cursor-pointer bg-transparent"
+                    />
+                    <input
+                      type="text"
+                      value={branding.background_color || ""}
+                      onChange={(e) => setBranding({ ...branding, background_color: e.target.value || undefined })}
+                      placeholder={branding.theme_mode === "light" ? "#ffffff" : "#0a0a12"}
+                      className="flex-1 px-2 py-1 bg-[var(--night)] border border-[var(--twilight)] rounded font-mono text-xs text-[var(--cream)] focus:outline-none focus:border-[var(--coral)]"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block font-mono text-xs text-[var(--muted)] uppercase mb-1">Text</label>
+                  <div className="flex gap-2">
+                    <input
+                      type="color"
+                      value={branding.text_color || (branding.theme_mode === "light" ? "#1a1a1a" : "#f5f0eb")}
+                      onChange={(e) => setBranding({ ...branding, text_color: e.target.value })}
+                      className="w-10 h-10 rounded border border-[var(--twilight)] cursor-pointer bg-transparent"
+                    />
+                    <input
+                      type="text"
+                      value={branding.text_color || ""}
+                      onChange={(e) => setBranding({ ...branding, text_color: e.target.value || undefined })}
+                      placeholder={branding.theme_mode === "light" ? "#1a1a1a" : "#f5f0eb"}
+                      className="flex-1 px-2 py-1 bg-[var(--night)] border border-[var(--twilight)] rounded font-mono text-xs text-[var(--cream)] focus:outline-none focus:border-[var(--coral)]"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block font-mono text-xs text-[var(--muted)] uppercase mb-1">Muted</label>
+                  <div className="flex gap-2">
+                    <input
+                      type="color"
+                      value={branding.muted_color || "#888888"}
+                      onChange={(e) => setBranding({ ...branding, muted_color: e.target.value })}
+                      className="w-10 h-10 rounded border border-[var(--twilight)] cursor-pointer bg-transparent"
+                    />
+                    <input
+                      type="text"
+                      value={branding.muted_color || ""}
+                      onChange={(e) => setBranding({ ...branding, muted_color: e.target.value || undefined })}
+                      placeholder="#888888"
+                      className="flex-1 px-2 py-1 bg-[var(--night)] border border-[var(--twilight)] rounded font-mono text-xs text-[var(--cream)] focus:outline-none focus:border-[var(--coral)]"
+                    />
+                  </div>
+                </div>
+              </div>
+
               <div className="grid grid-cols-3 gap-4">
                 <div>
-                  <label className="block font-mono text-xs text-[var(--muted)] uppercase mb-1">Primary</label>
+                  <label className="block font-mono text-xs text-[var(--muted)] uppercase mb-1">Primary/Button</label>
                   <div className="flex gap-2">
                     <input
                       type="color"
@@ -575,7 +761,26 @@ export default function EditPortalPage({ params }: { params: Promise<{ id: strin
                 </div>
 
                 <div>
-                  <label className="block font-mono text-xs text-[var(--muted)] uppercase mb-1">Secondary</label>
+                  <label className="block font-mono text-xs text-[var(--muted)] uppercase mb-1">Accent</label>
+                  <div className="flex gap-2">
+                    <input
+                      type="color"
+                      value={branding.accent_color || "#00d4ff"}
+                      onChange={(e) => setBranding({ ...branding, accent_color: e.target.value })}
+                      className="w-10 h-10 rounded border border-[var(--twilight)] cursor-pointer bg-transparent"
+                    />
+                    <input
+                      type="text"
+                      value={branding.accent_color || ""}
+                      onChange={(e) => setBranding({ ...branding, accent_color: e.target.value || undefined })}
+                      placeholder="#00d4ff"
+                      className="flex-1 px-2 py-1 bg-[var(--night)] border border-[var(--twilight)] rounded font-mono text-xs text-[var(--cream)] focus:outline-none focus:border-[var(--coral)]"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block font-mono text-xs text-[var(--muted)] uppercase mb-1">Border</label>
                   <div className="flex gap-2">
                     <input
                       type="color"
@@ -588,25 +793,6 @@ export default function EditPortalPage({ params }: { params: Promise<{ id: strin
                       value={branding.secondary_color || ""}
                       onChange={(e) => setBranding({ ...branding, secondary_color: e.target.value || undefined })}
                       placeholder="#2a2a4a"
-                      className="flex-1 px-2 py-1 bg-[var(--night)] border border-[var(--twilight)] rounded font-mono text-xs text-[var(--cream)] focus:outline-none focus:border-[var(--coral)]"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block font-mono text-xs text-[var(--muted)] uppercase mb-1">Background</label>
-                  <div className="flex gap-2">
-                    <input
-                      type="color"
-                      value={branding.background_color || "#0a0a12"}
-                      onChange={(e) => setBranding({ ...branding, background_color: e.target.value })}
-                      className="w-10 h-10 rounded border border-[var(--twilight)] cursor-pointer bg-transparent"
-                    />
-                    <input
-                      type="text"
-                      value={branding.background_color || ""}
-                      onChange={(e) => setBranding({ ...branding, background_color: e.target.value || undefined })}
-                      placeholder="#0a0a12"
                       className="flex-1 px-2 py-1 bg-[var(--night)] border border-[var(--twilight)] rounded font-mono text-xs text-[var(--cream)] focus:outline-none focus:border-[var(--coral)]"
                     />
                   </div>

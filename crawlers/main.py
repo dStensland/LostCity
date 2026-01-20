@@ -344,6 +344,13 @@ SOURCE_MODULES = {
     "pushpush-theater": "sources.pushpush_theater",
     "working-title-playwrights": "sources.working_title_playwrights",
     "pinch-n-ouch-theatre": "sources.pinch_n_ouch_theatre",
+    # ===== Healthcare: Piedmont =====
+    "piedmont-healthcare": "sources.piedmont_healthcare",
+    "piedmont-auxiliary": "sources.piedmont_auxiliary",
+    "piedmont-foundation": "sources.piedmont_foundation",
+    "piedmont-cancer-support": "sources.piedmont_cancer_support",
+    "piedmont-classes": "sources.piedmont_classes",
+    "piedmont-fitness": "sources.piedmont_fitness",
 }
 
 

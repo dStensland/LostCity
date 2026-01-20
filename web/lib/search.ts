@@ -31,6 +31,8 @@ export interface SearchFilters {
   geo_center?: [number, number]; // Portal geo filter [lat, lng]
   geo_radius_km?: number;    // Portal geo radius in km
   mood?: MoodId;             // Mood-based filtering (expands to vibes/categories)
+  portal_id?: string;        // Portal-restricted events filter
+  portal_exclusive?: boolean; // If true, only show events for this portal (not public events)
 }
 
 // Rollup types for collapsed event groups
@@ -306,6 +308,22 @@ export async function getFilteredEventsWithSearch(
     // - Show all-day events
     .or(`start_date.gt.${today},end_time.gte.${currentTime},and(end_time.is.null,start_time.gte.${currentTime}),is_all_day.eq.true`);
 
+  // Apply portal restriction filter
+  // If portal_exclusive is true, only show events for this portal (business portals)
+  // If portal_id is set but not exclusive, show events for that portal OR public events
+  // If portal_id is not set, only show public events (hide portal-restricted events)
+  if (filters.portal_id) {
+    if (filters.portal_exclusive) {
+      // Business portals: only show their own events
+      query = query.eq("portal_id", filters.portal_id);
+    } else {
+      // City portals: show portal events + public events
+      query = query.or(`portal_id.eq.${filters.portal_id},portal_id.is.null`);
+    }
+  } else {
+    query = query.is("portal_id", null);
+  }
+
   // Get mood data for potential vibes lookup
   const mood = filters.mood ? getMoodById(filters.mood) : null;
 
@@ -511,14 +529,27 @@ export async function getEventsForMap(
       title,
       start_date,
       start_time,
+      category,
       category_id,
       is_free,
+      is_live,
       venue:venues!inner(id, name, slug, address, neighborhood, city, state, lat, lng, spot_type)
     `
     )
     .gte("start_date", today)
     .not("venues.lat", "is", null)
     .not("venues.lng", "is", null);
+
+  // Apply portal restriction filter
+  if (filters.portal_id) {
+    if (filters.portal_exclusive) {
+      query = query.eq("portal_id", filters.portal_id);
+    } else {
+      query = query.or(`portal_id.eq.${filters.portal_id},portal_id.is.null`);
+    }
+  } else {
+    query = query.is("portal_id", null);
+  }
 
   // Apply search filter (includes venue name search)
   if (filters.search && filters.search.trim()) {
@@ -922,7 +953,8 @@ interface RollupStats {
 async function getRollupStats(
   dateStart: string,
   dateEnd: string,
-  categoryId?: string
+  categoryId?: string,
+  portalId?: string
 ): Promise<RollupStats> {
   // Get events with source rollup behavior
   let query = supabase
@@ -937,6 +969,13 @@ async function getRollupStats(
     )
     .gte("start_date", dateStart)
     .lte("start_date", dateEnd);
+
+  // Apply portal restriction filter
+  if (portalId) {
+    query = query.or(`portal_id.eq.${portalId},portal_id.is.null`);
+  } else {
+    query = query.is("portal_id", null);
+  }
 
   if (categoryId) {
     query = query.eq("category_id", categoryId);
@@ -1024,7 +1063,8 @@ export async function getFilteredEventsWithRollups(
   const rollupStats = await getRollupStats(
     dateRange.start,
     dateRange.end,
-    filters.categories?.[0]
+    filters.categories?.[0],
+    filters.portal_id
   );
 
   const venueIdsToExclude = rollupStats.venueRollups.map((v) => v.venueId);

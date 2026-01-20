@@ -154,7 +154,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             # Look for title
                             if not title and len(check_line) > 5:
                                 if not re.match(r"\d{1,2}[:/]", check_line):
-                                    if not re.match(r"(free|tickets|register|learn more|\$|more info|rsvp)", check_line.lower()):
+                                    # Skip UI elements and CTAs
+                                    skip_patterns = r"(free|tickets|register|learn more|\$|more info|rsvp|view event|upcoming|buy now|get tickets|sold out|→|see all)"
+                                    if not re.match(skip_patterns, check_line.lower()) and "→" not in check_line:
                                         title = check_line
                                         break
 

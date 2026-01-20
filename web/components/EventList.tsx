@@ -141,9 +141,11 @@ interface Props {
   initialEvents: EventWithLocation[];
   initialTotal: number;
   hasActiveFilters: boolean;
+  portalId?: string;
+  portalExclusive?: boolean;
 }
 
-export default function EventList({ initialEvents, initialTotal, hasActiveFilters }: Props) {
+export default function EventList({ initialEvents, initialTotal, hasActiveFilters, portalId, portalExclusive }: Props) {
   const [events, setEvents] = useState<EventWithLocation[]>(initialEvents);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(initialEvents.length < initialTotal);
@@ -204,6 +206,13 @@ export default function EventList({ initialEvents, initialTotal, hasActiveFilter
     const params = new URLSearchParams(searchParamsRef.current);
     params.set("page", nextPage.toString());
     params.delete("view"); // Don't need view param for API
+    // Add portal filters if set
+    if (portalId && portalId !== "default") {
+      params.set("portal_id", portalId);
+    }
+    if (portalExclusive) {
+      params.set("portal_exclusive", "true");
+    }
 
     try {
       const res = await fetch(`/api/events?${params}`);
@@ -227,7 +236,7 @@ export default function EventList({ initialEvents, initialTotal, hasActiveFilter
       isLoadingRef.current = false;
       setIsLoading(false);
     }
-  }, []); // No dependencies - uses refs instead
+  }, [portalId, portalExclusive]); // Include portal params as dependencies
 
   // Intersection Observer for infinite scroll - stable, doesn't depend on changing values
   useEffect(() => {

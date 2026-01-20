@@ -2,28 +2,42 @@
 
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
+import { usePortal } from "@/lib/portal-context";
 
 interface Props {
   portalSlug?: string;
 }
 
-const TABS = [
-  { label: "List", href: "events", isView: true },
-  { label: "For You", href: "feed", isView: true },
-  { label: "Map", href: "map", isView: true },
-  { label: "Spots", href: "/spots", isView: false },
-  { label: "Happening Now", href: "/happening-now", isView: false },
-  { label: "Collections", href: "/collections", isView: false },
-] as const;
+type NavTab = {
+  key: "feed" | "events" | "spots" | "happening_now";
+  defaultLabel: string;
+  href: string;
+  isView: boolean;
+};
+
+const DEFAULT_TABS: NavTab[] = [
+  { key: "feed", defaultLabel: "Feed", href: "feed", isView: true },
+  { key: "events", defaultLabel: "Events", href: "events", isView: true },
+  { key: "spots", defaultLabel: "Spots", href: "spots", isView: true },
+  { key: "happening_now", defaultLabel: "Happening Now", href: "happening-now", isView: true },
+];
 
 export default function MainNav({ portalSlug = "atlanta" }: Props) {
+  const { portal } = usePortal();
+  const navLabels = portal.settings?.nav_labels || {};
+
+  // Build tabs with custom labels
+  const TABS = DEFAULT_TABS.map(tab => ({
+    ...tab,
+    label: navLabels[tab.key] || tab.defaultLabel,
+  }));
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const currentView = searchParams.get("view") || "events";
 
-  const getHref = (tab: typeof TABS[number]) => {
+  const getHref = (tab: NavTab & { label: string }) => {
     if (tab.isView) {
-      if (tab.href === "events") {
+      if (tab.key === "events") {
         return `/${portalSlug}`;
       }
       return `/${portalSlug}?view=${tab.href}`;
@@ -31,12 +45,13 @@ export default function MainNav({ portalSlug = "atlanta" }: Props) {
     return tab.href;
   };
 
-  const isActive = (tab: typeof TABS[number]) => {
+  const isActive = (tab: NavTab & { label: string }) => {
     if (tab.isView) {
       // Check if we're on the portal page with this view
       const isPortalPage = pathname === `/${portalSlug}` || pathname === "/atlanta";
-      if (tab.href === "events") {
-        return isPortalPage && currentView === "events";
+      if (tab.key === "events") {
+        // Events tab is active for both list and map views
+        return isPortalPage && (currentView === "events" || currentView === "map");
       }
       return isPortalPage && currentView === tab.href;
     }
@@ -52,7 +67,7 @@ export default function MainNav({ portalSlug = "atlanta" }: Props) {
             const active = isActive(tab);
             return (
               <Link
-                key={tab.label}
+                key={tab.key}
                 href={getHref(tab)}
                 className={`px-3 py-1.5 rounded-md font-mono text-sm transition-colors ${
                   active

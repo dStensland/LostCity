@@ -30,12 +30,32 @@ export type Portal = {
     og_image_url?: string;
     primary_color?: string;
     secondary_color?: string;
+    accent_color?: string;
     background_color?: string;
+    text_color?: string;
+    muted_color?: string;
+    button_color?: string;
+    button_text_color?: string;
+    border_color?: string;
+    card_color?: string;
     font_heading?: string;
     font_body?: string;
+    theme_mode?: "dark" | "light";
     [key: string]: unknown;
   };
-  settings: Record<string, unknown>;
+  settings: {
+    nav_labels?: {
+      feed?: string;
+      events?: string;
+      spots?: string;
+      happening_now?: string;
+    };
+    meta_description?: string;
+    show_map?: boolean;
+    default_view?: string;
+    show_categories?: boolean;
+    [key: string]: unknown;
+  };
 };
 
 type PortalContextValue = {
