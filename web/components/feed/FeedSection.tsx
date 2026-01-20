@@ -128,10 +128,13 @@ function getSeeAllUrl(section: FeedSectionData, portalSlug: string): string {
 export default function FeedSection({ section, isFirst }: Props) {
   const { portal } = usePortal();
 
+  // Hide images for portals without good image data
+  const hideImages = portal.slug === "piedmont";
+
   // Render based on block type
   switch (section.block_type) {
     case "hero_banner":
-      return <HeroBanner section={section} portalSlug={portal.slug} />;
+      return <HeroBanner section={section} portalSlug={portal.slug} hideImages={hideImages} />;
     case "category_grid":
       return <CategoryGrid section={section} portalSlug={portal.slug} isFirst={isFirst} />;
     case "venue_list":
@@ -142,7 +145,7 @@ export default function FeedSection({ section, isFirst }: Props) {
       return <ExternalLink section={section} />;
     case "event_cards":
     case "event_carousel":
-      return <EventCards section={section} portalSlug={portal.slug} />;
+      return <EventCards section={section} portalSlug={portal.slug} hideImages={hideImages} />;
     case "event_list":
     default:
       return <EventList section={section} portalSlug={portal.slug} />;
@@ -235,7 +238,7 @@ function SocialProofBadge({ count, variant = "default" }: { count: number; varia
 // HERO BANNER - Large featured event
 // ============================================
 
-function HeroBanner({ section, portalSlug }: { section: FeedSectionData; portalSlug: string }) {
+function HeroBanner({ section, portalSlug, hideImages }: { section: FeedSectionData; portalSlug: string; hideImages?: boolean }) {
   const event = section.events[0];
 
   if (!event) {
@@ -255,7 +258,7 @@ function HeroBanner({ section, portalSlug }: { section: FeedSectionData; portalS
         <div
           className="absolute inset-0 bg-gradient-to-br from-[var(--twilight)] to-[var(--void)]"
           style={{
-            backgroundImage: event.image_url ? `url(${event.image_url})` : undefined,
+            backgroundImage: !hideImages && event.image_url ? `url(${event.image_url})` : undefined,
             backgroundSize: "cover",
             backgroundPosition: "center",
           }}
@@ -340,7 +343,7 @@ function HeroBanner({ section, portalSlug }: { section: FeedSectionData; portalS
 // EVENT CARDS - Grid or carousel layout
 // ============================================
 
-function EventCards({ section, portalSlug }: { section: FeedSectionData; portalSlug: string }) {
+function EventCards({ section, portalSlug, hideImages }: { section: FeedSectionData; portalSlug: string; hideImages?: boolean }) {
   const isCarousel = section.layout === "carousel";
   const itemsPerRow = section.items_per_row || 2;
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -448,7 +451,7 @@ function EventCards({ section, portalSlug }: { section: FeedSectionData; portalS
           }
         >
           {section.events.map((event) => (
-            <EventCard key={event.id} event={event} isCarousel={isCarousel} />
+            <EventCard key={event.id} event={event} isCarousel={isCarousel} hideImages={hideImages} />
           ))}
         </div>
 
@@ -484,10 +487,11 @@ function EventCards({ section, portalSlug }: { section: FeedSectionData; portalS
   );
 }
 
-function EventCard({ event, isCarousel }: { event: FeedEvent; isCarousel?: boolean }) {
+function EventCard({ event, isCarousel, hideImages }: { event: FeedEvent; isCarousel?: boolean; hideImages?: boolean }) {
   const categoryColor = event.category ? getCategoryColor(event.category) : null;
   const isPopular = (event.going_count || 0) >= 10;
-  const [imageLoaded, setImageLoaded] = useState(!event.image_url);
+  const showImage = !hideImages && event.image_url;
+  const [imageLoaded, setImageLoaded] = useState(!showImage);
   const [imageError, setImageError] = useState(false);
 
   return (
@@ -500,7 +504,7 @@ function EventCard({ event, isCarousel }: { event: FeedEvent; isCarousel?: boole
     >
       {/* Image with loading state */}
       <div className="h-36 bg-[var(--twilight)] relative overflow-hidden rounded-t-xl">
-        {event.image_url && !imageError && (
+        {showImage && !imageError && (
           <>
             {/* Blur placeholder */}
             {!imageLoaded && (
@@ -508,7 +512,7 @@ function EventCard({ event, isCarousel }: { event: FeedEvent; isCarousel?: boole
             )}
             {/* Actual image */}
             <img
-              src={event.image_url}
+              src={event.image_url!}
               alt=""
               className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${
                 imageLoaded ? "opacity-100" : "opacity-0"
@@ -522,7 +526,7 @@ function EventCard({ event, isCarousel }: { event: FeedEvent; isCarousel?: boole
             />
           </>
         )}
-        {(!event.image_url || imageError) && event.category && (
+        {(!showImage || imageError) && event.category && (
           <div className="h-full flex items-center justify-center">
             <CategoryIcon
               type={event.category}
