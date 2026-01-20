@@ -156,29 +156,52 @@ export default function EventList({ initialEvents, initialTotal, hasActiveFilter
   // Live events count for "Now" banner
   const liveEventCount = useLiveEventCount();
   const loaderRef = useRef<HTMLDivElement>(null);
+  const loadedPagesRef = useRef<Set<number>>(new Set([1])); // Track which pages we've loaded
 
-  const DEBOUNCE_MS = 300;
+  const DEBOUNCE_MS = 500; // Increased debounce
 
   // Reset when filters change (initialEvents will change from server)
   useEffect(() => {
     setEvents(initialEvents);
     setPage(1);
     setHasMore(initialEvents.length < initialTotal);
+    loadedPagesRef.current = new Set([1]); // Reset loaded pages tracker
+    isLoadingRef.current = false; // Reset loading state
   }, [initialEvents, initialTotal]);
+
+  // Use refs to track current values without causing re-renders
+  const pageRef = useRef(page);
+  const hasMoreRef = useRef(hasMore);
+  const searchParamsRef = useRef(searchParams.toString());
+
+  // Keep refs in sync
+  useEffect(() => {
+    pageRef.current = page;
+    hasMoreRef.current = hasMore;
+    searchParamsRef.current = searchParams.toString();
+  }, [page, hasMore, searchParams]);
 
   const loadMore = useCallback(async () => {
     // Debounce: prevent rapid successive calls
     const now = Date.now();
     if (now - lastLoadTime.current < DEBOUNCE_MS) return;
 
-    // Use ref for synchronous check to prevent race conditions
-    if (isLoadingRef.current || !hasMore) return;
+    // Use refs for synchronous check to prevent race conditions
+    if (isLoadingRef.current || !hasMoreRef.current) return;
+
+    const nextPage = pageRef.current + 1;
+
+    // Check if we've already loaded this page
+    if (loadedPagesRef.current.has(nextPage)) {
+      return;
+    }
 
     lastLoadTime.current = now;
     isLoadingRef.current = true;
+    loadedPagesRef.current.add(nextPage); // Mark as loading
     setIsLoading(true);
-    const nextPage = page + 1;
-    const params = new URLSearchParams(searchParams.toString());
+
+    const params = new URLSearchParams(searchParamsRef.current);
     params.set("page", nextPage.toString());
     params.delete("view"); // Don't need view param for API
 
@@ -198,18 +221,20 @@ export default function EventList({ initialEvents, initialTotal, hasActiveFilter
       setHasMore(data.hasMore);
     } catch (error) {
       console.error("Failed to load more events:", error);
+      // Remove from loaded pages so it can be retried
+      loadedPagesRef.current.delete(nextPage);
     } finally {
       isLoadingRef.current = false;
       setIsLoading(false);
     }
-  }, [page, searchParams, hasMore]);
+  }, []); // No dependencies - uses refs instead
 
-  // Intersection Observer for infinite scroll
+  // Intersection Observer for infinite scroll - stable, doesn't depend on changing values
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
-        // Use ref-based check only to avoid stale state issues
-        if (entries[0].isIntersecting && hasMore && !isLoadingRef.current) {
+        // Use ref-based checks only to avoid stale state issues
+        if (entries[0].isIntersecting && hasMoreRef.current && !isLoadingRef.current) {
           loadMore();
         }
       },
@@ -221,7 +246,7 @@ export default function EventList({ initialEvents, initialTotal, hasActiveFilter
     return () => {
       if (currentRef) observer.unobserve(currentRef);
     };
-  }, [hasMore, loadMore]);
+  }, [loadMore]); // loadMore is now stable (no deps)
 
   // Group events by date
   const eventsByDate = useMemo(() => {
