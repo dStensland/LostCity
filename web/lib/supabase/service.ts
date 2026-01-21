@@ -18,19 +18,8 @@ export function createServiceClient() {
   const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
 
   if (!supabaseUrl || !supabaseServiceKey) {
-    console.error("Missing SUPABASE_SERVICE_KEY for service client");
-    // Return a fallback that won't crash but returns empty results
-    return {
-      from: () => ({
-        select: () => ({
-          eq: () => ({ gte: () => ({ lte: () => ({ order: () => ({ limit: () => ({ data: null, error: new Error("Service client not configured") }) }) }) }) }),
-          gte: () => ({ lte: () => ({ order: () => ({ limit: () => ({ data: null, error: new Error("Service client not configured") }) }) }) }),
-          in: () => ({ data: null, error: new Error("Service client not configured") }),
-          data: null,
-          error: new Error("Service client not configured"),
-        }),
-      }),
-    } as unknown as ReturnType<typeof createClient<Database>>;
+    // Throw error - callers should catch this and handle gracefully
+    throw new Error("Missing SUPABASE_SERVICE_KEY for service client");
   }
 
   if (!_serviceClient) {
