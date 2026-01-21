@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState, useRef } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 
@@ -40,6 +40,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const initializedRef = useRef(false);
 
   const supabase = createClient();
 
@@ -66,6 +67,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
+    // Prevent double initialization in React StrictMode
+    if (initializedRef.current) return;
+    initializedRef.current = true;
+
     let isMounted = true;
 
     // Safety timeout - ensure loading is set to false after 3 seconds max
@@ -95,6 +100,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
         }
       } catch (error) {
+        // Ignore AbortError - expected during React StrictMode unmount/remount
+        if (error instanceof Error && error.name === "AbortError") {
+          return;
+        }
         console.error("Error getting initial session:", error);
       } finally {
         if (isMounted) {
