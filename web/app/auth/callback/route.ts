@@ -6,6 +6,17 @@ import type { Database } from "@/lib/types";
 type ProfileInsert = Database["public"]["Tables"]["profiles"]["Insert"];
 type PreferencesInsert = Database["public"]["Tables"]["user_preferences"]["Insert"];
 
+// Sanitize API key - remove any whitespace, control chars, or URL encoding artifacts
+function sanitizeKey(key: string | undefined): string | undefined {
+  if (!key) return undefined;
+  return key
+    .trim()
+    .replace(/[\s\n\r\t]/g, '')
+    .replace(/%0A/gi, '')
+    .replace(/%0D/gi, '')
+    .replace(/[^\x20-\x7E]/g, '');
+}
+
 // Validate redirect URL to prevent Open Redirect attacks
 function isValidRedirect(redirect: string): boolean {
   // Only allow relative URLs starting with / (not //)
@@ -26,8 +37,8 @@ export async function GET(request: NextRequest) {
 
     // Create Supabase client with cookie handling for auth callback
     const supabase = createServerClient<Database>(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      process.env.NEXT_PUBLIC_SUPABASE_URL!.trim(),
+      sanitizeKey(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)!,
       {
         cookies: {
           getAll() {

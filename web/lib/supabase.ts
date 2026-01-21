@@ -1,12 +1,23 @@
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "./types";
 
+// Sanitize API key - remove any whitespace, control chars, or URL encoding artifacts
+function sanitizeKey(key: string | undefined): string | undefined {
+  if (!key) return undefined;
+  return key
+    .trim()
+    .replace(/[\s\n\r\t]/g, '')
+    .replace(/%0A/gi, '')
+    .replace(/%0D/gi, '')
+    .replace(/[^\x20-\x7E]/g, '');
+}
+
 // Lazy-load Supabase client to avoid build-time errors
 let _supabase: SupabaseClient<Database> | null = null;
 
 function getSupabase(): SupabaseClient<Database> {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
+  const supabaseKey = sanitizeKey(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 
   if (!supabaseUrl || !supabaseKey) {
     throw new Error(

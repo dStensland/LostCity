@@ -2,6 +2,17 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import type { CookieOptions } from "@supabase/ssr";
 
+// Sanitize API key - remove any whitespace, control chars, or URL encoding artifacts
+function sanitizeKey(key: string | undefined): string | undefined {
+  if (!key) return undefined;
+  return key
+    .trim()
+    .replace(/[\s\n\r\t]/g, '')
+    .replace(/%0A/gi, '')
+    .replace(/%0D/gi, '')
+    .replace(/[^\x20-\x7E]/g, '');
+}
+
 /**
  * Middleware for subdomain routing and auth session management.
  * - Refreshes Supabase auth sessions on each request
@@ -13,8 +24,8 @@ export async function middleware(request: NextRequest) {
   // Create response that will be modified for auth
   let response = NextResponse.next({ request });
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
+  const supabaseKey = sanitizeKey(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 
   // Skip auth if Supabase isn't configured
   if (!supabaseUrl || !supabaseKey) {
