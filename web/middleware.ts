@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
+import type { CookieOptions } from "@supabase/ssr";
 
 /**
  * Middleware for subdomain routing and auth session management.
@@ -17,8 +18,11 @@ export async function middleware(request: NextRequest) {
 
   // Skip auth if Supabase isn't configured
   if (!supabaseUrl || !supabaseKey) {
-    return handleSubdomainRouting(request, response, null);
+    return handleSubdomainRouting(request, response, null, []);
   }
+
+  // Track cookies that need to be set (with full options)
+  const cookiesToSet: Array<{ name: string; value: string; options: CookieOptions }> = [];
 
   // Create Supabase client for session management
   const supabase = createServerClient(
@@ -29,12 +33,13 @@ export async function middleware(request: NextRequest) {
         getAll() {
           return request.cookies.getAll();
         },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value }) =>
-            request.cookies.set(name, value)
-          );
+        setAll(cookies) {
+          cookies.forEach(({ name, value, options }) => {
+            request.cookies.set(name, value);
+            cookiesToSet.push({ name, value, options });
+          });
           response = NextResponse.next({ request });
-          cookiesToSet.forEach(({ name, value, options }) =>
+          cookies.forEach(({ name, value, options }) =>
             response.cookies.set(name, value, options)
           );
         },
@@ -42,7 +47,7 @@ export async function middleware(request: NextRequest) {
     }
   );
 
-  // Refresh session if expired
+  // Use getUser() to refresh session - this validates the JWT
   const { data: { user } } = await supabase.auth.getUser();
 
   // Protected routes - redirect to login if not authenticated
@@ -58,13 +63,14 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  return handleSubdomainRouting(request, response, user);
+  return handleSubdomainRouting(request, response, user, cookiesToSet);
 }
 
 function handleSubdomainRouting(
   request: NextRequest,
   response: NextResponse,
-  user: unknown
+  user: unknown,
+  cookiesToSet: Array<{ name: string; value: string; options: CookieOptions }>
 ) {
   void user; // Reserved for future user-specific subdomain logic
   const host = request.headers.get("host") || "";
@@ -107,10 +113,10 @@ function handleSubdomainRouting(
       // Remove the portal query param if present
       url.searchParams.delete("portal");
 
-      // Create rewrite response with auth cookies
+      // Create rewrite response with auth cookies (preserve full options)
       const rewriteResponse = NextResponse.rewrite(url);
-      response.cookies.getAll().forEach((cookie) => {
-        rewriteResponse.cookies.set(cookie.name, cookie.value);
+      cookiesToSet.forEach(({ name, value, options }) => {
+        rewriteResponse.cookies.set(name, value, options);
       });
       return rewriteResponse;
     }
