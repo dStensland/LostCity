@@ -195,7 +195,7 @@ export default function SearchBar() {
 
       {/* Suggestions Dropdown */}
       {shouldShowDropdown && (
-        <div className="absolute top-full left-0 right-0 mt-1 border border-[var(--twilight)] rounded-lg shadow-lg z-50 overflow-hidden" style={{ backgroundColor: "var(--card-bg)" }}>
+        <div className="absolute top-full left-0 right-0 mt-1 border border-[var(--twilight)] rounded-lg shadow-lg z-[1050] overflow-hidden" style={{ backgroundColor: "var(--card-bg)" }}>
           {showRecent && (
             <div className="p-2">
               <p className="text-xs text-[var(--muted)] px-2 pb-1 font-medium">Recent</p>

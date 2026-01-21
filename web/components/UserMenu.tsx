@@ -100,7 +100,7 @@ export default function UserMenu() {
 
       {/* Dropdown menu */}
       {isOpen && (
-        <div className="absolute right-0 top-full mt-2 w-48 py-1 bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg shadow-lg z-50">
+        <div className="absolute right-0 top-full mt-2 w-48 py-1 bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg shadow-lg z-[1050]">
           <div className="px-4 py-2 border-b border-[var(--twilight)]">
             <p className="font-mono text-sm text-[var(--cream)]">
               {profile?.display_name || profile?.username}

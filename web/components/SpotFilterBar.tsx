@@ -293,7 +293,7 @@ export default function SpotFilterBar({
 
                 {/* Dropdown menu */}
                 {sortDropdownOpen && (
-                  <div className="absolute right-0 mt-1 w-36 rounded-lg bg-[var(--night)] border border-[var(--twilight)] shadow-lg overflow-hidden z-50">
+                  <div className="absolute right-0 mt-1 w-36 rounded-lg bg-[var(--night)] border border-[var(--twilight)] shadow-lg overflow-hidden z-[1050]">
                     {SORT_OPTIONS.map((option) => (
                       <button
                         key={option.value}
