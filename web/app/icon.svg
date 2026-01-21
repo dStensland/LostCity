@@ -1,0 +1,7 @@
+<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="32" height="32" rx="6" fill="#09090B"/>
+  <!-- L - solid coral block letter -->
+  <path d="M8 4h3v9h7v3H8V4z" fill="#FF6B7A"/>
+  <!-- C - white outline block letter -->
+  <path d="M18 18H8v10h10v-3h-7v-4h7v-3z" fill="none" stroke="#FFFFFF" stroke-width="1.5"/>
+</svg>

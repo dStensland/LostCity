@@ -254,7 +254,7 @@ function HeroBanner({ section, portalSlug, hideImages }: { section: FeedSectionD
     <section className="mb-10">
       <Link
         href={`/${portalSlug}/events/${event.id}`}
-        className="block relative rounded-2xl overflow-hidden group"
+        className="block relative rounded-2xl overflow-hidden group hero-featured coral-glow-hover"
         aria-label={`Featured event: ${event.title}`}
       >
         {/* Background - either image or gradient */}
@@ -519,9 +519,9 @@ function EventCard({ event, isCarousel, hideImages, portalSlug }: { event: FeedE
   return (
     <Link
       href={portalSlug ? `/${portalSlug}/events/${event.id}` : `/events/${event.id}`}
-      className={`group flex flex-col rounded-xl overflow-hidden border transition-all hover:border-[var(--coral)]/30 ${
+      className={`group flex flex-col rounded-xl overflow-hidden border transition-all hover:border-[var(--coral)]/30 coral-glow-hover ${
         isCarousel ? "flex-shrink-0 w-72 snap-start" : ""
-      } ${isPopular ? "border-[var(--coral)]/20" : "border-[var(--twilight)]"}`}
+      } ${isPopular ? "border-[var(--coral)]/20 coral-glow" : "border-[var(--twilight)]"}`}
       style={{ backgroundColor: "var(--card-bg)" }}
     >
       {/* Image - only show if there's an actual image available */}

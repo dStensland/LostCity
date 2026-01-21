@@ -1,0 +1,6 @@
+<svg width="128" height="128" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- LOST text - solid coral -->
+  <text x="16" y="52" font-family="Bebas Neue, sans-serif" font-size="42" font-weight="400" fill="#FF6B7A" letter-spacing="0.02em">LOST</text>
+  <!-- CITY text - white outline -->
+  <text x="16" y="92" font-family="Bebas Neue, sans-serif" font-size="42" font-weight="400" fill="none" stroke="#FFFFFF" stroke-width="1.5" letter-spacing="0.02em">CITY</text>
+</svg>
