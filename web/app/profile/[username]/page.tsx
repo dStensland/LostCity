@@ -4,6 +4,7 @@ import Image from "next/image";
 import PageHeader from "@/components/PageHeader";
 import PageFooter from "@/components/PageFooter";
 import FollowButton from "@/components/FollowButton";
+import FriendButton from "@/components/FriendButton";
 import { createClient } from "@/lib/supabase/server";
 import { formatDistanceToNow } from "date-fns";
 import type { Database } from "@/lib/types";
@@ -123,7 +124,10 @@ export default async function ProfilePage({ params }: Props) {
                   @{profile.username}
                 </p>
               </div>
-              <FollowButton targetUserId={profile.id} />
+              <div className="flex items-center gap-2">
+                <FriendButton targetUserId={profile.id} targetUsername={profile.username} />
+                <FollowButton targetUserId={profile.id} />
+              </div>
             </div>
 
             {profile.bio && (

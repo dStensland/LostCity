@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import type { Event } from "@/lib/supabase";
 import { formatTimeSplit } from "@/lib/formats";
 import CategoryIcon, { getCategoryColor } from "./CategoryIcon";
@@ -15,11 +16,23 @@ type EventCardEvent = Event & {
   } | null;
 };
 
+export type FriendGoing = {
+  user_id: string;
+  status: "going" | "interested";
+  user: {
+    id: string;
+    username: string;
+    display_name: string | null;
+    avatar_url: string | null;
+  };
+};
+
 interface Props {
   event: EventCardEvent;
   index?: number;
   skipAnimation?: boolean;
   portalSlug?: string;
+  friendsGoing?: FriendGoing[];
 }
 
 interface PriceDisplay {
@@ -82,7 +95,7 @@ function formatPrice(
   return null;
 }
 
-export default function EventCard({ event, index = 0, skipAnimation = false, portalSlug }: Props) {
+export default function EventCard({ event, index = 0, skipAnimation = false, portalSlug, friendsGoing = [] }: Props) {
   const { time, period } = formatTimeSplit(event.start_time, event.is_all_day);
   const isLive = event.is_live || false;
   // Only apply stagger animation to first 10 initial items, not infinite scroll items
@@ -166,6 +179,47 @@ export default function EventCard({ event, index = 0, skipAnimation = false, por
               </>
             )}
           </div>
+
+          {/* Friends going row */}
+          {friendsGoing.length > 0 && (
+            <div className="flex items-center gap-1.5 mt-2">
+              {/* Mini avatar stack */}
+              <div className="flex -space-x-1.5">
+                {friendsGoing.slice(0, 3).map((friend) => (
+                  friend.user.avatar_url ? (
+                    <Image
+                      key={friend.user_id}
+                      src={friend.user.avatar_url}
+                      alt={friend.user.display_name || friend.user.username}
+                      width={18}
+                      height={18}
+                      className="w-[18px] h-[18px] rounded-full border border-[var(--void)] object-cover"
+                    />
+                  ) : (
+                    <div
+                      key={friend.user_id}
+                      className="w-[18px] h-[18px] rounded-full border border-[var(--void)] bg-[var(--coral)] flex items-center justify-center text-[0.5rem] font-bold text-[var(--void)]"
+                    >
+                      {(friend.user.display_name || friend.user.username)[0].toUpperCase()}
+                    </div>
+                  )
+                ))}
+              </div>
+              <span className="text-[0.65rem] text-[var(--neon-cyan)]">
+                {friendsGoing.length === 1 ? (
+                  <>
+                    <span className="font-medium">{friendsGoing[0].user.display_name || friendsGoing[0].user.username}</span>
+                    {" "}{friendsGoing[0].status === "going" ? "is going" : "is interested"}
+                  </>
+                ) : (
+                  <>
+                    <span className="font-medium">{friendsGoing.length} friends</span>
+                    {" "}{friendsGoing.some(f => f.status === "going") ? "going" : "interested"}
+                  </>
+                )}
+              </span>
+            </div>
+          )}
         </div>
       </div>
     </Link>

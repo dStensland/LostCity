@@ -9,6 +9,7 @@ import EventGroup from "./EventGroup";
 import { EventCardSkeletonList } from "./EventCardSkeleton";
 import type { EventWithLocation } from "@/lib/search";
 import { useLiveEventCount } from "@/lib/hooks/useLiveEvents";
+import { useFriendsGoing } from "@/lib/use-friends-going";
 
 // Rollup thresholds
 const VENUE_ROLLUP_THRESHOLD = 4;
@@ -204,6 +205,10 @@ export default function EventList({ initialEvents, initialTotal, hasActiveFilter
   // Live events count for "Now" banner
   const liveEventCount = useLiveEventCount();
   const loaderRef = useRef<HTMLDivElement>(null);
+
+  // Friends going data
+  const eventIds = useMemo(() => events.map((e) => e.id), [events]);
+  const { getFriendsForEvent } = useFriendsGoing(eventIds);
 
   // AbortController for cancelling in-flight requests
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -652,6 +657,7 @@ export default function EventList({ initialEvents, initialTotal, hasActiveFilter
                         index={idx}
                         skipAnimation={isInfiniteScrollItem}
                         portalSlug={portalSlug}
+                        friendsGoing={getFriendsForEvent(item.event.id)}
                       />
                     );
                   })}
