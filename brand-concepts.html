@@ -1,0 +1,1343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lost City - Brand Concepts v2</title>
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@400;500;600;700&family=Anton&family=Archivo+Black&family=DM+Sans:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0a0a0a;
+            color: #fff;
+            font-family: 'DM Sans', sans-serif;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 60px 40px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 80px;
+        }
+
+        /* Hero Logo Display */
+        .hero-logo {
+            margin-bottom: 40px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .hero-logo .logo-stack {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            line-height: 0.85;
+        }
+
+        .hero-logo .lost {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 6rem;
+            color: #FF6B7A;
+            letter-spacing: 0.02em;
+        }
+
+        .hero-logo .city {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 6rem;
+            color: transparent;
+            -webkit-text-stroke: 2px #ffffff;
+            letter-spacing: 0.02em;
+        }
+
+        header h1 {
+            font-family: 'DM Sans', sans-serif;
+            font-size: 1.5rem;
+            font-weight: 500;
+            margin-bottom: 16px;
+            color: #666;
+        }
+
+        header p {
+            color: #888;
+            font-size: 1.1rem;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .section {
+            margin-bottom: 100px;
+        }
+
+        .section-title {
+            font-family: 'DM Sans', sans-serif;
+            font-size: 1.4rem;
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: #FF6B7A;
+        }
+
+        .section-desc {
+            color: #666;
+            margin-bottom: 40px;
+            max-width: 700px;
+        }
+
+        /* Logo Analysis */
+        .analysis-card {
+            background: #111;
+            border-radius: 24px;
+            padding: 48px;
+            border: 1px solid #222;
+            margin-bottom: 40px;
+        }
+
+        .analysis-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 48px;
+            align-items: center;
+        }
+
+        .analysis-visual {
+            display: flex;
+            justify-content: center;
+        }
+
+        .analysis-points h3 {
+            font-size: 1.2rem;
+            margin-bottom: 20px;
+            color: #fff;
+        }
+
+        .analysis-points ul {
+            list-style: none;
+        }
+
+        .analysis-points li {
+            color: #888;
+            margin-bottom: 12px;
+            padding-left: 24px;
+            position: relative;
+        }
+
+        .analysis-points li::before {
+            content: '✓';
+            position: absolute;
+            left: 0;
+            color: #FF6B7A;
+        }
+
+        /* Logo Iterations Grid */
+        .concepts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 32px;
+        }
+
+        .concept-card {
+            background: #111;
+            border-radius: 24px;
+            padding: 40px;
+            border: 1px solid #222;
+            transition: all 0.3s ease;
+        }
+
+        .concept-card:hover {
+            border-color: #333;
+            transform: translateY(-4px);
+        }
+
+        .concept-card.recommended {
+            border-color: #FF6B7A;
+            background: linear-gradient(135deg, #1a1012 0%, #111 100%);
+        }
+
+        .concept-card.recommended::before {
+            content: '★ RECOMMENDED';
+            display: block;
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: #FF6B7A;
+            letter-spacing: 2px;
+            margin-bottom: 16px;
+        }
+
+        .concept-name {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #666;
+            margin-bottom: 24px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .logo-display {
+            height: 160px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 24px;
+        }
+
+        .concept-rationale {
+            color: #666;
+            font-size: 0.9rem;
+            line-height: 1.7;
+        }
+
+        /* Stacked Logo Styles */
+        .logo-stack {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            line-height: 0.85;
+        }
+
+        .logo-stack .lost {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 3.5rem;
+            letter-spacing: 0.02em;
+        }
+
+        .logo-stack .city {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 3.5rem;
+            letter-spacing: 0.02em;
+        }
+
+        /* Variation: Original */
+        .var-original .lost { color: #FF6B7A; }
+        .var-original .city { color: transparent; -webkit-text-stroke: 2px #ffffff; }
+
+        /* Variation: Inverted */
+        .var-inverted .lost { color: transparent; -webkit-text-stroke: 2px #FF6B7A; }
+        .var-inverted .city { color: #ffffff; }
+
+        /* Variation: Coral Mono */
+        .var-coral-mono .lost { color: #FF6B7A; }
+        .var-coral-mono .city { color: transparent; -webkit-text-stroke: 2px #FF6B7A; }
+
+        /* Variation: White Mono */
+        .var-white-mono .lost { color: #ffffff; }
+        .var-white-mono .city { color: transparent; -webkit-text-stroke: 2px #ffffff; }
+
+        /* Variation: Gradient */
+        .var-gradient .lost {
+            background: linear-gradient(135deg, #FF6B7A 0%, #FF8F6B 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .var-gradient .city { color: transparent; -webkit-text-stroke: 2px #ffffff; }
+
+        /* Variation: Peach */
+        .var-peach .lost { color: #FFAA7A; }
+        .var-peach .city { color: transparent; -webkit-text-stroke: 2px #ffffff; }
+
+        /* Variation: Hot Pink */
+        .var-hotpink .lost { color: #FF4D6A; }
+        .var-hotpink .city { color: transparent; -webkit-text-stroke: 2px #ffffff; }
+
+        /* Variation: Sunset */
+        .var-sunset .lost { color: #FF8A65; }
+        .var-sunset .city { color: transparent; -webkit-text-stroke: 2px #FFE0B2; }
+
+        /* Inline Logo */
+        .logo-inline {
+            display: flex;
+            align-items: baseline;
+            gap: 12px;
+        }
+
+        .logo-inline .lost, .logo-inline .city {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 2.8rem;
+            letter-spacing: 0.02em;
+        }
+
+        /* Compact Logo */
+        .logo-compact {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            line-height: 0.8;
+        }
+
+        .logo-compact .lost, .logo-compact .city {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 2.2rem;
+            letter-spacing: 0.02em;
+        }
+
+        /* App Icon Styles */
+        .app-icon {
+            width: 80px;
+            height: 80px;
+            background: #1a1a1a;
+            border-radius: 18px;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            justify-content: center;
+            padding-left: 14px;
+            line-height: 0.75;
+        }
+
+        .app-icon .lost, .app-icon .city {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 1.4rem;
+            letter-spacing: 0.02em;
+        }
+
+        .app-icon.icon-coral {
+            background: #FF6B7A;
+        }
+
+        .app-icon.icon-coral .lost { color: #1a1a1a; }
+        .app-icon.icon-coral .city { color: transparent; -webkit-text-stroke: 1.5px #1a1a1a; }
+
+        .app-icon.icon-dark .lost { color: #FF6B7A; }
+        .app-icon.icon-dark .city { color: transparent; -webkit-text-stroke: 1.5px #ffffff; }
+
+        .app-icon.icon-gradient {
+            background: linear-gradient(135deg, #FF6B7A 0%, #FF8F6B 100%);
+        }
+        .app-icon.icon-gradient .lost { color: #1a1a1a; }
+        .app-icon.icon-gradient .city { color: transparent; -webkit-text-stroke: 1.5px #1a1a1a; }
+
+        .icons-row {
+            display: flex;
+            gap: 24px;
+            justify-content: center;
+        }
+
+        /* Color Palettes */
+        .palettes-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 32px;
+        }
+
+        .palette-card {
+            background: #111;
+            border-radius: 20px;
+            padding: 32px;
+            border: 1px solid #222;
+        }
+
+        .palette-card.recommended {
+            border-color: #FF6B7A;
+        }
+
+        .palette-name {
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .palette-name .badge {
+            font-size: 0.65rem;
+            background: #FF6B7A;
+            color: #000;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+
+        .palette-subtitle {
+            color: #666;
+            font-size: 0.85rem;
+            margin-bottom: 20px;
+        }
+
+        .color-swatches {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+
+        .swatch {
+            flex: 1;
+            height: 56px;
+            border-radius: 12px;
+            position: relative;
+        }
+
+        .swatch-label {
+            position: absolute;
+            bottom: -20px;
+            left: 0;
+            font-size: 0.65rem;
+            color: #555;
+            font-family: monospace;
+        }
+
+        .color-uses {
+            margin-top: 32px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .color-use-tag {
+            font-size: 0.75rem;
+            padding: 4px 10px;
+            border-radius: 6px;
+            background: #1a1a1a;
+            color: #888;
+        }
+
+        /* Typography */
+        .type-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 32px;
+        }
+
+        .type-card {
+            background: #111;
+            border-radius: 20px;
+            padding: 40px;
+            border: 1px solid #222;
+        }
+
+        .type-card.recommended {
+            border-color: #FF6B7A;
+        }
+
+        .type-name {
+            color: #666;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .type-sample {
+            margin-bottom: 16px;
+        }
+
+        .type-sample .lost, .type-sample .city {
+            font-size: 3rem;
+            letter-spacing: 0.02em;
+            line-height: 0.85;
+            display: block;
+        }
+
+        .type-sample.bebas .lost, .type-sample.bebas .city { font-family: 'Bebas Neue', sans-serif; }
+        .type-sample.oswald .lost, .type-sample.oswald .city { font-family: 'Oswald', sans-serif; font-weight: 700; }
+        .type-sample.anton .lost, .type-sample.anton .city { font-family: 'Anton', sans-serif; }
+        .type-sample.archivo .lost, .type-sample.archivo .city { font-family: 'Archivo Black', sans-serif; }
+
+        .type-sample .lost { color: #FF6B7A; }
+        .type-sample .city { color: transparent; -webkit-text-stroke: 2px #ffffff; }
+
+        .type-use {
+            color: #888;
+            font-size: 0.9rem;
+        }
+
+        .type-pairing {
+            margin-top: 24px;
+            padding-top: 24px;
+            border-top: 1px solid #222;
+        }
+
+        .type-pairing-label {
+            font-size: 0.7rem;
+            color: #555;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+        }
+
+        .type-pairing-sample {
+            font-size: 1rem;
+            color: #aaa;
+        }
+
+        .type-pairing-sample.dm-sans { font-family: 'DM Sans', sans-serif; }
+        .type-pairing-sample.inter { font-family: 'Inter', sans-serif; }
+
+        /* Landing Page Mockups */
+        .landing-concepts {
+            display: grid;
+            gap: 48px;
+        }
+
+        .landing-card {
+            background: #0d0d0d;
+            border-radius: 24px;
+            overflow: hidden;
+            border: 1px solid #222;
+        }
+
+        .landing-card.recommended {
+            border-color: #FF6B7A;
+        }
+
+        .landing-preview {
+            height: 450px;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .landing-info {
+            padding: 28px 32px;
+            border-top: 1px solid #222;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .landing-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .landing-desc {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .landing-badge {
+            font-size: 0.7rem;
+            background: #FF6B7A;
+            color: #000;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-weight: 600;
+        }
+
+        /* Landing 1: Clean Glow */
+        .preview-glow {
+            background: #0a0a0a;
+        }
+
+        .preview-glow .glow-effect {
+            position: absolute;
+            top: -50px;
+            width: 500px;
+            height: 300px;
+            background: radial-gradient(ellipse, rgba(255, 107, 122, 0.2) 0%, transparent 70%);
+            animation: pulse-glow 4s ease-in-out infinite;
+        }
+
+        @keyframes pulse-glow {
+            0%, 100% { opacity: 0.7; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.05); }
+        }
+
+        .preview-glow .logo-stack {
+            z-index: 1;
+            margin-bottom: 20px;
+            align-items: flex-start;
+        }
+
+        .preview-glow .logo-stack .lost {
+            font-size: 5rem;
+            color: #FF6B7A;
+        }
+
+        .preview-glow .logo-stack .city {
+            font-size: 5rem;
+            color: transparent;
+            -webkit-text-stroke: 2px #fff;
+        }
+
+        .preview-glow .tagline {
+            color: #666;
+            font-size: 1.1rem;
+            z-index: 1;
+            margin-bottom: 32px;
+        }
+
+        .preview-glow .cta {
+            background: #FF6B7A;
+            color: #0a0a0a;
+            padding: 14px 32px;
+            border-radius: 10px;
+            font-weight: 600;
+            z-index: 1;
+        }
+
+        /* Landing 2: Split */
+        .preview-split {
+            background: linear-gradient(135deg, #0a0a0a 50%, #12080a 50%);
+            flex-direction: row;
+            padding: 0 60px;
+            gap: 80px;
+        }
+
+        .preview-split .left-side {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .preview-split .logo-stack .lost {
+            font-size: 6rem;
+            color: #FF6B7A;
+        }
+
+        .preview-split .logo-stack .city {
+            font-size: 6rem;
+            color: transparent;
+            -webkit-text-stroke: 2px #fff;
+        }
+
+        .preview-split .right-side {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .preview-split .tagline {
+            font-size: 1.8rem;
+            color: #fff;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+
+        .preview-split .sub-tagline {
+            color: #666;
+            margin-bottom: 32px;
+        }
+
+        .preview-split .cta {
+            background: #FF6B7A;
+            color: #0a0a0a;
+            padding: 14px 28px;
+            border-radius: 10px;
+            font-weight: 600;
+            display: inline-block;
+            width: fit-content;
+        }
+
+        /* Landing 3: Cards */
+        .preview-cards {
+            background: #0a0a0a;
+            position: relative;
+        }
+
+        .preview-cards .bg-pattern {
+            position: absolute;
+            inset: 0;
+            background-image:
+                linear-gradient(rgba(255, 107, 122, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 107, 122, 0.03) 1px, transparent 1px);
+            background-size: 50px 50px;
+        }
+
+        .preview-cards .floating-events {
+            position: absolute;
+            inset: 0;
+        }
+
+        .preview-cards .event-card {
+            position: absolute;
+            background: #161616;
+            border: 1px solid #252525;
+            border-radius: 12px;
+            padding: 14px 18px;
+            animation: float 5s ease-in-out infinite;
+        }
+
+        .preview-cards .event-card .event-type {
+            font-size: 0.65rem;
+            color: #FF6B7A;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 4px;
+        }
+
+        .preview-cards .event-card .event-name {
+            font-size: 0.9rem;
+            color: #fff;
+        }
+
+        .preview-cards .event-card:nth-child(1) { top: 15%; left: 8%; animation-delay: 0s; }
+        .preview-cards .event-card:nth-child(2) { top: 65%; left: 5%; animation-delay: 1.5s; }
+        .preview-cards .event-card:nth-child(3) { top: 20%; right: 6%; animation-delay: 0.8s; }
+        .preview-cards .event-card:nth-child(4) { top: 60%; right: 10%; animation-delay: 2s; }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); opacity: 0.7; }
+            50% { transform: translateY(-8px); opacity: 1; }
+        }
+
+        .preview-cards .center-content {
+            z-index: 1;
+            text-align: center;
+        }
+
+        .preview-cards .logo-stack .lost {
+            font-size: 4.5rem;
+            color: #FF6B7A;
+        }
+
+        .preview-cards .logo-stack .city {
+            font-size: 4.5rem;
+            color: transparent;
+            -webkit-text-stroke: 2px #fff;
+        }
+
+        .preview-cards .tagline {
+            color: #888;
+            margin: 16px 0 28px;
+        }
+
+        .preview-cards .cta-row {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+        }
+
+        .preview-cards .cta {
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 500;
+            font-size: 0.95rem;
+        }
+
+        .preview-cards .cta.primary {
+            background: #FF6B7A;
+            color: #0a0a0a;
+        }
+
+        .preview-cards .cta.secondary {
+            background: transparent;
+            color: #888;
+            border: 1px solid #333;
+        }
+
+        /* Recommendations */
+        .rec-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 24px;
+        }
+
+        .rec-card {
+            background: linear-gradient(135deg, #1a1012 0%, #111 100%);
+            border: 1px solid #2a1a1d;
+            border-radius: 16px;
+            padding: 28px;
+        }
+
+        .rec-card h4 {
+            font-size: 1rem;
+            margin-bottom: 12px;
+            color: #FF6B7A;
+        }
+
+        .rec-card p {
+            color: #888;
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+
+        /* Usage Examples */
+        .usage-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 24px;
+        }
+
+        .usage-card {
+            background: #111;
+            border-radius: 16px;
+            overflow: hidden;
+            border: 1px solid #222;
+        }
+
+        .usage-preview {
+            height: 140px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #0d0d0d;
+        }
+
+        .usage-label {
+            padding: 16px;
+            font-size: 0.85rem;
+            color: #888;
+            border-top: 1px solid #222;
+        }
+
+        /* Favicon/Small */
+        .favicon-display {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .favicon {
+            width: 32px;
+            height: 32px;
+            background: #1a1a1a;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 0.9rem;
+            color: #FF6B7A;
+        }
+
+        .favicon.light {
+            background: #FF6B7A;
+            color: #0a0a0a;
+        }
+
+        footer {
+            text-align: center;
+            padding: 60px 0;
+            border-top: 1px solid #1a1a1a;
+            margin-top: 60px;
+            color: #444;
+        }
+
+        @media (max-width: 900px) {
+            .analysis-grid {
+                grid-template-columns: 1fr;
+            }
+            .preview-split {
+                flex-direction: column;
+                gap: 32px;
+                padding: 40px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="hero-logo">
+                <div class="logo-stack">
+                    <span class="lost">LOST</span>
+                    <span class="city">CITY</span>
+                </div>
+            </div>
+            <h1>Brand Identity System</h1>
+            <p>Building on the stacked solid/outline wordmark — exploring color, type, and application.</p>
+        </header>
+
+        <!-- Logo Analysis -->
+        <section class="section">
+            <h2 class="section-title">Why This Works</h2>
+            <p class="section-desc">Breaking down the design decisions that make this mark effective.</p>
+
+            <div class="analysis-card">
+                <div class="analysis-grid">
+                    <div class="analysis-visual">
+                        <div class="logo-stack var-original" style="transform: scale(1.3);">
+                            <span class="lost" style="font-size: 4rem;">LOST</span>
+                            <span class="city" style="font-size: 4rem;">CITY</span>
+                        </div>
+                    </div>
+                    <div class="analysis-points">
+                        <h3>Design Strengths</h3>
+                        <ul>
+                            <li><strong>Solid vs. Outline contrast</strong> — Creates visual tension and memorability. The filled "LOST" grounds the mark while the outlined "CITY" feels open, explorable.</li>
+                            <li><strong>Stacked layout</strong> — Compact, works as a square-ish icon. The vertical read is deliberate: you're lost first, then you find the city.</li>
+                            <li><strong>Coral pink (#FF6B7A)</strong> — Warmer and more alive than amber. Stands out without being aggressive. Works on dark and light.</li>
+                            <li><strong>Bold condensed type</strong> — Confident, urban, slightly editorial. Reads well at small sizes despite the tight tracking.</li>
+                            <li><strong>White outline</strong> — Clean, modern. The stroke weight matches the visual weight of the fill, creating balance.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Logo Iterations -->
+        <section class="section">
+            <h2 class="section-title">Logo Variations</h2>
+            <p class="section-desc">Different color treatments and layouts for various contexts.</p>
+
+            <div class="concepts-grid">
+                <!-- Original -->
+                <div class="concept-card recommended">
+                    <div class="concept-name">Primary Mark</div>
+                    <div class="logo-display">
+                        <div class="logo-stack var-original">
+                            <span class="lost">LOST</span>
+                            <span class="city">CITY</span>
+                        </div>
+                    </div>
+                    <p class="concept-rationale">The core mark. Coral "LOST" + white outline "CITY" on dark. Use this as the default everywhere.</p>
+                </div>
+
+                <!-- Inverted -->
+                <div class="concept-card">
+                    <div class="concept-name">Inverted</div>
+                    <div class="logo-display">
+                        <div class="logo-stack var-inverted">
+                            <span class="lost">LOST</span>
+                            <span class="city">CITY</span>
+                        </div>
+                    </div>
+                    <p class="concept-rationale">Flipped treatment — outline "LOST" + solid "CITY". Use sparingly for variation, like hover states or secondary placements.</p>
+                </div>
+
+                <!-- Coral Mono -->
+                <div class="concept-card">
+                    <div class="concept-name">Coral Monochrome</div>
+                    <div class="logo-display">
+                        <div class="logo-stack var-coral-mono">
+                            <span class="lost">LOST</span>
+                            <span class="city">CITY</span>
+                        </div>
+                    </div>
+                    <p class="concept-rationale">Single-color version in coral. Good for merchandise, watermarks, or when you need brand color consistency.</p>
+                </div>
+
+                <!-- White Mono -->
+                <div class="concept-card">
+                    <div class="concept-name">White Monochrome</div>
+                    <div class="logo-display">
+                        <div class="logo-stack var-white-mono">
+                            <span class="lost">LOST</span>
+                            <span class="city">CITY</span>
+                        </div>
+                    </div>
+                    <p class="concept-rationale">All-white version for dark photo backgrounds or video overlays where color would clash.</p>
+                </div>
+
+                <!-- Gradient -->
+                <div class="concept-card">
+                    <div class="concept-name">Gradient</div>
+                    <div class="logo-display">
+                        <div class="logo-stack var-gradient">
+                            <span class="lost">LOST</span>
+                            <span class="city">CITY</span>
+                        </div>
+                    </div>
+                    <p class="concept-rationale">Coral-to-peach gradient for special moments — launch announcements, featured content, celebration states.</p>
+                </div>
+
+                <!-- Hot Pink -->
+                <div class="concept-card">
+                    <div class="concept-name">Hot Pink Variant</div>
+                    <div class="logo-display">
+                        <div class="logo-stack var-hotpink">
+                            <span class="lost">LOST</span>
+                            <span class="city">CITY</span>
+                        </div>
+                    </div>
+                    <p class="concept-rationale">More saturated, nightlife-forward. Consider for music/club event contexts or a "after dark" mode.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- App Icons -->
+        <section class="section">
+            <h2 class="section-title">App Icon Treatments</h2>
+            <p class="section-desc">How the mark works at small sizes and in icon contexts.</p>
+
+            <div class="concepts-grid">
+                <div class="concept-card recommended">
+                    <div class="concept-name">Dark Background</div>
+                    <div class="logo-display">
+                        <div class="icons-row">
+                            <div class="app-icon icon-dark">
+                                <span class="lost">LOST</span>
+                                <span class="city">CITY</span>
+                            </div>
+                            <div class="favicon">LC</div>
+                            <div class="favicon" style="width: 24px; height: 24px; font-size: 0.7rem; border-radius: 4px;">LC</div>
+                        </div>
+                    </div>
+                    <p class="concept-rationale">Primary app icon. The dark background lets the coral and white pop. Scales down well to favicon.</p>
+                </div>
+
+                <div class="concept-card">
+                    <div class="concept-name">Coral Background</div>
+                    <div class="logo-display">
+                        <div class="icons-row">
+                            <div class="app-icon icon-coral">
+                                <span class="lost">LOST</span>
+                                <span class="city">CITY</span>
+                            </div>
+                            <div class="favicon light">LC</div>
+                            <div class="favicon light" style="width: 24px; height: 24px; font-size: 0.7rem; border-radius: 4px;">LC</div>
+                        </div>
+                    </div>
+                    <p class="concept-rationale">Inverted for light mode contexts or when you want the icon to stand out more in an app grid.</p>
+                </div>
+
+                <div class="concept-card">
+                    <div class="concept-name">Gradient Background</div>
+                    <div class="logo-display">
+                        <div class="icons-row">
+                            <div class="app-icon icon-gradient">
+                                <span class="lost">LOST</span>
+                                <span class="city">CITY</span>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="concept-rationale">Premium feel with the coral-to-peach gradient. More visually distinctive in crowded app drawers.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Color Palette -->
+        <section class="section">
+            <h2 class="section-title">Color Palette</h2>
+            <p class="section-desc">A system built around the coral primary, with supporting colors for UI states and content categories.</p>
+
+            <div class="palettes-grid">
+                <div class="palette-card recommended">
+                    <div class="palette-name">Primary Palette <span class="badge">CORE</span></div>
+                    <div class="palette-subtitle">The essential colors for the brand</div>
+                    <div class="color-swatches">
+                        <div class="swatch" style="background: #0a0a0a;">
+                            <span class="swatch-label">#0A0A0A</span>
+                        </div>
+                        <div class="swatch" style="background: #FF6B7A;">
+                            <span class="swatch-label">#FF6B7A</span>
+                        </div>
+                        <div class="swatch" style="background: #FFFFFF; border: 1px solid #333;">
+                            <span class="swatch-label">#FFFFFF</span>
+                        </div>
+                        <div class="swatch" style="background: #888888;">
+                            <span class="swatch-label">#888888</span>
+                        </div>
+                    </div>
+                    <div class="color-uses">
+                        <span class="color-use-tag">Background</span>
+                        <span class="color-use-tag">Primary Action</span>
+                        <span class="color-use-tag">Text</span>
+                        <span class="color-use-tag">Secondary Text</span>
+                    </div>
+                </div>
+
+                <div class="palette-card">
+                    <div class="palette-name">Extended Palette</div>
+                    <div class="palette-subtitle">Supporting colors for UI and categories</div>
+                    <div class="color-swatches">
+                        <div class="swatch" style="background: #FF8F6B;">
+                            <span class="swatch-label">#FF8F6B</span>
+                        </div>
+                        <div class="swatch" style="background: #4ADE80;">
+                            <span class="swatch-label">#4ADE80</span>
+                        </div>
+                        <div class="swatch" style="background: #60A5FA;">
+                            <span class="swatch-label">#60A5FA</span>
+                        </div>
+                        <div class="swatch" style="background: #C084FC;">
+                            <span class="swatch-label">#C084FC</span>
+                        </div>
+                    </div>
+                    <div class="color-uses">
+                        <span class="color-use-tag">Hover/Gradient</span>
+                        <span class="color-use-tag">Free/Success</span>
+                        <span class="color-use-tag">Community</span>
+                        <span class="color-use-tag">Arts/Music</span>
+                    </div>
+                </div>
+
+                <div class="palette-card">
+                    <div class="palette-name">Surface Colors</div>
+                    <div class="palette-subtitle">Cards, borders, and elevation</div>
+                    <div class="color-swatches">
+                        <div class="swatch" style="background: #111111;">
+                            <span class="swatch-label">#111111</span>
+                        </div>
+                        <div class="swatch" style="background: #1A1A1A;">
+                            <span class="swatch-label">#1A1A1A</span>
+                        </div>
+                        <div class="swatch" style="background: #222222;">
+                            <span class="swatch-label">#222222</span>
+                        </div>
+                        <div class="swatch" style="background: #333333;">
+                            <span class="swatch-label">#333333</span>
+                        </div>
+                    </div>
+                    <div class="color-uses">
+                        <span class="color-use-tag">Card BG</span>
+                        <span class="color-use-tag">Elevated</span>
+                        <span class="color-use-tag">Borders</span>
+                        <span class="color-use-tag">Dividers</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Typography -->
+        <section class="section">
+            <h2 class="section-title">Typography</h2>
+            <p class="section-desc">Font options that match the bold, condensed character of the logo.</p>
+
+            <div class="type-grid">
+                <div class="type-card recommended">
+                    <div class="type-name">Bebas Neue <span class="badge" style="font-size: 0.6rem; background: #FF6B7A; color: #000; padding: 2px 6px; border-radius: 3px;">RECOMMENDED</span></div>
+                    <div class="type-sample bebas">
+                        <span class="lost">LOST</span>
+                        <span class="city">CITY</span>
+                    </div>
+                    <p class="type-use">The original. Clean, geometric, excellent letter spacing. The most versatile — works at any size without losing clarity.</p>
+                    <div class="type-pairing">
+                        <div class="type-pairing-label">Pair with</div>
+                        <div class="type-pairing-sample dm-sans">DM Sans for body text. Clean, modern, highly readable at small sizes.</div>
+                    </div>
+                </div>
+
+                <div class="type-card">
+                    <div class="type-name">Oswald</div>
+                    <div class="type-sample oswald">
+                        <span class="lost">LOST</span>
+                        <span class="city">CITY</span>
+                    </div>
+                    <p class="type-use">Slightly heavier, more industrial. The curved letters (O, S) add subtle warmth. Good alternative if Bebas feels too stark.</p>
+                    <div class="type-pairing">
+                        <div class="type-pairing-label">Pair with</div>
+                        <div class="type-pairing-sample inter">Inter for body text. Neutral, professional, great for longer content.</div>
+                    </div>
+                </div>
+
+                <div class="type-card">
+                    <div class="type-name">Anton</div>
+                    <div class="type-sample anton">
+                        <span class="lost">LOST</span>
+                        <span class="city">CITY</span>
+                    </div>
+                    <p class="type-use">More aggressive, tighter. Almost brutalist. Could work for a more underground/DIY vibe, but may feel harsh.</p>
+                    <div class="type-pairing">
+                        <div class="type-pairing-label">Pair with</div>
+                        <div class="type-pairing-sample dm-sans">DM Sans softens the aggression while maintaining modernity.</div>
+                    </div>
+                </div>
+
+                <div class="type-card">
+                    <div class="type-name">Archivo Black</div>
+                    <div class="type-sample archivo">
+                        <span class="lost">LOST</span>
+                        <span class="city">CITY</span>
+                    </div>
+                    <p class="type-use">Wider, more squat. Less condensed than the others. Feels more approachable but loses some of the urban edge.</p>
+                    <div class="type-pairing">
+                        <div class="type-pairing-label">Pair with</div>
+                        <div class="type-pairing-sample inter">Inter maintains the geometric harmony.</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Landing Page Mockups -->
+        <section class="section">
+            <h2 class="section-title">Landing Page Mockups</h2>
+            <p class="section-desc">How the new logo works in context.</p>
+
+            <div class="landing-concepts">
+                <div class="landing-card recommended">
+                    <div class="landing-preview preview-glow">
+                        <div class="glow-effect"></div>
+                        <div class="logo-stack">
+                            <span class="lost">LOST</span>
+                            <span class="city">CITY</span>
+                        </div>
+                        <div class="tagline">Find what's happening tonight</div>
+                        <div class="cta">Explore Atlanta</div>
+                    </div>
+                    <div class="landing-info">
+                        <div>
+                            <div class="landing-title">Coral Glow</div>
+                            <div class="landing-desc">Minimal with a subtle pulsing glow in the brand color. Elegant, focused, memorable.</div>
+                        </div>
+                        <div class="landing-badge">RECOMMENDED</div>
+                    </div>
+                </div>
+
+                <div class="landing-card">
+                    <div class="landing-preview preview-split">
+                        <div class="left-side">
+                            <div class="logo-stack">
+                                <span class="lost">LOST</span>
+                                <span class="city">CITY</span>
+                            </div>
+                        </div>
+                        <div class="right-side">
+                            <div class="tagline">Your city, unlocked.</div>
+                            <div class="sub-tagline">Events, spots, and community in Atlanta</div>
+                            <div class="cta">Get Started</div>
+                        </div>
+                    </div>
+                    <div class="landing-info">
+                        <div>
+                            <div class="landing-title">Split Layout</div>
+                            <div class="landing-desc">Logo on left, messaging on right. More editorial, allows for longer copy. Good for explaining the value prop.</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="landing-card">
+                    <div class="landing-preview preview-cards">
+                        <div class="bg-pattern"></div>
+                        <div class="floating-events">
+                            <div class="event-card">
+                                <div class="event-type">Live Music</div>
+                                <div class="event-name">Jazz at Blind Willie's</div>
+                            </div>
+                            <div class="event-card">
+                                <div class="event-type">Theater</div>
+                                <div class="event-name">Alliance Theatre</div>
+                            </div>
+                            <div class="event-card">
+                                <div class="event-type">Community</div>
+                                <div class="event-name">BeltLine Art Walk</div>
+                            </div>
+                            <div class="event-card">
+                                <div class="event-type">Food</div>
+                                <div class="event-name">Ponce City Market</div>
+                            </div>
+                        </div>
+                        <div class="center-content">
+                            <div class="logo-stack">
+                                <span class="lost">LOST</span>
+                                <span class="city">CITY</span>
+                            </div>
+                            <div class="tagline">Discover Atlanta's hidden gems</div>
+                            <div class="cta-row">
+                                <div class="cta primary">Enter Atlanta</div>
+                                <div class="cta secondary">Other Cities</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="landing-info">
+                        <div>
+                            <div class="landing-title">Floating Events</div>
+                            <div class="landing-desc">Shows the product immediately. The floating cards hint at the variety inside. More complex but more compelling.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Usage Examples -->
+        <section class="section">
+            <h2 class="section-title">Usage Examples</h2>
+            <p class="section-desc">The logo in various real-world contexts.</p>
+
+            <div class="usage-grid">
+                <div class="usage-card">
+                    <div class="usage-preview" style="background: #0a0a0a;">
+                        <div class="logo-stack var-original" style="transform: scale(0.6);">
+                            <span class="lost">LOST</span>
+                            <span class="city">CITY</span>
+                        </div>
+                    </div>
+                    <div class="usage-label">Nav header (dark mode)</div>
+                </div>
+
+                <div class="usage-card">
+                    <div class="usage-preview" style="background: #f5f5f5;">
+                        <div class="logo-stack" style="transform: scale(0.6);">
+                            <span class="lost" style="color: #FF6B7A;">LOST</span>
+                            <span class="city" style="color: transparent; -webkit-text-stroke: 2px #1a1a1a;">CITY</span>
+                        </div>
+                    </div>
+                    <div class="usage-label">Nav header (light mode)</div>
+                </div>
+
+                <div class="usage-card">
+                    <div class="usage-preview" style="background: linear-gradient(135deg, #1a0a0d 0%, #0a0a0a 100%);">
+                        <div class="logo-stack var-gradient" style="transform: scale(0.7);">
+                            <span class="lost">LOST</span>
+                            <span class="city">CITY</span>
+                        </div>
+                    </div>
+                    <div class="usage-label">Email header</div>
+                </div>
+
+                <div class="usage-card">
+                    <div class="usage-preview" style="background: url('data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect fill=%22%23333%22 width=%22100%22 height=%22100%22/></svg>') center/cover;">
+                        <div class="logo-stack var-white-mono" style="transform: scale(0.5);">
+                            <span class="lost">LOST</span>
+                            <span class="city">CITY</span>
+                        </div>
+                    </div>
+                    <div class="usage-label">Photo overlay / watermark</div>
+                </div>
+
+                <div class="usage-card">
+                    <div class="usage-preview" style="background: #FF6B7A;">
+                        <div class="logo-stack" style="transform: scale(0.6);">
+                            <span class="lost" style="color: #0a0a0a;">LOST</span>
+                            <span class="city" style="color: transparent; -webkit-text-stroke: 2px #0a0a0a;">CITY</span>
+                        </div>
+                    </div>
+                    <div class="usage-label">Merch / sticker</div>
+                </div>
+
+                <div class="usage-card">
+                    <div class="usage-preview" style="background: #0a0a0a;">
+                        <div class="logo-compact var-original">
+                            <span class="lost">LOST</span>
+                            <span class="city">CITY</span>
+                        </div>
+                    </div>
+                    <div class="usage-label">Mobile nav (compact)</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Recommendations -->
+        <section class="section">
+            <h2 class="section-title">Recommendations</h2>
+            <p class="section-desc">Next steps for implementing this identity.</p>
+
+            <div class="rec-grid">
+                <div class="rec-card">
+                    <h4>1. Lock in the Primary Mark</h4>
+                    <p>Use the coral (#FF6B7A) + white outline version as the default everywhere. Create SVG versions at multiple sizes (16px, 32px, 64px, 128px, 512px).</p>
+                </div>
+                <div class="rec-card">
+                    <h4>2. Update the Landing Page</h4>
+                    <p>Implement the "Coral Glow" concept — it's minimal but alive. Update the tagline to "Find what's happening tonight" for more urgency.</p>
+                </div>
+                <div class="rec-card">
+                    <h4>3. Adopt Bebas Neue + DM Sans</h4>
+                    <p>Bebas for the logo and section headers, DM Sans for everything else. Keep the current monospace for times/dates — it works well.</p>
+                </div>
+                <div class="rec-card">
+                    <h4>4. Replace Amber with Coral</h4>
+                    <p>Swap #F5A623 → #FF6B7A across the site. The coral is warmer, more distinctive, and aligns with the new mark.</p>
+                </div>
+                <div class="rec-card">
+                    <h4>5. Create Dark/Light Icon Variants</h4>
+                    <p>Ship the dark background icon as primary. Have the coral background version ready for light mode or contexts where dark doesn't work.</p>
+                </div>
+                <div class="rec-card">
+                    <h4>6. Add Subtle Glow Effects</h4>
+                    <p>Use the coral glow sparingly — on the landing hero, on featured events, on hover states. Don't overdo it, but let it add warmth.</p>
+                </div>
+            </div>
+        </section>
+
+        <footer>
+            <p>Lost City Brand System — v2 — January 2026</p>
+        </footer>
+    </div>
+</body>
+</html>

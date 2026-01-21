@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Outfit, Instrument_Serif, JetBrains_Mono, Space_Grotesk } from "next/font/google";
+import { Outfit, Instrument_Serif, JetBrains_Mono, Space_Grotesk, Bebas_Neue } from "next/font/google";
 import { AuthProvider } from "@/lib/auth-context";
 import { ToastProvider } from "@/components/Toast";
 import DarkHoursTheme from "@/components/DarkHoursTheme";
@@ -27,6 +27,12 @@ const spaceGrotesk = Space_Grotesk({
   subsets: ["latin"],
 });
 
+const bebasNeue = Bebas_Neue({
+  weight: "400",
+  variable: "--font-bebas",
+  subsets: ["latin"],
+});
+
 export const metadata: Metadata = {
   title: "Lost City - Discover Local Events",
   description: "Discover local events near you. AI-powered event aggregation from 20+ sources.",
@@ -44,7 +50,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${outfit.variable} ${instrumentSerif.variable} ${jetbrainsMono.variable} ${spaceGrotesk.variable} antialiased`}>
+      <body className={`${outfit.variable} ${instrumentSerif.variable} ${jetbrainsMono.variable} ${spaceGrotesk.variable} ${bebasNeue.variable} antialiased`}>
         {/* Ambient glow effect */}
         <div className="ambient-glow" aria-hidden="true" />
         <AuthProvider>

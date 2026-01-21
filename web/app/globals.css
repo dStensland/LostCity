@@ -10,9 +10,10 @@
   --soft: #A1A1AA;
   --cream: #FAFAF9;
 
-  /* Legacy accent gradient (keep for compatibility) */
-  --rose: #E8912D;
-  --coral: #E8912D;
+  /* Brand colors */
+  --rose: #FF6B7A;
+  --coral: #FF6B7A;
+  --coral-light: #FF8F6B;
   --gold: #FFD93D;
 
   /* Neon accent palette */

@@ -7,17 +7,41 @@ interface LogoProps {
 }
 
 export default function Logo({ size = "md", href = "/", className = "" }: LogoProps) {
-  const sizeClasses = {
-    sm: "text-lg",
-    md: "text-xl",
-    lg: "text-2xl",
+  const sizeConfig = {
+    sm: { fontSize: "1.5rem", lineHeight: 0.85 },
+    md: { fontSize: "2rem", lineHeight: 0.85 },
+    lg: { fontSize: "3.5rem", lineHeight: 0.85 },
   };
 
+  const config = sizeConfig[size];
+
   const content = (
-    <span className={`logo-text font-bold tracking-tight ${sizeClasses[size]} relative inline-block`}>
-      Lost City
-      {/* Gradient underline - uses portal primary if set */}
-      <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-gradient-to-r from-[var(--portal-primary,var(--neon-magenta))] to-[var(--neon-cyan)] transition-all duration-300 group-hover:w-full" />
+    <span
+      className={`inline-flex flex-col items-start`}
+      style={{ lineHeight: config.lineHeight }}
+    >
+      <span
+        className="font-[var(--font-bebas)] tracking-[0.02em] text-[var(--coral)]"
+        style={{
+          fontFamily: "var(--font-bebas), sans-serif",
+          fontSize: config.fontSize,
+          fontWeight: 400,
+        }}
+      >
+        LOST
+      </span>
+      <span
+        className="font-[var(--font-bebas)] tracking-[0.02em]"
+        style={{
+          fontFamily: "var(--font-bebas), sans-serif",
+          fontSize: config.fontSize,
+          fontWeight: 400,
+          color: "transparent",
+          WebkitTextStroke: "1.5px #ffffff",
+        }}
+      >
+        CITY
+      </span>
     </span>
   );
 
