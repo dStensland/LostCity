@@ -140,7 +140,7 @@ export default function DirectionsDropdown({
       </button>
 
       {isOpen && (
-        <div className="absolute top-full right-0 mt-1 w-48 bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg shadow-xl z-[1050] overflow-hidden">
+        <div className="absolute top-full right-0 mt-1 w-48 max-w-[calc(100vw-2rem)] bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg shadow-xl z-[1050] overflow-hidden">
           {navOptions.map((option) => (
             <a
               key={option.name}
