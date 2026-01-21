@@ -326,7 +326,9 @@ export default function RSVPButton({
       {/* Dropdown Menu */}
       {menuOpen && (
         <div
-          className="absolute top-full mt-2 right-0 w-48 bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg shadow-lg z-[1050] overflow-hidden"
+          className={`absolute right-0 w-48 bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg shadow-lg z-[1050] overflow-hidden ${
+            variant === "compact" ? "bottom-full mb-2" : "top-full mt-2"
+          }`}
           role="menu"
           aria-orientation="vertical"
         >
