@@ -25,9 +25,9 @@ export function useLiveEvents(): UseLiveEventsResult {
   const [events, setEvents] = useState<LiveEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
-  const supabase = createClient();
   const channelRef = useRef<RealtimeChannel | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const mountedRef = useRef(true);
 
   const fetchLiveEvents = useCallback(async (signal?: AbortSignal) => {
     try {
@@ -35,20 +35,29 @@ export function useLiveEvents(): UseLiveEventsResult {
       if (!response.ok) throw new Error("Failed to fetch live events");
 
       const data = await response.json();
-      setEvents(data.events);
-      setError(null);
+      if (mountedRef.current) {
+        setEvents(data.events);
+        setError(null);
+      }
     } catch (err) {
       // Ignore abort errors - they're expected during cleanup
       if (err instanceof Error && err.name === "AbortError") {
         return;
       }
-      setError(err instanceof Error ? err : new Error("Unknown error"));
+      if (mountedRef.current) {
+        setError(err instanceof Error ? err : new Error("Unknown error"));
+      }
     } finally {
-      setLoading(false);
+      if (mountedRef.current) {
+        setLoading(false);
+      }
     }
   }, []);
 
   useEffect(() => {
+    mountedRef.current = true;
+    const supabase = createClient();
+
     // Create abort controller for cleanup
     abortControllerRef.current = new AbortController();
     const signal = abortControllerRef.current.signal;
@@ -93,15 +102,17 @@ export function useLiveEvents(): UseLiveEventsResult {
       .subscribe();
 
     return () => {
+      mountedRef.current = false;
       // Abort any in-flight requests
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
       }
       if (channelRef.current) {
         supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
       }
     };
-  }, [supabase, fetchLiveEvents]);
+  }, [fetchLiveEvents]); // Only depends on fetchLiveEvents which is stable
 
   return {
     events,
@@ -118,22 +129,28 @@ export function useLiveEvents(): UseLiveEventsResult {
  */
 export function useLiveEventCount(): number {
   const [count, setCount] = useState(0);
-  const supabase = createClient();
+  const channelRef = useRef<RealtimeChannel | null>(null);
+  const mountedRef = useRef(true);
 
   useEffect(() => {
+    mountedRef.current = true;
+    const supabase = createClient();
+
     async function fetchCount() {
       const { count: liveCount } = await supabase
         .from("events")
         .select("*", { count: "exact", head: true })
         .eq("is_live", true);
 
-      setCount(liveCount || 0);
+      if (mountedRef.current) {
+        setCount(liveCount || 0);
+      }
     }
 
     fetchCount();
 
     // Subscribe to changes
-    const channel = supabase
+    channelRef.current = supabase
       .channel("live-event-count")
       .on(
         "postgres_changes",
@@ -149,9 +166,13 @@ export function useLiveEventCount(): number {
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      mountedRef.current = false;
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
+      }
     };
-  }, [supabase]);
+  }, []); // Empty deps - supabase client is a singleton
 
   return count;
 }

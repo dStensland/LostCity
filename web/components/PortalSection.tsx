@@ -1,5 +1,26 @@
 import Link from "next/link";
 import type { PortalSection as PortalSectionType } from "@/lib/portal-sections";
+import { getCategoryColor } from "./CategoryIcon";
+
+// Get reflection color class based on category
+function getReflectionClass(category: string | null): string {
+  if (!category) return "";
+  const reflectionMap: Record<string, string> = {
+    music: "reflect-music",
+    comedy: "reflect-comedy",
+    art: "reflect-art",
+    theater: "reflect-theater",
+    film: "reflect-film",
+    community: "reflect-community",
+    food_drink: "reflect-food",
+    food: "reflect-food",
+    sports: "reflect-sports",
+    fitness: "reflect-fitness",
+    nightlife: "reflect-nightlife",
+    family: "reflect-family",
+  };
+  return reflectionMap[category] || "";
+}
 
 interface PortalSectionProps {
   section: PortalSectionType;
@@ -36,12 +57,18 @@ export function PortalSection({ section, portalSlug }: PortalSectionProps) {
             const dayOfWeek = date.toLocaleDateString("en-US", { weekday: "short" }).toUpperCase();
             const dayOfMonth = date.getDate();
             const month = date.toLocaleDateString("en-US", { month: "short" }).toUpperCase();
+            const categoryColor = event.category_id ? getCategoryColor(event.category_id) : null;
+            const reflectionClass = getReflectionClass(event.category_id);
 
             return (
               <Link
                 key={item.id}
                 href={portalSlug ? `/${portalSlug}/events/${event.id}` : `/events/${event.id}`}
-                className="group flex items-start gap-4 p-3 bg-[var(--night)] hover:bg-[var(--dusk)] rounded-lg border border-[var(--twilight)] hover:border-[var(--portal-primary,var(--neon-magenta))]/30 transition-all"
+                className={`group flex items-start gap-4 p-3 bg-[var(--night)] hover:bg-[var(--dusk)] rounded-lg border border-[var(--twilight)] hover:border-[var(--portal-primary,var(--neon-magenta))]/30 transition-all card-atmospheric ${reflectionClass}`}
+                style={{
+                  "--glow-color": categoryColor || "var(--portal-primary, var(--neon-magenta))",
+                  "--reflection-color": categoryColor ? `color-mix(in srgb, ${categoryColor} 15%, transparent)` : undefined,
+                } as React.CSSProperties}
               >
                 {/* Date block */}
                 <div className="flex-shrink-0 text-center w-14">

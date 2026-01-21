@@ -5,8 +5,16 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import FollowButton from "@/components/FollowButton";
-import CategoryIcon, { getCategoryColor } from "@/components/CategoryIcon";
+import CategoryIcon, { getCategoryColor, CATEGORY_CONFIG } from "@/components/CategoryIcon";
+import { EventsBadge } from "@/components/Badge";
 import type { Producer } from "./page";
+
+// Event categories that producers can create events in
+const EVENT_CATEGORIES = [
+  "music", "comedy", "art", "theater", "film", "community",
+  "food_drink", "sports", "fitness", "nightlife", "family",
+  "dance", "learning", "wellness", "outdoors"
+] as const;
 
 // Org type configuration with colors and labels
 const ORG_TYPE_CONFIG: Record<string, { label: string; color: string }> = {
@@ -33,6 +41,7 @@ const ORG_TYPES = {
 interface Props {
   producers: Producer[];
   selectedType: string;
+  selectedCategories: string[];
   searchQuery: string;
 }
 
@@ -49,6 +58,7 @@ function getDomainFromUrl(url: string): string {
 export default function CommunityContent({
   producers,
   selectedType,
+  selectedCategories,
   searchQuery,
 }: Props) {
   const router = useRouter();
@@ -61,6 +71,21 @@ export default function CommunityContent({
       params.delete("type");
     } else {
       params.set("type", type);
+    }
+    const query = params.toString();
+    router.push(`/community${query ? `?${query}` : ""}`, { scroll: false });
+  };
+
+  const handleCategoryToggle = (category: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    const newCategories = selectedCategories.includes(category)
+      ? selectedCategories.filter((c) => c !== category)
+      : [...selectedCategories, category];
+
+    if (newCategories.length > 0) {
+      params.set("category", newCategories.join(","));
+    } else {
+      params.delete("category");
     }
     const query = params.toString();
     router.push(`/community${query ? `?${query}` : ""}`, { scroll: false });
@@ -150,6 +175,39 @@ export default function CommunityContent({
         </div>
       </section>
 
+      {/* Category Filter */}
+      <section className="py-3 border-b border-[var(--twilight)] overflow-x-auto scrollbar-hide">
+        <div className="max-w-3xl mx-auto px-4">
+          <div className="flex items-center gap-2">
+            <span className="font-mono text-[0.6rem] text-[var(--muted)] uppercase tracking-wider whitespace-nowrap">
+              Creates:
+            </span>
+            <div className="flex gap-1.5">
+              {EVENT_CATEGORIES.map((cat) => {
+                const isSelected = selectedCategories.includes(cat);
+                const config = CATEGORY_CONFIG[cat];
+                const color = config?.color || "var(--muted)";
+                return (
+                  <button
+                    key={cat}
+                    onClick={() => handleCategoryToggle(cat)}
+                    className={`flex items-center gap-1 px-2 py-1 rounded-full font-mono text-[0.65rem] font-medium whitespace-nowrap transition-all ${
+                      isSelected
+                        ? "text-[var(--void)]"
+                        : "bg-[var(--twilight)]/50 text-[var(--muted)] hover:text-[var(--cream)]"
+                    }`}
+                    style={isSelected ? { backgroundColor: color } : undefined}
+                  >
+                    <CategoryIcon type={cat} size={12} glow={isSelected ? "none" : "subtle"} />
+                    {config?.label || cat}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Results Count */}
       <div className="max-w-3xl mx-auto px-4 border-b border-[var(--twilight)]">
         <p className="font-mono text-xs text-[var(--muted)] py-3">
@@ -170,30 +228,34 @@ export default function CommunityContent({
                 <Link
                   key={producer.id}
                   href={`/community/${producer.slug}`}
-                  className="block p-5 rounded-xl border border-[var(--twilight)] transition-all hover:border-[var(--coral)]/50 group"
-                  style={{ backgroundColor: "var(--card-bg)" }}
+                  className="block p-5 rounded-xl border border-[var(--twilight)] transition-all hover:border-[var(--coral)]/50 group card-atmospheric relative"
+                  style={{
+                    backgroundColor: "var(--card-bg)",
+                    "--glow-color": orgConfig?.color || "var(--coral)",
+                    "--reflection-color": orgConfig?.color ? `color-mix(in srgb, ${orgConfig.color} 15%, transparent)` : undefined,
+                  } as React.CSSProperties}
                 >
                   <div className="flex items-start gap-4">
-                    {/* Logo - Larger size */}
+                    {/* Logo */}
                     <div className="flex-shrink-0">
                       {producer.logo_url ? (
                         <Image
                           src={producer.logo_url}
                           alt={producer.name}
-                          width={72}
-                          height={72}
+                          width={64}
+                          height={64}
                           className="rounded-xl object-cover"
-                          style={{ width: 72, height: 72 }}
+                          style={{ width: 64, height: 64 }}
                         />
                       ) : (
                         <div
-                          className="w-[72px] h-[72px] rounded-xl flex items-center justify-center"
+                          className="w-16 h-16 rounded-xl flex items-center justify-center"
                           style={{
                             backgroundColor: orgConfig?.color ? `${orgConfig.color}20` : "var(--twilight)",
                           }}
                         >
                           <svg
-                            className="w-8 h-8"
+                            className="w-7 h-7"
                             fill="none"
                             stroke="currentColor"
                             viewBox="0 0 24 24"
@@ -209,13 +271,13 @@ export default function CommunityContent({
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
-                          <h3 className="text-lg text-[var(--cream)] font-medium truncate group-hover:text-[var(--coral)] transition-colors">
+                          <h3 className="text-base text-[var(--cream)] font-medium truncate group-hover:text-[var(--coral)] transition-colors">
                             {producer.name}
                           </h3>
                           <div className="flex items-center gap-2 mt-1">
                             {/* Org Type Badge */}
                             <span
-                              className="inline-flex items-center px-2 py-0.5 rounded-md text-[0.65rem] font-mono font-medium uppercase tracking-wider"
+                              className="inline-flex items-center px-2 py-0.5 rounded-md text-[0.6rem] font-mono font-medium uppercase tracking-wider"
                               style={{
                                 backgroundColor: orgConfig?.color ? `${orgConfig.color}20` : "var(--twilight)",
                                 color: orgConfig?.color || "var(--muted)",
@@ -224,7 +286,7 @@ export default function CommunityContent({
                               {orgConfig?.label || producer.org_type.replace(/_/g, " ")}
                             </span>
                             {producer.neighborhood && (
-                              <span className="text-[0.65rem] text-[var(--muted)] font-mono">
+                              <span className="text-[0.6rem] text-[var(--muted)] font-mono">
                                 {producer.neighborhood}
                               </span>
                             )}
@@ -233,55 +295,42 @@ export default function CommunityContent({
                         <FollowButton targetProducerId={producer.id} size="sm" />
                       </div>
 
-                      {/* Event Count - Prominent display */}
-                      {hasEvents && (
-                        <div className="mt-3 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[var(--coral)]/10 border border-[var(--coral)]/20">
-                          <svg className="w-4 h-4 text-[var(--coral)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                          </svg>
-                          <span className="text-[var(--coral)] font-mono text-sm font-medium">
-                            {producer.event_count} upcoming event{producer.event_count !== 1 ? "s" : ""}
-                          </span>
-                        </div>
-                      )}
-
                       {producer.description && (
-                        <p className="mt-3 text-sm text-[var(--soft)] line-clamp-2">
+                        <p className="mt-2 text-sm text-[var(--soft)] line-clamp-2">
                           {producer.description}
                         </p>
                       )}
 
                       {/* Category tags - Using CategoryIcon colors */}
                       {producer.categories && producer.categories.length > 0 && (
-                        <div className="mt-3 flex flex-wrap gap-1.5">
-                          {producer.categories.slice(0, 5).map((cat) => {
+                        <div className="mt-2 flex flex-wrap gap-1">
+                          {producer.categories.slice(0, 4).map((cat) => {
                             const color = getCategoryColor(cat);
                             return (
                               <span
                                 key={cat}
-                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[0.6rem] font-mono uppercase tracking-wider"
+                                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[0.55rem] font-mono uppercase tracking-wider"
                                 style={{
                                   backgroundColor: `${color}15`,
                                   color: color,
                                 }}
                               >
-                                <CategoryIcon type={cat} size={10} />
+                                <CategoryIcon type={cat} size={9} />
                                 {cat.replace(/_/g, " ")}
                               </span>
                             );
                           })}
                         </div>
                       )}
-
-                      {/* View profile hint */}
-                      <div className="mt-4 flex items-center gap-2 text-[var(--muted)] group-hover:text-[var(--coral)] transition-colors">
-                        <span className="font-mono text-xs">View profile</span>
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                        </svg>
-                      </div>
                     </div>
                   </div>
+
+                  {/* Event Count - Bottom right badge */}
+                  {hasEvents && (
+                    <div className="absolute bottom-3 right-3">
+                      <EventsBadge count={producer.event_count!} />
+                    </div>
+                  )}
                 </Link>
               );
             })}

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 import { usePortal } from "@/lib/portal-context";
 import FeedSection, { type FeedSectionData } from "./feed/FeedSection";
+import SerendipityFeed from "./SerendipityFeed";
 
 type FeedSettings = {
   feed_type?: "default" | "sections" | "custom";
@@ -159,11 +160,17 @@ export default function FeedView() {
     );
   }
 
-  // Render sections
+  // Render sections with serendipity moments interspersed
   return (
     <div className="py-6">
-      {sections.map((section) => (
-        <FeedSection key={section.id} section={section} />
+      {sections.map((section, index) => (
+        <div key={section.id}>
+          <FeedSection section={section} isFirst={index === 0} />
+          {/* Insert serendipity moment after every 2nd section */}
+          {index > 0 && index % 2 === 1 && index < sections.length - 1 && (
+            <SerendipityFeed portalSlug={portal.slug} position={index} />
+          )}
+        </div>
       ))}
     </div>
   );

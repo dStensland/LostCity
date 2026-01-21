@@ -252,8 +252,16 @@ export async function getSpotsWithEventCounts(
   // Get all venues
   let venueQuery = supabase.from("venues").select("*").order("name");
 
+  // Support multiple types separated by comma
   if (type && type !== "all") {
-    venueQuery = venueQuery.or(`spot_type.eq.${type},spot_types.cs.{${type}}`);
+    const types = type.split(",").filter(Boolean);
+    if (types.length === 1) {
+      venueQuery = venueQuery.or(`spot_type.eq.${types[0]},spot_types.cs.{${types[0]}}`);
+    } else if (types.length > 1) {
+      // Build OR query for multiple types
+      const typeConditions = types.map(t => `spot_type.eq.${t}`).join(",");
+      venueQuery = venueQuery.or(typeConditions);
+    }
   } else if (category === "venues") {
     // Filter to event venues only
     venueQuery = venueQuery.in("spot_type", [...VENUE_TYPES]);
@@ -270,8 +278,14 @@ export async function getSpotsWithEventCounts(
     }
   }
 
+  // Support multiple neighborhoods separated by comma
   if (neighborhood && neighborhood !== "all") {
-    venueQuery = venueQuery.eq("neighborhood", neighborhood);
+    const hoods = neighborhood.split(",").filter(Boolean);
+    if (hoods.length === 1) {
+      venueQuery = venueQuery.eq("neighborhood", hoods[0]);
+    } else if (hoods.length > 1) {
+      venueQuery = venueQuery.in("neighborhood", hoods);
+    }
   }
 
   // Apply text search filter

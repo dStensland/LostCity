@@ -135,8 +135,12 @@ export default function PortalCommunityView({ portalId, portalSlug, portalName }
             <Link
               key={producer.id}
               href={`/community/${producer.slug}`}
-              className="block p-5 rounded-xl border border-[var(--twilight)] card-event-hover group"
-              style={{ backgroundColor: "var(--card-bg)", "--glow-color": orgConfig?.color || "var(--coral)" } as React.CSSProperties}
+              className="block p-5 rounded-xl border border-[var(--twilight)] card-atmospheric group"
+              style={{
+                backgroundColor: "var(--card-bg)",
+                "--glow-color": orgConfig?.color || "var(--coral)",
+                "--reflection-color": orgConfig?.color ? `color-mix(in srgb, ${orgConfig.color} 15%, transparent)` : undefined,
+              } as React.CSSProperties}
             >
               <div className="flex items-start gap-4">
                 {/* Logo */}

@@ -94,6 +94,7 @@ async function getProducersWithCounts(): Promise<Producer[]> {
 type Props = {
   searchParams: Promise<{
     type?: string;
+    category?: string;
     search?: string;
   }>;
 };
@@ -101,15 +102,23 @@ type Props = {
 export default async function CommunityPage({ searchParams }: Props) {
   const params = await searchParams;
   const selectedType = params.type || "all";
+  const selectedCategories = params.category?.split(",").filter(Boolean) || [];
   const searchQuery = params.search || "";
 
   const producers = await getProducersWithCounts();
 
-  // Filter by type and search
+  // Filter by type, category, and search
   let filteredProducers = producers;
 
   if (selectedType && selectedType !== "all") {
     filteredProducers = filteredProducers.filter((p) => p.org_type === selectedType);
+  }
+
+  // Filter by event categories (producers who create events in these categories)
+  if (selectedCategories.length > 0) {
+    filteredProducers = filteredProducers.filter((p) =>
+      p.categories?.some((cat) => selectedCategories.includes(cat))
+    );
   }
 
   if (searchQuery) {
@@ -134,6 +143,7 @@ export default async function CommunityPage({ searchParams }: Props) {
         <CommunityContent
           producers={filteredProducers}
           selectedType={selectedType}
+          selectedCategories={selectedCategories}
           searchQuery={searchQuery}
         />
       </Suspense>

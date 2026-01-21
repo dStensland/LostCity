@@ -13,6 +13,7 @@ type Props = {
   searchParams: Promise<{
     type?: string;
     hood?: string;
+    vibe?: string;
     search?: string;
     view?: string;
     sort?: string;
@@ -27,11 +28,11 @@ export default async function SpotsPage({ searchParams }: Props) {
   const viewMode = (params.view as "list" | "type" | "neighborhood") || "type";
   const sortBy = (params.sort as SortOption) || "events";
 
-  // Fetch all spots (no category filter)
+  // Fetch spots with all selected filters
   const spots = await getSpotsWithEventCounts(
-    selectedTypes[0] || "all",
-    "",
-    selectedHoods[0] || "all",
+    selectedTypes.length > 0 ? selectedTypes.join(",") : "all",
+    params.vibe || "",
+    selectedHoods.length > 0 ? selectedHoods.join(",") : "all",
     searchQuery
   );
 

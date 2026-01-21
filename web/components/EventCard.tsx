@@ -95,13 +95,36 @@ function formatPrice(
   return null;
 }
 
+// Get reflection color class based on category
+function getReflectionClass(category: string | null): string {
+  if (!category) return "";
+  const reflectionMap: Record<string, string> = {
+    music: "reflect-music",
+    comedy: "reflect-comedy",
+    art: "reflect-art",
+    theater: "reflect-theater",
+    film: "reflect-film",
+    community: "reflect-community",
+    food_drink: "reflect-food",
+    food: "reflect-food",
+    sports: "reflect-sports",
+    fitness: "reflect-fitness",
+    nightlife: "reflect-nightlife",
+    family: "reflect-family",
+  };
+  return reflectionMap[category] || "";
+}
+
 export default function EventCard({ event, index = 0, skipAnimation = false, portalSlug, friendsGoing = [] }: Props) {
   const { time, period } = formatTimeSplit(event.start_time, event.is_all_day);
   const isLive = event.is_live || false;
   // Only apply stagger animation to first 10 initial items, not infinite scroll items
   const staggerClass = !skipAnimation && index < 10 ? `stagger-${index + 1}` : "";
-  const animationClass = skipAnimation ? "" : "animate-fade-in";
+  const animationClass = skipAnimation ? "" : "animate-card-emerge";
   const categoryColor = event.category ? getCategoryColor(event.category) : null;
+  const reflectionClass = getReflectionClass(event.category);
+  // Add live heat class for live events
+  const liveHeatClass = isLive ? "card-live-heat" : "";
 
   const price = formatPrice(
     event.is_free,
@@ -116,12 +139,13 @@ export default function EventCard({ event, index = 0, skipAnimation = false, por
   return (
     <Link
       href={portalSlug ? `/${portalSlug}/events/${event.id}` : `/events/${event.id}`}
-      className={`block p-3 mb-2 rounded-lg border border-[var(--twilight)] card-event-hover ${animationClass} ${staggerClass} group overflow-hidden`}
+      className={`block p-3 mb-4 rounded-lg border border-[var(--twilight)] card-atmospheric ${reflectionClass} ${liveHeatClass} ${animationClass} ${staggerClass} group overflow-hidden`}
       style={{
         borderLeftWidth: categoryColor ? "3px" : undefined,
         borderLeftColor: categoryColor || undefined,
         backgroundColor: "var(--card-bg)",
         "--glow-color": categoryColor || "var(--neon-magenta)",
+        "--reflection-color": categoryColor ? `color-mix(in srgb, ${categoryColor} 10%, transparent)` : undefined,
       } as React.CSSProperties}
     >
       <div className="flex gap-3">

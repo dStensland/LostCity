@@ -17,7 +17,8 @@ const CATEGORY_ROLLUP_THRESHOLD = 5;
 const ROLLUP_CATEGORIES = ["community"];
 
 // Infinite scroll configuration
-const DEBOUNCE_MS = 300;
+const DEBOUNCE_MS = 150; // Faster response for smoother UX
+const SCROLL_MARGIN = "200px"; // Conservative trigger distance
 const MAX_RETRIES = 3;
 const RETRY_DELAY_BASE = 1000; // Exponential backoff base
 const MAX_EVENTS = 500; // Prevent memory bloat
@@ -182,8 +183,15 @@ interface ScrollState {
   page: number;
   hasMore: boolean;
   isLoading: boolean;
+  isFetchingPage: boolean; // Separate flag for page fetches vs filter resets
   error: string | null;
   retryCount: number;
+}
+
+// Track loaded pages with their version to prevent stale page loads
+interface LoadedPagesTracker {
+  version: number;
+  pages: Set<number>;
 }
 
 export default function EventList({ initialEvents, initialTotal, hasActiveFilters = false, portalId, portalExclusive, portalSlug }: Props) {
@@ -193,6 +201,7 @@ export default function EventList({ initialEvents, initialTotal, hasActiveFilter
     page: 1,
     hasMore: initialEvents ? initialEvents.length < (initialTotal || 0) : true,
     isLoading: !initialEvents, // Start loading if no initial data
+    isFetchingPage: false,
     error: null,
     retryCount: 0,
   });
@@ -217,8 +226,8 @@ export default function EventList({ initialEvents, initialTotal, hasActiveFilter
   // Debounce timer ref
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Track loaded pages for current version
-  const loadedPagesRef = useRef<Set<number>>(new Set([1]));
+  // Track loaded pages with version to prevent stale page loads
+  const loadedPagesRef = useRef<LoadedPagesTracker>({ version: 0, pages: new Set([1]) });
 
   // Fetch initial data client-side when no server data provided
   useEffect(() => {
@@ -256,9 +265,10 @@ export default function EventList({ initialEvents, initialTotal, hasActiveFilter
           page: 1,
           hasMore: data.hasMore,
           isLoading: false,
+          isFetchingPage: false,
           error: null,
         }));
-        loadedPagesRef.current = new Set([1]);
+        loadedPagesRef.current = { version: 0, pages: new Set([1]) };
         initialEventIds.current = new Set((data.events || []).map((e: EventWithLocation) => e.id));
         setInitialLoadComplete(true);
       } catch (error) {
@@ -283,7 +293,7 @@ export default function EventList({ initialEvents, initialTotal, hasActiveFilter
     // Skip on initial mount
     if (!initialLoadComplete) return;
 
-    // Cancel any in-flight requests
+    // Cancel any in-flight requests immediately
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
       abortControllerRef.current = null;
@@ -295,32 +305,37 @@ export default function EventList({ initialEvents, initialTotal, hasActiveFilter
       debounceTimerRef.current = null;
     }
 
+    // Calculate new version - this must happen synchronously
+    const newVersion = scrollState.version + 1;
+
     // If we have server data, use it
     if (initialEvents && initialEvents.length > 0) {
       setEvents(initialEvents);
-      setScrollState(prev => ({
-        version: prev.version + 1,
+      setScrollState({
+        version: newVersion,
         page: 1,
         hasMore: initialEvents.length < (initialTotal || 0),
         isLoading: false,
+        isFetchingPage: false,
         error: null,
         retryCount: 0,
-      }));
-      loadedPagesRef.current = new Set([1]);
+      });
+      loadedPagesRef.current = { version: newVersion, pages: new Set([1]) };
       initialEventIds.current = new Set(initialEvents.map(e => e.id));
     } else {
       // Client-side: refetch on filter change
-      setScrollState(prev => ({
-        version: prev.version + 1,
+      setScrollState({
+        version: newVersion,
         page: 1,
         hasMore: true,
         isLoading: true,
+        isFetchingPage: false,
         error: null,
         retryCount: 0,
-      }));
-      loadedPagesRef.current = new Set();
+      });
+      loadedPagesRef.current = { version: newVersion, pages: new Set() };
 
-      // Trigger a refetch
+      // Trigger a refetch with version tracking
       const params = new URLSearchParams(searchParams.toString());
       params.set("page", "1");
       params.delete("view");
@@ -330,37 +345,62 @@ export default function EventList({ initialEvents, initialTotal, hasActiveFilter
       const controller = new AbortController();
       abortControllerRef.current = controller;
 
+      // Capture version at request time for staleness check
+      const requestVersion = newVersion;
+
       fetch(`/api/events?${params}`, { signal: controller.signal })
-        .then(res => res.json())
+        .then(res => {
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          return res.json();
+        })
         .then(data => {
-          setEvents(data.events || []);
-          setScrollState(prev => ({
-            ...prev,
-            page: 1,
-            hasMore: data.hasMore,
-            isLoading: false,
-          }));
-          loadedPagesRef.current = new Set([1]);
-          initialEventIds.current = new Set((data.events || []).map((e: EventWithLocation) => e.id));
+          // CRITICAL: Check if version has changed since request started
+          setScrollState(prev => {
+            if (prev.version !== requestVersion) {
+              // Version changed - this response is stale, discard it
+              return prev;
+            }
+            return {
+              ...prev,
+              page: 1,
+              hasMore: data.hasMore,
+              isLoading: false,
+              isFetchingPage: false,
+              error: null,
+            };
+          });
+
+          // Only update events if version matches
+          if (loadedPagesRef.current.version === requestVersion) {
+            setEvents(data.events || []);
+            loadedPagesRef.current = { version: requestVersion, pages: new Set([1]) };
+            initialEventIds.current = new Set((data.events || []).map((e: EventWithLocation) => e.id));
+          }
         })
         .catch(err => {
-          if (err.name !== "AbortError") {
-            setScrollState(prev => ({ ...prev, isLoading: false, error: "Failed to load events" }));
-          }
+          if (err.name === "AbortError") return;
+
+          setScrollState(prev => {
+            // Only set error if version still matches
+            if (prev.version !== requestVersion) return prev;
+            return { ...prev, isLoading: false, isFetchingPage: false, error: "Failed to load events" };
+          });
         });
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams, initialEvents, initialTotal, portalId, portalExclusive, initialLoadComplete]);
 
   // Load more function - stable reference with all deps captured via refs
   const loadMore = useCallback(async (isRetry = false) => {
     setScrollState(prev => {
-      // Don't load if already loading, no more pages, or hit max events
-      if (prev.isLoading || !prev.hasMore) return prev;
+      // Don't load if already loading, fetching page, no more pages, or hit max events
+      if (prev.isLoading || prev.isFetchingPage || !prev.hasMore) return prev;
 
       const nextPage = prev.page + 1;
 
-      // Check if already loaded this page
-      if (loadedPagesRef.current.has(nextPage)) {
+      // Check if already loaded this page for current version
+      const tracker = loadedPagesRef.current;
+      if (tracker.version === prev.version && tracker.pages.has(nextPage)) {
         return prev;
       }
 
@@ -369,31 +409,37 @@ export default function EventList({ initialEvents, initialTotal, hasActiveFilter
         return { ...prev, hasMore: false };
       }
 
-      // Start loading - we'll do the actual fetch outside this setState
+      // Start page fetch - use isFetchingPage to distinguish from filter reset loading
       return {
         ...prev,
-        isLoading: true,
+        isFetchingPage: true,
         error: null,
         retryCount: isRetry ? prev.retryCount : 0,
       };
     });
   }, [events.length]);
 
-  // Effect to perform the actual fetch when isLoading becomes true
+  // Effect to perform the actual fetch when isFetchingPage becomes true
   useEffect(() => {
-    if (!scrollState.isLoading) return;
+    if (!scrollState.isFetchingPage) return;
 
     const currentVersion = scrollState.version;
     const nextPage = scrollState.page + 1;
 
-    // Double-check we haven't loaded this page
-    if (loadedPagesRef.current.has(nextPage)) {
-      setScrollState(prev => ({ ...prev, isLoading: false }));
+    // Double-check version and page haven't already been loaded
+    const tracker = loadedPagesRef.current;
+    if (tracker.version === currentVersion && tracker.pages.has(nextPage)) {
+      setScrollState(prev => ({ ...prev, isFetchingPage: false }));
       return;
     }
 
-    // Mark page as being loaded
-    loadedPagesRef.current.add(nextPage);
+    // Mark page as being loaded for this version
+    if (tracker.version !== currentVersion) {
+      // Version mismatch - reset tracker
+      loadedPagesRef.current = { version: currentVersion, pages: new Set([nextPage]) };
+    } else {
+      tracker.pages.add(nextPage);
+    }
 
     // Create abort controller for this request
     const controller = new AbortController();
@@ -425,11 +471,22 @@ export default function EventList({ initialEvents, initialTotal, hasActiveFilter
         // Check if this response is still valid (filters haven't changed)
         setScrollState(prev => {
           if (prev.version !== currentVersion) {
-            // Stale response - discard
-            return prev;
+            // Stale response - discard but clear loading state
+            return { ...prev, isFetchingPage: false };
           }
 
-          // Deduplicate and add new events
+          return {
+            ...prev,
+            page: nextPage,
+            hasMore: data.hasMore && events.length + (data.events?.length || 0) < MAX_EVENTS,
+            isFetchingPage: false,
+            error: null,
+            retryCount: 0,
+          };
+        });
+
+        // Only update events if version still matches
+        if (loadedPagesRef.current.version === currentVersion) {
           setEvents(prevEvents => {
             const existingIds = new Set(prevEvents.map(e => e.id));
             const newEvents = (data.events as EventWithLocation[]).filter(
@@ -443,16 +500,7 @@ export default function EventList({ initialEvents, initialTotal, hasActiveFilter
             }
             return combined;
           });
-
-          return {
-            ...prev,
-            page: nextPage,
-            hasMore: data.hasMore && events.length + (data.events?.length || 0) < MAX_EVENTS,
-            isLoading: false,
-            error: null,
-            retryCount: 0,
-          };
-        });
+        }
       } catch (error) {
         // Ignore abort errors
         if (error instanceof Error && error.name === "AbortError") {
@@ -462,11 +510,14 @@ export default function EventList({ initialEvents, initialTotal, hasActiveFilter
         console.error("Failed to load more events:", error);
 
         // Remove from loaded pages so it can be retried
-        loadedPagesRef.current.delete(nextPage);
+        if (loadedPagesRef.current.version === currentVersion) {
+          loadedPagesRef.current.pages.delete(nextPage);
+        }
 
         setScrollState(prev => {
           if (prev.version !== currentVersion) {
-            return prev;
+            // Stale - just clear loading
+            return { ...prev, isFetchingPage: false };
           }
 
           const newRetryCount = prev.retryCount + 1;
@@ -476,14 +527,14 @@ export default function EventList({ initialEvents, initialTotal, hasActiveFilter
             const delay = RETRY_DELAY_BASE * Math.pow(2, newRetryCount - 1);
             setTimeout(() => {
               setScrollState(p => {
-                if (p.version !== currentVersion || p.isLoading) return p;
-                return { ...p, isLoading: true, retryCount: newRetryCount };
+                if (p.version !== currentVersion || p.isFetchingPage) return p;
+                return { ...p, isFetchingPage: true, retryCount: newRetryCount };
               });
             }, delay);
 
             return {
               ...prev,
-              isLoading: false,
+              isFetchingPage: false,
               retryCount: newRetryCount,
             };
           }
@@ -491,7 +542,7 @@ export default function EventList({ initialEvents, initialTotal, hasActiveFilter
           // Max retries exceeded - show error
           return {
             ...prev,
-            isLoading: false,
+            isFetchingPage: false,
             error: "Failed to load more events",
             retryCount: newRetryCount,
           };
@@ -504,36 +555,42 @@ export default function EventList({ initialEvents, initialTotal, hasActiveFilter
     return () => {
       controller.abort();
     };
-  }, [scrollState.isLoading, scrollState.version, scrollState.page, scrollState.retryCount, searchParams, portalId, portalExclusive, events.length]);
+  }, [scrollState.isFetchingPage, scrollState.version, scrollState.page, scrollState.retryCount, searchParams, portalId, portalExclusive, events.length]);
 
   // Intersection Observer for infinite scroll
   useEffect(() => {
     const currentLoaderRef = loaderRef.current;
     if (!currentLoaderRef) return;
 
+    let isObserving = true;
+
     const observer = new IntersectionObserver(
       (entries) => {
+        if (!isObserving) return;
         if (entries[0].isIntersecting) {
           // Clear any existing debounce
           if (debounceTimerRef.current) {
             clearTimeout(debounceTimerRef.current);
           }
 
-          // Debounce the load
+          // Debounce the load to prevent rapid-fire triggers
           debounceTimerRef.current = setTimeout(() => {
-            loadMore();
+            if (isObserving) {
+              loadMore();
+            }
           }, DEBOUNCE_MS);
         }
       },
       {
         threshold: 0,
-        rootMargin: "400px", // Trigger earlier for smoother experience
+        rootMargin: SCROLL_MARGIN, // Conservative trigger distance
       }
     );
 
     observer.observe(currentLoaderRef);
 
     return () => {
+      isObserving = false;
       observer.disconnect();
       if (debounceTimerRef.current) {
         clearTimeout(debounceTimerRef.current);
@@ -562,6 +619,7 @@ export default function EventList({ initialEvents, initialTotal, hasActiveFilter
       ...prev,
       error: null,
       retryCount: 0,
+      isFetchingPage: false,
     }));
     // Small delay then trigger load
     setTimeout(() => loadMore(true), 100);
@@ -783,7 +841,7 @@ export default function EventList({ initialEvents, initialTotal, hasActiveFilter
       })}
 
       {/* Loading indicator */}
-      {scrollState.isLoading && (
+      {(scrollState.isLoading || scrollState.isFetchingPage) && (
         <div className="py-2">
           <EventCardSkeletonList count={3} />
         </div>
@@ -806,7 +864,7 @@ export default function EventList({ initialEvents, initialTotal, hasActiveFilter
       )}
 
       {/* Intersection observer sentinel */}
-      {scrollState.hasMore && !scrollState.error && (
+      {scrollState.hasMore && !scrollState.error && !scrollState.isLoading && (
         <div
           ref={loaderRef}
           className="h-10"

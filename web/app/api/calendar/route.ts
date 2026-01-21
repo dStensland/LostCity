@@ -114,6 +114,7 @@ export async function GET(request: NextRequest) {
   // Fetch all events using pagination (Supabase has 1000 row limit)
   const PAGE_SIZE = 1000;
   let allEvents: CalendarEvent[] = [];
+  const seenIds = new Set<number>();
   let page = 0;
   let hasMore = true;
 
@@ -129,7 +130,14 @@ export async function GET(request: NextRequest) {
     }
 
     const pageEvents = (data || []) as CalendarEvent[];
-    allEvents = allEvents.concat(pageEvents);
+
+    // Deduplicate as we go
+    for (const event of pageEvents) {
+      if (!seenIds.has(event.id)) {
+        seenIds.add(event.id);
+        allEvents.push(event);
+      }
+    }
 
     // If we got fewer than PAGE_SIZE results, we've reached the end
     hasMore = pageEvents.length === PAGE_SIZE;

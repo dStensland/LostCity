@@ -280,6 +280,72 @@ body::after {
   color: var(--cream);
 }
 
+/* Navigation tabs - streetlight in rain aesthetic */
+.nav-tab {
+  position: relative;
+}
+
+.nav-tab-active {
+  background: linear-gradient(
+    180deg,
+    hsl(var(--neon-amber-hsl) / 0.95) 0%,
+    hsl(var(--neon-amber-hsl) / 0.85) 100%
+  );
+  box-shadow:
+    0 0 15px hsl(var(--neon-amber-hsl) / 0.5),
+    0 0 30px hsl(var(--neon-amber-hsl) / 0.25),
+    inset 0 1px 0 hsl(0 0% 100% / 0.2);
+  text-shadow: 0 1px 2px hsl(0 0% 0% / 0.3);
+}
+
+.nav-tab:not(.nav-tab-active):hover {
+  background: hsl(var(--neon-amber-hsl) / 0.15);
+}
+
+/* Reduced motion - disable glow */
+@media (prefers-reduced-motion: reduce) {
+  .nav-tab-active {
+    box-shadow: inset 0 1px 0 hsl(0 0% 100% / 0.2);
+  }
+}
+
+/* Mobile menu items - streetlight aesthetic */
+.mobile-menu-item {
+  position: relative;
+  transition: all 0.2s ease;
+}
+
+.mobile-menu-item:hover {
+  background: linear-gradient(
+    90deg,
+    hsl(var(--neon-amber-hsl) / 0.1) 0%,
+    transparent 100%
+  );
+}
+
+.mobile-menu-active {
+  color: var(--neon-amber) !important;
+  background: linear-gradient(
+    90deg,
+    hsl(var(--neon-amber-hsl) / 0.2) 0%,
+    hsl(var(--neon-amber-hsl) / 0.05) 100%
+  );
+  text-shadow: 0 0 10px hsl(var(--neon-amber-hsl) / 0.5);
+}
+
+.mobile-menu-active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 60%;
+  background: var(--neon-amber);
+  border-radius: 0 2px 2px 0;
+  box-shadow: 0 0 8px var(--neon-amber);
+}
+
 /* Event item - classified style */
 .event-item {
   display: grid;
@@ -1344,3 +1410,439 @@ textarea:focus-visible {
 .logo-placeholder-gradient {
   background: linear-gradient(135deg, var(--twilight), var(--dusk));
 }
+
+/* ============================================
+   RAINY NIGHT ATMOSPHERE
+   ============================================ */
+
+/* Rain overlay - erratic neon curves filling the background */
+.rain-overlay {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 45;
+  overflow: hidden;
+}
+
+.rain-overlay::before,
+.rain-overlay::after {
+  content: '';
+  position: absolute;
+  inset: -50%;
+  width: 200%;
+  height: 200%;
+}
+
+.rain-overlay::before {
+  opacity: 0.07;
+  background:
+    repeating-linear-gradient(-65deg, transparent 0, transparent 8px, #E855A0 8px, #E855A0 9px),
+    repeating-linear-gradient(-72deg, transparent 0, transparent 15px, #E855A0 15px, #E855A0 16px),
+    repeating-linear-gradient(-58deg, transparent 0, transparent 22px, #E855A0 22px, #E855A0 23px),
+    repeating-linear-gradient(-80deg, transparent 0, transparent 12px, #E855A0 12px, #E855A0 13px),
+    repeating-linear-gradient(-68deg, transparent 0, transparent 18px, #E855A0 18px, #E855A0 19px);
+  filter: drop-shadow(0 0 3px #E855A0) blur(0.3px);
+  animation: rain-chaos-1 10s linear infinite;
+}
+
+.rain-overlay::after {
+  opacity: 0.055;
+  background:
+    repeating-linear-gradient(-55deg, transparent 0, transparent 11px, #E855A0 11px, #E855A0 12px),
+    repeating-linear-gradient(-78deg, transparent 0, transparent 20px, #E855A0 20px, #E855A0 21px),
+    repeating-linear-gradient(-62deg, transparent 0, transparent 14px, #E855A0 14px, #E855A0 15px),
+    repeating-linear-gradient(-85deg, transparent 0, transparent 9px, #E855A0 9px, #E855A0 10px);
+  filter: drop-shadow(0 0 2px #E855A0) blur(0.5px);
+  animation: rain-chaos-2 13s linear infinite;
+}
+
+@keyframes rain-chaos-1 {
+  0% {
+    transform: translate(0, 0) skewX(0deg);
+  }
+  25% {
+    transform: translate(-22px, 45px) skewX(1.5deg);
+  }
+  50% {
+    transform: translate(-45px, 90px) skewX(0deg);
+  }
+  75% {
+    transform: translate(-67px, 135px) skewX(-1.5deg);
+  }
+  100% {
+    transform: translate(-90px, 180px) skewX(0deg);
+  }
+}
+
+@keyframes rain-chaos-2 {
+  0% {
+    transform: translate(0, 0) skewX(0deg);
+  }
+  50% {
+    transform: translate(-36px, 72px) skewX(1deg);
+  }
+  100% {
+    transform: translate(-72px, 144px) skewX(0deg);
+  }
+}
+
+/* Disable rain for reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .rain-overlay {
+    animation: none !important;
+    opacity: 0.06 !important;
+  }
+}
+
+/* Reduce rain on mobile for performance */
+@media (max-width: 768px) {
+  .rain-overlay {
+    opacity: 0.06;
+    animation-duration: 0.8s;
+  }
+}
+
+/* ============================================
+   WET PAVEMENT REFLECTIONS
+   ============================================ */
+
+/* Card reflection effect - subtle mirror beneath cards */
+.card-reflection {
+  position: relative;
+}
+
+.card-reflection::after {
+  content: '';
+  position: absolute;
+  bottom: -8px;
+  left: 8%;
+  right: 8%;
+  height: 16px;
+  background: linear-gradient(to bottom,
+    var(--reflection-color, rgba(255, 107, 122, 0.06)),
+    transparent
+  );
+  filter: blur(6px);
+  transform: scaleY(-0.3);
+  opacity: 0.4;
+  pointer-events: none;
+  border-radius: 50%;
+  transition: opacity 0.3s ease, height 0.3s ease;
+}
+
+/* Intensify reflection on hover */
+.card-reflection:hover::after {
+  opacity: 0.6;
+  height: 20px;
+}
+
+/* ============================================
+   NEON BLEED / GLOW DIFFUSION
+   ============================================ */
+
+/* Text with neon bleed effect - light bleeding through rain */
+.neon-bleed {
+  filter: blur(0.5px);
+  text-shadow:
+    0 0 10px currentColor,
+    0 0 20px currentColor,
+    0 0 40px currentColor;
+}
+
+/* Card neon bleed effect */
+.card-neon-bleed {
+  box-shadow:
+    0 0 20px -5px var(--glow-color, var(--neon-magenta)),
+    0 0 40px -10px var(--glow-color, var(--neon-magenta));
+}
+
+/* Subtle neon bleed for text */
+.text-neon-bleed {
+  text-shadow:
+    0 0 8px currentColor,
+    0 0 16px currentColor;
+}
+
+/* ============================================
+   GLASS WITH RAIN DROPLETS (WET GLASS)
+   ============================================ */
+
+.glass-wet {
+  background: linear-gradient(
+    135deg,
+    rgba(15, 15, 20, 0.85),
+    rgba(20, 20, 30, 0.75)
+  );
+  backdrop-filter: blur(16px) saturate(1.2);
+  -webkit-backdrop-filter: blur(16px) saturate(1.2);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.2);
+}
+
+/* Glass wet with subtle highlights mimicking water streaks */
+.glass-wet-streaks {
+  background: linear-gradient(
+    135deg,
+    rgba(15, 15, 20, 0.85),
+    rgba(20, 20, 30, 0.75)
+  );
+  backdrop-filter: blur(16px) saturate(1.2);
+  -webkit-backdrop-filter: blur(16px) saturate(1.2);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.2);
+  position: relative;
+}
+
+.glass-wet-streaks::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.015) 50%,
+    transparent 100%
+  );
+  pointer-events: none;
+}
+
+/* ============================================
+   CARD EMERGENCE ANIMATION
+   ============================================ */
+
+@keyframes card-emerge {
+  0% {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+    filter: blur(4px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+}
+
+.animate-card-emerge {
+  animation: card-emerge 0.4s cubic-bezier(0.25, 0.1, 0.25, 1) backwards;
+}
+
+/* Card emerge with glow bloom */
+@keyframes card-emerge-glow {
+  0% {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+    filter: blur(4px);
+    box-shadow: 0 0 0 transparent;
+  }
+  60% {
+    box-shadow: 0 0 30px -5px var(--glow-color, var(--neon-magenta));
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+    box-shadow: 0 0 0 transparent;
+  }
+}
+
+.animate-card-emerge-glow {
+  animation: card-emerge-glow 0.5s cubic-bezier(0.25, 0.1, 0.25, 1) backwards;
+}
+
+/* Disable emerge animations for reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .animate-card-emerge,
+  .animate-card-emerge-glow {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+    filter: none !important;
+  }
+}
+
+/* ============================================
+   CARD HOVER IGNITE EFFECT
+   ============================================ */
+
+/* Cards "light up" like a neon sign flickering on */
+.card-hover-ignite {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.card-hover-ignite:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 4px 20px -4px var(--glow-color, var(--neon-magenta)),
+    0 0 40px -10px var(--glow-color, var(--neon-magenta));
+}
+
+/* Combined card effect: reflection + hover ignite */
+.card-atmospheric {
+  position: relative;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.card-atmospheric::after {
+  content: '';
+  position: absolute;
+  bottom: -6px;
+  left: 5%;
+  right: 5%;
+  height: 20px;
+  background: linear-gradient(to bottom,
+    var(--reflection-color, rgba(255, 107, 122, 0.12)),
+    transparent
+  );
+  filter: blur(8px);
+  transform: scaleY(-0.4);
+  opacity: 0.55;
+  pointer-events: none;
+  border-radius: 50%;
+  transition: all 0.3s ease;
+}
+
+.card-atmospheric:hover {
+  transform: translateY(-3px) scale(1.005);
+  box-shadow:
+    0 6px 25px -4px var(--glow-color, var(--neon-magenta)),
+    0 0 50px -8px var(--glow-color, var(--neon-magenta)),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.card-atmospheric:hover::after {
+  opacity: 0.8;
+  height: 28px;
+  bottom: -10px;
+}
+
+/* ============================================
+   LIVE EVENT HEAT EFFECTS
+   ============================================ */
+
+/* Live event pulsing red reflection */
+.card-live-heat::after {
+  --reflection-color: rgba(255, 90, 90, 0.12);
+  animation: live-heat-pulse 2s ease-in-out infinite;
+}
+
+@keyframes live-heat-pulse {
+  0%, 100% {
+    opacity: 0.4;
+    height: 16px;
+  }
+  50% {
+    opacity: 0.7;
+    height: 20px;
+  }
+}
+
+/* Heat shimmer effect on hover */
+@keyframes heat-shimmer {
+  0%, 100% {
+    filter: blur(6px);
+  }
+  50% {
+    filter: blur(8px) brightness(1.1);
+  }
+}
+
+.card-live-heat:hover::after {
+  animation: heat-shimmer 1s ease-in-out infinite;
+}
+
+/* Intensified live border glow */
+.live-border-glow {
+  animation: live-border-pulse 2s ease-in-out infinite;
+}
+
+@keyframes live-border-pulse {
+  0%, 100% {
+    box-shadow: 0 0 10px -2px var(--neon-red);
+  }
+  50% {
+    box-shadow: 0 0 20px -2px var(--neon-red);
+  }
+}
+
+/* Disable heat animations for reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .card-live-heat::after,
+  .card-live-heat:hover::after {
+    animation: none !important;
+  }
+  .live-border-glow {
+    animation: none !important;
+    box-shadow: 0 0 10px -2px var(--neon-red) !important;
+  }
+}
+
+/* ============================================
+   ENGAGEMENT VISUAL HIERARCHY
+   ============================================ */
+
+/* Popular event - subtle background tint, stronger reflection */
+.card-popular {
+  background: linear-gradient(
+    135deg,
+    rgba(255, 107, 122, 0.03),
+    transparent
+  );
+}
+
+.card-popular::after {
+  opacity: 0.5;
+}
+
+/* Trending event - neon border glow */
+.card-trending {
+  border-color: color-mix(in srgb, var(--glow-color, var(--neon-magenta)) 50%, transparent);
+  box-shadow: 0 0 20px -5px var(--glow-color, var(--neon-magenta));
+}
+
+/* Hero/featured event treatment */
+.card-hero {
+  background: linear-gradient(
+    135deg,
+    rgba(255, 107, 122, 0.08),
+    rgba(255, 107, 122, 0.02)
+  );
+  border-color: color-mix(in srgb, var(--coral) 40%, transparent);
+}
+
+.card-hero::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 107, 122, 0.2),
+    transparent 50%
+  );
+  pointer-events: none;
+  z-index: -1;
+}
+
+/* ============================================
+   ATMOSPHERIC CATEGORY COLORS
+   ============================================ */
+
+/* Category-specific reflection colors */
+.reflect-music { --reflection-color: rgba(249, 168, 212, 0.1); }
+.reflect-comedy { --reflection-color: rgba(252, 211, 77, 0.1); }
+.reflect-art { --reflection-color: rgba(196, 181, 253, 0.1); }
+.reflect-theater { --reflection-color: rgba(240, 171, 252, 0.1); }
+.reflect-film { --reflection-color: rgba(165, 180, 252, 0.1); }
+.reflect-community { --reflection-color: rgba(110, 231, 183, 0.1); }
+.reflect-food { --reflection-color: rgba(253, 186, 116, 0.1); }
+.reflect-sports { --reflection-color: rgba(125, 211, 252, 0.1); }
+.reflect-fitness { --reflection-color: rgba(94, 234, 212, 0.1); }
+.reflect-nightlife { --reflection-color: rgba(232, 121, 249, 0.1); }
+.reflect-family { --reflection-color: rgba(167, 139, 250, 0.1); }

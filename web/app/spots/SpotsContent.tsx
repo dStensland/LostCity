@@ -7,6 +7,7 @@ import SpotCard from "@/components/SpotCard";
 import SpotFilterBar from "@/components/SpotFilterBar";
 import SpotSearchBar from "@/components/SpotSearchBar";
 import CategoryIcon, { getCategoryLabel } from "@/components/CategoryIcon";
+import { EventsBadge } from "@/components/Badge";
 import type { Spot } from "@/lib/spots";
 import type { SortOption } from "./page";
 
@@ -223,37 +224,35 @@ export default function SpotsContent({
                       <Link
                         key={spot.id}
                         href={`/spots/${spot.slug}`}
-                        className="p-3 rounded-lg border border-[var(--twilight)] transition-colors group"
+                        className="p-3 rounded-lg border border-[var(--twilight)] transition-colors group relative"
                         style={{ backgroundColor: "var(--card-bg)" }}
                       >
-                        <div className="flex items-start gap-2.5">
-                          {viewMode !== "type" && spot.spot_type && (
-                            <span className="flex items-center justify-center w-4 h-4 flex-shrink-0 mt-0.5">
+                        {/* Title row with icon */}
+                        <div className="flex items-center gap-2 min-w-0">
+                          {spot.spot_type && (
+                            <span className="flex-shrink-0">
                               <CategoryIcon type={spot.spot_type} size={16} className="opacity-70" />
                             </span>
                           )}
-                          <div className="flex-1 min-w-0">
-                            <div className="font-medium text-sm text-[var(--cream)] truncate group-hover:text-[var(--coral)] transition-colors">
-                              {spot.name}
-                            </div>
-                            <div className="flex items-center gap-1.5 font-mono text-[0.6rem] text-[var(--muted)] mt-0.5">
-                              {viewMode !== "neighborhood" && spot.neighborhood && (
-                                <span>{spot.neighborhood}</span>
-                              )}
-                              {viewMode === "neighborhood" && spot.spot_type && (
-                                <span>{getCategoryLabel(spot.spot_type)}</span>
-                              )}
-                              {(spot.event_count ?? 0) > 0 && (
-                                <>
-                                  <span className="opacity-40">·</span>
-                                  <span className="text-[var(--coral)]">
-                                    {spot.event_count} event{spot.event_count !== 1 ? "s" : ""}
-                                  </span>
-                                </>
-                              )}
-                            </div>
-                          </div>
+                          <span className="font-medium text-sm text-[var(--cream)] truncate group-hover:text-[var(--coral)] transition-colors">
+                            {spot.name}
+                          </span>
                         </div>
+                        {/* Meta row - aligned with icon */}
+                        <div className="flex items-center gap-1.5 font-mono text-[0.6rem] text-[var(--muted)] mt-1 ml-6">
+                          {viewMode !== "neighborhood" && spot.neighborhood && (
+                            <span>{spot.neighborhood}</span>
+                          )}
+                          {viewMode === "neighborhood" && spot.spot_type && (
+                            <span>{getCategoryLabel(spot.spot_type)}</span>
+                          )}
+                        </div>
+                        {/* Event count badge - bottom right */}
+                        {(spot.event_count ?? 0) > 0 && (
+                          <span className="absolute bottom-2 right-2">
+                            <EventsBadge count={spot.event_count!} />
+                          </span>
+                        )}
                       </Link>
                     ))}
                   </div>

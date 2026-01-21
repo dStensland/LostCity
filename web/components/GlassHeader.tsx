@@ -57,7 +57,7 @@ export default function GlassHeader({ portalSlug = "atlanta", portalName = "Atla
     <header
       className={`sticky top-0 z-40 px-4 py-3 flex justify-between items-center border-b transition-all duration-500 ease-out ${
         isScrolled
-          ? "glass border-[var(--twilight)]/50 shadow-[0_4px_20px_rgba(0,0,0,0.3)]"
+          ? "glass border-[var(--twilight)]/50"
           : "bg-transparent border-[var(--twilight)]/30"
       }`}
     >
@@ -127,37 +127,61 @@ export default function GlassHeader({ portalSlug = "atlanta", portalName = "Atla
           {mobileMenuOpen && (
             <div className="absolute right-0 top-full mt-2 w-48 py-2 bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg shadow-xl">
               <div className="px-3 py-1.5 text-[0.65rem] font-mono text-[var(--muted)] uppercase tracking-wider">
-                Views
+                Discover
               </div>
-              <Link
-                href={`/${portalSlug}`}
-                onClick={() => setMobileMenuOpen(false)}
-                className={`flex items-center gap-2 px-3 py-2 font-mono text-sm hover:bg-[var(--twilight)] ${
-                  !isMap && !isFeed ? "text-[var(--cream)] bg-[var(--twilight)]/50" : "text-[var(--muted)]"
-                }`}
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
-                </svg>
-                List
-              </Link>
               <Link
                 href={`/${portalSlug}?view=feed`}
                 onClick={() => setMobileMenuOpen(false)}
-                className={`flex items-center gap-2 px-3 py-2 font-mono text-sm hover:bg-[var(--twilight)] ${
-                  isFeed ? "text-[var(--neon-magenta)] bg-[var(--twilight)]/50" : "text-[var(--muted)]"
+                className={`mobile-menu-item flex items-center gap-2 px-3 py-2 font-mono text-sm ${
+                  isFeed ? "mobile-menu-active" : "text-[var(--muted)] hover:text-[var(--neon-amber)]"
                 }`}
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
                 </svg>
-                For You
+                Highlights
               </Link>
+              <Link
+                href={`/${portalSlug}`}
+                onClick={() => setMobileMenuOpen(false)}
+                className={`mobile-menu-item flex items-center gap-2 px-3 py-2 font-mono text-sm ${
+                  !isMap && !isFeed ? "mobile-menu-active" : "text-[var(--muted)] hover:text-[var(--neon-amber)]"
+                }`}
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                Happenings
+              </Link>
+              <Link
+                href={`/${portalSlug}?view=spots`}
+                onClick={() => setMobileMenuOpen(false)}
+                className="mobile-menu-item flex items-center gap-2 px-3 py-2 font-mono text-sm text-[var(--muted)] hover:text-[var(--neon-amber)]"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                Hangs
+              </Link>
+              <Link
+                href="/community"
+                onClick={() => setMobileMenuOpen(false)}
+                className="mobile-menu-item flex items-center gap-2 px-3 py-2 font-mono text-sm text-[var(--muted)] hover:text-[var(--neon-amber)]"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+                Humans
+              </Link>
+
+              <div className="my-2 border-t border-[var(--twilight)]" />
+
               <Link
                 href={`/${portalSlug}?view=map`}
                 onClick={() => setMobileMenuOpen(false)}
-                className={`flex items-center gap-2 px-3 py-2 font-mono text-sm hover:bg-[var(--twilight)] ${
-                  isMap ? "text-[var(--neon-cyan)] bg-[var(--twilight)]/50" : "text-[var(--muted)]"
+                className={`mobile-menu-item flex items-center gap-2 px-3 py-2 font-mono text-sm ${
+                  isMap ? "mobile-menu-active" : "text-[var(--muted)] hover:text-[var(--neon-amber)]"
                 }`}
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -165,28 +189,11 @@ export default function GlassHeader({ portalSlug = "atlanta", portalName = "Atla
                 </svg>
                 Map
               </Link>
-
-              <div className="my-2 border-t border-[var(--twilight)]" />
-
-              <div className="px-3 py-1.5 text-[0.65rem] font-mono text-[var(--muted)] uppercase tracking-wider">
-                Explore
-              </div>
-              <Link
-                href={`/${portalSlug}?view=spots`}
-                onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center gap-2 px-3 py-2 font-mono text-sm text-[var(--muted)] hover:bg-[var(--twilight)] hover:text-[var(--cream)]"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-                Spots
-              </Link>
               <Link
                 href={`/${portalSlug}?view=happening-now`}
                 onClick={() => setMobileMenuOpen(false)}
-                className={`flex items-center gap-2 px-3 py-2 font-mono text-sm hover:bg-[var(--twilight)] ${
-                  isHappeningNow ? "text-[var(--neon-red)]" : "text-[var(--muted)] hover:text-[var(--cream)]"
+                className={`mobile-menu-item flex items-center gap-2 px-3 py-2 font-mono text-sm ${
+                  isHappeningNow ? "mobile-menu-active" : "text-[var(--muted)] hover:text-[var(--neon-amber)]"
                 }`}
               >
                 {liveEventCount > 0 ? (
@@ -198,7 +205,7 @@ export default function GlassHeader({ portalSlug = "atlanta", portalName = "Atla
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
                   </svg>
                 )}
-                Happening Now
+                Live
                 {liveEventCount > 0 && (
                   <span className="ml-auto text-[0.65rem] text-[var(--neon-red)]">{liveEventCount}</span>
                 )}
@@ -206,7 +213,7 @@ export default function GlassHeader({ portalSlug = "atlanta", portalName = "Atla
               <Link
                 href="/saved"
                 onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center gap-2 px-3 py-2 font-mono text-sm text-[var(--muted)] hover:bg-[var(--twilight)] hover:text-[var(--cream)]"
+                className="mobile-menu-item flex items-center gap-2 px-3 py-2 font-mono text-sm text-[var(--muted)] hover:text-[var(--neon-amber)]"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />

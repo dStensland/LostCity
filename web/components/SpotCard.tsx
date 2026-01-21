@@ -1,7 +1,27 @@
 import Link from "next/link";
 import type { Spot } from "@/lib/spots";
 import { formatPriceLevel } from "@/lib/spots";
-import CategoryIcon, { getCategoryLabel } from "./CategoryIcon";
+import CategoryIcon, { getCategoryLabel, getCategoryColor } from "./CategoryIcon";
+import { EventsBadge } from "./Badge";
+
+// Get reflection color class based on spot type
+function getReflectionClass(spotType: string): string {
+  const reflectionMap: Record<string, string> = {
+    music_venue: "reflect-music",
+    comedy_club: "reflect-comedy",
+    art_gallery: "reflect-art",
+    theater: "reflect-theater",
+    movie_theater: "reflect-film",
+    community_space: "reflect-community",
+    restaurant: "reflect-food",
+    bar: "reflect-nightlife",
+    sports_venue: "reflect-sports",
+    fitness_studio: "reflect-fitness",
+    nightclub: "reflect-nightlife",
+    family_venue: "reflect-family",
+  };
+  return reflectionMap[spotType] || "";
+}
 
 interface Props {
   spot: Spot;
@@ -33,6 +53,8 @@ export default function SpotCard({ spot, index = 0, showDistance }: Props) {
   const staggerClass = index < 10 ? `stagger-${index + 1}` : "";
   const priceDisplay = formatPriceLevel(spot.price_level);
   const spotType = spot.spot_type || "music_venue";
+  const categoryColor = getCategoryColor(spotType);
+  const reflectionClass = getReflectionClass(spotType);
 
   // Calculate distance if we have user location and spot coordinates
   const distance = showDistance && spot.lat && spot.lng
@@ -42,7 +64,11 @@ export default function SpotCard({ spot, index = 0, showDistance }: Props) {
   return (
     <Link
       href={`/spots/${spot.slug}`}
-      className={`event-item animate-fade-in ${staggerClass} group`}
+      className={`event-item animate-fade-in ${staggerClass} group card-atmospheric ${reflectionClass}`}
+      style={{
+        "--glow-color": categoryColor,
+        "--reflection-color": `color-mix(in srgb, ${categoryColor} 15%, transparent)`,
+      } as React.CSSProperties}
     >
       {/* Icon column */}
       <div className="w-10 flex-shrink-0 flex items-center justify-center">
@@ -81,15 +107,13 @@ export default function SpotCard({ spot, index = 0, showDistance }: Props) {
             </span>
           )}
           {spot.event_count !== undefined && spot.event_count > 0 && (
-            <span className="font-mono text-xs text-[var(--cat-community)]">
-              {spot.event_count} upcoming
-            </span>
+            <EventsBadge count={spot.event_count} />
           )}
         </div>
       </div>
 
       {/* Right column - desktop only */}
-      <div className="hidden sm:flex items-center gap-4">
+      <div className="hidden sm:flex items-center gap-3">
         {distance !== null && (
           <span className="font-mono text-xs font-medium text-[var(--coral)] whitespace-nowrap">
             {formatDistance(distance)}
@@ -100,10 +124,9 @@ export default function SpotCard({ spot, index = 0, showDistance }: Props) {
             {priceDisplay}
           </span>
         )}
+        {/* Event count badge - always far right */}
         {spot.event_count !== undefined && spot.event_count > 0 && (
-          <span className="font-mono text-xs text-[var(--cat-community)] whitespace-nowrap">
-            {spot.event_count} upcoming
-          </span>
+          <EventsBadge count={spot.event_count} />
         )}
         {/* Arrow indicator */}
         <div className="w-5 h-5 flex items-center justify-center text-[var(--muted)] group-hover:text-[var(--coral)] transition-colors">

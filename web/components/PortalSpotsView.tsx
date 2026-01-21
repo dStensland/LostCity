@@ -2,7 +2,27 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import CategoryIcon, { getCategoryLabel } from "./CategoryIcon";
+import CategoryIcon, { getCategoryLabel, getCategoryColor } from "./CategoryIcon";
+
+// Get reflection color class based on spot type
+function getReflectionClass(spotType: string | null): string {
+  if (!spotType) return "";
+  const reflectionMap: Record<string, string> = {
+    music_venue: "reflect-music",
+    comedy_club: "reflect-comedy",
+    art_gallery: "reflect-art",
+    theater: "reflect-theater",
+    movie_theater: "reflect-film",
+    community_space: "reflect-community",
+    restaurant: "reflect-food",
+    bar: "reflect-nightlife",
+    sports_venue: "reflect-sports",
+    fitness_studio: "reflect-fitness",
+    nightclub: "reflect-nightlife",
+    family_venue: "reflect-family",
+  };
+  return reflectionMap[spotType] || "";
+}
 
 type Spot = {
   id: number;
@@ -111,12 +131,19 @@ export default function PortalSpotsView({ portalId, portalSlug, isExclusive = fa
       </div>
 
       <div className="space-y-2">
-        {spots.map((spot) => (
+        {spots.map((spot) => {
+          const categoryColor = spot.spot_type ? getCategoryColor(spot.spot_type) : "var(--coral)";
+          const reflectionClass = getReflectionClass(spot.spot_type);
+          return (
           <Link
             key={spot.id}
             href={`/spots/${spot.slug}`}
-            className="block p-4 rounded-lg border border-[var(--twilight)] card-event-hover group"
-            style={{ backgroundColor: "var(--card-bg)", "--glow-color": "var(--coral)" } as React.CSSProperties}
+            className={`block p-4 rounded-lg border border-[var(--twilight)] card-atmospheric ${reflectionClass} group`}
+            style={{
+              backgroundColor: "var(--card-bg)",
+              "--glow-color": categoryColor,
+              "--reflection-color": `color-mix(in srgb, ${categoryColor} 15%, transparent)`,
+            } as React.CSSProperties}
           >
             <div className="flex items-start gap-3">
               {spot.spot_type && (
@@ -157,7 +184,8 @@ export default function PortalSpotsView({ portalId, portalSlug, isExclusive = fa
               </div>
             </div>
           </Link>
-        ))}
+        );
+        })}
       </div>
     </div>
   );

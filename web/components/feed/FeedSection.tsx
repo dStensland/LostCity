@@ -4,9 +4,11 @@ import { useRef, useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { format, parseISO, isToday, isTomorrow, formatDistanceToNow } from "date-fns";
 import CategoryIcon, { getCategoryColor, CATEGORY_CONFIG, type CategoryType } from "../CategoryIcon";
+import { LiveBadge, SoonBadge, FreeBadge } from "../Badge";
 import { formatTime } from "@/lib/formats";
 import { usePortal } from "@/lib/portal-context";
 import AtlantaSkyline from "../AtlantaSkyline";
+import { useScrollReveal } from "@/hooks/useScrollReveal";
 
 // Types
 export type FeedEvent = {
@@ -24,6 +26,7 @@ export type FeedEvent = {
   image_url: string | null;
   description: string | null;
   going_count?: number;
+  is_trending?: boolean;
   venue: {
     id: number;
     name: string;
@@ -57,7 +60,34 @@ type Props = {
   isFirst?: boolean;
 };
 
-// Helper: Get smart time display
+// Helper: Get event status (live, soon, or null)
+function getEventStatus(date: string, time: string | null): "live" | "soon" | null {
+  if (!time) return null;
+
+  const eventDate = parseISO(date);
+  if (!isToday(eventDate)) return null;
+
+  const [hours, minutes] = time.split(":").map(Number);
+  const eventDateTime = new Date();
+  eventDateTime.setHours(hours, minutes, 0, 0);
+  const now = Date.now();
+
+  if (eventDateTime > new Date()) {
+    const minutesUntil = Math.round((eventDateTime.getTime() - now) / (1000 * 60));
+    if (minutesUntil <= 30) {
+      return "soon";
+    }
+  } else {
+    // Event started - check if still happening (within last 2 hours)
+    const minutesAgo = Math.round((now - eventDateTime.getTime()) / (1000 * 60));
+    if (minutesAgo <= 120) {
+      return "live";
+    }
+  }
+  return null;
+}
+
+// Helper: Get smart time display (always shows actual time)
 function getSmartTime(date: string, time: string | null): string {
   if (!time) return "All day";
 
@@ -65,33 +95,11 @@ function getSmartTime(date: string, time: string | null): string {
   const formattedTime = formatTime(time);
 
   if (isToday(eventDate)) {
-    // Parse time to check if it's in the future
-    const [hours, minutes] = time.split(":").map(Number);
-    const eventDateTime = new Date();
-    eventDateTime.setHours(hours, minutes, 0, 0);
-    const now = Date.now();
-
-    if (eventDateTime > new Date()) {
-      const minutesUntil = Math.round((eventDateTime.getTime() - now) / (1000 * 60));
-      if (minutesUntil <= 30) {
-        return "Starting soon";
-      }
-      const hoursUntil = Math.round(minutesUntil / 60);
-      if (hoursUntil <= 3) {
-        return `In ${hoursUntil}h`;
-      }
-    } else {
-      // Event started but might still be happening
-      const minutesAgo = Math.round((now - eventDateTime.getTime()) / (1000 * 60));
-      if (minutesAgo <= 60) {
-        return "Happening now";
-      }
-    }
-    return `Today ${formattedTime}`;
+    return formattedTime;
   }
 
   if (isTomorrow(eventDate)) {
-    return `Tomorrow ${formattedTime}`;
+    return formattedTime;
   }
 
   return formattedTime;
@@ -128,29 +136,51 @@ function getSeeAllUrl(section: FeedSectionData, portalSlug: string): string {
 
 export default function FeedSection({ section, isFirst }: Props) {
   const { portal } = usePortal();
+  const { ref, isVisible } = useScrollReveal<HTMLDivElement>({
+    threshold: 0.05,
+    rootMargin: "0px 0px -20px 0px",
+  });
 
   // Hide images can be configured per-portal via settings.feed.hide_images
   const hideImages = portal.settings?.feed?.hide_images === true;
 
-  // Render based on block type
-  switch (section.block_type) {
-    case "hero_banner":
-      return <HeroBanner section={section} portalSlug={portal.slug} hideImages={hideImages} />;
-    case "category_grid":
-      return <CategoryGrid section={section} portalSlug={portal.slug} isFirst={isFirst} />;
-    case "venue_list":
-      return <VenueList section={section} portalSlug={portal.slug} />;
-    case "announcement":
-      return <Announcement section={section} />;
-    case "external_link":
-      return <ExternalLink section={section} />;
-    case "event_cards":
-    case "event_carousel":
-      return <EventCards section={section} portalSlug={portal.slug} hideImages={hideImages} />;
-    case "event_list":
-    default:
-      return <EventList section={section} portalSlug={portal.slug} />;
+  // Render content based on block type
+  const renderContent = () => {
+    switch (section.block_type) {
+      case "hero_banner":
+        return <HeroBanner section={section} portalSlug={portal.slug} hideImages={hideImages} />;
+      case "category_grid":
+        return <CategoryGrid section={section} portalSlug={portal.slug} isFirst={isFirst} />;
+      case "venue_list":
+        return <VenueList section={section} portalSlug={portal.slug} />;
+      case "announcement":
+        return <Announcement section={section} />;
+      case "external_link":
+        return <ExternalLink section={section} />;
+      case "event_cards":
+      case "event_carousel":
+        return <EventCards section={section} portalSlug={portal.slug} hideImages={hideImages} />;
+      case "event_list":
+      default:
+        return <EventList section={section} portalSlug={portal.slug} />;
+    }
+  };
+
+  // First section doesn't need scroll reveal (already visible)
+  if (isFirst) {
+    return renderContent();
   }
+
+  return (
+    <div
+      ref={ref}
+      className={`transition-all duration-500 ease-out ${
+        isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"
+      }`}
+    >
+      {renderContent()}
+    </div>
+  );
 }
 
 // ============================================
@@ -515,6 +545,7 @@ function EventCard({ event, isCarousel, hideImages, portalSlug }: { event: FeedE
   const showImage = !hideImages && event.image_url;
   const [imageLoaded, setImageLoaded] = useState(!showImage);
   const [imageError, setImageError] = useState(false);
+  const eventStatus = getEventStatus(event.start_date, event.start_time);
 
   return (
     <Link
@@ -589,12 +620,13 @@ function EventCard({ event, isCarousel, hideImages, portalSlug }: { event: FeedE
           </p>
         )}
 
-        {/* Price/Free + Social proof */}
+        {/* Price/Free + Status badges */}
         <div className="mt-2.5 flex items-center gap-2 flex-wrap">
+          {/* Live/Soon status badges */}
+          {eventStatus === "live" && <LiveBadge />}
+          {eventStatus === "soon" && <SoonBadge />}
           {event.is_free ? (
-            <span className="px-1.5 py-0.5 rounded bg-[var(--neon-green)]/20 text-[var(--neon-green)] text-[0.55rem] font-mono font-medium">
-              FREE
-            </span>
+            <FreeBadge />
           ) : event.price_min !== null ? (
             <span className="text-[0.6rem] font-mono text-[var(--muted)]">
               From ${event.price_min}
@@ -665,15 +697,42 @@ function EventList({ section, portalSlug }: { section: FeedSectionData; portalSl
   );
 }
 
+// Get reflection color class based on category
+function getReflectionClass(category: string | null): string {
+  if (!category) return "";
+  const reflectionMap: Record<string, string> = {
+    music: "reflect-music",
+    comedy: "reflect-comedy",
+    art: "reflect-art",
+    theater: "reflect-theater",
+    film: "reflect-film",
+    community: "reflect-community",
+    food_drink: "reflect-food",
+    food: "reflect-food",
+    sports: "reflect-sports",
+    fitness: "reflect-fitness",
+    nightlife: "reflect-nightlife",
+    family: "reflect-family",
+  };
+  return reflectionMap[category] || "";
+}
+
 function EventListItem({ event, isAlternate, showDate = true, portalSlug }: { event: FeedEvent; isAlternate?: boolean; showDate?: boolean; portalSlug?: string }) {
   const categoryColor = event.category ? getCategoryColor(event.category) : null;
-  const isPopular = (event.going_count || 0) >= 10;
+  const goingCount = event.going_count || 0;
+  const isPopular = goingCount >= 10;
+  const isTrending = event.is_trending || false;
+  const reflectionClass = getReflectionClass(event.category);
+  const eventStatus = getEventStatus(event.start_date, event.start_time);
+
+  // Visual hierarchy classes
+  const hierarchyClass = isTrending ? "card-trending" : isPopular ? "card-popular" : "";
 
   return (
     <Link
       href={portalSlug ? `/${portalSlug}/events/${event.id}` : `/events/${event.id}`}
-      className={`flex items-center gap-3 px-3 py-3 rounded-lg border transition-all group hover:border-[var(--coral)]/30 ${
-        isPopular
+      className={`flex items-center gap-3 px-3 py-3 rounded-lg border transition-all group card-atmospheric ${reflectionClass} ${hierarchyClass} hover:border-[var(--coral)]/30 ${
+        isPopular || isTrending
           ? "border-[var(--coral)]/20"
           : isAlternate
             ? "border-transparent"
@@ -683,7 +742,9 @@ function EventListItem({ event, isAlternate, showDate = true, portalSlug }: { ev
         backgroundColor: isPopular ? "var(--coral-bg, rgba(190, 53, 39, 0.05))" : "var(--card-bg)",
         borderLeftWidth: categoryColor ? "3px" : undefined,
         borderLeftColor: categoryColor || undefined,
-      }}
+        "--glow-color": categoryColor || "var(--neon-magenta)",
+        "--reflection-color": categoryColor ? `color-mix(in srgb, ${categoryColor} 15%, transparent)` : undefined,
+      } as React.CSSProperties}
     >
       {/* Smart Time */}
       <div className="flex-shrink-0 w-16 font-mono text-sm text-[var(--soft)] text-center">
@@ -726,11 +787,10 @@ function EventListItem({ event, isAlternate, showDate = true, portalSlug }: { ev
 
       {/* Badges */}
       <div className="flex-shrink-0 flex items-center gap-2">
-        {event.is_free && (
-          <span className="px-1.5 py-0.5 text-[0.55rem] font-mono font-medium bg-[var(--neon-green)]/20 text-[var(--neon-green)] rounded">
-            FREE
-          </span>
-        )}
+        {/* Live/Soon status badges */}
+        {eventStatus === "live" && <LiveBadge />}
+        {eventStatus === "soon" && <SoonBadge />}
+        {event.is_free && <FreeBadge />}
         <svg className="w-4 h-4 text-[var(--muted)] opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
         </svg>

@@ -2,7 +2,27 @@ import Link from "next/link";
 import { getPopularEvents, type EventWithLocation } from "@/lib/search";
 import { formatTimeSplit } from "@/lib/formats";
 import { format, parseISO } from "date-fns";
-import CategoryIcon from "./CategoryIcon";
+import CategoryIcon, { getCategoryColor } from "./CategoryIcon";
+
+// Get reflection color class based on category
+function getReflectionClass(category: string | null): string {
+  if (!category) return "";
+  const reflectionMap: Record<string, string> = {
+    music: "reflect-music",
+    comedy: "reflect-comedy",
+    art: "reflect-art",
+    theater: "reflect-theater",
+    film: "reflect-film",
+    community: "reflect-community",
+    food_drink: "reflect-food",
+    food: "reflect-food",
+    sports: "reflect-sports",
+    fitness: "reflect-fitness",
+    nightlife: "reflect-nightlife",
+    family: "reflect-family",
+  };
+  return reflectionMap[category] || "";
+}
 
 export default async function PopularThisWeek({ portalSlug }: { portalSlug?: string } = {}) {
   const events = await getPopularEvents(6);
@@ -35,6 +55,8 @@ function PopularEventCard({ event, portalSlug }: { event: EventWithLocation; por
   const dateObj = parseISO(event.start_date);
   const dayName = format(dateObj, "EEE");
   const dayNum = format(dateObj, "d");
+  const categoryColor = event.category ? getCategoryColor(event.category) : null;
+  const reflectionClass = getReflectionClass(event.category);
 
   const totalEngagement =
     (event.going_count || 0) + (event.interested_count || 0) + (event.recommendation_count || 0);
@@ -42,7 +64,11 @@ function PopularEventCard({ event, portalSlug }: { event: EventWithLocation; por
   return (
     <Link
       href={portalSlug ? `/${portalSlug}/events/${event.id}` : `/events/${event.id}`}
-      className="flex-shrink-0 w-64 p-3 bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg hover:border-[var(--coral)] transition-colors group"
+      className={`flex-shrink-0 w-64 p-3 bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg hover:border-[var(--coral)] transition-colors group card-atmospheric ${reflectionClass}`}
+      style={{
+        "--glow-color": categoryColor || "var(--coral)",
+        "--reflection-color": categoryColor ? `color-mix(in srgb, ${categoryColor} 15%, transparent)` : undefined,
+      } as React.CSSProperties}
     >
       <div className="flex items-start gap-3">
         {/* Date block */}

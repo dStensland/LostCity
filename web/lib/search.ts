@@ -1398,3 +1398,110 @@ export async function getPopularEvents(limit = 6): Promise<EventWithLocation[]> 
 
   return popularEvents;
 }
+
+/**
+ * Get trending events - events with recent engagement velocity
+ * Different from popular: focuses on *recent* activity, not total counts
+ * Factors: RSVPs in last 48h, recommendations in last 48h, proximity to event
+ */
+export async function getTrendingEvents(limit = 6): Promise<EventWithLocation[]> {
+  const serviceClient = createServiceClient();
+  const now = new Date();
+  const today = now.toISOString().split("T")[0];
+  const weekFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+  const hours48Ago = new Date(now.getTime() - 48 * 60 * 60 * 1000).toISOString();
+
+  // Get upcoming events this week
+  const { data: events } = await serviceClient
+    .from("events")
+    .select(`
+      *,
+      venue:venues(*),
+      source:sources(name, url)
+    `)
+    .gte("start_date", today)
+    .lte("start_date", weekFromNow)
+    .eq("is_active", true)
+    .order("start_date", { ascending: true })
+    .limit(200);
+
+  if (!events || events.length === 0) {
+    return [];
+  }
+
+  // Cast to expected type
+  const typedEvents = events as unknown as EventWithLocation[];
+  const eventIds = typedEvents.map((e) => e.id);
+
+  // Get recent RSVPs (last 48 hours) - this shows momentum
+  const { data: recentRsvpsData } = await serviceClient
+    .from("event_rsvps")
+    .select("event_id, status, created_at")
+    .in("event_id", eventIds)
+    .eq("visibility", "public")
+    .gte("created_at", hours48Ago);
+
+  // Get recent recommendations (last 48 hours)
+  const { data: recentRecsData } = await serviceClient
+    .from("recommendations")
+    .select("event_id, created_at")
+    .in("event_id", eventIds)
+    .eq("visibility", "public")
+    .gte("created_at", hours48Ago);
+
+  // Cast to expected types
+  const recentRsvps = (recentRsvpsData || []) as { event_id: number; status: string; created_at: string }[];
+  const recentRecs = (recentRecsData || []) as { event_id: number; created_at: string }[];
+
+  // Count recent activity per event
+  const recentActivity = new Map<number, { rsvps: number; recs: number; goingRecent: number }>();
+
+  for (const rsvp of recentRsvps) {
+    const current = recentActivity.get(rsvp.event_id) || { rsvps: 0, recs: 0, goingRecent: 0 };
+    current.rsvps++;
+    if (rsvp.status === "going") current.goingRecent++;
+    recentActivity.set(rsvp.event_id, current);
+  }
+
+  for (const rec of recentRecs) {
+    if (rec.event_id) {
+      const current = recentActivity.get(rec.event_id) || { rsvps: 0, recs: 0, goingRecent: 0 };
+      current.recs++;
+      recentActivity.set(rec.event_id, current);
+    }
+  }
+
+  // Also get total social proof for context
+  const enrichedEvents = await enrichEventsWithSocialProof(typedEvents);
+
+  // Calculate trending score
+  // Trending = recent velocity + bonus for events happening soon
+  const scoredEvents = enrichedEvents.map((event) => {
+    const recent = recentActivity.get(event.id) || { rsvps: 0, recs: 0, goingRecent: 0 };
+    const totalGoing = event.going_count || 0;
+
+    // Recent activity score (weighted heavily)
+    const recentScore = recent.goingRecent * 5 + recent.rsvps * 3 + recent.recs * 4;
+
+    // Proximity bonus: events happening sooner get a boost
+    const eventDate = new Date(event.start_date);
+    const daysUntil = Math.max(0, (eventDate.getTime() - now.getTime()) / (24 * 60 * 60 * 1000));
+    const proximityMultiplier = daysUntil <= 1 ? 1.5 : daysUntil <= 3 ? 1.2 : 1.0;
+
+    // Require some baseline engagement to be "trending"
+    const hasBaseline = totalGoing >= 3 || recentScore >= 5;
+
+    const trendingScore = hasBaseline ? recentScore * proximityMultiplier : 0;
+
+    return { event: { ...event, is_trending: trendingScore > 0 }, score: trendingScore };
+  });
+
+  // Sort by trending score, filter to only events with recent activity
+  const trendingEvents = scoredEvents
+    .filter((e) => e.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, limit)
+    .map((e) => e.event);
+
+  return trendingEvents;
+}

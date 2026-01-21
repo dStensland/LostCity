@@ -49,6 +49,26 @@ function getVenueCategory(venueName: string): string | null {
   return null;
 }
 
+// Get reflection color class based on category
+function getReflectionClass(category: string | null): string {
+  if (!category) return "";
+  const reflectionMap: Record<string, string> = {
+    music: "reflect-music",
+    comedy: "reflect-comedy",
+    art: "reflect-art",
+    theater: "reflect-theater",
+    film: "reflect-film",
+    community: "reflect-community",
+    food_drink: "reflect-food",
+    food: "reflect-food",
+    sports: "reflect-sports",
+    fitness: "reflect-fitness",
+    nightlife: "reflect-nightlife",
+    family: "reflect-family",
+  };
+  return reflectionMap[category] || "";
+}
+
 // Group events by title to combine showtimes
 interface GroupedEvent {
   title: string;
@@ -108,15 +128,18 @@ export default function EventGroup({
   const venueCategory = type === "venue" ? getVenueCategory(title) : null;
   const dominantCategory = venueCategory || events[0]?.category || null;
   const categoryColor = dominantCategory ? getCategoryColor(dominantCategory) : null;
+  const reflectionClass = getReflectionClass(dominantCategory);
 
   return (
     <div
-      className={`rounded-lg border border-[var(--twilight)] mb-2 overflow-hidden ${skipAnimation ? "" : "animate-fade-in"}`}
+      className={`rounded-lg border border-[var(--twilight)] mb-2 overflow-hidden card-atmospheric ${reflectionClass} ${skipAnimation ? "" : "animate-fade-in"}`}
       style={{
         borderLeftWidth: categoryColor ? "3px" : undefined,
         borderLeftColor: categoryColor || undefined,
         backgroundColor: "var(--card-bg)",
-      }}
+        "--glow-color": categoryColor || "var(--neon-magenta)",
+        "--reflection-color": categoryColor ? `color-mix(in srgb, ${categoryColor} 15%, transparent)` : undefined,
+      } as React.CSSProperties}
     >
       {/* Header - clickable to expand/collapse */}
       <button

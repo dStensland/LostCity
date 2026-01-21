@@ -3,6 +3,8 @@ import { Outfit, Instrument_Serif, JetBrains_Mono, Space_Grotesk, Bebas_Neue } f
 import { AuthProvider } from "@/lib/auth-context";
 import { ToastProvider } from "@/components/Toast";
 import DarkHoursTheme from "@/components/DarkHoursTheme";
+import RainEffect from "@/components/RainEffect";
+import CursorGlow from "@/components/CursorGlow";
 import "./globals.css";
 
 const outfit = Outfit({
@@ -53,6 +55,10 @@ export default function RootLayout({
       <body className={`${outfit.variable} ${instrumentSerif.variable} ${jetbrainsMono.variable} ${spaceGrotesk.variable} ${bebasNeue.variable} antialiased`}>
         {/* Ambient glow effect */}
         <div className="ambient-glow" aria-hidden="true" />
+        {/* Rain overlay effect */}
+        <RainEffect />
+        {/* Cursor glow effect */}
+        <CursorGlow />
         <AuthProvider>
           <DarkHoursTheme />
           <ToastProvider>{children}</ToastProvider>

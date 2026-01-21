@@ -15,10 +15,10 @@ type NavTab = {
 };
 
 const DEFAULT_TABS: NavTab[] = [
-  { key: "feed", defaultLabel: "Feed", href: "feed" },
-  { key: "events", defaultLabel: "Events", href: "events" },
-  { key: "spots", defaultLabel: "Spots", href: "spots" },
-  { key: "community", defaultLabel: "Community", href: "community" },
+  { key: "feed", defaultLabel: "Highlights", href: "feed" },
+  { key: "events", defaultLabel: "Happenings", href: "events" },
+  { key: "spots", defaultLabel: "Hangs", href: "spots" },
+  { key: "community", defaultLabel: "Humans", href: "community" },
   { key: "happening_now", defaultLabel: "Live", href: "happening-now" },
 ];
 
@@ -60,34 +60,24 @@ export default function MainNav({ portalSlug = "atlanta" }: Props) {
   return (
     <nav className="sticky top-14 z-30 bg-[var(--night)]/95 backdrop-blur-sm border-b border-[var(--twilight)]/50">
       <div className="max-w-3xl mx-auto px-4">
-        <div className="relative">
-          {/* Fade gradient on left edge */}
-          <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-[var(--night)]/95 to-transparent z-10 pointer-events-none" />
-          {/* Fade gradient on right edge */}
-          <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-[var(--night)]/95 to-transparent z-10 pointer-events-none" />
-
-          <div className="flex gap-1.5 py-2.5 overflow-x-auto scrollbar-hide px-2">
-            {TABS.map((tab) => {
-              const active = isActive(tab);
-              return (
-                <Link
-                  key={tab.key}
-                  href={getHref(tab)}
-                  className={`relative px-4 py-2 rounded-lg font-mono text-sm whitespace-nowrap transition-all duration-200 ${
-                    active
-                      ? "bg-[var(--coral)] text-[var(--void)] font-medium border border-[#8B4513]/50 shadow-[0_0_15px_rgba(232,145,45,0.25),inset_0_1px_0_rgba(255,255,255,0.1)]"
-                      : "text-[var(--muted)] hover:text-[var(--cream)] hover:bg-[var(--twilight)]/60 border border-transparent hover:border-[var(--coral)]/20"
-                  }`}
-                >
-                  {tab.label}
-                  {/* Active indicator dot */}
-                  {active && (
-                    <span className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-[var(--coral)] shadow-[0_0_4px_var(--coral)]" />
-                  )}
-                </Link>
-              );
-            })}
-          </div>
+        {/* Tabs container - no overflow hidden to allow glow effects */}
+        <div className="flex gap-1 py-2.5 overflow-x-auto scrollbar-hide">
+          {TABS.map((tab) => {
+            const active = isActive(tab);
+            return (
+              <Link
+                key={tab.key}
+                href={getHref(tab)}
+                className={`nav-tab relative px-4 py-2 rounded-md font-mono text-sm whitespace-nowrap transition-all duration-300 ${
+                  active
+                    ? "nav-tab-active text-[var(--void)] font-medium"
+                    : "text-[var(--muted)] hover:text-[var(--neon-amber)] border border-transparent"
+                }`}
+              >
+                {tab.label}
+              </Link>
+            );
+          })}
         </div>
       </div>
     </nav>

@@ -11,6 +11,9 @@ import SearchBar from "@/components/SearchBar";
 import PortalSpotsView from "@/components/PortalSpotsView";
 import PortalHappeningNow from "@/components/PortalHappeningNow";
 import PortalCommunityView from "@/components/PortalCommunityView";
+import TrendingNow from "@/components/TrendingNow";
+import TonightsPicks from "@/components/TonightsPicks";
+import DynamicAmbient from "@/components/DynamicAmbient";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 
@@ -96,6 +99,11 @@ export default async function PortalPage({ params, searchParams }: Props) {
 
   return (
     <div className="min-h-screen">
+      {/* Dynamic ambient glow based on category */}
+      <Suspense fallback={null}>
+        <DynamicAmbient />
+      </Suspense>
+
       <GlassHeader
         portalSlug={portal.slug}
         portalName={portal.name}
@@ -141,9 +149,17 @@ export default async function PortalPage({ params, searchParams }: Props) {
         )}
 
         {viewMode === "feed" && (
-          <Suspense fallback={<div className="py-16 text-center text-[var(--muted)]">Loading...</div>}>
-            <FeedView />
-          </Suspense>
+          <>
+            <Suspense fallback={null}>
+              <TonightsPicks portalSlug={portal.slug} />
+            </Suspense>
+            <Suspense fallback={null}>
+              <TrendingNow portalSlug={portal.slug} />
+            </Suspense>
+            <Suspense fallback={<div className="py-16 text-center text-[var(--muted)]">Loading...</div>}>
+              <FeedView />
+            </Suspense>
+          </>
         )}
 
         {viewMode === "map" && (

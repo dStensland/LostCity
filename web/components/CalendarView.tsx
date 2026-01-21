@@ -46,6 +46,26 @@ interface DayData {
   isPast: boolean;
 }
 
+// Get reflection color class based on category
+function getReflectionClass(category: string | null): string {
+  if (!category) return "";
+  const reflectionMap: Record<string, string> = {
+    music: "reflect-music",
+    comedy: "reflect-comedy",
+    art: "reflect-art",
+    theater: "reflect-theater",
+    film: "reflect-film",
+    community: "reflect-community",
+    food_drink: "reflect-food",
+    food: "reflect-food",
+    sports: "reflect-sports",
+    fitness: "reflect-fitness",
+    nightlife: "reflect-nightlife",
+    family: "reflect-family",
+  };
+  return reflectionMap[category] || "";
+}
+
 interface CalendarSummary {
   totalEvents: number;
   daysWithEvents: number;
@@ -161,11 +181,18 @@ export default function CalendarView({ portalId, portalSlug = "atlanta", portalE
     return days;
   }, [currentMonth, eventsByDate]);
 
-  // Selected day's events
+  // Selected day's events (with deduplication for safety)
   const selectedDayEvents = useMemo(() => {
     if (!selectedDate) return [];
     const dateKey = format(selectedDate, "yyyy-MM-dd");
-    return eventsByDate.get(dateKey) || [];
+    const dayEvents = eventsByDate.get(dateKey) || [];
+    // Deduplicate by event ID
+    const seen = new Set<number>();
+    return dayEvents.filter(event => {
+      if (seen.has(event.id)) return false;
+      seen.add(event.id);
+      return true;
+    });
   }, [selectedDate, eventsByDate]);
 
   // Navigation handlers - immediate updates, CSS handles transitions
@@ -385,17 +412,19 @@ export default function CalendarView({ portalId, portalSlug = "atlanta", portalE
                   {selectedDayEvents.map((event) => {
                     const { time, period } = formatTimeSplit(event.start_time, event.is_all_day);
                     const categoryColor = event.category ? getCategoryColor(event.category) : null;
+                    const reflectionClass = getReflectionClass(event.category);
 
                     return (
                       <Link
                         key={event.id}
                         href={`/${portalSlug}/events/${event.id}`}
-                        className="block p-3 rounded-lg border border-[var(--twilight)] card-event-hover group"
+                        className={`block p-3 rounded-lg border border-[var(--twilight)] card-atmospheric ${reflectionClass} group`}
                         style={{
                           borderLeftWidth: categoryColor ? "3px" : undefined,
                           borderLeftColor: categoryColor || undefined,
                           backgroundColor: "var(--card-bg)",
                           "--glow-color": categoryColor || "var(--coral)",
+                          "--reflection-color": categoryColor ? `color-mix(in srgb, ${categoryColor} 15%, transparent)` : undefined,
                         } as React.CSSProperties}
                       >
                         {/* Time */}
