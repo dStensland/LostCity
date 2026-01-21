@@ -68,19 +68,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     // Get initial session
     const getInitialSession = async () => {
-      const {
-        data: { session: initialSession },
-      } = await supabase.auth.getSession();
+      try {
+        const {
+          data: { session: initialSession },
+        } = await supabase.auth.getSession();
 
-      setSession(initialSession);
-      setUser(initialSession?.user ?? null);
+        setSession(initialSession);
+        setUser(initialSession?.user ?? null);
 
-      if (initialSession?.user) {
-        const userProfile = await fetchProfile(initialSession.user.id);
-        setProfile(userProfile);
+        if (initialSession?.user) {
+          const userProfile = await fetchProfile(initialSession.user.id);
+          setProfile(userProfile);
+        }
+      } catch (error) {
+        console.error("Error getting initial session:", error);
+      } finally {
+        setLoading(false);
       }
-
-      setLoading(false);
     };
 
     getInitialSession();
@@ -89,17 +93,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, newSession) => {
-      setSession(newSession);
-      setUser(newSession?.user ?? null);
+      try {
+        setSession(newSession);
+        setUser(newSession?.user ?? null);
 
-      if (newSession?.user) {
-        const userProfile = await fetchProfile(newSession.user.id);
-        setProfile(userProfile);
-      } else {
-        setProfile(null);
+        if (newSession?.user) {
+          const userProfile = await fetchProfile(newSession.user.id);
+          setProfile(userProfile);
+        } else {
+          setProfile(null);
+        }
+      } catch (error) {
+        console.error("Error handling auth state change:", error);
+      } finally {
+        setLoading(false);
       }
-
-      setLoading(false);
     });
 
     return () => {
