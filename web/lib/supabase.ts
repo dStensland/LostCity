@@ -51,6 +51,15 @@ export const supabase = new Proxy({} as SupabaseClient<Database>, {
   },
 });
 
+export type SeriesInfo = {
+  id: string;
+  slug: string;
+  title: string;
+  series_type: string;
+  image_url: string | null;
+  genres: string[] | null;
+};
+
 export type Event = {
   id: number;
   title: string;
@@ -65,6 +74,7 @@ export type Event = {
   category_id: string | null;
   subcategory_id: string | null;
   tags: string[] | null;
+  genres: string[] | null;
   price_min: number | null;
   price_max: number | null;
   price_note: string | null;
@@ -73,6 +83,8 @@ export type Event = {
   ticket_url: string | null;
   image_url: string | null;
   venue: Venue | null;
+  series_id?: string | null;
+  series?: SeriesInfo | null;
 };
 
 export type Venue = {
@@ -138,13 +150,29 @@ export async function getUpcomingEventsPaginated(
   return { events: data as Event[], total: count ?? 0 };
 }
 
-export async function getEventById(id: number): Promise<Event | null> {
+export type Producer = {
+  id: string;
+  name: string;
+  slug: string;
+  org_type: string;
+  website: string | null;
+  instagram: string | null;
+  logo_url: string | null;
+  description: string | null;
+};
+
+export type EventWithProducer = Event & {
+  producer?: Producer | null;
+};
+
+export async function getEventById(id: number): Promise<EventWithProducer | null> {
   const { data, error } = await supabase
     .from("events")
     .select(
       `
       *,
-      venue:venues(id, name, slug, address, neighborhood, city, state)
+      venue:venues(id, name, slug, address, neighborhood, city, state),
+      producer:event_producers(id, name, slug, org_type, website, instagram, logo_url, description)
     `
     )
     .eq("id", id)
@@ -155,7 +183,7 @@ export async function getEventById(id: number): Promise<Event | null> {
     return null;
   }
 
-  return data as Event;
+  return data as EventWithProducer;
 }
 
 export async function getEventsByCategory(
@@ -229,4 +257,41 @@ export async function getRelatedEvents(
   const sameDateEvents = (sameDateData as Event[]) || [];
 
   return { venueEvents, sameDateEvents };
+}
+
+// Get similar events based on category
+export async function getSimilarEvents(
+  event: Event,
+  limit = 4
+): Promise<Event[]> {
+  if (!event.category) {
+    return [];
+  }
+
+  const today = new Date().toISOString().split("T")[0];
+
+  // Get events in the same category, excluding same venue and same date
+  const { data } = await supabase
+    .from("events")
+    .select(
+      `
+      *,
+      venue:venues(id, name, slug, address, neighborhood, city, state)
+    `
+    )
+    .eq("category", event.category)
+    .neq("id", event.id)
+    .neq("start_date", event.start_date) // Exclude same date (covered by "That same night")
+    .gte("start_date", today)
+    .order("start_date", { ascending: true })
+    .limit(limit * 2); // Fetch extra to filter out same venue
+
+  let similarEvents = (data as Event[]) || [];
+
+  // Filter out events at the same venue (covered by "More at this venue")
+  if (event.venue?.id) {
+    similarEvents = similarEvents.filter((e) => e.venue?.id !== event.venue?.id);
+  }
+
+  return similarEvents.slice(0, limit);
 }

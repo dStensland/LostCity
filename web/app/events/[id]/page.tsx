@@ -1,14 +1,18 @@
-import { getEventById, getRelatedEvents } from "@/lib/supabase";
+import { getEventById, getRelatedEvents, getSimilarEvents } from "@/lib/supabase";
 import { getNearbySpots, getSpotTypeLabel } from "@/lib/spots";
+import { getPortalById } from "@/lib/portal";
+import { getSeriesTypeLabel, getSeriesTypeColor } from "@/lib/series";
 import Image from "next/image";
 import CategoryIcon from "@/components/CategoryIcon";
 import RSVPButton from "@/components/RSVPButton";
 import RecommendButton from "@/components/RecommendButton";
+import FollowButton from "@/components/FollowButton";
 import FriendsGoing from "@/components/FriendsGoing";
 import WhosGoing from "@/components/WhosGoing";
 import LiveIndicator from "@/components/LiveIndicator";
 import PageHeader from "@/components/PageHeader";
 import PageFooter from "@/components/PageFooter";
+import { PortalTheme } from "@/components/PortalTheme";
 import { format, parseISO } from "date-fns";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -123,7 +127,16 @@ export default async function EventPage({ params }: Props) {
     notFound();
   }
 
-  const { venueEvents, sameDateEvents } = await getRelatedEvents(event);
+  // Get portal if event is portal-specific
+  const portalId = (event as { portal_id?: string }).portal_id;
+  const portal = portalId ? await getPortalById(portalId) : null;
+  const portalSlug = portal?.slug || "atlanta";
+  const portalName = portal?.name || "Atlanta";
+
+  const [{ venueEvents, sameDateEvents }, similarEvents] = await Promise.all([
+    getRelatedEvents(event),
+    getSimilarEvents(event, 4),
+  ]);
   const nearbySpots = event.venue?.id ? await getNearbySpots(event.venue.id) : [];
   const dateObj = parseISO(event.start_date);
   const shortDate = format(dateObj, "MMM d");
@@ -139,8 +152,11 @@ export default async function EventPage({ params }: Props) {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(eventSchema) }}
       />
 
+      {/* Portal-specific theming */}
+      {portal && <PortalTheme portal={portal} />}
+
       <div className="min-h-screen">
-        <PageHeader showEvents />
+        <PageHeader showEvents citySlug={portalSlug} cityName={portalName} />
 
         <main className="max-w-3xl mx-auto px-4 py-8">
           {/* Event image */}
@@ -157,6 +173,45 @@ export default async function EventPage({ params }: Props) {
 
           {/* Main event info card */}
           <div className="border border-[var(--twilight)] rounded-lg p-6 sm:p-8" style={{ backgroundColor: "var(--card-bg)" }}>
+            {/* Series link */}
+            {event.series && (
+              <Link
+                href={`/series/${event.series.slug}`}
+                className="inline-flex items-center gap-2 mb-3 px-3 py-1.5 rounded-lg border border-[var(--twilight)] transition-colors hover:border-[var(--coral)]/50 group"
+                style={{ backgroundColor: "var(--void)" }}
+              >
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  style={{ color: getSeriesTypeColor(event.series.series_type) }}
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={1.5}
+                    d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z"
+                  />
+                </svg>
+                <span className="text-sm text-[var(--soft)] group-hover:text-[var(--coral)] transition-colors">
+                  Part of <span className="text-[var(--cream)] font-medium">{event.series.title}</span>
+                </span>
+                <span
+                  className="text-[0.6rem] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded"
+                  style={{
+                    backgroundColor: `${getSeriesTypeColor(event.series.series_type)}20`,
+                    color: getSeriesTypeColor(event.series.series_type),
+                  }}
+                >
+                  {getSeriesTypeLabel(event.series.series_type)}
+                </span>
+                <svg className="w-4 h-4 text-[var(--muted)] group-hover:text-[var(--coral)] transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </Link>
+            )}
+
             {/* Badges row */}
             <div className="flex flex-wrap items-center gap-2 mb-4">
               {/* Category badge */}
@@ -254,6 +309,53 @@ export default async function EventPage({ params }: Props) {
                       {tag}
                     </span>
                   ))}
+                </div>
+              </div>
+            )}
+
+            {/* Presented by (Producer/Organizer) */}
+            {event.producer && (
+              <div className="mt-6 pt-6 border-t border-[var(--twilight)]">
+                <h2 className="font-mono text-[0.65rem] font-medium text-[var(--muted)] uppercase tracking-widest mb-3">
+                  Presented by
+                </h2>
+                <div className="flex items-center justify-between gap-4 p-4 rounded-lg border border-[var(--twilight)]" style={{ backgroundColor: "var(--void)" }}>
+                  <div className="flex items-center gap-3 min-w-0">
+                    {event.producer.logo_url ? (
+                      <Image
+                        src={event.producer.logo_url}
+                        alt={event.producer.name}
+                        width={48}
+                        height={48}
+                        className="rounded-lg object-cover flex-shrink-0"
+                      />
+                    ) : (
+                      <div className="w-12 h-12 rounded-lg bg-[var(--twilight)] flex items-center justify-center flex-shrink-0">
+                        <svg className="w-6 h-6 text-[var(--muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                        </svg>
+                      </div>
+                    )}
+                    <div className="min-w-0">
+                      <h3 className="text-[var(--cream)] font-medium truncate">
+                        {event.producer.name}
+                      </h3>
+                      <p className="text-[0.7rem] text-[var(--muted)] font-mono uppercase tracking-wider">
+                        {event.producer.org_type.replace(/_/g, " ")}
+                      </p>
+                      {event.producer.website && (
+                        <a
+                          href={event.producer.website}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs text-[var(--coral)] hover:underline"
+                        >
+                          {event.producer.website.replace(/^https?:\/\//, "").replace(/\/$/, "")}
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                  <FollowButton targetProducerId={event.producer.id} size="sm" />
                 </div>
               </div>
             )}
@@ -369,8 +471,50 @@ export default async function EventPage({ params }: Props) {
           )}
 
           {/* Related Events */}
-          {(venueEvents.length > 0 || sameDateEvents.length > 0) && (
+          {(venueEvents.length > 0 || sameDateEvents.length > 0 || similarEvents.length > 0) && (
             <div className="mt-8 space-y-8">
+              {/* Similar Events */}
+              {similarEvents.length > 0 && event.category && (
+                <div>
+                  <div className="flex items-center gap-2 mb-4">
+                    <CategoryIcon type={event.category} size={14} />
+                    <h2 className="font-mono text-[0.65rem] font-medium text-[var(--muted)] uppercase tracking-widest">
+                      More {event.category.replace(/_/g, " ")} events
+                    </h2>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    {similarEvents.map((relatedEvent) => (
+                      <Link
+                        key={relatedEvent.id}
+                        href={`/events/${relatedEvent.id}`}
+                        className="block p-3 border border-[var(--twilight)] rounded-lg transition-all group card-event-hover"
+                        style={{ backgroundColor: "var(--card-bg)" }}
+                      >
+                        {relatedEvent.image_url && (
+                          <div className="aspect-[4/3] rounded-lg overflow-hidden bg-[var(--night)] relative mb-2">
+                            <Image
+                              src={relatedEvent.image_url}
+                              alt={relatedEvent.title}
+                              fill
+                              className="object-cover"
+                            />
+                          </div>
+                        )}
+                        <h3 className="text-sm text-[var(--cream)] font-medium line-clamp-2 group-hover:text-[var(--coral)] transition-colors">
+                          {relatedEvent.title}
+                        </h3>
+                        <p className="text-xs text-[var(--muted)] mt-1 truncate">
+                          {relatedEvent.venue?.name || "Venue TBA"}
+                        </p>
+                        <p className="text-[0.65rem] text-[var(--soft)] font-mono mt-1">
+                          {format(parseISO(relatedEvent.start_date), "EEE, MMM d")}
+                        </p>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* More at this venue */}
               {venueEvents.length > 0 && event.venue && (
                 <div>
