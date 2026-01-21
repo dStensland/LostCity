@@ -201,16 +201,13 @@ function EventCard({ event, index = 0, skipAnimation = false, portalSlug, friend
           {/* Title row */}
           <div className="flex items-center gap-2">
             {event.category && (
-              <span
-                className="flex-shrink-0 inline-flex items-center justify-center w-6 h-6 rounded"
-                style={{
-                  backgroundColor: `${categoryColor}20`,
-                }}
-              >
-                <CategoryIcon type={event.category} size={14} glow="subtle" />
+              <span className="flex-shrink-0">
+                <CategoryIcon type={event.category} size={16} glow="subtle" />
               </span>
             )}
-            <span className="text-[var(--cream)] group-hover:text-[var(--neon-magenta)] transition-colors truncate">
+            <span
+              className="text-[var(--cream)] transition-colors truncate group-hover:text-[var(--glow-color,var(--neon-magenta))]"
+            >
               {event.title}
             </span>
             {isLive && (

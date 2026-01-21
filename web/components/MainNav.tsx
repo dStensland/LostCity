@@ -3,34 +3,40 @@
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { usePortal } from "@/lib/portal-context";
+import { useAuth } from "@/lib/auth-context";
 
 interface Props {
   portalSlug?: string;
 }
 
 type NavTab = {
-  key: "feed" | "events" | "spots" | "community" | "happening_now";
+  key: "feed" | "your_stuff" | "events" | "spots" | "community" | "happening_now";
   defaultLabel: string;
   href: string;
+  authRequired?: boolean;
 };
 
 const DEFAULT_TABS: NavTab[] = [
   { key: "feed", defaultLabel: "Highlights", href: "feed" },
-  { key: "events", defaultLabel: "To Go", href: "events" },
-  { key: "spots", defaultLabel: "To Stop", href: "spots" },
-  { key: "community", defaultLabel: "To Watch", href: "community" },
-  { key: "happening_now", defaultLabel: "Live", href: "happening-now" },
+  { key: "your_stuff", defaultLabel: "Your Stuff", href: "foryou", authRequired: true },
+  { key: "events", defaultLabel: "Events", href: "events" },
+  { key: "spots", defaultLabel: "Places", href: "spots" },
+  { key: "community", defaultLabel: "Groups", href: "community" },
+  { key: "happening_now", defaultLabel: "Stuff around You", href: "happening-now" },
 ];
 
 export default function MainNav({ portalSlug = "atlanta" }: Props) {
   const { portal } = usePortal();
+  const { user } = useAuth();
   const navLabels = (portal.settings?.nav_labels || {}) as Record<string, string | undefined>;
 
-  // Build tabs with custom labels
-  const TABS = DEFAULT_TABS.map(tab => ({
-    ...tab,
-    label: navLabels[tab.key] || tab.defaultLabel,
-  }));
+  // Build tabs with custom labels, filtering out auth-required tabs when not logged in
+  const TABS = DEFAULT_TABS
+    .filter(tab => !tab.authRequired || user)
+    .map(tab => ({
+      ...tab,
+      label: navLabels[tab.key] || tab.defaultLabel,
+    }));
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const currentView = searchParams.get("view") || "feed";
@@ -40,11 +46,18 @@ export default function MainNav({ portalSlug = "atlanta" }: Props) {
       // Feed is the default view (no query param needed)
       return `/${portalSlug}`;
     }
+    if (tab.key === "your_stuff") {
+      // Your Stuff links to the foryou page
+      return "/foryou";
+    }
     // All other tabs use ?view= parameter within the portal
     return `/${portalSlug}?view=${tab.href}`;
   };
 
   const isActive = (tab: NavTab & { label: string }) => {
+    if (tab.key === "your_stuff") {
+      return pathname === "/foryou" || pathname === "/saved";
+    }
     const isPortalPage = pathname === `/${portalSlug}`;
     if (tab.key === "feed") {
       // Feed is the default - active when no view param or view=feed

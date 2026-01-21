@@ -10,20 +10,12 @@ interface Props {
 }
 
 export default function EventStickyBar({ eventId, eventTitle, ticketUrl }: Props) {
-  const [isVisible, setIsVisible] = useState(false);
+  // Always visible - CTAs should be easily discoverable
+  const isVisible = true;
 
-  // Show sticky bar after scrolling past the hero section
+  // Keep for future use if we want scroll-based visibility
   useEffect(() => {
-    const handleScroll = () => {
-      const scrollY = window.scrollY;
-      // Show after scrolling 300px (past hero image)
-      setIsVisible(scrollY > 300);
-    };
-
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    handleScroll(); // Check initial position
-
-    return () => window.removeEventListener("scroll", handleScroll);
+    // No-op, keeping structure for potential future scroll behavior
   }, []);
 
   const handleShare = async () => {

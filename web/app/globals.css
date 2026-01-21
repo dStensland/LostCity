@@ -1791,17 +1791,17 @@ textarea:focus-visible {
 }
 
 .card-atmospheric:hover {
-  transform: translateY(-3px) scale(1.005);
+  transform: translateY(-2px) scale(1.002);
   box-shadow:
-    0 6px 25px -4px var(--glow-color, var(--neon-magenta)),
-    0 0 50px -8px var(--glow-color, var(--neon-magenta)),
-    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    0 4px 15px -4px var(--glow-color, var(--neon-magenta)),
+    0 0 25px -8px var(--glow-color, var(--neon-magenta)),
+    inset 0 1px 0 rgba(255, 255, 255, 0.03);
 }
 
 .card-atmospheric:hover::after {
-  opacity: 0.8;
-  height: 28px;
-  bottom: -10px;
+  opacity: 0.6;
+  height: 24px;
+  bottom: -8px;
 }
 
 /* ============================================

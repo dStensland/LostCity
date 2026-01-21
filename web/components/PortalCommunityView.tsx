@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import FollowButton from "@/components/FollowButton";
 import CategoryIcon, { getCategoryColor } from "@/components/CategoryIcon";
 
 type Producer = {
@@ -183,24 +182,21 @@ export default function PortalCommunityView({ portalId, portalSlug, portalName }
 
                 {/* Info */}
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <h3 className="text-lg text-[var(--cream)] font-medium truncate group-hover:text-[var(--coral)] transition-colors">
-                        {producer.name}
-                      </h3>
-                      <div className="flex items-center gap-2 mt-1">
-                        <span
-                          className="inline-flex items-center px-2 py-0.5 rounded-md text-[0.65rem] font-mono font-medium uppercase tracking-wider"
-                          style={{
-                            backgroundColor: orgConfig?.color ? `${orgConfig.color}20` : "var(--twilight)",
-                            color: orgConfig?.color || "var(--muted)",
-                          }}
-                        >
-                          {orgConfig?.label || producer.org_type.replace(/_/g, " ")}
-                        </span>
-                      </div>
+                  <div>
+                    <h3 className="text-lg text-[var(--cream)] font-medium truncate group-hover:text-[var(--coral)] transition-colors">
+                      {producer.name}
+                    </h3>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span
+                        className="inline-flex items-center px-2 py-0.5 rounded-md text-[0.65rem] font-mono font-medium uppercase tracking-wider"
+                        style={{
+                          backgroundColor: orgConfig?.color ? `${orgConfig.color}20` : "var(--twilight)",
+                          color: orgConfig?.color || "var(--muted)",
+                        }}
+                      >
+                        {orgConfig?.label || producer.org_type.replace(/_/g, " ")}
+                      </span>
                     </div>
-                    <FollowButton targetProducerId={producer.id} size="sm" />
                   </div>
 
                   {hasEvents && (

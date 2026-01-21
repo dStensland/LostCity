@@ -21,6 +21,7 @@ import AddToCalendar from "@/components/AddToCalendar";
 import DirectionsDropdown from "@/components/DirectionsDropdown";
 import EventStickyBar from "@/components/EventStickyBar";
 import EventHeroImage from "@/components/EventHeroImage";
+import LinkifyText from "@/components/LinkifyText";
 import { formatTimeSplit, formatPrice } from "@/lib/formats";
 
 export const revalidate = 60;
@@ -286,7 +287,7 @@ export default async function PortalEventPage({ params }: Props) {
                   About
                 </h2>
                 <p className="text-[var(--soft)] whitespace-pre-wrap leading-relaxed">
-                  {event.description}
+                  <LinkifyText text={event.description} />
                 </p>
               </div>
             )}

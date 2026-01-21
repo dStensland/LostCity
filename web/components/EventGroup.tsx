@@ -145,7 +145,7 @@ export default function EventGroup({
       <button
         type="button"
         onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full px-3 py-2.5 flex items-center gap-3 hover:bg-[var(--twilight)]/20 transition-colors"
+        className="group w-full px-3 py-2.5 flex items-center gap-3 hover:bg-[var(--twilight)]/20 transition-colors"
       >
         {/* Time of earliest event - matches EventCard format */}
         {(() => {
@@ -170,7 +170,7 @@ export default function EventGroup({
           </svg>
         )}
         <div className="flex-1 min-w-0 text-left">
-          <span className="font-medium text-sm text-[var(--cream)] truncate block">{title}</span>
+          <span className="font-medium text-sm text-[var(--cream)] group-hover:text-[var(--glow-color,var(--neon-magenta))] truncate block transition-colors">{title}</span>
           {subtitle && <span className="text-xs text-[var(--muted)]">{subtitle}</span>}
         </div>
         <span className="font-mono text-[0.6rem] text-[var(--muted)] bg-[var(--twilight)]/50 px-1.5 py-0.5 rounded">
