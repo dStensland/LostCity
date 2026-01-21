@@ -59,22 +59,22 @@ export default function FeedView() {
     return () => controller.abort();
   }, [loadFeed]);
 
-  // Loading state - matches actual feed layout
+  // Loading state - matches actual feed layout with shimmer
   if (loading) {
     return (
       <div className="py-6 space-y-10">
         {/* Hero banner skeleton */}
-        <div className="rounded-2xl bg-[var(--twilight)]/50 h-56 sm:h-64 animate-pulse" />
+        <div className="rounded-2xl h-56 sm:h-64 skeleton-shimmer" />
 
         {/* Carousel section skeleton */}
         <div>
           <div className="flex items-center justify-between mb-4">
-            <div className="h-6 w-36 bg-[var(--twilight)]/50 rounded animate-pulse" />
-            <div className="h-6 w-16 bg-[var(--twilight)]/50 rounded-full animate-pulse" />
+            <div className="h-6 w-36 rounded skeleton-shimmer" />
+            <div className="h-6 w-16 rounded-full skeleton-shimmer" style={{ animationDelay: "0.1s" }} />
           </div>
           <div className="flex gap-3 overflow-hidden -mx-4 px-4">
             {[...Array(4)].map((_, j) => (
-              <div key={j} className="flex-shrink-0 w-72 rounded-xl bg-[var(--twilight)]/50 h-52 animate-pulse" />
+              <div key={j} className="flex-shrink-0 w-72 rounded-xl h-52 skeleton-shimmer" style={{ animationDelay: `${j * 0.1}s` }} />
             ))}
           </div>
         </div>
@@ -82,12 +82,12 @@ export default function FeedView() {
         {/* Grid section skeleton */}
         <div>
           <div className="flex items-center justify-between mb-4">
-            <div className="h-6 w-32 bg-[var(--twilight)]/50 rounded animate-pulse" />
-            <div className="h-6 w-16 bg-[var(--twilight)]/50 rounded-full animate-pulse" />
+            <div className="h-6 w-32 rounded skeleton-shimmer" />
+            <div className="h-6 w-16 rounded-full skeleton-shimmer" style={{ animationDelay: "0.1s" }} />
           </div>
           <div className="grid grid-cols-2 gap-3">
             {[...Array(4)].map((_, j) => (
-              <div key={j} className="rounded-xl bg-[var(--twilight)]/50 h-52 animate-pulse" />
+              <div key={j} className="rounded-xl h-52 skeleton-shimmer" style={{ animationDelay: `${j * 0.1 + 0.2}s` }} />
             ))}
           </div>
         </div>
@@ -95,12 +95,12 @@ export default function FeedView() {
         {/* List section skeleton */}
         <div>
           <div className="flex items-center justify-between mb-4">
-            <div className="h-6 w-28 bg-[var(--twilight)]/50 rounded animate-pulse" />
-            <div className="h-6 w-16 bg-[var(--twilight)]/50 rounded-full animate-pulse" />
+            <div className="h-6 w-28 rounded skeleton-shimmer" />
+            <div className="h-6 w-16 rounded-full skeleton-shimmer" style={{ animationDelay: "0.1s" }} />
           </div>
           <div className="space-y-2">
             {[...Array(5)].map((_, j) => (
-              <div key={j} className="rounded-lg bg-[var(--twilight)]/50 h-16 animate-pulse" />
+              <div key={j} className="rounded-lg h-16 skeleton-shimmer" style={{ animationDelay: `${j * 0.08 + 0.3}s` }} />
             ))}
           </div>
         </div>
@@ -108,24 +108,28 @@ export default function FeedView() {
     );
   }
 
-  // Error state
+  // Error state with enhanced styling
   if (error) {
     return (
       <div className="py-16 text-center">
-        <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-[var(--twilight)]/50 flex items-center justify-center">
-          <svg className="w-8 h-8 text-[var(--coral)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="w-20 h-20 mx-auto mb-5 rounded-2xl bg-gradient-to-br from-[var(--coral)]/20 to-[var(--twilight)] flex items-center justify-center">
+          <svg className="w-10 h-10 text-[var(--coral)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
           </svg>
         </div>
-        <p className="text-[var(--muted)] mb-4">{error}</p>
+        <h3 className="text-[var(--cream)] text-lg font-medium mb-2">Something went wrong</h3>
+        <p className="text-[var(--muted)] text-sm mb-6 max-w-xs mx-auto">{error}</p>
         <button
           onClick={() => {
             setLoading(true);
             const controller = new AbortController();
             loadFeed(controller.signal);
           }}
-          className="px-4 py-2 bg-[var(--coral)] text-[var(--void)] rounded-lg font-mono text-sm font-medium hover:bg-[var(--rose)] transition-colors"
+          className="inline-flex items-center gap-2 px-5 py-2.5 bg-[var(--coral)] text-[var(--void)] rounded-lg font-mono text-sm font-medium hover:bg-[var(--rose)] transition-colors"
         >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
           Try Again
         </button>
       </div>

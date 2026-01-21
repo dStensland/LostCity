@@ -55,8 +55,10 @@ export default function GlassHeader({ portalSlug = "atlanta", portalName = "Atla
 
   return (
     <header
-      className={`sticky top-0 z-40 px-4 py-3 flex justify-between items-center border-b transition-all duration-300 ${
-        isScrolled ? "glass border-[var(--twilight)]/50" : "bg-transparent border-[var(--twilight)]"
+      className={`sticky top-0 z-40 px-4 py-3 flex justify-between items-center border-b transition-all duration-500 ease-out ${
+        isScrolled
+          ? "glass border-[var(--twilight)]/50 shadow-[0_4px_20px_rgba(0,0,0,0.3)]"
+          : "bg-transparent border-[var(--twilight)]/30"
       }`}
     >
       {/* Logo */}
@@ -83,14 +85,17 @@ export default function GlassHeader({ portalSlug = "atlanta", portalName = "Atla
         {/* Live indicator - only show when events are live */}
         {liveEventCount > 0 && (
           <Link
-            href="/happening-now"
-            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full font-mono text-[0.65rem] font-medium transition-all ${
+            href={`/${portalSlug}?view=happening-now`}
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-full font-mono text-[0.65rem] font-medium transition-all duration-200 ${
               isHappeningNow
-                ? "bg-[var(--neon-red)] text-white"
-                : "bg-[var(--neon-red)]/20 text-[var(--neon-red)] hover:bg-[var(--neon-red)]/30"
+                ? "bg-[var(--neon-red)] text-white shadow-[0_0_12px_rgba(255,90,90,0.4)]"
+                : "bg-[var(--neon-red)]/15 text-[var(--neon-red)] hover:bg-[var(--neon-red)]/25 border border-[var(--neon-red)]/30"
             }`}
           >
-            <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse" />
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-current opacity-75" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-current" />
+            </span>
             {liveEventCount} Live
           </Link>
         )}
@@ -167,7 +172,7 @@ export default function GlassHeader({ portalSlug = "atlanta", portalName = "Atla
                 Explore
               </div>
               <Link
-                href="/spots"
+                href={`/${portalSlug}?view=spots`}
                 onClick={() => setMobileMenuOpen(false)}
                 className="flex items-center gap-2 px-3 py-2 font-mono text-sm text-[var(--muted)] hover:bg-[var(--twilight)] hover:text-[var(--cream)]"
               >
@@ -178,7 +183,7 @@ export default function GlassHeader({ portalSlug = "atlanta", portalName = "Atla
                 Spots
               </Link>
               <Link
-                href="/happening-now"
+                href={`/${portalSlug}?view=happening-now`}
                 onClick={() => setMobileMenuOpen(false)}
                 className={`flex items-center gap-2 px-3 py-2 font-mono text-sm hover:bg-[var(--twilight)] ${
                   isHappeningNow ? "text-[var(--neon-red)]" : "text-[var(--muted)] hover:text-[var(--cream)]"

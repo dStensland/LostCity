@@ -18,6 +18,8 @@ type EventCardEvent = Event & {
 interface Props {
   event: EventCardEvent;
   index?: number;
+  skipAnimation?: boolean;
+  portalSlug?: string;
 }
 
 interface PriceDisplay {
@@ -80,10 +82,12 @@ function formatPrice(
   return null;
 }
 
-export default function EventCard({ event, index = 0 }: Props) {
+export default function EventCard({ event, index = 0, skipAnimation = false, portalSlug }: Props) {
   const { time, period } = formatTimeSplit(event.start_time, event.is_all_day);
   const isLive = event.is_live || false;
-  const staggerClass = index < 10 ? `stagger-${index + 1}` : "";
+  // Only apply stagger animation to first 10 initial items, not infinite scroll items
+  const staggerClass = !skipAnimation && index < 10 ? `stagger-${index + 1}` : "";
+  const animationClass = skipAnimation ? "" : "animate-fade-in";
   const categoryColor = event.category ? getCategoryColor(event.category) : null;
 
   const price = formatPrice(
@@ -98,13 +102,14 @@ export default function EventCard({ event, index = 0 }: Props) {
 
   return (
     <Link
-      href={`/events/${event.id}`}
-      className={`block p-3 mb-2 rounded-lg border border-[var(--twilight)] transition-all animate-fade-in ${staggerClass} group overflow-hidden`}
+      href={portalSlug ? `/${portalSlug}/events/${event.id}` : `/events/${event.id}`}
+      className={`block p-3 mb-2 rounded-lg border border-[var(--twilight)] card-event-hover ${animationClass} ${staggerClass} group overflow-hidden`}
       style={{
         borderLeftWidth: categoryColor ? "3px" : undefined,
         borderLeftColor: categoryColor || undefined,
         backgroundColor: "var(--card-bg)",
-      }}
+        "--glow-color": categoryColor || "var(--neon-magenta)",
+      } as React.CSSProperties}
     >
       <div className="flex gap-3">
         {/* Time cell */}
@@ -122,13 +127,16 @@ export default function EventCard({ event, index = 0 }: Props) {
           {/* Title row */}
           <div className="flex items-center gap-2">
             {event.category && (
-              <CategoryIcon type={event.category} size={14} className="flex-shrink-0 opacity-60" />
+              <CategoryIcon type={event.category} size={14} className="flex-shrink-0 opacity-80" />
             )}
             <span className="text-[var(--cream)] group-hover:text-[var(--neon-magenta)] transition-colors truncate">
               {event.title}
             </span>
             {isLive && (
-              <span className="flex-shrink-0 w-2 h-2 rounded-full bg-[var(--neon-red)] animate-pulse" />
+              <span className="flex-shrink-0 relative flex h-2.5 w-2.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--neon-red)] opacity-75" />
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[var(--neon-red)] shadow-[0_0_6px_var(--neon-red)]" />
+              </span>
             )}
           </div>
 
@@ -146,9 +154,15 @@ export default function EventCard({ event, index = 0 }: Props) {
             {price && (
               <>
                 <span className="opacity-40">·</span>
-                <span className={`${price.isFree ? "text-[var(--neon-green)]" : ""} ${price.isEstimate ? "opacity-60" : ""}`}>
-                  {price.text}
-                </span>
+                {price.isFree ? (
+                  <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-[var(--neon-green)]/15 text-[var(--neon-green)] text-[0.65rem] font-medium">
+                    {price.text}
+                  </span>
+                ) : (
+                  <span className={`${price.isEstimate ? "opacity-60" : "text-[var(--soft)]"}`}>
+                    {price.text}
+                  </span>
+                )}
               </>
             )}
           </div>

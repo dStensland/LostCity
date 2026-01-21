@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import CategoryIcon, { getCategoryLabel } from "./CategoryIcon";
 
@@ -48,8 +48,30 @@ export default function PortalSpotsView({ portalId, portalSlug, isExclusive = fa
 
   if (loading) {
     return (
-      <div className="py-16 text-center text-[var(--muted)]">
-        Loading locations...
+      <div className="py-4">
+        <div className="mb-4">
+          <div className="h-3 w-40 rounded skeleton-shimmer" />
+        </div>
+        <div className="space-y-2">
+          {[...Array(5)].map((_, i) => (
+            <div
+              key={i}
+              className="p-4 rounded-lg border border-[var(--twilight)]"
+              style={{ backgroundColor: "var(--card-bg)" }}
+            >
+              <div className="flex items-start gap-3">
+                <div className="w-[18px] h-[18px] rounded skeleton-shimmer" />
+                <div className="flex-1 min-w-0">
+                  <div className="h-4 w-2/3 rounded skeleton-shimmer mb-2" style={{ animationDelay: `${i * 0.05}s` }} />
+                  <div className="flex items-center gap-2">
+                    <div className="h-3 w-20 rounded skeleton-shimmer" style={{ animationDelay: `${i * 0.05 + 0.1}s` }} />
+                    <div className="h-3 w-24 rounded skeleton-shimmer" style={{ animationDelay: `${i * 0.05 + 0.15}s` }} />
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
@@ -57,11 +79,23 @@ export default function PortalSpotsView({ portalId, portalSlug, isExclusive = fa
   if (spots.length === 0) {
     return (
       <div className="py-16 text-center">
-        <p className="text-[var(--muted)]">No locations found</p>
+        <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-[var(--twilight)] to-[var(--dusk)] flex items-center justify-center">
+          <svg className="w-8 h-8 text-[var(--muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+          </svg>
+        </div>
+        <p className="text-[var(--cream)] text-lg font-medium mb-1">No locations found</p>
+        <p className="text-[var(--muted)] text-sm mb-4">
+          We haven&apos;t discovered any venues for this portal yet
+        </p>
         <Link
           href={`/${portalSlug}`}
-          className="inline-block mt-4 font-mono text-sm text-[var(--coral)] hover:text-[var(--rose)]"
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[var(--twilight)]/50 text-[var(--cream)] hover:bg-[var(--twilight)] transition-colors font-mono text-sm"
         >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
           View all events
         </Link>
       </div>
@@ -81,8 +115,8 @@ export default function PortalSpotsView({ portalId, portalSlug, isExclusive = fa
           <Link
             key={spot.id}
             href={`/spots/${spot.slug}`}
-            className="block p-4 rounded-lg border border-[var(--twilight)] transition-colors group"
-            style={{ backgroundColor: "var(--card-bg)" }}
+            className="block p-4 rounded-lg border border-[var(--twilight)] card-event-hover group"
+            style={{ backgroundColor: "var(--card-bg)", "--glow-color": "var(--coral)" } as React.CSSProperties}
           >
             <div className="flex items-start gap-3">
               {spot.spot_type && (
