@@ -2,6 +2,12 @@ import { NextResponse } from "next/server";
 import { createClient, getUser } from "@/lib/supabase/server";
 import { errorResponse } from "@/lib/api-utils";
 
+type RecommendationReason = {
+  type: "followed_venue" | "followed_producer" | "neighborhood" | "vibes" | "price" | "friends_going" | "trending";
+  label: string;
+  detail?: string;
+};
+
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const limit = Math.min(parseInt(searchParams.get("limit") || "20", 10), 50);
@@ -39,9 +45,60 @@ export async function GET(request: Request) {
   const followedVenues = followedVenuesData as { followed_venue_id: number | null }[] | null;
   const followedVenueIds = followedVenues?.map((f) => f.followed_venue_id).filter(Boolean) as number[] || [];
 
-  // Build personalized event query
-  const today = new Date().toISOString().split("T")[0];
+  // Get followed producers
+  const { data: followedProducersData } = await supabase
+    .from("follows")
+    .select("followed_producer_id")
+    .eq("follower_id", user.id)
+    .not("followed_producer_id", "is", null);
 
+  const followedProducers = followedProducersData as { followed_producer_id: string | null }[] | null;
+  const followedProducerIds = followedProducers?.map((f) => f.followed_producer_id).filter(Boolean) as string[] || [];
+
+  // Get friends (mutual follows)
+  const { data: following } = await supabase
+    .from("follows")
+    .select("followed_user_id")
+    .eq("follower_id", user.id)
+    .not("followed_user_id", "is", null);
+
+  const { data: followers } = await supabase
+    .from("follows")
+    .select("follower_id")
+    .eq("followed_user_id", user.id);
+
+  const followingIds = new Set((following || []).map((f: { followed_user_id: string }) => f.followed_user_id));
+  const followerIds = new Set((followers || []).map((f: { follower_id: string }) => f.follower_id));
+  const friendIds = [...followingIds].filter((id) => followerIds.has(id));
+
+  // Get events friends are going to
+  const today = new Date().toISOString().split("T")[0];
+  let friendsGoingMap: Record<number, { user_id: string; username: string; display_name: string | null }[]> = {};
+
+  if (friendIds.length > 0) {
+    const { data: friendRsvps } = await supabase
+      .from("event_rsvps")
+      .select(`
+        event_id,
+        user_id,
+        profiles!event_rsvps_user_id_fkey(username, display_name)
+      `)
+      .in("user_id", friendIds)
+      .in("status", ["going", "interested"]);
+
+    for (const rsvp of (friendRsvps || []) as { event_id: number; user_id: string; profiles: { username: string; display_name: string | null } }[]) {
+      if (!friendsGoingMap[rsvp.event_id]) {
+        friendsGoingMap[rsvp.event_id] = [];
+      }
+      friendsGoingMap[rsvp.event_id].push({
+        user_id: rsvp.user_id,
+        username: rsvp.profiles.username,
+        display_name: rsvp.profiles.display_name,
+      });
+    }
+  }
+
+  // Build personalized event query
   let query = supabase
     .from("events")
     .select(`
@@ -57,7 +114,9 @@ export async function GET(request: Request) {
       image_url,
       ticket_url,
       vibes,
-      venue:venues(id, name, neighborhood, slug)
+      producer_id,
+      venue:venues(id, name, neighborhood, slug),
+      producer:event_producers(id, name, slug)
     `)
     .gte("start_date", today)
     .order("start_date", { ascending: true })
@@ -87,13 +146,21 @@ export async function GET(request: Request) {
     image_url: string | null;
     ticket_url: string | null;
     vibes: string[] | null;
+    producer_id: string | null;
     venue: {
       id: number;
       name: string;
       neighborhood: string | null;
       slug: string | null;
     } | null;
+    producer?: {
+      id: string;
+      name: string;
+      slug: string;
+    } | null;
     score?: number;
+    reasons?: RecommendationReason[];
+    friends_going?: { user_id: string; username: string; display_name: string | null }[];
   };
 
   let events = (eventsData || []) as EventResult[];
@@ -101,16 +168,54 @@ export async function GET(request: Request) {
   // Score and sort events by relevance
   events = events.map((event) => {
     let score = 0;
+    const reasons: RecommendationReason[] = [];
+
+    // Boost for friends going (highest priority)
+    const friendsGoing = friendsGoingMap[event.id] || [];
+    if (friendsGoing.length > 0) {
+      score += 60 + (friendsGoing.length * 10); // 60 base + 10 per friend
+      const friendNames = friendsGoing.slice(0, 2).map((f) => f.display_name || `@${f.username}`);
+      const othersCount = friendsGoing.length - 2;
+      let detail = friendNames.join(" and ");
+      if (othersCount > 0) {
+        detail = `${friendNames[0]} and ${friendsGoing.length - 1} others`;
+      }
+      reasons.push({
+        type: "friends_going",
+        label: "Friends going",
+        detail,
+      });
+    }
 
     // Boost for followed venues
     if (event.venue?.id && followedVenueIds.includes(event.venue.id)) {
       score += 50;
+      reasons.push({
+        type: "followed_venue",
+        label: "You follow this venue",
+        detail: event.venue.name,
+      });
+    }
+
+    // Boost for followed producers
+    if (event.producer_id && followedProducerIds.includes(event.producer_id)) {
+      score += 45;
+      reasons.push({
+        type: "followed_producer",
+        label: "From an organizer you follow",
+        detail: event.producer?.name,
+      });
     }
 
     // Boost for matching neighborhoods
     if (prefs?.favorite_neighborhoods && event.venue?.neighborhood) {
       if (prefs.favorite_neighborhoods.includes(event.venue.neighborhood)) {
         score += 30;
+        reasons.push({
+          type: "neighborhood",
+          label: "In your favorite area",
+          detail: event.venue.neighborhood,
+        });
       }
     }
 
@@ -119,15 +224,30 @@ export async function GET(request: Request) {
       const matchingVibes = event.vibes.filter((v) =>
         prefs.favorite_vibes!.includes(v)
       );
-      score += matchingVibes.length * 10;
+      if (matchingVibes.length > 0) {
+        score += matchingVibes.length * 10;
+        reasons.push({
+          type: "vibes",
+          label: "Matches your vibe",
+          detail: matchingVibes.slice(0, 2).join(", "),
+        });
+      }
     }
 
     // Price preference
     if (prefs?.price_preference === "free" && event.is_free) {
       score += 20;
+      reasons.push({
+        type: "price",
+        label: "Free event",
+      });
     } else if (prefs?.price_preference === "budget") {
       if (event.is_free || (event.price_min !== null && event.price_min <= 25)) {
         score += 15;
+        reasons.push({
+          type: "price",
+          label: "Budget-friendly",
+        });
       }
     }
 
@@ -139,7 +259,12 @@ export async function GET(request: Request) {
       score += 10 - daysAway;
     }
 
-    return { ...event, score };
+    return {
+      ...event,
+      score,
+      reasons: reasons.length > 0 ? reasons : undefined,
+      friends_going: friendsGoing.length > 0 ? friendsGoing : undefined,
+    };
   });
 
   // Sort by score descending, then by date
