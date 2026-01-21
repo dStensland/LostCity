@@ -124,8 +124,8 @@ function handleSubdomainRouting(
 }
 
 export const config = {
-  // Match all paths except static files, API routes, and Next.js internals
+  // Match all paths except static files, API routes, auth callbacks, and Next.js internals
   matcher: [
-    "/((?!api|_next/static|_next/image|favicon.ico|.*\\..*).*)",
+    "/((?!api|auth/callback|_next/static|_next/image|favicon.ico|.*\\..*).*)",
   ],
 };

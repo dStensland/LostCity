@@ -1,5 +1,6 @@
-import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { NextRequest, NextResponse } from "next/server";
+import { createServerClient } from "@supabase/ssr";
+import { cookies } from "next/headers";
 import type { Database } from "@/lib/types";
 
 type ProfileInsert = Database["public"]["Tables"]["profiles"]["Insert"];
@@ -11,7 +12,7 @@ function isValidRedirect(redirect: string): boolean {
   return redirect.startsWith("/") && !redirect.startsWith("//") && !redirect.includes(":");
 }
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get("code");
   const rawRedirect = requestUrl.searchParams.get("redirect") || "/";
@@ -21,7 +22,26 @@ export async function GET(request: Request) {
   const origin = requestUrl.origin;
 
   if (code) {
-    const supabase = await createClient();
+    const cookieStore = await cookies();
+
+    // Create Supabase client with cookie handling for auth callback
+    const supabase = createServerClient<Database>(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() {
+            return cookieStore.getAll();
+          },
+          setAll(cookiesToSet) {
+            cookiesToSet.forEach(({ name, value, options }) =>
+              cookieStore.set(name, value, options)
+            );
+          },
+        },
+      }
+    );
+
     const { data, error } = await supabase.auth.exchangeCodeForSession(code);
 
     if (error) {
