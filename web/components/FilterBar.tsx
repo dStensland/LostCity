@@ -103,8 +103,20 @@ export default function FilterBar({ variant = "full" }: FilterBarProps) {
   // Fetch available filters on mount
   useEffect(() => {
     fetch("/api/filters")
-      .then((res) => res.json())
-      .then((data) => setAvailableFilters(data))
+      .then((res) => {
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status}`);
+        }
+        return res.json();
+      })
+      .then((data) => {
+        // Validate the response has expected structure
+        if (data.categories && Array.isArray(data.categories)) {
+          setAvailableFilters(data);
+        } else {
+          console.error("Invalid filters response:", data);
+        }
+      })
       .catch((err) => console.error("Failed to fetch available filters:", err));
   }, []);
 

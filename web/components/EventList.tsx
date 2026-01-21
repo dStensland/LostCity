@@ -777,7 +777,7 @@ export default function EventList({ initialEvents, initialTotal, hasActiveFilter
             </div>
 
             {/* Events grouped by time period */}
-            <div>
+            <div className="pt-4">
               {timePeriods.map(({ period, items }) => (
                 <div key={period}>
                   {/* Time period divider - only show if multiple periods */}
