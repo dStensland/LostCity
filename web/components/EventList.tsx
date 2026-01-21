@@ -468,39 +468,45 @@ export default function EventList({ initialEvents, initialTotal, hasActiveFilter
 
         const data = await res.json();
 
-        // Check if this response is still valid (filters haven't changed)
+        // Only update if version still matches
+        if (loadedPagesRef.current.version !== currentVersion) {
+          setScrollState(prev => ({ ...prev, isFetchingPage: false }));
+          return;
+        }
+
+        // Update events first to get accurate count
+        let newTotalCount = 0;
+        setEvents(prevEvents => {
+          const existingIds = new Set(prevEvents.map(e => e.id));
+          const newEvents = (data.events as EventWithLocation[]).filter(
+            (e) => !existingIds.has(e.id)
+          );
+
+          const combined = [...prevEvents, ...newEvents];
+          newTotalCount = combined.length;
+
+          // Don't exceed max events
+          if (combined.length > MAX_EVENTS) {
+            return combined.slice(0, MAX_EVENTS);
+          }
+          return combined;
+        });
+
+        // Update scroll state with accurate hasMore calculation
         setScrollState(prev => {
           if (prev.version !== currentVersion) {
-            // Stale response - discard but clear loading state
             return { ...prev, isFetchingPage: false };
           }
 
           return {
             ...prev,
             page: nextPage,
-            hasMore: data.hasMore && events.length + (data.events?.length || 0) < MAX_EVENTS,
+            hasMore: data.hasMore && newTotalCount < MAX_EVENTS,
             isFetchingPage: false,
             error: null,
             retryCount: 0,
           };
         });
-
-        // Only update events if version still matches
-        if (loadedPagesRef.current.version === currentVersion) {
-          setEvents(prevEvents => {
-            const existingIds = new Set(prevEvents.map(e => e.id));
-            const newEvents = (data.events as EventWithLocation[]).filter(
-              (e) => !existingIds.has(e.id)
-            );
-
-            // Don't exceed max events
-            const combined = [...prevEvents, ...newEvents];
-            if (combined.length > MAX_EVENTS) {
-              return combined.slice(0, MAX_EVENTS);
-            }
-            return combined;
-          });
-        }
       } catch (error) {
         // Ignore abort errors
         if (error instanceof Error && error.name === "AbortError") {
