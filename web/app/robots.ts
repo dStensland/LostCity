@@ -1,6 +1,6 @@
 import { MetadataRoute } from "next";
 
-const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://lostcity.app";
+const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://lostcity.ai";
 
 export default function robots(): MetadataRoute.Robots {
   return {

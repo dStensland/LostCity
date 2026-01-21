@@ -1,7 +1,7 @@
 import { MetadataRoute } from "next";
 import { createClient } from "@/lib/supabase/server";
 
-const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://lostcity.app";
+const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://lostcity.ai";
 
 type EventRow = { id: number; start_date: string; updated_at: string | null };
 type SpotRow = { slug: string | null; updated_at: string | null };
