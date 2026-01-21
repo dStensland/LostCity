@@ -42,10 +42,7 @@ export default function PageHeader({
   return (
     <header className="px-4 sm:px-6 py-4 flex justify-between items-center border-b border-[var(--twilight)]">
       <div className="flex items-baseline gap-3">
-        <Logo href={`/${citySlug}`} />
-        <span className="font-mono text-[0.65rem] font-medium text-[var(--muted)] uppercase tracking-widest hidden sm:inline">
-          {cityName}
-        </span>
+        <Logo href={`/${citySlug}`} portal={citySlug} />
       </div>
       <nav className="flex items-center gap-4 sm:gap-6">
         {showEvents && (

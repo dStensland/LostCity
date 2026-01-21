@@ -76,7 +76,7 @@ export default function GlassHeader({ portalSlug = "atlanta", portalName = "Atla
             </div>
           </>
         ) : (
-          <Logo href={`/${portalSlug}`} size="sm" />
+          <Logo href={`/${portalSlug}`} size="sm" portal={portalSlug} />
         )}
       </div>
 
