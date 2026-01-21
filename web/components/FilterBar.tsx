@@ -524,10 +524,12 @@ export default function FilterBar({ variant = "full" }: FilterBarProps) {
     SUBCATEGORIES[cat]?.map((sub) => ({ ...sub, category: cat })) || []
   );
 
-  const hasFilters = currentMood || currentCategories.length > 0 || currentSubcategories.length > 0 ||
+  const hasFilters = Boolean(
+    currentMood || currentCategories.length > 0 || currentSubcategories.length > 0 ||
     currentTags.length > 0 || currentVibes.length > 0 || currentNeighborhoods.length > 0 ||
     currentPriceFilter || currentDateFilter || currentDateStart || currentDateEnd ||
-    currentPriceMin || currentPriceMax || currentGeoLat;
+    currentPriceMin || currentPriceMax || currentGeoLat
+  );
 
   const filterCount = (currentMood ? 1 : 0) + currentCategories.length + currentSubcategories.length +
     currentTags.length + currentVibes.length + currentNeighborhoods.length +

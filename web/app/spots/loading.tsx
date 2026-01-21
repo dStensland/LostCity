@@ -1,9 +1,12 @@
+import { Suspense } from "react";
 import GlassHeader from "@/components/GlassHeader";
 
 export default function SpotsLoading() {
   return (
     <div className="min-h-screen bg-[var(--void)]">
-      <GlassHeader />
+      <Suspense fallback={<div className="h-14 bg-transparent" />}>
+        <GlassHeader />
+      </Suspense>
 
       {/* Nav skeleton */}
       <div className="h-10 bg-[var(--night)] border-b border-[var(--twilight)]" />

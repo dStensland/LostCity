@@ -3,6 +3,10 @@ import { createClient } from "@/lib/supabase/server";
 
 const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://lostcity.app";
 
+type EventRow = { id: number; start_date: string; updated_at: string | null };
+type SpotRow = { slug: string | null; updated_at: string | null };
+type SeriesRow = { slug: string; updated_at: string | null };
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const supabase = await createClient();
 
@@ -54,14 +58,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   // Fetch upcoming events (limit to recent/upcoming for performance)
   const today = new Date().toISOString().split("T")[0];
-  const { data: events } = await supabase
+  const { data: eventsData } = await supabase
     .from("events")
     .select("id, start_date, updated_at")
     .gte("start_date", today)
     .order("start_date", { ascending: true })
     .limit(1000);
 
-  const eventPages: MetadataRoute.Sitemap = (events || []).map((event) => ({
+  const events = (eventsData || []) as EventRow[];
+  const eventPages: MetadataRoute.Sitemap = events.map((event) => ({
     url: `${BASE_URL}/events/${event.id}`,
     lastModified: event.updated_at ? new Date(event.updated_at) : new Date(),
     changeFrequency: "daily" as const,
@@ -69,26 +74,30 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }));
 
   // Fetch venues/spots
-  const { data: spots } = await supabase
+  const { data: spotsData } = await supabase
     .from("venues")
     .select("slug, updated_at")
     .not("slug", "is", null)
     .limit(500);
 
-  const spotPages: MetadataRoute.Sitemap = (spots || []).map((spot) => ({
-    url: `${BASE_URL}/spots/${spot.slug}`,
-    lastModified: spot.updated_at ? new Date(spot.updated_at) : new Date(),
-    changeFrequency: "weekly" as const,
-    priority: 0.6,
-  }));
+  const spots = (spotsData || []) as SpotRow[];
+  const spotPages: MetadataRoute.Sitemap = spots
+    .filter((spot) => spot.slug)
+    .map((spot) => ({
+      url: `${BASE_URL}/spots/${spot.slug}`,
+      lastModified: spot.updated_at ? new Date(spot.updated_at) : new Date(),
+      changeFrequency: "weekly" as const,
+      priority: 0.6,
+    }));
 
   // Fetch event series
-  const { data: series } = await supabase
+  const { data: seriesData } = await supabase
     .from("event_series")
     .select("slug, updated_at")
     .limit(200);
 
-  const seriesPages: MetadataRoute.Sitemap = (series || []).map((s) => ({
+  const series = (seriesData || []) as SeriesRow[];
+  const seriesPages: MetadataRoute.Sitemap = series.map((s) => ({
     url: `${BASE_URL}/series/${s.slug}`,
     lastModified: s.updated_at ? new Date(s.updated_at) : new Date(),
     changeFrequency: "weekly" as const,

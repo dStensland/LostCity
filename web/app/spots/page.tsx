@@ -38,7 +38,9 @@ export default async function SpotsPage({ searchParams }: Props) {
 
   return (
     <div className="min-h-screen">
-      <GlassHeader />
+      <Suspense fallback={<div className="h-14 bg-transparent" />}>
+        <GlassHeader />
+      </Suspense>
 
       <Suspense fallback={<div className="h-10 bg-[var(--night)]" />}>
         <MainNav />
