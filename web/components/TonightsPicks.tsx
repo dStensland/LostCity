@@ -20,46 +20,54 @@ type TonightEvent = {
 };
 
 async function getTonightEvents(): Promise<TonightEvent[]> {
-  const today = new Date().toISOString().split("T")[0];
-  const now = new Date();
-  const currentHour = now.getHours();
+  try {
+    const today = new Date().toISOString().split("T")[0];
+    const now = new Date();
+    const currentHour = now.getHours();
 
-  // After 4pm, show tonight's events; before 4pm, don't show this section
-  if (currentHour < 16) {
+    // After 4pm, show tonight's events; before 4pm, don't show this section
+    if (currentHour < 16) {
+      return [];
+    }
+
+    const { data: events, error } = await supabase
+      .from("events")
+      .select(`
+        id,
+        title,
+        start_date,
+        start_time,
+        is_all_day,
+        is_free,
+        category,
+        image_url,
+        venue:venues(name, neighborhood)
+      `)
+      .eq("start_date", today)
+      .eq("is_active", true)
+      .order("start_time", { ascending: true })
+      .limit(6);
+
+    if (error || !events) {
+      console.error("Failed to fetch tonight events:", error);
+      return [];
+    }
+
+    // Cast to expected type for filtering
+    const typedEvents = events as unknown as TonightEvent[];
+
+    // Filter to events that haven't started yet or started within last hour
+    return typedEvents.filter((event) => {
+      if (event.is_all_day) return true;
+      if (!event.start_time) return true;
+      // Include if starts in the future or started within last 2 hours
+      const twoHoursAgo = format(new Date(now.getTime() - 2 * 60 * 60 * 1000), "HH:mm:ss");
+      return event.start_time >= twoHoursAgo;
+    });
+  } catch (error) {
+    console.error("Error in getTonightEvents:", error);
     return [];
   }
-
-  const { data: events } = await supabase
-    .from("events")
-    .select(`
-      id,
-      title,
-      start_date,
-      start_time,
-      is_all_day,
-      is_free,
-      category,
-      image_url,
-      venue:venues(name, neighborhood)
-    `)
-    .eq("start_date", today)
-    .eq("is_active", true)
-    .order("start_time", { ascending: true })
-    .limit(6);
-
-  if (!events) return [];
-
-  // Cast to expected type for filtering
-  const typedEvents = events as unknown as TonightEvent[];
-
-  // Filter to events that haven't started yet or started within last hour
-  return typedEvents.filter((event) => {
-    if (event.is_all_day) return true;
-    if (!event.start_time) return true;
-    // Include if starts in the future or started within last 2 hours
-    const twoHoursAgo = format(new Date(now.getTime() - 2 * 60 * 60 * 1000), "HH:mm:ss");
-    return event.start_time >= twoHoursAgo;
-  });
 }
 
 export default async function TonightsPicks({ portalSlug }: { portalSlug?: string } = {}) {

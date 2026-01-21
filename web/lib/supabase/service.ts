@@ -14,10 +14,23 @@ let _serviceClient: ReturnType<typeof createClient<Database>> | null = null;
 
 export function createServiceClient() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY;
+  // Support both naming conventions for the service key
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
 
   if (!supabaseUrl || !supabaseServiceKey) {
-    throw new Error("Missing SUPABASE_SERVICE_KEY for service client");
+    console.error("Missing SUPABASE_SERVICE_KEY for service client");
+    // Return a fallback that won't crash but returns empty results
+    return {
+      from: () => ({
+        select: () => ({
+          eq: () => ({ gte: () => ({ lte: () => ({ order: () => ({ limit: () => ({ data: null, error: new Error("Service client not configured") }) }) }) }) }),
+          gte: () => ({ lte: () => ({ order: () => ({ limit: () => ({ data: null, error: new Error("Service client not configured") }) }) }) }),
+          in: () => ({ data: null, error: new Error("Service client not configured") }),
+          data: null,
+          error: new Error("Service client not configured"),
+        }),
+      }),
+    } as unknown as ReturnType<typeof createClient<Database>>;
   }
 
   if (!_serviceClient) {

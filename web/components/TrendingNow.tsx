@@ -32,7 +32,14 @@ function getSmartDate(dateStr: string): string {
 }
 
 export default async function TrendingNow({ portalSlug }: { portalSlug?: string } = {}) {
-  const events = await getTrendingEvents(6);
+  let events: EventWithLocation[] = [];
+
+  try {
+    events = await getTrendingEvents(6);
+  } catch (error) {
+    console.error("Failed to fetch trending events:", error);
+    return null;
+  }
 
   // Don't render if no trending events
   if (events.length === 0) {
