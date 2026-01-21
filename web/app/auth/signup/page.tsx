@@ -123,7 +123,8 @@ function SignupForm() {
       await supabase.from("user_preferences").insert(prefsData as never);
     }
 
-    router.push(redirect);
+    // Redirect new users to welcome page for onboarding
+    router.push("/welcome");
     router.refresh();
   };
 
