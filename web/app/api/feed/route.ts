@@ -93,7 +93,7 @@ export async function GET(request: Request) {
 
   // Get events friends are going to
   const today = new Date().toISOString().split("T")[0];
-  let friendsGoingMap: Record<number, { user_id: string; username: string; display_name: string | null }[]> = {};
+  const friendsGoingMap: Record<number, { user_id: string; username: string; display_name: string | null }[]> = {};
 
   if (friendIds.length > 0) {
     const { data: friendRsvps } = await supabase

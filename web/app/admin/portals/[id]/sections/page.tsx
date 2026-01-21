@@ -398,7 +398,7 @@ export default function PortalSectionsPage({ params }: { params: Promise<{ id: s
           <div>
             <h1 className="font-serif text-2xl text-[var(--cream)]">Feed Sections</h1>
             <p className="font-mono text-xs text-[var(--muted)] mt-1">
-              Configure what appears in your portal's Feed tab
+              Configure what appears in your portal&apos;s Feed tab
             </p>
           </div>
           <button

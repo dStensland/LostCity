@@ -16,9 +16,9 @@ type NavTab = {
 
 const DEFAULT_TABS: NavTab[] = [
   { key: "feed", defaultLabel: "Highlights", href: "feed" },
-  { key: "events", defaultLabel: "Happenings", href: "events" },
-  { key: "spots", defaultLabel: "Hangs", href: "spots" },
-  { key: "community", defaultLabel: "Humans", href: "community" },
+  { key: "events", defaultLabel: "To Go", href: "events" },
+  { key: "spots", defaultLabel: "To Stop", href: "spots" },
+  { key: "community", defaultLabel: "To Watch", href: "community" },
   { key: "happening_now", defaultLabel: "Live", href: "happening-now" },
 ];
 

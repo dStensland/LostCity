@@ -96,24 +96,54 @@ const getMapStyles = (isLight: boolean) => `
 
   /* Marker styles */
   .neon-marker {
-    transition: transform 0.2s ease;
+    transition: transform 0.2s ease, filter 0.2s ease;
+    cursor: pointer;
   }
   .neon-marker:hover {
-    transform: scale(1.2);
+    transform: scale(1.25);
     z-index: 1000 !important;
+    filter: brightness(1.1);
   }
 
   /* Live event pulse animation - subtle */
   @keyframes marker-pulse {
     0%, 100% {
-      box-shadow: 0 0 4px var(--marker-color);
+      box-shadow: 0 0 6px var(--marker-color);
     }
     50% {
-      box-shadow: 0 0 8px var(--marker-color);
+      box-shadow: 0 0 12px var(--marker-color), 0 0 20px var(--marker-color);
     }
   }
   .marker-live {
     animation: marker-pulse 2s ease-in-out infinite;
+  }
+
+  /* Enhanced popup styling */
+  .leaflet-popup-content-wrapper {
+    border-radius: 12px !important;
+    overflow: hidden;
+  }
+  .leaflet-popup-content {
+    min-width: 240px;
+  }
+  .leaflet-popup-close-button {
+    width: 24px !important;
+    height: 24px !important;
+    font-size: 18px !important;
+    padding: 4px !important;
+  }
+
+  /* User location marker pulse */
+  @keyframes user-pulse {
+    0%, 100% {
+      box-shadow: 0 0 10px var(--neon-cyan), 0 0 20px var(--neon-cyan);
+    }
+    50% {
+      box-shadow: 0 0 15px var(--neon-cyan), 0 0 30px var(--neon-cyan), 0 0 45px var(--neon-cyan);
+    }
+  }
+  .user-location-marker > div {
+    animation: user-pulse 2s ease-in-out infinite;
   }
 `;
 
@@ -353,19 +383,25 @@ export default function MapView({ events, userLocation }: Props) {
               >
                 <Popup className="dark-popup">
                   <div
-                    className="min-w-[220px] p-3 rounded-lg"
+                    className="min-w-[240px] p-4 rounded-lg"
                     style={{
-                      borderLeft: `3px solid ${color}`,
+                      borderLeft: `4px solid ${color}`,
+                      background: `linear-gradient(135deg, ${color}08 0%, transparent 50%)`,
                     }}
                   >
-                    {/* Title row with live indicator */}
-                    <div className="flex items-start gap-2 mb-2">
-                      <Link
-                        href={`/${portal.slug}/events/${event.id}`}
-                        className="font-medium text-sm text-[var(--cream)] hover:text-[var(--coral)] transition-colors flex-1 line-clamp-2"
-                      >
-                        {event.title}
-                      </Link>
+                    {/* Category badge */}
+                    <div className="flex items-center justify-between mb-2">
+                      {event.category && (
+                        <span
+                          className="inline-flex items-center gap-1.5 px-2 py-0.5 text-[0.55rem] font-mono font-medium uppercase tracking-wide rounded"
+                          style={{
+                            backgroundColor: `${color}20`,
+                            color: color,
+                          }}
+                        >
+                          {event.category.replace(/_/g, " ")}
+                        </span>
+                      )}
                       {isLive && (
                         <span className="flex-shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 text-[0.55rem] font-mono font-medium bg-[var(--neon-red)]/20 text-[var(--neon-red)] rounded">
                           <span className="w-1.5 h-1.5 rounded-full bg-[var(--neon-red)] animate-pulse" />
@@ -374,13 +410,30 @@ export default function MapView({ events, userLocation }: Props) {
                       )}
                     </div>
 
-                    {/* Details row */}
+                    {/* Title */}
+                    <Link
+                      href={`/${portal.slug}/events/${event.id}`}
+                      className="block font-medium text-sm text-[var(--cream)] hover:text-[var(--coral)] transition-colors line-clamp-2 mb-2"
+                    >
+                      {event.title}
+                    </Link>
+
+                    {/* Venue name */}
+                    <div className="flex items-center gap-1.5 text-[0.7rem] text-[var(--soft)] mb-1">
+                      <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                      </svg>
+                      <span className="truncate">{event.venue?.name}</span>
+                    </div>
+
+                    {/* Time and neighborhood */}
                     <div className="flex items-center gap-1.5 font-mono text-[0.65rem] text-[var(--muted)]">
-                      <span className="text-[var(--soft)]">
+                      <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <span className="text-[var(--cream)]">
                         {formatTime(event.start_time)}
                       </span>
-                      <span className="opacity-40">·</span>
-                      <span className="truncate">{event.venue?.name}</span>
                       {event.venue?.neighborhood && (
                         <>
                           <span className="opacity-40">·</span>
@@ -390,13 +443,23 @@ export default function MapView({ events, userLocation }: Props) {
                     </div>
 
                     {/* Price badge */}
-                    {event.is_free && (
-                      <div className="mt-2">
+                    <div className="mt-3 flex items-center gap-2">
+                      {event.is_free ? (
                         <span className="inline-block px-2 py-0.5 text-[0.6rem] font-mono font-medium bg-[var(--neon-green)]/20 text-[var(--neon-green)] rounded">
                           FREE
                         </span>
-                      </div>
-                    )}
+                      ) : event.price_min !== null && (
+                        <span className="inline-block px-2 py-0.5 text-[0.6rem] font-mono font-medium bg-[var(--gold)]/20 text-[var(--gold)] rounded">
+                          ${event.price_min}{event.price_max && event.price_max !== event.price_min ? `–$${event.price_max}` : "+"}
+                        </span>
+                      )}
+                      <Link
+                        href={`/${portal.slug}/events/${event.id}`}
+                        className="ml-auto text-[0.6rem] font-mono text-[var(--coral)] hover:underline"
+                      >
+                        View details →
+                      </Link>
+                    </div>
                   </div>
                 </Popup>
               </Marker>

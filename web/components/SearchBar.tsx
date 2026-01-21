@@ -154,9 +154,12 @@ export default function SearchBar() {
 
   const shouldShowDropdown = showDropdown && (showRecent || showSuggestions);
 
+  const searchId = "event-search";
+  const suggestionsId = "search-suggestions";
+
   return (
-    <div className="relative w-full" ref={dropdownRef}>
-      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+    <div className="relative w-full" ref={dropdownRef} role="search">
+      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none" aria-hidden="true">
         {isSearching ? (
           <svg className="h-4 w-4 text-[var(--coral)] animate-spin" fill="none" viewBox="0 0 24 24">
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
@@ -168,9 +171,11 @@ export default function SearchBar() {
           </svg>
         )}
       </div>
+      <label htmlFor={searchId} className="sr-only">Search events, venues, and organizers</label>
       <input
         ref={inputRef}
-        type="text"
+        id={searchId}
+        type="search"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         onFocus={handleFocus}
@@ -179,6 +184,11 @@ export default function SearchBar() {
         placeholder="Search events, venues, organizers..."
         className="block w-full pl-11 pr-10 py-2.5 border border-[var(--twilight)] rounded-lg text-[var(--cream)] placeholder-[var(--muted)] text-sm focus:outline-none focus:border-[var(--coral)] focus:ring-1 focus:ring-[var(--coral)] transition-colors"
         style={{ backgroundColor: "var(--card-bg)" }}
+        role="combobox"
+        aria-expanded={shouldShowDropdown}
+        aria-controls={suggestionsId}
+        aria-activedescendant={selectedIndex >= 0 ? `suggestion-${selectedIndex}` : undefined}
+        aria-autocomplete="list"
       />
       {query && (
         <button
@@ -195,25 +205,36 @@ export default function SearchBar() {
 
       {/* Suggestions Dropdown */}
       {shouldShowDropdown && (
-        <div className="absolute top-full left-0 right-0 mt-1 border border-[var(--twilight)] rounded-lg shadow-lg z-[1050] overflow-hidden" style={{ backgroundColor: "var(--card-bg)" }}>
+        <div
+          id={suggestionsId}
+          role="listbox"
+          aria-label="Search suggestions"
+          className="absolute top-full left-0 right-0 mt-1 border border-[var(--twilight)] rounded-lg shadow-xl z-[1050] overflow-hidden animate-dropdown-in"
+          style={{ backgroundColor: "var(--card-bg)", boxShadow: "0 4px 20px rgba(0, 0, 0, 0.3)" }}
+        >
           {showRecent && (
             <div className="p-2">
-              <p className="text-xs text-[var(--muted)] px-2 pb-1 font-medium">Recent</p>
+              <div className="flex items-center gap-2 px-2 pb-2">
+                <svg className="h-3 w-3 text-[var(--muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <p className="text-[0.65rem] text-[var(--muted)] font-mono uppercase tracking-wider">Recent Searches</p>
+              </div>
               {recentSearches.map((term, idx) => (
                 <button
                   key={term}
                   onMouseDown={() => selectSuggestion(term)}
                   onMouseEnter={() => setSelectedIndex(idx)}
-                  className={`flex items-center gap-2 w-full text-left px-2 py-1.5 text-sm rounded transition-colors ${
+                  className={`flex items-center gap-2.5 w-full text-left px-3 py-2 text-sm rounded-lg transition-all ${
                     selectedIndex === idx
-                      ? "bg-[var(--twilight)] text-[var(--cream)]"
-                      : "text-[var(--cream)] hover:bg-[var(--twilight)]"
+                      ? "bg-[var(--twilight)] text-[var(--cream)] translate-x-0.5"
+                      : "text-[var(--cream)] hover:bg-[var(--twilight)]/50"
                   }`}
                 >
-                  <svg className="h-3 w-3 text-[var(--muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="h-3.5 w-3.5 text-[var(--soft)] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
-                  {term}
+                  <span className="truncate">{term}</span>
                 </button>
               ))}
             </div>
@@ -221,39 +242,91 @@ export default function SearchBar() {
 
           {showSuggestions && (
             <div className="p-2">
-              <p className="text-xs text-[var(--muted)] px-2 pb-1 font-medium">Suggestions</p>
+              <div className="flex items-center gap-2 px-2 pb-2">
+                <svg className="h-3 w-3 text-[var(--coral)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+                <p className="text-[0.65rem] text-[var(--muted)] font-mono uppercase tracking-wider">Suggestions</p>
+              </div>
               {activeSuggestions.map((suggestion, idx) => (
                 <button
                   key={`${suggestion.type}-${suggestion.text}`}
                   onMouseDown={() => selectSuggestion(suggestion.text)}
                   onMouseEnter={() => setSelectedIndex(idx)}
-                  className={`flex items-center gap-2 w-full text-left px-2 py-1.5 text-sm rounded transition-colors ${
+                  className={`flex items-center gap-2.5 w-full text-left px-3 py-2 text-sm rounded-lg transition-all ${
                     selectedIndex === idx
-                      ? "bg-[var(--twilight)] text-[var(--cream)]"
-                      : "text-[var(--cream)] hover:bg-[var(--twilight)]"
+                      ? "bg-[var(--twilight)] text-[var(--cream)] translate-x-0.5"
+                      : "text-[var(--cream)] hover:bg-[var(--twilight)]/50"
                   }`}
                 >
                   <SuggestionIcon type={suggestion.type} />
-                  <span className="flex-1 truncate">{suggestion.text}</span>
-                  <span className="text-[0.6rem] text-[var(--muted)] uppercase">{suggestion.type}</span>
+                  <span className="flex-1 truncate">
+                    <HighlightMatch text={suggestion.text} query={query} />
+                  </span>
+                  <span
+                    className="text-[0.55rem] font-mono uppercase tracking-wide px-1.5 py-0.5 rounded"
+                    style={{
+                      backgroundColor: getSuggestionTypeColor(suggestion.type) + "20",
+                      color: getSuggestionTypeColor(suggestion.type),
+                    }}
+                  >
+                    {suggestion.type}
+                  </span>
                 </button>
               ))}
             </div>
           )}
 
           {/* Keyboard hint */}
-          <div className="px-3 py-1.5 border-t border-[var(--twilight)]" style={{ backgroundColor: "var(--twilight)", opacity: 0.5 }}>
-            <p className="text-[0.6rem] text-[var(--muted)]">
-              <kbd className="px-1 py-0.5 bg-[var(--card-bg)] rounded text-[var(--soft)]">↑</kbd>
-              <kbd className="px-1 py-0.5 bg-[var(--card-bg)] rounded text-[var(--soft)] ml-1">↓</kbd>
-              <span className="ml-1">to navigate</span>
-              <kbd className="px-1 py-0.5 bg-[var(--card-bg)] rounded text-[var(--soft)] ml-2">↵</kbd>
-              <span className="ml-1">to select</span>
+          <div className="px-3 py-2 border-t border-[var(--twilight)] bg-[var(--night)]/50">
+            <p className="text-[0.6rem] text-[var(--muted)] flex items-center gap-3">
+              <span className="flex items-center gap-1">
+                <kbd className="px-1.5 py-0.5 bg-[var(--twilight)] rounded text-[var(--soft)] text-[0.55rem]">↑↓</kbd>
+                <span>navigate</span>
+              </span>
+              <span className="flex items-center gap-1">
+                <kbd className="px-1.5 py-0.5 bg-[var(--twilight)] rounded text-[var(--soft)] text-[0.55rem]">↵</kbd>
+                <span>select</span>
+              </span>
+              <span className="flex items-center gap-1">
+                <kbd className="px-1.5 py-0.5 bg-[var(--twilight)] rounded text-[var(--soft)] text-[0.55rem]">esc</kbd>
+                <span>close</span>
+              </span>
             </p>
           </div>
         </div>
       )}
     </div>
+  );
+}
+
+// Get color for suggestion type
+function getSuggestionTypeColor(type: string): string {
+  const colors: Record<string, string> = {
+    venue: "var(--coral)",
+    neighborhood: "var(--gold)",
+    organizer: "var(--neon-cyan)",
+    event: "var(--neon-magenta)",
+  };
+  return colors[type] || "var(--muted)";
+}
+
+// Highlight matching text in suggestions
+function HighlightMatch({ text, query }: { text: string; query: string }) {
+  if (!query || query.length < 2) return <>{text}</>;
+
+  const lowerText = text.toLowerCase();
+  const lowerQuery = query.toLowerCase();
+  const index = lowerText.indexOf(lowerQuery);
+
+  if (index === -1) return <>{text}</>;
+
+  return (
+    <>
+      {text.slice(0, index)}
+      <span className="text-[var(--coral)] font-medium">{text.slice(index, index + query.length)}</span>
+      {text.slice(index + query.length)}
+    </>
   );
 }
 

@@ -270,3 +270,28 @@ export async function getSimilarEvents(
 
   return similarEvents.slice(0, limit);
 }
+
+// Get platform stats for landing page
+export async function getPlatformStats(): Promise<{ eventCount: number; venueCount: number; sourceCount: number }> {
+  const today = new Date().toISOString().split("T")[0];
+
+  const [eventsResult, venuesResult, sourcesResult] = await Promise.all([
+    supabase
+      .from("events")
+      .select("id", { count: "exact", head: true })
+      .gte("start_date", today),
+    supabase
+      .from("venues")
+      .select("id", { count: "exact", head: true }),
+    supabase
+      .from("sources")
+      .select("id", { count: "exact", head: true })
+      .eq("is_active", true),
+  ]);
+
+  return {
+    eventCount: eventsResult.count || 0,
+    venueCount: venuesResult.count || 0,
+    sourceCount: sourcesResult.count || 0,
+  };
+}

@@ -7,6 +7,7 @@ import Link from "next/link";
 import EventCard from "./EventCard";
 import EventGroup from "./EventGroup";
 import { EventCardSkeletonList } from "./EventCardSkeleton";
+import PullToRefresh from "./PullToRefresh";
 import type { EventWithLocation } from "@/lib/search";
 import { useLiveEventCount } from "@/lib/hooks/useLiveEvents";
 import { useFriendsGoing } from "@/lib/use-friends-going";
@@ -640,6 +641,39 @@ export default function EventList({ initialEvents, initialTotal, hasActiveFilter
     { value: "film", label: "Film" },
   ];
 
+  // Pull-to-refresh handler
+  const handleRefresh = useCallback(async () => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("page", "1");
+    params.delete("view");
+
+    if (portalId && portalId !== "default") {
+      params.set("portal_id", portalId);
+    }
+    if (portalExclusive) {
+      params.set("portal_exclusive", "true");
+    }
+
+    try {
+      const res = await fetch(`/api/events?${params}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+      const data = await res.json();
+      setEvents(data.events || []);
+      setScrollState(prev => ({
+        ...prev,
+        page: 1,
+        hasMore: data.hasMore,
+        error: null,
+        retryCount: 0,
+      }));
+      loadedPagesRef.current = { version: scrollState.version, pages: new Set([1]) };
+      initialEventIds.current = new Set((data.events || []).map((e: EventWithLocation) => e.id));
+    } catch (error) {
+      console.error("Failed to refresh events:", error);
+    }
+  }, [searchParams, portalId, portalExclusive, scrollState.version]);
+
   // Show loading skeleton during initial load
   if (!initialLoadComplete) {
     return (
@@ -725,7 +759,7 @@ export default function EventList({ initialEvents, initialTotal, hasActiveFilter
   }
 
   return (
-    <div>
+    <PullToRefresh onRefresh={handleRefresh} disabled={scrollState.isLoading}>
       {/* Live Events Banner - Enhanced with gradient background */}
       {liveEventCount > 0 && (
         <Link
@@ -895,6 +929,6 @@ export default function EventList({ initialEvents, initialTotal, hasActiveFilter
           </span>
         </div>
       )}
-    </div>
+    </PullToRefresh>
   );
 }

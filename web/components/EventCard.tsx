@@ -1,8 +1,12 @@
+"use client";
+
+import { useState, memo } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import type { Event } from "@/lib/supabase";
 import { formatTimeSplit } from "@/lib/formats";
 import CategoryIcon, { getCategoryColor } from "./CategoryIcon";
+import LazyImage from "./LazyImage";
 
 type EventCardEvent = Event & {
   is_live?: boolean;
@@ -33,6 +37,8 @@ interface Props {
   skipAnimation?: boolean;
   portalSlug?: string;
   friendsGoing?: FriendGoing[];
+  /** Show thumbnail image on mobile when event has an image */
+  showThumbnail?: boolean;
 }
 
 interface PriceDisplay {
@@ -115,7 +121,8 @@ function getReflectionClass(category: string | null): string {
   return reflectionMap[category] || "";
 }
 
-export default function EventCard({ event, index = 0, skipAnimation = false, portalSlug, friendsGoing = [] }: Props) {
+function EventCard({ event, index = 0, skipAnimation = false, portalSlug, friendsGoing = [], showThumbnail = false }: Props) {
+  const [thumbnailError, setThumbnailError] = useState(false);
   const { time, period } = formatTimeSplit(event.start_time, event.is_all_day);
   const isLive = event.is_live || false;
   // Only apply stagger animation to first 10 initial items, not infinite scroll items
@@ -125,6 +132,8 @@ export default function EventCard({ event, index = 0, skipAnimation = false, por
   const reflectionClass = getReflectionClass(event.category);
   // Add live heat class for live events
   const liveHeatClass = isLive ? "card-live-heat" : "";
+  // Show thumbnail on mobile if enabled and event has an image
+  const hasThumbnail = showThumbnail && event.image_url && !thumbnailError;
 
   const price = formatPrice(
     event.is_free,
@@ -159,12 +168,47 @@ export default function EventCard({ event, index = 0, skipAnimation = false, por
           )}
         </div>
 
+        {/* Mobile thumbnail */}
+        {hasThumbnail && (
+          <LazyImage
+            src={event.image_url!}
+            alt=""
+            fill
+            sizes="64px"
+            className="flex-shrink-0 w-16 h-16 rounded-lg sm:hidden border border-[var(--twilight)]"
+            placeholderColor={categoryColor ? `${categoryColor}15` : "var(--night)"}
+            onError={() => setThumbnailError(true)}
+          />
+        )}
+        {/* Fallback thumbnail when image fails */}
+        {showThumbnail && event.image_url && thumbnailError && (
+          <div
+            className="flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden relative sm:hidden border border-[var(--twilight)] flex items-center justify-center"
+            style={{ backgroundColor: categoryColor ? `${categoryColor}15` : "var(--night)" }}
+          >
+            {event.category ? (
+              <CategoryIcon type={event.category} size={24} glow="subtle" />
+            ) : (
+              <svg className="w-6 h-6 text-[var(--muted)] opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+            )}
+          </div>
+        )}
+
         {/* Content */}
         <div className="flex-1 min-w-0">
           {/* Title row */}
           <div className="flex items-center gap-2">
             {event.category && (
-              <CategoryIcon type={event.category} size={14} className="flex-shrink-0 opacity-80" />
+              <span
+                className="flex-shrink-0 inline-flex items-center justify-center w-6 h-6 rounded"
+                style={{
+                  backgroundColor: `${categoryColor}20`,
+                }}
+              >
+                <CategoryIcon type={event.category} size={14} glow="subtle" />
+              </span>
             )}
             <span className="text-[var(--cream)] group-hover:text-[var(--neon-magenta)] transition-colors truncate">
               {event.title}
@@ -249,3 +293,5 @@ export default function EventCard({ event, index = 0, skipAnimation = false, por
     </Link>
   );
 }
+
+export default memo(EventCard);

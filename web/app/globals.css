@@ -874,6 +874,22 @@ textarea:focus-visible {
   animation-name: fade-in;
 }
 
+/* Dropdown animation for search autocomplete */
+@keyframes dropdown-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.animate-dropdown-in {
+  animation: dropdown-in 150ms ease-out forwards;
+}
+
 /* ============================================
    ACCESSIBILITY UTILITIES
    ============================================ */
@@ -889,6 +905,72 @@ textarea:focus-visible {
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border: 0;
+}
+
+/* Skip link - visible on focus for keyboard users */
+.skip-link {
+  position: fixed;
+  top: -100%;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10000;
+  padding: 12px 24px;
+  background: var(--coral);
+  color: var(--void);
+  font-weight: 600;
+  border-radius: 0 0 8px 8px;
+  text-decoration: none;
+  transition: top 0.2s ease;
+}
+
+.skip-link:focus {
+  top: 0;
+  outline: 2px solid var(--neon-cyan);
+  outline-offset: 2px;
+}
+
+/* Enhanced focus visible states */
+:focus-visible {
+  outline: 2px solid var(--coral);
+  outline-offset: 2px;
+}
+
+/* Focus ring for interactive elements */
+.focus-ring:focus-visible {
+  outline: 2px solid var(--coral);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(232, 145, 45, 0.2);
+}
+
+/* Remove default focus for mouse users but keep for keyboard */
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* Reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  :root {
+    --twilight: #444;
+    --muted: #999;
+    --soft: #ccc;
+  }
+
+  .card-interactive,
+  .border {
+    border-width: 2px;
+  }
 }
 
 /* Safe area for iOS devices with home indicator */

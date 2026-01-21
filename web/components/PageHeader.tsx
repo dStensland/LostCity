@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import Logo from "@/components/Logo";
 import UserMenu from "@/components/UserMenu";
 
@@ -21,6 +24,21 @@ export default function PageHeader({
   showSubmit = false,
   rightContent,
 }: PageHeaderProps) {
+  const pathname = usePathname();
+
+  // Helper to check if a path is active
+  const isActive = (path: string) => {
+    if (path === `/${citySlug}`) {
+      // Events link: active on city root or /events paths
+      return pathname === path || pathname.startsWith(`/${citySlug}/events`) || pathname.startsWith("/events/");
+    }
+    return pathname.startsWith(path);
+  };
+
+  const linkBaseClass = "font-mono text-[0.7rem] font-medium uppercase tracking-wide transition-colors relative";
+  const activeClass = "text-[var(--neon-amber)]";
+  const inactiveClass = "text-[var(--muted)] hover:text-[var(--cream)]";
+
   return (
     <header className="px-4 sm:px-6 py-4 flex justify-between items-center border-b border-[var(--twilight)]">
       <div className="flex items-baseline gap-3">
@@ -33,31 +51,40 @@ export default function PageHeader({
         {showEvents && (
           <Link
             href={`/${citySlug}`}
-            className="font-mono text-[0.7rem] font-medium text-[var(--muted)] uppercase tracking-wide hover:text-[var(--cream)] transition-colors"
+            className={`${linkBaseClass} ${isActive(`/${citySlug}`) ? activeClass : inactiveClass}`}
           >
             Events
+            {isActive(`/${citySlug}`) && (
+              <span className="absolute -bottom-1 left-0 right-0 h-0.5 bg-[var(--neon-amber)] rounded-full" />
+            )}
           </Link>
         )}
         {showSpots && (
           <Link
             href="/spots"
-            className="font-mono text-[0.7rem] font-medium text-[var(--muted)] uppercase tracking-wide hover:text-[var(--cream)] transition-colors"
+            className={`${linkBaseClass} ${isActive("/spots") ? activeClass : inactiveClass}`}
           >
             Spots
+            {isActive("/spots") && (
+              <span className="absolute -bottom-1 left-0 right-0 h-0.5 bg-[var(--neon-amber)] rounded-full" />
+            )}
           </Link>
         )}
         {showCollections && (
           <Link
             href="/collections"
-            className="font-mono text-[0.7rem] font-medium text-[var(--muted)] uppercase tracking-wide hover:text-[var(--cream)] transition-colors"
+            className={`${linkBaseClass} ${isActive("/collections") ? activeClass : inactiveClass}`}
           >
             Collections
+            {isActive("/collections") && (
+              <span className="absolute -bottom-1 left-0 right-0 h-0.5 bg-[var(--neon-amber)] rounded-full" />
+            )}
           </Link>
         )}
         {showSubmit && (
           <a
             href="mailto:hello@lostcity.ai"
-            className="font-mono text-[0.7rem] font-medium text-[var(--muted)] uppercase tracking-wide hover:text-[var(--cream)] transition-colors hidden sm:inline"
+            className={`${linkBaseClass} ${inactiveClass} hidden sm:inline`}
           >
             Submit
           </a>

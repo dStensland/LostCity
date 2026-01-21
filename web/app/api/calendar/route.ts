@@ -113,7 +113,7 @@ export async function GET(request: NextRequest) {
 
   // Fetch all events using pagination (Supabase has 1000 row limit)
   const PAGE_SIZE = 1000;
-  let allEvents: CalendarEvent[] = [];
+  const allEvents: CalendarEvent[] = [];
   const seenIds = new Set<number>();
   let page = 0;
   let hasMore = true;

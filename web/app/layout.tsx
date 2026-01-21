@@ -1,10 +1,13 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { Outfit, Instrument_Serif, JetBrains_Mono, Space_Grotesk, Bebas_Neue } from "next/font/google";
 import { AuthProvider } from "@/lib/auth-context";
 import { ToastProvider } from "@/components/Toast";
 import DarkHoursTheme from "@/components/DarkHoursTheme";
 import RainEffect from "@/components/RainEffect";
 import CursorGlow from "@/components/CursorGlow";
+import NavigationProgress from "@/components/NavigationProgress";
+import SkipLink from "@/components/SkipLink";
 import "./globals.css";
 
 const outfit = Outfit({
@@ -52,7 +55,21 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        {/* Preconnect to external domains for faster resource loading */}
+        <link rel="preconnect" href="https://rtppvljfrkjtoxmaizea.supabase.co" />
+        <link rel="preconnect" href="https://img.evbuc.com" />
+        <link rel="preconnect" href="https://cdn.evbuc.com" />
+        <link rel="preconnect" href="https://s1.ticketm.net" />
+        <link rel="dns-prefetch" href="https://images.unsplash.com" />
+      </head>
       <body className={`${outfit.variable} ${instrumentSerif.variable} ${jetbrainsMono.variable} ${spaceGrotesk.variable} ${bebasNeue.variable} antialiased`}>
+        {/* Skip link for keyboard users */}
+        <SkipLink />
+        {/* Navigation progress bar */}
+        <Suspense fallback={null}>
+          <NavigationProgress />
+        </Suspense>
         {/* Ambient glow effect */}
         <div className="ambient-glow" aria-hidden="true" />
         {/* Rain overlay effect */}

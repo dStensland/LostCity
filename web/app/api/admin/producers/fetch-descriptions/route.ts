@@ -93,7 +93,7 @@ async function fetchDescriptionFromWebsite(websiteUrl: string): Promise<string |
       const match = html.match(pattern);
       if (match?.[1]) {
         // Strip HTML tags and get first paragraph
-        let text = match[1]
+        const text = match[1]
           .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
           .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
           .replace(/<[^>]+>/g, " ")

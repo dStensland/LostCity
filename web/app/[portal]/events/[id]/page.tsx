@@ -20,6 +20,7 @@ import type { Metadata } from "next";
 import AddToCalendar from "@/components/AddToCalendar";
 import DirectionsDropdown from "@/components/DirectionsDropdown";
 import EventStickyBar from "@/components/EventStickyBar";
+import EventHeroImage from "@/components/EventHeroImage";
 import { formatTimeSplit, formatPrice } from "@/lib/formats";
 
 export const revalidate = 60;
@@ -160,11 +161,10 @@ export default async function PortalEventPage({ params }: Props) {
           {/* Event image */}
           {event.image_url && (
             <div className="aspect-video bg-[var(--night)] rounded-lg overflow-hidden mb-6 border border-[var(--twilight)] relative">
-              <Image
+              <EventHeroImage
                 src={event.image_url}
                 alt={event.title}
-                fill
-                className="object-cover"
+                category={event.category}
               />
             </div>
           )}
@@ -398,9 +398,9 @@ export default async function PortalEventPage({ params }: Props) {
                   href={event.ticket_url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-[var(--coral)] text-[var(--void)] font-semibold rounded-lg hover:bg-[var(--rose)] transition-colors"
+                  className="inline-flex items-center justify-center gap-2.5 px-8 py-3.5 bg-[var(--coral)] text-[var(--void)] text-lg font-semibold rounded-lg hover:bg-[var(--rose)] transition-colors glow-sm"
                 >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
                   </svg>
                   Get Tickets
@@ -422,7 +422,7 @@ export default async function PortalEventPage({ params }: Props) {
                   href={event.source_url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center justify-center gap-2 px-6 py-3 border border-[var(--twilight)] text-[var(--soft)] font-medium rounded-lg hover:bg-[var(--twilight)] hover:text-[var(--cream)] transition-colors"
+                  className="inline-flex items-center justify-center gap-2 px-4 py-2.5 text-[var(--muted)] text-sm font-medium rounded-lg hover:bg-[var(--twilight)] hover:text-[var(--cream)] transition-colors"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />

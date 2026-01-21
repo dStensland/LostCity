@@ -8,14 +8,17 @@ const DARK_HOURS_OVERRIDE_KEY = "dark_hours_override";
  * Hook that detects "dark hours" (10pm-5am) for enhanced nightlife theming.
  * Returns true during night hours when the darker, more neon-glowy theme should activate.
  * Supports manual override via localStorage for testing.
+ * Also returns the current hour for time-based intensity adjustments.
  */
 export function useDarkHours(): {
   isDarkHours: boolean;
   isOverride: boolean;
+  hour: number;
   toggleOverride: () => void;
 } {
   const [isDarkHours, setIsDarkHours] = useState(false);
   const [isOverride, setIsOverride] = useState(false);
+  const [hour, setHour] = useState(() => new Date().getHours());
 
   useEffect(() => {
     // Check for manual override in localStorage
@@ -31,9 +34,10 @@ export function useDarkHours(): {
     }
 
     const checkDarkHours = () => {
-      const hour = new Date().getHours();
+      const currentHour = new Date().getHours();
+      setHour(currentHour);
       // 10pm (22) to 5am (4) = dark hours
-      setIsDarkHours(hour >= 22 || hour < 5);
+      setIsDarkHours(currentHour >= 22 || currentHour < 5);
     };
 
     // Check immediately
@@ -53,8 +57,9 @@ export function useDarkHours(): {
       localStorage.removeItem(DARK_HOURS_OVERRIDE_KEY);
       setIsOverride(false);
       // Check actual time
-      const hour = new Date().getHours();
-      setIsDarkHours(hour >= 22 || hour < 5);
+      const currentHour = new Date().getHours();
+      setHour(currentHour);
+      setIsDarkHours(currentHour >= 22 || currentHour < 5);
     } else {
       // Not forced on -> force on
       localStorage.setItem(DARK_HOURS_OVERRIDE_KEY, "on");
@@ -63,5 +68,5 @@ export function useDarkHours(): {
     }
   }, []);
 
-  return { isDarkHours, isOverride, toggleOverride };
+  return { isDarkHours, isOverride, hour, toggleOverride };
 }

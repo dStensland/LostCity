@@ -4,7 +4,7 @@ import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import PageHeader from "@/components/PageHeader";
-import CategoryIcon from "@/components/CategoryIcon";
+import CategoryIcon, { CATEGORY_CONFIG, type CategoryType } from "@/components/CategoryIcon";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/lib/auth-context";
 import {
@@ -153,28 +153,34 @@ function PreferencesContent() {
                 Categories
               </h2>
               <div className="flex flex-wrap gap-2">
-                {PREFERENCE_CATEGORIES.map((cat) => (
-                  <button
-                    key={cat.value}
-                    onClick={() => toggleCategory(cat.value)}
-                    className={`flex items-center gap-1.5 px-3 py-2 rounded-lg font-mono text-sm transition-colors ${
-                      selectedCategories.includes(cat.value)
-                        ? "bg-[var(--coral)] text-[var(--void)]"
-                        : "bg-[var(--dusk)] text-[var(--muted)] hover:text-[var(--cream)] border border-[var(--twilight)]"
-                    }`}
-                  >
-                    <CategoryIcon
-                      type={cat.value}
-                      size={16}
-                      style={{
-                        color: selectedCategories.includes(cat.value)
-                          ? "var(--void)"
-                          : undefined,
-                      }}
-                    />
-                    {cat.label}
-                  </button>
-                ))}
+                {PREFERENCE_CATEGORIES.map((cat) => {
+                  const isActive = selectedCategories.includes(cat.value);
+                  const categoryColor = CATEGORY_CONFIG[cat.value as CategoryType]?.color || "var(--coral)";
+                  return (
+                    <button
+                      key={cat.value}
+                      onClick={() => toggleCategory(cat.value)}
+                      className={`flex items-center gap-1.5 px-3 py-2 rounded-lg font-mono text-sm transition-all duration-200 ${
+                        isActive
+                          ? "text-[var(--void)] font-medium border border-transparent"
+                          : "bg-[var(--dusk)] text-[var(--muted)] hover:text-[var(--cream)] border border-[var(--twilight)] hover:border-[var(--twilight)]/80"
+                      }`}
+                      style={isActive ? {
+                        backgroundColor: categoryColor,
+                        boxShadow: `0 0 20px ${categoryColor}40, 0 0 8px ${categoryColor}60`,
+                      } : undefined}
+                    >
+                      <CategoryIcon
+                        type={cat.value}
+                        size={16}
+                        style={{
+                          color: isActive ? "var(--void)" : categoryColor,
+                        }}
+                      />
+                      {cat.label}
+                    </button>
+                  );
+                })}
               </div>
             </section>
 
@@ -184,19 +190,25 @@ function PreferencesContent() {
                 Neighborhoods
               </h2>
               <div className="flex flex-wrap gap-2">
-                {PREFERENCE_NEIGHBORHOODS.map((hood) => (
-                  <button
-                    key={hood}
-                    onClick={() => toggleNeighborhood(hood)}
-                    className={`px-3 py-2 rounded-lg font-mono text-sm transition-colors ${
-                      selectedNeighborhoods.includes(hood)
-                        ? "bg-[var(--gold)] text-[var(--void)]"
-                        : "bg-[var(--dusk)] text-[var(--muted)] hover:text-[var(--cream)] border border-[var(--twilight)]"
-                    }`}
-                  >
-                    {hood}
-                  </button>
-                ))}
+                {PREFERENCE_NEIGHBORHOODS.map((hood) => {
+                  const isActive = selectedNeighborhoods.includes(hood);
+                  return (
+                    <button
+                      key={hood}
+                      onClick={() => toggleNeighborhood(hood)}
+                      className={`px-3 py-2 rounded-lg font-mono text-sm transition-all duration-200 ${
+                        isActive
+                          ? "bg-[var(--gold)] text-[var(--void)] font-medium border border-transparent"
+                          : "bg-[var(--dusk)] text-[var(--muted)] hover:text-[var(--cream)] border border-[var(--twilight)] hover:border-[var(--twilight)]/80"
+                      }`}
+                      style={isActive ? {
+                        boxShadow: "0 0 20px rgba(251, 191, 36, 0.4), 0 0 8px rgba(251, 191, 36, 0.6)",
+                      } : undefined}
+                    >
+                      {hood}
+                    </button>
+                  );
+                })}
               </div>
             </section>
 
@@ -206,19 +218,25 @@ function PreferencesContent() {
                 Vibes
               </h2>
               <div className="flex flex-wrap gap-2">
-                {PREFERENCE_VIBES.map((vibe) => (
-                  <button
-                    key={vibe.value}
-                    onClick={() => toggleVibe(vibe.value)}
-                    className={`px-3 py-2 rounded-lg font-mono text-sm transition-colors ${
-                      selectedVibes.includes(vibe.value)
-                        ? "bg-[var(--lavender)] text-[var(--void)]"
-                        : "bg-[var(--dusk)] text-[var(--muted)] hover:text-[var(--cream)] border border-[var(--twilight)]"
-                    }`}
-                  >
-                    {vibe.label}
-                  </button>
-                ))}
+                {PREFERENCE_VIBES.map((vibe) => {
+                  const isActive = selectedVibes.includes(vibe.value);
+                  return (
+                    <button
+                      key={vibe.value}
+                      onClick={() => toggleVibe(vibe.value)}
+                      className={`px-3 py-2 rounded-lg font-mono text-sm transition-all duration-200 ${
+                        isActive
+                          ? "bg-[var(--lavender)] text-[var(--void)] font-medium border border-transparent"
+                          : "bg-[var(--dusk)] text-[var(--muted)] hover:text-[var(--cream)] border border-[var(--twilight)] hover:border-[var(--twilight)]/80"
+                      }`}
+                      style={isActive ? {
+                        boxShadow: "0 0 20px rgba(196, 181, 253, 0.4), 0 0 8px rgba(196, 181, 253, 0.6)",
+                      } : undefined}
+                    >
+                      {vibe.label}
+                    </button>
+                  );
+                })}
               </div>
             </section>
 
@@ -228,19 +246,25 @@ function PreferencesContent() {
                 Price Range
               </h2>
               <div className="flex flex-wrap gap-2">
-                {PRICE_PREFERENCES.map((price) => (
-                  <button
-                    key={price.value}
-                    onClick={() => setPricePreference(price.value)}
-                    className={`px-3 py-2 rounded-lg font-mono text-sm transition-colors ${
-                      pricePreference === price.value
-                        ? "bg-[var(--rose)] text-[var(--void)]"
-                        : "bg-[var(--dusk)] text-[var(--muted)] hover:text-[var(--cream)] border border-[var(--twilight)]"
-                    }`}
-                  >
-                    {price.label}
-                  </button>
-                ))}
+                {PRICE_PREFERENCES.map((price) => {
+                  const isActive = pricePreference === price.value;
+                  return (
+                    <button
+                      key={price.value}
+                      onClick={() => setPricePreference(price.value)}
+                      className={`px-3 py-2 rounded-lg font-mono text-sm transition-all duration-200 ${
+                        isActive
+                          ? "bg-[var(--neon-green)] text-[var(--void)] font-medium border border-transparent"
+                          : "bg-[var(--dusk)] text-[var(--muted)] hover:text-[var(--cream)] border border-[var(--twilight)] hover:border-[var(--twilight)]/80"
+                      }`}
+                      style={isActive ? {
+                        boxShadow: "0 0 20px rgba(52, 211, 153, 0.4), 0 0 8px rgba(52, 211, 153, 0.6)",
+                      } : undefined}
+                    >
+                      {price.label}
+                    </button>
+                  );
+                })}
               </div>
             </section>
 

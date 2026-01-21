@@ -6,6 +6,7 @@ import { CATEGORIES, SUBCATEGORIES, DATE_FILTERS, PRICE_FILTERS, TAG_GROUPS, typ
 import { PREFERENCE_VIBES, PREFERENCE_NEIGHBORHOODS } from "@/lib/preferences";
 import { MOODS, getMoodById, type MoodId } from "@/lib/moods";
 import CategoryIcon, { CATEGORY_CONFIG, type CategoryType } from "./CategoryIcon";
+import { useFilterPersistence } from "@/hooks/useFilterPersistence";
 
 type FilterBarProps = {
   variant?: "full" | "compact";
@@ -85,6 +86,38 @@ function FilterSection({
         <div className="px-4 pb-3">
           {children}
         </div>
+      )}
+    </div>
+  );
+}
+
+// Filter drawer footer with persistence
+function FilterFooter({ hasFilters, clearAll }: { hasFilters: boolean; clearAll: () => void }) {
+  const { hasSavedFilters, restoreFilters } = useFilterPersistence();
+  const showRestore = !hasFilters && hasSavedFilters();
+
+  if (!hasFilters && !showRestore) return null;
+
+  return (
+    <div className="px-4 py-3 border-t border-[var(--twilight)] space-y-2">
+      {hasFilters && (
+        <button
+          onClick={clearAll}
+          className="w-full px-3 py-2 rounded-lg font-mono text-xs font-medium text-[var(--coral)] hover:text-[var(--rose)] border border-[var(--twilight)] hover:border-[var(--coral)]/50 transition-colors"
+        >
+          Clear all filters
+        </button>
+      )}
+      {showRestore && (
+        <button
+          onClick={restoreFilters}
+          className="w-full px-3 py-2 rounded-lg font-mono text-xs font-medium text-[var(--neon-cyan)] hover:text-[var(--cream)] border border-[var(--twilight)] hover:border-[var(--neon-cyan)]/50 transition-colors flex items-center justify-center gap-2"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+          Restore saved filters
+        </button>
       )}
     </div>
   );
@@ -1327,17 +1360,8 @@ export default function FilterBar({ variant = "full" }: FilterBarProps) {
             </FilterSection>
           </div>
 
-          {/* Footer - only show Clear all when filters are active */}
-          {hasFilters && (
-            <div className="px-4 py-3 border-t border-[var(--twilight)]">
-              <button
-                onClick={clearAll}
-                className="w-full px-3 py-2 rounded-lg font-mono text-xs font-medium text-[var(--coral)] hover:text-[var(--rose)] border border-[var(--twilight)] hover:border-[var(--coral)]/50 transition-colors"
-              >
-                Clear all filters
-              </button>
-            </div>
-          )}
+          {/* Footer - show Clear all when filters are active, or Restore when saved filters exist */}
+          <FilterFooter hasFilters={hasFilters} clearAll={clearAll} />
         </div>
       </div>
     </>
