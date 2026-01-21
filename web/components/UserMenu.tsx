@@ -13,6 +13,7 @@ export default function UserMenu() {
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
   const [imgError, setImgError] = useState(false);
+  const [showLoading, setShowLoading] = useState(true);
   const menuRef = useRef<HTMLDivElement>(null);
 
   // Close menu when clicking outside
@@ -27,18 +28,33 @@ export default function UserMenu() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Loading state
-  if (loading) {
+  // Timeout to prevent infinite loading state - show sign in after 2s
+  useEffect(() => {
+    if (!loading) {
+      setShowLoading(false);
+      return;
+    }
+
+    const timeout = setTimeout(() => {
+      setShowLoading(false);
+    }, 2000);
+
+    return () => clearTimeout(timeout);
+  }, [loading]);
+
+  const loginUrl = pathname && pathname !== "/"
+    ? `/auth/login?redirect=${encodeURIComponent(pathname)}`
+    : "/auth/login";
+
+  // Brief loading state (max 2 seconds)
+  if (loading && showLoading) {
     return (
       <div className="w-8 h-8 rounded-full bg-[var(--twilight)] animate-pulse" />
     );
   }
 
-  // Not logged in
+  // Not logged in (or loading timed out without user)
   if (!user) {
-    const loginUrl = pathname && pathname !== "/"
-      ? `/auth/login?redirect=${encodeURIComponent(pathname)}`
-      : "/auth/login";
     return (
       <Link
         href={loginUrl}

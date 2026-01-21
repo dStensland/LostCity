@@ -66,6 +66,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
+    let isMounted = true;
+
+    // Safety timeout - ensure loading is set to false after 3 seconds max
+    const safetyTimeout = setTimeout(() => {
+      if (isMounted && loading) {
+        console.warn("Auth loading timeout - forcing loading to false");
+        setLoading(false);
+      }
+    }, 3000);
+
     // Get initial session
     const getInitialSession = async () => {
       try {
@@ -73,17 +83,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           data: { session: initialSession },
         } = await supabase.auth.getSession();
 
+        if (!isMounted) return;
+
         setSession(initialSession);
         setUser(initialSession?.user ?? null);
 
         if (initialSession?.user) {
           const userProfile = await fetchProfile(initialSession.user.id);
-          setProfile(userProfile);
+          if (isMounted) {
+            setProfile(userProfile);
+          }
         }
       } catch (error) {
         console.error("Error getting initial session:", error);
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
 
@@ -93,24 +109,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, newSession) => {
+      if (!isMounted) return;
+
       try {
         setSession(newSession);
         setUser(newSession?.user ?? null);
 
         if (newSession?.user) {
           const userProfile = await fetchProfile(newSession.user.id);
-          setProfile(userProfile);
+          if (isMounted) {
+            setProfile(userProfile);
+          }
         } else {
           setProfile(null);
         }
       } catch (error) {
         console.error("Error handling auth state change:", error);
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     });
 
     return () => {
+      isMounted = false;
+      clearTimeout(safetyTimeout);
       subscription.unsubscribe();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- Run only on mount, supabase client is stable
