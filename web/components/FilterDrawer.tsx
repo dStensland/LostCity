@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { CATEGORIES, SUBCATEGORIES, DATE_FILTERS, PRICE_FILTERS, ALL_TAGS } from "@/lib/search";
 import { PREFERENCE_VIBES, PREFERENCE_NEIGHBORHOODS } from "@/lib/preferences";
@@ -15,6 +15,7 @@ export default function FilterDrawer({ isOpen, onClose }: FilterDrawerProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const contentRef = useRef<HTMLDivElement>(null);
 
   const currentCategories = searchParams.get("categories")?.split(",").filter(Boolean) || [];
   const currentSubcategories = searchParams.get("subcategories")?.split(",").filter(Boolean) || [];
@@ -32,6 +33,10 @@ export default function FilterDrawer({ isOpen, onClose }: FilterDrawerProps) {
     if (isOpen) {
       document.addEventListener("keydown", handleEscape);
       document.body.style.overflow = "hidden";
+      // Scroll content to top when opened
+      if (contentRef.current) {
+        contentRef.current.scrollTop = 0;
+      }
     }
     return () => {
       document.removeEventListener("keydown", handleEscape);
@@ -144,7 +149,7 @@ export default function FilterDrawer({ isOpen, onClose }: FilterDrawerProps) {
           <h2 className="font-display text-xl font-semibold text-[var(--cream)]">Filters</h2>
           <button
             onClick={onClose}
-            className="p-2 text-[var(--muted)] hover:text-[var(--cream)] hover:bg-[var(--twilight)] rounded-lg transition-colors"
+            className="p-2.5 -mr-2 text-[var(--muted)] hover:text-[var(--cream)] hover:bg-[var(--twilight)] rounded-lg transition-colors active:scale-95"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -153,7 +158,7 @@ export default function FilterDrawer({ isOpen, onClose }: FilterDrawerProps) {
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-6">
+        <div ref={contentRef} className="flex-1 overflow-y-auto p-4 space-y-6">
           {/* When */}
           <FilterSection title="When" icon="calendar">
             <div className="grid grid-cols-2 gap-2">
@@ -177,7 +182,7 @@ export default function FilterDrawer({ isOpen, onClose }: FilterDrawerProps) {
                   label={cat.label}
                   checked={currentCategories.includes(cat.value)}
                   onChange={() => toggleCategory(cat.value)}
-                  icon={<CategoryIcon type={cat.value} size={16} style={{ color: CATEGORY_CONFIG[cat.value as CategoryType]?.color }} />}
+                  icon={<CategoryIcon type={cat.value} size={16} style={{ color: CATEGORY_CONFIG[cat.value as CategoryType]?.color }} glow="subtle" />}
                 />
               ))}
             </div>

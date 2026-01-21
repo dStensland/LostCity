@@ -8,6 +8,7 @@ from typing import Optional
 from supabase import create_client, Client
 from config import get_config
 from tag_inference import infer_tags
+from series import get_or_create_series
 
 
 _client: Optional[Client] = None
@@ -46,6 +47,45 @@ def get_active_sources() -> list[dict]:
     client = get_client()
     result = client.table("sources").select("*").eq("is_active", True).execute()
     return result.data or []
+
+
+# Hardcoded source slug to producer_id mapping
+# TODO: Move to sources table when migration 025 is applied
+_SOURCE_PRODUCER_MAP = {
+    'atlanta-film-society': 'atlanta-film-society',
+    'out-on-film': 'out-on-film',
+    'ajff': 'atlanta-jewish-film',
+    'atlanta-opera': 'atlanta-opera',
+    'atlanta-ballet': 'atlanta-ballet',
+    'atlanta-pride': 'atlanta-pride',
+    'beltline': 'atlanta-beltline-inc',
+    'atlanta-contemporary': 'atlanta-contemporary',
+    'callanwolde': 'callanwolde',
+    'atlanta-track-club': 'atlanta-track-club',
+    'arts-atl': 'artsatl',
+    'atlanta-cultural-affairs': 'atlanta-cultural-affairs',
+    'community-foundation-atl': 'community-foundation-atl',
+    'high-museum': 'woodruff-arts',
+    'decatur-arts-festival': 'decatur-arts',
+    'taste-of-atlanta': 'taste-of-atlanta',
+}
+
+
+def get_producer_id_for_source(source_id: int) -> Optional[str]:
+    """Get the producer_id associated with a source, if any."""
+    client = get_client()
+
+    # Get source slug to look up in mapping
+    try:
+        result = client.table("sources").select("slug").eq("id", source_id).execute()
+        if result.data and len(result.data) > 0:
+            slug = result.data[0].get("slug")
+            if slug:
+                return _SOURCE_PRODUCER_MAP.get(slug)
+    except Exception:
+        pass
+
+    return None
 
 
 def get_or_create_venue(venue_data: dict) -> int:
@@ -89,9 +129,15 @@ def get_venue_by_slug(slug: str) -> Optional[dict]:
     return None
 
 
-def insert_event(event_data: dict) -> int:
-    """Insert a new event with inferred tags. Returns event ID."""
+def insert_event(event_data: dict, series_hint: dict = None, genres: list = None) -> int:
+    """Insert a new event with inferred tags, series linking, and genres. Returns event ID."""
     client = get_client()
+
+    # Auto-link producer_id from source if not already set
+    if not event_data.get("producer_id") and event_data.get("source_id"):
+        producer_id = get_producer_id_for_source(event_data["source_id"])
+        if producer_id:
+            event_data["producer_id"] = producer_id
 
     # Get venue vibes for tag inheritance
     venue_vibes = []
@@ -102,6 +148,18 @@ def insert_event(event_data: dict) -> int:
 
     # Infer and merge tags
     event_data["tags"] = infer_tags(event_data, venue_vibes)
+
+    # Process series association if hint provided
+    if series_hint:
+        series_id = get_or_create_series(client, series_hint, event_data.get("category"))
+        if series_id:
+            event_data["series_id"] = series_id
+            # Don't store genres on event if it has a series (genres live on series)
+            genres = None
+
+    # Add genres for standalone events (events without a series)
+    if genres and not event_data.get("series_id"):
+        event_data["genres"] = genres
 
     result = client.table("events").insert(event_data).execute()
     return result.data[0]["id"]
@@ -183,3 +241,19 @@ def update_crawl_log(
         "events_updated": events_updated,
         "error_message": error_message
     }).eq("id", log_id).execute()
+
+
+def refresh_available_filters() -> bool:
+    """
+    Refresh the available_filters table with current filter options.
+    Call this after each crawl run to update filter availability.
+    Returns True on success, False on error.
+    """
+    client = get_client()
+    try:
+        # Call the PostgreSQL function that refreshes filters
+        client.rpc("refresh_available_filters").execute()
+        return True
+    except Exception as e:
+        print(f"Error refreshing available filters: {e}")
+        return False

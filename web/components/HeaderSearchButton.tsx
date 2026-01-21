@@ -10,7 +10,7 @@ export default function HeaderSearchButton() {
     <>
       <button
         onClick={() => setIsSearchOpen(true)}
-        className="p-2 rounded-lg text-[var(--muted)] hover:text-[var(--cream)] hover:bg-[var(--twilight)] transition-colors"
+        className="p-2.5 rounded-lg text-[var(--muted)] hover:text-[var(--cream)] hover:bg-[var(--twilight)] transition-colors active:scale-95"
         aria-label="Search"
       >
         <svg

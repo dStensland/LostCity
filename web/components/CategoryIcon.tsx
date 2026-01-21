@@ -64,9 +64,24 @@ export const CATEGORY_CONFIG = {
   studio: { label: "Studio", color: "#A3E635" },
   cooking_school: { label: "Cooking School", color: "#F97316" },
   community_center: { label: "Community Center", color: "#6EE7B7" },
+
+  // New spot types
+  college: { label: "College", color: "#60A5FA" },
+  university: { label: "University", color: "#60A5FA" },
+  healthcare: { label: "Healthcare", color: "#34D399" },
+  hospital: { label: "Hospital", color: "#34D399" },
+  hotel: { label: "Hotel", color: "#FBBF24" },
+  rooftop: { label: "Rooftop", color: "#F472B6" },
+  distillery: { label: "Distillery", color: "#D97706" },
+  winery: { label: "Winery", color: "#A855F7" },
+  church: { label: "Church", color: "#DDD6FE" },
+  event_space: { label: "Event Space", color: "#A78BFA" },
+  fitness_center: { label: "Fitness Center", color: "#5EEAD4" },
 } as const;
 
 export type CategoryType = keyof typeof CATEGORY_CONFIG;
+
+type GlowIntensity = "none" | "subtle" | "default" | "intense" | "pulse" | "flicker";
 
 interface Props {
   type: string;
@@ -74,6 +89,8 @@ interface Props {
   className?: string;
   showLabel?: boolean;
   style?: CSSProperties;
+  /** Neon glow intensity: "none", "subtle", "default", "intense", "pulse", or "flicker" */
+  glow?: GlowIntensity;
 }
 
 // SVG icon paths for each category/type
@@ -94,13 +111,23 @@ const iconPaths: Record<string, ReactNode> = {
     </>
   ),
 
-  // Film - clapperboard
+  // Film - film reel
   film: (
     <>
-      <rect x="2" y="8" width="20" height="14" rx="2" strokeWidth={2} fill="none" stroke="currentColor" />
-      <path d="M2 12h20" strokeWidth={2} stroke="currentColor" />
-      <path d="M7 8L5 4h14l-2 4" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" fill="none" stroke="currentColor" />
-      <path d="M10 4l-1 4M15 4l-1 4" strokeWidth={2} strokeLinecap="round" stroke="currentColor" />
+      {/* Outer reel circle */}
+      <circle cx="12" cy="12" r="9" strokeWidth={2} fill="none" stroke="currentColor" />
+      {/* Center hub */}
+      <circle cx="12" cy="12" r="3" strokeWidth={2} fill="none" stroke="currentColor" />
+      {/* Film holes around the reel */}
+      <circle cx="12" cy="5.5" r="1.5" fill="currentColor" />
+      <circle cx="17.5" cy="9" r="1.5" fill="currentColor" />
+      <circle cx="17.5" cy="15" r="1.5" fill="currentColor" />
+      <circle cx="12" cy="18.5" r="1.5" fill="currentColor" />
+      <circle cx="6.5" cy="15" r="1.5" fill="currentColor" />
+      <circle cx="6.5" cy="9" r="1.5" fill="currentColor" />
+      {/* Film strip coming out */}
+      <path d="M21 8v8" strokeWidth={2} strokeLinecap="round" stroke="currentColor" opacity={0.6} />
+      <path d="M23 6v12" strokeWidth={1.5} strokeLinecap="round" stroke="currentColor" opacity={0.4} />
     </>
   ),
 
@@ -172,12 +199,25 @@ const iconPaths: Record<string, ReactNode> = {
     </>
   ),
 
-  // Bar - cocktail glass
+  // Bar - beer mug with foam, tilted for cheers
   bar: (
-    <>
-      <path d="M8 2h8l-4 9v11M6 22h12" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" fill="none" stroke="currentColor" />
-      <path d="M5 2l7 7 7-7" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" fill="none" stroke="currentColor" />
-    </>
+    <g transform="rotate(-15, 12, 12)">
+      {/* Handle */}
+      <path d="M18 10h1.5a2.5 2.5 0 010 5H18" strokeWidth={2} fill="none" stroke="currentColor" />
+      {/* Mug body */}
+      <path d="M5 7h12a1 1 0 011 1v11a2 2 0 01-2 2H6a2 2 0 01-2-2V8a1 1 0 011-1z" strokeWidth={2} fill="none" stroke="currentColor" />
+      {/* Foam bubbles - glowy, overflowing */}
+      <ellipse cx="7" cy="5.5" rx="2.5" ry="2" fill="currentColor" opacity={0.9} />
+      <ellipse cx="11" cy="4.5" rx="3" ry="2.5" fill="currentColor" opacity={0.95} />
+      <ellipse cx="15" cy="5.5" rx="2.5" ry="2" fill="currentColor" opacity={0.9} />
+      <circle cx="9" cy="3.5" r="1.5" fill="currentColor" opacity={0.75} />
+      <circle cx="13" cy="3" r="1.3" fill="currentColor" opacity={0.65} />
+      <circle cx="16.5" cy="4" r="1" fill="currentColor" opacity={0.5} />
+      {/* Bubbles in beer */}
+      <circle cx="8" cy="13" r="0.7" fill="currentColor" opacity={0.3} />
+      <circle cx="12" cy="15" r="0.5" fill="currentColor" opacity={0.25} />
+      <circle cx="10" cy="11" r="0.6" fill="currentColor" opacity={0.2} />
+    </g>
   ),
 
   // Coffee - cup
@@ -189,12 +229,23 @@ const iconPaths: Record<string, ReactNode> = {
     </>
   ),
 
-  // Brewery - beer mug
+  // Brewery - beer mug with foam (same as bar)
   brewery: (
     <>
-      <path d="M17 8h1a4 4 0 010 8h-1" strokeWidth={2} fill="none" stroke="currentColor" />
-      <rect x="3" y="4" width="14" height="16" rx="2" strokeWidth={2} fill="none" stroke="currentColor" />
-      <path d="M7 8v8M11 8v8" strokeWidth={2} strokeLinecap="round" stroke="currentColor" opacity={0.5} />
+      {/* Handle */}
+      <path d="M17 11h1.5a3 3 0 010 6H17" strokeWidth={2} fill="none" stroke="currentColor" />
+      {/* Mug body */}
+      <path d="M4 8h12a1 1 0 011 1v10a2 2 0 01-2 2H5a2 2 0 01-2-2V9a1 1 0 011-1z" strokeWidth={2} fill="none" stroke="currentColor" />
+      {/* Foam bubbles - glowy */}
+      <ellipse cx="6" cy="6" rx="2.5" ry="2" fill="currentColor" opacity={0.9} />
+      <ellipse cx="10" cy="5" rx="3" ry="2.5" fill="currentColor" opacity={0.95} />
+      <ellipse cx="14" cy="6" rx="2.5" ry="2" fill="currentColor" opacity={0.9} />
+      <circle cx="8" cy="4" r="1.5" fill="currentColor" opacity={0.7} />
+      <circle cx="12" cy="3.5" r="1.2" fill="currentColor" opacity={0.6} />
+      {/* Bubbles in beer */}
+      <circle cx="7" cy="14" r="0.8" fill="currentColor" opacity={0.3} />
+      <circle cx="11" cy="16" r="0.6" fill="currentColor" opacity={0.25} />
+      <circle cx="9" cy="12" r="0.5" fill="currentColor" opacity={0.2} />
     </>
   ),
 
@@ -429,14 +480,23 @@ const iconPaths: Record<string, ReactNode> = {
     </>
   ),
 
-  // Cinema - projector/screen
+  // Cinema - film reel (same as film)
   cinema: (
     <>
-      <rect x="2" y="4" width="20" height="12" rx="2" strokeWidth={2} fill="none" stroke="currentColor" />
-      <path d="M8 20h8" strokeWidth={2} strokeLinecap="round" stroke="currentColor" />
-      <path d="M12 16v4" strokeWidth={2} strokeLinecap="round" stroke="currentColor" />
-      <circle cx="8" cy="10" r="2" fill="currentColor" opacity={0.5} />
-      <circle cx="16" cy="10" r="2" fill="currentColor" opacity={0.5} />
+      {/* Outer reel circle */}
+      <circle cx="12" cy="12" r="9" strokeWidth={2} fill="none" stroke="currentColor" />
+      {/* Center hub */}
+      <circle cx="12" cy="12" r="3" strokeWidth={2} fill="none" stroke="currentColor" />
+      {/* Film holes around the reel */}
+      <circle cx="12" cy="5.5" r="1.5" fill="currentColor" />
+      <circle cx="17.5" cy="9" r="1.5" fill="currentColor" />
+      <circle cx="17.5" cy="15" r="1.5" fill="currentColor" />
+      <circle cx="12" cy="18.5" r="1.5" fill="currentColor" />
+      <circle cx="6.5" cy="15" r="1.5" fill="currentColor" />
+      <circle cx="6.5" cy="9" r="1.5" fill="currentColor" />
+      {/* Film strip coming out */}
+      <path d="M21 8v8" strokeWidth={2} strokeLinecap="round" stroke="currentColor" opacity={0.6} />
+      <path d="M23 6v12" strokeWidth={1.5} strokeLinecap="round" stroke="currentColor" opacity={0.4} />
     </>
   ),
 
@@ -608,6 +668,113 @@ const iconPaths: Record<string, ReactNode> = {
       <path d="M9 9h6" strokeWidth={2} strokeLinecap="round" stroke="currentColor" />
     </>
   ),
+
+  // College/University - graduation cap
+  college: (
+    <>
+      <path d="M22 10l-10-5L2 10l10 5 10-5z" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" fill="none" stroke="currentColor" />
+      <path d="M6 12v5c3 3 9 3 12 0v-5" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" fill="none" stroke="currentColor" />
+      <path d="M22 10v6" strokeWidth={2} strokeLinecap="round" stroke="currentColor" />
+      <circle cx="22" cy="17" r="1" fill="currentColor" />
+    </>
+  ),
+  university: (
+    <>
+      <path d="M22 10l-10-5L2 10l10 5 10-5z" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" fill="none" stroke="currentColor" />
+      <path d="M6 12v5c3 3 9 3 12 0v-5" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" fill="none" stroke="currentColor" />
+      <path d="M22 10v6" strokeWidth={2} strokeLinecap="round" stroke="currentColor" />
+      <circle cx="22" cy="17" r="1" fill="currentColor" />
+    </>
+  ),
+
+  // Healthcare/Hospital - medical cross with heart
+  healthcare: (
+    <>
+      <rect x="3" y="3" width="18" height="18" rx="2" strokeWidth={2} fill="none" stroke="currentColor" />
+      <path d="M12 8v8M8 12h8" strokeWidth={2.5} strokeLinecap="round" stroke="currentColor" />
+      <circle cx="12" cy="12" r="1" fill="currentColor" opacity={0.5} />
+    </>
+  ),
+  hospital: (
+    <>
+      <rect x="3" y="3" width="18" height="18" rx="2" strokeWidth={2} fill="none" stroke="currentColor" />
+      <path d="M12 8v8M8 12h8" strokeWidth={2.5} strokeLinecap="round" stroke="currentColor" />
+      <circle cx="12" cy="12" r="1" fill="currentColor" opacity={0.5} />
+    </>
+  ),
+
+  // Hotel - bed
+  hotel: (
+    <>
+      <path d="M2 17v-5a3 3 0 013-3h14a3 3 0 013 3v5" strokeWidth={2} strokeLinecap="round" fill="none" stroke="currentColor" />
+      <path d="M2 17h20v3H2v-3z" strokeWidth={2} fill="none" stroke="currentColor" />
+      <path d="M6 9V6a2 2 0 012-2h2a2 2 0 012 2v3" strokeWidth={2} fill="none" stroke="currentColor" />
+      <circle cx="8" cy="7" r="1.5" fill="currentColor" opacity={0.5} />
+    </>
+  ),
+
+  // Rooftop - building with view
+  rooftop: (
+    <>
+      <path d="M3 21h18" strokeWidth={2} strokeLinecap="round" stroke="currentColor" />
+      <path d="M5 21V10l7-7 7 7v11" strokeWidth={2} fill="none" stroke="currentColor" />
+      <path d="M9 21v-6h6v6" strokeWidth={2} fill="none" stroke="currentColor" />
+      {/* Stars/lights at top */}
+      <circle cx="8" cy="5" r="1" fill="currentColor" opacity={0.7} />
+      <circle cx="16" cy="5" r="1" fill="currentColor" opacity={0.7} />
+      <circle cx="12" cy="2" r="1.2" fill="currentColor" opacity={0.9} />
+    </>
+  ),
+
+  // Distillery - still/bottle
+  distillery: (
+    <>
+      <path d="M8 2h8v4c0 2-1 3-2 4l-1 1v9a2 2 0 01-2 2h0a2 2 0 01-2-2v-9l-1-1c-1-1-2-2-2-4V2z" strokeWidth={2} fill="none" stroke="currentColor" />
+      <path d="M8 2h8" strokeWidth={2} strokeLinecap="round" stroke="currentColor" />
+      <ellipse cx="12" cy="17" rx="2" ry="1" fill="currentColor" opacity={0.3} />
+      <path d="M10 10h4" strokeWidth={1.5} stroke="currentColor" opacity={0.5} />
+    </>
+  ),
+
+  // Winery - wine glass
+  winery: (
+    <>
+      <path d="M8 2h8l-1 7a4 4 0 01-3 3.5V20h-1v-7.5A4 4 0 018.5 9L8 2z" strokeWidth={2} fill="none" stroke="currentColor" />
+      <path d="M7 22h10" strokeWidth={2} strokeLinecap="round" stroke="currentColor" />
+      <ellipse cx="12" cy="7" rx="3" ry="2" fill="currentColor" opacity={0.4} />
+    </>
+  ),
+
+  // Church - steeple with cross
+  church: (
+    <>
+      <path d="M12 2v4M10 4h4" strokeWidth={2} strokeLinecap="round" stroke="currentColor" />
+      <path d="M6 22V12l6-6 6 6v10" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" fill="none" stroke="currentColor" />
+      <path d="M6 22h12" strokeWidth={2} strokeLinecap="round" stroke="currentColor" />
+      <rect x="9" y="14" width="6" height="8" strokeWidth={2} fill="none" stroke="currentColor" />
+      <path d="M12 14v4" strokeWidth={1.5} stroke="currentColor" opacity={0.5} />
+    </>
+  ),
+
+  // Event Space - star/sparkle venue
+  event_space: (
+    <>
+      <rect x="3" y="6" width="18" height="14" rx="2" strokeWidth={2} fill="none" stroke="currentColor" />
+      <path d="M3 10h18" strokeWidth={2} stroke="currentColor" />
+      <path d="M12 13l1 2 2 .5-1.5 1.5.5 2-2-1-2 1 .5-2L9 15.5l2-.5 1-2z" fill="currentColor" opacity={0.8} />
+    </>
+  ),
+
+  // Fitness Center - dumbbell
+  fitness_center: (
+    <>
+      <path d="M6.5 6.5v11M17.5 6.5v11M6.5 12h11" strokeWidth={2.5} strokeLinecap="round" stroke="currentColor" />
+      <rect x="3" y="8" width="3.5" height="8" rx="1" strokeWidth={2} fill="none" stroke="currentColor" />
+      <rect x="17.5" y="8" width="3.5" height="8" rx="1" strokeWidth={2} fill="none" stroke="currentColor" />
+      <rect x="1" y="10" width="2" height="4" rx="0.5" fill="currentColor" opacity={0.7} />
+      <rect x="21" y="10" width="2" height="4" rx="0.5" fill="currentColor" opacity={0.7} />
+    </>
+  ),
 };
 
 // Default icon for unknown types
@@ -618,16 +785,28 @@ const defaultIcon = (
   </>
 );
 
+// Map glow intensity to CSS class
+const GLOW_CLASSES: Record<GlowIntensity, string> = {
+  none: "",
+  subtle: "icon-neon-subtle",
+  default: "icon-neon",
+  intense: "icon-neon-intense",
+  pulse: "icon-neon icon-neon-pulse",
+  flicker: "icon-neon icon-neon-flicker",
+};
+
 export default function CategoryIcon({
   type,
   size = 20,
   className = "",
   showLabel = false,
   style,
+  glow = "default",
 }: Props) {
   const config = CATEGORY_CONFIG[type as CategoryType];
   const color = config?.color || "#8B8B94";
   const label = config?.label || type;
+  const glowClass = GLOW_CLASSES[glow];
 
   return (
     <span
@@ -640,7 +819,7 @@ export default function CategoryIcon({
         viewBox="0 0 24 24"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
-        className="flex-shrink-0"
+        className={`flex-shrink-0 ${glowClass}`}
       >
         {iconPaths[type] || defaultIcon}
       </svg>

@@ -3,9 +3,10 @@ import type { PortalSection as PortalSectionType } from "@/lib/portal-sections";
 
 interface PortalSectionProps {
   section: PortalSectionType;
+  portalSlug?: string;
 }
 
-export function PortalSection({ section }: PortalSectionProps) {
+export function PortalSection({ section, portalSlug }: PortalSectionProps) {
   // Only render curated sections with items for now
   if (section.section_type !== "curated" || !section.items?.length) {
     return null;
@@ -39,7 +40,7 @@ export function PortalSection({ section }: PortalSectionProps) {
             return (
               <Link
                 key={item.id}
-                href={`/events/${event.id}`}
+                href={portalSlug ? `/${portalSlug}/events/${event.id}` : `/events/${event.id}`}
                 className="group flex items-start gap-4 p-3 bg-[var(--night)] hover:bg-[var(--dusk)] rounded-lg border border-[var(--twilight)] hover:border-[var(--portal-primary,var(--neon-magenta))]/30 transition-all"
               >
                 {/* Date block */}

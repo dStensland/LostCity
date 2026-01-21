@@ -2,24 +2,122 @@ import { supabase } from "./supabase";
 import type { Event } from "./supabase";
 
 export const SPOT_TYPES = {
+  // Entertainment venues
   music_venue: { label: "Music Venue", icon: "🎵" },
   theater: { label: "Theater", icon: "🎭" },
   comedy_club: { label: "Comedy Club", icon: "🎤" },
-  bar: { label: "Bar", icon: "🍸" },
-  restaurant: { label: "Restaurant", icon: "🍽️" },
-  coffee_shop: { label: "Coffee", icon: "☕" },
-  brewery: { label: "Brewery", icon: "🍺" },
-  gallery: { label: "Gallery", icon: "🖼️" },
   club: { label: "Club", icon: "🪩" },
   arena: { label: "Arena", icon: "🏟️" },
+  cinema: { label: "Cinema", icon: "🎬" },
+  attraction: { label: "Attraction", icon: "🎢" },
+
+  // Food & Drink
+  bar: { label: "Bar", icon: "🍺" },
+  restaurant: { label: "Restaurant", icon: "🍽️" },
+  coffee_shop: { label: "Coffee", icon: "☕" },
+  brewery: { label: "Brewery", icon: "🍻" },
+  distillery: { label: "Distillery", icon: "🥃" },
+  winery: { label: "Winery", icon: "🍷" },
+  rooftop: { label: "Rooftop", icon: "🌃" },
+  sports_bar: { label: "Sports Bar", icon: "📺" },
+  food_hall: { label: "Food Hall", icon: "🍴" },
+  eatertainment: { label: "Eatertainment", icon: "🎳" },
+
+  // Cultural
+  gallery: { label: "Gallery", icon: "🖼️" },
   museum: { label: "Museum", icon: "🏛️" },
-  convention_center: { label: "Convention", icon: "🏢" },
-  games: { label: "Games", icon: "🎯" },
-  park: { label: "Park", icon: "🌳" },
+  studio: { label: "Studio", icon: "🎬" },
+
+  // Education
+  college: { label: "College", icon: "🎓" },
+  university: { label: "University", icon: "🎓" },
   library: { label: "Library", icon: "📚" },
   bookstore: { label: "Bookstore", icon: "📖" },
+  cooking_school: { label: "Cooking School", icon: "👨‍🍳" },
+
+  // Community & Events
+  convention_center: { label: "Convention", icon: "🏢" },
+  community_center: { label: "Community Center", icon: "🏘️" },
+  event_space: { label: "Event Space", icon: "✨" },
+  coworking: { label: "Coworking", icon: "💻" },
+  organization: { label: "Organization", icon: "🤝" },
+  venue: { label: "Venue", icon: "📍" },
+  festival: { label: "Festival", icon: "🎪" },
+
+  // Recreation
+  games: { label: "Games", icon: "🎯" },
+  park: { label: "Park", icon: "🌳" },
+  garden: { label: "Garden", icon: "🌷" },
+  outdoor: { label: "Outdoor", icon: "⛰️" },
   farmers_market: { label: "Farmers Market", icon: "🥬" },
+  fitness_center: { label: "Fitness Center", icon: "💪" },
+
+  // Healthcare
+  healthcare: { label: "Healthcare", icon: "🏥" },
+  hospital: { label: "Hospital", icon: "🏥" },
+
+  // Hospitality
+  hotel: { label: "Hotel", icon: "🏨" },
+
+  // Religious
+  church: { label: "Church", icon: "⛪" },
+
+  // LGBTQ+
+  lgbtq: { label: "LGBTQ+", icon: "🏳️‍🌈" },
 } as const;
+
+// Spot types that are event venues (host events)
+export const VENUE_TYPES = [
+  "music_venue",
+  "theater",
+  "comedy_club",
+  "club",
+  "arena",
+  "cinema",
+  "museum",
+  "gallery",
+  "convention_center",
+  "community_center",
+  "event_space",
+  "park",
+  "garden",
+  "outdoor",
+  "college",
+  "university",
+  "church",
+  "healthcare",
+  "hospital",
+  "fitness_center",
+  "attraction",
+  "festival",
+  "venue",
+  "organization",
+  "studio",
+  "cooking_school",
+] as const;
+
+// Spot types that are places/amenities (food, drinks, entertainment)
+export const PLACE_TYPES = [
+  "bar",
+  "restaurant",
+  "coffee_shop",
+  "brewery",
+  "distillery",
+  "winery",
+  "rooftop",
+  "sports_bar",
+  "games",
+  "bookstore",
+  "library",
+  "farmers_market",
+  "coworking",
+  "hotel",
+  "lgbtq",
+  "food_hall",
+  "eatertainment",
+] as const;
+
+export type SpotCategory = "venues" | "places";
 
 // Vibes organized by category for UI grouping
 export const VIBE_GROUPS = {
@@ -146,7 +244,8 @@ export async function getSpotsWithEventCounts(
   type?: string,
   vibe?: string,
   neighborhood?: string,
-  search?: string
+  search?: string,
+  category?: SpotCategory
 ): Promise<Spot[]> {
   const today = new Date().toISOString().split("T")[0];
 
@@ -155,6 +254,12 @@ export async function getSpotsWithEventCounts(
 
   if (type && type !== "all") {
     venueQuery = venueQuery.or(`spot_type.eq.${type},spot_types.cs.{${type}}`);
+  } else if (category === "venues") {
+    // Filter to event venues only
+    venueQuery = venueQuery.in("spot_type", [...VENUE_TYPES]);
+  } else if (category === "places") {
+    // Filter to places/amenities only
+    venueQuery = venueQuery.in("spot_type", [...PLACE_TYPES]);
   }
 
   if (vibe) {

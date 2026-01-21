@@ -11,6 +11,7 @@ type RecommendationReason = {
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const limit = Math.min(parseInt(searchParams.get("limit") || "20", 10), 50);
+  const portalSlug = searchParams.get("portal");
 
   const user = await getUser();
   if (!user) {
@@ -18,6 +19,25 @@ export async function GET(request: Request) {
   }
 
   const supabase = await createClient();
+
+  // Get portal data if specified
+  let portalId: string | null = null;
+  let portalFilters: { categories?: string[]; neighborhoods?: string[] } = {};
+
+  if (portalSlug) {
+    const { data: portal } = await supabase
+      .from("portals")
+      .select("id, filters")
+      .eq("slug", portalSlug)
+      .eq("status", "active")
+      .single();
+
+    const portalData = portal as { id: string; filters: typeof portalFilters } | null;
+    if (portalData) {
+      portalId = portalData.id;
+      portalFilters = portalData.filters || {};
+    }
+  }
 
   // Get user preferences
   const { data: prefsData } = await supabase
@@ -115,6 +135,7 @@ export async function GET(request: Request) {
       ticket_url,
       vibes,
       producer_id,
+      portal_id,
       venue:venues(id, name, neighborhood, slug),
       producer:event_producers(id, name, slug)
     `)
@@ -122,9 +143,26 @@ export async function GET(request: Request) {
     .order("start_date", { ascending: true })
     .limit(limit * 2); // Fetch more to filter
 
-  // Apply category filter if user has preferences
+  // Apply portal filter if specified
+  if (portalId) {
+    // Show portal-specific events + public events
+    query = query.or(`portal_id.eq.${portalId},portal_id.is.null`);
+
+    // Apply portal category filters
+    if (portalFilters.categories?.length) {
+      query = query.in("category", portalFilters.categories);
+    }
+  } else {
+    // No portal - only show public events
+    query = query.is("portal_id", null);
+  }
+
+  // Apply user category filter (on top of portal filters)
   if (prefs?.favorite_categories && prefs.favorite_categories.length > 0) {
-    query = query.in("category", prefs.favorite_categories);
+    // Only apply if no portal filter already set categories
+    if (!portalFilters.categories?.length) {
+      query = query.in("category", prefs.favorite_categories);
+    }
   }
 
   const { data: eventsData, error } = await query;

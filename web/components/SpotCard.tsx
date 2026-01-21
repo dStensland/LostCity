@@ -6,13 +6,38 @@ import CategoryIcon, { getCategoryLabel } from "./CategoryIcon";
 interface Props {
   spot: Spot;
   index?: number;
+  showDistance?: { lat: number; lng: number };
 }
 
-export default function SpotCard({ spot, index = 0 }: Props) {
+// Calculate distance between two points using Haversine formula
+function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 3959; // Earth's radius in miles
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
+function formatDistance(miles: number): string {
+  if (miles < 0.1) return "< 0.1 mi";
+  if (miles < 1) return `${miles.toFixed(1)} mi`;
+  return `${Math.round(miles)} mi`;
+}
+
+export default function SpotCard({ spot, index = 0, showDistance }: Props) {
   // Stagger animation class
   const staggerClass = index < 10 ? `stagger-${index + 1}` : "";
   const priceDisplay = formatPriceLevel(spot.price_level);
   const spotType = spot.spot_type || "music_venue";
+
+  // Calculate distance if we have user location and spot coordinates
+  const distance = showDistance && spot.lat && spot.lng
+    ? calculateDistance(showDistance.lat, showDistance.lng, spot.lat, spot.lng)
+    : null;
 
   return (
     <Link
@@ -45,6 +70,11 @@ export default function SpotCard({ spot, index = 0 }: Props) {
 
         {/* Meta row - mobile */}
         <div className="flex items-center gap-3 mt-2 sm:hidden">
+          {distance !== null && (
+            <span className="font-mono text-xs font-medium text-[var(--coral)]">
+              {formatDistance(distance)}
+            </span>
+          )}
           {priceDisplay && (
             <span className="font-mono text-xs font-medium text-[var(--muted)]">
               {priceDisplay}
@@ -60,6 +90,11 @@ export default function SpotCard({ spot, index = 0 }: Props) {
 
       {/* Right column - desktop only */}
       <div className="hidden sm:flex items-center gap-4">
+        {distance !== null && (
+          <span className="font-mono text-xs font-medium text-[var(--coral)] whitespace-nowrap">
+            {formatDistance(distance)}
+          </span>
+        )}
         {priceDisplay && (
           <span className="font-mono text-sm font-medium text-[var(--muted)]">
             {priceDisplay}

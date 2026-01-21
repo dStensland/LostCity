@@ -27,6 +27,26 @@ RULES:
 CATEGORIES (pick one):
 music, art, comedy, theater, film, sports, food_drink, nightlife, community, fitness, family, learning, dance, tours, meetup, words, religious, markets, wellness, gaming, outdoors, other
 
+SERIES DETECTION:
+Some events are instances of a "series" - a recurring show or film playing multiple times/venues:
+- Films at theaters (same movie, multiple showtimes)
+- Recurring shows ("Tuesday Night Improv", "Open Mic Night")
+- Touring acts passing through
+- Festival programs (DragonCon panels, Film Fest screenings)
+
+If the event appears to be part of a series, populate the series_hint field:
+- series_type: "film" | "recurring_show" | "class_series" | "festival_program" | "tour" | null
+- series_title: The canonical name of the series (movie title, show name)
+- For films: include director, runtime_minutes, year, rating if available
+
+GENRES:
+For film, music, theater, and sports events, identify relevant genres:
+- Film: action, comedy, drama, horror, sci-fi, documentary, thriller, animation, romance, indie, cult, classic, etc.
+- Music: rock, pop, hip-hop, jazz, electronic, country, metal, punk, indie, folk, classical, r&b, blues, etc.
+- Theater: musical, drama, comedy, improv, stand-up, ballet, opera, puppet, burlesque, sketch, etc.
+- Sports: baseball, basketball, football, soccer, hockey, mma, racing, esports, marathon, etc.
+Include 1-3 most relevant genres. Use lowercase. Custom genres allowed if standard ones don't fit.
+
 OUTPUT FORMAT:
 Return valid JSON matching this schema:
 {
@@ -55,7 +75,18 @@ Return valid JSON matching this schema:
       "image_url": string | null,
       "is_recurring": boolean,
       "recurrence_rule": string | null,
-      "confidence": number
+      "confidence": number,
+      "genres": string[] | null,
+      "series_hint": {
+        "series_type": "film" | "recurring_show" | "class_series" | "festival_program" | "tour" | null,
+        "series_title": string | null,
+        "director": string | null,
+        "runtime_minutes": number | null,
+        "year": number | null,
+        "rating": string | null,
+        "frequency": string | null,
+        "genres": string[] | null
+      } | null
     }
   ]
 }"""
@@ -66,6 +97,18 @@ class VenueData(BaseModel):
     name: str
     address: Optional[str] = None
     neighborhood: Optional[str] = None
+
+
+class SeriesHint(BaseModel):
+    """Hints for identifying series membership."""
+    series_type: Optional[str] = None  # film, recurring_show, class_series, festival_program, tour
+    series_title: Optional[str] = None  # Canonical name (movie title, show name)
+    director: Optional[str] = None  # For films
+    runtime_minutes: Optional[int] = None  # For films
+    year: Optional[int] = None  # For films
+    rating: Optional[str] = None  # PG, R, etc.
+    frequency: Optional[str] = None  # weekly, monthly, etc. for recurring
+    genres: list[str] = []  # Genre tags for the series
 
 
 class EventData(BaseModel):
@@ -90,6 +133,8 @@ class EventData(BaseModel):
     is_recurring: bool = False
     recurrence_rule: Optional[str] = None
     confidence: float
+    genres: list[str] = []  # Genre tags for standalone events
+    series_hint: Optional[SeriesHint] = None
 
 
 class ExtractionResult(BaseModel):

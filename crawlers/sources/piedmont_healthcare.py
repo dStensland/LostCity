@@ -6,6 +6,14 @@ This is a coordinator crawler that imports events from multiple Piedmont sources
 - Piedmont Foundation (special events, galas, fundraisers)
 - Piedmont Cancer Institute (support groups)
 - Piedmont Classes (maternity, CPR, etc. via Inquicker)
+- Piedmont Fitness (fitness center schedules)
+- Piedmont CME (continuing medical education)
+- Piedmont Heart Conferences (cardiology conferences)
+- Piedmont Women's Heart (support network)
+- Piedmont Luminaria (oncology gala)
+- Piedmont Transplant (transplant support groups)
+- Piedmont Athens (spiritual care and support)
+- Piedmont HealthCare Events (piedmonthealthcare.com)
 
 Can be run standalone or as part of the main crawler system.
 """
@@ -19,6 +27,13 @@ from sources.piedmont_foundation import crawl as crawl_foundation
 from sources.piedmont_cancer_support import crawl as crawl_cancer_support
 from sources.piedmont_classes import crawl as crawl_classes
 from sources.piedmont_fitness import crawl as crawl_fitness
+from sources.piedmont_cme import crawl as crawl_cme
+from sources.piedmont_heart_conferences import crawl as crawl_heart_conferences
+from sources.piedmont_womens_heart import crawl as crawl_womens_heart
+from sources.piedmont_luminaria import crawl as crawl_luminaria
+from sources.piedmont_transplant import crawl as crawl_transplant
+from sources.piedmont_athens import crawl as crawl_athens
+from sources.piedmonthealthcare_events import crawl as crawl_piedmonthealthcare
 
 logger = logging.getLogger(__name__)
 
@@ -39,6 +54,13 @@ def crawl(source: dict) -> tuple[int, int, int]:
         ("Piedmont Cancer Support", crawl_cancer_support),
         ("Piedmont Classes", crawl_classes),
         ("Piedmont Fitness", crawl_fitness),
+        ("Piedmont CME", crawl_cme),
+        ("Piedmont Heart Conferences", crawl_heart_conferences),
+        ("Piedmont Women's Heart", crawl_womens_heart),
+        ("Piedmont Luminaria", crawl_luminaria),
+        ("Piedmont Transplant", crawl_transplant),
+        ("Piedmont Athens", crawl_athens),
+        ("Piedmont HealthCare Events", crawl_piedmonthealthcare),
     ]
 
     for name, crawler_func in crawlers:

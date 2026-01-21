@@ -3,10 +3,11 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { usePortal } from "@/lib/portal-context";
 
 interface SearchResult {
   id: number | string;
-  type: "event" | "venue" | "neighborhood";
+  type: "event" | "venue" | "neighborhood" | "organizer";
   title: string;
   subtitle?: string;
   href: string;
@@ -21,6 +22,7 @@ interface SearchOverlayProps {
 const POPULAR_SEARCHES = ["Live Music", "Comedy", "Free Events", "Rooftop", "Late Night"];
 
 export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
+  const { portal } = usePortal();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResult[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -84,6 +86,13 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
         slug: string;
       };
 
+      type ProducerRow = {
+        id: string;
+        name: string;
+        org_type: string;
+        slug: string;
+      };
+
       // Search events
       const { data: events } = await supabase
         .from("events")
@@ -100,9 +109,18 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
         .or(`name.ilike.%${searchQuery}%,neighborhood.ilike.%${searchQuery}%`)
         .limit(4);
 
+      // Search organizers (event producers)
+      const { data: producers } = await supabase
+        .from("event_producers")
+        .select("id, name, org_type, slug")
+        .ilike("name", `%${searchQuery}%`)
+        .eq("hidden", false)
+        .limit(3);
+
       const searchResults: SearchResult[] = [];
       const eventRows = events as EventRow[] | null;
       const venueRows = venues as VenueRow[] | null;
+      const producerRows = producers as ProducerRow[] | null;
 
       // Add events
       if (eventRows) {
@@ -112,7 +130,7 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
             type: "event",
             title: event.title,
             subtitle: event.venue ? `${event.venue.name} · ${event.start_date}` : event.start_date,
-            href: `/events/${event.id}`,
+            href: portal?.slug ? `/${portal.slug}/events/${event.id}` : `/events/${event.id}`,
             isLive: event.is_live || false,
           });
         }
@@ -131,13 +149,26 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
         }
       }
 
+      // Add organizers
+      if (producerRows) {
+        for (const producer of producerRows) {
+          searchResults.push({
+            id: producer.id,
+            type: "organizer",
+            title: producer.name,
+            subtitle: producer.org_type.replace(/_/g, " "),
+            href: `/community/${producer.slug}`,
+          });
+        }
+      }
+
       setResults(searchResults);
     } catch (error) {
       console.error("Search error:", error);
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [portal?.slug]);
 
   // Debounced search
   useEffect(() => {
@@ -192,7 +223,7 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
                 type="text"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search events, venues, neighborhoods..."
+                placeholder="Search events, venues, organizers..."
                 className="flex-1 bg-transparent text-[var(--cream)] placeholder:text-[var(--muted)] outline-none text-lg font-display"
               />
               {query && (
@@ -376,6 +407,62 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
                         </div>
                       </div>
                     )}
+
+                    {/* Organizers */}
+                    {results.filter((r) => r.type === "organizer").length > 0 && (
+                      <div className="p-3">
+                        <h3 className="flex items-center gap-2 text-xs font-mono font-semibold text-[var(--muted)] uppercase tracking-wider mb-2 px-2">
+                          <svg
+                            className="w-3.5 h-3.5"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+                            />
+                          </svg>
+                          Organizers
+                        </h3>
+                        <div className="space-y-1">
+                          {results
+                            .filter((r) => r.type === "organizer")
+                            .map((result) => (
+                              <Link
+                                key={result.id}
+                                href={result.href}
+                                onClick={handleResultClick}
+                                className="flex items-center gap-3 p-2 rounded-lg hover:bg-[var(--twilight)] transition-colors group"
+                              >
+                                <div className="w-10 h-10 rounded-lg bg-[var(--coral)]/10 flex items-center justify-center flex-shrink-0">
+                                  <svg
+                                    className="w-5 h-5 text-[var(--coral)]"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+                                    />
+                                  </svg>
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="font-medium text-[var(--cream)] truncate group-hover:text-[var(--coral)] transition-colors">
+                                    {result.title}
+                                  </p>
+                                  <p className="text-xs text-[var(--muted)] capitalize">{result.subtitle}</p>
+                                </div>
+                              </Link>
+                            ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -384,7 +471,7 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
                   <div className="p-8 text-center">
                     <p className="text-[var(--muted)]">No results found for &quot;{query}&quot;</p>
                     <p className="text-sm text-[var(--muted)] opacity-60 mt-1">
-                      Try searching for events, venues, or neighborhoods
+                      Try searching for events, venues, or organizers
                     </p>
                   </div>
                 )}

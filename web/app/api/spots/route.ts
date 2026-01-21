@@ -49,26 +49,25 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ spots: [] });
     }
 
-    // Aggregate venue counts in memory (faster than multiple DB calls)
-    const venueMap = new Map<number, {
+    type VenueData = {
       id: number;
       name: string;
       slug: string;
       address: string | null;
       neighborhood: string | null;
       spot_type: string | null;
-      event_count: number;
-    }>();
+    };
 
-    for (const event of events) {
-      const venue = event.venues as {
-        id: number;
-        name: string;
-        slug: string;
-        address: string | null;
-        neighborhood: string | null;
-        spot_type: string | null;
-      };
+    type EventWithVenue = {
+      venue_id: number;
+      venues: VenueData;
+    };
+
+    // Aggregate venue counts in memory (faster than multiple DB calls)
+    const venueMap = new Map<number, VenueData & { event_count: number }>();
+
+    for (const event of events as EventWithVenue[]) {
+      const venue = event.venues;
 
       if (!venue?.id) continue;
 

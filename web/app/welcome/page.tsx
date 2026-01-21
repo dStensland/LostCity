@@ -1,12 +1,26 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import Logo from "@/components/Logo";
 import { useAuth } from "@/lib/auth-context";
 import { createClient } from "@/lib/supabase/client";
+
+type Portal = {
+  id: string;
+  slug: string;
+  name: string;
+  filters: {
+    categories?: string[];
+    neighborhoods?: string[];
+  };
+  branding: {
+    logo_url?: string;
+    primary_color?: string;
+  };
+};
 
 type Category = {
   id: string;
@@ -129,8 +143,10 @@ const NEIGHBORHOODS: Neighborhood[] = [
 
 type Step = "categories" | "neighborhoods" | "producers" | "complete";
 
-export default function WelcomePage() {
+function WelcomeContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const portalSlug = searchParams.get("portal");
   const { user, loading: authLoading } = useAuth();
   const supabase = createClient();
 
@@ -139,6 +155,7 @@ export default function WelcomePage() {
   const [selectedNeighborhoods, setSelectedNeighborhoods] = useState<string[]>([]);
   const [selectedProducers, setSelectedProducers] = useState<string[]>([]);
   const [producers, setProducers] = useState<Producer[]>([]);
+  const [portal, setPortal] = useState<Portal | null>(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -149,11 +166,33 @@ export default function WelcomePage() {
     }
   }, [authLoading, user, router]);
 
-  // Load featured producers
+  // Load portal data if specified
+  useEffect(() => {
+    async function loadPortal() {
+      if (!portalSlug) return;
+
+      const { data } = await supabase
+        .from("portals")
+        .select("id, slug, name, filters, branding")
+        .eq("slug", portalSlug)
+        .eq("status", "active")
+        .single();
+
+      if (data) {
+        setPortal(data as Portal);
+      }
+    }
+    loadPortal();
+  }, [portalSlug, supabase]);
+
+  // Load featured producers (portal-filtered if applicable)
   useEffect(() => {
     async function loadProducers() {
       setLoading(true);
-      const res = await fetch("/api/producers?limit=12");
+      const url = portal
+        ? `/api/producers?limit=12&portal_id=${portal.id}`
+        : "/api/producers?limit=12";
+      const res = await fetch(url);
       if (res.ok) {
         const data = await res.json();
         // Sort by event count and take top ones
@@ -165,7 +204,16 @@ export default function WelcomePage() {
       setLoading(false);
     }
     loadProducers();
-  }, []);
+  }, [portal]);
+
+  // Filter categories and neighborhoods based on portal
+  const displayCategories = portal?.filters?.categories?.length
+    ? CATEGORIES.filter((c) => portal.filters.categories!.includes(c.id))
+    : CATEGORIES;
+
+  const displayNeighborhoods = portal?.filters?.neighborhoods?.length
+    ? NEIGHBORHOODS.filter((n) => portal.filters.neighborhoods!.includes(n.id))
+    : NEIGHBORHOODS;
 
   const toggleCategory = (id: string) => {
     setSelectedCategories((prev) =>
@@ -248,7 +296,24 @@ export default function WelcomePage() {
     <div className="min-h-screen flex flex-col">
       {/* Header */}
       <header className="px-4 sm:px-6 py-4 border-b border-[var(--twilight)]">
-        <Logo />
+        <div className="flex items-center gap-3">
+          {portal?.branding?.logo_url ? (
+            <Image
+              src={portal.branding.logo_url}
+              alt={portal.name}
+              width={32}
+              height={32}
+              className="rounded-lg"
+            />
+          ) : (
+            <Logo />
+          )}
+          {portal && (
+            <span className="font-mono text-xs text-[var(--muted)]">
+              {portal.name}
+            </span>
+          )}
+        </div>
       </header>
 
       {/* Progress bar */}
@@ -268,7 +333,7 @@ export default function WelcomePage() {
             <div className="animate-fadeIn">
               <div className="text-center mb-8">
                 <h1 className="font-serif text-2xl sm:text-3xl text-[var(--cream)] italic mb-2">
-                  Welcome to Lost City
+                  {portal ? `Welcome to ${portal.name}` : "Welcome to Lost City"}
                 </h1>
                 <p className="text-[var(--soft)] text-sm">
                   What kind of events interest you?
@@ -276,7 +341,7 @@ export default function WelcomePage() {
               </div>
 
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
-                {CATEGORIES.map((category) => {
+                {displayCategories.map((category) => {
                   const isSelected = selectedCategories.includes(category.id);
                   return (
                     <button
@@ -314,12 +379,12 @@ export default function WelcomePage() {
                   Where do you like to go?
                 </h1>
                 <p className="text-[var(--soft)] text-sm">
-                  Select your favorite Atlanta neighborhoods
+                  {portal ? `Select neighborhoods for ${portal.name} events` : "Select your favorite Atlanta neighborhoods"}
                 </p>
               </div>
 
               <div className="flex flex-wrap justify-center gap-2 mb-8">
-                {NEIGHBORHOODS.map((neighborhood) => {
+                {displayNeighborhoods.map((neighborhood) => {
                   const isSelected = selectedNeighborhoods.includes(neighborhood.id);
                   return (
                     <button
@@ -419,20 +484,22 @@ export default function WelcomePage() {
                 You&apos;re all set!
               </h1>
               <p className="text-[var(--soft)] text-sm mb-8">
-                Your personalized feed is ready. Discover events happening in Atlanta.
+                {portal
+                  ? `Your personalized feed is ready. Discover ${portal.name} events.`
+                  : "Your personalized feed is ready. Discover events happening in Atlanta."}
               </p>
               <div className="flex flex-col sm:flex-row gap-3 justify-center">
                 <Link
-                  href="/foryou"
+                  href={portal ? `/${portal.slug}` : "/foryou"}
                   className="px-6 py-3 bg-[var(--coral)] text-[var(--void)] font-mono text-sm font-medium rounded-lg hover:bg-[var(--rose)] transition-colors"
                 >
-                  See Your Feed
+                  {portal ? `Explore ${portal.name}` : "See Your Feed"}
                 </Link>
                 <Link
-                  href="/"
+                  href={portal ? "/foryou" : "/"}
                   className="px-6 py-3 border border-[var(--twilight)] text-[var(--cream)] font-mono text-sm rounded-lg hover:bg-[var(--twilight)] transition-colors"
                 >
-                  Explore Events
+                  {portal ? "Your Feed" : "Explore Events"}
                 </Link>
               </div>
             </div>
@@ -459,5 +526,19 @@ export default function WelcomePage() {
         </div>
       </main>
     </div>
+  );
+}
+
+export default function WelcomePage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="w-8 h-8 border-2 border-[var(--coral)] border-t-transparent rounded-full animate-spin" />
+        </div>
+      }
+    >
+      <WelcomeContent />
+    </Suspense>
   );
 }

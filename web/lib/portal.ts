@@ -27,6 +27,32 @@ export async function getPortalBySlug(slug: string): Promise<Portal | null> {
   return data as Portal;
 }
 
+export async function getPortalById(id: string): Promise<Portal | null> {
+  const { data, error } = await supabase
+    .from("portals")
+    .select(`
+      id,
+      slug,
+      name,
+      tagline,
+      portal_type,
+      status,
+      visibility,
+      filters,
+      branding,
+      settings
+    `)
+    .eq("id", id)
+    .eq("status", "active")
+    .single();
+
+  if (error || !data) {
+    return null;
+  }
+
+  return data as Portal;
+}
+
 // Default Atlanta portal for fallback
 export const DEFAULT_PORTAL: Portal = {
   id: "default",

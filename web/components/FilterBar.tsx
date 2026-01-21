@@ -1,9 +1,8 @@
 "use client";
 
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
-import { useCallback, useMemo, useState, useRef, useEffect } from "react";
-import { format, addDays, isToday, isTomorrow, isThisWeek, parseISO } from "date-fns";
-import { CATEGORIES, SUBCATEGORIES, DATE_FILTERS, PRICE_FILTERS, TAG_GROUPS } from "@/lib/search";
+import { useCallback, useMemo, useState, useEffect, useRef } from "react";
+import { CATEGORIES, SUBCATEGORIES, DATE_FILTERS, PRICE_FILTERS, TAG_GROUPS, type AvailableFilters } from "@/lib/search";
 import { PREFERENCE_VIBES, PREFERENCE_NEIGHBORHOODS } from "@/lib/preferences";
 import { MOODS, getMoodById, type MoodId } from "@/lib/moods";
 import CategoryIcon, { CATEGORY_CONFIG, type CategoryType } from "./CategoryIcon";
@@ -12,12 +11,155 @@ type FilterBarProps = {
   variant?: "full" | "compact";
 };
 
+// Active filter chip type
+type ActiveFilterChip = {
+  label: string;
+  onRemove: () => void;
+  className?: string;
+  style?: React.CSSProperties;
+};
+
+// Collapsible section component with inline active filters
+function FilterSection({
+  title,
+  expanded,
+  onToggle,
+  activeFilters = [],
+  children
+}: {
+  title: string;
+  expanded: boolean;
+  onToggle: () => void;
+  activeFilters?: ActiveFilterChip[];
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="border-b border-[var(--twilight)]/50 last:border-b-0">
+      {/* Header row - always clickable to expand/collapse */}
+      <button
+        onClick={onToggle}
+        className="w-full flex items-center justify-between px-4 py-3 hover:bg-[var(--twilight)]/20 transition-colors"
+      >
+        <div className="flex items-center gap-2">
+          <span className="font-mono text-xs font-medium text-[var(--cream)]">{title}</span>
+          {activeFilters.length > 0 && !expanded && (
+            <span className="px-1.5 py-0.5 rounded-full bg-[var(--coral)] text-[var(--void)] text-[0.6rem] font-mono font-medium">
+              {activeFilters.length}
+            </span>
+          )}
+        </div>
+        <svg
+          className={`w-4 h-4 text-[var(--muted)] transition-transform flex-shrink-0 ${expanded ? "rotate-180" : ""}`}
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+
+      {/* Active filter pills - visible when collapsed */}
+      {!expanded && activeFilters.length > 0 && (
+        <div className="px-4 pb-3 -mt-1 flex flex-wrap gap-1.5">
+          {activeFilters.map((chip) => (
+            <button
+              key={chip.label}
+              onClick={(e) => {
+                e.stopPropagation();
+                chip.onRemove();
+              }}
+              className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[0.65rem] font-mono font-medium transition-colors hover:opacity-80 ${chip.className || "bg-[var(--twilight)] text-[var(--cream)]"}`}
+              style={chip.style}
+            >
+              {chip.label}
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Expanded content */}
+      {expanded && (
+        <div className="px-4 pb-3">
+          {children}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function FilterBar({ variant = "full" }: FilterBarProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [showAdvanced, setShowAdvanced] = useState(false);
+  const drawerContentRef = useRef<HTMLDivElement>(null);
+
+  // Available filters from API (dynamically generated from events)
+  const [availableFilters, setAvailableFilters] = useState<AvailableFilters | null>(null);
+
+  // Fetch available filters on mount
+  useEffect(() => {
+    fetch("/api/filters")
+      .then((res) => res.json())
+      .then((data) => setAvailableFilters(data))
+      .catch((err) => console.error("Failed to fetch available filters:", err));
+  }, []);
+
+  // Helper to check if a filter value has events
+  const categoryHasEvents = useCallback(
+    (value: string) => {
+      if (!availableFilters) return true; // Show all while loading
+      return availableFilters.categories.some((c) => c.value === value && c.count > 0);
+    },
+    [availableFilters]
+  );
+
+  const tagHasEvents = useCallback(
+    (value: string) => {
+      if (!availableFilters) return true;
+      return availableFilters.tags.some((t) => t.value === value && t.count > 0);
+    },
+    [availableFilters]
+  );
+
+  // Get event count for a category
+  const getCategoryCount = useCallback(
+    (value: string) => {
+      if (!availableFilters) return null;
+      const cat = availableFilters.categories.find((c) => c.value === value);
+      return cat?.count || 0;
+    },
+    [availableFilters]
+  );
+
+  // Get event count for a tag
+  const getTagCount = useCallback(
+    (value: string) => {
+      if (!availableFilters) return null;
+      const tag = availableFilters.tags.find((t) => t.value === value);
+      return tag?.count || 0;
+    },
+    [availableFilters]
+  );
+
+  // Track which filter sections are expanded (none expanded by default)
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
+
+  // Toggle a section's expanded state
+  const toggleSection = useCallback((section: string) => {
+    setExpandedSections(prev => {
+      const next = new Set(prev);
+      if (next.has(section)) {
+        next.delete(section);
+      } else {
+        next.add(section);
+      }
+      return next;
+    });
+  }, []);
 
   // View mode (list or map)
   const currentView = searchParams.get("view") || "events";
@@ -27,8 +169,6 @@ export default function FilterBar({ variant = "full" }: FilterBarProps) {
   const [showPriceRange, setShowPriceRange] = useState(false);
   const [showGeoRange, setShowGeoRange] = useState(false);
   const [geoLoading, setGeoLoading] = useState(false);
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const datePickerRef = useRef<HTMLDivElement>(null);
 
   const currentCategories = useMemo(
     () => searchParams.get("categories")?.split(",").filter(Boolean) || [],
@@ -54,11 +194,53 @@ export default function FilterBar({ variant = "full" }: FilterBarProps) {
   const currentDateFilter = searchParams.get("date") || "";
   const currentMood = (searchParams.get("mood") as MoodId) || null;
 
+  // Auto-expand vibe section if mood/vibes/tags are active
   useEffect(() => {
     if (currentMood || currentVibes.length > 0 || currentTags.length > 0) {
-      setShowAdvanced(true);
+      setExpandedSections(prev => new Set([...prev, "vibe"]));
     }
   }, [currentMood, currentTags.length, currentVibes.length]);
+
+  // Lock body scroll and reset drawer scroll when opened
+  // Uses fixed positioning for iOS compatibility
+  useEffect(() => {
+    if (drawerOpen) {
+      // Store current scroll position
+      const scrollY = window.scrollY;
+      // Lock body with fixed position (works on iOS)
+      document.body.style.position = "fixed";
+      document.body.style.top = `-${scrollY}px`;
+      document.body.style.left = "0";
+      document.body.style.right = "0";
+      document.body.style.overflow = "hidden";
+      // Reset drawer content scroll
+      if (drawerContentRef.current) {
+        drawerContentRef.current.scrollTop = 0;
+      }
+    } else {
+      // Restore scroll position
+      const scrollY = document.body.style.top;
+      document.body.style.position = "";
+      document.body.style.top = "";
+      document.body.style.left = "";
+      document.body.style.right = "";
+      document.body.style.overflow = "";
+      if (scrollY) {
+        window.scrollTo(0, parseInt(scrollY || "0", 10) * -1);
+      }
+    }
+    return () => {
+      const scrollY = document.body.style.top;
+      document.body.style.position = "";
+      document.body.style.top = "";
+      document.body.style.left = "";
+      document.body.style.right = "";
+      document.body.style.overflow = "";
+      if (scrollY) {
+        window.scrollTo(0, parseInt(scrollY || "0", 10) * -1);
+      }
+    };
+  }, [drawerOpen]);
 
   // Custom ranges
   const currentDateStart = searchParams.get("date_start") || "";
@@ -255,7 +437,7 @@ export default function FilterBar({ variant = "full" }: FilterBarProps) {
 
   const setViewMode = useCallback(
     (view: "events" | "map") => {
-      updateParams({ view: view === "events" ? null : view });
+      updateParams({ view });
     },
     [updateParams]
   );
@@ -292,49 +474,6 @@ export default function FilterBar({ variant = "full" }: FilterBarProps) {
       isActive: currentTags.includes("outdoor"),
     },
   ];
-
-  const jumpToDate = useCallback(
-    (date: string) => {
-      updateParams({
-        date: null,
-        date_start: date,
-        date_end: date,
-      });
-      setShowDatePicker(false);
-    },
-    [updateParams]
-  );
-
-  const clearDateJump = useCallback(() => {
-    updateParams({
-      date_start: null,
-      date_end: null,
-    });
-  }, [updateParams]);
-
-  // Generate quick date options
-  const quickDates = useMemo(() => {
-    const today = new Date();
-    const dates = [];
-    for (let i = 0; i < 14; i++) {
-      const date = addDays(today, i);
-      const dateStr = format(date, "yyyy-MM-dd");
-      let label = format(date, "EEE d");
-      if (i === 0) label = "Today";
-      else if (i === 1) label = "Tomorrow";
-      dates.push({ date: dateStr, label, dayName: format(date, "EEEE"), fullDate: format(date, "MMM d") });
-    }
-    return dates;
-  }, []);
-
-  // Get current jumped date label
-  const currentJumpedDate = useMemo(() => {
-    if (!currentDateStart || currentDateStart !== currentDateEnd) return null;
-    const date = parseISO(currentDateStart);
-    if (isToday(date)) return "Today";
-    if (isTomorrow(date)) return "Tomorrow";
-    return format(date, "EEE, MMM d");
-  }, [currentDateStart, currentDateEnd]);
 
   const availableSubcategories = currentCategories.flatMap((cat) =>
     SUBCATEGORIES[cat]?.map((sub) => ({ ...sub, category: cat })) || []
@@ -488,13 +627,118 @@ export default function FilterBar({ variant = "full" }: FilterBarProps) {
   const visibleChips = activeChips.slice(0, 3);
   const extraChipCount = Math.max(activeChips.length - visibleChips.length, 0);
 
+  // Section-specific active filters for collapsed state
+  const categoryActiveFilters: ActiveFilterChip[] = useMemo(() => [
+    ...currentCategories.map(cat => ({
+      label: CATEGORIES.find(c => c.value === cat)?.label || cat,
+      onRemove: () => toggleCategory(cat),
+      className: "bg-[var(--cream)] text-[var(--void)]",
+    })),
+    ...currentSubcategories.map(sub => ({
+      label: SUBCATEGORIES[sub.split('.')[0]]?.find(s => s.value === sub)?.label || sub,
+      onRemove: () => toggleSubcategory(sub),
+      className: "bg-[var(--coral)] text-[var(--void)]",
+    })),
+  ], [currentCategories, currentSubcategories, toggleCategory, toggleSubcategory]);
+
+  const whenActiveFilters: ActiveFilterChip[] = useMemo(() => {
+    const filters: ActiveFilterChip[] = [];
+    if (currentDateFilter) {
+      filters.push({
+        label: DATE_FILTERS.find(d => d.value === currentDateFilter)?.label || currentDateFilter,
+        onRemove: () => setDateFilter(currentDateFilter),
+        className: "bg-[var(--gold)] text-[var(--void)]",
+      });
+    }
+    if (hasCustomDateRange) {
+      filters.push({
+        label: currentDateStart && currentDateEnd
+          ? `${currentDateStart} - ${currentDateEnd}`
+          : currentDateStart ? `From ${currentDateStart}` : `Until ${currentDateEnd}`,
+        onRemove: () => setCustomDateRange("", ""),
+        className: "bg-[var(--gold)] text-[var(--void)]",
+      });
+    }
+    return filters;
+  }, [currentDateFilter, hasCustomDateRange, currentDateStart, currentDateEnd, setDateFilter, setCustomDateRange]);
+
+  const priceActiveFilters: ActiveFilterChip[] = useMemo(() => {
+    const filters: ActiveFilterChip[] = [];
+    if (currentPriceFilter) {
+      filters.push({
+        label: PRICE_FILTERS.find(p => p.value === currentPriceFilter)?.label || currentPriceFilter,
+        onRemove: () => setPriceFilter(currentPriceFilter),
+        className: "bg-[var(--neon-green)] text-[var(--void)]",
+      });
+    }
+    if (hasCustomPriceRange) {
+      filters.push({
+        label: currentPriceMin && currentPriceMax
+          ? `$${currentPriceMin}-${currentPriceMax}`
+          : currentPriceMin ? `$${currentPriceMin}+` : `Under $${currentPriceMax}`,
+        onRemove: () => setCustomPriceRange("", ""),
+        className: "bg-[var(--neon-green)] text-[var(--void)]",
+      });
+    }
+    return filters;
+  }, [currentPriceFilter, hasCustomPriceRange, currentPriceMin, currentPriceMax, setPriceFilter, setCustomPriceRange]);
+
+  const areaActiveFilters: ActiveFilterChip[] = useMemo(() => {
+    const filters: ActiveFilterChip[] = [];
+    if (hasGeoFilter) {
+      filters.push({
+        label: `Near me (${currentGeoRadius}km)`,
+        onRemove: clearGeo,
+        className: "bg-[var(--neon-magenta)] text-[var(--void)]",
+      });
+    }
+    currentNeighborhoods.forEach(n => {
+      filters.push({
+        label: n,
+        onRemove: () => toggleNeighborhood(n),
+        className: "bg-[var(--coral)] text-[var(--void)]",
+      });
+    });
+    return filters;
+  }, [hasGeoFilter, currentGeoRadius, currentNeighborhoods, clearGeo, toggleNeighborhood]);
+
+  const vibeActiveFilters: ActiveFilterChip[] = useMemo(() => {
+    const filters: ActiveFilterChip[] = [];
+    if (currentMood) {
+      const mood = getMoodById(currentMood);
+      if (mood) {
+        filters.push({
+          label: `${mood.emoji} ${mood.name}`,
+          onRemove: () => setMood(null),
+          className: "text-[var(--void)]",
+          style: { backgroundColor: mood.color },
+        });
+      }
+    }
+    currentVibes.forEach(v => {
+      filters.push({
+        label: PREFERENCE_VIBES.find(pv => pv.value === v)?.label || v,
+        onRemove: () => toggleVibe(v),
+        className: "bg-[var(--sage)] text-[var(--void)]",
+      });
+    });
+    currentTags.forEach(t => {
+      filters.push({
+        label: [...TAG_GROUPS.Vibe, ...TAG_GROUPS.Access, ...TAG_GROUPS.Special].find(tg => tg.value === t)?.label || t,
+        onRemove: () => toggleTag(t),
+        className: "bg-[var(--lavender)] text-[var(--void)]",
+      });
+    });
+    return filters;
+  }, [currentMood, currentVibes, currentTags, setMood, toggleVibe, toggleTag]);
+
   return (
     <>
       {/* Filter bar */}
       <div className="sticky top-[104px] z-30 bg-[var(--night)] border-b border-[var(--twilight)]">
         <div className={`max-w-3xl mx-auto px-4 ${variant === "compact" ? "py-1.5" : "py-2"}`}>
           <div className="flex items-center gap-2">
-            {/* List/Map view toggle */}
+            {/* List/Calendar/Map view toggle */}
             <div className="flex rounded-full bg-[var(--twilight)] p-0.5">
               <button
                 onClick={() => setViewMode("events")}
@@ -509,6 +753,20 @@ export default function FilterBar({ variant = "full" }: FilterBarProps) {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
                 </svg>
                 <span className="hidden sm:inline">List</span>
+              </button>
+              <button
+                onClick={() => updateParams({ view: "calendar" })}
+                className={`flex items-center gap-1 px-2.5 py-1 rounded-full font-mono text-xs font-medium transition-all ${
+                  currentView === "calendar"
+                    ? "bg-[var(--cream)] text-[var(--void)]"
+                    : "text-[var(--muted)] hover:text-[var(--cream)]"
+                }`}
+                aria-label="Calendar view"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                <span className="hidden sm:inline">Cal</span>
               </button>
               <button
                 onClick={() => setViewMode("map")}
@@ -545,63 +803,6 @@ export default function FilterBar({ variant = "full" }: FilterBarProps) {
                 </span>
               )}
             </button>
-
-            {/* Date jump picker */}
-            <div className="relative" ref={datePickerRef}>
-              <button
-                onClick={() => setShowDatePicker(!showDatePicker)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full font-mono text-xs font-medium transition-all ${
-                  currentJumpedDate
-                    ? "bg-[var(--gold)] text-[var(--void)]"
-                    : "bg-[var(--twilight)] text-[var(--muted)] hover:text-[var(--cream)]"
-                }`}
-              >
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-                {currentJumpedDate || "Date"}
-                {currentJumpedDate && (
-                  <span
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      clearDateJump();
-                    }}
-                    className="hover:bg-[var(--void)]/20 rounded-full p-0.5"
-                  >
-                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </span>
-                )}
-              </button>
-
-              {/* Date picker dropdown */}
-              {showDatePicker && (
-                <>
-                  <div className="fixed inset-0 z-[1100]" onClick={() => setShowDatePicker(false)} />
-                  <div className="absolute top-full left-0 mt-1 z-[1101] border border-[var(--twilight)] rounded-lg shadow-xl p-2 min-w-[200px]" style={{ backgroundColor: "var(--card-bg)" }}>
-                    <div className="grid grid-cols-2 gap-1">
-                      {quickDates.map((d) => (
-                        <button
-                          key={d.date}
-                          onClick={() => jumpToDate(d.date)}
-                          className={`px-2 py-1.5 rounded text-left font-mono text-xs transition-colors ${
-                            currentDateStart === d.date
-                              ? "bg-[var(--gold)] text-[var(--void)]"
-                              : "hover:bg-[var(--twilight)] text-[var(--muted)] hover:text-[var(--cream)]"
-                          }`}
-                        >
-                          <div className="font-medium">{d.label}</div>
-                          {d.label !== "Today" && d.label !== "Tomorrow" && (
-                            <div className="text-[0.6rem] opacity-60">{d.fullDate}</div>
-                          )}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </>
-              )}
-            </div>
 
             {/* Active filter chips (compact summary) */}
             {hasFilters && !drawerOpen && variant === "full" && (
@@ -647,7 +848,10 @@ export default function FilterBar({ variant = "full" }: FilterBarProps) {
 
       {/* Drawer overlay */}
       {drawerOpen && (
-        <div className="fixed inset-0 z-[1100] bg-black/60" onClick={() => setDrawerOpen(false)} />
+        <div
+          className="fixed inset-0 z-[1100] bg-black/60 touch-none"
+          onClick={() => setDrawerOpen(false)}
+        />
       )}
 
       {/* Drawer */}
@@ -663,7 +867,7 @@ export default function FilterBar({ variant = "full" }: FilterBarProps) {
             <span className="font-mono text-sm font-medium text-[var(--cream)]">Filters</span>
             <button
               onClick={() => setDrawerOpen(false)}
-              className="p-1 text-[var(--muted)] hover:text-[var(--cream)]"
+              className="p-2.5 -mr-2 text-[var(--muted)] hover:text-[var(--cream)] hover:bg-[var(--twilight)]/50 rounded-lg transition-colors active:scale-95"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -672,9 +876,39 @@ export default function FilterBar({ variant = "full" }: FilterBarProps) {
           </div>
 
           {/* Content */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-5">
-            {/* Quick Picks */}
-            <div>
+          <div ref={drawerContentRef} className="flex-1 overflow-y-auto overscroll-contain">
+            {/* Active Filters - Always visible at top when filters are active */}
+            {activeChips.length > 0 && (
+              <div className="px-4 py-3 border-b border-[var(--twilight)] bg-[var(--twilight)]/20">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="font-mono text-[0.6rem] text-[var(--muted)] uppercase tracking-wider">Active Filters</span>
+                  <button
+                    onClick={clearAll}
+                    className="font-mono text-[0.6rem] text-[var(--coral)] hover:text-[var(--rose)]"
+                  >
+                    Clear all
+                  </button>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {activeChips.map((chip) => (
+                    <button
+                      key={chip.label}
+                      onClick={chip.onClick}
+                      className={`flex items-center gap-1 px-2 py-1 rounded-full text-[0.65rem] font-mono font-medium ${chip.className}`}
+                      style={chip.style}
+                    >
+                      {chip.label}
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Quick Picks - Always visible */}
+            <div className="px-4 py-3 border-b border-[var(--twilight)]/50">
               <div className="font-mono text-[0.6rem] text-[var(--muted)] uppercase tracking-wider mb-2">Quick Picks</div>
               <div className="flex flex-wrap gap-1.5">
                 {quickPicks.map((pick) => (
@@ -693,12 +927,17 @@ export default function FilterBar({ variant = "full" }: FilterBarProps) {
               </div>
             </div>
 
-            {/* 1. Categories */}
-            <div>
-              <div className="font-mono text-[0.6rem] text-[var(--muted)] uppercase tracking-wider mb-2">Category</div>
+            {/* Collapsible Filter Sections */}
+            <FilterSection
+              title="Category"
+              activeFilters={categoryActiveFilters}
+              expanded={expandedSections.has("category")}
+              onToggle={() => toggleSection("category")}
+            >
               <div className="flex flex-wrap gap-1.5">
-                {CATEGORIES.map((cat) => {
+                {CATEGORIES.filter((cat) => categoryHasEvents(cat.value)).map((cat) => {
                   const isActive = currentCategories.includes(cat.value);
+                  const count = getCategoryCount(cat.value);
                   return (
                     <button
                       key={cat.value}
@@ -713,39 +952,45 @@ export default function FilterBar({ variant = "full" }: FilterBarProps) {
                         type={cat.value}
                         size={12}
                         style={{ color: isActive ? "var(--void)" : CATEGORY_CONFIG[cat.value as CategoryType]?.color }}
+                        glow={isActive ? "none" : "subtle"}
                       />
                       {cat.label}
+                      {count !== null && count > 0 && !isActive && (
+                        <span className="text-[0.55rem] opacity-60">{count}</span>
+                      )}
                     </button>
                   );
                 })}
               </div>
-            </div>
-
-            {/* Subcategories (Genre) - only show if categories selected */}
-            {availableSubcategories.length > 0 && (
-              <div>
-                <div className="font-mono text-[0.6rem] text-[var(--muted)] uppercase tracking-wider mb-2">Genre</div>
-                <div className="flex flex-wrap gap-1.5">
-                  {availableSubcategories.map((sub) => (
-                    <button
-                      key={sub.value}
-                      onClick={() => toggleSubcategory(sub.value)}
-                      className={`px-2.5 py-1 rounded-full font-mono text-xs font-medium transition-colors ${
-                        currentSubcategories.includes(sub.value)
-                          ? "bg-[var(--coral)] text-[var(--void)]"
-                          : "bg-[var(--twilight)] text-[var(--muted)] hover:text-[var(--cream)]"
-                      }`}
-                    >
-                      {sub.label}
-                    </button>
-                  ))}
+              {/* Subcategories (Genre) - only show if categories selected */}
+              {availableSubcategories.length > 0 && (
+                <div className="mt-3">
+                  <div className="font-mono text-[0.55rem] text-[var(--muted)] mb-1.5">Genre</div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {availableSubcategories.map((sub) => (
+                      <button
+                        key={sub.value}
+                        onClick={() => toggleSubcategory(sub.value)}
+                        className={`px-2.5 py-1 rounded-full font-mono text-xs font-medium transition-colors ${
+                          currentSubcategories.includes(sub.value)
+                            ? "bg-[var(--coral)] text-[var(--void)]"
+                            : "bg-[var(--twilight)] text-[var(--muted)] hover:text-[var(--cream)]"
+                        }`}
+                      >
+                        {sub.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
+            </FilterSection>
 
-            {/* 2. When */}
-            <div>
-              <div className="font-mono text-[0.6rem] text-[var(--muted)] uppercase tracking-wider mb-2">When</div>
+            <FilterSection
+              title="When"
+              activeFilters={whenActiveFilters}
+              expanded={expandedSections.has("when")}
+              onToggle={() => toggleSection("when")}
+            >
               <div className="flex flex-wrap gap-1.5">
                 {DATE_FILTERS.map((df) => (
                   <button
@@ -795,11 +1040,14 @@ export default function FilterBar({ variant = "full" }: FilterBarProps) {
                   </div>
                 </div>
               )}
-            </div>
+            </FilterSection>
 
-            {/* 3. Price */}
-            <div>
-              <div className="font-mono text-[0.6rem] text-[var(--muted)] uppercase tracking-wider mb-2">Price</div>
+            <FilterSection
+              title="Price"
+              activeFilters={priceActiveFilters}
+              expanded={expandedSections.has("price")}
+              onToggle={() => toggleSection("price")}
+            >
               <div className="flex flex-wrap gap-1.5">
                 {PRICE_FILTERS.map((pf) => (
                   <button
@@ -854,11 +1102,14 @@ export default function FilterBar({ variant = "full" }: FilterBarProps) {
                   </div>
                 </div>
               )}
-            </div>
+            </FilterSection>
 
-            {/* 4. Area */}
-            <div>
-              <div className="font-mono text-[0.6rem] text-[var(--muted)] uppercase tracking-wider mb-2">Area</div>
+            <FilterSection
+              title="Area"
+              activeFilters={areaActiveFilters}
+              expanded={expandedSections.has("area")}
+              onToggle={() => toggleSection("area")}
+            >
               <div className="flex flex-wrap gap-1.5 mb-2">
                 <button
                   onClick={hasGeoFilter ? clearGeo : requestNearMe}
@@ -908,170 +1159,170 @@ export default function FilterBar({ variant = "full" }: FilterBarProps) {
                   </button>
                 ))}
               </div>
-            </div>
+            </FilterSection>
 
-            {/* Advanced filters toggle */}
-            <div>
-              <button
-                onClick={() => setShowAdvanced((prev) => !prev)}
-                className="w-full flex items-center justify-between px-3 py-2 rounded-lg bg-[var(--twilight)]/40 text-[var(--muted)] hover:text-[var(--cream)] transition-colors font-mono text-xs"
-              >
-                <span>More filters (mood, vibe, amenities)</span>
-                <svg className={`w-4 h-4 transition-transform ${showAdvanced ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
-              </button>
-            </div>
-
-            {showAdvanced && (
-              <div>
-                <div className="font-mono text-[0.6rem] text-[var(--muted)] uppercase tracking-wider mb-2">Vibe</div>
-
-                {/* Mood quick-picks */}
-                <div className="mb-3">
-                  <div className="font-mono text-[0.55rem] text-[var(--muted)] mb-1.5">I'm feeling...</div>
-                  <div className="flex flex-wrap gap-1.5">
-                    {MOODS.map((mood) => {
-                      const isSelected = currentMood === mood.id;
-                      return (
-                        <button
-                          key={mood.id}
-                          onClick={() => setMood(mood.id)}
-                          className={`px-2.5 py-1 rounded-full font-mono text-xs font-medium transition-all ${
-                            isSelected ? "text-[var(--void)]" : "bg-[var(--twilight)] text-[var(--muted)] hover:text-[var(--cream)]"
-                          }`}
-                          style={isSelected ? { backgroundColor: mood.color } : undefined}
-                        >
-                          {mood.emoji} {mood.name}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* Atmosphere vibes */}
-                <div className="mb-3">
-                  <div className="font-mono text-[0.55rem] text-[var(--muted)] mb-1.5">Atmosphere</div>
-                  <div className="flex flex-wrap gap-1.5">
-                    {PREFERENCE_VIBES.filter(v => v.group === "Atmosphere").map((v) => (
+            <FilterSection
+              title="Vibe"
+              activeFilters={vibeActiveFilters}
+              expanded={expandedSections.has("vibe")}
+              onToggle={() => toggleSection("vibe")}
+            >
+              {/* Mood quick-picks */}
+              <div className="mb-3">
+                <div className="font-mono text-[0.55rem] text-[var(--muted)] mb-1.5">I'm feeling...</div>
+                <div className="flex flex-wrap gap-1.5">
+                  {MOODS.map((mood) => {
+                    const isSelected = currentMood === mood.id;
+                    return (
                       <button
-                        key={v.value}
-                        onClick={() => toggleVibe(v.value)}
-                        className={`px-2.5 py-1 rounded-full font-mono text-xs font-medium transition-colors ${
-                          currentVibes.includes(v.value)
-                            ? "bg-[var(--sage)] text-[var(--void)]"
-                            : "bg-[var(--twilight)] text-[var(--muted)] hover:text-[var(--cream)]"
+                        key={mood.id}
+                        onClick={() => setMood(mood.id)}
+                        className={`px-2.5 py-1 rounded-full font-mono text-xs font-medium transition-all ${
+                          isSelected ? "text-[var(--void)]" : "bg-[var(--twilight)] text-[var(--muted)] hover:text-[var(--cream)]"
                         }`}
+                        style={isSelected ? { backgroundColor: mood.color } : undefined}
                       >
-                        {v.label}
+                        {mood.emoji} {mood.name}
                       </button>
-                    ))}
-                    {TAG_GROUPS.Vibe.map((t) => (
-                      <button
-                        key={t.value}
-                        onClick={() => toggleTag(t.value)}
-                        className={`px-2.5 py-1 rounded-full font-mono text-xs font-medium transition-colors ${
-                          currentTags.includes(t.value)
-                            ? "bg-[var(--lavender)] text-[var(--void)]"
-                            : "bg-[var(--twilight)] text-[var(--muted)] hover:text-[var(--cream)]"
-                        }`}
-                      >
-                        {t.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Access tags */}
-                <div className="mb-3">
-                  <div className="font-mono text-[0.55rem] text-[var(--muted)] mb-1.5">Access</div>
-                  <div className="flex flex-wrap gap-1.5">
-                    {TAG_GROUPS.Access.map((t) => (
-                      <button
-                        key={t.value}
-                        onClick={() => toggleTag(t.value)}
-                        className={`px-2.5 py-1 rounded-full font-mono text-xs font-medium transition-colors ${
-                          currentTags.includes(t.value)
-                            ? "bg-[var(--lavender)] text-[var(--void)]"
-                            : "bg-[var(--twilight)] text-[var(--muted)] hover:text-[var(--cream)]"
-                        }`}
-                      >
-                        {t.label}
-                      </button>
-                    ))}
-                    {PREFERENCE_VIBES.filter(v => v.group === "Access").map((v) => (
-                      <button
-                        key={v.value}
-                        onClick={() => toggleVibe(v.value)}
-                        className={`px-2.5 py-1 rounded-full font-mono text-xs font-medium transition-colors ${
-                          currentVibes.includes(v.value)
-                            ? "bg-[var(--sage)] text-[var(--void)]"
-                            : "bg-[var(--twilight)] text-[var(--muted)] hover:text-[var(--cream)]"
-                        }`}
-                      >
-                        {v.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Amenities */}
-                <div className="mb-3">
-                  <div className="font-mono text-[0.55rem] text-[var(--muted)] mb-1.5">Amenities</div>
-                  <div className="flex flex-wrap gap-1.5">
-                    {PREFERENCE_VIBES.filter(v => v.group === "Amenities").map((v) => (
-                      <button
-                        key={v.value}
-                        onClick={() => toggleVibe(v.value)}
-                        className={`px-2.5 py-1 rounded-full font-mono text-xs font-medium transition-colors ${
-                          currentVibes.includes(v.value)
-                            ? "bg-[var(--sage)] text-[var(--void)]"
-                            : "bg-[var(--twilight)] text-[var(--muted)] hover:text-[var(--cream)]"
-                        }`}
-                      >
-                        {v.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Special tags */}
-                <div>
-                  <div className="font-mono text-[0.55rem] text-[var(--muted)] mb-1.5">Special</div>
-                  <div className="flex flex-wrap gap-1.5">
-                    {TAG_GROUPS.Special.map((t) => (
-                      <button
-                        key={t.value}
-                        onClick={() => toggleTag(t.value)}
-                        className={`px-2.5 py-1 rounded-full font-mono text-xs font-medium transition-colors ${
-                          currentTags.includes(t.value)
-                            ? "bg-[var(--lavender)] text-[var(--void)]"
-                            : "bg-[var(--twilight)] text-[var(--muted)] hover:text-[var(--cream)]"
-                        }`}
-                      >
-                        {t.label}
-                      </button>
-                    ))}
-                  </div>
+                    );
+                  })}
                 </div>
               </div>
-            )}
+
+              {/* Atmosphere vibes */}
+              <div className="mb-3">
+                <div className="font-mono text-[0.55rem] text-[var(--muted)] mb-1.5">Atmosphere</div>
+                <div className="flex flex-wrap gap-1.5">
+                  {PREFERENCE_VIBES.filter(v => v.group === "Atmosphere").map((v) => (
+                    <button
+                      key={v.value}
+                      onClick={() => toggleVibe(v.value)}
+                      className={`px-2.5 py-1 rounded-full font-mono text-xs font-medium transition-colors ${
+                        currentVibes.includes(v.value)
+                          ? "bg-[var(--sage)] text-[var(--void)]"
+                          : "bg-[var(--twilight)] text-[var(--muted)] hover:text-[var(--cream)]"
+                      }`}
+                    >
+                      {v.label}
+                    </button>
+                  ))}
+                  {TAG_GROUPS.Vibe.filter((t) => tagHasEvents(t.value)).map((t) => {
+                    const count = getTagCount(t.value);
+                    return (
+                      <button
+                        key={t.value}
+                        onClick={() => toggleTag(t.value)}
+                        className={`px-2.5 py-1 rounded-full font-mono text-xs font-medium transition-colors ${
+                          currentTags.includes(t.value)
+                            ? "bg-[var(--lavender)] text-[var(--void)]"
+                            : "bg-[var(--twilight)] text-[var(--muted)] hover:text-[var(--cream)]"
+                        }`}
+                      >
+                        {t.label}
+                        {count !== null && count > 0 && !currentTags.includes(t.value) && (
+                          <span className="ml-1 text-[0.55rem] opacity-60">{count}</span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Access tags */}
+              <div className="mb-3">
+                <div className="font-mono text-[0.55rem] text-[var(--muted)] mb-1.5">Access</div>
+                <div className="flex flex-wrap gap-1.5">
+                  {TAG_GROUPS.Access.filter((t) => tagHasEvents(t.value)).map((t) => {
+                    const count = getTagCount(t.value);
+                    return (
+                      <button
+                        key={t.value}
+                        onClick={() => toggleTag(t.value)}
+                        className={`px-2.5 py-1 rounded-full font-mono text-xs font-medium transition-colors ${
+                          currentTags.includes(t.value)
+                            ? "bg-[var(--lavender)] text-[var(--void)]"
+                            : "bg-[var(--twilight)] text-[var(--muted)] hover:text-[var(--cream)]"
+                        }`}
+                      >
+                        {t.label}
+                        {count !== null && count > 0 && !currentTags.includes(t.value) && (
+                          <span className="ml-1 text-[0.55rem] opacity-60">{count}</span>
+                        )}
+                      </button>
+                    );
+                  })}
+                  {PREFERENCE_VIBES.filter(v => v.group === "Access").map((v) => (
+                    <button
+                      key={v.value}
+                      onClick={() => toggleVibe(v.value)}
+                      className={`px-2.5 py-1 rounded-full font-mono text-xs font-medium transition-colors ${
+                        currentVibes.includes(v.value)
+                          ? "bg-[var(--sage)] text-[var(--void)]"
+                          : "bg-[var(--twilight)] text-[var(--muted)] hover:text-[var(--cream)]"
+                      }`}
+                    >
+                      {v.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Amenities */}
+              <div className="mb-3">
+                <div className="font-mono text-[0.55rem] text-[var(--muted)] mb-1.5">Amenities</div>
+                <div className="flex flex-wrap gap-1.5">
+                  {PREFERENCE_VIBES.filter(v => v.group === "Amenities").map((v) => (
+                    <button
+                      key={v.value}
+                      onClick={() => toggleVibe(v.value)}
+                      className={`px-2.5 py-1 rounded-full font-mono text-xs font-medium transition-colors ${
+                        currentVibes.includes(v.value)
+                          ? "bg-[var(--sage)] text-[var(--void)]"
+                          : "bg-[var(--twilight)] text-[var(--muted)] hover:text-[var(--cream)]"
+                      }`}
+                    >
+                      {v.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Special tags */}
+              <div>
+                <div className="font-mono text-[0.55rem] text-[var(--muted)] mb-1.5">Special</div>
+                <div className="flex flex-wrap gap-1.5">
+                  {TAG_GROUPS.Special.filter((t) => tagHasEvents(t.value)).map((t) => {
+                    const count = getTagCount(t.value);
+                    return (
+                      <button
+                        key={t.value}
+                        onClick={() => toggleTag(t.value)}
+                        className={`px-2.5 py-1 rounded-full font-mono text-xs font-medium transition-colors ${
+                          currentTags.includes(t.value)
+                            ? "bg-[var(--lavender)] text-[var(--void)]"
+                            : "bg-[var(--twilight)] text-[var(--muted)] hover:text-[var(--cream)]"
+                        }`}
+                      >
+                        {t.label}
+                        {count !== null && count > 0 && !currentTags.includes(t.value) && (
+                          <span className="ml-1 text-[0.55rem] opacity-60">{count}</span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </FilterSection>
           </div>
 
-          {/* Footer */}
+          {/* Footer - only show Clear all when filters are active */}
           {hasFilters && (
-            <div className="px-4 py-3 border-t border-[var(--twilight)] flex gap-2">
+            <div className="px-4 py-3 border-t border-[var(--twilight)]">
               <button
                 onClick={clearAll}
-                className="flex-1 px-3 py-2 rounded-lg font-mono text-xs font-medium text-[var(--muted)] hover:text-[var(--cream)] border border-[var(--twilight)]"
+                className="w-full px-3 py-2 rounded-lg font-mono text-xs font-medium text-[var(--coral)] hover:text-[var(--rose)] border border-[var(--twilight)] hover:border-[var(--coral)]/50 transition-colors"
               >
-                Clear all
-              </button>
-              <button
-                onClick={() => setDrawerOpen(false)}
-                className="flex-1 px-3 py-2 rounded-lg font-mono text-xs font-medium bg-[var(--coral)] text-[var(--void)]"
-              >
-                Show results
+                Clear all filters
               </button>
             </div>
           )}

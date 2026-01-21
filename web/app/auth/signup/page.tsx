@@ -16,11 +16,26 @@ function isValidRedirect(redirect: string): boolean {
   return redirect.startsWith("/") && !redirect.startsWith("//") && !redirect.includes(":");
 }
 
+// Extract portal slug from redirect URL (e.g., "/piedmont/events" -> "piedmont")
+function extractPortalFromRedirect(redirect: string): string | null {
+  // Known non-portal routes that start with a slug-like segment
+  const nonPortalRoutes = ["auth", "api", "events", "spots", "profile", "settings", "friends", "people", "foryou", "welcome", "community", "saved", "notifications"];
+
+  const match = redirect.match(/^\/([a-z0-9-]+)/);
+  if (match && !nonPortalRoutes.includes(match[1])) {
+    return match[1];
+  }
+  return null;
+}
+
 function SignupForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const rawRedirect = searchParams.get("redirect") || "/";
   const redirect = isValidRedirect(rawRedirect) ? rawRedirect : "/";
+
+  // Capture portal context for onboarding
+  const portalSlug = searchParams.get("portal") || extractPortalFromRedirect(rawRedirect);
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -124,7 +139,8 @@ function SignupForm() {
     }
 
     // Redirect new users to welcome page for onboarding
-    router.push("/welcome");
+    const welcomeUrl = portalSlug ? `/welcome?portal=${portalSlug}` : "/welcome";
+    router.push(welcomeUrl);
     router.refresh();
   };
 

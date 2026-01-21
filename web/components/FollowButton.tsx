@@ -9,7 +9,8 @@ import { useToast } from "@/components/Toast";
 type FollowButtonProps = {
   targetUserId?: string;
   targetVenueId?: number;
-  targetOrgId?: number;
+  targetOrgId?: string;
+  targetProducerId?: string;
   size?: "sm" | "md";
   className?: string;
 };
@@ -18,6 +19,7 @@ export default function FollowButton({
   targetUserId,
   targetVenueId,
   targetOrgId,
+  targetProducerId,
   size = "md",
   className = "",
 }: FollowButtonProps) {
@@ -50,6 +52,8 @@ export default function FollowButton({
         query = query.eq("followed_venue_id", targetVenueId);
       } else if (targetOrgId) {
         query = query.eq("followed_org_id", targetOrgId);
+      } else if (targetProducerId) {
+        query = query.eq("followed_producer_id", targetProducerId);
       }
 
       const { data } = await query.single();
@@ -58,7 +62,7 @@ export default function FollowButton({
     }
 
     checkFollowStatus();
-  }, [user, targetUserId, targetVenueId, targetOrgId, supabase]);
+  }, [user, targetUserId, targetVenueId, targetOrgId, targetProducerId, supabase]);
 
   // Don't show follow button for own profile
   if (targetUserId && user?.id === targetUserId) {
@@ -92,6 +96,8 @@ export default function FollowButton({
         query = query.eq("followed_venue_id", targetVenueId);
       } else if (targetOrgId) {
         query = query.eq("followed_org_id", targetOrgId);
+      } else if (targetProducerId) {
+        query = query.eq("followed_producer_id", targetProducerId);
       }
 
       const { error } = await query;
@@ -114,6 +120,8 @@ export default function FollowButton({
         followData.followed_venue_id = targetVenueId;
       } else if (targetOrgId) {
         followData.followed_org_id = targetOrgId;
+      } else if (targetProducerId) {
+        followData.followed_producer_id = targetProducerId;
       }
 
       const { error } = await supabase

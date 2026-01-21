@@ -1,8 +1,9 @@
 import { supabase } from "@/lib/supabase";
 import { NextRequest, NextResponse } from "next/server";
-import { addDays, startOfDay, endOfDay, nextFriday, nextSunday, isFriday, isSaturday, isSunday } from "date-fns";
+import { addDays, startOfDay, nextFriday, nextSunday, isFriday, isSaturday, isSunday } from "date-fns";
 
-export const dynamic = "force-dynamic";
+// Cache feed for 5 minutes at CDN, allow stale for 1 hour while revalidating
+export const revalidate = 300;
 
 type Props = {
   params: Promise<{ slug: string }>;
@@ -175,7 +176,7 @@ export async function GET(request: NextRequest, { params }: Props) {
   // Get portal
   const { data: portalData, error: portalError } = await supabase
     .from("portals")
-    .select("id, slug, name, settings")
+    .select("id, slug, name, portal_type, settings")
     .eq("slug", slug)
     .eq("status", "active")
     .single();
@@ -184,7 +185,8 @@ export async function GET(request: NextRequest, { params }: Props) {
     return NextResponse.json({ error: "Portal not found" }, { status: 404 });
   }
 
-  const portal = portalData as { id: string; slug: string; name: string; settings: Record<string, unknown> };
+  const portal = portalData as { id: string; slug: string; name: string; portal_type: string; settings: Record<string, unknown> };
+  const isBusinessPortal = portal.portal_type === "business";
   const feedSettings = (portal.settings?.feed || {}) as {
     feed_type?: string;
     featured_section_ids?: string[];
@@ -283,200 +285,139 @@ export async function GET(request: NextRequest, { params }: Props) {
     }
   }
 
-  // Build response with events for each section
-  const feedSections = await Promise.all(
-    sections.map(async (section) => {
-      let events: Event[] = [];
-      const limit = section.max_items || feedSettings.items_per_section || defaultLimit;
+  // PERFORMANCE OPTIMIZATION: Batch all event fetching upfront
+  // Instead of N queries (one per section), we do 1-2 queries total
 
-      // Non-event block types don't need events
-      if (["category_grid", "announcement", "external_link", "countdown"].includes(section.block_type)) {
-        return {
-          id: section.id,
-          title: section.title,
-          slug: section.slug,
-          description: section.description,
-          section_type: section.section_type,
-          block_type: section.block_type,
-          layout: section.layout,
-          items_per_row: section.items_per_row,
-          style: section.style,
-          block_content: section.block_content,
-          auto_filter: section.auto_filter,
-          events: [],
-        };
+  const today = new Date().toISOString().split("T")[0];
+
+  // Step 1: Collect all pinned event IDs from sections
+  const pinnedEventIds = new Set<number>();
+  for (const section of sections) {
+    if (section.auto_filter?.event_ids?.length) {
+      for (const id of section.auto_filter.event_ids) {
+        pinnedEventIds.add(id);
       }
+    }
+  }
 
-      // Check for pinned event_ids first (works for any section type)
-      if (section.auto_filter?.event_ids?.length) {
-        const filter = section.auto_filter;
-        const { data: pinnedEvents } = await supabase
-          .from("events")
-          .select(`
-            id,
-            title,
-            start_date,
-            start_time,
-            end_time,
-            is_all_day,
-            is_free,
-            price_min,
-            price_max,
-            category,
-            subcategory,
-            image_url,
-            description,
-            venue:venues(id, name, neighborhood, slug)
-          `)
-          .in("id", filter.event_ids!);
+  // Step 2: Fetch pinned events in one query
+  if (pinnedEventIds.size > 0) {
+    const { data: pinnedEvents } = await supabase
+      .from("events")
+      .select(`
+        id,
+        title,
+        start_date,
+        start_time,
+        end_time,
+        is_all_day,
+        is_free,
+        price_min,
+        price_max,
+        category,
+        subcategory,
+        image_url,
+        description,
+        venue:venues(id, name, neighborhood, slug)
+      `)
+      .in("id", Array.from(pinnedEventIds));
 
-        events = (pinnedEvents || []) as Event[];
-      } else if (section.section_type === "curated") {
-        // Get events from curated items
-        const items = (section.portal_section_items || [])
-          .filter((item) => item.entity_type === "event")
-          .sort((a, b) => a.display_order - b.display_order);
+    for (const event of (pinnedEvents || []) as Event[]) {
+      eventMap.set(event.id, event);
+    }
+  }
 
-        events = items
-          .map((item) => eventMap.get(item.entity_id))
-          .filter((e): e is Event => e !== undefined)
-          .slice(0, limit);
-      } else if ((section.section_type === "auto" || section.section_type === "mixed") && section.auto_filter) {
-        // Fetch events based on auto filter
-        const filter = section.auto_filter;
-        const today = new Date().toISOString().split("T")[0];
+  // Step 3: Determine if we need auto-filtered events and get widest date range needed
+  const sectionsNeedingAutoEvents = sections.filter(
+    s => (s.section_type === "auto" || s.section_type === "mixed") &&
+         s.auto_filter &&
+         !s.auto_filter.event_ids?.length &&
+         !["category_grid", "announcement", "external_link", "countdown"].includes(s.block_type)
+  );
 
-        let query = supabase
-          .from("events")
-          .select(`
-            id,
-            title,
-            start_date,
-            start_time,
-            end_time,
-            is_all_day,
-            is_free,
-            price_min,
-            price_max,
-            category,
-            subcategory,
-            image_url,
-            description,
-            venue:venues(id, name, neighborhood, slug)
-          `)
-          .gte("start_date", today);
+  // Build master event pool for auto sections
+  const autoEventPool = new Map<number, Event>();
 
-        // Apply date filter
-        if (filter.date_filter) {
-          const { start, end } = getDateRange(filter.date_filter);
-          query = query.gte("start_date", start).lte("start_date", end);
-        }
+  if (sectionsNeedingAutoEvents.length > 0) {
+    // Find the widest date range needed across all sections
+    let maxEndDate = addDays(new Date(), 14).toISOString().split("T")[0]; // Default 2 weeks
 
-        // Apply category filter
-        if (filter.categories?.length) {
-          query = query.in("category", filter.categories);
-        }
-
-        // Exclude categories
-        if (filter.exclude_categories?.length) {
-          query = query.not("category", "in", `(${filter.exclude_categories.join(",")})`);
-        }
-
-        // Apply subcategory filter
-        if (filter.subcategories?.length) {
-          query = query.in("subcategory", filter.subcategories);
-        }
-
-        // Apply free filter
-        if (filter.is_free) {
-          query = query.eq("is_free", true);
-        }
-
-        // Apply price max filter
-        if (filter.price_max !== undefined) {
-          query = query.or(`price_min.lte.${filter.price_max},is_free.eq.true`);
-        }
-
-        // Apply venue filter
-        if (filter.venue_ids?.length) {
-          query = query.in("venue_id", filter.venue_ids);
-        }
-
-        // Apply source filter
-        if (filter.source_ids?.length) {
-          query = query.in("source_id", filter.source_ids);
-        }
-
-        // Apply exclusions
-        if (filter.exclude_ids?.length) {
-          query = query.not("id", "in", `(${filter.exclude_ids.join(",")})`);
-        }
-
-        // Apply sorting
-        switch (filter.sort_by) {
-          case "popularity":
-            // We'll sort by RSVP count after fetching
-            query = query.order("start_date", { ascending: true });
-            break;
-          case "trending":
-            // Recent RSVPs - for now just use date
-            query = query.order("start_date", { ascending: true });
-            break;
-          case "random":
-            // Postgres random ordering
-            query = query.order("id", { ascending: true }); // Will shuffle client-side
-            break;
-          default:
-            query = query.order("start_date", { ascending: true }).order("start_time", { ascending: true });
-        }
-
-        query = query.limit(limit * 2); // Fetch extra for filtering
-
-        const { data: autoEvents } = await query;
-        events = (autoEvents || []) as Event[];
-
-        // If sorting by popularity, fetch RSVP counts
-        if (filter.sort_by === "popularity" && events.length > 0) {
-          const eventIdsForRsvp = events.map((e) => e.id);
-          const { data: rsvpData } = await supabase
-            .from("event_rsvps")
-            .select("event_id")
-            .in("event_id", eventIdsForRsvp)
-            .eq("status", "going");
-
-          const rsvpCounts: Record<number, number> = {};
-          for (const rsvp of (rsvpData || []) as { event_id: number }[]) {
-            rsvpCounts[rsvp.event_id] = (rsvpCounts[rsvp.event_id] || 0) + 1;
-          }
-
-          events = events.map((e) => ({ ...e, going_count: rsvpCounts[e.id] || 0 }));
-          events.sort((a, b) => (b.going_count || 0) - (a.going_count || 0));
-        }
-
-        // Random shuffle if requested
-        if (filter.sort_by === "random") {
-          events = events.sort(() => Math.random() - 0.5);
-        }
-
-        events = events.slice(0, limit);
-
-        // For mixed sections, also add curated items at the top
-        if (section.section_type === "mixed") {
-          const curatedItems = (section.portal_section_items || [])
-            .filter((item) => item.entity_type === "event")
-            .sort((a, b) => a.display_order - b.display_order);
-
-          const curatedEvents = curatedItems
-            .map((item) => eventMap.get(item.entity_id))
-            .filter((e): e is Event => e !== undefined);
-
-          // Merge: curated first, then auto (avoiding duplicates)
-          const curatedIds = new Set(curatedEvents.map((e) => e.id));
-          const autoEventsFiltered = events.filter((e) => !curatedIds.has(e.id));
-          events = [...curatedEvents, ...autoEventsFiltered].slice(0, limit);
-        }
+    for (const section of sectionsNeedingAutoEvents) {
+      const filter = section.auto_filter!;
+      if (filter.date_filter) {
+        const { end } = getDateRange(filter.date_filter);
+        if (end > maxEndDate) maxEndDate = end;
       }
+    }
 
+    // Calculate max events needed
+    const maxEventsNeeded = sectionsNeedingAutoEvents.reduce((sum, s) => {
+      return sum + ((s.max_items || feedSettings.items_per_section || defaultLimit) * 2);
+    }, 0);
+
+    // Fetch a pool of events that covers all sections' needs
+    let poolQuery = supabase
+      .from("events")
+      .select(`
+        id,
+        title,
+        start_date,
+        start_time,
+        end_time,
+        is_all_day,
+        is_free,
+        price_min,
+        price_max,
+        category,
+        subcategory,
+        image_url,
+        description,
+        venue:venues(id, name, neighborhood, slug)
+      `)
+      .gte("start_date", today)
+      .lte("start_date", maxEndDate);
+
+    // Apply portal filter - business portals only show their own events
+    if (isBusinessPortal) {
+      poolQuery = poolQuery.eq("portal_id", portal.id);
+    } else {
+      // City portals show public events + portal-specific events
+      poolQuery = poolQuery.or(`portal_id.eq.${portal.id},portal_id.is.null`);
+    }
+
+    const { data: poolEvents } = await poolQuery
+      .order("start_date", { ascending: true })
+      .order("start_time", { ascending: true })
+      .limit(Math.min(maxEventsNeeded, 200)); // Cap at 200 for safety
+
+    for (const event of (poolEvents || []) as Event[]) {
+      autoEventPool.set(event.id, event);
+    }
+  }
+
+  // Step 4: Check if any section needs popularity sorting - batch fetch RSVP counts
+  const needsPopularitySort = sectionsNeedingAutoEvents.some(s => s.auto_filter?.sort_by === "popularity");
+  const rsvpCounts: Record<number, number> = {};
+
+  if (needsPopularitySort && autoEventPool.size > 0) {
+    const { data: rsvpData } = await supabase
+      .from("event_rsvps")
+      .select("event_id")
+      .in("event_id", Array.from(autoEventPool.keys()))
+      .eq("status", "going");
+
+    for (const rsvp of (rsvpData || []) as { event_id: number }[]) {
+      rsvpCounts[rsvp.event_id] = (rsvpCounts[rsvp.event_id] || 0) + 1;
+    }
+  }
+
+  // Step 5: Build sections synchronously using pre-fetched data
+  const feedSections = sections.map((section) => {
+    let events: Event[] = [];
+    const limit = section.max_items || feedSettings.items_per_section || defaultLimit;
+
+    // Non-event block types don't need events
+    if (["category_grid", "announcement", "external_link", "countdown"].includes(section.block_type)) {
       return {
         id: section.id,
         title: section.title,
@@ -489,21 +430,140 @@ export async function GET(request: NextRequest, { params }: Props) {
         style: section.style,
         block_content: section.block_content,
         auto_filter: section.auto_filter,
-        events,
+        events: [],
       };
-    })
-  );
+    }
 
-  return NextResponse.json({
-    portal: {
-      slug: portal.slug,
-      name: portal.name,
-    },
-    feedSettings: {
-      feed_type: feedSettings.feed_type || "sections",
-      items_per_section: feedSettings.items_per_section || 5,
-      default_layout: feedSettings.default_layout || "list",
-    },
-    sections: feedSections,
+    // Check for pinned event_ids first (works for any section type)
+    if (section.auto_filter?.event_ids?.length) {
+      events = section.auto_filter.event_ids
+        .map(id => eventMap.get(id))
+        .filter((e): e is Event => e !== undefined);
+    } else if (section.section_type === "curated") {
+      // Get events from curated items
+      const items = (section.portal_section_items || [])
+        .filter((item) => item.entity_type === "event")
+        .sort((a, b) => a.display_order - b.display_order);
+
+      events = items
+        .map((item) => eventMap.get(item.entity_id))
+        .filter((e): e is Event => e !== undefined)
+        .slice(0, limit);
+    } else if ((section.section_type === "auto" || section.section_type === "mixed") && section.auto_filter) {
+      // Filter from pre-fetched pool instead of making new query
+      const filter = section.auto_filter;
+
+      // Start with all pool events
+      let filtered = Array.from(autoEventPool.values());
+
+      // Apply date filter
+      if (filter.date_filter) {
+        const { start, end } = getDateRange(filter.date_filter);
+        filtered = filtered.filter(e => e.start_date >= start && e.start_date <= end);
+      }
+
+      // Apply category filter
+      if (filter.categories?.length) {
+        filtered = filtered.filter(e => e.category && filter.categories!.includes(e.category));
+      }
+
+      // Exclude categories
+      if (filter.exclude_categories?.length) {
+        filtered = filtered.filter(e => !e.category || !filter.exclude_categories!.includes(e.category));
+      }
+
+      // Apply subcategory filter
+      if (filter.subcategories?.length) {
+        filtered = filtered.filter(e => e.subcategory && filter.subcategories!.includes(e.subcategory));
+      }
+
+      // Apply free filter
+      if (filter.is_free) {
+        filtered = filtered.filter(e => e.is_free);
+      }
+
+      // Apply price max filter
+      if (filter.price_max !== undefined) {
+        filtered = filtered.filter(e => e.is_free || (e.price_min !== null && e.price_min <= filter.price_max!));
+      }
+
+      // Apply exclusions
+      if (filter.exclude_ids?.length) {
+        const excludeSet = new Set(filter.exclude_ids);
+        filtered = filtered.filter(e => !excludeSet.has(e.id));
+      }
+
+      // Apply sorting
+      switch (filter.sort_by) {
+        case "popularity":
+          filtered = filtered.map(e => ({ ...e, going_count: rsvpCounts[e.id] || 0 }));
+          filtered.sort((a, b) => (b.going_count || 0) - (a.going_count || 0));
+          break;
+        case "trending":
+          // For now, same as date sort
+          filtered.sort((a, b) => a.start_date.localeCompare(b.start_date));
+          break;
+        case "random":
+          filtered = filtered.sort(() => Math.random() - 0.5);
+          break;
+        default:
+          // Already sorted by date from query
+          break;
+      }
+
+      events = filtered.slice(0, limit);
+
+      // For mixed sections, also add curated items at the top
+      if (section.section_type === "mixed") {
+        const curatedItems = (section.portal_section_items || [])
+          .filter((item) => item.entity_type === "event")
+          .sort((a, b) => a.display_order - b.display_order);
+
+        const curatedEvents = curatedItems
+          .map((item) => eventMap.get(item.entity_id))
+          .filter((e): e is Event => e !== undefined);
+
+        // Merge: curated first, then auto (avoiding duplicates)
+        const curatedIds = new Set(curatedEvents.map((e) => e.id));
+        const autoEventsFiltered = events.filter((e) => !curatedIds.has(e.id));
+        events = [...curatedEvents, ...autoEventsFiltered].slice(0, limit);
+      }
+    }
+
+    return {
+      id: section.id,
+      title: section.title,
+      slug: section.slug,
+      description: section.description,
+      section_type: section.section_type,
+      block_type: section.block_type,
+      layout: section.layout,
+      items_per_row: section.items_per_row,
+      style: section.style,
+      block_content: section.block_content,
+      auto_filter: section.auto_filter,
+      events,
+    };
   });
+
+  return NextResponse.json(
+    {
+      portal: {
+        slug: portal.slug,
+        name: portal.name,
+      },
+      feedSettings: {
+        feed_type: feedSettings.feed_type || "sections",
+        items_per_section: feedSettings.items_per_section || 5,
+        default_layout: feedSettings.default_layout || "list",
+      },
+      sections: feedSections,
+    },
+    {
+      headers: {
+        // Cache for 5 minutes on CDN, allow stale for 1 hour while revalidating
+        "Cache-Control": "public, s-maxage=300, stale-while-revalidate=3600",
+      },
+    }
+  );
 }

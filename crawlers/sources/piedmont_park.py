@@ -149,6 +149,18 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         i += 1
                         continue
 
+                    # Determine category based on title
+                    title_lower = title.lower()
+                    if any(w in title_lower for w in ["run", "5k", "race", "yoga", "fitness"]):
+                        category = "fitness"
+                    elif any(w in title_lower for w in ["concert", "music", "festival"]):
+                        category = "music"
+                    elif any(w in title_lower for w in ["market", "food", "taste"]):
+                        category = "food_drink"
+                    else:
+                        # Default for park events is outdoors
+                        category = "outdoors"
+
                     event_record = {
                         "source_id": source_id,
                         "venue_id": venue_id,
@@ -159,15 +171,15 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "end_date": None,
                         "end_time": None,
                         "is_all_day": start_time is None,
-                        "category": "community",
+                        "category": category,
                         "subcategory": None,
                         "tags": [
-                        "piedmont-park",
-                        "midtown",
-                        "outdoor",
-                        "park",
-                        "family-friendly",
-                    ],
+                            "piedmont-park",
+                            "midtown",
+                            "outdoor",
+                            "park",
+                            "family-friendly",
+                        ],
                         "price_min": None,
                         "price_max": None,
                         "price_note": None,

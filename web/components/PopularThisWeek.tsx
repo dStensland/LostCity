@@ -4,7 +4,7 @@ import { formatTimeSplit } from "@/lib/formats";
 import { format, parseISO } from "date-fns";
 import CategoryIcon from "./CategoryIcon";
 
-export default async function PopularThisWeek() {
+export default async function PopularThisWeek({ portalSlug }: { portalSlug?: string } = {}) {
   const events = await getPopularEvents(6);
 
   // Don't render if no popular events
@@ -22,7 +22,7 @@ export default async function PopularThisWeek() {
         {/* Horizontal scroll container */}
         <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
           {events.map((event) => (
-            <PopularEventCard key={event.id} event={event} />
+            <PopularEventCard key={event.id} event={event} portalSlug={portalSlug} />
           ))}
         </div>
       </div>
@@ -30,7 +30,7 @@ export default async function PopularThisWeek() {
   );
 }
 
-function PopularEventCard({ event }: { event: EventWithLocation }) {
+function PopularEventCard({ event, portalSlug }: { event: EventWithLocation; portalSlug?: string }) {
   const { time, period } = formatTimeSplit(event.start_time, event.is_all_day);
   const dateObj = parseISO(event.start_date);
   const dayName = format(dateObj, "EEE");
@@ -41,7 +41,7 @@ function PopularEventCard({ event }: { event: EventWithLocation }) {
 
   return (
     <Link
-      href={`/events/${event.id}`}
+      href={portalSlug ? `/${portalSlug}/events/${event.id}` : `/events/${event.id}`}
       className="flex-shrink-0 w-64 p-3 bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg hover:border-[var(--coral)] transition-colors group"
     >
       <div className="flex items-start gap-3">

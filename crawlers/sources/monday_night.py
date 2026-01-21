@@ -21,7 +21,17 @@ logger = logging.getLogger(__name__)
 BASE_URL = "https://mondaynightbrewing.com"
 EVENTS_URL = f"{BASE_URL}/category/events/"
 
-VENUE_DATA = {}
+VENUE_DATA = {
+    "name": "Monday Night Brewing",
+    "slug": "monday-night-brewing",
+    "address": "670 Trabert Avenue NW",
+    "neighborhood": "West Midtown",
+    "city": "Atlanta",
+    "state": "GA",
+    "zip": "30318",
+    "venue_type": "brewery",
+    "website": BASE_URL,
+}
 
 
 def parse_time(time_text: str) -> Optional[str]:
@@ -39,7 +49,7 @@ def parse_time(time_text: str) -> Optional[str]:
 
 
 def crawl(source: dict) -> tuple[int, int, int]:
-    """Crawl Unknown events using Playwright."""
+    """Crawl Monday Night Brewing events using Playwright."""
     source_id = source["id"]
     events_found = 0
     events_new = 0
@@ -56,7 +66,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             venue_id = get_or_create_venue(VENUE_DATA)
 
-            logger.info(f"Fetching Unknown: {EVENTS_URL}")
+            logger.info(f"Fetching Monday Night Brewing: {EVENTS_URL}")
             page.goto(EVENTS_URL, wait_until="domcontentloaded", timeout=30000)
             page.wait_for_timeout(3000)
 
@@ -129,7 +139,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     events_found += 1
 
-                    content_hash = generate_content_hash(title, "Unknown", start_date)
+                    content_hash = generate_content_hash(title, VENUE_DATA["name"], start_date)
 
                     if find_event_by_hash(content_hash):
                         events_updated += 1
@@ -140,7 +150,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "source_id": source_id,
                         "venue_id": venue_id,
                         "title": title,
-                        "description": "Event at Unknown",
+                        "description": f"Event at {VENUE_DATA['name']}",
                         "start_date": start_date,
                         "start_time": start_time,
                         "end_date": None,
@@ -148,7 +158,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "is_all_day": start_time is None,
                         "category": "community",
                         "subcategory": None,
-                        "tags": ["event"],
+                        "tags": ["brewery", "beer", "west-midtown"],
                         "price_min": None,
                         "price_max": None,
                         "price_note": None,
@@ -175,11 +185,11 @@ def crawl(source: dict) -> tuple[int, int, int]:
             browser.close()
 
         logger.info(
-            f"Unknown crawl complete: {events_found} found, {events_new} new, {events_updated} updated"
+            f"Monday Night Brewing crawl complete: {events_found} found, {events_new} new, {events_updated} updated"
         )
 
     except Exception as e:
-        logger.error(f"Failed to crawl Unknown: {e}")
+        logger.error(f"Failed to crawl Monday Night Brewing: {e}")
         raise
 
     return events_found, events_new, events_updated

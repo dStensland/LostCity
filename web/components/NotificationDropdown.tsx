@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useAuth } from "@/lib/auth-context";
+import { usePortal } from "@/lib/portal-context";
 import { formatDistanceToNow } from "date-fns";
 
 type NotificationType =
@@ -161,7 +162,7 @@ export default function NotificationDropdown() {
       {/* Bell button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="relative p-2 text-[var(--muted)] hover:text-[var(--cream)] transition-colors"
+        className="relative p-2.5 text-[var(--muted)] hover:text-[var(--cream)] hover:bg-[var(--twilight)]/50 rounded-lg transition-colors active:scale-95"
         aria-label="Notifications"
       >
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -253,6 +254,7 @@ function NotificationItem({
   notification: Notification;
   onClick: () => void;
 }) {
+  const { portal } = usePortal();
   const isUnread = !notification.read_at;
   const timeAgo = formatDistanceToNow(new Date(notification.created_at), { addSuffix: true });
 
@@ -315,7 +317,7 @@ function NotificationItem({
       return `/profile/${notification.actor.username}`;
     }
     if (notification.event) {
-      return `/events/${notification.event.id}`;
+      return portal?.slug ? `/${portal.slug}/events/${notification.event.id}` : `/events/${notification.event.id}`;
     }
     if (notification.venue) {
       return `/spots/${notification.venue.id}`;

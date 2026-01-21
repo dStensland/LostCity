@@ -12,9 +12,13 @@ interface PortalThemeProps {
  */
 export function PortalTheme({ portal }: PortalThemeProps) {
   const branding = portal.branding || {};
+  const settings = portal.settings || {};
 
   // Extract branding values with defaults
   const primaryColor = (branding.primary_color as string) || null;
+
+  // Icon glow setting (default: true)
+  const iconGlowEnabled = settings.icon_glow !== false;
   const primaryLight = (branding.primary_light as string) || null;
   const secondaryColor = (branding.secondary_color as string) || null;
   const accentColor = (branding.accent_color as string) || null;
@@ -131,17 +135,19 @@ export function PortalTheme({ portal }: PortalThemeProps) {
       cssVars.push(`--soft: #4b5563;`);
     }
     // Adjust neon colors for better light theme visibility
+    // Use portal's primary color if set, otherwise use neutral defaults
+    const lightPrimary = primaryColor || "#1f2937"; // Dark gray fallback
     if (!primaryColor) {
-      cssVars.push(`--neon-magenta: #0066B3;`); // Piedmont blue
+      cssVars.push(`--neon-magenta: ${lightPrimary};`);
     }
     cssVars.push(`--neon-green: #059669;`); // Darker green for light bg
     cssVars.push(`--neon-red: #DC2626;`); // Darker red for light bg
     cssVars.push(`--neon-cyan: #0891B2;`); // Darker cyan for light bg
     cssVars.push(`--neon-amber: #D97706;`); // Darker amber for light bg
-    // Rose/coral for light themes
-    cssVars.push(`--rose: #0066B3;`);
-    if (!buttonColor) {
-      cssVars.push(`--coral: #0066B3;`);
+    // Rose/coral uses portal primary for light themes
+    cssVars.push(`--rose: ${primaryColor || lightPrimary};`);
+    if (!buttonColor && !primaryColor) {
+      cssVars.push(`--coral: ${lightPrimary};`);
     }
     cssVars.push(`--gold: #B45309;`);
     // Glass panel styles for light themes
@@ -172,9 +178,22 @@ export function PortalTheme({ portal }: PortalThemeProps) {
     ? `https://fonts.googleapis.com/css2?${fontsToLoad.map(f => `family=${f}:wght@400;500;600;700`).join("&")}&display=swap`
     : null;
 
+  // CSS to disable icon glow when configured
+  const iconGlowOverride = !iconGlowEnabled
+    ? `
+.icon-neon,
+.icon-neon-subtle,
+.icon-neon-intense,
+.icon-neon-pulse,
+.icon-neon-flicker {
+  filter: none !important;
+  animation: none !important;
+}`
+    : "";
+
   // Generate the full style block
-  const styleContent = cssVars.length > 0
-    ? `:root {\n  ${cssVars.join("\n  ")}\n}\n${fontHeading ? `.font-serif, .font-display, h1, h2, h3, h4, h5, h6 { font-family: var(--portal-font-heading); }` : ""}\n${fontBody ? `body, .font-sans { font-family: var(--portal-font-body); }` : ""}`
+  const styleContent = cssVars.length > 0 || iconGlowOverride
+    ? `:root {\n  ${cssVars.join("\n  ")}\n}\n${fontHeading ? `.font-serif, .font-display, h1, h2, h3, h4, h5, h6 { font-family: var(--portal-font-heading); }` : ""}\n${fontBody ? `body, .font-sans { font-family: var(--portal-font-body); }` : ""}${iconGlowOverride}`
     : "";
 
   // Don't render anything if no customizations

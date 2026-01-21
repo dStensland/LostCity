@@ -11,7 +11,7 @@ from importlib import import_module
 from typing import Optional
 
 from config import get_config
-from db import get_active_sources, get_source_by_slug, create_crawl_log, update_crawl_log
+from db import get_active_sources, get_source_by_slug, create_crawl_log, update_crawl_log, refresh_available_filters
 from utils import setup_logging, slugify
 
 logger = logging.getLogger(__name__)
@@ -351,6 +351,57 @@ SOURCE_MODULES = {
     "piedmont-cancer-support": "sources.piedmont_cancer_support",
     "piedmont-classes": "sources.piedmont_classes",
     "piedmont-fitness": "sources.piedmont_fitness",
+    "piedmont-cme": "sources.piedmont_cme",
+    "piedmont-heart-conferences": "sources.piedmont_heart_conferences",
+    "piedmont-womens-heart": "sources.piedmont_womens_heart",
+    "piedmont-luminaria": "sources.piedmont_luminaria",
+    "piedmont-transplant": "sources.piedmont_transplant",
+    "piedmont-athens": "sources.piedmont_athens",
+    "piedmonthealthcare-events": "sources.piedmonthealthcare_events",
+    # ===== Colleges & Universities =====
+    "georgia-tech-athletics": "sources.georgia_tech_athletics",
+    "georgia-tech-events": "sources.georgia_tech_events",
+    "emory-events": "sources.emory_events",
+    "gsu-athletics": "sources.gsu_athletics",
+    "spelman-college": "sources.spelman_college",
+    "morehouse-college": "sources.morehouse_college",
+    "clark-atlanta": "sources.clark_atlanta",
+    "kennesaw-state": "sources.kennesaw_state",
+    "scad-atlanta": "sources.scad_atlanta",
+    "agnes-scott": "sources.agnes_scott",
+    "spivey-hall": "sources.spivey_hall",
+    "oglethorpe-university": "sources.oglethorpe_university",
+    # ===== New Venues =====
+    "knock-music-house": "sources.knock_music_house",
+    "side-saddle": "sources.side_saddle",
+    "woofs-atlanta": "sources.woofs_atlanta",
+    "sports-social": "sources.sports_social",
+    "park-tavern": "sources.park_tavern",
+    "midway-pub": "sources.midway_pub",
+    "spaceman-rooftop": "sources.spaceman_rooftop",
+    "rowdy-tiger": "sources.rowdy_tiger",
+    # ===== Bookstores =====
+    "bookish-atlanta": "sources.bookish_atlanta",
+    "wild-aster-books": "sources.wild_aster_books",
+    "book-boutique": "sources.book_boutique",
+    # ===== Organizations =====
+    "arts-atl": "sources.arts_atl",
+    "atlanta-cultural-affairs": "sources.atlanta_cultural_affairs",
+    "community-foundation-atl": "sources.community_foundation_atl",
+    # ===== Tier 2 Sports Bars & Venues =====
+    "fado-irish-pub": "sources.fado_irish_pub",
+    "stats-downtown": "sources.stats_downtown",
+    "meehans-pub": "sources.meehans_pub",
+    "urban-grind": "sources.urban_grind",
+    "kats-cafe": "sources.kats_cafe",
+    "gypsy-kitchen": "sources.gypsy_kitchen",
+    "sun-dial-restaurant": "sources.sun_dial_restaurant",
+    # ===== Gaming & Barcades =====
+    "battle-and-brew": "sources.battle_and_brew",
+    "joystick-gamebar": "sources.joystick_gamebar",
+    # ===== Poker & Chess =====
+    "freeroll-atlanta": "sources.freeroll_atlanta",
+    "georgia-chess": "sources.georgia_chess",
 }
 
 
@@ -445,6 +496,13 @@ def run_all_sources() -> dict[str, bool]:
     success = sum(1 for v in results.values() if v)
     failed = len(results) - success
     logger.info(f"Crawl complete: {success} succeeded, {failed} failed")
+
+    # Refresh available filters for UI
+    logger.info("Refreshing available filters...")
+    if refresh_available_filters():
+        logger.info("Available filters refreshed successfully")
+    else:
+        logger.warning("Failed to refresh available filters")
 
     return results
 

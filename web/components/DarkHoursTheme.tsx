@@ -26,24 +26,24 @@ export default function DarkHoursTheme() {
 
       /* Intensified neons (+5% brightness, +10% saturation) */
       --neon-magenta: hsl(330, 95%, 58%);
-      --neon-cyan: hsl(180, 95%, 58%);
+      --neon-cyan: hsl(185, 100%, 50%);
       --neon-amber: hsl(40, 100%, 58%);
       --neon-green: hsl(145, 95%, 55%);
-      --coral: hsl(12, 95%, 65%);
-      --rose: hsl(340, 95%, 68%);
+      --coral: #E8912D;
+      --rose: #E8912D;
     }
 
     /* Enhanced glow effects during dark hours */
     .card-interactive:hover {
-      box-shadow: 0 0 30px rgba(232, 85, 160, 0.2), 0 0 60px rgba(232, 85, 160, 0.1);
+      box-shadow: 0 0 30px rgba(232, 145, 45, 0.25), 0 0 60px rgba(232, 145, 45, 0.12);
     }
 
     .badge-featured {
-      box-shadow: 0 0 12px rgba(232, 85, 160, 0.5);
+      box-shadow: 0 0 12px rgba(232, 145, 45, 0.5);
     }
 
     .badge-trending {
-      box-shadow: 0 0 12px rgba(255, 107, 53, 0.5);
+      box-shadow: 0 0 12px rgba(232, 145, 45, 0.5);
     }
 
     /* Ambient glow pulse - respects reduced motion */

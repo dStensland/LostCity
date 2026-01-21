@@ -237,14 +237,56 @@ export default function MapView({ events, userLocation }: Props) {
     [filteredEvents]
   );
 
-  // Use user location or Atlanta center as default
+  // Pick an active spot (venue with most events) as fallback center
+  const activeSpotCenter = useMemo((): [number, number] | null => {
+    if (mappableEvents.length === 0) return null;
+
+    // Count events per venue
+    const venueCounts = new Map<string, { count: number; lat: number; lng: number; name: string }>();
+    mappableEvents.forEach((e) => {
+      if (e.venue?.lat && e.venue?.lng) {
+        const key = `${e.venue.lat},${e.venue.lng}`;
+        const existing = venueCounts.get(key);
+        if (existing) {
+          existing.count++;
+        } else {
+          venueCounts.set(key, { count: 1, lat: e.venue.lat, lng: e.venue.lng, name: e.venue.name || "" });
+        }
+      }
+    });
+
+    // Find venue with most events
+    let maxCount = 0;
+    let activeLat = 0;
+    let activeLng = 0;
+    let found = false;
+
+    venueCounts.forEach((venue) => {
+      if (venue.count > maxCount) {
+        maxCount = venue.count;
+        activeLat = venue.lat;
+        activeLng = venue.lng;
+        found = true;
+      }
+    });
+
+    return found ? [activeLat, activeLng] : null;
+  }, [mappableEvents]);
+
+  // Default Atlanta center (Ponce City Market area - active hub)
+  const ATLANTA_DEFAULT: [number, number] = [33.7725, -84.3655];
+
+  // Use user location, or active spot, or Atlanta default
   const mapCenter: [number, number] = localUserLocation
     ? [localUserLocation.lat, localUserLocation.lng]
-    : [33.749, -84.388]; // Atlanta center
+    : activeSpotCenter || ATLANTA_DEFAULT;
 
-  // Calculate bounds if we have events
+  // Zoom level: 11 for user location (roughly 20 mile view), 13 for active spot, 12 for default
+  const defaultZoom = localUserLocation ? 11 : (activeSpotCenter ? 13 : 12);
+
+  // Calculate bounds if we have events (but don't auto-fit if user has location)
   const bounds =
-    mappableEvents.length > 0
+    mappableEvents.length > 0 && !localUserLocation
       ? L.latLngBounds(
           mappableEvents.map((e) => [e.venue!.lat!, e.venue!.lng!] as [number, number])
         )
@@ -273,8 +315,8 @@ export default function MapView({ events, userLocation }: Props) {
       <div className="w-full h-full rounded-lg overflow-hidden border border-[var(--twilight)] relative">
         <MapContainer
           center={mapCenter}
-          zoom={localUserLocation ? 14 : 12}
-          bounds={bounds || undefined}
+          zoom={defaultZoom}
+          bounds={!localUserLocation && bounds ? bounds : undefined}
           boundsOptions={{ padding: [50, 50] }}
           className="w-full h-full"
           scrollWheelZoom={true}
@@ -287,8 +329,9 @@ export default function MapView({ events, userLocation }: Props) {
           <MapOverlay
             totalEvents={filteredEvents.length}
             mappableCount={mappableEvents.length}
-            bounds={bounds}
+            allEventsBounds={mappableEvents.length > 0 ? L.latLngBounds(mappableEvents.map((e) => [e.venue!.lat!, e.venue!.lng!] as [number, number])) : null}
             hasUserLocation={!!localUserLocation}
+            userLocation={localUserLocation}
             locating={locating}
             locationDenied={locationDenied}
             onRequestLocation={requestUserLocation}
@@ -318,7 +361,7 @@ export default function MapView({ events, userLocation }: Props) {
                     {/* Title row with live indicator */}
                     <div className="flex items-start gap-2 mb-2">
                       <Link
-                        href={`/events/${event.id}`}
+                        href={`/${portal.slug}/events/${event.id}`}
                         className="font-medium text-sm text-[var(--cream)] hover:text-[var(--coral)] transition-colors flex-1 line-clamp-2"
                       >
                         {event.title}
@@ -392,8 +435,9 @@ export default function MapView({ events, userLocation }: Props) {
 function MapOverlay({
   totalEvents,
   mappableCount,
-  bounds,
+  allEventsBounds,
   hasUserLocation,
+  userLocation,
   locating,
   locationDenied,
   onRequestLocation,
@@ -403,8 +447,9 @@ function MapOverlay({
 }: {
   totalEvents: number;
   mappableCount: number;
-  bounds: L.LatLngBounds | null;
+  allEventsBounds: L.LatLngBounds | null;
   hasUserLocation: boolean;
+  userLocation: { lat: number; lng: number } | null;
   locating: boolean;
   locationDenied: boolean;
   onRequestLocation: () => void;
@@ -415,18 +460,25 @@ function MapOverlay({
   const map = useMap();
 
   const fitToEvents = useCallback(() => {
-    if (bounds) {
-      map.fitBounds(bounds, { padding: [60, 60] });
+    if (allEventsBounds) {
+      map.fitBounds(allEventsBounds, { padding: [60, 60] });
     } else {
-      map.setView([33.749, -84.388], 12);
+      map.setView([33.7725, -84.3655], 12); // Ponce City Market area
     }
-  }, [bounds, map]);
+  }, [allEventsBounds, map]);
 
-  useEffect(() => {
-    if (bounds) {
-      map.fitBounds(bounds, { padding: [60, 60] });
+  const centerOnUser = useCallback(() => {
+    if (userLocation) {
+      map.setView([userLocation.lat, userLocation.lng], 11); // ~20 mile radius
     }
-  }, [bounds, map]);
+  }, [userLocation, map]);
+
+  // Only auto-fit to bounds if user doesn't have location set
+  useEffect(() => {
+    if (!hasUserLocation && allEventsBounds) {
+      map.fitBounds(allEventsBounds, { padding: [60, 60] });
+    }
+  }, [allEventsBounds, hasUserLocation, map]);
 
   return (
     <>
@@ -451,6 +503,14 @@ function MapOverlay({
         >
           Fit to events
         </button>
+        {hasUserLocation && (
+          <button
+            onClick={centerOnUser}
+            className="rounded-lg px-3 py-2 text-[0.65rem] font-mono text-[var(--neon-cyan)] hover:text-[var(--cream)] glass-panel-compact"
+          >
+            Center on me
+          </button>
+        )}
         <button
           onClick={onToggleLiveOnly}
           className={`rounded-lg px-3 py-2 text-[0.65rem] font-mono glass-panel-compact ${

@@ -196,15 +196,36 @@ def crawl_category(page: Page, category: str, source_id: int, portal_id: str) ->
             time_text = None
             price_text = None
 
-            skip_words = ["Classes", "Events", "Category", "Reset", "Filter", "Sort", "Home", "Search", category]
+            # UI elements and navigation items to skip
+            skip_words = [
+                "Classes", "Events", "Category", "Reset", "Filter", "Sort", "Home", "Search",
+                "Click for More Dates", "Class Name", "Date Range", "Location", "Price",
+                "View Details", "Register", "Sign Up", "Log In", "My Account", "Cart",
+                "Showing", "results", "No classes", "Loading", "Please wait",
+                "(Class Name", "(Date", "(Location", "(Price", "A-Z", "Z-A",
+                "Ascending", "Descending", "Clear All", "Apply", "Cancel",
+                category
+            ]
 
             for i, line in enumerate(lines):
-                # Skip navigation items
-                if any(sw in line for sw in skip_words) or len(line) < 10:
+                # Skip navigation items and UI elements
+                if any(sw.lower() in line.lower() for sw in skip_words) or len(line) < 10:
                     continue
 
-                # First substantial line is likely the title
+                # Skip lines that look like UI controls (parentheses with sorting, buttons, etc.)
+                if line.startswith("(") or line.endswith(")"):
+                    continue
+
+                # Skip lines that are just numbers or very short
+                if re.match(r"^\d+$", line) or re.match(r"^[A-Z]{1,3}$", line):
+                    continue
+
+                # First substantial line is likely the title - must look like a class name
+                # Good titles usually have multiple words and don't contain certain patterns
                 if not title and len(line) > 15 and len(line) < 100:
+                    # Skip if it looks like a button or UI element
+                    if re.match(r"^(Click|View|Show|Hide|Select|Choose|More|See|Get)\s", line, re.IGNORECASE):
+                        continue
                     title = line
                     continue
 

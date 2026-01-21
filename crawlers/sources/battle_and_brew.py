@@ -1,7 +1,7 @@
 """
 Crawler for Battle & Brew (battleandbrew.com).
 
-Site uses JavaScript rendering - must use Playwright.
+Site uses JavaScript rendering with event cards - must use Playwright.
 """
 
 from __future__ import annotations
@@ -38,7 +38,7 @@ VENUE_DATA = {
 
 
 def parse_time(time_text: str) -> Optional[str]:
-    """Parse time from '7:00 PM' format."""
+    """Parse time from '7:00 PM' or '7:30 PM - 10:30 PM' format."""
     match = re.search(r"(\d{1,2}):(\d{2})\s*(am|pm)", time_text, re.IGNORECASE)
     if match:
         hour, minute, period = match.groups()
@@ -49,6 +49,65 @@ def parse_time(time_text: str) -> Optional[str]:
             hour = 0
         return f"{hour:02d}:{minute}"
     return None
+
+
+def parse_date(date_text: str) -> Optional[str]:
+    """Parse date from various formats like 'Tuesday, January 20, 2026'."""
+    # Try full format: "Tuesday, January 20, 2026"
+    match = re.search(
+        r"(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday),?\s+"
+        r"(January|February|March|April|May|June|July|August|September|October|November|December)\s+"
+        r"(\d{1,2}),?\s+(\d{4})",
+        date_text,
+        re.IGNORECASE
+    )
+    if match:
+        month, day, year = match.groups()
+        try:
+            dt = datetime.strptime(f"{month} {day} {year}", "%B %d %Y")
+            return dt.strftime("%Y-%m-%d")
+        except ValueError:
+            pass
+
+    # Try shorter format: "Jan 20, 2026"
+    match = re.search(
+        r"(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{1,2}),?\s+(\d{4})",
+        date_text,
+        re.IGNORECASE
+    )
+    if match:
+        month, day, year = match.groups()
+        try:
+            dt = datetime.strptime(f"{month} {day} {year}", "%b %d %Y")
+            return dt.strftime("%Y-%m-%d")
+        except ValueError:
+            pass
+
+    return None
+
+
+def get_category_from_title(title: str) -> tuple[str, Optional[str]]:
+    """Determine category based on event title."""
+    title_lower = title.lower()
+
+    if any(x in title_lower for x in ["trivia", "quiz"]):
+        return "community", "trivia"
+    elif any(x in title_lower for x in ["karaoke"]):
+        return "nightlife", "karaoke"
+    elif any(x in title_lower for x in ["d&d", "dungeons", "ttrpg", "rpg"]):
+        return "community", "gaming"
+    elif any(x in title_lower for x in ["mtg", "magic the gathering", "draft", "pokemon", "pokémon"]):
+        return "community", "gaming"
+    elif any(x in title_lower for x in ["mahjong", "board game"]):
+        return "community", "gaming"
+    elif any(x in title_lower for x in ["cosplay", "costume"]):
+        return "community", "cosplay"
+    elif any(x in title_lower for x in ["paint", "art", "craft"]):
+        return "art", "workshop"
+    elif any(x in title_lower for x in ["brunch", "mimosa"]):
+        return "food_drink", None
+    else:
+        return "community", "gaming"
 
 
 def crawl(source: dict) -> tuple[int, int, int]:
@@ -70,74 +129,79 @@ def crawl(source: dict) -> tuple[int, int, int]:
             venue_id = get_or_create_venue(VENUE_DATA)
 
             logger.info(f"Fetching Battle & Brew: {EVENTS_URL}")
-            page.goto(EVENTS_URL, wait_until="domcontentloaded", timeout=30000)
-            page.wait_for_timeout(3000)
+            page.goto(EVENTS_URL, wait_until="networkidle", timeout=30000)
+            page.wait_for_timeout(2000)
 
             # Scroll to load all content
-            for _ in range(5):
+            for _ in range(3):
                 page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
                 page.wait_for_timeout(1000)
 
-            # Get page text and parse line by line
-            body_text = page.inner_text("body")
-            lines = [l.strip() for l in body_text.split("\n") if l.strip()]
+            # Find event cards - look for links that contain event details
+            # Battle & Brew uses article or card elements for events
+            event_links = page.query_selector_all("a[href*='/event/']")
 
-            # Parse events - look for date patterns
-            i = 0
-            while i < len(lines):
-                line = lines[i]
+            seen_events = set()
 
-                # Skip navigation items
-                if len(line) < 3:
-                    i += 1
-                    continue
+            for link in event_links:
+                try:
+                    href = link.get_attribute("href")
+                    if not href or href in seen_events:
+                        continue
+                    seen_events.add(href)
 
-                # Look for date patterns
-                date_match = re.match(
-                    r"(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)?,?\s*(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{1,2})(?:,?\s+(\d{4}))?",
-                    line,
-                    re.IGNORECASE
-                )
-
-                if date_match:
-                    month = date_match.group(1)
-                    day = date_match.group(2)
-                    year = date_match.group(3) if date_match.group(3) else str(datetime.now().year)
-
-                    # Look for title in surrounding lines
-                    title = None
-                    start_time = None
-
-                    for offset in [-2, -1, 1, 2, 3]:
-                        idx = i + offset
-                        if 0 <= idx < len(lines):
-                            check_line = lines[idx]
-                            if re.match(r"(January|February|March)", check_line, re.IGNORECASE):
-                                continue
-                            if not start_time:
-                                time_result = parse_time(check_line)
-                                if time_result:
-                                    start_time = time_result
-                                    continue
-                            if not title and len(check_line) > 5:
-                                if not re.match(r"\d{1,2}[:/]", check_line):
-                                    if not re.match(r"(free|tickets|register|\$|more info)", check_line.lower()):
-                                        title = check_line
-                                        break
-
-                    if not title:
-                        i += 1
+                    # Get the parent container to find title and date
+                    # Try to get text content from the card
+                    parent = link.evaluate_handle("el => el.closest('article') || el.closest('[class*=\"event\"]') || el.parentElement.parentElement")
+                    if not parent:
                         continue
 
-                    # Parse date
-                    try:
-                        month_str = month[:3] if len(month) > 3 else month
-                        dt = datetime.strptime(f"{month_str} {day} {year}", "%b %d %Y")
-                        if dt.date() < datetime.now().date():
-                            dt = datetime.strptime(f"{month_str} {day} {int(year) + 1}", "%b %d %Y")
-                        start_date = dt.strftime("%Y-%m-%d")
-                    except ValueError:
-                        i += 1
+                    card_text = parent.inner_text() if hasattr(parent, 'inner_text') else ""
+                    if not card_text:
+                        # Fallback: get text from the link itself and siblings
+                        card_text = link.inner_text()
+
+                    # Skip navigation/utility links
+                    if not card_text or len(card_text) < 10:
+                        continue
+                    if card_text.strip().lower() in ["view event", "view event →", "all events"]:
+                        continue
+
+                    # Parse the card text
+                    lines = [l.strip() for l in card_text.split("\n") if l.strip()]
+
+                    title = None
+                    start_date = None
+                    start_time = None
+
+                    for line in lines:
+                        # Skip utility text
+                        if line.lower() in ["view event", "view event →", "all events", "add to calendar"]:
+                            continue
+                        if re.match(r"^\(\d{3}\)", line):  # Phone numbers
+                            continue
+
+                        # Try to parse as date
+                        if not start_date:
+                            parsed_date = parse_date(line)
+                            if parsed_date:
+                                start_date = parsed_date
+                                continue
+
+                        # Try to parse time
+                        if not start_time and re.search(r"\d{1,2}:\d{2}\s*(am|pm)", line, re.IGNORECASE):
+                            start_time = parse_time(line)
+                            continue
+
+                        # Otherwise might be the title (first substantial text)
+                        if not title and len(line) > 3 and not re.match(r"^\d", line):
+                            title = line
+
+                    if not title or not start_date:
+                        continue
+
+                    # Skip "Closed on Mondays" type entries
+                    if "closed" in title.lower():
                         continue
 
                     events_found += 1
@@ -146,38 +210,41 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     if find_event_by_hash(content_hash):
                         events_updated += 1
-                        i += 1
                         continue
+
+                    category, subcategory = get_category_from_title(title)
+
+                    # Build event URL
+                    event_url = href if href.startswith("http") else f"{BASE_URL}{href}"
 
                     event_record = {
                         "source_id": source_id,
                         "venue_id": venue_id,
                         "title": title,
-                        "description": "Event at Battle & Brew",
+                        "description": f"{title} at Battle & Brew - Atlanta's premier geek bar and restaurant.",
                         "start_date": start_date,
                         "start_time": start_time,
                         "end_date": None,
                         "end_time": None,
                         "is_all_day": start_time is None,
-                        "category": "community",
-                        "subcategory": None,
+                        "category": category,
+                        "subcategory": subcategory,
                         "tags": [
-                        "battle-brew",
-                        "gaming",
-                        "barcade",
-                        "sandy-springs",
-                        "trivia",
-                        "esports",
-                    ],
+                            "battle-brew",
+                            "gaming",
+                            "barcade",
+                            "sandy-springs",
+                            "geek",
+                        ],
                         "price_min": None,
                         "price_max": None,
                         "price_note": None,
-                        "is_free": False,
-                        "source_url": EVENTS_URL,
-                        "ticket_url": EVENTS_URL,
+                        "is_free": "free" in title.lower() or "50% off" in title.lower(),
+                        "source_url": event_url,
+                        "ticket_url": event_url,
                         "image_url": None,
                         "raw_text": f"{title} - {start_date}",
-                        "extraction_confidence": 0.80,
+                        "extraction_confidence": 0.85,
                         "is_recurring": False,
                         "recurrence_rule": None,
                         "content_hash": content_hash,
@@ -190,7 +257,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     except Exception as e:
                         logger.error(f"Failed to insert: {title}: {e}")
 
-                i += 1
+                except Exception as e:
+                    logger.debug(f"Error parsing event card: {e}")
+                    continue
 
             browser.close()
 

@@ -168,9 +168,9 @@ function groupByTimePeriod(items: DisplayItem[]): { period: TimePeriod; items: D
 }
 
 interface Props {
-  initialEvents: EventWithLocation[];
-  initialTotal: number;
-  hasActiveFilters: boolean;
+  initialEvents?: EventWithLocation[];
+  initialTotal?: number;
+  hasActiveFilters?: boolean;
   portalId?: string;
   portalExclusive?: boolean;
   portalSlug?: string;
@@ -186,19 +186,20 @@ interface ScrollState {
   retryCount: number;
 }
 
-export default function EventList({ initialEvents, initialTotal, hasActiveFilters, portalId, portalExclusive, portalSlug }: Props) {
-  const [events, setEvents] = useState<EventWithLocation[]>(initialEvents);
+export default function EventList({ initialEvents, initialTotal, hasActiveFilters = false, portalId, portalExclusive, portalSlug }: Props) {
+  const [events, setEvents] = useState<EventWithLocation[]>(initialEvents || []);
   const [scrollState, setScrollState] = useState<ScrollState>({
     version: 0,
     page: 1,
-    hasMore: initialEvents.length < initialTotal,
-    isLoading: false,
+    hasMore: initialEvents ? initialEvents.length < (initialTotal || 0) : true,
+    isLoading: !initialEvents, // Start loading if no initial data
     error: null,
     retryCount: 0,
   });
+  const [initialLoadComplete, setInitialLoadComplete] = useState(!!initialEvents);
 
   // Track initial event IDs to skip animations on infinite scroll items
-  const initialEventIds = useRef<Set<number>>(new Set(initialEvents.map(e => e.id)));
+  const initialEventIds = useRef<Set<number>>(new Set((initialEvents || []).map(e => e.id)));
   const searchParams = useSearchParams();
   const pathname = usePathname();
 
@@ -219,8 +220,69 @@ export default function EventList({ initialEvents, initialTotal, hasActiveFilter
   // Track loaded pages for current version
   const loadedPagesRef = useRef<Set<number>>(new Set([1]));
 
-  // Reset everything when filters change (initialEvents will change from server)
+  // Fetch initial data client-side when no server data provided
   useEffect(() => {
+    // Skip if we have initial data from server
+    if (initialEvents && initialEvents.length > 0) {
+      return;
+    }
+
+    const controller = new AbortController();
+
+    async function fetchInitialData() {
+      const params = new URLSearchParams(searchParams.toString());
+      params.set("page", "1");
+      params.delete("view");
+
+      if (portalId && portalId !== "default") {
+        params.set("portal_id", portalId);
+      }
+      if (portalExclusive) {
+        params.set("portal_exclusive", "true");
+      }
+
+      try {
+        const res = await fetch(`/api/events?${params}`, {
+          signal: controller.signal,
+        });
+
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+        const data = await res.json();
+
+        setEvents(data.events || []);
+        setScrollState(prev => ({
+          ...prev,
+          page: 1,
+          hasMore: data.hasMore,
+          isLoading: false,
+          error: null,
+        }));
+        loadedPagesRef.current = new Set([1]);
+        initialEventIds.current = new Set((data.events || []).map((e: EventWithLocation) => e.id));
+        setInitialLoadComplete(true);
+      } catch (error) {
+        if (error instanceof Error && error.name === "AbortError") return;
+        console.error("Failed to fetch events:", error);
+        setScrollState(prev => ({
+          ...prev,
+          isLoading: false,
+          error: "Failed to load events",
+        }));
+        setInitialLoadComplete(true);
+      }
+    }
+
+    fetchInitialData();
+
+    return () => controller.abort();
+  }, [searchParams, portalId, portalExclusive, initialEvents]);
+
+  // Reset when filters change (for both server and client-side data)
+  useEffect(() => {
+    // Skip on initial mount
+    if (!initialLoadComplete) return;
+
     // Cancel any in-flight requests
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
@@ -233,18 +295,61 @@ export default function EventList({ initialEvents, initialTotal, hasActiveFilter
       debounceTimerRef.current = null;
     }
 
-    setEvents(initialEvents);
-    setScrollState(prev => ({
-      version: prev.version + 1, // New version invalidates any in-flight responses
-      page: 1,
-      hasMore: initialEvents.length < initialTotal,
-      isLoading: false,
-      error: null,
-      retryCount: 0,
-    }));
-    loadedPagesRef.current = new Set([1]);
-    initialEventIds.current = new Set(initialEvents.map(e => e.id));
-  }, [initialEvents, initialTotal]);
+    // If we have server data, use it
+    if (initialEvents && initialEvents.length > 0) {
+      setEvents(initialEvents);
+      setScrollState(prev => ({
+        version: prev.version + 1,
+        page: 1,
+        hasMore: initialEvents.length < (initialTotal || 0),
+        isLoading: false,
+        error: null,
+        retryCount: 0,
+      }));
+      loadedPagesRef.current = new Set([1]);
+      initialEventIds.current = new Set(initialEvents.map(e => e.id));
+    } else {
+      // Client-side: refetch on filter change
+      setScrollState(prev => ({
+        version: prev.version + 1,
+        page: 1,
+        hasMore: true,
+        isLoading: true,
+        error: null,
+        retryCount: 0,
+      }));
+      loadedPagesRef.current = new Set();
+
+      // Trigger a refetch
+      const params = new URLSearchParams(searchParams.toString());
+      params.set("page", "1");
+      params.delete("view");
+      if (portalId && portalId !== "default") params.set("portal_id", portalId);
+      if (portalExclusive) params.set("portal_exclusive", "true");
+
+      const controller = new AbortController();
+      abortControllerRef.current = controller;
+
+      fetch(`/api/events?${params}`, { signal: controller.signal })
+        .then(res => res.json())
+        .then(data => {
+          setEvents(data.events || []);
+          setScrollState(prev => ({
+            ...prev,
+            page: 1,
+            hasMore: data.hasMore,
+            isLoading: false,
+          }));
+          loadedPagesRef.current = new Set([1]);
+          initialEventIds.current = new Set((data.events || []).map((e: EventWithLocation) => e.id));
+        })
+        .catch(err => {
+          if (err.name !== "AbortError") {
+            setScrollState(prev => ({ ...prev, isLoading: false, error: "Failed to load events" }));
+          }
+        });
+    }
+  }, [searchParams, initialEvents, initialTotal, portalId, portalExclusive, initialLoadComplete]);
 
   // Load more function - stable reference with all deps captured via refs
   const loadMore = useCallback(async (isRetry = false) => {
@@ -470,6 +575,15 @@ export default function EventList({ initialEvents, initialTotal, hasActiveFilter
     { value: "food_drink", label: "Food & Drink" },
     { value: "film", label: "Film" },
   ];
+
+  // Show loading skeleton during initial load
+  if (!initialLoadComplete) {
+    return (
+      <div className="py-4">
+        <EventCardSkeletonList count={6} />
+      </div>
+    );
+  }
 
   if (dates.length === 0) {
     return (

@@ -1,252 +1,379 @@
 "use client";
 
+import { useState, useRef, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useMemo, useState } from "react";
-import CategoryIcon, { CATEGORY_CONFIG, getCategoryLabel } from "./CategoryIcon";
-import { VIBE_GROUPS, VIBES } from "@/lib/spots";
-import { PREFERENCE_NEIGHBORHOODS } from "@/lib/preferences";
+import CategoryIcon, { CATEGORY_CONFIG, type CategoryType } from "./CategoryIcon";
+import { SPOT_TYPES, NEIGHBORHOODS, VIBE_GROUPS } from "@/lib/spots";
+import type { SortOption } from "@/app/spots/page";
 
-const SPOT_TYPES = [
-  { value: "music_venue", label: "Music Venue" },
-  { value: "theater", label: "Theater" },
-  { value: "comedy_club", label: "Comedy Club" },
-  { value: "bar", label: "Bar" },
-  { value: "restaurant", label: "Restaurant" },
-  { value: "coffee_shop", label: "Coffee Shop" },
-  { value: "brewery", label: "Brewery" },
-  { value: "gallery", label: "Gallery" },
-  { value: "museum", label: "Museum" },
-  { value: "club", label: "Club" },
-  { value: "arena", label: "Arena" },
-] as const;
-
-type GroupBy = "none" | "category" | "neighborhood";
+type ViewMode = "list" | "type" | "neighborhood";
 
 interface Props {
-  onGroupByChange?: (groupBy: GroupBy) => void;
-  currentGroupBy?: GroupBy;
+  viewMode: ViewMode;
+  sortBy: SortOption;
+  onViewModeChange: (mode: ViewMode) => void;
+  onSortChange: (sort: SortOption) => void;
 }
 
-export default function SpotFilterBar({ onGroupByChange, currentGroupBy = "none" }: Props) {
+const SORT_OPTIONS: { value: SortOption; label: string; icon: React.ReactNode }[] = [
+  {
+    value: "events",
+    label: "Most Events",
+    icon: (
+      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+      </svg>
+    ),
+  },
+  {
+    value: "alpha",
+    label: "A-Z",
+    icon: (
+      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12" />
+      </svg>
+    ),
+  },
+  {
+    value: "closest",
+    label: "Closest",
+    icon: (
+      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+      </svg>
+    ),
+  },
+];
+
+// Collapsible section component
+function FilterSection({
+  title,
+  activeFilters,
+  expanded,
+  onToggle,
+  children,
+}: {
+  title: string;
+  activeFilters: string[];
+  expanded: boolean;
+  onToggle: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="border-b border-[var(--twilight)] last:border-b-0">
+      <button
+        onClick={onToggle}
+        className="w-full px-4 py-3 flex items-center justify-between text-left hover:bg-[var(--twilight)]/20 transition-colors active:scale-[0.99]"
+      >
+        <div className="flex items-center gap-2">
+          <span className="font-mono text-xs font-medium text-[var(--cream)] uppercase tracking-wider">
+            {title}
+          </span>
+          {activeFilters.length > 0 && (
+            <span className="px-1.5 py-0.5 rounded-full bg-[var(--coral)] text-[var(--void)] font-mono text-[0.55rem] font-bold">
+              {activeFilters.length}
+            </span>
+          )}
+        </div>
+        <svg
+          className={`w-4 h-4 text-[var(--muted)] transition-transform ${expanded ? "rotate-180" : ""}`}
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+      {expanded && <div className="px-4 pb-4">{children}</div>}
+    </div>
+  );
+}
+
+export default function SpotFilterBar({
+  viewMode,
+  sortBy,
+  onViewModeChange,
+  onSortChange,
+}: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const [sortDropdownOpen, setSortDropdownOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const drawerContentRef = useRef<HTMLDivElement>(null);
 
-  const selectedTypes = useMemo(
-    () => searchParams.get("type")?.split(",").filter(Boolean) || [],
-    [searchParams]
-  );
-  const selectedNeighborhoods = useMemo(
-    () => searchParams.get("hood")?.split(",").filter(Boolean) || [],
-    [searchParams]
-  );
-  const selectedVibes = useMemo(
-    () => searchParams.get("vibe")?.split(",").filter(Boolean) || [],
-    [searchParams]
-  );
+  // Get current filter values from URL
+  const currentTypes = searchParams.get("type")?.split(",").filter(Boolean) || [];
+  const currentHoods = searchParams.get("hood")?.split(",").filter(Boolean) || [];
+  const currentVibes = searchParams.get("vibe")?.split(",").filter(Boolean) || [];
 
-  const updateParams = useCallback(
-    (updates: Record<string, string | null>) => {
-      const params = new URLSearchParams(searchParams.toString());
-      for (const [key, value] of Object.entries(updates)) {
-        if (value === null || value === "") {
-          params.delete(key);
-        } else {
-          params.set(key, value);
-        }
+  const activeFilterCount = currentTypes.length + currentHoods.length + currentVibes.length;
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setSortDropdownOpen(false);
       }
-      const query = params.toString();
-      router.push(`/spots${query ? `?${query}` : ""}`, { scroll: false });
-    },
-    [router, searchParams]
-  );
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
-  const toggleType = useCallback(
-    (type: string) => {
-      const newTypes = selectedTypes.includes(type)
-        ? selectedTypes.filter((t) => t !== type)
-        : [...selectedTypes, type];
-      updateParams({ type: newTypes.length > 0 ? newTypes.join(",") : null });
-    },
-    [selectedTypes, updateParams]
-  );
+  // Lock body scroll when drawer is open
+  useEffect(() => {
+    if (drawerOpen) {
+      const scrollY = window.scrollY;
+      document.body.style.position = "fixed";
+      document.body.style.top = `-${scrollY}px`;
+      document.body.style.left = "0";
+      document.body.style.right = "0";
+      document.body.style.overflow = "hidden";
+      if (drawerContentRef.current) {
+        drawerContentRef.current.scrollTop = 0;
+      }
+    } else {
+      const scrollY = document.body.style.top;
+      document.body.style.position = "";
+      document.body.style.top = "";
+      document.body.style.left = "";
+      document.body.style.right = "";
+      document.body.style.overflow = "";
+      if (scrollY) {
+        window.scrollTo(0, parseInt(scrollY || "0", 10) * -1);
+      }
+    }
+    return () => {
+      const scrollY = document.body.style.top;
+      document.body.style.position = "";
+      document.body.style.top = "";
+      document.body.style.left = "";
+      document.body.style.right = "";
+      document.body.style.overflow = "";
+      if (scrollY) {
+        window.scrollTo(0, parseInt(scrollY || "0", 10) * -1);
+      }
+    };
+  }, [drawerOpen]);
 
-  const toggleNeighborhood = useCallback(
-    (hood: string) => {
-      const newHoods = selectedNeighborhoods.includes(hood)
-        ? selectedNeighborhoods.filter((h) => h !== hood)
-        : [...selectedNeighborhoods, hood];
-      updateParams({ hood: newHoods.length > 0 ? newHoods.join(",") : null });
-    },
-    [selectedNeighborhoods, updateParams]
-  );
+  const toggleSection = (section: string) => {
+    setExpandedSections((prev) => {
+      const next = new Set(prev);
+      if (next.has(section)) {
+        next.delete(section);
+      } else {
+        next.add(section);
+      }
+      return next;
+    });
+  };
 
-  const toggleVibe = useCallback(
-    (vibe: string) => {
-      const newVibes = selectedVibes.includes(vibe)
-        ? selectedVibes.filter((v) => v !== vibe)
-        : [...selectedVibes, vibe];
-      updateParams({ vibe: newVibes.length > 0 ? newVibes.join(",") : null });
-    },
-    [selectedVibes, updateParams]
-  );
+  const updateFilters = (updates: Record<string, string | null>) => {
+    const params = new URLSearchParams(searchParams.toString());
+    for (const [key, value] of Object.entries(updates)) {
+      if (value === null || value === "") {
+        params.delete(key);
+      } else {
+        params.set(key, value);
+      }
+    }
+    const query = params.toString();
+    router.push(`/spots${query ? `?${query}` : ""}`, { scroll: false });
+  };
 
-  const clearAll = useCallback(() => {
-    updateParams({ type: null, hood: null, vibe: null });
-  }, [updateParams]);
+  const toggleType = (type: string) => {
+    const newTypes = currentTypes.includes(type)
+      ? currentTypes.filter((t) => t !== type)
+      : [...currentTypes, type];
+    updateFilters({ type: newTypes.length > 0 ? newTypes.join(",") : null });
+  };
 
-  const hasFilters = selectedTypes.length > 0 || selectedNeighborhoods.length > 0 || selectedVibes.length > 0;
-  const filterCount = selectedTypes.length + selectedNeighborhoods.length + selectedVibes.length;
+  const toggleHood = (hood: string) => {
+    const newHoods = currentHoods.includes(hood)
+      ? currentHoods.filter((h) => h !== hood)
+      : [...currentHoods, hood];
+    updateFilters({ hood: newHoods.length > 0 ? newHoods.join(",") : null });
+  };
+
+  const toggleVibe = (vibe: string) => {
+    const newVibes = currentVibes.includes(vibe)
+      ? currentVibes.filter((v) => v !== vibe)
+      : [...currentVibes, vibe];
+    updateFilters({ vibe: newVibes.length > 0 ? newVibes.join(",") : null });
+  };
+
+  const clearAllFilters = () => {
+    updateFilters({ type: null, hood: null, vibe: null });
+  };
+
+  const currentSort = SORT_OPTIONS.find((s) => s.value === sortBy) || SORT_OPTIONS[0];
 
   return (
     <>
-      {/* Filter bar */}
       <div className="sticky top-[104px] z-30 bg-[var(--night)] border-b border-[var(--twilight)]">
         <div className="max-w-3xl mx-auto px-4 py-2">
-          <div className="flex items-center gap-2">
-            {/* Filters button */}
-            <button
-              onClick={() => setDrawerOpen(true)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full font-mono text-xs font-medium transition-all ${
-                hasFilters
-                  ? "bg-[var(--coral)] text-[var(--void)]"
-                  : "bg-[var(--twilight)] text-[var(--muted)] hover:text-[var(--cream)]"
-              }`}
-            >
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-              </svg>
-              Filters
-              {filterCount > 0 && (
-                <span className="px-1.5 py-0.5 rounded-full bg-[var(--void)]/20 text-[0.6rem]">
-                  {filterCount}
-                </span>
-              )}
-            </button>
+          <div className="flex items-center justify-between gap-3">
+            {/* Left side: Filter button + View mode toggle */}
+            <div className="flex items-center gap-2">
+              {/* Filter button */}
+              <button
+                onClick={() => setDrawerOpen(true)}
+                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-full font-mono text-[0.65rem] font-medium transition-colors active:scale-95 ${
+                  activeFilterCount > 0
+                    ? "bg-[var(--coral)] text-[var(--void)]"
+                    : "bg-[var(--twilight)] text-[var(--muted)] hover:text-[var(--cream)]"
+                }`}
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                </svg>
+                Filter
+                {activeFilterCount > 0 && (
+                  <span className="ml-0.5 px-1 py-0.5 rounded-full bg-[var(--void)] text-[var(--coral)] text-[0.5rem]">
+                    {activeFilterCount}
+                  </span>
+                )}
+              </button>
 
-            {/* Group by toggle */}
-            <div className="flex items-center gap-1 bg-[var(--twilight)]/50 rounded-full p-0.5">
-              <button
-                onClick={() => onGroupByChange?.("none")}
-                className={`px-2.5 py-1 rounded-full font-mono text-[0.65rem] font-medium transition-colors ${
-                  currentGroupBy === "none"
-                    ? "bg-[var(--cream)] text-[var(--void)]"
-                    : "text-[var(--muted)] hover:text-[var(--cream)]"
-                }`}
-              >
-                List
-              </button>
-              <button
-                onClick={() => onGroupByChange?.("category")}
-                className={`px-2.5 py-1 rounded-full font-mono text-[0.65rem] font-medium transition-colors ${
-                  currentGroupBy === "category"
-                    ? "bg-[var(--cream)] text-[var(--void)]"
-                    : "text-[var(--muted)] hover:text-[var(--cream)]"
-                }`}
-              >
-                By Type
-              </button>
-              <button
-                onClick={() => onGroupByChange?.("neighborhood")}
-                className={`px-2.5 py-1 rounded-full font-mono text-[0.65rem] font-medium transition-colors ${
-                  currentGroupBy === "neighborhood"
-                    ? "bg-[var(--cream)] text-[var(--void)]"
-                    : "text-[var(--muted)] hover:text-[var(--cream)]"
-                }`}
-              >
-                By Hood
-              </button>
+              {/* View mode toggle */}
+              <div className="flex items-center gap-0.5 bg-[var(--twilight)]/50 rounded-full p-0.5">
+                <button
+                  onClick={() => onViewModeChange("type")}
+                  className={`px-2.5 py-1.5 rounded-full font-mono text-[0.65rem] font-medium transition-colors ${
+                    viewMode === "type"
+                      ? "bg-[var(--cream)] text-[var(--void)]"
+                      : "text-[var(--muted)] hover:text-[var(--cream)]"
+                  }`}
+                >
+                  Category
+                </button>
+                <button
+                  onClick={() => onViewModeChange("neighborhood")}
+                  className={`px-2.5 py-1.5 rounded-full font-mono text-[0.65rem] font-medium transition-colors ${
+                    viewMode === "neighborhood"
+                      ? "bg-[var(--cream)] text-[var(--void)]"
+                      : "text-[var(--muted)] hover:text-[var(--cream)]"
+                  }`}
+                >
+                  Hood
+                </button>
+                <button
+                  onClick={() => onViewModeChange("list")}
+                  className={`px-2.5 py-1.5 rounded-full font-mono text-[0.65rem] font-medium transition-colors ${
+                    viewMode === "list"
+                      ? "bg-[var(--cream)] text-[var(--void)]"
+                      : "text-[var(--muted)] hover:text-[var(--cream)]"
+                  }`}
+                >
+                  List
+                </button>
+              </div>
             </div>
 
-            {/* Active filter chips */}
-            {hasFilters && !drawerOpen && (
-              <div className="flex items-center gap-1.5 overflow-x-auto flex-1 scrollbar-hide">
-                {selectedTypes.map((type) => (
-                  <button
-                    key={type}
-                    onClick={() => toggleType(type)}
-                    className="flex items-center gap-1 px-2 py-1 rounded-full bg-[var(--twilight)] text-[0.65rem] font-mono font-medium text-[var(--cream)] whitespace-nowrap"
-                  >
-                    <CategoryIcon type={type} size={10} />
-                    {getCategoryLabel(type)}
-                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-                ))}
-                {selectedNeighborhoods.map((hood) => (
-                  <button
-                    key={hood}
-                    onClick={() => toggleNeighborhood(hood)}
-                    className="flex items-center gap-1 px-2 py-1 rounded-full bg-[var(--gold)] text-[0.65rem] font-mono font-medium text-[var(--void)] whitespace-nowrap"
-                  >
-                    {hood}
-                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-                ))}
-                {selectedVibes.map((vibe) => (
-                  <button
-                    key={vibe}
-                    onClick={() => toggleVibe(vibe)}
-                    className="flex items-center gap-1 px-2 py-1 rounded-full bg-[var(--rose)] text-[0.65rem] font-mono font-medium text-[var(--void)] whitespace-nowrap"
-                  >
-                    {VIBES.find((v) => v.value === vibe)?.label || vibe}
-                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-                ))}
+            {/* Sort dropdown - only visible in list view */}
+            {viewMode === "list" && (
+              <div className="relative" ref={dropdownRef}>
                 <button
-                  onClick={clearAll}
-                  className="px-2 py-1 font-mono text-[0.65rem] text-[var(--coral)] hover:text-[var(--rose)] whitespace-nowrap"
+                  onClick={() => setSortDropdownOpen(!sortDropdownOpen)}
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-[var(--twilight)] text-[var(--cream)] font-mono text-[0.65rem] font-medium hover:bg-[var(--twilight)]/80 transition-colors"
                 >
-                  Clear all
+                  {currentSort.icon}
+                  <span>{currentSort.label}</span>
+                  <svg
+                    className={`w-3 h-3 transition-transform ${sortDropdownOpen ? "rotate-180" : ""}`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
                 </button>
+
+                {/* Dropdown menu */}
+                {sortDropdownOpen && (
+                  <div className="absolute right-0 mt-1 w-36 rounded-lg bg-[var(--night)] border border-[var(--twilight)] shadow-lg overflow-hidden z-50">
+                    {SORT_OPTIONS.map((option) => (
+                      <button
+                        key={option.value}
+                        onClick={() => {
+                          onSortChange(option.value);
+                          setSortDropdownOpen(false);
+                        }}
+                        className={`w-full flex items-center gap-2 px-3 py-2 font-mono text-xs transition-colors ${
+                          sortBy === option.value
+                            ? "bg-[var(--coral)] text-[var(--void)]"
+                            : "text-[var(--cream)] hover:bg-[var(--twilight)]"
+                        }`}
+                      >
+                        {option.icon}
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </div>
         </div>
       </div>
 
-      {/* Drawer overlay */}
+      {/* Filter Drawer Overlay */}
       {drawerOpen && (
-        <div className="fixed inset-0 z-50 bg-black/60" onClick={() => setDrawerOpen(false)} />
+        <div
+          className="fixed inset-0 z-[1100] bg-black/60 touch-none"
+          onClick={() => setDrawerOpen(false)}
+        />
       )}
 
-      {/* Drawer */}
+      {/* Filter Drawer */}
       <div
-        className={`fixed inset-y-0 left-0 z-50 w-80 max-w-[85vw] bg-[var(--night)] border-r border-[var(--twilight)] transform transition-transform duration-200 ${
+        className={`fixed inset-y-0 left-0 z-[1101] w-80 max-w-[85vw] border-r border-[var(--twilight)] transform transition-transform duration-200 ${
           drawerOpen ? "translate-x-0" : "-translate-x-full"
         }`}
+        style={{ backgroundColor: "var(--void)" }}
       >
         <div className="flex flex-col h-full">
-          {/* Header */}
+          {/* Drawer Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--twilight)]">
             <span className="font-mono text-sm font-medium text-[var(--cream)]">Filters</span>
-            <button
-              onClick={() => setDrawerOpen(false)}
-              className="p-1 text-[var(--muted)] hover:text-[var(--cream)]"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
+            <div className="flex items-center gap-2">
+              {activeFilterCount > 0 && (
+                <button
+                  onClick={clearAllFilters}
+                  className="font-mono text-xs text-[var(--coral)] hover:text-[var(--rose)] transition-colors"
+                >
+                  Clear all
+                </button>
+              )}
+              <button
+                onClick={() => setDrawerOpen(false)}
+                className="p-2.5 text-[var(--muted)] hover:text-[var(--cream)] hover:bg-[var(--twilight)]/50 rounded-lg transition-colors active:scale-95"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
           </div>
 
-          {/* Content */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-5">
-            {/* Spot Types */}
-            <div>
-              <div className="font-mono text-[0.6rem] text-[var(--muted)] uppercase tracking-wider mb-2">Type</div>
+          {/* Drawer Content */}
+          <div ref={drawerContentRef} className="flex-1 overflow-y-auto overscroll-contain">
+            {/* Type Filter */}
+            <FilterSection
+              title="Type"
+              activeFilters={currentTypes}
+              expanded={expandedSections.has("type")}
+              onToggle={() => toggleSection("type")}
+            >
               <div className="flex flex-wrap gap-1.5">
-                {SPOT_TYPES.map((type) => {
-                  const isActive = selectedTypes.includes(type.value);
+                {Object.entries(SPOT_TYPES).map(([value, config]) => {
+                  const isActive = currentTypes.includes(value);
                   return (
                     <button
-                      key={type.value}
-                      onClick={() => toggleType(type.value)}
+                      key={value}
+                      onClick={() => toggleType(value)}
                       className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full font-mono text-xs font-medium transition-all ${
                         isActive
                           ? "bg-[var(--cream)] text-[var(--void)]"
@@ -254,80 +381,87 @@ export default function SpotFilterBar({ onGroupByChange, currentGroupBy = "none"
                       }`}
                     >
                       <CategoryIcon
-                        type={type.value}
+                        type={value}
                         size={12}
-                        style={{ color: isActive ? "var(--void)" : CATEGORY_CONFIG[type.value as keyof typeof CATEGORY_CONFIG]?.color }}
+                        style={{ color: isActive ? "var(--void)" : CATEGORY_CONFIG[value as CategoryType]?.color }}
+                        glow={isActive ? "none" : "subtle"}
                       />
-                      {type.label}
+                      {config.label}
                     </button>
                   );
                 })}
               </div>
-            </div>
+            </FilterSection>
 
-            {/* Neighborhoods */}
-            <div>
-              <div className="font-mono text-[0.6rem] text-[var(--muted)] uppercase tracking-wider mb-2">Neighborhood</div>
+            {/* Neighborhood Filter */}
+            <FilterSection
+              title="Neighborhood"
+              activeFilters={currentHoods}
+              expanded={expandedSections.has("neighborhood")}
+              onToggle={() => toggleSection("neighborhood")}
+            >
               <div className="flex flex-wrap gap-1.5">
-                {PREFERENCE_NEIGHBORHOODS.map((hood) => (
-                  <button
-                    key={hood}
-                    onClick={() => toggleNeighborhood(hood)}
-                    className={`px-2.5 py-1 rounded-full font-mono text-xs font-medium transition-colors ${
-                      selectedNeighborhoods.includes(hood)
-                        ? "bg-[var(--gold)] text-[var(--void)]"
-                        : "bg-[var(--twilight)] text-[var(--muted)] hover:text-[var(--cream)]"
-                    }`}
-                  >
-                    {hood}
-                  </button>
-                ))}
+                {NEIGHBORHOODS.map((hood) => {
+                  const isActive = currentHoods.includes(hood);
+                  return (
+                    <button
+                      key={hood}
+                      onClick={() => toggleHood(hood)}
+                      className={`px-2.5 py-1 rounded-full font-mono text-xs font-medium transition-colors ${
+                        isActive
+                          ? "bg-[var(--neon-cyan)] text-[var(--void)]"
+                          : "bg-[var(--twilight)] text-[var(--muted)] hover:text-[var(--cream)]"
+                      }`}
+                    >
+                      {hood}
+                    </button>
+                  );
+                })}
               </div>
-            </div>
+            </FilterSection>
 
-            {/* Vibes */}
-            <div>
-              <div className="font-mono text-[0.6rem] text-[var(--muted)] uppercase tracking-wider mb-2">Vibe</div>
-              {Object.entries(VIBE_GROUPS).map(([group, vibes]) => (
-                <div key={group} className="mb-3">
-                  <div className="font-mono text-[0.55rem] text-[var(--muted)] mb-1.5">{group}</div>
+            {/* Vibes Filter */}
+            <FilterSection
+              title="Vibes"
+              activeFilters={currentVibes}
+              expanded={expandedSections.has("vibes")}
+              onToggle={() => toggleSection("vibes")}
+            >
+              {Object.entries(VIBE_GROUPS).map(([groupName, vibes]) => (
+                <div key={groupName} className="mb-3 last:mb-0">
+                  <div className="font-mono text-[0.55rem] text-[var(--muted)] mb-1.5">{groupName}</div>
                   <div className="flex flex-wrap gap-1.5">
-                    {vibes.map((vibe) => (
-                      <button
-                        key={vibe.value}
-                        onClick={() => toggleVibe(vibe.value)}
-                        className={`px-2.5 py-1 rounded-full font-mono text-xs font-medium transition-colors ${
-                          selectedVibes.includes(vibe.value)
-                            ? "bg-[var(--rose)] text-[var(--void)]"
-                            : "bg-[var(--twilight)] text-[var(--muted)] hover:text-[var(--cream)]"
-                        }`}
-                      >
-                        {vibe.label}
-                      </button>
-                    ))}
+                    {vibes.map((vibe) => {
+                      const isActive = currentVibes.includes(vibe.value);
+                      return (
+                        <button
+                          key={vibe.value}
+                          onClick={() => toggleVibe(vibe.value)}
+                          className={`px-2.5 py-1 rounded-full font-mono text-xs font-medium transition-colors ${
+                            isActive
+                              ? "bg-[var(--lavender)] text-[var(--void)]"
+                              : "bg-[var(--twilight)] text-[var(--muted)] hover:text-[var(--cream)]"
+                          }`}
+                        >
+                          {vibe.label}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               ))}
-            </div>
+            </FilterSection>
           </div>
 
-          {/* Footer */}
-          {hasFilters && (
-            <div className="px-4 py-3 border-t border-[var(--twilight)] flex gap-2">
-              <button
-                onClick={clearAll}
-                className="flex-1 px-3 py-2 rounded-lg font-mono text-xs font-medium text-[var(--muted)] hover:text-[var(--cream)] border border-[var(--twilight)]"
-              >
-                Clear all
-              </button>
-              <button
-                onClick={() => setDrawerOpen(false)}
-                className="flex-1 px-3 py-2 rounded-lg font-mono text-xs font-medium bg-[var(--coral)] text-[var(--void)]"
-              >
-                Show results
-              </button>
-            </div>
-          )}
+          {/* Drawer Footer */}
+          <div className="px-4 py-3 border-t border-[var(--twilight)]">
+            <button
+              onClick={() => setDrawerOpen(false)}
+              className="w-full py-2.5 rounded-lg bg-[var(--coral)] text-[var(--void)] font-mono text-sm font-medium hover:bg-[var(--rose)] transition-colors active:scale-[0.98]"
+            >
+              Apply Filters
+            </button>
+          </div>
         </div>
       </div>
     </>

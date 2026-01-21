@@ -185,22 +185,30 @@ def find_venue_for_event(title: str, location_text: str) -> dict:
 
 
 def determine_category(title: str) -> tuple[str, Optional[str], list[str]]:
-    """Determine category based on event title."""
+    """Determine category based on event title.
+
+    Note: Piedmont portal only allows these categories:
+    fitness, wellness, community, family, learning, meetup, outdoors
+    """
     title_lower = title.lower()
     base_tags = ["piedmont", "healthcare", "fundraiser", "charity"]
 
     if "golf" in title_lower:
-        return "sports", "golf", base_tags + ["golf", "tournament"]
+        # Golf tournaments are outdoor fundraisers
+        return "outdoors", "golf", base_tags + ["golf", "tournament"]
     if "5k" in title_lower or "race" in title_lower or "run" in title_lower:
         return "fitness", "running", base_tags + ["5k", "running", "race"]
     if "gala" in title_lower or "luminaria" in title_lower:
         return "community", "gala", base_tags + ["gala", "formal", "dinner"]
     if "derby" in title_lower:
-        return "food_drink", "social", base_tags + ["derby", "party"]
+        # Derby parties are community fundraisers
+        return "community", "social", base_tags + ["derby", "party"]
     if "clays" in title_lower or "shooting" in title_lower:
-        return "sports", "shooting", base_tags + ["clay-shooting", "outdoor"]
+        # Clay shooting is an outdoor activity
+        return "outdoors", "shooting", base_tags + ["clay-shooting"]
     if "rocks" in title_lower or "concert" in title_lower or "music" in title_lower:
-        return "music", "concert", base_tags + ["concert", "live-music"]
+        # Concerts at fundraisers are community events
+        return "community", "concert", base_tags + ["concert", "live-music"]
 
     return "community", "fundraiser", base_tags
 

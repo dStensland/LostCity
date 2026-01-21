@@ -1,11 +1,12 @@
 "use client";
 
-import { useRef, useState, useEffect } from "react";
+import { useRef, useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { format, parseISO, isToday, isTomorrow, formatDistanceToNow } from "date-fns";
 import CategoryIcon, { getCategoryColor, CATEGORY_CONFIG, type CategoryType } from "../CategoryIcon";
 import { formatTime } from "@/lib/formats";
 import { usePortal } from "@/lib/portal-context";
+import AtlantaSkyline from "../AtlantaSkyline";
 
 // Types
 export type FeedEvent = {
@@ -128,8 +129,8 @@ function getSeeAllUrl(section: FeedSectionData, portalSlug: string): string {
 export default function FeedSection({ section, isFirst }: Props) {
   const { portal } = usePortal();
 
-  // Hide images for portals without good image data
-  const hideImages = portal.slug === "piedmont";
+  // Hide images can be configured per-portal via settings.feed.hide_images
+  const hideImages = portal.settings?.feed?.hide_images === true;
 
   // Render based on block type
   switch (section.block_type) {
@@ -241,35 +242,43 @@ function SocialProofBadge({ count, variant = "default" }: { count: number; varia
 function HeroBanner({ section, portalSlug, hideImages }: { section: FeedSectionData; portalSlug: string; hideImages?: boolean }) {
   const event = section.events[0];
 
+  // Don't render hero if no event
   if (!event) {
     return null;
   }
 
+  const hasImage = !hideImages && event.image_url;
   const categoryColor = event.category ? getCategoryColor(event.category) : "var(--coral)";
 
   return (
     <section className="mb-10">
       <Link
-        href={`/events/${event.id}`}
+        href={`/${portalSlug}/events/${event.id}`}
         className="block relative rounded-2xl overflow-hidden group"
         aria-label={`Featured event: ${event.title}`}
       >
-        {/* Background - use brand color gradient when hiding images */}
-        <div
-          className={`absolute inset-0 ${hideImages ? "bg-gradient-to-br from-[var(--coral)] to-[var(--coral)]/80" : "bg-gradient-to-br from-[var(--twilight)] to-[var(--void)]"}`}
-          style={{
-            backgroundImage: !hideImages && event.image_url ? `url(${event.image_url})` : undefined,
-            backgroundSize: "cover",
-            backgroundPosition: "center",
-          }}
-          role="img"
-          aria-label={event.title}
-        />
-        {/* Gradient overlay - lighter when using brand color background */}
-        <div className={`absolute inset-0 ${hideImages ? "bg-gradient-to-t from-black/40 to-transparent" : "bg-gradient-to-t from-black/95 via-black/60 to-black/30"}`} />
+        {/* Background - either image or gradient */}
+        {hasImage ? (
+          <>
+            <div
+              className="absolute inset-0 bg-gradient-to-br from-[var(--twilight)] to-[var(--void)]"
+              style={{
+                backgroundImage: `url(${event.image_url})`,
+                backgroundSize: "cover",
+                backgroundPosition: "center",
+              }}
+              role="img"
+              aria-label={event.title}
+            />
+            {/* Gradient overlay for text readability */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/60 to-black/30" />
+          </>
+        ) : (
+          <div className="absolute inset-0 bg-gradient-to-br from-[var(--twilight)] to-[var(--void)]" />
+        )}
 
         {/* Content */}
-        <div className={`relative p-6 ${hideImages ? "pt-24 sm:pt-32" : "pt-36 sm:pt-44"}`}>
+        <div className="relative p-6 pt-36 sm:pt-44">
           {/* Featured + Category badges */}
           <div className="flex flex-wrap items-center gap-2 mb-3">
             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[var(--gold)] text-[var(--void)] text-xs font-mono font-medium">
@@ -283,7 +292,7 @@ function HeroBanner({ section, portalSlug, hideImages }: { section: FeedSectionD
                 className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-mono font-medium"
                 style={{ backgroundColor: categoryColor, color: "var(--void)" }}
               >
-                <CategoryIcon type={event.category} size={12} style={{ color: "var(--void)" }} />
+                <CategoryIcon type={event.category} size={12} style={{ color: "var(--void)" }} glow="none" />
                 {CATEGORY_CONFIG[event.category as CategoryType]?.label || event.category}
               </span>
             )}
@@ -348,29 +357,42 @@ function EventCards({ section, portalSlug, hideImages }: { section: FeedSectionD
   const itemsPerRow = section.items_per_row || 2;
   const scrollRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
-  const [canScrollRight, setCanScrollRight] = useState(true);
+  const [canScrollRight, setCanScrollRight] = useState(false); // Start false, update after mount
   const [activeIndex, setActiveIndex] = useState(0);
   const cardWidth = 288; // w-72 = 18rem = 288px
   const gap = 12; // gap-3 = 0.75rem = 12px
 
   // Update scroll state and active index
-  const updateScrollState = () => {
+  const updateScrollState = useCallback(() => {
     if (!scrollRef.current) return;
     const { scrollLeft, scrollWidth, clientWidth } = scrollRef.current;
     setCanScrollLeft(scrollLeft > 10);
-    setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 10);
+    // Can scroll right if content is wider than container and not at end
+    setCanScrollRight(scrollWidth > clientWidth && scrollLeft < scrollWidth - clientWidth - 10);
     // Calculate which card is most visible
     const index = Math.round(scrollLeft / (cardWidth + gap));
     setActiveIndex(Math.min(index, section.events.length - 1));
-  };
+  }, [section.events.length]);
 
   useEffect(() => {
     if (isCarousel && scrollRef.current) {
+      // Initial state calculation
       updateScrollState();
-      scrollRef.current.addEventListener("scroll", updateScrollState, { passive: true });
-      return () => scrollRef.current?.removeEventListener("scroll", updateScrollState);
+
+      // Listen to scroll events
+      const el = scrollRef.current;
+      el.addEventListener("scroll", updateScrollState, { passive: true });
+
+      // Listen to resize to recalculate when container size changes
+      const resizeObserver = new ResizeObserver(updateScrollState);
+      resizeObserver.observe(el);
+
+      return () => {
+        el.removeEventListener("scroll", updateScrollState);
+        resizeObserver.disconnect();
+      };
     }
-  }, [isCarousel, section.events.length]);
+  }, [isCarousel, updateScrollState]);
 
   const scroll = (direction: "left" | "right") => {
     if (!scrollRef.current) return;
@@ -451,7 +473,7 @@ function EventCards({ section, portalSlug, hideImages }: { section: FeedSectionD
           }
         >
           {section.events.map((event) => (
-            <EventCard key={event.id} event={event} isCarousel={isCarousel} hideImages={hideImages} />
+            <EventCard key={event.id} event={event} isCarousel={isCarousel} hideImages={hideImages} portalSlug={portalSlug} />
           ))}
         </div>
 
@@ -487,7 +509,7 @@ function EventCards({ section, portalSlug, hideImages }: { section: FeedSectionD
   );
 }
 
-function EventCard({ event, isCarousel, hideImages }: { event: FeedEvent; isCarousel?: boolean; hideImages?: boolean }) {
+function EventCard({ event, isCarousel, hideImages, portalSlug }: { event: FeedEvent; isCarousel?: boolean; hideImages?: boolean; portalSlug?: string }) {
   const categoryColor = event.category ? getCategoryColor(event.category) : null;
   const isPopular = (event.going_count || 0) >= 10;
   const showImage = !hideImages && event.image_url;
@@ -496,46 +518,33 @@ function EventCard({ event, isCarousel, hideImages }: { event: FeedEvent; isCaro
 
   return (
     <Link
-      href={`/events/${event.id}`}
+      href={portalSlug ? `/${portalSlug}/events/${event.id}` : `/events/${event.id}`}
       className={`group flex flex-col rounded-xl overflow-hidden border transition-all hover:border-[var(--coral)]/30 ${
         isCarousel ? "flex-shrink-0 w-72 snap-start" : ""
       } ${isPopular ? "border-[var(--coral)]/20" : "border-[var(--twilight)]"}`}
       style={{ backgroundColor: "var(--card-bg)" }}
     >
-      {/* Image with loading state - only show if images are enabled */}
-      {!hideImages && (
+      {/* Image - only show if there's an actual image available */}
+      {showImage && !imageError && (
         <div className="h-36 bg-[var(--twilight)] relative overflow-hidden rounded-t-xl">
-          {showImage && !imageError && (
-            <>
-              {/* Blur placeholder */}
-              {!imageLoaded && (
-                <div className="absolute inset-0 bg-[var(--twilight)] animate-pulse" />
-              )}
-              {/* Actual image */}
-              <img
-                src={event.image_url!}
-                alt=""
-                className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${
-                  imageLoaded ? "opacity-100" : "opacity-0"
-                }`}
-                onLoad={() => setImageLoaded(true)}
-                onError={() => {
-                  setImageError(true);
-                  setImageLoaded(true);
-                }}
-                loading="lazy"
-              />
-            </>
+          {/* Blur placeholder */}
+          {!imageLoaded && (
+            <div className="absolute inset-0 bg-[var(--twilight)] animate-pulse" />
           )}
-          {(!showImage || imageError) && event.category && (
-            <div className="h-full flex items-center justify-center">
-              <CategoryIcon
-                type={event.category}
-                size={48}
-                style={{ color: categoryColor || "var(--muted)", opacity: 0.2 }}
-              />
-            </div>
-          )}
+          {/* Actual image */}
+          <img
+            src={event.image_url!}
+            alt=""
+            className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${
+              imageLoaded ? "opacity-100" : "opacity-0"
+            }`}
+            onLoad={() => setImageLoaded(true)}
+            onError={() => {
+              setImageError(true);
+              setImageLoaded(true);
+            }}
+            loading="lazy"
+          />
 
           {/* Popular indicator */}
           {isPopular && (
@@ -550,7 +559,7 @@ function EventCard({ event, isCarousel, hideImages }: { event: FeedEvent; isCaro
 
       {/* Content */}
       <div className="flex-1 p-3">
-        {/* Category + Smart Date */}
+        {/* Category + Smart Date + Popular (when no image) */}
         <div className="flex items-center gap-2 mb-1.5">
           {event.category && (
             <CategoryIcon type={event.category} size={12} style={{ color: categoryColor || undefined }} />
@@ -559,6 +568,12 @@ function EventCard({ event, isCarousel, hideImages }: { event: FeedEvent; isCaro
             {getSmartDate(event.start_date)}
             {event.start_time && ` · ${getSmartTime(event.start_date, event.start_time)}`}
           </span>
+          {/* Show popular badge inline when no image */}
+          {isPopular && (!showImage || imageError) && (
+            <span className="ml-auto flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-[var(--coral)] text-[var(--void)] text-[0.55rem] font-mono font-medium">
+              🔥 Popular
+            </span>
+          )}
         </div>
 
         {/* Title */}
@@ -639,6 +654,7 @@ function EventList({ section, portalSlug }: { section: FeedSectionData; portalSl
                   event={event}
                   isAlternate={idx % 2 === 1}
                   showDate={!showDateHeaders}
+                  portalSlug={portalSlug}
                 />
               ))}
             </div>
@@ -649,13 +665,13 @@ function EventList({ section, portalSlug }: { section: FeedSectionData; portalSl
   );
 }
 
-function EventListItem({ event, isAlternate, showDate = true }: { event: FeedEvent; isAlternate?: boolean; showDate?: boolean }) {
+function EventListItem({ event, isAlternate, showDate = true, portalSlug }: { event: FeedEvent; isAlternate?: boolean; showDate?: boolean; portalSlug?: string }) {
   const categoryColor = event.category ? getCategoryColor(event.category) : null;
   const isPopular = (event.going_count || 0) >= 10;
 
   return (
     <Link
-      href={`/events/${event.id}`}
+      href={portalSlug ? `/${portalSlug}/events/${event.id}` : `/events/${event.id}`}
       className={`flex items-center gap-3 px-3 py-3 rounded-lg border transition-all group hover:border-[var(--coral)]/30 ${
         isPopular
           ? "border-[var(--coral)]/20"
@@ -663,8 +679,8 @@ function EventListItem({ event, isAlternate, showDate = true }: { event: FeedEve
             ? "border-transparent"
             : "border-[var(--twilight)]"
       }`}
-      style={{ backgroundColor: isPopular ? "var(--coral-bg, rgba(190, 53, 39, 0.05))" : "var(--card-bg)" }}
       style={{
+        backgroundColor: isPopular ? "var(--coral-bg, rgba(190, 53, 39, 0.05))" : "var(--card-bg)",
         borderLeftWidth: categoryColor ? "3px" : undefined,
         borderLeftColor: categoryColor || undefined,
       }}
@@ -886,8 +902,8 @@ function VenueList({ section, portalSlug }: { section: FeedSectionData; portalSl
             <div
               key={venue.id}
               className="rounded-lg border border-[var(--twilight)] overflow-hidden"
-              style={{ backgroundColor: "var(--card-bg)" }}
               style={{
+                backgroundColor: "var(--card-bg)",
                 borderLeftWidth: categoryColor ? "3px" : undefined,
                 borderLeftColor: categoryColor || undefined,
               }}
@@ -949,7 +965,7 @@ function VenueList({ section, portalSlug }: { section: FeedSectionData; portalSl
                             {group.events.map((event) => (
                               <Link
                                 key={event.id}
-                                href={`/events/${event.id}`}
+                                href={`/${portalSlug}/events/${event.id}`}
                                 className="font-mono text-xs px-2 py-0.5 rounded bg-[var(--twilight)]/40 text-[var(--muted)] hover:bg-[var(--twilight)] hover:text-[var(--cream)] transition-colors"
                               >
                                 {formatTime(event.start_time)}

@@ -50,10 +50,19 @@ export type Portal = {
       spots?: string;
       happening_now?: string;
     };
+    feed?: {
+      hide_images?: boolean;
+      feed_type?: string;
+      featured_section_ids?: string[];
+      items_per_section?: number;
+      default_layout?: string;
+    };
     meta_description?: string;
     show_map?: boolean;
     default_view?: string;
     show_categories?: boolean;
+    /** Enable neon glow on category icons (default: true) */
+    icon_glow?: boolean;
     [key: string]: unknown;
   };
 };

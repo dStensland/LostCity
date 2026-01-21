@@ -521,6 +521,28 @@ export async function getEventsForMap(
 ): Promise<EventWithLocation[]> {
   const today = new Date().toISOString().split("T")[0];
 
+  // PERFORMANCE OPTIMIZATION: Batch all venue ID lookups in parallel
+  // instead of making 3 sequential queries
+  const {
+    searchVenueIds,
+    vibesVenueIds,
+    neighborhoodVenueIds,
+  } = await batchFetchVenueIds({
+    searchTerm: filters.search?.trim() || undefined,
+    vibes: filters.vibes,
+    neighborhoods: filters.neighborhoods,
+  });
+
+  // Early return if vibes filter specified but no matching venues found
+  if (filters.vibes && filters.vibes.length > 0 && vibesVenueIds.length === 0) {
+    return [];
+  }
+
+  // Early return if neighborhoods filter specified but no matching venues found
+  if (filters.neighborhoods && filters.neighborhoods.length > 0 && neighborhoodVenueIds.length === 0) {
+    return [];
+  }
+
   let query = supabase
     .from("events")
     .select(
@@ -551,22 +573,14 @@ export async function getEventsForMap(
     query = query.is("portal_id", null);
   }
 
-  // Apply search filter (includes venue name search)
+  // Apply search filter (includes venue name search) - using batched venue IDs
   if (filters.search && filters.search.trim()) {
-    const rawSearch = filters.search.trim();
-    const escapedSearch = escapePostgrestValue(rawSearch);
+    const escapedSearch = escapePostgrestValue(filters.search.trim());
     const searchTerm = `%${escapedSearch}%`;
 
-    const { data: matchingVenues } = await supabase
-      .from("venues")
-      .select("id")
-      .ilike("name", `%${rawSearch}%`);
-
-    const venueIds = (matchingVenues as { id: number }[] | null)?.map((v) => v.id) || [];
-
-    if (venueIds.length > 0) {
+    if (searchVenueIds.length > 0) {
       query = query.or(
-        `title.ilike.${searchTerm},description.ilike.${searchTerm},venue_id.in.(${venueIds.join(",")})`
+        `title.ilike.${searchTerm},description.ilike.${searchTerm},venue_id.in.(${searchVenueIds.join(",")})`
       );
     } else {
       query = query.or(`title.ilike.${searchTerm},description.ilike.${searchTerm}`);
@@ -585,34 +599,14 @@ export async function getEventsForMap(
     query = query.overlaps("tags", filters.tags);
   }
 
-  // Apply vibes filter (venue attribute) - OR logic
-  if (filters.vibes && filters.vibes.length > 0) {
-    const { data: matchingVenues } = await supabase
-      .from("venues")
-      .select("id")
-      .overlaps("vibes", filters.vibes);
-
-    const venueIds = (matchingVenues as { id: number }[] | null)?.map((v) => v.id) || [];
-    if (venueIds.length > 0) {
-      query = query.in("venue_id", venueIds);
-    } else {
-      return [];
-    }
+  // Apply vibes filter - using batched venue IDs
+  if (filters.vibes && filters.vibes.length > 0 && vibesVenueIds.length > 0) {
+    query = query.in("venue_id", vibesVenueIds);
   }
 
-  // Apply neighborhoods filter - OR logic
-  if (filters.neighborhoods && filters.neighborhoods.length > 0) {
-    const { data: matchingVenues } = await supabase
-      .from("venues")
-      .select("id")
-      .in("neighborhood", filters.neighborhoods);
-
-    const venueIds = (matchingVenues as { id: number }[] | null)?.map((v) => v.id) || [];
-    if (venueIds.length > 0) {
-      query = query.in("venue_id", venueIds);
-    } else {
-      return [];
-    }
+  // Apply neighborhoods filter - using batched venue IDs
+  if (filters.neighborhoods && filters.neighborhoods.length > 0 && neighborhoodVenueIds.length > 0) {
+    query = query.in("venue_id", neighborhoodVenueIds);
   }
 
   if (filters.is_free) {
@@ -876,7 +870,7 @@ export async function getVenuesWithEvents(): Promise<VenueWithCount[]> {
 // Get search suggestions for autocomplete
 export type SearchSuggestion = {
   text: string;
-  type: "venue" | "event" | "neighborhood";
+  type: "venue" | "event" | "neighborhood" | "organizer";
 };
 
 export async function getSearchSuggestions(prefix: string): Promise<SearchSuggestion[]> {
@@ -885,7 +879,7 @@ export async function getSearchSuggestions(prefix: string): Promise<SearchSugges
   const searchTerm = `${prefix}%`;
   const today = new Date().toISOString().split("T")[0];
 
-  const [venueResult, eventResult, neighborhoodResult] = await Promise.all([
+  const [venueResult, eventResult, neighborhoodResult, producerResult] = await Promise.all([
     supabase.from("venues").select("name").ilike("name", searchTerm).limit(3),
     supabase
       .from("events")
@@ -899,6 +893,12 @@ export async function getSearchSuggestions(prefix: string): Promise<SearchSugges
       .ilike("neighborhood", searchTerm)
       .not("neighborhood", "is", null)
       .limit(3),
+    supabase
+      .from("event_producers")
+      .select("name")
+      .ilike("name", searchTerm)
+      .eq("hidden", false)
+      .limit(2),
   ]);
 
   const suggestions: SearchSuggestion[] = [];
@@ -908,6 +908,14 @@ export async function getSearchSuggestions(prefix: string): Promise<SearchSugges
   for (const v of venues) {
     if (!suggestions.some((s) => s.text === v.name)) {
       suggestions.push({ text: v.name, type: "venue" });
+    }
+  }
+
+  // Add organizers (producers)
+  const producers = (producerResult.data as { name: string }[] | null) || [];
+  for (const p of producers) {
+    if (!suggestions.some((s) => s.text === p.name)) {
+      suggestions.push({ text: p.name, type: "organizer" });
     }
   }
 
@@ -1256,6 +1264,93 @@ export async function enrichEventsWithSocialProof(
       recommendation_count: eventCounts?.recommendations || 0,
     };
   });
+}
+
+// ============================================================================
+// DYNAMIC FILTER AVAILABILITY
+// ============================================================================
+
+export interface AvailableFilter {
+  filter_type: string;
+  filter_value: string;
+  display_label: string;
+  parent_value: string | null;
+  event_count: number;
+  display_order: number;
+  updated_at?: string;
+}
+
+export interface AvailableFilters {
+  categories: { value: string; label: string; count: number }[];
+  subcategories: Record<string, { value: string; label: string; count: number }[]>;
+  tags: { value: string; label: string; count: number }[];
+  lastUpdated: string | null;
+}
+
+// Fetch available filters that have active events
+export async function getAvailableFilters(): Promise<AvailableFilters> {
+  const { data, error } = await supabase
+    .from("available_filters")
+    .select("*")
+    .order("event_count", { ascending: false });
+
+  if (error || !data) {
+    console.error("Error fetching available filters:", error);
+    // Fall back to static filters
+    return {
+      categories: CATEGORIES.map((c) => ({ ...c, count: 0 })),
+      subcategories: Object.fromEntries(
+        Object.entries(SUBCATEGORIES).map(([k, v]) => [
+          k,
+          v.map((s) => ({ ...s, count: 0 })),
+        ])
+      ),
+      tags: ALL_TAGS.map((t) => ({ ...t, count: 0 })),
+      lastUpdated: null,
+    };
+  }
+
+  const filters = data as AvailableFilter[];
+  const lastUpdated = filters[0]?.updated_at || null;
+
+  // Group by type
+  const categories = filters
+    .filter((f) => f.filter_type === "category")
+    .sort((a, b) => a.display_order - b.display_order)
+    .map((f) => ({
+      value: f.filter_value,
+      label: f.display_label,
+      count: f.event_count,
+    }));
+
+  const subcategoryFilters = filters.filter((f) => f.filter_type === "subcategory");
+  const subcategories: Record<string, { value: string; label: string; count: number }[]> = {};
+  for (const sub of subcategoryFilters) {
+    const parent = sub.parent_value || "other";
+    if (!subcategories[parent]) {
+      subcategories[parent] = [];
+    }
+    subcategories[parent].push({
+      value: sub.filter_value,
+      label: sub.display_label,
+      count: sub.event_count,
+    });
+  }
+
+  const tags = filters
+    .filter((f) => f.filter_type === "tag")
+    .map((f) => ({
+      value: f.filter_value,
+      label: f.display_label,
+      count: f.event_count,
+    }));
+
+  return {
+    categories,
+    subcategories,
+    tags,
+    lastUpdated,
+  };
 }
 
 // Get popular events this week based on RSVPs and recommendations

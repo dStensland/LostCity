@@ -246,6 +246,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     event_record = {
                         "source_id": source_id,
                         "venue_id": venue_id,
+                        "portal_id": portal_id,
                         "title": title,
                         "description": description,
                         "start_date": start_date,

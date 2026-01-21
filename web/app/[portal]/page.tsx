@@ -1,14 +1,16 @@
-import { getFilteredEventsWithSearch, enrichEventsWithSocialProof, getEventsForMap, PRICE_FILTERS, type SearchFilters } from "@/lib/search";
+import { PRICE_FILTERS, type SearchFilters } from "@/lib/search";
 import { getPortalBySlug, DEFAULT_PORTAL } from "@/lib/portal";
 import FilterBar from "@/components/FilterBar";
 import MainNav from "@/components/MainNav";
 import EventList from "@/components/EventList";
 import MapViewWrapper from "@/components/MapViewWrapper";
 import FeedView from "@/components/FeedView";
+import CalendarView from "@/components/CalendarView";
 import GlassHeader from "@/components/GlassHeader";
 import SearchBar from "@/components/SearchBar";
 import PortalSpotsView from "@/components/PortalSpotsView";
 import PortalHappeningNow from "@/components/PortalHappeningNow";
+import PortalCommunityView from "@/components/PortalCommunityView";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 
@@ -16,7 +18,7 @@ export const revalidate = 60;
 
 const PAGE_SIZE = 20;
 
-type ViewMode = "events" | "map" | "feed" | "spots" | "happening-now";
+type ViewMode = "events" | "map" | "calendar" | "feed" | "spots" | "happening-now" | "community";
 
 type Props = {
   params: Promise<{ portal: string }>;
@@ -50,14 +52,16 @@ export default async function PortalPage({ params, searchParams }: Props) {
     notFound();
   }
 
-  // Current view mode
+  // Current view mode - Feed is the default
   const view = searchParamsData.view;
   const viewMode: ViewMode =
     view === "map" ? "map" :
-    view === "feed" ? "feed" :
+    view === "calendar" ? "calendar" :
+    view === "events" ? "events" :
     view === "spots" ? "spots" :
     view === "happening-now" ? "happening-now" :
-    "events";
+    view === "community" ? "community" :
+    "feed";
 
   // Parse price filter
   const priceFilter = PRICE_FILTERS.find(p => p.value === searchParamsData.price);
@@ -87,19 +91,7 @@ export default async function PortalPage({ params, searchParams }: Props) {
     portal_exclusive: portal.portal_type === "business",  // Business portals only show their own events
   };
 
-  // Fetch data based on view mode
-  let events: Awaited<ReturnType<typeof enrichEventsWithSocialProof>> = [];
-  let total = 0;
-  let mapEvents: Awaited<ReturnType<typeof getEventsForMap>> = [];
-
-  if (viewMode === "events") {
-    const { events: rawEvents, total: eventTotal } = await getFilteredEventsWithSearch(filters, 1, PAGE_SIZE);
-    events = await enrichEventsWithSocialProof(rawEvents);
-    total = eventTotal;
-  } else if (viewMode === "map") {
-    mapEvents = await getEventsForMap(filters);
-  }
-
+  // Don't block on data - let views fetch their own data client-side for instant navigation
   const hasActiveFilters = !!(searchParamsData.search || searchParamsData.categories || searchParamsData.subcategories || searchParamsData.tags || searchParamsData.vibes || searchParamsData.neighborhoods || searchParamsData.price || searchParamsData.date || searchParamsData.mood);
 
   return (
@@ -122,7 +114,7 @@ export default async function PortalPage({ params, searchParams }: Props) {
         </div>
       )}
 
-      {(viewMode === "events" || viewMode === "map") && (
+      {(viewMode === "events" || viewMode === "map" || viewMode === "calendar") && (
         <Suspense fallback={<div className="h-10 bg-[var(--night)]" />}>
           <FilterBar variant={viewMode === "map" ? "compact" : "full"} />
         </Suspense>
@@ -130,12 +122,19 @@ export default async function PortalPage({ params, searchParams }: Props) {
 
       <main className={viewMode === "map" ? "" : "max-w-3xl mx-auto px-4 pb-16"}>
         {viewMode === "events" && (
-          <Suspense fallback={<div className="py-16 text-center text-[var(--muted)]">Loading...</div>}>
-            <EventList
-              initialEvents={events}
-              initialTotal={total}
-              hasActiveFilters={hasActiveFilters}
+          <EventList
+            hasActiveFilters={hasActiveFilters}
+            portalId={portal.id}
+            portalExclusive={portal.portal_type === "business"}
+            portalSlug={portal.slug}
+          />
+        )}
+
+        {viewMode === "calendar" && (
+          <Suspense fallback={<div className="py-16 text-center text-[var(--muted)]">Loading calendar...</div>}>
+            <CalendarView
               portalId={portal.id}
+              portalSlug={portal.slug}
               portalExclusive={portal.portal_type === "business"}
             />
           </Suspense>
@@ -149,9 +148,10 @@ export default async function PortalPage({ params, searchParams }: Props) {
 
         {viewMode === "map" && (
           <div className="h-[calc(100vh-180px)]">
-            <Suspense fallback={<div className="h-full bg-[var(--night)] animate-pulse" />}>
-              <MapViewWrapper events={mapEvents} />
-            </Suspense>
+            <MapViewWrapper
+              portalId={portal.id}
+              portalExclusive={portal.portal_type === "business"}
+            />
           </div>
         )}
 
@@ -164,6 +164,12 @@ export default async function PortalPage({ params, searchParams }: Props) {
         {viewMode === "happening-now" && (
           <Suspense fallback={<div className="py-16 text-center text-[var(--muted)]">Loading live events...</div>}>
             <PortalHappeningNow portalId={portal.id} portalSlug={portal.slug} isExclusive={portal.portal_type === "business"} />
+          </Suspense>
+        )}
+
+        {viewMode === "community" && (
+          <Suspense fallback={<div className="py-16 text-center text-[var(--muted)]">Loading community...</div>}>
+            <PortalCommunityView portalId={portal.id} portalSlug={portal.slug} portalName={portal.name} />
           </Suspense>
         )}
       </main>

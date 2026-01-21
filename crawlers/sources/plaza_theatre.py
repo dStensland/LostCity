@@ -199,8 +199,14 @@ def extract_movies_for_date(
                         "content_hash": content_hash,
                     }
 
+                    # Series hint for films - movie title is the series
+                    series_hint = {
+                        "series_type": "film",
+                        "series_title": current_movie,
+                    }
+
                     try:
-                        insert_event(event_record)
+                        insert_event(event_record, series_hint=series_hint)
                         events_new += 1
                         logger.info(
                             f"Added: {current_movie} on {date_str} at {start_time}"
@@ -462,8 +468,15 @@ def extract_upcoming_movies(
                 "content_hash": content_hash,
             }
 
+            # Series hint for films - movie title is the series
+            # Special series events (Trash & Trivia, etc.) are recurring_shows
+            series_hint = {
+                "series_type": "recurring_show" if is_special else "film",
+                "series_title": movie_title,
+            }
+
             try:
-                insert_event(event_record)
+                insert_event(event_record, series_hint=series_hint)
                 events_new += 1
                 logger.info(f"Added {page_type}: {movie_title}")
             except Exception as e:

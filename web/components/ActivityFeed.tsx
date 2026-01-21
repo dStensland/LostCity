@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/lib/auth-context";
+import { usePortal } from "@/lib/portal-context";
 import { formatDistanceToNow } from "date-fns";
 
 type ActivityType = "rsvp" | "recommendation" | "follow";
@@ -48,6 +49,7 @@ type ActivityFeedProps = {
 
 export default function ActivityFeed({ limit = 20, className = "" }: ActivityFeedProps) {
   const { user } = useAuth();
+  const { portal } = usePortal();
   const supabase = createClient();
 
   const [activities, setActivities] = useState<ActivityItem[]>([]);
@@ -206,13 +208,13 @@ export default function ActivityFeed({ limit = 20, className = "" }: ActivityFee
   return (
     <div className={`space-y-3 ${className}`}>
       {activities.map((activity) => (
-        <ActivityCard key={activity.id} activity={activity} />
+        <ActivityCard key={activity.id} activity={activity} portalSlug={portal?.slug} />
       ))}
     </div>
   );
 }
 
-function ActivityCard({ activity }: { activity: ActivityItem }) {
+function ActivityCard({ activity, portalSlug }: { activity: ActivityItem; portalSlug?: string }) {
   const timeAgo = formatDistanceToNow(new Date(activity.created_at), { addSuffix: true });
 
   return (
@@ -252,7 +254,7 @@ function ActivityCard({ activity }: { activity: ActivityItem }) {
               {activity.user.display_name || activity.user.username}
             </Link>
             {" "}
-            <ActivityText activity={activity} />
+            <ActivityText activity={activity} portalSlug={portalSlug} />
           </p>
 
           {/* Note for recommendations */}
@@ -277,7 +279,7 @@ function ActivityCard({ activity }: { activity: ActivityItem }) {
   );
 }
 
-function ActivityText({ activity }: { activity: ActivityItem }) {
+function ActivityText({ activity, portalSlug }: { activity: ActivityItem; portalSlug?: string }) {
   switch (activity.activity_type) {
     case "rsvp":
       const status = activity.metadata?.status || "going";
@@ -287,7 +289,7 @@ function ActivityText({ activity }: { activity: ActivityItem }) {
           {statusText}{" "}
           {activity.event ? (
             <Link
-              href={`/events/${activity.event.id}`}
+              href={portalSlug ? `/${portalSlug}/events/${activity.event.id}` : `/events/${activity.event.id}`}
               className="font-medium text-[var(--cream)] hover:text-[var(--coral)] transition-colors"
             >
               {activity.event.title}
@@ -304,7 +306,7 @@ function ActivityText({ activity }: { activity: ActivityItem }) {
           recommended{" "}
           {activity.event ? (
             <Link
-              href={`/events/${activity.event.id}`}
+              href={portalSlug ? `/${portalSlug}/events/${activity.event.id}` : `/events/${activity.event.id}`}
               className="font-medium text-[var(--cream)] hover:text-[var(--coral)] transition-colors"
             >
               {activity.event.title}

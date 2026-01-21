@@ -6,9 +6,29 @@ export const revalidate = 300; // Cache for 5 minutes
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const limit = Math.min(parseInt(searchParams.get("limit") || "6", 10), 20);
+  const portalSlug = searchParams.get("portal");
 
   const today = new Date().toISOString().split("T")[0];
   const nextWeek = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+
+  // Get portal data if specified
+  let portalId: string | null = null;
+  let portalFilters: { categories?: string[] } = {};
+
+  if (portalSlug) {
+    const { data: portal } = await supabase
+      .from("portals")
+      .select("id, filters")
+      .eq("slug", portalSlug)
+      .eq("status", "active")
+      .single();
+
+    const portalData = portal as { id: string; filters: typeof portalFilters } | null;
+    if (portalData) {
+      portalId = portalData.id;
+      portalFilters = portalData.filters || {};
+    }
+  }
 
   try {
     // Get events with RSVP counts for the next week
@@ -23,8 +43,8 @@ export async function GET(request: Request) {
       rsvpMap[rsvp.event_id] = (rsvpMap[rsvp.event_id] || 0) + 1;
     }
 
-    // Get events happening this week
-    const { data: events, error } = await supabase
+    // Build query for events happening this week
+    let query = supabase
       .from("events")
       .select(`
         id,
@@ -36,12 +56,29 @@ export async function GET(request: Request) {
         price_min,
         category,
         image_url,
+        portal_id,
         venue:venues(id, name, neighborhood, slug)
       `)
       .gte("start_date", today)
       .lte("start_date", nextWeek)
       .order("start_date", { ascending: true })
       .limit(100);
+
+    // Apply portal filter if specified
+    if (portalId) {
+      // Show portal-specific events + public events
+      query = query.or(`portal_id.eq.${portalId},portal_id.is.null`);
+
+      // Apply portal category filters
+      if (portalFilters.categories?.length) {
+        query = query.in("category", portalFilters.categories);
+      }
+    } else {
+      // No portal - only show public events
+      query = query.is("portal_id", null);
+    }
+
+    const { data: events, error } = await query;
 
     if (error) {
       console.error("Error fetching trending events:", error);

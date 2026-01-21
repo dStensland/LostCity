@@ -7,13 +7,15 @@ import SpotsContent from "./SpotsContent";
 
 export const revalidate = 60;
 
+export type SortOption = "alpha" | "events" | "closest";
+
 type Props = {
   searchParams: Promise<{
     type?: string;
     hood?: string;
-    vibe?: string;
     search?: string;
-    group?: string;
+    view?: string;
+    sort?: string;
   }>;
 };
 
@@ -21,14 +23,14 @@ export default async function SpotsPage({ searchParams }: Props) {
   const params = await searchParams;
   const selectedTypes = params.type?.split(",").filter(Boolean) || [];
   const selectedHoods = params.hood?.split(",").filter(Boolean) || [];
-  const selectedVibes = params.vibe?.split(",").filter(Boolean) || [];
   const searchQuery = params.search || "";
-  const groupBy = (params.group as "none" | "category" | "neighborhood") || "none";
+  const viewMode = (params.view as "list" | "type" | "neighborhood") || "type";
+  const sortBy = (params.sort as SortOption) || "events";
 
-  // For now, pass first type/vibe/hood to the existing function
+  // Fetch all spots (no category filter)
   const spots = await getSpotsWithEventCounts(
     selectedTypes[0] || "all",
-    selectedVibes.join(","),
+    "",
     selectedHoods[0] || "all",
     searchQuery
   );
@@ -44,7 +46,8 @@ export default async function SpotsPage({ searchParams }: Props) {
       <Suspense fallback={<div className="h-12 bg-[var(--night)]" />}>
         <SpotsContent
           spots={spots}
-          initialGroupBy={groupBy}
+          viewMode={viewMode}
+          sortBy={sortBy}
           selectedTypes={selectedTypes}
           selectedHoods={selectedHoods}
           searchQuery={searchQuery}

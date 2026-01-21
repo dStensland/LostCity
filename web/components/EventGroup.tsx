@@ -87,6 +87,8 @@ interface Props {
   title: string;
   subtitle?: string;
   events: EventWithLocation[];
+  portalSlug?: string;
+  skipAnimation?: boolean;
 }
 
 export default function EventGroup({
@@ -94,6 +96,8 @@ export default function EventGroup({
   title,
   subtitle,
   events,
+  portalSlug,
+  skipAnimation,
 }: Props) {
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -107,7 +111,7 @@ export default function EventGroup({
 
   return (
     <div
-      className="rounded-lg border border-[var(--twilight)] mb-2 overflow-hidden"
+      className={`rounded-lg border border-[var(--twilight)] mb-2 overflow-hidden ${skipAnimation ? "" : "animate-fade-in"}`}
       style={{
         borderLeftWidth: categoryColor ? "3px" : undefined,
         borderLeftColor: categoryColor || undefined,
@@ -170,7 +174,7 @@ export default function EventGroup({
               {/* Event title row */}
               <div className="flex items-center gap-2 mb-1">
                 {group.category && (
-                  <CategoryIcon type={group.category} size={12} className="flex-shrink-0 opacity-50" />
+                  <CategoryIcon type={group.category} size={12} className="flex-shrink-0 opacity-50" glow="subtle" />
                 )}
                 <span className="text-sm text-[var(--cream)] truncate">{group.title}</span>
               </div>
@@ -180,7 +184,7 @@ export default function EventGroup({
                 {group.events.map((event) => (
                   <Link
                     key={event.id}
-                    href={`/events/${event.id}`}
+                    href={portalSlug ? `/${portalSlug}/events/${event.id}` : `/events/${event.id}`}
                     className="font-mono text-xs px-2 py-0.5 rounded bg-[var(--twilight)]/40 text-[var(--muted)] hover:bg-[var(--twilight)] hover:text-[var(--cream)] transition-colors"
                   >
                     {formatTime(event.start_time)}

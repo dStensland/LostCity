@@ -3,12 +3,14 @@
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { usePathname } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import NotificationDropdown from "./NotificationDropdown";
 import ShareInviteLink from "./ShareInviteLink";
 
 export default function UserMenu() {
   const { user, profile, loading, signOut } = useAuth();
+  const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
   const [imgError, setImgError] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -34,9 +36,12 @@ export default function UserMenu() {
 
   // Not logged in
   if (!user) {
+    const loginUrl = pathname && pathname !== "/"
+      ? `/auth/login?redirect=${encodeURIComponent(pathname)}`
+      : "/auth/login";
     return (
       <Link
-        href="/auth/login"
+        href={loginUrl}
         className="font-mono text-[0.7rem] font-medium text-[var(--muted)] uppercase tracking-wide hover:text-[var(--cream)] transition-colors"
       >
         Sign in
@@ -85,17 +90,17 @@ export default function UserMenu() {
         {/* Dropdown trigger */}
         <button
           onClick={() => setIsOpen(!isOpen)}
-          className="ml-1 p-1 text-[var(--muted)] hover:text-[var(--cream)] transition-colors focus:outline-none"
+          className="ml-0.5 p-2 -mr-2 text-[var(--muted)] hover:text-[var(--cream)] hover:bg-[var(--twilight)]/50 rounded-lg transition-colors focus:outline-none active:scale-95"
           aria-label="User menu"
         >
-          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
           </svg>
         </button>
 
       {/* Dropdown menu */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-48 py-1 bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg shadow-lg z-50">
+        <div className="absolute right-0 top-full mt-2 w-48 py-1 bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg shadow-lg z-50">
           <div className="px-4 py-2 border-b border-[var(--twilight)]">
             <p className="font-mono text-sm text-[var(--cream)]">
               {profile?.display_name || profile?.username}

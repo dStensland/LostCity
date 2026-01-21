@@ -109,7 +109,7 @@ export default function GlassHeader({ portalSlug = "atlanta", portalName = "Atla
         <div className="relative sm:hidden" ref={mobileMenuRef}>
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="p-1.5 text-[var(--muted)] hover:text-[var(--cream)] transition-colors"
+            className="p-2.5 -mr-2 text-[var(--muted)] hover:text-[var(--cream)] hover:bg-[var(--twilight)]/50 rounded-lg transition-colors active:scale-95"
             aria-expanded={mobileMenuOpen}
             aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
           >

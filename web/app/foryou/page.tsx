@@ -8,6 +8,7 @@ import ActivityFeed from "@/components/ActivityFeed";
 import CategoryIcon from "@/components/CategoryIcon";
 import Image from "next/image";
 import { useAuth } from "@/lib/auth-context";
+import { usePortal } from "@/lib/portal-context";
 import { format, parseISO } from "date-fns";
 import { formatTime } from "@/lib/formats";
 
@@ -68,6 +69,7 @@ type TrendingEvent = {
 export default function ForYouPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
+  const { portal } = usePortal();
 
   const [tab, setTab] = useState<FeedTab>("events");
   const [events, setEvents] = useState<Event[]>([]);
@@ -81,10 +83,13 @@ export default function ForYouPage() {
     try {
       setError(null);
 
+      // Build portal-aware URLs
+      const portalParam = portal.slug !== "atlanta" ? `&portal=${portal.slug}` : "";
+
       // Fetch both in parallel
       const [feedRes, trendingRes] = await Promise.all([
-        fetch("/api/feed?limit=20", { signal }),
-        fetch("/api/trending?limit=6", { signal }),
+        fetch(`/api/feed?limit=20${portalParam}`, { signal }),
+        fetch(`/api/trending?limit=6${portalParam}`, { signal }),
       ]);
 
       if (!feedRes.ok) {
@@ -110,7 +115,7 @@ export default function ForYouPage() {
         setLoading(false);
       }
     }
-  }, []);
+  }, [portal.slug]);
 
   useEffect(() => {
     // Don't do anything while auth is loading

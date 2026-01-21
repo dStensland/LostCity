@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/lib/auth-context";
+import { usePortal } from "@/lib/portal-context";
 import { formatDistanceToNow } from "date-fns";
 
 type ActivityItem = {
@@ -32,6 +33,7 @@ type ActivityItem = {
 
 export default function HomeFriendsActivity() {
   const { user } = useAuth();
+  const { portal } = usePortal();
   const supabase = createClient();
 
   const [activities, setActivities] = useState<ActivityItem[]>([]);
@@ -174,7 +176,7 @@ export default function HomeFriendsActivity() {
               {" "}
               {activity.event && (
                 <Link
-                  href={`/events/${activity.event.id}`}
+                  href={portal?.slug ? `/${portal.slug}/events/${activity.event.id}` : `/events/${activity.event.id}`}
                   className="text-[var(--cream)] hover:text-[var(--coral)] transition-colors"
                 >
                   {activity.event.title}
