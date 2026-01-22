@@ -14,6 +14,7 @@ from playwright.sync_api import sync_playwright
 
 from db import get_or_create_venue, insert_event, find_event_by_hash
 from dedupe import generate_content_hash
+from utils import extract_images_from_page
 
 logger = logging.getLogger(__name__)
 
@@ -84,6 +85,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
             page.goto(EVENTS_URL, wait_until="domcontentloaded", timeout=30000)
             page.wait_for_timeout(2000)
 
+            # Extract images from page
+            image_map = extract_images_from_page(page)
+
             # EAV Market: Thursdays 4-8pm, March 26 - Nov 19, 2026
             # Generate dates for current and next year's season
             current_year = datetime.now().year
@@ -135,7 +139,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "is_free": True,
                         "source_url": EVENTS_URL,
                         "ticket_url": None,
-                        "image_url": None,
+                        "image_url": image_map.get(title),
                         "raw_text": f"EAV Farmers Market - {start_date_str} 4-8pm",
                         "extraction_confidence": 0.95,
                         "is_recurring": True,

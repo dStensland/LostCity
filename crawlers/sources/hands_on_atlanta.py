@@ -17,6 +17,7 @@ import requests
 from utils import slugify, validate_event_time
 from db import get_or_create_venue, insert_event, find_event_by_hash
 from dedupe import generate_content_hash
+from utils import extract_images_from_page
 
 logger = logging.getLogger(__name__)
 
@@ -109,6 +110,9 @@ def fetch_opportunities_via_page() -> list[dict]:
                 timeout=30000,
             )
             page.wait_for_timeout(5000)  # Wait for JS to render
+
+            # Extract images from page
+            image_map = extract_images_from_page(page)
 
             # Get all opportunity cards - they have 'opportunity' in the class
             cards = page.query_selector_all("[class*='opportunity']")
@@ -356,7 +360,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 "is_free": True,
                 "source_url": parsed["source_url"],
                 "ticket_url": parsed["source_url"],
-                "image_url": None,
+                "image_url": image_map.get(parsed),
                 "raw_text": None,
                 "extraction_confidence": 0.80,
                 "is_recurring": False,

@@ -16,6 +16,7 @@ from playwright.sync_api import sync_playwright, Page
 
 from db import get_or_create_venue, insert_event, find_event_by_hash, get_portal_id_by_slug
 from dedupe import generate_content_hash
+from utils import extract_images_from_page
 
 # Portal ID for Piedmont-exclusive events
 PORTAL_SLUG = "piedmont"
@@ -168,6 +169,9 @@ def crawl_category(page: Page, category: str, source_id: int, portal_id: str) ->
         page.click(f"text={category}", timeout=10000)
         page.wait_for_timeout(3000)
 
+        # Extract images from page
+        image_map = extract_images_from_page(page)
+
         # Wait for results to load
         page.wait_for_selector("text=Classes", timeout=10000)
 
@@ -319,7 +323,7 @@ def crawl_category(page: Page, category: str, source_id: int, portal_id: str) ->
                 "is_free": is_free,
                 "source_url": CLASSES_URL,
                 "ticket_url": CLASSES_URL,
-                "image_url": None,
+                "image_url": image_map.get(title),
                 "raw_text": f"{title} - {start_date}",
                 "extraction_confidence": 0.85,
                 "is_recurring": False,

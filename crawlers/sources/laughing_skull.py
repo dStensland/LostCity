@@ -14,6 +14,7 @@ from playwright.sync_api import sync_playwright
 
 from db import get_or_create_venue, insert_event, find_event_by_hash
 from dedupe import generate_content_hash
+from utils import extract_images_from_page
 
 logger = logging.getLogger(__name__)
 
@@ -105,6 +106,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
             logger.info(f"Fetching Laughing Skull: {BASE_URL}")
             page.goto(BASE_URL, wait_until="domcontentloaded", timeout=30000)
             page.wait_for_timeout(3000)
+
+            # Extract images from page
+            image_map = extract_images_from_page(page)
 
             venue_id = get_or_create_venue(VENUE_DATA)
 
@@ -199,7 +203,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     "is_free": False,
                     "source_url": BASE_URL,
                     "ticket_url": None,
-                    "image_url": None,
+                    "image_url": image_map.get(title),
                     "raw_text": None,
                     "extraction_confidence": 0.90,
                     "is_recurring": False,

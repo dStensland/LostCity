@@ -14,6 +14,7 @@ from playwright.sync_api import sync_playwright, Page
 
 from db import get_or_create_venue, insert_event, find_event_by_hash
 from dedupe import generate_content_hash
+from utils import extract_images_from_page
 
 logger = logging.getLogger(__name__)
 
@@ -525,6 +526,9 @@ def select_midtown_location(page: Page) -> bool:
                 if loc_btn.is_visible(timeout=2000):
                     loc_btn.click()
                     page.wait_for_timeout(1500)
+
+                    # Extract images from page
+                    image_map = extract_images_from_page(page)
                     break
             except Exception:
                 continue

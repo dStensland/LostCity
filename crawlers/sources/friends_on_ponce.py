@@ -18,6 +18,7 @@ from playwright.sync_api import sync_playwright
 
 from db import get_or_create_venue, insert_event, find_event_by_hash
 from dedupe import generate_content_hash
+from utils import extract_images_from_page
 
 logger = logging.getLogger(__name__)
 
@@ -67,6 +68,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
             page.goto(EVENTS_URL, wait_until="domcontentloaded", timeout=30000)
             page.wait_for_timeout(2000)
 
+            # Extract images from page
+            image_map = extract_images_from_page(page)
+
             # Generate next 3 months of recurring events
             current_date = datetime.now()
             end_date = current_date + timedelta(days=90)
@@ -103,7 +107,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "is_free": True,
                         "source_url": EVENTS_URL,
                         "ticket_url": None,
-                        "image_url": None,
+                        "image_url": image_map.get(title),
                         "raw_text": f"{title} at Friends on Ponce - {start_date_str}",
                         "extraction_confidence": 0.90,
                         "is_recurring": True,
@@ -155,7 +159,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "is_free": True,
                         "source_url": EVENTS_URL,
                         "ticket_url": None,
-                        "image_url": None,
+                        "image_url": image_map.get(title),
                         "raw_text": f"{title} at Friends on Ponce - {start_date_str}",
                         "extraction_confidence": 0.85,
                         "is_recurring": True,
@@ -212,7 +216,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "is_free": True,
                         "source_url": f"{BASE_URL}/events",
                         "ticket_url": None,
-                        "image_url": None,
+                        "image_url": image_map.get(title),
                         "raw_text": f"{title} at Friends on Ponce - {start_date_str}",
                         "extraction_confidence": 0.90,
                         "is_recurring": True,

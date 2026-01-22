@@ -20,6 +20,7 @@ from playwright.sync_api import sync_playwright, Page
 
 from db import get_or_create_venue, insert_event, find_event_by_hash
 from dedupe import generate_content_hash
+from utils import extract_images_from_page
 
 logger = logging.getLogger(__name__)
 
@@ -433,6 +434,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 try:
                     page.goto(url, wait_until="domcontentloaded", timeout=30000)
                     page.wait_for_timeout(3000)
+
+                    # Extract images from page
+                    image_map = extract_images_from_page(page)
 
                     # Scroll to load more content
                     for _ in range(5):

@@ -28,6 +28,7 @@ from playwright.sync_api import sync_playwright
 
 from db import get_or_create_venue, insert_event, find_event_by_hash, get_portal_id_by_slug
 from dedupe import generate_content_hash
+from utils import extract_images_from_page
 
 # Portal ID for Piedmont-exclusive events
 PORTAL_SLUG = "piedmont"
@@ -309,6 +310,9 @@ def crawl_fayetteville_calendar(venue_data: dict, source_id: int, portal_id: Opt
             page.goto(calendar_url, wait_until="domcontentloaded", timeout=90000)
             page.wait_for_timeout(8000)
 
+            # Extract images from page
+            image_map = extract_images_from_page(page)
+
             # Accept cookies if prompted
             try:
                 page.click("text=Accept", timeout=3000)
@@ -461,7 +465,7 @@ def crawl_fayetteville_calendar(venue_data: dict, source_id: int, portal_id: Opt
                             "is_free": False,
                             "source_url": calendar_url,
                             "ticket_url": venue_data["website"],
-                            "image_url": None,
+                            "image_url": image_map.get(class_name),
                             "raw_text": f"{class_name} - {start_date} {start_time}",
                             "extraction_confidence": 0.85,
                             "is_recurring": True,

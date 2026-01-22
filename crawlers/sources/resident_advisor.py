@@ -14,6 +14,7 @@ from playwright.sync_api import sync_playwright
 
 from db import get_or_create_venue, insert_event, find_event_by_hash
 from dedupe import generate_content_hash
+from utils import extract_images_from_page
 
 logger = logging.getLogger(__name__)
 
@@ -85,6 +86,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
             logger.info(f"Fetching Resident Advisor: {EVENTS_URL}")
             page.goto(EVENTS_URL, wait_until="networkidle", timeout=60000)
             page.wait_for_timeout(5000)  # Extra time for JS rendering
+
+            # Extract images from page
+            image_map = extract_images_from_page(page)
 
             # Scroll to load more events
             for _ in range(3):
@@ -230,7 +234,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "is_free": False,
                         "source_url": event_url,
                         "ticket_url": event_url,
-                        "image_url": None,
+                        "image_url": image_map.get(title),
                         "raw_text": None,
                         "extraction_confidence": 0.75,
                         "is_recurring": False,

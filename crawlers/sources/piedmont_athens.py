@@ -17,6 +17,7 @@ from playwright.sync_api import sync_playwright
 
 from db import get_or_create_venue, insert_event, find_event_by_hash, get_portal_id_by_slug
 from dedupe import generate_content_hash
+from utils import extract_images_from_page
 
 PORTAL_SLUG = "piedmont"
 
@@ -173,6 +174,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
             try:
                 page.goto(ATHENS_CHAPEL_URL, wait_until="domcontentloaded", timeout=30000)
                 page.wait_for_timeout(2000)
+
+                # Extract images from page
+                image_map = extract_images_from_page(page)
                 body_text = page.inner_text("body")
                 logger.info(f"Page loaded, content length: {len(body_text)}")
 
@@ -247,7 +251,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                                                 "is_free": True,
                                                 "source_url": ATHENS_CHAPEL_URL,
                                                 "ticket_url": ATHENS_CHAPEL_URL,
-                                                "image_url": None,
+                                                "image_url": image_map.get(title),
                                                 "raw_text": f"{title} - {start_date}",
                                                 "extraction_confidence": 0.8,
                                                 "is_recurring": False,
@@ -312,7 +316,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     "is_free": True,
                     "source_url": ATHENS_CHAPEL_URL,
                     "ticket_url": ATHENS_CHAPEL_URL,
-                    "image_url": None,
+                    "image_url": image_map.get(title),
                     "raw_text": f"{title} - {start_date}",
                     "extraction_confidence": 0.9,
                     "is_recurring": True,

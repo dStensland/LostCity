@@ -15,6 +15,7 @@ from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeo
 from utils import slugify
 from db import get_or_create_venue, insert_event, find_event_by_hash
 from dedupe import generate_content_hash
+from utils import extract_images_from_page
 
 logger = logging.getLogger(__name__)
 
@@ -141,6 +142,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
             page.goto(EVENTS_URL, wait_until="domcontentloaded", timeout=30000)
             page.wait_for_timeout(5000)
 
+            # Extract images from page
+            image_map = extract_images_from_page(page)
+
             # Scroll to load content
             for _ in range(3):
                 page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
@@ -247,7 +251,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "is_free": True,
                         "source_url": source_url,
                         "ticket_url": None,
-                        "image_url": None,
+                        "image_url": image_map.get(title),
                         "raw_text": None,
                         "extraction_confidence": 0.85,
                         "is_recurring": False,

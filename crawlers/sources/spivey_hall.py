@@ -12,6 +12,7 @@ import requests
 
 from db import get_or_create_venue, insert_event, find_event_by_hash
 from dedupe import generate_content_hash
+from utils import extract_image_url
 
 logger = logging.getLogger(__name__)
 
@@ -207,7 +208,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "is_free": False,
                         "source_url": EVENTS_URL,
                         "ticket_url": BASE_URL,
-                        "image_url": None,
+                        "image_url": extract_image_url(soup) if soup else None,
                         "raw_text": None,
                         "extraction_confidence": 0.80,
                         "is_recurring": False,

@@ -11,6 +11,7 @@ import requests
 
 from db import get_or_create_venue, insert_event, find_event_by_hash
 from dedupe import generate_content_hash
+from utils import extract_image_url
 
 logger = logging.getLogger(__name__)
 
@@ -81,7 +82,7 @@ def generate_annual_events(source_id: int, venue_id: int) -> list[dict]:
             "is_free": False,
             "source_url": BASE_URL,
             "ticket_url": None,
-            "image_url": None,
+            "image_url": extract_image_url(soup) if soup else None,
             "raw_text": "Valentine's Day at Sun Dial",
             "extraction_confidence": 0.90,
             "is_recurring": True,
@@ -112,7 +113,7 @@ def generate_annual_events(source_id: int, venue_id: int) -> list[dict]:
             "is_free": False,
             "source_url": BASE_URL,
             "ticket_url": None,
-            "image_url": None,
+            "image_url": extract_image_url(soup) if soup else None,
             "raw_text": "New Year's Eve at Sun Dial",
             "extraction_confidence": 0.90,
             "is_recurring": True,
