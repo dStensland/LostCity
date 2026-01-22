@@ -7,6 +7,7 @@ import { usePathname } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import NotificationDropdown from "./NotificationDropdown";
 import ShareInviteLink from "./ShareInviteLink";
+import SavedEventsButton from "./SavedEventsButton";
 
 export default function UserMenu() {
   const { user, profile, loading, signOut } = useAuth();
@@ -72,6 +73,9 @@ export default function UserMenu() {
 
   return (
     <div className="flex items-center gap-2">
+      {/* Saved Events */}
+      <SavedEventsButton />
+
       {/* Notifications */}
       <NotificationDropdown />
 

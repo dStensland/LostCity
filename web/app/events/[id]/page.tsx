@@ -22,6 +22,7 @@ import DirectionsDropdown from "@/components/DirectionsDropdown";
 import EventStickyBar from "@/components/EventStickyBar";
 import EventHeroImage from "@/components/EventHeroImage";
 import LinkifyText from "@/components/LinkifyText";
+import ShareEventButton from "@/components/ShareEventButton";
 import { formatTimeSplit, formatPrice } from "@/lib/formats";
 
 export const revalidate = 60;
@@ -433,6 +434,11 @@ export default async function EventPage({ params }: Props) {
                   View Source
                 </a>
               )}
+
+              <ShareEventButton
+                eventId={event.id}
+                eventTitle={event.title}
+              />
             </div>
           </div>
 

@@ -168,7 +168,7 @@ function EventCard({ event, index = 0, skipAnimation = false, portalSlug, friend
           )}
         </div>
 
-        {/* Mobile thumbnail */}
+        {/* Mobile thumbnail (left side) */}
         {hasThumbnail && (
           <LazyImage
             src={event.image_url!}
@@ -180,7 +180,7 @@ function EventCard({ event, index = 0, skipAnimation = false, portalSlug, friend
             onError={() => setThumbnailError(true)}
           />
         )}
-        {/* Fallback thumbnail when image fails */}
+        {/* Mobile fallback thumbnail when image fails */}
         {showThumbnail && event.image_url && thumbnailError && (
           <div
             className="flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden relative sm:hidden border border-[var(--twilight)] flex items-center justify-center"
@@ -221,12 +221,12 @@ function EventCard({ event, index = 0, skipAnimation = false, portalSlug, friend
           {/* Details row */}
           <div className="flex items-center gap-1.5 text-xs text-[var(--muted)] mt-1">
             {event.venue && (
-              <span className="truncate max-w-[40%]">{event.venue.name}</span>
+              <span className="truncate max-w-[40%]" title={event.venue.name}>{event.venue.name}</span>
             )}
             {event.venue?.neighborhood && (
               <>
                 <span className="opacity-40">·</span>
-                <span className="truncate">{event.venue.neighborhood}</span>
+                <span className="truncate" title={event.venue.neighborhood}>{event.venue.neighborhood}</span>
               </>
             )}
             {price && (
@@ -286,6 +286,19 @@ function EventCard({ event, index = 0, skipAnimation = false, portalSlug, friend
             </div>
           )}
         </div>
+
+        {/* Desktop thumbnail (right side) */}
+        {hasThumbnail && (
+          <LazyImage
+            src={event.image_url!}
+            alt=""
+            fill
+            sizes="80px"
+            className="hidden sm:block flex-shrink-0 w-20 h-14 rounded-lg border border-[var(--twilight)] ml-auto"
+            placeholderColor={categoryColor ? `${categoryColor}15` : "var(--night)"}
+            onError={() => setThumbnailError(true)}
+          />
+        )}
       </div>
     </Link>
   );

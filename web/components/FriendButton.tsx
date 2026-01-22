@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/components/Toast";
 
@@ -230,12 +231,33 @@ export default function FriendButton({
   };
 
   const handleUnfriend = async () => {
-    // Unfriend = unfollow mutually (we just unfollow them, they may still follow us)
-    // For simplicity, we'll just change the display and let them know
-    // In reality this would need a dedicated unfriend endpoint
-    setRelationship("following");
-    showToast("Friendship removed");
-    onRelationshipChange?.("following");
+    if (!user) return;
+
+    setActionLoading(true);
+    const supabase = createClient();
+
+    try {
+      // Delete our follow of them - this breaks the mutual friendship
+      const { error } = await supabase
+        .from("follows")
+        .delete()
+        .eq("follower_id", user.id)
+        .eq("followed_user_id", targetUserId);
+
+      if (error) {
+        showToast("Failed to unfriend", "error");
+        return;
+      }
+
+      // They may still follow us, so we're now "followed_by" instead of "friends"
+      setRelationship("followed_by");
+      showToast("Removed from friends");
+      onRelationshipChange?.("followed_by");
+    } catch {
+      showToast("Failed to unfriend", "error");
+    } finally {
+      setActionLoading(false);
+    }
   };
 
   const sizeClasses = {
@@ -268,18 +290,31 @@ export default function FriendButton({
   if (relationship === "friends") {
     return (
       <div className={`flex items-center gap-2 ${className}`}>
-        <span
-          className={`font-mono font-medium rounded-full bg-[var(--neon-green)]/20 text-[var(--neon-green)] ${sizeClasses[size]} flex items-center gap-1.5`}
+        <button
+          onClick={handleUnfriend}
+          disabled={actionLoading}
+          className={`font-mono font-medium rounded-full bg-[var(--neon-green)]/20 text-[var(--neon-green)] hover:bg-[var(--coral)]/20 hover:text-[var(--coral)] transition-all disabled:opacity-50 ${sizeClasses[size]} flex items-center gap-1.5 group`}
+          title="Click to unfriend"
         >
-          <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
-            <path
-              fillRule="evenodd"
-              d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-              clipRule="evenodd"
-            />
-          </svg>
-          Friends
-        </span>
+          {actionLoading ? (
+            <span className="inline-block w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin" />
+          ) : (
+            <>
+              <svg className="w-3.5 h-3.5 group-hover:hidden" fill="currentColor" viewBox="0 0 20 20">
+                <path
+                  fillRule="evenodd"
+                  d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                  clipRule="evenodd"
+                />
+              </svg>
+              <svg className="w-3.5 h-3.5 hidden group-hover:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </>
+          )}
+          <span className="group-hover:hidden">Friends</span>
+          <span className="hidden group-hover:inline">Unfriend</span>
+        </button>
       </div>
     );
   }

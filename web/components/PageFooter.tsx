@@ -1,36 +1,20 @@
 import Link from "next/link";
 import Logo from "@/components/Logo";
-import NewsletterSignup from "@/components/NewsletterSignup";
 
 interface PageFooterProps {
   cityName?: string;
   tagline?: string;
-  showNewsletter?: boolean;
 }
 
 export default function PageFooter({
   cityName = "Atlanta",
   tagline,
-  showNewsletter = true,
 }: PageFooterProps) {
   const currentYear = 2026;
 
   return (
     <footer className="border-t border-[var(--twilight)] bg-[var(--night)]">
       <div className="max-w-3xl mx-auto px-4 py-8">
-        {/* Newsletter signup */}
-        {showNewsletter && (
-          <div className="text-center mb-8 pb-8 border-b border-[var(--twilight)]">
-            <h3 className="font-serif text-[var(--cream)] text-lg italic mb-2">
-              Weekly picks in your inbox
-            </h3>
-            <p className="font-mono text-[0.7rem] text-[var(--muted)] mb-4">
-              Get the best events delivered every Thursday
-            </p>
-            <NewsletterSignup />
-          </div>
-        )}
-
         {/* Logo and tagline */}
         <div className="text-center mb-6">
           <Logo size="md" href={undefined} />

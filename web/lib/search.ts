@@ -501,6 +501,45 @@ export async function getFilteredEventsWithSearch(
 
   let events = data as EventWithLocation[];
 
+  // Compute is_live for each event based on current time
+  const currentMinutes = now.getHours() * 60 + now.getMinutes();
+
+  events = events.map((event) => {
+    // Skip if already marked live by database
+    if (event.is_live) return event;
+
+    // Only today's events can be live
+    if (event.start_date !== today) return event;
+
+    // All-day events are live all day
+    if (event.is_all_day) {
+      return { ...event, is_live: true };
+    }
+
+    // Need start_time to determine if live
+    if (!event.start_time) return event;
+
+    // Parse start time (HH:MM:SS format)
+    const [startH, startM] = event.start_time.split(":").map(Number);
+    const startMinutes = startH * 60 + startM;
+
+    // Parse end time or default to 3 hours after start
+    let endMinutes: number;
+    if (event.end_time) {
+      const [endH, endM] = event.end_time.split(":").map(Number);
+      endMinutes = endH * 60 + endM;
+      // Handle events that go past midnight
+      if (endMinutes < startMinutes) endMinutes += 24 * 60;
+    } else {
+      endMinutes = startMinutes + 180; // Default 3 hours
+    }
+
+    // Check if current time is within event window
+    const isLive = currentMinutes >= startMinutes && currentMinutes <= endMinutes;
+
+    return isLive ? { ...event, is_live: true } : event;
+  });
+
   // Sort by relevance when search is active
   if (filters.search?.trim()) {
     const term = filters.search.trim();
@@ -638,7 +677,34 @@ export async function getEventsForMap(
     return [];
   }
 
-  return data as EventWithLocation[];
+  // Compute is_live for each event based on current time
+  const now = new Date();
+  const currentDate = now.toISOString().split("T")[0];
+  const currentMinutes = now.getHours() * 60 + now.getMinutes();
+
+  const events = (data as EventWithLocation[]).map((event) => {
+    if (event.is_live) return event;
+    if (event.start_date !== currentDate) return event;
+    if (event.is_all_day) return { ...event, is_live: true };
+    if (!event.start_time) return event;
+
+    const [startH, startM] = event.start_time.split(":").map(Number);
+    const startMinutes = startH * 60 + startM;
+
+    let endMinutes: number;
+    if (event.end_time) {
+      const [endH, endM] = event.end_time.split(":").map(Number);
+      endMinutes = endH * 60 + endM;
+      if (endMinutes < startMinutes) endMinutes += 24 * 60;
+    } else {
+      endMinutes = startMinutes + 180;
+    }
+
+    const isLive = currentMinutes >= startMinutes && currentMinutes <= endMinutes;
+    return isLive ? { ...event, is_live: true } : event;
+  });
+
+  return events;
 }
 
 // Fetch categories from database
