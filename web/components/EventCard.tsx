@@ -7,6 +7,8 @@ import type { Event } from "@/lib/supabase";
 import { formatTimeSplit } from "@/lib/formats";
 import CategoryIcon, { getCategoryColor } from "./CategoryIcon";
 import LazyImage from "./LazyImage";
+import SeriesBadge from "./SeriesBadge";
+import type { Frequency, DayOfWeek } from "@/lib/recurrence";
 
 type EventCardEvent = Event & {
   is_live?: boolean;
@@ -17,6 +19,13 @@ type EventCardEvent = Event & {
   category_data?: {
     typical_price_min: number | null;
     typical_price_max: number | null;
+  } | null;
+  series?: {
+    id: string;
+    title: string;
+    series_type: string;
+    frequency?: Frequency;
+    day_of_week?: DayOfWeek;
   } | null;
 };
 
@@ -241,6 +250,18 @@ function EventCard({ event, index = 0, skipAnimation = false, portalSlug, friend
                     {price.text}
                   </span>
                 )}
+              </>
+            )}
+            {/* Series badge */}
+            {event.series && (
+              <>
+                <span className="opacity-40">·</span>
+                <SeriesBadge
+                  seriesType={event.series.series_type}
+                  frequency={event.series.frequency}
+                  dayOfWeek={event.series.day_of_week}
+                  compact
+                />
               </>
             )}
           </div>

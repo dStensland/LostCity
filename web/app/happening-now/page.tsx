@@ -13,6 +13,7 @@ import { SPOT_TYPES, NEIGHBORHOODS, type Spot } from "@/lib/spots";
 const GlassHeader = dynamic(() => import("@/components/GlassHeader"), { ssr: false });
 const MainNav = dynamic(() => import("@/components/MainNav"), { ssr: false });
 const MapViewWrapper = dynamic(() => import("@/components/MapViewWrapper"), { ssr: false });
+const NeighborhoodGrid = dynamic(() => import("@/components/NeighborhoodGrid"), { ssr: false });
 
 // Categories for grouping - focused on open spots
 const CATEGORIES = [
@@ -325,6 +326,19 @@ export default function HappeningNowPage() {
           </div>
         </div>
       </div>
+
+      {/* Neighborhood Grid */}
+      {!showLocationPrompt && (
+        <div className="max-w-3xl mx-auto px-4">
+          <NeighborhoodGrid
+            neighborhoods={NEIGHBORHOODS}
+            events={events}
+            spots={openSpots}
+            selectedNeighborhood={selectedNeighborhood}
+            onSelectNeighborhood={setSelectedNeighborhood}
+          />
+        </div>
+      )}
 
       {/* Map */}
       <div className="h-[250px] border-b border-[var(--twilight)]">

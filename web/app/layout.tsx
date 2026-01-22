@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { Outfit, Instrument_Serif, JetBrains_Mono, Space_Grotesk, Bebas_Neue } from "next/font/google";
 import { AuthProvider } from "@/lib/auth-context";
+import { ThemeProvider } from "@/lib/theme-context";
 import { ToastProvider } from "@/components/Toast";
 import DarkHoursTheme from "@/components/DarkHoursTheme";
 import RainEffect from "@/components/RainEffect";
@@ -65,22 +66,24 @@ export default function RootLayout({
         <link rel="dns-prefetch" href="https://images.unsplash.com" />
       </head>
       <body className={`${outfit.variable} ${instrumentSerif.variable} ${jetbrainsMono.variable} ${spaceGrotesk.variable} ${bebasNeue.variable} antialiased`}>
-        {/* Skip link for keyboard users */}
-        <SkipLink />
-        {/* Navigation progress bar */}
-        <Suspense fallback={null}>
-          <NavigationProgress />
-        </Suspense>
-        {/* Ambient glow effect */}
-        <div className="ambient-glow" aria-hidden="true" />
-        {/* Rain overlay effect */}
-        <RainEffect />
-        {/* Cursor glow effect */}
-        <CursorGlow />
-        <AuthProvider>
-          <DarkHoursTheme />
-          <ToastProvider>{children}</ToastProvider>
-        </AuthProvider>
+        <ThemeProvider>
+          {/* Skip link for keyboard users */}
+          <SkipLink />
+          {/* Navigation progress bar */}
+          <Suspense fallback={null}>
+            <NavigationProgress />
+          </Suspense>
+          {/* Ambient glow effect */}
+          <div className="ambient-glow" aria-hidden="true" />
+          {/* Rain overlay effect */}
+          <RainEffect />
+          {/* Cursor glow effect */}
+          <CursorGlow />
+          <AuthProvider>
+            <DarkHoursTheme />
+            <ToastProvider>{children}</ToastProvider>
+          </AuthProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

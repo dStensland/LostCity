@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import PageHeader from "@/components/PageHeader";
+import { useTheme } from "@/lib/theme-context";
 
 type VisualSettings = {
   rainEnabled: boolean;
@@ -19,6 +20,7 @@ const defaultSettings: VisualSettings = {
 };
 
 export default function AppearancePage() {
+  const { theme, setTheme } = useTheme();
   const [settings, setSettings] = useState<VisualSettings>(defaultSettings);
   const [mounted, setMounted] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -103,6 +105,93 @@ export default function AppearancePage() {
         </div>
 
         <div className="space-y-6">
+          {/* Theme Section */}
+          <section>
+            <h2 className="font-mono text-xs text-[var(--muted)] uppercase tracking-wider mb-4">
+              Theme
+            </h2>
+
+            <div className="grid grid-cols-3 gap-3">
+              {/* Dark Theme Option */}
+              <button
+                onClick={() => setTheme("dark")}
+                className={`relative p-4 rounded-lg border-2 transition-all ${
+                  theme === "dark"
+                    ? "border-[var(--coral)] bg-[var(--dusk)]"
+                    : "border-[var(--twilight)] bg-[var(--dusk)]/50 hover:border-[var(--muted)]"
+                }`}
+              >
+                <div className="flex flex-col items-center gap-2">
+                  <div className="w-10 h-10 rounded-lg bg-[#09090B] border border-[#252530] flex items-center justify-center">
+                    <svg className="w-5 h-5 text-[#FAFAF9]" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M12 3a9 9 0 109 9c0-.46-.04-.92-.1-1.36a5.389 5.389 0 01-4.4 2.26 5.403 5.403 0 01-3.14-9.8c-.44-.06-.9-.1-1.36-.1z" />
+                    </svg>
+                  </div>
+                  <span className="font-mono text-xs text-[var(--cream)]">Dark</span>
+                </div>
+                {theme === "dark" && (
+                  <div className="absolute top-2 right-2">
+                    <svg className="w-4 h-4 text-[var(--coral)]" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z" />
+                    </svg>
+                  </div>
+                )}
+              </button>
+
+              {/* Light Theme Option */}
+              <button
+                onClick={() => setTheme("light")}
+                className={`relative p-4 rounded-lg border-2 transition-all ${
+                  theme === "light"
+                    ? "border-[var(--coral)] bg-[var(--dusk)]"
+                    : "border-[var(--twilight)] bg-[var(--dusk)]/50 hover:border-[var(--muted)]"
+                }`}
+              >
+                <div className="flex flex-col items-center gap-2">
+                  <div className="w-10 h-10 rounded-lg bg-[#FAFAF9] border border-[#D6D3D1] flex items-center justify-center">
+                    <svg className="w-5 h-5 text-[#CA8A04]" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M12 7a5 5 0 100 10 5 5 0 000-10zm0-5a1 1 0 011 1v2a1 1 0 11-2 0V3a1 1 0 011-1zm0 18a1 1 0 011 1v2a1 1 0 11-2 0v-2a1 1 0 011-1zm9-9a1 1 0 011 1h2a1 1 0 110 2h-2a1 1 0 01-1-1zm-18 0a1 1 0 011 1H3a1 1 0 110-2h2a1 1 0 011 1zm15.07-6.93a1 1 0 011.41 0l1.42 1.42a1 1 0 11-1.42 1.41l-1.41-1.41a1 1 0 010-1.42zm-12.14 0a1 1 0 011.41 1.41L5.93 6.9a1 1 0 11-1.42-1.41l1.42-1.42zm12.14 12.14a1 1 0 011.41 1.41l-1.41 1.42a1 1 0 11-1.42-1.42l1.42-1.41zm-12.14 0a1 1 0 011.41 0l-1.41 1.41a1 1 0 11-1.42-1.41l1.42-1.41z" />
+                    </svg>
+                  </div>
+                  <span className="font-mono text-xs text-[var(--cream)]">Light</span>
+                </div>
+                {theme === "light" && (
+                  <div className="absolute top-2 right-2">
+                    <svg className="w-4 h-4 text-[var(--coral)]" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z" />
+                    </svg>
+                  </div>
+                )}
+              </button>
+
+              {/* System Theme Option */}
+              <button
+                onClick={() => setTheme("system")}
+                className={`relative p-4 rounded-lg border-2 transition-all ${
+                  theme === "system"
+                    ? "border-[var(--coral)] bg-[var(--dusk)]"
+                    : "border-[var(--twilight)] bg-[var(--dusk)]/50 hover:border-[var(--muted)]"
+                }`}
+              >
+                <div className="flex flex-col items-center gap-2">
+                  <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#09090B] to-[#FAFAF9] border border-[var(--twilight)] flex items-center justify-center">
+                    <svg className="w-5 h-5 text-[var(--muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                    </svg>
+                  </div>
+                  <span className="font-mono text-xs text-[var(--cream)]">System</span>
+                </div>
+                {theme === "system" && (
+                  <div className="absolute top-2 right-2">
+                    <svg className="w-4 h-4 text-[var(--coral)]" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z" />
+                    </svg>
+                  </div>
+                )}
+              </button>
+            </div>
+          </section>
+
           {/* Atmospheric Effects Section */}
           <section>
             <h2 className="font-mono text-xs text-[var(--muted)] uppercase tracking-wider mb-4">

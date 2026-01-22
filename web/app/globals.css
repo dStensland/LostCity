@@ -77,6 +77,69 @@
   --focus-ring: var(--coral);
 }
 
+/* Light theme */
+[data-theme="light"] {
+  /* Inverted base palette */
+  --void: #FAFAF9;
+  --night: #F5F5F4;
+  --dusk: #E7E5E4;
+  --twilight: #D6D3D1;
+  --muted: #78716C;
+  --soft: #57534E;
+  --cream: #1C1917;
+
+  /* UI colors */
+  --background: var(--void);
+  --foreground: var(--cream);
+
+  /* Card background - light glass effect */
+  --card-bg: rgba(255, 255, 255, 0.8);
+  --card-bg-hover: rgba(255, 255, 255, 0.95);
+
+  /* Adjusted neon colors for light mode - deeper, more saturated */
+  --neon-magenta: #C026D3;
+  --neon-cyan: #0891B2;
+  --neon-amber: #D97706;
+  --neon-green: #059669;
+  --neon-red: #DC2626;
+
+  /* HSL versions for opacity support - light mode */
+  --neon-magenta-hsl: 293 72% 49%;
+  --neon-cyan-hsl: 189 94% 37%;
+  --neon-amber-hsl: 38 92% 43%;
+  --neon-green-hsl: 160 84% 31%;
+  --neon-red-hsl: 0 72% 51%;
+
+  /* Brand colors - slightly adjusted for light mode */
+  --rose: #E11D48;
+  --coral: #E11D48;
+  --coral-light: #F43F5E;
+  --gold: #CA8A04;
+
+  /* Disable grain texture in light mode */
+  --grain-opacity: 0;
+
+  /* Adjusted category colors for light mode - deeper variants */
+  --cat-music: #DB2777;
+  --cat-film: #4F46E5;
+  --cat-comedy: #CA8A04;
+  --cat-theater: #A855F7;
+  --cat-art: #7C3AED;
+  --cat-community: #059669;
+  --cat-food: #EA580C;
+  --cat-sports: #0284C7;
+  --cat-fitness: #0D9488;
+  --cat-nightlife: #C026D3;
+  --cat-family: #7C3AED;
+
+  /* Glass panel adjustments for light mode */
+  --glass-bg: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(250, 250, 249, 0.85));
+  --glass-border: rgba(0, 0, 0, 0.08);
+  --glass-shadow: 0 10px 30px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  --glass-bg-compact: rgba(255, 255, 255, 0.85);
+  --glass-shadow-compact: 0 6px 16px rgba(0, 0, 0, 0.08);
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);

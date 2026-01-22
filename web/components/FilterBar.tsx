@@ -7,6 +7,7 @@ import { PREFERENCE_VIBES, PREFERENCE_NEIGHBORHOODS } from "@/lib/preferences";
 import { MOODS, getMoodById, type MoodId } from "@/lib/moods";
 import CategoryIcon, { CATEGORY_CONFIG, type CategoryType } from "./CategoryIcon";
 import { useFilterPersistence } from "@/hooks/useFilterPersistence";
+import SavedFiltersMenu from "./SavedFiltersMenu";
 
 type FilterBarProps = {
   variant?: "full" | "compact";
@@ -850,6 +851,9 @@ export default function FilterBar({ variant = "full" }: FilterBarProps) {
                 </span>
               )}
             </button>
+
+            {/* Saved filters menu */}
+            <SavedFiltersMenu variant={variant === "compact" ? "compact" : "full"} />
 
             {/* Active filter chips (compact summary) */}
             {hasFilters && !drawerOpen && variant === "full" && (

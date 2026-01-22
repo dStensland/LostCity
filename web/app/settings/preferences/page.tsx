@@ -37,20 +37,25 @@ function PreferencesContent() {
     async function loadPreferences() {
       if (!user) return;
 
-      const { data: prefsData } = await supabase
-        .from("user_preferences")
-        .select("*")
-        .eq("user_id", user.id)
-        .single();
+      try {
+        const { data: prefsData } = await supabase
+          .from("user_preferences")
+          .select("*")
+          .eq("user_id", user.id)
+          .maybeSingle();
 
-      const prefs = prefsData as UserPreferences | null;
-      if (prefs) {
-        setSelectedCategories(prefs.favorite_categories || []);
-        setSelectedNeighborhoods(prefs.favorite_neighborhoods || []);
-        setSelectedVibes(prefs.favorite_vibes || []);
-        setPricePreference(prefs.price_preference || "any");
+        const prefs = prefsData as UserPreferences | null;
+        if (prefs) {
+          setSelectedCategories(prefs.favorite_categories || []);
+          setSelectedNeighborhoods(prefs.favorite_neighborhoods || []);
+          setSelectedVibes(prefs.favorite_vibes || []);
+          setPricePreference(prefs.price_preference || "any");
+        }
+      } catch (err) {
+        console.error("Error loading preferences:", err);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     }
 
     loadPreferences();
