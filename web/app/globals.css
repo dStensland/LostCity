@@ -1516,25 +1516,25 @@ textarea:focus-visible {
 }
 
 .rain-overlay::before {
-  opacity: 0.07;
+  opacity: 0.025;
   background:
     repeating-linear-gradient(-65deg, transparent 0, transparent 8px, #E855A0 8px, #E855A0 9px),
     repeating-linear-gradient(-72deg, transparent 0, transparent 15px, #E855A0 15px, #E855A0 16px),
     repeating-linear-gradient(-58deg, transparent 0, transparent 22px, #E855A0 22px, #E855A0 23px),
     repeating-linear-gradient(-80deg, transparent 0, transparent 12px, #E855A0 12px, #E855A0 13px),
     repeating-linear-gradient(-68deg, transparent 0, transparent 18px, #E855A0 18px, #E855A0 19px);
-  filter: drop-shadow(0 0 3px #E855A0) blur(0.3px);
+  filter: blur(0.3px);
   animation: rain-chaos-1 10s linear infinite;
 }
 
 .rain-overlay::after {
-  opacity: 0.055;
+  opacity: 0.02;
   background:
     repeating-linear-gradient(-55deg, transparent 0, transparent 11px, #E855A0 11px, #E855A0 12px),
     repeating-linear-gradient(-78deg, transparent 0, transparent 20px, #E855A0 20px, #E855A0 21px),
     repeating-linear-gradient(-62deg, transparent 0, transparent 14px, #E855A0 14px, #E855A0 15px),
     repeating-linear-gradient(-85deg, transparent 0, transparent 9px, #E855A0 9px, #E855A0 10px);
-  filter: drop-shadow(0 0 2px #E855A0) blur(0.5px);
+  filter: blur(0.5px);
   animation: rain-chaos-2 13s linear infinite;
 }
 
