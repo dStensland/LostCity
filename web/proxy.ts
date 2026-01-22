@@ -20,7 +20,7 @@ function sanitizeKey(key: string | undefined): string | undefined {
  * - Rewrites root requests from {slug}.lostcity.ai to /{slug} portal page
  * - Other routes (events, collections, etc.) work globally on any subdomain
  */
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   // Create response that will be modified for auth
   let response = NextResponse.next({ request });
 
