@@ -1779,12 +1779,12 @@ textarea:focus-visible {
   right: 5%;
   height: 20px;
   background: linear-gradient(to bottom,
-    var(--reflection-color, rgba(255, 107, 122, 0.12)),
+    var(--reflection-color, rgba(255, 255, 255, 0.04)),
     transparent
   );
   filter: blur(8px);
   transform: scaleY(-0.4);
-  opacity: 0.55;
+  opacity: 0.35;
   pointer-events: none;
   border-radius: 50%;
   transition: all 0.3s ease;
