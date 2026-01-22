@@ -1,6 +1,12 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Disable verbose Fast Refresh logging in development
+  logging: {
+    fetches: {
+      fullUrl: false,
+    },
+  },
   images: {
     remotePatterns: [
       {
