@@ -39,7 +39,7 @@ export default function DarkHoursTheme() {
       --neon-cyan: hsl(185, 100%, 50%);
       --neon-amber: hsl(40, 100%, 58%);
       --neon-green: hsl(145, 95%, 55%);
-      --coral: #E8912D;
+      /* Keep --coral as brand color, use --rose for dark hours accent */
       --rose: #E8912D;
     }
 
