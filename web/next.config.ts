@@ -45,6 +45,18 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "indy-systems.imgix.net",
       },
+      {
+        protocol: "https",
+        hostname: "bunny-wp-pullzone-2v7xwnunut.b-cdn.net",
+      },
+      {
+        protocol: "https",
+        hostname: "funspotamericaatlanta.com",
+      },
+      {
+        protocol: "https",
+        hostname: "**.b-cdn.net",
+      },
     ],
   },
 };
