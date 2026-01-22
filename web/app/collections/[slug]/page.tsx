@@ -63,19 +63,30 @@ async function getCollection(slug: string) {
       user_id,
       visibility,
       is_featured,
-      created_at,
-      owner:profiles!collections_user_id_fkey(username, display_name, avatar_url)
+      created_at
     `)
     .eq("slug", slug)
     .eq("visibility", "public")
     .single();
 
-  if (error) {
-    console.error("Collection fetch error:", error);
+  if (error || !collectionData) return null;
+
+  // Fetch owner profile separately since FK join doesn't work
+  let owner: { username: string; display_name: string | null; avatar_url: string | null } | null = null;
+  if (collectionData.user_id) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: profileData } = await (supabase as any)
+      .from("profiles")
+      .select("username, display_name, avatar_url")
+      .eq("id", collectionData.user_id)
+      .single();
+    owner = profileData;
   }
 
-  const collection = collectionData as CollectionData | null;
-  if (!collection) return null;
+  const collection: CollectionData = {
+    ...collectionData,
+    owner,
+  };
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: items } = await (supabase as any)
