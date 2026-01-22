@@ -22,32 +22,68 @@ type SerendipityEvent = {
 
 type SerendipityType = "hidden_gem" | "try_something_new" | "neighborhood_spotlight" | "free_finds";
 
+// SVG icon paths for serendipity types
+const SerendipityIcon = ({ type, className = "" }: { type: SerendipityType; className?: string }) => {
+  const icons: Record<SerendipityType, { path: string; color: string }> = {
+    hidden_gem: {
+      // Diamond/gem shape
+      path: "M12 2L2 9l10 13 10-13L12 2zm0 3.5L18.5 9 12 18.5 5.5 9 12 5.5z",
+      color: "var(--neon-purple, #a855f7)",
+    },
+    try_something_new: {
+      // Dice/sparkle - combined dice dots pattern
+      path: "M4 4h16v16H4V4zm2 2v12h12V6H6zm3 2a1.5 1.5 0 110 3 1.5 1.5 0 010-3zm6 0a1.5 1.5 0 110 3 1.5 1.5 0 010-3zm-3 3a1.5 1.5 0 110 3 1.5 1.5 0 010-3zm-3 3a1.5 1.5 0 110 3 1.5 1.5 0 010-3zm6 0a1.5 1.5 0 110 3 1.5 1.5 0 010-3z",
+      color: "var(--neon-cyan, #06b6d4)",
+    },
+    neighborhood_spotlight: {
+      // Map pin with spotlight rays
+      path: "M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 110-5 2.5 2.5 0 010 5z",
+      color: "var(--neon-amber, #f59e0b)",
+    },
+    free_finds: {
+      // Gift box with ribbon
+      path: "M20 7h-4.05c.38-.5.63-1.09.73-1.74.08-.52.01-1.04-.21-1.52a2.98 2.98 0 00-1.08-1.18C14.68 2.18 13.78 2 12.87 2c-.85 0-1.69.28-2.39.8L12 4.36l1.52-1.56c.4-.29.88-.44 1.35-.44.52 0 1.02.22 1.37.6.34.36.52.83.52 1.32 0 .56-.22 1.09-.62 1.49L14.54 7H20c1.1 0 2 .9 2 2v2c0 1.1-.9 2-2 2v7c0 1.1-.9 2-2 2H6c-1.1 0-2-.9-2-2v-7c-1.1 0-2-.9-2-2V9c0-1.1.9-2 2-2h5.46l-1.6-1.23c-.4-.4-.62-.93-.62-1.49 0-.49.18-.96.52-1.32.35-.38.85-.6 1.37-.6.47 0 .95.15 1.35.44L12 4.36zM4 9v2h7V9H4zm9 0v2h7V9h-7zm-2 4H6v7h5v-7zm2 0v7h5v-7h-5z",
+      color: "var(--neon-green, #22c55e)",
+    },
+  };
+
+  const { path, color } = icons[type];
+
+  return (
+    <svg
+      className={`${className} icon-neon`}
+      style={{ "--icon-color": color, color } as React.CSSProperties}
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="currentColor"
+    >
+      <path d={path} />
+    </svg>
+  );
+};
+
 const SERENDIPITY_CONFIGS: Record<SerendipityType, {
-  icon: string;
   title: string;
   subtitle: string;
   gradient: string;
 }> = {
   hidden_gem: {
-    icon: "💎",
     title: "Hidden Gem",
     subtitle: "Discover something special",
     gradient: "from-purple-500/20 to-transparent",
   },
   try_something_new: {
-    icon: "🎲",
     title: "Try Something New",
     subtitle: "Step outside your comfort zone",
     gradient: "from-cyan-500/20 to-transparent",
   },
   neighborhood_spotlight: {
-    icon: "📍",
     title: "Neighborhood Spotlight",
     subtitle: "Explore a different part of town",
     gradient: "from-amber-500/20 to-transparent",
   },
   free_finds: {
-    icon: "🎁",
     title: "Free Finds",
     subtitle: "Great experiences, zero cost",
     gradient: "from-green-500/20 to-transparent",
@@ -114,7 +150,7 @@ export default function SerendipityMoment({ type, event, portalSlug, onDismiss }
 
         {/* Header */}
         <div className="px-4 pt-4 pb-2 flex items-center gap-3">
-          <span className="text-2xl">{config.icon}</span>
+          <SerendipityIcon type={type} className="w-6 h-6 flex-shrink-0" />
           <div>
             <h3 className="font-mono text-xs font-medium text-[var(--cream)] uppercase tracking-wider">
               {config.title}

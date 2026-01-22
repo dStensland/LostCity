@@ -150,9 +150,17 @@ export default function SpotsContent({
       groups.get(key)!.push(spot);
     }
 
-    // Sort groups by count (descending)
+    // Sort groups alphabetically by category/neighborhood name
     return Array.from(groups.entries())
-      .sort((a, b) => b[1].length - a[1].length);
+      .sort((a, b) => {
+        // Put "other" at the end
+        if (a[0] === "other" || a[0] === "Other") return 1;
+        if (b[0] === "other" || b[0] === "Other") return -1;
+        // Sort alphabetically by label
+        const labelA = viewMode === "type" ? getCategoryLabel(a[0]) : a[0];
+        const labelB = viewMode === "type" ? getCategoryLabel(b[0]) : b[0];
+        return labelA.localeCompare(labelB);
+      });
   }, [sortedSpots, viewMode]);
 
   const hasFilters = selectedTypes.length > 0 || selectedHoods.length > 0 || searchQuery;
