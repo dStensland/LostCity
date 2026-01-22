@@ -287,3 +287,154 @@ def normalize_time_format(time_str: str) -> Optional[str]:
 
     logger.debug(f"Could not normalize time format: {time_str}")
     return None
+
+
+def extract_image_url(
+    soup: BeautifulSoup,
+    selectors: Optional[list[str]] = None,
+    base_url: Optional[str] = None,
+) -> Optional[str]:
+    """
+    Extract event image URL from HTML using common patterns.
+
+    Tries multiple strategies in order:
+    1. Custom selectors provided by caller
+    2. JSON-LD schema.org image
+    3. Open Graph (og:image) meta tag
+    4. Twitter card image
+    5. Common image selectors
+
+    Args:
+        soup: BeautifulSoup parsed HTML
+        selectors: Optional list of CSS selectors to try first
+        base_url: Base URL for resolving relative URLs
+
+    Returns:
+        Absolute image URL or None
+    """
+    image_url = None
+
+    # 1. Try custom selectors first
+    if selectors:
+        for selector in selectors:
+            img = soup.select_one(selector)
+            if img:
+                image_url = img.get("src") or img.get("data-src") or img.get("content")
+                if image_url:
+                    break
+
+    # 2. Try JSON-LD
+    if not image_url:
+        for script in soup.find_all("script", type="application/ld+json"):
+            try:
+                import json
+                data = json.loads(script.string or "")
+                # Handle both single object and array
+                items = data if isinstance(data, list) else [data]
+                for item in items:
+                    if isinstance(item, dict):
+                        # Direct image field
+                        img = item.get("image")
+                        if img:
+                            if isinstance(img, str):
+                                image_url = img
+                            elif isinstance(img, dict):
+                                image_url = img.get("url") or img.get("contentUrl")
+                            elif isinstance(img, list) and img:
+                                first = img[0]
+                                image_url = first if isinstance(first, str) else first.get("url")
+                            if image_url:
+                                break
+                if image_url:
+                    break
+            except (json.JSONDecodeError, TypeError):
+                continue
+
+    # 3. Try Open Graph
+    if not image_url:
+        og_image = soup.find("meta", property="og:image")
+        if og_image:
+            image_url = og_image.get("content")
+
+    # 4. Try Twitter card
+    if not image_url:
+        twitter_image = soup.find("meta", {"name": "twitter:image"})
+        if twitter_image:
+            image_url = twitter_image.get("content")
+
+    # 5. Try common selectors
+    if not image_url:
+        common_selectors = [
+            "img.event-image",
+            "img.hero-image",
+            "img.featured-image",
+            ".event-image img",
+            ".event-hero img",
+            ".event-banner img",
+            ".event-thumbnail img",
+            "article img",
+            ".poster img",
+            "[class*='event'] img",
+            "[class*='hero'] img",
+        ]
+        for selector in common_selectors:
+            img = soup.select_one(selector)
+            if img:
+                image_url = img.get("src") or img.get("data-src")
+                if image_url and not _is_icon_or_logo(image_url):
+                    break
+                image_url = None
+
+    # Resolve relative URLs
+    if image_url and base_url and not image_url.startswith(("http://", "https://", "//")):
+        from urllib.parse import urljoin
+        image_url = urljoin(base_url, image_url)
+
+    # Handle protocol-relative URLs
+    if image_url and image_url.startswith("//"):
+        image_url = "https:" + image_url
+
+    return image_url
+
+
+def _is_icon_or_logo(url: str) -> bool:
+    """Check if URL is likely an icon or logo, not an event image."""
+    url_lower = url.lower()
+    skip_patterns = [
+        "logo", "icon", "favicon", "sprite", "avatar",
+        "placeholder", "default", "blank", "spacer",
+        "1x1", "pixel", "tracking", "badge", "button",
+    ]
+    return any(pattern in url_lower for pattern in skip_patterns)
+
+
+def extract_images_from_page(
+    page,  # Playwright Page object
+    title_selector: Optional[str] = None,
+) -> dict[str, str]:
+    """
+    Extract title-to-image mapping from a Playwright page.
+
+    Useful for JS-rendered sites where images have alt text matching titles.
+
+    Args:
+        page: Playwright Page object
+        title_selector: Optional selector for title elements to match
+
+    Returns:
+        Dict mapping titles/alt text to image URLs
+    """
+    image_map = {}
+    try:
+        images = page.query_selector_all("img[alt], img[title]")
+        for img in images:
+            alt = img.get_attribute("alt") or img.get_attribute("title")
+            src = img.get_attribute("src") or img.get_attribute("data-src")
+            if alt and src and len(alt) > 3:
+                # Skip common non-event images
+                if not _is_icon_or_logo(src):
+                    image_map[alt.strip()] = src
+    except Exception as e:
+        logger.warning(f"Error extracting images from page: {e}")
+
+    return image_map

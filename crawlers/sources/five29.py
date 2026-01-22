@@ -15,6 +15,7 @@ from playwright.sync_api import sync_playwright
 
 from db import get_or_create_venue, insert_event, find_event_by_hash
 from dedupe import generate_content_hash
+from utils import extract_images_from_page
 
 logger = logging.getLogger(__name__)
 
@@ -74,6 +75,10 @@ def crawl(source: dict) -> tuple[int, int, int]:
             for _ in range(5):
                 page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
                 page.wait_for_timeout(1000)
+
+            # Extract images for matching with events
+            image_map = extract_images_from_page(page)
+            logger.info(f"Found {len(image_map)} images on page")
 
             # Get page text and parse line by line
             body_text = page.inner_text("body")
@@ -150,6 +155,14 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         i += 1
                         continue
 
+                    # Find image for this event
+                    event_image = None
+                    title_lower = title.lower()
+                    for img_title, img_url in image_map.items():
+                        if img_title.lower() in title_lower or title_lower in img_title.lower():
+                            event_image = img_url
+                            break
+
                     event_record = {
                         "source_id": source_id,
                         "venue_id": venue_id,
@@ -169,7 +182,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "is_free": False,
                         "source_url": EVENTS_URL,
                         "ticket_url": EVENTS_URL,
-                        "image_url": None,
+                        "image_url": event_image,
                         "raw_text": f"{title} - {start_date}",
                         "extraction_confidence": 0.80,
                         "is_recurring": False,

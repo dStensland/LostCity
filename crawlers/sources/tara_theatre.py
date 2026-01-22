@@ -17,6 +17,38 @@ from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
 
+
+def extract_movie_images(page: Page) -> dict[str, str]:
+    """Extract movie title to image URL mapping from the page."""
+    image_map = {}
+    try:
+        images = page.query_selector_all("img[alt]")
+        for img in images:
+            alt = img.get_attribute("alt")
+            src = img.get_attribute("src")
+            if alt and src and "imgix.net" in src and len(alt) > 3:
+                skip_alts = ["Logo", "Rated", "expand", "arrow", "play_arrow", "Icon"]
+                if not any(skip in alt for skip in skip_alts):
+                    image_map[alt.strip()] = src
+    except Exception as e:
+        logger.warning(f"Error extracting movie images: {e}")
+    logger.info(f"Extracted {len(image_map)} movie images")
+    return image_map
+
+
+def find_image_for_movie(title: str, image_map: dict[str, str]) -> Optional[str]:
+    """Find image URL for a movie title, with fuzzy matching."""
+    if title in image_map:
+        return image_map[title]
+    title_lower = title.lower()
+    for img_title, url in image_map.items():
+        if img_title.lower() == title_lower:
+            return url
+    for img_title, url in image_map.items():
+        if title_lower in img_title.lower() or img_title.lower() in title_lower:
+            return url
+    return None
+
 BASE_URL = "https://www.taraatlanta.com"
 HOME_URL = f"{BASE_URL}/home"
 COMING_SOON_URL = f"{BASE_URL}/coming-soon"
@@ -52,12 +84,17 @@ def parse_time(time_text: str) -> Optional[str]:
 
 
 def extract_movies_for_date(
-    page: Page, target_date: datetime, source_id: int, venue_id: int
+    page: Page,
+    target_date: datetime,
+    source_id: int,
+    venue_id: int,
+    image_map: Optional[dict[str, str]] = None,
 ) -> tuple[int, int, int]:
     """Extract movies and showtimes for a specific date."""
     events_found = 0
     events_new = 0
     events_updated = 0
+    image_map = image_map or {}
 
     date_str = target_date.strftime("%Y-%m-%d")
 
@@ -164,6 +201,8 @@ def extract_movies_for_date(
                 if existing:
                     events_updated += 1
                 else:
+                    movie_image = find_image_for_movie(current_movie, image_map)
+
                     event_record = {
                         "source_id": source_id,
                         "venue_id": venue_id,
@@ -183,7 +222,7 @@ def extract_movies_for_date(
                         "is_free": False,
                         "source_url": HOME_URL,
                         "ticket_url": None,
-                        "image_url": None,
+                        "image_url": movie_image,
                         "raw_text": None,
                         "extraction_confidence": 0.90,
                         "is_recurring": False,
@@ -210,6 +249,7 @@ def extract_upcoming_movies(
     source_id: int,
     venue_id: int,
     source_url: str,
+    image_map: Optional[dict[str, str]] = None,
 ) -> tuple[int, int, int]:
     """Extract movies from Coming Soon page."""
     events_found = 0
@@ -347,6 +387,8 @@ def extract_upcoming_movies(
                 "%Y-%m-%d"
             )
 
+            movie_image = find_image_for_movie(movie_title, image_map or {})
+
             event_record = {
                 "source_id": source_id,
                 "venue_id": venue_id,
@@ -366,7 +408,7 @@ def extract_upcoming_movies(
                 "is_free": False,
                 "source_url": source_url,
                 "ticket_url": None,
-                "image_url": None,
+                "image_url": movie_image,
                 "raw_text": None,
                 "extraction_confidence": 0.75,
                 "is_recurring": False,
@@ -408,10 +450,13 @@ def crawl(source: dict) -> tuple[int, int, int]:
             page.goto(HOME_URL, wait_until="domcontentloaded", timeout=30000)
             page.wait_for_timeout(4000)  # Wait for JS to load
 
+            # Extract movie images from the page
+            image_map = extract_movie_images(page)
+
             # First, get today's showtimes (default view)
             logger.info(f"Scraping Today ({today.strftime('%Y-%m-%d')})")
             found, new, updated = extract_movies_for_date(
-                page, datetime.combine(today, datetime.min.time()), source_id, venue_id
+                page, datetime.combine(today, datetime.min.time()), source_id, venue_id, image_map
             )
             total_found += found
             total_new += new
@@ -470,6 +515,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     datetime.combine(target_date, datetime.min.time()),
                     source_id,
                     venue_id,
+                    image_map,
                 )
                 total_found += found
                 total_new += new
@@ -487,8 +533,12 @@ def crawl(source: dict) -> tuple[int, int, int]:
             page.goto(COMING_SOON_URL, wait_until="domcontentloaded", timeout=30000)
             page.wait_for_timeout(3000)  # Wait for JS to load
 
+            # Extract images from coming soon page
+            coming_soon_images = extract_movie_images(page)
+            image_map.update(coming_soon_images)
+
             found, new, updated = extract_upcoming_movies(
-                page, source_id, venue_id, COMING_SOON_URL
+                page, source_id, venue_id, COMING_SOON_URL, image_map
             )
             total_found += found
             total_new += new
