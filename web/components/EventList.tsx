@@ -18,8 +18,8 @@ const CATEGORY_ROLLUP_THRESHOLD = 5;
 const ROLLUP_CATEGORIES = ["community"];
 
 // Infinite scroll configuration
-const DEBOUNCE_MS = 150; // Faster response for smoother UX
-const SCROLL_MARGIN = "200px"; // Conservative trigger distance
+const DEBOUNCE_MS = 200; // Balanced for mobile smoothness
+const SCROLL_MARGIN = "300px"; // Trigger earlier to load content before user reaches bottom
 const MAX_RETRIES = 3;
 const RETRY_DELAY_BASE = 1000; // Exponential backoff base
 const MAX_EVENTS = 500; // Prevent memory bloat
@@ -903,11 +903,11 @@ export default function EventList({ initialEvents, initialTotal, hasActiveFilter
         </div>
       )}
 
-      {/* Intersection observer sentinel */}
+      {/* Intersection observer sentinel - taller to prevent flickering */}
       {scrollState.hasMore && !scrollState.error && !scrollState.isLoading && (
         <div
           ref={loaderRef}
-          className="h-10"
+          className="h-20"
           aria-hidden="true"
         />
       )}

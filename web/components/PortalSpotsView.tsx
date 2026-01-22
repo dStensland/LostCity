@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import CategoryIcon, { getCategoryLabel, getCategoryColor } from "./CategoryIcon";
 
@@ -32,7 +32,12 @@ type Spot = {
   neighborhood: string | null;
   spot_type: string | null;
   event_count?: number;
+  lat?: number | null;
+  lng?: number | null;
 };
+
+type SortOption = "alphabetical" | "event_count" | "neighborhood";
+type GroupOption = "none" | "category" | "neighborhood";
 
 interface Props {
   portalId: string;
@@ -43,6 +48,8 @@ interface Props {
 export default function PortalSpotsView({ portalId, portalSlug, isExclusive = false }: Props) {
   const [spots, setSpots] = useState<Spot[]>([]);
   const [loading, setLoading] = useState(true);
+  const [sortBy, setSortBy] = useState<SortOption>("event_count");
+  const [groupBy, setGroupBy] = useState<GroupOption>("none");
 
   useEffect(() => {
     async function fetchSpots() {
@@ -96,6 +103,50 @@ export default function PortalSpotsView({ portalId, portalSlug, isExclusive = fa
     );
   }
 
+  // Sort and group spots
+  const sortedAndGroupedSpots = useMemo(() => {
+    // Sort spots
+    const sorted = [...spots].sort((a, b) => {
+      switch (sortBy) {
+        case "alphabetical":
+          return a.name.localeCompare(b.name);
+        case "event_count":
+          return (b.event_count ?? 0) - (a.event_count ?? 0);
+        case "neighborhood":
+          return (a.neighborhood || "ZZZ").localeCompare(b.neighborhood || "ZZZ");
+        default:
+          return 0;
+      }
+    });
+
+    // Group if needed
+    if (groupBy === "none") {
+      return [{ key: "all", label: null, spots: sorted }];
+    }
+
+    const groups = new Map<string, Spot[]>();
+    for (const spot of sorted) {
+      const key = groupBy === "category"
+        ? (spot.spot_type || "other")
+        : (spot.neighborhood || "Other");
+      if (!groups.has(key)) {
+        groups.set(key, []);
+      }
+      groups.get(key)!.push(spot);
+    }
+
+    // Sort groups by name
+    const sortedGroups = Array.from(groups.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([key, spots]) => ({
+        key,
+        label: groupBy === "category" ? getCategoryLabel(key) : key,
+        spots,
+      }));
+
+    return sortedGroups;
+  }, [spots, sortBy, groupBy]);
+
   if (spots.length === 0) {
     return (
       <div className="py-16 text-center">
@@ -124,68 +175,118 @@ export default function PortalSpotsView({ portalId, portalSlug, isExclusive = fa
 
   return (
     <div className="py-4">
-      <div className="mb-4">
+      {/* Header with count and controls */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
         <p className="font-mono text-xs text-[var(--muted)]">
           <span className="text-[var(--soft)]">{spots.length}</span> locations with upcoming events
         </p>
+
+        {/* Sort and Group controls */}
+        <div className="flex items-center gap-2">
+          {/* Sort dropdown */}
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as SortOption)}
+            className="px-2.5 py-1.5 rounded-lg bg-[var(--twilight)]/50 border border-[var(--twilight)] text-[var(--soft)] font-mono text-xs focus:outline-none focus:border-[var(--coral)]/50 cursor-pointer"
+          >
+            <option value="event_count">Most Events</option>
+            <option value="alphabetical">A-Z</option>
+            <option value="neighborhood">Neighborhood</option>
+          </select>
+
+          {/* Group dropdown */}
+          <select
+            value={groupBy}
+            onChange={(e) => setGroupBy(e.target.value as GroupOption)}
+            className="px-2.5 py-1.5 rounded-lg bg-[var(--twilight)]/50 border border-[var(--twilight)] text-[var(--soft)] font-mono text-xs focus:outline-none focus:border-[var(--coral)]/50 cursor-pointer"
+          >
+            <option value="none">No Grouping</option>
+            <option value="category">By Category</option>
+            <option value="neighborhood">By Neighborhood</option>
+          </select>
+        </div>
       </div>
 
-      <div className="space-y-2">
-        {spots.map((spot) => {
-          const categoryColor = spot.spot_type ? getCategoryColor(spot.spot_type) : "var(--coral)";
-          const reflectionClass = getReflectionClass(spot.spot_type);
-          return (
-          <Link
-            key={spot.id}
-            href={`/spots/${spot.slug}`}
-            className={`block p-4 rounded-lg border border-[var(--twilight)] card-atmospheric ${reflectionClass} group`}
-            style={{
-              backgroundColor: "var(--card-bg)",
-              "--glow-color": categoryColor,
-              "--reflection-color": `color-mix(in srgb, ${categoryColor} 15%, transparent)`,
-            } as React.CSSProperties}
-          >
-            <div className="flex items-start gap-3">
-              {spot.spot_type && (
-                <CategoryIcon
-                  type={spot.spot_type}
-                  size={18}
-                  className="flex-shrink-0 opacity-60 mt-0.5"
-                />
-              )}
-              <div className="flex-1 min-w-0">
-                <div className="font-medium text-[var(--cream)] group-hover:text-[var(--coral)] transition-colors">
-                  {spot.name}
-                </div>
-                <div className="flex items-center gap-2 font-mono text-xs text-[var(--muted)] mt-1">
-                  {spot.spot_type && (
-                    <span>{getCategoryLabel(spot.spot_type)}</span>
-                  )}
-                  {spot.neighborhood && (
-                    <>
-                      <span className="opacity-40">·</span>
-                      <span>{spot.neighborhood}</span>
-                    </>
-                  )}
-                  {(spot.event_count ?? 0) > 0 && (
-                    <>
-                      <span className="opacity-40">·</span>
-                      <span className="text-[var(--coral)]">
-                        {spot.event_count} upcoming event{spot.event_count !== 1 ? "s" : ""}
-                      </span>
-                    </>
-                  )}
-                </div>
-                {spot.address && (
-                  <div className="font-mono text-[0.65rem] text-[var(--muted)] mt-1 opacity-60">
-                    {spot.address}
-                  </div>
+      {/* Spots list with optional grouping */}
+      <div className="space-y-6">
+        {sortedAndGroupedSpots.map((group) => (
+          <div key={group.key}>
+            {/* Group header */}
+            {group.label && (
+              <div className="flex items-center gap-2 mb-3 pt-2">
+                {groupBy === "category" && (
+                  <CategoryIcon type={group.key} size={14} className="opacity-60" />
                 )}
+                <h3 className="font-mono text-xs font-medium text-[var(--muted)] uppercase tracking-wider">
+                  {group.label}
+                </h3>
+                <span className="font-mono text-[0.6rem] text-[var(--muted)]/60 bg-[var(--twilight)]/30 px-1.5 py-0.5 rounded">
+                  {group.spots.length}
+                </span>
+                <div className="flex-1 h-px bg-[var(--twilight)]/30" />
               </div>
+            )}
+
+            {/* Spots in this group */}
+            <div className="space-y-2">
+              {group.spots.map((spot) => {
+                const categoryColor = spot.spot_type ? getCategoryColor(spot.spot_type) : "var(--coral)";
+                const reflectionClass = getReflectionClass(spot.spot_type);
+                return (
+                  <Link
+                    key={spot.id}
+                    href={`/${portalSlug}/spots/${spot.slug}`}
+                    className={`block p-4 rounded-lg border border-[var(--twilight)] card-atmospheric ${reflectionClass} group`}
+                    style={{
+                      backgroundColor: "var(--card-bg)",
+                      "--glow-color": categoryColor,
+                      "--reflection-color": `color-mix(in srgb, ${categoryColor} 15%, transparent)`,
+                    } as React.CSSProperties}
+                  >
+                    <div className="flex items-start gap-3">
+                      {spot.spot_type && (
+                        <CategoryIcon
+                          type={spot.spot_type}
+                          size={18}
+                          className="flex-shrink-0 opacity-60 mt-0.5"
+                        />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-[var(--cream)] group-hover:text-[var(--glow-color,var(--coral))] transition-colors">
+                          {spot.name}
+                        </div>
+                        <div className="flex items-center gap-2 font-mono text-xs text-[var(--muted)] mt-1">
+                          {spot.spot_type && (
+                            <span>{getCategoryLabel(spot.spot_type)}</span>
+                          )}
+                          {spot.neighborhood && (
+                            <>
+                              <span className="opacity-40">·</span>
+                              <span>{spot.neighborhood}</span>
+                            </>
+                          )}
+                          {(spot.event_count ?? 0) > 0 && (
+                            <>
+                              <span className="opacity-40">·</span>
+                              <span className="text-[var(--coral)]">
+                                {spot.event_count} upcoming event{spot.event_count !== 1 ? "s" : ""}
+                              </span>
+                            </>
+                          )}
+                        </div>
+                        {spot.address && (
+                          <div className="font-mono text-[0.65rem] text-[var(--muted)] mt-1 opacity-60">
+                            {spot.address}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </Link>
+                );
+              })}
             </div>
-          </Link>
-        );
-        })}
+          </div>
+        ))}
       </div>
     </div>
   );

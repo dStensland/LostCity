@@ -144,7 +144,7 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
             type: "venue",
             title: venue.name,
             subtitle: venue.neighborhood || undefined,
-            href: `/spots/${venue.slug}`,
+            href: portal?.slug ? `/${portal.slug}/spots/${venue.slug}` : `/spots/${venue.slug}`,
           });
         }
       }
@@ -157,7 +157,7 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
             type: "organizer",
             title: producer.name,
             subtitle: producer.org_type.replace(/_/g, " "),
-            href: `/community/${producer.slug}`,
+            href: portal?.slug ? `/${portal.slug}/community/${producer.slug}` : `/community/${producer.slug}`,
           });
         }
       }

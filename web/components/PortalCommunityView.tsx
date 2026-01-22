@@ -133,7 +133,7 @@ export default function PortalCommunityView({ portalId, portalSlug, portalName }
           return (
             <Link
               key={producer.id}
-              href={`/community/${producer.slug}`}
+              href={`/${portalSlug}/community/${producer.slug}`}
               className="block p-5 rounded-xl border border-[var(--twilight)] card-atmospheric group"
               style={{
                 backgroundColor: "var(--card-bg)",

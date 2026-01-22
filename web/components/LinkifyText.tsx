@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import React, { useMemo } from "react";
 
 interface LinkifyTextProps {
   text: string;
@@ -10,17 +10,51 @@ interface LinkifyTextProps {
 // Regex to match URLs (http, https, www)
 const URL_REGEX = /(https?:\/\/[^\s<]+|www\.[^\s<]+)/gi;
 
+// Common HTML entities to decode
+const HTML_ENTITIES: Record<string, string> = {
+  "&amp;": "&",
+  "&lt;": "<",
+  "&gt;": ">",
+  "&quot;": '"',
+  "&#39;": "'",
+  "&apos;": "'",
+  "&nbsp;": " ",
+  "&ndash;": "–",
+  "&mdash;": "—",
+  "&hellip;": "…",
+  "&copy;": "©",
+  "&reg;": "®",
+  "&trade;": "™",
+  "&bull;": "•",
+};
+
+// Decode HTML entities in text
+function decodeHtmlEntities(str: string): string {
+  let result = str;
+  // Decode named entities
+  for (const [entity, char] of Object.entries(HTML_ENTITIES)) {
+    result = result.replace(new RegExp(entity, "gi"), char);
+  }
+  // Decode numeric entities (&#123; or &#x7B;)
+  result = result.replace(/&#(\d+);/g, (_, num) => String.fromCharCode(parseInt(num, 10)));
+  result = result.replace(/&#x([0-9a-f]+);/gi, (_, hex) => String.fromCharCode(parseInt(hex, 16)));
+  return result;
+}
+
 export default function LinkifyText({ text, className = "" }: LinkifyTextProps) {
   const parts = useMemo(() => {
+    // First decode HTML entities
+    const decodedText = decodeHtmlEntities(text);
+
     const result: (string | { url: string; display: string })[] = [];
     let lastIndex = 0;
     let match;
 
     const regex = new RegExp(URL_REGEX);
-    while ((match = regex.exec(text)) !== null) {
+    while ((match = regex.exec(decodedText)) !== null) {
       // Add text before the URL
       if (match.index > lastIndex) {
-        result.push(text.slice(lastIndex, match.index));
+        result.push(decodedText.slice(lastIndex, match.index));
       }
 
       // Add the URL
@@ -42,8 +76,8 @@ export default function LinkifyText({ text, className = "" }: LinkifyTextProps) 
     }
 
     // Add remaining text
-    if (lastIndex < text.length) {
-      result.push(text.slice(lastIndex));
+    if (lastIndex < decodedText.length) {
+      result.push(decodedText.slice(lastIndex));
     }
 
     return result;
@@ -53,7 +87,8 @@ export default function LinkifyText({ text, className = "" }: LinkifyTextProps) 
     <span className={className}>
       {parts.map((part, i) =>
         typeof part === "string" ? (
-          part
+          // Text is rendered as-is; parent container should use whitespace-pre-wrap for newlines
+          <React.Fragment key={i}>{part}</React.Fragment>
         ) : (
           <a
             key={i}

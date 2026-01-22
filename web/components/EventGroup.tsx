@@ -132,7 +132,7 @@ export default function EventGroup({
 
   return (
     <div
-      className={`rounded-lg border border-[var(--twilight)] mb-2 overflow-hidden card-atmospheric ${reflectionClass} ${skipAnimation ? "" : "animate-fade-in"}`}
+      className={`rounded-lg border border-[var(--twilight)] mb-4 overflow-hidden card-atmospheric ${reflectionClass} ${skipAnimation ? "" : "animate-fade-in"}`}
       style={{
         borderLeftWidth: categoryColor ? "3px" : undefined,
         borderLeftColor: categoryColor || undefined,
@@ -145,7 +145,7 @@ export default function EventGroup({
       <button
         type="button"
         onClick={() => setIsExpanded(!isExpanded)}
-        className="group w-full px-3 py-2.5 flex items-center gap-3 hover:bg-[var(--twilight)]/20 transition-colors"
+        className="group w-full p-3 flex items-center gap-3 hover:bg-[var(--twilight)]/20 transition-colors"
       >
         {/* Time of earliest event - matches EventCard format */}
         {(() => {
