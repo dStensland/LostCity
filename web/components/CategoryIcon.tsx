@@ -149,13 +149,21 @@ const iconPaths: Record<string, ReactNode> = {
     </>
   ),
 
-  // Theater - curtains/masks
+  // Theater - comedy/tragedy masks
   theater: (
     <>
-      <path d="M4 3h16v4c0 4-3.5 7-8 7S4 11 4 7V3z" strokeWidth={2} fill="none" stroke="currentColor" />
-      <path d="M4 3c0 2 2 4 4 4s4-2 4-4" strokeWidth={2} fill="none" stroke="currentColor" />
-      <path d="M12 3c0 2 2 4 4 4s4-2 4-4" strokeWidth={2} fill="none" stroke="currentColor" />
-      <path d="M12 14v4M8 21h8" strokeWidth={2} strokeLinecap="round" stroke="currentColor" />
+      {/* Happy mask */}
+      <path d="M2 8c0-2 1.5-4 4-4s4 2 4 4c0 3-2 5-4 5S2 11 2 8z" strokeWidth={2} fill="none" stroke="currentColor" />
+      <circle cx="4.5" cy="7" r="0.8" fill="currentColor" />
+      <circle cx="7.5" cy="7" r="0.8" fill="currentColor" />
+      <path d="M4 10c.5.5 1.5 1 2 1s1.5-.5 2-1" strokeWidth={1.5} strokeLinecap="round" fill="none" stroke="currentColor" />
+      {/* Sad mask */}
+      <path d="M14 12c0-2 1.5-4 4-4s4 2 4 4c0 3-2 5-4 5s-4-2-4-4z" strokeWidth={2} fill="none" stroke="currentColor" />
+      <circle cx="16.5" cy="11" r="0.8" fill="currentColor" />
+      <circle cx="19.5" cy="11" r="0.8" fill="currentColor" />
+      <path d="M16 15c.5-.5 1.5-1 2-1s1.5.5 2 1" strokeWidth={1.5} strokeLinecap="round" fill="none" stroke="currentColor" />
+      {/* Ribbon connecting */}
+      <path d="M10 6c2 0 3 1 4 3" strokeWidth={1.5} strokeLinecap="round" fill="none" stroke="currentColor" opacity={0.6} />
     </>
   ),
 
