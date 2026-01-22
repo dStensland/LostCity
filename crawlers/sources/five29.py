@@ -109,7 +109,11 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         idx = i + offset
                         if 0 <= idx < len(lines):
                             check_line = lines[idx]
-                            if re.match(r"(January|February|March)", check_line, re.IGNORECASE):
+                            # Skip month names
+                            if re.match(r"(January|February|March|April|May|June|July|August|September|October|November|December)", check_line, re.IGNORECASE):
+                                continue
+                            # Skip day-of-week names
+                            if re.match(r"^(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)$", check_line, re.IGNORECASE):
                                 continue
                             if not start_time:
                                 time_result = parse_time(check_line)

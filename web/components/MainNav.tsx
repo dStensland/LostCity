@@ -73,8 +73,8 @@ export default function MainNav({ portalSlug = "atlanta" }: Props) {
   return (
     <nav className="sticky top-14 z-30 bg-[var(--night)]/95 backdrop-blur-sm border-b border-[var(--twilight)]/50">
       <div className="max-w-3xl mx-auto px-4">
-        {/* Tabs container - no overflow hidden to allow glow effects */}
-        <div className="flex gap-1 py-2.5 overflow-x-auto scrollbar-hide">
+        {/* Tabs container with padding for glow */}
+        <div className="flex gap-1 py-3 overflow-x-auto scrollbar-hide">
           {TABS.map((tab) => {
             const active = isActive(tab);
             return (

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import SpotCard from "@/components/SpotCard";
@@ -49,6 +49,19 @@ export default function SpotsContent({
   const [sortBy, setSortBy] = useState<SortOption>(initialSortBy);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [locationRequested, setLocationRequested] = useState(false);
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
+
+  const toggleGroup = useCallback((groupKey: string) => {
+    setCollapsedGroups(prev => {
+      const next = new Set(prev);
+      if (next.has(groupKey)) {
+        next.delete(groupKey);
+      } else {
+        next.add(groupKey);
+      }
+      return next;
+    });
+  }, []);
 
   // Request location when sorting by closest
   useEffect(() => {
@@ -200,64 +213,81 @@ export default function SpotsContent({
             </div>
           ) : (
             // Grouped view
-            <div className="space-y-6 pt-4">
-              {groupedSpots?.map(([groupKey, groupSpots]) => (
-                <div key={groupKey}>
-                  {/* Group header */}
-                  <div className="flex items-center gap-2 mb-3 sticky top-[160px] bg-[var(--void)] py-2 z-10">
-                    {viewMode === "type" && (
-                      <span className="flex items-center justify-center w-5 h-5 flex-shrink-0">
-                        <CategoryIcon type={groupKey} size={18} className="opacity-80" />
-                      </span>
-                    )}
-                    <h2 className="font-mono text-sm font-medium text-[var(--cream)] leading-5">
-                      {viewMode === "type" ? getCategoryLabel(groupKey) : groupKey}
-                    </h2>
-                    <span className="font-mono text-xs text-[var(--muted)]">
-                      ({groupSpots.length})
-                    </span>
-                  </div>
-
-                  {/* Group spots */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    {groupSpots.map((spot) => (
-                      <Link
-                        key={spot.id}
-                        href={`/spots/${spot.slug}`}
-                        className="p-3 rounded-lg border border-[var(--twilight)] transition-colors group relative"
-                        style={{ backgroundColor: "var(--card-bg)" }}
+            <div className="space-y-2 pt-4">
+              {groupedSpots?.map(([groupKey, groupSpots]) => {
+                const isCollapsed = collapsedGroups.has(groupKey);
+                return (
+                  <div key={groupKey} className="border border-[var(--twilight)] rounded-lg overflow-hidden">
+                    {/* Collapsible group header */}
+                    <button
+                      onClick={() => toggleGroup(groupKey)}
+                      className="w-full flex items-center gap-2 px-3 py-2.5 bg-[var(--dusk)] hover:bg-[var(--twilight)]/50 transition-colors cursor-pointer"
+                    >
+                      {/* Chevron */}
+                      <svg
+                        className={`w-4 h-4 text-[var(--muted)] transition-transform flex-shrink-0 ${isCollapsed ? "" : "rotate-90"}`}
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
                       >
-                        {/* Title row with icon */}
-                        <div className="flex items-center gap-2 min-w-0">
-                          {spot.spot_type && (
-                            <span className="flex-shrink-0">
-                              <CategoryIcon type={spot.spot_type} size={16} className="opacity-70" />
-                            </span>
-                          )}
-                          <span className="font-medium text-sm text-[var(--cream)] truncate group-hover:text-[var(--coral)] transition-colors">
-                            {spot.name}
-                          </span>
-                        </div>
-                        {/* Meta row - aligned with icon */}
-                        <div className="flex items-center gap-1.5 font-mono text-[0.6rem] text-[var(--muted)] mt-1 ml-6">
-                          {viewMode !== "neighborhood" && spot.neighborhood && (
-                            <span>{spot.neighborhood}</span>
-                          )}
-                          {viewMode === "neighborhood" && spot.spot_type && (
-                            <span>{getCategoryLabel(spot.spot_type)}</span>
-                          )}
-                        </div>
-                        {/* Event count badge - bottom right */}
-                        {(spot.event_count ?? 0) > 0 && (
-                          <span className="absolute bottom-2 right-2">
-                            <EventsBadge count={spot.event_count!} />
-                          </span>
-                        )}
-                      </Link>
-                    ))}
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                      {viewMode === "type" && (
+                        <span className="flex items-center justify-center w-5 h-5 flex-shrink-0">
+                          <CategoryIcon type={groupKey} size={18} className="opacity-80" />
+                        </span>
+                      )}
+                      <h2 className="font-mono text-sm font-medium text-[var(--cream)] leading-5">
+                        {viewMode === "type" ? getCategoryLabel(groupKey) : groupKey}
+                      </h2>
+                      <span className="font-mono text-xs text-[var(--muted)]">
+                        ({groupSpots.length})
+                      </span>
+                    </button>
+
+                    {/* Group spots - collapsible */}
+                    {!isCollapsed && (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 p-2 bg-[var(--void)]">
+                        {groupSpots.map((spot) => (
+                          <Link
+                            key={spot.id}
+                            href={`/spots/${spot.slug}`}
+                            className="p-3 rounded-lg border border-[var(--twilight)] transition-colors group relative"
+                            style={{ backgroundColor: "var(--card-bg)" }}
+                          >
+                            {/* Title row with icon */}
+                            <div className="flex items-center gap-2 min-w-0">
+                              {spot.spot_type && (
+                                <span className="flex-shrink-0">
+                                  <CategoryIcon type={spot.spot_type} size={16} className="opacity-70" />
+                                </span>
+                              )}
+                              <span className="font-medium text-sm text-[var(--cream)] truncate group-hover:text-[var(--coral)] transition-colors">
+                                {spot.name}
+                              </span>
+                            </div>
+                            {/* Meta row - aligned with icon */}
+                            <div className="flex items-center gap-1.5 font-mono text-[0.6rem] text-[var(--muted)] mt-1 ml-6">
+                              {viewMode !== "neighborhood" && spot.neighborhood && (
+                                <span>{spot.neighborhood}</span>
+                              )}
+                              {viewMode === "neighborhood" && spot.spot_type && (
+                                <span>{getCategoryLabel(spot.spot_type)}</span>
+                              )}
+                            </div>
+                            {/* Event count badge - bottom right */}
+                            {(spot.event_count ?? 0) > 0 && (
+                              <span className="absolute bottom-2 right-2">
+                                <EventsBadge count={spot.event_count!} />
+                              </span>
+                            )}
+                          </Link>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )
         ) : (

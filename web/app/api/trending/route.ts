@@ -61,6 +61,7 @@ export async function GET(request: Request) {
       `)
       .gte("start_date", today)
       .lte("start_date", nextWeek)
+      .is("canonical_event_id", null) // Only show canonical events, not duplicates
       .order("start_date", { ascending: true })
       .limit(100);
 

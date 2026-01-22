@@ -278,7 +278,8 @@ export async function GET(request: NextRequest, { params }: Props) {
         venue:venues(id, name, neighborhood, slug)
       `)
       .in("id", Array.from(eventIds))
-      .gte("start_date", new Date().toISOString().split("T")[0]);
+      .gte("start_date", new Date().toISOString().split("T")[0])
+      .is("canonical_event_id", null); // Only show canonical events, not duplicates
 
     for (const event of (eventsData || []) as Event[]) {
       eventMap.set(event.id, event);
@@ -320,7 +321,8 @@ export async function GET(request: NextRequest, { params }: Props) {
         description,
         venue:venues(id, name, neighborhood, slug)
       `)
-      .in("id", Array.from(pinnedEventIds));
+      .in("id", Array.from(pinnedEventIds))
+      .is("canonical_event_id", null); // Only show canonical events, not duplicates
 
     for (const event of (pinnedEvents || []) as Event[]) {
       eventMap.set(event.id, event);
@@ -375,7 +377,8 @@ export async function GET(request: NextRequest, { params }: Props) {
         venue:venues(id, name, neighborhood, slug)
       `)
       .gte("start_date", today)
-      .lte("start_date", maxEndDate);
+      .lte("start_date", maxEndDate)
+      .is("canonical_event_id", null); // Only show canonical events, not duplicates
 
     // Apply portal filter - business portals only show their own events
     if (isBusinessPortal) {

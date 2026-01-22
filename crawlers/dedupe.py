@@ -9,13 +9,52 @@ import logging
 from typing import Optional
 from rapidfuzz import fuzz
 from extract import EventData
-from db import find_event_by_hash, find_events_by_date_and_venue
+from db import find_event_by_hash, find_events_by_date_and_venue, find_events_by_date_and_venue_family
 
 logger = logging.getLogger(__name__)
 
 # Similarity thresholds
 VENUE_SIMILARITY_THRESHOLD = 80
 TITLE_SIMILARITY_THRESHOLD = 85
+
+# Multi-room venue patterns: base name -> list of room suffix patterns
+# These venues have multiple rooms that should be treated as the same venue for dedup
+MULTI_ROOM_VENUES = {
+    "the masquerade": [
+        r"\s*-\s*(hell|heaven|purgatory|altar|music\s*park)$",
+    ],
+    "masquerade": [
+        r"\s*-\s*(hell|heaven|purgatory|altar|music\s*park)$",
+    ],
+    # Add more multi-room venues here as needed
+    # "terminal west": [r"\s*-\s*(main|rooftop)$"],
+}
+
+
+def normalize_venue_for_dedup(venue_name: str) -> str:
+    """
+    Normalize venue name for deduplication purposes.
+    Strips room suffixes from multi-room venues so events at different rooms
+    of the same venue are detected as potential duplicates.
+
+    Example: "The Masquerade - Hell" -> "the masquerade"
+    """
+    if not venue_name:
+        return ""
+
+    normalized = venue_name.lower().strip()
+
+    # Check each multi-room venue pattern
+    for base_name, patterns in MULTI_ROOM_VENUES.items():
+        for pattern in patterns:
+            # Check if venue name starts with base and has room suffix
+            if normalized.startswith(base_name):
+                stripped = re.sub(pattern, "", normalized, flags=re.IGNORECASE)
+                if stripped != normalized:
+                    logger.debug(f"Normalized venue '{venue_name}' -> '{stripped}' for dedup")
+                    return stripped.strip()
+
+    return normalized
 
 
 def normalize_text(text: str) -> str:
@@ -37,8 +76,11 @@ def generate_content_hash(title: str, venue_name: str, date: str) -> str:
     """
     Generate a content hash for deduplication.
     Hash is based on normalized title + venue + date.
+    Uses special venue normalization that strips room suffixes from multi-room venues.
     """
-    normalized = f"{normalize_text(title)}|{normalize_text(venue_name)}|{date}"
+    # Use venue-specific normalization to handle multi-room venues
+    normalized_venue = normalize_venue_for_dedup(venue_name)
+    normalized = f"{normalize_text(title)}|{normalized_venue}|{date}"
     return hashlib.md5(normalized.encode()).hexdigest()
 
 
@@ -90,15 +132,15 @@ def is_duplicate(event: EventData, venue_id: int) -> Optional[int]:
         logger.debug(f"Found exact hash match for '{event.title}'")
         return existing["id"]
 
-    # Then check fuzzy match
-    candidates = find_events_by_date_and_venue(event.start_date, venue_id)
+    # Then check fuzzy match - search across venue "family" (e.g., all Masquerade rooms)
+    candidates = find_events_by_date_and_venue_family(event.start_date, venue_id)
 
     for candidate in candidates:
         similarity = calculate_similarity(event, candidate)
         if similarity >= TITLE_SIMILARITY_THRESHOLD:
             logger.debug(
                 f"Found fuzzy match for '{event.title}' -> '{candidate['title']}' "
-                f"(similarity: {similarity:.1f}%)"
+                f"at '{candidate.get('venue_name', 'unknown')}' (similarity: {similarity:.1f}%)"
             )
             return candidate["id"]
 

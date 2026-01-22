@@ -93,7 +93,9 @@ export default function ForYouPage() {
       ]);
 
       if (!feedRes.ok) {
-        throw new Error("Failed to load feed");
+        const errorData = await feedRes.json().catch(() => ({}));
+        console.error("Feed API error:", feedRes.status, errorData);
+        throw new Error(errorData.error || `Failed to load feed (${feedRes.status})`);
       }
 
       const feedData = await feedRes.json();
@@ -106,14 +108,16 @@ export default function ForYouPage() {
         setLoading(false);
       }
     } catch (err) {
-      if (err instanceof Error && err.name === "AbortError") {
+      // Ignore abort errors (component unmount, navigation, etc.)
+      if (
+        signal.aborted ||
+        (err instanceof Error && (err.name === "AbortError" || err.message.includes("aborted")))
+      ) {
         return;
       }
       console.error("Failed to load feed:", err);
-      if (!signal.aborted) {
-        setError("Failed to load feed");
-        setLoading(false);
-      }
+      setError("Failed to load feed");
+      setLoading(false);
     }
   }, [portal.slug]);
 

@@ -350,6 +350,13 @@ function HeroBanner({ section, portalSlug, hideImages }: { section: FeedSectionD
             )}
           </div>
 
+          {/* Editorial blurb */}
+          {section.description && (
+            <p className="mt-3 text-sm text-white/80 italic leading-relaxed max-w-xl">
+              {section.description}
+            </p>
+          )}
+
           {/* Price/Free + Social Proof badges */}
           <div className="mt-4 flex flex-wrap items-center gap-2">
             {event.is_free ? (
@@ -365,13 +372,6 @@ function HeroBanner({ section, portalSlug, hideImages }: { section: FeedSectionD
               <SocialProofBadge count={event.going_count} />
             )}
           </div>
-        </div>
-
-        {/* Hover indicator */}
-        <div className="absolute bottom-4 right-4 w-10 h-10 rounded-full bg-white/10 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-          <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-          </svg>
         </div>
       </Link>
     </section>

@@ -28,11 +28,12 @@ export default function Logo({ size = "md", href = "/", className = "", portal }
       style={{ lineHeight: config.lineHeight }}
     >
       <span
-        className="font-[var(--font-bebas)] tracking-[0.02em] text-[var(--coral)]"
+        className="font-[var(--font-bebas)] tracking-[0.02em]"
         style={{
           fontFamily: "var(--font-bebas), sans-serif",
           fontSize: config.fontSize,
           fontWeight: 400,
+          color: "#FF6B7A", // Brand coral - hardcoded to avoid portal theme overrides
         }}
       >
         LOST

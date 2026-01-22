@@ -193,6 +193,63 @@ def find_events_by_date_and_venue(date: str, venue_id: int) -> list[dict]:
     return result.data or []
 
 
+def get_sibling_venue_ids(venue_id: int) -> list[int]:
+    """
+    Get IDs of sibling venues (other rooms of the same multi-room venue).
+    For example, if venue_id is for "The Masquerade - Hell", returns IDs for
+    Heaven, Purgatory, Altar, Music Park, and the main Masquerade venue.
+
+    Returns list including the original venue_id.
+    """
+    client = get_client()
+
+    # Get the venue name
+    venue = get_venue_by_id(venue_id)
+    if not venue:
+        return [venue_id]
+
+    venue_name = venue.get("name", "").lower()
+
+    # Check if this is a Masquerade room
+    if "masquerade" in venue_name:
+        # Find all Masquerade venues
+        result = client.table("venues").select("id").ilike("name", "%masquerade%").execute()
+        if result.data:
+            return [v["id"] for v in result.data]
+
+    # Add more multi-room venue patterns here as needed
+    # if "terminal west" in venue_name:
+    #     result = client.table("venues").select("id").ilike("name", "%terminal west%").execute()
+    #     ...
+
+    return [venue_id]
+
+
+def find_events_by_date_and_venue_family(date: str, venue_id: int) -> list[dict]:
+    """
+    Find events on a specific date at a venue OR any of its sibling rooms.
+    Used for deduplication of events at multi-room venues like The Masquerade.
+    """
+    client = get_client()
+    sibling_ids = get_sibling_venue_ids(venue_id)
+
+    result = (
+        client.table("events")
+        .select("*, venue:venues(name)")
+        .eq("start_date", date)
+        .in_("venue_id", sibling_ids)
+        .execute()
+    )
+
+    # Add venue_name to results for similarity calculation
+    events = []
+    for event in (result.data or []):
+        event["venue_name"] = event.get("venue", {}).get("name", "")
+        events.append(event)
+
+    return events
+
+
 def create_crawl_log(source_id: int) -> int:
     """Create a new crawl log entry. Returns log ID."""
     client = get_client()

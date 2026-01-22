@@ -151,6 +151,7 @@ SOURCE_MODULES = {
     "venkmans": "sources.venkmans",
     "northside-tavern": "sources.northside_tavern",
     "red-light-cafe": "sources.red_light_cafe",
+    "apache-xlr": "sources.apache_xlr",
     # ===== Additional Breweries =====
     "scofflaw-brewing": "sources.scofflaw_brewing",
     "second-self-brewing": "sources.second_self_brewing",

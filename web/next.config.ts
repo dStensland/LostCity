@@ -37,6 +37,14 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "s1.ticketm.net",
       },
+      {
+        protocol: "https",
+        hostname: "localist-images.azureedge.net",
+      },
+      {
+        protocol: "https",
+        hostname: "indy-systems.imgix.net",
+      },
     ],
   },
 };

@@ -1,26 +1,26 @@
 import { NextResponse } from "next/server";
 import { createClient, getUser } from "@/lib/supabase/server";
-import { errorResponse } from "@/lib/api-utils";
 
 type RecommendationReason = {
-  type: "followed_venue" | "followed_producer" | "neighborhood" | "vibes" | "price" | "friends_going" | "trending";
+  type: "followed_venue" | "followed_producer" | "neighborhood" | "price" | "friends_going" | "trending";
   label: string;
   detail?: string;
 };
 
 export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const limit = Math.min(parseInt(searchParams.get("limit") || "20", 10), 50);
-  const portalSlug = searchParams.get("portal");
+  try {
+    const { searchParams } = new URL(request.url);
+    const limit = Math.min(parseInt(searchParams.get("limit") || "20", 10), 50);
+    const portalSlug = searchParams.get("portal");
 
-  const user = await getUser();
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+    const user = await getUser();
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
-  const supabase = await createClient();
+    const supabase = await createClient();
 
-  // Get portal data if specified
+    // Get portal data if specified
   let portalId: string | null = null;
   let portalFilters: { categories?: string[]; neighborhoods?: string[] } = {};
 
@@ -100,20 +100,37 @@ export async function GET(request: Request) {
       .from("event_rsvps")
       .select(`
         event_id,
-        user_id,
-        profiles!event_rsvps_user_id_fkey(username, display_name)
+        user_id
       `)
       .in("user_id", friendIds)
       .in("status", ["going", "interested"]);
 
-    for (const rsvp of (friendRsvps || []) as { event_id: number; user_id: string; profiles: { username: string; display_name: string | null } }[]) {
+    // Fetch profile data separately to avoid FK hint issues
+    const rsvpUserIds = [...new Set((friendRsvps || []).map((r: { user_id: string }) => r.user_id))];
+    const profilesMap: Record<string, { username: string; display_name: string | null }> = {};
+
+    if (rsvpUserIds.length > 0) {
+      const { data: profilesData } = await supabase
+        .from("profiles")
+        .select("id, username, display_name")
+        .in("id", rsvpUserIds);
+
+      for (const p of (profilesData || []) as { id: string; username: string; display_name: string | null }[]) {
+        profilesMap[p.id] = { username: p.username, display_name: p.display_name };
+      }
+    }
+
+    for (const rsvp of (friendRsvps || []) as { event_id: number; user_id: string }[]) {
+      const profile = profilesMap[rsvp.user_id];
+      if (!profile) continue;
+
       if (!friendsGoingMap[rsvp.event_id]) {
         friendsGoingMap[rsvp.event_id] = [];
       }
       friendsGoingMap[rsvp.event_id].push({
         user_id: rsvp.user_id,
-        username: rsvp.profiles.username,
-        display_name: rsvp.profiles.display_name,
+        username: profile.username,
+        display_name: profile.display_name,
       });
     }
   }
@@ -133,13 +150,12 @@ export async function GET(request: Request) {
       category,
       image_url,
       ticket_url,
-      vibes,
       producer_id,
       portal_id,
-      venue:venues(id, name, neighborhood, slug),
-      producer:event_producers(id, name, slug)
+      venue:venues(id, name, neighborhood, slug)
     `)
     .gte("start_date", today)
+    .is("canonical_event_id", null) // Only show canonical events, not duplicates
     .order("start_date", { ascending: true })
     .limit(limit * 2); // Fetch more to filter
 
@@ -168,7 +184,11 @@ export async function GET(request: Request) {
   const { data: eventsData, error } = await query;
 
   if (error) {
-    return errorResponse(error, "feed:GET");
+    console.error("Feed API query error:", error);
+    return NextResponse.json(
+      { error: error.message, code: error.code, details: error.details },
+      { status: 500 }
+    );
   }
 
   type EventResult = {
@@ -183,18 +203,12 @@ export async function GET(request: Request) {
     category: string | null;
     image_url: string | null;
     ticket_url: string | null;
-    vibes: string[] | null;
     producer_id: string | null;
     venue: {
       id: number;
       name: string;
       neighborhood: string | null;
       slug: string | null;
-    } | null;
-    producer?: {
-      id: string;
-      name: string;
-      slug: string;
     } | null;
     score?: number;
     reasons?: RecommendationReason[];
@@ -241,7 +255,6 @@ export async function GET(request: Request) {
       reasons.push({
         type: "followed_producer",
         label: "From an organizer you follow",
-        detail: event.producer?.name,
       });
     }
 
@@ -253,21 +266,6 @@ export async function GET(request: Request) {
           type: "neighborhood",
           label: "In your favorite area",
           detail: event.venue.neighborhood,
-        });
-      }
-    }
-
-    // Boost for matching vibes
-    if (prefs?.favorite_vibes && event.vibes) {
-      const matchingVibes = event.vibes.filter((v) =>
-        prefs.favorite_vibes!.includes(v)
-      );
-      if (matchingVibes.length > 0) {
-        score += matchingVibes.length * 10;
-        reasons.push({
-          type: "vibes",
-          label: "Matches your vibe",
-          detail: matchingVibes.slice(0, 2).join(", "),
         });
       }
     }
@@ -330,4 +328,9 @@ export async function GET(request: Request) {
       },
     }
   );
+  } catch (err) {
+    console.error("Feed API error:", err);
+    const message = err instanceof Error ? err.message : String(err);
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
 }

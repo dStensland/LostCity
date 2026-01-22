@@ -43,7 +43,7 @@ export default async function Home() {
         </p>
         <Link
           href="/atlanta"
-          className="px-8 py-4 bg-[var(--coral)] text-[var(--night)] rounded-lg font-medium hover:bg-[var(--rose)] transition-all text-lg glow-sm"
+          className="px-8 py-4 bg-[var(--coral)]/90 text-[var(--cream)] rounded-lg font-medium transition-all text-lg hover:bg-[var(--coral)] hover:shadow-[0_0_30px_rgba(255,107,122,0.5)] hover:scale-[1.02] active:scale-[0.98]"
         >
           Explore Atlanta
         </Link>
