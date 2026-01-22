@@ -360,7 +360,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 "is_free": True,
                 "source_url": parsed["source_url"],
                 "ticket_url": parsed["source_url"],
-                "image_url": image_map.get(parsed),
+                "image_url": None,  # TODO: propagate image_map from fetch_opportunities_via_page
                 "raw_text": None,
                 "extraction_confidence": 0.80,
                 "is_recurring": False,
