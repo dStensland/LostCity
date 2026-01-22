@@ -149,21 +149,16 @@ const iconPaths: Record<string, ReactNode> = {
     </>
   ),
 
-  // Theater - comedy/tragedy masks
+  // Theater - single drama mask
   theater: (
     <>
-      {/* Happy mask */}
-      <path d="M2 8c0-2 1.5-4 4-4s4 2 4 4c0 3-2 5-4 5S2 11 2 8z" strokeWidth={2} fill="none" stroke="currentColor" />
-      <circle cx="4.5" cy="7" r="0.8" fill="currentColor" />
-      <circle cx="7.5" cy="7" r="0.8" fill="currentColor" />
-      <path d="M4 10c.5.5 1.5 1 2 1s1.5-.5 2-1" strokeWidth={1.5} strokeLinecap="round" fill="none" stroke="currentColor" />
-      {/* Sad mask */}
-      <path d="M14 12c0-2 1.5-4 4-4s4 2 4 4c0 3-2 5-4 5s-4-2-4-4z" strokeWidth={2} fill="none" stroke="currentColor" />
-      <circle cx="16.5" cy="11" r="0.8" fill="currentColor" />
-      <circle cx="19.5" cy="11" r="0.8" fill="currentColor" />
-      <path d="M16 15c.5-.5 1.5-1 2-1s1.5.5 2 1" strokeWidth={1.5} strokeLinecap="round" fill="none" stroke="currentColor" />
-      {/* Ribbon connecting */}
-      <path d="M10 6c2 0 3 1 4 3" strokeWidth={1.5} strokeLinecap="round" fill="none" stroke="currentColor" opacity={0.6} />
+      {/* Mask face */}
+      <path d="M4 9c0-4 3.5-7 8-7s8 3 8 7c0 5-3.5 9-8 9s-8-4-8-9z" strokeWidth={2} fill="none" stroke="currentColor" />
+      {/* Eyes */}
+      <ellipse cx="9" cy="9" rx="2" ry="2.5" fill="currentColor" />
+      <ellipse cx="15" cy="9" rx="2" ry="2.5" fill="currentColor" />
+      {/* Mouth - dramatic smile */}
+      <path d="M8 14c1 2 3 3 4 3s3-1 4-3" strokeWidth={2} strokeLinecap="round" fill="none" stroke="currentColor" />
     </>
   ),
 
