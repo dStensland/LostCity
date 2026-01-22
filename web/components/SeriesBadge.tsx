@@ -1,8 +1,32 @@
 "use client";
 
 import { memo } from "react";
-import { getSeriesTypeLabel, getSeriesTypeColor } from "@/lib/series";
 import { formatRecurrence, type Frequency, type DayOfWeek } from "@/lib/recurrence";
+
+// Inline helpers to avoid importing from server-only lib/series.ts
+function getSeriesTypeLabel(type: string): string {
+  const labels: Record<string, string> = {
+    film: "Film",
+    recurring_show: "Recurring Show",
+    class_series: "Class Series",
+    festival_program: "Festival Program",
+    tour: "Tour",
+    other: "Series",
+  };
+  return labels[type] || "Series";
+}
+
+function getSeriesTypeColor(type: string): string {
+  const colors: Record<string, string> = {
+    film: "#A5B4FC", // indigo
+    recurring_show: "#F9A8D4", // pink
+    class_series: "#6EE7B7", // green
+    festival_program: "#FBBF24", // amber
+    tour: "#C4B5FD", // purple
+    other: "#94A3B8", // slate
+  };
+  return colors[type] || "#94A3B8";
+}
 
 interface SeriesBadgeProps {
   seriesType: string;

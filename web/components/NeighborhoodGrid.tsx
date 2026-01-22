@@ -10,7 +10,7 @@ interface NeighborhoodStats {
 }
 
 interface NeighborhoodGridProps {
-  neighborhoods: string[];
+  neighborhoods: readonly string[];
   events: Array<{ venue?: { neighborhood?: string | null } | null }>;
   spots: Array<{ neighborhood?: string | null }>;
   selectedNeighborhood: string | null;

@@ -14,7 +14,7 @@ import {
 
 // Icon components
 function NotificationIcon({ type, className = "" }: { type: string; className?: string }) {
-  const icons: Record<string, JSX.Element> = {
+  const icons: Record<string, React.ReactElement> = {
     clock: (
       <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -85,10 +85,11 @@ export default function NotificationsPage() {
           .eq("user_id", user.id)
           .maybeSingle();
 
-        if (data?.notification_settings) {
+        const prefs = data as { notification_settings?: Record<string, boolean> } | null;
+        if (prefs?.notification_settings) {
           setSettings({
             ...DEFAULT_NOTIFICATION_SETTINGS,
-            ...(data.notification_settings as Partial<NotificationSettings>),
+            ...(prefs.notification_settings as Partial<NotificationSettings>),
           });
         }
       } catch (err) {
@@ -104,6 +105,8 @@ export default function NotificationsPage() {
   }, [user, authLoading, supabase]);
 
   const updateSetting = async (key: keyof NotificationSettings, value: boolean) => {
+    if (!user) return;
+
     const newSettings = { ...settings, [key]: value };
     setSettings(newSettings);
     setSaving(true);
@@ -113,21 +116,22 @@ export default function NotificationsPage() {
       const { data: existing } = await supabase
         .from("user_preferences")
         .select("id")
-        .eq("user_id", user?.id)
+        .eq("user_id", user.id)
         .maybeSingle();
 
       if (existing) {
-        // Update existing
-        await supabase
-          .from("user_preferences")
-          .update({ notification_settings: newSettings })
-          .eq("user_id", user?.id);
+        // Update existing - cast to any to bypass strict typing
+        await (supabase
+          .from("user_preferences") as ReturnType<typeof supabase.from>)
+          .update({ notification_settings: newSettings } as never)
+          .eq("user_id", user.id);
       } else {
         // Insert new
-        await supabase.from("user_preferences").insert({
-          user_id: user?.id,
-          notification_settings: newSettings,
-        });
+        await (supabase.from("user_preferences") as ReturnType<typeof supabase.from>)
+          .insert({
+            user_id: user.id,
+            notification_settings: newSettings,
+          } as never);
       }
 
       setSaved(true);
