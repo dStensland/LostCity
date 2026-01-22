@@ -185,17 +185,30 @@ const iconPaths: Record<string, ReactNode> = {
     </>
   ),
 
-  // Food & Drink - utensils
+  // Food & Drink - cocktail glass with garnish
   food_drink: (
     <>
-      <path d="M3 3v18M3 9h4a4 4 0 000-8H3" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" fill="none" stroke="currentColor" />
-      <path d="M15 3v6c0 2.2 1.8 4 4 4h2V3h-2M15 13v8" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" fill="none" stroke="currentColor" />
+      {/* Cocktail glass */}
+      <path d="M8 3h8l-3 9v6h-2v-6L8 3z" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" fill="none" stroke="currentColor" />
+      {/* Base */}
+      <path d="M7 21h10" strokeWidth={2} strokeLinecap="round" stroke="currentColor" />
+      <path d="M12 18v3" strokeWidth={2} stroke="currentColor" />
+      {/* Liquid */}
+      <path d="M9.5 6h5l-1.5 4.5h-2L9.5 6z" fill="currentColor" opacity={0.4} />
+      {/* Garnish - citrus slice */}
+      <circle cx="16" cy="5" r="2.5" strokeWidth={1.5} fill="none" stroke="currentColor" />
+      <path d="M14.5 5h3M16 3.5v3" strokeWidth={1} stroke="currentColor" opacity={0.6} />
     </>
   ),
   restaurant: (
     <>
-      <path d="M3 3v18M3 9h4a4 4 0 000-8H3" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" fill="none" stroke="currentColor" />
-      <path d="M15 3v6c0 2.2 1.8 4 4 4h2V3h-2M15 13v8" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" fill="none" stroke="currentColor" />
+      {/* Plate */}
+      <ellipse cx="12" cy="14" rx="9" ry="5" strokeWidth={2} fill="none" stroke="currentColor" />
+      {/* Dome/cloche */}
+      <path d="M5 14c0-5 3-9 7-9s7 4 7 9" strokeWidth={2} fill="none" stroke="currentColor" />
+      {/* Handle */}
+      <path d="M10 5h4" strokeWidth={2} strokeLinecap="round" stroke="currentColor" />
+      <circle cx="12" cy="5" r="1" fill="currentColor" />
     </>
   ),
 

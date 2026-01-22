@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import PageHeader from "@/components/PageHeader";
 import CategoryIcon, { CATEGORY_CONFIG, type CategoryType } from "@/components/CategoryIcon";
+import VibeIcon, { getVibeColor } from "@/components/VibeIcon";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/lib/auth-context";
 import {
@@ -16,24 +17,6 @@ import {
 import type { Database } from "@/lib/types";
 
 type UserPreferences = Database["public"]["Tables"]["user_preferences"]["Row"];
-
-// Vibe emojis for visual interest
-const VIBE_EMOJIS: Record<string, string> = {
-  "late-night": "🌙",
-  "date-spot": "💕",
-  "divey": "🍺",
-  "intimate": "🕯️",
-  "upscale": "✨",
-  "casual": "😎",
-  "artsy": "🎨",
-  "outdoor-seating": "🌳",
-  "live-music": "🎸",
-  "good-for-groups": "👥",
-  "rooftop": "🏙️",
-  "all-ages": "🎫",
-  "family-friendly": "👨‍👩‍👧",
-  "dog-friendly": "🐕",
-};
 
 function PreferencesContent() {
   const router = useRouter();
@@ -188,7 +171,7 @@ function PreferencesContent() {
         ) : (
           <div className="space-y-6">
             {/* Categories Section */}
-            <section className="p-5 rounded-xl bg-[var(--dusk)]/50 border border-[var(--twilight)] backdrop-blur-sm">
+            <section className="p-5 rounded-xl bg-[var(--dusk)]/50 border border-[var(--twilight)]">
               <div className="flex items-center justify-between mb-4">
                 <div>
                   <h2 className="font-sans text-base font-medium text-[var(--cream)] flex items-center gap-2">
@@ -219,18 +202,18 @@ function PreferencesContent() {
                       onClick={() => toggleCategory(cat.value)}
                       className={`flex items-center gap-2 px-3.5 py-2.5 rounded-xl font-mono text-sm transition-all duration-200 ${
                         isActive
-                          ? "text-[var(--void)] font-medium scale-[1.02]"
+                          ? "text-[var(--void)] font-medium"
                           : "bg-[var(--night)] text-[var(--muted)] hover:text-[var(--cream)] border border-[var(--twilight)] hover:border-[var(--soft)]/30"
                       }`}
                       style={isActive ? {
                         backgroundColor: categoryColor,
-                        boxShadow: `0 0 20px ${categoryColor}40, 0 4px 12px ${categoryColor}30`,
                         border: "1px solid transparent",
                       } : undefined}
                     >
                       <CategoryIcon
                         type={cat.value}
                         size={18}
+                        glow="none"
                         style={{
                           color: isActive ? "var(--void)" : categoryColor,
                         }}
@@ -243,7 +226,7 @@ function PreferencesContent() {
             </section>
 
             {/* Neighborhoods Section */}
-            <section className="p-5 rounded-xl bg-[var(--dusk)]/50 border border-[var(--twilight)] backdrop-blur-sm">
+            <section className="p-5 rounded-xl bg-[var(--dusk)]/50 border border-[var(--twilight)]">
               <div className="flex items-center justify-between mb-4">
                 <div>
                   <h2 className="font-sans text-base font-medium text-[var(--cream)] flex items-center gap-2">
@@ -274,13 +257,9 @@ function PreferencesContent() {
                       onClick={() => toggleNeighborhood(hood)}
                       className={`px-3.5 py-2.5 rounded-xl font-mono text-sm transition-all duration-200 ${
                         isActive
-                          ? "bg-[var(--gold)] text-[var(--void)] font-medium scale-[1.02]"
+                          ? "bg-[var(--gold)] text-[var(--void)] font-medium border border-transparent"
                           : "bg-[var(--night)] text-[var(--muted)] hover:text-[var(--cream)] border border-[var(--twilight)] hover:border-[var(--soft)]/30"
                       }`}
-                      style={isActive ? {
-                        boxShadow: "0 0 20px rgba(251, 191, 36, 0.35), 0 4px 12px rgba(251, 191, 36, 0.25)",
-                        border: "1px solid transparent",
-                      } : undefined}
                     >
                       {hood}
                     </button>
@@ -290,7 +269,7 @@ function PreferencesContent() {
             </section>
 
             {/* Vibes Section */}
-            <section className="p-5 rounded-xl bg-[var(--dusk)]/50 border border-[var(--twilight)] backdrop-blur-sm">
+            <section className="p-5 rounded-xl bg-[var(--dusk)]/50 border border-[var(--twilight)]">
               <div className="flex items-center justify-between mb-4">
                 <div>
                   <h2 className="font-sans text-base font-medium text-[var(--cream)] flex items-center gap-2">
@@ -314,22 +293,27 @@ function PreferencesContent() {
               <div className="flex flex-wrap gap-2">
                 {PREFERENCE_VIBES.map((vibe) => {
                   const isActive = selectedVibes.includes(vibe.value);
-                  const emoji = VIBE_EMOJIS[vibe.value];
+                  const vibeColor = getVibeColor(vibe.value);
                   return (
                     <button
                       key={vibe.value}
                       onClick={() => toggleVibe(vibe.value)}
-                      className={`flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl font-mono text-sm transition-all duration-200 ${
+                      className={`flex items-center gap-2 px-3.5 py-2.5 rounded-xl font-mono text-sm transition-all duration-200 ${
                         isActive
-                          ? "bg-[var(--lavender)] text-[var(--void)] font-medium scale-[1.02]"
+                          ? "text-[var(--void)] font-medium border border-transparent"
                           : "bg-[var(--night)] text-[var(--muted)] hover:text-[var(--cream)] border border-[var(--twilight)] hover:border-[var(--soft)]/30"
                       }`}
                       style={isActive ? {
-                        boxShadow: "0 0 20px rgba(196, 181, 253, 0.35), 0 4px 12px rgba(196, 181, 253, 0.25)",
-                        border: "1px solid transparent",
+                        backgroundColor: vibeColor,
                       } : undefined}
                     >
-                      {emoji && <span className="text-base">{emoji}</span>}
+                      <VibeIcon
+                        type={vibe.value}
+                        size={18}
+                        style={{
+                          color: isActive ? "var(--void)" : vibeColor,
+                        }}
+                      />
                       {vibe.label}
                     </button>
                   );
@@ -338,7 +322,7 @@ function PreferencesContent() {
             </section>
 
             {/* Price Section */}
-            <section className="p-5 rounded-xl bg-[var(--dusk)]/50 border border-[var(--twilight)] backdrop-blur-sm">
+            <section className="p-5 rounded-xl bg-[var(--dusk)]/50 border border-[var(--twilight)]">
               <div className="mb-4">
                 <h2 className="font-sans text-base font-medium text-[var(--cream)] flex items-center gap-2">
                   <span className="w-6 h-6 rounded-lg bg-[var(--neon-green)]/20 flex items-center justify-center">
@@ -355,7 +339,7 @@ function PreferencesContent() {
               <div className="flex flex-wrap gap-2">
                 {PRICE_PREFERENCES.map((price) => {
                   const isActive = pricePreference === price.value;
-                  const priceIcons: Record<string, string> = {
+                  const priceLabels: Record<string, string> = {
                     free: "Free",
                     budget: "$ Budget",
                     any: "$$$ Any",
@@ -366,15 +350,11 @@ function PreferencesContent() {
                       onClick={() => setPricePreference(price.value)}
                       className={`px-4 py-2.5 rounded-xl font-mono text-sm transition-all duration-200 ${
                         isActive
-                          ? "bg-[var(--neon-green)] text-[var(--void)] font-medium scale-[1.02]"
+                          ? "bg-[var(--neon-green)] text-[var(--void)] font-medium border border-transparent"
                           : "bg-[var(--night)] text-[var(--muted)] hover:text-[var(--cream)] border border-[var(--twilight)] hover:border-[var(--soft)]/30"
                       }`}
-                      style={isActive ? {
-                        boxShadow: "0 0 20px rgba(52, 211, 153, 0.35), 0 4px 12px rgba(52, 211, 153, 0.25)",
-                        border: "1px solid transparent",
-                      } : undefined}
                     >
-                      {priceIcons[price.value] || price.label}
+                      {priceLabels[price.value] || price.label}
                     </button>
                   );
                 })}
@@ -394,7 +374,7 @@ function PreferencesContent() {
               <button
                 onClick={handleSave}
                 disabled={saving}
-                className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-[var(--coral)] text-[var(--void)] font-mono text-sm font-medium hover:bg-[var(--rose)] transition-all disabled:opacity-50 shadow-lg shadow-[var(--coral)]/20"
+                className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-[var(--coral)] text-[var(--void)] font-mono text-sm font-medium hover:bg-[var(--rose)] transition-all disabled:opacity-50"
               >
                 {saving ? (
                   <>
