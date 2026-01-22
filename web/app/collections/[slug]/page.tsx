@@ -52,7 +52,7 @@ async function getCollection(slug: string) {
   const supabase = await createClient();
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: collectionData } = await (supabase as any)
+  const { data: collectionData, error } = await (supabase as any)
     .from("collections")
     .select(`
       id,
@@ -67,7 +67,12 @@ async function getCollection(slug: string) {
       owner:profiles!collections_user_id_fkey(username, display_name, avatar_url)
     `)
     .eq("slug", slug)
+    .eq("visibility", "public")
     .single();
+
+  if (error) {
+    console.error("Collection fetch error:", error);
+  }
 
   const collection = collectionData as CollectionData | null;
   if (!collection) return null;
