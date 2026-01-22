@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import Image from "next/image";
 import { notFound } from "next/navigation";
@@ -49,6 +49,8 @@ type CollectionData = {
 };
 
 async function getCollection(slug: string) {
+  const supabase = await createClient();
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: collectionData } = await (supabase as any)
     .from("collections")
