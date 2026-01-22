@@ -66,10 +66,17 @@ export default function UserMenu() {
     );
   }
 
-  // Logged in - show avatar and dropdown
-  const initials = profile?.display_name
+  // User exists but profile still loading - show loading state
+  if (!profile) {
+    return (
+      <div className="w-8 h-8 rounded-full bg-[var(--twilight)] animate-pulse" />
+    );
+  }
+
+  // Logged in with profile - show avatar and dropdown
+  const initials = profile.display_name
     ? profile.display_name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
-    : profile?.username?.slice(0, 2).toUpperCase() || "??";
+    : profile.username?.slice(0, 2).toUpperCase() || user.email?.slice(0, 2).toUpperCase() || "U";
 
   return (
     <div className="flex items-center gap-2">
@@ -86,13 +93,13 @@ export default function UserMenu() {
       <div className="relative flex items-center" ref={menuRef}>
         {/* Avatar - clicks through to profile */}
         <Link
-          href={`/profile/${profile?.username}`}
+          href={`/profile/${profile.username}`}
           className="focus:outline-none"
         >
-          {profile?.avatar_url && !imgError ? (
+          {profile.avatar_url && !imgError ? (
             <Image
               src={profile.avatar_url}
-              alt={profile.display_name || profile.username}
+              alt={profile.display_name || profile.username || "Profile"}
               width={32}
               height={32}
               className="w-8 h-8 rounded-full object-cover border border-[var(--twilight)] hover:border-[var(--coral)] transition-colors"
@@ -123,15 +130,15 @@ export default function UserMenu() {
         <div className="absolute right-0 top-full mt-2 w-48 py-1 bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg shadow-lg z-[1050]">
           <div className="px-4 py-2 border-b border-[var(--twilight)]">
             <p className="font-mono text-sm text-[var(--cream)]">
-              {profile?.display_name || profile?.username}
+              {profile.display_name || profile.username}
             </p>
             <p className="font-mono text-xs text-[var(--muted)]">
-              @{profile?.username}
+              @{profile.username}
             </p>
           </div>
 
           <Link
-            href={`/profile/${profile?.username}`}
+            href={`/profile/${profile.username}`}
             onClick={() => setIsOpen(false)}
             className="block px-4 py-2 font-mono text-xs text-[var(--soft)] hover:bg-[var(--twilight)] transition-colors"
           >
