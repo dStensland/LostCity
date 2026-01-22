@@ -44,7 +44,7 @@ async function getTonightEvents(): Promise<TonightEvent[]> {
         venue:venues(name, neighborhood)
       `)
       .eq("start_date", today)
-      .eq("is_active", true)
+      .eq("is_live", true)
       .order("start_time", { ascending: true })
       .limit(6);
 
