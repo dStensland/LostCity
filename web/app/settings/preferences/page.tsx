@@ -79,27 +79,35 @@ function PreferencesContent() {
 
     setSaving(true);
 
-    const { error } = await supabase
-      .from("user_preferences")
-      .upsert({
-        user_id: user.id,
-        favorite_categories: selectedCategories,
-        favorite_neighborhoods: selectedNeighborhoods,
-        favorite_vibes: selectedVibes,
-        price_preference: pricePreference,
-      } as never);
+    try {
+      const { error } = await supabase
+        .from("user_preferences")
+        .upsert(
+          {
+            user_id: user.id,
+            favorite_categories: selectedCategories,
+            favorite_neighborhoods: selectedNeighborhoods,
+            favorite_vibes: selectedVibes,
+            price_preference: pricePreference,
+          },
+          { onConflict: "user_id" }
+        );
 
-    setSaving(false);
+      if (error) {
+        console.error("Error saving preferences:", error);
+        setSaving(false);
+        return;
+      }
 
-    if (error) {
-      console.error("Error saving preferences:", error);
-      return;
-    }
-
-    if (isWelcome) {
-      router.push("/foryou");
-    } else {
-      router.push("/settings");
+      // Navigate after successful save
+      if (isWelcome) {
+        router.push("/foryou");
+      } else {
+        router.push("/settings");
+      }
+    } catch (err) {
+      console.error("Error saving preferences:", err);
+      setSaving(false);
     }
   };
 
