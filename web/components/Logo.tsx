@@ -9,7 +9,7 @@ interface LogoProps {
 
 // Portal-specific configurations
 const PORTAL_CONFIG: Record<string, { name: string; color: string }> = {
-  atlanta: { name: "ATLANTA", color: "var(--coral)" }, // Coral for Atlanta
+  atlanta: { name: "ATLANTA", color: "var(--gold)" }, // Golden for Atlanta
 };
 
 export default function Logo({ size = "md", href = "/", className = "", portal }: LogoProps) {
@@ -57,7 +57,7 @@ export default function Logo({ size = "md", href = "/", className = "", portal }
             fontSize: config.portalSize,
             fontWeight: 400,
             color: portalConfig.color,
-            textShadow: "0 0 10px rgba(255, 107, 107, 0.4)",
+            textShadow: portal === "atlanta" ? "0 0 10px rgba(255, 215, 0, 0.4)" : "0 0 10px rgba(255, 107, 107, 0.4)",
           }}
         >
           {portalConfig.name}
