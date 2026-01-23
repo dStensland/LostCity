@@ -1,0 +1,158 @@
+import { NextResponse } from "next/server";
+import { createClient, getUser } from "@/lib/supabase/server";
+import { errorResponse } from "@/lib/api-utils";
+
+// GET /api/invites - Get user's invites
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const type = searchParams.get("type") || "received"; // received, sent, all
+  const status = searchParams.get("status"); // pending, accepted, declined, maybe
+
+  const user = await getUser();
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const supabase = await createClient();
+
+  let query = supabase
+    .from("event_invites")
+    .select(`
+      id,
+      note,
+      status,
+      created_at,
+      responded_at,
+      inviter:profiles!event_invites_inviter_id_fkey (
+        id, username, display_name, avatar_url
+      ),
+      invitee:profiles!event_invites_invitee_id_fkey (
+        id, username, display_name, avatar_url
+      ),
+      event:events (
+        id, title, start_date, start_time, is_all_day, image_url,
+        venue:venues (id, name, neighborhood)
+      )
+    `)
+    .order("created_at", { ascending: false });
+
+  // Filter by type
+  if (type === "received") {
+    query = query.eq("invitee_id", user.id);
+  } else if (type === "sent") {
+    query = query.eq("inviter_id", user.id);
+  } else {
+    query = query.or(`inviter_id.eq.${user.id},invitee_id.eq.${user.id}`);
+  }
+
+  // Filter by status
+  if (status) {
+    query = query.eq("status", status);
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    return errorResponse(error, "invites");
+  }
+
+  // Get counts
+  const { count: pendingCount } = await supabase
+    .from("event_invites")
+    .select("*", { count: "exact", head: true })
+    .eq("invitee_id", user.id)
+    .eq("status", "pending");
+
+  return NextResponse.json({
+    invites: data || [],
+    pendingCount: pendingCount || 0,
+  });
+}
+
+// POST /api/invites - Create a new invite
+export async function POST(request: Request) {
+  const user = await getUser();
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const body = await request.json();
+  const { eventId, inviteeId, note } = body as {
+    eventId: number;
+    inviteeId: string;
+    note?: string;
+  };
+
+  if (!eventId || !inviteeId) {
+    return NextResponse.json(
+      { error: "eventId and inviteeId are required" },
+      { status: 400 }
+    );
+  }
+
+  // Can't invite yourself
+  if (inviteeId === user.id) {
+    return NextResponse.json(
+      { error: "You can't invite yourself" },
+      { status: 400 }
+    );
+  }
+
+  const supabase = await createClient();
+
+  // Check if event exists
+  const { data: event } = await supabase
+    .from("events")
+    .select("id")
+    .eq("id", eventId)
+    .single();
+
+  if (!event) {
+    return NextResponse.json({ error: "Event not found" }, { status: 404 });
+  }
+
+  // Check if invitee exists
+  const { data: invitee } = await supabase
+    .from("profiles")
+    .select("id")
+    .eq("id", inviteeId)
+    .single();
+
+  if (!invitee) {
+    return NextResponse.json({ error: "User not found" }, { status: 404 });
+  }
+
+  // Check if invite already exists
+  const { data: existingInvite } = await supabase
+    .from("event_invites")
+    .select("id, status")
+    .eq("event_id", eventId)
+    .eq("inviter_id", user.id)
+    .eq("invitee_id", inviteeId)
+    .single();
+
+  if (existingInvite) {
+    return NextResponse.json(
+      { error: "You've already invited this person to this event" },
+      { status: 400 }
+    );
+  }
+
+  // Create invite
+  const { data: invite, error } = await supabase
+    .from("event_invites")
+    .insert({
+      event_id: eventId,
+      inviter_id: user.id,
+      invitee_id: inviteeId,
+      note: note || null,
+    } as never)
+    .select()
+    .single();
+
+  if (error) {
+    return errorResponse(error, "invite");
+  }
+
+  return NextResponse.json({ invite }, { status: 201 });
+}

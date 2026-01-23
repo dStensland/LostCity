@@ -7,7 +7,6 @@ import Image from "next/image";
 import Logo from "./Logo";
 import UserMenu from "./UserMenu";
 import HeaderSearchButton from "./HeaderSearchButton";
-import { useLiveEventCount } from "@/lib/hooks/useLiveEvents";
 import { usePortal, DEFAULT_PORTAL_SLUG, DEFAULT_PORTAL_NAME } from "@/lib/portal-context";
 import { useAuth } from "@/lib/auth-context";
 
@@ -31,7 +30,7 @@ interface UnifiedHeaderProps {
 }
 
 type NavTab = {
-  key: "feed" | "your_stuff" | "events" | "spots" | "community" | "happening_now";
+  key: "feed" | "your_stuff" | "events" | "spots" | "community";
   defaultLabel: string;
   href: string;
   authRequired?: boolean;
@@ -51,8 +50,8 @@ const DEFAULT_TABS: NavTab[] = [
   },
   {
     key: "your_stuff",
-    defaultLabel: "Your Stuff",
-    href: "foryou",
+    defaultLabel: "Your Scene",
+    href: "dashboard",
     authRequired: true,
     icon: (
       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -91,17 +90,6 @@ const DEFAULT_TABS: NavTab[] = [
       </svg>
     ),
   },
-  {
-    key: "happening_now",
-    defaultLabel: "Around You",
-    href: "happening-now",
-    icon: (
-      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-      </svg>
-    ),
-  },
 ];
 
 // Inner component that uses useSearchParams (must be wrapped in Suspense)
@@ -117,7 +105,6 @@ function UnifiedHeaderInner({
   const mobileMenuRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const liveEventCount = useLiveEventCount();
   const { portal } = usePortal();
   const { user } = useAuth();
 
@@ -133,7 +120,6 @@ function UnifiedHeaderInner({
     }));
 
   const currentView = searchParams?.get("view") || "feed";
-  const isHappeningNow = currentView === "happening-now" || pathname?.startsWith("/happening-now");
 
   // Click outside to close mobile menu
   useEffect(() => {
@@ -161,7 +147,7 @@ function UnifiedHeaderInner({
       return `/${portalSlug}`;
     }
     if (tab.key === "your_stuff") {
-      return "/foryou";
+      return "/dashboard";
     }
     return `/${portalSlug}?view=${tab.href}`;
   };
@@ -171,16 +157,13 @@ function UnifiedHeaderInner({
     const isPortalPage = pathname === `/${portalSlug}`;
 
     if (tab.key === "your_stuff") {
-      return pathname === "/foryou" || pathname === "/saved";
+      return pathname === "/dashboard" || pathname === "/foryou" || pathname === "/saved" || pathname === "/friends";
     }
     if (tab.key === "feed") {
       return isPortalPage && currentView === "feed";
     }
     if (tab.key === "events") {
       return isPortalPage && (currentView === "events" || currentView === "map" || currentView === "calendar");
-    }
-    if (tab.key === "happening_now") {
-      return isPortalPage && currentView === "happening-now";
     }
     return isPortalPage && currentView === tab.href;
   };
@@ -250,26 +233,8 @@ function UnifiedHeaderInner({
             </nav>
           )}
 
-          {/* Right: Live indicator, Search, User menu, Mobile menu */}
+          {/* Right: Search, User menu, Mobile menu */}
           <div className="flex items-center gap-2 flex-shrink-0 ml-auto">
-            {/* Live indicator */}
-            {liveEventCount > 0 && (
-              <Link
-                href={`/${portalSlug}?view=happening-now`}
-                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full font-mono text-[0.6rem] font-medium transition-all duration-200 ${
-                  isHappeningNow
-                    ? "bg-[var(--neon-red)] text-white shadow-[0_0_12px_rgba(255,90,90,0.4)]"
-                    : "bg-[var(--neon-red)]/15 text-[var(--neon-red)] hover:bg-[var(--neon-red)]/25 border border-[var(--neon-red)]/30"
-                }`}
-              >
-                <span className="relative flex h-1.5 w-1.5">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-current opacity-75" />
-                  <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-current" />
-                </span>
-                {liveEventCount} Live
-              </Link>
-            )}
-
             <HeaderSearchButton />
             <UserMenu />
 
@@ -308,14 +273,14 @@ function UnifiedHeaderInner({
                     Map View
                   </Link>
                   <Link
-                    href="/saved"
+                    href="/dashboard?tab=planning"
                     onClick={() => setMobileMenuOpen(false)}
                     className="flex items-center gap-2 px-3 py-2 font-mono text-sm text-[var(--muted)] hover:text-[var(--neon-amber)] hover:bg-[var(--twilight)]/30"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
                     </svg>
-                    Saved
+                    Your Moves
                   </Link>
 
                   <div className="my-2 border-t border-[var(--twilight)]" />

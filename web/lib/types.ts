@@ -278,6 +278,66 @@ export type Database = {
           status?: "pending" | "accepted" | "declined";
         };
       };
+      event_invites: {
+        Row: {
+          id: string;
+          event_id: number;
+          inviter_id: string;
+          invitee_id: string;
+          note: string | null;
+          status: "pending" | "accepted" | "declined" | "maybe";
+          created_at: string;
+          responded_at: string | null;
+        };
+        Insert: {
+          event_id: number;
+          inviter_id: string;
+          invitee_id: string;
+          note?: string | null;
+          status?: "pending" | "accepted" | "declined" | "maybe";
+        };
+        Update: {
+          status?: "pending" | "accepted" | "declined" | "maybe";
+          responded_at?: string | null;
+        };
+      };
+      inferred_preferences: {
+        Row: {
+          id: string;
+          user_id: string;
+          signal_type: string;
+          signal_value: string;
+          score: number;
+          interaction_count: number;
+          last_interaction_at: string;
+          created_at: string;
+        };
+        Insert: {
+          user_id: string;
+          signal_type: string;
+          signal_value: string;
+          score?: number;
+          interaction_count?: number;
+        };
+        Update: {
+          score?: number;
+          interaction_count?: number;
+          last_interaction_at?: string;
+        };
+      };
+      hidden_events: {
+        Row: {
+          user_id: string;
+          event_id: number;
+          reason: string | null;
+          created_at: string;
+        };
+        Insert: {
+          user_id: string;
+          event_id: number;
+          reason?: string | null;
+        };
+      };
       organizations: {
         Row: {
           id: number;
@@ -431,4 +491,18 @@ export interface RecommendationReason {
   type: RecommendationReasonType;
   label: string;
   detail?: string;
+}
+
+// Event invite types
+export type EventInviteStatus = "pending" | "accepted" | "declined" | "maybe";
+
+export interface EventInvite {
+  id: string;
+  event_id: number;
+  inviter_id: string;
+  invitee_id: string;
+  note: string | null;
+  status: EventInviteStatus;
+  created_at: string;
+  responded_at: string | null;
 }

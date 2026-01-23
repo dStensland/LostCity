@@ -146,19 +146,27 @@ export default function UserMenu() {
           </Link>
 
           <Link
-            href="/foryou"
+            href="/dashboard"
             onClick={() => setIsOpen(false)}
             className="block px-4 py-2 font-mono text-xs text-[var(--soft)] hover:bg-[var(--twilight)] transition-colors"
           >
-            For You
+            Your Scene
           </Link>
 
           <Link
-            href="/saved"
+            href="/dashboard?tab=planning"
             onClick={() => setIsOpen(false)}
             className="block px-4 py-2 font-mono text-xs text-[var(--soft)] hover:bg-[var(--twilight)] transition-colors"
           >
-            Saved Events
+            Your Moves
+          </Link>
+
+          <Link
+            href="/dashboard?tab=activity"
+            onClick={() => setIsOpen(false)}
+            className="block px-4 py-2 font-mono text-xs text-[var(--soft)] hover:bg-[var(--twilight)] transition-colors"
+          >
+            The Scene
           </Link>
 
           <Link
