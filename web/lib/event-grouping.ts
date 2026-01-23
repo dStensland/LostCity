@@ -1,5 +1,6 @@
 import { format, parseISO, isToday, isTomorrow } from "date-fns";
 import type { EventWithLocation } from "@/lib/search";
+import type { SeriesInfo, SeriesVenueGroup } from "@/components/SeriesCard";
 
 // Rollup thresholds
 const VENUE_ROLLUP_THRESHOLD = 4;
@@ -12,7 +13,8 @@ const ROLLUP_CATEGORIES = ["community"];
 export type DisplayItem =
   | { type: "event"; event: EventWithLocation }
   | { type: "venue-group"; venueId: number; venueName: string; neighborhood: string | null; events: EventWithLocation[] }
-  | { type: "category-group"; categoryId: string; categoryName: string; events: EventWithLocation[] };
+  | { type: "category-group"; categoryId: string; categoryName: string; events: EventWithLocation[] }
+  | { type: "series-group"; seriesId: string; series: SeriesInfo; venueGroups: SeriesVenueGroup[] };
 
 /**
  * Time period for grouping events within a day
@@ -42,16 +44,89 @@ export function getTimePeriod(time: string | null): TimePeriod {
 }
 
 /**
- * Group events into display items (individual events, venue groups, category groups)
+ * Group events into display items (individual events, venue groups, category groups, series groups)
  * Uses rollup thresholds to combine events from the same venue or category
+ * Series events are grouped FIRST (highest priority), then venue, then category
  */
 export function groupEventsForDisplay(events: EventWithLocation[]): DisplayItem[] {
   const items: DisplayItem[] = [];
   const usedEventIds = new Set<number>();
 
-  // First pass: Find venue clusters
+  // FIRST PASS: Group series events by series_id
+  // Series grouping takes highest priority - shows all showtimes for a series by venue
+  const seriesGroups = new Map<string, EventWithLocation[]>();
+  for (const event of events) {
+    if (event.series_id && event.series) {
+      const existing = seriesGroups.get(event.series_id) || [];
+      existing.push(event);
+      seriesGroups.set(event.series_id, existing);
+    }
+  }
+
+  // Create series groups - group by venue within each series
+  for (const [seriesId, seriesEvents] of seriesGroups) {
+    // Get series info from first event
+    const firstEvent = seriesEvents[0];
+    const series = firstEvent.series!;
+
+    // Group events by venue
+    const venueMap = new Map<number, { venue: SeriesVenueGroup["venue"]; events: EventWithLocation[] }>();
+    for (const event of seriesEvents) {
+      if (event.venue) {
+        const existing = venueMap.get(event.venue.id);
+        if (existing) {
+          existing.events.push(event);
+        } else {
+          venueMap.set(event.venue.id, {
+            venue: {
+              id: event.venue.id,
+              name: event.venue.name,
+              slug: event.venue.slug,
+              neighborhood: event.venue.neighborhood,
+            },
+            events: [event],
+          });
+        }
+      }
+    }
+
+    // Build venue groups with showtimes
+    const venueGroups: SeriesVenueGroup[] = [];
+    for (const { venue, events: venueEvents } of venueMap.values()) {
+      // Sort by time
+      venueEvents.sort((a, b) => (a.start_time || "").localeCompare(b.start_time || ""));
+      venueGroups.push({
+        venue,
+        showtimes: venueEvents.map((e) => ({ id: e.id, time: e.start_time })),
+      });
+    }
+
+    // Sort venues by earliest showtime
+    venueGroups.sort((a, b) =>
+      (a.showtimes[0]?.time || "").localeCompare(b.showtimes[0]?.time || "")
+    );
+
+    items.push({
+      type: "series-group",
+      seriesId,
+      series: {
+        id: series.id,
+        slug: series.slug,
+        title: series.title,
+        series_type: series.series_type,
+        image_url: series.image_url,
+      },
+      venueGroups,
+    });
+
+    // Mark all series events as used
+    seriesEvents.forEach((e) => usedEventIds.add(e.id));
+  }
+
+  // SECOND PASS: Find venue clusters (excluding series events)
   const venueGroups = new Map<number, EventWithLocation[]>();
   for (const event of events) {
+    if (usedEventIds.has(event.id)) continue;
     if (event.venue?.id) {
       const existing = venueGroups.get(event.venue.id) || [];
       existing.push(event);
@@ -74,7 +149,7 @@ export function groupEventsForDisplay(events: EventWithLocation[]): DisplayItem[
     }
   }
 
-  // Second pass: Find category clusters (only for specific categories)
+  // THIRD PASS: Find category clusters (only for specific categories)
   const categoryGroups = new Map<string, EventWithLocation[]>();
   for (const event of events) {
     if (usedEventIds.has(event.id)) continue;
@@ -101,7 +176,7 @@ export function groupEventsForDisplay(events: EventWithLocation[]): DisplayItem[
     }
   }
 
-  // Third pass: Add remaining events as individual items
+  // FOURTH PASS: Add remaining events as individual items
   for (const event of events) {
     if (!usedEventIds.has(event.id)) {
       items.push({ type: "event", event });
@@ -112,12 +187,22 @@ export function groupEventsForDisplay(events: EventWithLocation[]): DisplayItem[
   items.sort((a, b) => {
     const getFirstTime = (item: DisplayItem): string => {
       if (item.type === "event") return item.event.start_time || "00:00";
+      if (item.type === "series-group") return item.venueGroups[0]?.showtimes[0]?.time || "00:00";
       return item.events[0]?.start_time || "00:00";
     };
     return getFirstTime(a).localeCompare(getFirstTime(b));
   });
 
   return items;
+}
+
+/**
+ * Get the first time for a display item (used for sorting/grouping)
+ */
+function getFirstTimeForItem(item: DisplayItem): string | null {
+  if (item.type === "event") return item.event.start_time;
+  if (item.type === "series-group") return item.venueGroups[0]?.showtimes[0]?.time || null;
+  return item.events[0]?.start_time || null;
 }
 
 /**
@@ -128,8 +213,8 @@ export function groupByTimePeriod(items: DisplayItem[]): { period: TimePeriod; i
   const periods: TimePeriod[] = ["morning", "afternoon", "evening", "latenight"];
 
   for (const item of items) {
-    const time = item.type === "event" ? item.event.start_time : item.events[0]?.start_time;
-    const period = getTimePeriod(time || null);
+    const time = getFirstTimeForItem(item);
+    const period = getTimePeriod(time);
     if (!groups.has(period)) groups.set(period, []);
     groups.get(period)!.push(item);
   }

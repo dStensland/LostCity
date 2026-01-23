@@ -10,6 +10,8 @@ import PageFooter from "@/components/PageFooter";
 import FollowButton from "@/components/FollowButton";
 import EventCard from "@/components/EventCard";
 import CategoryIcon, { getCategoryColor } from "@/components/CategoryIcon";
+import FlagButton from "@/components/FlagButton";
+import ProducerStickyBar from "@/components/ProducerStickyBar";
 import type { Event } from "@/lib/supabase";
 
 export const revalidate = 300;
@@ -302,8 +304,17 @@ export default async function PortalOrganizerPage({ params }: Props) {
         </div>
       </section>
 
+      {/* Flag for QA */}
+      <div className="max-w-3xl mx-auto px-4 py-6 border-t border-[var(--twilight)]">
+        <FlagButton
+          entityType="producer"
+          entityId={parseInt(producer.id, 10)}
+          entityName={producer.name}
+        />
+      </div>
+
       {/* Back link */}
-      <div className="max-w-3xl mx-auto px-4 pb-8">
+      <div className="max-w-3xl mx-auto px-4 pb-28">
         <Link
           href={`/${portalSlug}?view=community`}
           className="inline-flex items-center gap-2 font-mono text-sm text-[var(--muted)] hover:text-[var(--coral)] transition-colors"
@@ -314,6 +325,13 @@ export default async function PortalOrganizerPage({ params }: Props) {
           Back to Groups
         </Link>
       </div>
+
+      <ProducerStickyBar
+        producerId={producer.id}
+        producerName={producer.name}
+        website={producer.website}
+        instagram={producer.instagram}
+      />
 
       <PageFooter />
     </div>

@@ -71,6 +71,10 @@ export type Event = {
   venue: Venue | null;
   series_id?: string | null;
   series?: SeriesInfo | null;
+  is_recurring?: boolean;
+  recurrence_rule?: string | null;
+  is_live?: boolean;
+  attendee_count?: number | null;
 };
 
 export type Venue = {
@@ -81,6 +85,8 @@ export type Venue = {
   neighborhood: string | null;
   city: string;
   state: string;
+  vibes?: string[] | null;
+  description?: string | null;
 };
 
 export async function getUpcomingEvents(limit = 50): Promise<Event[]> {
@@ -157,7 +163,7 @@ export async function getEventById(id: number): Promise<EventWithProducer | null
     .select(
       `
       *,
-      venue:venues(id, name, slug, address, neighborhood, city, state),
+      venue:venues(id, name, slug, address, neighborhood, city, state, vibes, description),
       producer:event_producers(id, name, slug, org_type, website, instagram, logo_url, description)
     `
     )

@@ -173,11 +173,11 @@ export default function EventGroup({
           <span className="font-medium text-sm text-[var(--cream)] group-hover:text-[var(--glow-color,var(--neon-magenta))] truncate block transition-colors">{title}</span>
           {subtitle && <span className="text-xs text-[var(--muted)]">{subtitle}</span>}
         </div>
-        <span className="font-mono text-[0.6rem] text-[var(--muted)] bg-[var(--twilight)]/50 px-1.5 py-0.5 rounded">
+        <span className="font-mono text-[0.6rem] text-[var(--muted)] bg-[var(--twilight)]/50 px-1.5 py-0.5 rounded flex-shrink-0 whitespace-nowrap">
           {events.length} {events.length === 1 ? "thing" : "things"}
         </span>
         <svg
-          className={`w-4 h-4 text-[var(--muted)] transition-transform ${isExpanded ? "rotate-180" : ""}`}
+          className={`w-4 h-4 text-[var(--muted)] transition-transform flex-shrink-0 ${isExpanded ? "rotate-180" : ""}`}
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"

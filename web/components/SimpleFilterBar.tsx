@@ -1,0 +1,368 @@
+"use client";
+
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
+import { useCallback, useMemo, useState, useEffect, useRef, useTransition } from "react";
+import { CATEGORIES, DATE_FILTERS } from "@/lib/search";
+import CategoryIcon, { CATEGORY_CONFIG, type CategoryType } from "./CategoryIcon";
+import { useAuth } from "@/lib/auth-context";
+
+type SimpleFilterBarProps = {
+  variant?: "full" | "compact";
+};
+
+// Simple date filters for the simplified bar
+const SIMPLE_DATE_FILTERS = [
+  { value: "today", label: "Today" },
+  { value: "tomorrow", label: "Tomorrow" },
+  { value: "weekend", label: "Weekend" },
+  { value: "week", label: "This Week" },
+] as const;
+
+export default function SimpleFilterBar({ variant = "full" }: SimpleFilterBarProps) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const [isPending, startTransition] = useTransition();
+  const { user } = useAuth();
+
+  // Dropdown states
+  const [categoryDropdownOpen, setCategoryDropdownOpen] = useState(false);
+  const [dateDropdownOpen, setDateDropdownOpen] = useState(false);
+  const categoryDropdownRef = useRef<HTMLDivElement>(null);
+  const dateDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Optimistic view state for instant UI feedback
+  const [optimisticView, setOptimisticView] = useState<string | null>(null);
+
+  // View mode (list or map) - use optimistic state when pending for instant feedback
+  const urlView = searchParams.get("view") || "events";
+  const currentView = optimisticView || urlView;
+
+  // Reset optimistic state when URL catches up
+  useEffect(() => {
+    if (optimisticView && urlView === optimisticView) {
+      setOptimisticView(null);
+    }
+  }, [urlView, optimisticView]);
+
+  // Current filter values
+  const currentCategories = useMemo(
+    () => searchParams.get("categories")?.split(",").filter(Boolean) || [],
+    [searchParams]
+  );
+  const currentDateFilter = searchParams.get("date") || "";
+  const currentFreeOnly = searchParams.get("free") === "1";
+  const currentFeedMode = searchParams.get("feed") || "all";
+
+  // Close dropdowns when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (categoryDropdownRef.current && !categoryDropdownRef.current.contains(event.target as Node)) {
+        setCategoryDropdownOpen(false);
+      }
+      if (dateDropdownRef.current && !dateDropdownRef.current.contains(event.target as Node)) {
+        setDateDropdownOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const updateParams = useCallback(
+    (updates: Record<string, string | null>) => {
+      const params = new URLSearchParams(searchParams.toString());
+      for (const [key, value] of Object.entries(updates)) {
+        if (value === null || value === "") {
+          params.delete(key);
+        } else {
+          params.set(key, value);
+        }
+      }
+      params.delete("page");
+      const newUrl = params.toString() ? `${pathname}?${params.toString()}` : pathname;
+      startTransition(() => {
+        router.push(newUrl, { scroll: false });
+      });
+    },
+    [router, pathname, searchParams, startTransition]
+  );
+
+  const toggleCategory = useCallback(
+    (category: string) => {
+      const newCategories = currentCategories.includes(category)
+        ? currentCategories.filter((c) => c !== category)
+        : [...currentCategories, category];
+      updateParams({
+        categories: newCategories.length > 0 ? newCategories.join(",") : null,
+      });
+    },
+    [currentCategories, updateParams]
+  );
+
+  const setDateFilter = useCallback(
+    (date: string) => {
+      updateParams({
+        date: currentDateFilter === date ? null : date,
+      });
+      setDateDropdownOpen(false);
+    },
+    [currentDateFilter, updateParams]
+  );
+
+  const toggleFreeOnly = useCallback(() => {
+    updateParams({
+      free: currentFreeOnly ? null : "1",
+      price: currentFreeOnly ? null : "free",
+    });
+  }, [currentFreeOnly, updateParams]);
+
+  const toggleFeedMode = useCallback(
+    (mode: "all" | "following") => {
+      updateParams({
+        feed: mode === "all" ? null : mode,
+      });
+    },
+    [updateParams]
+  );
+
+  const setViewMode = useCallback(
+    (view: "events" | "map" | "calendar") => {
+      setOptimisticView(view);
+      updateParams({ view });
+    },
+    [updateParams]
+  );
+
+  const hasFilters = currentCategories.length > 0 || currentDateFilter || currentFreeOnly || currentFeedMode !== "all";
+
+  const clearAll = useCallback(() => {
+    updateParams({
+      categories: null,
+      date: null,
+      free: null,
+      price: null,
+      feed: null,
+    });
+  }, [updateParams]);
+
+  // Get display label for current date filter
+  const dateFilterLabel = currentDateFilter
+    ? SIMPLE_DATE_FILTERS.find(d => d.value === currentDateFilter)?.label || "When"
+    : "When";
+
+  // Get display label for categories
+  const categoryLabel = currentCategories.length === 0
+    ? "Category"
+    : currentCategories.length === 1
+    ? CATEGORIES.find(c => c.value === currentCategories[0])?.label || "Category"
+    : `${currentCategories.length} selected`;
+
+  return (
+    <div className="sticky top-[104px] z-30 bg-[var(--night)] border-b border-[var(--twilight)]">
+      <div className={`max-w-3xl mx-auto px-4 ${variant === "compact" ? "py-1.5" : "py-2"}`}>
+        <div className="flex items-center gap-2">
+          {/* Category dropdown */}
+          <div className="relative" ref={categoryDropdownRef}>
+            <button
+              onClick={() => {
+                setCategoryDropdownOpen(!categoryDropdownOpen);
+                setDateDropdownOpen(false);
+              }}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full font-mono text-xs font-medium transition-all ${
+                currentCategories.length > 0
+                  ? "bg-[var(--coral)] text-[var(--void)]"
+                  : "bg-[var(--twilight)] text-[var(--muted)] hover:text-[var(--cream)]"
+              }`}
+            >
+              {categoryLabel}
+              <svg className={`w-3 h-3 transition-transform ${categoryDropdownOpen ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+
+            {/* Category dropdown menu */}
+            {categoryDropdownOpen && (
+              <div className="absolute top-full left-0 mt-1 w-56 max-h-80 overflow-y-auto rounded-lg border border-[var(--twilight)] shadow-xl z-50" style={{ backgroundColor: "var(--void)" }}>
+                <div className="p-2">
+                  {CATEGORIES.map((cat) => {
+                    const isActive = currentCategories.includes(cat.value);
+                    return (
+                      <button
+                        key={cat.value}
+                        onClick={() => toggleCategory(cat.value)}
+                        className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg font-mono text-xs font-medium transition-colors ${
+                          isActive
+                            ? "bg-[var(--coral)] text-[var(--void)]"
+                            : "text-[var(--cream)] hover:bg-[var(--twilight)]"
+                        }`}
+                      >
+                        <CategoryIcon
+                          type={cat.value}
+                          size={14}
+                          style={{ color: isActive ? "var(--void)" : CATEGORY_CONFIG[cat.value as CategoryType]?.color }}
+                          glow={isActive ? "none" : "subtle"}
+                        />
+                        {cat.label}
+                        {isActive && (
+                          <svg className="w-3 h-3 ml-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* When dropdown */}
+          <div className="relative" ref={dateDropdownRef}>
+            <button
+              onClick={() => {
+                setDateDropdownOpen(!dateDropdownOpen);
+                setCategoryDropdownOpen(false);
+              }}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full font-mono text-xs font-medium transition-all ${
+                currentDateFilter
+                  ? "bg-[var(--gold)] text-[var(--void)]"
+                  : "bg-[var(--twilight)] text-[var(--muted)] hover:text-[var(--cream)]"
+              }`}
+            >
+              {dateFilterLabel}
+              <svg className={`w-3 h-3 transition-transform ${dateDropdownOpen ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+
+            {/* Date dropdown menu */}
+            {dateDropdownOpen && (
+              <div className="absolute top-full left-0 mt-1 w-40 rounded-lg border border-[var(--twilight)] shadow-xl z-50" style={{ backgroundColor: "var(--void)" }}>
+                <div className="p-2">
+                  {SIMPLE_DATE_FILTERS.map((df) => {
+                    const isActive = currentDateFilter === df.value;
+                    return (
+                      <button
+                        key={df.value}
+                        onClick={() => setDateFilter(df.value)}
+                        className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg font-mono text-xs font-medium transition-colors ${
+                          isActive
+                            ? "bg-[var(--gold)] text-[var(--void)]"
+                            : "text-[var(--cream)] hover:bg-[var(--twilight)]"
+                        }`}
+                      >
+                        {df.label}
+                        {isActive && (
+                          <svg className="w-3 h-3 ml-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Following toggle - only for logged in users */}
+          {user && (
+            <button
+              onClick={() => toggleFeedMode(currentFeedMode === "following" ? "all" : "following")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full font-mono text-xs font-medium transition-all ${
+                currentFeedMode === "following"
+                  ? "bg-[var(--neon-cyan)] text-[var(--void)]"
+                  : "bg-[var(--twilight)] text-[var(--muted)] hover:text-[var(--cream)]"
+              }`}
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+              </svg>
+              Following
+            </button>
+          )}
+
+          {/* Free only toggle */}
+          <button
+            onClick={toggleFreeOnly}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full font-mono text-xs font-medium transition-all ${
+              currentFreeOnly
+                ? "bg-[var(--neon-green)] text-[var(--void)]"
+                : "bg-[var(--twilight)] text-[var(--muted)] hover:text-[var(--cream)]"
+            }`}
+          >
+            <span className={`w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center ${
+              currentFreeOnly
+                ? "border-[var(--void)] bg-[var(--void)]"
+                : "border-current"
+            }`}>
+              {currentFreeOnly && (
+                <span className="w-1.5 h-1.5 rounded-full bg-[var(--neon-green)]" />
+              )}
+            </span>
+            Free only
+          </button>
+
+          {/* Spacer */}
+          <div className="flex-1" />
+
+          {/* Clear filters (only show when filters active) */}
+          {hasFilters && (
+            <button
+              onClick={clearAll}
+              className="px-2 py-1 font-mono text-[0.65rem] text-[var(--coral)] hover:text-[var(--rose)] whitespace-nowrap"
+            >
+              Clear
+            </button>
+          )}
+
+          {/* List/Calendar/Map view toggle */}
+          <div className="flex rounded-full bg-[var(--twilight)] p-0.5">
+            <button
+              onClick={() => setViewMode("events")}
+              className={`flex items-center gap-1 px-2.5 py-1 rounded-full font-mono text-xs font-medium transition-all ${
+                currentView === "events" || currentView === "list"
+                  ? "bg-[var(--cream)] text-[var(--void)]"
+                  : "text-[var(--muted)] hover:text-[var(--cream)]"
+              }`}
+              aria-label="List view"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+              </svg>
+              <span className="hidden sm:inline">List</span>
+            </button>
+            <button
+              onClick={() => setViewMode("calendar")}
+              className={`flex items-center gap-1 px-2.5 py-1 rounded-full font-mono text-xs font-medium transition-all ${
+                currentView === "calendar"
+                  ? "bg-[var(--cream)] text-[var(--void)]"
+                  : "text-[var(--muted)] hover:text-[var(--cream)]"
+              }`}
+              aria-label="Calendar view"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              <span className="hidden sm:inline">Cal</span>
+            </button>
+            <button
+              onClick={() => setViewMode("map")}
+              className={`flex items-center gap-1 px-2.5 py-1 rounded-full font-mono text-xs font-medium transition-all ${
+                currentView === "map"
+                  ? "bg-[var(--cream)] text-[var(--void)]"
+                  : "text-[var(--muted)] hover:text-[var(--cream)]"
+              }`}
+              aria-label="Map view"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+              </svg>
+              <span className="hidden sm:inline">Map</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

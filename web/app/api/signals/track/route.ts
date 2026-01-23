@@ -1,0 +1,137 @@
+import { NextResponse } from "next/server";
+import { createClient, getUser } from "@/lib/supabase/server";
+
+type ActionType = "view" | "save" | "share" | "rsvp_going" | "rsvp_interested" | "went";
+
+// Signal weights for different actions
+const ACTION_WEIGHTS: Record<ActionType, number> = {
+  view: 2,           // Click into detail (2s+)
+  save: 8,           // Save event
+  share: 15,         // Share event
+  rsvp_going: 10,    // RSVP "going"
+  rsvp_interested: 5,// RSVP "interested"
+  went: 12,          // Mark "went"
+};
+
+export async function POST(request: Request) {
+  try {
+    const user = await getUser();
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const body = await request.json();
+    const { event_id, action } = body as { event_id: number; action: ActionType };
+
+    // Validate input
+    if (!event_id || !action) {
+      return NextResponse.json(
+        { error: "Missing required fields: event_id and action" },
+        { status: 400 }
+      );
+    }
+
+    if (!ACTION_WEIGHTS[action]) {
+      return NextResponse.json(
+        { error: `Invalid action type. Must be one of: ${Object.keys(ACTION_WEIGHTS).join(", ")}` },
+        { status: 400 }
+      );
+    }
+
+    const supabase = await createClient();
+
+    // Get event details to extract signals
+    const { data: event, error: eventError } = await supabase
+      .from("events")
+      .select(`
+        id,
+        category,
+        venue:venues(id, name, neighborhood)
+      `)
+      .eq("id", event_id)
+      .single();
+
+    if (eventError || !event) {
+      return NextResponse.json(
+        { error: "Event not found" },
+        { status: 404 }
+      );
+    }
+
+    const weight = ACTION_WEIGHTS[action];
+    const signals: { type: string; value: string }[] = [];
+
+    // Extract signals from event
+    if (event.category) {
+      signals.push({ type: "category", value: event.category });
+    }
+
+    const venue = event.venue as { id: number; name: string; neighborhood: string | null } | null;
+    if (venue?.id) {
+      signals.push({ type: "venue", value: `venue:${venue.id}` });
+    }
+
+    if (venue?.neighborhood) {
+      signals.push({ type: "neighborhood", value: venue.neighborhood });
+    }
+
+    // Upsert each signal into inferred_preferences
+    const upsertPromises = signals.map(async (signal) => {
+      // Use upsert with ON CONFLICT handling
+      const { error } = await supabase.rpc("upsert_inferred_preference", {
+        p_user_id: user.id,
+        p_signal_type: signal.type,
+        p_signal_value: signal.value,
+        p_score_increment: weight,
+      });
+
+      if (error) {
+        // Fallback to manual upsert if RPC doesn't exist
+        if (error.code === "42883") {
+          // Function doesn't exist, do manual upsert
+          const { data: existing } = await supabase
+            .from("inferred_preferences")
+            .select("id, score, interaction_count")
+            .eq("user_id", user.id)
+            .eq("signal_type", signal.type)
+            .eq("signal_value", signal.value)
+            .single();
+
+          if (existing) {
+            await supabase
+              .from("inferred_preferences")
+              .update({
+                score: (existing.score || 0) + weight,
+                interaction_count: (existing.interaction_count || 0) + 1,
+                last_interaction_at: new Date().toISOString(),
+              } as never)
+              .eq("id", existing.id);
+          } else {
+            await supabase.from("inferred_preferences").insert({
+              user_id: user.id,
+              signal_type: signal.type,
+              signal_value: signal.value,
+              score: weight,
+              interaction_count: 1,
+            } as never);
+          }
+        } else {
+          console.error("Error upserting signal:", error);
+        }
+      }
+    });
+
+    await Promise.all(upsertPromises);
+
+    return NextResponse.json({
+      success: true,
+      tracked: signals.length,
+      action,
+      weight,
+    });
+  } catch (err) {
+    console.error("Signals API error:", err);
+    const message = err instanceof Error ? err.message : String(err);
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}

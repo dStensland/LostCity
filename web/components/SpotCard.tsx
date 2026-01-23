@@ -3,6 +3,7 @@ import type { Spot } from "@/lib/spots";
 import { formatPriceLevel } from "@/lib/spots";
 import CategoryIcon, { getCategoryLabel, getCategoryColor } from "./CategoryIcon";
 import { EventsBadge } from "./Badge";
+import VenueTagBadges from "./VenueTagBadges";
 
 // Get reflection color class based on spot type
 function getReflectionClass(spotType: string): string {
@@ -93,6 +94,9 @@ export default function SpotCard({ spot, index = 0, showDistance }: Props) {
             {spot.short_description}
           </p>
         )}
+
+        {/* Community tags */}
+        <VenueTagBadges venueId={spot.id} maxTags={3} />
 
         {/* Meta row - mobile */}
         <div className="flex items-center gap-3 mt-2 sm:hidden">

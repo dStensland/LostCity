@@ -8,6 +8,8 @@ import { formatTimeSplit } from "@/lib/formats";
 import CategoryIcon, { getCategoryColor } from "./CategoryIcon";
 import LazyImage from "./LazyImage";
 import SeriesBadge from "./SeriesBadge";
+import ReasonBadge, { getTopReasons, type RecommendationReason } from "./ReasonBadge";
+import EventCardMenu from "./EventCardMenu";
 import type { Frequency, DayOfWeek } from "@/lib/recurrence";
 
 type EventCardEvent = Event & {
@@ -46,8 +48,12 @@ interface Props {
   skipAnimation?: boolean;
   portalSlug?: string;
   friendsGoing?: FriendGoing[];
+  /** Recommendation reasons for personalization */
+  reasons?: RecommendationReason[];
   /** Show thumbnail image on mobile when event has an image */
   showThumbnail?: boolean;
+  /** Callback when user hides the event */
+  onHide?: () => void;
 }
 
 interface PriceDisplay {
@@ -130,7 +136,7 @@ function getReflectionClass(category: string | null): string {
   return reflectionMap[category] || "";
 }
 
-function EventCard({ event, index = 0, skipAnimation = false, portalSlug, friendsGoing = [], showThumbnail = false }: Props) {
+function EventCard({ event, index = 0, skipAnimation = false, portalSlug, friendsGoing = [], reasons, showThumbnail = false, onHide }: Props) {
   const [thumbnailError, setThumbnailError] = useState(false);
   const { time, period } = formatTimeSplit(event.start_time, event.is_all_day);
   const isLive = event.is_live || false;
@@ -225,6 +231,8 @@ function EventCard({ event, index = 0, skipAnimation = false, portalSlug, friend
                 <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[var(--neon-red)] shadow-[0_0_6px_var(--neon-red)]" />
               </span>
             )}
+            {/* Kebab menu for hide/report */}
+            <EventCardMenu eventId={event.id} onHide={onHide} className="ml-auto" />
           </div>
 
           {/* Details row */}
@@ -304,6 +312,15 @@ function EventCard({ event, index = 0, skipAnimation = false, portalSlug, friend
                   </>
                 )}
               </span>
+            </div>
+          )}
+
+          {/* Recommendation reasons (only show if no friends going, to avoid clutter) */}
+          {friendsGoing.length === 0 && reasons && reasons.length > 0 && (
+            <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+              {getTopReasons(reasons, 2).map((reason, idx) => (
+                <ReasonBadge key={`${reason.type}-${idx}`} reason={reason} size="sm" />
+              ))}
             </div>
           )}
         </div>

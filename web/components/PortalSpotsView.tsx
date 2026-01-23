@@ -40,41 +40,126 @@ type SortOption = "category" | "alphabetical" | "neighborhood";
 
 // Spot type configuration with colors and labels
 const SPOT_TYPE_CONFIG: Record<string, { label: string; color: string }> = {
+  // Performance & Arts
   music_venue: { label: "Music Venues", color: "#F472B6" },
-  comedy_club: { label: "Comedy Clubs", color: "#FBBF24" },
-  art_gallery: { label: "Art Galleries", color: "#A78BFA" },
   theater: { label: "Theaters", color: "#F87171" },
-  movie_theater: { label: "Movie Theaters", color: "#60A5FA" },
-  community_space: { label: "Community Spaces", color: "#34D399" },
+  cinema: { label: "Cinemas", color: "#A5B4FC" },
+  comedy_club: { label: "Comedy Clubs", color: "#FBBF24" },
+  gallery: { label: "Galleries", color: "#C4B5FD" },
+  museum: { label: "Museums", color: "#A78BFA" },
+  studio: { label: "Studios", color: "#A3E635" },
+
+  // Food & Drink
   restaurant: { label: "Restaurants", color: "#FB923C" },
   bar: { label: "Bars", color: "#C084FC" },
-  sports_venue: { label: "Sports Venues", color: "#4ADE80" },
-  fitness_studio: { label: "Fitness Studios", color: "#2DD4BF" },
+  sports_bar: { label: "Sports Bars", color: "#38BDF8" },
+  brewery: { label: "Breweries", color: "#FBBF24" },
+  distillery: { label: "Distilleries", color: "#D97706" },
+  coffee_shop: { label: "Coffee Shops", color: "#D4A574" },
+  food_hall: { label: "Food Halls", color: "#FB923C" },
+  farmers_market: { label: "Markets", color: "#FCA5A5" },
+
+  // Nightlife
+  club: { label: "Clubs", color: "#E879F9" },
   nightclub: { label: "Nightclubs", color: "#E879F9" },
-  family_venue: { label: "Family Venues", color: "#FACC15" },
-  brewery: { label: "Breweries", color: "#FB923C" },
-  museum: { label: "Museums", color: "#A78BFA" },
-  park: { label: "Parks & Outdoors", color: "#4ADE80" },
-  other: { label: "Other Venues", color: "#94A3B8" },
+
+  // Books & Learning
+  bookstore: { label: "Bookstores", color: "#93C5FD" },
+  library: { label: "Libraries", color: "#60A5FA" },
+  university: { label: "Universities", color: "#60A5FA" },
+  college: { label: "Colleges", color: "#60A5FA" },
+  cooking_school: { label: "Cooking Schools", color: "#F97316" },
+  coworking: { label: "Coworking", color: "#60A5FA" },
+
+  // Community & Organizations
+  organization: { label: "Organizations", color: "#6EE7B7" },
+  community_center: { label: "Community Centers", color: "#6EE7B7" },
+  community_space: { label: "Community Spaces", color: "#34D399" },
+  church: { label: "Churches", color: "#DDD6FE" },
+
+  // Sports & Fitness
+  arena: { label: "Arenas", color: "#7DD3FC" },
+  sports_venue: { label: "Sports Venues", color: "#4ADE80" },
+  fitness_center: { label: "Fitness Centers", color: "#5EEAD4" },
+  fitness_studio: { label: "Fitness Studios", color: "#2DD4BF" },
+
+  // Outdoors
+  park: { label: "Parks", color: "#86EFAC" },
+  garden: { label: "Gardens", color: "#4ADE80" },
+  outdoor: { label: "Outdoor Spaces", color: "#BEF264" },
+
+  // Entertainment & Events
+  event_space: { label: "Event Spaces", color: "#A78BFA" },
+  convention_center: { label: "Convention Centers", color: "#38BDF8" },
+  games: { label: "Game Venues", color: "#86EFAC" },
+  eatertainment: { label: "Eatertainment", color: "#22D3EE" },
+  attraction: { label: "Attractions", color: "#FBBF24" },
+
+  // Hospitality & Services
+  hotel: { label: "Hotels", color: "#FBBF24" },
+  hospital: { label: "Hospitals", color: "#34D399" },
+  healthcare: { label: "Healthcare", color: "#34D399" },
+
+  // Catch-all
+  venue: { label: "The Rest", color: "#94A3B8" },
+  other: { label: "Other", color: "#64748B" },
 };
 
 // Order for category sorting
 const SPOT_TYPE_ORDER = [
+  // Performance & Arts
   "music_venue",
   "theater",
-  "movie_theater",
+  "cinema",
   "comedy_club",
-  "art_gallery",
+  "gallery",
   "museum",
+  "studio",
+  // Food & Drink
   "restaurant",
   "bar",
+  "sports_bar",
   "brewery",
+  "distillery",
+  "coffee_shop",
+  "food_hall",
+  "farmers_market",
+  // Nightlife
+  "club",
   "nightclub",
+  // Books & Learning
+  "bookstore",
+  "library",
+  "university",
+  "college",
+  "cooking_school",
+  "coworking",
+  // Community & Organizations
+  "organization",
+  "community_center",
   "community_space",
+  "church",
+  // Sports & Fitness
+  "arena",
   "sports_venue",
+  "fitness_center",
   "fitness_studio",
-  "family_venue",
+  // Outdoors
   "park",
+  "garden",
+  "outdoor",
+  // Entertainment & Events
+  "event_space",
+  "convention_center",
+  "games",
+  "eatertainment",
+  "attraction",
+  // Hospitality & Services
+  "hotel",
+  "hospital",
+  "healthcare",
+  // Catch-all
+  "venue",
   "other",
 ];
 
@@ -147,10 +232,11 @@ export default function PortalSpotsView({ portalId, portalSlug, isExclusive = fa
   const [spots, setSpots] = useState<Spot[]>([]);
   const [loading, setLoading] = useState(true);
   const [sortBy, setSortBy] = useState<SortOption>("category");
-  const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
+  // Track which categories are expanded (collapsed by default)
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
 
   const toggleCategory = (category: string) => {
-    setCollapsedCategories(prev => {
+    setExpandedCategories(prev => {
       const next = new Set(prev);
       if (next.has(category)) {
         next.delete(category);
@@ -314,7 +400,7 @@ export default function PortalSpotsView({ portalId, portalSlug, isExclusive = fa
           <div>
             <h2 className="text-xl font-semibold text-[var(--cream)]">Places</h2>
             <p className="text-sm text-[var(--muted)] mt-1">
-              <span className="text-[var(--soft)]">{spots.length}</span> locations with upcoming events
+              <span className="text-[var(--soft)]">{spots.length}</span> venues in the city
             </p>
           </div>
           <div className="flex items-center gap-1">
@@ -359,7 +445,7 @@ export default function PortalSpotsView({ portalId, portalSlug, isExclusive = fa
       {groupedSpots ? (
         <div className="space-y-2">
           {groupedSpots.map(({ type, spots: groupSpots, config }) => {
-            const isCollapsed = collapsedCategories.has(type);
+            const isExpanded = expandedCategories.has(type);
 
             return (
               <div key={type}>
@@ -384,7 +470,7 @@ export default function PortalSpotsView({ portalId, portalSlug, isExclusive = fa
                     {groupSpots.length}
                   </span>
                   <svg
-                    className={`w-4 h-4 text-[var(--muted)] transition-transform ${isCollapsed ? "" : "rotate-180"}`}
+                    className={`w-4 h-4 text-[var(--muted)] transition-transform ${isExpanded ? "rotate-180" : ""}`}
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -394,7 +480,7 @@ export default function PortalSpotsView({ portalId, portalSlug, isExclusive = fa
                 </button>
 
                 {/* Collapsible Content */}
-                {!isCollapsed && (
+                {isExpanded && (
                   <div className="space-y-2 pb-4">
                     {groupSpots.map((spot) => (
                       <SpotCard

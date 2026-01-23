@@ -11,6 +11,7 @@ import {
   getSeriesTypeLabel,
   getSeriesTypeColor,
   formatGenre,
+  groupSeriesEventsByVenue,
 } from "@/lib/series";
 
 export const revalidate = 300; // 5 minutes
@@ -51,17 +52,16 @@ function formatTime(timeStr: string | null): string {
   return `${displayHour}:${minutes} ${ampm}`;
 }
 
-// Group events by date
+// Group events by date within a venue (for display)
 function groupEventsByDate(
-  events: Awaited<ReturnType<typeof getSeriesEvents>>
+  events: { id: number; date: string; time: string | null; ticketUrl: string | null }[]
 ): Map<string, typeof events> {
   const groups = new Map<string, typeof events>();
   for (const event of events) {
-    const date = event.start_date;
-    if (!groups.has(date)) {
-      groups.set(date, []);
+    if (!groups.has(event.date)) {
+      groups.set(event.date, []);
     }
-    groups.get(date)!.push(event);
+    groups.get(event.date)!.push(event);
   }
   return groups;
 }
@@ -75,7 +75,7 @@ export default async function SeriesPage({ params }: Props) {
   }
 
   const events = await getSeriesEvents(series.id);
-  const eventsByDate = groupEventsByDate(events);
+  const venueShowtimes = groupSeriesEventsByVenue(events);
   const typeColor = getSeriesTypeColor(series.series_type);
 
   return (
@@ -249,88 +249,68 @@ export default async function SeriesPage({ params }: Props) {
         </div>
       </section>
 
-      {/* Showtimes Section */}
+      {/* Showtimes Section - Venue First Layout */}
       <main className="max-w-3xl mx-auto px-4 py-8">
         <h2 className="text-xl font-bold text-[var(--cream)] mb-6">
           {events.length > 0 ? (
             <>
               <span className="text-[var(--coral)]">{events.length}</span> Upcoming{" "}
               {series.series_type === "film" ? "Showtime" : "Event"}
-              {events.length !== 1 ? "s" : ""}
+              {events.length !== 1 ? "s" : ""} at{" "}
+              <span className="text-[var(--coral)]">{venueShowtimes.length}</span>{" "}
+              {venueShowtimes.length === 1 ? "Venue" : "Venues"}
             </>
           ) : (
             "No Upcoming Events"
           )}
         </h2>
 
-        {events.length > 0 ? (
+        {venueShowtimes.length > 0 ? (
           <div className="space-y-6">
-            {Array.from(eventsByDate.entries()).map(([date, dateEvents]) => (
-              <div key={date}>
-                {/* Date header */}
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="text-[var(--cream)] font-medium">
-                    {formatDate(date)}
-                  </div>
-                  <div className="flex-1 h-px bg-[var(--twilight)]" />
-                </div>
+            {venueShowtimes.map((vs) => {
+              const eventsByDate = groupEventsByDate(vs.events);
 
-                {/* Events for this date */}
-                <div className="space-y-2">
-                  {dateEvents.map((event) => (
+              return (
+                <div
+                  key={vs.venue.id}
+                  className="rounded-lg border border-[var(--twilight)] overflow-hidden"
+                  style={{ backgroundColor: "var(--card-bg)" }}
+                >
+                  {/* Venue header */}
+                  <div className="p-4 border-b border-[var(--twilight)]/50">
                     <Link
-                      key={event.id}
-                      href={`/events/${event.id}`}
-                      className="flex items-center gap-4 p-4 rounded-lg border border-[var(--twilight)] transition-all hover:border-[var(--coral)]/50 group"
-                      style={{ backgroundColor: "var(--card-bg)" }}
+                      href={`/spots/${vs.venue.slug}`}
+                      className="group flex items-center gap-2"
                     >
-                      {/* Time */}
-                      <div className="flex-shrink-0 w-20 text-center">
-                        {event.start_time ? (
-                          <span className="text-lg font-mono text-[var(--cream)] group-hover:text-[var(--coral)] transition-colors">
-                            {formatTime(event.start_time)}
-                          </span>
-                        ) : (
-                          <span className="text-sm font-mono text-[var(--muted)]">
-                            TBA
-                          </span>
-                        )}
-                      </div>
-
-                      {/* Venue */}
-                      <div className="flex-1 min-w-0">
-                        {event.venue ? (
-                          <>
-                            <div className="font-medium text-[var(--cream)] truncate group-hover:text-[var(--coral)] transition-colors">
-                              {event.venue.name}
-                            </div>
-                            {event.venue.neighborhood && (
-                              <div className="text-xs text-[var(--muted)] font-mono">
-                                {event.venue.neighborhood}
-                              </div>
-                            )}
-                          </>
-                        ) : (
-                          <div className="text-[var(--muted)]">Venue TBA</div>
-                        )}
-                      </div>
-
-                      {/* Ticket button */}
-                      {event.ticket_url && (
-                        <a
-                          href={event.ticket_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          onClick={(e) => e.stopPropagation()}
-                          className="flex-shrink-0 px-3 py-1.5 rounded-lg bg-[var(--coral)] text-[var(--void)] text-sm font-medium hover:bg-[var(--rose)] transition-colors"
-                        >
-                          Tickets
-                        </a>
-                      )}
-
-                      {/* Arrow */}
                       <svg
                         className="w-5 h-5 text-[var(--muted)] group-hover:text-[var(--coral)] transition-colors flex-shrink-0"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                        />
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                        />
+                      </svg>
+                      <span className="font-semibold text-[var(--cream)] group-hover:text-[var(--coral)] transition-colors">
+                        {vs.venue.name}
+                      </span>
+                      {vs.venue.neighborhood && (
+                        <span className="text-sm text-[var(--muted)] font-mono">
+                          ({vs.venue.neighborhood})
+                        </span>
+                      )}
+                      <svg
+                        className="w-4 h-4 text-[var(--muted)] group-hover:text-[var(--coral)] transition-colors ml-auto"
                         fill="none"
                         stroke="currentColor"
                         viewBox="0 0 24 24"
@@ -343,10 +323,48 @@ export default async function SeriesPage({ params }: Props) {
                         />
                       </svg>
                     </Link>
-                  ))}
+                  </div>
+
+                  {/* Dates and times for this venue */}
+                  <div className="divide-y divide-[var(--twilight)]/30">
+                    {Array.from(eventsByDate.entries()).map(([date, dateEvents]) => (
+                      <div key={date} className="px-4 py-3">
+                        <div className="flex items-center gap-3">
+                          {/* Date */}
+                          <div className="flex-shrink-0 w-28">
+                            <span className="text-sm font-medium text-[var(--soft)]">
+                              {formatDate(date)}
+                            </span>
+                          </div>
+
+                          {/* Times */}
+                          <div className="flex flex-wrap items-center gap-2">
+                            {dateEvents.map((event) => (
+                              <div key={event.id} className="flex items-center gap-1">
+                                {event.ticketUrl ? (
+                                  <a
+                                    href={event.ticketUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="font-mono text-sm px-2 py-1 rounded bg-[var(--twilight)]/50 text-[var(--cream)] hover:bg-[var(--coral)] hover:text-[var(--void)] transition-colors"
+                                  >
+                                    {formatTime(event.time)}
+                                  </a>
+                                ) : (
+                                  <span className="font-mono text-sm px-2 py-1 rounded bg-[var(--twilight)]/30 text-[var(--muted)]">
+                                    {formatTime(event.time)}
+                                  </span>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         ) : (
           <div className="py-12 text-center">

@@ -1,5 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 
+// Re-export client-safe utilities for backward compatibility
+export { getSeriesTypeLabel, getSeriesTypeColor, formatGenre } from "@/lib/series-utils";
+
 export interface Series {
   id: string;
   slug: string;
@@ -184,47 +187,81 @@ export async function searchSeries(query: string, limit = 10): Promise<Series[]>
   return data as Series[];
 }
 
-// Helper to get series type label
-export function getSeriesTypeLabel(type: string): string {
-  const labels: Record<string, string> = {
-    film: "Film",
-    recurring_show: "Recurring Show",
-    class_series: "Class Series",
-    festival_program: "Festival Program",
-    tour: "Tour",
-    other: "Series",
+
+// Type for venue-first grouping on series page
+export interface VenueShowtimes {
+  venue: {
+    id: number;
+    name: string;
+    slug: string;
+    neighborhood: string | null;
   };
-  return labels[type] || "Series";
+  events: {
+    id: number;
+    date: string;
+    time: string | null;
+    ticketUrl: string | null;
+  }[];
 }
 
-// Helper to get series type color
-export function getSeriesTypeColor(type: string): string {
-  const colors: Record<string, string> = {
-    film: "#A5B4FC", // indigo
-    recurring_show: "#F9A8D4", // pink
-    class_series: "#6EE7B7", // green
-    festival_program: "#FBBF24", // amber
-    tour: "#C4B5FD", // purple
-    other: "#94A3B8", // slate
-  };
-  return colors[type] || "#94A3B8";
-}
+/**
+ * Group series events by venue, then by date within each venue
+ * Used for the series page venue-first layout
+ */
+export function groupSeriesEventsByVenue(events: SeriesEvent[]): VenueShowtimes[] {
+  // Group by venue
+  const venueMap = new Map<number, {
+    venue: VenueShowtimes["venue"];
+    events: VenueShowtimes["events"];
+  }>();
 
-// Helper to format genre for display
-export function formatGenre(genre: string): string {
-  // Handle special cases
-  const special: Record<string, string> = {
-    "sci-fi": "Sci-Fi",
-    "r&b": "R&B",
-    "hip-hop": "Hip-Hop",
-    "edm": "EDM",
-    "mma": "MMA",
-  };
-  if (special[genre]) return special[genre];
+  for (const event of events) {
+    if (!event.venue) continue;
 
-  // Capitalize first letter of each word
-  return genre
-    .split("-")
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join("-");
+    const venueId = event.venue.id;
+    const existing = venueMap.get(venueId);
+
+    const eventData = {
+      id: event.id,
+      date: event.start_date,
+      time: event.start_time,
+      ticketUrl: event.ticket_url,
+    };
+
+    if (existing) {
+      existing.events.push(eventData);
+    } else {
+      venueMap.set(venueId, {
+        venue: {
+          id: event.venue.id,
+          name: event.venue.name,
+          slug: event.venue.slug,
+          neighborhood: event.venue.neighborhood,
+        },
+        events: [eventData],
+      });
+    }
+  }
+
+  // Convert to array and sort
+  const result: VenueShowtimes[] = [];
+  for (const { venue, events: venueEvents } of venueMap.values()) {
+    // Sort events by date, then by time
+    venueEvents.sort((a, b) => {
+      const dateCompare = a.date.localeCompare(b.date);
+      if (dateCompare !== 0) return dateCompare;
+      return (a.time || "").localeCompare(b.time || "");
+    });
+
+    result.push({ venue, events: venueEvents });
+  }
+
+  // Sort venues by total event count (descending), then by name
+  result.sort((a, b) => {
+    const countDiff = b.events.length - a.events.length;
+    if (countDiff !== 0) return countDiff;
+    return a.venue.name.localeCompare(b.venue.name);
+  });
+
+  return result;
 }

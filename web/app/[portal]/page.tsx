@@ -1,7 +1,7 @@
 import { PRICE_FILTERS, type SearchFilters } from "@/lib/search";
 import { getPortalBySlug, DEFAULT_PORTAL } from "@/lib/portal";
 import { DEFAULT_PORTAL_SLUG } from "@/lib/constants";
-import FilterBar from "@/components/FilterBar";
+import SimpleFilterBar from "@/components/SimpleFilterBar";
 import EventList from "@/components/EventList";
 import MapViewWrapper from "@/components/MapViewWrapper";
 import FeedView from "@/components/FeedView";
@@ -33,6 +33,7 @@ type Props = {
     vibes?: string;
     neighborhoods?: string;
     price?: string;
+    free?: string;
     date?: string;
     view?: string;
     mood?: string;
@@ -68,7 +69,7 @@ export default async function PortalPage({ params, searchParams }: Props) {
 
   // Parse price filter
   const priceFilter = PRICE_FILTERS.find(p => p.value === searchParamsData.price);
-  const isFree = searchParamsData.price === "free";
+  const isFree = searchParamsData.price === "free" || searchParamsData.free === "1";
   const priceMax = priceFilter?.max || undefined;
 
   // Build filters, incorporating portal-specific filters
@@ -81,7 +82,7 @@ export default async function PortalPage({ params, searchParams }: Props) {
     neighborhoods: searchParamsData.neighborhoods?.split(",").filter(Boolean) || portal.filters.neighborhoods || undefined,
     is_free: isFree || undefined,
     price_max: priceMax || portal.filters.price_max || undefined,
-    date_filter: (searchParamsData.date as "now" | "today" | "weekend" | "week") || undefined,
+    date_filter: (searchParamsData.date as "now" | "today" | "tomorrow" | "weekend" | "week") || undefined,
     mood: searchParamsData.mood as import("@/lib/moods").MoodId || undefined,
     city: portal.filters.city || undefined,
     exclude_categories: portal.filters.exclude_categories || undefined,
@@ -95,7 +96,7 @@ export default async function PortalPage({ params, searchParams }: Props) {
   };
 
   // Don't block on data - let views fetch their own data client-side for instant navigation
-  const hasActiveFilters = !!(searchParamsData.search || searchParamsData.categories || searchParamsData.subcategories || searchParamsData.tags || searchParamsData.vibes || searchParamsData.neighborhoods || searchParamsData.price || searchParamsData.date || searchParamsData.mood);
+  const hasActiveFilters = !!(searchParamsData.search || searchParamsData.categories || searchParamsData.subcategories || searchParamsData.tags || searchParamsData.vibes || searchParamsData.neighborhoods || searchParamsData.price || searchParamsData.free || searchParamsData.date || searchParamsData.mood);
 
   return (
     <div className="min-h-screen">
@@ -111,7 +112,7 @@ export default async function PortalPage({ params, searchParams }: Props) {
       />
 
       {viewMode !== "feed" && (
-        <div className="border-b border-[var(--twilight)] bg-[var(--night)]/95 backdrop-blur-sm">
+        <div className="sticky top-14 z-30 border-b border-[var(--twilight)] bg-[var(--night)]/95 backdrop-blur-md">
           <div className="max-w-3xl mx-auto px-4 py-2">
             <SearchBar />
           </div>
@@ -120,7 +121,7 @@ export default async function PortalPage({ params, searchParams }: Props) {
 
       {(viewMode === "events" || viewMode === "map" || viewMode === "calendar") && (
         <Suspense fallback={<div className="h-10 bg-[var(--night)]" />}>
-          <FilterBar variant={viewMode === "map" ? "compact" : "full"} />
+          <SimpleFilterBar variant={viewMode === "map" ? "compact" : "full"} />
         </Suspense>
       )}
 

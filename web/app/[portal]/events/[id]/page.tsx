@@ -3,13 +3,10 @@ import { getNearbySpots, getSpotTypeLabel } from "@/lib/spots";
 import { getPortalBySlug } from "@/lib/portal";
 import { getSeriesTypeLabel, getSeriesTypeColor } from "@/lib/series";
 import Image from "next/image";
-import CategoryIcon from "@/components/CategoryIcon";
-import RSVPButton from "@/components/RSVPButton";
-import RecommendButton from "@/components/RecommendButton";
+import CategoryIcon, { getCategoryColor } from "@/components/CategoryIcon";
 import FollowButton from "@/components/FollowButton";
 import FriendsGoing from "@/components/FriendsGoing";
 import WhosGoing from "@/components/WhosGoing";
-import LiveIndicator from "@/components/LiveIndicator";
 import UnifiedHeader from "@/components/UnifiedHeader";
 import PageFooter from "@/components/PageFooter";
 import { PortalTheme } from "@/components/PortalTheme";
@@ -17,13 +14,15 @@ import { format, parseISO } from "date-fns";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import AddToCalendar from "@/components/AddToCalendar";
 import DirectionsDropdown from "@/components/DirectionsDropdown";
 import EventStickyBar from "@/components/EventStickyBar";
 import EventHeroImage from "@/components/EventHeroImage";
+import EventActionCard from "@/components/EventActionCard";
+import VenueVibes from "@/components/VenueVibes";
 import LinkifyText from "@/components/LinkifyText";
-import ShareEventButton from "@/components/ShareEventButton";
-import { formatTimeSplit, formatPrice } from "@/lib/formats";
+import { formatTimeSplit, formatTimeRange } from "@/lib/formats";
+import VenueTagList from "@/components/VenueTagList";
+import FlagButton from "@/components/FlagButton";
 
 export const revalidate = 60;
 
@@ -124,6 +123,32 @@ function generateEventSchema(event: NonNullable<Awaited<ReturnType<typeof getEve
   return schema;
 }
 
+// Parse recurrence rule to human-readable format
+function parseRecurrenceRule(rule: string | null | undefined): string | null {
+  if (!rule) return null;
+
+  // Simple RRULE parsing - handle common patterns
+  const match = rule.match(/FREQ=(\w+)(?:;BYDAY=(\w+))?/i);
+  if (!match) return null;
+
+  const freq = match[1]?.toUpperCase();
+  const day = match[2];
+
+  const dayNames: Record<string, string> = {
+    MO: "Monday", TU: "Tuesday", WE: "Wednesday",
+    TH: "Thursday", FR: "Friday", SA: "Saturday", SU: "Sunday"
+  };
+
+  if (freq === "WEEKLY" && day && dayNames[day]) {
+    return `Every ${dayNames[day]}`;
+  }
+  if (freq === "WEEKLY") return "Weekly";
+  if (freq === "MONTHLY") return "Monthly";
+  if (freq === "DAILY") return "Daily";
+
+  return null;
+}
+
 export default async function PortalEventPage({ params }: Props) {
   const { id, portal: portalSlug } = await params;
   const event = await getEventById(parseInt(id, 10));
@@ -143,7 +168,13 @@ export default async function PortalEventPage({ params }: Props) {
   const shortDate = format(dateObj, "MMM d");
   const dayOfWeek = format(dateObj, "EEE");
   const { time, period } = formatTimeSplit(event.start_time, event.is_all_day);
+  const timeRange = formatTimeRange(event.start_time, event.end_time, event.is_all_day);
   const eventSchema = generateEventSchema(event);
+
+  // Event state
+  const isLive = (event as { is_live?: boolean }).is_live || false;
+  const recurrenceText = parseRecurrenceRule(event.recurrence_rule);
+  const categoryColor = event.category ? getCategoryColor(event.category) : "var(--coral)";
 
   return (
     <>
@@ -163,25 +194,90 @@ export default async function PortalEventPage({ params }: Props) {
           backLink={{ href: `/${activePortalSlug}?view=events`, label: "Events" }}
         />
 
-        <main className="max-w-3xl mx-auto px-4 py-8">
-          {/* Event image */}
-          {event.image_url && (
-            <div className="aspect-video bg-[var(--night)] rounded-lg overflow-hidden mb-6 border border-[var(--twilight)] relative">
+        <main className="max-w-3xl mx-auto px-4 py-8 pb-28">
+          {/* Hero Section with immersive image and glass overlay */}
+          <div
+            className={`relative aspect-video bg-[var(--night)] rounded-lg overflow-hidden mb-6 animate-fade-in ${
+              isLive ? "live-border-glow" : ""
+            }`}
+            style={{
+              "--glow-color": categoryColor,
+            } as React.CSSProperties}
+          >
+            {event.image_url ? (
               <EventHeroImage
                 src={event.image_url}
                 alt={event.title}
                 category={event.category}
+                title={event.title}
+                venueName={event.venue?.name}
+                neighborhood={event.venue?.neighborhood}
+                startDate={event.start_date}
+                startTime={event.start_time}
+                isLive={isLive}
+                eventId={event.id}
               />
+            ) : (
+              <EventHeroImage
+                src=""
+                alt={event.title}
+                category={event.category}
+                title={event.title}
+                venueName={event.venue?.name}
+                neighborhood={event.venue?.neighborhood}
+                startDate={event.start_date}
+                startTime={event.start_time}
+                isLive={isLive}
+                eventId={event.id}
+              />
+            )}
+
+            {/* Live event heat effect */}
+            {isLive && (
+              <div
+                className="absolute inset-0 pointer-events-none"
+                style={{
+                  boxShadow: "inset 0 0 60px rgba(255, 90, 90, 0.15)",
+                }}
+              />
+            )}
+          </div>
+
+          {/* Floating Action Card */}
+          <EventActionCard
+            event={event}
+            isLive={isLive}
+            className="mb-6"
+          />
+
+          {/* Recurring Event Badge */}
+          {event.is_recurring && recurrenceText && (
+            <div
+              className="flex items-center gap-3 p-4 rounded-lg border border-[var(--twilight)] mb-6 animate-fade-up"
+              style={{ backgroundColor: "var(--card-bg)", animationDelay: "0.15s" }}
+            >
+              <div className="w-10 h-10 rounded-full bg-[var(--twilight)] flex items-center justify-center flex-shrink-0">
+                <svg className="w-5 h-5 text-[var(--coral)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+              </div>
+              <div>
+                <p className="text-[var(--cream)] font-medium">This event repeats {recurrenceText.toLowerCase()}</p>
+                <p className="text-sm text-[var(--muted)]">View all dates in the series</p>
+              </div>
             </div>
           )}
 
           {/* Main event info card */}
-          <div className="border border-[var(--twilight)] rounded-lg p-6 sm:p-8" style={{ backgroundColor: "var(--card-bg)" }}>
+          <div
+            className="border border-[var(--twilight)] rounded-lg p-6 sm:p-8 animate-fade-up"
+            style={{ backgroundColor: "var(--card-bg)", animationDelay: "0.2s" }}
+          >
             {/* Series link */}
             {event.series && (
               <Link
                 href={`/${activePortalSlug}/series/${event.series.slug}`}
-                className="inline-flex items-center gap-2 mb-3 px-3 py-1.5 rounded-lg border border-[var(--twilight)] transition-colors hover:border-[var(--coral)]/50 group"
+                className="inline-flex items-center gap-2 mb-5 px-3 py-1.5 rounded-lg border border-[var(--twilight)] transition-colors hover:border-[var(--coral)]/50 group"
                 style={{ backgroundColor: "var(--void)" }}
               >
                 <svg
@@ -216,42 +312,11 @@ export default async function PortalEventPage({ params }: Props) {
               </Link>
             )}
 
-            {/* Badges row */}
-            <div className="flex flex-wrap items-center gap-2 mb-4">
-              {/* Category badge */}
-              {event.category && (
-                <span className={`category-${event.category} inline-block px-2 py-0.5 rounded text-xs font-mono uppercase tracking-wider`}>
-                  {event.category}
-                </span>
-              )}
-              {/* Real-time live indicator */}
-              <LiveIndicator
-                eventId={event.id}
-                initialIsLive={(event as { is_live?: boolean }).is_live || false}
-                size="md"
-              />
-            </div>
-
-            {/* Title */}
-            <h1 className="text-2xl sm:text-3xl font-bold text-[var(--cream)] leading-tight">
-              {event.title}
-            </h1>
-
-            {/* Venue */}
-            {event.venue && (
-              <p className="mt-2 text-[var(--soft)] font-serif text-lg">
-                {event.venue.name}
-                {event.venue.neighborhood && (
-                  <span className="text-[var(--muted)]"> &middot; {event.venue.neighborhood}</span>
-                )}
-              </p>
-            )}
-
             {/* Friends going */}
-            <FriendsGoing eventId={event.id} className="mt-3" />
+            <FriendsGoing eventId={event.id} className="mb-5" />
 
-            {/* Date/Time/Price grid */}
-            <div className="mt-6 grid grid-cols-3 gap-3 sm:gap-4">
+            {/* Date/Time grid with end time */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4 mb-6">
               <div className="rounded-lg p-3 sm:p-4 text-center border border-[var(--twilight)]" style={{ backgroundColor: "var(--void)" }}>
                 <div className="font-mono text-[0.6rem] text-[var(--muted)] uppercase tracking-widest mb-1">
                   Date
@@ -269,25 +334,30 @@ export default async function PortalEventPage({ params }: Props) {
                 <div className="font-mono text-lg sm:text-xl font-semibold text-[var(--coral)]">
                   {time}
                 </div>
-                <div className="font-mono text-xs text-[var(--muted)]">{period}</div>
+                <div className="font-mono text-xs text-[var(--muted)]">
+                  {event.end_time ? timeRange : period}
+                </div>
               </div>
 
-              <div className="rounded-lg p-3 sm:p-4 text-center border border-[var(--twilight)]" style={{ backgroundColor: "var(--void)" }}>
-                <div className="font-mono text-[0.6rem] text-[var(--muted)] uppercase tracking-widest mb-1">
-                  Price
+              {/* Show duration if we have end time */}
+              {event.end_time && (
+                <div className="rounded-lg p-3 sm:p-4 text-center border border-[var(--twilight)] col-span-2 sm:col-span-1" style={{ backgroundColor: "var(--void)" }}>
+                  <div className="font-mono text-[0.6rem] text-[var(--muted)] uppercase tracking-widest mb-1">
+                    Ends
+                  </div>
+                  <div className="font-mono text-lg sm:text-xl font-semibold text-[var(--soft)]">
+                    {formatTimeSplit(event.end_time).time}
+                  </div>
+                  <div className="font-mono text-xs text-[var(--muted)]">
+                    {formatTimeSplit(event.end_time).period}
+                  </div>
                 </div>
-                <div className={`font-mono text-lg sm:text-xl font-semibold ${event.is_free ? "text-green-400" : "text-[var(--gold)]"}`}>
-                  {formatPrice(event)}
-                </div>
-                <div className="font-mono text-xs text-[var(--muted)]">
-                  {event.is_free ? "No cover" : "Per ticket"}
-                </div>
-              </div>
+              )}
             </div>
 
             {/* Description */}
             {event.description && (
-              <div className="mt-6 pt-6 border-t border-[var(--twilight)]">
+              <div className="mb-6 pt-6 border-t border-[var(--twilight)]">
                 <h2 className="font-mono text-[0.65rem] font-medium text-[var(--muted)] uppercase tracking-widest mb-3">
                   About
                 </h2>
@@ -299,7 +369,7 @@ export default async function PortalEventPage({ params }: Props) {
 
             {/* Tags */}
             {event.tags && event.tags.length > 0 && (
-              <div className="mt-6 pt-6 border-t border-[var(--twilight)]">
+              <div className="mb-6 pt-6 border-t border-[var(--twilight)]">
                 <h2 className="font-mono text-[0.65rem] font-medium text-[var(--muted)] uppercase tracking-widest mb-3">
                   Also Featuring
                 </h2>
@@ -319,7 +389,7 @@ export default async function PortalEventPage({ params }: Props) {
 
             {/* Presented by (Producer/Organizer) */}
             {event.producer && (
-              <div className="mt-6 pt-6 border-t border-[var(--twilight)]">
+              <div className="mb-6 pt-6 border-t border-[var(--twilight)]">
                 <h2 className="font-mono text-[0.65rem] font-medium text-[var(--muted)] uppercase tracking-widest mb-3">
                   Presented by
                 </h2>
@@ -365,9 +435,9 @@ export default async function PortalEventPage({ params }: Props) {
               </div>
             )}
 
-            {/* Location */}
+            {/* Location with Venue Vibes */}
             {event.venue && event.venue.address && (
-              <div className="mt-6 pt-6 border-t border-[var(--twilight)]">
+              <div className="mb-6 pt-6 border-t border-[var(--twilight)]">
                 <div className="flex items-center justify-between mb-3">
                   <h2 className="font-mono text-[0.65rem] font-medium text-[var(--muted)] uppercase tracking-widest">
                     Location
@@ -379,84 +449,68 @@ export default async function PortalEventPage({ params }: Props) {
                     state={event.venue.state}
                   />
                 </div>
-                <p className="text-[var(--soft)]">
-                  <span className="text-[var(--cream)] font-medium">{event.venue.name}</span>
-                  <br />
-                  {event.venue.address}
-                  <br />
-                  {event.venue.city}, {event.venue.state}
-                </p>
+                <Link
+                  href={`/${activePortalSlug}/spots/${event.venue.slug}`}
+                  className="block p-4 -mx-4 rounded-lg transition-colors hover:bg-[var(--void)] group"
+                >
+                  <p className="text-[var(--soft)] mb-2">
+                    <span className="text-[var(--cream)] font-medium group-hover:text-[var(--coral)] transition-colors">
+                      {event.venue.name}
+                    </span>
+                    <svg className="inline-block w-4 h-4 ml-1.5 text-[var(--muted)] group-hover:text-[var(--coral)] transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                    <br />
+                    <span className="text-sm">
+                      {event.venue.address}
+                      <br />
+                      {event.venue.city}, {event.venue.state}
+                    </span>
+                  </p>
+
+                  {/* Venue Vibes */}
+                  <VenueVibes vibes={event.venue.vibes} className="mb-2" />
+
+                  {/* Venue Description */}
+                  {event.venue.description && (
+                    <p className="text-sm text-[var(--muted)] italic leading-relaxed">
+                      {event.venue.description}
+                    </p>
+                  )}
+                </Link>
+
+                {/* Community Tags */}
+                <div className="mt-4 pt-4 border-t border-[var(--twilight)]">
+                  <VenueTagList venueId={event.venue.id} />
+                </div>
               </div>
             )}
 
             {/* Who's Going section */}
-            <WhosGoing eventId={event.id} className="mt-6 pt-6 border-t border-[var(--twilight)]" />
+            <WhosGoing eventId={event.id} className="pt-6 border-t border-[var(--twilight)]" />
 
-            {/* RSVP and Recommend */}
-            <div className="mt-8 pt-6 border-t border-[var(--twilight)] flex flex-wrap items-center gap-3">
-              <RSVPButton eventId={event.id} />
-              <RecommendButton eventId={event.id} />
-            </div>
-
-            {/* Action buttons */}
-            <div className="mt-4 flex flex-col sm:flex-row gap-3">
-              {event.ticket_url && (
-                <a
-                  href={event.ticket_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center justify-center gap-2.5 px-8 py-3.5 bg-[var(--coral)] text-[var(--void)] text-lg font-semibold rounded-lg hover:bg-[var(--rose)] transition-colors glow-sm"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
-                  </svg>
-                  Get Tickets
-                </a>
-              )}
-
-              <AddToCalendar
-                title={event.title}
-                date={event.start_date}
-                time={event.start_time}
-                venue={event.venue?.name}
-                address={event.venue?.address}
-                city={event.venue?.city}
-                state={event.venue?.state}
-              />
-
-              {event.source_url && (
-                <a
-                  href={event.source_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center justify-center gap-2 px-4 py-2.5 text-[var(--muted)] text-sm font-medium rounded-lg hover:bg-[var(--twilight)] hover:text-[var(--cream)] transition-colors"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                  </svg>
-                  View Source
-                </a>
-              )}
-
-              <ShareEventButton
-                eventId={event.id}
-                eventTitle={event.title}
+            {/* Flag for QA */}
+            <div className="pt-6 border-t border-[var(--twilight)]">
+              <FlagButton
+                entityType="event"
+                entityId={event.id}
+                entityName={event.title}
               />
             </div>
           </div>
 
           {/* Before & After - Nearby Spots */}
           {nearbySpots.length > 0 && event.venue?.neighborhood && (
-            <div className="mt-8">
+            <div className="mt-8 animate-fade-up" style={{ animationDelay: "0.3s" }}>
               <h2 className="font-mono text-[0.65rem] font-medium text-[var(--muted)] uppercase tracking-widest mb-4">
                 Before & After in {event.venue.neighborhood}
               </h2>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                {nearbySpots.map((spot) => (
+                {nearbySpots.map((spot, index) => (
                   <Link
                     key={spot.id}
                     href={`/${activePortalSlug}/spots/${spot.slug}`}
-                    className="group p-3 border border-[var(--twilight)] rounded-lg transition-colors"
+                    className={`group p-3 border border-[var(--twilight)] rounded-lg transition-colors card-hover-lift stagger-${Math.min(index + 1, 6)}`}
                     style={{ backgroundColor: "var(--card-bg)" }}
                   >
                     <div className="flex items-start gap-2">
@@ -482,7 +536,7 @@ export default async function PortalEventPage({ params }: Props) {
 
           {/* Related Events */}
           {(venueEvents.length > 0 || sameDateEvents.length > 0) && (
-            <div className="mt-8 space-y-8">
+            <div className="mt-8 space-y-8 animate-fade-up" style={{ animationDelay: "0.35s" }}>
               {/* More at this venue */}
               {venueEvents.length > 0 && event.venue && (
                 <div>
@@ -490,11 +544,11 @@ export default async function PortalEventPage({ params }: Props) {
                     More at {event.venue.name}
                   </h2>
                   <div className="space-y-2">
-                    {venueEvents.map((relatedEvent) => (
+                    {venueEvents.map((relatedEvent, index) => (
                       <Link
                         key={relatedEvent.id}
                         href={`/${activePortalSlug}/events/${relatedEvent.id}`}
-                        className="block p-4 border border-[var(--twilight)] rounded-lg transition-colors group"
+                        className={`block p-4 border border-[var(--twilight)] rounded-lg transition-colors group card-hover-lift stagger-${Math.min(index + 1, 6)}`}
                         style={{ backgroundColor: "var(--card-bg)" }}
                       >
                         <div className="flex items-start justify-between gap-4">
@@ -526,11 +580,11 @@ export default async function PortalEventPage({ params }: Props) {
                     That same night
                   </h2>
                   <div className="space-y-2">
-                    {sameDateEvents.map((relatedEvent) => (
+                    {sameDateEvents.map((relatedEvent, index) => (
                       <Link
                         key={relatedEvent.id}
                         href={`/${activePortalSlug}/events/${relatedEvent.id}`}
-                        className="block p-4 border border-[var(--twilight)] rounded-lg transition-colors group"
+                        className={`block p-4 border border-[var(--twilight)] rounded-lg transition-colors group card-hover-lift stagger-${Math.min(index + 1, 6)}`}
                         style={{ backgroundColor: "var(--card-bg)" }}
                       >
                         <div className="flex items-start justify-between gap-4">
@@ -566,6 +620,7 @@ export default async function PortalEventPage({ params }: Props) {
         eventId={event.id}
         eventTitle={event.title}
         ticketUrl={event.ticket_url}
+        eventCategory={event.category}
       />
     </>
   );

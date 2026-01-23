@@ -14,16 +14,14 @@ from playwright.sync_api import sync_playwright, Page
 
 from db import get_or_create_venue, insert_event, find_event_by_hash
 from dedupe import generate_content_hash
-from utils import extract_images_from_page
 
 logger = logging.getLogger(__name__)
 
 BASE_URL = "https://www.landmarktheatres.com"
-# Use venue-specific URL which already has location set
-VENUE_PAGE_URL = f"{BASE_URL}/atlanta/midtown-art-cinema"
-SHOWTIMES_URL = f"{VENUE_PAGE_URL}/film"
-FILM_SERIES_URL = f"{BASE_URL}/film-series/"
-SPECIAL_SCREENINGS_URL = f"{BASE_URL}/special-screenings/"
+# The main showtimes page - location is selected via dropdown
+SHOWTIMES_URL = f"{BASE_URL}/showtimes/"
+# Venue-specific page (redirects to /our-locations/...)
+VENUE_PAGE_URL = f"{BASE_URL}/our-locations/x00qm-landmark-midtown-art-cinema-atlanta/"
 
 VENUE_DATA = {
     "name": "Landmark Midtown Art Cinema",
@@ -59,150 +57,118 @@ def parse_time(time_text: str) -> Optional[str]:
 def extract_movies_for_date(
     page: Page, target_date: datetime, source_id: int, venue_id: int
 ) -> tuple[int, int, int]:
-    """Extract movies and showtimes for a specific date."""
+    """Extract movies and showtimes for a specific date.
+
+    Landmark page structure (from main content text):
+    - Rating/Duration line: "{RATING} • {DURATION}" (e.g., "PG-13 • 2 hr, 10 min")
+    - Title on next line (Title Case)
+    - "Directed by {DIRECTOR}"
+    - Content advisory description
+    - "Genre: {GENRES}"
+    - "Cast: {CAST}"
+    - Date line (e.g., "Today, January 22")
+    - Showtimes as "4:00PM", "7:15PM" (no space before AM/PM)
+    """
     events_found = 0
     events_new = 0
     events_updated = 0
 
     date_str = target_date.strftime("%Y-%m-%d")
 
-    body_text = page.inner_text("body")
-    lines = [l.strip() for l in body_text.split("\n") if l.strip()]
+    try:
+        # Get main content text
+        main = page.query_selector("main")
+        if not main:
+            main = page.query_selector("body")
 
-    current_movie = None
-    seen_movies = set()
+        text = main.inner_text()
 
-    skip_words = [
-        # Navigation and UI
-        "NOW PLAYING",
-        "COMING SOON",
-        "SEE DETAILS",
-        "CLICK HERE",
-        "LANDMARK",
-        "THEATRES",
-        "SIGN UP",
-        "LOG IN",
-        "MENU",
-        "SEARCH",
-        "TRAILER",
-        "See trailer",
-        "MY LANDMARK",
-        "GIFT CARDS",
-        "LOCATIONS",
-        "ABOUT",
-        "EVENTS",
-        "FAQ",
-        "CONTACT",
-        "CAREERS",
-        "PRIVACY",
-        "TERMS",
-        "ACCESSIBILITY",
-        "NEWSLETTER",
-        "SUBSCRIBE",
-        "FOLLOW",
-        "Facebook",
-        "Instagram",
-        "Twitter",
-        "YouTube",
-        "TikTok",
-        "©",
-        "Copyright",
-        "All Rights Reserved",
-        "Monroe Drive",
-        "Atlanta, GA",
-        "30308",
-        "MIDTOWN ART CINEMA",
-        "Select Date",
-        "Today",
-        "Loading",
-        # Cookie and consent
-        "Cookie",
-        "Accept and Continue",
-        "Skip to main",
-        "consent",
-        # Page structure
-        "SHOWTIMES FOR",
-        "PLEASE SELECT",
-        "SELECT A LOCATION",
-        "SHOWTIMES",
-        "MOVIES",
-        "LOYALTY",
-        "ANOTHER DATE",
-        "Home",
-        "More",
-        "Film Series",
-        "Special Screenings",
-        # Movie metadata (not titles)
-        "Directed by",
-        "A FILM BY",
-        "See trailer of the movie",
-        "GENRE:",
-        "CAST:",
-        "STARRING:",
-        # Ratings and runtimes
-        "HR,",
-        "MIN",
-        "• 1 HR",
-        "• 2 HR",
-        "• 3 HR",
-        # Buttons
-        "BUY TICKETS",
-        "GET TICKETS",
-        "LEARN MORE",
-        "VIEW DETAILS",
-        "SEE MORE",
-        "RESERVE",
-    ]
+        # Stop at Film Series section (special events handled separately)
+        if "Film Series & Special Screenings" in text:
+            text = text.split("Film Series & Special Screenings")[0]
 
-    i = 0
-    while i < len(lines):
-        line = lines[i]
+        # Pattern to find movie blocks:
+        # Rating line followed by title on next line
+        # Format: "PG-13 • 2 HR, 10 MIN\n{TITLE}\n\nDirected by..."
+        movie_pattern = re.compile(
+            r'((?:G|PG|PG-13|R|NC-17|NR|Not Rated)\s*•\s*'  # Rating
+            r'\d+\s*HR,?\s*\d*\s*MIN)\s*\n'  # Duration followed by newline
+            r'([^\n]{3,80})\n+'  # Title on its own line (any chars)
+            r'Directed by\s+([^\n]+)',  # Director confirms this is a movie
+            re.IGNORECASE
+        )
 
-        # Skip UI elements
-        if any(w.lower() in line.lower() for w in skip_words):
-            i += 1
-            continue
+        # Showtime pattern: times like "4:00PM", "3:10PM" (no space)
+        showtime_pattern = re.compile(r'\b(\d{1,2}:\d{2}(?:AM|PM))\b', re.IGNORECASE)
 
-        # Skip short lines
-        if len(line) < 3:
-            i += 1
-            continue
+        # Find all movies
+        movies = []
+        for match in movie_pattern.finditer(text):
+            rating_duration = match.group(1).strip()
+            title = match.group(2).strip()
+            director = match.group(3).strip()
 
-        # Skip lines that are just numbers or dates
-        if re.match(r"^\d{1,2}$", line) or re.match(r"^\d{1,2}/\d{1,2}", line):
-            i += 1
-            continue
+            # Clean up title - remove any trailing metadata
+            title = re.sub(r'\s*(Directed by.*|Genre:.*|Cast:.*)$', '', title, flags=re.IGNORECASE).strip()
 
-        # Look for movie titles - typically followed by runtime or genre
-        # Movie titles are usually in caps or title case
-        if i + 1 < len(lines):
-            next_line = lines[i + 1]
+            # Skip if title looks like UI text
+            skip_titles = [
+                "Showtimes", "Now Playing", "Coming Soon", "Landmark",
+                "Another Date", "See Details", "Film Series", "Special"
+            ]
+            if any(skip.lower() in title.lower() for skip in skip_titles):
+                continue
 
-            # Check if next line has runtime pattern "1h 45m" or "2 hr 10 min" or genre
-            runtime_match = re.match(r"(\d+)\s*h(?:r|our)?\s*(\d+)?\s*m(?:in)?", next_line, re.IGNORECASE)
-            genre_indicators = ["Drama", "Comedy", "Thriller", "Horror", "Documentary", "Romance", "Action", "Sci-Fi"]
-            has_genre = any(g.lower() in next_line.lower() for g in genre_indicators)
+            if len(title) < 3 or len(title) > 100:
+                continue
 
-            if runtime_match or has_genre:
-                # This line is likely a movie title
-                if len(line) > 2 and line[0].isupper():
-                    current_movie = line
-                    i += 2
+            movies.append({
+                "title": title,
+                "rating_duration": rating_duration,
+                "director": director,
+                "start": match.start(),
+                "end": match.end()
+            })
+
+        logger.info(f"Found {len(movies)} movies on Landmark page")
+
+        # For each movie, find showtimes in its section
+        seen_movies = set()
+
+        for i, movie in enumerate(movies):
+            # Get text section for this movie (until next movie or TRAILER marker)
+            if i + 1 < len(movies):
+                section = text[movie["end"]:movies[i + 1]["start"]]
+            else:
+                section = text[movie["end"]:movie["end"] + 500]  # Limit search area
+
+            # Stop at TRAILER marker (indicates end of this movie's section)
+            if "TRAILER" in section:
+                section = section.split("TRAILER")[0]
+
+            # Find all showtimes in this section
+            showtimes = []
+            for st_match in showtime_pattern.finditer(section):
+                time_str = st_match.group(1)
+                # Validate it's a reasonable showtime (not part of duration)
+                if "hr" not in section[max(0, st_match.start()-10):st_match.start()].lower():
+                    showtimes.append(time_str)
+
+            # Create events for each showtime
+            for showtime in showtimes:
+                start_time = parse_time(showtime)
+                if not start_time:
                     continue
 
-        # Look for showtime patterns
-        time_match = re.match(r"^(\d{1,2}:\d{2}\s*(?:AM|PM|am|pm))$", line)
-        if time_match and current_movie:
-            showtime = time_match.group(1)
-            start_time = parse_time(showtime)
+                movie_key = f"{movie['title']}|{date_str}|{start_time}"
+                if movie_key in seen_movies:
+                    continue
 
-            movie_key = f"{current_movie}|{date_str}|{start_time}"
-            if movie_key not in seen_movies:
                 seen_movies.add(movie_key)
                 events_found += 1
 
                 content_hash = generate_content_hash(
-                    current_movie, "Landmark Midtown Art Cinema", f"{date_str}|{start_time}"
+                    movie["title"], "Landmark Midtown Art Cinema", f"{date_str}|{start_time}"
                 )
 
                 existing = find_event_by_hash(content_hash)
@@ -212,8 +178,8 @@ def extract_movies_for_date(
                     event_record = {
                         "source_id": source_id,
                         "venue_id": venue_id,
-                        "title": current_movie,
-                        "description": None,
+                        "title": movie["title"],
+                        "description": movie["rating_duration"],
                         "start_date": date_str,
                         "start_time": start_time,
                         "end_date": None,
@@ -230,328 +196,86 @@ def extract_movies_for_date(
                         "ticket_url": None,
                         "image_url": None,
                         "raw_text": None,
-                        "extraction_confidence": 0.85,
+                        "extraction_confidence": 0.90,
                         "is_recurring": False,
                         "recurrence_rule": None,
                         "content_hash": content_hash,
                     }
 
-                    try:
-                        insert_event(event_record)
-                        events_new += 1
-                        logger.info(f"Added: {current_movie} on {date_str} at {start_time}")
-                    except Exception as e:
-                        logger.error(f"Failed to insert: {current_movie}: {e}")
-
-        # Also check for movie without specific showtime (just playing today)
-        if current_movie and current_movie not in seen_movies:
-            # If we found a movie but no showtimes yet, record it as playing
-            movie_key = f"{current_movie}|{date_str}|all-day"
-            if movie_key not in seen_movies:
-                seen_movies.add(movie_key)
-                # Don't count as event yet, wait for showtimes
-
-        i += 1
-
-    # Fallback: Only if we found NO movies at all from showtimes, look for titles
-    # This should rarely trigger if the location selection works
-    if not events_found:
-        # Very strict pattern for movie titles - must be ALL CAPS, no metadata patterns
-        for line in lines:
-            # Must be reasonable length
-            if len(line) < 5 or len(line) > 50:
-                continue
-            # Skip if in skip_words
-            if any(w.lower() in line.lower() for w in skip_words):
-                continue
-            # Must be ALL CAPS (movie titles on Landmark are uppercase)
-            if not line.isupper():
-                continue
-            # Skip rating/runtime patterns like "R • 1 HR, 40 MIN" or "PG-13 • 2 HR"
-            if re.match(r"^(G|PG|PG-13|R|NC-17|NR)\s*•", line):
-                continue
-            # Skip lines with bullet separators (metadata)
-            if " • " in line:
-                continue
-            # Skip lines that are just single words (navigation items)
-            if " " not in line:
-                continue
-            # Skip already seen
-            if line in seen_movies:
-                continue
-
-            # This looks like a movie title
-            seen_movies.add(line)
-            events_found += 1
-
-            content_hash = generate_content_hash(
-                line, "Landmark Midtown Art Cinema", date_str
-            )
-
-            existing = find_event_by_hash(content_hash)
-            if existing:
-                events_updated += 1
-            else:
-                event_record = {
-                    "source_id": source_id,
-                    "venue_id": venue_id,
-                    "title": line.title(),  # Convert to title case
-                    "description": "Now Playing",
-                    "start_date": date_str,
-                    "start_time": None,
-                    "end_date": None,
-                    "end_time": None,
-                    "is_all_day": True,
-                    "category": "film",
-                    "subcategory": "cinema",
-                    "tags": ["film", "cinema", "arthouse", "landmark"],
-                    "price_min": None,
-                    "price_max": None,
-                    "price_note": None,
-                    "is_free": False,
-                    "source_url": SHOWTIMES_URL,
-                    "ticket_url": None,
-                    "image_url": None,
-                    "raw_text": None,
-                    "extraction_confidence": 0.70,
-                    "is_recurring": False,
-                    "recurrence_rule": None,
-                    "content_hash": content_hash,
-                }
-
-                try:
-                    insert_event(event_record)
-                    events_new += 1
-                    logger.info(f"Added (no time): {line} on {date_str}")
-                except Exception as e:
-                    logger.error(f"Failed to insert: {line}: {e}")
-
-    return events_found, events_new, events_updated
-
-
-def extract_special_events(
-    page: Page,
-    source_id: int,
-    venue_id: int,
-    source_url: str,
-) -> tuple[int, int, int]:
-    """Extract special events from film series or special screenings pages."""
-    events_found = 0
-    events_new = 0
-    events_updated = 0
-
-    body_text = page.inner_text("body")
-    lines = [l.strip() for l in body_text.split("\n") if l.strip()]
-
-    skip_patterns = [
-        # Navigation and UI
-        "NOW PLAYING",
-        "COMING SOON",
-        "SEE DETAILS",
-        "CLICK HERE",
-        "LANDMARK",
-        "THEATRES",
-        "SIGN UP",
-        "LOG IN",
-        "MENU",
-        "SEARCH",
-        "MY LANDMARK",
-        "GIFT CARDS",
-        "LOCATIONS",
-        "ABOUT",
-        "FAQ",
-        "CONTACT",
-        "CAREERS",
-        "PRIVACY",
-        "TERMS",
-        "NEWSLETTER",
-        "SUBSCRIBE",
-        "FOLLOW",
-        "Facebook",
-        "Instagram",
-        "Twitter",
-        "YouTube",
-        "TikTok",
-        "©",
-        "Copyright",
-        "Monroe Drive",
-        "Atlanta, GA",
-        "MIDTOWN ART CINEMA",
-        "Loading",
-        "All Rights Reserved",
-        # Cookie and consent
-        "Cookie",
-        "Accept and Continue",
-        "Skip to main",
-        "consent",
-        # Page structure
-        "SHOWTIMES FOR",
-        "PLEASE SELECT",
-        "SELECT A LOCATION",
-        "SHOWTIMES",
-        "MOVIES",
-        "LOYALTY",
-        "ANOTHER DATE",
-        "Home",
-        "More",
-        "Film Series",
-        "Special Screenings",
-        "Event Movies",
-        # Movie metadata
-        "Directed by",
-        "A FILM BY",
-        "GENRE:",
-        "CAST:",
-        "STARRING:",
-        "HR,",
-        "MIN",
-        # Trailer/preview patterns
-        "TRAILER",
-        "See trailer of",
-        "Watch trailer",
-        "View trailer",
-        # Buttons
-        "BUY TICKETS",
-        "GET TICKETS",
-        "LEARN MORE",
-        "VIEW DETAILS",
-        "SEE MORE",
-        "RESERVE",
-    ]
-
-    seen_events = set()
-    current_event = None
-    current_date = None
-
-    for i, line in enumerate(lines):
-        # Skip short lines
-        if len(line) < 5:
-            continue
-
-        # Skip UI elements
-        if any(skip.lower() in line.lower() for skip in skip_patterns):
-            continue
-
-        # Look for date patterns
-        date_match = re.search(
-            r"(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2})(?:,?\s*(\d{4}))?",
-            line,
-            re.IGNORECASE
-        )
-        if date_match:
-            month, day, year = date_match.groups()
-            year = year or str(datetime.now().year)
-            try:
-                dt = datetime.strptime(f"{month} {day}, {year}", "%B %d, %Y")
-                current_date = dt.strftime("%Y-%m-%d")
-            except ValueError:
-                pass
-            continue
-
-        # Look for event titles (capitalized, reasonable length)
-        if len(line) > 5 and len(line) < 100 and line[0].isupper():
-            # Skip if it looks like a date or time
-            if re.match(r"^\d", line) or re.match(r"^(Mon|Tue|Wed|Thu|Fri|Sat|Sun)", line, re.IGNORECASE):
-                continue
-
-            current_event = line
-
-            if current_event and current_event not in seen_events:
-                seen_events.add(current_event)
-                events_found += 1
-
-                # Use current_date if found, otherwise 14 days from now
-                event_date = current_date or (datetime.now() + timedelta(days=14)).strftime("%Y-%m-%d")
-
-                content_hash = generate_content_hash(
-                    current_event, "Landmark Midtown Art Cinema", f"event-{event_date}"
-                )
-
-                existing = find_event_by_hash(content_hash)
-                if existing:
-                    events_updated += 1
-                else:
-                    event_record = {
-                        "source_id": source_id,
-                        "venue_id": venue_id,
-                        "title": current_event,
-                        "description": "Special Event",
-                        "start_date": event_date,
-                        "start_time": None,
-                        "end_date": None,
-                        "end_time": None,
-                        "is_all_day": True,
-                        "category": "film",
-                        "subcategory": "special-screening",
-                        "tags": ["film", "cinema", "arthouse", "landmark", "special-event"],
-                        "price_min": None,
-                        "price_max": None,
-                        "price_note": None,
-                        "is_free": False,
-                        "source_url": source_url,
-                        "ticket_url": None,
-                        "image_url": None,
-                        "raw_text": None,
-                        "extraction_confidence": 0.75,
-                        "is_recurring": False,
-                        "recurrence_rule": None,
-                        "content_hash": content_hash,
+                    series_hint = {
+                        "series_type": "film",
+                        "series_title": movie["title"],
                     }
 
                     try:
-                        insert_event(event_record)
+                        insert_event(event_record, series_hint=series_hint)
                         events_new += 1
-                        logger.info(f"Added event: {current_event} on {event_date}")
+                        logger.info(f"Added: {movie['title']} on {date_str} at {start_time}")
                     except Exception as e:
-                        logger.error(f"Failed to insert event: {current_event}: {e}")
+                        logger.error(f"Failed to insert: {movie['title']}: {e}")
+
+    except Exception as e:
+        logger.error(f"Error extracting movies: {e}")
 
     return events_found, events_new, events_updated
 
 
 def select_midtown_location(page: Page) -> bool:
-    """Try to select Midtown Art Cinema from the location dropdown."""
+    """Select Midtown Art Cinema from the location dropdown.
+
+    The page starts with "PLEASE SELECT A LOCATION" and we need to:
+    1. Click the dropdown
+    2. Select "Midtown Art Cinema" from the list
+    """
     try:
-        # Look for location selector/dropdown
-        location_selectors = [
-            "text=Please select a location",
+        # Check if already selected (text contains "LANDMARK MIDTOWN ART CINEMA")
+        page_text = page.inner_text("body")
+        if "LANDMARK MIDTOWN ART CINEMA" in page_text:
+            logger.info("Midtown Art Cinema already selected")
+            return True
+
+        # Click the location dropdown
+        dropdown_selectors = [
+            "text=PLEASE SELECT A LOCATION",
             "text=Select a location",
-            "[data-testid='location-selector']",
-            "button:has-text('location')",
-            ".location-select",
+            "text=/At:.*select/i",
         ]
 
-        for selector in location_selectors:
+        dropdown_clicked = False
+        for selector in dropdown_selectors:
             try:
-                loc_btn = page.locator(selector).first
-                if loc_btn.is_visible(timeout=2000):
-                    loc_btn.click()
+                dropdown = page.locator(selector).first
+                if dropdown.is_visible(timeout=2000):
+                    dropdown.click()
                     page.wait_for_timeout(1500)
-
-                    # Extract images from page
-                    image_map = extract_images_from_page(page)
+                    dropdown_clicked = True
+                    logger.info("Clicked location dropdown")
                     break
             except Exception:
                 continue
 
-        # Now look for Midtown Art Cinema in the dropdown
+        if not dropdown_clicked:
+            logger.warning("Could not find location dropdown")
+            return False
+
+        # Look for Midtown Art Cinema in the dropdown options
         midtown_selectors = [
             "text=Midtown Art Cinema",
-            "text=midtown art cinema",
-            "text=Atlanta",
-            "[data-location='midtown-art-cinema']",
+            "text=/Midtown.*Atlanta/i",
         ]
 
         for selector in midtown_selectors:
             try:
-                midtown_btn = page.locator(selector).first
-                if midtown_btn.is_visible(timeout=2000):
-                    midtown_btn.click()
+                option = page.locator(selector).first
+                if option.is_visible(timeout=3000):
+                    option.click()
                     page.wait_for_timeout(2000)
                     logger.info("Selected Midtown Art Cinema location")
                     return True
             except Exception:
                 continue
 
+        logger.warning("Could not find Midtown Art Cinema option")
         return False
     except Exception as e:
         logger.warning(f"Could not select Midtown location: {e}")
@@ -559,7 +283,7 @@ def select_midtown_location(page: Page) -> bool:
 
 
 def crawl(source: dict) -> tuple[int, int, int]:
-    """Crawl Landmark Midtown Art Cinema showtimes and events."""
+    """Crawl Landmark Midtown Art Cinema showtimes."""
     source_id = source["id"]
     total_found = 0
     total_new = 0
@@ -577,20 +301,21 @@ def crawl(source: dict) -> tuple[int, int, int]:
             venue_id = get_or_create_venue(VENUE_DATA)
             today = datetime.now().date()
 
-            # ========== SHOWTIMES PAGE ==========
+            # Load the showtimes page
             logger.info(f"Fetching Landmark showtimes: {SHOWTIMES_URL}")
-            page.goto(SHOWTIMES_URL, wait_until="domcontentloaded", timeout=30000)
-            page.wait_for_timeout(4000)
+            page.goto(SHOWTIMES_URL, wait_until="networkidle", timeout=30000)
+            page.wait_for_timeout(3000)
 
             # Select Midtown Art Cinema location
             select_midtown_location(page)
+            page.wait_for_timeout(2000)
 
-            # Scroll to load content
+            # Scroll to load all content
             for _ in range(3):
                 page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
                 page.wait_for_timeout(1000)
 
-            # Get today's showtimes
+            # Extract today's showtimes (already showing by default)
             logger.info(f"Scraping Today ({today.strftime('%Y-%m-%d')})")
             found, new, updated = extract_movies_for_date(
                 page, datetime.combine(today, datetime.min.time()), source_id, venue_id
@@ -598,43 +323,35 @@ def crawl(source: dict) -> tuple[int, int, int]:
             total_found += found
             total_new += new
             total_updated += updated
-            if found > 0:
-                logger.info(f"  {today.strftime('%Y-%m-%d')}: {found} movies found, {new} new")
 
-            # Try to click through dates for next 7 days
-            day_names = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
-
+            # Click through dates for next 7 days
+            # Date buttons show day abbreviation and number (e.g., "Fri 23")
             for day_offset in range(1, 8):
                 target_date = today + timedelta(days=day_offset)
-                day_name = day_names[target_date.weekday()]
                 day_num = target_date.day
                 date_str = target_date.strftime("%Y-%m-%d")
 
-                # Try to click date selector
+                # Try to click the date button by day number
                 clicked = False
                 try:
-                    # Look for date picker or day buttons
-                    day_btn = page.locator(f"text={day_name}").first
-                    if day_btn.is_visible(timeout=1000):
-                        day_btn.click()
+                    # The date buttons contain just the day number
+                    date_btn = page.locator(f"text=/^{day_num}$/").first
+                    if date_btn.is_visible(timeout=1500):
+                        date_btn.click()
                         page.wait_for_timeout(2000)
                         clicked = True
                 except Exception:
                     pass
 
-                if not clicked:
-                    try:
-                        # Try clicking by date number
-                        date_btn = page.locator(f"text=/^{day_num}$/").first
-                        if date_btn.is_visible(timeout=1000):
-                            date_btn.click()
-                            page.wait_for_timeout(2000)
-                            clicked = True
-                    except Exception:
-                        pass
-
                 if clicked:
-                    logger.info(f"Scraping {day_name} {day_num} ({date_str})")
+                    # Scroll to load content for this date
+                    page.evaluate("window.scrollTo(0, 0)")
+                    page.wait_for_timeout(500)
+                    for _ in range(2):
+                        page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+                        page.wait_for_timeout(800)
+
+                    logger.info(f"Scraping {date_str}")
                     found, new, updated = extract_movies_for_date(
                         page,
                         datetime.combine(target_date, datetime.min.time()),
@@ -644,49 +361,6 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     total_found += found
                     total_new += new
                     total_updated += updated
-
-                    if found > 0:
-                        logger.info(f"  {date_str}: {found} movies found, {new} new")
-
-            # ========== FILM SERIES PAGE ==========
-            logger.info(f"Fetching Landmark film series: {FILM_SERIES_URL}")
-            page.goto(FILM_SERIES_URL, wait_until="domcontentloaded", timeout=30000)
-            page.wait_for_timeout(3000)
-
-            # Select Midtown Art Cinema location
-            select_midtown_location(page)
-
-            # Scroll to load content
-            for _ in range(2):
-                page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
-                page.wait_for_timeout(1000)
-
-            found, new, updated = extract_special_events(page, source_id, venue_id, FILM_SERIES_URL)
-            total_found += found
-            total_new += new
-            total_updated += updated
-            if found > 0:
-                logger.info(f"Film Series: {found} found, {new} new")
-
-            # ========== SPECIAL SCREENINGS PAGE ==========
-            logger.info(f"Fetching Landmark special screenings: {SPECIAL_SCREENINGS_URL}")
-            page.goto(SPECIAL_SCREENINGS_URL, wait_until="domcontentloaded", timeout=30000)
-            page.wait_for_timeout(3000)
-
-            # Select Midtown Art Cinema location
-            select_midtown_location(page)
-
-            # Scroll to load content
-            for _ in range(2):
-                page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
-                page.wait_for_timeout(1000)
-
-            found, new, updated = extract_special_events(page, source_id, venue_id, SPECIAL_SCREENINGS_URL)
-            total_found += found
-            total_new += new
-            total_updated += updated
-            if found > 0:
-                logger.info(f"Special Screenings: {found} found, {new} new")
 
             browser.close()
 

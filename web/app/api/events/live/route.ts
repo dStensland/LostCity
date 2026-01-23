@@ -58,6 +58,7 @@ export async function GET(request: Request) {
         )
       `)
       .eq("is_live", true)
+      .is("canonical_event_id", null) // Only show canonical events, not duplicates
       .order("start_time", { ascending: true });
 
     if (error) {

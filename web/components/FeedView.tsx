@@ -6,6 +6,7 @@ import { useAuth } from "@/lib/auth-context";
 import { usePortal } from "@/lib/portal-context";
 import FeedSection, { type FeedSectionData } from "./feed/FeedSection";
 import SerendipityFeed from "./SerendipityFeed";
+import YourPicksRow from "./YourPicksRow";
 
 type FeedSettings = {
   feed_type?: "default" | "sections" | "custom";
@@ -163,6 +164,9 @@ export default function FeedView() {
   // Render sections with serendipity moments interspersed
   return (
     <div className="py-6">
+      {/* Personalized picks row for authenticated users */}
+      <YourPicksRow portalSlug={portal.slug} />
+
       {sections.map((section, index) => (
         <div key={section.id}>
           <FeedSection section={section} isFirst={index === 0} />

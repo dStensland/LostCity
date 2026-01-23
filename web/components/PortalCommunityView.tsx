@@ -165,10 +165,11 @@ export default function PortalCommunityView({ portalId, portalSlug, portalName }
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<"category" | "alphabetical">("category");
-  const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
+  // Track which categories are expanded (collapsed by default)
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
 
   const toggleCategory = (orgType: string) => {
-    setCollapsedCategories(prev => {
+    setExpandedCategories(prev => {
       const next = new Set(prev);
       if (next.has(orgType)) {
         next.delete(orgType);
@@ -329,7 +330,7 @@ export default function PortalCommunityView({ portalId, portalSlug, portalName }
         <div className="space-y-2">
           {groupedProducers.map(({ type, producers: groupProducers }) => {
             const orgConfig = ORG_TYPE_CONFIG[type];
-            const isCollapsed = collapsedCategories.has(type);
+            const isExpanded = expandedCategories.has(type);
 
             return (
               <div key={type}>
@@ -352,7 +353,7 @@ export default function PortalCommunityView({ portalId, portalSlug, portalName }
                     {groupProducers.length}
                   </span>
                   <svg
-                    className={`w-4 h-4 text-[var(--muted)] transition-transform ${isCollapsed ? "" : "rotate-180"}`}
+                    className={`w-4 h-4 text-[var(--muted)] transition-transform ${isExpanded ? "rotate-180" : ""}`}
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -362,7 +363,7 @@ export default function PortalCommunityView({ portalId, portalSlug, portalName }
                 </button>
 
                 {/* Collapsible Content */}
-                {!isCollapsed && (
+                {isExpanded && (
                   <div className="space-y-3 pb-4">
                     {groupProducers.map((producer) => (
                       <ProducerCard

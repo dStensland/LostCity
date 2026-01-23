@@ -2,19 +2,32 @@
 """
 Lost City Crawler - Main entry point.
 Orchestrates crawling, extraction, and storage of event data.
+
+Features:
+- Circuit breaker pattern to skip consistently failing sources
+- Parallel execution for faster crawls
+- Auto-discovery of crawler modules
 """
 
 import argparse
 import logging
+import os
 import sys
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from importlib import import_module
 from typing import Optional
 
 from config import get_config
 from db import get_active_sources, get_source_by_slug, create_crawl_log, update_crawl_log, refresh_available_filters
 from utils import setup_logging, slugify
+from circuit_breaker import should_skip_source, get_all_circuit_states
+from fetch_logos import fetch_logos
 
 logger = logging.getLogger(__name__)
+
+# Parallel execution settings
+MAX_WORKERS = 5  # Number of concurrent crawlers
+TIMEOUT_SECONDS = 300  # 5 minute timeout per source
 
 
 # Map source slugs to their crawler modules
@@ -397,9 +410,6 @@ SOURCE_MODULES = {
     "kats-cafe": "sources.kats_cafe",
     "gypsy-kitchen": "sources.gypsy_kitchen",
     "sun-dial-restaurant": "sources.sun_dial_restaurant",
-    # ===== Gaming & Barcades =====
-    "battle-and-brew": "sources.battle_and_brew",
-    "joystick-gamebar": "sources.joystick_gamebar",
     # ===== Poker & Chess =====
     "freeroll-atlanta": "sources.freeroll_atlanta",
     "georgia-chess": "sources.georgia_chess",
@@ -417,13 +427,14 @@ def run_crawler(source: dict) -> tuple[int, int, int]:
         Tuple of (events_found, events_new, events_updated)
     """
     slug = source["slug"]
+    modules = get_source_modules()
 
-    if slug not in SOURCE_MODULES:
+    if slug not in modules:
         logger.warning(f"No crawler implemented for source: {slug}")
         return 0, 0, 0
 
     try:
-        module = import_module(SOURCE_MODULES[slug])
+        module = import_module(modules[slug])
         return module.crawl(source)
     except ImportError as e:
         logger.error(f"Failed to import crawler module for {slug}: {e}")
@@ -433,12 +444,13 @@ def run_crawler(source: dict) -> tuple[int, int, int]:
         raise
 
 
-def run_source(slug: str) -> bool:
+def run_source(slug: str, skip_circuit_breaker: bool = False) -> bool:
     """
     Run crawler for a specific source by slug.
 
     Args:
         slug: Source slug to crawl
+        skip_circuit_breaker: If True, bypass circuit breaker check
 
     Returns:
         True if successful, False otherwise
@@ -452,6 +464,13 @@ def run_source(slug: str) -> bool:
     if not source["is_active"]:
         logger.warning(f"Source is not active: {slug}")
         return False
+
+    # Check circuit breaker (unless bypassed)
+    if not skip_circuit_breaker:
+        should_skip, reason = should_skip_source(source)
+        if should_skip:
+            logger.warning(f"Skipping {slug}: circuit breaker open ({reason})")
+            return False
 
     logger.info(f"Starting crawl for: {source['name']}")
     log_id = create_crawl_log(source["id"])
@@ -477,9 +496,13 @@ def run_source(slug: str) -> bool:
         return False
 
 
-def run_all_sources() -> dict[str, bool]:
+def run_all_sources(parallel: bool = True, max_workers: int = MAX_WORKERS) -> dict[str, bool]:
     """
     Run crawlers for all active sources.
+
+    Args:
+        parallel: If True, run crawlers in parallel (default: True)
+        max_workers: Maximum number of parallel workers
 
     Returns:
         Dict mapping source slug to success status
@@ -487,16 +510,60 @@ def run_all_sources() -> dict[str, bool]:
     sources = get_active_sources()
     results = {}
 
-    logger.info(f"Running crawlers for {len(sources)} active sources")
+    # Pre-filter sources with open circuit breakers
+    active_sources = []
+    skipped_sources = []
 
     for source in sources:
-        slug = source["slug"]
-        results[slug] = run_source(slug)
+        should_skip, reason = should_skip_source(source)
+        if should_skip:
+            skipped_sources.append((source["slug"], reason))
+            results[source["slug"]] = False
+        else:
+            active_sources.append(source)
+
+    if skipped_sources:
+        logger.warning(
+            f"Skipping {len(skipped_sources)} sources due to circuit breaker: "
+            f"{[s[0] for s in skipped_sources]}"
+        )
+
+    logger.info(
+        f"Running crawlers for {len(active_sources)} sources "
+        f"({len(skipped_sources)} skipped by circuit breaker)"
+    )
+
+    if parallel and len(active_sources) > 1:
+        # Parallel execution
+        logger.info(f"Using parallel execution with {max_workers} workers")
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            # Submit all tasks
+            future_to_slug = {
+                executor.submit(run_source, source["slug"], True): source["slug"]
+                for source in active_sources
+            }
+
+            # Collect results as they complete
+            for future in as_completed(future_to_slug, timeout=TIMEOUT_SECONDS * len(active_sources)):
+                slug = future_to_slug[future]
+                try:
+                    results[slug] = future.result(timeout=TIMEOUT_SECONDS)
+                except Exception as e:
+                    logger.error(f"Parallel execution failed for {slug}: {e}")
+                    results[slug] = False
+    else:
+        # Sequential execution
+        for source in active_sources:
+            slug = source["slug"]
+            results[slug] = run_source(slug, skip_circuit_breaker=True)
 
     # Summary
     success = sum(1 for v in results.values() if v)
     failed = len(results) - success
-    logger.info(f"Crawl complete: {success} succeeded, {failed} failed")
+    logger.info(
+        f"Crawl complete: {success} succeeded, {failed} failed, "
+        f"{len(skipped_sources)} circuit-breaker skipped"
+    )
 
     # Refresh available filters for UI
     logger.info("Refreshing available filters...")
@@ -505,7 +572,55 @@ def run_all_sources() -> dict[str, bool]:
     else:
         logger.warning("Failed to refresh available filters")
 
+    # Fetch logos for any producers missing them
+    logger.info("Fetching logos for producers...")
+    try:
+        logo_results = fetch_logos()
+        logger.info(
+            f"Logo fetch complete: {logo_results['success']} new, "
+            f"{logo_results['failed']} failed, {logo_results['skipped']} skipped"
+        )
+    except Exception as e:
+        logger.warning(f"Logo fetch failed: {e}")
+
     return results
+
+
+def auto_discover_modules() -> dict[str, str]:
+    """
+    Auto-discover crawler modules from the sources directory.
+    Maps slug (derived from filename) to module path.
+
+    Filename convention: sources/<slug_with_underscores>.py
+    Example: sources/terminal_west.py -> "terminal-west": "sources.terminal_west"
+    """
+    sources_dir = os.path.join(os.path.dirname(__file__), "sources")
+    discovered = {}
+
+    if not os.path.exists(sources_dir):
+        logger.warning(f"Sources directory not found: {sources_dir}")
+        return discovered
+
+    for filename in os.listdir(sources_dir):
+        if filename.endswith(".py") and not filename.startswith("_"):
+            module_name = filename[:-3]  # Remove .py
+            # Convert underscores to hyphens for slug
+            slug = module_name.replace("_", "-")
+            discovered[slug] = f"sources.{module_name}"
+
+    return discovered
+
+
+def get_source_modules() -> dict[str, str]:
+    """
+    Get all available source modules.
+    Merges hardcoded SOURCE_MODULES with auto-discovered modules.
+    Hardcoded takes precedence for explicit mappings.
+    """
+    discovered = auto_discover_modules()
+    # Merge: hardcoded takes precedence
+    merged = {**discovered, **SOURCE_MODULES}
+    return merged
 
 
 def main():
@@ -530,25 +645,77 @@ def main():
         action="store_true",
         help="Fetch and extract but don't save to database"
     )
+    parser.add_argument(
+        "--sequential",
+        action="store_true",
+        help="Run crawlers sequentially instead of in parallel"
+    )
+    parser.add_argument(
+        "--workers", "-w",
+        type=int,
+        default=MAX_WORKERS,
+        help=f"Number of parallel workers (default: {MAX_WORKERS})"
+    )
+    parser.add_argument(
+        "--force", "-f",
+        action="store_true",
+        help="Force crawl even if circuit breaker is open"
+    )
+    parser.add_argument(
+        "--circuit-status",
+        action="store_true",
+        help="Show circuit breaker status for all sources"
+    )
 
     args = parser.parse_args()
 
-    if args.list:
-        sources = get_active_sources()
-        print("\nActive sources:")
-        for source in sources:
-            implemented = "✓" if source["slug"] in SOURCE_MODULES else "✗"
-            print(f"  [{implemented}] {source['slug']}: {source['name']}")
-        print(f"\nTotal: {len(sources)} sources")
+    # Circuit breaker status
+    if args.circuit_status:
+        states = get_all_circuit_states()
+        print("\nCircuit Breaker Status:")
+        print("-" * 60)
+        open_circuits = [s for s in states if s.is_open]
+        degraded = [s for s in states if not s.is_open and s.consecutive_failures > 0]
+        healthy = [s for s in states if not s.is_open and s.consecutive_failures == 0]
+
+        if open_circuits:
+            print(f"\n🔴 OPEN ({len(open_circuits)} sources):")
+            for s in open_circuits:
+                print(f"  {s.slug}: {s.consecutive_failures} failures - {s.reason}")
+
+        if degraded:
+            print(f"\n🟡 DEGRADED ({len(degraded)} sources):")
+            for s in degraded:
+                print(f"  {s.slug}: {s.consecutive_failures} failures")
+
+        print(f"\n🟢 HEALTHY: {len(healthy)} sources")
+        print(f"\nTotal: {len(states)} sources")
         return 0
 
+    # List sources
+    if args.list:
+        sources = get_active_sources()
+        modules = get_source_modules()
+        print("\nActive sources:")
+        for source in sources:
+            implemented = "✓" if source["slug"] in modules else "✗"
+            print(f"  [{implemented}] {source['slug']}: {source['name']}")
+        print(f"\nTotal: {len(sources)} sources")
+        print(f"Crawler modules: {len(modules)} available")
+        return 0
+
+    # Single source
     if args.source:
-        success = run_source(args.source)
+        success = run_source(args.source, skip_circuit_breaker=args.force)
         return 0 if success else 1
-    else:
-        results = run_all_sources()
-        failed = sum(1 for v in results.values() if not v)
-        return 1 if failed > 0 else 0
+
+    # All sources
+    results = run_all_sources(
+        parallel=not args.sequential,
+        max_workers=args.workers
+    )
+    failed = sum(1 for v in results.values() if not v)
+    return 1 if failed > 0 else 0
 
 
 if __name__ == "__main__":

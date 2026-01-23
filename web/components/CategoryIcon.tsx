@@ -26,7 +26,7 @@ export const CATEGORY_CONFIG = {
   outdoors: { label: "Outdoors", color: "#BEF264" },
   other: { label: "Other", color: "#8B8B94" },
 
-  // Spot types (reuse some colors, add new ones)
+  // Spot types
   music_venue: { label: "Music Venue", color: "#F9A8D4" },
   bar: { label: "Bar", color: "#FDBA74" },
   restaurant: { label: "Restaurant", color: "#FB923C" },
@@ -51,7 +51,7 @@ export const CATEGORY_CONFIG = {
   food_hall: { label: "Food Hall", color: "#FB923C" },
   farmers_market: { label: "Farmers Market", color: "#FCA5A5" },
 
-  // New categories for expanded crawlers
+  // Extended categories
   haunted: { label: "Haunted", color: "#9333EA" },
   cooking: { label: "Cooking", color: "#F97316" },
   eatertainment: { label: "Eatertainment", color: "#22D3EE" },
@@ -65,7 +65,7 @@ export const CATEGORY_CONFIG = {
   cooking_school: { label: "Cooking School", color: "#F97316" },
   community_center: { label: "Community Center", color: "#6EE7B7" },
 
-  // New spot types
+  // Extended spot types
   college: { label: "College", color: "#60A5FA" },
   university: { label: "University", color: "#60A5FA" },
   healthcare: { label: "Healthcare", color: "#34D399" },
@@ -89,706 +89,663 @@ interface Props {
   className?: string;
   showLabel?: boolean;
   style?: CSSProperties;
-  /** Neon glow intensity: "none", "subtle", "default", "intense", "pulse", or "flicker" */
   glow?: GlowIntensity;
 }
 
-// SVG icon paths for each category/type
+/*
+ * LOST CITY ICON SYSTEM
+ * =====================
+ * Design principles:
+ * - Minimal geometric forms that glow beautifully
+ * - Consistent 1.5px stroke weight
+ * - Open forms to let neon light bleed
+ * - Distinctive silhouettes at small sizes
+ * - Negative space embraces the void
+ */
+
 const iconPaths: Record<string, ReactNode> = {
-  // Music - sound wave
+  // ═══════════════════════════════════════════
+  // MUSIC & AUDIO
+  // ═══════════════════════════════════════════
+
+  // Music - Sound waves emanating (like a speaker or sound)
   music: (
     <>
-      <path d="M9 18V5l12-2v13" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" fill="none" stroke="currentColor" />
-      <circle cx="6" cy="18" r="3" fill="currentColor" />
-      <circle cx="18" cy="16" r="3" fill="currentColor" />
+      <circle cx="8" cy="12" r="3" strokeWidth={1.5} fill="none" stroke="currentColor" />
+      <path d="M14 6c3 2 5 4 5 6s-2 4-5 6" strokeWidth={1.5} strokeLinecap="round" fill="none" stroke="currentColor" />
+      <path d="M17 3c4 3 6 6 6 9s-2 6-6 9" strokeWidth={1.5} strokeLinecap="round" fill="none" stroke="currentColor" opacity={0.6} />
     </>
   ),
   music_venue: (
     <>
-      <path d="M9 18V5l12-2v13" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" fill="none" stroke="currentColor" />
-      <circle cx="6" cy="18" r="3" fill="currentColor" />
-      <circle cx="18" cy="16" r="3" fill="currentColor" />
+      <circle cx="8" cy="12" r="3" strokeWidth={1.5} fill="none" stroke="currentColor" />
+      <path d="M14 6c3 2 5 4 5 6s-2 4-5 6" strokeWidth={1.5} strokeLinecap="round" fill="none" stroke="currentColor" />
+      <path d="M17 3c4 3 6 6 6 9s-2 6-6 9" strokeWidth={1.5} strokeLinecap="round" fill="none" stroke="currentColor" opacity={0.6} />
     </>
   ),
 
-  // Film - film reel
+  // Record Store - Vinyl with spindle
+  record_store: (
+    <>
+      <circle cx="12" cy="12" r="9" strokeWidth={1.5} fill="none" stroke="currentColor" />
+      <circle cx="12" cy="12" r="4" strokeWidth={1.5} fill="none" stroke="currentColor" opacity={0.5} />
+      <circle cx="12" cy="12" r="1.5" fill="currentColor" />
+    </>
+  ),
+
+  // ═══════════════════════════════════════════
+  // FILM & VISUAL
+  // ═══════════════════════════════════════════
+
+  // Film - Play button in frame
   film: (
     <>
-      {/* Outer reel circle */}
-      <circle cx="12" cy="12" r="9" strokeWidth={2} fill="none" stroke="currentColor" />
-      {/* Center hub */}
-      <circle cx="12" cy="12" r="3" strokeWidth={2} fill="none" stroke="currentColor" />
-      {/* Film holes around the reel */}
-      <circle cx="12" cy="5.5" r="1.5" fill="currentColor" />
-      <circle cx="17.5" cy="9" r="1.5" fill="currentColor" />
-      <circle cx="17.5" cy="15" r="1.5" fill="currentColor" />
-      <circle cx="12" cy="18.5" r="1.5" fill="currentColor" />
-      <circle cx="6.5" cy="15" r="1.5" fill="currentColor" />
-      <circle cx="6.5" cy="9" r="1.5" fill="currentColor" />
-      {/* Film strip coming out */}
-      <path d="M21 8v8" strokeWidth={2} strokeLinecap="round" stroke="currentColor" opacity={0.6} />
-      <path d="M23 6v12" strokeWidth={1.5} strokeLinecap="round" stroke="currentColor" opacity={0.4} />
+      <rect x="3" y="5" width="18" height="14" rx="2" strokeWidth={1.5} fill="none" stroke="currentColor" />
+      <polygon points="10,8 10,16 16,12" fill="currentColor" />
+    </>
+  ),
+  cinema: (
+    <>
+      <rect x="3" y="5" width="18" height="14" rx="2" strokeWidth={1.5} fill="none" stroke="currentColor" />
+      <polygon points="10,8 10,16 16,12" fill="currentColor" />
     </>
   ),
 
-  // Comedy - masks/smile
+  // ═══════════════════════════════════════════
+  // COMEDY & THEATER
+  // ═══════════════════════════════════════════
+
+  // Comedy - Smile face (minimal, iconic)
   comedy: (
     <>
-      <circle cx="12" cy="12" r="10" strokeWidth={2} fill="none" stroke="currentColor" />
-      <path d="M8 14s1.5 2 4 2 4-2 4-2" strokeWidth={2} strokeLinecap="round" fill="none" stroke="currentColor" />
+      <circle cx="12" cy="12" r="9" strokeWidth={1.5} fill="none" stroke="currentColor" />
+      <path d="M8 14c1.5 2 2.5 3 4 3s2.5-1 4-3" strokeWidth={1.5} strokeLinecap="round" fill="none" stroke="currentColor" />
       <circle cx="9" cy="10" r="1" fill="currentColor" />
       <circle cx="15" cy="10" r="1" fill="currentColor" />
     </>
   ),
   comedy_club: (
     <>
-      <circle cx="12" cy="12" r="10" strokeWidth={2} fill="none" stroke="currentColor" />
-      <path d="M8 14s1.5 2 4 2 4-2 4-2" strokeWidth={2} strokeLinecap="round" fill="none" stroke="currentColor" />
+      <circle cx="12" cy="12" r="9" strokeWidth={1.5} fill="none" stroke="currentColor" />
+      <path d="M8 14c1.5 2 2.5 3 4 3s2.5-1 4-3" strokeWidth={1.5} strokeLinecap="round" fill="none" stroke="currentColor" />
       <circle cx="9" cy="10" r="1" fill="currentColor" />
       <circle cx="15" cy="10" r="1" fill="currentColor" />
     </>
   ),
 
-  // Theater - single drama mask
+  // Theater - Stage curtains
   theater: (
     <>
-      {/* Mask face */}
-      <path d="M4 9c0-4 3.5-7 8-7s8 3 8 7c0 5-3.5 9-8 9s-8-4-8-9z" strokeWidth={2} fill="none" stroke="currentColor" />
-      {/* Eyes */}
-      <ellipse cx="9" cy="9" rx="2" ry="2.5" fill="currentColor" />
-      <ellipse cx="15" cy="9" rx="2" ry="2.5" fill="currentColor" />
-      {/* Mouth - dramatic smile */}
-      <path d="M8 14c1 2 3 3 4 3s3-1 4-3" strokeWidth={2} strokeLinecap="round" fill="none" stroke="currentColor" />
+      <path d="M2 3h20v2c0 1-1 2-2 2H4c-1 0-2-1-2-2V3z" strokeWidth={1.5} fill="none" stroke="currentColor" />
+      <path d="M4 7c1 2 1 6 0 14" strokeWidth={1.5} strokeLinecap="round" fill="none" stroke="currentColor" />
+      <path d="M7 7c.5 3 0 8-2 14" strokeWidth={1.5} strokeLinecap="round" fill="none" stroke="currentColor" opacity={0.6} />
+      <path d="M20 7c-1 2-1 6 0 14" strokeWidth={1.5} strokeLinecap="round" fill="none" stroke="currentColor" />
+      <path d="M17 7c-.5 3 0 8 2 14" strokeWidth={1.5} strokeLinecap="round" fill="none" stroke="currentColor" opacity={0.6} />
+      <circle cx="12" cy="14" r="2" fill="currentColor" opacity={0.4} />
     </>
   ),
 
-  // Art - palette
+  // ═══════════════════════════════════════════
+  // ART & CREATIVITY
+  // ═══════════════════════════════════════════
+
+  // Art - Abstract brush stroke / splatter
   art: (
     <>
-      <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.9 0 1.8-.1 2.6-.3.5-.1.8-.6.7-1.1-.1-.4-.4-.7-.8-.8-2-.5-3.5-2.3-3.5-4.5 0-2.5 2-4.5 4.5-4.5 1 0 2 .3 2.8.9.4.3 1 .2 1.3-.2.3-.4.3-.9 0-1.3C17.3 5.5 14.9 2 12 2z" strokeWidth={2} fill="none" stroke="currentColor" />
-      <circle cx="8" cy="9" r="1.5" fill="currentColor" />
-      <circle cx="12" cy="7" r="1.5" fill="currentColor" />
-      <circle cx="16" cy="9" r="1.5" fill="currentColor" />
-      <circle cx="7" cy="13" r="1.5" fill="currentColor" />
+      <circle cx="7" cy="7" r="4" strokeWidth={1.5} fill="none" stroke="currentColor" />
+      <circle cx="16" cy="9" r="3" strokeWidth={1.5} fill="none" stroke="currentColor" opacity={0.7} />
+      <circle cx="10" cy="16" r="5" strokeWidth={1.5} fill="none" stroke="currentColor" opacity={0.5} />
     </>
   ),
+
+  // Gallery - Frame with abstract
   gallery: (
     <>
-      <rect x="3" y="3" width="18" height="18" rx="2" strokeWidth={2} fill="none" stroke="currentColor" />
-      <path d="M3 15l5-5 4 4 5-5 4 4" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" fill="none" stroke="currentColor" />
-      <circle cx="8.5" cy="8.5" r="1.5" fill="currentColor" />
+      <rect x="3" y="3" width="18" height="18" rx="1" strokeWidth={1.5} fill="none" stroke="currentColor" />
+      <path d="M8 12l3-4 3 3 2-2 3 4" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" fill="none" stroke="currentColor" />
+      <circle cx="8" cy="8" r="1.5" fill="currentColor" />
     </>
   ),
 
-  // Community - people
-  community: (
+  // Museum - Columns (classical, minimal)
+  museum: (
     <>
-      <circle cx="12" cy="7" r="4" strokeWidth={2} fill="none" stroke="currentColor" />
-      <path d="M5.5 21v-2a6.5 6.5 0 0113 0v2" strokeWidth={2} strokeLinecap="round" fill="none" stroke="currentColor" />
+      <path d="M12 2L3 7h18L12 2z" strokeWidth={1.5} strokeLinejoin="round" fill="none" stroke="currentColor" />
+      <path d="M5 7v12M9.5 7v12M14.5 7v12M19 7v12" strokeWidth={1.5} stroke="currentColor" />
+      <path d="M3 19h18" strokeWidth={1.5} stroke="currentColor" />
     </>
   ),
 
-  // Food & Drink - cocktail glass with garnish
+  // ═══════════════════════════════════════════
+  // FOOD & DRINK
+  // ═══════════════════════════════════════════
+
+  // Food & Drink - Cocktail glass
   food_drink: (
     <>
-      {/* Cocktail glass */}
-      <path d="M8 3h8l-3 9v6h-2v-6L8 3z" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" fill="none" stroke="currentColor" />
-      {/* Base */}
-      <path d="M7 21h10" strokeWidth={2} strokeLinecap="round" stroke="currentColor" />
-      <path d="M12 18v3" strokeWidth={2} stroke="currentColor" />
-      {/* Liquid */}
-      <path d="M9.5 6h5l-1.5 4.5h-2L9.5 6z" fill="currentColor" opacity={0.4} />
-      {/* Garnish - citrus slice */}
-      <circle cx="16" cy="5" r="2.5" strokeWidth={1.5} fill="none" stroke="currentColor" />
-      <path d="M14.5 5h3M16 3.5v3" strokeWidth={1} stroke="currentColor" opacity={0.6} />
+      <path d="M6 3h12l-5 8v7h-2v-7L6 3z" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" fill="none" stroke="currentColor" />
+      <path d="M8 21h8" strokeWidth={1.5} strokeLinecap="round" stroke="currentColor" />
+      <circle cx="17" cy="6" r="2" strokeWidth={1.5} fill="none" stroke="currentColor" opacity={0.6} />
     </>
   ),
+
+  // Restaurant - Cloche / dome
   restaurant: (
     <>
-      {/* Plate */}
-      <ellipse cx="12" cy="14" rx="9" ry="5" strokeWidth={2} fill="none" stroke="currentColor" />
-      {/* Dome/cloche */}
-      <path d="M5 14c0-5 3-9 7-9s7 4 7 9" strokeWidth={2} fill="none" stroke="currentColor" />
-      {/* Handle */}
-      <path d="M10 5h4" strokeWidth={2} strokeLinecap="round" stroke="currentColor" />
+      <ellipse cx="12" cy="17" rx="9" ry="4" strokeWidth={1.5} fill="none" stroke="currentColor" />
+      <path d="M4 15c0-6 4-10 8-10s8 4 8 10" strokeWidth={1.5} fill="none" stroke="currentColor" />
       <circle cx="12" cy="5" r="1" fill="currentColor" />
     </>
   ),
 
-  // Bar - beer mug with foam, tilted for cheers
+  // Bar - Tilted glass with bubbles
   bar: (
-    <g transform="rotate(-15, 12, 12)">
-      {/* Handle */}
-      <path d="M18 10h1.5a2.5 2.5 0 010 5H18" strokeWidth={2} fill="none" stroke="currentColor" />
-      {/* Mug body */}
-      <path d="M5 7h12a1 1 0 011 1v11a2 2 0 01-2 2H6a2 2 0 01-2-2V8a1 1 0 011-1z" strokeWidth={2} fill="none" stroke="currentColor" />
-      {/* Foam bubbles - glowy, overflowing */}
-      <ellipse cx="7" cy="5.5" rx="2.5" ry="2" fill="currentColor" opacity={0.9} />
-      <ellipse cx="11" cy="4.5" rx="3" ry="2.5" fill="currentColor" opacity={0.95} />
-      <ellipse cx="15" cy="5.5" rx="2.5" ry="2" fill="currentColor" opacity={0.9} />
-      <circle cx="9" cy="3.5" r="1.5" fill="currentColor" opacity={0.75} />
-      <circle cx="13" cy="3" r="1.3" fill="currentColor" opacity={0.65} />
-      <circle cx="16.5" cy="4" r="1" fill="currentColor" opacity={0.5} />
-      {/* Bubbles in beer */}
-      <circle cx="8" cy="13" r="0.7" fill="currentColor" opacity={0.3} />
-      <circle cx="12" cy="15" r="0.5" fill="currentColor" opacity={0.25} />
-      <circle cx="10" cy="11" r="0.6" fill="currentColor" opacity={0.2} />
-    </g>
-  ),
-
-  // Coffee - cup
-  coffee_shop: (
     <>
-      <path d="M18 8h1a4 4 0 010 8h-1" strokeWidth={2} fill="none" stroke="currentColor" />
-      <path d="M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8z" strokeWidth={2} fill="none" stroke="currentColor" />
-      <path d="M6 1v3M10 1v3M14 1v3" strokeWidth={2} strokeLinecap="round" stroke="currentColor" />
+      <path d="M6 4h10l-2 15H8L6 4z" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" fill="none" stroke="currentColor" transform="rotate(-10, 12, 12)" />
+      <ellipse cx="11" cy="6" rx="4" ry="1.5" strokeWidth={1.5} fill="none" stroke="currentColor" transform="rotate(-10, 12, 12)" />
+      <circle cx="10" cy="11" r="0.8" fill="currentColor" opacity={0.5} />
+      <circle cx="12" cy="14" r="0.6" fill="currentColor" opacity={0.4} />
     </>
   ),
 
-  // Brewery - beer mug with foam (same as bar)
+  // Brewery - Beer mug
   brewery: (
     <>
-      {/* Handle */}
-      <path d="M17 11h1.5a3 3 0 010 6H17" strokeWidth={2} fill="none" stroke="currentColor" />
-      {/* Mug body */}
-      <path d="M4 8h12a1 1 0 011 1v10a2 2 0 01-2 2H5a2 2 0 01-2-2V9a1 1 0 011-1z" strokeWidth={2} fill="none" stroke="currentColor" />
-      {/* Foam bubbles - glowy */}
-      <ellipse cx="6" cy="6" rx="2.5" ry="2" fill="currentColor" opacity={0.9} />
-      <ellipse cx="10" cy="5" rx="3" ry="2.5" fill="currentColor" opacity={0.95} />
-      <ellipse cx="14" cy="6" rx="2.5" ry="2" fill="currentColor" opacity={0.9} />
-      <circle cx="8" cy="4" r="1.5" fill="currentColor" opacity={0.7} />
-      <circle cx="12" cy="3.5" r="1.2" fill="currentColor" opacity={0.6} />
-      {/* Bubbles in beer */}
-      <circle cx="7" cy="14" r="0.8" fill="currentColor" opacity={0.3} />
-      <circle cx="11" cy="16" r="0.6" fill="currentColor" opacity={0.25} />
-      <circle cx="9" cy="12" r="0.5" fill="currentColor" opacity={0.2} />
+      <path d="M4 6h11v13a2 2 0 01-2 2H6a2 2 0 01-2-2V6z" strokeWidth={1.5} fill="none" stroke="currentColor" />
+      <path d="M15 9h2a3 3 0 010 6h-2" strokeWidth={1.5} fill="none" stroke="currentColor" />
+      <ellipse cx="9.5" cy="4" rx="5" ry="2" fill="currentColor" opacity={0.6} />
     </>
   ),
 
-  // Sports - trophy
-  sports: (
+  // Coffee - Steaming cup
+  coffee_shop: (
     <>
-      <path d="M6 4h12v6a6 6 0 01-12 0V4z" strokeWidth={2} fill="none" stroke="currentColor" />
-      <path d="M6 8H4a2 2 0 010-4h2M18 8h2a2 2 0 000-4h-2" strokeWidth={2} fill="none" stroke="currentColor" />
-      <path d="M12 16v4M8 22h8" strokeWidth={2} strokeLinecap="round" stroke="currentColor" />
-    </>
-  ),
-  arena: (
-    <>
-      <ellipse cx="12" cy="12" rx="10" ry="6" strokeWidth={2} fill="none" stroke="currentColor" />
-      <ellipse cx="12" cy="12" rx="6" ry="3" strokeWidth={2} fill="none" stroke="currentColor" />
-      <path d="M12 6v-4M12 18v4" strokeWidth={2} strokeLinecap="round" stroke="currentColor" />
+      <path d="M5 9h11v8a3 3 0 01-3 3H8a3 3 0 01-3-3V9z" strokeWidth={1.5} fill="none" stroke="currentColor" />
+      <path d="M16 11h1.5a2.5 2.5 0 010 5H16" strokeWidth={1.5} fill="none" stroke="currentColor" />
+      <path d="M8 4c0 2 2 3 2 5M12 4c0 2 2 3 2 5" strokeWidth={1.5} strokeLinecap="round" stroke="currentColor" opacity={0.5} />
     </>
   ),
 
-  // Fitness - dumbbell
-  fitness: (
+  // Winery - Wine glass
+  winery: (
     <>
-      <path d="M6 5v14M18 5v14M6 12h12" strokeWidth={2} stroke="currentColor" />
-      <rect x="3" y="7" width="3" height="10" rx="1" strokeWidth={2} fill="none" stroke="currentColor" />
-      <rect x="18" y="7" width="3" height="10" rx="1" strokeWidth={2} fill="none" stroke="currentColor" />
+      <path d="M7 2h10l-.5 6a5 5 0 01-4 4.5V19h-1v-6.5A5 5 0 017.5 8L7 2z" strokeWidth={1.5} fill="none" stroke="currentColor" />
+      <path d="M7 21h10" strokeWidth={1.5} strokeLinecap="round" stroke="currentColor" />
+      <ellipse cx="12" cy="6" rx="3.5" ry="2" fill="currentColor" opacity={0.4} />
     </>
   ),
 
-  // Nightlife - disco ball / moon
-  nightlife: (
+  // Distillery - Still / flask
+  distillery: (
     <>
-      <circle cx="12" cy="12" r="8" strokeWidth={2} fill="none" stroke="currentColor" />
-      <ellipse cx="12" cy="12" rx="8" ry="3" strokeWidth={2} fill="none" stroke="currentColor" />
-      <path d="M12 4v16" strokeWidth={2} stroke="currentColor" />
-      <path d="M4.93 7.5h14.14M4.93 16.5h14.14" strokeWidth={1.5} stroke="currentColor" opacity={0.5} />
-    </>
-  ),
-  club: (
-    <>
-      <circle cx="12" cy="12" r="8" strokeWidth={2} fill="none" stroke="currentColor" />
-      <ellipse cx="12" cy="12" rx="8" ry="3" strokeWidth={2} fill="none" stroke="currentColor" />
-      <path d="M12 4v16" strokeWidth={2} stroke="currentColor" />
-      <path d="M4.93 7.5h14.14M4.93 16.5h14.14" strokeWidth={1.5} stroke="currentColor" opacity={0.5} />
+      <path d="M8 3h8v3c0 2-1 3-2 4l-.5.5V20a1 1 0 01-1 1h-1a1 1 0 01-1-1v-9.5L10 10c-1-1-2-2-2-4V3z" strokeWidth={1.5} fill="none" stroke="currentColor" />
+      <path d="M8 3h8" strokeWidth={1.5} strokeLinecap="round" stroke="currentColor" />
     </>
   ),
 
-  // Family - house/heart
-  family: (
-    <>
-      <path d="M3 10.5L12 3l9 7.5" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" fill="none" stroke="currentColor" />
-      <path d="M5 9v10a2 2 0 002 2h10a2 2 0 002-2V9" strokeWidth={2} fill="none" stroke="currentColor" />
-      <path d="M12 12.5l2.5 2.5L12 17.5 9.5 15l2.5-2.5z" fill="currentColor" />
-    </>
-  ),
-
-  // Museum - classical building with columns
-  museum: (
-    <>
-      <path d="M3 21h18M4 21V10M20 21V10M12 3L2 9h20L12 3z" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" fill="none" stroke="currentColor" />
-      <path d="M7 21v-8M12 21v-8M17 21v-8" strokeWidth={2} strokeLinecap="round" stroke="currentColor" />
-    </>
-  ),
-
-  // Convention Center - large building
-  convention_center: (
-    <>
-      <rect x="3" y="8" width="18" height="13" rx="1" strokeWidth={2} fill="none" stroke="currentColor" />
-      <path d="M3 12h18" strokeWidth={2} stroke="currentColor" />
-      <path d="M8 3h8l2 5H6l2-5z" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" fill="none" stroke="currentColor" />
-      <rect x="7" y="15" width="3" height="6" fill="currentColor" opacity={0.5} />
-      <rect x="14" y="15" width="3" height="6" fill="currentColor" opacity={0.5} />
-    </>
-  ),
-
-  // Games - game controller
-  games: (
-    <>
-      <path d="M6 11h4M8 9v4" strokeWidth={2} strokeLinecap="round" stroke="currentColor" />
-      <circle cx="15" cy="10" r="1" fill="currentColor" />
-      <circle cx="17" cy="12" r="1" fill="currentColor" />
-      <path d="M2 10a4 4 0 014-4h12a4 4 0 014 4v4a4 4 0 01-4 4H6a4 4 0 01-4-4v-4z" strokeWidth={2} fill="none" stroke="currentColor" />
-    </>
-  ),
-
-  // Meetup - group of people
-  meetup: (
-    <>
-      <circle cx="9" cy="7" r="3" strokeWidth={2} fill="none" stroke="currentColor" />
-      <circle cx="17" cy="7" r="3" strokeWidth={2} fill="none" stroke="currentColor" />
-      <path d="M3 21v-2a4 4 0 014-4h4" strokeWidth={2} strokeLinecap="round" fill="none" stroke="currentColor" />
-      <path d="M21 21v-2a4 4 0 00-4-4h-4" strokeWidth={2} strokeLinecap="round" fill="none" stroke="currentColor" />
-    </>
-  ),
-
-  // Words - open book
-  words: (
-    <>
-      <path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2V3z" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" fill="none" stroke="currentColor" />
-      <path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7V3z" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" fill="none" stroke="currentColor" />
-    </>
-  ),
-
-  // Bookstore - spot type
-  bookstore: (
-    <>
-      <path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2V3z" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" fill="none" stroke="currentColor" />
-      <path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7V3z" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" fill="none" stroke="currentColor" />
-    </>
-  ),
-
-  // Library - building with book
-  library: (
-    <>
-      <path d="M4 19V6a2 2 0 012-2h12a2 2 0 012 2v13" strokeWidth={2} fill="none" stroke="currentColor" />
-      <path d="M2 19h20M2 22h20" strokeWidth={2} strokeLinecap="round" stroke="currentColor" />
-      <path d="M9 4v15M15 4v15" strokeWidth={2} stroke="currentColor" opacity={0.5} />
-    </>
-  ),
-
-  // Learning - graduation cap
-  learning: (
-    <>
-      <path d="M22 10l-10-5L2 10l10 5 10-5z" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" fill="none" stroke="currentColor" />
-      <path d="M6 12v5c3 3 9 3 12 0v-5" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" fill="none" stroke="currentColor" />
-      <path d="M22 10v6" strokeWidth={2} strokeLinecap="round" stroke="currentColor" />
-    </>
-  ),
-
-  // Dance - dancing figure
-  dance: (
-    <>
-      <circle cx="12" cy="4" r="2" strokeWidth={2} fill="none" stroke="currentColor" />
-      <path d="M12 6v6" strokeWidth={2} strokeLinecap="round" stroke="currentColor" />
-      <path d="M12 12l4 4M12 12l-4 4" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" fill="none" stroke="currentColor" />
-      <path d="M8 8l4 4 4-4" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" fill="none" stroke="currentColor" />
-      <path d="M12 18v3" strokeWidth={2} strokeLinecap="round" stroke="currentColor" />
-    </>
-  ),
-
-  // Tours - compass/map marker
-  tours: (
-    <>
-      <circle cx="12" cy="12" r="10" strokeWidth={2} fill="none" stroke="currentColor" />
-      <polygon points="12,2 15,10 12,8 9,10" fill="currentColor" />
-      <polygon points="12,22 9,14 12,16 15,14" fill="currentColor" opacity={0.5} />
-      <circle cx="12" cy="12" r="2" fill="currentColor" />
-    </>
-  ),
-
-  // Other - generic star
-  other: (
-    <>
-      <polygon points="12,2 15,9 22,9 17,14 19,22 12,17 5,22 7,14 2,9 9,9" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" fill="none" stroke="currentColor" />
-    </>
-  ),
-
-  // Religious - church/hands in prayer
-  religious: (
-    <>
-      <path d="M12 2v4M12 22v-6" strokeWidth={2} strokeLinecap="round" stroke="currentColor" />
-      <path d="M4 10l8-4 8 4" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" fill="none" stroke="currentColor" />
-      <path d="M4 10v12h16V10" strokeWidth={2} fill="none" stroke="currentColor" />
-      <path d="M9 22v-6h6v6" strokeWidth={2} fill="none" stroke="currentColor" />
-    </>
-  ),
-
-  // Markets - shopping bag/stall
-  markets: (
-    <>
-      <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" fill="none" stroke="currentColor" />
-      <path d="M3 6h18" strokeWidth={2} stroke="currentColor" />
-      <path d="M16 10a4 4 0 01-8 0" strokeWidth={2} strokeLinecap="round" fill="none" stroke="currentColor" />
-    </>
-  ),
-
-  // Wellness - lotus/meditation
-  wellness: (
-    <>
-      <circle cx="12" cy="8" r="3" strokeWidth={2} fill="none" stroke="currentColor" />
-      <path d="M12 11c-4 0-6 3-6 5s2 4 6 4 6-2 6-4-2-5-6-5z" strokeWidth={2} fill="none" stroke="currentColor" />
-      <path d="M8 16c0-2 2-3 4-3s4 1 4 3" strokeWidth={2} strokeLinecap="round" fill="none" stroke="currentColor" />
-    </>
-  ),
-
-  // Gaming - game controller
-  gaming: (
-    <>
-      <path d="M6 11h4M8 9v4" strokeWidth={2} strokeLinecap="round" stroke="currentColor" />
-      <circle cx="15" cy="10" r="1" fill="currentColor" />
-      <circle cx="17" cy="12" r="1" fill="currentColor" />
-      <path d="M2 10a4 4 0 014-4h12a4 4 0 014 4v4a4 4 0 01-4 4H6a4 4 0 01-4-4v-4z" strokeWidth={2} fill="none" stroke="currentColor" />
-    </>
-  ),
-
-  // Outdoors - mountain/sun
-  outdoors: (
-    <>
-      <path d="M8 21l4-10 4 10" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" fill="none" stroke="currentColor" />
-      <path d="M2 21h20" strokeWidth={2} strokeLinecap="round" stroke="currentColor" />
-      <path d="M14 21l3-6 5 6" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" fill="none" stroke="currentColor" />
-      <circle cx="18" cy="5" r="3" strokeWidth={2} fill="none" stroke="currentColor" />
-    </>
-  ),
-
-  // Venue - generic building
-  venue: (
-    <>
-      <rect x="3" y="8" width="18" height="13" rx="1" strokeWidth={2} fill="none" stroke="currentColor" />
-      <path d="M3 12h18" strokeWidth={2} stroke="currentColor" />
-      <path d="M12 3v5" strokeWidth={2} strokeLinecap="round" stroke="currentColor" />
-      <path d="M8 3h8" strokeWidth={2} strokeLinecap="round" stroke="currentColor" />
-    </>
-  ),
-
-  // Organization - building with people
-  organization: (
-    <>
-      <rect x="4" y="4" width="16" height="17" rx="1" strokeWidth={2} fill="none" stroke="currentColor" />
-      <path d="M9 21v-4h6v4" strokeWidth={2} fill="none" stroke="currentColor" />
-      <circle cx="12" cy="10" r="2" strokeWidth={2} fill="none" stroke="currentColor" />
-      <path d="M8 8h2M14 8h2" strokeWidth={2} strokeLinecap="round" stroke="currentColor" />
-    </>
-  ),
-
-  // Festival - tent
-  festival: (
-    <>
-      <path d="M12 2L2 12h20L12 2z" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" fill="none" stroke="currentColor" />
-      <path d="M12 2v10" strokeWidth={2} stroke="currentColor" />
-      <path d="M4 22V12h16v10" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" fill="none" stroke="currentColor" />
-      <path d="M9 22v-5h6v5" strokeWidth={2} fill="none" stroke="currentColor" />
-    </>
-  ),
-
-  // Cinema - film reel (same as film)
-  cinema: (
-    <>
-      {/* Outer reel circle */}
-      <circle cx="12" cy="12" r="9" strokeWidth={2} fill="none" stroke="currentColor" />
-      {/* Center hub */}
-      <circle cx="12" cy="12" r="3" strokeWidth={2} fill="none" stroke="currentColor" />
-      {/* Film holes around the reel */}
-      <circle cx="12" cy="5.5" r="1.5" fill="currentColor" />
-      <circle cx="17.5" cy="9" r="1.5" fill="currentColor" />
-      <circle cx="17.5" cy="15" r="1.5" fill="currentColor" />
-      <circle cx="12" cy="18.5" r="1.5" fill="currentColor" />
-      <circle cx="6.5" cy="15" r="1.5" fill="currentColor" />
-      <circle cx="6.5" cy="9" r="1.5" fill="currentColor" />
-      {/* Film strip coming out */}
-      <path d="M21 8v8" strokeWidth={2} strokeLinecap="round" stroke="currentColor" opacity={0.6} />
-      <path d="M23 6v12" strokeWidth={1.5} strokeLinecap="round" stroke="currentColor" opacity={0.4} />
-    </>
-  ),
-
-  // Park - tree
-  park: (
-    <>
-      <path d="M12 22v-6" strokeWidth={2} strokeLinecap="round" stroke="currentColor" />
-      <path d="M12 2l-6 8h4l-4 6h12l-4-6h4L12 2z" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" fill="none" stroke="currentColor" />
-    </>
-  ),
-
-  // Garden - flower
-  garden: (
-    <>
-      <circle cx="12" cy="8" r="3" strokeWidth={2} fill="none" stroke="currentColor" />
-      <path d="M12 11v11" strokeWidth={2} strokeLinecap="round" stroke="currentColor" />
-      <path d="M9 5c-2-2-5-1-5 2s3 4 5 2" strokeWidth={2} fill="none" stroke="currentColor" />
-      <path d="M15 5c2-2 5-1 5 2s-3 4-5 2" strokeWidth={2} fill="none" stroke="currentColor" />
-      <path d="M8 17c-2 0-3 2-2 4h12c1-2 0-4-2-4" strokeWidth={2} fill="none" stroke="currentColor" />
-    </>
-  ),
-
-  // Outdoor - same as outdoors
-  outdoor: (
-    <>
-      <path d="M8 21l4-10 4 10" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" fill="none" stroke="currentColor" />
-      <path d="M2 21h20" strokeWidth={2} strokeLinecap="round" stroke="currentColor" />
-      <path d="M14 21l3-6 5 6" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" fill="none" stroke="currentColor" />
-      <circle cx="18" cy="5" r="3" strokeWidth={2} fill="none" stroke="currentColor" />
-    </>
-  ),
-
-  // Food Hall - multiple food items
+  // Food Hall - Multiple dots (variety)
   food_hall: (
     <>
-      <rect x="2" y="6" width="20" height="14" rx="2" strokeWidth={2} fill="none" stroke="currentColor" />
-      <path d="M2 10h20" strokeWidth={2} stroke="currentColor" />
-      <path d="M8 6V4M12 6V4M16 6V4" strokeWidth={2} strokeLinecap="round" stroke="currentColor" />
-      <circle cx="7" cy="14" r="2" fill="currentColor" opacity={0.5} />
-      <circle cx="12" cy="14" r="2" fill="currentColor" opacity={0.5} />
-      <circle cx="17" cy="14" r="2" fill="currentColor" opacity={0.5} />
+      <rect x="3" y="5" width="18" height="14" rx="2" strokeWidth={1.5} fill="none" stroke="currentColor" />
+      <circle cx="7" cy="12" r="2" fill="currentColor" />
+      <circle cx="12" cy="12" r="2" fill="currentColor" opacity={0.7} />
+      <circle cx="17" cy="12" r="2" fill="currentColor" opacity={0.5} />
     </>
   ),
 
-  // Farmers Market - produce stand
+  // Farmers Market - Produce/basket
   farmers_market: (
     <>
-      <path d="M3 11l9-7 9 7" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" fill="none" stroke="currentColor" />
-      <path d="M5 9v12h14V9" strokeWidth={2} fill="none" stroke="currentColor" />
-      <circle cx="9" cy="15" r="2" fill="currentColor" />
-      <circle cx="15" cy="15" r="2" fill="currentColor" />
-      <circle cx="12" cy="13" r="2" fill="currentColor" opacity={0.6} />
+      <path d="M4 10c0-1 1-2 2-2h12c1 0 2 1 2 2l-2 10H6L4 10z" strokeWidth={1.5} fill="none" stroke="currentColor" />
+      <circle cx="9" cy="13" r="2" fill="currentColor" />
+      <circle cx="15" cy="14" r="1.5" fill="currentColor" opacity={0.6} />
+      <path d="M4 10h16" strokeWidth={1.5} stroke="currentColor" />
     </>
   ),
 
-  // Haunted - ghost
-  haunted: (
-    <>
-      <path d="M12 2C8 2 5 5.5 5 9.5V22l2.5-2 2 2 2.5-2 2.5 2 2-2 2.5 2V9.5C19 5.5 16 2 12 2z" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" fill="none" stroke="currentColor" />
-      <circle cx="9" cy="10" r="1.5" fill="currentColor" />
-      <circle cx="15" cy="10" r="1.5" fill="currentColor" />
-      <path d="M9 15c1.5 1 4.5 1 6 0" strokeWidth={2} strokeLinecap="round" fill="none" stroke="currentColor" />
-    </>
-  ),
-  attraction: (
-    <>
-      <path d="M12 2C8 2 5 5.5 5 9.5V22l2.5-2 2 2 2.5-2 2.5 2 2-2 2.5 2V9.5C19 5.5 16 2 12 2z" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" fill="none" stroke="currentColor" />
-      <circle cx="9" cy="10" r="1.5" fill="currentColor" />
-      <circle cx="15" cy="10" r="1.5" fill="currentColor" />
-      <path d="M9 15c1.5 1 4.5 1 6 0" strokeWidth={2} strokeLinecap="round" fill="none" stroke="currentColor" />
-    </>
-  ),
-
-  // Cooking - chef hat
+  // Cooking - Flame
   cooking: (
     <>
-      <path d="M6 13c-1.7 0-3-1.3-3-3 0-1.4 1-2.6 2.3-2.9C5.6 4.6 7.6 3 10 3c1.4 0 2.6.6 3.5 1.5.5-.3 1-.5 1.5-.5 1.7 0 3 1.3 3 3 0 .3 0 .6-.1.9 1.4.5 2.1 1.6 2.1 3.1 0 1.7-1.3 3-3 3" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" fill="none" stroke="currentColor" />
-      <rect x="6" y="13" width="12" height="8" rx="1" strokeWidth={2} fill="none" stroke="currentColor" />
-      <path d="M10 17h4" strokeWidth={2} strokeLinecap="round" stroke="currentColor" />
+      <path d="M12 2c-2 4-5 6-5 10a5 5 0 0010 0c0-4-3-6-5-10z" strokeWidth={1.5} fill="none" stroke="currentColor" />
+      <path d="M12 8c-1 2-2 3-2 5a2 2 0 004 0c0-2-1-3-2-5z" fill="currentColor" opacity={0.5} />
     </>
   ),
   cooking_school: (
     <>
-      <path d="M6 13c-1.7 0-3-1.3-3-3 0-1.4 1-2.6 2.3-2.9C5.6 4.6 7.6 3 10 3c1.4 0 2.6.6 3.5 1.5.5-.3 1-.5 1.5-.5 1.7 0 3 1.3 3 3 0 .3 0 .6-.1.9 1.4.5 2.1 1.6 2.1 3.1 0 1.7-1.3 3-3 3" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" fill="none" stroke="currentColor" />
-      <rect x="6" y="13" width="12" height="8" rx="1" strokeWidth={2} fill="none" stroke="currentColor" />
-      <path d="M10 17h4" strokeWidth={2} strokeLinecap="round" stroke="currentColor" />
+      <path d="M12 2c-2 4-5 6-5 10a5 5 0 0010 0c0-4-3-6-5-10z" strokeWidth={1.5} fill="none" stroke="currentColor" />
+      <path d="M12 8c-1 2-2 3-2 5a2 2 0 004 0c0-2-1-3-2-5z" fill="currentColor" opacity={0.5} />
     </>
   ),
 
-  // Eatertainment - bowling pin + fork
+  // ═══════════════════════════════════════════
+  // NIGHTLIFE & ENTERTAINMENT
+  // ═══════════════════════════════════════════
+
+  // Nightlife - Moon/crescent
+  nightlife: (
+    <>
+      <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" strokeWidth={1.5} fill="none" stroke="currentColor" />
+      <circle cx="8" cy="9" r="1" fill="currentColor" opacity={0.5} />
+      <circle cx="12" cy="14" r="0.8" fill="currentColor" opacity={0.4} />
+    </>
+  ),
+
+  // Club - Disco ball / sparkle
+  club: (
+    <>
+      <circle cx="12" cy="12" r="7" strokeWidth={1.5} fill="none" stroke="currentColor" />
+      <path d="M5 12h14M12 5v14" strokeWidth={1.5} stroke="currentColor" opacity={0.4} />
+      <path d="M7 7l10 10M17 7L7 17" strokeWidth={1.5} stroke="currentColor" opacity={0.25} />
+      <circle cx="12" cy="12" r="2" fill="currentColor" />
+    </>
+  ),
+
+  // Dance - Figure in motion
+  dance: (
+    <>
+      <circle cx="12" cy="4" r="2.5" strokeWidth={1.5} fill="none" stroke="currentColor" />
+      <path d="M12 7v5" strokeWidth={1.5} stroke="currentColor" />
+      <path d="M8 10l4 2 4-2" strokeWidth={1.5} strokeLinecap="round" fill="none" stroke="currentColor" />
+      <path d="M9 21l3-9 3 9" strokeWidth={1.5} strokeLinecap="round" fill="none" stroke="currentColor" />
+    </>
+  ),
+
+  // Gaming - D-pad / controller
+  gaming: (
+    <>
+      <rect x="3" y="7" width="18" height="10" rx="3" strokeWidth={1.5} fill="none" stroke="currentColor" />
+      <path d="M7 10v4M5 12h4" strokeWidth={1.5} strokeLinecap="round" stroke="currentColor" />
+      <circle cx="15" cy="11" r="1" fill="currentColor" />
+      <circle cx="18" cy="13" r="1" fill="currentColor" opacity={0.6} />
+    </>
+  ),
+  games: (
+    <>
+      <rect x="3" y="7" width="18" height="10" rx="3" strokeWidth={1.5} fill="none" stroke="currentColor" />
+      <path d="M7 10v4M5 12h4" strokeWidth={1.5} strokeLinecap="round" stroke="currentColor" />
+      <circle cx="15" cy="11" r="1" fill="currentColor" />
+      <circle cx="18" cy="13" r="1" fill="currentColor" opacity={0.6} />
+    </>
+  ),
+
+  // Eatertainment - Fork + play
   eatertainment: (
     <>
-      <path d="M8 4c0-1 .5-2 2-2s2 1 2 2c0 2-1 3-1 5h-2c0-2-1-3-1-5z" strokeWidth={2} fill="none" stroke="currentColor" />
-      <ellipse cx="10" cy="11" rx="2.5" ry="2" strokeWidth={2} fill="none" stroke="currentColor" />
-      <path d="M7.5 13c-.5 1-.5 3 0 4 .5 1 2 2 2.5 2s2-1 2.5-2c.5-1 .5-3 0-4" strokeWidth={2} fill="none" stroke="currentColor" />
-      <path d="M17 3v8M17 14v4M14 6h6" strokeWidth={2} strokeLinecap="round" stroke="currentColor" />
+      <path d="M5 3v18M3 3v6a2 2 0 002 2M7 3v6a2 2 0 01-2 2" strokeWidth={1.5} strokeLinecap="round" stroke="currentColor" />
+      <polygon points="15,6 15,18 21,12" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinejoin="round" />
     </>
   ),
 
-  // Yoga - person in lotus pose
+  // ═══════════════════════════════════════════
+  // SPORTS & FITNESS
+  // ═══════════════════════════════════════════
+
+  // Sports - Trophy
+  sports: (
+    <>
+      <path d="M6 4h12v5a6 6 0 01-12 0V4z" strokeWidth={1.5} fill="none" stroke="currentColor" />
+      <path d="M6 7H4a2 2 0 000 4h2M18 7h2a2 2 0 010 4h-2" strokeWidth={1.5} fill="none" stroke="currentColor" />
+      <path d="M12 15v4M8 21h8" strokeWidth={1.5} strokeLinecap="round" stroke="currentColor" />
+    </>
+  ),
+
+  // Arena - Stadium outline
+  arena: (
+    <>
+      <ellipse cx="12" cy="16" rx="9" ry="4" strokeWidth={1.5} fill="none" stroke="currentColor" />
+      <path d="M3 16V8a9 4 0 0118 0v8" strokeWidth={1.5} fill="none" stroke="currentColor" />
+    </>
+  ),
+
+  // Fitness - Dumbbell (minimal)
+  fitness: (
+    <>
+      <path d="M7 8v8M17 8v8M7 12h10" strokeWidth={2} strokeLinecap="round" stroke="currentColor" />
+      <rect x="3" y="9" width="4" height="6" rx="1" strokeWidth={1.5} fill="none" stroke="currentColor" />
+      <rect x="17" y="9" width="4" height="6" rx="1" strokeWidth={1.5} fill="none" stroke="currentColor" />
+    </>
+  ),
+  fitness_center: (
+    <>
+      <path d="M7 8v8M17 8v8M7 12h10" strokeWidth={2} strokeLinecap="round" stroke="currentColor" />
+      <rect x="3" y="9" width="4" height="6" rx="1" strokeWidth={1.5} fill="none" stroke="currentColor" />
+      <rect x="17" y="9" width="4" height="6" rx="1" strokeWidth={1.5} fill="none" stroke="currentColor" />
+    </>
+  ),
+
+  // Sports Bar - Screen + ball
+  sports_bar: (
+    <>
+      <rect x="3" y="5" width="14" height="10" rx="1" strokeWidth={1.5} fill="none" stroke="currentColor" />
+      <path d="M7 19h6M10 15v4" strokeWidth={1.5} strokeLinecap="round" stroke="currentColor" />
+      <circle cx="19" cy="15" r="3" strokeWidth={1.5} fill="none" stroke="currentColor" />
+      <path d="M17.5 13.5l3 3" strokeWidth={1.5} stroke="currentColor" opacity={0.5} />
+    </>
+  ),
+
+  // Yoga / Studio - Lotus / balance
   yoga: (
     <>
-      <circle cx="12" cy="5" r="2.5" strokeWidth={2} fill="none" stroke="currentColor" />
-      <path d="M12 8v4" strokeWidth={2} strokeLinecap="round" stroke="currentColor" />
-      <path d="M8 10l4 2 4-2" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" fill="none" stroke="currentColor" />
-      <path d="M4 18c2-2 4-3 8-3s6 1 8 3" strokeWidth={2} strokeLinecap="round" fill="none" stroke="currentColor" />
-      <path d="M8 15l-2 4M16 15l2 4" strokeWidth={2} strokeLinecap="round" stroke="currentColor" />
+      <circle cx="12" cy="6" r="3" strokeWidth={1.5} fill="none" stroke="currentColor" />
+      <path d="M12 9v4" strokeWidth={1.5} stroke="currentColor" />
+      <path d="M6 20c0-4 3-6 6-6s6 2 6 6" strokeWidth={1.5} strokeLinecap="round" fill="none" stroke="currentColor" />
+      <path d="M8 17l-2 3M16 17l2 3" strokeWidth={1.5} strokeLinecap="round" stroke="currentColor" opacity={0.6} />
     </>
   ),
   studio: (
     <>
-      <circle cx="12" cy="5" r="2.5" strokeWidth={2} fill="none" stroke="currentColor" />
-      <path d="M12 8v4" strokeWidth={2} strokeLinecap="round" stroke="currentColor" />
-      <path d="M8 10l4 2 4-2" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" fill="none" stroke="currentColor" />
-      <path d="M4 18c2-2 4-3 8-3s6 1 8 3" strokeWidth={2} strokeLinecap="round" fill="none" stroke="currentColor" />
-      <path d="M8 15l-2 4M16 15l2 4" strokeWidth={2} strokeLinecap="round" stroke="currentColor" />
+      <circle cx="12" cy="6" r="3" strokeWidth={1.5} fill="none" stroke="currentColor" />
+      <path d="M12 9v4" strokeWidth={1.5} stroke="currentColor" />
+      <path d="M6 20c0-4 3-6 6-6s6 2 6 6" strokeWidth={1.5} strokeLinecap="round" fill="none" stroke="currentColor" />
+      <path d="M8 17l-2 3M16 17l2 3" strokeWidth={1.5} strokeLinecap="round" stroke="currentColor" opacity={0.6} />
     </>
   ),
 
-  // Coworking - laptop/desk
-  coworking: (
+  // Wellness - Leaf / organic
+  wellness: (
     <>
-      <rect x="3" y="4" width="18" height="12" rx="2" strokeWidth={2} fill="none" stroke="currentColor" />
-      <path d="M7 8h10" strokeWidth={2} strokeLinecap="round" stroke="currentColor" opacity={0.5} />
-      <path d="M7 11h6" strokeWidth={2} strokeLinecap="round" stroke="currentColor" opacity={0.5} />
-      <path d="M1 20h22" strokeWidth={2} strokeLinecap="round" stroke="currentColor" />
-      <path d="M6 16l-1 4M18 16l1 4" strokeWidth={2} strokeLinecap="round" stroke="currentColor" />
+      <path d="M12 22c-4-4-8-8-8-14C8 4 12 2 12 2s4 2 8 6c0 6-4 10-8 14z" strokeWidth={1.5} fill="none" stroke="currentColor" />
+      <path d="M12 22V10" strokeWidth={1.5} stroke="currentColor" />
+      <path d="M8 14c2-1 4-1 4 0" strokeWidth={1.5} strokeLinecap="round" fill="none" stroke="currentColor" opacity={0.5} />
     </>
   ),
 
-  // Record Store - vinyl record
-  record_store: (
+  // ═══════════════════════════════════════════
+  // COMMUNITY & SOCIAL
+  // ═══════════════════════════════════════════
+
+  // Community - Connected dots
+  community: (
     <>
-      <circle cx="12" cy="12" r="9" strokeWidth={2} fill="none" stroke="currentColor" />
-      <circle cx="12" cy="12" r="3" strokeWidth={2} fill="none" stroke="currentColor" />
-      <circle cx="12" cy="12" r="1" fill="currentColor" />
-      <path d="M12 3v2M12 19v2" strokeWidth={1.5} stroke="currentColor" opacity={0.3} />
-      <path d="M3 12h2M19 12h2" strokeWidth={1.5} stroke="currentColor" opacity={0.3} />
+      <circle cx="12" cy="5" r="3" strokeWidth={1.5} fill="none" stroke="currentColor" />
+      <circle cx="5" cy="18" r="3" strokeWidth={1.5} fill="none" stroke="currentColor" />
+      <circle cx="19" cy="18" r="3" strokeWidth={1.5} fill="none" stroke="currentColor" />
+      <path d="M12 8v4M9 16l-2-2M15 16l2-2" strokeWidth={1.5} stroke="currentColor" opacity={0.5} />
     </>
   ),
 
-  // LGBTQ+ - rainbow/pride flag
-  lgbtq: (
+  // Meetup - Two people
+  meetup: (
     <>
-      <rect x="3" y="4" width="18" height="16" rx="1" strokeWidth={2} fill="none" stroke="currentColor" />
-      <path d="M3 7h18" strokeWidth={2} stroke="currentColor" />
-      <path d="M3 10h18" strokeWidth={2} stroke="currentColor" opacity={0.8} />
-      <path d="M3 13h18" strokeWidth={2} stroke="currentColor" opacity={0.6} />
-      <path d="M3 16h18" strokeWidth={2} stroke="currentColor" opacity={0.4} />
+      <circle cx="8" cy="6" r="3" strokeWidth={1.5} fill="none" stroke="currentColor" />
+      <circle cx="16" cy="6" r="3" strokeWidth={1.5} fill="none" stroke="currentColor" />
+      <path d="M2 20c0-4 3-6 6-6M22 20c0-4-3-6-6-6" strokeWidth={1.5} strokeLinecap="round" fill="none" stroke="currentColor" />
+      <path d="M8 14h8" strokeWidth={1.5} stroke="currentColor" opacity={0.4} />
     </>
   ),
 
-  // Sports Bar - TV with ball
-  sports_bar: (
+  // Family - House with heart
+  family: (
     <>
-      <rect x="2" y="4" width="16" height="10" rx="1" strokeWidth={2} fill="none" stroke="currentColor" />
-      <path d="M6 18h8M10 14v4" strokeWidth={2} strokeLinecap="round" stroke="currentColor" />
-      <circle cx="18" cy="14" r="4" strokeWidth={2} fill="none" stroke="currentColor" />
-      <path d="M16 14c0-1.1.9-2 2-2M18 12v4" strokeWidth={1.5} stroke="currentColor" />
+      <path d="M3 11l9-7 9 7" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" fill="none" stroke="currentColor" />
+      <path d="M5 10v10h14V10" strokeWidth={1.5} fill="none" stroke="currentColor" />
+      <path d="M12 12l2 2-2 2-2-2 2-2z" fill="currentColor" />
     </>
   ),
 
-  // Community Center - building with people
+  // Community Center - Building with people
   community_center: (
     <>
-      <path d="M3 21h18" strokeWidth={2} strokeLinecap="round" stroke="currentColor" />
-      <path d="M5 21V7l7-4 7 4v14" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" fill="none" stroke="currentColor" />
-      <rect x="9" y="13" width="6" height="8" strokeWidth={2} fill="none" stroke="currentColor" />
-      <path d="M9 9h6" strokeWidth={2} strokeLinecap="round" stroke="currentColor" />
+      <path d="M4 21V8l8-5 8 5v13" strokeWidth={1.5} strokeLinejoin="round" fill="none" stroke="currentColor" />
+      <circle cx="12" cy="11" r="2" strokeWidth={1.5} fill="none" stroke="currentColor" />
+      <path d="M9 21v-4h6v4" strokeWidth={1.5} fill="none" stroke="currentColor" />
     </>
   ),
 
-  // College/University - graduation cap
+  // LGBTQ+ - Rainbow arc
+  lgbtq: (
+    <>
+      <path d="M4 18A8 8 0 0120 18" strokeWidth={2} strokeLinecap="round" fill="none" stroke="currentColor" />
+      <path d="M6 18A6 6 0 0118 18" strokeWidth={2} strokeLinecap="round" fill="none" stroke="currentColor" opacity={0.7} />
+      <path d="M8 18A4 4 0 0116 18" strokeWidth={2} strokeLinecap="round" fill="none" stroke="currentColor" opacity={0.4} />
+    </>
+  ),
+
+  // ═══════════════════════════════════════════
+  // LEARNING & WORDS
+  // ═══════════════════════════════════════════
+
+  // Learning - Graduation cap
+  learning: (
+    <>
+      <path d="M2 10l10-5 10 5-10 5-10-5z" strokeWidth={1.5} strokeLinejoin="round" fill="none" stroke="currentColor" />
+      <path d="M6 12v5c0 2 3 4 6 4s6-2 6-4v-5" strokeWidth={1.5} fill="none" stroke="currentColor" />
+      <path d="M22 10v6" strokeWidth={1.5} strokeLinecap="round" stroke="currentColor" />
+    </>
+  ),
   college: (
     <>
-      <path d="M22 10l-10-5L2 10l10 5 10-5z" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" fill="none" stroke="currentColor" />
-      <path d="M6 12v5c3 3 9 3 12 0v-5" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" fill="none" stroke="currentColor" />
-      <path d="M22 10v6" strokeWidth={2} strokeLinecap="round" stroke="currentColor" />
-      <circle cx="22" cy="17" r="1" fill="currentColor" />
+      <path d="M2 10l10-5 10 5-10 5-10-5z" strokeWidth={1.5} strokeLinejoin="round" fill="none" stroke="currentColor" />
+      <path d="M6 12v5c0 2 3 4 6 4s6-2 6-4v-5" strokeWidth={1.5} fill="none" stroke="currentColor" />
+      <path d="M22 10v6" strokeWidth={1.5} strokeLinecap="round" stroke="currentColor" />
     </>
   ),
   university: (
     <>
-      <path d="M22 10l-10-5L2 10l10 5 10-5z" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" fill="none" stroke="currentColor" />
-      <path d="M6 12v5c3 3 9 3 12 0v-5" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" fill="none" stroke="currentColor" />
-      <path d="M22 10v6" strokeWidth={2} strokeLinecap="round" stroke="currentColor" />
-      <circle cx="22" cy="17" r="1" fill="currentColor" />
+      <path d="M2 10l10-5 10 5-10 5-10-5z" strokeWidth={1.5} strokeLinejoin="round" fill="none" stroke="currentColor" />
+      <path d="M6 12v5c0 2 3 4 6 4s6-2 6-4v-5" strokeWidth={1.5} fill="none" stroke="currentColor" />
+      <path d="M22 10v6" strokeWidth={1.5} strokeLinecap="round" stroke="currentColor" />
     </>
   ),
 
-  // Healthcare/Hospital - medical cross with heart
+  // Words / Bookstore - Open book
+  words: (
+    <>
+      <path d="M2 4h7c2 0 3 1 3 2v15c-1-1-2-1-3-1H2V4z" strokeWidth={1.5} strokeLinejoin="round" fill="none" stroke="currentColor" />
+      <path d="M22 4h-7c-2 0-3 1-3 2v15c1-1 2-1 3-1h7V4z" strokeWidth={1.5} strokeLinejoin="round" fill="none" stroke="currentColor" />
+    </>
+  ),
+  bookstore: (
+    <>
+      <path d="M2 4h7c2 0 3 1 3 2v15c-1-1-2-1-3-1H2V4z" strokeWidth={1.5} strokeLinejoin="round" fill="none" stroke="currentColor" />
+      <path d="M22 4h-7c-2 0-3 1-3 2v15c1-1 2-1 3-1h7V4z" strokeWidth={1.5} strokeLinejoin="round" fill="none" stroke="currentColor" />
+    </>
+  ),
+
+  // Library - Books on shelf
+  library: (
+    <>
+      <rect x="3" y="3" width="18" height="18" rx="1" strokeWidth={1.5} fill="none" stroke="currentColor" />
+      <path d="M7 3v18M11 3v18M16 3v18" strokeWidth={1.5} stroke="currentColor" />
+      <path d="M3 14h18" strokeWidth={1.5} stroke="currentColor" opacity={0.4} />
+    </>
+  ),
+
+  // Coworking - Laptop
+  coworking: (
+    <>
+      <rect x="4" y="5" width="16" height="11" rx="1" strokeWidth={1.5} fill="none" stroke="currentColor" />
+      <path d="M2 19h20" strokeWidth={1.5} strokeLinecap="round" stroke="currentColor" />
+      <path d="M4 16l-1 3M20 16l1 3" strokeWidth={1.5} strokeLinecap="round" stroke="currentColor" />
+    </>
+  ),
+
+  // ═══════════════════════════════════════════
+  // OUTDOORS & NATURE
+  // ═══════════════════════════════════════════
+
+  // Outdoors - Mountain peak
+  outdoors: (
+    <>
+      <path d="M3 20L10 6l4 8 4-4 4 10H3z" strokeWidth={1.5} strokeLinejoin="round" fill="none" stroke="currentColor" />
+      <circle cx="18" cy="5" r="2" strokeWidth={1.5} fill="none" stroke="currentColor" />
+    </>
+  ),
+  outdoor: (
+    <>
+      <path d="M3 20L10 6l4 8 4-4 4 10H3z" strokeWidth={1.5} strokeLinejoin="round" fill="none" stroke="currentColor" />
+      <circle cx="18" cy="5" r="2" strokeWidth={1.5} fill="none" stroke="currentColor" />
+    </>
+  ),
+
+  // Park - Tree (minimal)
+  park: (
+    <>
+      <path d="M12 22v-8" strokeWidth={1.5} stroke="currentColor" />
+      <path d="M12 2L6 10h3L5 16h14l-4-6h3L12 2z" strokeWidth={1.5} strokeLinejoin="round" fill="none" stroke="currentColor" />
+    </>
+  ),
+
+  // Garden - Flower
+  garden: (
+    <>
+      <circle cx="12" cy="8" r="4" strokeWidth={1.5} fill="none" stroke="currentColor" />
+      <path d="M12 12v10" strokeWidth={1.5} stroke="currentColor" />
+      <path d="M8 6c-2-1-4 0-4 2s2 3 4 2" strokeWidth={1.5} fill="none" stroke="currentColor" opacity={0.6} />
+      <path d="M16 6c2-1 4 0 4 2s-2 3-4 2" strokeWidth={1.5} fill="none" stroke="currentColor" opacity={0.6} />
+    </>
+  ),
+
+  // ═══════════════════════════════════════════
+  // TOURS & TRAVEL
+  // ═══════════════════════════════════════════
+
+  // Tours - Compass
+  tours: (
+    <>
+      <circle cx="12" cy="12" r="9" strokeWidth={1.5} fill="none" stroke="currentColor" />
+      <polygon points="12,3 14,12 12,10 10,12" fill="currentColor" />
+      <polygon points="12,21 10,12 12,14 14,12" fill="currentColor" opacity={0.4} />
+    </>
+  ),
+
+  // Hotel - Bed
+  hotel: (
+    <>
+      <path d="M3 18v-5a2 2 0 012-2h14a2 2 0 012 2v5" strokeWidth={1.5} fill="none" stroke="currentColor" />
+      <path d="M3 18h18v2H3v-2z" strokeWidth={1.5} fill="none" stroke="currentColor" />
+      <circle cx="7" cy="8" r="2" strokeWidth={1.5} fill="none" stroke="currentColor" />
+      <path d="M3 11V7" strokeWidth={1.5} strokeLinecap="round" stroke="currentColor" />
+    </>
+  ),
+
+  // Rooftop - Building with star
+  rooftop: (
+    <>
+      <path d="M4 21V9l8-6 8 6v12" strokeWidth={1.5} strokeLinejoin="round" fill="none" stroke="currentColor" />
+      <path d="M9 21v-6h6v6" strokeWidth={1.5} fill="none" stroke="currentColor" />
+      <circle cx="12" cy="3" r="1.5" fill="currentColor" />
+      <circle cx="6" cy="5" r="1" fill="currentColor" opacity={0.5} />
+      <circle cx="18" cy="5" r="1" fill="currentColor" opacity={0.5} />
+    </>
+  ),
+
+  // ═══════════════════════════════════════════
+  // VENUES & SPACES
+  // ═══════════════════════════════════════════
+
+  // Venue - Pin / marker
+  venue: (
+    <>
+      <path d="M12 2C8 2 5 5.5 5 9c0 5 7 13 7 13s7-8 7-13c0-3.5-3-7-7-7z" strokeWidth={1.5} fill="none" stroke="currentColor" />
+      <circle cx="12" cy="9" r="2.5" strokeWidth={1.5} fill="none" stroke="currentColor" />
+    </>
+  ),
+
+  // Event Space - Sparkle
+  event_space: (
+    <>
+      <path d="M12 2v4M12 18v4M2 12h4M18 12h4" strokeWidth={1.5} strokeLinecap="round" stroke="currentColor" />
+      <path d="M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M5.6 18.4l2.8-2.8M15.6 8.4l2.8-2.8" strokeWidth={1.5} strokeLinecap="round" stroke="currentColor" opacity={0.6} />
+      <circle cx="12" cy="12" r="3" fill="currentColor" />
+    </>
+  ),
+
+  // Convention Center - Grid building
+  convention_center: (
+    <>
+      <rect x="3" y="6" width="18" height="14" rx="1" strokeWidth={1.5} fill="none" stroke="currentColor" />
+      <path d="M9 3v3M15 3v3" strokeWidth={1.5} strokeLinecap="round" stroke="currentColor" />
+      <path d="M3 11h18M9 6v14M15 6v14" strokeWidth={1.5} stroke="currentColor" opacity={0.4} />
+    </>
+  ),
+
+  // Organization - Building with window
+  organization: (
+    <>
+      <rect x="4" y="3" width="16" height="18" rx="1" strokeWidth={1.5} fill="none" stroke="currentColor" />
+      <rect x="8" y="7" width="3" height="3" strokeWidth={1.5} fill="none" stroke="currentColor" />
+      <rect x="13" y="7" width="3" height="3" strokeWidth={1.5} fill="none" stroke="currentColor" />
+      <path d="M10 21v-6h4v6" strokeWidth={1.5} fill="none" stroke="currentColor" />
+    </>
+  ),
+
+  // Festival - Tent / flag
+  festival: (
+    <>
+      <path d="M3 20l9-16 9 16H3z" strokeWidth={1.5} strokeLinejoin="round" fill="none" stroke="currentColor" />
+      <path d="M12 4v16" strokeWidth={1.5} stroke="currentColor" />
+      <path d="M7 12h10" strokeWidth={1.5} stroke="currentColor" opacity={0.4} />
+    </>
+  ),
+
+  // Markets - Shopping bag
+  markets: (
+    <>
+      <path d="M5 7l2-4h10l2 4v12a2 2 0 01-2 2H7a2 2 0 01-2-2V7z" strokeWidth={1.5} fill="none" stroke="currentColor" />
+      <path d="M5 7h14" strokeWidth={1.5} stroke="currentColor" />
+      <path d="M9 10v3a3 3 0 006 0v-3" strokeWidth={1.5} strokeLinecap="round" fill="none" stroke="currentColor" />
+    </>
+  ),
+
+  // ═══════════════════════════════════════════
+  // RELIGIOUS & SPIRITUAL
+  // ═══════════════════════════════════════════
+
+  // Religious - Cross / steeple
+  religious: (
+    <>
+      <path d="M12 2v6M9 5h6" strokeWidth={1.5} strokeLinecap="round" stroke="currentColor" />
+      <path d="M5 21V10l7-2 7 2v11" strokeWidth={1.5} strokeLinejoin="round" fill="none" stroke="currentColor" />
+      <path d="M9 21v-5h6v5" strokeWidth={1.5} fill="none" stroke="currentColor" />
+    </>
+  ),
+  church: (
+    <>
+      <path d="M12 2v6M9 5h6" strokeWidth={1.5} strokeLinecap="round" stroke="currentColor" />
+      <path d="M5 21V10l7-2 7 2v11" strokeWidth={1.5} strokeLinejoin="round" fill="none" stroke="currentColor" />
+      <path d="M9 21v-5h6v5" strokeWidth={1.5} fill="none" stroke="currentColor" />
+    </>
+  ),
+
+  // ═══════════════════════════════════════════
+  // SPECIAL
+  // ═══════════════════════════════════════════
+
+  // Haunted / Attraction - Ghost
+  haunted: (
+    <>
+      <path d="M12 2C8 2 5 5 5 9v11l2.5-2 2 2 2.5-2 2.5 2 2-2 2.5 2V9c0-4-3-7-7-7z" strokeWidth={1.5} strokeLinejoin="round" fill="none" stroke="currentColor" />
+      <circle cx="9" cy="10" r="1.5" fill="currentColor" />
+      <circle cx="15" cy="10" r="1.5" fill="currentColor" />
+    </>
+  ),
+  attraction: (
+    <>
+      <path d="M12 2C8 2 5 5 5 9v11l2.5-2 2 2 2.5-2 2.5 2 2-2 2.5 2V9c0-4-3-7-7-7z" strokeWidth={1.5} strokeLinejoin="round" fill="none" stroke="currentColor" />
+      <circle cx="9" cy="10" r="1.5" fill="currentColor" />
+      <circle cx="15" cy="10" r="1.5" fill="currentColor" />
+    </>
+  ),
+
+  // Healthcare / Hospital - Plus / medical
   healthcare: (
     <>
-      <rect x="3" y="3" width="18" height="18" rx="2" strokeWidth={2} fill="none" stroke="currentColor" />
-      <path d="M12 8v8M8 12h8" strokeWidth={2.5} strokeLinecap="round" stroke="currentColor" />
-      <circle cx="12" cy="12" r="1" fill="currentColor" opacity={0.5} />
+      <rect x="4" y="4" width="16" height="16" rx="2" strokeWidth={1.5} fill="none" stroke="currentColor" />
+      <path d="M12 8v8M8 12h8" strokeWidth={2} strokeLinecap="round" stroke="currentColor" />
     </>
   ),
   hospital: (
     <>
-      <rect x="3" y="3" width="18" height="18" rx="2" strokeWidth={2} fill="none" stroke="currentColor" />
-      <path d="M12 8v8M8 12h8" strokeWidth={2.5} strokeLinecap="round" stroke="currentColor" />
-      <circle cx="12" cy="12" r="1" fill="currentColor" opacity={0.5} />
+      <rect x="4" y="4" width="16" height="16" rx="2" strokeWidth={1.5} fill="none" stroke="currentColor" />
+      <path d="M12 8v8M8 12h8" strokeWidth={2} strokeLinecap="round" stroke="currentColor" />
     </>
   ),
 
-  // Hotel - bed
-  hotel: (
+  // Other - Sparkle / star
+  other: (
     <>
-      <path d="M2 17v-5a3 3 0 013-3h14a3 3 0 013 3v5" strokeWidth={2} strokeLinecap="round" fill="none" stroke="currentColor" />
-      <path d="M2 17h20v3H2v-3z" strokeWidth={2} fill="none" stroke="currentColor" />
-      <path d="M6 9V6a2 2 0 012-2h2a2 2 0 012 2v3" strokeWidth={2} fill="none" stroke="currentColor" />
-      <circle cx="8" cy="7" r="1.5" fill="currentColor" opacity={0.5} />
-    </>
-  ),
-
-  // Rooftop - building with view
-  rooftop: (
-    <>
-      <path d="M3 21h18" strokeWidth={2} strokeLinecap="round" stroke="currentColor" />
-      <path d="M5 21V10l7-7 7 7v11" strokeWidth={2} fill="none" stroke="currentColor" />
-      <path d="M9 21v-6h6v6" strokeWidth={2} fill="none" stroke="currentColor" />
-      {/* Stars/lights at top */}
-      <circle cx="8" cy="5" r="1" fill="currentColor" opacity={0.7} />
-      <circle cx="16" cy="5" r="1" fill="currentColor" opacity={0.7} />
-      <circle cx="12" cy="2" r="1.2" fill="currentColor" opacity={0.9} />
-    </>
-  ),
-
-  // Distillery - still/bottle
-  distillery: (
-    <>
-      <path d="M8 2h8v4c0 2-1 3-2 4l-1 1v9a2 2 0 01-2 2h0a2 2 0 01-2-2v-9l-1-1c-1-1-2-2-2-4V2z" strokeWidth={2} fill="none" stroke="currentColor" />
-      <path d="M8 2h8" strokeWidth={2} strokeLinecap="round" stroke="currentColor" />
-      <ellipse cx="12" cy="17" rx="2" ry="1" fill="currentColor" opacity={0.3} />
-      <path d="M10 10h4" strokeWidth={1.5} stroke="currentColor" opacity={0.5} />
-    </>
-  ),
-
-  // Winery - wine glass
-  winery: (
-    <>
-      <path d="M8 2h8l-1 7a4 4 0 01-3 3.5V20h-1v-7.5A4 4 0 018.5 9L8 2z" strokeWidth={2} fill="none" stroke="currentColor" />
-      <path d="M7 22h10" strokeWidth={2} strokeLinecap="round" stroke="currentColor" />
-      <ellipse cx="12" cy="7" rx="3" ry="2" fill="currentColor" opacity={0.4} />
-    </>
-  ),
-
-  // Church - steeple with cross
-  church: (
-    <>
-      <path d="M12 2v4M10 4h4" strokeWidth={2} strokeLinecap="round" stroke="currentColor" />
-      <path d="M6 22V12l6-6 6 6v10" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" fill="none" stroke="currentColor" />
-      <path d="M6 22h12" strokeWidth={2} strokeLinecap="round" stroke="currentColor" />
-      <rect x="9" y="14" width="6" height="8" strokeWidth={2} fill="none" stroke="currentColor" />
-      <path d="M12 14v4" strokeWidth={1.5} stroke="currentColor" opacity={0.5} />
-    </>
-  ),
-
-  // Event Space - star/sparkle venue
-  event_space: (
-    <>
-      <rect x="3" y="6" width="18" height="14" rx="2" strokeWidth={2} fill="none" stroke="currentColor" />
-      <path d="M3 10h18" strokeWidth={2} stroke="currentColor" />
-      <path d="M12 13l1 2 2 .5-1.5 1.5.5 2-2-1-2 1 .5-2L9 15.5l2-.5 1-2z" fill="currentColor" opacity={0.8} />
-    </>
-  ),
-
-  // Fitness Center - dumbbell
-  fitness_center: (
-    <>
-      <path d="M6.5 6.5v11M17.5 6.5v11M6.5 12h11" strokeWidth={2.5} strokeLinecap="round" stroke="currentColor" />
-      <rect x="3" y="8" width="3.5" height="8" rx="1" strokeWidth={2} fill="none" stroke="currentColor" />
-      <rect x="17.5" y="8" width="3.5" height="8" rx="1" strokeWidth={2} fill="none" stroke="currentColor" />
-      <rect x="1" y="10" width="2" height="4" rx="0.5" fill="currentColor" opacity={0.7} />
-      <rect x="21" y="10" width="2" height="4" rx="0.5" fill="currentColor" opacity={0.7} />
+      <path d="M12 2l2 6.5L21 10l-5.5 3L17 20l-5-4-5 4 1.5-7L3 10l7-1.5L12 2z" strokeWidth={1.5} strokeLinejoin="round" fill="none" stroke="currentColor" />
     </>
   ),
 };
@@ -796,8 +753,8 @@ const iconPaths: Record<string, ReactNode> = {
 // Default icon for unknown types
 const defaultIcon = (
   <>
-    <circle cx="12" cy="12" r="10" strokeWidth={2} fill="none" stroke="currentColor" />
-    <circle cx="12" cy="12" r="3" fill="currentColor" />
+    <circle cx="12" cy="12" r="8" strokeWidth={1.5} fill="none" stroke="currentColor" />
+    <circle cx="12" cy="12" r="2" fill="currentColor" />
   </>
 );
 

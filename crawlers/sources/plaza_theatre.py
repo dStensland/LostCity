@@ -1,6 +1,8 @@
 """
 Crawler for Plaza Theatre Atlanta (plazaatlanta.com).
 Historic independent cinema showing first-run indie, classic, and cult films.
+
+Rewritten to use DOM queries instead of text parsing for more reliable extraction.
 """
 
 from __future__ import annotations
@@ -19,8 +21,6 @@ logger = logging.getLogger(__name__)
 
 BASE_URL = "https://www.plazaatlanta.com"
 NOW_SHOWING_URL = f"{BASE_URL}/now-showing"
-COMING_SOON_URL = f"{BASE_URL}/coming-soon"
-SPECIAL_EVENTS_URL = f"{BASE_URL}/special-events/"
 
 VENUE_DATA = {
     "name": "Plaza Theatre",
@@ -36,9 +36,10 @@ VENUE_DATA = {
 
 
 def parse_time(time_text: str) -> Optional[str]:
-    """Parse time from '7:00 PM' or '7:00PM' format."""
+    """Parse time from '7:00 PM' or '7:00PM' format to HH:MM."""
     try:
-        match = re.match(r"(\d{1,2}):(\d{2})\s*(AM|PM)", time_text, re.IGNORECASE)
+        # Handle both "7:00 PM" and "7:00PM"
+        match = re.match(r"(\d{1,2}):(\d{2})\s*(AM|PM)", time_text.strip(), re.IGNORECASE)
         if match:
             hour, minute, period = match.groups()
             hour = int(hour)
@@ -52,496 +53,233 @@ def parse_time(time_text: str) -> Optional[str]:
         return None
 
 
-def extract_movie_images(page: Page) -> dict[str, str]:
-    """Extract movie title to image URL mapping from the page.
-
-    Images have alt text matching movie titles and src from imgix CDN.
-    """
-    image_map = {}
+def parse_duration(duration_text: str) -> Optional[int]:
+    """Parse duration from '1 hr 55 min' format to minutes."""
     try:
-        # Query all img elements with alt text
-        images = page.query_selector_all("img[alt]")
-        for img in images:
-            alt = img.get_attribute("alt")
-            src = img.get_attribute("src")
-            if alt and src and "imgix.net" in src and len(alt) > 3:
-                # Skip non-movie images (logos, icons, ratings, etc.)
-                skip_alts = ["Logo", "Rated", "expand", "arrow", "play_arrow", "Icon"]
-                if not any(skip in alt for skip in skip_alts):
-                    # Normalize the title for matching
-                    image_map[alt.strip()] = src
-                    logger.debug(f"Found image for '{alt}': {src[:60]}...")
-    except Exception as e:
-        logger.warning(f"Error extracting movie images: {e}")
-
-    logger.info(f"Extracted {len(image_map)} movie images")
-    return image_map
+        match = re.match(r"(\d+)\s*hr\s*(\d+)?\s*min", duration_text, re.IGNORECASE)
+        if match:
+            hours = int(match.group(1))
+            minutes = int(match.group(2)) if match.group(2) else 0
+            return hours * 60 + minutes
+        return None
+    except Exception:
+        return None
 
 
-def find_image_for_movie(title: str, image_map: dict[str, str]) -> Optional[str]:
-    """Find image URL for a movie title, with fuzzy matching."""
-    # Exact match first
-    if title in image_map:
-        return image_map[title]
+def extract_movies_from_page(page: Page, date_str: str) -> dict:
+    """Extract movies and showtimes using multiple methods.
 
-    # Try case-insensitive match
-    title_lower = title.lower()
-    for img_title, url in image_map.items():
-        if img_title.lower() == title_lower:
-            return url
+    Tries text-based extraction first, falls back to button-based.
+    Returns a dict of {movie_title: {duration, image, showtimes: []}}.
+    """
+    # Try text-based extraction first (most reliable)
+    movie_showtimes = extract_via_text_blocks(page, date_str)
 
-    # Try partial match (title contained in image alt or vice versa)
-    for img_title, url in image_map.items():
-        if title_lower in img_title.lower() or img_title.lower() in title_lower:
-            return url
+    # Fall back to button-based extraction
+    if not movie_showtimes:
+        logger.info("Text extraction found nothing, trying button extraction")
+        movie_showtimes = extract_via_buttons(page)
 
-    return None
+    return movie_showtimes
 
 
-def extract_movies_for_date(
-    page: Page,
-    target_date: datetime,
-    source_id: int,
-    venue_id: int,
-    image_map: Optional[dict[str, str]] = None,
-) -> tuple[int, int, int]:
-    """Extract movies and showtimes for a specific date."""
-    events_found = 0
-    events_new = 0
-    events_updated = 0
-    image_map = image_map or {}
+def extract_via_buttons(page: Page) -> dict:
+    """Extract movies by finding showtime buttons with 'Ends at' text.
 
-    date_str = target_date.strftime("%Y-%m-%d")
+    Button structure:
+    - Time (e.g., "5:00 PM")
+    - "Ends at X:XX PM"
+    - Accessibility icons
 
-    # Get all movie cards/sections
-    body_text = page.inner_text("body")
-    lines = [l.strip() for l in body_text.split("\n") if l.strip()]
+    Walk up DOM to find containing movie card with title.
+    """
+    movie_showtimes = {}
 
-    # Track current movie being parsed
-    current_movie = None
-    current_duration = None
-    seen_movies = set()
+    try:
+        # Find all buttons that contain "Ends at" - these are showtime buttons
+        buttons = page.query_selector_all("button")
 
-    # Skip words for navigation/UI elements
-    skip_words = [
-        "NOW PLAYING",
-        "COMING SOON",
-        "SPECIAL PROGRAMS",
-        "START DATES",
-        "RENTALS",
-        "NEWS",
-        "VISIT US",
-        "STORE",
-        "Today",
-        "COMING SOON TO PLAZA",
-        "expand_more",
-        "arrow_drop_down",
-        "calendar_today",
-        "PLAZA THEATRE",
-        "The Tara",
-        "Digital",
-        "accessible",
-        "headphones",
-        "closed_caption",
-        "CAPTION",
-        "SUBTITLED",
-        "Not Rated",
-        "Select",
-        "Loading",
-        "Popping",
-        "Starting",
-        "SHOWTIMES",
-        "announced",
-        "Tuesday",
-        "rental event",
-        "Buy Tickets",
-        "More Info",
-        "Trash & Trivia",
-        "Silver Scream",
-        "WussyVision",
-        "SUBSCRIBE",
-        "Email",
-        "Facebook",
-        "Instagram",
-    ]
+        for btn in buttons:
+            try:
+                btn_text = btn.inner_text()
 
-    i = 0
-    while i < len(lines):
-        line = lines[i]
-
-        # Skip UI elements
-        if any(w.lower() in line.lower() for w in skip_words):
-            i += 1
-            continue
-
-        # Skip short lines and numbers
-        if len(line) < 4 or re.match(r"^\d{1,2}$", line):
-            i += 1
-            continue
-
-        # Movie title pattern - duration may be on next line or line after rating
-        if i + 1 < len(lines):
-            next_line = lines[i + 1]
-            # Check if next line is duration: "2 hr 19 min" or "1 hr 45 min · Drama"
-            duration_match = re.match(r"(\d+)\s*hr\s*(\d+)?\s*min", next_line)
-            if duration_match:
-                current_movie = line
-                current_duration = next_line
-                i += 2
-                continue
-
-            # Check if next line is a rating (Not Rated, PG, R, etc.) and duration is line after
-            if i + 2 < len(lines) and re.match(
-                r"^(Not Rated|G|PG|PG-13|R|NC-17|NR|Unrated)$", next_line, re.IGNORECASE
-            ):
-                line_after = lines[i + 2]
-                duration_match = re.match(r"(\d+)\s*hr\s*(\d+)?\s*min", line_after)
-                if duration_match:
-                    current_movie = line
-                    current_duration = line_after
-                    i += 3
+                # Only process showtime buttons (have "Ends at" text)
+                if "Ends at" not in btn_text:
                     continue
 
-        # Time pattern - showtime for current movie (e.g., "7:00PM", "11:15AM")
-        time_match = re.match(r"^(\d{1,2}:\d{2}\s*(?:AM|PM))$", line, re.IGNORECASE)
-        if time_match and current_movie:
-            showtime = time_match.group(1)
-            start_time = parse_time(showtime)
+                # Extract time from button
+                time_match = re.search(r"^(\d{1,2}:\d{2}\s*(?:AM|PM))", btn_text, re.IGNORECASE)
+                if not time_match:
+                    continue
 
-            # Create unique key for movie + date + time
-            movie_key = f"{current_movie}|{date_str}|{start_time}"
-            if movie_key not in seen_movies:
-                seen_movies.add(movie_key)
-                events_found += 1
+                showtime = time_match.group(1)
 
-                # Include time in hash so each showtime is unique
-                content_hash = generate_content_hash(
-                    current_movie, "Plaza Theatre", f"{date_str}|{start_time}"
-                )
+                # Walk up the DOM to find the movie container
+                # The movie title is in a sibling/ancestor element
+                parent = btn
+                movie_title = None
+                duration = None
 
-                existing = find_event_by_hash(content_hash)
-                if existing:
-                    events_updated += 1
-                else:
-                    # Find image for this movie
-                    movie_image = find_image_for_movie(current_movie, image_map)
-
-                    event_record = {
-                        "source_id": source_id,
-                        "venue_id": venue_id,
-                        "title": current_movie,
-                        "description": current_duration,
-                        "start_date": date_str,
-                        "start_time": start_time,
-                        "end_date": None,
-                        "end_time": None,
-                        "is_all_day": False,
-                        "category": "film",
-                        "subcategory": "cinema",
-                        "tags": ["film", "cinema", "independent", "plaza-theatre"],
-                        "price_min": None,
-                        "price_max": None,
-                        "price_note": None,
-                        "is_free": False,
-                        "source_url": NOW_SHOWING_URL,
-                        "ticket_url": None,
-                        "image_url": movie_image,
-                        "raw_text": None,
-                        "extraction_confidence": 0.90,
-                        "is_recurring": False,
-                        "recurrence_rule": None,
-                        "content_hash": content_hash,
-                    }
-
-                    # Series hint for films - movie title is the series
-                    series_hint = {
-                        "series_type": "film",
-                        "series_title": current_movie,
-                    }
-
+                for _ in range(12):  # Walk up max 12 levels
                     try:
-                        insert_event(event_record, series_hint=series_hint)
-                        events_new += 1
-                        logger.info(
-                            f"Added: {current_movie} on {date_str} at {start_time}"
+                        parent = parent.evaluate_handle("el => el.parentElement")
+                        if not parent:
+                            break
+
+                        parent_text = parent.evaluate("el => el.innerText || ''")
+
+                        # Look for the pattern: Title followed by "X hr Y min"
+                        # The title line ends right before the duration
+                        duration_match = re.search(
+                            r'([^\n]{4,80})\s*(?:Not Rated|Rated\s*[A-Z]+)?\s*\n\s*'
+                            r'(\d+\s*hr\s*\d*\s*min)',
+                            parent_text
                         )
-                    except Exception as e:
-                        logger.error(f"Failed to insert: {current_movie}: {e}")
 
-        i += 1
+                        if duration_match:
+                            potential_title = duration_match.group(1).strip()
+                            potential_duration = duration_match.group(2).strip()
 
-    return events_found, events_new, events_updated
+                            # Clean up title
+                            potential_title = re.sub(
+                                r'\s*(Not Rated|Rated\s*[A-Z]+)\s*$', '', potential_title
+                            ).strip()
+
+                            # Skip UI text
+                            skip_words = [
+                                "NOW PLAYING", "COMING SOON", "Digital", "Plaza Theatre",
+                                "The Tara", "35MM", "70MM", "accessible", "headphones",
+                                "chevron", "calendar", "Help Us"
+                            ]
+                            if not any(skip.lower() in potential_title.lower() for skip in skip_words):
+                                if len(potential_title) >= 4:
+                                    movie_title = potential_title
+                                    duration = potential_duration
+                                    break
+
+                    except Exception:
+                        break
+
+                if movie_title:
+                    if movie_title not in movie_showtimes:
+                        movie_showtimes[movie_title] = {
+                            "duration": duration,
+                            "image": None,
+                            "showtimes": []
+                        }
+                    if showtime not in movie_showtimes[movie_title]["showtimes"]:
+                        movie_showtimes[movie_title]["showtimes"].append(showtime)
+
+            except Exception:
+                continue
+
+        logger.info(f"Button extraction found {len(movie_showtimes)} movies")
+
+    except Exception as e:
+        logger.error(f"Error in button-based extraction: {e}")
+
+    return movie_showtimes
 
 
-def extract_upcoming_movies(
-    page: Page,
-    source_id: int,
-    venue_id: int,
-    source_url: str,
-    page_type: str = "coming-soon",
-    image_map: Optional[dict[str, str]] = None,
-) -> tuple[int, int, int]:
-    """Extract movies from Coming Soon or Special Events pages."""
-    events_found = 0
-    events_new = 0
-    events_updated = 0
-    image_map = image_map or {}
+def extract_via_text_blocks(page: Page, date_str: str) -> dict:
+    """Extract movies by parsing the full page text content.
 
-    body_text = page.inner_text("body")
-    lines = [l.strip() for l in body_text.split("\n") if l.strip()]
+    The Plaza Theatre page structure is:
+    - Movie title (may include rating inline like "Not Rated")
+    - Duration line: "X hr Y min · Genre · features"
+    - Description text (may be multiple lines)
+    - Showtime blocks: "The {Screen}Digital{Time} Ends at {EndTime}"
 
-    # Skip navigation/UI elements - be comprehensive
-    skip_patterns = [
-        # Navigation
-        "NOW PLAYING",
-        "COMING SOON",
-        "SPECIAL PROGRAMS",
-        "START DATES",
-        "RENTALS",
-        "NEWS",
-        "VISIT US",
-        "STORE",
-        "COMING SOON TO PLAZA",
-        # Icons and UI
-        "expand_more",
-        "arrow_drop_down",
-        "calendar_today",
-        "swap_vert",
-        "keyboard_arrow",
-        "chevron",
-        "arrow_",
-        # Site elements
-        "PLAZA THEATRE",
-        "The Tara",
-        "Digital",
-        "accessible",
-        "headphones",
-        "closed_caption",
-        "CAPTION",
-        "SUBTITLED",
-        "Select",
-        "Loading",
-        "Popping",
-        "Starting",
-        "SHOWTIMES",
-        "announced",
-        "rental event",
-        "Buy Tickets",
-        "More Info",
-        # Social/footer
-        "SUBSCRIBE",
-        "Email",
-        "Facebook",
-        "Instagram",
-        "Twitter",
-        # Headers
-        "Title, genre",
-        "actor, date",
-        "Release Date",
-        # Accessibility
-        "screen-reader",
-        "Option+",
-        "Accessibility",
-        "Feedback",
-        "Issue Reporting",
-        # Address/footer
-        "Ponce DeLeon Ave",
-        "Ponce De Leon",
-        "Atlanta, GA",
-        "30306",
-        "Info, Parking",
-        "Lodging",
-        "Drive-In Movie Tribute",
-        "Letterboxd",
-        "Shaped by INDY",
-        "ACCEPT",
-        "DISMISS",
-        "Movies",
-        "Explore Movies",
-        # Special events page specific
-        "SERIES & RETROSPECTIVES",
-        "SPECIAL EVENTS",
-        "COMMUNITY EVENTS",
-        "Signature events",
-        "contests, raffles",
-        "special guests",
-        "continuing series",
-        "Trivia:",
-        "Doors ",
-        "Movie:",
-        "Presented by WABE",
-        "More details to come",
-        "Videodrome's",
-        "97 ESTORIA",
-        "EVERY 2ND",
-        "Join Mailing List",
-        "First Name",
-        "Last Name",
-        "TRASH & TRIVIA",
-        # Other
-        "TBA",
-        "OPENS",
-        "Opens",
-        "©",
-        "Copyright",
-        "All Rights Reserved",
-    ]
+    One movie can have multiple showtimes at different screens.
+    """
+    movie_showtimes = {}
 
-    # Known special event series prefixes to preserve
-    special_prefixes = [
-        "Trash & Trivia:",
-        "Silver Scream Spookshow:",
-        "WussyVision:",
-        "Soul Cinema Sunday:",
-        "Plazadrome:",
-        "Plazamania:",
-        "Shane Morton Presents:",
-        "WABE Cinema Social:",
-        "Behind the Slate:",
-    ]
+    try:
+        main = page.query_selector("main")
+        if not main:
+            return {}
 
-    seen_movies = set()
+        text = main.inner_text()
 
-    for line in lines:
-        # Skip short lines
-        if len(line) < 5:
-            continue
+        # Split on "COMING SOON" to only process NOW PLAYING section
+        if "COMING SOON TO PLAZA" in text:
+            text = text.split("COMING SOON TO PLAZA")[0]
 
-        # Skip UI elements
-        if any(skip.lower() in line.lower() for skip in skip_patterns):
-            continue
-
-        # Skip lines that look like icons, dates, times, or phone numbers
-        if (
-            line.startswith("·")
-            or line.startswith("_")
-            or re.match(r"^[a-z_]+$", line)
-            or re.match(r"^\d{1,2}$", line)
-            or re.match(r"^\d{1,2}/\d{1,2}", line)
-            or re.match(r"^\d{1,2}:\d{2}", line)
-            or re.match(r"^\d+\s*(hr|min)", line)
-            or re.match(r"^\d{3}[-.\s]?\d{3}[-.\s]?\d{4}$", line)  # Phone number
-            or re.match(r"^(Mon|Tue|Wed|Thu|Fri|Sat|Sun)", line, re.IGNORECASE)
-            or re.match(
-                r"^(January|February|March|April|May|June|July|August|September|October|November|December)",
-                line,
-                re.IGNORECASE,
-            )
-            or re.match(
-                r"^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{1,2}$",
-                line,
-                re.IGNORECASE,
-            )
-        ):  # "Feb 8" etc
-            continue
-
-        # Skip ratings and genre-only lines
-        if re.match(
-            r"^(Not Rated|G|PG|PG-13|R|NC-17|NR|Unrated)$", line, re.IGNORECASE
-        ):
-            continue
-        if re.match(r"^[A-Z][a-z]+(\s*·\s*[A-Z][a-z]+)+$", line):  # "Horror · Drama"
-            continue
-
-        # Check if it looks like a movie title (starts with capital, reasonable length)
-        # Movie titles typically have capitals and may include colons, parentheses
-        if not (line[0].isupper() or line[0].isdigit()):
-            continue
-
-        # Skip if too long (probably a description)
-        if len(line) > 80:
-            continue
-
-        # Skip if already seen
-        if line in seen_movies:
-            continue
-
-        # This looks like a movie title
-        movie_title = line
-        seen_movies.add(movie_title)
-        events_found += 1
-
-        # Use "coming-soon" as date identifier for hash
-        content_hash = generate_content_hash(
-            movie_title, "Plaza Theatre", "coming-soon"
+        # Find all movie+showtime blocks using regex patterns
+        # Movie titles are followed by duration "X hr Y min"
+        # Pattern: Title (possibly with rating) followed by duration
+        movie_pattern = re.compile(
+            r'([A-Z][^·\n]{3,80}?)(?:\s*(?:Not Rated|Rated\s*[A-Z]+|[GPNR]-?\d*))?\s*'
+            r'(\d+\s*hr\s*\d*\s*min[^\n]*)',
+            re.MULTILINE
         )
 
-        existing = find_event_by_hash(content_hash)
-        if existing:
-            events_updated += 1
-        else:
-            # Use date 30 days from now as placeholder
-            placeholder_date = (datetime.now() + timedelta(days=30)).strftime(
-                "%Y-%m-%d"
-            )
+        # Showtime pattern: Screen + Digital + Time + Ends at
+        # Screens are: The Lefont, The Rej, The Mike
+        showtime_pattern = re.compile(
+            r'(The\s+(?:Lefont|Rej|Mike))\s*Digital\s*'
+            r'(\d{1,2}:\d{2}\s*(?:AM|PM))\s*'
+            r'Ends at\s*\d{1,2}:\d{2}\s*(?:AM|PM)',
+            re.IGNORECASE
+        )
 
-            # Determine if this is a special series event
-            is_special = any(
-                movie_title.startswith(prefix) for prefix in special_prefixes
-            )
+        # Find all movies with their positions
+        movies = []
+        for match in movie_pattern.finditer(text):
+            title = match.group(1).strip()
+            duration = match.group(2).strip()
+            start_pos = match.start()
 
-            # Set description based on page type
-            if page_type == "special-events":
-                description = (
-                    "Special Event" if not is_special else "Special Event Series"
-                )
+            # Clean up title - remove trailing ratings/whitespace
+            title = re.sub(r'\s*(Not Rated|Rated\s*[A-Z]+)\s*$', '', title).strip()
+
+            # Skip non-movie text
+            skip_words = [
+                "NOW PLAYING", "COMING SOON", "SPECIAL", "RENTALS", "NEWS",
+                "Today", "Plaza Theatre", "The Tara", "Help Us", "Join",
+                "Showtimes are", "Start dates", "When nothing", "Not finding",
+                "Community", "TRASH", "Trivia", "throw down", "chevron",
+            ]
+            if any(skip.lower() in title.lower() for skip in skip_words):
+                continue
+            if len(title) < 4 or len(title) > 100:
+                continue
+
+            movies.append({
+                "title": title,
+                "duration": duration,
+                "start": start_pos,
+                "end": match.end()
+            })
+
+        # For each movie, find showtimes between this movie and the next
+        for i, movie in enumerate(movies):
+            # Get text section for this movie (until next movie or end)
+            if i + 1 < len(movies):
+                section = text[movie["end"]:movies[i + 1]["start"]]
             else:
-                description = (
-                    "Coming Soon"
-                    if not is_special
-                    else "Coming Soon - Special Event Series"
-                )
+                section = text[movie["end"]:]
 
-            # Build tags list
-            tags = ["film", "cinema", "independent", "plaza-theatre", page_type]
-            if is_special:
-                tags.append("special-series")
+            # Find all showtimes in this section
+            showtimes = []
+            for st_match in showtime_pattern.finditer(section):
+                screen = st_match.group(1)
+                time = st_match.group(2)
+                showtimes.append(time)
 
-            # Find image for this movie
-            movie_image = find_image_for_movie(movie_title, image_map)
+            if showtimes:
+                movie_showtimes[movie["title"]] = {
+                    "duration": movie["duration"],
+                    "image": None,
+                    "showtimes": showtimes
+                }
 
-            event_record = {
-                "source_id": source_id,
-                "venue_id": venue_id,
-                "title": movie_title,
-                "description": description,
-                "start_date": placeholder_date,
-                "start_time": None,
-                "end_date": None,
-                "end_time": None,
-                "is_all_day": True,
-                "category": "film",
-                "subcategory": "cinema",
-                "tags": tags,
-                "price_min": None,
-                "price_max": None,
-                "price_note": None,
-                "is_free": False,
-                "source_url": source_url,
-                "ticket_url": None,
-                "image_url": movie_image,
-                "raw_text": None,
-                "extraction_confidence": 0.75,
-                "is_recurring": False,
-                "recurrence_rule": None,
-                "content_hash": content_hash,
-            }
+        logger.info(f"Text extraction found {len(movie_showtimes)} movies")
 
-            # Series hint for films - movie title is the series
-            # Special series events (Trash & Trivia, etc.) are recurring_shows
-            series_hint = {
-                "series_type": "recurring_show" if is_special else "film",
-                "series_title": movie_title,
-            }
+    except Exception as e:
+        logger.error(f"Error in text block extraction: {e}")
 
-            try:
-                insert_event(event_record, series_hint=series_hint)
-                events_new += 1
-                logger.info(f"Added {page_type}: {movie_title}")
-            except Exception as e:
-                logger.error(f"Failed to insert {page_type}: {movie_title}: {e}")
-
-    return events_found, events_new, events_updated
+    return movie_showtimes
 
 
 def crawl(source: dict) -> tuple[int, int, int]:
@@ -565,126 +303,156 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             # Load the now-showing page
             logger.info(f"Fetching Plaza Theatre: {NOW_SHOWING_URL}")
-            page.goto(NOW_SHOWING_URL, wait_until="domcontentloaded", timeout=30000)
-            page.wait_for_timeout(4000)  # Wait for JS to load
+            page.goto(NOW_SHOWING_URL, wait_until="networkidle", timeout=30000)
+            page.wait_for_timeout(3000)  # Wait for JS to load
 
-            # Extract movie images from the page
-            image_map = extract_movie_images(page)
+            # Click on Plaza Theatre tab if needed (there's also The Tara)
+            try:
+                plaza_tab = page.locator("text=Plaza Theatre Atlanta").first
+                if plaza_tab.is_visible(timeout=2000):
+                    plaza_tab.click()
+                    page.wait_for_timeout(1500)
+            except Exception:
+                pass
 
-            # First, get today's showtimes (default view)
-            logger.info(f"Scraping Today ({today.strftime('%Y-%m-%d')})")
-            found, new, updated = extract_movies_for_date(
-                page, datetime.combine(today, datetime.min.time()), source_id, venue_id, image_map
-            )
-            total_found += found
-            total_new += new
-            total_updated += updated
-            if found > 0:
-                logger.info(
-                    f"  {today.strftime('%Y-%m-%d')}: {found} movies found, {new} new"
-                )
-
-            # Click through the quick-select day buttons (Sat, Sun, Mon, Tue, etc.)
-            # weekday(): Monday=0, Tuesday=1, ..., Sunday=6
+            # Day names for clicking
             day_names = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 
-            # Try clicking each upcoming day for the next 10 days
-            for day_offset in range(1, 11):
+            # Try each day for the next 10 days
+            for day_offset in range(0, 11):
                 target_date = today + timedelta(days=day_offset)
                 day_name = day_names[target_date.weekday()]
                 day_num = target_date.day
                 date_str = target_date.strftime("%Y-%m-%d")
 
-                # Try to click the day button by name or number
+                # Click the appropriate day button
                 clicked = False
-                try:
-                    # First try clicking by day name (e.g., "Sun", "Mon")
-                    day_btn = page.locator(f"text={day_name}").first
-                    if day_btn.is_visible(timeout=1000):
-                        day_btn.click()
-                        page.wait_for_timeout(2000)
-                        clicked = True
-                except Exception:
-                    pass
 
-                if not clicked:
-                    # Try clicking "Other" and then the date number in calendar
+                if day_offset == 0:
+                    # Today is already selected by default, but click to be sure
                     try:
-                        other_btn = page.locator("text=Other").first
-                        if other_btn.is_visible(timeout=1000):
-                            other_btn.click()
-                            page.wait_for_timeout(1500)
-
-                            # Click the day number in the calendar
-                            # Be careful to click the right element
-                            day_cell = page.locator(f"text=/^{day_num}$/").first
-                            if day_cell.is_visible(timeout=1000):
-                                day_cell.click()
+                        today_btn = page.locator("text=Today").first
+                        if today_btn.is_visible(timeout=1000):
+                            today_btn.click()
+                            page.wait_for_timeout(2000)
+                            clicked = True
+                    except Exception:
+                        clicked = True  # Assume today is already showing
+                else:
+                    # Try clicking by day abbreviation and number
+                    for selector in [
+                        f"text=/{day_name}.*{day_num}/i",
+                        f"text={day_name}",
+                        f"listitem:has-text('{day_num}')"
+                    ]:
+                        try:
+                            btn = page.locator(selector).first
+                            if btn.is_visible(timeout=1000):
+                                btn.click()
                                 page.wait_for_timeout(2000)
                                 clicked = True
-                    except Exception:
-                        pass
+                                break
+                        except Exception:
+                            continue
 
-                if not clicked:
+                    # If still not clicked, try the "Other" date picker
+                    if not clicked:
+                        try:
+                            other_btn = page.locator("text=Other").first
+                            if other_btn.is_visible(timeout=1000):
+                                other_btn.click()
+                                page.wait_for_timeout(1500)
+                                # Click the day number in calendar
+                                day_cell = page.locator(f"text=/^{day_num}$/").first
+                                if day_cell.is_visible(timeout=1000):
+                                    day_cell.click()
+                                    page.wait_for_timeout(2000)
+                                    clicked = True
+                        except Exception:
+                            pass
+
+                if not clicked and day_offset > 0:
                     logger.debug(f"Could not select date {date_str}, skipping")
                     continue
 
+                # Check if there's a "Nothing Scheduled" message
+                try:
+                    nothing_msg = page.locator("text=Nothing Scheduled").first
+                    if nothing_msg.is_visible(timeout=1000):
+                        logger.info(f"  {date_str}: No showtimes scheduled")
+                        continue
+                except Exception:
+                    pass
+
+                # Extract movies for this date
                 logger.info(f"Scraping {day_name} {day_num} ({date_str})")
-                found, new, updated = extract_movies_for_date(
-                    page,
-                    datetime.combine(target_date, datetime.min.time()),
-                    source_id,
-                    venue_id,
-                    image_map,
-                )
-                total_found += found
-                total_new += new
-                total_updated += updated
 
-                if found > 0:
-                    logger.info(f"  {date_str}: {found} movies found, {new} new")
-                else:
-                    # If no movies found, probably no schedule for this date yet
-                    logger.info(f"  {date_str}: No showtimes scheduled")
-                    break  # Stop trying further dates
+                # Try multiple extraction methods
+                movie_showtimes = extract_via_text_blocks(page, date_str)
 
-            # Now scrape the Coming Soon page
-            logger.info(f"Fetching Coming Soon: {COMING_SOON_URL}")
-            page.goto(COMING_SOON_URL, wait_until="domcontentloaded", timeout=30000)
-            page.wait_for_timeout(3000)  # Wait for JS to load
+                if not movie_showtimes:
+                    movie_showtimes = extract_via_buttons(page)
 
-            # Extract images from coming soon page
-            coming_soon_images = extract_movie_images(page)
-            # Merge with existing image map
-            image_map.update(coming_soon_images)
+                # Create events
+                for movie_title, data in movie_showtimes.items():
+                    for showtime in data.get("showtimes", []):
+                        start_time = parse_time(showtime)
+                        if not start_time:
+                            continue
 
-            found, new, updated = extract_upcoming_movies(
-                page, source_id, venue_id, COMING_SOON_URL, "coming-soon", image_map
-            )
-            total_found += found
-            total_new += new
-            total_updated += updated
-            if found > 0:
-                logger.info(f"Coming Soon: {found} movies found, {new} new")
+                        movie_key = f"{movie_title}|{date_str}|{start_time}"
 
-            # Now scrape the Special Events page
-            logger.info(f"Fetching Special Events: {SPECIAL_EVENTS_URL}")
-            page.goto(SPECIAL_EVENTS_URL, wait_until="domcontentloaded", timeout=30000)
-            page.wait_for_timeout(3000)  # Wait for JS to load
+                        total_found += 1
+                        content_hash = generate_content_hash(
+                            movie_title, "Plaza Theatre", f"{date_str}|{start_time}"
+                        )
 
-            # Extract images from special events page
-            special_events_images = extract_movie_images(page)
-            # Merge with existing image map
-            image_map.update(special_events_images)
+                        existing = find_event_by_hash(content_hash)
+                        if existing:
+                            total_updated += 1
+                        else:
+                            event_record = {
+                                "source_id": source_id,
+                                "venue_id": venue_id,
+                                "title": movie_title,
+                                "description": data.get("duration"),
+                                "start_date": date_str,
+                                "start_time": start_time,
+                                "end_date": None,
+                                "end_time": None,
+                                "is_all_day": False,
+                                "category": "film",
+                                "subcategory": "cinema",
+                                "tags": ["film", "cinema", "independent", "plaza-theatre"],
+                                "price_min": None,
+                                "price_max": None,
+                                "price_note": None,
+                                "is_free": False,
+                                "source_url": NOW_SHOWING_URL,
+                                "ticket_url": None,
+                                "image_url": data.get("image"),
+                                "raw_text": None,
+                                "extraction_confidence": 0.90,
+                                "is_recurring": False,
+                                "recurrence_rule": None,
+                                "content_hash": content_hash,
+                            }
 
-            found, new, updated = extract_upcoming_movies(
-                page, source_id, venue_id, SPECIAL_EVENTS_URL, "special-events", image_map
-            )
-            total_found += found
-            total_new += new
-            total_updated += updated
-            if found > 0:
-                logger.info(f"Special Events: {found} movies found, {new} new")
+                            series_hint = {
+                                "series_type": "film",
+                                "series_title": movie_title,
+                            }
+
+                            try:
+                                insert_event(event_record, series_hint=series_hint)
+                                total_new += 1
+                                logger.info(f"Added: {movie_title} on {date_str} at {start_time}")
+                            except Exception as e:
+                                logger.error(f"Failed to insert: {movie_title}: {e}")
+
+                if total_found == 0 and day_offset > 3:
+                    # No movies found for several days, stop looking
+                    break
 
             browser.close()
 

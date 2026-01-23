@@ -1,17 +1,85 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import RSVPButton from "./RSVPButton";
+import { useState, useEffect, useCallback } from "react";
+import RSVPButton, { type RSVPStatus } from "./RSVPButton";
+import PreferencePrompt, { hasPromptBeenDismissed, markPromptDismissed } from "./PreferencePrompt";
+import { useAuth } from "@/lib/auth-context";
+import { CATEGORY_CONFIG, type CategoryType } from "./CategoryIcon";
+import { useViewTracking, useShareTracking } from "@/hooks/useSignalTracking";
 
 interface Props {
   eventId: number;
   eventTitle: string;
   ticketUrl?: string | null;
+  /** Event category for preference prompts */
+  eventCategory?: string | null;
 }
 
-export default function EventStickyBar({ eventId, eventTitle, ticketUrl }: Props) {
+export default function EventStickyBar({ eventId, eventTitle, ticketUrl, eventCategory }: Props) {
+  const { user } = useAuth();
+  const [showPreferencePrompt, setShowPreferencePrompt] = useState(false);
+
+  // Track view signal after 2 seconds on page
+  useViewTracking(eventId, 2000);
+
+  // Share tracking
+  const { trackShare } = useShareTracking(eventId);
+
   // Always visible - CTAs should be easily discoverable
   const isVisible = true;
+
+  // Handle RSVP change - potentially show preference prompt
+  const handleRSVPChange = useCallback(
+    async (newStatus: RSVPStatus, prevStatus: RSVPStatus) => {
+      // Only show prompt for "going" status and if we have a category
+      if (newStatus !== "going" || !eventCategory || !user) {
+        return;
+      }
+
+      // Check if prompt was already dismissed for this category
+      if (hasPromptBeenDismissed(eventCategory)) {
+        return;
+      }
+
+      // Check if category is already in user preferences
+      try {
+        const res = await fetch("/api/preferences");
+        if (res.ok) {
+          const prefs = await res.json();
+          const userCategories = prefs.favorite_categories || [];
+          if (userCategories.includes(eventCategory)) {
+            return; // Already in preferences
+          }
+        }
+      } catch {
+        // If we can't fetch preferences, still show the prompt
+      }
+
+      // Show the prompt
+      setShowPreferencePrompt(true);
+    },
+    [eventCategory, user]
+  );
+
+  const handlePreferenceAccept = useCallback(async () => {
+    if (!eventCategory) return;
+
+    try {
+      await fetch("/api/preferences/add", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type: "category", value: eventCategory }),
+      });
+    } catch (err) {
+      console.error("Failed to add preference:", err);
+    }
+
+    setShowPreferencePrompt(false);
+  }, [eventCategory]);
+
+  const handlePreferenceDismiss = useCallback(() => {
+    setShowPreferencePrompt(false);
+  }, []);
 
   // Keep for future use if we want scroll-based visibility
   useEffect(() => {
@@ -27,10 +95,13 @@ export default function EventStickyBar({ eventId, eventTitle, ticketUrl }: Props
     try {
       if (navigator.share) {
         await navigator.share(shareData);
+        // Track share signal
+        trackShare();
       } else {
         // Fallback: copy to clipboard
         await navigator.clipboard.writeText(window.location.href);
-        // Could add a toast notification here
+        // Track share signal even for clipboard copy
+        trackShare();
       }
     } catch (err) {
       // User cancelled or error - ignore
@@ -67,7 +138,7 @@ export default function EventStickyBar({ eventId, eventTitle, ticketUrl }: Props
 
           {/* RSVP button */}
           <div className="flex-shrink-0">
-            <RSVPButton eventId={eventId} variant="compact" />
+            <RSVPButton eventId={eventId} variant="compact" onRSVPChange={handleRSVPChange} />
           </div>
 
           {/* Primary CTA */}
@@ -90,7 +161,19 @@ export default function EventStickyBar({ eventId, eventTitle, ticketUrl }: Props
             </a>
           ) : (
             <div className="flex-1">
-              <RSVPButton eventId={eventId} variant="primary" className="w-full justify-center" />
+              <RSVPButton eventId={eventId} variant="primary" className="w-full justify-center" onRSVPChange={handleRSVPChange} />
+            </div>
+          )}
+
+          {/* Preference Prompt */}
+          {showPreferencePrompt && eventCategory && (
+            <div className="absolute left-4 right-4 bottom-full mb-3">
+              <PreferencePrompt
+                category={eventCategory}
+                categoryLabel={CATEGORY_CONFIG[eventCategory as CategoryType]?.label || eventCategory}
+                onAccept={handlePreferenceAccept}
+                onDismiss={handlePreferenceDismiss}
+              />
             </div>
           )}
         </div>

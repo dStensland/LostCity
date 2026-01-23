@@ -36,6 +36,53 @@ export function formatTimeSplit(time: string | null, isAllDay?: boolean): { time
   return { time: `${hour12}:${minutes}`, period };
 }
 
+/**
+ * Format a time range: "8PM → 11PM" or "8PM" if no end time
+ */
+export function formatTimeRange(
+  startTime: string | null,
+  endTime: string | null,
+  isAllDay?: boolean
+): string {
+  if (isAllDay) return "All Day";
+  if (!startTime) return "TBA";
+
+  const start = formatTime(startTime);
+  if (!endTime) return start;
+
+  const end = formatTime(endTime);
+  return `${start} → ${end}`;
+}
+
+/**
+ * Calculate and format duration between two times.
+ * Returns "3 hours" or "1.5 hours" or null if can't calculate.
+ */
+export function formatDuration(
+  startTime: string | null,
+  endTime: string | null
+): string | null {
+  if (!startTime || !endTime) return null;
+
+  const [startH, startM] = startTime.split(":").map(Number);
+  const [endH, endM] = endTime.split(":").map(Number);
+
+  const startMinutes = startH * 60 + startM;
+  let endMinutes = endH * 60 + endM;
+
+  // Handle events that cross midnight
+  if (endMinutes < startMinutes) {
+    endMinutes += 24 * 60;
+  }
+
+  const durationMinutes = endMinutes - startMinutes;
+  const hours = durationMinutes / 60;
+
+  if (hours === 1) return "1 hour";
+  if (hours === Math.floor(hours)) return `${hours} hours`;
+  return `${hours.toFixed(1)} hours`;
+}
+
 // ============================================================================
 // PRICE FORMATTING
 // ============================================================================

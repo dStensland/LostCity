@@ -282,6 +282,151 @@ export type Database = {
           name: string;
         };
       };
+      venue_tag_definitions: {
+        Row: {
+          id: string;
+          slug: string;
+          label: string;
+          category: "vibe" | "amenity" | "good_for" | "food_drink" | "accessibility";
+          is_official: boolean;
+          is_active: boolean;
+          created_by: string | null;
+          created_at: string;
+        };
+        Insert: {
+          slug: string;
+          label: string;
+          category: string;
+          is_official?: boolean;
+          is_active?: boolean;
+          created_by?: string | null;
+        };
+      };
+      venue_tags: {
+        Row: {
+          id: string;
+          venue_id: number;
+          tag_id: string;
+          added_by: string;
+          created_at: string;
+        };
+        Insert: {
+          venue_id: number;
+          tag_id: string;
+          added_by: string;
+        };
+      };
+      venue_tag_votes: {
+        Row: {
+          id: string;
+          venue_tag_id: string;
+          user_id: string;
+          vote_type: "up" | "down";
+          created_at: string;
+        };
+        Insert: {
+          venue_tag_id: string;
+          user_id: string;
+          vote_type: "up" | "down";
+        };
+        Update: {
+          vote_type?: "up" | "down";
+        };
+      };
+      venue_tag_suggestions: {
+        Row: {
+          id: string;
+          venue_id: number;
+          suggested_label: string;
+          suggested_category: string;
+          suggested_by: string;
+          status: "pending" | "approved" | "rejected";
+          reviewed_by: string | null;
+          reviewed_at: string | null;
+          rejection_reason: string | null;
+          created_at: string;
+        };
+        Insert: {
+          venue_id: number;
+          suggested_label: string;
+          suggested_category: string;
+          suggested_by: string;
+          status?: "pending" | "approved" | "rejected";
+        };
+        Update: {
+          status?: "pending" | "approved" | "rejected";
+          reviewed_by?: string | null;
+          reviewed_at?: string | null;
+          rejection_reason?: string | null;
+        };
+      };
     };
   };
 };
+
+// Venue tag types for use throughout the app
+export type VenueTagDefinition = Database["public"]["Tables"]["venue_tag_definitions"]["Row"];
+
+export type VenueTag = Database["public"]["Tables"]["venue_tags"]["Row"];
+
+export type VenueTagVote = Database["public"]["Tables"]["venue_tag_votes"]["Row"];
+
+export type VenueTagSuggestion = Database["public"]["Tables"]["venue_tag_suggestions"]["Row"];
+
+export type VenueTagCategory = "vibe" | "amenity" | "good_for" | "food_drink" | "accessibility";
+
+// Tag summary from materialized view
+export interface VenueTagSummary {
+  venue_id: number;
+  tag_id: string;
+  tag_slug: string;
+  tag_label: string;
+  tag_category: VenueTagCategory;
+  is_official: boolean;
+  add_count: number;
+  upvote_count: number;
+  downvote_count: number;
+  score: number;
+}
+
+// Tag with user vote status
+export interface VenueTagWithVote extends VenueTagSummary {
+  user_vote?: "up" | "down" | null;
+  user_added?: boolean;
+}
+
+// Inferred preferences from user behavior
+export interface InferredPreference {
+  id: string;
+  user_id: string;
+  signal_type: "category" | "venue" | "neighborhood" | "time_slot" | "producer";
+  signal_value: string;
+  score: number;
+  interaction_count: number;
+  last_interaction_at: string;
+  created_at: string;
+}
+
+// Hidden events for personalization
+export interface HiddenEvent {
+  user_id: string;
+  event_id: number;
+  reason?: "not_interested" | "seen_enough" | "wrong_category" | null;
+  created_at: string;
+}
+
+// Recommendation reason type (also exported from lib/search.ts)
+export type RecommendationReasonType =
+  | "friends_going"
+  | "followed_venue"
+  | "followed_producer"
+  | "neighborhood"
+  | "price"
+  | "category"
+  | "trending";
+
+export interface RecommendationReason {
+  type: RecommendationReasonType;
+  label: string;
+  detail?: string;
+}

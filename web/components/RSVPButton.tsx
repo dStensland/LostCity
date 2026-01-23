@@ -8,13 +8,15 @@ import { VISIBILITY_OPTIONS, DEFAULT_VISIBILITY, type Visibility } from "@/lib/v
 import type { Database } from "@/lib/types";
 import Confetti from "./ui/Confetti";
 
-type RSVPStatus = "going" | "interested" | "went" | null;
+export type RSVPStatus = "going" | "interested" | "went" | null;
 
 type RSVPButtonProps = {
   eventId: number;
   size?: "sm" | "md";
   variant?: "default" | "compact" | "primary";
   className?: string;
+  /** Callback when RSVP status changes successfully */
+  onRSVPChange?: (newStatus: RSVPStatus, prevStatus: RSVPStatus) => void;
 };
 
 type RSVPRow = Database["public"]["Tables"]["event_rsvps"]["Row"];
@@ -31,6 +33,7 @@ export default function RSVPButton({
   size = "md",
   variant = "default",
   className = "",
+  onRSVPChange,
 }: RSVPButtonProps) {
   const router = useRouter();
   const { user } = useAuth();
@@ -177,6 +180,11 @@ export default function RSVPButton({
         if (error) throw error;
       }
       setMenuOpen(false);
+
+      // Notify parent of successful status change
+      if (onRSVPChange) {
+        onRSVPChange(newStatus, previousStatus);
+      }
     } catch (error) {
       // Rollback on error
       setStatus(previousStatus);

@@ -9,6 +9,9 @@ import { formatTimeSplit } from "@/lib/formats";
 import GlassHeader from "@/components/GlassHeader";
 import MainNav from "@/components/MainNav";
 import PageFooter from "@/components/PageFooter";
+import VenueTagList from "@/components/VenueTagList";
+import FlagButton from "@/components/FlagButton";
+import SpotStickyBar from "@/components/SpotStickyBar";
 
 export const revalidate = 60;
 
@@ -88,7 +91,7 @@ export default async function PortalSpotPage({ params }: Props) {
           <MainNav portalSlug={portalSlug} />
         </Suspense>
 
-        <main className="max-w-3xl mx-auto px-4 py-8">
+        <main className="max-w-3xl mx-auto px-4 py-8 pb-28">
           {/* Spot image */}
           {spot.image_url && (
             <div className="aspect-video bg-[var(--night)] rounded-lg overflow-hidden mb-6 border border-[var(--twilight)] relative">
@@ -165,6 +168,11 @@ export default async function PortalSpotPage({ params }: Props) {
                 </div>
               </div>
             )}
+
+            {/* Community Tags */}
+            <div className="mt-6 pt-6 border-t border-[var(--twilight)]">
+              <VenueTagList venueId={spot.id} />
+            </div>
 
             {/* Location */}
             {spot.address && (
@@ -269,8 +277,17 @@ export default async function PortalSpotPage({ params }: Props) {
             </div>
           )}
 
+          {/* Flag for QA */}
+          <div className="mt-8 pt-6 border-t border-[var(--twilight)]">
+            <FlagButton
+              entityType="venue"
+              entityId={spot.id}
+              entityName={spot.name}
+            />
+          </div>
+
           {/* Back link */}
-          <div className="mt-8">
+          <div className="mt-6">
             <Link
               href={`/${portalSlug}?view=spots`}
               className="inline-flex items-center gap-2 font-mono text-sm text-[var(--muted)] hover:text-[var(--coral)] transition-colors"
@@ -282,6 +299,15 @@ export default async function PortalSpotPage({ params }: Props) {
             </Link>
           </div>
         </main>
+
+        <SpotStickyBar
+          spotName={spot.name}
+          address={spot.address}
+          city={spot.city}
+          state={spot.state}
+          website={spot.website}
+          instagram={spot.instagram}
+        />
 
         <PageFooter />
       </div>

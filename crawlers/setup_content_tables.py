@@ -27,6 +27,7 @@ ORGANIZATIONS = [
 
     # Music Organizations
     {"id": "atlanta-symphony", "name": "Atlanta Symphony Orchestra", "slug": "atlanta-symphony", "org_type": "arts_nonprofit", "website": "https://aso.org", "categories": ["music"], "neighborhood": "Midtown"},
+    {"id": "georgia-symphony", "name": "Georgia Symphony Orchestra", "slug": "georgia-symphony", "org_type": "arts_nonprofit", "website": "https://georgiasymphony.org", "instagram": "georgiasymphony", "description": "For over 70 years, the Georgia Symphony has engaged audiences through imaginative programming, visionary leadership, and critically acclaimed performances.", "categories": ["music"], "neighborhood": "Marietta", "city": "Marietta"},
     {"id": "atlanta-opera", "name": "Atlanta Opera", "slug": "atlanta-opera", "org_type": "arts_nonprofit", "website": "https://atlantaopera.org", "categories": ["music", "theater"], "neighborhood": "Midtown"},
     {"id": "atlanta-ballet", "name": "Atlanta Ballet", "slug": "atlanta-ballet", "org_type": "arts_nonprofit", "website": "https://atlantaballet.com", "categories": ["theater", "fitness"], "neighborhood": "Midtown"},
 

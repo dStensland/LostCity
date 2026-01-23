@@ -11,7 +11,7 @@ type FollowButtonProps = {
   targetVenueId?: number;
   targetOrgId?: string;
   targetProducerId?: string;
-  size?: "sm" | "md";
+  size?: "sm" | "md" | "lg";
   className?: string;
 };
 
@@ -142,13 +142,14 @@ export default function FollowButton({
   const sizeClasses = {
     sm: "px-3 py-1 text-xs",
     md: "px-4 py-1.5 text-sm",
+    lg: "px-6 py-3 text-base",
   };
 
   if (loading) {
     return (
       <div
         className={`${sizeClasses[size]} rounded-full bg-[var(--twilight)] animate-pulse ${className}`}
-        style={{ width: size === "sm" ? 70 : 85 }}
+        style={{ width: size === "sm" ? 70 : size === "lg" ? "100%" : 85 }}
       />
     );
   }

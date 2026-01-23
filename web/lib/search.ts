@@ -19,7 +19,7 @@ export interface SearchFilters {
   tags?: string[];
   is_free?: boolean;
   price_max?: number;
-  date_filter?: "now" | "today" | "weekend" | "week";
+  date_filter?: "now" | "today" | "tomorrow" | "weekend" | "week";
   date_range_start?: string; // Portal date range filter
   date_range_end?: string;   // Portal date range filter
   venue_id?: number;
@@ -53,6 +53,13 @@ export function isEventGroup(item: EventOrGroup): item is EventGroup {
   return "type" in item && (item.type === "venue" || item.type === "source");
 }
 
+// Recommendation reason type for personalization
+export type RecommendationReason = {
+  type: "friends_going" | "followed_venue" | "followed_producer" | "neighborhood" | "price" | "category" | "trending";
+  label: string;
+  detail?: string;
+};
+
 export type EventWithLocation = Event & {
   venue: Event["venue"] & {
     lat: number | null;
@@ -67,6 +74,15 @@ export type EventWithLocation = Event & {
     typical_price_min: number | null;
     typical_price_max: number | null;
   } | null;
+  // Series information (for series rollups)
+  series_id?: string | null;
+  series?: {
+    id: string;
+    slug: string;
+    title: string;
+    series_type: string;
+    image_url: string | null;
+  } | null;
   // Social proof counts (optional, added when requested)
   going_count?: number;
   interested_count?: number;
@@ -76,6 +92,10 @@ export type EventWithLocation = Event & {
   is_live?: boolean;
   is_featured?: boolean;
   is_trending?: boolean;
+  // Personalization
+  score?: number;
+  reasons?: RecommendationReason[];
+  friends_going?: { user_id: string; username: string; display_name: string | null }[];
 };
 
 export type Category = {
@@ -108,7 +128,7 @@ function escapePostgrestValue(value: string): string {
     .replace(/\./g, "\\.");  // Escape periods
 }
 
-function getDateRange(filter: "now" | "today" | "weekend" | "week"): {
+function getDateRange(filter: "now" | "today" | "tomorrow" | "weekend" | "week"): {
   start: string;
   end: string;
 } {
@@ -122,6 +142,14 @@ function getDateRange(filter: "now" | "today" | "weekend" | "week"): {
         start: format(today, "yyyy-MM-dd"),
         end: format(today, "yyyy-MM-dd"),
       };
+
+    case "tomorrow": {
+      const tomorrow = addDays(today, 1);
+      return {
+        start: format(tomorrow, "yyyy-MM-dd"),
+        end: format(tomorrow, "yyyy-MM-dd"),
+      };
+    }
 
     case "weekend": {
       let satDate: Date;
@@ -297,7 +325,8 @@ export async function getFilteredEventsWithSearch(
       `
       *,
       venue:venues(id, name, slug, address, neighborhood, city, state, lat, lng, typical_price_min, typical_price_max, spot_type),
-      category_data:categories(typical_price_min, typical_price_max)
+      category_data:categories(typical_price_min, typical_price_max),
+      series:series(id, slug, title, series_type, image_url)
     `,
       { count: "exact" }
     )
@@ -307,7 +336,8 @@ export async function getFilteredEventsWithSearch(
     // - Show if end_time exists and hasn't passed yet
     // - Show if end_time is null but start_time hasn't passed yet
     // - Show all-day events
-    .or(`start_date.gt.${today},end_time.gte.${currentTime},and(end_time.is.null,start_time.gte.${currentTime}),is_all_day.eq.true`);
+    .or(`start_date.gt.${today},end_time.gte.${currentTime},and(end_time.is.null,start_time.gte.${currentTime}),is_all_day.eq.true`)
+    .is("canonical_event_id", null); // Only show canonical events, not duplicates
 
   // Apply portal restriction filter
   // If portal_exclusive is true, only show events for this portal (business portals)
@@ -583,12 +613,14 @@ export async function getFilteredEventsWithCursor(
       `
       *,
       venue:venues(id, name, slug, address, neighborhood, city, state, lat, lng, typical_price_min, typical_price_max, spot_type),
-      category_data:categories(typical_price_min, typical_price_max)
+      category_data:categories(typical_price_min, typical_price_max),
+      series:series(id, slug, title, series_type, image_url)
     `
     )
     .gte("start_date", today)
     // Hide past events for today
-    .or(`start_date.gt.${today},end_time.gte.${currentTime},and(end_time.is.null,start_time.gte.${currentTime}),is_all_day.eq.true`);
+    .or(`start_date.gt.${today},end_time.gte.${currentTime},and(end_time.is.null,start_time.gte.${currentTime}),is_all_day.eq.true`)
+    .is("canonical_event_id", null); // Only show canonical events, not duplicates
 
   // Apply portal restriction filter
   if (filters.portal_id) {
@@ -873,7 +905,8 @@ export async function getEventsForMap(
     )
     .gte("start_date", today)
     .not("venues.lat", "is", null)
-    .not("venues.lng", "is", null);
+    .not("venues.lng", "is", null)
+    .is("canonical_event_id", null); // Only show canonical events, not duplicates
 
   // Apply portal restriction filter
   if (filters.portal_id) {
@@ -1111,6 +1144,7 @@ export const SUBCATEGORIES: Record<string, { value: string; label: string }[]> =
 export const DATE_FILTERS = [
   { value: "now", label: "Happening Now" },
   { value: "today", label: "Today" },
+  { value: "tomorrow", label: "Tomorrow" },
   { value: "weekend", label: "This Weekend" },
   { value: "week", label: "This Week" },
 ] as const;
@@ -1316,7 +1350,8 @@ async function getRollupStats(
     `
     )
     .gte("start_date", dateStart)
-    .lte("start_date", dateEnd);
+    .lte("start_date", dateEnd)
+    .is("canonical_event_id", null); // Only show canonical events, not duplicates
 
   // Apply portal restriction filter
   if (portalId) {

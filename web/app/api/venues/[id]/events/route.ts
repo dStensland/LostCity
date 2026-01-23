@@ -32,6 +32,7 @@ export async function GET(request: NextRequest, { params }: Props) {
     `)
     .eq("venue_id", venueId)
     .gte("start_date", today)
+    .is("canonical_event_id", null) // Only show canonical events, not duplicates
     .order("start_date", { ascending: true })
     .order("start_time", { ascending: true })
     .limit(limit);
