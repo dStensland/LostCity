@@ -159,20 +159,20 @@ export default function FilterBar({ variant = "full" }: FilterBarProps) {
   }, []);
 
   // Helper to check if a filter value has events
+  // Note: Always return true since available_filters counts aren't reliably populated
   const categoryHasEvents = useCallback(
-    (value: string) => {
-      if (!availableFilters) return true; // Show all while loading
-      return availableFilters.categories.some((c) => c.value === value && c.count > 0);
+    (_value: string) => {
+      return true; // Show all categories - counts not reliably available
     },
-    [availableFilters]
+    []
   );
 
+  // Note: Always return true since available_filters counts aren't reliably populated
   const tagHasEvents = useCallback(
-    (value: string) => {
-      if (!availableFilters) return true;
-      return availableFilters.tags.some((t) => t.value === value && t.count > 0);
+    (_value: string) => {
+      return true; // Show all tags - counts not reliably available
     },
-    [availableFilters]
+    []
   );
 
   // Get event count for a category
