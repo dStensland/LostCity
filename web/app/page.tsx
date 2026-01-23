@@ -40,7 +40,7 @@ export default async function Home() {
 
         <Logo size="lg" href={undefined} />
         <p className="font-serif text-[var(--muted)] mt-4 mb-8 text-lg text-center max-w-md">
-          Find what&apos;s happening tonight in {DEFAULT_PORTAL_NAME}
+          what the hell is going on?
         </p>
         <Link
           href={`/${DEFAULT_PORTAL_SLUG}`}
