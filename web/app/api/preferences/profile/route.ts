@@ -1,6 +1,24 @@
 import { NextResponse } from "next/server";
 import { createClient, getUser } from "@/lib/supabase/server";
 
+type UserPreferences = {
+  favorite_categories: string[] | null;
+  favorite_neighborhoods: string[] | null;
+  favorite_vibes: string[] | null;
+  price_preference: string | null;
+};
+
+type InferredPreference = {
+  signal_type: string;
+  signal_value: string;
+  score: number;
+  interaction_count: number;
+};
+
+type RsvpStat = {
+  status: string;
+};
+
 export async function GET() {
   try {
     const user = await getUser();
@@ -15,7 +33,7 @@ export async function GET() {
       .from("user_preferences")
       .select("*")
       .eq("user_id", user.id)
-      .single();
+      .single() as { data: UserPreferences | null };
 
     // Get inferred preferences (top 20 by score)
     const { data: inferredPrefs } = await supabase
@@ -23,7 +41,7 @@ export async function GET() {
       .select("*")
       .eq("user_id", user.id)
       .order("score", { ascending: false })
-      .limit(20);
+      .limit(20) as { data: InferredPreference[] | null };
 
     // Get follow counts
     const { count: venueFollowCount } = await supabase
@@ -42,7 +60,7 @@ export async function GET() {
     const { data: rsvpStats } = await supabase
       .from("event_rsvps")
       .select("status")
-      .eq("user_id", user.id);
+      .eq("user_id", user.id) as { data: RsvpStat[] | null };
 
     const rsvpCounts = (rsvpStats || []).reduce(
       (acc, r) => {

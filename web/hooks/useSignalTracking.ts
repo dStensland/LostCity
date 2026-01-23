@@ -28,7 +28,7 @@ export async function trackSignal(eventId: number, action: ActionType): Promise<
 export function useViewTracking(eventId: number, minDwellMs: number = 2000) {
   const { user } = useAuth();
   const trackedRef = useRef(false);
-  const timerRef = useRef<NodeJS.Timeout>();
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     // Don't track if not logged in or already tracked

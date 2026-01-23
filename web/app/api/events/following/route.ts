@@ -1,6 +1,41 @@
 import { NextResponse } from "next/server";
 import { createClient, getUser } from "@/lib/supabase/server";
-import { format, startOfDay, endOfDay, addDays } from "date-fns";
+import { format, startOfDay } from "date-fns";
+
+type FollowingEvent = {
+  id: number;
+  title: string;
+  start_date: string;
+  start_time: string | null;
+  end_time: string | null;
+  is_all_day: boolean;
+  is_free: boolean;
+  price_min: number | null;
+  price_max: number | null;
+  category: string | null;
+  subcategory: string | null;
+  image_url: string | null;
+  description: string | null;
+  ticket_url: string | null;
+  source_url: string | null;
+  venue_id: number | null;
+  producer_id: string | null;
+  venue: {
+    id: number;
+    name: string;
+    slug: string | null;
+    neighborhood: string | null;
+    address: string | null;
+    city: string | null;
+    state: string | null;
+  } | null;
+  producer: {
+    id: string;
+    name: string;
+    org_type: string | null;
+    logo_url: string | null;
+  } | null;
+};
 
 export async function GET(request: Request) {
   try {
@@ -21,7 +56,7 @@ export async function GET(request: Request) {
       .from("follows")
       .select("followed_venue_id")
       .eq("follower_id", user.id)
-      .not("followed_venue_id", "is", null);
+      .not("followed_venue_id", "is", null) as { data: { followed_venue_id: number | null }[] | null };
 
     const venueIds = (followedVenues || [])
       .map((f) => f.followed_venue_id)
@@ -32,7 +67,7 @@ export async function GET(request: Request) {
       .from("follows")
       .select("followed_producer_id")
       .eq("follower_id", user.id)
-      .not("followed_producer_id", "is", null);
+      .not("followed_producer_id", "is", null) as { data: { followed_producer_id: string | null }[] | null };
 
     const producerIds = (followedProducers || [])
       .map((f) => f.followed_producer_id)
@@ -101,7 +136,7 @@ export async function GET(request: Request) {
       query = query.in("producer_id", producerIds);
     }
 
-    const { data: events, error } = await query;
+    const { data: events, error } = await query as { data: FollowingEvent[] | null; error: Error | null };
 
     if (error) {
       console.error("Error fetching following events:", error);

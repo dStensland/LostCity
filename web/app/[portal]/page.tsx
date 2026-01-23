@@ -13,6 +13,8 @@ import PortalHappeningNow from "@/components/PortalHappeningNow";
 import PortalCommunityView from "@/components/PortalCommunityView";
 import TrendingNow from "@/components/TrendingNow";
 import TonightsPicks from "@/components/TonightsPicks";
+import TonightsPicksSkeleton from "@/components/TonightsPicksSkeleton";
+import TrendingNowSkeleton from "@/components/TrendingNowSkeleton";
 import DynamicAmbient from "@/components/DynamicAmbient";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
@@ -147,13 +149,13 @@ export default async function PortalPage({ params, searchParams }: Props) {
 
         {viewMode === "feed" && (
           <>
-            <Suspense fallback={null}>
+            <Suspense fallback={<TonightsPicksSkeleton />}>
               <TonightsPicks portalSlug={portal.slug} />
             </Suspense>
-            <Suspense fallback={null}>
+            <Suspense fallback={<TrendingNowSkeleton />}>
               <TrendingNow portalSlug={portal.slug} />
             </Suspense>
-            <Suspense fallback={<div className="py-16 text-center text-[var(--muted)]">Loading...</div>}>
+            <Suspense fallback={null}>
               <FeedView />
             </Suspense>
           </>

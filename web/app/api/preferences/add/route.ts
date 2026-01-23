@@ -59,7 +59,8 @@ export async function POST(request: Request) {
     }
 
     // Get current values for this preference type
-    const currentValues = (currentPrefs?.[columnName as keyof typeof currentPrefs] as string[] | null) || [];
+    const prefsRecord = currentPrefs as Record<string, unknown> | null;
+    const currentValues = (prefsRecord?.[columnName] as string[] | null) ?? [];
 
     // Check if value already exists
     if (currentValues.includes(value)) {
@@ -74,10 +75,11 @@ export async function POST(request: Request) {
     const updatedValues = [...currentValues, value];
 
     if (currentPrefs) {
-      // Update existing preferences
+      // Update existing preferences - use raw SQL to avoid type issues
+      const updateData = { [columnName]: updatedValues } as Record<string, string[]>;
       const { error: updateError } = await supabase
         .from("user_preferences")
-        .update({ [columnName]: updatedValues })
+        .update(updateData as never)
         .eq("user_id", user.id);
 
       if (updateError) {
@@ -89,12 +91,13 @@ export async function POST(request: Request) {
       }
     } else {
       // Insert new preferences row
+      const insertData = {
+        user_id: user.id,
+        [columnName]: updatedValues,
+      } as Record<string, unknown>;
       const { error: insertError } = await supabase
         .from("user_preferences")
-        .insert({
-          user_id: user.id,
-          [columnName]: updatedValues,
-        });
+        .insert(insertData as never);
 
       if (insertError) {
         console.error("Error inserting preferences:", insertError);

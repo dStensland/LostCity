@@ -3,6 +3,22 @@ import { createClient, getUser } from "@/lib/supabase/server";
 
 type ActionType = "view" | "save" | "share" | "rsvp_going" | "rsvp_interested" | "went";
 
+type EventWithVenue = {
+  id: number;
+  category: string | null;
+  venue: {
+    id: number;
+    name: string;
+    neighborhood: string | null;
+  } | null;
+};
+
+type InferredPref = {
+  id: string;
+  score: number;
+  interaction_count: number;
+};
+
 // Signal weights for different actions
 const ACTION_WEIGHTS: Record<ActionType, number> = {
   view: 2,           // Click into detail (2s+)
@@ -49,7 +65,7 @@ export async function POST(request: Request) {
         venue:venues(id, name, neighborhood)
       `)
       .eq("id", event_id)
-      .single();
+      .single() as { data: EventWithVenue | null; error: Error | null };
 
     if (eventError || !event) {
       return NextResponse.json(
@@ -78,7 +94,7 @@ export async function POST(request: Request) {
     // Upsert each signal into inferred_preferences
     const upsertPromises = signals.map(async (signal) => {
       // Use upsert with ON CONFLICT handling
-      const { error } = await supabase.rpc("upsert_inferred_preference", {
+      const { error } = await (supabase.rpc as Function)("upsert_inferred_preference", {
         p_user_id: user.id,
         p_signal_type: signal.type,
         p_signal_value: signal.value,
@@ -95,7 +111,7 @@ export async function POST(request: Request) {
             .eq("user_id", user.id)
             .eq("signal_type", signal.type)
             .eq("signal_value", signal.value)
-            .single();
+            .single() as { data: InferredPref | null };
 
           if (existing) {
             await supabase
