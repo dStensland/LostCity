@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, Suspense } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import PageHeader from "@/components/PageHeader";
+import UnifiedHeader from "@/components/UnifiedHeader";
 import PageFooter from "@/components/PageFooter";
 import { useAuth } from "@/lib/auth-context";
+import { usePortalSlug } from "@/lib/portal-context";
 import { useToast } from "@/components/Toast";
 import { formatDistanceToNow } from "date-fns";
 
@@ -29,9 +30,10 @@ type FriendRequest = {
 
 type Tab = "requests" | "friends";
 
-export default function FriendsPage() {
+function FriendsPageContent() {
   const { user, loading: authLoading } = useAuth();
   const { showToast } = useToast();
+  const portalSlug = usePortalSlug();
 
   const [tab, setTab] = useState<Tab>("requests");
   const [requests, setRequests] = useState<FriendRequest[]>([]);
@@ -147,7 +149,7 @@ export default function FriendsPage() {
   if (!authLoading && !user) {
     return (
       <div className="min-h-screen">
-        <PageHeader />
+        <UnifiedHeader />
         <main className="max-w-3xl mx-auto px-4 py-16 text-center">
           <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-[var(--twilight)] to-[var(--dusk)] flex items-center justify-center">
             <svg className="w-8 h-8 text-[var(--muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -173,7 +175,7 @@ export default function FriendsPage() {
 
   return (
     <div className="min-h-screen">
-      <PageHeader />
+      <UnifiedHeader />
 
       <main className="max-w-3xl mx-auto px-4 py-8">
         <h1 className="font-serif text-2xl text-[var(--cream)] italic mb-6">Friends</h1>
@@ -367,7 +369,7 @@ export default function FriendsPage() {
                   Find people to connect with and see what events they are attending
                 </p>
                 <Link
-                  href="/atlanta"
+                  href={`/${portalSlug}`}
                   className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[var(--twilight)]/50 text-[var(--cream)] hover:bg-[var(--twilight)] transition-colors font-mono text-sm"
                 >
                   Discover Events
@@ -443,5 +445,33 @@ export default function FriendsPage() {
 
       <PageFooter />
     </div>
+  );
+}
+
+export default function FriendsPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen">
+        <div className="h-16 bg-[var(--void)]" />
+        <main className="max-w-3xl mx-auto px-4 py-8">
+          <div className="h-8 w-32 rounded skeleton-shimmer mb-6" />
+          <div className="space-y-4">
+            {[...Array(3)].map((_, i) => (
+              <div key={i} className="p-4 rounded-lg border border-[var(--twilight)]" style={{ backgroundColor: "var(--card-bg)" }}>
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-full skeleton-shimmer" />
+                  <div className="flex-1">
+                    <div className="h-4 w-32 rounded skeleton-shimmer mb-2" />
+                    <div className="h-3 w-24 rounded skeleton-shimmer" />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </main>
+      </div>
+    }>
+      <FriendsPageContent />
+    </Suspense>
   );
 }

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import PageHeader from "@/components/PageHeader";
+import UnifiedHeader from "@/components/UnifiedHeader";
 import { useTheme } from "@/lib/theme-context";
 
 type VisualSettings = {
@@ -74,7 +74,7 @@ export default function AppearancePage() {
   if (!mounted) {
     return (
       <div className="min-h-screen">
-        <PageHeader />
+        <UnifiedHeader />
         <main className="max-w-2xl mx-auto px-4 py-8">
           <div className="animate-pulse">
             <div className="h-8 w-48 bg-[var(--twilight)] rounded mb-8" />
@@ -90,7 +90,7 @@ export default function AppearancePage() {
 
   return (
     <div className="min-h-screen">
-      <PageHeader />
+      <UnifiedHeader />
 
       <main className="max-w-2xl mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-8">

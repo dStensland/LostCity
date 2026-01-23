@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { DEFAULT_PORTAL_SLUG } from "@/lib/portal-context";
 
 interface LogoProps {
   size?: "sm" | "md" | "lg";
@@ -9,7 +10,7 @@ interface LogoProps {
 
 // Portal-specific configurations
 const PORTAL_CONFIG: Record<string, { name: string; color: string }> = {
-  atlanta: { name: "ATLANTA", color: "var(--gold)" }, // Golden for Atlanta
+  [DEFAULT_PORTAL_SLUG]: { name: "ATLANTA", color: "var(--gold)" }, // Golden for Atlanta
 };
 
 export default function Logo({ size = "md", href = "/", className = "", portal }: LogoProps) {
@@ -58,7 +59,7 @@ export default function Logo({ size = "md", href = "/", className = "", portal }
             fontSize: config.portalSize,
             fontWeight: 400,
             color: portalConfig.color,
-            textShadow: portal === "atlanta" ? "0 0 10px rgba(255, 215, 0, 0.4)" : "0 0 10px rgba(255, 107, 107, 0.4)",
+            textShadow: portal === DEFAULT_PORTAL_SLUG ? "0 0 10px rgba(255, 215, 0, 0.4)" : "0 0 10px rgba(255, 107, 107, 0.4)",
           }}
         >
           {portalConfig.name}

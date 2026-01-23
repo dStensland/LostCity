@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import PageHeader from "@/components/PageHeader";
+import UnifiedHeader from "@/components/UnifiedHeader";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/lib/auth-context";
 
@@ -114,7 +114,7 @@ export default function ProfileSettingsPage() {
 
   return (
     <div className="min-h-screen">
-      <PageHeader />
+      <UnifiedHeader />
 
       {/* Main */}
       <main className="max-w-2xl mx-auto px-4 py-8">

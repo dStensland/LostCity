@@ -4,6 +4,7 @@ import { useState, useEffect, use, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Logo from "@/components/Logo";
+import { DEFAULT_PORTAL_SLUG } from "@/lib/portal-context";
 
 type PortalBranding = {
   logo_url?: string;
@@ -1116,7 +1117,7 @@ export default function EditPortalPage({ params }: { params: Promise<{ id: strin
 
           {/* Actions */}
           <div className="flex items-center justify-between pt-4">
-            {portal.slug !== "atlanta" && (
+            {portal.slug !== DEFAULT_PORTAL_SLUG && (
               <button
                 onClick={handleDelete}
                 className="px-4 py-2 text-red-400 font-mono text-sm hover:text-red-300"

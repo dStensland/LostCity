@@ -8,6 +8,7 @@ import Logo from "./Logo";
 import UserMenu from "./UserMenu";
 import HeaderSearchButton from "./HeaderSearchButton";
 import { useLiveEventCount } from "@/lib/hooks/useLiveEvents";
+import { DEFAULT_PORTAL_SLUG, DEFAULT_PORTAL_NAME } from "@/lib/portal-context";
 
 interface PortalBranding {
   logo_url?: string;
@@ -21,7 +22,7 @@ interface GlassHeaderProps {
   branding?: PortalBranding;
 }
 
-export default function GlassHeader({ portalSlug = "atlanta", portalName = "Atlanta", branding }: GlassHeaderProps) {
+export default function GlassHeader({ portalSlug = DEFAULT_PORTAL_SLUG, portalName = DEFAULT_PORTAL_NAME, branding }: GlassHeaderProps) {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
@@ -70,7 +71,7 @@ export default function GlassHeader({ portalSlug = "atlanta", portalName = "Atla
             </Link>
             <div className="hidden sm:flex items-center gap-1 text-[0.6rem] text-[var(--muted)] font-mono">
               <span>powered by</span>
-              <Link href="/atlanta" className="text-[var(--coral)] hover:opacity-80 transition-opacity">
+              <Link href={`/${DEFAULT_PORTAL_SLUG}`} className="text-[var(--coral)] hover:opacity-80 transition-opacity">
                 Lost City
               </Link>
             </div>

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { usePortal } from "@/lib/portal-context";
+import { usePortal, DEFAULT_PORTAL_SLUG } from "@/lib/portal-context";
 import { useAuth } from "@/lib/auth-context";
 
 interface Props {
@@ -25,7 +25,7 @@ const DEFAULT_TABS: NavTab[] = [
   { key: "happening_now", defaultLabel: "Stuff around You", href: "happening-now" },
 ];
 
-export default function MainNav({ portalSlug = "atlanta" }: Props) {
+export default function MainNav({ portalSlug = DEFAULT_PORTAL_SLUG }: Props) {
   const { portal } = usePortal();
   const { user } = useAuth();
   const navLabels = (portal.settings?.nav_labels || {}) as Record<string, string | undefined>;

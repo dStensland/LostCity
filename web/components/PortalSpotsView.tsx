@@ -36,8 +36,47 @@ type Spot = {
   lng?: number | null;
 };
 
-type SortOption = "alphabetical" | "event_count" | "neighborhood";
-type GroupOption = "none" | "category" | "neighborhood";
+type SortOption = "category" | "alphabetical" | "neighborhood";
+
+// Spot type configuration with colors and labels
+const SPOT_TYPE_CONFIG: Record<string, { label: string; color: string }> = {
+  music_venue: { label: "Music Venues", color: "#F472B6" },
+  comedy_club: { label: "Comedy Clubs", color: "#FBBF24" },
+  art_gallery: { label: "Art Galleries", color: "#A78BFA" },
+  theater: { label: "Theaters", color: "#F87171" },
+  movie_theater: { label: "Movie Theaters", color: "#60A5FA" },
+  community_space: { label: "Community Spaces", color: "#34D399" },
+  restaurant: { label: "Restaurants", color: "#FB923C" },
+  bar: { label: "Bars", color: "#C084FC" },
+  sports_venue: { label: "Sports Venues", color: "#4ADE80" },
+  fitness_studio: { label: "Fitness Studios", color: "#2DD4BF" },
+  nightclub: { label: "Nightclubs", color: "#E879F9" },
+  family_venue: { label: "Family Venues", color: "#FACC15" },
+  brewery: { label: "Breweries", color: "#FB923C" },
+  museum: { label: "Museums", color: "#A78BFA" },
+  park: { label: "Parks & Outdoors", color: "#4ADE80" },
+  other: { label: "Other Venues", color: "#94A3B8" },
+};
+
+// Order for category sorting
+const SPOT_TYPE_ORDER = [
+  "music_venue",
+  "theater",
+  "movie_theater",
+  "comedy_club",
+  "art_gallery",
+  "museum",
+  "restaurant",
+  "bar",
+  "brewery",
+  "nightclub",
+  "community_space",
+  "sports_venue",
+  "fitness_studio",
+  "family_venue",
+  "park",
+  "other",
+];
 
 interface Props {
   portalId: string;
@@ -45,11 +84,82 @@ interface Props {
   isExclusive?: boolean;
 }
 
+// Spot card component
+function SpotCard({
+  spot,
+  portalSlug,
+}: {
+  spot: Spot;
+  portalSlug: string;
+}) {
+  const categoryColor = spot.spot_type ? getCategoryColor(spot.spot_type) : "var(--coral)";
+  const reflectionClass = getReflectionClass(spot.spot_type);
+  const config = SPOT_TYPE_CONFIG[spot.spot_type || "other"] || SPOT_TYPE_CONFIG.other;
+
+  return (
+    <Link
+      href={`/${portalSlug}/spots/${spot.slug}`}
+      className={`block p-4 rounded-lg border border-[var(--twilight)] card-atmospheric ${reflectionClass} group`}
+      style={{
+        backgroundColor: "var(--card-bg)",
+        "--glow-color": categoryColor,
+        "--reflection-color": `color-mix(in srgb, ${categoryColor} 15%, transparent)`,
+      } as React.CSSProperties}
+    >
+      <div className="flex items-start gap-3">
+        {spot.spot_type && (
+          <CategoryIcon
+            type={spot.spot_type}
+            size={18}
+            className="flex-shrink-0 mt-0.5"
+          />
+        )}
+        <div className="flex-1 min-w-0">
+          <div className="font-medium text-[var(--cream)] group-hover:text-[var(--glow-color)] transition-colors">
+            {spot.name}
+          </div>
+          <div className="flex items-center gap-2 font-mono text-xs text-[var(--muted)] mt-1">
+            {spot.spot_type && (
+              <span style={{ color: config.color }}>{getCategoryLabel(spot.spot_type)}</span>
+            )}
+            {spot.neighborhood && (
+              <>
+                <span className="opacity-40">·</span>
+                <span>{spot.neighborhood}</span>
+              </>
+            )}
+            {(spot.event_count ?? 0) > 0 && (
+              <>
+                <span className="opacity-40">·</span>
+                <span className="text-[var(--coral)]">
+                  {spot.event_count} event{spot.event_count !== 1 ? "s" : ""}
+                </span>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+    </Link>
+  );
+}
+
 export default function PortalSpotsView({ portalId, portalSlug, isExclusive = false }: Props) {
   const [spots, setSpots] = useState<Spot[]>([]);
   const [loading, setLoading] = useState(true);
-  const [sortBy, setSortBy] = useState<SortOption>("event_count");
-  const [groupBy, setGroupBy] = useState<GroupOption>("none");
+  const [sortBy, setSortBy] = useState<SortOption>("category");
+  const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
+
+  const toggleCategory = (category: string) => {
+    setCollapsedCategories(prev => {
+      const next = new Set(prev);
+      if (next.has(category)) {
+        next.delete(category);
+      } else {
+        next.add(category);
+      }
+      return next;
+    });
+  };
 
   useEffect(() => {
     async function fetchSpots() {
@@ -73,51 +183,71 @@ export default function PortalSpotsView({ portalId, portalSlug, isExclusive = fa
     fetchSpots();
   }, [portalId, isExclusive]);
 
-  // Sort and group spots - must be called before any conditional returns (Rules of Hooks)
-  const sortedAndGroupedSpots = useMemo(() => {
-    if (spots.length === 0) return [];
-
-    // Sort spots
-    const sorted = [...spots].sort((a, b) => {
-      switch (sortBy) {
-        case "alphabetical":
-          return a.name.localeCompare(b.name);
-        case "event_count":
+  // Sort spots
+  const sortedSpots = useMemo(() => {
+    const sorted = [...spots];
+    if (sortBy === "alphabetical") {
+      sorted.sort((a, b) => a.name.localeCompare(b.name));
+    } else if (sortBy === "neighborhood") {
+      sorted.sort((a, b) => {
+        const aNeighborhood = a.neighborhood || "ZZZ";
+        const bNeighborhood = b.neighborhood || "ZZZ";
+        if (aNeighborhood !== bNeighborhood) return aNeighborhood.localeCompare(bNeighborhood);
+        return a.name.localeCompare(b.name);
+      });
+    } else {
+      // Sort by category (spot_type), then by event count within category
+      sorted.sort((a, b) => {
+        const aType = a.spot_type || "other";
+        const bType = b.spot_type || "other";
+        const aOrder = SPOT_TYPE_ORDER.indexOf(aType);
+        const bOrder = SPOT_TYPE_ORDER.indexOf(bType);
+        const aIdx = aOrder === -1 ? 999 : aOrder;
+        const bIdx = bOrder === -1 ? 999 : bOrder;
+        if (aIdx !== bIdx) return aIdx - bIdx;
+        // Within same category, sort by event count then name
+        if ((b.event_count ?? 0) !== (a.event_count ?? 0)) {
           return (b.event_count ?? 0) - (a.event_count ?? 0);
-        case "neighborhood":
-          return (a.neighborhood || "ZZZ").localeCompare(b.neighborhood || "ZZZ");
-        default:
-          return 0;
-      }
-    });
-
-    // Group if needed
-    if (groupBy === "none") {
-      return [{ key: "all", label: null, spots: sorted }];
+        }
+        return a.name.localeCompare(b.name);
+      });
     }
+    return sorted;
+  }, [spots, sortBy]);
 
-    const groups = new Map<string, Spot[]>();
-    for (const spot of sorted) {
-      const key = groupBy === "category"
+  // Group spots by category or neighborhood for collapsible view
+  const groupedSpots = useMemo(() => {
+    if (sortBy === "alphabetical") return null;
+
+    const groups: Record<string, Spot[]> = {};
+    for (const spot of sortedSpots) {
+      const key = sortBy === "category"
         ? (spot.spot_type || "other")
         : (spot.neighborhood || "Other");
-      if (!groups.has(key)) {
-        groups.set(key, []);
-      }
-      groups.get(key)!.push(spot);
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(spot);
     }
 
-    // Sort groups by name
-    const sortedGroups = Array.from(groups.entries())
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([key, spots]) => ({
-        key,
-        label: groupBy === "category" ? getCategoryLabel(key) : key,
-        spots,
-      }));
-
-    return sortedGroups;
-  }, [spots, sortBy, groupBy]);
+    if (sortBy === "category") {
+      // Return in predefined order
+      return SPOT_TYPE_ORDER
+        .filter(type => groups[type]?.length > 0)
+        .map(type => ({
+          type,
+          spots: groups[type],
+          config: SPOT_TYPE_CONFIG[type] || SPOT_TYPE_CONFIG.other
+        }));
+    } else {
+      // Neighborhood - sort alphabetically
+      return Object.keys(groups)
+        .sort()
+        .map(neighborhood => ({
+          type: neighborhood,
+          spots: groups[neighborhood],
+          config: { label: neighborhood, color: "var(--muted)" }
+        }));
+    }
+  }, [sortedSpots, sortBy]);
 
   // Loading state - after hooks to follow Rules of Hooks
   if (loading) {
@@ -177,120 +307,119 @@ export default function PortalSpotsView({ portalId, portalSlug, isExclusive = fa
   }
 
   return (
-    <div className="py-4">
+    <div className="py-6">
       {/* Header with count and controls */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-        <p className="font-mono text-xs text-[var(--muted)]">
-          <span className="text-[var(--soft)]">{spots.length}</span> locations with upcoming events
-        </p>
-
-        {/* Sort and Group controls */}
-        <div className="flex items-center gap-2">
-          {/* Sort dropdown */}
-          <select
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value as SortOption)}
-            className="px-2.5 py-1.5 rounded-lg bg-[var(--twilight)]/50 border border-[var(--twilight)] text-[var(--soft)] font-mono text-xs focus:outline-none focus:border-[var(--coral)]/50 cursor-pointer"
-          >
-            <option value="event_count">Most Events</option>
-            <option value="alphabetical">A-Z</option>
-            <option value="neighborhood">Neighborhood</option>
-          </select>
-
-          {/* Group dropdown */}
-          <select
-            value={groupBy}
-            onChange={(e) => setGroupBy(e.target.value as GroupOption)}
-            className="px-2.5 py-1.5 rounded-lg bg-[var(--twilight)]/50 border border-[var(--twilight)] text-[var(--soft)] font-mono text-xs focus:outline-none focus:border-[var(--coral)]/50 cursor-pointer"
-          >
-            <option value="none">No Grouping</option>
-            <option value="category">By Category</option>
-            <option value="neighborhood">By Neighborhood</option>
-          </select>
+      <div className="mb-6">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h2 className="text-xl font-semibold text-[var(--cream)]">Places</h2>
+            <p className="text-sm text-[var(--muted)] mt-1">
+              <span className="text-[var(--soft)]">{spots.length}</span> locations with upcoming events
+            </p>
+          </div>
+          <div className="flex items-center gap-1">
+            <span className="font-mono text-[0.6rem] text-[var(--muted)] uppercase tracking-wider mr-2 hidden sm:inline">
+              Sort:
+            </span>
+            <button
+              onClick={() => setSortBy("category")}
+              className={`px-2 py-1 rounded font-mono text-[0.65rem] transition-all ${
+                sortBy === "category"
+                  ? "bg-[var(--coral)] text-[var(--void)]"
+                  : "bg-[var(--twilight)]/50 text-[var(--muted)] hover:text-[var(--cream)]"
+              }`}
+            >
+              Category
+            </button>
+            <button
+              onClick={() => setSortBy("neighborhood")}
+              className={`px-2 py-1 rounded font-mono text-[0.65rem] transition-all ${
+                sortBy === "neighborhood"
+                  ? "bg-[var(--coral)] text-[var(--void)]"
+                  : "bg-[var(--twilight)]/50 text-[var(--muted)] hover:text-[var(--cream)]"
+              }`}
+            >
+              Area
+            </button>
+            <button
+              onClick={() => setSortBy("alphabetical")}
+              className={`px-2 py-1 rounded font-mono text-[0.65rem] transition-all ${
+                sortBy === "alphabetical"
+                  ? "bg-[var(--coral)] text-[var(--void)]"
+                  : "bg-[var(--twilight)]/50 text-[var(--muted)] hover:text-[var(--cream)]"
+              }`}
+            >
+              A-Z
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Spots list with optional grouping */}
-      <div className="space-y-6">
-        {sortedAndGroupedSpots.map((group) => (
-          <div key={group.key}>
-            {/* Group header */}
-            {group.label && (
-              <div className="flex items-center gap-2 mb-3 pt-2">
-                {groupBy === "category" && (
-                  <CategoryIcon type={group.key} size={14} className="opacity-60" />
-                )}
-                <h3 className="font-mono text-xs font-medium text-[var(--muted)] uppercase tracking-wider">
-                  {group.label}
-                </h3>
-                <span className="font-mono text-[0.6rem] text-[var(--muted)]/60 bg-[var(--twilight)]/30 px-1.5 py-0.5 rounded">
-                  {group.spots.length}
-                </span>
-                <div className="flex-1 h-px bg-[var(--twilight)]/30" />
-              </div>
-            )}
+      {/* Spots list with collapsible grouping */}
+      {groupedSpots ? (
+        <div className="space-y-2">
+          {groupedSpots.map(({ type, spots: groupSpots, config }) => {
+            const isCollapsed = collapsedCategories.has(type);
 
-            {/* Spots in this group */}
-            <div className="space-y-2">
-              {group.spots.map((spot) => {
-                const categoryColor = spot.spot_type ? getCategoryColor(spot.spot_type) : "var(--coral)";
-                const reflectionClass = getReflectionClass(spot.spot_type);
-                return (
-                  <Link
-                    key={spot.id}
-                    href={`/${portalSlug}/spots/${spot.slug}`}
-                    className={`block p-4 rounded-lg border border-[var(--twilight)] card-atmospheric ${reflectionClass} group`}
-                    style={{
-                      backgroundColor: "var(--card-bg)",
-                      "--glow-color": categoryColor,
-                      "--reflection-color": `color-mix(in srgb, ${categoryColor} 15%, transparent)`,
-                    } as React.CSSProperties}
+            return (
+              <div key={type}>
+                {/* Collapsible Header */}
+                <button
+                  onClick={() => toggleCategory(type)}
+                  className="w-full flex items-center gap-2 py-3 px-1 group/header"
+                >
+                  {sortBy === "category" && (
+                    <div
+                      className="w-2 h-2 rounded-full"
+                      style={{ backgroundColor: config.color }}
+                    />
+                  )}
+                  <h3
+                    className="font-mono text-xs font-medium uppercase tracking-wider flex-1 text-left"
+                    style={{ color: sortBy === "category" ? config.color : "var(--muted)" }}
                   >
-                    <div className="flex items-start gap-3">
-                      {spot.spot_type && (
-                        <CategoryIcon
-                          type={spot.spot_type}
-                          size={18}
-                          className="flex-shrink-0 opacity-60 mt-0.5"
-                        />
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <div className="font-medium text-[var(--cream)] group-hover:text-[var(--glow-color,var(--coral))] transition-colors">
-                          {spot.name}
-                        </div>
-                        <div className="flex items-center gap-2 font-mono text-xs text-[var(--muted)] mt-1">
-                          {spot.spot_type && (
-                            <span>{getCategoryLabel(spot.spot_type)}</span>
-                          )}
-                          {spot.neighborhood && (
-                            <>
-                              <span className="opacity-40">·</span>
-                              <span>{spot.neighborhood}</span>
-                            </>
-                          )}
-                          {(spot.event_count ?? 0) > 0 && (
-                            <>
-                              <span className="opacity-40">·</span>
-                              <span className="text-[var(--coral)]">
-                                {spot.event_count} upcoming event{spot.event_count !== 1 ? "s" : ""}
-                              </span>
-                            </>
-                          )}
-                        </div>
-                        {spot.address && (
-                          <div className="font-mono text-[0.65rem] text-[var(--muted)] mt-1 opacity-60">
-                            {spot.address}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </Link>
-                );
-              })}
-            </div>
-          </div>
-        ))}
-      </div>
+                    {config.label}
+                  </h3>
+                  <span className="font-mono text-[0.6rem] text-[var(--muted)] mr-2">
+                    {groupSpots.length}
+                  </span>
+                  <svg
+                    className={`w-4 h-4 text-[var(--muted)] transition-transform ${isCollapsed ? "" : "rotate-180"}`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+
+                {/* Collapsible Content */}
+                {!isCollapsed && (
+                  <div className="space-y-2 pb-4">
+                    {groupSpots.map((spot) => (
+                      <SpotCard
+                        key={spot.id}
+                        spot={spot}
+                        portalSlug={portalSlug}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {sortedSpots.map((spot) => (
+            <SpotCard
+              key={spot.id}
+              spot={spot}
+              portalSlug={portalSlug}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

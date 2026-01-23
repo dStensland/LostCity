@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
-import { useCallback, useMemo, useState, useEffect, useRef } from "react";
+import { useCallback, useMemo, useState, useEffect, useRef, useTransition } from "react";
 import { CATEGORIES, SUBCATEGORIES, DATE_FILTERS, PRICE_FILTERS, TAG_GROUPS, type AvailableFilters } from "@/lib/search";
 import { PREFERENCE_VIBES, PREFERENCE_NEIGHBORHOODS } from "@/lib/preferences";
 import { MOODS, getMoodById, type MoodId } from "@/lib/moods";
@@ -130,6 +130,10 @@ export default function FilterBar({ variant = "full" }: FilterBarProps) {
   const searchParams = useSearchParams();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const drawerContentRef = useRef<HTMLDivElement>(null);
+  const [isPending, startTransition] = useTransition();
+
+  // Optimistic view state for instant UI feedback
+  const [optimisticView, setOptimisticView] = useState<string | null>(null);
 
   // Available filters from API (dynamically generated from events)
   const [availableFilters, setAvailableFilters] = useState<AvailableFilters | null>(null);
@@ -207,8 +211,16 @@ export default function FilterBar({ variant = "full" }: FilterBarProps) {
     });
   }, []);
 
-  // View mode (list or map)
-  const currentView = searchParams.get("view") || "events";
+  // View mode (list or map) - use optimistic state when pending for instant feedback
+  const urlView = searchParams.get("view") || "events";
+  const currentView = optimisticView || urlView;
+
+  // Reset optimistic state when URL catches up
+  useEffect(() => {
+    if (optimisticView && urlView === optimisticView) {
+      setOptimisticView(null);
+    }
+  }, [urlView, optimisticView]);
 
   // Custom range states
   const [showDateRange, setShowDateRange] = useState(false);
@@ -309,9 +321,12 @@ export default function FilterBar({ variant = "full" }: FilterBarProps) {
       }
       params.delete("page");
       const newUrl = params.toString() ? `${pathname}?${params.toString()}` : pathname;
-      router.push(newUrl, { scroll: false });
+      // Use startTransition to make navigation non-blocking for instant UI feedback
+      startTransition(() => {
+        router.push(newUrl, { scroll: false });
+      });
     },
-    [router, pathname, searchParams]
+    [router, pathname, searchParams, startTransition]
   );
 
   const toggleCategory = useCallback(
@@ -482,7 +497,9 @@ export default function FilterBar({ variant = "full" }: FilterBarProps) {
   }, [updateParams]);
 
   const setViewMode = useCallback(
-    (view: "events" | "map") => {
+    (view: "events" | "map" | "calendar") => {
+      // Optimistically update UI immediately
+      setOptimisticView(view);
       updateParams({ view });
     },
     [updateParams]
@@ -803,7 +820,7 @@ export default function FilterBar({ variant = "full" }: FilterBarProps) {
                 <span className="hidden sm:inline">List</span>
               </button>
               <button
-                onClick={() => updateParams({ view: "calendar" })}
+                onClick={() => setViewMode("calendar")}
                 className={`flex items-center gap-1 px-2.5 py-1 rounded-full font-mono text-xs font-medium transition-all ${
                   currentView === "calendar"
                     ? "bg-[var(--cream)] text-[var(--void)]"

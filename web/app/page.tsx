@@ -2,6 +2,7 @@ import Link from "next/link";
 import Logo from "@/components/Logo";
 import CategoryIcon from "@/components/CategoryIcon";
 import { getPlatformStats } from "@/lib/supabase";
+import { DEFAULT_PORTAL_SLUG, DEFAULT_PORTAL_NAME } from "@/lib/constants";
 
 // Disable caching for this page
 export const dynamic = "force-dynamic";
@@ -39,13 +40,13 @@ export default async function Home() {
 
         <Logo size="lg" href={undefined} />
         <p className="font-serif text-[var(--muted)] mt-4 mb-8 text-lg text-center max-w-md">
-          Find what&apos;s happening tonight in Atlanta
+          Find what&apos;s happening tonight in {DEFAULT_PORTAL_NAME}
         </p>
         <Link
-          href="/atlanta"
+          href={`/${DEFAULT_PORTAL_SLUG}`}
           className="px-8 py-4 bg-[var(--coral)]/90 text-[var(--cream)] rounded-lg font-medium transition-all text-lg hover:bg-[var(--coral)] hover:shadow-[0_0_30px_rgba(255,107,122,0.5)] hover:scale-[1.02] active:scale-[0.98]"
         >
-          Explore Atlanta
+          Explore {DEFAULT_PORTAL_NAME}
         </Link>
       </div>
 
@@ -141,7 +142,7 @@ export default async function Home() {
             {FEATURED_CATEGORIES.map((category) => (
               <Link
                 key={category.type}
-                href={`/atlanta?category=${category.type}`}
+                href={`/${DEFAULT_PORTAL_SLUG}?category=${category.type}`}
                 className="flex flex-col items-center p-4 rounded-lg border border-[var(--twilight)] transition-all hover:border-[var(--coral)]/40 hover:-translate-y-0.5 group"
                 style={{ backgroundColor: "var(--card-bg)" }}
               >
@@ -163,7 +164,7 @@ export default async function Home() {
       {/* Footer hint */}
       <div className="mt-auto px-4 py-6 text-center border-t border-[var(--twilight)]">
         <p className="font-mono text-[0.55rem] text-[var(--muted)] opacity-60">
-          AI-powered event discovery for Atlanta
+          AI-powered event discovery for {DEFAULT_PORTAL_NAME}
         </p>
       </div>
     </div>

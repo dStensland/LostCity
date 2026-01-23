@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import Logo from "@/components/Logo";
 import { useAuth } from "@/lib/auth-context";
+import { DEFAULT_PORTAL_SLUG } from "@/lib/portal-context";
 
 type InviterProfile = {
   id: string;
@@ -125,7 +126,7 @@ export default function InvitePage({ params }: Props) {
             This invite link is no longer valid or the user doesn&apos;t exist.
           </p>
           <Link
-            href="/atlanta"
+            href={`/${DEFAULT_PORTAL_SLUG}`}
             className="inline-block bg-[var(--coral)] text-[var(--night)] px-6 py-3 rounded font-medium hover:opacity-90"
           >
             Go to Home
@@ -293,7 +294,7 @@ export default function InvitePage({ params }: Props) {
                   {inviter.display_name || `@${inviter.username}`}
                 </p>
                 <Link
-                  href="/atlanta"
+                  href={`/${DEFAULT_PORTAL_SLUG}`}
                   className="inline-block bg-[var(--coral)] text-[var(--night)] px-6 py-3 rounded font-medium hover:opacity-90"
                 >
                   Explore Events

@@ -5,8 +5,9 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { format, parseISO } from "date-fns";
 import { formatTimeSplit } from "@/lib/formats";
-import PageHeader from "@/components/PageHeader";
+import UnifiedHeader from "@/components/UnifiedHeader";
 import PageFooter from "@/components/PageFooter";
+import { DEFAULT_PORTAL_SLUG } from "@/lib/constants";
 
 export const revalidate = 60;
 
@@ -80,7 +81,7 @@ export default async function SpotPage({ params }: Props) {
       />
 
       <div className="min-h-screen">
-        <PageHeader showSpots />
+        <UnifiedHeader backLink={{ href: `/${DEFAULT_PORTAL_SLUG}?view=spots`, label: "Places" }} />
 
         <main className="max-w-3xl mx-auto px-4 py-8">
           {/* Spot image */}

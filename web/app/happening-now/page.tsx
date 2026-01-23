@@ -8,6 +8,7 @@ import Link from "next/link";
 import { formatTime } from "@/lib/formats";
 import CategoryIcon, { getCategoryColor, getCategoryLabel } from "@/components/CategoryIcon";
 import { SPOT_TYPES, NEIGHBORHOODS, type Spot } from "@/lib/spots";
+import { DEFAULT_PORTAL_SLUG } from "@/lib/portal-context";
 
 // Dynamically import components
 const GlassHeader = dynamic(() => import("@/components/GlassHeader"), { ssr: false });
@@ -377,7 +378,7 @@ export default function HappeningNowPage() {
               Check back later or browse upcoming events
             </p>
             <Link
-              href="/atlanta"
+              href={`/${DEFAULT_PORTAL_SLUG}`}
               className="inline-block px-4 py-2 bg-[var(--twilight)]/30 rounded-lg font-mono text-sm text-[var(--cream)] hover:bg-[var(--twilight)]/50 transition-colors"
             >
               Browse events

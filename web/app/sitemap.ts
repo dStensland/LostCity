@@ -1,5 +1,6 @@
 import { MetadataRoute } from "next";
 import { createClient } from "@/lib/supabase/server";
+import { DEFAULT_PORTAL_SLUG } from "@/lib/constants";
 
 const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://lostcity.ai";
 
@@ -19,7 +20,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 1,
     },
     {
-      url: `${BASE_URL}/atlanta`,
+      url: `${BASE_URL}/${DEFAULT_PORTAL_SLUG}`,
       lastModified: new Date(),
       changeFrequency: "hourly",
       priority: 0.9,

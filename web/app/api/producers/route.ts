@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
+import { applyRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 
 type Producer = {
   id: string;
@@ -16,6 +17,10 @@ type Producer = {
 };
 
 export async function GET(request: NextRequest) {
+  // Rate limit: read endpoint
+  const rateLimitResult = applyRateLimit(request, RATE_LIMITS.read);
+  if (rateLimitResult) return rateLimitResult;
+
   const searchParams = request.nextUrl.searchParams;
 
   try {
@@ -53,7 +58,15 @@ export async function GET(request: NextRequest) {
       event_count: eventCounts[p.id] || 0,
     }));
 
-    return NextResponse.json({ producers: producersWithCounts });
+    return NextResponse.json(
+      { producers: producersWithCounts },
+      {
+        headers: {
+          // Producers rarely change - cache for 5 minutes
+          "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600",
+        },
+      }
+    );
   } catch (err) {
     console.error("Error in producers API:", err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

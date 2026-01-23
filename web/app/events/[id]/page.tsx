@@ -2,6 +2,7 @@ import { getEventById, getRelatedEvents, getSimilarEvents } from "@/lib/supabase
 import { getNearbySpots, getSpotTypeLabel } from "@/lib/spots";
 import { getPortalById } from "@/lib/portal";
 import { getSeriesTypeLabel, getSeriesTypeColor } from "@/lib/series";
+import { DEFAULT_PORTAL_SLUG, DEFAULT_PORTAL_NAME } from "@/lib/constants";
 import Image from "next/image";
 import CategoryIcon from "@/components/CategoryIcon";
 import RSVPButton from "@/components/RSVPButton";
@@ -10,7 +11,7 @@ import FollowButton from "@/components/FollowButton";
 import FriendsGoing from "@/components/FriendsGoing";
 import WhosGoing from "@/components/WhosGoing";
 import LiveIndicator from "@/components/LiveIndicator";
-import PageHeader from "@/components/PageHeader";
+import UnifiedHeader from "@/components/UnifiedHeader";
 import PageFooter from "@/components/PageFooter";
 import { PortalTheme } from "@/components/PortalTheme";
 import { format, parseISO } from "date-fns";
@@ -133,8 +134,8 @@ export default async function EventPage({ params }: Props) {
   // Get portal if event is portal-specific
   const portalId = (event as { portal_id?: string }).portal_id;
   const portal = portalId ? await getPortalById(portalId) : null;
-  const portalSlug = portal?.slug || "atlanta";
-  const portalName = portal?.name || "Atlanta";
+  const portalSlug = portal?.slug || DEFAULT_PORTAL_SLUG;
+  const portalName = portal?.name || DEFAULT_PORTAL_NAME;
 
   const [{ venueEvents, sameDateEvents }, similarEvents] = await Promise.all([
     getRelatedEvents(event),
@@ -159,7 +160,11 @@ export default async function EventPage({ params }: Props) {
       {portal && <PortalTheme portal={portal} />}
 
       <div className="min-h-screen">
-        <PageHeader showEvents citySlug={portalSlug} cityName={portalName} />
+        <UnifiedHeader
+          portalSlug={portalSlug}
+          portalName={portalName}
+          backLink={{ href: `/${portalSlug}?view=events`, label: "Events" }}
+        />
 
         <main className="max-w-3xl mx-auto px-4 py-8">
           {/* Event image */}
@@ -330,6 +335,7 @@ export default async function EventPage({ params }: Props) {
                         width={48}
                         height={48}
                         className="rounded-lg object-cover flex-shrink-0"
+                        unoptimized
                       />
                     ) : (
                       <div className="w-12 h-12 rounded-lg bg-[var(--twilight)] flex items-center justify-center flex-shrink-0">

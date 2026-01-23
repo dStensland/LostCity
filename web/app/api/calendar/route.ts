@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { startOfMonth, endOfMonth, startOfWeek, endOfWeek, format } from "date-fns";
+import { applyRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 
 /**
  * Calendar API - Optimized endpoint for calendar view
@@ -18,6 +19,10 @@ import { startOfMonth, endOfMonth, startOfWeek, endOfWeek, format } from "date-f
  * - portal_exclusive: If true, only show portal's own events
  */
 export async function GET(request: NextRequest) {
+  // Rate limit: expensive endpoint with pagination
+  const rateLimitResult = applyRateLimit(request, RATE_LIMITS.expensive);
+  if (rateLimitResult) return rateLimitResult;
+
   const searchParams = request.nextUrl.searchParams;
 
   // Parse month/year - default to current
@@ -106,7 +111,8 @@ export async function GET(request: NextRequest) {
     if (portalExclusive && portalId) {
       query = query.eq("portal_id", portalId);
     } else if (portalId) {
-      query = query.or(`portal_id.is.null,portal_id.eq.${portalId}`);
+      // Escape portalId to prevent PostgREST injection
+      query = query.or(`portal_id.is.null,portal_id.eq."${portalId.replace(/"/g, "")}"`);
     }
 
     return query;

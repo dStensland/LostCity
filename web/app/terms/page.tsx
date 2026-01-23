@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import PageHeader from "@/components/PageHeader";
+import UnifiedHeader from "@/components/UnifiedHeader";
 import PageFooter from "@/components/PageFooter";
+
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Terms of Service | Lost City",
@@ -11,7 +13,7 @@ export const metadata: Metadata = {
 export default function TermsOfServicePage() {
   return (
     <div className="min-h-screen flex flex-col">
-      <PageHeader />
+      <UnifiedHeader />
 
       <main className="flex-1 max-w-3xl mx-auto px-4 py-12">
         <h1 className="text-3xl font-bold text-[var(--cream)] mb-2">Terms of Service</h1>

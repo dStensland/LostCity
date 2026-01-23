@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import PageHeader from "@/components/PageHeader";
+import UnifiedHeader from "@/components/UnifiedHeader";
 import { useAuth } from "@/lib/auth-context";
 import { createClient } from "@/lib/supabase/client";
 import {
@@ -148,7 +148,7 @@ export default function NotificationsPage() {
   if (authLoading || loading) {
     return (
       <div className="min-h-screen">
-        <PageHeader />
+        <UnifiedHeader />
         <main className="max-w-2xl mx-auto px-4 py-8">
           <div className="animate-pulse">
             <div className="h-8 w-48 bg-[var(--twilight)] rounded mb-8" />
@@ -166,7 +166,7 @@ export default function NotificationsPage() {
   if (!user) {
     return (
       <div className="min-h-screen">
-        <PageHeader />
+        <UnifiedHeader />
         <main className="max-w-2xl mx-auto px-4 py-8 text-center">
           <p className="text-[var(--muted)]">Please sign in to manage notifications.</p>
           <Link href="/auth/login" className="mt-4 inline-block text-[var(--coral)]">
@@ -179,7 +179,7 @@ export default function NotificationsPage() {
 
   return (
     <div className="min-h-screen">
-      <PageHeader />
+      <UnifiedHeader />
 
       <main className="max-w-2xl mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-8">

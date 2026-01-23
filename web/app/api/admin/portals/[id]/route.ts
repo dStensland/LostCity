@@ -1,5 +1,6 @@
 import { createClient, isAdmin, canManagePortal } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
+import { DEFAULT_PORTAL_SLUG } from "@/lib/constants";
 
 export const dynamic = "force-dynamic";
 
@@ -162,8 +163,8 @@ export async function DELETE(request: NextRequest, { params }: Props) {
     return NextResponse.json({ error: "Portal not found" }, { status: 404 });
   }
 
-  // Don't allow deleting the main atlanta portal
-  if (portal.slug === "atlanta") {
+  // Don't allow deleting the main city portal
+  if (portal.slug === DEFAULT_PORTAL_SLUG) {
     return NextResponse.json({ error: "Cannot delete the main city portal" }, { status: 403 });
   }
 

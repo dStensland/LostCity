@@ -1,9 +1,9 @@
-import PageHeader from "@/components/PageHeader";
+import UnifiedHeader from "@/components/UnifiedHeader";
 
 export default function ProfileLoading() {
   return (
     <div className="min-h-screen bg-[var(--void)]">
-      <PageHeader />
+      <UnifiedHeader />
 
       <main className="max-w-2xl mx-auto px-4 py-8">
         {/* Profile header skeleton */}

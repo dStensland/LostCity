@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import CategoryIcon, { getCategoryColor } from "@/components/CategoryIcon";
@@ -31,16 +31,187 @@ const ORG_TYPE_CONFIG: Record<string, { label: string; color: string }> = {
   festival: { label: "Festival", color: "#F9A8D4" },
 };
 
+// Order for category sorting
+const ORG_TYPE_ORDER = [
+  "arts_nonprofit",
+  "film_society",
+  "community_group",
+  "running_club",
+  "cultural_org",
+  "food_festival",
+  "venue",
+  "festival",
+];
+
 interface Props {
   portalId: string;
   portalSlug: string;
   portalName: string;
 }
 
+// Producer card component
+function ProducerCard({
+  producer,
+  portalSlug,
+  orgConfig,
+}: {
+  producer: Producer;
+  portalSlug: string;
+  orgConfig: { label: string; color: string } | undefined;
+}) {
+  const hasEvents = (producer.event_count ?? 0) > 0;
+
+  return (
+    <Link
+      href={`/${portalSlug}/community/${producer.slug}`}
+      className="block p-5 rounded-xl border border-[var(--twilight)] card-atmospheric group"
+      style={{
+        backgroundColor: "var(--card-bg)",
+        "--glow-color": orgConfig?.color || "var(--coral)",
+        "--reflection-color": orgConfig?.color ? `color-mix(in srgb, ${orgConfig.color} 15%, transparent)` : undefined,
+      } as React.CSSProperties}
+    >
+      <div className="flex items-start gap-4">
+        {/* Logo */}
+        <div className="flex-shrink-0">
+          {producer.logo_url ? (
+            <div className="w-[72px] h-[72px] rounded-xl bg-white flex items-center justify-center overflow-hidden">
+              <Image
+                src={producer.logo_url}
+                alt={producer.name}
+                width={72}
+                height={72}
+                className="object-contain"
+                style={{ width: 72, height: 72 }}
+                unoptimized
+              />
+            </div>
+          ) : (
+            <div
+              className="w-[72px] h-[72px] rounded-xl flex items-center justify-center"
+              style={{
+                backgroundColor: producer.categories?.[0]
+                  ? `${getCategoryColor(producer.categories[0])}20`
+                  : "var(--twilight)",
+              }}
+            >
+              <CategoryIcon
+                type={producer.categories?.[0] || "community"}
+                size={32}
+                glow="subtle"
+              />
+            </div>
+          )}
+        </div>
+
+        {/* Info */}
+        <div className="flex-1 min-w-0">
+          <div>
+            <h3 className="text-lg text-[var(--cream)] font-medium truncate transition-colors group-hover:text-[var(--glow-color)]">
+              {producer.name}
+            </h3>
+            <div className="flex items-center gap-2 mt-1">
+              <span
+                className="inline-flex items-center px-2 py-0.5 rounded-md text-[0.65rem] font-mono font-medium uppercase tracking-wider"
+                style={{
+                  backgroundColor: orgConfig?.color ? `${orgConfig.color}20` : "var(--twilight)",
+                  color: orgConfig?.color || "var(--muted)",
+                }}
+              >
+                {orgConfig?.label || producer.org_type.replace(/_/g, " ")}
+              </span>
+            </div>
+          </div>
+
+          {hasEvents && (
+            <div className="mt-3 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[var(--coral)]/10 border border-[var(--coral)]/20">
+              <svg className="w-4 h-4 text-[var(--coral)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              <span className="text-[var(--coral)] font-mono text-sm font-medium">
+                {producer.event_count} upcoming event{producer.event_count !== 1 ? "s" : ""}
+              </span>
+            </div>
+          )}
+
+          {producer.categories && producer.categories.length > 0 && (
+            <div className="mt-3 flex flex-wrap gap-1.5">
+              {producer.categories.slice(0, 5).map((cat) => {
+                const color = getCategoryColor(cat);
+                return (
+                  <span
+                    key={cat}
+                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[0.6rem] font-mono uppercase tracking-wider"
+                    style={{
+                      backgroundColor: `${color}15`,
+                      color: color,
+                    }}
+                  >
+                    <CategoryIcon type={cat} size={10} glow="none" />
+                    {cat.replace(/_/g, " ")}
+                  </span>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+    </Link>
+  );
+}
+
 export default function PortalCommunityView({ portalId, portalSlug, portalName }: Props) {
   const [producers, setProducers] = useState<Producer[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [sortBy, setSortBy] = useState<"category" | "alphabetical">("category");
+  const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
+
+  const toggleCategory = (orgType: string) => {
+    setCollapsedCategories(prev => {
+      const next = new Set(prev);
+      if (next.has(orgType)) {
+        next.delete(orgType);
+      } else {
+        next.add(orgType);
+      }
+      return next;
+    });
+  };
+
+  // Sort producers based on selected sort option
+  const sortedProducers = useMemo(() => {
+    const sorted = [...producers];
+    if (sortBy === "alphabetical") {
+      sorted.sort((a, b) => a.name.localeCompare(b.name));
+    } else {
+      // Sort by category (org_type), then by name within category
+      sorted.sort((a, b) => {
+        const aOrder = ORG_TYPE_ORDER.indexOf(a.org_type);
+        const bOrder = ORG_TYPE_ORDER.indexOf(b.org_type);
+        const aIdx = aOrder === -1 ? 999 : aOrder;
+        const bIdx = bOrder === -1 ? 999 : bOrder;
+        if (aIdx !== bIdx) return aIdx - bIdx;
+        return a.name.localeCompare(b.name);
+      });
+    }
+    return sorted;
+  }, [producers, sortBy]);
+
+  // Group producers by category for collapsible view
+  const groupedProducers = useMemo(() => {
+    if (sortBy !== "category") return null;
+    const groups: Record<string, Producer[]> = {};
+    for (const producer of sortedProducers) {
+      const orgType = producer.org_type;
+      if (!groups[orgType]) groups[orgType] = [];
+      groups[orgType].push(producer);
+    }
+    // Return in order
+    return ORG_TYPE_ORDER
+      .filter(type => groups[type]?.length > 0)
+      .map(type => ({ type, producers: groups[type] }));
+  }, [sortedProducers, sortBy]);
 
   useEffect(() => {
     async function loadProducers() {
@@ -119,124 +290,109 @@ export default function PortalCommunityView({ portalId, portalSlug, portalName }
   return (
     <div className="py-6">
       <div className="mb-6">
-        <h2 className="text-xl font-semibold text-[var(--cream)]">Community</h2>
-        <p className="text-sm text-[var(--muted)] mt-1">
-          Organizations and producers creating events in {portalName}
-        </p>
-      </div>
-
-      <div className="space-y-4">
-        {producers.map((producer) => {
-          const orgConfig = ORG_TYPE_CONFIG[producer.org_type];
-          const hasEvents = (producer.event_count ?? 0) > 0;
-
-          return (
-            <Link
-              key={producer.id}
-              href={`/${portalSlug}/community/${producer.slug}`}
-              className="block p-5 rounded-xl border border-[var(--twilight)] card-atmospheric group"
-              style={{
-                backgroundColor: "var(--card-bg)",
-                "--glow-color": orgConfig?.color || "var(--coral)",
-                "--reflection-color": orgConfig?.color ? `color-mix(in srgb, ${orgConfig.color} 15%, transparent)` : undefined,
-              } as React.CSSProperties}
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h2 className="text-xl font-semibold text-[var(--cream)]">Community</h2>
+            <p className="text-sm text-[var(--muted)] mt-1">
+              <span className="text-[var(--soft)]">{producers.length}</span> organizations creating events in {portalName}
+            </p>
+          </div>
+          <div className="flex items-center gap-1">
+            <span className="font-mono text-[0.6rem] text-[var(--muted)] uppercase tracking-wider mr-2 hidden sm:inline">
+              Sort:
+            </span>
+            <button
+              onClick={() => setSortBy("category")}
+              className={`px-2 py-1 rounded font-mono text-[0.65rem] transition-all ${
+                sortBy === "category"
+                  ? "bg-[var(--coral)] text-[var(--void)]"
+                  : "bg-[var(--twilight)]/50 text-[var(--muted)] hover:text-[var(--cream)]"
+              }`}
             >
-              <div className="flex items-start gap-4">
-                {/* Logo */}
-                <div className="flex-shrink-0">
-                  {producer.logo_url ? (
-                    <Image
-                      src={producer.logo_url}
-                      alt={producer.name}
-                      width={72}
-                      height={72}
-                      className="rounded-xl object-cover"
-                      style={{ width: 72, height: 72 }}
-                    />
-                  ) : (
-                    <div
-                      className="w-[72px] h-[72px] rounded-xl flex items-center justify-center relative overflow-hidden"
-                      style={{
-                        background: orgConfig?.color
-                          ? `linear-gradient(135deg, ${orgConfig.color}30, ${orgConfig.color}10)`
-                          : "linear-gradient(135deg, var(--twilight), var(--dusk))",
-                      }}
-                    >
-                      {/* Initials */}
-                      <span
-                        className="text-xl font-bold uppercase"
-                        style={{ color: orgConfig?.color || "var(--muted)" }}
-                      >
-                        {producer.name.split(" ").slice(0, 2).map(w => w[0]).join("")}
-                      </span>
-                      {/* Decorative gradient overlay */}
-                      <div
-                        className="absolute inset-0 opacity-20"
-                        style={{
-                          background: `radial-gradient(circle at top right, ${orgConfig?.color || "var(--coral)"}, transparent 70%)`,
-                        }}
-                      />
-                    </div>
-                  )}
-                </div>
-
-                {/* Info */}
-                <div className="flex-1 min-w-0">
-                  <div>
-                    <h3 className="text-lg text-[var(--cream)] font-medium truncate group-hover:text-[var(--coral)] transition-colors">
-                      {producer.name}
-                    </h3>
-                    <div className="flex items-center gap-2 mt-1">
-                      <span
-                        className="inline-flex items-center px-2 py-0.5 rounded-md text-[0.65rem] font-mono font-medium uppercase tracking-wider"
-                        style={{
-                          backgroundColor: orgConfig?.color ? `${orgConfig.color}20` : "var(--twilight)",
-                          color: orgConfig?.color || "var(--muted)",
-                        }}
-                      >
-                        {orgConfig?.label || producer.org_type.replace(/_/g, " ")}
-                      </span>
-                    </div>
-                  </div>
-
-                  {hasEvents && (
-                    <div className="mt-3 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[var(--coral)]/10 border border-[var(--coral)]/20">
-                      <svg className="w-4 h-4 text-[var(--coral)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                      </svg>
-                      <span className="text-[var(--coral)] font-mono text-sm font-medium">
-                        {producer.event_count} upcoming event{producer.event_count !== 1 ? "s" : ""}
-                      </span>
-                    </div>
-                  )}
-
-
-                  {producer.categories && producer.categories.length > 0 && (
-                    <div className="mt-3 flex flex-wrap gap-1.5">
-                      {producer.categories.slice(0, 5).map((cat) => {
-                        const color = getCategoryColor(cat);
-                        return (
-                          <span
-                            key={cat}
-                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[0.6rem] font-mono uppercase tracking-wider"
-                            style={{
-                              backgroundColor: `${color}15`,
-                              color: color,
-                            }}
-                          >
-                            <CategoryIcon type={cat} size={10} glow="none" />
-                            {cat.replace(/_/g, " ")}
-                          </span>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </Link>
-          );
-        })}
+              Category
+            </button>
+            <button
+              onClick={() => setSortBy("alphabetical")}
+              className={`px-2 py-1 rounded font-mono text-[0.65rem] transition-all ${
+                sortBy === "alphabetical"
+                  ? "bg-[var(--coral)] text-[var(--void)]"
+                  : "bg-[var(--twilight)]/50 text-[var(--muted)] hover:text-[var(--cream)]"
+              }`}
+            >
+              A-Z
+            </button>
+          </div>
+        </div>
       </div>
+
+      {sortBy === "category" && groupedProducers ? (
+        <div className="space-y-2">
+          {groupedProducers.map(({ type, producers: groupProducers }) => {
+            const orgConfig = ORG_TYPE_CONFIG[type];
+            const isCollapsed = collapsedCategories.has(type);
+
+            return (
+              <div key={type}>
+                {/* Collapsible Category Header */}
+                <button
+                  onClick={() => toggleCategory(type)}
+                  className="w-full flex items-center gap-2 py-3 px-1 group/header"
+                >
+                  <div
+                    className="w-2 h-2 rounded-full"
+                    style={{ backgroundColor: orgConfig?.color || "var(--muted)" }}
+                  />
+                  <h3
+                    className="font-mono text-xs font-medium uppercase tracking-wider flex-1 text-left"
+                    style={{ color: orgConfig?.color || "var(--muted)" }}
+                  >
+                    {orgConfig?.label || type.replace(/_/g, " ")}
+                  </h3>
+                  <span className="font-mono text-[0.6rem] text-[var(--muted)] mr-2">
+                    {groupProducers.length}
+                  </span>
+                  <svg
+                    className={`w-4 h-4 text-[var(--muted)] transition-transform ${isCollapsed ? "" : "rotate-180"}`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+
+                {/* Collapsible Content */}
+                {!isCollapsed && (
+                  <div className="space-y-3 pb-4">
+                    {groupProducers.map((producer) => (
+                      <ProducerCard
+                        key={producer.id}
+                        producer={producer}
+                        portalSlug={portalSlug}
+                        orgConfig={orgConfig}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {sortedProducers.map((producer) => {
+            const orgConfig = ORG_TYPE_CONFIG[producer.org_type];
+            return (
+              <ProducerCard
+                key={producer.id}
+                producer={producer}
+                portalSlug={portalSlug}
+                orgConfig={orgConfig}
+              />
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

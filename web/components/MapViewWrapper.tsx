@@ -1,8 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
+import { useMapEvents } from "@/lib/hooks/useMapEvents";
 import type { EventWithLocation } from "@/lib/search";
 
 const MapView = dynamic(() => import("./MapView"), {
@@ -18,104 +17,25 @@ const MapView = dynamic(() => import("./MapView"), {
 });
 
 interface Props {
+  // If events are provided directly, use them (e.g., happening-now page)
   events?: EventWithLocation[];
   userLocation?: { lat: number; lng: number } | null;
+  // If no events provided, fetch using these params
   portalId?: string;
   portalExclusive?: boolean;
 }
 
-export default function MapViewWrapper({ events: initialEvents, userLocation, portalId, portalExclusive }: Props) {
-  const [events, setEvents] = useState<EventWithLocation[]>(initialEvents || []);
-  const [loading, setLoading] = useState(!initialEvents);
-  const searchParams = useSearchParams();
+export default function MapViewWrapper({ events: providedEvents, userLocation, portalId, portalExclusive }: Props) {
+  // Only use the hook if events aren't provided directly
+  const { events: fetchedEvents, isLoading } = useMapEvents({
+    portalId,
+    portalExclusive,
+    enabled: !providedEvents, // Skip fetching if events are provided
+  });
 
-  // Fetch events client-side if not provided
-  useEffect(() => {
-    // Skip if we have initial events
-    if (initialEvents && initialEvents.length > 0) {
-      return;
-    }
-
-    const controller = new AbortController();
-
-    async function fetchMapEvents() {
-      setLoading(true);
-
-      const params = new URLSearchParams(searchParams.toString());
-      params.delete("view");
-      params.set("for_map", "true");
-
-      if (portalId && portalId !== "default") {
-        params.set("portal_id", portalId);
-      }
-      if (portalExclusive) {
-        params.set("portal_exclusive", "true");
-      }
-
-      try {
-        const res = await fetch(`/api/events?${params}`, {
-          signal: controller.signal,
-        });
-
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-
-        const data = await res.json();
-        setEvents(data.events || []);
-      } catch (error) {
-        if (error instanceof Error && error.name === "AbortError") return;
-        console.error("Failed to fetch map events:", error);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    fetchMapEvents();
-
-    return () => controller.abort();
-  }, [searchParams, portalId, portalExclusive, initialEvents]);
-
-  // Refetch when filters change
-  useEffect(() => {
-    // Skip initial mount or if we have server data
-    if (initialEvents) return;
-
-    const controller = new AbortController();
-
-    async function refetch() {
-      setLoading(true);
-
-      const params = new URLSearchParams(searchParams.toString());
-      params.delete("view");
-      params.set("for_map", "true");
-
-      if (portalId && portalId !== "default") {
-        params.set("portal_id", portalId);
-      }
-      if (portalExclusive) {
-        params.set("portal_exclusive", "true");
-      }
-
-      try {
-        const res = await fetch(`/api/events?${params}`, {
-          signal: controller.signal,
-        });
-
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-
-        const data = await res.json();
-        setEvents(data.events || []);
-      } catch (error) {
-        if (error instanceof Error && error.name === "AbortError") return;
-        console.error("Failed to fetch map events:", error);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    refetch();
-
-    return () => controller.abort();
-  }, [searchParams, portalId, portalExclusive, initialEvents]);
+  // Use provided events if available, otherwise use fetched events
+  const events = providedEvents || fetchedEvents;
+  const loading = !providedEvents && isLoading;
 
   if (loading && events.length === 0) {
     return (

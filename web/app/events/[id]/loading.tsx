@@ -1,9 +1,9 @@
-import PageHeader from "@/components/PageHeader";
+import UnifiedHeader from "@/components/UnifiedHeader";
 
 export default function EventLoading() {
   return (
     <div className="min-h-screen">
-      <PageHeader />
+      <UnifiedHeader />
 
       <main className="max-w-3xl mx-auto px-4 py-8">
         {/* Image skeleton */}

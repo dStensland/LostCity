@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -55,6 +55,18 @@ function getDomainFromUrl(url: string): string {
   }
 }
 
+// Order for category sorting
+const ORG_TYPE_ORDER = [
+  "arts_nonprofit",
+  "film_society",
+  "community_group",
+  "running_club",
+  "cultural_org",
+  "food_festival",
+  "venue",
+  "festival",
+];
+
 export default function CommunityContent({
   producers,
   selectedType,
@@ -64,6 +76,26 @@ export default function CommunityContent({
   const router = useRouter();
   const searchParams = useSearchParams();
   const [search, setSearch] = useState(searchQuery);
+  const [sortBy, setSortBy] = useState<"category" | "alphabetical">("category");
+
+  // Sort producers based on selected sort option
+  const sortedProducers = useMemo(() => {
+    const sorted = [...producers];
+    if (sortBy === "alphabetical") {
+      sorted.sort((a, b) => a.name.localeCompare(b.name));
+    } else {
+      // Sort by category (org_type), then by name within category
+      sorted.sort((a, b) => {
+        const aOrder = ORG_TYPE_ORDER.indexOf(a.org_type);
+        const bOrder = ORG_TYPE_ORDER.indexOf(b.org_type);
+        const aIdx = aOrder === -1 ? 999 : aOrder;
+        const bIdx = bOrder === -1 ? 999 : bOrder;
+        if (aIdx !== bIdx) return aIdx - bIdx;
+        return a.name.localeCompare(b.name);
+      });
+    }
+    return sorted;
+  }, [producers, sortBy]);
 
   const handleTypeChange = (type: string) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -208,25 +240,71 @@ export default function CommunityContent({
         </div>
       </section>
 
-      {/* Results Count */}
+      {/* Results Count & Sort */}
       <div className="max-w-3xl mx-auto px-4 border-b border-[var(--twilight)]">
-        <p className="font-mono text-xs text-[var(--muted)] py-3">
-          <span className="text-[var(--soft)]">{producers.length}</span> organizers
-          {searchQuery && ` matching "${searchQuery}"`}
-        </p>
+        <div className="flex items-center justify-between py-3">
+          <p className="font-mono text-xs text-[var(--muted)]">
+            <span className="text-[var(--soft)]">{producers.length}</span> organizers
+            {searchQuery && ` matching "${searchQuery}"`}
+          </p>
+          <div className="flex items-center gap-1">
+            <span className="font-mono text-[0.6rem] text-[var(--muted)] uppercase tracking-wider mr-2">
+              Sort:
+            </span>
+            <button
+              onClick={() => setSortBy("category")}
+              className={`px-2 py-1 rounded font-mono text-[0.65rem] transition-all ${
+                sortBy === "category"
+                  ? "bg-[var(--coral)] text-[var(--void)]"
+                  : "bg-[var(--twilight)]/50 text-[var(--muted)] hover:text-[var(--cream)]"
+              }`}
+            >
+              Category
+            </button>
+            <button
+              onClick={() => setSortBy("alphabetical")}
+              className={`px-2 py-1 rounded font-mono text-[0.65rem] transition-all ${
+                sortBy === "alphabetical"
+                  ? "bg-[var(--coral)] text-[var(--void)]"
+                  : "bg-[var(--twilight)]/50 text-[var(--muted)] hover:text-[var(--cream)]"
+              }`}
+            >
+              A-Z
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Producers List */}
       <main className="max-w-3xl mx-auto px-4 py-6 pb-12">
-        {producers.length > 0 ? (
+        {sortedProducers.length > 0 ? (
           <div className="space-y-4">
-            {producers.map((producer) => {
+            {sortedProducers.map((producer, index) => {
+              // Show category header when sorting by category
+              const showCategoryHeader = sortBy === "category" && (
+                index === 0 ||
+                sortedProducers[index - 1].org_type !== producer.org_type
+              );
               const orgConfig = ORG_TYPE_CONFIG[producer.org_type];
               const hasEvents = (producer.event_count ?? 0) > 0;
 
               return (
-                <Link
-                  key={producer.id}
+                <div key={producer.id}>
+                  {showCategoryHeader && (
+                    <div className="flex items-center gap-2 mb-3 mt-6 first:mt-0">
+                      <div
+                        className="w-2 h-2 rounded-full"
+                        style={{ backgroundColor: orgConfig?.color || "var(--muted)" }}
+                      />
+                      <h2
+                        className="font-mono text-xs font-medium uppercase tracking-wider"
+                        style={{ color: orgConfig?.color || "var(--muted)" }}
+                      >
+                        {orgConfig?.label || producer.org_type.replace(/_/g, " ")}
+                      </h2>
+                    </div>
+                  )}
+                  <Link
                   href={`/community/${producer.slug}`}
                   className="block p-5 rounded-xl border border-[var(--twilight)] transition-all hover:border-[var(--coral)]/50 group card-atmospheric relative"
                   style={{
@@ -239,30 +317,31 @@ export default function CommunityContent({
                     {/* Logo */}
                     <div className="flex-shrink-0">
                       {producer.logo_url ? (
-                        <Image
-                          src={producer.logo_url}
-                          alt={producer.name}
-                          width={64}
-                          height={64}
-                          className="rounded-xl object-cover"
-                          style={{ width: 64, height: 64 }}
-                        />
+                        <div className="w-16 h-16 rounded-xl bg-white flex items-center justify-center overflow-hidden">
+                          <Image
+                            src={producer.logo_url}
+                            alt={producer.name}
+                            width={64}
+                            height={64}
+                            className="object-contain"
+                            style={{ width: 64, height: 64 }}
+                            unoptimized
+                          />
+                        </div>
                       ) : (
                         <div
                           className="w-16 h-16 rounded-xl flex items-center justify-center"
                           style={{
-                            backgroundColor: orgConfig?.color ? `${orgConfig.color}20` : "var(--twilight)",
+                            backgroundColor: producer.categories?.[0]
+                              ? `${getCategoryColor(producer.categories[0])}20`
+                              : "var(--twilight)",
                           }}
                         >
-                          <svg
-                            className="w-7 h-7"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                            style={{ color: orgConfig?.color || "var(--muted)" }}
-                          >
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                          </svg>
+                          <CategoryIcon
+                            type={producer.categories?.[0] || "community"}
+                            size={28}
+                            glow="subtle"
+                          />
                         </div>
                       )}
                     </div>
@@ -332,6 +411,7 @@ export default function CommunityContent({
                     </div>
                   )}
                 </Link>
+                </div>
               );
             })}
           </div>
@@ -343,7 +423,7 @@ export default function CommunityContent({
               </svg>
             </div>
             <p className="text-[var(--muted)]">No organizers found</p>
-            {(selectedType !== "all" || searchQuery) && (
+            {(selectedType !== "all" || searchQuery || selectedCategories.length > 0) && (
               <Link
                 href="/community"
                 className="inline-block mt-4 font-mono text-sm text-[var(--coral)] hover:text-[var(--rose)]"

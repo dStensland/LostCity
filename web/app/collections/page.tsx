@@ -1,7 +1,7 @@
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 import Image from "next/image";
-import PageHeader from "@/components/PageHeader";
+import UnifiedHeader from "@/components/UnifiedHeader";
 import CreateCollectionButton from "@/components/CreateCollectionButton";
 
 export const dynamic = "force-dynamic";
@@ -64,7 +64,7 @@ export default async function CollectionsPage() {
 
   return (
     <div className="min-h-screen">
-      <PageHeader showEvents />
+      <UnifiedHeader />
 
       <main className="max-w-4xl mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-8">

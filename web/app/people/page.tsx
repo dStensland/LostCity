@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import PageHeader from "@/components/PageHeader";
+import UnifiedHeader from "@/components/UnifiedHeader";
 import PageFooter from "@/components/PageFooter";
 import FollowButton from "@/components/FollowButton";
 import FriendButton from "@/components/FriendButton";
@@ -63,7 +63,7 @@ export default function PeoplePage() {
 
   return (
     <div className="min-h-screen">
-      <PageHeader />
+      <UnifiedHeader />
 
       <main className="max-w-3xl mx-auto px-4 py-8">
         <h1 className="font-serif text-2xl text-[var(--cream)] italic mb-2">Find People</h1>

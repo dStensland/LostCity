@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient, getUser } from "@/lib/supabase/server";
+import { applyRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 
 type RecommendationReason = {
   type: "followed_venue" | "followed_producer" | "neighborhood" | "price" | "friends_going" | "trending";
@@ -8,6 +9,10 @@ type RecommendationReason = {
 };
 
 export async function GET(request: Request) {
+  // Rate limit: expensive endpoint (7+ queries per request)
+  const rateLimitResult = applyRateLimit(request, RATE_LIMITS.expensive);
+  if (rateLimitResult) return rateLimitResult;
+
   try {
     const { searchParams } = new URL(request.url);
     const limit = Math.min(parseInt(searchParams.get("limit") || "20", 10), 50);
@@ -162,7 +167,8 @@ export async function GET(request: Request) {
   // Apply portal filter if specified
   if (portalId) {
     // Show portal-specific events + public events
-    query = query.or(`portal_id.eq.${portalId},portal_id.is.null`);
+    // Use filter instead of .or() string interpolation to prevent injection
+    query = query.or(`portal_id.eq."${portalId.replace(/"/g, "")}",portal_id.is.null`);
 
     // Apply portal category filters
     if (portalFilters.categories?.length) {

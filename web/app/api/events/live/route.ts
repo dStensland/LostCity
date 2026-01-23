@@ -1,6 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-
-export const dynamic = "force-dynamic";
+import { applyRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 
 type LiveEventRow = {
   id: number;
@@ -25,7 +24,11 @@ type LiveEventRow = {
   } | null;
 };
 
-export async function GET() {
+export async function GET(request: Request) {
+  // Rate limit: read endpoint
+  const rateLimitResult = applyRateLimit(request, RATE_LIMITS.read);
+  if (rateLimitResult) return rateLimitResult;
+
   try {
     const supabase = await createClient();
 
@@ -89,10 +92,18 @@ export async function GET() {
       going_count: goingCounts[event.id] || 0,
     }));
 
-    return Response.json({
-      events: enrichedEvents,
-      count: enrichedEvents.length,
-    });
+    return Response.json(
+      {
+        events: enrichedEvents,
+        count: enrichedEvents.length,
+      },
+      {
+        headers: {
+          // Live events change frequently - short cache
+          "Cache-Control": "public, s-maxage=30, stale-while-revalidate=60",
+        },
+      }
+    );
   } catch (error) {
     console.error("Live events API error:", error);
     return Response.json(

@@ -2,7 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import Image from "next/image";
 import { notFound } from "next/navigation";
-import PageHeader from "@/components/PageHeader";
+import UnifiedHeader from "@/components/UnifiedHeader";
 import CategoryIcon from "@/components/CategoryIcon";
 import { formatTimeSplit } from "@/lib/formats";
 import { format, parseISO } from "date-fns";
@@ -147,7 +147,7 @@ export default async function CollectionPage({ params }: Props) {
 
   return (
     <div className="min-h-screen">
-      <PageHeader showCollections />
+      <UnifiedHeader />
 
       <main className="max-w-3xl mx-auto px-4 py-8">
         {/* Back link */}

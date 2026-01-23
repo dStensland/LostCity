@@ -1,14 +1,11 @@
 "use client";
 
-import React, { useState, useMemo, useCallback, useEffect, useRef } from "react";
-import { useSearchParams } from "next/navigation";
+import React, { useState, useMemo, useCallback } from "react";
 import Link from "next/link";
 import {
   format,
   startOfMonth,
-  endOfMonth,
   startOfWeek,
-  endOfWeek,
   addDays,
   addMonths,
   subMonths,
@@ -20,23 +17,8 @@ import {
 import { getCategoryColor } from "./CategoryIcon";
 import CategoryIcon from "./CategoryIcon";
 import { formatTimeSplit } from "@/lib/formats";
-
-// Types
-interface CalendarEvent {
-  id: number;
-  title: string;
-  start_date: string;
-  start_time: string | null;
-  is_all_day: boolean;
-  category: string | null;
-  is_free: boolean;
-  price_min: number | null;
-  price_max: number | null;
-  venue?: {
-    name: string;
-    neighborhood: string | null;
-  } | null;
-}
+import { DEFAULT_PORTAL_SLUG } from "@/lib/portal-context";
+import { useCalendarEvents, type CalendarEvent, type CalendarSummary } from "@/lib/hooks/useCalendarEvents";
 
 interface DayData {
   date: Date;
@@ -66,12 +48,6 @@ function getReflectionClass(category: string | null): string {
   return reflectionMap[category] || "";
 }
 
-interface CalendarSummary {
-  totalEvents: number;
-  daysWithEvents: number;
-  categoryCounts: Record<string, number>;
-}
-
 interface Props {
   portalId?: string;
   portalSlug?: string;
@@ -88,73 +64,20 @@ const CATEGORY_PRIORITY = [
 const CALENDAR_ROWS = 6;
 const CALENDAR_DAYS = CALENDAR_ROWS * 7;
 
-export default function CalendarView({ portalId, portalSlug = "atlanta", portalExclusive }: Props) {
-  const searchParams = useSearchParams();
+export default function CalendarView({ portalId, portalSlug = DEFAULT_PORTAL_SLUG, portalExclusive }: Props) {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
-  const [eventsByDate, setEventsByDate] = useState<Map<string, CalendarEvent[]>>(new Map());
-  const [summary, setSummary] = useState<CalendarSummary>({ totalEvents: 0, daysWithEvents: 0, categoryCounts: {} });
-  const [loading, setLoading] = useState(true);
-  const initialLoadDone = useRef(false);
 
-  // Fetch events using the dedicated calendar endpoint
-  // This ignores date filters from URL (since calendar IS the date interface)
-  // but respects other filters like categories, price, neighborhoods
-  useEffect(() => {
-    async function fetchCalendarData() {
-      setLoading(true);
+  // Use the new React Query hook for calendar events
+  const { eventsByDate, summary, isLoading: loading, isRefetching } = useCalendarEvents({
+    month: currentMonth.getMonth() + 1,
+    year: currentMonth.getFullYear(),
+    portalId,
+    portalExclusive,
+  });
 
-      const month = currentMonth.getMonth() + 1;
-      const year = currentMonth.getFullYear();
-
-      // Build params - only include non-date filters
-      const params = new URLSearchParams();
-      params.set("month", month.toString());
-      params.set("year", year.toString());
-
-      // Pass through non-date filters from URL
-      const categories = searchParams.get("categories");
-      const neighborhoods = searchParams.get("neighborhoods");
-      const price = searchParams.get("price");
-
-      if (categories) params.set("categories", categories);
-      if (neighborhoods) params.set("neighborhoods", neighborhoods);
-      if (price) params.set("price", price);
-
-      // Portal filtering
-      if (portalId && portalId !== "default") {
-        params.set("portal_id", portalId);
-      }
-      if (portalExclusive) {
-        params.set("portal_exclusive", "true");
-      }
-
-      try {
-        const res = await fetch(`/api/calendar?${params}`);
-        const data = await res.json();
-
-        // Convert eventsByDate object to Map
-        const eventsMap = new Map<string, CalendarEvent[]>();
-        if (data.eventsByDate) {
-          Object.entries(data.eventsByDate).forEach(([date, events]) => {
-            eventsMap.set(date, events as CalendarEvent[]);
-          });
-        }
-
-        setEventsByDate(eventsMap);
-        setSummary(data.summary || { totalEvents: 0, daysWithEvents: 0, categoryCounts: {} });
-      } catch (error) {
-        console.error("Failed to fetch calendar data:", error);
-        setEventsByDate(new Map());
-        setSummary({ totalEvents: 0, daysWithEvents: 0, categoryCounts: {} });
-      } finally {
-        setLoading(false);
-        initialLoadDone.current = true;
-      }
-    }
-
-    fetchCalendarData();
-  }, [currentMonth, searchParams, portalId, portalExclusive]);
+  // Track if initial load is done (for showing subtle loading indicator)
+  const initialLoadDone = eventsByDate.size > 0 || !loading;
 
   // Generate calendar grid - always 6 rows for stable layout
   const calendarDays = useMemo((): DayData[] => {
@@ -240,7 +163,7 @@ export default function CalendarView({ portalId, portalSlug = "atlanta", portalE
             {format(currentMonth, "MMMM yyyy")}
           </h2>
           {/* Subtle loading indicator after initial load */}
-          {loading && initialLoadDone.current && (
+          {(loading || isRefetching) && initialLoadDone && (
             <span className="w-4 h-4 border-2 border-[var(--coral)]/30 border-t-[var(--coral)] rounded-full animate-spin" />
           )}
           {!isSameMonth(currentMonth, new Date()) && (
@@ -391,7 +314,7 @@ export default function CalendarView({ portalId, portalSlug = "atlanta", portalE
               </div>
 
               {/* Events list */}
-              {loading && !initialLoadDone.current ? (
+              {loading && !initialLoadDone ? (
                 <div className="space-y-3">
                   {[1, 2, 3].map((i) => (
                     <div key={i} className="p-3 rounded-lg border border-[var(--twilight)]" style={{ backgroundColor: "var(--card-bg)" }}>

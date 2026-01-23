@@ -1,5 +1,5 @@
 import Link from "next/link";
-import PageHeader from "@/components/PageHeader";
+import UnifiedHeader from "@/components/UnifiedHeader";
 import { getUser } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 
@@ -16,7 +16,7 @@ export default async function SettingsPage() {
 
   return (
     <div className="min-h-screen">
-      <PageHeader />
+      <UnifiedHeader />
 
       {/* Main */}
       <main className="max-w-2xl mx-auto px-4 py-8">

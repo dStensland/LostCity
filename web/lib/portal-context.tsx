@@ -1,6 +1,10 @@
 "use client";
 
 import { createContext, useContext, ReactNode } from "react";
+import { DEFAULT_PORTAL_SLUG, DEFAULT_PORTAL_NAME } from "./constants";
+
+// Re-export from shared constants for backwards compatibility
+export { DEFAULT_PORTAL_SLUG, DEFAULT_PORTAL_NAME };
 
 export type Portal = {
   id: string;
@@ -88,27 +92,48 @@ export function PortalProvider({
   );
 }
 
-export function usePortal() {
+export function usePortal(): PortalContextValue {
   const context = useContext(PortalContext);
   if (!context) {
-    // Default to Atlanta if no context (for backwards compatibility)
+    // Default to configured default portal if no context (for backwards compatibility)
     return {
       portal: {
         id: "default",
-        slug: "atlanta",
-        name: "Atlanta",
+        slug: DEFAULT_PORTAL_SLUG,
+        name: DEFAULT_PORTAL_NAME,
         tagline: "The real Atlanta, found",
         portal_type: "city" as const,
         status: "active",
         visibility: "public",
-        filters: { city: "Atlanta" },
+        filters: { city: DEFAULT_PORTAL_NAME },
         branding: {},
         settings: {},
-      },
+      } as Portal,
       isLoading: false,
     };
   }
   return context;
+}
+
+/**
+ * Get the current portal slug. Use this for building portal-relative URLs.
+ */
+export function usePortalSlug() {
+  const { portal } = usePortal();
+  return portal.slug;
+}
+
+/**
+ * Build a portal-relative URL.
+ * @param path - The path within the portal (e.g., "events", "?view=spots")
+ * @param portalSlug - Optional portal slug override
+ */
+export function buildPortalUrl(path: string, portalSlug?: string) {
+  const slug = portalSlug || DEFAULT_PORTAL_SLUG;
+  if (path.startsWith("?") || path.startsWith("/")) {
+    return `/${slug}${path}`;
+  }
+  return `/${slug}/${path}`;
 }
 
 export function usePortalName() {

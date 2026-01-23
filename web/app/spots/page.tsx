@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
+import { DEFAULT_PORTAL_SLUG } from "@/lib/constants";
 
 export default function SpotsRedirect() {
-  redirect("/atlanta?view=spots");
+  redirect(`/${DEFAULT_PORTAL_SLUG}?view=spots`);
 }

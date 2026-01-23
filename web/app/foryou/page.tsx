@@ -3,12 +3,12 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import PageHeader from "@/components/PageHeader";
+import UnifiedHeader from "@/components/UnifiedHeader";
 import ActivityFeed from "@/components/ActivityFeed";
 import CategoryIcon from "@/components/CategoryIcon";
 import Image from "next/image";
 import { useAuth } from "@/lib/auth-context";
-import { usePortal } from "@/lib/portal-context";
+import { usePortal, DEFAULT_PORTAL_SLUG } from "@/lib/portal-context";
 import { format, parseISO } from "date-fns";
 import { formatTime } from "@/lib/formats";
 
@@ -84,7 +84,7 @@ export default function ForYouPage() {
       setError(null);
 
       // Build portal-aware URLs
-      const portalParam = portal.slug !== "atlanta" ? `&portal=${portal.slug}` : "";
+      const portalParam = portal.slug !== DEFAULT_PORTAL_SLUG ? `&portal=${portal.slug}` : "";
 
       // Fetch both in parallel
       const [feedRes, trendingRes] = await Promise.all([
@@ -157,7 +157,7 @@ export default function ForYouPage() {
 
   return (
     <div className="min-h-screen">
-      <PageHeader showSpots />
+      <UnifiedHeader />
 
       {/* Main */}
       <main className="max-w-2xl mx-auto px-4 py-6">

@@ -1,9 +1,13 @@
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
+import { applyRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 
 export const revalidate = 300; // Cache for 5 minutes
 
 export async function GET(request: Request) {
+  // Rate limit: expensive endpoint with RSVP aggregation
+  const rateLimitResult = applyRateLimit(request, RATE_LIMITS.expensive);
+  if (rateLimitResult) return rateLimitResult;
   const { searchParams } = new URL(request.url);
   const limit = Math.min(parseInt(searchParams.get("limit") || "6", 10), 20);
   const portalSlug = searchParams.get("portal");
@@ -31,18 +35,6 @@ export async function GET(request: Request) {
   }
 
   try {
-    // Get events with RSVP counts for the next week
-    const { data: rsvpCounts } = await supabase
-      .from("event_rsvps")
-      .select("event_id")
-      .in("status", ["going", "interested"]);
-
-    // Count RSVPs per event
-    const rsvpMap: Record<number, number> = {};
-    for (const rsvp of (rsvpCounts || []) as { event_id: number }[]) {
-      rsvpMap[rsvp.event_id] = (rsvpMap[rsvp.event_id] || 0) + 1;
-    }
-
     // Build query for events happening this week
     let query = supabase
       .from("events")
@@ -68,7 +60,8 @@ export async function GET(request: Request) {
     // Apply portal filter if specified
     if (portalId) {
       // Show portal-specific events + public events
-      query = query.or(`portal_id.eq.${portalId},portal_id.is.null`);
+      // Escape portalId to prevent PostgREST injection
+      query = query.or(`portal_id.eq."${portalId.replace(/"/g, "")}",portal_id.is.null`);
 
       // Apply portal category filters
       if (portalFilters.categories?.length) {
@@ -84,6 +77,24 @@ export async function GET(request: Request) {
     if (error) {
       console.error("Error fetching trending events:", error);
       return NextResponse.json({ error: "Failed to fetch trending events" }, { status: 500 });
+    }
+
+    // Get event IDs for RSVP lookup (batch query instead of fetching ALL RSVPs)
+    const eventIds = (events || []).map((e: { id: number }) => e.id);
+
+    // Fetch RSVPs only for the events we're considering (not ALL events in database)
+    const rsvpMap: Record<number, number> = {};
+    if (eventIds.length > 0) {
+      const { data: rsvpCounts } = await supabase
+        .from("event_rsvps")
+        .select("event_id")
+        .in("event_id", eventIds)
+        .in("status", ["going", "interested"]);
+
+      // Count RSVPs per event
+      for (const rsvp of (rsvpCounts || []) as { event_id: number }[]) {
+        rsvpMap[rsvp.event_id] = (rsvpMap[rsvp.event_id] || 0) + 1;
+      }
     }
 
     type EventWithRsvps = {

@@ -1,12 +1,12 @@
 import { PRICE_FILTERS, type SearchFilters } from "@/lib/search";
 import { getPortalBySlug, DEFAULT_PORTAL } from "@/lib/portal";
+import { DEFAULT_PORTAL_SLUG } from "@/lib/constants";
 import FilterBar from "@/components/FilterBar";
-import MainNav from "@/components/MainNav";
 import EventList from "@/components/EventList";
 import MapViewWrapper from "@/components/MapViewWrapper";
 import FeedView from "@/components/FeedView";
 import CalendarView from "@/components/CalendarView";
-import GlassHeader from "@/components/GlassHeader";
+import UnifiedHeader from "@/components/UnifiedHeader";
 import SearchBar from "@/components/SearchBar";
 import PortalSpotsView from "@/components/PortalSpotsView";
 import PortalHappeningNow from "@/components/PortalHappeningNow";
@@ -47,7 +47,7 @@ export default async function PortalPage({ params, searchParams }: Props) {
   let portal = await getPortalBySlug(slug);
 
   // Fallback for Atlanta if not in database
-  if (!portal && slug === "atlanta") {
+  if (!portal && slug === DEFAULT_PORTAL_SLUG) {
     portal = DEFAULT_PORTAL;
   }
 
@@ -104,15 +104,11 @@ export default async function PortalPage({ params, searchParams }: Props) {
         <DynamicAmbient />
       </Suspense>
 
-      <GlassHeader
+      <UnifiedHeader
         portalSlug={portal.slug}
         portalName={portal.name}
         branding={portal.branding}
       />
-
-      <Suspense fallback={<div className="h-10 bg-[var(--night)]" />}>
-        <MainNav portalSlug={portal.slug} />
-      </Suspense>
 
       {viewMode !== "feed" && (
         <div className="border-b border-[var(--twilight)] bg-[var(--night)]/95 backdrop-blur-sm">

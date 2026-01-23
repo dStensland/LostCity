@@ -3,11 +3,12 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import PageHeader from "@/components/PageHeader";
+import UnifiedHeader from "@/components/UnifiedHeader";
 import SaveButton from "@/components/SaveButton";
 import CategoryIcon from "@/components/CategoryIcon";
 import Image from "next/image";
 import { useAuth } from "@/lib/auth-context";
+import { usePortalSlug } from "@/lib/portal-context";
 import { createClient } from "@/lib/supabase/client";
 import { format, parseISO, startOfDay } from "date-fns";
 import { formatTime } from "@/lib/formats";
@@ -39,6 +40,7 @@ type FilterTab = "upcoming" | "past" | "all";
 export default function SavedPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
+  const portalSlug = usePortalSlug();
   const supabase = createClient();
 
   const [tab, setTab] = useState<FilterTab>("upcoming");
@@ -141,7 +143,7 @@ export default function SavedPage() {
 
   return (
     <div className="min-h-screen">
-      <PageHeader showSpots />
+      <UnifiedHeader />
 
       {/* Main */}
       <main className="max-w-2xl mx-auto px-4 py-6">
@@ -226,7 +228,7 @@ export default function SavedPage() {
               Save events by clicking the bookmark icon
             </p>
             <Link
-              href="/atlanta"
+              href={`/${portalSlug}`}
               className="inline-block mt-4 px-4 py-2 bg-[var(--coral)] text-[var(--void)] font-mono text-xs font-medium rounded-lg hover:bg-[var(--rose)] transition-colors"
             >
               Browse Events

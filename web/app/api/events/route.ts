@@ -1,5 +1,7 @@
-import { getFilteredEventsWithSearch, enrichEventsWithSocialProof, PRICE_FILTERS, type SearchFilters } from "@/lib/search";
+import { getFilteredEventsWithSearch, getFilteredEventsWithCursor, enrichEventsWithSocialProof, PRICE_FILTERS, type SearchFilters } from "@/lib/search";
 import type { MoodId } from "@/lib/moods";
+import { applyRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
+import { generateNextCursor } from "@/lib/cursor";
 
 // Helper to safely parse integers with validation
 function safeParseInt(value: string | null, defaultValue: number, min = 1, max = 1000): number {
@@ -10,6 +12,10 @@ function safeParseInt(value: string | null, defaultValue: number, min = 1, max =
 }
 
 export async function GET(request: Request) {
+  // Rate limit: read endpoint
+  const rateLimitResult = applyRateLimit(request, RATE_LIMITS.read);
+  if (rateLimitResult) return rateLimitResult;
+
   try {
     const { searchParams } = new URL(request.url);
 
@@ -39,27 +45,58 @@ export async function GET(request: Request) {
       portal_exclusive: searchParams.get("portal_exclusive") === "true" || undefined,
     };
 
-    const page = safeParseInt(searchParams.get("page"), 1, 1, 100);
     const pageSize = 20;
+    const cursor = searchParams.get("cursor");
 
-    const { events: rawEvents, total } = await getFilteredEventsWithSearch(filters, page, pageSize);
+    // Use cursor-based pagination if cursor provided, otherwise fall back to offset pagination
+    if (cursor !== null || searchParams.get("useCursor") === "true") {
+      // Cursor-based pagination (new, preferred method)
+      const { events: rawEvents, nextCursor, hasMore } = await getFilteredEventsWithCursor(
+        filters,
+        cursor,
+        pageSize
+      );
 
-    // Enrich with social proof counts (RSVPs, recommendations)
-    const events = await enrichEventsWithSocialProof(rawEvents);
+      // Enrich with social proof counts
+      const events = await enrichEventsWithSocialProof(rawEvents);
 
-    return Response.json(
-      {
-        events,
-        hasMore: page * pageSize < total,
-        total,
-      },
-      {
-        headers: {
-          // Cache for 30 seconds, allow stale content for 60s while revalidating
-          "Cache-Control": "public, s-maxage=30, stale-while-revalidate=60",
+      return Response.json(
+        {
+          events,
+          cursor: nextCursor,
+          hasMore,
         },
-      }
-    );
+        {
+          headers: {
+            "Cache-Control": "public, s-maxage=30, stale-while-revalidate=60",
+          },
+        }
+      );
+    } else {
+      // Offset-based pagination (legacy, for backwards compatibility)
+      const page = safeParseInt(searchParams.get("page"), 1, 1, 100);
+      const { events: rawEvents, total } = await getFilteredEventsWithSearch(filters, page, pageSize);
+
+      // Enrich with social proof counts
+      const events = await enrichEventsWithSocialProof(rawEvents);
+
+      // Also generate a cursor from the last event for gradual migration
+      const nextCursor = events.length > 0 ? generateNextCursor(events) : null;
+
+      return Response.json(
+        {
+          events,
+          hasMore: page * pageSize < total,
+          total,
+          cursor: nextCursor, // Include cursor for clients that want to switch
+        },
+        {
+          headers: {
+            "Cache-Control": "public, s-maxage=30, stale-while-revalidate=60",
+          },
+        }
+      );
+    }
   } catch (error) {
     console.error("Events API error:", error);
     return Response.json(

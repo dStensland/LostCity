@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Logo from "@/components/Logo";
+import { DEFAULT_PORTAL_SLUG } from "@/lib/constants";
 
 export default function NotFound() {
   return (
@@ -31,7 +32,7 @@ export default function NotFound() {
 
       {/* CTA */}
       <Link
-        href="/atlanta"
+        href={`/${DEFAULT_PORTAL_SLUG}`}
         className="mt-8 px-8 py-4 bg-[var(--coral)] text-[var(--void)] rounded-lg font-medium hover:bg-[var(--rose)] transition-colors glow-sm"
       >
         Find Something to Do

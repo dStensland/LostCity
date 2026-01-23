@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import Logo from "@/components/Logo";
 import UserMenu from "@/components/UserMenu";
+import { DEFAULT_PORTAL_SLUG, DEFAULT_PORTAL_NAME } from "@/lib/portal-context";
 
 interface PageHeaderProps {
   cityName?: string;
@@ -23,8 +24,8 @@ interface PageHeaderProps {
 }
 
 export default function PageHeader({
-  cityName = "Atlanta",
-  citySlug = "atlanta",
+  cityName = DEFAULT_PORTAL_NAME,
+  citySlug = DEFAULT_PORTAL_SLUG,
   showCollections = false,
   showEvents = true,
   showSpots = false,

@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
-import PageHeader from "@/components/PageHeader";
+import UnifiedHeader from "@/components/UnifiedHeader";
 import PageFooter from "@/components/PageFooter";
+
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Privacy Policy | Lost City",
@@ -10,7 +12,7 @@ export const metadata: Metadata = {
 export default function PrivacyPolicyPage() {
   return (
     <div className="min-h-screen flex flex-col">
-      <PageHeader />
+      <UnifiedHeader />
 
       <main className="flex-1 max-w-3xl mx-auto px-4 py-12">
         <h1 className="text-3xl font-bold text-[var(--cream)] mb-2">Privacy Policy</h1>

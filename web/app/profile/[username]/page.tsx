@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import PageHeader from "@/components/PageHeader";
+import UnifiedHeader from "@/components/UnifiedHeader";
 import PageFooter from "@/components/PageFooter";
 import FollowButton from "@/components/FollowButton";
 import FriendButton from "@/components/FriendButton";
@@ -100,7 +100,7 @@ export default async function ProfilePage({ params }: Props) {
 
   return (
     <div className="min-h-screen">
-      <PageHeader />
+      <UnifiedHeader />
 
       {/* Profile Header */}
       <section className="max-w-3xl mx-auto px-4 py-8 border-b border-[var(--twilight)]">

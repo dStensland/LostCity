@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Logo from "@/components/Logo";
 import { useAuth } from "@/lib/auth-context";
+import { DEFAULT_PORTAL_SLUG } from "@/lib/portal-context";
 
 type Props = {
   params: Promise<{ username: string }>;
@@ -183,7 +184,7 @@ export default function InviteCompletePage({ params }: Props) {
         )}
 
         <Link
-          href="/atlanta"
+          href={`/${DEFAULT_PORTAL_SLUG}`}
           className="inline-block bg-[var(--coral)] text-[var(--night)] px-6 py-3 rounded font-medium hover:opacity-90"
         >
           Explore Events

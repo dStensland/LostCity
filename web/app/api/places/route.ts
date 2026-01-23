@@ -1,6 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { NextRequest, NextResponse } from "next/server";
 import { errorResponse } from "@/lib/api-utils";
+import { applyRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 
 function getSupabase() {
   return createClient(
@@ -10,6 +11,10 @@ function getSupabase() {
 }
 
 export async function GET(req: NextRequest) {
+  // Rate limit: read endpoint
+  const rateLimitResult = applyRateLimit(req, RATE_LIMITS.read);
+  if (rateLimitResult) return rateLimitResult;
+
   const supabase = getSupabase();
   const params = req.nextUrl.searchParams;
 
@@ -57,10 +62,18 @@ export async function GET(req: NextRequest) {
     return errorResponse(error, "places:GET");
   }
 
-  return NextResponse.json({
-    places: data,
-    total: count,
-    limit,
-    offset,
-  });
+  return NextResponse.json(
+    {
+      places: data,
+      total: count,
+      limit,
+      offset,
+    },
+    {
+      headers: {
+        // Places data is relatively stable - cache for 60 seconds
+        "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300",
+      },
+    }
+  );
 }

@@ -10,6 +10,7 @@ import {
   format,
 } from "date-fns";
 import { getMoodById, type MoodId } from "./moods";
+import { decodeCursor, generateNextCursor, type CursorData } from "./cursor";
 
 export interface SearchFilters {
   search?: string;
@@ -551,6 +552,279 @@ export async function getFilteredEventsWithSearch(
   }
 
   return { events, total: count ?? 0 };
+}
+
+/**
+ * Cursor-based pagination for events
+ * More stable than offset pagination - works correctly even when data changes
+ */
+export async function getFilteredEventsWithCursor(
+  filters: SearchFilters,
+  cursor: string | null,
+  pageSize = 20
+): Promise<{ events: EventWithLocation[]; nextCursor: string | null; hasMore: boolean }> {
+  const now = new Date();
+  const today = now.toISOString().split("T")[0];
+  const currentTime = now.toTimeString().split(" ")[0]; // HH:MM:SS format
+
+  // Decode cursor if provided
+  let cursorData: CursorData | null = null;
+  if (cursor) {
+    cursorData = decodeCursor(cursor);
+    if (!cursorData) {
+      // Invalid cursor - start from beginning
+      console.warn("Invalid cursor provided, starting from beginning");
+    }
+  }
+
+  let query = supabase
+    .from("events")
+    .select(
+      `
+      *,
+      venue:venues(id, name, slug, address, neighborhood, city, state, lat, lng, typical_price_min, typical_price_max, spot_type),
+      category_data:categories(typical_price_min, typical_price_max)
+    `
+    )
+    .gte("start_date", today)
+    // Hide past events for today
+    .or(`start_date.gt.${today},end_time.gte.${currentTime},and(end_time.is.null,start_time.gte.${currentTime}),is_all_day.eq.true`);
+
+  // Apply portal restriction filter
+  if (filters.portal_id) {
+    if (filters.portal_exclusive) {
+      query = query.eq("portal_id", filters.portal_id);
+    } else {
+      query = query.or(`portal_id.eq.${filters.portal_id},portal_id.is.null`);
+    }
+  } else {
+    query = query.is("portal_id", null);
+  }
+
+  // Get mood data for potential vibes lookup
+  const mood = filters.mood ? getMoodById(filters.mood) : null;
+
+  // Batch all venue queries in parallel
+  const {
+    searchVenueIds,
+    moodVenueIds,
+    vibesVenueIds,
+    neighborhoodVenueIds,
+    cityVenueIds,
+  } = await batchFetchVenueIds({
+    searchTerm: filters.search?.trim() || undefined,
+    moodVibes: mood?.vibes,
+    vibes: filters.vibes,
+    neighborhoods: filters.neighborhoods,
+    city: filters.city,
+  });
+
+  // Apply search filter
+  if (filters.search && filters.search.trim()) {
+    const escapedSearch = escapePostgrestValue(filters.search.trim());
+    const searchTerm = `%${escapedSearch}%`;
+
+    if (searchVenueIds.length > 0) {
+      query = query.or(
+        `title.ilike.${searchTerm},description.ilike.${searchTerm},venue_id.in.(${searchVenueIds.join(",")})`
+      );
+    } else {
+      query = query.or(`title.ilike.${searchTerm},description.ilike.${searchTerm}`);
+    }
+  }
+
+  // Apply mood filter
+  if (mood) {
+    const conditions: string[] = [];
+    if (mood.categories.length > 0) {
+      conditions.push(`category_id.in.(${mood.categories.join(",")})`);
+    }
+    if (moodVenueIds.length > 0) {
+      conditions.push(`venue_id.in.(${moodVenueIds.join(",")})`);
+    }
+    if (conditions.length > 0) {
+      query = query.or(conditions.join(","));
+    } else {
+      return { events: [], nextCursor: null, hasMore: false };
+    }
+  }
+
+  // Apply category filter
+  if (filters.categories && filters.categories.length > 0) {
+    query = query.in("category_id", filters.categories);
+  }
+
+  // Apply subcategory filter
+  if (filters.subcategories && filters.subcategories.length > 0) {
+    query = query.in("subcategory_id", filters.subcategories);
+  }
+
+  // Apply tag filter
+  if (filters.tags && filters.tags.length > 0) {
+    query = query.overlaps("tags", filters.tags);
+  }
+
+  // Apply vibes filter
+  if (filters.vibes && filters.vibes.length > 0) {
+    if (vibesVenueIds.length > 0) {
+      query = query.in("venue_id", vibesVenueIds);
+    } else {
+      return { events: [], nextCursor: null, hasMore: false };
+    }
+  }
+
+  // Apply neighborhoods filter
+  if (filters.neighborhoods && filters.neighborhoods.length > 0) {
+    if (neighborhoodVenueIds.length > 0) {
+      query = query.in("venue_id", neighborhoodVenueIds);
+    } else {
+      return { events: [], nextCursor: null, hasMore: false };
+    }
+  }
+
+  // Apply city filter
+  if (filters.city && cityVenueIds.length > 0) {
+    query = query.in("venue_id", cityVenueIds);
+  }
+
+  // Apply price filters
+  if (filters.is_free) {
+    query = query.eq("is_free", true);
+  } else if (filters.price_max) {
+    query = query.or(`is_free.eq.true,price_min.lte.${filters.price_max}`);
+  }
+
+  // Apply date filter
+  if (filters.date_filter) {
+    const { start, end } = getDateRange(filters.date_filter);
+    query = query.gte("start_date", start).lte("start_date", end);
+
+    if (filters.date_filter === "now") {
+      query = query.eq("is_live", true);
+    }
+  }
+
+  // Apply venue filter
+  if (filters.venue_id) {
+    query = query.eq("venue_id", filters.venue_id);
+  }
+
+  // Apply multiple venues filter (portal filter)
+  if (filters.venue_ids && filters.venue_ids.length > 0) {
+    query = query.in("venue_id", filters.venue_ids);
+  }
+
+  // Apply exclude categories filter
+  if (filters.exclude_categories && filters.exclude_categories.length > 0) {
+    for (const cat of filters.exclude_categories) {
+      query = query.neq("category_id", cat);
+    }
+  }
+
+  // Apply date range filter
+  if (filters.date_range_start) {
+    query = query.gte("start_date", filters.date_range_start);
+  }
+  if (filters.date_range_end) {
+    query = query.lte("start_date", filters.date_range_end);
+  }
+
+  // Apply geo filter
+  if (filters.geo_center && filters.geo_radius_km) {
+    const [lat, lng] = filters.geo_center;
+    const radiusKm = filters.geo_radius_km;
+    const latDelta = radiusKm / 111;
+    const lngDelta = radiusKm / (111 * Math.cos(lat * Math.PI / 180));
+
+    const { data: nearbyVenues } = await supabase
+      .from("venues")
+      .select("id")
+      .gte("lat", lat - latDelta)
+      .lte("lat", lat + latDelta)
+      .gte("lng", lng - lngDelta)
+      .lte("lng", lng + lngDelta);
+
+    const venueIds = (nearbyVenues as { id: number }[] | null)?.map((v) => v.id) || [];
+    if (venueIds.length > 0) {
+      query = query.in("venue_id", venueIds);
+    } else {
+      return { events: [], nextCursor: null, hasMore: false };
+    }
+  }
+
+  // CURSOR-BASED PAGINATION (keyset pagination)
+  // Order: start_date ASC, start_time ASC (nulls first), id ASC
+  if (cursorData) {
+    // Get events AFTER the cursor position
+    // The query is: (date > d) OR (date = d AND time > t) OR (date = d AND time = t AND id > i)
+    query = query.or(
+      `start_date.gt.${cursorData.d},` +
+      `and(start_date.eq.${cursorData.d},start_time.gt.${cursorData.t}),` +
+      `and(start_date.eq.${cursorData.d},start_time.eq.${cursorData.t},id.gt.${cursorData.i})`
+    );
+  }
+
+  // Order and limit (fetch one extra to check hasMore)
+  query = query
+    .order("start_date", { ascending: true })
+    .order("start_time", { ascending: true, nullsFirst: true })
+    .order("id", { ascending: true })
+    .limit(pageSize + 1);
+
+  const { data, error } = await query;
+
+  if (error) {
+    console.error("Error fetching filtered events with cursor:", error);
+    return { events: [], nextCursor: null, hasMore: false };
+  }
+
+  let events = data as EventWithLocation[];
+
+  // Check if there are more results
+  const hasMore = events.length > pageSize;
+  if (hasMore) {
+    events = events.slice(0, pageSize); // Remove the extra item
+  }
+
+  // Compute is_live for each event
+  const currentMinutes = now.getHours() * 60 + now.getMinutes();
+
+  events = events.map((event) => {
+    if (event.is_live) return event;
+    if (event.start_date !== today) return event;
+    if (event.is_all_day) return { ...event, is_live: true };
+    if (!event.start_time) return event;
+
+    const [startH, startM] = event.start_time.split(":").map(Number);
+    const startMinutes = startH * 60 + startM;
+
+    let endMinutes: number;
+    if (event.end_time) {
+      const [endH, endM] = event.end_time.split(":").map(Number);
+      endMinutes = endH * 60 + endM;
+      if (endMinutes < startMinutes) endMinutes += 24 * 60;
+    } else {
+      endMinutes = startMinutes + 180;
+    }
+
+    const isLive = currentMinutes >= startMinutes && currentMinutes <= endMinutes;
+    return isLive ? { ...event, is_live: true } : event;
+  });
+
+  // Sort by relevance when search is active
+  if (filters.search?.trim()) {
+    const term = filters.search.trim();
+    events = events.sort((a, b) => {
+      const scoreDiff = scoreEvent(b, term) - scoreEvent(a, term);
+      if (scoreDiff !== 0) return scoreDiff;
+      return a.start_date.localeCompare(b.start_date);
+    });
+  }
+
+  // Generate next cursor from the last event
+  const nextCursor = hasMore ? generateNextCursor(events) : null;
+
+  return { events, nextCursor, hasMore };
 }
 
 // Get all events for map view

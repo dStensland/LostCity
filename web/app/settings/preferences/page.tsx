@@ -3,7 +3,7 @@
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import PageHeader from "@/components/PageHeader";
+import UnifiedHeader from "@/components/UnifiedHeader";
 import CategoryIcon, { CATEGORY_CONFIG, type CategoryType } from "@/components/CategoryIcon";
 import VibeIcon, { getVibeColor } from "@/components/VibeIcon";
 import { createClient } from "@/lib/supabase/client";
@@ -14,6 +14,7 @@ import {
   PREFERENCE_VIBES,
   PRICE_PREFERENCES,
 } from "@/lib/preferences";
+import { usePortalSlug } from "@/lib/portal-context";
 import type { Database } from "@/lib/types";
 
 type UserPreferences = Database["public"]["Tables"]["user_preferences"]["Row"];
@@ -23,6 +24,7 @@ function PreferencesContent() {
   const searchParams = useSearchParams();
   const isWelcome = searchParams.get("welcome") === "true";
   const { user, loading: authLoading } = useAuth();
+  const portalSlug = usePortalSlug();
   const supabase = createClient();
 
   const [loading, setLoading] = useState(true);
@@ -136,7 +138,7 @@ function PreferencesContent() {
 
   return (
     <div className="min-h-screen">
-      <PageHeader />
+      <UnifiedHeader />
 
       <main className="max-w-2xl mx-auto px-4 py-8">
         {/* Welcome banner */}
@@ -406,7 +408,7 @@ function PreferencesContent() {
               </button>
               {isWelcome && (
                 <Link
-                  href="/atlanta"
+                  href={`/${portalSlug}`}
                   className="px-5 py-3 rounded-xl font-mono text-sm text-[var(--muted)] hover:text-[var(--cream)] hover:bg-[var(--twilight)]/50 transition-all"
                 >
                   Skip

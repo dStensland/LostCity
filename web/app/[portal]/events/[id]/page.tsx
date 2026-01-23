@@ -10,7 +10,7 @@ import FollowButton from "@/components/FollowButton";
 import FriendsGoing from "@/components/FriendsGoing";
 import WhosGoing from "@/components/WhosGoing";
 import LiveIndicator from "@/components/LiveIndicator";
-import PageHeader from "@/components/PageHeader";
+import UnifiedHeader from "@/components/UnifiedHeader";
 import PageFooter from "@/components/PageFooter";
 import { PortalTheme } from "@/components/PortalTheme";
 import { format, parseISO } from "date-fns";
@@ -157,7 +157,11 @@ export default async function PortalEventPage({ params }: Props) {
       {portal && <PortalTheme portal={portal} />}
 
       <div className="min-h-screen">
-        <PageHeader showEvents citySlug={activePortalSlug} cityName={activePortalName} />
+        <UnifiedHeader
+          portalSlug={activePortalSlug}
+          portalName={activePortalName}
+          backLink={{ href: `/${activePortalSlug}?view=events`, label: "Events" }}
+        />
 
         <main className="max-w-3xl mx-auto px-4 py-8">
           {/* Event image */}
@@ -328,6 +332,7 @@ export default async function PortalEventPage({ params }: Props) {
                         width={48}
                         height={48}
                         className="rounded-lg object-cover flex-shrink-0"
+                        unoptimized
                       />
                     ) : (
                       <div className="w-12 h-12 rounded-lg bg-[var(--twilight)] flex items-center justify-center flex-shrink-0">

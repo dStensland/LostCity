@@ -145,30 +145,31 @@ export default async function PortalOrganizerPage({ params }: Props) {
             {/* Logo */}
             <div className="flex-shrink-0">
               {producer.logo_url ? (
-                <Image
-                  src={producer.logo_url}
-                  alt={producer.name}
-                  width={96}
-                  height={96}
-                  className="rounded-xl object-cover"
-                  style={{ width: 96, height: 96 }}
-                />
+                <div className="w-24 h-24 rounded-xl bg-white flex items-center justify-center overflow-hidden">
+                  <Image
+                    src={producer.logo_url}
+                    alt={producer.name}
+                    width={96}
+                    height={96}
+                    className="object-contain"
+                    style={{ width: 96, height: 96 }}
+                    unoptimized
+                  />
+                </div>
               ) : (
                 <div
                   className="w-24 h-24 rounded-xl flex items-center justify-center"
                   style={{
-                    backgroundColor: orgConfig?.color ? `${orgConfig.color}20` : "var(--twilight)",
+                    backgroundColor: producer.categories?.[0]
+                      ? `${getCategoryColor(producer.categories[0])}20`
+                      : "var(--twilight)",
                   }}
                 >
-                  <svg
-                    className="w-12 h-12"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                    style={{ color: orgConfig?.color || "var(--muted)" }}
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                  </svg>
+                  <CategoryIcon
+                    type={producer.categories?.[0] || "community"}
+                    size={48}
+                    glow="subtle"
+                  />
                 </div>
               )}
             </div>

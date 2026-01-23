@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { getPortalBySlug, DEFAULT_PORTAL } from "@/lib/portal";
 import { PortalProvider } from "@/lib/portal-context";
+import { DEFAULT_PORTAL_SLUG } from "@/lib/constants";
 import { PortalTheme } from "@/components/PortalTheme";
 import type { Metadata } from "next";
 import type { Portal } from "@/lib/portal-context";
@@ -45,7 +46,7 @@ export default async function PortalLayout({ children, params }: Props) {
 
   if (!portal) {
     // For Atlanta, use default if not in database yet
-    if (slug === "atlanta") {
+    if (slug === DEFAULT_PORTAL_SLUG) {
       return (
         <PortalProvider portal={DEFAULT_PORTAL}>
           <PortalTheme portal={DEFAULT_PORTAL} />
