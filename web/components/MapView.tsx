@@ -14,6 +14,10 @@ import { formatTime } from "@/lib/formats";
 // Fix for default marker icons in Leaflet with webpack
 import "leaflet/dist/leaflet.css";
 
+// Icon cache to prevent recreation on every render
+const iconCache = new Map<string, L.DivIcon>();
+const clusterIconCache = new Map<number, L.DivIcon>();
+
 // SVG paths for category and spot type icons (simplified for map markers)
 const ICON_PATHS: Record<string, string> = {
   // Event categories
@@ -95,15 +99,12 @@ const getMapStyles = (isLight: boolean) => `
     color: var(--soft, ${isLight ? '#4b5563' : '#A1A1AA'}) !important;
   }
 
-  /* Marker styles */
+  /* Marker styles - minimal transitions to prevent jitter */
   .neon-marker {
-    transition: transform 0.2s ease, filter 0.2s ease;
     cursor: pointer;
   }
   .neon-marker:hover {
-    transform: scale(1.25);
     z-index: 1000 !important;
-    filter: brightness(1.1);
   }
 
   /* Live event pulse animation - subtle */
@@ -147,7 +148,7 @@ const getMapStyles = (isLight: boolean) => `
     animation: user-pulse 2s ease-in-out infinite;
   }
 
-  /* Cluster marker styles */
+  /* Cluster marker styles - no transitions to prevent jitter */
   .custom-cluster {
     display: flex;
     align-items: center;
@@ -162,11 +163,9 @@ const getMapStyles = (isLight: boolean) => `
     font-size: 14px;
     font-weight: bold;
     color: var(--void);
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
   }
   .custom-cluster:hover {
-    transform: scale(1.15);
-    box-shadow: 0 0 25px rgba(232, 145, 45, 0.6), 0 4px 12px rgba(0,0,0,0.4);
+    z-index: 1000 !important;
   }
   .custom-cluster-large {
     width: 50px !important;
@@ -178,15 +177,22 @@ const getMapStyles = (isLight: boolean) => `
 // Default map pin icon when no category icon found
 const DEFAULT_ICON_PATH = "M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0zM15 11a3 3 0 11-6 0 3 3 0 016 0z";
 
-// Neon marker with glow effect and category icon
-const createNeonIcon = (color: string, iconType: string | null, isLive: boolean = false) => {
+// Neon marker with glow effect and category icon - uses caching to prevent jitter
+const createNeonIcon = (color: string, iconType: string | null, isLive: boolean = false): L.DivIcon => {
+  // Create a cache key from the parameters
+  const cacheKey = `${color}-${iconType || 'default'}-${isLive}`;
+
+  // Return cached icon if available
+  const cached = iconCache.get(cacheKey);
+  if (cached) return cached;
+
   // Try to get icon path, normalize to lowercase for matching
   const normalizedType = iconType?.toLowerCase().replace(/-/g, "_");
   const iconPath = normalizedType && ICON_PATHS[normalizedType]
     ? ICON_PATHS[normalizedType]
     : DEFAULT_ICON_PATH;
 
-  return L.divIcon({
+  const icon = L.divIcon({
     className: `neon-marker ${isLive ? "marker-live" : ""}`,
     html: `<div style="
       --marker-color: ${color};
@@ -208,6 +214,10 @@ const createNeonIcon = (color: string, iconType: string | null, isLive: boolean 
     iconAnchor: [14, 14],
     popupAnchor: [0, -14],
   });
+
+  // Cache for reuse
+  iconCache.set(cacheKey, icon);
+  return icon;
 };
 
 // Get category color from config or fallback
@@ -219,17 +229,24 @@ const getCategoryColor = (iconType: string | null): string => {
   return config?.color || "#E855A0"; // Neon magenta fallback
 };
 
-// Create custom cluster icon
+// Create custom cluster icon with caching
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const createClusterIcon = (cluster: any) => {
+const createClusterIcon = (cluster: any): L.DivIcon => {
   const count = cluster.getChildCount();
-  const sizeClass = count > 50 ? "custom-cluster-large" : "";
 
-  return L.divIcon({
+  // Cache by count to avoid recreation
+  const cached = clusterIconCache.get(count);
+  if (cached) return cached;
+
+  const sizeClass = count > 50 ? "custom-cluster-large" : "";
+  const icon = L.divIcon({
     html: `<div class="custom-cluster ${sizeClass}">${count}</div>`,
     className: "",
     iconSize: L.point(40, 40, true),
   });
+
+  clusterIconCache.set(count, icon);
+  return icon;
 };
 
 // Map resize helper
@@ -416,7 +433,8 @@ export default function MapView({ events, userLocation }: Props) {
             maxClusterRadius={50}
             spiderfyOnMaxZoom={true}
             showCoverageOnHover={false}
-            animate={true}
+            animate={false}
+            disableClusteringAtZoom={16}
           >
             {mappableEvents.map((event) => {
               // Prefer venue spot_type for icon, fall back to event category
