@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, memo } from "react";
 import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import MarkerClusterGroup from "react-leaflet-cluster";
 import L from "leaflet";
@@ -268,6 +268,140 @@ interface Props {
   userLocation?: { lat: number; lng: number } | null;
 }
 
+// Memoized single event marker to prevent re-renders
+interface EventMarkerProps {
+  event: EventWithLocation;
+  portalSlug: string;
+}
+
+const EventMarker = memo(function EventMarker({ event, portalSlug }: EventMarkerProps) {
+  const iconType = event.venue?.spot_type || event.category || null;
+  const color = getCategoryColor(iconType);
+  const isLive = event.is_live || false;
+
+  return (
+    <Marker
+      position={[event.venue!.lat!, event.venue!.lng!]}
+      icon={createNeonIcon(color, iconType, isLive)}
+    >
+      <Popup className="dark-popup">
+        <div
+          className="min-w-[240px] p-4 rounded-lg"
+          style={{
+            borderLeft: `4px solid ${color}`,
+            background: `linear-gradient(135deg, ${color}08 0%, transparent 50%)`,
+          }}
+        >
+          {/* Category badge */}
+          <div className="flex items-center justify-between mb-2">
+            {event.category && (
+              <span
+                className="inline-flex items-center gap-1.5 px-2 py-0.5 text-[0.55rem] font-mono font-medium uppercase tracking-wide rounded"
+                style={{
+                  backgroundColor: `${color}20`,
+                  color: color,
+                }}
+              >
+                {event.category.replace(/_/g, " ")}
+              </span>
+            )}
+            {isLive && (
+              <span className="flex-shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 text-[0.55rem] font-mono font-medium bg-[var(--neon-red)]/20 text-[var(--neon-red)] rounded">
+                <span className="w-1.5 h-1.5 rounded-full bg-[var(--neon-red)] animate-pulse" />
+                LIVE
+              </span>
+            )}
+          </div>
+
+          {/* Title */}
+          <Link
+            href={`/${portalSlug}/events/${event.id}`}
+            className="block font-medium text-sm text-[var(--cream)] hover:text-[var(--coral)] transition-colors line-clamp-2 mb-2"
+          >
+            {event.title}
+          </Link>
+
+          {/* Venue name */}
+          <div className="flex items-center gap-1.5 text-[0.7rem] text-[var(--soft)] mb-1">
+            <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+            </svg>
+            <span className="truncate">{event.venue?.name}</span>
+          </div>
+
+          {/* Time and neighborhood */}
+          <div className="flex items-center gap-1.5 font-mono text-[0.65rem] text-[var(--muted)]">
+            <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span className="text-[var(--cream)]">
+              {formatTime(event.start_time)}
+            </span>
+            {event.venue?.neighborhood && (
+              <>
+                <span className="opacity-40">·</span>
+                <span className="truncate">{event.venue.neighborhood}</span>
+              </>
+            )}
+          </div>
+
+          {/* Price badge */}
+          <div className="mt-3 flex items-center gap-2">
+            {event.is_free ? (
+              <span className="inline-block px-2 py-0.5 text-[0.6rem] font-mono font-medium bg-[var(--neon-green)]/20 text-[var(--neon-green)] rounded">
+                FREE
+              </span>
+            ) : event.price_min !== null && (
+              <span className="inline-block px-2 py-0.5 text-[0.6rem] font-mono font-medium bg-[var(--gold)]/20 text-[var(--gold)] rounded">
+                ${event.price_min}{event.price_max && event.price_max !== event.price_min ? `–$${event.price_max}` : "+"}
+              </span>
+            )}
+            <Link
+              href={`/${portalSlug}/events/${event.id}`}
+              className="ml-auto text-[0.6rem] font-mono text-[var(--coral)] hover:underline"
+            >
+              View details →
+            </Link>
+          </div>
+        </div>
+      </Popup>
+    </Marker>
+  );
+});
+
+// Memoized markers container - only re-renders when events array changes
+interface EventMarkersProps {
+  events: EventWithLocation[];
+  portalSlug: string;
+}
+
+const EventMarkers = memo(function EventMarkers({ events, portalSlug }: EventMarkersProps) {
+  return (
+    <MarkerClusterGroup
+      chunkedLoading
+      iconCreateFunction={createClusterIcon}
+      maxClusterRadius={50}
+      spiderfyOnMaxZoom={true}
+      showCoverageOnHover={false}
+      animate={false}
+      disableClusteringAtZoom={16}
+    >
+      {events.map((event) => (
+        <EventMarker key={event.id} event={event} portalSlug={portalSlug} />
+      ))}
+    </MarkerClusterGroup>
+  );
+}, (prevProps, nextProps) => {
+  // Custom comparison - only re-render if events array length or IDs change
+  if (prevProps.events.length !== nextProps.events.length) return false;
+  if (prevProps.portalSlug !== nextProps.portalSlug) return false;
+  // Check if event IDs are the same (shallow comparison)
+  for (let i = 0; i < prevProps.events.length; i++) {
+    if (prevProps.events[i].id !== nextProps.events[i].id) return false;
+  }
+  return true;
+});
+
 function applyLiveFilter(events: EventWithLocation[], liveOnly: boolean) {
   if (!liveOnly) return events;
   return events.filter((event) => event.is_live);
@@ -427,112 +561,7 @@ export default function MapView({ events, userLocation }: Props) {
             liveOnly={liveOnly}
             onToggleLiveOnly={() => setLiveOnly((prev) => !prev)}
           />
-          <MarkerClusterGroup
-            chunkedLoading
-            iconCreateFunction={createClusterIcon}
-            maxClusterRadius={50}
-            spiderfyOnMaxZoom={true}
-            showCoverageOnHover={false}
-            animate={false}
-            disableClusteringAtZoom={16}
-          >
-            {mappableEvents.map((event) => {
-              // Prefer venue spot_type for icon, fall back to event category
-              const iconType = event.venue?.spot_type || event.category || null;
-              const color = getCategoryColor(iconType);
-              const isLive = event.is_live || false;
-
-              return (
-                <Marker
-                  key={event.id}
-                  position={[event.venue!.lat!, event.venue!.lng!]}
-                  icon={createNeonIcon(color, iconType, isLive)}
-                >
-                  <Popup className="dark-popup">
-                    <div
-                      className="min-w-[240px] p-4 rounded-lg"
-                      style={{
-                        borderLeft: `4px solid ${color}`,
-                        background: `linear-gradient(135deg, ${color}08 0%, transparent 50%)`,
-                      }}
-                    >
-                      {/* Category badge */}
-                      <div className="flex items-center justify-between mb-2">
-                        {event.category && (
-                          <span
-                            className="inline-flex items-center gap-1.5 px-2 py-0.5 text-[0.55rem] font-mono font-medium uppercase tracking-wide rounded"
-                            style={{
-                              backgroundColor: `${color}20`,
-                              color: color,
-                            }}
-                          >
-                            {event.category.replace(/_/g, " ")}
-                          </span>
-                        )}
-                        {isLive && (
-                          <span className="flex-shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 text-[0.55rem] font-mono font-medium bg-[var(--neon-red)]/20 text-[var(--neon-red)] rounded">
-                            <span className="w-1.5 h-1.5 rounded-full bg-[var(--neon-red)] animate-pulse" />
-                            LIVE
-                          </span>
-                        )}
-                      </div>
-
-                      {/* Title */}
-                      <Link
-                        href={`/${portal.slug}/events/${event.id}`}
-                        className="block font-medium text-sm text-[var(--cream)] hover:text-[var(--coral)] transition-colors line-clamp-2 mb-2"
-                      >
-                        {event.title}
-                      </Link>
-
-                      {/* Venue name */}
-                      <div className="flex items-center gap-1.5 text-[0.7rem] text-[var(--soft)] mb-1">
-                        <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                        </svg>
-                        <span className="truncate">{event.venue?.name}</span>
-                      </div>
-
-                      {/* Time and neighborhood */}
-                      <div className="flex items-center gap-1.5 font-mono text-[0.65rem] text-[var(--muted)]">
-                        <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        <span className="text-[var(--cream)]">
-                          {formatTime(event.start_time)}
-                        </span>
-                        {event.venue?.neighborhood && (
-                          <>
-                            <span className="opacity-40">·</span>
-                            <span className="truncate">{event.venue.neighborhood}</span>
-                          </>
-                        )}
-                      </div>
-
-                      {/* Price badge */}
-                      <div className="mt-3 flex items-center gap-2">
-                        {event.is_free ? (
-                          <span className="inline-block px-2 py-0.5 text-[0.6rem] font-mono font-medium bg-[var(--neon-green)]/20 text-[var(--neon-green)] rounded">
-                            FREE
-                          </span>
-                        ) : event.price_min !== null && (
-                          <span className="inline-block px-2 py-0.5 text-[0.6rem] font-mono font-medium bg-[var(--gold)]/20 text-[var(--gold)] rounded">
-                            ${event.price_min}{event.price_max && event.price_max !== event.price_min ? `–$${event.price_max}` : "+"}
-                          </span>
-                        )}
-                        <Link
-                          href={`/${portal.slug}/events/${event.id}`}
-                          className="ml-auto text-[0.6rem] font-mono text-[var(--coral)] hover:underline"
-                        >
-                          View details →
-                        </Link>
-                      </div>
-                    </div>
-                  </Popup>
-                </Marker>
-              );
-            })}
-          </MarkerClusterGroup>
+          <EventMarkers events={mappableEvents} portalSlug={portal.slug} />
           {/* User location marker */}
           {localUserLocation && (
             <Marker
