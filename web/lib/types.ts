@@ -31,6 +31,7 @@ export type Database = {
           canonical_event_id: number | null;
           created_at: string;
           updated_at: string;
+          search_vector: unknown | null; // tsvector for full-text search
         };
       };
       venues: {
@@ -49,6 +50,7 @@ export type Database = {
           website: string | null;
           aliases: string[] | null;
           created_at: string;
+          search_vector: unknown | null; // tsvector for full-text search
         };
       };
       sources: {
