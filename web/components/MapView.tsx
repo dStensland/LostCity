@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, memo } from "react";
+import { useCallback, useEffect, useMemo, useState, memo, useRef } from "react";
 import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import MarkerClusterGroup from "react-leaflet-cluster";
 import L from "leaflet";
@@ -514,6 +514,14 @@ export default function MapView({ events, userLocation }: Props) {
         )
       : null;
 
+  // Memoize allEventsBounds for MapOverlay to prevent unnecessary re-renders
+  const allEventsBounds = useMemo(() => {
+    if (mappableEvents.length === 0) return null;
+    return L.latLngBounds(
+      mappableEvents.map((e) => [e.venue!.lat!, e.venue!.lng!] as [number, number])
+    );
+  }, [mappableEvents]);
+
   const categoryLegend = [
     { key: "music", label: "Music", color: CATEGORY_CONFIG.music.color },
     { key: "food_drink", label: "Food & Drink", color: CATEGORY_CONFIG.food_drink.color },
@@ -551,7 +559,7 @@ export default function MapView({ events, userLocation }: Props) {
           <MapOverlay
             totalEvents={filteredEvents.length}
             mappableCount={mappableEvents.length}
-            allEventsBounds={mappableEvents.length > 0 ? L.latLngBounds(mappableEvents.map((e) => [e.venue!.lat!, e.venue!.lng!] as [number, number])) : null}
+            allEventsBounds={allEventsBounds}
             hasUserLocation={!!localUserLocation}
             userLocation={localUserLocation}
             locating={locating}
@@ -618,6 +626,7 @@ function MapOverlay({
   onToggleLiveOnly: () => void;
 }) {
   const map = useMap();
+  const initialFitDoneRef = useRef(false);
 
   const fitToEvents = useCallback(() => {
     if (allEventsBounds) {
@@ -633,10 +642,11 @@ function MapOverlay({
     }
   }, [userLocation, map]);
 
-  // Only auto-fit to bounds if user doesn't have location set
+  // Only auto-fit to bounds ONCE on initial load, not on every change
   useEffect(() => {
-    if (!hasUserLocation && allEventsBounds) {
+    if (!initialFitDoneRef.current && !hasUserLocation && allEventsBounds) {
       map.fitBounds(allEventsBounds, { padding: [60, 60] });
+      initialFitDoneRef.current = true;
     }
   }, [allEventsBounds, hasUserLocation, map]);
 
