@@ -383,8 +383,11 @@ const EventMarkers = memo(function EventMarkers({ events, portalSlug }: EventMar
       maxClusterRadius={50}
       spiderfyOnMaxZoom={true}
       showCoverageOnHover={false}
-      animate={false}
+      animate={true}
+      animateAddingMarkers={false}
       disableClusteringAtZoom={16}
+      zoomToBoundsOnClick={true}
+      spiderfyDistanceMultiplier={1.5}
     >
       {events.map((event) => (
         <EventMarker key={event.id} event={event} portalSlug={portalSlug} />
@@ -550,6 +553,12 @@ export default function MapView({ events, userLocation }: Props) {
           boundsOptions={{ padding: [50, 50] }}
           className="w-full h-full"
           scrollWheelZoom={true}
+          zoomAnimation={true}
+          fadeAnimation={true}
+          markerZoomAnimation={true}
+          zoomSnap={0.5}
+          zoomDelta={0.5}
+          wheelPxPerZoomLevel={120}
         >
           <MapResizer />
           <TileLayer
