@@ -181,16 +181,34 @@ def extract_via_buttons(page: Page) -> dict:
     return movie_showtimes
 
 
+def clean_movie_title(title: str) -> str:
+    """Remove common UI prefixes/suffixes from movie titles."""
+    prefixes_to_remove = [
+        'Subtitled', 'Caption', 'closed_caption', 'accessible',
+        'headphones', 'Digital', '2k', '35MM', '70MM', 'emoji_events'
+    ]
+    for prefix in prefixes_to_remove:
+        if title.lower().startswith(prefix.lower()):
+            title = title[len(prefix):].strip()
+    # Also remove trailing ratings
+    title = re.sub(r'\s*(Not Rated|Rated|[RPGN](?:-\d+)?)\s*$', '', title, flags=re.IGNORECASE).strip()
+    return title
+
+
 def extract_via_text_blocks(page: Page, date_str: str) -> dict:
     """Extract movies by parsing the full page text content.
 
-    The Plaza Theatre page structure is:
-    - Movie title (may include rating inline like "Not Rated")
-    - Duration line: "X hr Y min · Genre · features"
-    - Description text (may be multiple lines)
-    - Showtime blocks: "The {Screen}Digital{Time} Ends at {EndTime}"
+    Strategy: Find all duration patterns (X hr Y min) and work backwards
+    to extract movie titles. This handles concatenated text better than
+    trying to match title + duration as a single pattern.
 
-    One movie can have multiple showtimes at different screens.
+    The Plaza Theatre page structure (text is often concatenated without spaces):
+    - Movie title (may include year/format in parentheses)
+    - Rating: "Not Rated", "R", "PG-13", etc.
+    - Duration: "X hr Y min"
+    - Genre and features with · separator
+    - Description text
+    - Showtimes: "The [Screen]Digital[Time] Ends at [EndTime]"
     """
     movie_showtimes = {}
 
@@ -205,76 +223,97 @@ def extract_via_text_blocks(page: Page, date_str: str) -> dict:
         if "COMING SOON TO PLAZA" in text:
             text = text.split("COMING SOON TO PLAZA")[0]
 
-        # Find all movie+showtime blocks using regex patterns
-        # Movie titles are followed by duration "X hr Y min"
-        # Pattern: Title (possibly with rating) followed by duration
-        movie_pattern = re.compile(
-            r'([A-Z][^·\n]{3,80}?)(?:\s*(?:Not Rated|Rated\s*[A-Z]+|[GPNR]-?\d*))?\s*'
-            r'(\d+\s*hr\s*\d*\s*min[^\n]*)',
-            re.MULTILINE
-        )
+        # Find all duration patterns first
+        duration_pattern = re.compile(r'(\d+\s*hr\s*\d*\s*min)', re.IGNORECASE)
+        durations = list(duration_pattern.finditer(text))
+
+        logger.info(f"Found {len(durations)} duration patterns in Plaza text")
+
+        # For each duration, look backwards to find the movie title
+        movies = []
+        for i, d in enumerate(durations):
+            duration = d.group(1)
+            duration_start = d.start()
+
+            # Look backwards for the title - go back up to 150 chars or to previous duration
+            if i > 0:
+                search_start = max(durations[i-1].end(), duration_start - 150)
+            else:
+                search_start = max(0, duration_start - 150)
+
+            before_duration = text[search_start:duration_start]
+
+            # Find capitalized phrase at end of the section (before rating if present)
+            # Movie titles start with capital letter
+            title_match = re.search(
+                r'([A-Z][A-Za-z0-9\s\'\"\-\:\'\(\)\&\!]+?)\s*(?:Not Rated|Rated\s*[A-Z]+|[RPGN](?:-\d+)?)?\s*$',
+                before_duration
+            )
+
+            if title_match:
+                title = clean_movie_title(title_match.group(1).strip())
+
+                # Skip UI text and navigation elements
+                skip_words = [
+                    "NOW PLAYING", "COMING SOON", "SPECIAL", "RENTALS", "NEWS",
+                    "Today", "Plaza Theatre", "The Tara", "Help Us", "Join",
+                    "Showtimes are", "Start dates", "When nothing", "Not finding",
+                    "Community", "TRASH", "Trivia", "throw down", "chevron",
+                    "Subscribe", "Mailing List", "Follow us", "Letterboxd",
+                    "Special Events", "LIVE with", "Every Friday", "Digital",
+                    "Ends at", "caption", "accessible", "headphones",
+                ]
+                if any(skip.lower() in title.lower() for skip in skip_words):
+                    continue
+                if len(title) < 3 or len(title) > 100:
+                    continue
+
+                movies.append({
+                    "title": title,
+                    "duration": duration,
+                    "start": title_match.start() + search_start,
+                    "end": d.end()
+                })
+
+        logger.info(f"Found {len(movies)} movies in Plaza text")
 
         # Showtime pattern: Screen + Digital + Time + Ends at
-        # Screens are: The Lefont, The Rej, The Mike
+        # Text is concatenated like: "The LefontDigital5:00 PM Ends at 7:05 PM"
         showtime_pattern = re.compile(
-            r'(The\s+(?:Lefont|Rej|Mike))\s*Digital\s*'
+            r'The\s*(Lefont|Rej|Mike)\s*Digital\s*'
             r'(\d{1,2}:\d{2}\s*(?:AM|PM))\s*'
             r'Ends at\s*\d{1,2}:\d{2}\s*(?:AM|PM)',
             re.IGNORECASE
         )
 
-        # Find all movies with their positions
-        movies = []
-        for match in movie_pattern.finditer(text):
-            title = match.group(1).strip()
-            duration = match.group(2).strip()
-            start_pos = match.start()
+        # Find all showtimes with their positions
+        showtimes_found = list(showtime_pattern.finditer(text))
+        logger.info(f"Found {len(showtimes_found)} showtimes in Plaza text")
 
-            # Clean up title - remove trailing ratings/whitespace
-            title = re.sub(r'\s*(Not Rated|Rated\s*[A-Z]+)\s*$', '', title).strip()
+        # Associate showtimes with movies based on position
+        for movie in movies:
+            movie_showtimes_list = []
 
-            # Skip non-movie text
-            skip_words = [
-                "NOW PLAYING", "COMING SOON", "SPECIAL", "RENTALS", "NEWS",
-                "Today", "Plaza Theatre", "The Tara", "Help Us", "Join",
-                "Showtimes are", "Start dates", "When nothing", "Not finding",
-                "Community", "TRASH", "Trivia", "throw down", "chevron",
-            ]
-            if any(skip.lower() in title.lower() for skip in skip_words):
-                continue
-            if len(title) < 4 or len(title) > 100:
-                continue
+            for st in showtimes_found:
+                # Check if this showtime is after the movie and before the next movie
+                if st.start() > movie["end"]:
+                    # Check if there's another movie between this movie and the showtime
+                    has_intervening_movie = False
+                    for other_movie in movies:
+                        if other_movie["start"] > movie["end"] and other_movie["start"] < st.start():
+                            has_intervening_movie = True
+                            break
+                    if not has_intervening_movie:
+                        movie_showtimes_list.append(st.group(2))
 
-            movies.append({
-                "title": title,
-                "duration": duration,
-                "start": start_pos,
-                "end": match.end()
-            })
-
-        # For each movie, find showtimes between this movie and the next
-        for i, movie in enumerate(movies):
-            # Get text section for this movie (until next movie or end)
-            if i + 1 < len(movies):
-                section = text[movie["end"]:movies[i + 1]["start"]]
-            else:
-                section = text[movie["end"]:]
-
-            # Find all showtimes in this section
-            showtimes = []
-            for st_match in showtime_pattern.finditer(section):
-                screen = st_match.group(1)
-                time = st_match.group(2)
-                showtimes.append(time)
-
-            if showtimes:
+            if movie_showtimes_list:
                 movie_showtimes[movie["title"]] = {
                     "duration": movie["duration"],
                     "image": None,
-                    "showtimes": showtimes
+                    "showtimes": movie_showtimes_list
                 }
 
-        logger.info(f"Text extraction found {len(movie_showtimes)} movies")
+        logger.info(f"Text extraction found {len(movie_showtimes)} movies with showtimes")
 
     except Exception as e:
         logger.error(f"Error in text block extraction: {e}")

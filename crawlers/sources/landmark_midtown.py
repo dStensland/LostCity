@@ -59,15 +59,14 @@ def extract_movies_for_date(
 ) -> tuple[int, int, int]:
     """Extract movies and showtimes for a specific date.
 
-    Landmark page structure (from main content text):
-    - Rating/Duration line: "{RATING} • {DURATION}" (e.g., "PG-13 • 2 hr, 10 min")
-    - Title on next line (Title Case)
+    Landmark page structure (text is concatenated without newlines):
+    - "Trailer" marker (optional)
+    - Rating + Duration: "PG-13 • 2 hr, 10 min" or "R • 1 hr, 50 min"
+    - Title immediately follows (e.g., "H Is For Hawk")
     - "Directed by {DIRECTOR}"
-    - Content advisory description
-    - "Genre: {GENRES}"
-    - "Cast: {CAST}"
-    - Date line (e.g., "Today, January 22")
-    - Showtimes as "4:00PM", "7:15PM" (no space before AM/PM)
+    - Content advisory, Genre, Cast info
+    - "Today, January 23" date marker
+    - Showtimes concatenated: "1:10PM4:00PM7:00PM10:00PM"
     """
     events_found = 0
     events_new = 0
@@ -87,19 +86,22 @@ def extract_movies_for_date(
         if "Film Series & Special Screenings" in text:
             text = text.split("Film Series & Special Screenings")[0]
 
-        # Pattern to find movie blocks:
-        # Rating line followed by title on next line
-        # Format: "PG-13 • 2 HR, 10 MIN\n{TITLE}\n\nDirected by..."
+        # Movie pattern for concatenated text:
+        # "Trailer PG-13 • 2 hr, 10 minH Is For HawkDirected by..."
+        # Key: Rating • Duration followed by Title then "Directed by"
         movie_pattern = re.compile(
+            r'(?:Trailer\s*)?'  # Optional Trailer marker
             r'((?:G|PG|PG-13|R|NC-17|NR|Not Rated)\s*•\s*'  # Rating
-            r'\d+\s*HR,?\s*\d*\s*MIN)\s*\n'  # Duration followed by newline
-            r'([^\n]{3,80})\n+'  # Title on its own line (any chars)
-            r'Directed by\s+([^\n]+)',  # Director confirms this is a movie
+            r'\d+\s*hr,?\s*\d*\s*min)'  # Duration
+            r'\s*'
+            r'([A-Z][A-Za-z0-9\s\'\"\-\:\,\.\!\?\&\(\)]+?)'  # Title (starts with capital)
+            r'Directed by\s+([A-Za-z\s\-\.]+)',  # Director (confirms this is a movie)
             re.IGNORECASE
         )
 
-        # Showtime pattern: times like "4:00PM", "3:10PM" (no space)
-        showtime_pattern = re.compile(r'\b(\d{1,2}:\d{2}(?:AM|PM))\b', re.IGNORECASE)
+        # Showtime pattern: times like "4:00PM", "3:10PM" (no space before AM/PM)
+        # Can be concatenated: "1:10PM4:00PM7:00PM"
+        showtime_pattern = re.compile(r'(\d{1,2}:\d{2}(?:AM|PM))', re.IGNORECASE)
 
         # Find all movies
         movies = []
@@ -108,15 +110,18 @@ def extract_movies_for_date(
             title = match.group(2).strip()
             director = match.group(3).strip()
 
-            # Clean up title - remove any trailing metadata
-            title = re.sub(r'\s*(Directed by.*|Genre:.*|Cast:.*)$', '', title, flags=re.IGNORECASE).strip()
+            # Clean up title - remove trailing whitespace and any leftover metadata
+            title = re.sub(r'\s+$', '', title).strip()
 
             # Skip if title looks like UI text
             skip_titles = [
                 "Showtimes", "Now Playing", "Coming Soon", "Landmark",
-                "Another Date", "See Details", "Film Series", "Special"
+                "Another Date", "See Details", "Film Series", "Special",
+                "At:", "Fri", "Sat", "Sun", "Mon", "Tue", "Wed", "Thu"
             ]
-            if any(skip.lower() in title.lower() for skip in skip_titles):
+            if any(skip.lower() == title.lower() for skip in skip_titles):
+                continue
+            if any(skip.lower() in title.lower() and len(title) < 20 for skip in skip_titles):
                 continue
 
             if len(title) < 3 or len(title) > 100:
@@ -136,23 +141,25 @@ def extract_movies_for_date(
         seen_movies = set()
 
         for i, movie in enumerate(movies):
-            # Get text section for this movie (until next movie or TRAILER marker)
+            # Get text section for this movie (until next movie or Trailer marker)
             if i + 1 < len(movies):
                 section = text[movie["end"]:movies[i + 1]["start"]]
             else:
                 section = text[movie["end"]:movie["end"] + 500]  # Limit search area
 
-            # Stop at TRAILER marker (indicates end of this movie's section)
-            if "TRAILER" in section:
-                section = section.split("TRAILER")[0]
+            # Stop at Trailer marker (indicates start of next movie)
+            if "Trailer" in section:
+                section = section.split("Trailer")[0]
 
             # Find all showtimes in this section
             showtimes = []
             for st_match in showtime_pattern.finditer(section):
                 time_str = st_match.group(1)
-                # Validate it's a reasonable showtime (not part of duration)
-                if "hr" not in section[max(0, st_match.start()-10):st_match.start()].lower():
-                    showtimes.append(time_str)
+                # Skip if this looks like part of duration (preceded by "hr" or "min")
+                prefix = section[max(0, st_match.start()-15):st_match.start()].lower()
+                if "hr" in prefix or "min" in prefix:
+                    continue
+                showtimes.append(time_str)
 
             # Create events for each showtime
             for showtime in showtimes:
