@@ -193,10 +193,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signOut = async () => {
-    await supabase.auth.signOut();
-    setUser(null);
-    setSession(null);
-    setProfile(null);
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        console.error("Sign out error:", error);
+      }
+    } catch (err) {
+      console.error("Sign out exception:", err);
+    } finally {
+      // Always clear local state and redirect, even if API call fails
+      setUser(null);
+      setSession(null);
+      setProfile(null);
+      // Redirect to home page
+      window.location.href = "/";
+    }
   };
 
   return (
