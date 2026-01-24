@@ -45,16 +45,6 @@ interface Props {
   searchQuery: string;
 }
 
-// Helper to extract domain from URL for display
-function getDomainFromUrl(url: string): string {
-  try {
-    const domain = new URL(url).hostname.replace(/^www\./, "");
-    return domain;
-  } catch {
-    return url;
-  }
-}
-
 // Order for category sorting
 const ORG_TYPE_ORDER = [
   "arts_nonprofit",

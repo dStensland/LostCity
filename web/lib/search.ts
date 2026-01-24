@@ -14,7 +14,7 @@ import { decodeCursor, generateNextCursor, type CursorData } from "./cursor";
 import { getPortalSourceAccess, type PortalSourceAccess } from "./federation";
 
 // Cache for portal source access (refreshed on each request but cached within a request)
-let sourceAccessCache: Map<string, { data: PortalSourceAccess; timestamp: number }> = new Map();
+const sourceAccessCache: Map<string, { data: PortalSourceAccess; timestamp: number }> = new Map();
 const CACHE_TTL_MS = 60000; // 1 minute cache
 
 /**

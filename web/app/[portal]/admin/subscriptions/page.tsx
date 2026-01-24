@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, use } from "react";
+import { useState, useEffect } from "react";
 import { usePortal } from "@/lib/portal-context";
 import { formatDistanceToNow } from "date-fns";
 
@@ -46,8 +46,7 @@ type AvailableSource = {
   };
 };
 
-export default function PortalSubscriptionsPage({ params }: { params: Promise<{ portal: string }> }) {
-  const { portal: slug } = use(params);
+export default function PortalSubscriptionsPage() {
   const { portal } = usePortal();
 
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);

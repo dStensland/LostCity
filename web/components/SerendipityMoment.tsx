@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { formatTimeSplit } from "@/lib/formats";
 import { format, parseISO, isToday, isTomorrow } from "date-fns";
-import CategoryIcon, { getCategoryColor, CATEGORY_CONFIG, type CategoryType } from "./CategoryIcon";
+import CategoryIcon, { getCategoryColor } from "./CategoryIcon";
 
 type SerendipityEvent = {
   id: number;

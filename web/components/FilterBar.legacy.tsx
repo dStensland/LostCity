@@ -130,7 +130,7 @@ export default function FilterBar({ variant = "full" }: FilterBarProps) {
   const searchParams = useSearchParams();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const drawerContentRef = useRef<HTMLDivElement>(null);
-  const [isPending, startTransition] = useTransition();
+  const [, startTransition] = useTransition();
 
   // Optimistic view state for instant UI feedback
   const [optimisticView, setOptimisticView] = useState<string | null>(null);
@@ -225,7 +225,7 @@ export default function FilterBar({ variant = "full" }: FilterBarProps) {
   // Custom range states
   const [showDateRange, setShowDateRange] = useState(false);
   const [showPriceRange, setShowPriceRange] = useState(false);
-  const [showGeoRange, setShowGeoRange] = useState(false);
+  const [, setShowGeoRange] = useState(false);
   const [geoLoading, setGeoLoading] = useState(false);
 
   const currentCategories = useMemo(

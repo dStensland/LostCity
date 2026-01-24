@@ -5,7 +5,6 @@
  * PostgreSQL tsvector/tsquery with pg_trgm for fuzzy matching.
  */
 
-import { supabase } from "./supabase";
 import { createServiceClient } from "./supabase/service";
 
 // ============================================

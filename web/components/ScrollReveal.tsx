@@ -1,6 +1,6 @@
 "use client";
 
-import { useScrollReveal, getScrollRevealClasses } from "@/hooks/useScrollReveal";
+import { useScrollReveal } from "@/hooks/useScrollReveal";
 import { ReactNode } from "react";
 
 interface Props {

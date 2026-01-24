@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getOpenSpots, type Spot } from "@/lib/spots";
+import { getOpenSpots } from "@/lib/spots";
 
 export const dynamic = "force-dynamic";
 

@@ -6,8 +6,8 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { useLiveEvents } from "@/lib/hooks/useLiveEvents";
 import Link from "next/link";
 import { formatTime } from "@/lib/formats";
-import CategoryIcon, { getCategoryColor, getCategoryLabel } from "@/components/CategoryIcon";
-import { SPOT_TYPES, NEIGHBORHOODS, type Spot } from "@/lib/spots";
+import CategoryIcon, { getCategoryColor } from "@/components/CategoryIcon";
+import { NEIGHBORHOODS, type Spot } from "@/lib/spots";
 import { DEFAULT_PORTAL_SLUG } from "@/lib/portal-context";
 
 // Dynamically import components

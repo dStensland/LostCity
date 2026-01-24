@@ -21,8 +21,6 @@ export async function GET(request: NextRequest) {
   const rateLimitResult = applyRateLimit(request, RATE_LIMITS.read);
   if (rateLimitResult) return rateLimitResult;
 
-  const searchParams = request.nextUrl.searchParams;
-
   try {
     // Get current date for event counting
     const today = new Date().toISOString().split("T")[0];

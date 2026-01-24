@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { createClient, getUser } from "@/lib/supabase/server";
-import { errorResponse } from "@/lib/api-utils";
 
 // POST /api/personalization/feedback - Record user feedback on events
 export async function POST(request: Request) {

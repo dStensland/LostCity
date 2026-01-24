@@ -1,4 +1,4 @@
-import { createClient, isAdmin, canManagePortal } from "@/lib/supabase/server";
+import { createClient, canManagePortal } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 import { DEFAULT_PORTAL_SLUG } from "@/lib/constants";
 

@@ -2,7 +2,7 @@
 
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useCallback, useMemo, useState, useEffect, useRef, useTransition } from "react";
-import { CATEGORIES, DATE_FILTERS } from "@/lib/search";
+import { CATEGORIES } from "@/lib/search";
 import CategoryIcon, { CATEGORY_CONFIG, type CategoryType } from "./CategoryIcon";
 import { useAuth } from "@/lib/auth-context";
 
@@ -22,7 +22,7 @@ export default function SimpleFilterBar({ variant = "full" }: SimpleFilterBarPro
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const [isPending, startTransition] = useTransition();
+  const [, startTransition] = useTransition();
   const { user } = useAuth();
 
   // Dropdown states

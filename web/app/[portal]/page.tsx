@@ -1,4 +1,3 @@
-import { PRICE_FILTERS, type SearchFilters } from "@/lib/search";
 import { getPortalBySlug } from "@/lib/portal";
 import SimpleFilterBar from "@/components/SimpleFilterBar";
 import EventList from "@/components/EventList";
@@ -18,8 +17,6 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 
 export const revalidate = 60;
-
-const PAGE_SIZE = 20;
 
 type ViewMode = "events" | "map" | "calendar" | "feed" | "spots" | "community";
 
@@ -60,34 +57,6 @@ export default async function PortalPage({ params, searchParams }: Props) {
     view === "spots" ? "spots" :
     view === "community" ? "community" :
     "feed";
-
-  // Parse price filter
-  const priceFilter = PRICE_FILTERS.find(p => p.value === searchParamsData.price);
-  const isFree = searchParamsData.price === "free" || searchParamsData.free === "1";
-  const priceMax = priceFilter?.max || undefined;
-
-  // Build filters, incorporating portal-specific filters
-  const filters: SearchFilters = {
-    search: searchParamsData.search || undefined,
-    categories: searchParamsData.categories?.split(",").filter(Boolean) || portal.filters.categories || undefined,
-    subcategories: searchParamsData.subcategories?.split(",").filter(Boolean) || undefined,
-    tags: searchParamsData.tags?.split(",").filter(Boolean) || portal.filters.tags || undefined,
-    vibes: searchParamsData.vibes?.split(",").filter(Boolean) || undefined,
-    neighborhoods: searchParamsData.neighborhoods?.split(",").filter(Boolean) || portal.filters.neighborhoods || undefined,
-    is_free: isFree || undefined,
-    price_max: priceMax || portal.filters.price_max || undefined,
-    date_filter: (searchParamsData.date as "now" | "today" | "tomorrow" | "weekend" | "week") || undefined,
-    mood: searchParamsData.mood as import("@/lib/moods").MoodId || undefined,
-    city: portal.filters.city || undefined,
-    exclude_categories: portal.filters.exclude_categories || undefined,
-    date_range_start: portal.filters.date_range_start || undefined,
-    date_range_end: portal.filters.date_range_end || undefined,
-    venue_ids: portal.filters.venue_ids || undefined,
-    geo_center: portal.filters.geo_center || undefined,
-    geo_radius_km: portal.filters.geo_radius_km || undefined,
-    portal_id: portal.id,  // Pass portal ID to filter portal-restricted events
-    portal_exclusive: portal.portal_type === "business",  // Business portals only show their own events
-  };
 
   // Don't block on data - let views fetch their own data client-side for instant navigation
   const hasActiveFilters = !!(searchParamsData.search || searchParamsData.categories || searchParamsData.subcategories || searchParamsData.tags || searchParamsData.vibes || searchParamsData.neighborhoods || searchParamsData.price || searchParamsData.free || searchParamsData.date || searchParamsData.mood);

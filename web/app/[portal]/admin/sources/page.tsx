@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useEffect, use } from "react";
-import Link from "next/link";
+import { useState, useEffect } from "react";
 import { usePortal } from "@/lib/portal-context";
 import { formatDistanceToNow } from "date-fns";
 
@@ -26,8 +25,7 @@ const CATEGORIES = [
   "markets", "wellness", "gaming", "outdoors", "other"
 ];
 
-export default function PortalSourcesPage({ params }: { params: Promise<{ portal: string }> }) {
-  const { portal: slug } = use(params);
+export default function PortalSourcesPage() {
   const { portal } = usePortal();
 
   const [sources, setSources] = useState<Source[]>([]);

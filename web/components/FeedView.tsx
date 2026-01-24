@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { useAuth } from "@/lib/auth-context";
 import { usePortal } from "@/lib/portal-context";
 import FeedSection, { type FeedSectionData } from "./feed/FeedSection";
 import SerendipityFeed from "./SerendipityFeed";
@@ -17,16 +16,11 @@ type FeedSettings = {
 };
 
 export default function FeedView() {
-  const { user, loading: authLoading } = useAuth();
   const { portal } = usePortal();
 
   const [sections, setSections] = useState<FeedSectionData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  // Get feed settings from portal
-  const feedSettings = (portal.settings?.feed || {}) as FeedSettings;
-  const feedType = feedSettings.feed_type || "sections";
 
   const loadFeed = useCallback(async (signal: AbortSignal) => {
     try {

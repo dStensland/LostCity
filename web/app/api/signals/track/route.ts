@@ -94,7 +94,7 @@ export async function POST(request: Request) {
     // Upsert each signal into inferred_preferences
     const upsertPromises = signals.map(async (signal) => {
       // Use upsert with ON CONFLICT handling
-      const { error } = await (supabase.rpc as Function)("upsert_inferred_preference", {
+      const { error } = await (supabase.rpc as unknown as (name: string, params: Record<string, unknown>) => Promise<{ error: Error | null }>)("upsert_inferred_preference", {
         p_user_id: user.id,
         p_signal_type: signal.type,
         p_signal_value: signal.value,
@@ -103,7 +103,8 @@ export async function POST(request: Request) {
 
       if (error) {
         // Fallback to manual upsert if RPC doesn't exist
-        if (error.code === "42883") {
+        const errorCode = (error as Error & { code?: string }).code;
+        if (errorCode === "42883") {
           // Function doesn't exist, do manual upsert
           const { data: existing } = await supabase
             .from("inferred_preferences")

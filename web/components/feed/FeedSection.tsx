@@ -2,12 +2,11 @@
 
 import { useRef, useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { format, parseISO, isToday, isTomorrow, formatDistanceToNow } from "date-fns";
+import { format, parseISO, isToday, isTomorrow } from "date-fns";
 import CategoryIcon, { getCategoryColor, CATEGORY_CONFIG, type CategoryType } from "../CategoryIcon";
 import { LiveBadge, SoonBadge, FreeBadge } from "../Badge";
 import { formatTime } from "@/lib/formats";
 import { usePortal } from "@/lib/portal-context";
-import AtlantaSkyline from "../AtlantaSkyline";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 
 // Types

@@ -47,7 +47,6 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const limit = parseInt(searchParams.get("limit") || "50", 10);
     const offset = parseInt(searchParams.get("offset") || "0", 10);
-    const cursor = searchParams.get("cursor");
 
     const supabase = await createClient();
 
