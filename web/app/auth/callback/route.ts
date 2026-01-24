@@ -75,12 +75,13 @@ export async function GET(request: NextRequest) {
         const emailUsername = email.split("@")[0].toLowerCase().replace(/[^a-z0-9_]/g, "");
 
         // Make sure username is unique by appending random suffix if needed
-        let username = emailUsername.slice(0, 25);
+        let username = emailUsername.slice(0, 25) || "user";
         let attempts = 0;
         let isUnique = false;
+        const maxAttempts = 10;
 
-        while (!isUnique && attempts < 10) {
-          const checkUsername = attempts === 0 ? username : `${username}${Math.floor(Math.random() * 1000)}`;
+        while (!isUnique && attempts < maxAttempts) {
+          const checkUsername = attempts === 0 ? username : `${username.slice(0, 20)}${Math.floor(Math.random() * 10000)}`;
           const { data: existing } = await supabase
             .from("profiles")
             .select("id")
@@ -94,26 +95,60 @@ export async function GET(request: NextRequest) {
           attempts++;
         }
 
-        // Create profile
-        const profileData: ProfileInsert = {
-          id: data.user.id,
-          username,
-          display_name: data.user.user_metadata?.full_name || null,
-          avatar_url: data.user.user_metadata?.avatar_url || null,
-        };
-        const { error: profileError } = await supabase
-          .from("profiles")
-          .insert(profileData as never);
-
-        if (profileError) {
-          console.error("Profile creation error:", profileError);
+        // Guaranteed fallback: use user ID prefix if all random attempts failed
+        if (!isUnique) {
+          username = `user_${data.user.id.slice(0, 8)}`;
         }
 
-        // Create default preferences
-        const prefsData: PreferencesInsert = {
-          user_id: data.user.id,
-        };
-        await supabase.from("user_preferences").insert(prefsData as never);
+        // Create profile with retry logic for race conditions
+        let profileCreated = false;
+        let profileAttempts = 0;
+
+        while (!profileCreated && profileAttempts < 3) {
+          const profileData: ProfileInsert = {
+            id: data.user.id,
+            username,
+            display_name: data.user.user_metadata?.full_name || null,
+            avatar_url: data.user.user_metadata?.avatar_url || null,
+          };
+          const { error: profileError } = await supabase
+            .from("profiles")
+            .insert(profileData as never);
+
+          if (!profileError) {
+            profileCreated = true;
+          } else if (profileError.code === "23505") {
+            // Unique constraint violation - use ID-based username
+            profileAttempts++;
+            username = `user_${data.user.id.slice(0, 8)}_${profileAttempts}`;
+          } else {
+            console.error("Profile creation error:", profileError);
+            return NextResponse.redirect(`${origin}/auth/login?error=profile_failed`);
+          }
+        }
+
+        if (!profileCreated) {
+          console.error("Failed to create profile after max attempts");
+          return NextResponse.redirect(`${origin}/auth/login?error=profile_failed`);
+        }
+
+        // Create default preferences with error handling
+        try {
+          const prefsData: PreferencesInsert = {
+            user_id: data.user.id,
+          };
+          const { error: prefsError } = await supabase
+            .from("user_preferences")
+            .insert(prefsData as never);
+
+          if (prefsError) {
+            // Log but don't block signup - preferences can be created later
+            console.error("Preferences creation error:", prefsError);
+          }
+        } catch (err) {
+          // Log but don't block signup - preferences can be created later
+          console.error("Preferences creation exception:", err);
+        }
 
         // Redirect new OAuth users to set preferences
         if (isNewUser) {

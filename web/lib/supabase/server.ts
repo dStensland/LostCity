@@ -80,20 +80,39 @@ export async function getSession() {
 // Get user profile with preferences
 export async function getUserProfile() {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
 
-  if (!user) return null;
+  try {
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select(`
-      *,
-      user_preferences(*)
-    `)
-    .eq("id", user.id)
-    .single();
+    if (userError) {
+      console.error("Error getting user in getUserProfile:", userError);
+      return null;
+    }
 
-  return profile;
+    if (!user) return null;
+
+    const { data: profile, error: profileError } = await supabase
+      .from("profiles")
+      .select(`
+        *,
+        user_preferences(*)
+      `)
+      .eq("id", user.id)
+      .single();
+
+    if (profileError) {
+      // PGRST116 = "not found" - expected for new users before profile creation
+      if (profileError.code !== "PGRST116") {
+        console.error("Error fetching profile in getUserProfile:", profileError);
+      }
+      return null;
+    }
+
+    return profile;
+  } catch (err) {
+    console.error("Exception in getUserProfile:", err);
+    return null;
+  }
 }
 
 // Check if current user is an admin

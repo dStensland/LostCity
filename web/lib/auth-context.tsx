@@ -22,6 +22,7 @@ type AuthContextType = {
   session: Session | null;
   profile: Profile | null;
   loading: boolean;
+  error: Error | null;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
 };
@@ -31,6 +32,7 @@ const AuthContext = createContext<AuthContextType>({
   session: null,
   profile: null,
   loading: true,
+  error: null,
   signOut: async () => {},
   refreshProfile: async () => {},
 });
@@ -40,29 +42,49 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
   const initializedRef = useRef(false);
+  const isMountedRef = useRef(true);
 
   const supabase = createClient();
 
-  const fetchProfile = async (userId: string) => {
-    const { data, error } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("id", userId)
-      .single();
+  const fetchProfile = async (userId: string): Promise<Profile | null> => {
+    try {
+      const { data, error: fetchError } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", userId)
+        .single();
 
-    if (error) {
-      console.error("Error fetching profile:", error);
-      return null;
+      if (fetchError) {
+        console.error("Error fetching profile:", fetchError);
+        // Don't set error state for "not found" - that's expected for new users
+        if (fetchError.code !== "PGRST116") {
+          throw new Error(`Profile fetch failed: ${fetchError.message}`);
+        }
+        return null;
+      }
+
+      return data as Profile;
+    } catch (err) {
+      console.error("Exception fetching profile:", err);
+      throw err;
     }
-
-    return data as Profile;
   };
 
   const refreshProfile = async () => {
     if (user) {
-      const newProfile = await fetchProfile(user.id);
-      setProfile(newProfile);
+      try {
+        const newProfile = await fetchProfile(user.id);
+        if (isMountedRef.current) {
+          setProfile(newProfile);
+        }
+      } catch (err) {
+        console.error("Error refreshing profile:", err);
+        if (isMountedRef.current) {
+          setError(err instanceof Error ? err : new Error("Failed to refresh profile"));
+        }
+      }
     }
   };
 
@@ -70,43 +92,53 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Prevent double initialization in React StrictMode
     if (initializedRef.current) return;
     initializedRef.current = true;
-
-    let isMounted = true;
-
-    // Safety timeout - ensure loading is set to false after 3 seconds max
-    const safetyTimeout = setTimeout(() => {
-      if (isMounted && loading) {
-        console.warn("Auth loading timeout - forcing loading to false");
-        setLoading(false);
-      }
-    }, 3000);
+    isMountedRef.current = true;
 
     // Get initial session
     const getInitialSession = async () => {
       try {
         const {
           data: { session: initialSession },
+          error: sessionError,
         } = await supabase.auth.getSession();
 
-        if (!isMounted) return;
+        if (!isMountedRef.current) return;
+
+        if (sessionError) {
+          console.error("Error getting session:", sessionError);
+          setError(new Error(`Session error: ${sessionError.message}`));
+          setLoading(false);
+          return;
+        }
 
         setSession(initialSession);
         setUser(initialSession?.user ?? null);
 
         if (initialSession?.user) {
-          const userProfile = await fetchProfile(initialSession.user.id);
-          if (isMounted) {
-            setProfile(userProfile);
+          try {
+            const userProfile = await fetchProfile(initialSession.user.id);
+            if (isMountedRef.current) {
+              setProfile(userProfile);
+            }
+          } catch (profileErr) {
+            // Profile fetch failed but session is valid - log but continue
+            console.error("Profile fetch failed during init:", profileErr);
+            if (isMountedRef.current) {
+              setError(profileErr instanceof Error ? profileErr : new Error("Profile fetch failed"));
+            }
           }
         }
-      } catch (error) {
+      } catch (err) {
         // Ignore AbortError - expected during React StrictMode unmount/remount
-        if (error instanceof Error && error.name === "AbortError") {
+        if (err instanceof Error && err.name === "AbortError") {
           return;
         }
-        console.error("Error getting initial session:", error);
+        console.error("Error getting initial session:", err);
+        if (isMountedRef.current) {
+          setError(err instanceof Error ? err : new Error("Auth initialization failed"));
+        }
       } finally {
-        if (isMounted) {
+        if (isMountedRef.current) {
           setLoading(false);
         }
       }
@@ -118,32 +150,43 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, newSession) => {
-      if (!isMounted) return;
+      if (!isMountedRef.current) return;
 
       try {
+        // Clear previous errors on auth state change
+        setError(null);
         setSession(newSession);
         setUser(newSession?.user ?? null);
 
         if (newSession?.user) {
-          const userProfile = await fetchProfile(newSession.user.id);
-          if (isMounted) {
-            setProfile(userProfile);
+          try {
+            const userProfile = await fetchProfile(newSession.user.id);
+            if (isMountedRef.current) {
+              setProfile(userProfile);
+            }
+          } catch (profileErr) {
+            console.error("Profile fetch failed on auth change:", profileErr);
+            if (isMountedRef.current) {
+              setError(profileErr instanceof Error ? profileErr : new Error("Profile fetch failed"));
+            }
           }
         } else {
           setProfile(null);
         }
-      } catch (error) {
-        console.error("Error handling auth state change:", error);
+      } catch (err) {
+        console.error("Error handling auth state change:", err);
+        if (isMountedRef.current) {
+          setError(err instanceof Error ? err : new Error("Auth state change failed"));
+        }
       } finally {
-        if (isMounted) {
+        if (isMountedRef.current) {
           setLoading(false);
         }
       }
     });
 
     return () => {
-      isMounted = false;
-      clearTimeout(safetyTimeout);
+      isMountedRef.current = false;
       subscription.unsubscribe();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- Run only on mount, supabase client is stable
@@ -163,6 +206,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         session,
         profile,
         loading,
+        error,
         signOut,
         refreshProfile,
       }}

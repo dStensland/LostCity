@@ -98,11 +98,12 @@ export default function ProfileSettingsPage() {
       return;
     }
 
-    setSuccess(true);
-    // Refresh profile in auth context
+    // Refresh profile in auth context before showing success
     if (refreshProfile) {
-      refreshProfile();
+      await refreshProfile();
     }
+
+    setSuccess(true);
 
     // Clear success message after 3 seconds
     setTimeout(() => setSuccess(false), 3000);

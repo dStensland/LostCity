@@ -115,27 +115,59 @@ function SignupForm() {
     }
 
     if (authData.user) {
-      // Create the profile
-      const profileData: ProfileInsert = {
-        id: authData.user.id,
-        username,
-        display_name: null,
-      };
-      const { error: profileError } = await supabase
-        .from("profiles")
-        .insert(profileData as never);
+      // Create the profile with retry logic for username conflicts
+      let finalUsername = username;
+      let profileCreated = false;
+      let attempts = 0;
+      const maxAttempts = 5;
 
-      if (profileError) {
-        setError("Failed to create profile. Please try again.");
+      while (!profileCreated && attempts < maxAttempts) {
+        const profileData: ProfileInsert = {
+          id: authData.user.id,
+          username: finalUsername,
+          display_name: null,
+        };
+        const { error: profileError } = await supabase
+          .from("profiles")
+          .insert(profileData as never);
+
+        if (!profileError) {
+          profileCreated = true;
+        } else if (profileError.code === "23505") {
+          // Unique constraint violation - try with a suffix
+          attempts++;
+          finalUsername = `${username.slice(0, 25)}_${Math.floor(Math.random() * 10000)}`;
+        } else {
+          console.error("Profile creation error:", profileError);
+          setError("Failed to create profile. Please try again.");
+          setLoading(false);
+          return;
+        }
+      }
+
+      if (!profileCreated) {
+        setError("Unable to create a unique username. Please try a different one.");
         setLoading(false);
         return;
       }
 
-      // Create default preferences
-      const prefsData: PreferencesInsert = {
-        user_id: authData.user.id,
-      };
-      await supabase.from("user_preferences").insert(prefsData as never);
+      // Create default preferences with error handling
+      try {
+        const prefsData: PreferencesInsert = {
+          user_id: authData.user.id,
+        };
+        const { error: prefsError } = await supabase
+          .from("user_preferences")
+          .insert(prefsData as never);
+
+        if (prefsError) {
+          // Log but don't block signup - preferences can be created later
+          console.error("Preferences creation error:", prefsError);
+        }
+      } catch (err) {
+        // Log but don't block signup - preferences can be created later
+        console.error("Preferences creation exception:", err);
+      }
     }
 
     // Redirect new users to welcome page for onboarding
