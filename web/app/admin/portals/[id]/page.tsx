@@ -35,7 +35,6 @@ type NavLabels = {
   feed?: string;
   events?: string;
   spots?: string;
-  happening_now?: string;
 };
 
 type PortalFilters = {
@@ -398,16 +397,6 @@ export default function EditPortalPage({ params }: { params: Promise<{ id: strin
                 />
               </div>
 
-              <div>
-                <label className="block font-mono text-xs text-[var(--muted)] uppercase mb-1">Happening Now Tab</label>
-                <input
-                  type="text"
-                  value={navLabels.happening_now || ""}
-                  onChange={(e) => setNavLabels({ ...navLabels, happening_now: e.target.value || undefined })}
-                  placeholder="Happening Now"
-                  className="w-full px-3 py-2 bg-[var(--night)] border border-[var(--twilight)] rounded font-mono text-sm text-[var(--cream)] focus:outline-none focus:border-[var(--coral)]"
-                />
-              </div>
             </div>
 
             <div className="mt-4 p-3 bg-[var(--night)] rounded border border-[var(--twilight)]">
@@ -417,7 +406,6 @@ export default function EditPortalPage({ params }: { params: Promise<{ id: strin
                   { key: "feed", default: "Feed" },
                   { key: "events", default: "Events" },
                   { key: "spots", default: "Spots" },
-                  { key: "happening_now", default: "Happening Now" },
                 ].map((tab) => (
                   <span
                     key={tab.key}

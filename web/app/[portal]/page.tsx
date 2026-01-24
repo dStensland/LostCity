@@ -1,6 +1,5 @@
 import { PRICE_FILTERS, type SearchFilters } from "@/lib/search";
-import { getPortalBySlug, DEFAULT_PORTAL } from "@/lib/portal";
-import { DEFAULT_PORTAL_SLUG } from "@/lib/constants";
+import { getPortalBySlug } from "@/lib/portal";
 import SimpleFilterBar from "@/components/SimpleFilterBar";
 import EventList from "@/components/EventList";
 import MapViewWrapper from "@/components/MapViewWrapper";
@@ -9,7 +8,6 @@ import CalendarView from "@/components/CalendarView";
 import UnifiedHeader from "@/components/UnifiedHeader";
 import SearchBar from "@/components/SearchBar";
 import PortalSpotsView from "@/components/PortalSpotsView";
-import PortalHappeningNow from "@/components/PortalHappeningNow";
 import PortalCommunityView from "@/components/PortalCommunityView";
 import TrendingNow from "@/components/TrendingNow";
 import TonightsPicks from "@/components/TonightsPicks";
@@ -23,7 +21,7 @@ export const revalidate = 60;
 
 const PAGE_SIZE = 20;
 
-type ViewMode = "events" | "map" | "calendar" | "feed" | "spots" | "happening-now" | "community";
+type ViewMode = "events" | "map" | "calendar" | "feed" | "spots" | "community";
 
 type Props = {
   params: Promise<{ portal: string }>;
@@ -46,13 +44,8 @@ export default async function PortalPage({ params, searchParams }: Props) {
   const { portal: slug } = await params;
   const searchParamsData = await searchParams;
 
-  // Get portal data
-  let portal = await getPortalBySlug(slug);
-
-  // Fallback for Atlanta if not in database
-  if (!portal && slug === DEFAULT_PORTAL_SLUG) {
-    portal = DEFAULT_PORTAL;
-  }
+  // Get portal data - all portals must exist in database
+  const portal = await getPortalBySlug(slug);
 
   if (!portal) {
     notFound();
@@ -65,7 +58,6 @@ export default async function PortalPage({ params, searchParams }: Props) {
     view === "calendar" ? "calendar" :
     view === "events" ? "events" :
     view === "spots" ? "spots" :
-    view === "happening-now" ? "happening-now" :
     view === "community" ? "community" :
     "feed";
 
@@ -114,8 +106,8 @@ export default async function PortalPage({ params, searchParams }: Props) {
       />
 
       {viewMode !== "feed" && (
-        <div className="sticky top-14 z-30 border-b border-[var(--twilight)] bg-[var(--night)]/95 backdrop-blur-md">
-          <div className="max-w-3xl mx-auto px-4 py-2">
+        <div className="sticky top-[52px] z-30 border-b border-[var(--twilight)] bg-[var(--night)] backdrop-blur-md">
+          <div className="max-w-3xl mx-auto px-4 pt-1 pb-2">
             <SearchBar />
           </div>
         </div>
@@ -173,12 +165,6 @@ export default async function PortalPage({ params, searchParams }: Props) {
         {viewMode === "spots" && (
           <Suspense fallback={<div className="py-16 text-center text-[var(--muted)]">Loading spots...</div>}>
             <PortalSpotsView portalId={portal.id} portalSlug={portal.slug} isExclusive={portal.portal_type === "business"} />
-          </Suspense>
-        )}
-
-        {viewMode === "happening-now" && (
-          <Suspense fallback={<div className="py-16 text-center text-[var(--muted)]">Loading live events...</div>}>
-            <PortalHappeningNow portalId={portal.id} portalSlug={portal.slug} isExclusive={portal.portal_type === "business"} />
           </Suspense>
         )}
 

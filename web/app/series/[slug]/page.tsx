@@ -128,6 +128,13 @@ export default async function SeriesPage({ params }: Props) {
                         strokeWidth={1.5}
                         d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z"
                       />
+                    ) : series.series_type === "festival_program" ? (
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={1.5}
+                        d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+                      />
                     ) : (
                       <path
                         strokeLinecap="round"
@@ -256,12 +263,19 @@ export default async function SeriesPage({ params }: Props) {
             <>
               <span className="text-[var(--coral)]">{events.length}</span> Upcoming{" "}
               {series.series_type === "film" ? "Showtime" : "Event"}
-              {events.length !== 1 ? "s" : ""} at{" "}
-              <span className="text-[var(--coral)]">{venueShowtimes.length}</span>{" "}
-              {venueShowtimes.length === 1 ? "Venue" : "Venues"}
+              {events.length !== 1 ? "s" : ""}{" "}
+              {venueShowtimes.length > 0 && (
+                <>
+                  at{" "}
+                  <span className="text-[var(--coral)]">{venueShowtimes.length}</span>{" "}
+                  {venueShowtimes.length === 1 ? "Venue" : "Venues"}
+                </>
+              )}
             </>
           ) : (
-            "No Upcoming Events"
+            series.series_type === "festival_program"
+              ? "No Scheduled Events"
+              : "No Upcoming Events"
           )}
         </h2>
 

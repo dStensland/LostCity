@@ -19,10 +19,10 @@ export default function GlobalError({
       <body className="min-h-screen bg-[var(--void)] flex items-center justify-center">
         <div className="text-center px-4">
           <h1 className="font-serif text-2xl text-[var(--cream)] italic mb-4">
-            Something went wrong
+            Something broke
           </h1>
           <p className="font-mono text-sm text-[var(--muted)] mb-6">
-            We&apos;ve been notified and are working on it.
+            Probably our fault. This stuff is hard, ok?
           </p>
           <button
             onClick={() => reset()}

@@ -23,10 +23,10 @@ export default function NotFound() {
       {/* Message */}
       <div className="text-center mt-8 max-w-md">
         <h1 className="font-serif text-2xl text-[var(--cream)] italic mb-2">
-          Lost in the city?
+          Some who wander are also lost
         </h1>
         <p className="font-mono text-sm text-[var(--muted)]">
-          This page doesn&apos;t exist, but plenty of events do.
+          That&apos;s you.
         </p>
       </div>
 

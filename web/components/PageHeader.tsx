@@ -138,12 +138,6 @@ export default function PageHeader({
               >
                 Places
               </Link>
-              <Link
-                href={`/${citySlug}?view=happening-now`}
-                className={`nav-tab relative px-4 py-2 rounded-md font-mono text-sm whitespace-nowrap transition-all duration-300 text-[var(--muted)] hover:text-[var(--neon-amber)] border border-transparent`}
-              >
-                Stuff around You
-              </Link>
             </div>
           </div>
         </nav>

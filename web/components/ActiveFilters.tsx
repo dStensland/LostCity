@@ -78,8 +78,9 @@ export default function ActiveFilters() {
   const getDateLabel = (date: string) => {
     switch (date) {
       case "today": return "Today";
-      case "weekend": return "This Weekend";
+      case "weekend": return "The weekend";
       case "week": return "This Week";
+      case "now": return "Live";
       default: return date;
     }
   };

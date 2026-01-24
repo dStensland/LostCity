@@ -148,11 +148,19 @@ SOURCE_MODULES = {
     # ===== Festivals & Conventions =====
     "dragon-con": "sources.dragon_con",
     "momocon": "sources.momocon",
+    "anime-weekend-atlanta": "sources.anime_weekend_atlanta",
+    "dreamhack-atlanta": "sources.dreamhack_atlanta",
     "atlanta-dogwood": "sources.atlanta_dogwood",
     "inman-park-festival": "sources.inman_park_festival",
     "shaky-knees": "sources.shaky_knees",
     "atlanta-jazz-festival": "sources.atlanta_jazz_festival",
+    "sweetwater-420-fest": "sources.sweetwater_420_fest",
+    "one-musicfest": "sources.one_musicfest",
+    "juneteenth-atlanta": "sources.juneteenth_atlanta",
+    "porchfest-vahi": "sources.porchfest_vahi",
+    "breakaway-atlanta": "sources.breakaway_atlanta",
     "decatur-arts-festival": "sources.decatur_arts_festival",
+    "bronzelens": "sources.bronzelens",
     # ===== Additional Theaters =====
     "aurora-theatre": "sources.aurora_theatre",
     "horizon-theatre": "sources.horizon_theatre",
@@ -413,6 +421,10 @@ SOURCE_MODULES = {
     # ===== Poker & Chess =====
     "freeroll-atlanta": "sources.freeroll_atlanta",
     "georgia-chess": "sources.georgia_chess",
+    # ===== Attractions =====
+    "fun-spot-america-atlanta": "sources.fun_spot_atlanta",
+    "stone-mountain-park": "sources.stone_mountain_park",
+    "trap-music-museum": "sources.trap_music_museum",
 }
 
 

@@ -10,7 +10,7 @@ interface Props {
 }
 
 type NavTab = {
-  key: "feed" | "your_stuff" | "events" | "spots" | "community" | "happening_now";
+  key: "feed" | "your_stuff" | "events" | "spots" | "community";
   defaultLabel: string;
   href: string;
   authRequired?: boolean;
@@ -18,11 +18,10 @@ type NavTab = {
 
 const DEFAULT_TABS: NavTab[] = [
   { key: "feed", defaultLabel: "Highlights", href: "feed" },
-  { key: "your_stuff", defaultLabel: "Your Stuff", href: "foryou", authRequired: true },
+  { key: "your_stuff", defaultLabel: "Your scene", href: "foryou", authRequired: true },
   { key: "events", defaultLabel: "Events", href: "events" },
   { key: "spots", defaultLabel: "Places", href: "spots" },
   { key: "community", defaultLabel: "Groups", href: "community" },
-  { key: "happening_now", defaultLabel: "Stuff around You", href: "happening-now" },
 ];
 
 export default function MainNav({ portalSlug = DEFAULT_PORTAL_SLUG }: Props) {

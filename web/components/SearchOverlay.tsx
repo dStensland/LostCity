@@ -12,7 +12,7 @@ interface SearchOverlayProps {
   onClose: () => void;
 }
 
-const POPULAR_SEARCHES = ["Live Music", "Comedy", "Free Events", "Rooftop", "Late Night"];
+const POPULAR_SEARCHES = ["Live Music", "Comedy", "Free", "Rooftop", "Late Night"];
 
 // Custom hook for debounced value
 function useDebounce<T>(value: T, delay: number): T {
@@ -259,7 +259,7 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
                 type="text"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search events, venues, organizers..."
+                placeholder="Find the good stuff..."
                 className="flex-1 bg-transparent text-[var(--cream)] placeholder:text-[var(--muted)] outline-none text-lg font-display"
               />
               {query && (
@@ -342,6 +342,7 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
                 {isLoading && (
                   <div className="p-4 text-center">
                     <div className="animate-spin h-5 w-5 border-2 border-[var(--neon-magenta)] border-t-transparent rounded-full mx-auto" />
+                    <p className="text-xs text-[var(--muted)] mt-2">Hold your horses...</p>
                   </div>
                 )}
 
@@ -349,7 +350,7 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
                 {!isLoading && didYouMean.length > 0 && !hasResults && (
                   <div className="p-3 border-b border-[var(--twilight)]">
                     <p className="text-sm text-[var(--muted)]">
-                      Did you mean:{" "}
+                      Maybe more like:{" "}
                       {didYouMean.map((suggestion, i) => (
                         <span key={suggestion}>
                           <button
@@ -394,7 +395,7 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
                 {!isLoading && showSuggestions && (
                   <div className="p-4">
                     <h3 className="text-xs font-mono font-semibold text-[var(--muted)] uppercase tracking-wider mb-3">
-                      Popular Searches
+                      Hot right now
                     </h3>
                     <div className="flex flex-wrap gap-2">
                       {POPULAR_SEARCHES.map((term) => (
@@ -606,9 +607,9 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
                 {/* No Results */}
                 {!isLoading && query.length >= 2 && !hasResults && suggestions.length === 0 && (
                   <div className="p-8 text-center">
-                    <p className="text-[var(--muted)]">No results found for &quot;{query}&quot;</p>
+                    <p className="text-[var(--muted)]">Nothing. Absolutely nothing. The void stares back.</p>
                     <p className="text-sm text-[var(--muted)] opacity-60 mt-1">
-                      Try searching for events, venues, or organizers
+                      Nothing here. Try searching better.
                     </p>
                   </div>
                 )}
@@ -618,11 +619,10 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
 
           {/* Close hint */}
           <p className="text-center text-xs text-[var(--muted)] mt-3">
-            Press{" "}
             <kbd className="px-1.5 py-0.5 rounded bg-[var(--twilight)] text-[var(--cream)] font-mono text-xs">
               ESC
             </kbd>{" "}
-            to close
+            to bail
           </p>
         </div>
       </div>

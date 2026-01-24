@@ -92,9 +92,9 @@ export function useEventsList(options: UseEventsListOptions = {}) {
   // Infinite query for events
   const query = useInfiniteQuery<EventsResponse, Error>({
     queryKey: ["events", "list", filtersKey, portalId, portalExclusive],
-    queryFn: async ({ pageParam }) => {
+    queryFn: async ({ pageParam, signal }) => {
       const params = buildApiParams(pageParam as string | null);
-      const res = await fetch(`/api/events?${params}`);
+      const res = await fetch(`/api/events?${params}`, { signal });
 
       if (!res.ok) {
         throw new Error(`Failed to fetch events: ${res.status}`);
@@ -110,6 +110,11 @@ export function useEventsList(options: UseEventsListOptions = {}) {
     // Retry failed requests
     retry: 3,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    // Treat abort as a non-error (happens during view switching)
+    throwOnError: (error) => {
+      if (error.name === "AbortError") return false;
+      return true;
+    },
   });
 
   // Flatten all pages into a single events array

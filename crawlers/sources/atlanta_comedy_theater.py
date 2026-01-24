@@ -1,7 +1,9 @@
 """
-Crawler for Atlanta Comedy Theater (atlantacomedytheater.com).
+Crawler for Atlanta Comedy Theater (atlcomedytheater.com).
+Stand-up comedy club in Norcross.
 
-Site uses JavaScript rendering - must use Playwright.
+Site structure: Shows on homepage, tickets through ShowClix.
+Note: Domain redirects from atlantacomedytheater.com to atlcomedytheater.com
 """
 
 from __future__ import annotations
@@ -15,45 +17,98 @@ from playwright.sync_api import sync_playwright
 
 from db import get_or_create_venue, insert_event, find_event_by_hash
 from dedupe import generate_content_hash
-from utils import extract_images_from_page
 
 logger = logging.getLogger(__name__)
 
-BASE_URL = "https://www.atlantacomedytheater.com"
-EVENTS_URL = f"{BASE_URL}/events"
+BASE_URL = "http://atlcomedytheater.com"
 
 VENUE_DATA = {
     "name": "Atlanta Comedy Theater",
     "slug": "atlanta-comedy-theater",
-    "address": "6025 Sandy Springs Cir NW",
-    "neighborhood": "Sandy Springs",
-    "city": "Sandy Springs",
+    "address": "5385 Peachtree Industrial Blvd",
+    "neighborhood": "Norcross",
+    "city": "Norcross",
     "state": "GA",
-    "zip": "30328",
-    "lat": 33.9285,
-    "lng": -84.3783,
+    "zip": "30092",
+    "lat": 33.9168,
+    "lng": -84.2592,
     "venue_type": "comedy_club",
     "spot_type": "comedy_club",
     "website": BASE_URL,
 }
 
+SKIP_PATTERNS = [
+    r"^(home|about|contact|menu|reservations?|private events?)$",
+    r"^(login|sign in|register|account)$",
+    r"^(facebook|twitter|instagram|youtube)$",
+    r"^(privacy|terms|policy|copyright)$",
+    r"^(buy tickets?|get tickets?|on sale)$",
+    r"^\d+$",
+    r"^[a-z]{1,3}$",
+]
 
-def parse_time(time_text: str) -> Optional[str]:
-    """Parse time from '7:00 PM' format."""
-    match = re.search(r"(\d{1,2}):(\d{2})\s*(am|pm)", time_text, re.IGNORECASE)
-    if match:
-        hour, minute, period = match.groups()
-        hour = int(hour)
-        if period.lower() == "pm" and hour != 12:
-            hour += 12
-        elif period.lower() == "am" and hour == 12:
-            hour = 0
-        return f"{hour:02d}:{minute}"
-    return None
+
+def is_valid_title(title: str) -> bool:
+    """Check if a string looks like a valid show/comedian name."""
+    if not title or len(title) < 3 or len(title) > 200:
+        return False
+    title_lower = title.lower().strip()
+    for pattern in SKIP_PATTERNS:
+        if re.match(pattern, title_lower, re.IGNORECASE):
+            return False
+    return True
+
+
+def parse_date_range(date_text: str) -> tuple[Optional[str], Optional[str]]:
+    """Parse date range like 'February 13-15' or 'February 13-15, 2026'."""
+    if not date_text:
+        return None, None
+
+    date_text = date_text.strip()
+    current_year = datetime.now().year
+
+    # Pattern: "Month Day-Day" or "Month Day-Day, Year"
+    same_month_match = re.search(
+        r"(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2})\s*[-–—]\s*(\d{1,2})(?:,?\s*(\d{4}))?",
+        date_text,
+        re.IGNORECASE
+    )
+    if same_month_match:
+        month, start_day, end_day, year = same_month_match.groups()
+        year = year or str(current_year)
+        try:
+            start_dt = datetime.strptime(f"{month} {start_day} {year}", "%B %d %Y")
+            end_dt = datetime.strptime(f"{month} {end_day} {year}", "%B %d %Y")
+            # If dates are in past, assume next year
+            if end_dt.date() < datetime.now().date():
+                start_dt = datetime(start_dt.year + 1, start_dt.month, start_dt.day)
+                end_dt = datetime(end_dt.year + 1, end_dt.month, end_dt.day)
+            return start_dt.strftime("%Y-%m-%d"), end_dt.strftime("%Y-%m-%d")
+        except ValueError:
+            pass
+
+    # Single date
+    single_match = re.search(
+        r"(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2})(?:,?\s*(\d{4}))?",
+        date_text,
+        re.IGNORECASE
+    )
+    if single_match:
+        month, day, year = single_match.groups()
+        year = year or str(current_year)
+        try:
+            dt = datetime.strptime(f"{month} {day} {year}", "%B %d %Y")
+            if dt.date() < datetime.now().date():
+                dt = datetime(dt.year + 1, dt.month, dt.day)
+            return dt.strftime("%Y-%m-%d"), dt.strftime("%Y-%m-%d")
+        except ValueError:
+            pass
+
+    return None, None
 
 
 def crawl(source: dict) -> tuple[int, int, int]:
-    """Crawl Atlanta Comedy Theater events using Playwright."""
+    """Crawl Atlanta Comedy Theater shows."""
     source_id = source["id"]
     events_found = 0
     events_new = 0
@@ -70,78 +125,79 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             venue_id = get_or_create_venue(VENUE_DATA)
 
-            logger.info(f"Fetching Atlanta Comedy Theater: {EVENTS_URL}")
-            page.goto(EVENTS_URL, wait_until="domcontentloaded", timeout=30000)
-            page.wait_for_timeout(3000)
+            logger.info(f"Fetching Atlanta Comedy Theater: {BASE_URL}")
+            page.goto(BASE_URL, wait_until="networkidle", timeout=30000)
+            page.wait_for_timeout(2000)
 
-            # Extract images from page
-            image_map = extract_images_from_page(page)
-
-            # Scroll to load all content
-            for _ in range(5):
+            # Scroll to load content
+            for _ in range(3):
                 page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
                 page.wait_for_timeout(1000)
 
-            # Get page text and parse line by line
-            body_text = page.inner_text("body")
-            lines = [l.strip() for l in body_text.split("\n") if l.strip()]
+            # Find ShowClix ticket links
+            showclix_links = page.query_selector_all('a[href*="showclix.com"]')
 
-            # Parse events - look for date patterns
-            i = 0
-            while i < len(lines):
-                line = lines[i]
+            processed_events = set()
 
-                # Skip navigation items
-                if len(line) < 3:
-                    i += 1
-                    continue
+            for link in showclix_links:
+                try:
+                    href = link.get_attribute("href")
+                    link_text = link.inner_text().strip()
 
-                # Look for date patterns
-                date_match = re.match(
-                    r"(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)?,?\s*(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{1,2})(?:,?\s+(\d{4}))?",
-                    line,
-                    re.IGNORECASE
-                )
-
-                if date_match:
-                    month = date_match.group(1)
-                    day = date_match.group(2)
-                    year = date_match.group(3) if date_match.group(3) else str(datetime.now().year)
-
-                    # Look for title in surrounding lines
+                    # Try to get comedian name from link or surrounding context
                     title = None
-                    start_time = None
 
-                    for offset in [-2, -1, 1, 2, 3]:
-                        idx = i + offset
-                        if 0 <= idx < len(lines):
-                            check_line = lines[idx]
-                            if re.match(r"(January|February|March)", check_line, re.IGNORECASE):
-                                continue
-                            if not start_time:
-                                time_result = parse_time(check_line)
-                                if time_result:
-                                    start_time = time_result
-                                    continue
-                            if not title and len(check_line) > 5:
-                                if not re.match(r"\d{1,2}[:/]", check_line):
-                                    if not re.match(r"(free|tickets|register|\$|more info)", check_line.lower()):
-                                        title = check_line
-                                        break
+                    # Check if link text is a name
+                    if link_text and is_valid_title(link_text) and not link_text.lower().startswith("buy"):
+                        title = link_text
+
+                    # Look for heading nearby
+                    if not title:
+                        parent = link.evaluate_handle("el => el.closest('article, section, div')")
+                        if parent:
+                            heading = parent.as_element().query_selector("h1, h2, h3, h4")
+                            if heading:
+                                heading_text = heading.inner_text().strip()
+                                if is_valid_title(heading_text):
+                                    title = heading_text
 
                     if not title:
-                        i += 1
+                        # Extract from ShowClix URL
+                        match = re.search(r"showclix\.com/event/([^/?\s]+)", href)
+                        if match:
+                            title = match.group(1).replace("-", " ").title()
+
+                    if not title or not is_valid_title(title):
                         continue
 
-                    # Parse date
-                    try:
-                        month_str = month[:3] if len(month) > 3 else month
-                        dt = datetime.strptime(f"{month_str} {day} {year}", "%b %d %Y")
-                        if dt.date() < datetime.now().date():
-                            dt = datetime.strptime(f"{month_str} {day} {int(year) + 1}", "%b %d %Y")
-                        start_date = dt.strftime("%Y-%m-%d")
-                    except ValueError:
-                        i += 1
+                    # Skip duplicates
+                    if title.lower() in processed_events:
+                        continue
+                    processed_events.add(title.lower())
+
+                    # Get date context
+                    parent = link.evaluate_handle("el => el.closest('article, section, div')")
+                    parent_text = ""
+                    if parent:
+                        parent_text = parent.as_element().inner_text()
+
+                    start_date, end_date = parse_date_range(parent_text)
+
+                    if not start_date:
+                        # Try to find date in broader page context
+                        body_text = page.inner_text("body")
+                        # Look for date near the title
+                        title_pattern = re.escape(title)
+                        context_match = re.search(
+                            rf"{title_pattern}.*?((?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{{1,2}}(?:\s*[-–—]\s*\d{{1,2}})?(?:,?\s*\d{{4}})?)",
+                            body_text,
+                            re.IGNORECASE | re.DOTALL
+                        )
+                        if context_match:
+                            start_date, end_date = parse_date_range(context_match.group(1))
+
+                    if not start_date:
+                        logger.debug(f"No dates found for {title}")
                         continue
 
                     events_found += 1
@@ -150,37 +206,39 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     if find_event_by_hash(content_hash):
                         events_updated += 1
-                        i += 1
                         continue
+
+                    # Determine tags
+                    tags = ["atlanta-comedy-theater", "comedy", "standup", "norcross"]
+                    if "special engagement" in parent_text.lower():
+                        tags.append("special-engagement")
+                    if "drag" in parent_text.lower():
+                        tags.append("drag")
+                        tags.append("brunch")
 
                     event_record = {
                         "source_id": source_id,
                         "venue_id": venue_id,
                         "title": title,
-                        "description": "Event at Atlanta Comedy Theater",
+                        "description": f"{title} at Atlanta Comedy Theater",
                         "start_date": start_date,
-                        "start_time": start_time,
-                        "end_date": None,
+                        "start_time": "20:00",  # Most shows at 8pm
+                        "end_date": end_date if end_date != start_date else None,
                         "end_time": None,
-                        "is_all_day": start_time is None,
+                        "is_all_day": False,
                         "category": "comedy",
                         "subcategory": "standup",
-                        "tags": [
-                        "atlanta-comedy-theater",
-                        "comedy",
-                        "standup",
-                        "sandy-springs",
-                    ],
+                        "tags": tags,
                         "price_min": None,
                         "price_max": None,
                         "price_note": None,
                         "is_free": False,
-                        "source_url": EVENTS_URL,
-                        "ticket_url": EVENTS_URL,
-                        "image_url": image_map.get(title),
-                        "raw_text": f"{title} - {start_date}",
-                        "extraction_confidence": 0.80,
-                        "is_recurring": False,
+                        "source_url": BASE_URL,
+                        "ticket_url": href,
+                        "image_url": None,
+                        "raw_text": f"{title}",
+                        "extraction_confidence": 0.82,
+                        "is_recurring": True if end_date and end_date != start_date else False,
                         "recurrence_rule": None,
                         "content_hash": content_hash,
                     }
@@ -188,11 +246,13 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     try:
                         insert_event(event_record)
                         events_new += 1
-                        logger.info(f"Added: {title} on {start_date}")
+                        logger.info(f"Added: {title} ({start_date} to {end_date})")
                     except Exception as e:
                         logger.error(f"Failed to insert: {title}: {e}")
 
-                i += 1
+                except Exception as e:
+                    logger.debug(f"Error processing link: {e}")
+                    continue
 
             browser.close()
 

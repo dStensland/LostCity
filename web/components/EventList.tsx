@@ -8,7 +8,6 @@ import { EventCardSkeletonList } from "./EventCardSkeleton";
 import PullToRefresh from "./PullToRefresh";
 import { useEventsList } from "@/lib/hooks/useEventsList";
 import { useEventFilters } from "@/lib/hooks/useEventFilters";
-import { useLiveEventCount } from "@/lib/hooks/useLiveEvents";
 import { useFriendsGoing } from "@/lib/use-friends-going";
 import type { EventWithLocation } from "@/lib/search";
 
@@ -56,9 +55,6 @@ export default function EventList({
     portalExclusive,
     initialData: initialEvents,
   });
-
-  // Live events count for banner
-  const liveEventCount = useLiveEventCount();
 
   // Friends going data
   const eventIds = useMemo(() => events.map((e) => e.id), [events]);
@@ -171,7 +167,7 @@ export default function EventList({
         ) : (
           <div className="space-y-4">
             <p className="text-[var(--muted)]/60 text-sm">
-              Explore what&apos;s happening in your city
+              Pick your poison
             </p>
             <div className="flex flex-wrap justify-center gap-2">
               {suggestedCategories.map((cat) => (
@@ -192,35 +188,6 @@ export default function EventList({
 
   return (
     <PullToRefresh onRefresh={handleRefresh} disabled={isLoading || isRefetching}>
-      {/* Live Events Banner */}
-      {liveEventCount > 0 && (
-        <Link
-          href="/happening-now"
-          className="group flex items-center gap-3 mb-5 px-4 py-3.5 rounded-xl bg-gradient-to-r from-[var(--neon-red)]/15 via-[var(--neon-magenta)]/10 to-[var(--neon-cyan)]/15 border border-[var(--neon-red)]/30 hover:border-[var(--neon-red)]/50 transition-all hover:shadow-[0_0_20px_rgba(255,90,90,0.1)]"
-        >
-          <span className="relative flex h-3.5 w-3.5">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--neon-red)] opacity-75" />
-            <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-[var(--neon-red)] shadow-[0_0_8px_var(--neon-red)]" />
-          </span>
-          <div className="flex-1">
-            <span className="font-medium text-[var(--cream)]">
-              {liveEventCount} {liveEventCount === 1 ? "thing" : "things"} happening right now
-            </span>
-            <span className="hidden sm:inline text-[var(--muted)] text-sm ml-2">
-              · tap to see what&apos;s live
-            </span>
-          </div>
-          <svg
-            className="w-5 h-5 text-[var(--muted)] group-hover:text-[var(--cream)] group-hover:translate-x-1 transition-all"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-          </svg>
-        </Link>
-      )}
-
       {/* Animated event list */}
       <AnimatedEventList
         events={displayEvents}

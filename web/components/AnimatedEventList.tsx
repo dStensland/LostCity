@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import EventCard from "./EventCard";
 import EventGroup from "./EventGroup";
 import SeriesCard from "./SeriesCard";
+import FestivalCard from "./FestivalCard";
 import { EventCardSkeletonList } from "./EventCardSkeleton";
 import {
   groupEventsForDisplay,
@@ -182,7 +183,11 @@ export default function AnimatedEventList({
                           ? !initialEventIdsRef.current.has(item.event.id)
                           : item.type === "series-group"
                           ? item.venueGroups.some((vg) => vg.showtimes.some((st) => !initialEventIdsRef.current.has(st.id)))
-                          : item.events.some((e) => !initialEventIdsRef.current.has(e.id));
+                          : item.type === "festival-group"
+                          ? true // Festival groups are always treated as new for animation
+                          : item.type === "venue-group" || item.type === "category-group"
+                          ? item.events.some((e) => !initialEventIdsRef.current.has(e.id))
+                          : false;
 
                         const key =
                           item.type === "event"
@@ -191,6 +196,8 @@ export default function AnimatedEventList({
                             ? `venue-${item.venueId}`
                             : item.type === "series-group"
                             ? `series-${item.seriesId}`
+                            : item.type === "festival-group"
+                            ? `festival-${item.seriesId}`
                             : `cat-${item.categoryId}`;
 
                         return (
@@ -227,7 +234,7 @@ export default function AnimatedEventList({
 }
 
 /**
- * Render a display item (event, venue group, category group, or series group)
+ * Render a display item (event, venue group, category group, series group, or festival group)
  */
 function renderItem(
   item: DisplayItem,
@@ -241,6 +248,17 @@ function renderItem(
       <SeriesCard
         series={item.series}
         venueGroups={item.venueGroups}
+        portalSlug={portalSlug}
+        skipAnimation={skipAnimation}
+      />
+    );
+  }
+
+  if (item.type === "festival-group") {
+    return (
+      <FestivalCard
+        series={item.series}
+        summary={item.summary}
         portalSlug={portalSlug}
         skipAnimation={skipAnimation}
       />

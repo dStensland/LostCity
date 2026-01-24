@@ -14,7 +14,7 @@ import {
   PREFERENCE_VIBES,
   PRICE_PREFERENCES,
 } from "@/lib/preferences";
-import { usePortalSlug } from "@/lib/portal-context";
+import { DEFAULT_PORTAL_SLUG } from "@/lib/constants";
 import type { Database } from "@/lib/types";
 
 type UserPreferences = Database["public"]["Tables"]["user_preferences"]["Row"];
@@ -24,7 +24,6 @@ function PreferencesContent() {
   const searchParams = useSearchParams();
   const isWelcome = searchParams.get("welcome") === "true";
   const { user, loading: authLoading } = useAuth();
-  const portalSlug = usePortalSlug();
   const supabase = createClient();
 
   const [loading, setLoading] = useState(true);
@@ -408,7 +407,7 @@ function PreferencesContent() {
               </button>
               {isWelcome && (
                 <Link
-                  href={`/${portalSlug}`}
+                  href={`/${DEFAULT_PORTAL_SLUG}`}
                   className="px-5 py-3 rounded-xl font-mono text-sm text-[var(--muted)] hover:text-[var(--cream)] hover:bg-[var(--twilight)]/50 transition-all"
                 >
                   Skip

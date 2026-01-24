@@ -20,6 +20,8 @@ type SourceHealth = {
   success_rate_7d: number;
   avg_events_found_7d: number;
   total_events: number;
+  owner_portal_id: string | null;
+  owner_portal: { id: string; name: string; slug: string } | null;
 };
 
 type Summary = {
@@ -82,7 +84,15 @@ export default function SourceHealthPage() {
       </header>
 
       <main className="max-w-6xl mx-auto px-4 py-8">
-        <h1 className="font-serif text-2xl text-[var(--cream)] italic mb-6">Source Health</h1>
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="font-serif text-2xl text-[var(--cream)] italic">Source Health</h1>
+          <Link
+            href="/admin/federation"
+            className="px-4 py-2 bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg font-mono text-sm text-[var(--cream)] hover:border-[var(--coral)] transition-colors"
+          >
+            Federation Dashboard
+          </Link>
+        </div>
 
         {loading ? (
           <div className="py-12 text-center">
@@ -130,6 +140,7 @@ export default function SourceHealthPage() {
                   <thead>
                     <tr className="border-b border-[var(--twilight)] bg-[var(--night)]">
                       <th className="text-left px-4 py-3 font-mono text-xs text-[var(--muted)] uppercase">Source</th>
+                      <th className="text-left px-4 py-3 font-mono text-xs text-[var(--muted)] uppercase">Owner</th>
                       <th className="text-left px-4 py-3 font-mono text-xs text-[var(--muted)] uppercase">Status</th>
                       <th className="text-left px-4 py-3 font-mono text-xs text-[var(--muted)] uppercase">Last Run</th>
                       <th className="text-right px-4 py-3 font-mono text-xs text-[var(--muted)] uppercase">7d Runs</th>
@@ -213,10 +224,29 @@ function SourceRow({ source }: { source: SourceHealth }) {
           <div className="flex items-center gap-2">
             <span className={`w-2 h-2 rounded-full ${statusColor.replace("text-", "bg-")}`} />
             <div>
-              <p className="font-mono text-sm text-[var(--cream)]">{source.name}</p>
+              <Link
+                href={`/admin/sources/${source.id}`}
+                onClick={(e) => e.stopPropagation()}
+                className="font-mono text-sm text-[var(--cream)] hover:text-[var(--coral)]"
+              >
+                {source.name}
+              </Link>
               <p className="font-mono text-[0.6rem] text-[var(--muted)]">{source.slug}</p>
             </div>
           </div>
+        </td>
+        <td className="px-4 py-3">
+          {source.owner_portal ? (
+            <Link
+              href={`/admin/portals/${source.owner_portal.id}`}
+              onClick={(e) => e.stopPropagation()}
+              className="font-mono text-xs text-[var(--coral)] hover:underline"
+            >
+              {source.owner_portal.name}
+            </Link>
+          ) : (
+            <span className="font-mono text-xs text-[var(--muted)]">Global</span>
+          )}
         </td>
         <td className="px-4 py-3">
           <span className={`font-mono text-xs ${statusColor}`}>{statusText}</span>
@@ -249,7 +279,7 @@ function SourceRow({ source }: { source: SourceHealth }) {
       {/* Expanded Details */}
       {expanded && (
         <tr className="bg-[var(--night)]">
-          <td colSpan={7} className="px-4 py-3">
+          <td colSpan={8} className="px-4 py-3">
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
                 <p className="font-mono text-xs text-[var(--muted)] mb-1">Source URL</p>

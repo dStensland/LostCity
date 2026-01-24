@@ -60,8 +60,8 @@ interface ErrorFallbackProps {
 export function ErrorFallback({
   error,
   onRetry,
-  title = "Something went wrong",
-  description = "An unexpected error occurred. Please try again.",
+  title = "Something broke",
+  description = "Probably our fault. This stuff is hard, ok?",
 }: ErrorFallbackProps) {
   return (
     <div className="flex flex-col items-center justify-center py-16 px-4 text-center">

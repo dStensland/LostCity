@@ -20,8 +20,8 @@ export default function GlobalError({
       <ErrorFallback
         error={error}
         onRetry={reset}
-        title="Something went wrong"
-        description="We encountered an unexpected error. Please try again or refresh the page."
+        title="Something broke"
+        description="Probably our fault. This stuff is hard, ok?"
       />
     </div>
   );

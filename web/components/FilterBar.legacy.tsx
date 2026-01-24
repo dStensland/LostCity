@@ -507,7 +507,7 @@ export default function FilterBar({ variant = "full" }: FilterBarProps) {
 
   const quickPicks = [
     {
-      label: "Happening Now",
+      label: "Live",
       onClick: () => setDateFilter("now"),
       isActive: currentDateFilter === "now",
     },

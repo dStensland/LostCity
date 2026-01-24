@@ -1,10 +1,8 @@
 import { notFound } from "next/navigation";
-import { getPortalBySlug, DEFAULT_PORTAL } from "@/lib/portal";
+import { getPortalBySlug } from "@/lib/portal";
 import { PortalProvider } from "@/lib/portal-context";
-import { DEFAULT_PORTAL_SLUG } from "@/lib/constants";
 import { PortalTheme } from "@/components/PortalTheme";
 import type { Metadata } from "next";
-import type { Portal } from "@/lib/portal-context";
 
 type Props = {
   children: React.ReactNode;
@@ -23,10 +21,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   return {
     title: `${portal.name} Events | Lost City`,
-    description: portal.tagline || `Discover events in ${portal.name}. ${portal.portal_type === "city" ? "Concerts, shows, food, nightlife and more." : ""}`,
+    description: portal.tagline || `Find your people in ${portal.name}. ${portal.portal_type === "city" ? "Shows, sounds, scenes, and the good stuff." : ""}`,
     openGraph: {
       title: `${portal.name} | Lost City`,
-      description: portal.tagline || `Discover events in ${portal.name}`,
+      description: portal.tagline || `Find your people in ${portal.name}`,
       images: branding.og_image_url ? [{ url: branding.og_image_url as string }] : [],
     },
     icons: branding.favicon_url ? { icon: branding.favicon_url as string } : undefined,
@@ -42,18 +40,10 @@ export default async function PortalLayout({ children, params }: Props) {
     notFound();
   }
 
+  // All portals must exist in the database - no hardcoded fallback
   const portal = await getPortalBySlug(slug);
 
   if (!portal) {
-    // For Atlanta, use default if not in database yet
-    if (slug === DEFAULT_PORTAL_SLUG) {
-      return (
-        <PortalProvider portal={DEFAULT_PORTAL}>
-          <PortalTheme portal={DEFAULT_PORTAL} />
-          {children}
-        </PortalProvider>
-      );
-    }
     notFound();
   }
 

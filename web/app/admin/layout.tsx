@@ -50,6 +50,24 @@ export default async function AdminLayout({
             Dashboard
           </Link>
           <Link
+            href="/admin/analytics"
+            className="font-mono text-xs text-[var(--muted)] hover:text-[var(--cream)] transition-colors"
+          >
+            Analytics
+          </Link>
+          <Link
+            href="/admin/sources"
+            className="font-mono text-xs text-[var(--muted)] hover:text-[var(--cream)] transition-colors"
+          >
+            Sources
+          </Link>
+          <Link
+            href="/admin/federation"
+            className="font-mono text-xs text-[var(--muted)] hover:text-[var(--cream)] transition-colors"
+          >
+            Federation
+          </Link>
+          <Link
             href="/admin/events"
             className="font-mono text-xs text-[var(--muted)] hover:text-[var(--cream)] transition-colors"
           >

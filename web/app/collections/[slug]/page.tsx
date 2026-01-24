@@ -218,7 +218,7 @@ export default async function CollectionPage({ params }: Props) {
           </div>
         ) : (
           <div className="py-16 text-center">
-            <p className="text-[var(--muted)] font-mono text-sm">No events in this collection yet</p>
+            <p className="text-[var(--muted)] font-mono text-sm">Empty. Add some stuff.</p>
           </div>
         )}
       </main>

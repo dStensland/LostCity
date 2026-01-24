@@ -19,6 +19,8 @@ type SourceHealth = {
   success_rate_7d: number;
   avg_events_found_7d: number;
   total_events: number;
+  owner_portal_id: string | null;
+  owner_portal: { id: string; name: string; slug: string } | null;
 };
 
 type SourceRow = {
@@ -27,6 +29,8 @@ type SourceRow = {
   slug: string;
   url: string;
   is_active: boolean;
+  owner_portal_id?: string | null;
+  owner_portal?: { id: string; name: string; slug: string } | null;
 };
 
 export async function GET() {
@@ -35,17 +39,32 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
   }
 
-  // Get all sources
-  const { data: sourcesData, error: sourcesError } = await supabase
+  // Get all sources - try to get owner info if federation columns exist
+  let sources: SourceRow[] = [];
+
+  // First try with owner info (federation columns)
+  const { data: sourcesWithOwner, error: ownerError } = await supabase
     .from("sources")
-    .select("id, name, slug, url, is_active")
+    .select(`
+      id, name, slug, url, is_active, owner_portal_id,
+      owner_portal:portals!sources_owner_portal_id_fkey(id, name, slug)
+    `)
     .order("name");
 
-  if (sourcesError) {
-    return NextResponse.json({ error: sourcesError.message }, { status: 500 });
-  }
+  if (!ownerError && sourcesWithOwner) {
+    sources = sourcesWithOwner as SourceRow[];
+  } else {
+    // Fallback: get basic source info without federation columns
+    const { data: basicSources, error: basicError } = await supabase
+      .from("sources")
+      .select("id, name, slug, url, is_active")
+      .order("name");
 
-  const sources = (sourcesData || []) as SourceRow[];
+    if (basicError) {
+      return NextResponse.json({ error: basicError.message }, { status: 500 });
+    }
+    sources = (basicSources || []) as SourceRow[];
+  }
 
   // Get crawl logs from last 7 days
   const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
@@ -117,6 +136,8 @@ export async function GET() {
       success_rate_7d: successRate,
       avg_events_found_7d: avgEventsFound,
       total_events: eventCountMap.get(source.id) || 0,
+      owner_portal_id: source.owner_portal_id || null,
+      owner_portal: source.owner_portal || null,
     };
   });
 

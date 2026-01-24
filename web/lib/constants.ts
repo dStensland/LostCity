@@ -6,8 +6,14 @@
  */
 
 /**
- * Default portal slug - used as fallback when no portal context is available.
- * Change this to configure the default city portal.
+ * Default portal slug - used for URL routing when building portal-relative URLs.
+ * The portal data is always loaded from the database; there is no hardcoded fallback.
  */
 export const DEFAULT_PORTAL_SLUG = "atlanta";
+
+/**
+ * Default portal name - used for display purposes in UI elements when no
+ * portal context is available (e.g., homepage, error pages).
+ * NOTE: The actual portal data is always loaded from the database.
+ */
 export const DEFAULT_PORTAL_NAME = "Atlanta";

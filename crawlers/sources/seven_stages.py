@@ -1,7 +1,8 @@
 """
-Crawler for 7 Stages (7stages.org).
+Crawler for 7 Stages Theatre (7stages.org).
+Experimental theater in Little Five Points known for edgy, provocative productions.
 
-Site uses JavaScript rendering - must use Playwright.
+Site structure: Shows at /shows with portfolio grid, links to individual show pages.
 """
 
 from __future__ import annotations
@@ -15,12 +16,11 @@ from playwright.sync_api import sync_playwright
 
 from db import get_or_create_venue, insert_event, find_event_by_hash
 from dedupe import generate_content_hash
-from utils import extract_images_from_page
 
 logger = logging.getLogger(__name__)
 
 BASE_URL = "https://www.7stages.org"
-EVENTS_URL = f"{BASE_URL}/shows"
+SHOWS_URL = f"{BASE_URL}/shows"
 
 VENUE_DATA = {
     "name": "7 Stages",
@@ -37,23 +37,84 @@ VENUE_DATA = {
     "website": BASE_URL,
 }
 
+SKIP_PATTERNS = [
+    r"^(home|about|contact|donate|support|subscribe|tickets?|buy|cart|menu)$",
+    r"^(login|sign in|sign up|register|account)$",
+    r"^(facebook|twitter|instagram|youtube)$",
+    r"^(privacy|terms|policy|copyright|\d{4})$",
+    r"^(what's on|rental|archive|past)$",
+    r"^\d+$",
+    r"^[a-z]{1,3}$",
+]
 
-def parse_time(time_text: str) -> Optional[str]:
-    """Parse time from '7:00 PM' format."""
-    match = re.search(r"(\d{1,2}):(\d{2})\s*(am|pm)", time_text, re.IGNORECASE)
-    if match:
-        hour, minute, period = match.groups()
-        hour = int(hour)
-        if period.lower() == "pm" and hour != 12:
-            hour += 12
-        elif period.lower() == "am" and hour == 12:
-            hour = 0
-        return f"{hour:02d}:{minute}"
-    return None
+
+def is_valid_title(title: str) -> bool:
+    """Check if a string looks like a valid show title."""
+    if not title or len(title) < 3 or len(title) > 200:
+        return False
+    title_lower = title.lower().strip()
+    for pattern in SKIP_PATTERNS:
+        if re.match(pattern, title_lower, re.IGNORECASE):
+            return False
+    return True
+
+
+def parse_date_range(date_text: str) -> tuple[Optional[str], Optional[str]]:
+    """Parse date range from various formats."""
+    if not date_text:
+        return None, None
+
+    date_text = date_text.strip()
+
+    # Pattern: "Month Day - Month Day, Year" or embedded date like "2.14.2026"
+    # 7 Stages sometimes uses format like "Game. Set. Match. 2.14.2026"
+    embedded_match = re.search(r"(\d{1,2})\.(\d{1,2})\.(\d{4})", date_text)
+    if embedded_match:
+        month, day, year = embedded_match.groups()
+        try:
+            dt = datetime(int(year), int(month), int(day))
+            return dt.strftime("%Y-%m-%d"), dt.strftime("%Y-%m-%d")
+        except ValueError:
+            pass
+
+    # Standard range pattern
+    range_match = re.search(
+        r"(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2})\s*[-–—]\s*(?:(January|February|March|April|May|June|July|August|September|October|November|December)\s+)?(\d{1,2}),?\s*(\d{4})",
+        date_text,
+        re.IGNORECASE
+    )
+    if range_match:
+        start_month = range_match.group(1)
+        start_day = range_match.group(2)
+        end_month = range_match.group(3) or start_month
+        end_day = range_match.group(4)
+        year = range_match.group(5)
+        try:
+            start_dt = datetime.strptime(f"{start_month} {start_day} {year}", "%B %d %Y")
+            end_dt = datetime.strptime(f"{end_month} {end_day} {year}", "%B %d %Y")
+            return start_dt.strftime("%Y-%m-%d"), end_dt.strftime("%Y-%m-%d")
+        except ValueError:
+            pass
+
+    # Single date
+    single_match = re.search(
+        r"(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2}),?\s*(\d{4})",
+        date_text,
+        re.IGNORECASE
+    )
+    if single_match:
+        month, day, year = single_match.groups()
+        try:
+            dt = datetime.strptime(f"{month} {day} {year}", "%B %d %Y")
+            return dt.strftime("%Y-%m-%d"), dt.strftime("%Y-%m-%d")
+        except ValueError:
+            pass
+
+    return None, None
 
 
 def crawl(source: dict) -> tuple[int, int, int]:
-    """Crawl 7 Stages events using Playwright."""
+    """Crawl 7 Stages shows using Playwright with DOM-based parsing."""
     source_id = source["id"]
     events_found = 0
     events_new = 0
@@ -70,79 +131,113 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             venue_id = get_or_create_venue(VENUE_DATA)
 
-            logger.info(f"Fetching 7 Stages: {EVENTS_URL}")
-            page.goto(EVENTS_URL, wait_until="domcontentloaded", timeout=30000)
-            page.wait_for_timeout(3000)
+            logger.info(f"Fetching 7 Stages: {SHOWS_URL}")
+            page.goto(SHOWS_URL, wait_until="networkidle", timeout=30000)
+            page.wait_for_timeout(2000)
 
-            # Extract images from page
-            image_map = extract_images_from_page(page)
-
-            # Scroll to load all content
-            for _ in range(5):
+            # Scroll to load lazy content
+            for _ in range(3):
                 page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
                 page.wait_for_timeout(1000)
 
-            # Get page text and parse line by line
-            body_text = page.inner_text("body")
-            lines = [l.strip() for l in body_text.split("\n") if l.strip()]
+            # 7 Stages uses portfolio items with h3 titles
+            # Look for show cards/items
+            show_items = page.query_selector_all("article, .portfolio-item, .show-item, .summary-item")
 
-            # Parse events - look for date patterns
-            i = 0
-            while i < len(lines):
-                line = lines[i]
+            if not show_items:
+                # Fallback: look for h3 elements with links
+                show_items = page.query_selector_all("h3 a, .show-title a")
 
-                # Skip navigation items
-                if len(line) < 3:
-                    i += 1
+            show_data = []
+
+            for item in show_items:
+                try:
+                    # Try to get title from h3 or heading
+                    title_el = item.query_selector("h3, h2, .title, .show-title")
+                    if not title_el:
+                        title_el = item
+
+                    title = title_el.inner_text().strip()
+
+                    # Clean up title - remove embedded dates for display
+                    clean_title = re.sub(r"\s*\d{1,2}\.\d{1,2}\.\d{4}\s*", "", title).strip()
+                    if clean_title:
+                        title = clean_title
+
+                    if not is_valid_title(title):
+                        continue
+
+                    # Get link
+                    link_el = item.query_selector("a") if item.query_selector("a") else item
+                    href = link_el.get_attribute("href") if link_el else None
+
+                    show_url = None
+                    if href:
+                        show_url = href if href.startswith("http") else BASE_URL + href
+
+                    # Get image
+                    img_el = item.query_selector("img")
+                    image_url = None
+                    if img_el:
+                        src = img_el.get_attribute("src") or img_el.get_attribute("data-src")
+                        if src:
+                            image_url = src if src.startswith("http") else BASE_URL + src
+
+                    show_data.append({
+                        "title": title,
+                        "url": show_url,
+                        "image_url": image_url,
+                    })
+
+                except Exception as e:
+                    logger.debug(f"Error parsing show item: {e}")
                     continue
 
-                # Look for date patterns
-                date_match = re.match(
-                    r"(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)?,?\s*(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{1,2})(?:,?\s+(\d{4}))?",
-                    line,
-                    re.IGNORECASE
-                )
+            logger.info(f"Found {len(show_data)} potential shows")
 
-                if date_match:
-                    month = date_match.group(1)
-                    day = date_match.group(2)
-                    year = date_match.group(3) if date_match.group(3) else str(datetime.now().year)
+            # Visit each show page to get dates
+            for show in show_data:
+                try:
+                    title = show["title"]
+                    show_url = show["url"]
 
-                    # Look for title in surrounding lines
-                    title = None
-                    start_time = None
+                    if not show_url:
+                        continue
 
-                    for offset in [-2, -1, 1, 2, 3]:
-                        idx = i + offset
-                        if 0 <= idx < len(lines):
-                            check_line = lines[idx]
-                            if re.match(r"(January|February|March)", check_line, re.IGNORECASE):
+                    page.goto(show_url, wait_until="networkidle", timeout=20000)
+                    page.wait_for_timeout(1000)
+
+                    # Get dates from show page
+                    body_text = page.inner_text("body")
+
+                    # Look for date patterns
+                    start_date, end_date = parse_date_range(body_text)
+
+                    if not start_date:
+                        # Try to extract from title if it had embedded date
+                        start_date, end_date = parse_date_range(show["title"])
+
+                    if not start_date:
+                        logger.debug(f"No dates found for {title}")
+                        continue
+
+                    # Skip past shows
+                    if end_date:
+                        try:
+                            if datetime.strptime(end_date, "%Y-%m-%d").date() < datetime.now().date():
                                 continue
-                            if not start_time:
-                                time_result = parse_time(check_line)
-                                if time_result:
-                                    start_time = time_result
-                                    continue
-                            if not title and len(check_line) > 5:
-                                if not re.match(r"\d{1,2}[:/]", check_line):
-                                    if not re.match(r"(free|tickets|register|\$|more info)", check_line.lower()):
-                                        title = check_line
-                                        break
+                        except ValueError:
+                            pass
 
-                    if not title:
-                        i += 1
-                        continue
-
-                    # Parse date
-                    try:
-                        month_str = month[:3] if len(month) > 3 else month
-                        dt = datetime.strptime(f"{month_str} {day} {year}", "%b %d %Y")
-                        if dt.date() < datetime.now().date():
-                            dt = datetime.strptime(f"{month_str} {day} {int(year) + 1}", "%b %d %Y")
-                        start_date = dt.strftime("%Y-%m-%d")
-                    except ValueError:
-                        i += 1
-                        continue
+                    # Get description
+                    description = None
+                    for selector in [".show-description", ".entry-content p", "article p", ".synopsis"]:
+                        el = page.query_selector(selector)
+                        if el:
+                            desc = el.inner_text().strip()
+                            if desc and len(desc) > 20:
+                                description = desc[:500]
+                                break
 
                     events_found += 1
 
@@ -150,38 +245,31 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     if find_event_by_hash(content_hash):
                         events_updated += 1
-                        i += 1
                         continue
 
                     event_record = {
                         "source_id": source_id,
                         "venue_id": venue_id,
                         "title": title,
-                        "description": "Event at 7 Stages",
+                        "description": description or f"{title} at 7 Stages",
                         "start_date": start_date,
-                        "start_time": start_time,
-                        "end_date": None,
+                        "start_time": "20:00",
+                        "end_date": end_date,
                         "end_time": None,
-                        "is_all_day": start_time is None,
+                        "is_all_day": False,
                         "category": "theater",
-                        "subcategory": "performance",
-                        "tags": [
-                        "7-stages",
-                        "theater",
-                        "experimental",
-                        "l5p",
-                        "contemporary",
-                    ],
+                        "subcategory": "play",
+                        "tags": ["7-stages", "theater", "experimental", "little-five-points", "l5p"],
                         "price_min": None,
                         "price_max": None,
                         "price_note": None,
                         "is_free": False,
-                        "source_url": EVENTS_URL,
-                        "ticket_url": EVENTS_URL,
-                        "image_url": image_map.get(title),
-                        "raw_text": f"{title} - {start_date}",
-                        "extraction_confidence": 0.80,
-                        "is_recurring": False,
+                        "source_url": show_url,
+                        "ticket_url": show_url,
+                        "image_url": show["image_url"],
+                        "raw_text": f"{title}",
+                        "extraction_confidence": 0.85,
+                        "is_recurring": True if end_date and end_date != start_date else False,
                         "recurrence_rule": None,
                         "content_hash": content_hash,
                     }
@@ -189,11 +277,13 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     try:
                         insert_event(event_record)
                         events_new += 1
-                        logger.info(f"Added: {title} on {start_date}")
+                        logger.info(f"Added: {title} ({start_date} to {end_date})")
                     except Exception as e:
                         logger.error(f"Failed to insert: {title}: {e}")
 
-                i += 1
+                except Exception as e:
+                    logger.warning(f"Failed to process show {show.get('title', 'unknown')}: {e}")
+                    continue
 
             browser.close()
 

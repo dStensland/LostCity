@@ -1,7 +1,8 @@
 """
 Crawler for Theatrical Outfit (theatricaloutfit.org).
+Downtown Atlanta theater at the Balzer Theater at Herren's.
 
-Site uses JavaScript rendering - must use Playwright.
+Site structure: Shows listed under season navigation, individual show pages.
 """
 
 from __future__ import annotations
@@ -15,12 +16,10 @@ from playwright.sync_api import sync_playwright
 
 from db import get_or_create_venue, insert_event, find_event_by_hash
 from dedupe import generate_content_hash
-from utils import extract_images_from_page
 
 logger = logging.getLogger(__name__)
 
 BASE_URL = "https://www.theatricaloutfit.org"
-EVENTS_URL = f"{BASE_URL}/shows"
 
 VENUE_DATA = {
     "name": "Theatrical Outfit",
@@ -37,23 +36,92 @@ VENUE_DATA = {
     "website": BASE_URL,
 }
 
+# Known shows from their 2025-2026 season
+KNOWN_SHOWS = [
+    "the-glass-menagerie",
+    "bleeding-hearts",
+    "the-price",
+    "the-revolutionists",
+]
 
-def parse_time(time_text: str) -> Optional[str]:
-    """Parse time from '7:00 PM' format."""
-    match = re.search(r"(\d{1,2}):(\d{2})\s*(am|pm)", time_text, re.IGNORECASE)
-    if match:
-        hour, minute, period = match.groups()
-        hour = int(hour)
-        if period.lower() == "pm" and hour != 12:
-            hour += 12
-        elif period.lower() == "am" and hour == 12:
-            hour = 0
-        return f"{hour:02d}:{minute}"
-    return None
+SKIP_PATTERNS = [
+    r"^(home|about|contact|donate|support|subscribe|tickets?|buy|cart|menu)$",
+    r"^(login|sign in|register|account)$",
+    r"^(facebook|twitter|instagram|youtube)$",
+    r"^(privacy|terms|policy|copyright)$",
+    r"^(season|launchpad|calendar)$",
+    r"^\d+$",
+    r"^[a-z]{1,3}$",
+]
+
+
+def is_valid_title(title: str) -> bool:
+    """Check if a string looks like a valid show title."""
+    if not title or len(title) < 3 or len(title) > 200:
+        return False
+    title_lower = title.lower().strip()
+    for pattern in SKIP_PATTERNS:
+        if re.match(pattern, title_lower, re.IGNORECASE):
+            return False
+    return True
+
+
+def parse_date_range(date_text: str) -> tuple[Optional[str], Optional[str]]:
+    """Parse date range from various formats."""
+    if not date_text:
+        return None, None
+
+    date_text = date_text.strip()
+
+    # Pattern: "Month Day - Month Day, Year"
+    range_match = re.search(
+        r"(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2})\s*[-–—]\s*(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2}),?\s*(\d{4})",
+        date_text,
+        re.IGNORECASE
+    )
+    if range_match:
+        start_month, start_day, end_month, end_day, year = range_match.groups()
+        try:
+            start_dt = datetime.strptime(f"{start_month} {start_day} {year}", "%B %d %Y")
+            end_dt = datetime.strptime(f"{end_month} {end_day} {year}", "%B %d %Y")
+            return start_dt.strftime("%Y-%m-%d"), end_dt.strftime("%Y-%m-%d")
+        except ValueError:
+            pass
+
+    # Same month range
+    same_month_match = re.search(
+        r"(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2})\s*[-–—]\s*(\d{1,2}),?\s*(\d{4})",
+        date_text,
+        re.IGNORECASE
+    )
+    if same_month_match:
+        month, start_day, end_day, year = same_month_match.groups()
+        try:
+            start_dt = datetime.strptime(f"{month} {start_day} {year}", "%B %d %Y")
+            end_dt = datetime.strptime(f"{month} {end_day} {year}", "%B %d %Y")
+            return start_dt.strftime("%Y-%m-%d"), end_dt.strftime("%Y-%m-%d")
+        except ValueError:
+            pass
+
+    # Single date
+    single_match = re.search(
+        r"(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2}),?\s*(\d{4})",
+        date_text,
+        re.IGNORECASE
+    )
+    if single_match:
+        month, day, year = single_match.groups()
+        try:
+            dt = datetime.strptime(f"{month} {day} {year}", "%B %d %Y")
+            return dt.strftime("%Y-%m-%d"), dt.strftime("%Y-%m-%d")
+        except ValueError:
+            pass
+
+    return None, None
 
 
 def crawl(source: dict) -> tuple[int, int, int]:
-    """Crawl Theatrical Outfit events using Playwright."""
+    """Crawl Theatrical Outfit shows."""
     source_id = source["id"]
     events_found = 0
     events_new = 0
@@ -70,79 +138,100 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             venue_id = get_or_create_venue(VENUE_DATA)
 
-            logger.info(f"Fetching Theatrical Outfit: {EVENTS_URL}")
-            page.goto(EVENTS_URL, wait_until="domcontentloaded", timeout=30000)
-            page.wait_for_timeout(3000)
+            # Theatrical Outfit doesn't have a simple shows page
+            # Shows are linked from navigation under the season
+            # We'll try to discover show URLs from the main page
 
-            # Extract images from page
-            image_map = extract_images_from_page(page)
+            logger.info(f"Fetching Theatrical Outfit: {BASE_URL}")
+            page.goto(BASE_URL, wait_until="networkidle", timeout=30000)
+            page.wait_for_timeout(2000)
 
-            # Scroll to load all content
-            for _ in range(5):
-                page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
-                page.wait_for_timeout(1000)
+            # Find all internal links that might be shows
+            all_links = page.query_selector_all("a[href]")
 
-            # Get page text and parse line by line
-            body_text = page.inner_text("body")
-            lines = [l.strip() for l in body_text.split("\n") if l.strip()]
-
-            # Parse events - look for date patterns
-            i = 0
-            while i < len(lines):
-                line = lines[i]
-
-                # Skip navigation items
-                if len(line) < 3:
-                    i += 1
+            show_urls = set()
+            for link in all_links:
+                href = link.get_attribute("href")
+                if not href:
                     continue
 
-                # Look for date patterns
-                date_match = re.match(
-                    r"(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)?,?\s*(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{1,2})(?:,?\s+(\d{4}))?",
-                    line,
-                    re.IGNORECASE
-                )
+                # Look for show-like URLs
+                href_lower = href.lower()
+                if any(show in href_lower for show in KNOWN_SHOWS):
+                    full_url = href if href.startswith("http") else BASE_URL + href
+                    show_urls.add(full_url)
+                elif "/shows/" in href_lower or "/production/" in href_lower:
+                    full_url = href if href.startswith("http") else BASE_URL + href
+                    show_urls.add(full_url)
 
-                if date_match:
-                    month = date_match.group(1)
-                    day = date_match.group(2)
-                    year = date_match.group(3) if date_match.group(3) else str(datetime.now().year)
+            # Also try direct URLs for known shows
+            for show_slug in KNOWN_SHOWS:
+                possible_urls = [
+                    f"{BASE_URL}/{show_slug}/",
+                    f"{BASE_URL}/shows/{show_slug}/",
+                    f"{BASE_URL}/production/{show_slug}/",
+                ]
+                for url in possible_urls:
+                    show_urls.add(url)
 
-                    # Look for title in surrounding lines
+            logger.info(f"Found {len(show_urls)} potential show URLs")
+
+            for show_url in show_urls:
+                try:
+                    response = page.goto(show_url, wait_until="networkidle", timeout=15000)
+                    if not response or response.status >= 400:
+                        continue
+
+                    page.wait_for_timeout(1000)
+
+                    # Get title
                     title = None
-                    start_time = None
-
-                    for offset in [-2, -1, 1, 2, 3]:
-                        idx = i + offset
-                        if 0 <= idx < len(lines):
-                            check_line = lines[idx]
-                            if re.match(r"(January|February|March)", check_line, re.IGNORECASE):
-                                continue
-                            if not start_time:
-                                time_result = parse_time(check_line)
-                                if time_result:
-                                    start_time = time_result
-                                    continue
-                            if not title and len(check_line) > 5:
-                                if not re.match(r"\d{1,2}[:/]", check_line):
-                                    if not re.match(r"(free|tickets|register|\$|more info)", check_line.lower()):
-                                        title = check_line
-                                        break
+                    for selector in ["h1", ".show-title", ".entry-title", ".page-title"]:
+                        el = page.query_selector(selector)
+                        if el:
+                            title = el.inner_text().strip()
+                            if is_valid_title(title):
+                                break
+                            title = None
 
                     if not title:
-                        i += 1
                         continue
 
-                    # Parse date
-                    try:
-                        month_str = month[:3] if len(month) > 3 else month
-                        dt = datetime.strptime(f"{month_str} {day} {year}", "%b %d %Y")
-                        if dt.date() < datetime.now().date():
-                            dt = datetime.strptime(f"{month_str} {day} {int(year) + 1}", "%b %d %Y")
-                        start_date = dt.strftime("%Y-%m-%d")
-                    except ValueError:
-                        i += 1
+                    # Get dates
+                    body_text = page.inner_text("body")
+                    start_date, end_date = parse_date_range(body_text)
+
+                    if not start_date:
+                        logger.debug(f"No dates found for {title}")
                         continue
+
+                    # Skip past shows
+                    check_date = end_date or start_date
+                    try:
+                        if datetime.strptime(check_date, "%Y-%m-%d").date() < datetime.now().date():
+                            continue
+                    except ValueError:
+                        pass
+
+                    # Get description
+                    description = None
+                    for selector in [".show-description", ".entry-content p", "article p", ".synopsis", "main p"]:
+                        el = page.query_selector(selector)
+                        if el:
+                            desc = el.inner_text().strip()
+                            if desc and len(desc) > 30:
+                                description = desc[:500]
+                                break
+
+                    # Get image
+                    image_url = None
+                    for selector in [".show-image img", ".featured-image img", "article img"]:
+                        el = page.query_selector(selector)
+                        if el:
+                            src = el.get_attribute("src") or el.get_attribute("data-src")
+                            if src and "logo" not in src.lower():
+                                image_url = src if src.startswith("http") else BASE_URL + src
+                                break
 
                     events_found += 1
 
@@ -150,38 +239,31 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     if find_event_by_hash(content_hash):
                         events_updated += 1
-                        i += 1
                         continue
 
                     event_record = {
                         "source_id": source_id,
                         "venue_id": venue_id,
                         "title": title,
-                        "description": "Event at Theatrical Outfit",
+                        "description": description or f"{title} at Theatrical Outfit",
                         "start_date": start_date,
-                        "start_time": start_time,
-                        "end_date": None,
+                        "start_time": "19:30",
+                        "end_date": end_date,
                         "end_time": None,
-                        "is_all_day": start_time is None,
+                        "is_all_day": False,
                         "category": "theater",
-                        "subcategory": "performance",
-                        "tags": [
-                        "theatrical-outfit",
-                        "theater",
-                        "downtown",
-                        "drama",
-                        "balzer",
-                    ],
+                        "subcategory": "play",
+                        "tags": ["theatrical-outfit", "theater", "downtown", "balzer-theater"],
                         "price_min": None,
                         "price_max": None,
                         "price_note": None,
                         "is_free": False,
-                        "source_url": EVENTS_URL,
-                        "ticket_url": EVENTS_URL,
-                        "image_url": image_map.get(title),
-                        "raw_text": f"{title} - {start_date}",
-                        "extraction_confidence": 0.80,
-                        "is_recurring": False,
+                        "source_url": show_url,
+                        "ticket_url": show_url,
+                        "image_url": image_url,
+                        "raw_text": f"{title}",
+                        "extraction_confidence": 0.85,
+                        "is_recurring": True if end_date and end_date != start_date else False,
                         "recurrence_rule": None,
                         "content_hash": content_hash,
                     }
@@ -189,11 +271,13 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     try:
                         insert_event(event_record)
                         events_new += 1
-                        logger.info(f"Added: {title} on {start_date}")
+                        logger.info(f"Added: {title} ({start_date} to {end_date})")
                     except Exception as e:
                         logger.error(f"Failed to insert: {title}: {e}")
 
-                i += 1
+                except Exception as e:
+                    logger.debug(f"Failed to process {show_url}: {e}")
+                    continue
 
             browser.close()
 

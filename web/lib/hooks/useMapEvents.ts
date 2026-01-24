@@ -106,8 +106,8 @@ export function useMapEvents(options: UseMapEventsOptions = {}) {
 
   const query = useQuery<EventsResponse, Error>({
     queryKey: ["events", "map", filtersKey, boundsKey, portalId, portalExclusive],
-    queryFn: async () => {
-      const res = await fetch(`/api/events?${buildApiParams}`);
+    queryFn: async ({ signal }) => {
+      const res = await fetch(`/api/events?${buildApiParams}`, { signal });
 
       if (!res.ok) {
         throw new Error(`Failed to fetch map events: ${res.status}`);
@@ -120,6 +120,11 @@ export function useMapEvents(options: UseMapEventsOptions = {}) {
     staleTime: 60 * 1000, // 1 minute
     // Don't refetch on window focus for map
     refetchOnWindowFocus: false,
+    // Treat abort as a non-error (happens during view switching)
+    throwOnError: (error) => {
+      if (error.name === "AbortError") return false;
+      return true;
+    },
   });
 
   // Filter events that have valid coordinates

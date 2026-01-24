@@ -29,6 +29,8 @@ export async function GET(request: Request) {
     const venueParam = searchParams.get("venue");
     const venueId = venueParam ? safeParseInt(venueParam, 0, 0, 999999) : undefined;
 
+    const portalId = searchParams.get("portal_id") || undefined;
+
     const filters: SearchFilters = {
       search: searchParams.get("search") || undefined,
       categories: searchParams.get("categories")?.split(",").filter(Boolean) || undefined,
@@ -41,8 +43,10 @@ export async function GET(request: Request) {
       date_filter: (searchParams.get("date") as "today" | "weekend" | "week") || undefined,
       venue_id: venueId || undefined,
       mood: (searchParams.get("mood") as MoodId) || undefined,
-      portal_id: searchParams.get("portal_id") || undefined,
+      portal_id: portalId,
       portal_exclusive: searchParams.get("portal_exclusive") === "true" || undefined,
+      // Enable federation filtering when a portal is specified
+      use_federation: !!portalId,
     };
 
     const pageSize = 20;

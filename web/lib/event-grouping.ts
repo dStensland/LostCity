@@ -7,6 +7,20 @@ const VENUE_ROLLUP_THRESHOLD = 4;
 const CATEGORY_ROLLUP_THRESHOLD = 5;
 const ROLLUP_CATEGORIES = ["community"];
 
+// Series types that should be collapsed into a summary card instead of expanded showtimes
+const COLLAPSED_SERIES_TYPES = ["festival_program"];
+
+/**
+ * Summary info for festival/convention collapsed display
+ */
+export interface FestivalSummary {
+  eventCount: number;
+  startDate: string;
+  endDate: string;
+  venues: { id: number; name: string; slug: string; neighborhood: string | null }[];
+  categories: string[];
+}
+
 /**
  * Display item types for the event list
  */
@@ -14,7 +28,8 @@ export type DisplayItem =
   | { type: "event"; event: EventWithLocation }
   | { type: "venue-group"; venueId: number; venueName: string; neighborhood: string | null; events: EventWithLocation[] }
   | { type: "category-group"; categoryId: string; categoryName: string; events: EventWithLocation[] }
-  | { type: "series-group"; seriesId: string; series: SeriesInfo; venueGroups: SeriesVenueGroup[] };
+  | { type: "series-group"; seriesId: string; series: SeriesInfo; venueGroups: SeriesVenueGroup[] }
+  | { type: "festival-group"; seriesId: string; series: SeriesInfo; summary: FestivalSummary };
 
 /**
  * Time period for grouping events within a day
@@ -44,6 +59,45 @@ export function getTimePeriod(time: string | null): TimePeriod {
 }
 
 /**
+ * Build a summary for collapsed festival/convention display
+ * Derives date range and venues from child events
+ */
+function buildFestivalSummary(events: EventWithLocation[]): FestivalSummary {
+  // Collect all dates to find range
+  const dates = events
+    .flatMap((e) => [e.start_date, e.end_date])
+    .filter((d): d is string => d !== null)
+    .sort();
+
+  const startDate = dates[0] || events[0]?.start_date || "";
+  const endDate = dates[dates.length - 1] || events[0]?.start_date || "";
+
+  // Collect unique venues
+  const venueMap = new Map<number, FestivalSummary["venues"][0]>();
+  for (const event of events) {
+    if (event.venue && !venueMap.has(event.venue.id)) {
+      venueMap.set(event.venue.id, {
+        id: event.venue.id,
+        name: event.venue.name,
+        slug: event.venue.slug,
+        neighborhood: event.venue.neighborhood,
+      });
+    }
+  }
+
+  // Collect unique categories
+  const categories = [...new Set(events.map((e) => e.category_id).filter((c): c is string => c !== null))];
+
+  return {
+    eventCount: events.length,
+    startDate,
+    endDate,
+    venues: Array.from(venueMap.values()),
+    categories,
+  };
+}
+
+/**
  * Group events into display items (individual events, venue groups, category groups, series groups)
  * Uses rollup thresholds to combine events from the same venue or category
  * Series events are grouped FIRST (highest priority), then venue, then category
@@ -64,11 +118,36 @@ export function groupEventsForDisplay(events: EventWithLocation[]): DisplayItem[
   }
 
   // Create series groups - group by venue within each series
+  // Festival/convention types get collapsed into a summary card
   for (const [seriesId, seriesEvents] of seriesGroups) {
     // Get series info from first event
     const firstEvent = seriesEvents[0];
     const series = firstEvent.series!;
 
+    // Check if this series type should be collapsed (festivals, conventions)
+    if (COLLAPSED_SERIES_TYPES.includes(series.series_type)) {
+      // Create a collapsed festival summary instead of expanded showtimes
+      const summary = buildFestivalSummary(seriesEvents);
+
+      items.push({
+        type: "festival-group",
+        seriesId,
+        series: {
+          id: series.id,
+          slug: series.slug,
+          title: series.title,
+          series_type: series.series_type,
+          image_url: series.image_url,
+        },
+        summary,
+      });
+
+      // Mark all series events as used
+      seriesEvents.forEach((e) => usedEventIds.add(e.id));
+      continue;
+    }
+
+    // Regular series (film, recurring shows) - expand with showtimes by venue
     // Group events by venue
     const venueMap = new Map<number, { venue: SeriesVenueGroup["venue"]; events: EventWithLocation[] }>();
     for (const event of seriesEvents) {
@@ -188,7 +267,11 @@ export function groupEventsForDisplay(events: EventWithLocation[]): DisplayItem[
     const getFirstTime = (item: DisplayItem): string => {
       if (item.type === "event") return item.event.start_time || "00:00";
       if (item.type === "series-group") return item.venueGroups[0]?.showtimes[0]?.time || "00:00";
-      return item.events[0]?.start_time || "00:00";
+      if (item.type === "festival-group") return "00:00"; // Festivals sort at start of day
+      if (item.type === "venue-group" || item.type === "category-group") {
+        return item.events[0]?.start_time || "00:00";
+      }
+      return "00:00";
     };
     return getFirstTime(a).localeCompare(getFirstTime(b));
   });
@@ -202,7 +285,11 @@ export function groupEventsForDisplay(events: EventWithLocation[]): DisplayItem[
 function getFirstTimeForItem(item: DisplayItem): string | null {
   if (item.type === "event") return item.event.start_time;
   if (item.type === "series-group") return item.venueGroups[0]?.showtimes[0]?.time || null;
-  return item.events[0]?.start_time || null;
+  if (item.type === "festival-group") return null; // Festivals span multiple times, default to morning
+  if (item.type === "venue-group" || item.type === "category-group") {
+    return item.events[0]?.start_time || null;
+  }
+  return null;
 }
 
 /**

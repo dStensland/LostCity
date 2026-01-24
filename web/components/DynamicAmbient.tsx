@@ -63,12 +63,6 @@ export default function DynamicAmbient() {
       newColor = CATEGORY_AMBIENT_COLORS.community;
     }
 
-    // Check for view modes that might have a specific feel
-    const view = searchParams.get("view");
-    if (view === "happening-now") {
-      newColor = "rgba(255, 100, 100, 0.18)"; // More intense red for live events
-    }
-
     // Only update if color changed
     if (newColor !== ambientColor) {
       setIsTransitioning(true);

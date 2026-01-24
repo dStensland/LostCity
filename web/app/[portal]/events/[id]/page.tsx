@@ -17,10 +17,10 @@ import type { Metadata } from "next";
 import DirectionsDropdown from "@/components/DirectionsDropdown";
 import EventStickyBar from "@/components/EventStickyBar";
 import EventHeroImage from "@/components/EventHeroImage";
-import EventActionCard from "@/components/EventActionCard";
+import EventQuickActions from "@/components/EventQuickActions";
 import VenueVibes from "@/components/VenueVibes";
 import LinkifyText from "@/components/LinkifyText";
-import { formatTimeSplit, formatTimeRange } from "@/lib/formats";
+import { formatTimeSplit } from "@/lib/formats";
 import VenueTagList from "@/components/VenueTagList";
 import FlagButton from "@/components/FlagButton";
 
@@ -164,11 +164,6 @@ export default async function PortalEventPage({ params }: Props) {
 
   const { venueEvents, sameDateEvents } = await getRelatedEvents(event);
   const nearbySpots = event.venue?.id ? await getNearbySpots(event.venue.id) : [];
-  const dateObj = parseISO(event.start_date);
-  const shortDate = format(dateObj, "MMM d");
-  const dayOfWeek = format(dateObj, "EEE");
-  const { time, period } = formatTimeSplit(event.start_time, event.is_all_day);
-  const timeRange = formatTimeRange(event.start_time, event.end_time, event.is_all_day);
   const eventSchema = generateEventSchema(event);
 
   // Event state
@@ -194,10 +189,10 @@ export default async function PortalEventPage({ params }: Props) {
           backLink={{ href: `/${activePortalSlug}?view=events`, label: "Events" }}
         />
 
-        <main className="max-w-3xl mx-auto px-4 py-8 pb-28">
-          {/* Hero Section with immersive image and glass overlay */}
+        <main className="max-w-3xl mx-auto px-4 py-6 pb-28">
+          {/* Hero Section - compact 2:1 ratio for faster access to CTAs */}
           <div
-            className={`relative aspect-video bg-[var(--night)] rounded-lg overflow-hidden mb-6 animate-fade-in ${
+            className={`relative aspect-[2/1] bg-[var(--night)] rounded-xl overflow-hidden mb-4 animate-fade-in ${
               isLive ? "live-border-glow" : ""
             }`}
             style={{
@@ -243,8 +238,8 @@ export default async function PortalEventPage({ params }: Props) {
             )}
           </div>
 
-          {/* Floating Action Card */}
-          <EventActionCard
+          {/* Quick Actions - Price, Date, Time + Primary CTA */}
+          <EventQuickActions
             event={event}
             isLive={isLive}
             className="mb-6"
@@ -270,94 +265,12 @@ export default async function PortalEventPage({ params }: Props) {
 
           {/* Main event info card */}
           <div
-            className="border border-[var(--twilight)] rounded-lg p-6 sm:p-8 animate-fade-up"
+            className="border border-[var(--twilight)] rounded-xl p-5 sm:p-6 animate-fade-up"
             style={{ backgroundColor: "var(--card-bg)", animationDelay: "0.2s" }}
           >
-            {/* Series link */}
-            {event.series && (
-              <Link
-                href={`/${activePortalSlug}/series/${event.series.slug}`}
-                className="inline-flex items-center gap-2 mb-5 px-3 py-1.5 rounded-lg border border-[var(--twilight)] transition-colors hover:border-[var(--coral)]/50 group"
-                style={{ backgroundColor: "var(--void)" }}
-              >
-                <svg
-                  className="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  style={{ color: getSeriesTypeColor(event.series.series_type) }}
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={1.5}
-                    d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z"
-                  />
-                </svg>
-                <span className="text-sm text-[var(--soft)] group-hover:text-[var(--coral)] transition-colors">
-                  Part of <span className="text-[var(--cream)] font-medium">{event.series.title}</span>
-                </span>
-                <span
-                  className="text-[0.6rem] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded"
-                  style={{
-                    backgroundColor: `${getSeriesTypeColor(event.series.series_type)}20`,
-                    color: getSeriesTypeColor(event.series.series_type),
-                  }}
-                >
-                  {getSeriesTypeLabel(event.series.series_type)}
-                </span>
-                <svg className="w-4 h-4 text-[var(--muted)] group-hover:text-[var(--coral)] transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-              </Link>
-            )}
-
-            {/* Friends going */}
-            <FriendsGoing eventId={event.id} className="mb-5" />
-
-            {/* Date/Time grid with end time */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4 mb-6">
-              <div className="rounded-lg p-3 sm:p-4 text-center border border-[var(--twilight)]" style={{ backgroundColor: "var(--void)" }}>
-                <div className="font-mono text-[0.6rem] text-[var(--muted)] uppercase tracking-widest mb-1">
-                  Date
-                </div>
-                <div className="font-mono text-lg sm:text-xl font-semibold text-[var(--coral)]">
-                  {shortDate}
-                </div>
-                <div className="font-mono text-xs text-[var(--muted)]">{dayOfWeek}</div>
-              </div>
-
-              <div className="rounded-lg p-3 sm:p-4 text-center border border-[var(--twilight)]" style={{ backgroundColor: "var(--void)" }}>
-                <div className="font-mono text-[0.6rem] text-[var(--muted)] uppercase tracking-widest mb-1">
-                  Time
-                </div>
-                <div className="font-mono text-lg sm:text-xl font-semibold text-[var(--coral)]">
-                  {time}
-                </div>
-                <div className="font-mono text-xs text-[var(--muted)]">
-                  {event.end_time ? timeRange : period}
-                </div>
-              </div>
-
-              {/* Show duration if we have end time */}
-              {event.end_time && (
-                <div className="rounded-lg p-3 sm:p-4 text-center border border-[var(--twilight)] col-span-2 sm:col-span-1" style={{ backgroundColor: "var(--void)" }}>
-                  <div className="font-mono text-[0.6rem] text-[var(--muted)] uppercase tracking-widest mb-1">
-                    Ends
-                  </div>
-                  <div className="font-mono text-lg sm:text-xl font-semibold text-[var(--soft)]">
-                    {formatTimeSplit(event.end_time).time}
-                  </div>
-                  <div className="font-mono text-xs text-[var(--muted)]">
-                    {formatTimeSplit(event.end_time).period}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Description */}
+            {/* 1. Description - primary content, what is this event? */}
             {event.description && (
-              <div className="mb-6 pt-6 border-t border-[var(--twilight)]">
+              <div className="mb-5">
                 <h2 className="font-mono text-[0.65rem] font-medium text-[var(--muted)] uppercase tracking-widest mb-3">
                   About
                 </h2>
@@ -367,77 +280,9 @@ export default async function PortalEventPage({ params }: Props) {
               </div>
             )}
 
-            {/* Tags */}
-            {event.tags && event.tags.length > 0 && (
-              <div className="mb-6 pt-6 border-t border-[var(--twilight)]">
-                <h2 className="font-mono text-[0.65rem] font-medium text-[var(--muted)] uppercase tracking-widest mb-3">
-                  Also Featuring
-                </h2>
-                <div className="flex flex-wrap gap-2">
-                  {event.tags.map((tag) => (
-                    <span
-                      key={tag}
-                      className="px-3 py-1 text-[var(--soft)] rounded border border-[var(--twilight)] text-sm"
-                      style={{ backgroundColor: "var(--void)" }}
-                    >
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Presented by (Producer/Organizer) */}
-            {event.producer && (
-              <div className="mb-6 pt-6 border-t border-[var(--twilight)]">
-                <h2 className="font-mono text-[0.65rem] font-medium text-[var(--muted)] uppercase tracking-widest mb-3">
-                  Presented by
-                </h2>
-                <div className="flex items-center justify-between gap-4 p-4 rounded-lg border border-[var(--twilight)]" style={{ backgroundColor: "var(--void)" }}>
-                  <div className="flex items-center gap-3 min-w-0">
-                    {event.producer.logo_url ? (
-                      <Image
-                        src={event.producer.logo_url}
-                        alt={event.producer.name}
-                        width={48}
-                        height={48}
-                        className="rounded-lg object-cover flex-shrink-0"
-                        unoptimized
-                      />
-                    ) : (
-                      <div className="w-12 h-12 rounded-lg bg-[var(--twilight)] flex items-center justify-center flex-shrink-0">
-                        <svg className="w-6 h-6 text-[var(--muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                        </svg>
-                      </div>
-                    )}
-                    <div className="min-w-0">
-                      <h3 className="text-[var(--cream)] font-medium truncate">
-                        {event.producer.name}
-                      </h3>
-                      <p className="text-[0.7rem] text-[var(--muted)] font-mono uppercase tracking-wider">
-                        {event.producer.org_type.replace(/_/g, " ")}
-                      </p>
-                      {event.producer.website && (
-                        <a
-                          href={event.producer.website}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-xs text-[var(--coral)] hover:underline"
-                        >
-                          {event.producer.website.replace(/^https?:\/\//, "").replace(/\/$/, "")}
-                        </a>
-                      )}
-                    </div>
-                  </div>
-                  <FollowButton targetProducerId={event.producer.id} size="sm" />
-                </div>
-              </div>
-            )}
-
-            {/* Location with Venue Vibes */}
+            {/* 2. Location - where is it? (important decision info) */}
             {event.venue && event.venue.address && (
-              <div className="mb-6 pt-6 border-t border-[var(--twilight)]">
+              <div className={`mb-5 ${event.description ? "pt-5 border-t border-[var(--twilight)]" : ""}`}>
                 <div className="flex items-center justify-between mb-3">
                   <h2 className="font-mono text-[0.65rem] font-medium text-[var(--muted)] uppercase tracking-widest">
                     Location
@@ -451,46 +296,142 @@ export default async function PortalEventPage({ params }: Props) {
                 </div>
                 <Link
                   href={`/${activePortalSlug}/spots/${event.venue.slug}`}
-                  className="block p-4 -mx-4 rounded-lg transition-colors hover:bg-[var(--void)] group"
+                  className="block p-3 rounded-lg border border-[var(--twilight)] transition-colors hover:border-[var(--coral)]/50 group"
+                  style={{ backgroundColor: "var(--void)" }}
                 >
-                  <p className="text-[var(--soft)] mb-2">
+                  <p className="text-[var(--soft)]">
                     <span className="text-[var(--cream)] font-medium group-hover:text-[var(--coral)] transition-colors">
                       {event.venue.name}
                     </span>
-                    <svg className="inline-block w-4 h-4 ml-1.5 text-[var(--muted)] group-hover:text-[var(--coral)] transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="inline-block w-4 h-4 ml-1 text-[var(--muted)] group-hover:text-[var(--coral)] transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                     </svg>
                     <br />
-                    <span className="text-sm">
-                      {event.venue.address}
-                      <br />
-                      {event.venue.city}, {event.venue.state}
+                    <span className="text-sm text-[var(--muted)]">
+                      {event.venue.address} · {event.venue.city}, {event.venue.state}
                     </span>
                   </p>
 
                   {/* Venue Vibes */}
-                  <VenueVibes vibes={event.venue.vibes} className="mb-2" />
-
-                  {/* Venue Description */}
-                  {event.venue.description && (
-                    <p className="text-sm text-[var(--muted)] italic leading-relaxed">
-                      {event.venue.description}
-                    </p>
-                  )}
+                  <VenueVibes vibes={event.venue.vibes} className="mt-2" />
                 </Link>
 
                 {/* Community Tags */}
-                <div className="mt-4 pt-4 border-t border-[var(--twilight)]">
+                <div className="mt-3">
                   <VenueTagList venueId={event.venue.id} />
                 </div>
               </div>
             )}
 
-            {/* Who's Going section */}
-            <WhosGoing eventId={event.id} className="pt-6 border-t border-[var(--twilight)]" />
+            {/* 3. Social proof - friends and who's going */}
+            <div className="pt-5 border-t border-[var(--twilight)]">
+              <FriendsGoing eventId={event.id} className="mb-4" />
+              <WhosGoing eventId={event.id} />
+            </div>
 
-            {/* Flag for QA */}
-            <div className="pt-6 border-t border-[var(--twilight)]">
+            {/* 4. Series link (if part of series) */}
+            {event.series && (
+              <div className="pt-5 border-t border-[var(--twilight)]">
+                <Link
+                  href={`/${activePortalSlug}/series/${event.series.slug}`}
+                  className="flex items-center gap-3 p-3 rounded-lg border border-[var(--twilight)] transition-colors hover:border-[var(--coral)]/50 group"
+                  style={{ backgroundColor: "var(--void)" }}
+                >
+                  <svg
+                    className="w-5 h-5 flex-shrink-0"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    style={{ color: getSeriesTypeColor(event.series.series_type) }}
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={1.5}
+                      d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z"
+                    />
+                  </svg>
+                  <div className="flex-1 min-w-0">
+                    <span className="text-sm text-[var(--soft)] group-hover:text-[var(--coral)] transition-colors">
+                      Part of <span className="text-[var(--cream)] font-medium">{event.series.title}</span>
+                    </span>
+                    <span
+                      className="ml-2 text-[0.6rem] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded"
+                      style={{
+                        backgroundColor: `${getSeriesTypeColor(event.series.series_type)}20`,
+                        color: getSeriesTypeColor(event.series.series_type),
+                      }}
+                    >
+                      {getSeriesTypeLabel(event.series.series_type)}
+                    </span>
+                  </div>
+                  <svg className="w-4 h-4 text-[var(--muted)] group-hover:text-[var(--coral)] transition-colors flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </Link>
+              </div>
+            )}
+
+            {/* 5. Producer/Presented by */}
+            {event.producer && (
+              <div className="pt-5 border-t border-[var(--twilight)]">
+                <h2 className="font-mono text-[0.65rem] font-medium text-[var(--muted)] uppercase tracking-widest mb-3">
+                  Presented by
+                </h2>
+                <div className="flex items-center justify-between gap-4 p-3 rounded-lg border border-[var(--twilight)]" style={{ backgroundColor: "var(--void)" }}>
+                  <div className="flex items-center gap-3 min-w-0">
+                    {event.producer.logo_url ? (
+                      <Image
+                        src={event.producer.logo_url}
+                        alt={event.producer.name}
+                        width={40}
+                        height={40}
+                        className="rounded-lg object-cover flex-shrink-0"
+                        unoptimized
+                      />
+                    ) : (
+                      <div className="w-10 h-10 rounded-lg bg-[var(--twilight)] flex items-center justify-center flex-shrink-0">
+                        <svg className="w-5 h-5 text-[var(--muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                        </svg>
+                      </div>
+                    )}
+                    <div className="min-w-0">
+                      <h3 className="text-[var(--cream)] font-medium truncate text-sm">
+                        {event.producer.name}
+                      </h3>
+                      <p className="text-[0.65rem] text-[var(--muted)] font-mono uppercase tracking-wider">
+                        {event.producer.org_type.replace(/_/g, " ")}
+                      </p>
+                    </div>
+                  </div>
+                  <FollowButton targetProducerId={event.producer.id} size="sm" />
+                </div>
+              </div>
+            )}
+
+            {/* 6. Tags (if any) */}
+            {event.tags && event.tags.length > 0 && (
+              <div className="pt-5 border-t border-[var(--twilight)]">
+                <h2 className="font-mono text-[0.65rem] font-medium text-[var(--muted)] uppercase tracking-widest mb-3">
+                  Also Featuring
+                </h2>
+                <div className="flex flex-wrap gap-2">
+                  {event.tags.map((tag) => (
+                    <span
+                      key={tag}
+                      className="px-2.5 py-1 text-[var(--soft)] rounded border border-[var(--twilight)] text-xs"
+                      style={{ backgroundColor: "var(--void)" }}
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* 7. Flag for QA (minimal) */}
+            <div className="pt-5 border-t border-[var(--twilight)]">
               <FlagButton
                 entityType="event"
                 entityId={event.id}

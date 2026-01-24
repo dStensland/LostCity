@@ -52,7 +52,6 @@ export type Portal = {
       feed?: string;
       events?: string;
       spots?: string;
-      happening_now?: string;
     };
     feed?: {
       hide_images?: boolean;
@@ -95,22 +94,10 @@ export function PortalProvider({
 export function usePortal(): PortalContextValue {
   const context = useContext(PortalContext);
   if (!context) {
-    // Default to configured default portal if no context (for backwards compatibility)
-    return {
-      portal: {
-        id: "default",
-        slug: DEFAULT_PORTAL_SLUG,
-        name: DEFAULT_PORTAL_NAME,
-        tagline: "The real Atlanta, found",
-        portal_type: "city" as const,
-        status: "active",
-        visibility: "public",
-        filters: { city: DEFAULT_PORTAL_NAME },
-        branding: {},
-        settings: {},
-      } as Portal,
-      isLoading: false,
-    };
+    throw new Error(
+      "usePortal must be used within a PortalProvider. " +
+      "Ensure the component is wrapped in a PortalProvider with a valid portal from the database."
+    );
   }
   return context;
 }

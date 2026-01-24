@@ -7,7 +7,6 @@ import Image from "next/image";
 import Logo from "./Logo";
 import UserMenu from "./UserMenu";
 import HeaderSearchButton from "./HeaderSearchButton";
-import { useLiveEventCount } from "@/lib/hooks/useLiveEvents";
 import { DEFAULT_PORTAL_SLUG, DEFAULT_PORTAL_NAME } from "@/lib/portal-context";
 
 interface PortalBranding {
@@ -28,9 +27,7 @@ export default function GlassHeader({ portalSlug = DEFAULT_PORTAL_SLUG, portalNa
   const mobileMenuRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const liveEventCount = useLiveEventCount();
 
-  const isHappeningNow = pathname?.startsWith("/happening-now");
   const currentView = searchParams?.get("view") || "events";
   const isMap = currentView === "map";
   const isFeed = currentView === "feed";
@@ -83,24 +80,6 @@ export default function GlassHeader({ portalSlug = DEFAULT_PORTAL_SLUG, portalNa
 
       {/* Right side */}
       <nav className="flex items-center gap-2">
-        {/* Live indicator - only show when events are live */}
-        {liveEventCount > 0 && (
-          <Link
-            href={`/${portalSlug}?view=happening-now`}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-full font-mono text-[0.65rem] font-medium transition-all duration-200 ${
-              isHappeningNow
-                ? "bg-[var(--neon-red)] text-white shadow-[0_0_12px_rgba(255,90,90,0.4)]"
-                : "bg-[var(--neon-red)]/15 text-[var(--neon-red)] hover:bg-[var(--neon-red)]/25 border border-[var(--neon-red)]/30"
-            }`}
-          >
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-current opacity-75" />
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-current" />
-            </span>
-            {liveEventCount} Live
-          </Link>
-        )}
-
         <div className="sm:hidden">
           <HeaderSearchButton />
         </div>
@@ -191,27 +170,6 @@ export default function GlassHeader({ portalSlug = DEFAULT_PORTAL_SLUG, portalNa
                 Map
               </Link>
               <Link
-                href={`/${portalSlug}?view=happening-now`}
-                onClick={() => setMobileMenuOpen(false)}
-                className={`mobile-menu-item flex items-center gap-2 px-3 py-2 font-mono text-sm ${
-                  isHappeningNow ? "mobile-menu-active" : "text-[var(--muted)] hover:text-[var(--neon-amber)]"
-                }`}
-              >
-                {liveEventCount > 0 ? (
-                  <span className="w-4 h-4 flex items-center justify-center">
-                    <span className="w-2 h-2 rounded-full bg-[var(--neon-red)] animate-pulse" />
-                  </span>
-                ) : (
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                  </svg>
-                )}
-                Stuff around You
-                {liveEventCount > 0 && (
-                  <span className="ml-auto text-[0.65rem] text-[var(--neon-red)]">{liveEventCount}</span>
-                )}
-              </Link>
-              <Link
                 href="/saved"
                 onClick={() => setMobileMenuOpen(false)}
                 className="mobile-menu-item flex items-center gap-2 px-3 py-2 font-mono text-sm text-[var(--muted)] hover:text-[var(--neon-amber)]"
@@ -219,7 +177,7 @@ export default function GlassHeader({ portalSlug = DEFAULT_PORTAL_SLUG, portalNa
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
                 </svg>
-                Saved
+                Stashed
               </Link>
             </div>
           )}

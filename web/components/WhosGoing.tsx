@@ -130,7 +130,7 @@ export default function WhosGoing({ eventId, className = "" }: WhosGoingProps) {
     return (
       <div className={`${className}`}>
         <h2 className="font-mono text-[0.65rem] font-medium text-[var(--muted)] uppercase tracking-widest mb-4">
-          Who&apos;s Going
+          Who&apos;s in
         </h2>
         <div className="animate-pulse flex gap-2">
           {[1, 2, 3].map((i) => (
@@ -145,10 +145,10 @@ export default function WhosGoing({ eventId, className = "" }: WhosGoingProps) {
     return (
       <div className={`${className}`}>
         <h2 className="font-mono text-[0.65rem] font-medium text-[var(--muted)] uppercase tracking-widest mb-4">
-          Who&apos;s Going
+          Who&apos;s in
         </h2>
         <p className="text-sm text-[var(--muted)] italic">
-          Be the first to RSVP!
+          Be the first. Claim it.
         </p>
       </div>
     );
@@ -161,7 +161,7 @@ export default function WhosGoing({ eventId, className = "" }: WhosGoingProps) {
   return (
     <div className={`${className}`}>
       <h2 className="font-mono text-[0.65rem] font-medium text-[var(--muted)] uppercase tracking-widest mb-4">
-        Who&apos;s Going
+        Who&apos;s in
       </h2>
 
       {/* Stats with accessible indicators */}
@@ -231,9 +231,9 @@ export default function WhosGoing({ eventId, className = "" }: WhosGoingProps) {
                   ? "bg-[var(--neon-green)] text-[var(--void)]"
                   : "bg-[var(--neon-amber)] text-[var(--void)]"
               }`}
-              title={attendee.status === "going" ? "Going" : "Interested"}
+              title={attendee.status === "going" ? "In" : "Maybe"}
             >
-              {attendee.status === "going" ? "G" : "I"}
+              {attendee.status === "going" ? "✓" : "?"}
             </span>
           </Link>
         ))}

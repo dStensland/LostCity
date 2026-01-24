@@ -40,7 +40,7 @@ export const SPOT_TYPES = {
   community_center: { label: "Community Center", icon: "🏘️" },
   event_space: { label: "Event Space", icon: "✨" },
   coworking: { label: "Coworking", icon: "💻" },
-  organization: { label: "Organization", icon: "🤝" },
+  nonprofit_hq: { label: "Nonprofit HQ", icon: "🤝" },  // For organization headquarters
   venue: { label: "Venue", icon: "📍" },
   festival: { label: "Festival", icon: "🎪" },
 
@@ -91,7 +91,6 @@ export const VENUE_TYPES = [
   "attraction",
   "festival",
   "venue",
-  "organization",
   "studio",
   "cooking_school",
 ] as const;

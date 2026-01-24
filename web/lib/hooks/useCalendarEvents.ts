@@ -99,8 +99,8 @@ export function useCalendarEvents(options: UseCalendarEventsOptions) {
 
   const query = useQuery<CalendarResponse, Error>({
     queryKey: ["events", "calendar", month, year, filtersKey, portalId, portalExclusive],
-    queryFn: async () => {
-      const res = await fetch(`/api/calendar?${buildApiParams}`);
+    queryFn: async ({ signal }) => {
+      const res = await fetch(`/api/calendar?${buildApiParams}`, { signal });
 
       if (!res.ok) {
         throw new Error(`Failed to fetch calendar events: ${res.status}`);
@@ -111,6 +111,11 @@ export function useCalendarEvents(options: UseCalendarEventsOptions) {
     enabled,
     // Keep calendar data fresh for longer since it's a month view
     staleTime: 60 * 1000, // 1 minute
+    // Treat abort as a non-error (happens during view switching)
+    throwOnError: (error) => {
+      if (error.name === "AbortError") return false;
+      return true;
+    },
   });
 
   // Convert eventsByDate object to Map for easier lookup

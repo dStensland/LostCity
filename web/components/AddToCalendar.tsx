@@ -10,6 +10,8 @@ interface Props {
   address?: string | null;
   city?: string;
   state?: string;
+  /** "default" shows full button, "icon" shows compact icon-only button */
+  variant?: "default" | "icon";
 }
 
 export default function AddToCalendar({
@@ -20,6 +22,7 @@ export default function AddToCalendar({
   address,
   city,
   state,
+  variant = "default",
 }: Props) {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -96,14 +99,21 @@ END:VCALENDAR`;
   // Outlook Web URL
   const outlookUrl = `https://outlook.live.com/calendar/0/deeplink/compose?subject=${encodeURIComponent(title)}&startdt=${startDate.toISOString()}&enddt=${endDate.toISOString()}&location=${encodeURIComponent(location)}&body=${encodeURIComponent(`Event discovered on Lost City - lostcity.ai`)}`;
 
+  const isIcon = variant === "icon";
+
   return (
     <div className="relative" ref={dropdownRef}>
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="inline-flex items-center justify-center gap-2 px-6 py-3 border border-[var(--twilight)] text-[var(--soft)] font-medium rounded-lg hover:bg-[var(--twilight)] hover:text-[var(--cream)] transition-colors w-full sm:w-auto"
+        className={
+          isIcon
+            ? "inline-flex items-center justify-center w-10 h-10 text-[var(--muted)] rounded-lg hover:bg-[var(--twilight)] hover:text-[var(--cream)] transition-colors"
+            : "inline-flex items-center justify-center gap-2 px-6 py-3 border border-[var(--twilight)] text-[var(--soft)] font-medium rounded-lg hover:bg-[var(--twilight)] hover:text-[var(--cream)] transition-colors w-full sm:w-auto"
+        }
+        aria-label="Add to calendar"
       >
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className={isIcon ? "w-5 h-5" : "w-4 h-4"} fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -111,15 +121,19 @@ END:VCALENDAR`;
             d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
           />
         </svg>
-        Add to Calendar
-        <svg
-          className={`w-3 h-3 transition-transform ${isOpen ? "rotate-180" : ""}`}
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-        </svg>
+        {!isIcon && (
+          <>
+            Add to Calendar
+            <svg
+              className={`w-3 h-3 transition-transform ${isOpen ? "rotate-180" : ""}`}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </>
+        )}
       </button>
 
       {isOpen && (

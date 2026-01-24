@@ -19,7 +19,7 @@ export default function PageFooter({
         <div className="text-center mb-6">
           <Logo size="md" href={undefined} />
           <p className="font-serif text-[var(--muted)] mt-1">
-            {tagline || `The real ${cityName}, found`}
+            {tagline || `Find your people in ${cityName}`}
           </p>
         </div>
 

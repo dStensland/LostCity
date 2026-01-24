@@ -421,6 +421,7 @@ export default function MapView({ events, userLocation }: Props) {
   const [locating, setLocating] = useState(false);
   const [locationDenied, setLocationDenied] = useState(false);
   const [liveOnly, setLiveOnly] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   // All hooks must be called before any early returns
   useEffect(() => {
@@ -545,7 +546,11 @@ export default function MapView({ events, userLocation }: Props) {
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: mapStyles }} />
-      <div className="w-full h-full rounded-lg overflow-hidden border border-[var(--twilight)] relative">
+      <div className={`rounded-lg overflow-hidden border border-[var(--twilight)] relative ${
+        isFullscreen
+          ? "fixed inset-0 z-[9999] rounded-none border-0"
+          : "w-full h-full"
+      }`}>
         <MapContainer
           center={mapCenter}
           zoom={defaultZoom}
@@ -577,6 +582,8 @@ export default function MapView({ events, userLocation }: Props) {
             legend={categoryLegend}
             liveOnly={liveOnly}
             onToggleLiveOnly={() => setLiveOnly((prev) => !prev)}
+            isFullscreen={isFullscreen}
+            onToggleFullscreen={() => setIsFullscreen((prev) => !prev)}
           />
           <EventMarkers events={mappableEvents} portalSlug={portal.slug} />
           {/* User location marker */}
@@ -601,7 +608,7 @@ export default function MapView({ events, userLocation }: Props) {
         </MapContainer>
         {mappableEvents.length === 0 && (
           <div className="absolute inset-0 flex items-center justify-center bg-[var(--void)]/80">
-            <p className="text-[var(--muted)] font-mono text-sm">No events with map locations</p>
+            <p className="text-[var(--muted)] font-mono text-sm">Nothing to see here. Literally.</p>
           </div>
         )}
       </div>
@@ -621,6 +628,8 @@ function MapOverlay({
   legend,
   liveOnly,
   onToggleLiveOnly,
+  isFullscreen,
+  onToggleFullscreen,
 }: {
   totalEvents: number;
   mappableCount: number;
@@ -633,6 +642,8 @@ function MapOverlay({
   legend: { key: string; label: string; color: string }[];
   liveOnly: boolean;
   onToggleLiveOnly: () => void;
+  isFullscreen: boolean;
+  onToggleFullscreen: () => void;
 }) {
   const map = useMap();
   const initialFitDoneRef = useRef(false);
@@ -676,6 +687,23 @@ function MapOverlay({
       </div>
 
       <div className="absolute top-4 right-4 z-[1000] flex flex-col gap-2">
+        <button
+          onClick={onToggleFullscreen}
+          className={`rounded-lg px-3 py-2 text-[0.65rem] font-mono glass-panel-compact ${
+            isFullscreen ? "text-[var(--coral)]" : "text-[var(--muted)] hover:text-[var(--cream)]"
+          }`}
+          title={isFullscreen ? "Exit fullscreen" : "Fullscreen"}
+        >
+          {isFullscreen ? (
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          ) : (
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+            </svg>
+          )}
+        </button>
         <button
           onClick={fitToEvents}
           className="rounded-lg px-3 py-2 text-[0.65rem] font-mono text-[var(--muted)] hover:text-[var(--cream)] glass-panel-compact"

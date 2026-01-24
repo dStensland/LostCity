@@ -42,11 +42,11 @@ const bebasNeue = Bebas_Neue({
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://lostcity.ai"),
-  title: "Lost City - Discover Local Events",
-  description: "Discover local events near you. AI-powered event aggregation from 20+ sources.",
+  title: "Lost City - Find Your People",
+  description: "Find your people. Discover the underground events, shows, and happenings in your city.",
   openGraph: {
-    title: "Lost City - Discover Local Events",
-    description: "Discover local events near you",
+    title: "Lost City - Find Your People",
+    description: "Find your people. Discover the underground.",
     images: ["/og-image.png"],
   },
 };

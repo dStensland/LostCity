@@ -28,6 +28,8 @@ export default function PortalHappeningNow({ portalId, portalSlug, isExclusive =
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let isMounted = true;
+
     async function fetchLiveEvents() {
       const now = new Date();
       const today = now.toISOString().split("T")[0];
@@ -54,54 +56,76 @@ export default function PortalHappeningNow({ portalId, portalSlug, isExclusive =
         query = query.or(`portal_id.eq.${portalId},portal_id.is.null`);
       }
 
-      const { data, error } = await query;
+      try {
+        const { data, error } = await query;
 
-      if (error) {
-        console.error("Error fetching live events:", error);
+        // Don't update state if component unmounted
+        if (!isMounted) return;
+
+        if (error) {
+          // Ignore abort errors silently (happen during navigation)
+          const isAbortError = error.message?.includes("AbortError") ||
+                              error.message?.includes("aborted") ||
+                              error.name === "AbortError";
+          if (!isAbortError) {
+            console.error("Error fetching live events:", error.message, error.code, error.details);
+          }
+          setEvents([]);
+          setLoading(false);
+          return;
+        }
+
+        // Filter to only events that are currently happening
+        // (started but haven't ended yet)
+        const liveEvents = (data || []).filter((event: EventWithVenue) => {
+          if (!event.start_time) return false;
+
+          // If there's an end_time, check if we're past it
+          if (event.end_time && event.end_time < currentTime) {
+            return false;
+          }
+
+          // If no end_time, assume events last ~3 hours
+          const startParts = event.start_time.split(":");
+          const startHour = parseInt(startParts[0], 10);
+          const endHour = startHour + 3;
+
+          const nowParts = currentTime.split(":");
+          const nowHour = parseInt(nowParts[0], 10);
+
+          // Check if current time is within ~3 hours of start
+          if (nowHour > endHour + 1) {
+            return false;
+          }
+
+          return true;
+        }).map((event: EventWithVenue) => ({
+          ...event,
+          is_live: true,
+        }));
+
+        setEvents(liveEvents);
+        setLoading(false);
+      } catch (err) {
+        // Ignore abort errors (happen during navigation)
+        if (err instanceof Error && err.name === "AbortError") {
+          return;
+        }
+        if (!isMounted) return;
+        console.error("Error fetching live events:", err);
         setEvents([]);
         setLoading(false);
-        return;
       }
-
-      // Filter to only events that are currently happening
-      // (started but haven't ended yet)
-      const liveEvents = (data || []).filter((event: EventWithVenue) => {
-        if (!event.start_time) return false;
-
-        // If there's an end_time, check if we're past it
-        if (event.end_time && event.end_time < currentTime) {
-          return false;
-        }
-
-        // If no end_time, assume events last ~3 hours
-        const startParts = event.start_time.split(":");
-        const startHour = parseInt(startParts[0], 10);
-        const startMin = parseInt(startParts[1], 10);
-        const endHour = startHour + 3;
-
-        const nowParts = currentTime.split(":");
-        const nowHour = parseInt(nowParts[0], 10);
-
-        // Check if current time is within ~3 hours of start
-        if (nowHour > endHour + 1) {
-          return false;
-        }
-
-        return true;
-      }).map((event: EventWithVenue) => ({
-        ...event,
-        is_live: true,
-      }));
-
-      setEvents(liveEvents);
-      setLoading(false);
     }
 
     fetchLiveEvents();
 
     // Refresh every minute
     const interval = setInterval(fetchLiveEvents, 60000);
-    return () => clearInterval(interval);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
   }, [portalId, isExclusive]);
 
   if (loading) {
@@ -148,9 +172,9 @@ export default function PortalHappeningNow({ portalId, portalSlug, isExclusive =
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
           </svg>
         </div>
-        <p className="text-[var(--cream)] text-lg font-medium mb-1">Nothing happening right now</p>
+        <p className="text-[var(--cream)] text-lg font-medium mb-1">Dead air</p>
         <p className="text-sm text-[var(--muted)] mb-6">
-          Check back later or browse upcoming events
+          Nothing live at the moment. Patience.
         </p>
 
         {/* Coming up next hint */}
@@ -186,7 +210,7 @@ export default function PortalHappeningNow({ portalId, portalSlug, isExclusive =
             <span className="relative inline-flex rounded-full h-3 w-3 bg-[var(--neon-red)] shadow-[0_0_8px_var(--neon-red)]" />
           </span>
           <p className="font-mono text-sm font-medium text-[var(--cream)]">
-            {events.length} event{events.length !== 1 ? "s" : ""} happening now
+            {events.length} live now
           </p>
         </div>
         <span className="font-mono text-[0.6rem] text-[var(--muted)] opacity-60">

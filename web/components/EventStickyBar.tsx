@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import RSVPButton, { type RSVPStatus } from "./RSVPButton";
-import PreferencePrompt, { hasPromptBeenDismissed, markPromptDismissed } from "./PreferencePrompt";
+import PreferencePrompt, { hasPromptBeenDismissed } from "./PreferencePrompt";
 import { useAuth } from "@/lib/auth-context";
 import { CATEGORY_CONFIG, type CategoryType } from "./CategoryIcon";
 import { useViewTracking, useShareTracking } from "@/hooks/useSignalTracking";
@@ -18,6 +18,7 @@ interface Props {
 export default function EventStickyBar({ eventId, eventTitle, ticketUrl, eventCategory }: Props) {
   const { user } = useAuth();
   const [showPreferencePrompt, setShowPreferencePrompt] = useState(false);
+  const [isVisible, setIsVisible] = useState(false);
 
   // Track view signal after 2 seconds on page
   useViewTracking(eventId, 2000);
@@ -25,12 +26,22 @@ export default function EventStickyBar({ eventId, eventTitle, ticketUrl, eventCa
   // Share tracking
   const { trackShare } = useShareTracking(eventId);
 
-  // Always visible - CTAs should be easily discoverable
-  const isVisible = true;
+  // Show sticky bar after scrolling past the quick actions (roughly 400px)
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollThreshold = 400;
+      setIsVisible(window.scrollY > scrollThreshold);
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    handleScroll(); // Check initial position
+
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   // Handle RSVP change - potentially show preference prompt
   const handleRSVPChange = useCallback(
-    async (newStatus: RSVPStatus, prevStatus: RSVPStatus) => {
+    async (newStatus: RSVPStatus, _prevStatus: RSVPStatus) => {
       // Only show prompt for "going" status and if we have a category
       if (newStatus !== "going" || !eventCategory || !user) {
         return;
@@ -81,10 +92,6 @@ export default function EventStickyBar({ eventId, eventTitle, ticketUrl, eventCa
     setShowPreferencePrompt(false);
   }, []);
 
-  // Keep for future use if we want scroll-based visibility
-  useEffect(() => {
-    // No-op, keeping structure for potential future scroll behavior
-  }, []);
 
   const handleShare = async () => {
     const shareData = {
@@ -103,7 +110,7 @@ export default function EventStickyBar({ eventId, eventTitle, ticketUrl, eventCa
         // Track share signal even for clipboard copy
         trackShare();
       }
-    } catch (err) {
+    } catch {
       // User cancelled or error - ignore
     }
   };
@@ -147,7 +154,7 @@ export default function EventStickyBar({ eventId, eventTitle, ticketUrl, eventCa
               href={ticketUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex-1 inline-flex items-center justify-center gap-2 px-6 py-3 bg-[var(--coral)] text-[var(--void)] font-semibold rounded-lg hover:bg-[var(--rose)] transition-colors"
+              className="flex-1 inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-[var(--coral)] text-[var(--void)] font-semibold rounded-lg hover:bg-[var(--rose)] transition-all shadow-[0_0_20px_rgba(255,107,122,0.4)] hover:shadow-[0_0_30px_rgba(255,107,122,0.6)]"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path

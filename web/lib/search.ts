@@ -11,6 +11,43 @@ import {
 } from "date-fns";
 import { getMoodById, type MoodId } from "./moods";
 import { decodeCursor, generateNextCursor, type CursorData } from "./cursor";
+import { getPortalSourceAccess, type PortalSourceAccess } from "./federation";
+
+// Cache for portal source access (refreshed on each request but cached within a request)
+let sourceAccessCache: Map<string, { data: PortalSourceAccess; timestamp: number }> = new Map();
+const CACHE_TTL_MS = 60000; // 1 minute cache
+
+/**
+ * Get accessible source IDs for a portal using the federation system.
+ * Uses a short-lived cache to avoid repeated database queries within a request.
+ */
+async function getAccessibleSourceIds(portalId: string): Promise<{
+  sourceIds: number[];
+  categoryConstraints: Map<number, string[] | null>;
+}> {
+  const now = Date.now();
+  const cached = sourceAccessCache.get(portalId);
+
+  if (cached && now - cached.timestamp < CACHE_TTL_MS) {
+    return {
+      sourceIds: cached.data.sourceIds,
+      categoryConstraints: cached.data.categoryConstraints,
+    };
+  }
+
+  try {
+    const access = await getPortalSourceAccess(portalId);
+    sourceAccessCache.set(portalId, { data: access, timestamp: now });
+    return {
+      sourceIds: access.sourceIds,
+      categoryConstraints: access.categoryConstraints,
+    };
+  } catch (error) {
+    console.error("Error fetching portal source access:", error);
+    // Return empty on error - this will effectively hide all events
+    return { sourceIds: [], categoryConstraints: new Map() };
+  }
+}
 
 export interface SearchFilters {
   search?: string;
@@ -34,6 +71,9 @@ export interface SearchFilters {
   mood?: MoodId;             // Mood-based filtering (expands to vibes/categories)
   portal_id?: string;        // Portal-restricted events filter
   portal_exclusive?: boolean; // If true, only show events for this portal (not public events)
+  // Federation filters
+  source_ids?: number[];     // Explicit list of source IDs to filter by
+  use_federation?: boolean;  // If true, fetch source access from federation system
 }
 
 // Rollup types for collapsed event groups
@@ -355,6 +395,21 @@ export async function getFilteredEventsWithSearch(
     query = query.is("portal_id", null);
   }
 
+  // Apply federation source filtering
+  // If use_federation is true and portal_id is set, filter by accessible sources
+  // If source_ids is explicitly provided, use that instead
+  if (filters.source_ids && filters.source_ids.length > 0) {
+    query = query.in("source_id", filters.source_ids);
+  } else if (filters.use_federation && filters.portal_id) {
+    const { sourceIds } = await getAccessibleSourceIds(filters.portal_id);
+    if (sourceIds.length > 0) {
+      query = query.in("source_id", sourceIds);
+    } else {
+      // No accessible sources - return empty results
+      return { events: [], total: 0 };
+    }
+  }
+
   // Get mood data for potential vibes lookup
   const mood = filters.mood ? getMoodById(filters.mood) : null;
 
@@ -631,6 +686,18 @@ export async function getFilteredEventsWithCursor(
     }
   } else {
     query = query.is("portal_id", null);
+  }
+
+  // Apply federation source filtering
+  if (filters.source_ids && filters.source_ids.length > 0) {
+    query = query.in("source_id", filters.source_ids);
+  } else if (filters.use_federation && filters.portal_id) {
+    const { sourceIds } = await getAccessibleSourceIds(filters.portal_id);
+    if (sourceIds.length > 0) {
+      query = query.in("source_id", sourceIds);
+    } else {
+      return { events: [], nextCursor: null, hasMore: false };
+    }
   }
 
   // Get mood data for potential vibes lookup
@@ -919,6 +986,18 @@ export async function getEventsForMap(
     query = query.is("portal_id", null);
   }
 
+  // Apply federation source filtering
+  if (filters.source_ids && filters.source_ids.length > 0) {
+    query = query.in("source_id", filters.source_ids);
+  } else if (filters.use_federation && filters.portal_id) {
+    const { sourceIds } = await getAccessibleSourceIds(filters.portal_id);
+    if (sourceIds.length > 0) {
+      query = query.in("source_id", sourceIds);
+    } else {
+      return [];
+    }
+  }
+
   // Apply search filter (includes venue name search) - using batched venue IDs
   if (filters.search && filters.search.trim()) {
     const escapedSearch = escapePostgrestValue(filters.search.trim());
@@ -1142,10 +1221,10 @@ export const SUBCATEGORIES: Record<string, { value: string; label: string }[]> =
 };
 
 export const DATE_FILTERS = [
-  { value: "now", label: "Happening Now" },
+  { value: "now", label: "Live" },
   { value: "today", label: "Today" },
   { value: "tomorrow", label: "Tomorrow" },
-  { value: "weekend", label: "This Weekend" },
+  { value: "weekend", label: "The weekend" },
   { value: "week", label: "This Week" },
 ] as const;
 

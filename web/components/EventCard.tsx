@@ -216,8 +216,13 @@ function EventCard({ event, index = 0, skipAnimation = false, portalSlug, friend
           {/* Title row */}
           <div className="flex items-center gap-2">
             {event.category && (
-              <span className="flex-shrink-0">
-                <CategoryIcon type={event.category} size={16} glow="subtle" />
+              <span
+                className="flex-shrink-0 inline-flex items-center justify-center w-6 h-6 rounded"
+                style={{
+                  backgroundColor: categoryColor ? `${categoryColor}20` : undefined,
+                }}
+              >
+                <CategoryIcon type={event.category} size={14} glow="subtle" />
               </span>
             )}
             <span
@@ -303,12 +308,12 @@ function EventCard({ event, index = 0, skipAnimation = false, portalSlug, friend
                 {friendsGoing.length === 1 ? (
                   <>
                     <span className="font-medium">{friendsGoing[0].user.display_name || friendsGoing[0].user.username}</span>
-                    {" "}{friendsGoing[0].status === "going" ? "is going" : "is interested"}
+                    {" "}{friendsGoing[0].status === "going" ? "is in" : "is a maybe"}
                   </>
                 ) : (
                   <>
                     <span className="font-medium">{friendsGoing.length} friends</span>
-                    {" "}{friendsGoing.some(f => f.status === "going") ? "going" : "interested"}
+                    {" "}{friendsGoing.some(f => f.status === "going") ? "are in" : "are maybes"}
                   </>
                 )}
               </span>
