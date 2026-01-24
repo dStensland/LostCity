@@ -22,7 +22,7 @@ export default function SpotStickyBar({ spotName, address, city, state, website,
       } else {
         await navigator.clipboard.writeText(window.location.href);
       }
-    } catch (err) {
+    } catch {
       // User cancelled or error - ignore
     }
   };

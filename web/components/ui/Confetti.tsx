@@ -46,7 +46,9 @@ export default function Confetti({ isActive, duration = 2000 }: ConfettiProps) {
       scale: 0.5 + Math.random() * 0.5,
     }));
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Animation setup
     setParticles(newParticles);
+     
     setShow(true);
 
     const timer = setTimeout(() => {

@@ -40,7 +40,6 @@ export default function DirectionsDropdown({
 
   // Use coordinates if available, otherwise address
   const hasCoords = latitude != null && longitude != null;
-  const coordsParam = hasCoords ? `${latitude},${longitude}` : encodedAddress;
 
   const navOptions = [
     {

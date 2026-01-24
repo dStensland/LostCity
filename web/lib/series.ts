@@ -1,5 +1,22 @@
 import { createClient } from "@/lib/supabase/server";
 
+// Type for raw event data from Supabase query
+type RawSeriesEvent = {
+  id: number;
+  title: string;
+  start_date: string;
+  start_time: string | null;
+  end_time: string | null;
+  source_url: string | null;
+  ticket_url: string | null;
+  venues: {
+    id: number;
+    name: string;
+    slug: string;
+    neighborhood: string | null;
+  } | null;
+};
+
 // Re-export client-safe utilities for backward compatibility
 export { getSeriesTypeLabel, getSeriesTypeColor, formatGenre } from "@/lib/series-utils";
 
@@ -103,14 +120,14 @@ export async function getSeriesEvents(
     return [];
   }
 
-  return data.map((event: any) => ({
+  return (data as RawSeriesEvent[]).map((event) => ({
     id: event.id,
     title: event.title,
     start_date: event.start_date,
     start_time: event.start_time,
     end_time: event.end_time,
     venue: event.venues,
-    source_url: event.source_url,
+    source_url: event.source_url || "",
     ticket_url: event.ticket_url,
   }));
 }

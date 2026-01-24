@@ -63,7 +63,7 @@ export default function DashboardShell({
   }, [touchEnd, touchStart, onTouchEnd]);
 
   // Pull-to-refresh handler (optional enhancement)
-  const [isPulling, setIsPulling] = useState(false);
+  const [isPulling] = useState(false);
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-6">

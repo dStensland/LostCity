@@ -115,7 +115,6 @@ export default function VenueTagList({ venueId, initialTags = [] }: VenueTagList
             <TagChip
               key={tag.tag_id}
               tag={tag}
-              venueId={venueId}
               onVote={handleVote}
             />
           ))}

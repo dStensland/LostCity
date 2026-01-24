@@ -263,6 +263,7 @@ function PickCard({ event, portalSlug }: { event: PickEvent; portalSlug: string 
           style={{ backgroundColor: categoryColor ? `${categoryColor}15` : "var(--twilight)" }}
         >
           {event.image_url && !imageError ? (
+            /* eslint-disable-next-line @next/next/no-img-element */
             <img
               src={event.image_url}
               alt=""

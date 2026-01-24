@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
-import { getCategoryColor } from "./CategoryIcon";
 
 // Category color mapping for ambient glow
 const CATEGORY_AMBIENT_COLORS: Record<string, string> = {
@@ -65,6 +64,7 @@ export default function DynamicAmbient() {
 
     // Only update if color changed
     if (newColor !== ambientColor) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Intentional transition animation
       setIsTransitioning(true);
       setTimeout(() => {
         setAmbientColor(newColor);

@@ -53,7 +53,7 @@ export default function FlagButton({
         setIsOpen(false);
         setSubmitted(false);
       }, 2000);
-    } catch (err) {
+    } catch {
       setError("Failed to submit flag. Please try again.");
     } finally {
       setIsSubmitting(false);

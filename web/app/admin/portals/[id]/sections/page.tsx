@@ -301,7 +301,7 @@ export default function PortalSectionsPage({ params }: { params: Promise<{ id: s
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ display_order: idx }),
       });
-    } catch (err) {
+    } catch {
       loadSections(); // Revert on error
     }
   }

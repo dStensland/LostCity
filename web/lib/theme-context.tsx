@@ -34,6 +34,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   // Initialize from localStorage
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- SSR hydration pattern
     setMounted(true);
     try {
       const stored = localStorage.getItem(STORAGE_KEY) as Theme | null;

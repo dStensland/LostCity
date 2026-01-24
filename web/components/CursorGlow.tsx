@@ -16,6 +16,7 @@ export default function CursorGlow() {
   const isVisibleRef = useRef(false);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- SSR hydration pattern
     setMounted(true);
 
     // Check settings
@@ -26,7 +27,7 @@ export default function CursorGlow() {
           const settings = JSON.parse(stored);
           setIsEnabled(settings.cursorGlowEnabled !== false && !settings.reducedMotion);
         }
-      } catch (e) {
+      } catch {
         // ignore
       }
     };

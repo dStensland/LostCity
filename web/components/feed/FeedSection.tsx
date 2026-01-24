@@ -562,6 +562,7 @@ function EventCard({ event, isCarousel, hideImages, portalSlug }: { event: FeedE
             <div className="absolute inset-0 bg-[var(--twilight)] animate-pulse" />
           )}
           {/* Actual image */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={event.image_url!}
             alt=""

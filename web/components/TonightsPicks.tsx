@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { formatTimeSplit } from "@/lib/formats";
-import { format, isToday } from "date-fns";
+import { format } from "date-fns";
 import CategoryIcon, { getCategoryColor } from "./CategoryIcon";
 
 type TonightEvent = {
@@ -98,7 +98,7 @@ export default async function TonightsPicks({ portalSlug }: { portalSlug?: strin
             <span className="text-lg">🌙</span>
           </div>
           <div>
-            <h2 className="font-serif text-xl text-[var(--cream)]">Tonight's Picks</h2>
+            <h2 className="font-serif text-xl text-[var(--cream)]">Tonight&apos;s Picks</h2>
             <p className="font-mono text-xs text-[var(--muted)]">Hand-picked for your evening</p>
           </div>
         </div>
@@ -223,7 +223,7 @@ export default async function TonightsPicks({ portalSlug }: { portalSlug?: strin
             href={portalSlug ? `/${portalSlug}?view=events&date=today` : `/?view=events&date=today`}
             className="block mt-4 text-center py-2 rounded-lg border border-[var(--twilight)] text-[var(--muted)] hover:text-[var(--neon-magenta)] hover:border-[var(--neon-magenta)]/30 transition-colors font-mono text-xs"
           >
-            View all tonight's events →
+            View all tonight&apos;s events →
           </Link>
         )}
       </div>

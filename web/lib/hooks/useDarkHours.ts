@@ -24,10 +24,12 @@ export function useDarkHours(): {
     // Check for manual override in localStorage
     const override = localStorage.getItem(DARK_HOURS_OVERRIDE_KEY);
     if (override === "on") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Sync with localStorage override
       setIsDarkHours(true);
       setIsOverride(true);
       return;
     } else if (override === "off") {
+       
       setIsDarkHours(false);
       setIsOverride(true);
       return;

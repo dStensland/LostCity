@@ -38,6 +38,7 @@ export function useScrollReveal<T extends HTMLElement = HTMLDivElement>(
   // Check for reduced motion preference
   useEffect(() => {
     const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Initial sync with browser API
     setPrefersReducedMotion(mediaQuery.matches);
 
     const handler = (e: MediaQueryListEvent) => {
@@ -51,6 +52,7 @@ export function useScrollReveal<T extends HTMLElement = HTMLDivElement>(
   useEffect(() => {
     // If reduced motion is preferred, show immediately
     if (prefersReducedMotion) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Accessibility: skip animation for reduced motion
       setIsVisible(true);
       return;
     }

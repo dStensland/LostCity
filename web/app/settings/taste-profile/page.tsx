@@ -165,7 +165,7 @@ export default function TasteProfilePage() {
           <div className="flex items-center justify-between mb-4">
             <div>
               <h2 className="font-semibold text-[var(--cream)]">Your Preferences</h2>
-              <p className="text-xs text-[var(--muted)] mt-0.5">Categories and vibes you've told us you like</p>
+              <p className="text-xs text-[var(--muted)] mt-0.5">Categories and vibes you&apos;ve told us you like</p>
             </div>
             <Link
               href="/settings/preferences"

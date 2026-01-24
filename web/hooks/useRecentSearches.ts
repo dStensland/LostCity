@@ -22,6 +22,7 @@ export function useRecentSearches() {
         // Filter out old searches (older than 30 days)
         const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
         const filtered = parsed.filter((s) => s.timestamp > thirtyDaysAgo);
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- Initial data load from localStorage
         setRecentSearches(filtered);
       }
     } catch (e) {

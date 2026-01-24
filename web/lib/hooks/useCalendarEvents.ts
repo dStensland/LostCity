@@ -127,7 +127,7 @@ export function useCalendarEvents(options: UseCalendarEventsOptions) {
       });
     }
     return map;
-  }, [query.data?.eventsByDate]);
+  }, [query.data]);
 
   // Get summary with defaults
   const summary = useMemo((): CalendarSummary => {

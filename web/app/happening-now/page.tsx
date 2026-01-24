@@ -33,7 +33,7 @@ export default function HappeningNowPage() {
   const { events, loading: eventsLoading, count } = useLiveEvents();
   const [userLocation, setUserLocation] = useState<UserLocation>(null);
   const [locationLoading, setLocationLoading] = useState(false);
-  const [locationDenied, setLocationDenied] = useState(false);
+  const [, setLocationDenied] = useState(false);
   const [showLocationPrompt, setShowLocationPrompt] = useState(true);
   const [selectedNeighborhood, setSelectedNeighborhood] = useState<string | null>(null);
   const [openSpots, setOpenSpots] = useState<Spot[]>([]);

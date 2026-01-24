@@ -18,7 +18,7 @@ import { getCategoryColor } from "./CategoryIcon";
 import CategoryIcon from "./CategoryIcon";
 import { formatTimeSplit } from "@/lib/formats";
 import { DEFAULT_PORTAL_SLUG } from "@/lib/portal-context";
-import { useCalendarEvents, type CalendarEvent, type CalendarSummary } from "@/lib/hooks/useCalendarEvents";
+import { useCalendarEvents, type CalendarEvent } from "@/lib/hooks/useCalendarEvents";
 
 interface DayData {
   date: Date;

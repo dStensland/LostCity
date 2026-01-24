@@ -425,11 +425,13 @@ export default function MapView({ events, userLocation }: Props) {
 
   // All hooks must be called before any early returns
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- SSR hydration pattern
     setMounted(true);
   }, []);
 
   useEffect(() => {
     if (userLocation) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Sync external prop to local state
       setLocalUserLocation(userLocation);
     }
   }, [userLocation]);

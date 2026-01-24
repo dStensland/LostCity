@@ -38,6 +38,7 @@ export default function PortalSourcesPage() {
 
   useEffect(() => {
     loadSources();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [portal.id]);
 
   async function loadSources() {

@@ -7,13 +7,14 @@ import FeedSection, { type FeedSectionData } from "./feed/FeedSection";
 import SerendipityFeed from "./SerendipityFeed";
 import YourPicksRow from "./YourPicksRow";
 
-type FeedSettings = {
-  feed_type?: "default" | "sections" | "custom";
-  show_activity_tab?: boolean;
-  featured_section_ids?: string[];
-  items_per_section?: number;
-  default_layout?: string;
-};
+// Reserved for future use
+// type _FeedSettings = {
+//   feed_type?: "default" | "sections" | "custom";
+//   show_activity_tab?: boolean;
+//   featured_section_ids?: string[];
+//   items_per_section?: number;
+//   default_layout?: string;
+// };
 
 export default function FeedView() {
   const { portal } = usePortal();

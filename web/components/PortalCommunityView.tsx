@@ -221,7 +221,7 @@ export default function PortalCommunityView({ portalId, portalSlug, portalName }
         if (!res.ok) throw new Error("Failed to load");
         const data = await res.json();
         setProducers(data.producers || []);
-      } catch (err) {
+      } catch {
         // Fall back to all producers if portal-specific fails
         try {
           const res = await fetch("/api/producers");

@@ -41,6 +41,7 @@ export default function SimpleFilterBar({ variant = "full" }: SimpleFilterBarPro
   // Reset optimistic state when URL catches up
   useEffect(() => {
     if (optimisticView && urlView === optimisticView) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Sync optimistic state with URL
       setOptimisticView(null);
     }
   }, [urlView, optimisticView]);

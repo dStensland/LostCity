@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useRef, useEffect } from "react";
+import React, { useMemo, useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import EventCard from "./EventCard";
 import EventGroup from "./EventGroup";
@@ -97,14 +97,15 @@ export default function AnimatedEventList({
   isRefetching = false,
   getFriendsForEvent,
 }: AnimatedEventListProps) {
-  // Track initial events for animation purposes
-  const initialEventIdsRef = useRef<Set<number>>(new Set());
+  // Track initial events for animation purposes (use state since we read during render)
+  const [initialEventIds, setInitialEventIds] = useState<Set<number>>(new Set());
   const isInitialLoadRef = useRef(true);
 
   // Set initial event IDs on first load
   useEffect(() => {
     if (events.length > 0 && isInitialLoadRef.current) {
-      initialEventIdsRef.current = new Set(events.map((e) => e.id));
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- One-time initialization
+      setInitialEventIds(new Set(events.map((e) => e.id)));
       isInitialLoadRef.current = false;
     }
   }, [events]);
@@ -180,13 +181,13 @@ export default function AnimatedEventList({
                     <AnimatePresence mode="popLayout">
                       {items.map((item, idx) => {
                         const isInfiniteScrollItem = item.type === "event"
-                          ? !initialEventIdsRef.current.has(item.event.id)
+                          ? !initialEventIds.has(item.event.id)
                           : item.type === "series-group"
-                          ? item.venueGroups.some((vg) => vg.showtimes.some((st) => !initialEventIdsRef.current.has(st.id)))
+                          ? item.venueGroups.some((vg) => vg.showtimes.some((st) => !initialEventIds.has(st.id)))
                           : item.type === "festival-group"
                           ? true // Festival groups are always treated as new for animation
                           : item.type === "venue-group" || item.type === "category-group"
-                          ? item.events.some((e) => !initialEventIdsRef.current.has(e.id))
+                          ? item.events.some((e) => !initialEventIds.has(e.id))
                           : false;
 
                         const key =

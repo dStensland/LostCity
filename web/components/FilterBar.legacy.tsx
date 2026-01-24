@@ -160,20 +160,12 @@ export default function FilterBar({ variant = "full" }: FilterBarProps) {
 
   // Helper to check if a filter value has events
   // Note: Always return true since available_filters counts aren't reliably populated
-  const categoryHasEvents = useCallback(
-    (_value: string) => {
-      return true; // Show all categories - counts not reliably available
-    },
-    []
-  );
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const categoryHasEvents = useCallback((_value: string) => true, []);
 
   // Note: Always return true since available_filters counts aren't reliably populated
-  const tagHasEvents = useCallback(
-    (_value: string) => {
-      return true; // Show all tags - counts not reliably available
-    },
-    []
-  );
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const tagHasEvents = useCallback((_value: string) => true, []);
 
   // Get event count for a category
   const getCategoryCount = useCallback(
@@ -218,6 +210,7 @@ export default function FilterBar({ variant = "full" }: FilterBarProps) {
   // Reset optimistic state when URL catches up
   useEffect(() => {
     if (optimisticView && urlView === optimisticView) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Sync optimistic state with URL
       setOptimisticView(null);
     }
   }, [urlView, optimisticView]);
@@ -255,6 +248,7 @@ export default function FilterBar({ variant = "full" }: FilterBarProps) {
   // Auto-expand vibe section if mood/vibes/tags are active
   useEffect(() => {
     if (currentMood || currentVibes.length > 0 || currentTags.length > 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Sync UI with filter state
       setExpandedSections(prev => new Set([...prev, "vibe"]));
     }
   }, [currentMood, currentTags.length, currentVibes.length]);
@@ -1237,7 +1231,7 @@ export default function FilterBar({ variant = "full" }: FilterBarProps) {
             >
               {/* Mood quick-picks */}
               <div className="mb-3">
-                <div className="font-mono text-[0.55rem] text-[var(--muted)] mb-1.5">I'm feeling...</div>
+                <div className="font-mono text-[0.55rem] text-[var(--muted)] mb-1.5">I&apos;m feeling...</div>
                 <div className="flex flex-wrap gap-1.5">
                   {MOODS.map((mood) => {
                     const isSelected = currentMood === mood.id;

@@ -95,6 +95,7 @@ export default function RSVPButton({
 
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [menuOpen, focusedIndex, menuItemCount, statusOptions, status]);
 
   // Reset focus when menu opens
@@ -378,7 +379,7 @@ export default function RSVPButton({
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
-                I'm out
+                I&apos;m out
               </button>
             )}
           </div>

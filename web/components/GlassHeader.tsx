@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { usePathname, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import Logo from "./Logo";
@@ -25,7 +25,6 @@ export default function GlassHeader({ portalSlug = DEFAULT_PORTAL_SLUG, portalNa
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
-  const pathname = usePathname();
   const searchParams = useSearchParams();
 
   const currentView = searchParams?.get("view") || "events";

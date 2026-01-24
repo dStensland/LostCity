@@ -12,6 +12,7 @@ export default function RainEffect() {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- SSR hydration pattern
     setMounted(true);
     // Check localStorage for setting
     const stored = localStorage.getItem("lostcity-visual-settings");
@@ -19,7 +20,7 @@ export default function RainEffect() {
       try {
         const settings = JSON.parse(stored);
         setIsEnabled(settings.rainEnabled !== false);
-      } catch (e) {
+      } catch {
         // Fallback to legacy key
         const legacy = localStorage.getItem("lostcity-rain-enabled");
         if (legacy !== null) {
@@ -34,7 +35,7 @@ export default function RainEffect() {
         try {
           const settings = JSON.parse(e.newValue);
           setIsEnabled(settings.rainEnabled !== false);
-        } catch (e) {
+        } catch {
           // ignore
         }
       }
@@ -68,11 +69,13 @@ export function useRainToggle(): [boolean, () => void] {
     if (stored) {
       try {
         const settings = JSON.parse(stored);
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- Sync with localStorage
         setIsEnabled(settings.rainEnabled !== false);
-      } catch (e) {
+      } catch {
         // Fallback to legacy key
         const legacy = localStorage.getItem("lostcity-rain-enabled");
         if (legacy !== null) {
+           
           setIsEnabled(legacy === "true");
         }
       }
@@ -89,7 +92,7 @@ export function useRainToggle(): [boolean, () => void] {
       const settings = stored ? JSON.parse(stored) : {};
       settings.rainEnabled = newValue;
       localStorage.setItem("lostcity-visual-settings", JSON.stringify(settings));
-    } catch (e) {
+    } catch {
       // Fallback
       localStorage.setItem("lostcity-rain-enabled", String(newValue));
     }

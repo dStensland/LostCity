@@ -41,7 +41,7 @@ export default function EventStickyBar({ eventId, eventTitle, ticketUrl, eventCa
 
   // Handle RSVP change - potentially show preference prompt
   const handleRSVPChange = useCallback(
-    async (newStatus: RSVPStatus, _prevStatus: RSVPStatus) => {
+    async (newStatus: RSVPStatus) => {
       // Only show prompt for "going" status and if we have a category
       if (newStatus !== "going" || !eventCategory || !user) {
         return;

@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
-import ReasonBadge, { type RecommendationReason, REASON_PRIORITY } from "./ReasonBadge";
+import ReasonBadge, { type RecommendationReason } from "./ReasonBadge";
 
 interface WhyThisModalProps {
   isOpen: boolean;

@@ -69,7 +69,7 @@ export default function DashboardActivity() {
   const [activities, setActivities] = useState<ActivityItem[]>([]);
   const [pendingRequests, setPendingRequests] = useState<FriendRequest[]>([]);
   const [friends, setFriends] = useState<Profile[]>([]);
-  const [friendSuggestions, setFriendSuggestions] = useState<Profile[]>([]);
+  const [, setFriendSuggestions] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
   const [showFriendsList, setShowFriendsList] = useState(false);
 

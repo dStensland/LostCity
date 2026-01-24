@@ -29,6 +29,7 @@ function SavedFiltersMenu({ variant = "compact" }: SavedFiltersMenuProps) {
 
   // Load saved filters on mount
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Initial data load from localStorage
     setSavedFilters(getSavedFilters());
   }, []);
 
@@ -51,7 +52,7 @@ function SavedFiltersMenu({ variant = "compact" }: SavedFiltersMenuProps) {
 
   const handleSaveFilter = () => {
     const name = filterName.trim() || generateFilterName(currentFilter);
-    const newFilter = saveFilterPreset({
+    saveFilterPreset({
       name,
       ...currentFilter,
     });

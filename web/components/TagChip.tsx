@@ -6,7 +6,6 @@ import type { VenueTagWithVote, VenueTagCategory } from "@/lib/types";
 
 interface TagChipProps {
   tag: VenueTagWithVote;
-  venueId: number;
   onVote?: (tagId: string, voteType: "up" | "down" | null) => Promise<void>;
   compact?: boolean;
   showVoteControls?: boolean;
@@ -14,7 +13,6 @@ interface TagChipProps {
 
 export default function TagChip({
   tag,
-  venueId,
   onVote,
   compact = false,
   showVoteControls = true,

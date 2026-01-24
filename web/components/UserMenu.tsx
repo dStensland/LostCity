@@ -33,6 +33,7 @@ export default function UserMenu() {
   // Timeout to prevent infinite loading state - show sign in after 2s
   useEffect(() => {
     if (!loading) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Sync with loading state
       setShowLoading(false);
       return;
     }
@@ -47,6 +48,7 @@ export default function UserMenu() {
   // Timeout for profile loading - if user exists but profile takes too long, show fallback
   useEffect(() => {
     if (!user || profile) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Sync with profile state
       setProfileTimeout(false);
       return;
     }

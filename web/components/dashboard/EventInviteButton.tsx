@@ -55,6 +55,7 @@ export default function EventInviteButton({ eventId, className = "" }: EventInvi
     if (isOpen && user) {
       fetchData();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, user]);
 
   const fetchData = async () => {

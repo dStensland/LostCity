@@ -452,7 +452,8 @@ export default function EditPortalPage({ params }: { params: Promise<{ id: strin
                         if (lat !== undefined) {
                           setFilters({ ...filters, geo_center: [lat, filters.geo_center?.[1] ?? -84.388] });
                         } else {
-                          const { geo_center: _, ...rest } = filters;
+                          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+const { geo_center: _geo_center, ...rest } = filters;
                           setFilters(rest);
                         }
                       }}
@@ -471,7 +472,8 @@ export default function EditPortalPage({ params }: { params: Promise<{ id: strin
                         if (lng !== undefined) {
                           setFilters({ ...filters, geo_center: [filters.geo_center?.[0] ?? 33.749, lng] });
                         } else {
-                          const { geo_center: _, ...rest } = filters;
+                          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+const { geo_center: _geo_center, ...rest } = filters;
                           setFilters(rest);
                         }
                       }}

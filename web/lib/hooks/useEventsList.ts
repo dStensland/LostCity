@@ -135,7 +135,7 @@ export function useEventsList(options: UseEventsListOptions = {}) {
     });
 
     return allEvents;
-  }, [query.data?.pages, initialData]);
+  }, [query.data, initialData]);
 
   // Get hasMore from the last page
   const hasMore = useMemo(() => {

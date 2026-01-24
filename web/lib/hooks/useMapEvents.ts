@@ -131,7 +131,7 @@ export function useMapEvents(options: UseMapEventsOptions = {}) {
   const events = useMemo(() => {
     if (!query.data?.events) return [];
     return query.data.events.filter((e) => e.venue?.lat && e.venue?.lng);
-  }, [query.data?.events]);
+  }, [query.data]);
 
   // Filter events within current bounds
   const eventsInBounds = useMemo(() => {
