@@ -671,8 +671,14 @@ function EventList({ section, portalSlug }: { section: FeedSectionData; portalSl
           <div key={date}>
             {/* Date header - only show if multiple dates */}
             {showDateHeaders && (
-              <div className="flex items-center gap-3 mb-2">
-                <span className="font-mono text-xs font-medium text-[var(--coral)]">
+              <div
+                className="group flex items-center gap-3 mb-2 px-3 py-2 -mx-3 rounded-lg cursor-default transition-all hover:bg-[var(--twilight)]/20 card-atmospheric"
+                style={{
+                  "--glow-color": "var(--coral)",
+                  "--reflection-color": "rgba(255, 107, 122, 0.08)",
+                } as React.CSSProperties}
+              >
+                <span className="font-mono text-xs font-medium text-[var(--coral)] transition-all group-hover:text-glow">
                   {getSmartDate(date)}
                 </span>
                 <div className="flex-1 h-px bg-[var(--twilight)]/50" />
@@ -759,7 +765,12 @@ function EventListItem({ event, isAlternate, showDate = true, portalSlug }: { ev
       {/* Content */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
-          <span className="font-medium text-sm text-[var(--cream)] truncate group-hover:text-[var(--coral)] transition-colors">
+          <span
+            className="font-medium text-sm text-[var(--cream)] truncate transition-all group-hover:text-glow"
+            style={{
+              "--glow-color": categoryColor || "var(--coral)",
+            } as React.CSSProperties}
+          >
             {event.title}
           </span>
           {isPopular && (

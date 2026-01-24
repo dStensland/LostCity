@@ -1708,6 +1708,21 @@ textarea:focus-visible {
     0 0 16px currentColor;
 }
 
+/* Text glow using --glow-color variable (for category-tinted title glow) */
+.text-glow {
+  color: var(--glow-color, var(--coral));
+  text-shadow:
+    0 0 8px var(--glow-color, var(--coral)),
+    0 0 16px color-mix(in srgb, var(--glow-color, var(--coral)) 50%, transparent);
+}
+
+.group:hover .group-hover\:text-glow {
+  color: var(--glow-color, var(--coral));
+  text-shadow:
+    0 0 8px var(--glow-color, var(--coral)),
+    0 0 16px color-mix(in srgb, var(--glow-color, var(--coral)) 50%, transparent);
+}
+
 /* ============================================
    GLASS WITH RAIN DROPLETS (WET GLASS)
    ============================================ */
