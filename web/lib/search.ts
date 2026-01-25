@@ -74,6 +74,8 @@ export interface SearchFilters {
   // Federation filters
   source_ids?: number[];     // Explicit list of source IDs to filter by
   use_federation?: boolean;  // If true, fetch source access from federation system
+  // Content filters
+  exclude_adult?: boolean;   // If true, exclude adult entertainment venues/events
 }
 
 // Rollup types for collapsed event groups
@@ -534,6 +536,11 @@ export async function getFilteredEventsWithSearch(
     for (const cat of filters.exclude_categories) {
       query = query.neq("category_id", cat);
     }
+  }
+
+  // Apply adult content filter - exclude adult entertainment venues/events
+  if (filters.exclude_adult) {
+    query = query.or("is_adult.eq.false,is_adult.is.null");
   }
 
   // Apply date range filter (portal filter) - overrides date_filter if set
@@ -1054,6 +1061,11 @@ export async function getEventsForMap(
     query = query.eq("venue_id", filters.venue_id);
   }
 
+  // Apply adult content filter
+  if (filters.exclude_adult) {
+    query = query.or("is_adult.eq.false,is_adult.is.null");
+  }
+
   query = query.order("start_date", { ascending: true }).limit(limit);
 
   const { data, error } = await query;
@@ -1195,6 +1207,10 @@ export const SUBCATEGORIES: Record<string, { value: string; label: string }[]> =
     { value: "nightlife.dj", label: "DJ Night" },
     { value: "nightlife.drag", label: "Drag / Cabaret" },
     { value: "nightlife.trivia", label: "Trivia" },
+    { value: "nightlife.strip", label: "Strip Club" },
+    { value: "nightlife.burlesque", label: "Burlesque" },
+    { value: "nightlife.lifestyle", label: "Lifestyle" },
+    { value: "nightlife.revue", label: "Adult Revue" },
   ],
   meetup: [
     { value: "meetup.tech", label: "Tech & Science" },
@@ -1246,6 +1262,7 @@ export const TAG_GROUPS = {
   Access: [
     { value: "free", label: "Free" },
     { value: "all-ages", label: "All Ages" },
+    { value: "18+", label: "18+" },
     { value: "21+", label: "21+" },
     { value: "family-friendly", label: "Family" },
     { value: "accessible", label: "Accessible" },

@@ -27,6 +27,20 @@ RULES:
 CATEGORIES (pick one):
 music, art, comedy, theater, film, sports, food_drink, nightlife, community, fitness, family, learning, dance, tours, meetup, words, religious, markets, wellness, gaming, outdoors, other
 
+SUBCATEGORIES for nightlife (use when applicable):
+- nightlife.dj: DJ sets, dance nights
+- nightlife.drag: Drag shows, drag brunch
+- nightlife.strip: Strip clubs, gentlemen's clubs (e.g., Clermont Lounge, Magic City, Pink Pony)
+- nightlife.burlesque: Burlesque shows, adult cabaret
+- nightlife.lifestyle: Swingers clubs, lifestyle events (e.g., Trapeze)
+- nightlife.revue: Male revues, adult entertainment shows (e.g., Swinging Richards)
+
+ADULT CONTENT TAGGING:
+For events at adult entertainment venues (strip clubs, lifestyle clubs, etc.), include these tags:
+- "21+" or "18+" for age restriction
+- "adult" for adult-oriented content
+Add these automatically for known adult venues like Clermont Lounge, Magic City, Pink Pony, Trapeze, Swinging Richards, Oasis, etc.
+
 SERIES DETECTION:
 Some events are instances of a "series" - a recurring show or film playing multiple times/venues:
 - Films at theaters (same movie, multiple showtimes)
