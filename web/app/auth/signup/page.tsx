@@ -45,6 +45,7 @@ function SignupForm() {
   const [loading, setLoading] = useState(false);
   const [checkingUsername, setCheckingUsername] = useState(false);
   const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null);
+  const [emailSent, setEmailSent] = useState(false);
 
   const supabase = createClient();
 
@@ -114,7 +115,9 @@ function SignupForm() {
       return;
     }
 
-    if (authData.user) {
+    // Check if we have a session (email confirmation disabled) or need email confirmation
+    if (authData.session && authData.user) {
+      // Email confirmation is disabled - user is logged in immediately
       // Create the profile with retry logic for username conflicts
       let finalUsername = username;
       let profileCreated = false;
@@ -168,12 +171,17 @@ function SignupForm() {
         // Log but don't block signup - preferences can be created later
         console.error("Preferences creation exception:", err);
       }
-    }
 
-    // Redirect new users to welcome page for onboarding
-    const welcomeUrl = portalSlug ? `/welcome?portal=${portalSlug}` : "/welcome";
-    router.push(welcomeUrl);
-    router.refresh();
+      // Redirect new users to onboarding
+      const onboardingUrl = portalSlug ? `/onboarding?portal=${portalSlug}` : "/onboarding";
+      router.push(onboardingUrl);
+      router.refresh();
+    } else if (authData.user) {
+      // Email confirmation is enabled - show confirmation message
+      // Profile will be created in auth callback when user confirms email
+      setEmailSent(true);
+      setLoading(false);
+    }
   };
 
   const handleGoogleSignup = async () => {
@@ -192,6 +200,42 @@ function SignupForm() {
       setLoading(false);
     }
   };
+
+  // Show email confirmation screen
+  if (emailSent) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <header className="px-4 sm:px-6 py-4 flex justify-between items-center border-b border-[var(--twilight)]">
+          <Logo />
+        </header>
+        <main className="flex-1 flex items-center justify-center px-4 py-12">
+          <div className="w-full max-w-sm text-center">
+            <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-[var(--coral)]/10 flex items-center justify-center">
+              <svg className="w-8 h-8 text-[var(--coral)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+              </svg>
+            </div>
+            <h1 className="font-serif text-2xl text-[var(--cream)] italic mb-4">
+              Check your email
+            </h1>
+            <p className="font-mono text-sm text-[var(--muted)] mb-6">
+              We sent a confirmation link to<br />
+              <span className="text-[var(--cream)]">{email}</span>
+            </p>
+            <p className="font-mono text-xs text-[var(--muted)]">
+              Click the link in your email to finish creating your account.
+            </p>
+            <button
+              onClick={() => setEmailSent(false)}
+              className="mt-8 font-mono text-xs text-[var(--coral)] hover:text-[var(--rose)] transition-colors"
+            >
+              Use a different email
+            </button>
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col">

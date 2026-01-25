@@ -29,7 +29,6 @@ export async function GET(request: NextRequest) {
   const rawRedirect = requestUrl.searchParams.get("redirect") || "/";
   // Validate redirect to prevent Open Redirect vulnerability
   const redirect = isValidRedirect(rawRedirect) ? rawRedirect : "/";
-  const isNewUser = requestUrl.searchParams.get("new") === "true";
   const origin = requestUrl.origin;
 
   if (code) {
@@ -68,14 +67,16 @@ export async function GET(request: NextRequest) {
         .eq("id", data.user.id)
         .single();
 
-      // If no profile exists, create one for OAuth users
+      // If no profile exists, create one (for OAuth users or email confirmation)
       if (!profile) {
-        // Generate a username from email or user metadata
+        // Use username from metadata (email signup) or generate from email (OAuth)
+        const metadataUsername = data.user.user_metadata?.username;
         const email = data.user.email || "";
         const emailUsername = email.split("@")[0].toLowerCase().replace(/[^a-z0-9_]/g, "");
+        const baseUsername = metadataUsername || emailUsername;
 
         // Make sure username is unique by appending random suffix if needed
-        let username = emailUsername.slice(0, 25) || "user";
+        let username = baseUsername.slice(0, 25) || "user";
         let attempts = 0;
         let isUnique = false;
         const maxAttempts = 10;
@@ -150,10 +151,8 @@ export async function GET(request: NextRequest) {
           console.error("Preferences creation exception:", err);
         }
 
-        // Redirect new OAuth users to Discovery Mode onboarding
-        if (isNewUser) {
-          return NextResponse.redirect(`${origin}/onboarding`);
-        }
+        // Redirect new users (OAuth or email confirmation) to Discovery Mode onboarding
+        return NextResponse.redirect(`${origin}/onboarding`);
       }
     }
   }
