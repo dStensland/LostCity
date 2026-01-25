@@ -70,11 +70,21 @@ export async function GET(request: NextRequest) {
         // Use username from metadata (email signup) or generate from email (OAuth)
         const metadataUsername = data.user.user_metadata?.username;
         const email = data.user.email || "";
-        const emailUsername = email.split("@")[0].toLowerCase().replace(/[^a-z0-9_]/g, "");
+        let emailUsername = email.split("@")[0].toLowerCase().replace(/[^a-z0-9_]/g, "");
+
+        // Username must be at least 3 characters (database constraint)
+        if (emailUsername.length < 3) {
+          emailUsername = emailUsername + "_" + Math.floor(Math.random() * 1000).toString().padStart(3, "0");
+        }
+
         const baseUsername = metadataUsername || emailUsername;
 
         // Make sure username is unique by appending random suffix if needed
-        let username = baseUsername.slice(0, 25) || "user";
+        // Also ensure minimum 3 chars and max 25 chars (leaving room for uniqueness suffix)
+        let username = baseUsername.slice(0, 25);
+        if (username.length < 3) {
+          username = "user_" + data.user.id.slice(0, 6);
+        }
         let attempts = 0;
         let isUnique = false;
         const maxAttempts = 10;
