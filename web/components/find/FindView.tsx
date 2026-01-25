@@ -74,18 +74,18 @@ function FindViewInner({
 
   return (
     <div className="py-4">
-      {/* Type selector chips */}
-      <div className="flex items-center gap-2 mb-4 overflow-x-auto pb-2 scrollbar-hide">
+      {/* Type selector tabs */}
+      <div className="flex p-1 mb-4 bg-[var(--night)] rounded-lg max-w-md">
         {TYPE_OPTIONS.map((option) => {
           const isActive = findType === option.key;
           return (
             <button
               key={option.key}
               onClick={() => handleTypeChange(option.key)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-full font-mono text-xs whitespace-nowrap transition-all ${
+              className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-md font-mono text-xs whitespace-nowrap transition-all ${
                 isActive
-                  ? "bg-[var(--coral)] text-[var(--void)] font-medium"
-                  : "bg-[var(--twilight)]/50 text-[var(--muted)] hover:text-[var(--cream)] hover:bg-[var(--twilight)]"
+                  ? "bg-[var(--coral)] text-[var(--void)] font-medium shadow-[0_0_12px_var(--coral)/20]"
+                  : "text-[var(--muted)] hover:text-[var(--cream)] hover:bg-[var(--twilight)]/50"
               }`}
             >
               {option.icon}

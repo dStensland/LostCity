@@ -185,9 +185,9 @@ function FindViewSkeleton() {
   return (
     <div className="py-6 space-y-4">
       {/* Type selector skeleton */}
-      <div className="flex gap-2">
+      <div className="flex p-1 bg-[var(--night)] rounded-lg max-w-md">
         {[1, 2, 3].map((i) => (
-          <div key={i} className="h-8 w-20 skeleton-shimmer rounded-full" />
+          <div key={i} className="flex-1 h-9 skeleton-shimmer rounded-md" />
         ))}
       </div>
       {/* Content skeleton */}
@@ -204,9 +204,9 @@ function CommunityViewSkeleton() {
   return (
     <div className="py-6 space-y-4">
       {/* Tab skeleton */}
-      <div className="flex gap-2">
+      <div className="flex p-1 bg-[var(--night)] rounded-lg max-w-xs">
         {[1, 2].map((i) => (
-          <div key={i} className="h-8 w-24 skeleton-shimmer rounded-lg" />
+          <div key={i} className="flex-1 h-9 skeleton-shimmer rounded-md" />
         ))}
       </div>
       {/* Content skeleton */}

@@ -53,17 +53,17 @@ function CommunityViewInner({ portalId, portalSlug, portalName, activeTab }: Com
   return (
     <div className="py-6">
       {/* Tab navigation */}
-      <div className="flex gap-2 mb-6">
+      <div className="flex p-1 mb-6 bg-[var(--night)] rounded-lg max-w-xs">
         {TABS.map((tab) => {
           const isActive = activeTab === tab.key;
           return (
             <button
               key={tab.key}
               onClick={() => handleTabChange(tab.key)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-mono text-xs transition-all ${
+              className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-md font-mono text-xs transition-all ${
                 isActive
-                  ? "bg-[var(--coral)] text-[var(--void)] font-medium"
-                  : "bg-[var(--twilight)]/50 text-[var(--muted)] hover:text-[var(--cream)] hover:bg-[var(--twilight)]"
+                  ? "bg-[var(--coral)] text-[var(--void)] font-medium shadow-[0_0_12px_var(--coral)/20]"
+                  : "text-[var(--muted)] hover:text-[var(--cream)] hover:bg-[var(--twilight)]/50"
               }`}
             >
               {tab.icon}
