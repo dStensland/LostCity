@@ -82,12 +82,26 @@ function generateEventSchema(event: NonNullable<Awaited<ReturnType<typeof getEve
     eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
   };
 
+  // End date (Google wants this)
+  if (event.end_date) {
+    const endDateTime = event.end_time
+      ? `${event.end_date}T${event.end_time}:00`
+      : event.end_date;
+    schema.endDate = endDateTime;
+  } else if (event.start_time) {
+    // Estimate 2-3 hour duration if no end date
+    const [hours, minutes] = event.start_time.split(":").map(Number);
+    const endHours = (hours + 2) % 24;
+    schema.endDate = `${event.start_date}T${String(endHours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:00`;
+  }
+
   if (event.description) {
     schema.description = event.description;
   }
 
+  // Image (as array for better compatibility)
   if (event.image_url) {
-    schema.image = event.image_url;
+    schema.image = [event.image_url];
   }
 
   if (event.venue) {
@@ -104,13 +118,51 @@ function generateEventSchema(event: NonNullable<Awaited<ReturnType<typeof getEve
     };
   }
 
+  // Organizer (use producer if available, otherwise venue)
+  if (event.producer) {
+    schema.organizer = {
+      "@type": "Organization",
+      name: event.producer.name,
+      url: event.producer.website || undefined,
+    };
+  } else if (event.venue) {
+    schema.organizer = {
+      "@type": "Organization",
+      name: event.venue.name,
+    };
+  }
+
+  // Performer (for music/comedy/theater events)
+  if (event.category === "music" || event.category === "comedy") {
+    // Use event title as performer name (usually the artist/comedian)
+    schema.performer = {
+      "@type": event.category === "music" ? "MusicGroup" : "Person",
+      name: event.title,
+    };
+  }
+
+  // Offers (always include, even for free events)
   if (event.is_free) {
     schema.isAccessibleForFree = true;
+    schema.offers = {
+      "@type": "Offer",
+      price: 0,
+      priceCurrency: "USD",
+      availability: "https://schema.org/InStock",
+      url: event.ticket_url || event.source_url,
+    };
   } else if (event.price_min !== null) {
     schema.offers = {
       "@type": "Offer",
       price: event.price_min,
       priceCurrency: "USD",
+      availability: "https://schema.org/InStock",
+      url: event.ticket_url || event.source_url,
+    };
+  } else {
+    // Unknown price - still include offers with URL
+    schema.offers = {
+      "@type": "Offer",
       availability: "https://schema.org/InStock",
       url: event.ticket_url || event.source_url,
     };
