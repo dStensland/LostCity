@@ -74,8 +74,8 @@ export interface SearchFilters {
   // Federation filters
   source_ids?: number[];     // Explicit list of source IDs to filter by
   use_federation?: boolean;  // If true, fetch source access from federation system
-  // Content filters
-  exclude_adult?: boolean;   // If true, exclude adult entertainment venues/events
+  // Content filters (set automatically from user preferences / portal settings)
+  exclude_adult?: boolean;   // If true, exclude adult entertainment venues/events (internal use)
 }
 
 // Rollup types for collapsed event groups

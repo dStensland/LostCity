@@ -111,6 +111,7 @@ export type Database = {
           notification_settings: Record<string, unknown>;
           onboarding_mood: string | null;
           onboarding_completed_at: string | null;
+          hide_adult_content: boolean;
           updated_at: string;
         };
         Insert: {
@@ -122,6 +123,7 @@ export type Database = {
           notification_settings?: Record<string, unknown>;
           onboarding_mood?: string | null;
           onboarding_completed_at?: string | null;
+          hide_adult_content?: boolean;
         };
         Update: {
           favorite_categories?: string[] | null;
@@ -131,6 +133,7 @@ export type Database = {
           notification_settings?: Record<string, unknown>;
           onboarding_mood?: string | null;
           onboarding_completed_at?: string | null;
+          hide_adult_content?: boolean;
         };
       };
       onboarding_interactions: {

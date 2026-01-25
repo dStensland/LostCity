@@ -101,16 +101,31 @@ UPDATE events SET is_adult = true
 WHERE venue_id IN (SELECT id FROM venues WHERE is_adult = true);
 
 -- ============================================
--- 6. Add comment for documentation
+-- 6. Add adult content preference to user_preferences
+-- ============================================
+ALTER TABLE user_preferences ADD COLUMN IF NOT EXISTS hide_adult_content BOOLEAN DEFAULT false;
+
+COMMENT ON COLUMN user_preferences.hide_adult_content IS 'User preference to hide adult entertainment content from feeds and search results.';
+
+-- ============================================
+-- 7. Add comment for documentation
 -- ============================================
 COMMENT ON COLUMN venues.is_adult IS 'Flag for adult entertainment venues (strip clubs, lifestyle clubs). Used for content filtering.';
 COMMENT ON COLUMN events.is_adult IS 'Flag for adult-only events. Auto-set from venue, can also be manually flagged.';
+
+-- ============================================
+-- 8. Portal settings note
+-- ============================================
+-- Portals can exclude adult content by adding to their settings JSONB:
+-- UPDATE portals SET settings = settings || '{"exclude_adult": true}' WHERE id = '...';
+-- This is checked in the application layer when fetching events for a portal.
 
 -- ============================================
 -- Summary
 -- ============================================
 -- New subcategories: nightlife.strip, nightlife.burlesque, nightlife.lifestyle, nightlife.revue
 -- New venues: 10 adult entertainment venues
--- New columns: venues.is_adult, events.is_adult
+-- New columns: venues.is_adult, events.is_adult, user_preferences.hide_adult_content
 -- New vibes: adult, 21-plus, lifestyle
 -- Trigger: Auto-flags events from adult venues
+-- Portal setting: settings.exclude_adult (JSONB) to hide adult content portal-wide

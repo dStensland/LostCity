@@ -44,6 +44,7 @@ export interface PortalSettings {
   contact_email?: string;
   meta_description?: string;
   og_image_url?: string;
+  exclude_adult?: boolean;  // Hide adult entertainment content from this portal
 }
 
 export interface Portal {

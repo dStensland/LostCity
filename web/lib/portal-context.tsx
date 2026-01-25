@@ -66,6 +66,8 @@ export type Portal = {
     show_categories?: boolean;
     /** Enable neon glow on category icons (default: true) */
     icon_glow?: boolean;
+    /** Hide adult entertainment content from this portal */
+    exclude_adult?: boolean;
     [key: string]: unknown;
   };
 };
