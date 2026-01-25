@@ -137,8 +137,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
             venue_id = get_or_create_venue(VENUE_DATA)
 
             logger.info(f"Fetching Horizon Theatre: {PLAYS_URL}")
-            page.goto(PLAYS_URL, wait_until="networkidle", timeout=30000)
-            page.wait_for_timeout(2000)
+            page.goto(PLAYS_URL, wait_until="domcontentloaded", timeout=30000)
+            page.wait_for_timeout(3000)  # Wait for JS instead of networkidle
 
             # Find all show links in the navigation/plays section
             # Horizon uses menu structure with links to /plays/[show-slug]/
@@ -162,8 +162,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
             # Visit each show page to get details
             for show_url in show_urls:
                 try:
-                    page.goto(show_url, wait_until="networkidle", timeout=20000)
-                    page.wait_for_timeout(1000)
+                    page.goto(show_url, wait_until="domcontentloaded", timeout=20000)
+                    page.wait_for_timeout(2000)
 
                     # Get show title - usually in h1 or prominent heading
                     title = None

@@ -14,6 +14,7 @@ from playwright.sync_api import sync_playwright, Page
 
 from db import get_or_create_venue, insert_event, find_event_by_hash
 from dedupe import generate_content_hash
+from utils import extract_images_from_page
 
 logger = logging.getLogger(__name__)
 
@@ -55,7 +56,7 @@ def parse_time(time_text: str) -> Optional[str]:
 
 
 def extract_movies_for_date(
-    page: Page, target_date: datetime, source_id: int, venue_id: int
+    page: Page, target_date: datetime, source_id: int, venue_id: int, image_map: dict = None
 ) -> tuple[int, int, int]:
     """Extract movies and showtimes for a specific date.
 
@@ -201,7 +202,12 @@ def extract_movies_for_date(
                         "is_free": False,
                         "source_url": SHOWTIMES_URL,
                         "ticket_url": None,
-                        "image_url": None,
+                        # Case-insensitive image lookup
+                        "image_url": next(
+                            (url for title, url in (image_map or {}).items()
+                             if title.lower() == movie["title"].lower()),
+                            None
+                        ),
                         "raw_text": None,
                         "extraction_confidence": 0.90,
                         "is_recurring": False,
@@ -231,21 +237,46 @@ def select_midtown_location(page: Page) -> bool:
     """Select Midtown Art Cinema from the location dropdown.
 
     The page starts with "PLEASE SELECT A LOCATION" and we need to:
-    1. Click the dropdown
-    2. Select "Midtown Art Cinema" from the list
+    1. Dismiss cookie consent popup if present
+    2. Click the dropdown
+    3. Select "Midtown Art Cinema" from the list
     """
     try:
+        # Dismiss Didomi cookie consent popup if present
+        try:
+            # Try clicking "Agree & Close" or similar dismiss buttons
+            dismiss_selectors = [
+                "button#didomi-notice-agree-button",
+                "button:has-text('Agree')",
+                "button:has-text('Accept')",
+                "#didomi-notice-agree-button",
+            ]
+            for sel in dismiss_selectors:
+                try:
+                    dismiss_btn = page.locator(sel).first
+                    if dismiss_btn.is_visible(timeout=1000):
+                        dismiss_btn.click()
+                        page.wait_for_timeout(1000)
+                        logger.info("Dismissed cookie consent popup")
+                        break
+                except Exception:
+                    continue
+        except Exception:
+            pass
+
         # Check if already selected (text contains "LANDMARK MIDTOWN ART CINEMA")
         page_text = page.inner_text("body")
         if "LANDMARK MIDTOWN ART CINEMA" in page_text:
             logger.info("Midtown Art Cinema already selected")
             return True
 
-        # Click the location dropdown
+        # Click the location dropdown button
+        # Button text is "SHOWTIMES FOR:\nPLEASE SELECT A LOCATION\n—"
         dropdown_selectors = [
+            "button:has-text('SELECT A LOCATION')",
+            "button:has-text('PLEASE SELECT')",
             "text=PLEASE SELECT A LOCATION",
             "text=Select a location",
-            "text=/At:.*select/i",
         ]
 
         dropdown_clicked = False
@@ -256,7 +287,7 @@ def select_midtown_location(page: Page) -> bool:
                     dropdown.click()
                     page.wait_for_timeout(1500)
                     dropdown_clicked = True
-                    logger.info("Clicked location dropdown")
+                    logger.info(f"Clicked location dropdown with selector: {selector}")
                     break
             except Exception:
                 continue
@@ -310,8 +341,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             # Load the showtimes page
             logger.info(f"Fetching Landmark showtimes: {SHOWTIMES_URL}")
-            page.goto(SHOWTIMES_URL, wait_until="networkidle", timeout=30000)
-            page.wait_for_timeout(3000)
+            page.goto(SHOWTIMES_URL, wait_until="domcontentloaded", timeout=30000)
+            page.wait_for_timeout(5000)  # Wait for JS to render
 
             # Select Midtown Art Cinema location
             select_midtown_location(page)
@@ -322,10 +353,14 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
                 page.wait_for_timeout(1000)
 
+            # Extract movie poster images from page
+            image_map = extract_images_from_page(page)
+            logger.info(f"Extracted {len(image_map)} movie images")
+
             # Extract today's showtimes (already showing by default)
             logger.info(f"Scraping Today ({today.strftime('%Y-%m-%d')})")
             found, new, updated = extract_movies_for_date(
-                page, datetime.combine(today, datetime.min.time()), source_id, venue_id
+                page, datetime.combine(today, datetime.min.time()), source_id, venue_id, image_map
             )
             total_found += found
             total_new += new
@@ -364,6 +399,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         datetime.combine(target_date, datetime.min.time()),
                         source_id,
                         venue_id,
+                        image_map,
                     )
                     total_found += found
                     total_new += new

@@ -1,24 +1,20 @@
 import { getPortalBySlug } from "@/lib/portal";
-import SimpleFilterBar from "@/components/SimpleFilterBar";
-import EventList from "@/components/EventList";
-import MapViewWrapper from "@/components/MapViewWrapper";
-import FeedView from "@/components/FeedView";
-import CalendarView from "@/components/CalendarView";
 import UnifiedHeader from "@/components/UnifiedHeader";
 import SearchBar from "@/components/SearchBar";
-import PortalSpotsView from "@/components/PortalSpotsView";
-import PortalCommunityView from "@/components/PortalCommunityView";
-import TrendingNow from "@/components/TrendingNow";
-import TonightsPicks from "@/components/TonightsPicks";
-import TonightsPicksSkeleton from "@/components/TonightsPicksSkeleton";
-import TrendingNowSkeleton from "@/components/TrendingNowSkeleton";
 import DynamicAmbient from "@/components/DynamicAmbient";
+import FeedShell from "@/components/feed/FeedShell";
+import CuratedContent from "@/components/feed/CuratedContent";
+import FindView from "@/components/find/FindView";
+import CommunityView from "@/components/community/CommunityView";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 
 export const revalidate = 60;
 
-type ViewMode = "events" | "map" | "calendar" | "feed" | "spots" | "community";
+type ViewMode = "feed" | "find" | "community";
+type FeedTab = "curated" | "foryou" | "activity";
+type FindType = "events" | "places" | "orgs";
+type FindDisplay = "list" | "map" | "calendar";
 
 type Props = {
   params: Promise<{ portal: string }>;
@@ -33,6 +29,9 @@ type Props = {
     free?: string;
     date?: string;
     view?: string;
+    tab?: string;
+    type?: string;
+    display?: string;
     mood?: string;
   }>;
 };
@@ -48,18 +47,56 @@ export default async function PortalPage({ params, searchParams }: Props) {
     notFound();
   }
 
-  // Current view mode - Feed is the default
-  const view = searchParamsData.view;
-  const viewMode: ViewMode =
-    view === "map" ? "map" :
-    view === "calendar" ? "calendar" :
-    view === "events" ? "events" :
-    view === "spots" ? "spots" :
-    view === "community" ? "community" :
-    "feed";
+  // Parse view mode - support legacy views for backwards compatibility
+  const viewParam = searchParamsData.view;
+  let viewMode: ViewMode = "feed";
 
-  // Don't block on data - let views fetch their own data client-side for instant navigation
-  const hasActiveFilters = !!(searchParamsData.search || searchParamsData.categories || searchParamsData.subcategories || searchParamsData.tags || searchParamsData.vibes || searchParamsData.neighborhoods || searchParamsData.price || searchParamsData.free || searchParamsData.date || searchParamsData.mood);
+  // Map legacy view params to new structure
+  if (viewParam === "find" || viewParam === "events" || viewParam === "spots" || viewParam === "map" || viewParam === "calendar") {
+    viewMode = "find";
+  } else if (viewParam === "community") {
+    viewMode = "community";
+  } else if (viewParam === "feed" || !viewParam) {
+    viewMode = "feed";
+  }
+
+  // Parse sub-parameters
+  const feedTab: FeedTab = (searchParamsData.tab as FeedTab) || "curated";
+
+  // Determine find type - support legacy view params
+  let findType: FindType = "events";
+  if (searchParamsData.type) {
+    findType = searchParamsData.type as FindType;
+  } else if (viewParam === "spots") {
+    findType = "places";
+  }
+
+  // Determine display mode - support legacy view params
+  let findDisplay: FindDisplay = "list";
+  if (searchParamsData.display) {
+    findDisplay = searchParamsData.display as FindDisplay;
+  } else if (viewParam === "map") {
+    findDisplay = "map";
+  } else if (viewParam === "calendar") {
+    findDisplay = "calendar";
+  }
+
+  // Community sub-tab
+  const communityTab = searchParamsData.tab === "groups" ? "groups" : "lists";
+
+  // Check for active filters
+  const hasActiveFilters = !!(
+    searchParamsData.search ||
+    searchParamsData.categories ||
+    searchParamsData.subcategories ||
+    searchParamsData.tags ||
+    searchParamsData.vibes ||
+    searchParamsData.neighborhoods ||
+    searchParamsData.price ||
+    searchParamsData.free ||
+    searchParamsData.date ||
+    searchParamsData.mood
+  );
 
   return (
     <div className="min-h-screen">
@@ -74,6 +111,7 @@ export default async function PortalPage({ params, searchParams }: Props) {
         branding={portal.branding}
       />
 
+      {/* Search bar for Find and Community views */}
       {viewMode !== "feed" && (
         <div className="sticky top-[52px] z-30 border-b border-[var(--twilight)] bg-[var(--night)] backdrop-blur-md">
           <div className="max-w-3xl mx-auto px-4 pt-1 pb-2">
@@ -82,67 +120,101 @@ export default async function PortalPage({ params, searchParams }: Props) {
         </div>
       )}
 
-      {(viewMode === "events" || viewMode === "map" || viewMode === "calendar") && (
-        <Suspense fallback={<div className="h-10 bg-[var(--night)]" />}>
-          <SimpleFilterBar variant={viewMode === "map" ? "compact" : "full"} />
-        </Suspense>
-      )}
-
-      <main className={viewMode === "map" ? "" : "max-w-3xl mx-auto px-4 pb-16"}>
-        {viewMode === "events" && (
-          <EventList
-            hasActiveFilters={hasActiveFilters}
-            portalId={portal.id}
-            portalExclusive={portal.portal_type === "business"}
-            portalSlug={portal.slug}
-          />
-        )}
-
-        {viewMode === "calendar" && (
-          <Suspense fallback={<div className="py-16 text-center text-[var(--muted)]">Loading calendar...</div>}>
-            <CalendarView
+      <main className={findDisplay === "map" && viewMode === "find" ? "" : "max-w-3xl mx-auto px-4 pb-16"}>
+        {viewMode === "feed" && (
+          <Suspense fallback={<FeedShellSkeleton />}>
+            <FeedShell
               portalId={portal.id}
               portalSlug={portal.slug}
-              portalExclusive={portal.portal_type === "business"}
+              activeTab={feedTab}
+              curatedContent={<CuratedContent portalSlug={portal.slug} />}
             />
           </Suspense>
         )}
 
-        {viewMode === "feed" && (
-          <>
-            <Suspense fallback={<TonightsPicksSkeleton />}>
-              <TonightsPicks portalSlug={portal.slug} />
-            </Suspense>
-            <Suspense fallback={<TrendingNowSkeleton />}>
-              <TrendingNow portalSlug={portal.slug} />
-            </Suspense>
-            <Suspense fallback={null}>
-              <FeedView />
-            </Suspense>
-          </>
-        )}
-
-        {viewMode === "map" && (
-          <div className="h-[calc(100vh-180px)]">
-            <MapViewWrapper
+        {viewMode === "find" && (
+          <Suspense fallback={<FindViewSkeleton />}>
+            <FindView
               portalId={portal.id}
+              portalSlug={portal.slug}
               portalExclusive={portal.portal_type === "business"}
+              findType={findType}
+              displayMode={findDisplay}
+              hasActiveFilters={hasActiveFilters}
             />
-          </div>
-        )}
-
-        {viewMode === "spots" && (
-          <Suspense fallback={<div className="py-16 text-center text-[var(--muted)]">Loading spots...</div>}>
-            <PortalSpotsView portalId={portal.id} portalSlug={portal.slug} isExclusive={portal.portal_type === "business"} />
           </Suspense>
         )}
 
         {viewMode === "community" && (
-          <Suspense fallback={<div className="py-16 text-center text-[var(--muted)]">Loading community...</div>}>
-            <PortalCommunityView portalId={portal.id} portalSlug={portal.slug} portalName={portal.name} />
+          <Suspense fallback={<CommunityViewSkeleton />}>
+            <CommunityView
+              portalId={portal.id}
+              portalSlug={portal.slug}
+              portalName={portal.name}
+              activeTab={communityTab}
+            />
           </Suspense>
         )}
       </main>
+    </div>
+  );
+}
+
+// Loading skeletons
+function FeedShellSkeleton() {
+  return (
+    <div className="py-6 space-y-6">
+      {/* Sub-nav skeleton */}
+      <div className="flex gap-1 p-1 bg-[var(--night)] rounded-lg">
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="flex-1 h-9 skeleton-shimmer rounded-md" />
+        ))}
+      </div>
+      {/* Content skeleton */}
+      <div className="rounded-2xl h-56 skeleton-shimmer" />
+      <div className="space-y-3">
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="h-20 skeleton-shimmer rounded-xl" />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function FindViewSkeleton() {
+  return (
+    <div className="py-6 space-y-4">
+      {/* Type selector skeleton */}
+      <div className="flex gap-2">
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="h-8 w-20 skeleton-shimmer rounded-full" />
+        ))}
+      </div>
+      {/* Content skeleton */}
+      <div className="space-y-3">
+        {[1, 2, 3, 4, 5].map((i) => (
+          <div key={i} className="h-24 skeleton-shimmer rounded-xl" />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function CommunityViewSkeleton() {
+  return (
+    <div className="py-6 space-y-4">
+      {/* Tab skeleton */}
+      <div className="flex gap-2">
+        {[1, 2].map((i) => (
+          <div key={i} className="h-8 w-24 skeleton-shimmer rounded-lg" />
+        ))}
+      </div>
+      {/* Content skeleton */}
+      <div className="space-y-3">
+        {[1, 2, 3, 4].map((i) => (
+          <div key={i} className="h-32 skeleton-shimmer rounded-xl" />
+        ))}
+      </div>
     </div>
   );
 }

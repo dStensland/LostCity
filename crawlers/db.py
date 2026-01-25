@@ -13,6 +13,26 @@ from series import get_or_create_series
 
 _client: Optional[Client] = None
 
+# Virtual venue for online events
+VIRTUAL_VENUE_SLUG = "online-virtual"
+VIRTUAL_VENUE_DATA = {
+    "name": "Online / Virtual Event",
+    "slug": VIRTUAL_VENUE_SLUG,
+    "city": "Atlanta",
+    "state": "GA",
+    "venue_type": "virtual",
+}
+
+
+def get_or_create_virtual_venue() -> int:
+    """Get or create canonical virtual venue. Returns venue ID."""
+    client = get_client()
+    result = client.table("venues").select("id").eq("slug", VIRTUAL_VENUE_SLUG).execute()
+    if result.data:
+        return result.data[0]["id"]
+    result = client.table("venues").insert(VIRTUAL_VENUE_DATA).execute()
+    return result.data[0]["id"]
+
 
 def get_client() -> Client:
     """Get or create Supabase client."""

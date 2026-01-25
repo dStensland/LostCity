@@ -15,7 +15,7 @@ from datetime import datetime
 from bs4 import BeautifulSoup
 
 from utils import fetch_page, slugify
-from db import get_or_create_venue, insert_event, find_event_by_hash
+from db import get_or_create_venue, get_or_create_virtual_venue, insert_event, find_event_by_hash
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -239,6 +239,10 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     venue_id = get_or_create_venue(venue_record)
                 except Exception as e:
                     logger.warning(f"Failed to create venue {venue_info['name']}: {e}")
+
+            # Fallback to virtual venue if no venue was resolved
+            if venue_id is None:
+                venue_id = get_or_create_virtual_venue()
 
             # Generate content hash
             venue_name = venue_info.get("name", "") if venue_info else ""

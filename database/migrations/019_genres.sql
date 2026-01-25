@@ -82,60 +82,99 @@ INSERT INTO genre_options (category, genre, display_order) VALUES
   ('music', 'gospel', 31);
 
 -- Theater genres
+-- Organized by type: plays, musicals, performance art, dance, spoken word, variety
 INSERT INTO genre_options (category, genre, display_order) VALUES
-  ('theater', 'musical', 1),
-  ('theater', 'drama', 2),
-  ('theater', 'comedy', 3),
-  ('theater', 'tragedy', 4),
-  ('theater', 'improv', 5),
-  ('theater', 'sketch', 6),
-  ('theater', 'stand-up', 7),
-  ('theater', 'one-person', 8),
-  ('theater', 'puppet', 9),
-  ('theater', 'dance', 10),
-  ('theater', 'ballet', 11),
-  ('theater', 'opera', 12),
-  ('theater', 'burlesque', 13),
-  ('theater', 'cabaret', 14),
-  ('theater', 'variety', 15),
-  ('theater', 'magic', 16),
-  ('theater', 'circus', 17),
-  ('theater', 'immersive', 18),
-  ('theater', 'experimental', 19),
-  ('theater', 'classic', 20),
-  ('theater', 'shakespeare', 21),
-  ('theater', 'children', 22),
-  ('theater', 'devised', 23),
-  ('theater', 'new-work', 24);
+  -- Plays
+  ('theater', 'drama', 1),
+  ('theater', 'comedy', 2),
+  ('theater', 'tragedy', 3),
+  ('theater', 'classic', 4),
+  ('theater', 'shakespeare', 5),
+  ('theater', 'new-work', 6),
+  ('theater', 'one-person', 7),
+  -- Musicals
+  ('theater', 'musical', 10),
+  ('theater', 'broadway', 11),
+  ('theater', 'revue', 12),
+  -- Dance
+  ('theater', 'ballet', 20),
+  ('theater', 'modern-dance', 21),
+  ('theater', 'contemporary-dance', 22),
+  ('theater', 'tap', 23),
+  ('theater', 'folk-dance', 24),
+  -- Music/Opera
+  ('theater', 'opera', 30),
+  ('theater', 'symphony', 31),
+  ('theater', 'orchestra', 32),
+  ('theater', 'choral', 33),
+  -- Spoken Word/Comedy
+  ('theater', 'stand-up', 40),
+  ('theater', 'improv', 41),
+  ('theater', 'sketch', 42),
+  ('theater', 'spoken-word', 43),
+  ('theater', 'storytelling', 44),
+  -- Variety/Spectacle
+  ('theater', 'circus', 50),
+  ('theater', 'acrobatics', 51),
+  ('theater', 'magic', 52),
+  ('theater', 'burlesque', 53),
+  ('theater', 'cabaret', 54),
+  ('theater', 'variety', 55),
+  ('theater', 'drag', 56),
+  -- Family/Special
+  ('theater', 'children', 60),
+  ('theater', 'puppet', 61),
+  ('theater', 'immersive', 62),
+  ('theater', 'experimental', 63),
+  ('theater', 'devised', 64);
 
 -- Sports types
+-- Organized by: major leagues, college, combat, racing, individual, misc
 INSERT INTO genre_options (category, genre, display_order) VALUES
+  -- Major team sports (Atlanta teams)
   ('sports', 'baseball', 1),
   ('sports', 'basketball', 2),
   ('sports', 'football', 3),
   ('sports', 'soccer', 4),
   ('sports', 'hockey', 5),
-  ('sports', 'golf', 6),
-  ('sports', 'tennis', 7),
-  ('sports', 'boxing', 8),
-  ('sports', 'mma', 9),
-  ('sports', 'wrestling', 10),
-  ('sports', 'racing', 11),
-  ('sports', 'motorsports', 12),
-  ('sports', 'track', 13),
-  ('sports', 'gymnastics', 14),
-  ('sports', 'swimming', 15),
-  ('sports', 'volleyball', 16),
-  ('sports', 'lacrosse', 17),
-  ('sports', 'rugby', 18),
-  ('sports', 'cricket', 19),
-  ('sports', 'esports', 20),
-  ('sports', 'poker', 21),
-  ('sports', 'cycling', 22),
-  ('sports', 'marathon', 23),
-  ('sports', 'triathlon', 24),
-  ('sports', 'crossfit', 25),
-  ('sports', 'roller-derby', 26);
+  -- Other team sports
+  ('sports', 'softball', 10),
+  ('sports', 'volleyball', 11),
+  ('sports', 'lacrosse', 12),
+  ('sports', 'rugby', 13),
+  ('sports', 'cricket', 14),
+  ('sports', 'field-hockey', 15),
+  -- Combat sports
+  ('sports', 'boxing', 20),
+  ('sports', 'mma', 21),
+  ('sports', 'wrestling', 22),
+  ('sports', 'kickboxing', 23),
+  -- Racing/Motorsports
+  ('sports', 'racing', 30),
+  ('sports', 'motorsports', 31),
+  ('sports', 'nascar', 32),
+  ('sports', 'monster-truck', 33),
+  ('sports', 'dirt-track', 34),
+  -- Individual sports
+  ('sports', 'golf', 40),
+  ('sports', 'tennis', 41),
+  ('sports', 'track', 42),
+  ('sports', 'gymnastics', 43),
+  ('sports', 'swimming', 44),
+  ('sports', 'diving', 45),
+  ('sports', 'figure-skating', 46),
+  -- Endurance
+  ('sports', 'marathon', 50),
+  ('sports', 'triathlon', 51),
+  ('sports', 'cycling', 52),
+  ('sports', 'crossfit', 53),
+  -- Alternative/Misc
+  ('sports', 'esports', 60),
+  ('sports', 'poker', 61),
+  ('sports', 'roller-derby', 62),
+  ('sports', 'pickleball', 63),
+  ('sports', 'cornhole', 64),
+  ('sports', 'axe-throwing', 65);
 
 -- Index for quick genre lookups
 CREATE INDEX idx_genre_options_category ON genre_options(category);

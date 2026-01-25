@@ -20,7 +20,7 @@ from utils import extract_images_from_page
 
 logger = logging.getLogger(__name__)
 
-BASE_URL = "https://www.atlantacontemporary.org"
+BASE_URL = "https://atlantacontemporary.org"  # No www - redirects otherwise
 EVENTS_URL = f"{BASE_URL}/programs"
 
 VENUE_DATA = {

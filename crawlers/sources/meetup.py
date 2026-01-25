@@ -12,7 +12,7 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_venue, insert_event, find_event_by_hash
+from db import get_or_create_venue, get_or_create_virtual_venue, insert_event, find_event_by_hash
 from dedupe import generate_content_hash
 from utils import extract_images_from_page
 
@@ -331,6 +331,10 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             venue_id = get_or_create_venue(venue_data)
                         except Exception as e:
                             logger.debug(f"Could not create venue: {e}")
+
+                    # Assign virtual venue for online events with no venue
+                    if venue_id is None and is_online:
+                        venue_id = get_or_create_virtual_venue()
 
                     # Generate content hash
                     venue_for_hash = location_text or group_name or "Meetup"

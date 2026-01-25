@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import Image from "next/image";
 import CategoryIcon, { getCategoryColor } from "./CategoryIcon";
 import LiveIndicator from "./LiveIndicator";
@@ -33,7 +33,12 @@ export default function EventHeroImage({
   eventId,
 }: EventHeroImageProps) {
   const [imgError, setImgError] = useState(false);
+  const [imgLoaded, setImgLoaded] = useState(false);
   const categoryColor = category ? getCategoryColor(category) : "var(--coral)";
+
+  const handleImageLoad = useCallback(() => {
+    setImgLoaded(true);
+  }, []);
 
   // Format date/time for display
   const dateDisplay = startDate ? format(parseISO(startDate), "EEE, MMM d") : null;
@@ -98,12 +103,27 @@ export default function EventHeroImage({
 
   return (
     <div className="relative w-full h-full">
+      {/* Skeleton placeholder while image loads */}
+      {!imgLoaded && (
+        <div
+          className="absolute inset-0 skeleton-shimmer"
+          style={{
+            background: `linear-gradient(135deg, ${categoryColor}10 0%, var(--dusk) 50%, ${categoryColor}05 100%)`,
+          }}
+        >
+          {/* Category icon hint in skeleton */}
+          <div className="absolute inset-0 flex items-center justify-center opacity-20">
+            {category && <CategoryIcon type={category} size={48} />}
+          </div>
+        </div>
+      )}
       <Image
         src={src}
         alt={alt}
         fill
-        className="object-cover"
+        className={`object-cover transition-opacity duration-300 ${imgLoaded ? "opacity-100" : "opacity-0"}`}
         onError={() => setImgError(true)}
+        onLoad={handleImageLoad}
       />
 
       {/* Glass wet overlay at bottom */}

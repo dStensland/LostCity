@@ -143,6 +143,7 @@ def extract_movies_for_date(
             "Showtimes", "Subscribe", "Mailing List", "Email", "Facebook",
             "Instagram", "Copyright", "All rights", "Father Mother",
             "Get Tickets", "Join", "searchTitle", "My Movies",
+            "TBA", "To Be Announced", "Coming Soon", "Upcoming",
         ]
         if any(skip.lower() in title.lower() for skip in skip_words):
             continue
@@ -150,6 +151,12 @@ def extract_movies_for_date(
             continue
         # Skip if title starts with lowercase (likely description)
         if title[0].islower():
+            continue
+        # Skip placeholder titles (TBA, TBD, etc.)
+        if re.match(r'^(TBA|TBD|TBC|To Be Announced|To Be Determined)(\s*\([^)]+\))?$', title, re.IGNORECASE):
+            continue
+        # Skip if title is too short and looks like a placeholder
+        if len(title) <= 5 and title.upper() in ['TBA', 'TBD', 'TBC', 'N/A']:
             continue
 
         movies.append({

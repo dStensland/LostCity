@@ -43,7 +43,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
-  const initializedRef = useRef(false);
   const isMountedRef = useRef(true);
 
   const supabase = createClient();
@@ -89,10 +88,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    // Prevent double initialization in React StrictMode
-    if (initializedRef.current) return;
-    initializedRef.current = true;
+    // Reset mounted ref on each effect run
     isMountedRef.current = true;
+
+    // Use a local flag to prevent race conditions within this effect instance
+    let isCurrentEffect = true;
 
     // Get initial session
     const getInitialSession = async () => {
@@ -102,7 +102,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           error: sessionError,
         } = await supabase.auth.getSession();
 
-        if (!isMountedRef.current) return;
+        if (!isMountedRef.current || !isCurrentEffect) return;
 
         if (sessionError) {
           console.error("Error getting session:", sessionError);
@@ -134,11 +134,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           return;
         }
         console.error("Error getting initial session:", err);
-        if (isMountedRef.current) {
+        if (isMountedRef.current && isCurrentEffect) {
           setError(err instanceof Error ? err : new Error("Auth initialization failed"));
         }
       } finally {
-        if (isMountedRef.current) {
+        // Always set loading to false if this is the current effect and component is mounted
+        if (isMountedRef.current && isCurrentEffect) {
           setLoading(false);
         }
       }
@@ -187,6 +188,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     return () => {
       isMountedRef.current = false;
+      isCurrentEffect = false;
       subscription.unsubscribe();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- Run only on mount, supabase client is stable

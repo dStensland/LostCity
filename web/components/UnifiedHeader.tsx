@@ -30,7 +30,7 @@ interface UnifiedHeaderProps {
 }
 
 type NavTab = {
-  key: "feed" | "your_stuff" | "events" | "spots" | "community";
+  key: "feed" | "find" | "community";
   defaultLabel: string;
   href: string;
   authRequired?: boolean;
@@ -40,7 +40,7 @@ type NavTab = {
 const DEFAULT_TABS: NavTab[] = [
   {
     key: "feed",
-    defaultLabel: "Highlights",
+    defaultLabel: "Feed",
     href: "feed",
     icon: (
       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -49,44 +49,22 @@ const DEFAULT_TABS: NavTab[] = [
     ),
   },
   {
-    key: "your_stuff",
-    defaultLabel: "Your Scene",
-    href: "dashboard",
-    authRequired: true,
+    key: "find",
+    defaultLabel: "Find",
+    href: "find",
     icon: (
       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
-      </svg>
-    ),
-  },
-  {
-    key: "events",
-    defaultLabel: "Events",
-    href: "events",
-    icon: (
-      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-      </svg>
-    ),
-  },
-  {
-    key: "spots",
-    defaultLabel: "Places",
-    href: "spots",
-    icon: (
-      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
       </svg>
     ),
   },
   {
     key: "community",
-    defaultLabel: "Groups",
+    defaultLabel: "Community",
     href: "community",
     icon: (
       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
       </svg>
     ),
   },
@@ -146,26 +124,25 @@ function UnifiedHeaderInner({
     if (tab.key === "feed") {
       return `/${portalSlug}`;
     }
-    if (tab.key === "your_stuff") {
-      return "/dashboard";
-    }
-    return `/${portalSlug}?view=${tab.href}`;
+    return `/${portalSlug}?view=${tab.key}`;
   };
 
   const isActive = (tab: typeof TABS[0]) => {
     // Handle non-portal pages - nothing active except specific matches
     const isPortalPage = pathname === `/${portalSlug}`;
 
-    if (tab.key === "your_stuff") {
-      return pathname === "/dashboard" || pathname === "/foryou" || pathname === "/saved" || pathname === "/friends";
-    }
     if (tab.key === "feed") {
-      return isPortalPage && currentView === "feed";
+      // Feed is active when no view param or view=feed
+      return isPortalPage && (!currentView || currentView === "feed");
     }
-    if (tab.key === "events") {
-      return isPortalPage && (currentView === "events" || currentView === "map" || currentView === "calendar");
+    if (tab.key === "find") {
+      // Find is active for find view, or legacy events/spots/map/calendar views
+      return isPortalPage && (currentView === "find" || currentView === "events" || currentView === "spots" || currentView === "map" || currentView === "calendar");
     }
-    return isPortalPage && currentView === tab.href;
+    if (tab.key === "community") {
+      return isPortalPage && currentView === "community";
+    }
+    return false;
   };
 
   return (
@@ -263,7 +240,28 @@ function UnifiedHeaderInner({
                     Quick Links
                   </div>
                   <Link
-                    href={`/${portalSlug}?view=map`}
+                    href={`/${portalSlug}?view=find&type=events`}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex items-center gap-2 px-3 py-2 font-mono text-sm text-[var(--muted)] hover:text-[var(--neon-amber)] hover:bg-[var(--twilight)]/30"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    Events
+                  </Link>
+                  <Link
+                    href={`/${portalSlug}?view=find&type=places`}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex items-center gap-2 px-3 py-2 font-mono text-sm text-[var(--muted)] hover:text-[var(--neon-amber)] hover:bg-[var(--twilight)]/30"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    Places
+                  </Link>
+                  <Link
+                    href={`/${portalSlug}?view=find&display=map`}
                     onClick={() => setMobileMenuOpen(false)}
                     className="flex items-center gap-2 px-3 py-2 font-mono text-sm text-[var(--muted)] hover:text-[var(--neon-amber)] hover:bg-[var(--twilight)]/30"
                   >
@@ -271,16 +269,6 @@ function UnifiedHeaderInner({
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
                     </svg>
                     Map View
-                  </Link>
-                  <Link
-                    href="/dashboard?tab=planning"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="flex items-center gap-2 px-3 py-2 font-mono text-sm text-[var(--muted)] hover:text-[var(--neon-amber)] hover:bg-[var(--twilight)]/30"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
-                    </svg>
-                    Your Moves
                   </Link>
 
                   <div className="my-2 border-t border-[var(--twilight)]" />

@@ -1,18 +1,70 @@
 "use client";
 
-import { Suspense } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
+import Link from "next/link";
 import DashboardShell from "@/components/dashboard/DashboardShell";
 import DashboardFeed from "@/components/dashboard/DashboardFeed";
 import DashboardActivity from "@/components/dashboard/DashboardActivity";
 import DashboardPlanning from "@/components/dashboard/DashboardPlanning";
+import { usePortal, DEFAULT_PORTAL_SLUG } from "@/lib/portal-context";
 
 type DashboardTab = "feed" | "activity" | "planning";
+
+function RedirectBanner() {
+  const { portal } = usePortal();
+  const [dismissed, setDismissed] = useState(false);
+
+  if (dismissed) return null;
+
+  const newUrl = `/${portal?.slug || DEFAULT_PORTAL_SLUG}?view=feed&tab=foryou`;
+
+  return (
+    <div className="mb-4 p-3 rounded-lg bg-[var(--coral)]/10 border border-[var(--coral)]/30 flex items-center justify-between gap-4">
+      <div className="flex items-center gap-3">
+        <svg className="w-5 h-5 text-[var(--coral)] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <div>
+          <p className="text-sm text-[var(--cream)]">
+            Dashboard has moved!
+          </p>
+          <p className="text-xs text-[var(--muted)]">
+            Find your personalized feed under Feed &rarr; For You
+          </p>
+        </div>
+      </div>
+      <div className="flex items-center gap-2">
+        <Link
+          href={newUrl}
+          className="px-3 py-1.5 bg-[var(--coral)] text-[var(--void)] rounded-lg font-mono text-xs font-medium hover:bg-[var(--rose)] transition-colors whitespace-nowrap"
+        >
+          Go there
+        </Link>
+        <button
+          onClick={() => setDismissed(true)}
+          className="p-1 text-[var(--muted)] hover:text-[var(--cream)] transition-colors"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+    </div>
+  );
+}
 
 function DashboardContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const currentTab = (searchParams?.get("tab") as DashboardTab) || "feed";
+  const [showRedirect, setShowRedirect] = useState(false);
+
+  // Show redirect banner after a moment
+  useEffect(() => {
+    const timer = setTimeout(() => setShowRedirect(true), 500);
+    return () => clearTimeout(timer);
+  }, []);
 
   const handleTabChange = (tab: DashboardTab) => {
     const params = new URLSearchParams();
@@ -23,11 +75,14 @@ function DashboardContent() {
   };
 
   return (
-    <DashboardShell currentTab={currentTab} onTabChange={handleTabChange}>
-      {currentTab === "feed" && <DashboardFeed />}
-      {currentTab === "activity" && <DashboardActivity />}
-      {currentTab === "planning" && <DashboardPlanning />}
-    </DashboardShell>
+    <>
+      {showRedirect && <RedirectBanner />}
+      <DashboardShell currentTab={currentTab} onTabChange={handleTabChange}>
+        {currentTab === "feed" && <DashboardFeed />}
+        {currentTab === "activity" && <DashboardActivity />}
+        {currentTab === "planning" && <DashboardPlanning />}
+      </DashboardShell>
+    </>
   );
 }
 

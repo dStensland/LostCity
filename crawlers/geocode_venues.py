@@ -4,15 +4,12 @@ Geocode venues using OpenStreetMap Nominatim (free, no API key required).
 Rate limited to 1 request per second per Nominatim usage policy.
 """
 
-import os
 import time
 import logging
 from typing import Optional, Tuple
-from dotenv import load_dotenv
-from supabase import create_client
 import requests
 
-load_dotenv()
+from db import get_client
 
 logging.basicConfig(
     level=logging.INFO,
@@ -81,10 +78,7 @@ def geocode_address(address: str, city: str, state: str) -> Optional[Tuple[float
 
 
 def main():
-    client = create_client(
-        os.getenv("SUPABASE_URL"),
-        os.getenv("SUPABASE_KEY")
-    )
+    client = get_client()
 
     # Get venues without coordinates
     result = client.table("venues").select("*").is_("lat", "null").execute()

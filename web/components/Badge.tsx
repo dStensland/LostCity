@@ -1,6 +1,6 @@
 import React from "react";
 
-type BadgeVariant = "live" | "soon" | "free" | "events" | "trending";
+type BadgeVariant = "live" | "soon" | "free" | "usually-free" | "events" | "trending";
 
 interface BadgeProps {
   variant: BadgeVariant;
@@ -23,6 +23,11 @@ const BADGE_STYLES: Record<BadgeVariant, { bg: string; text: string; border: str
     bg: "bg-[var(--neon-green)]/20",
     text: "text-[var(--neon-green)]",
     border: "border-[var(--neon-green)]/30",
+  },
+  "usually-free": {
+    bg: "bg-[var(--neon-green)]/15",
+    text: "text-[var(--neon-green)]",
+    border: "border-[var(--neon-green)]/25",
   },
   events: {
     bg: "bg-[var(--coral)]/15",
@@ -73,6 +78,15 @@ export default function Badge({ variant, count, className = "" }: BadgeProps) {
     );
   }
 
+  // Usually Free badge (slightly muted version)
+  if (variant === "usually-free") {
+    return (
+      <span className={`inline-flex items-center px-1.5 py-0.5 rounded border font-mono text-[0.55rem] font-medium ${styles.bg} ${styles.text} ${styles.border} opacity-90 ${className}`}>
+        Usually Free
+      </span>
+    );
+  }
+
   // Events count badge
   if (variant === "events" && count !== undefined && count > 0) {
     return (
@@ -114,4 +128,8 @@ export function EventsBadge({ count, className }: { count: number; className?: s
 
 export function TrendingBadge({ className }: { className?: string }) {
   return <Badge variant="trending" className={className} />;
+}
+
+export function UsuallyFreeBadge({ className }: { className?: string }) {
+  return <Badge variant="usually-free" className={className} />;
 }

@@ -144,13 +144,13 @@ export default function AnimatedEventList({
               exit="exit"
               layout
             >
-              {/* Date header */}
-              <div className="sticky top-[148px] bg-[var(--void)]/95 backdrop-blur-sm z-20 py-2.5 -mx-4 px-4 border-b border-[var(--twilight)]/30">
+              {/* Date header - improved typography hierarchy */}
+              <div className="sticky top-[148px] bg-[var(--void)]/95 backdrop-blur-sm z-20 py-3 -mx-4 px-4 border-b border-[var(--twilight)]/30">
                 <div className="flex items-center gap-3">
-                  <span className="font-mono text-[0.65rem] font-semibold text-[var(--cream)] uppercase tracking-wider">
+                  <span className="font-serif text-sm font-medium text-[var(--cream)] tracking-wide">
                     {getDateLabel(date)}
                   </span>
-                  <span className="font-mono text-[0.6rem] text-[var(--muted)] bg-[var(--twilight)]/50 px-2 py-0.5 rounded">
+                  <span className="font-mono text-[0.6rem] text-[var(--muted)] bg-[var(--twilight)]/50 px-2 py-0.5 rounded-full">
                     {eventCount} event{eventCount !== 1 ? "s" : ""}
                   </span>
                   <div className="flex-1 h-px bg-gradient-to-r from-[var(--twilight)]/50 to-transparent" />

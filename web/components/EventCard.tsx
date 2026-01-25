@@ -173,13 +173,13 @@ function EventCard({ event, index = 0, skipAnimation = false, portalSlug, friend
       } as React.CSSProperties}
     >
       <div className="flex gap-3">
-        {/* Time cell */}
-        <div className="flex-shrink-0 w-12 flex flex-col items-center justify-center">
-          <span className="font-mono text-sm text-[var(--muted)] leading-none">
+        {/* Time cell - improved readability */}
+        <div className="flex-shrink-0 w-14 flex flex-col items-center justify-center py-1">
+          <span className="font-mono text-sm font-medium text-[var(--soft)] leading-none tabular-nums">
             {time}
           </span>
           {period && (
-            <span className="font-mono text-[0.5rem] text-[var(--muted)] opacity-60">{period}</span>
+            <span className="font-mono text-[0.55rem] text-[var(--muted)] mt-0.5">{period}</span>
           )}
         </div>
 
@@ -255,7 +255,11 @@ function EventCard({ event, index = 0, skipAnimation = false, portalSlug, friend
               <>
                 <span className="opacity-40">·</span>
                 {price.isFree ? (
-                  <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-[var(--neon-green)]/15 text-[var(--neon-green)] text-[0.65rem] font-medium">
+                  <span className={`inline-flex items-center px-1.5 py-0.5 rounded border font-mono text-[0.55rem] font-medium ${
+                    price.isEstimate
+                      ? "bg-[var(--neon-green)]/15 text-[var(--neon-green)] border-[var(--neon-green)]/25 opacity-90"
+                      : "bg-[var(--neon-green)]/20 text-[var(--neon-green)] border-[var(--neon-green)]/30"
+                  }`}>
                     {price.text}
                   </span>
                 ) : (

@@ -16,6 +16,7 @@ from playwright.sync_api import sync_playwright, Page
 
 from db import get_or_create_venue, insert_event, find_event_by_hash
 from dedupe import generate_content_hash
+from utils import extract_images_from_page
 
 logger = logging.getLogger(__name__)
 
@@ -354,6 +355,10 @@ def crawl(source: dict) -> tuple[int, int, int]:
             except Exception:
                 pass
 
+            # Extract movie poster images from page
+            image_map = extract_images_from_page(page)
+            logger.info(f"Extracted {len(image_map)} movie images")
+
             # Day names for clicking
             day_names = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 
@@ -469,7 +474,12 @@ def crawl(source: dict) -> tuple[int, int, int]:
                                 "is_free": False,
                                 "source_url": NOW_SHOWING_URL,
                                 "ticket_url": None,
-                                "image_url": data.get("image"),
+                                # Case-insensitive image lookup
+                                "image_url": next(
+                                    (url for title, url in (image_map or {}).items()
+                                     if title.lower() == movie_title.lower()),
+                                    None
+                                ),
                                 "raw_text": None,
                                 "extraction_confidence": 0.90,
                                 "is_recurring": False,

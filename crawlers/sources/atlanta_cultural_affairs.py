@@ -12,7 +12,6 @@ import requests
 
 from db import get_or_create_venue, insert_event, find_event_by_hash
 from dedupe import generate_content_hash
-from utils import extract_image_url
 
 logger = logging.getLogger(__name__)
 
@@ -112,7 +111,7 @@ def generate_annual_events(source_id: int, year: int) -> list[dict]:
                 "is_free": True,
                 "source_url": "https://atlantafestivals.com/atlanta-jazz-festival/",
                 "ticket_url": None,
-                "image_url": extract_image_url(soup) if soup else None,
+                "image_url": None,
                 "raw_text": f"Atlanta Jazz Festival {year} - {day_name}",
                 "extraction_confidence": 0.95,
                 "is_recurring": True,

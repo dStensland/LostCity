@@ -207,7 +207,12 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             "is_free": False,
                             "source_url": EVENTS_URL,
                             "ticket_url": None,
-                            "image_url": image_map.get(title),
+                            # Case-insensitive image lookup
+                            "image_url": next(
+                                (url for t, url in (image_map or {}).items()
+                                 if t.lower() == title.lower()),
+                                None
+                            ),
                             "raw_text": None,
                             "extraction_confidence": 0.85,
                             "is_recurring": False,

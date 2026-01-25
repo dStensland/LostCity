@@ -3,15 +3,11 @@ Crawler for Kat's Cafe - creative space with open mic and live music.
 Thursday open mic nights and Saturday live bands in Midtown.
 """
 
-import json
 import logging
 from datetime import datetime, timedelta
-from bs4 import BeautifulSoup
-import requests
 
 from db import get_or_create_venue, insert_event, find_event_by_hash
 from dedupe import generate_content_hash
-from utils import extract_image_url
 
 logger = logging.getLogger(__name__)
 
@@ -92,7 +88,7 @@ def generate_recurring_events(source_id: int, venue_id: int, weeks_ahead: int = 
                 "is_free": False,
                 "source_url": BASE_URL,
                 "ticket_url": None,
-                "image_url": extract_image_url(soup) if soup else None,
+                "image_url": None,
                 "raw_text": f"Recurring: {recurring['title']}",
                 "extraction_confidence": 0.85,
                 "is_recurring": True,
