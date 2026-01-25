@@ -3,9 +3,6 @@ import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import type { Database } from "@/lib/types";
 
-type ProfileInsert = Database["public"]["Tables"]["profiles"]["Insert"];
-type PreferencesInsert = Database["public"]["Tables"]["user_preferences"]["Insert"];
-
 // Sanitize API key - remove any whitespace, control chars, or URL encoding artifacts
 function sanitizeKey(key: string | undefined): string | undefined {
   if (!key) return undefined;
@@ -61,7 +58,8 @@ export async function GET(request: NextRequest) {
 
     if (data.user) {
       // Check if profile exists
-      const { data: profile } = await supabase
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: profile } = await (supabase as any)
         .from("profiles")
         .select("id")
         .eq("id", data.user.id)
@@ -83,7 +81,8 @@ export async function GET(request: NextRequest) {
 
         while (!isUnique && attempts < maxAttempts) {
           const checkUsername = attempts === 0 ? username : `${username.slice(0, 20)}${Math.floor(Math.random() * 10000)}`;
-          const { data: existing } = await supabase
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const { data: existing } = await (supabase as any)
             .from("profiles")
             .select("id")
             .eq("username", checkUsername)
@@ -106,15 +105,16 @@ export async function GET(request: NextRequest) {
         let profileAttempts = 0;
 
         while (!profileCreated && profileAttempts < 3) {
-          const profileData: ProfileInsert = {
+          const profileData = {
             id: data.user.id,
             username,
             display_name: data.user.user_metadata?.full_name || null,
             avatar_url: data.user.user_metadata?.avatar_url || null,
           };
-          const { error: profileError } = await supabase
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const { error: profileError } = await (supabase as any)
             .from("profiles")
-            .insert(profileData as never);
+            .insert(profileData);
 
           if (!profileError) {
             profileCreated = true;
@@ -123,7 +123,7 @@ export async function GET(request: NextRequest) {
             profileAttempts++;
             username = `user_${data.user.id.slice(0, 8)}_${profileAttempts}`;
           } else {
-            console.error("Profile creation error:", profileError);
+            console.error("Profile creation error:", profileError, "User ID:", data.user.id, "Username:", username);
             return NextResponse.redirect(`${origin}/auth/login?error=profile_failed`);
           }
         }
@@ -135,12 +135,13 @@ export async function GET(request: NextRequest) {
 
         // Create default preferences with error handling
         try {
-          const prefsData: PreferencesInsert = {
+          const prefsData = {
             user_id: data.user.id,
           };
-          const { error: prefsError } = await supabase
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const { error: prefsError } = await (supabase as any)
             .from("user_preferences")
-            .insert(prefsData as never);
+            .insert(prefsData);
 
           if (prefsError) {
             // Log but don't block signup - preferences can be created later
