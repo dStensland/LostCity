@@ -57,13 +57,21 @@ export async function GET(request: NextRequest) {
     }
 
     if (data.user) {
-      // Check if profile exists
+      console.log("Auth callback - user authenticated:", data.user.id, data.user.email);
+
+      // Check if profile exists - use maybeSingle() to avoid error when no rows
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data: profile } = await (supabase as any)
+      const { data: profile, error: profileCheckError } = await (supabase as any)
         .from("profiles")
         .select("id")
         .eq("id", data.user.id)
-        .single();
+        .maybeSingle();
+
+      if (profileCheckError) {
+        console.error("Profile check error:", profileCheckError);
+      }
+
+      console.log("Profile check result:", profile ? "exists" : "not found");
 
       // If no profile exists, create one (for OAuth users or email confirmation)
       if (!profile) {
@@ -110,6 +118,8 @@ export async function GET(request: NextRequest) {
           username = `user_${data.user.id.slice(0, 8)}`;
         }
 
+        console.log("Creating profile with username:", username, "for user:", data.user.id);
+
         // Create profile with retry logic for race conditions
         let profileCreated = false;
         let profileAttempts = 0;
@@ -121,19 +131,23 @@ export async function GET(request: NextRequest) {
             display_name: data.user.user_metadata?.full_name || null,
             avatar_url: data.user.user_metadata?.avatar_url || null,
           };
+          console.log("Profile insert attempt", profileAttempts + 1, "data:", JSON.stringify(profileData));
+
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const { error: profileError } = await (supabase as any)
             .from("profiles")
             .insert(profileData);
 
           if (!profileError) {
+            console.log("Profile created successfully");
             profileCreated = true;
           } else if (profileError.code === "23505") {
             // Unique constraint violation - use ID-based username
+            console.log("Username conflict, retrying with new username");
             profileAttempts++;
             username = `user_${data.user.id.slice(0, 8)}_${profileAttempts}`;
           } else {
-            console.error("Profile creation error:", profileError, "User ID:", data.user.id, "Username:", username);
+            console.error("Profile creation error:", JSON.stringify(profileError), "Code:", profileError.code, "Message:", profileError.message);
             return NextResponse.redirect(`${origin}/auth/login?error=profile_failed`);
           }
         }
