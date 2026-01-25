@@ -169,7 +169,7 @@ export default function PortalAnalyticsPage({ params }: Props) {
               <span className="text-[var(--twilight)]">/</span>
               <span className="font-mono text-sm text-[var(--cream)]">{data.portal.name}</span>
             </div>
-            <h1 className="font-serif text-2xl text-[var(--cream)] italic">
+            <h1 className="text-2xl font-semibold text-[var(--cream)]">
               {data.portal.name} Analytics
             </h1>
             <p className="font-mono text-xs text-[var(--muted)] mt-1">

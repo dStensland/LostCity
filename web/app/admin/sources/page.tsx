@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import Logo from "@/components/Logo";
 import { formatDistanceToNow } from "date-fns";
 
 type SourceHealth = {
@@ -64,28 +63,9 @@ export default function SourceHealthPage() {
   });
 
   return (
-    <div className="min-h-screen">
-      {/* Header */}
-      <header className="px-4 sm:px-6 py-4 flex justify-between items-center border-b border-[var(--twilight)]">
-        <div className="flex items-baseline gap-3">
-          <Logo />
-          <span className="font-mono text-[0.65rem] font-medium text-[var(--muted)] uppercase tracking-widest">
-            Admin
-          </span>
-        </div>
-        <nav className="flex items-center gap-4">
-          <Link href="/admin" className="font-mono text-xs text-[var(--muted)] hover:text-[var(--cream)]">
-            Dashboard
-          </Link>
-          <Link href="/" className="font-mono text-xs text-[var(--muted)] hover:text-[var(--cream)]">
-            Home
-          </Link>
-        </nav>
-      </header>
-
-      <main className="max-w-6xl mx-auto px-4 py-8">
+    <div className="max-w-6xl mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-6">
-          <h1 className="font-serif text-2xl text-[var(--cream)] italic">Source Health</h1>
+          <h1 className="text-2xl font-semibold text-[var(--cream)]">Source Health</h1>
           <Link
             href="/admin/federation"
             className="px-4 py-2 bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg font-mono text-sm text-[var(--cream)] hover:border-[var(--coral)] transition-colors"
@@ -165,7 +145,6 @@ export default function SourceHealthPage() {
             )}
           </>
         )}
-      </main>
     </div>
   );
 }

@@ -81,7 +81,7 @@ export default function FederationDashboardPage() {
     <div className="max-w-6xl mx-auto px-4 py-8">
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="font-serif text-2xl text-[var(--cream)] italic">Source Federation</h1>
+          <h1 className="text-2xl font-semibold text-[var(--cream)]">Source Federation</h1>
           <p className="font-mono text-sm text-[var(--muted)] mt-1">
             Manage source ownership, sharing, and subscriptions across portals
           </p>
@@ -111,7 +111,7 @@ export default function FederationDashboardPage() {
         {/* Portal Source Ownership */}
         <div className="bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg">
           <div className="p-4 border-b border-[var(--twilight)]">
-            <h2 className="font-serif text-lg text-[var(--cream)] italic">Sources by Portal</h2>
+            <h2 className="text-lg font-semibold text-[var(--cream)]">Sources by Portal</h2>
             <p className="font-mono text-xs text-[var(--muted)] mt-1">
               Distribution of source ownership across portals
             </p>
@@ -163,7 +163,7 @@ export default function FederationDashboardPage() {
         {/* Recent Sources */}
         <div className="bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg">
           <div className="p-4 border-b border-[var(--twilight)]">
-            <h2 className="font-serif text-lg text-[var(--cream)] italic">Sources Overview</h2>
+            <h2 className="text-lg font-semibold text-[var(--cream)]">Sources Overview</h2>
             <p className="font-mono text-xs text-[var(--muted)] mt-1">
               Source ownership and sharing status
             </p>
@@ -221,7 +221,7 @@ export default function FederationDashboardPage() {
 
       {/* Help Section */}
       <div className="mt-8 bg-[var(--night)] border border-[var(--twilight)] rounded-lg p-6">
-        <h3 className="font-serif text-lg text-[var(--cream)] italic mb-4">How Federation Works</h3>
+        <h3 className="text-lg font-semibold text-[var(--cream)] mb-4">How Federation Works</h3>
         <div className="grid md:grid-cols-3 gap-6">
           <div>
             <h4 className="font-mono text-sm text-[var(--coral)] mb-2">1. Source Ownership</h4>

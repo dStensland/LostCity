@@ -272,7 +272,7 @@ export default function EditPortalPage({ params }: { params: Promise<{ id: strin
       <main className="max-w-3xl mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="font-serif text-2xl text-[var(--cream)] italic">{portal.name}</h1>
+            <h1 className="text-2xl font-semibold text-[var(--cream)]">{portal.name}</h1>
             <p className="font-mono text-xs text-[var(--muted)]">/{portal.slug} · {portal.portal_type}</p>
           </div>
           <div className="flex items-center gap-2">

@@ -123,7 +123,7 @@ export default function APIKeyManager({ portals = [] }: Props) {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="font-serif text-xl text-[var(--cream)] italic">API Keys</h2>
+          <h2 className="text-xl font-semibold text-[var(--cream)]">API Keys</h2>
           <p className="font-mono text-xs text-[var(--muted)] mt-1">
             Manage API keys for external integrations (Snowflake, GA, etc.)
           </p>

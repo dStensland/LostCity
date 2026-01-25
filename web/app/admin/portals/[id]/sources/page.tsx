@@ -199,7 +199,7 @@ export default function PortalSourcesPage({ params }: { params: Promise<{ id: st
 
       {/* Header */}
       <div className="mb-6">
-        <h1 className="font-serif text-2xl text-[var(--cream)] italic mb-1">
+        <h1 className="text-2xl font-semibold text-[var(--cream)] mb-1">
           {portal?.name} Sources
         </h1>
         <p className="font-mono text-sm text-[var(--muted)]">

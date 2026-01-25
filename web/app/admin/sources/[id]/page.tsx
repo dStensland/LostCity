@@ -215,7 +215,7 @@ export default function SourceDetailPage({ params }: { params: Promise<{ id: str
               source.is_active ? "bg-green-400" : "bg-[var(--muted)]"
             }`}
           />
-          <h1 className="font-serif text-2xl text-[var(--cream)] italic">{source.name}</h1>
+          <h1 className="text-2xl font-semibold text-[var(--cream)]">{source.name}</h1>
         </div>
         <p className="font-mono text-sm text-[var(--muted)]">{source.slug}</p>
       </div>
@@ -228,7 +228,7 @@ export default function SourceDetailPage({ params }: { params: Promise<{ id: str
 
       {/* Basic Info Card */}
       <div className="bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg p-6 mb-6">
-        <h2 className="font-serif text-lg text-[var(--cream)] italic mb-4">Source Info</h2>
+        <h2 className="text-lg font-semibold text-[var(--cream)] mb-4">Source Info</h2>
         <div className="grid grid-cols-2 gap-4">
           <div>
             <p className="font-mono text-xs text-[var(--muted)] uppercase mb-1">URL</p>
@@ -256,7 +256,7 @@ export default function SourceDetailPage({ params }: { params: Promise<{ id: str
 
       {/* Ownership Card */}
       <div className="bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg p-6 mb-6">
-        <h2 className="font-serif text-lg text-[var(--cream)] italic mb-4">Ownership</h2>
+        <h2 className="text-lg font-semibold text-[var(--cream)] mb-4">Ownership</h2>
         <p className="font-mono text-xs text-[var(--muted)] mb-4">
           Assign this source to a portal. Global sources appear in all portals automatically.
         </p>
@@ -299,7 +299,7 @@ export default function SourceDetailPage({ params }: { params: Promise<{ id: str
 
       {/* Sharing Rules Card */}
       <div className="bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg p-6 mb-6">
-        <h2 className="font-serif text-lg text-[var(--cream)] italic mb-4">Sharing Rules</h2>
+        <h2 className="text-lg font-semibold text-[var(--cream)] mb-4">Sharing Rules</h2>
 
         {!source.owner_portal_id ? (
           <p className="font-mono text-sm text-[var(--muted)]">
@@ -377,7 +377,7 @@ export default function SourceDetailPage({ params }: { params: Promise<{ id: str
       {/* Subscribers Card */}
       <div className="bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg p-6">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="font-serif text-lg text-[var(--cream)] italic">Subscribers</h2>
+          <h2 className="text-lg font-semibold text-[var(--cream)]">Subscribers</h2>
           <span className="px-2 py-1 bg-[var(--night)] rounded font-mono text-xs text-[var(--muted)]">
             {subscriberCount} portal{subscriberCount !== 1 ? "s" : ""}
           </span>

@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import Logo from "@/components/Logo";
 
 type Portal = {
   id: string;
@@ -72,31 +71,9 @@ export default function AdminPortalsPage() {
   });
 
   return (
-    <div className="min-h-screen">
-      {/* Header */}
-      <header className="px-4 sm:px-6 py-4 flex justify-between items-center border-b border-[var(--twilight)]">
-        <div className="flex items-baseline gap-3">
-          <Logo />
-          <span className="font-mono text-[0.65rem] font-medium text-[var(--muted)] uppercase tracking-widest">
-            Admin
-          </span>
-        </div>
-        <nav className="flex items-center gap-4">
-          <Link href="/admin" className="font-mono text-xs text-[var(--muted)] hover:text-[var(--cream)]">
-            Dashboard
-          </Link>
-          <Link href="/admin/sources" className="font-mono text-xs text-[var(--muted)] hover:text-[var(--cream)]">
-            Sources
-          </Link>
-          <Link href="/" className="font-mono text-xs text-[var(--muted)] hover:text-[var(--cream)]">
-            Home
-          </Link>
-        </nav>
-      </header>
-
-      <main className="max-w-6xl mx-auto px-4 py-8">
+    <div className="max-w-6xl mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-6">
-          <h1 className="font-serif text-2xl text-[var(--cream)] italic">Portals</h1>
+          <h1 className="text-2xl font-semibold text-[var(--cream)]">Portals</h1>
           <button
             onClick={() => setShowCreateModal(true)}
             className="px-4 py-2 bg-[var(--coral)] text-[var(--void)] font-mono text-sm rounded hover:opacity-90 transition-opacity"
@@ -164,8 +141,14 @@ export default function AdminPortalsPage() {
                 ))}
                 {filteredPortals.length === 0 && (
                   <tr>
-                    <td colSpan={5} className="px-4 py-8 text-center text-[var(--muted)] font-mono text-sm">
-                      No portals found
+                    <td colSpan={5} className="px-4 py-12 text-center">
+                      <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-[var(--twilight)] flex items-center justify-center">
+                        <svg className="w-6 h-6 text-[var(--muted)]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                        </svg>
+                      </div>
+                      <p className="font-mono text-sm text-[var(--cream)] mb-1">No portals found</p>
+                      <p className="font-mono text-xs text-[var(--muted)]">Create your first portal to get started</p>
                     </td>
                   </tr>
                 )}
@@ -173,7 +156,6 @@ export default function AdminPortalsPage() {
             </table>
           </div>
         )}
-      </main>
 
       {/* Create Modal */}
       {showCreateModal && (
@@ -338,7 +320,7 @@ function CreatePortalModal({ onClose, onCreated }: { onClose: () => void; onCrea
   return (
     <div className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50">
       <div className="bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg max-w-md w-full p-6">
-        <h2 className="font-serif text-xl text-[var(--cream)] italic mb-4">Create Portal</h2>
+        <h2 className="text-xl font-semibold text-[var(--cream)] mb-4">Create Portal</h2>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>

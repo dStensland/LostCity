@@ -99,7 +99,7 @@ export default function AdminEventsPage() {
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
-      <h1 className="font-serif text-2xl text-[var(--cream)] italic mb-8">
+      <h1 className="text-2xl font-semibold text-[var(--cream)] mb-8">
         Manage Events
       </h1>
 
@@ -161,8 +161,14 @@ export default function AdminEventsPage() {
                 </tr>
               ) : events.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-4 py-8 text-center text-[var(--muted)]">
-                    No events found
+                  <td colSpan={5} className="px-4 py-12 text-center">
+                    <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-[var(--twilight)] flex items-center justify-center">
+                      <svg className="w-6 h-6 text-[var(--muted)]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                    </div>
+                    <p className="font-mono text-sm text-[var(--cream)] mb-1">No events found</p>
+                    <p className="font-mono text-xs text-[var(--muted)]">Try adjusting your search or filters</p>
                   </td>
                 </tr>
               ) : (

@@ -44,7 +44,7 @@ export default async function AdminDashboard() {
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
-      <h1 className="font-serif text-2xl text-[var(--cream)] italic mb-8">
+      <h1 className="text-2xl font-semibold text-[var(--cream)] mb-8">
         Admin Dashboard
       </h1>
 

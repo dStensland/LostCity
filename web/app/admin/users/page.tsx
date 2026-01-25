@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import Image from "next/image";
-import { createClient } from "@/lib/supabase/client";
+import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
 
 type User = {
@@ -22,8 +22,6 @@ type User = {
 };
 
 export default function AdminUsersPage() {
-  const supabase = createClient();
-
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -31,99 +29,112 @@ export default function AdminUsersPage() {
   const [editMode, setEditMode] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const detailPanelRef = useRef<HTMLDivElement>(null);
 
-  // Load users
-  useEffect(() => {
-    async function loadUsers() {
-      setLoading(true);
+  // Scroll detail panel into view on mobile when user is selected
+  const handleSelectUser = (user: User) => {
+    setSelectedUser(user);
+    setEditMode(false);
+    // Scroll to detail panel on mobile
+    setTimeout(() => {
+      detailPanelRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 100);
+  };
 
-      let query = supabase
-        .from("profiles")
-        .select("*")
-        .order("created_at", { ascending: false })
-        .limit(100);
+  // Load users via API (uses service role to bypass RLS)
+  const loadUsers = useCallback(async () => {
+    setLoading(true);
 
-      if (search) {
-        query = query.or(
-          `username.ilike.%${search}%,display_name.ilike.%${search}%`
-        );
+    try {
+      const params = new URLSearchParams();
+      if (search) params.set("search", search);
+
+      const res = await fetch(`/api/admin/users?${params}`);
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Failed to load users");
       }
 
-      const { data } = await query;
-      setUsers((data as User[]) || []);
+      const data = await res.json();
+      setUsers((data.users as User[]) || []);
+    } catch (err) {
+      console.error("Failed to load users:", err);
+      setUsers([]);
+    } finally {
       setLoading(false);
     }
+  }, [search]);
 
+  useEffect(() => {
     loadUsers();
-  }, [search, supabase]);
+  }, [loadUsers]);
 
-  // Load user details when selected
+  // Load user details when selected (via API to bypass RLS)
   useEffect(() => {
     if (!selectedUser?.id) return;
     const userId = selectedUser.id;
 
     async function loadUserDetails() {
-      // Get follower/following/rsvp counts
-      const [
-        { count: followerCount },
-        { count: followingCount },
-        { count: rsvpCount },
-      ] = await Promise.all([
-        supabase
-          .from("follows")
-          .select("*", { count: "exact", head: true })
-          .eq("followed_user_id", userId),
-        supabase
-          .from("follows")
-          .select("*", { count: "exact", head: true })
-          .eq("follower_id", userId),
-        supabase
-          .from("event_rsvps")
-          .select("*", { count: "exact", head: true })
-          .eq("user_id", userId),
-      ]);
+      try {
+        const res = await fetch(`/api/admin/users?id=${userId}`);
+        if (!res.ok) return;
 
-      setSelectedUser((prev) =>
-        prev
-          ? {
-              ...prev,
-              follower_count: followerCount || 0,
-              following_count: followingCount || 0,
-              rsvp_count: rsvpCount || 0,
-            }
-          : null
-      );
+        const data = await res.json();
+        if (data.user) {
+          setSelectedUser((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  follower_count: data.user.follower_count || 0,
+                  following_count: data.user.following_count || 0,
+                  rsvp_count: data.user.rsvp_count || 0,
+                }
+              : null
+          );
+        }
+      } catch (err) {
+        console.error("Failed to load user details:", err);
+      }
     }
 
     loadUserDetails();
-  }, [selectedUser?.id, supabase]);
+  }, [selectedUser?.id]);
 
   const handleSave = async () => {
     if (!selectedUser) return;
 
     setSaving(true);
 
-    const { error } = await supabase
-      .from("profiles")
-      .update({
-        display_name: selectedUser.display_name,
-        bio: selectedUser.bio,
-        location: selectedUser.location,
-        is_public: selectedUser.is_public,
-        is_admin: selectedUser.is_admin,
-      } as never)
-      .eq("id", selectedUser.id);
+    try {
+      const res = await fetch("/api/admin/users", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: selectedUser.id,
+          updates: {
+            display_name: selectedUser.display_name,
+            bio: selectedUser.bio,
+            location: selectedUser.location,
+            is_public: selectedUser.is_public,
+            is_admin: selectedUser.is_admin,
+          },
+        }),
+      });
 
-    if (error) {
-      alert("Failed to save: " + error.message);
-    } else {
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to save");
+      }
+
       setUsers((prev) =>
         prev.map((u) => (u.id === selectedUser.id ? selectedUser : u))
       );
       setEditMode(false);
+    } catch (err) {
+      alert("Failed to save: " + (err instanceof Error ? err.message : "Unknown error"));
+    } finally {
+      setSaving(false);
     }
-
-    setSaving(false);
   };
 
   const handleDelete = async () => {
@@ -160,7 +171,7 @@ export default function AdminUsersPage() {
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="font-serif text-2xl text-[var(--cream)] italic">
+        <h1 className="text-2xl font-semibold text-[var(--cream)]">
           Manage Users
         </h1>
         <p className="font-mono text-xs text-[var(--muted)]">
@@ -168,9 +179,9 @@ export default function AdminUsersPage() {
         </p>
       </div>
 
-      <div className="flex gap-6">
+      <div className="flex flex-col lg:flex-row gap-6">
         {/* User List */}
-        <div className="w-1/2">
+        <div className="w-full lg:w-1/2">
           {/* Search */}
           <div className="mb-4">
             <input
@@ -189,18 +200,21 @@ export default function AdminUsersPage() {
                 <div className="w-6 h-6 border-2 border-[var(--coral)] border-t-transparent rounded-full animate-spin mx-auto" />
               </div>
             ) : users.length === 0 ? (
-              <p className="p-8 text-center font-mono text-sm text-[var(--muted)]">
-                No users found
-              </p>
+              <div className="p-12 text-center">
+                <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-[var(--twilight)] flex items-center justify-center">
+                  <svg className="w-6 h-6 text-[var(--muted)]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                  </svg>
+                </div>
+                <p className="font-mono text-sm text-[var(--cream)] mb-1">No users found</p>
+                <p className="font-mono text-xs text-[var(--muted)]">Try adjusting your search</p>
+              </div>
             ) : (
               <div className="divide-y divide-[var(--twilight)] max-h-[600px] overflow-y-auto">
                 {users.map((user) => (
                   <button
                     key={user.id}
-                    onClick={() => {
-                      setSelectedUser(user);
-                      setEditMode(false);
-                    }}
+                    onClick={() => handleSelectUser(user)}
                     className={`w-full flex items-center gap-3 p-3 text-left hover:bg-[var(--twilight)] transition-colors ${
                       selectedUser?.id === user.id ? "bg-[var(--twilight)]" : ""
                     }`}
@@ -246,14 +260,29 @@ export default function AdminUsersPage() {
         </div>
 
         {/* User Detail */}
-        <div className="w-1/2">
+        <div ref={detailPanelRef} className="w-full lg:w-1/2">
           {selectedUser ? (
             <div className="bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg">
               {/* Header */}
               <div className="p-4 border-b border-[var(--twilight)] flex items-center justify-between">
-                <h2 className="font-mono text-sm font-medium text-[var(--cream)]">
-                  User Details
-                </h2>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => setSelectedUser(null)}
+                    className="lg:hidden font-mono text-xs text-[var(--muted)] hover:text-[var(--cream)]"
+                  >
+                    ← Back
+                  </button>
+                  <h2 className="font-mono text-sm font-medium text-[var(--cream)]">
+                    User Details
+                  </h2>
+                  <Link
+                    href={`/profile/${selectedUser.username}`}
+                    target="_blank"
+                    className="font-mono text-xs text-[var(--coral)] hover:text-[var(--rose)] transition-colors"
+                  >
+                    View Profile →
+                  </Link>
+                </div>
                 <div className="flex gap-2">
                   {editMode ? (
                     <>
@@ -484,9 +513,15 @@ export default function AdminUsersPage() {
               </div>
             </div>
           ) : (
-            <div className="bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg p-8 text-center">
-              <p className="font-mono text-sm text-[var(--muted)]">
-                Select a user to view details
+            <div className="bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg p-12 text-center">
+              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-[var(--twilight)] flex items-center justify-center">
+                <svg className="w-8 h-8 text-[var(--muted)]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+              </div>
+              <h3 className="font-mono text-sm text-[var(--cream)] mb-1">No user selected</h3>
+              <p className="font-mono text-xs text-[var(--muted)]">
+                Select a user from the list to view their details
               </p>
             </div>
           )}

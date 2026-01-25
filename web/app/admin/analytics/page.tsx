@@ -145,7 +145,7 @@ export default function AnalyticsDashboardPage() {
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="font-serif text-2xl text-[var(--cream)] italic">Analytics Dashboard</h1>
+            <h1 className="text-2xl font-semibold text-[var(--cream)]">Analytics Dashboard</h1>
             <p className="font-mono text-xs text-[var(--muted)] mt-1">
               Platform metrics and performance
             </p>
