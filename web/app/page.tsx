@@ -161,11 +161,26 @@ export default async function Home() {
         </div>
       </div>
 
-      {/* Footer hint */}
+      {/* Footer */}
       <div className="mt-auto px-4 py-6 text-center border-t border-[var(--twilight)]">
-        <p className="font-mono text-[0.55rem] text-[var(--muted)] opacity-60">
+        <p className="font-mono text-[0.55rem] text-[var(--muted)] opacity-60 mb-2">
           AI-powered event discovery for {DEFAULT_PORTAL_NAME}
         </p>
+        <div className="flex items-center justify-center gap-4">
+          <Link
+            href="/privacy"
+            className="font-mono text-[0.55rem] text-[var(--muted)] opacity-60 hover:opacity-100 hover:text-[var(--coral)] transition-all"
+          >
+            Privacy Policy
+          </Link>
+          <span className="font-mono text-[0.55rem] text-[var(--muted)] opacity-40">|</span>
+          <Link
+            href="/terms"
+            className="font-mono text-[0.55rem] text-[var(--muted)] opacity-60 hover:opacity-100 hover:text-[var(--coral)] transition-all"
+          >
+            Terms of Use
+          </Link>
+        </div>
       </div>
     </div>
   );
