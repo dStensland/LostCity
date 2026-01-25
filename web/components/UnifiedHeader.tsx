@@ -190,14 +190,14 @@ function UnifiedHeaderInner({
 
           {/* Center: Nav tabs (desktop only) */}
           {!hideNav && (
-            <nav className="hidden sm:flex items-center gap-1 flex-1 justify-center">
+            <nav className="hidden sm:flex items-center flex-1 max-w-md mx-auto">
               {TABS.map((tab) => {
                 const active = isActive(tab);
                 return (
                   <Link
                     key={tab.key}
                     href={getHref(tab)}
-                    className={`nav-tab relative px-3 py-1.5 rounded-md font-mono text-xs whitespace-nowrap transition-all duration-300 ${
+                    className={`nav-tab relative flex-1 text-center px-3 py-1.5 rounded-md font-mono text-xs whitespace-nowrap transition-all duration-300 ${
                       active
                         ? "nav-tab-active text-[var(--void)] font-medium"
                         : "text-[var(--muted)] hover:text-[var(--neon-amber)] border border-transparent"
@@ -296,14 +296,14 @@ function UnifiedHeaderInner({
         {/* Mobile Nav Bar (below header on mobile) */}
         {!hideNav && (
           <nav className="sm:hidden border-t border-[var(--twilight)]/30 bg-[var(--night)]/95">
-            <div className="flex gap-1 py-2 px-3 overflow-x-auto scrollbar-hide">
+            <div className="flex py-2 px-4">
               {TABS.map((tab) => {
                 const active = isActive(tab);
                 return (
                   <Link
                     key={tab.key}
                     href={getHref(tab)}
-                    className={`nav-tab relative px-3 py-1.5 rounded-md font-mono text-xs whitespace-nowrap transition-all duration-300 ${
+                    className={`nav-tab relative flex-1 text-center py-1.5 rounded-md font-mono text-xs whitespace-nowrap transition-all duration-300 ${
                       active
                         ? "nav-tab-active text-[var(--void)] font-medium"
                         : "text-[var(--muted)] hover:text-[var(--neon-amber)] border border-transparent"
