@@ -60,7 +60,7 @@ export function NeighborhoodMap({ likedEvents, onComplete, onSkip }: Neighborhoo
     <div className="flex flex-col items-center min-h-[calc(100vh-120px)] px-4 py-6">
       {/* Header */}
       <div className="text-center mb-6 animate-fadeIn">
-        <h1 className="font-serif text-xl sm:text-2xl text-[var(--cream)] italic mb-1">
+        <h1 className="text-xl sm:text-2xl font-semibold text-[var(--cream)] mb-1">
           Where do you explore?
         </h1>
         <p className="text-sm text-[var(--muted)]">

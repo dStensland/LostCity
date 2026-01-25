@@ -183,7 +183,7 @@ export default function NotificationsPage() {
 
       <main className="max-w-2xl mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-8">
-          <h1 className="font-serif text-2xl text-[var(--cream)] italic">
+          <h1 className="text-2xl font-semibold text-[var(--cream)]">
             Notifications
           </h1>
           {(saved || saving) && (

@@ -68,7 +68,7 @@ export default async function FollowersPage({ params }: Props) {
           </Link>
         </div>
 
-        <h1 className="font-serif text-xl text-[var(--cream)] italic mb-1">
+        <h1 className="text-xl font-semibold text-[var(--cream)] mb-1">
           Followers
         </h1>
         <p className="font-mono text-xs text-[var(--muted)] mb-6">

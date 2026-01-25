@@ -22,7 +22,7 @@ export default function NotFound() {
 
       {/* Message */}
       <div className="text-center mt-8 max-w-md">
-        <h1 className="font-serif text-2xl text-[var(--cream)] italic mb-2">
+        <h1 className="text-2xl font-semibold text-[var(--cream)] mb-2">
           Some who wander are also lost
         </h1>
         <p className="font-mono text-sm text-[var(--muted)]">

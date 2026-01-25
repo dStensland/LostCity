@@ -128,7 +128,7 @@ export default async function ProfilePage({ params }: Props) {
           <div className="flex-1 min-w-0">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <h1 className="font-serif text-2xl text-[var(--cream)] italic truncate">
+                <h1 className="text-2xl font-semibold text-[var(--cream)] truncate">
                   {profile.display_name || profile.username}
                 </h1>
                 <p className="font-mono text-sm text-[var(--muted)]">

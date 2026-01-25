@@ -88,7 +88,7 @@ export default function ConfirmDialog({
         <div className="p-6">
           <h2
             id="confirm-dialog-title"
-            className="font-serif text-lg text-[var(--cream)] italic mb-2"
+            className="text-lg font-semibold text-[var(--cream)] mb-2"
           >
             {title}
           </h2>

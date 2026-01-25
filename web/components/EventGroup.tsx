@@ -10,9 +10,12 @@ import CategoryIcon, { getCategoryColor } from "./CategoryIcon";
 const VENUE_CATEGORY_MAP: Record<string, string> = {
   // Movie theaters
   "plaza theatre": "film",
+  "tara theatre": "film",
+  "landmark midtown art cinema": "film",
   "regal": "film",
   "amc": "film",
   "cinemark": "film",
+  "silverspot": "film",
   // Sports venues
   "state farm arena": "sports",
   "mercedes-benz stadium": "sports",

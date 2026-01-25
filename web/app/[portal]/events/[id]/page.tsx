@@ -251,33 +251,16 @@ export default async function PortalEventPage({ params }: Props) {
               "--glow-color": categoryColor,
             } as React.CSSProperties}
           >
-            {event.image_url ? (
-              <EventHeroImage
-                src={event.image_url}
-                alt={event.title}
-                category={event.category}
-                title={event.title}
-                venueName={event.venue?.name}
-                neighborhood={event.venue?.neighborhood}
-                startDate={event.start_date}
-                startTime={event.start_time}
-                isLive={isLive}
-                eventId={event.id}
-              />
-            ) : (
-              <EventHeroImage
-                src=""
-                alt={event.title}
-                category={event.category}
-                title={event.title}
-                venueName={event.venue?.name}
-                neighborhood={event.venue?.neighborhood}
-                startDate={event.start_date}
-                startTime={event.start_time}
-                isLive={isLive}
-                eventId={event.id}
-              />
-            )}
+            <EventHeroImage
+              src={event.image_url || ""}
+              alt={event.title}
+              category={event.category}
+              title={event.title}
+              venueName={event.venue?.name}
+              neighborhood={event.venue?.neighborhood}
+              isLive={isLive}
+              eventId={event.id}
+            />
 
             {/* Live event heat effect */}
             {isLive && (

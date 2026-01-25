@@ -20,7 +20,7 @@ export default async function SettingsPage() {
 
       {/* Main */}
       <main className="max-w-2xl mx-auto px-4 py-8">
-        <h1 className="font-serif text-2xl text-[var(--cream)] italic mb-8">
+        <h1 className="text-2xl font-semibold text-[var(--cream)] mb-8">
           Settings
         </h1>
 

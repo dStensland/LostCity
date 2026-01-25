@@ -90,61 +90,98 @@ VENUES = {
 
 
 def parse_schedule_page(soup: BeautifulSoup, sport_name: str) -> list[dict]:
-    """Parse game information from schedule page text."""
+    """Parse game information from schedule page by finding schedule item divs."""
     games = []
-    body_text = soup.get_text(separator="\n")
-    lines = [l.strip() for l in body_text.split("\n") if l.strip()]
 
-    # Look for date patterns followed by opponent info
-    # Format typically: "Sat Jan 24" or "Jan 24" followed by opponent
-    current_date = None
-    current_time = None
+    # Find all schedule items
+    schedule_items = soup.select("div.schedule__table_item--inner")
+    logger.debug(f"Found {len(schedule_items)} schedule items")
 
-    for i, line in enumerate(lines):
-        # Date pattern: "Sat Jan 24" or "Jan 24"
-        date_match = re.match(
-            r"^(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun)?\s*"
-            r"(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{1,2})$",
-            line, re.IGNORECASE
-        )
-        if date_match:
-            month, day = date_match.groups()
-            # Assume current or next year
+    for item in schedule_items:
+        try:
+            # Check if this is a home game
+            item_classes = item.get("class", [])
+            is_home = "home" in item_classes
+
+            # Skip away and neutral games - we only want home games
+            if not is_home:
+                continue
+
+            # Check if game already has results (past game)
+            has_result = item.select_one("div.score_results") is not None
+            if has_result:
+                logger.debug("Skipping past game with results")
+                continue
+
+            # Extract date from <time> tag
+            time_elem = item.select_one("time")
+            if not time_elem:
+                logger.debug("No time element found, skipping")
+                continue
+
+            date_str = time_elem.get_text(strip=True)  # e.g., "Mon Nov 3" or "Sat Dec 6"
+
+            # Parse date - format is like "Mon Nov 3" or "Fri Nov 7"
+            # Remove day of week if present
+            date_parts = date_str.split()
+            if len(date_parts) >= 3:
+                # Format: "Mon Nov 3"
+                month_str = date_parts[1]
+                day_str = date_parts[2]
+            elif len(date_parts) == 2:
+                # Format: "Nov 3"
+                month_str = date_parts[0]
+                day_str = date_parts[1]
+            else:
+                logger.debug(f"Could not parse date: {date_str}")
+                continue
+
+            # Determine year (assume current or next year)
             year = datetime.now().year
             try:
-                test_date = datetime.strptime(f"{month} {day} {year}", "%b %d %Y")
+                test_date = datetime.strptime(f"{month_str} {day_str} {year}", "%b %d %Y")
+                # If date is more than 30 days in the past, assume it's next year
                 if test_date < datetime.now() - timedelta(days=30):
                     year += 1
-                current_date = f"{year}-{test_date.month:02d}-{int(day):02d}"
-            except ValueError:
-                current_date = None
-            continue
+                parsed_date = f"{year}-{test_date.month:02d}-{int(day_str):02d}"
+            except ValueError as e:
+                logger.debug(f"Failed to parse date {month_str} {day_str}: {e}")
+                continue
 
-        # Time pattern: "12:00 pm" or "7:00 PM"
-        time_match = re.match(r"^(\d{1,2}):(\d{2})\s*(am|pm)$", line, re.IGNORECASE)
-        if time_match:
-            hour, minute, period = time_match.groups()
-            hour = int(hour)
-            if period.lower() == "pm" and hour != 12:
-                hour += 12
-            elif period.lower() == "am" and hour == 12:
-                hour = 0
-            current_time = f"{hour:02d}:{minute}"
-            continue
+            # Extract opponent from img alt tags - second image is opponent
+            logos = item.select("img[alt]")
+            if len(logos) < 2:
+                logger.debug("Could not find opponent logo")
+                continue
+            opponent = logos[1].get("alt", "").strip()
 
-        # Opponent pattern: "vs" or "at" followed by team name
-        opponent_match = re.match(r"^(vs\.?|at)\s+(.+)$", line, re.IGNORECASE)
-        if opponent_match and current_date:
-            prefix, opponent = opponent_match.groups()
-            is_home = prefix.lower().startswith("vs")
+            # Extract time if available
+            time_div = item.select_one("div.time")
+            game_time = None
+            if time_div:
+                time_str = time_div.get_text(strip=True)
+                # Parse time like "7:00 PM" or "2:00 PM"
+                time_match = re.match(r"(\d{1,2}):(\d{2})\s*(AM|PM)", time_str, re.IGNORECASE)
+                if time_match:
+                    hour, minute, period = time_match.groups()
+                    hour = int(hour)
+                    if period.upper() == "PM" and hour != 12:
+                        hour += 12
+                    elif period.upper() == "AM" and hour == 12:
+                        hour = 0
+                    game_time = f"{hour:02d}:{minute}"
 
             games.append({
-                "date": current_date,
-                "time": current_time,
-                "opponent": opponent.strip(),
+                "date": parsed_date,
+                "time": game_time,
+                "opponent": opponent,
                 "is_home": is_home,
             })
-            current_time = None  # Reset time for next game
+            logger.debug(f"Found game: {opponent} on {parsed_date}")
+
+        except Exception as e:
+            logger.warning(f"Error parsing schedule item: {e}")
+            continue
 
     return games
 

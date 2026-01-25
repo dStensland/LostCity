@@ -61,7 +61,7 @@ export function FeedPreview({ likedEvents, onComplete, portalSlug }: FeedPreview
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
             </svg>
           </div>
-          <h1 className="font-serif text-xl sm:text-2xl text-[var(--cream)] italic mb-1">
+          <h1 className="text-xl sm:text-2xl font-semibold text-[var(--cream)] mb-1">
             Your feed is ready
           </h1>
           <p className="text-sm text-[var(--muted)]">

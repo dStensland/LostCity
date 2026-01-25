@@ -4,6 +4,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import CategoryIcon, { getCategoryColor } from "@/components/CategoryIcon";
+import CategorySkeleton from "@/components/CategorySkeleton";
 
 type Producer = {
   id: string;
@@ -241,26 +242,11 @@ export default function PortalCommunityView({ portalId, portalSlug, portalName }
 
   if (loading) {
     return (
-      <div className="py-6">
-        <div className="mb-6">
-          <div className="h-6 w-32 rounded skeleton-shimmer mb-2" />
-          <div className="h-4 w-64 rounded skeleton-shimmer" style={{ animationDelay: "0.1s" }} />
-        </div>
-        <div className="space-y-4">
-          {[...Array(5)].map((_, i) => (
-            <div key={i} className="p-5 rounded-xl border border-[var(--twilight)]" style={{ backgroundColor: "var(--card-bg)" }}>
-              <div className="flex items-start gap-4">
-                <div className="w-[72px] h-[72px] rounded-xl skeleton-shimmer" style={{ animationDelay: `${i * 0.1}s` }} />
-                <div className="flex-1 min-w-0">
-                  <div className="h-5 w-2/3 rounded skeleton-shimmer mb-2" style={{ animationDelay: `${i * 0.1 + 0.05}s` }} />
-                  <div className="h-4 w-24 rounded skeleton-shimmer mb-3" style={{ animationDelay: `${i * 0.1 + 0.1}s` }} />
-                  <div className="h-8 w-36 rounded-lg skeleton-shimmer" style={{ animationDelay: `${i * 0.1 + 0.15}s` }} />
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
+      <CategorySkeleton
+        count={8}
+        title="Community"
+        subtitle="Loading organizations..."
+      />
     );
   }
 

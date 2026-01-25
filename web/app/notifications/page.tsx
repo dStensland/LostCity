@@ -174,7 +174,7 @@ export default function NotificationsPage() {
       <main className="max-w-2xl mx-auto px-4 py-6">
         {/* Page header */}
         <div className="flex items-center justify-between mb-6">
-          <h1 className="font-serif text-2xl text-[var(--cream)] italic">Notifications</h1>
+          <h1 className="text-2xl font-semibold text-[var(--cream)]">Notifications</h1>
           {unreadCount > 0 && (
             <button
               onClick={handleMarkAllRead}

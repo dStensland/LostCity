@@ -150,7 +150,7 @@ export default function CreateCollectionModal({ isOpen, onClose }: CreateCollect
         ref={modalRef}
         className="relative bg-[var(--night)] border border-[var(--twilight)] rounded-xl p-6 max-w-md w-full shadow-2xl animate-in fade-in scale-in"
       >
-        <h2 id="create-collection-title" className="font-serif text-xl text-[var(--cream)] italic mb-6">
+        <h2 id="create-collection-title" className="text-xl font-semibold text-[var(--cream)] mb-6">
           Create Collection
         </h2>
 

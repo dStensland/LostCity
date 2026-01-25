@@ -255,7 +255,7 @@ export default function RecommendButton({
             className="w-full max-w-md bg-[var(--dusk)] border border-[var(--twilight)] rounded-xl shadow-2xl animate-in fade-in scale-in"
           >
             <div className="p-4 border-b border-[var(--twilight)]">
-              <h3 id="recommend-modal-title" className="font-serif text-lg text-[var(--cream)] italic">
+              <h3 id="recommend-modal-title" className="text-lg font-semibold text-[var(--cream)]">
                 {isRecommended ? "Edit Recommendation" : "Add Recommendation"}
               </h3>
             </div>

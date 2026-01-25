@@ -68,7 +68,7 @@ export default async function CollectionsPage() {
 
       <main className="max-w-4xl mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-8">
-          <h1 className="font-serif text-2xl text-[var(--cream)] italic">Collections</h1>
+          <h1 className="text-2xl font-semibold text-[var(--cream)]">Collections</h1>
           <CreateCollectionButton />
         </div>
 

@@ -2,6 +2,7 @@
 Crawler for College Football Hall of Fame (cfbhall.com).
 
 Site uses JavaScript rendering - must use Playwright.
+Events are on /happenings/ page, not /events.
 """
 
 from __future__ import annotations
@@ -15,12 +16,11 @@ from playwright.sync_api import sync_playwright
 
 from db import get_or_create_venue, insert_event, find_event_by_hash
 from dedupe import generate_content_hash
-from utils import extract_images_from_page
 
 logger = logging.getLogger(__name__)
 
 BASE_URL = "https://www.cfbhall.com"
-EVENTS_URL = f"{BASE_URL}/events"
+HAPPENINGS_URL = f"{BASE_URL}/happenings/"
 
 VENUE_DATA = {
     "name": "College Football Hall of Fame",
@@ -38,18 +38,75 @@ VENUE_DATA = {
 }
 
 
-def parse_time(time_text: str) -> Optional[str]:
-    """Parse time from '7:00 PM' format."""
-    match = re.search(r"(\d{1,2}):(\d{2})\s*(am|pm)", time_text, re.IGNORECASE)
-    if match:
-        hour, minute, period = match.groups()
-        hour = int(hour)
-        if period.lower() == "pm" and hour != 12:
-            hour += 12
-        elif period.lower() == "am" and hour == 12:
-            hour = 0
-        return f"{hour:02d}:{minute}"
-    return None
+def parse_date_range(date_text: str) -> tuple[Optional[str], Optional[str]]:
+    """
+    Parse date ranges like:
+    - "Saturday, February 28 - Sunday, March 1"
+    - "Now Open"
+
+    Returns (start_date, end_date) or (None, None) if unparseable.
+    """
+    # Handle ongoing exhibitions
+    if "now open" in date_text.lower() or "follow" in date_text.lower() or "now available" in date_text.lower():
+        return None, None
+
+    # Try to parse date range like "Saturday, February 28 - Sunday, March 1"
+    # Pattern: Day, Month DD - Day, Month DD
+    range_match = re.search(
+        r'(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday),?\s+'
+        r'(January|February|March|April|May|June|July|August|September|October|November|December)\s+'
+        r'(\d{1,2})\s*-\s*'
+        r'(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday),?\s+'
+        r'(January|February|March|April|May|June|July|August|September|October|November|December)\s+'
+        r'(\d{1,2})',
+        date_text,
+        re.IGNORECASE
+    )
+
+    if range_match:
+        start_month, start_day, end_month, end_day = range_match.groups()
+        current_year = datetime.now().year
+
+        try:
+            # Parse start date
+            start_dt = datetime.strptime(f"{start_month} {start_day} {current_year}", "%B %d %Y")
+            # If start date is in the past, assume next year
+            if start_dt.date() < datetime.now().date():
+                start_dt = datetime.strptime(f"{start_month} {start_day} {current_year + 1}", "%B %d %Y")
+
+            # Parse end date
+            end_year = start_dt.year
+            # Handle year rollover (e.g., Dec 31 - Jan 1)
+            end_dt = datetime.strptime(f"{end_month} {end_day} {end_year}", "%B %d %Y")
+            if end_dt < start_dt:
+                end_dt = datetime.strptime(f"{end_month} {end_day} {end_year + 1}", "%B %d %Y")
+
+            return start_dt.strftime("%Y-%m-%d"), end_dt.strftime("%Y-%m-%d")
+        except ValueError:
+            pass
+
+    # Try single date format
+    single_match = re.search(
+        r'(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday),?\s+'
+        r'(January|February|March|April|May|June|July|August|September|October|November|December)\s+'
+        r'(\d{1,2})(?:,?\s+(\d{4}))?',
+        date_text,
+        re.IGNORECASE
+    )
+
+    if single_match:
+        month, day, year = single_match.groups()
+        year = year or str(datetime.now().year)
+
+        try:
+            dt = datetime.strptime(f"{month} {day} {year}", "%B %d %Y")
+            if dt.date() < datetime.now().date():
+                dt = datetime.strptime(f"{month} {day} {int(year) + 1}", "%B %d %Y")
+            return dt.strftime("%Y-%m-%d"), None
+        except ValueError:
+            pass
+
+    return None, None
 
 
 def crawl(source: dict) -> tuple[int, int, int]:
@@ -70,79 +127,79 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             venue_id = get_or_create_venue(VENUE_DATA)
 
-            logger.info(f"Fetching College Football Hall of Fame: {EVENTS_URL}")
-            page.goto(EVENTS_URL, wait_until="domcontentloaded", timeout=30000)
+            logger.info(f"Fetching College Football Hall of Fame: {HAPPENINGS_URL}")
+            page.goto(HAPPENINGS_URL, wait_until="domcontentloaded", timeout=30000)
             page.wait_for_timeout(3000)
 
-            # Extract images from page
-            image_map = extract_images_from_page(page)
-
             # Scroll to load all content
-            for _ in range(5):
+            for _ in range(3):
                 page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
                 page.wait_for_timeout(1000)
 
-            # Get page text and parse line by line
-            body_text = page.inner_text("body")
-            lines = [l.strip() for l in body_text.split("\n") if l.strip()]
+            # Find all event cards - they have class "event card-zoom"
+            event_cards = page.query_selector_all('.event.card-zoom')
 
-            # Parse events - look for date patterns
-            i = 0
-            while i < len(lines):
-                line = lines[i]
+            logger.info(f"Found {len(event_cards)} event cards")
 
-                # Skip navigation items
-                if len(line) < 3:
-                    i += 1
-                    continue
-
-                # Look for date patterns
-                date_match = re.match(
-                    r"(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)?,?\s*(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{1,2})(?:,?\s+(\d{4}))?",
-                    line,
-                    re.IGNORECASE
-                )
-
-                if date_match:
-                    month = date_match.group(1)
-                    day = date_match.group(2)
-                    year = date_match.group(3) if date_match.group(3) else str(datetime.now().year)
-
-                    # Look for title in surrounding lines
-                    title = None
-                    start_time = None
-
-                    for offset in [-2, -1, 1, 2, 3]:
-                        idx = i + offset
-                        if 0 <= idx < len(lines):
-                            check_line = lines[idx]
-                            if re.match(r"(January|February|March)", check_line, re.IGNORECASE):
-                                continue
-                            if not start_time:
-                                time_result = parse_time(check_line)
-                                if time_result:
-                                    start_time = time_result
-                                    continue
-                            if not title and len(check_line) > 5:
-                                if not re.match(r"\d{1,2}[:/]", check_line):
-                                    if not re.match(r"(free|tickets|register|\$|more info)", check_line.lower()):
-                                        title = check_line
-                                        break
-
-                    if not title:
-                        i += 1
+            for card in event_cards:
+                try:
+                    # Get the event URL from the link inside the card
+                    link_elem = card.query_selector('a[href*="/happenings/"]')
+                    if not link_elem:
                         continue
 
-                    # Parse date
-                    try:
-                        month_str = month[:3] if len(month) > 3 else month
-                        dt = datetime.strptime(f"{month_str} {day} {year}", "%b %d %Y")
-                        if dt.date() < datetime.now().date():
-                            dt = datetime.strptime(f"{month_str} {day} {int(year) + 1}", "%b %d %Y")
-                        start_date = dt.strftime("%Y-%m-%d")
-                    except ValueError:
-                        i += 1
+                    event_url = link_elem.get_attribute("href")
+                    if not event_url or event_url == "/happenings/":
                         continue
+
+                    if not event_url.startswith("http"):
+                        event_url = BASE_URL + event_url
+
+                    # Get title from h2
+                    title_elem = card.query_selector("h2")
+                    if not title_elem:
+                        continue
+
+                    title = title_elem.inner_text().strip()
+                    if not title or len(title) < 5:
+                        continue
+
+                    # Skip navigation items
+                    if title.lower() in ["happenings", "news", "blog", "events and happenings"]:
+                        continue
+
+                    # Get date from happening-date div
+                    date_elem = card.query_selector(".happening-date, .happenings-date")
+                    date_text = ""
+                    if date_elem:
+                        date_text = date_elem.inner_text().strip()
+
+                    # Parse the date
+                    start_date, end_date = parse_date_range(date_text)
+
+                    # Skip if we couldn't parse a date or it's an ongoing exhibition
+                    if not start_date:
+                        logger.info(f"Skipping '{title}' - no parseable date (text: '{date_text}')")
+                        continue
+
+                    # Get description from p tag
+                    description = "Event at College Football Hall of Fame"
+                    desc_elem = card.query_selector("p")
+                    if desc_elem:
+                        desc_text = desc_elem.inner_text().strip()
+                        if desc_text and len(desc_text) > 20:
+                            description = desc_text
+
+                    # Get image URL
+                    image_url = None
+                    img_elem = card.query_selector("img")
+                    if img_elem:
+                        image_url = img_elem.get_attribute("src")
+                        if image_url and not image_url.startswith("http"):
+                            if image_url.startswith("//"):
+                                image_url = "https:" + image_url
+                            elif image_url.startswith("/"):
+                                image_url = BASE_URL + image_url
 
                     events_found += 1
 
@@ -150,37 +207,37 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     if find_event_by_hash(content_hash):
                         events_updated += 1
-                        i += 1
+                        logger.info(f"Event already exists: {title}")
                         continue
 
                     event_record = {
                         "source_id": source_id,
                         "venue_id": venue_id,
                         "title": title,
-                        "description": "Event at College Football Hall of Fame",
+                        "description": description,
                         "start_date": start_date,
-                        "start_time": start_time,
-                        "end_date": None,
+                        "start_time": None,  # No specific times on the happenings page
+                        "end_date": end_date,
                         "end_time": None,
-                        "is_all_day": start_time is None,
+                        "is_all_day": True,
                         "category": "community",
                         "subcategory": None,
                         "tags": [
-                        "college-football",
-                        "hall-of-fame",
-                        "football",
-                        "downtown",
-                        "sports",
-                    ],
+                            "college-football",
+                            "hall-of-fame",
+                            "football",
+                            "downtown",
+                            "sports",
+                        ],
                         "price_min": None,
                         "price_max": None,
                         "price_note": None,
                         "is_free": False,
-                        "source_url": EVENTS_URL,
-                        "ticket_url": EVENTS_URL,
-                        "image_url": image_map.get(title),
-                        "raw_text": f"{title} - {start_date}",
-                        "extraction_confidence": 0.80,
+                        "source_url": event_url,
+                        "ticket_url": event_url,
+                        "image_url": image_url,
+                        "raw_text": f"{title} - {date_text}",
+                        "extraction_confidence": 0.85,
                         "is_recurring": False,
                         "recurrence_rule": None,
                         "content_hash": content_hash,
@@ -189,11 +246,13 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     try:
                         insert_event(event_record)
                         events_new += 1
-                        logger.info(f"Added: {title} on {start_date}")
+                        logger.info(f"Added: {title} on {start_date}" + (f" - {end_date}" if end_date else ""))
                     except Exception as e:
                         logger.error(f"Failed to insert: {title}: {e}")
 
-                i += 1
+                except Exception as e:
+                    logger.error(f"Error processing event card: {e}")
+                    continue
 
             browser.close()
 

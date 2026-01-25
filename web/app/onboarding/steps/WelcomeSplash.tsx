@@ -61,7 +61,7 @@ export function WelcomeSplash({ onComplete, portalLogo, portalName }: WelcomeSpl
       </div>
 
       {/* Tagline */}
-      <p className="relative z-10 mt-6 font-serif text-xl text-[var(--soft)] italic animate-fadeIn animation-delay-500">
+      <p className="relative z-10 mt-6 text-xl font-medium text-[var(--soft)] animate-fadeIn animation-delay-500">
         {portalName ? `Welcome to ${portalName}` : "Discover what's happening"}
       </p>
 

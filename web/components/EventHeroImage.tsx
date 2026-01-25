@@ -4,18 +4,15 @@ import { useState, useCallback } from "react";
 import Image from "next/image";
 import CategoryIcon, { getCategoryColor } from "./CategoryIcon";
 import LiveIndicator from "./LiveIndicator";
-import { format, parseISO } from "date-fns";
 
 interface EventHeroImageProps {
   src: string;
   alt: string;
   category?: string | null;
-  // New overlay content props
+  // Overlay content props
   title?: string;
   venueName?: string | null;
   neighborhood?: string | null;
-  startDate?: string;
-  startTime?: string | null;
   isLive?: boolean;
   eventId?: number;
 }
@@ -27,8 +24,6 @@ export default function EventHeroImage({
   title,
   venueName,
   neighborhood,
-  startDate,
-  startTime,
   isLive,
   eventId,
 }: EventHeroImageProps) {
@@ -40,18 +35,8 @@ export default function EventHeroImage({
     setImgLoaded(true);
   }, []);
 
-  // Format date/time for display
-  const dateDisplay = startDate ? format(parseISO(startDate), "EEE, MMM d") : null;
-  const timeDisplay = startTime ? (() => {
-    const [hours, minutes] = startTime.split(":");
-    const hour = parseInt(hours, 10);
-    const period = hour >= 12 ? "PM" : "AM";
-    const hour12 = hour % 12 || 12;
-    return `${hour12}:${minutes} ${period}`;
-  })() : null;
-
-  // Determine if we should show the overlay
-  const showOverlay = title || venueName || dateDisplay;
+  // Determine if we should show the overlay (title or venue present)
+  const showOverlay = title || venueName;
 
   if (imgError) {
     // Fallback: Category icon on gradient background with glass overlay
@@ -82,8 +67,6 @@ export default function EventHeroImage({
             title={title}
             venueName={venueName}
             neighborhood={neighborhood}
-            dateDisplay={dateDisplay}
-            timeDisplay={timeDisplay}
             isLive={isLive}
             eventId={eventId}
           />
@@ -134,8 +117,6 @@ export default function EventHeroImage({
           title={title}
           venueName={venueName}
           neighborhood={neighborhood}
-          dateDisplay={dateDisplay}
-          timeDisplay={timeDisplay}
           isLive={isLive}
           eventId={eventId}
         />
@@ -160,8 +141,6 @@ function HeroOverlay({
   title,
   venueName,
   neighborhood,
-  dateDisplay,
-  timeDisplay,
   isLive,
   eventId,
 }: {
@@ -170,8 +149,6 @@ function HeroOverlay({
   title?: string;
   venueName?: string | null;
   neighborhood?: string | null;
-  dateDisplay?: string | null;
-  timeDisplay?: string | null;
   isLive?: boolean;
   eventId?: number;
 }) {
@@ -179,19 +156,19 @@ function HeroOverlay({
     <div
       className="absolute bottom-0 left-0 right-0 glass-wet"
       style={{
-        background: `linear-gradient(to top, rgba(9, 9, 11, 0.95), rgba(9, 9, 11, 0.8), transparent)`,
+        background: `linear-gradient(to top, rgba(9, 9, 11, 0.98) 0%, rgba(9, 9, 11, 0.9) 40%, rgba(9, 9, 11, 0.6) 70%, transparent 100%)`,
       }}
     >
-      <div className="px-4 sm:px-6 pb-5 pt-10">
+      <div className="px-4 sm:px-6 pb-5 pt-12">
         {/* Top row: Category + Live indicator */}
         <div className="flex items-center gap-2 mb-2">
           {category && (
             <span
-              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-mono uppercase tracking-wider"
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-mono uppercase tracking-wider backdrop-blur-sm"
               style={{
-                backgroundColor: `${categoryColor}20`,
+                backgroundColor: `${categoryColor}30`,
                 color: categoryColor,
-                border: `1px solid ${categoryColor}40`,
+                border: `1px solid ${categoryColor}50`,
               }}
             >
               <CategoryIcon type={category} size={14} glow="subtle" />
@@ -203,35 +180,32 @@ function HeroOverlay({
           )}
         </div>
 
-        {/* Title with text glow */}
+        {/* Title with strong text shadow for legibility */}
         {title && (
           <h1
-            className="text-xl sm:text-2xl md:text-3xl font-bold text-[var(--cream)] leading-tight mb-2"
+            className="text-xl sm:text-2xl md:text-3xl font-bold text-[var(--cream)] leading-tight mb-1"
             style={{
-              textShadow: `0 0 30px ${categoryColor}40, 0 0 60px ${categoryColor}20`,
+              textShadow: `0 2px 4px rgba(0,0,0,0.8), 0 0 30px ${categoryColor}40`,
             }}
           >
             {title}
           </h1>
         )}
 
-        {/* Venue + Date row */}
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-[var(--soft)]">
-          {(venueName || neighborhood) && (
-            <span className="font-serif">
-              {venueName}
-              {neighborhood && (
-                <span className="text-[var(--muted)]"> · {neighborhood}</span>
-              )}
-            </span>
-          )}
-          {(dateDisplay || timeDisplay) && (
-            <span className="font-mono text-[var(--cream)]">
-              {dateDisplay}
-              {timeDisplay && ` · ${timeDisplay}`}
-            </span>
-          )}
-        </div>
+        {/* Venue only - date/time shown in EventQuickActions below */}
+        {(venueName || neighborhood) && (
+          <p
+            className="text-sm text-[var(--soft)] font-serif"
+            style={{
+              textShadow: "0 1px 3px rgba(0,0,0,0.8)",
+            }}
+          >
+            {venueName}
+            {neighborhood && (
+              <span className="text-[var(--muted)]"> · {neighborhood}</span>
+            )}
+          </p>
+        )}
       </div>
     </div>
   );

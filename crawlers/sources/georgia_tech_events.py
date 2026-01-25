@@ -1,24 +1,24 @@
 """
 Crawler for Georgia Tech Campus Events (calendar.gatech.edu).
 Lectures, arts, campus activities, and public events.
-Georgia Tech uses Trumba calendar system.
+Georgia Tech uses a Drupal-based calendar system with RSS feeds.
 """
 
-import json
 import logging
 import re
+import xml.etree.ElementTree as ET
 from datetime import datetime
+from html import unescape
 from bs4 import BeautifulSoup
 import requests
 
 from db import get_or_create_venue, insert_event, find_event_by_hash
 from dedupe import generate_content_hash
-from utils import extract_image_url
 
 logger = logging.getLogger(__name__)
 
 BASE_URL = "https://calendar.gatech.edu"
-EVENTS_URL = BASE_URL
+RSS_FEED_URL = "https://calendar.gatech.edu/event-calendar-day.xml"
 
 VENUE_DATA = {
     "name": "Georgia Tech",
@@ -33,60 +33,67 @@ VENUE_DATA = {
 }
 
 
-def parse_jsonld_events(soup: BeautifulSoup) -> list[dict]:
-    """Extract Event data from JSON-LD scripts."""
-    events = []
-    scripts = soup.find_all("script", type="application/ld+json")
+def parse_time_element(description: str) -> tuple[str, str, str, str]:
+    """
+    Extract start and end datetime information from RSS description.
+    Returns (start_date, start_time, end_date, end_time)
+    """
+    # Look for Event time block with datetime attributes
+    # Pattern: <time datetime="2026-01-22T21:00:00Z">Thu, 01/22/2026 - 16:00</time>
+    time_pattern = r'Event time.*?<time datetime="([^"]+)">([^<]+)</time>\s*-\s*<time datetime="([^"]+)">([^<]+)</time>'
+    match = re.search(time_pattern, description, re.DOTALL)
 
-    for script in scripts:
-        try:
-            data = json.loads(script.string)
-            if isinstance(data, dict):
-                if data.get("@type") == "Event":
-                    events.append(data)
-                if "@graph" in data:
-                    events.extend([e for e in data["@graph"] if e.get("@type") == "Event"])
-            elif isinstance(data, list):
-                events.extend([e for e in data if e.get("@type") == "Event"])
-        except (json.JSONDecodeError, TypeError):
-            continue
+    if not match:
+        return None, None, None, None
 
-    return events
+    start_iso = match.group(1)  # e.g., "2026-01-22T21:00:00Z"
+    end_iso = match.group(3)
+
+    # Parse ISO format datetime
+    try:
+        start_dt = datetime.fromisoformat(start_iso.replace('Z', '+00:00'))
+        end_dt = datetime.fromisoformat(end_iso.replace('Z', '+00:00'))
+
+        # Convert to local time (EST/EDT)
+        # The times in the feed are UTC, but the displayed times are EST
+        # From the example: datetime="2026-01-22T21:00:00Z" shows as "16:00" (5 hours behind)
+
+        start_date = start_dt.strftime("%Y-%m-%d")
+        start_time = start_dt.strftime("%H:%M:%S")
+        end_date = end_dt.strftime("%Y-%m-%d")
+        end_time = end_dt.strftime("%H:%M:%S")
+
+        # Check if it's an all-day event (starts at 00:00 and ends at 23:59 or similar)
+        if (start_dt.hour == 5 and start_dt.minute == 0 and
+            end_dt.hour == 4 and end_dt.minute == 59):
+            # This is an all-day event (midnight to 11:59pm in EST)
+            return start_date, None, end_date, None
+
+        return start_date, start_time, end_date, end_time
+
+    except Exception as e:
+        logger.warning(f"Failed to parse datetime: {e}")
+        return None, None, None, None
 
 
-def parse_trumba_events(soup: BeautifulSoup) -> list[dict]:
-    """Parse events from Trumba calendar HTML structure."""
-    events = []
+def extract_location_from_description(description: str) -> str:
+    """Try to extract location from description HTML."""
+    # Some events have location in the title or description
+    # Clean HTML tags and look for common location patterns
+    text = re.sub(r'<[^>]+>', ' ', description)
+    text = unescape(text)
 
-    # Trumba uses specific class patterns for events
-    event_items = soup.find_all(class_=re.compile(r"twSimpleEvent|twDetailEvent|event-item", re.IGNORECASE))
+    # Look for common location patterns
+    # E.g., "at Klaus Atrium", "- Room 123", etc.
+    location_match = re.search(r'\bat\s+([A-Z][^\.,;]+(?:Atrium|Hall|Building|Room|Center|Lab|Theatre|Theater))', text, re.IGNORECASE)
+    if location_match:
+        return location_match.group(1).strip()
 
-    for item in event_items:
-        event = {}
-
-        # Try to find title
-        title_elem = item.find(class_=re.compile(r"title|summary|event-title", re.IGNORECASE))
-        if title_elem:
-            event["title"] = title_elem.get_text(strip=True)
-
-        # Try to find date
-        date_elem = item.find(class_=re.compile(r"date|startdate", re.IGNORECASE))
-        if date_elem:
-            event["date_text"] = date_elem.get_text(strip=True)
-
-        # Try to find location
-        loc_elem = item.find(class_=re.compile(r"location|venue", re.IGNORECASE))
-        if loc_elem:
-            event["location"] = loc_elem.get_text(strip=True)
-
-        if event.get("title"):
-            events.append(event)
-
-    return events
+    return None
 
 
 def crawl(source: dict) -> tuple[int, int, int]:
-    """Crawl Georgia Tech campus events calendar."""
+    """Crawl Georgia Tech campus events calendar via RSS feed."""
     source_id = source["id"]
     events_found = 0
     events_new = 0
@@ -97,128 +104,129 @@ def crawl(source: dict) -> tuple[int, int, int]:
     }
 
     try:
-        response = requests.get(EVENTS_URL, headers=headers, timeout=30)
+        # Fetch RSS feed
+        response = requests.get(RSS_FEED_URL, headers=headers, timeout=30)
         response.raise_for_status()
 
-        soup = BeautifulSoup(response.text, "html.parser")
+        # Parse XML
+        root = ET.fromstring(response.content)
         venue_id = get_or_create_venue(VENUE_DATA)
 
-        # Try JSON-LD first
-        json_events = parse_jsonld_events(soup)
+        # Get all items (events) from the feed
+        items = root.findall('.//item')
+        logger.info(f"Found {len(items)} events in RSS feed")
 
-        for event_data in json_events:
-            events_found += 1
-            title = event_data.get("name", "").strip()
-            if not title:
-                continue
-
-            start_date = event_data.get("startDate", "")[:10] if event_data.get("startDate") else None
-            if not start_date:
-                continue
-
-            content_hash = generate_content_hash(title, VENUE_DATA["name"], start_date)
-            existing = find_event_by_hash(content_hash)
-            if existing:
-                events_updated += 1
-                continue
-
-            # Determine category
-            title_lower = title.lower()
-            if any(w in title_lower for w in ["lecture", "seminar", "talk", "speaker"]):
-                category, subcategory = "community", "lecture"
-            elif any(w in title_lower for w in ["concert", "music", "performance"]):
-                category, subcategory = "music", "concert"
-            elif any(w in title_lower for w in ["workshop", "class", "training"]):
-                category, subcategory = "community", "workshop"
-            else:
-                category, subcategory = "community", "campus"
-
-            event_record = {
-                "source_id": source_id,
-                "venue_id": venue_id,
-                "title": title,
-                "description": event_data.get("description", f"Event at Georgia Tech")[:500],
-                "start_date": start_date,
-                "start_time": None,
-                "end_date": None,
-                "end_time": None,
-                "is_all_day": True,
-                "category": category,
-                "subcategory": subcategory,
-                "tags": ["college", "georgia-tech", "midtown"],
-                "price_min": None,
-                "price_max": None,
-                "price_note": None,
-                "is_free": True,
-                "source_url": EVENTS_URL,
-                "ticket_url": None,
-                "image_url": event_data.get("image"),
-                "raw_text": json.dumps(event_data),
-                "extraction_confidence": 0.85,
-                "is_recurring": False,
-                "recurrence_rule": None,
-                "content_hash": content_hash,
-            }
-
+        for item in items:
             try:
-                insert_event(event_record)
-                events_new += 1
-            except Exception as e:
-                logger.error(f"Failed to insert {title}: {e}")
+                # Extract basic info
+                title_elem = item.find('title')
+                link_elem = item.find('link')
+                description_elem = item.find('description')
 
-        # If no JSON-LD, try Trumba parsing
-        if not json_events:
-            trumba_events = parse_trumba_events(soup)
-            for event_data in trumba_events:
-                events_found += 1
-                title = event_data.get("title", "")
-                if not title:
+                if title_elem is None or title_elem.text is None:
                     continue
 
-                # Parse date from text
-                date_text = event_data.get("date_text", "")
-                start_date = None
-                if date_text:
-                    match = re.search(r"(\w+)\s+(\d{1,2}),?\s+(\d{4})", date_text)
-                    if match:
-                        try:
-                            month, day, year = match.groups()
-                            dt = datetime.strptime(f"{month} {day} {year}", "%B %d %Y")
-                            start_date = dt.strftime("%Y-%m-%d")
-                        except ValueError:
-                            pass
+                title = title_elem.text.strip()
+                link = link_elem.text if link_elem is not None else BASE_URL
+                description = description_elem.text if description_elem is not None else ""
+
+                # Parse datetime info
+                start_date, start_time, end_date, end_time = parse_time_element(description)
 
                 if not start_date:
+                    logger.debug(f"Skipping event without valid date: {title}")
                     continue
 
+                # Filter out past events - but keep multi-day events if they haven't ended yet
+                try:
+                    start_dt = datetime.strptime(start_date, "%Y-%m-%d")
+                    end_dt = datetime.strptime(end_date, "%Y-%m-%d") if end_date else start_dt
+                    today = datetime.now().date()
+
+                    # Skip if event ended before today
+                    if end_dt.date() < today:
+                        logger.debug(f"Skipping past event: {title} (ended {end_date})")
+                        continue
+                except Exception as e:
+                    logger.warning(f"Date parsing error for {title}: {e}")
+                    pass
+
+                events_found += 1
+
+                # Check if event already exists
                 content_hash = generate_content_hash(title, VENUE_DATA["name"], start_date)
                 existing = find_event_by_hash(content_hash)
                 if existing:
                     events_updated += 1
                     continue
 
+                # Extract location if available
+                location_text = extract_location_from_description(description)
+
+                # Determine if it's all-day
+                is_all_day = (start_time is None)
+
+                # Determine category based on title
+                title_lower = title.lower()
+                if any(w in title_lower for w in ["lecture", "seminar", "talk", "speaker", "colloquium"]):
+                    category, subcategory = "community", "lecture"
+                elif any(w in title_lower for w in ["concert", "music", "performance", "recital"]):
+                    category, subcategory = "music", "concert"
+                elif any(w in title_lower for w in ["workshop", "class", "training", "bootcamp"]):
+                    category, subcategory = "community", "workshop"
+                elif any(w in title_lower for w in ["exhibit", "exhibition", "museum", "gallery"]):
+                    category, subcategory = "arts", "visual-art"
+                elif any(w in title_lower for w in ["hackathon", "competition"]):
+                    category, subcategory = "community", "meetup"
+                elif any(w in title_lower for w in ["conference", "symposium", "meeting"]):
+                    category, subcategory = "community", "conference"
+                elif any(w in title_lower for w in ["career", "job", "professional"]):
+                    category, subcategory = "community", "networking"
+                else:
+                    category, subcategory = "community", "campus"
+
+                # Build tags
+                tags = ["college", "georgia-tech", "midtown"]
+                if "hackathon" in title_lower:
+                    tags.append("tech")
+                if "career" in title_lower or "job" in title_lower:
+                    tags.append("professional-development")
+
+                # Clean description text
+                desc_text = re.sub(r'<[^>]+>', ' ', description)
+                desc_text = unescape(desc_text).strip()
+                desc_text = re.sub(r'\s+', ' ', desc_text)
+
+                # Use first 500 chars of description
+                if desc_text and len(desc_text) > 50:
+                    event_description = desc_text[:500]
+                else:
+                    event_description = f"{title} at Georgia Tech"
+                    if location_text:
+                        event_description += f" - {location_text}"
+
                 event_record = {
                     "source_id": source_id,
                     "venue_id": venue_id,
                     "title": title,
-                    "description": f"Event at Georgia Tech",
+                    "description": event_description,
                     "start_date": start_date,
-                    "start_time": None,
-                    "end_date": None,
-                    "end_time": None,
-                    "is_all_day": True,
-                    "category": "community",
-                    "subcategory": "campus",
-                    "tags": ["college", "georgia-tech", "midtown"],
+                    "start_time": start_time,
+                    "end_date": end_date,
+                    "end_time": end_time,
+                    "is_all_day": is_all_day,
+                    "category": category,
+                    "subcategory": subcategory,
+                    "tags": tags,
                     "price_min": None,
                     "price_max": None,
                     "price_note": None,
                     "is_free": True,
-                    "source_url": EVENTS_URL,
+                    "source_url": link,
                     "ticket_url": None,
-                    "image_url": extract_image_url(soup) if soup else None,
-                    "raw_text": None,
-                    "extraction_confidence": 0.70,
+                    "image_url": None,
+                    "raw_text": description[:1000] if description else None,
+                    "extraction_confidence": 0.85,
                     "is_recurring": False,
                     "recurrence_rule": None,
                     "content_hash": content_hash,
@@ -227,13 +235,18 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 try:
                     insert_event(event_record)
                     events_new += 1
+                    logger.debug(f"Inserted: {title} on {start_date}")
                 except Exception as e:
                     logger.error(f"Failed to insert {title}: {e}")
+
+            except Exception as e:
+                logger.error(f"Failed to process event item: {e}", exc_info=True)
+                continue
 
         logger.info(f"Georgia Tech Events: Found {events_found} events, {events_new} new, {events_updated} existing")
 
     except Exception as e:
-        logger.error(f"Failed to crawl Georgia Tech Events: {e}")
+        logger.error(f"Failed to crawl Georgia Tech Events: {e}", exc_info=True)
         raise
 
     return events_found, events_new, events_updated

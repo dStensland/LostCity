@@ -332,7 +332,7 @@ function WelcomeContent() {
           {step === "categories" && (
             <div className="animate-fadeIn">
               <div className="text-center mb-8">
-                <h1 className="font-serif text-2xl sm:text-3xl text-[var(--cream)] italic mb-2">
+                <h1 className="text-2xl sm:text-3xl font-semibold text-[var(--cream)] mb-2">
                   {portal ? `Welcome to ${portal.name}` : "Welcome to Lost City"}
                 </h1>
                 <p className="text-[var(--soft)] text-sm">
@@ -375,7 +375,7 @@ function WelcomeContent() {
           {step === "neighborhoods" && (
             <div className="animate-fadeIn">
               <div className="text-center mb-8">
-                <h1 className="font-serif text-2xl sm:text-3xl text-[var(--cream)] italic mb-2">
+                <h1 className="text-2xl sm:text-3xl font-semibold text-[var(--cream)] mb-2">
                   Where do you like to go?
                 </h1>
                 <p className="text-[var(--soft)] text-sm">
@@ -407,7 +407,7 @@ function WelcomeContent() {
           {step === "producers" && (
             <div className="animate-fadeIn">
               <div className="text-center mb-8">
-                <h1 className="font-serif text-2xl sm:text-3xl text-[var(--cream)] italic mb-2">
+                <h1 className="text-2xl sm:text-3xl font-semibold text-[var(--cream)] mb-2">
                   Follow some organizers
                 </h1>
                 <p className="text-[var(--soft)] text-sm">
@@ -480,7 +480,7 @@ function WelcomeContent() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
               </div>
-              <h1 className="font-serif text-2xl sm:text-3xl text-[var(--cream)] italic mb-2">
+              <h1 className="text-2xl sm:text-3xl font-semibold text-[var(--cream)] mb-2">
                 You&apos;re all set!
               </h1>
               <p className="text-[var(--soft)] text-sm mb-8">

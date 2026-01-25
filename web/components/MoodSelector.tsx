@@ -25,7 +25,7 @@ export default function MoodSelector({
   return (
     <div className={`${className}`}>
       <div className="flex items-center gap-2 mb-3">
-        <span className="font-serif text-sm text-[var(--cream)] italic">
+        <span className="text-sm font-medium text-[var(--cream)]">
           I&apos;m feeling...
         </span>
       </div>

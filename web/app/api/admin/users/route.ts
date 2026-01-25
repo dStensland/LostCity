@@ -17,7 +17,8 @@ export async function PATCH(request: Request) {
 
     const supabase = await createServerClient();
 
-    const { error } = await supabase
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await (supabase as any)
       .from("profiles")
       .update(updates)
       .eq("id", userId);
@@ -62,7 +63,8 @@ export async function DELETE(request: Request) {
     // Soft delete - deactivate the profile
     // Full deletion requires service key which isn't available
     const supabase = await createServerClient();
-    const { error } = await supabase
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await (supabase as any)
       .from("profiles")
       .update({ is_active: false })
       .eq("id", userId);
@@ -97,11 +99,13 @@ export async function GET(request: Request) {
 
     if (userId) {
       // Get single user with profile and stats
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const sb = supabase as any;
       const [profileResult, followerCount, followingCount, rsvpCount] = await Promise.all([
-        supabase.from("profiles").select("*").eq("id", userId).single(),
-        supabase.from("follows").select("*", { count: "exact", head: true }).eq("followed_user_id", userId),
-        supabase.from("follows").select("*", { count: "exact", head: true }).eq("follower_id", userId),
-        supabase.from("event_rsvps").select("*", { count: "exact", head: true }).eq("user_id", userId),
+        sb.from("profiles").select("*").eq("id", userId).single(),
+        sb.from("follows").select("*", { count: "exact", head: true }).eq("followed_user_id", userId),
+        sb.from("follows").select("*", { count: "exact", head: true }).eq("follower_id", userId),
+        sb.from("event_rsvps").select("*", { count: "exact", head: true }).eq("user_id", userId),
       ]);
 
       if (profileResult.error) {
@@ -120,7 +124,8 @@ export async function GET(request: Request) {
 
     // List all profiles with optional search
     // Note: Requires RLS policy allowing admins to read all profiles
-    let query = supabase
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let query = (supabase as any)
       .from("profiles")
       .select("*")
       .order("created_at", { ascending: false })

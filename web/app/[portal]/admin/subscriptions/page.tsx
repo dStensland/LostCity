@@ -128,7 +128,7 @@ export default function PortalSubscriptionsPage() {
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
       <div className="mb-8">
-        <h1 className="font-serif text-2xl text-[var(--cream)] italic mb-1">Subscriptions</h1>
+        <h1 className="text-2xl font-semibold text-[var(--cream)] mb-1">Subscriptions</h1>
         <p className="font-mono text-sm text-[var(--muted)]">
           Subscribe to sources shared by other portals
         </p>

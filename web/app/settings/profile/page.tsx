@@ -128,7 +128,7 @@ export default function ProfileSettingsPage() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
           </Link>
-          <h1 className="font-serif text-2xl text-[var(--cream)] italic">
+          <h1 className="text-2xl font-semibold text-[var(--cream)]">
             Edit Profile
           </h1>
         </div>

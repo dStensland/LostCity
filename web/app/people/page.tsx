@@ -66,7 +66,7 @@ export default function PeoplePage() {
       <UnifiedHeader />
 
       <main className="max-w-3xl mx-auto px-4 py-8">
-        <h1 className="font-serif text-2xl text-[var(--cream)] italic mb-2">Find People</h1>
+        <h1 className="text-2xl font-semibold text-[var(--cream)] mb-2">Find People</h1>
         <p className="text-[var(--muted)] text-sm mb-6">
           Search for people to follow and connect with
         </p>

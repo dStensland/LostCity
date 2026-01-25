@@ -383,16 +383,22 @@ SOURCE_MODULES = {
     # ===== Colleges & Universities =====
     "georgia-tech-athletics": "sources.georgia_tech_athletics",
     "georgia-tech-events": "sources.georgia_tech_events",
+    "georgia-tech-arts": "sources.georgia_tech_arts",
     "emory-events": "sources.emory_events",
+    "emory-schwartz-center": "sources.emory_schwartz_center",
     "gsu-athletics": "sources.gsu_athletics",
+    "georgia-state-university": "sources.georgia_state_university",
     "spelman-college": "sources.spelman_college",
     "morehouse-college": "sources.morehouse_college",
     "clark-atlanta": "sources.clark_atlanta",
     "kennesaw-state": "sources.kennesaw_state",
+    "ksu-athletics": "sources.ksu_athletics",
     "scad-atlanta": "sources.scad_atlanta",
     "agnes-scott": "sources.agnes_scott",
     "spivey-hall": "sources.spivey_hall",
     "oglethorpe-university": "sources.oglethorpe_university",
+    # ===== Community Centers =====
+    "ymca-atlanta": "sources.ymca_atlanta",
     # ===== New Venues =====
     "knock-music-house": "sources.knock_music_house",
     "side-saddle": "sources.side_saddle",
@@ -425,6 +431,10 @@ SOURCE_MODULES = {
     "fun-spot-america-atlanta": "sources.fun_spot_atlanta",
     "stone-mountain-park": "sources.stone_mountain_park",
     "trap-music-museum": "sources.trap_music_museum",
+    # ===== Hotel Venues =====
+    "hotel-clermont": "sources.hotel_clermont",
+    "georgian-terrace-hotel": "sources.georgian_terrace",
+    "skylounge-glenn-hotel": "sources.skylounge_glenn",
 }
 
 

@@ -58,7 +58,7 @@ export default function PortalAdminDashboard({ params }: { params: Promise<{ por
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
       <div className="mb-8">
-        <h1 className="font-serif text-2xl text-[var(--cream)] italic mb-1">
+        <h1 className="text-2xl font-semibold text-[var(--cream)] mb-1">
           {portal.name} Admin
         </h1>
         <p className="font-mono text-sm text-[var(--muted)]">
@@ -87,7 +87,7 @@ export default function PortalAdminDashboard({ params }: { params: Promise<{ por
 
       {/* Quick Actions */}
       <div className="bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg p-6">
-        <h2 className="font-serif text-lg text-[var(--cream)] italic mb-4">Quick Actions</h2>
+        <h2 className="text-lg font-semibold text-[var(--cream)] mb-4">Quick Actions</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Link
             href={`/${slug}/admin/sources`}

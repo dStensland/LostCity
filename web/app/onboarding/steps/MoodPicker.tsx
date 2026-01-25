@@ -13,7 +13,7 @@ export function MoodPicker({ onSelect, onSkip }: MoodPickerProps) {
       <div className="w-full max-w-md animate-fadeIn">
         {/* Header */}
         <div className="text-center mb-8">
-          <h1 className="font-serif text-2xl sm:text-3xl text-[var(--cream)] italic mb-2">
+          <h1 className="text-2xl sm:text-3xl font-semibold text-[var(--cream)] mb-2">
             What sounds good?
           </h1>
           <p className="text-[var(--soft)] text-sm">

@@ -35,7 +35,7 @@ export default function EmptyState({
         </div>
       )}
       {title && (
-        <h3 className="font-serif text-xl text-[var(--cream)] italic mb-2">
+        <h3 className="text-xl font-semibold text-[var(--cream)] mb-2">
           {title}
         </h3>
       )}

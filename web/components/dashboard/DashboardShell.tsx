@@ -70,7 +70,7 @@ export default function DashboardShell({
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="font-serif text-2xl text-[var(--cream)] italic">
+          <h1 className="text-2xl font-semibold text-[var(--cream)]">
             {currentTab === "feed"
               ? "Your scene"
               : currentTab === "activity"

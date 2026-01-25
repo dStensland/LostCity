@@ -150,7 +150,7 @@ function PreferencesContent() {
                 </svg>
               </div>
               <div>
-                <h2 className="font-serif text-xl text-[var(--cream)] italic mb-1">
+                <h2 className="text-xl font-semibold text-[var(--cream)] mb-1">
                   Welcome to Lost City!
                 </h2>
                 <p className="font-mono text-sm text-[var(--soft)] leading-relaxed">
@@ -164,7 +164,7 @@ function PreferencesContent() {
         {/* Page header */}
         <div className="mb-8">
           <div className="flex items-center justify-between">
-            <h1 className="font-serif text-2xl sm:text-3xl text-[var(--cream)] italic">
+            <h1 className="text-2xl sm:text-3xl font-semibold text-[var(--cream)]">
               {isWelcome ? "What are you into?" : "Your Preferences"}
             </h1>
             {totalSelected > 0 && (

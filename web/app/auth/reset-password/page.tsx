@@ -138,7 +138,7 @@ export default function ResetPasswordPage() {
       <main className="flex-1 flex items-center justify-center px-4 py-12">
         <div className="w-full max-w-sm">
           <div className="text-center mb-8">
-            <h1 className="font-serif text-2xl text-[var(--cream)] italic">
+            <h1 className="text-2xl font-semibold text-[var(--cream)]">
               Set new password
             </h1>
             <p className="font-mono text-xs text-[var(--muted)] mt-2">

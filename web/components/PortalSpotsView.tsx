@@ -3,6 +3,7 @@
 import React, { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import CategoryIcon, { getCategoryLabel, getCategoryColor } from "./CategoryIcon";
+import CategorySkeleton from "./CategorySkeleton";
 
 // Get reflection color class based on spot type
 function getReflectionClass(spotType: string | null): string {
@@ -338,31 +339,11 @@ export default function PortalSpotsView({ portalId, portalSlug, isExclusive = fa
   // Loading state - after hooks to follow Rules of Hooks
   if (loading) {
     return (
-      <div className="py-4">
-        <div className="mb-4">
-          <div className="h-3 w-40 rounded skeleton-shimmer" />
-        </div>
-        <div className="space-y-2">
-          {[...Array(5)].map((_, i) => (
-            <div
-              key={i}
-              className="p-4 rounded-lg border border-[var(--twilight)]"
-              style={{ backgroundColor: "var(--card-bg)" }}
-            >
-              <div className="flex items-start gap-3">
-                <div className="w-[18px] h-[18px] rounded skeleton-shimmer" />
-                <div className="flex-1 min-w-0">
-                  <div className="h-4 w-2/3 rounded skeleton-shimmer mb-2" style={{ animationDelay: `${i * 0.05}s` }} />
-                  <div className="flex items-center gap-2">
-                    <div className="h-3 w-20 rounded skeleton-shimmer" style={{ animationDelay: `${i * 0.05 + 0.1}s` }} />
-                    <div className="h-3 w-24 rounded skeleton-shimmer" style={{ animationDelay: `${i * 0.05 + 0.15}s` }} />
-                  </div>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
+      <CategorySkeleton
+        count={10}
+        title="Places"
+        subtitle="Loading venues..."
+      />
     );
   }
 

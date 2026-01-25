@@ -174,7 +174,7 @@ export default async function CollectionPage({ params }: Props) {
             </div>
           )}
 
-          <h1 className="font-serif text-2xl sm:text-3xl text-[var(--cream)] italic mb-2">
+          <h1 className="text-2xl sm:text-3xl font-semibold text-[var(--cream)] mb-2">
             {collection.title}
           </h1>
 

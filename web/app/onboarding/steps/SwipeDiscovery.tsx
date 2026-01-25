@@ -124,7 +124,7 @@ export function SwipeDiscovery({ mood, portalId, onComplete, onSkip }: SwipeDisc
             )}
 
             {/* Title */}
-            <h2 className="font-serif text-2xl text-[var(--cream)] italic mb-4">
+            <h2 className="text-2xl font-semibold text-[var(--cream)] mb-4">
               {expandedEvent.title}
             </h2>
 
@@ -210,7 +210,7 @@ export function SwipeDiscovery({ mood, portalId, onComplete, onSkip }: SwipeDisc
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
           </div>
-          <h2 className="font-serif text-xl text-[var(--cream)] italic mb-2">
+          <h2 className="text-xl font-semibold text-[var(--cream)] mb-2">
             Nice picks!
           </h2>
           <p className="text-sm text-[var(--muted)] mb-6">
@@ -232,7 +232,7 @@ export function SwipeDiscovery({ mood, portalId, onComplete, onSkip }: SwipeDisc
     <div className="flex flex-col items-center min-h-[calc(100vh-120px)] px-4 py-6">
       {/* Header */}
       <div className="text-center mb-4 animate-fadeIn">
-        <h1 className="font-serif text-xl sm:text-2xl text-[var(--cream)] italic mb-1">
+        <h1 className="text-xl sm:text-2xl font-semibold text-[var(--cream)] mb-1">
           Swipe to discover
         </h1>
         <p className="text-sm text-[var(--muted)]">

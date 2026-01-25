@@ -126,7 +126,7 @@ export default function ShareInviteLink({
         ref={modalRef}
         className="bg-[var(--dusk)] border border-[var(--twilight)] rounded-xl p-6 max-w-md w-full shadow-2xl animate-in fade-in scale-in"
       >
-        <h3 id="invite-modal-title" className="font-serif text-lg text-[var(--cream)] italic mb-4">
+        <h3 id="invite-modal-title" className="text-lg font-semibold text-[var(--cream)] mb-4">
           Invite Friends
         </h3>
         <p className="text-[var(--muted)] font-mono text-sm mb-4">

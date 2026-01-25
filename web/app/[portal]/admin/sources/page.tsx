@@ -119,7 +119,7 @@ export default function PortalSourcesPage() {
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
       <div className="mb-8">
-        <h1 className="font-serif text-2xl text-[var(--cream)] italic mb-1">Owned Sources</h1>
+        <h1 className="text-2xl font-semibold text-[var(--cream)] mb-1">Owned Sources</h1>
         <p className="font-mono text-sm text-[var(--muted)]">
           Configure sharing rules for sources you own
         </p>
