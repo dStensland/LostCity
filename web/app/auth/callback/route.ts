@@ -150,9 +150,9 @@ export async function GET(request: NextRequest) {
           console.error("Preferences creation exception:", err);
         }
 
-        // Redirect new OAuth users to set preferences
+        // Redirect new OAuth users to Discovery Mode onboarding
         if (isNewUser) {
-          return NextResponse.redirect(`${origin}/settings/preferences?welcome=true`);
+          return NextResponse.redirect(`${origin}/onboarding`);
         }
       }
     }

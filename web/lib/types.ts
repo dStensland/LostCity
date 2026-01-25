@@ -109,6 +109,8 @@ export type Database = {
           favorite_vibes: string[] | null;
           price_preference: string | null;
           notification_settings: Record<string, unknown>;
+          onboarding_mood: string | null;
+          onboarding_completed_at: string | null;
           updated_at: string;
         };
         Insert: {
@@ -118,6 +120,8 @@ export type Database = {
           favorite_vibes?: string[] | null;
           price_preference?: string | null;
           notification_settings?: Record<string, unknown>;
+          onboarding_mood?: string | null;
+          onboarding_completed_at?: string | null;
         };
         Update: {
           favorite_categories?: string[] | null;
@@ -125,6 +129,24 @@ export type Database = {
           favorite_vibes?: string[] | null;
           price_preference?: string | null;
           notification_settings?: Record<string, unknown>;
+          onboarding_mood?: string | null;
+          onboarding_completed_at?: string | null;
+        };
+      };
+      onboarding_interactions: {
+        Row: {
+          id: string;
+          user_id: string;
+          step: string;
+          event_id: number | null;
+          action: string;
+          created_at: string;
+        };
+        Insert: {
+          user_id: string;
+          step: string;
+          event_id?: number | null;
+          action: string;
         };
       };
       follows: {
@@ -505,4 +527,125 @@ export interface EventInvite {
   status: EventInviteStatus;
   created_at: string;
   responded_at: string | null;
+}
+
+// Community Lists types
+export type ListCategory =
+  | "best_of"
+  | "hidden_gems"
+  | "date_night"
+  | "with_friends"
+  | "solo"
+  | "budget"
+  | "special_occasion";
+
+export type ListItemType = "venue" | "event" | "producer" | "custom";
+
+export type ListVoteType = "up" | "down";
+
+export interface List {
+  id: string;
+  portal_id: string | null;
+  creator_id: string;
+  title: string;
+  slug: string;
+  description: string | null;
+  category: ListCategory | null;
+  is_public: boolean;
+  status: "active" | "archived" | "deleted";
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ListItem {
+  id: string;
+  list_id: string;
+  item_type: ListItemType;
+  venue_id: number | null;
+  event_id: number | null;
+  producer_id: number | null;
+  custom_name: string | null;
+  custom_description: string | null;
+  position: number;
+  added_by: string;
+  created_at: string;
+}
+
+export interface ListVote {
+  id: string;
+  list_id: string;
+  item_id: string | null;
+  user_id: string;
+  vote_type: ListVoteType;
+  created_at: string;
+}
+
+// List with computed counts and creator info
+export interface ListWithMeta extends List {
+  item_count: number;
+  vote_count: number;
+  creator?: {
+    username: string;
+    display_name: string | null;
+    avatar_url: string | null;
+  };
+}
+
+// List item with associated data
+export interface ListItemWithData extends ListItem {
+  venue?: {
+    id: number;
+    name: string;
+    slug: string;
+    neighborhood: string | null;
+    spot_type: string | null;
+  } | null;
+  event?: {
+    id: number;
+    title: string;
+    start_date: string;
+    venue_name: string | null;
+  } | null;
+  producer?: {
+    id: number;
+    name: string;
+    slug: string;
+  } | null;
+  vote_count: number;
+  user_vote?: ListVoteType | null;
+}
+
+// Discovery Mode Onboarding types
+export type OnboardingMood = "chill" | "wild" | "social" | "culture";
+export type OnboardingStep = "splash" | "mood" | "swipe" | "neighborhood" | "preview";
+export type OnboardingAction = "select" | "like" | "skip" | "follow";
+
+export interface OnboardingSwipeEvent {
+  id: number;
+  title: string;
+  start_date: string;
+  start_time: string | null;
+  category: string | null;
+  image_url: string | null;
+  is_free: boolean;
+  price_min: number | null;
+  venue: {
+    id: number;
+    name: string;
+    neighborhood: string | null;
+  } | null;
+  producer: {
+    id: number;
+    name: string;
+    slug: string;
+  } | null;
+}
+
+export interface OnboardingState {
+  currentStep: OnboardingStep;
+  mood: OnboardingMood | null;
+  likedEvents: number[];
+  likedEventDetails: OnboardingSwipeEvent[];
+  selectedNeighborhoods: string[];
+  followedProducers: number[];
 }
