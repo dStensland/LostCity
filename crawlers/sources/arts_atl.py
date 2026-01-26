@@ -7,7 +7,6 @@ Uses The Events Calendar (Modern Tribe) plugin with JSON-LD structured data.
 import json
 import logging
 import re
-from datetime import datetime
 from bs4 import BeautifulSoup
 import requests
 
@@ -236,7 +235,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     "source_id": source_id,
                     "venue_id": venue_id,
                     "title": title,
-                    "description": f"Arts event from ArtsATL calendar",
+                    "description": "Arts event from ArtsATL calendar",
                     "start_date": start_date,
                     "start_time": None,
                     "end_date": None,

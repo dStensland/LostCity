@@ -5,8 +5,6 @@ Sprawling two-level sports bar with 30-foot screen near Truist Park.
 
 import json
 import logging
-import re
-from datetime import datetime
 from bs4 import BeautifulSoup
 import requests
 
@@ -102,7 +100,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 "source_id": source_id,
                 "venue_id": venue_id,
                 "title": title,
-                "description": event_data.get("description", f"Event at Sports & Social, The Battery's premier sports bar")[:500],
+                "description": event_data.get("description", "Event at Sports & Social, The Battery's premier sports bar")[:500],
                 "start_date": start_date,
                 "start_time": None,
                 "end_date": None,

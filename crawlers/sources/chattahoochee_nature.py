@@ -114,7 +114,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     event_id_attr = title_link.get_attribute("data-event-id")
 
                     if not title or not event_url:
-                        logger.debug(f"Missing title or URL, skipping")
+                        logger.debug("Missing title or URL, skipping")
                         continue
 
                     # Skip duplicate events (same event on different days)
@@ -198,7 +198,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "source_id": source_id,
                         "venue_id": venue_id,
                         "title": title,
-                        "description": description if description else f"Event at Chattahoochee Nature Center",
+                        "description": description if description else "Event at Chattahoochee Nature Center",
                         "start_date": start_date,
                         "start_time": start_time,
                         "end_date": None,

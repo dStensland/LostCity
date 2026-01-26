@@ -4,7 +4,6 @@ Can be run standalone or as part of the daily crawl.
 """
 
 import re
-import sys
 import argparse
 import requests
 from typing import Optional

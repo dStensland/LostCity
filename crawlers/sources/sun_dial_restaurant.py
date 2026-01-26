@@ -167,7 +167,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             "source_id": source_id,
                             "venue_id": venue_id,
                             "title": title,
-                            "description": event_data.get("description", f"Special event at The Sun Dial Restaurant, 73 stories above Atlanta")[:500],
+                            "description": event_data.get("description", "Special event at The Sun Dial Restaurant, 73 stories above Atlanta")[:500],
                             "start_date": start_date,
                             "start_time": None,
                             "end_date": None,

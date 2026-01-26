@@ -6,7 +6,6 @@ Events include live music, DJ nights, and special performances.
 
 from __future__ import annotations
 
-import json
 import logging
 import re
 from datetime import datetime
@@ -220,7 +219,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     location_detail = location_elem.inner_text().strip() if location_elem else None
 
                     # Build description
-                    description = f"Event at Hotel Clermont"
+                    description = "Event at Hotel Clermont"
                     if location_detail:
                         description += f" - {location_detail}"
                     if event_type:

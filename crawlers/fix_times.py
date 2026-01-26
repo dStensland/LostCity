@@ -3,10 +3,8 @@ Time Extraction Audit and Fix Script
 Identifies events with time issues and attempts to fix them.
 """
 
-import re
 import logging
-from datetime import datetime, date
-from typing import Optional
+from datetime import date
 from db import get_client
 
 logging.basicConfig(level=logging.INFO)

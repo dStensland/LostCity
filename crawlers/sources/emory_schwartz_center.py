@@ -4,7 +4,6 @@ Classical music, theater, dance, and performing arts events at Emory.
 Uses Playwright to handle calendar widget.
 """
 
-import json
 import logging
 import re
 from datetime import datetime
@@ -256,7 +255,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "source_id": source_id,
                         "venue_id": venue_id,
                         "title": title,
-                        "description": f"Performance at Schwartz Center for Performing Arts",
+                        "description": "Performance at Schwartz Center for Performing Arts",
                         "start_date": start_date,
                         "start_time": start_time,
                         "end_date": None,

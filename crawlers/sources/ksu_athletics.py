@@ -5,7 +5,6 @@ Scrapes sport-specific schedule pages for game information.
 Uses Sidearm Sports platform (same as Georgia Tech).
 """
 
-import json
 import logging
 import re
 from datetime import datetime, timedelta

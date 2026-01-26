@@ -16,7 +16,6 @@ from playwright.sync_api import sync_playwright
 
 from db import get_or_create_venue, insert_event, find_event_by_hash
 from dedupe import generate_content_hash
-from series import get_or_create_series
 
 logger = logging.getLogger(__name__)
 

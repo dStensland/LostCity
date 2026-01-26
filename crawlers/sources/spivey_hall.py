@@ -193,7 +193,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "source_id": source_id,
                         "venue_id": venue_id,
                         "title": title,
-                        "description": description if description else f"Concert at Spivey Hall, world-renowned for exceptional acoustics.",
+                        "description": description if description else "Concert at Spivey Hall, world-renowned for exceptional acoustics.",
                         "start_date": start_date,
                         "start_time": start_time,
                         "end_date": None,

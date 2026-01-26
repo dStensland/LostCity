@@ -8,7 +8,6 @@ Site uses JavaScript to load calendar data - extracts from embedded JSON.
 from __future__ import annotations
 
 import re
-import json
 import logging
 from datetime import datetime, timedelta
 from typing import Optional

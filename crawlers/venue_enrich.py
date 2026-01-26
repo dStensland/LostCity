@@ -5,13 +5,10 @@ Enriches venue data using Google Places API.
 
 import os
 import re
-import json
 import time
 import math
 import requests
-from dataclasses import dataclass
 from typing import Optional
-from datetime import datetime
 from dotenv import load_dotenv
 from db import get_client
 
@@ -290,7 +287,7 @@ def enrich_venue_by_name(venue: dict, dry_run: bool = False) -> Optional[dict]:
     place = search_google_places(query)
 
     if not place:
-        print(f"  No results found")
+        print("  No results found")
         return None
 
     found_name = place.get("displayName", {}).get("text", "")
@@ -333,7 +330,7 @@ def enrich_incomplete_venues(limit: int = 50, dry_run: bool = False) -> dict:
 
         # Skip if already has coordinates and neighborhood
         if venue.get("lat") and venue.get("lng") and venue.get("neighborhood") and venue.get("spot_type"):
-            print(f"  Skipping: already complete")
+            print("  Skipping: already complete")
             stats["skipped"] += 1
             continue
 
@@ -421,10 +418,10 @@ def enrich_address_venues(limit: int = 50, dry_run: bool = False) -> dict:
                     stats["renamed"] += 1
                     print(f"  {'[DRY RUN] Would rename' if dry_run else 'Renamed'}: {venue['name']} -> {found_name}")
                 else:
-                    print(f"  No establishment found at this address")
+                    print("  No establishment found at this address")
                     stats["failed"] += 1
             else:
-                print(f"  No Google results")
+                print("  No Google results")
                 stats["failed"] += 1
 
         except Exception as e:

@@ -9,7 +9,7 @@ import logging
 from typing import Optional
 from rapidfuzz import fuzz
 from extract import EventData
-from db import find_event_by_hash, find_events_by_date_and_venue, find_events_by_date_and_venue_family
+from db import find_event_by_hash, find_events_by_date_and_venue_family
 
 logger = logging.getLogger(__name__)
 

@@ -6,7 +6,6 @@ Tests the crawler logic without requiring database access.
 
 import sys
 import re
-from datetime import datetime
 
 # Test the parsing functions
 def test_parse_time():

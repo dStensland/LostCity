@@ -4,11 +4,8 @@ Cozy wine bar with live jazz on Thursdays and Sundays.
 Generates recurring jazz night events.
 """
 
-import json
 import logging
 from datetime import datetime, timedelta
-from bs4 import BeautifulSoup
-import requests
 
 from db import get_or_create_venue, insert_event, find_event_by_hash
 from dedupe import generate_content_hash

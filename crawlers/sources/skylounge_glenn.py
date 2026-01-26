@@ -7,13 +7,11 @@ While they don't have a public events calendar, we monitor for special events.
 from __future__ import annotations
 
 import logging
-from datetime import datetime
 
 import requests
 from bs4 import BeautifulSoup
 
-from db import get_or_create_venue, insert_event, find_event_by_hash
-from dedupe import generate_content_hash
+from db import get_or_create_venue
 
 logger = logging.getLogger(__name__)
 

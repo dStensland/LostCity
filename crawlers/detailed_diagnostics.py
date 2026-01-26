@@ -3,7 +3,6 @@ Detailed diagnostics for specific data quality issues.
 """
 
 from db import get_client
-import json
 
 def get_source_id(client, slug):
     """Get source ID by slug, return None if not found."""
@@ -188,7 +187,7 @@ def check_time_issues():
                 lines = raw.split('\n')
                 time_lines = [l for l in lines if 'time' in l.lower() or 'pm' in l.lower() or 'am' in l.lower()]
                 if time_lines:
-                    print(f"  Raw text time mentions:")
+                    print("  Raw text time mentions:")
                     for line in time_lines[:3]:
                         print(f"    {line.strip()[:100]}")
     

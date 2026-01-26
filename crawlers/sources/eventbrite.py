@@ -9,9 +9,7 @@ from public search pages is the only option for discovery.
 
 import json
 import logging
-import re
 from typing import Optional
-from datetime import datetime
 from bs4 import BeautifulSoup
 
 from utils import fetch_page, slugify

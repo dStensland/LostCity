@@ -5,7 +5,6 @@ Atlanta's highest rooftop bar on the 15th floor.
 
 import json
 import logging
-from datetime import datetime
 from bs4 import BeautifulSoup
 import requests
 
@@ -101,7 +100,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 "source_id": source_id,
                 "venue_id": venue_id,
                 "title": title,
-                "description": event_data.get("description", f"Event at Spaceman - Atlanta's highest rooftop bar")[:500],
+                "description": event_data.get("description", "Event at Spaceman - Atlanta's highest rooftop bar")[:500],
                 "start_date": start_date,
                 "start_time": None,
                 "end_date": None,

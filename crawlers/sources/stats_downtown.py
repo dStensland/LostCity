@@ -6,7 +6,6 @@ Atlanta's ultimate sports bar with 70+ screens near Mercedes-Benz Stadium.
 
 import json
 import logging
-from datetime import datetime
 from bs4 import BeautifulSoup
 import requests
 
@@ -113,7 +112,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "source_id": source_id,
                         "venue_id": venue_id,
                         "title": title,
-                        "description": event_data.get("description", f"Event at STATS Brewpub - Atlanta's ultimate sports bar with 70+ screens")[:500],
+                        "description": event_data.get("description", "Event at STATS Brewpub - Atlanta's ultimate sports bar with 70+ screens")[:500],
                         "start_date": start_date,
                         "start_time": None,
                         "end_date": None,

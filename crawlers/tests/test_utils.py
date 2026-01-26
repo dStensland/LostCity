@@ -2,7 +2,6 @@
 Tests for utility functions in utils.py.
 """
 
-import pytest
 from datetime import datetime, timedelta
 from utils import (
     slugify,

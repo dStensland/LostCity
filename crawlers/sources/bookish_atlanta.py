@@ -112,7 +112,7 @@ def generate_book_club_events(source_id: int, months_ahead: int = 3) -> list[dic
                 "source_id": source_id,
                 "venue_id": venue_id,
                 "title": title,
-                "description": f"Monthly book club hosted by Bookish Atlanta. Join fellow readers for discussion and community.",
+                "description": "Monthly book club hosted by Bookish Atlanta. Join fellow readers for discussion and community.",
                 "start_date": start_date,
                 "start_time": time,
                 "end_date": None,

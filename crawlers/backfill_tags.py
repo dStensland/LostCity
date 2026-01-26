@@ -105,7 +105,7 @@ def main():
     stats = backfill_tags(dry_run=args.dry_run, batch_size=args.batch_size)
 
     logger.info("=" * 50)
-    logger.info(f"Backfill complete!")
+    logger.info("Backfill complete!")
     logger.info(f"  Total events: {stats['total']}")
     logger.info(f"  Updated: {stats['updated']}")
     logger.info(f"  Unchanged: {stats['unchanged']}")

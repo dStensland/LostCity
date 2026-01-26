@@ -2,7 +2,6 @@
 Tests for tag inference logic in tag_inference.py.
 """
 
-import pytest
 from tag_inference import infer_tags, merge_tags
 
 

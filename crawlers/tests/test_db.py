@@ -3,7 +3,6 @@ Tests for database operations in db.py.
 Uses mocked Supabase client to avoid actual database calls.
 """
 
-import pytest
 from unittest.mock import patch, MagicMock
 
 

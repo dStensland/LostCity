@@ -13,7 +13,6 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
 
-from utils import slugify
 from db import get_or_create_venue, insert_event, find_event_by_hash
 from dedupe import generate_content_hash
 

@@ -15,7 +15,6 @@ from __future__ import annotations
 
 import re
 import logging
-from datetime import datetime
 from typing import Optional
 
 from playwright.sync_api import sync_playwright

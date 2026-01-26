@@ -5,7 +5,6 @@ Hip coffeehouse with work settings by day, events by evening.
 
 import json
 import logging
-from datetime import datetime
 from bs4 import BeautifulSoup
 import requests
 
@@ -109,7 +108,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "source_id": source_id,
                         "venue_id": venue_id,
                         "title": title,
-                        "description": event_data.get("description", f"Event at Urban Grind - Black-owned coffeehouse on the Westside")[:500],
+                        "description": event_data.get("description", "Event at Urban Grind - Black-owned coffeehouse on the Westside")[:500],
                         "start_date": start_date,
                         "start_time": None,
                         "end_date": None,

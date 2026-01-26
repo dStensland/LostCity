@@ -5,7 +5,6 @@ Batch script to add image extraction to all crawlers.
 
 import os
 import re
-import sys
 
 SOURCES_DIR = "sources"
 
@@ -29,9 +28,7 @@ def update_playwright_crawler(filepath: str) -> bool:
 
     # Track state
     added_import = False
-    in_crawl_function = False
     added_image_extraction = False
-    page_var_name = "page"
 
     for i, line in enumerate(lines):
         # Add import after other imports

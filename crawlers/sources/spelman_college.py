@@ -270,7 +270,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 # Extract basic info
                 title = event_data.get("title", "").strip()
                 if not title:
-                    logger.debug(f"Skipping event without title")
+                    logger.debug("Skipping event without title")
                     continue
 
                 # Parse dates
@@ -295,7 +295,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 # Extract additional info
                 description = event_data.get("description", "")
                 if not description:
-                    description = f"Event at Spelman College, ranked #1 HBCU in the nation."
+                    description = "Event at Spelman College, ranked #1 HBCU in the nation."
 
                 # Truncate description if too long
                 if len(description) > 500:
@@ -395,7 +395,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     continue
 
                 # Build description
-                description = f"Annual event at Spelman College, ranked #1 HBCU in the nation."
+                description = "Annual event at Spelman College, ranked #1 HBCU in the nation."
 
                 # Build tags
                 tags = ["college", "hbcu", "spelman", "women", "annual"]

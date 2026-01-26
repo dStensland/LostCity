@@ -6,7 +6,6 @@ Uses Wix platform - may need Playwright for dynamic content.
 
 import json
 import logging
-import re
 from datetime import datetime
 from bs4 import BeautifulSoup
 import requests
@@ -104,7 +103,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 "source_id": source_id,
                 "venue_id": venue_id,
                 "title": title,
-                "description": event_data.get("description", f"Live music at Knock Music House")[:500],
+                "description": event_data.get("description", "Live music at Knock Music House")[:500],
                 "start_date": start_date,
                 "start_time": start_time,
                 "end_date": None,

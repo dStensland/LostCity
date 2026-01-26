@@ -2,8 +2,6 @@
 Tests for deduplication logic in dedupe.py.
 """
 
-import pytest
-from unittest.mock import patch, MagicMock
 from dedupe import (
     normalize_text,
     generate_content_hash,

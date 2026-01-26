@@ -113,7 +113,7 @@ def main():
             logger.info(f"  -> {lat}, {lng}")
             geocoded += 1
         else:
-            logger.warning(f"  -> Could not geocode")
+            logger.warning("  -> Could not geocode")
             failed += 1
 
         # Rate limit: 1 request per second (Nominatim policy)

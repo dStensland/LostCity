@@ -9,7 +9,7 @@ Groups meet monthly at fixed times - we generate events for the next 3 months.
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime
 from calendar import monthrange
 from typing import Optional
 

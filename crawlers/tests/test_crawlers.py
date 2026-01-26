@@ -3,11 +3,9 @@ Tests for crawler parsing logic.
 Tests common patterns used across multiple crawlers.
 """
 
-import pytest
 import re
 from datetime import datetime
 from typing import Optional
-from unittest.mock import patch, MagicMock
 from bs4 import BeautifulSoup
 
 

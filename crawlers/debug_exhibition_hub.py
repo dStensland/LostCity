@@ -42,7 +42,7 @@ with sync_playwright() as p:
         print(f"{selector}: {len(elements)} found")
         if elements and len(elements) > 0:
             first = elements[0]
-            print(f"  First element HTML (first 300 chars):")
+            print("  First element HTML (first 300 chars):")
             html = first.inner_html()
             print(f"  {html[:300]}")
 

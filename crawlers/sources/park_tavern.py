@@ -5,8 +5,6 @@ Sports bar with outdoor patio overlooking Piedmont Park - UGA football watch par
 
 import json
 import logging
-import re
-from datetime import datetime
 from bs4 import BeautifulSoup
 import requests
 
@@ -105,7 +103,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 "source_id": source_id,
                 "venue_id": venue_id,
                 "title": title,
-                "description": event_data.get("description", f"Event at Park Tavern overlooking Piedmont Park")[:500],
+                "description": event_data.get("description", "Event at Park Tavern overlooking Piedmont Park")[:500],
                 "start_date": start_date,
                 "start_time": None,
                 "end_date": None,

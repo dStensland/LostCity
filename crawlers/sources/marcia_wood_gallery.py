@@ -161,7 +161,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             i += 1
                             continue
 
-                        description = f"Art exhibition at Marcia Wood Gallery"
+                        description = "Art exhibition at Marcia Wood Gallery"
                         if artist:
                             description = f"{title} - an exhibition by {artist} at Marcia Wood Gallery"
                         description += f". On view through {end_date.strftime('%B %d, %Y')}."

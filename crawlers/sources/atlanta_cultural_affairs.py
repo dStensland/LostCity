@@ -4,7 +4,6 @@ City-sponsored arts programming including Atlanta Jazz Festival.
 Note: Government site may block direct requests - uses fallback data for major annual events.
 """
 
-import json
 import logging
 from datetime import datetime
 from bs4 import BeautifulSoup

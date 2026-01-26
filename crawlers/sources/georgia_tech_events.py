@@ -9,7 +9,6 @@ import re
 import xml.etree.ElementTree as ET
 from datetime import datetime
 from html import unescape
-from bs4 import BeautifulSoup
 import requests
 
 from db import get_or_create_venue, insert_event, find_event_by_hash

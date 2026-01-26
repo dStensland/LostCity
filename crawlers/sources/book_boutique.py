@@ -5,7 +5,6 @@ Bookstore with cafe, apparel, and twice-monthly spoken word poetry series.
 
 import json
 import logging
-from datetime import datetime
 from bs4 import BeautifulSoup
 import requests
 
@@ -106,7 +105,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     "source_id": source_id,
                     "venue_id": venue_id,
                     "title": title,
-                    "description": event_data.get("description", f"Event at Book Boutique, Atlantic Station's literary destination")[:500],
+                    "description": event_data.get("description", "Event at Book Boutique, Atlantic Station's literary destination")[:500],
                     "start_date": start_date,
                     "start_time": None,
                     "end_date": None,

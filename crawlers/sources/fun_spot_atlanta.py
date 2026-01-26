@@ -17,7 +17,6 @@ from bs4 import BeautifulSoup
 
 from db import get_or_create_venue, insert_event, find_event_by_hash
 from dedupe import generate_content_hash
-from utils import extract_image_url
 
 logger = logging.getLogger(__name__)
 
@@ -166,7 +165,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     "source_id": source_id,
                     "venue_id": venue_id,
                     "title": title,
-                    "description": description if description else f"Special event at Fun Spot America Atlanta",
+                    "description": description if description else "Special event at Fun Spot America Atlanta",
                     "start_date": start_date,
                     "start_time": None,
                     "end_date": end_date if end_date != start_date else None,

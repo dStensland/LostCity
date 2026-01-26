@@ -5,13 +5,9 @@ Largest multi-media pop culture convention - 80K+ attendance Labor Day weekend.
 
 from __future__ import annotations
 
-import re
 import logging
 from datetime import datetime
-from typing import Optional
 
-import requests
-from bs4 import BeautifulSoup
 
 from db import get_or_create_venue, insert_event, find_event_by_hash
 from dedupe import generate_content_hash

@@ -263,7 +263,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     "source_id": source_id,
                     "venue_id": venue_id,
                     "title": title,
-                    "description": description or f"Event at YMCA of Metro Atlanta",
+                    "description": description or "Event at YMCA of Metro Atlanta",
                     "start_date": start_date,
                     "start_time": start_time,
                     "end_date": None,

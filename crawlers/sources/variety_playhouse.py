@@ -140,7 +140,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                                 # Check if next line back exists and could be main title
                                 if i - back - 1 >= 0:
                                     prev_prev = lines[i - back - 1]
-                                    if not prev_prev.upper() in ["TICKETS", "SOLD OUT", "CANCELLED"] and not re.match(r"(JANUARY|FEBRUARY)", prev_prev, re.IGNORECASE):
+                                    if prev_prev.upper() not in ["TICKETS", "SOLD OUT", "CANCELLED"] and not re.match(r"(JANUARY|FEBRUARY)", prev_prev, re.IGNORECASE):
                                         # prev_line might be opener, prev_prev might be title
                                         opener = prev_line
                                         title = prev_prev

@@ -2,7 +2,6 @@
 Tests for configuration management in config.py.
 """
 
-import pytest
 import os
 from unittest.mock import patch
 

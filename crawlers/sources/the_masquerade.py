@@ -213,7 +213,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             tags.append(f"masquerade-{room.lower()}")
 
                         # Build description
-                        description = f"Live at The Masquerade"
+                        description = "Live at The Masquerade"
                         if room:
                             description += f" - {room}"
                         if opener:

@@ -9,7 +9,7 @@ from __future__ import annotations
 import os
 import re
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Optional
 
 import requests
@@ -60,7 +60,7 @@ def fetch_opportunities(page: int = 1, per_page: int = 50) -> dict:
     endpoints = [
         f"{API_BASE}/organizations/{ORG_ID}/opportunities",
         f"{API_BASE}/opportunities",
-        f"https://volunteer.handsonatlanta.org/api/opportunities",
+        "https://volunteer.handsonatlanta.org/api/opportunities",
     ]
 
     params = {
