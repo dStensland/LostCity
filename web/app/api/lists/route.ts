@@ -36,7 +36,6 @@ export async function GET(request: NextRequest) {
             producer_id,
             custom_name,
             custom_description,
-            note,
             position,
             venue:venues(id, name, slug, neighborhood, spot_type, image_url),
             event:events(id, title, start_date, image_url, venue:venues(name))
@@ -122,7 +121,6 @@ export async function GET(request: NextRequest) {
         producer_id: number | null;
         custom_name: string | null;
         custom_description: string | null;
-        note: string | null;
         position: number;
         venue?: unknown;
         event?: unknown;
