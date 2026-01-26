@@ -148,6 +148,7 @@ SOURCE_MODULES = {
     # ===== Tech & Community Organizations =====
     "atlanta-tech-village": "sources.atlanta_tech_village",
     "render-atl": "sources.render_atl",
+    "freeside-atlanta": "sources.freeside_atlanta",
     "atlanta-tech-week": "sources.atlanta_tech_week",
     "ypa-atlanta": "sources.ypa_atlanta",
     # ===== Festivals & Conventions =====
