@@ -8,6 +8,7 @@ import json
 import logging
 import re
 from datetime import datetime
+from typing import Optional
 from bs4 import BeautifulSoup
 import requests
 
@@ -32,7 +33,7 @@ VENUE_DATA = {
 }
 
 
-def parse_date(date_str: str) -> str | None:
+def parse_date(date_str: str) -> Optional[str]:
     """Parse date from various Songkick formats."""
     if not date_str:
         return None
@@ -71,7 +72,7 @@ def parse_date(date_str: str) -> str | None:
     return None
 
 
-def parse_time(time_str: str) -> str | None:
+def parse_time(time_str: str) -> Optional[str]:
     """Parse time from formats like '8:00 PM' or '20:00'."""
     if not time_str:
         return None
