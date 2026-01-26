@@ -105,6 +105,31 @@ export function usePortal(): PortalContextValue {
 }
 
 /**
+ * Optional version of usePortal that returns null when outside a PortalProvider.
+ * Use this in components that may be rendered outside portal context (e.g., settings pages).
+ */
+export function usePortalOptional(): PortalContextValue | null {
+  return useContext(PortalContext);
+}
+
+/**
+ * Default portal object for use when outside portal context.
+ * Provides fallback values for components that need portal data.
+ */
+export const DEFAULT_PORTAL: Portal = {
+  id: "",
+  slug: DEFAULT_PORTAL_SLUG,
+  name: DEFAULT_PORTAL_NAME,
+  tagline: null,
+  portal_type: "city",
+  status: "active",
+  visibility: "public",
+  filters: {},
+  branding: {},
+  settings: {},
+};
+
+/**
  * Get the current portal slug. Use this for building portal-relative URLs.
  */
 export function usePortalSlug() {

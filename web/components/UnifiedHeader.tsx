@@ -7,7 +7,7 @@ import Image from "next/image";
 import Logo from "./Logo";
 import UserMenu from "./UserMenu";
 import HeaderSearchButton from "./HeaderSearchButton";
-import { usePortal, DEFAULT_PORTAL_SLUG, DEFAULT_PORTAL_NAME } from "@/lib/portal-context";
+import { usePortalOptional, DEFAULT_PORTAL, DEFAULT_PORTAL_SLUG, DEFAULT_PORTAL_NAME } from "@/lib/portal-context";
 import { useAuth } from "@/lib/auth-context";
 
 interface PortalBranding {
@@ -83,7 +83,8 @@ function UnifiedHeaderInner({
   const mobileMenuRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const { portal } = usePortal();
+  const portalContext = usePortalOptional();
+  const portal = portalContext?.portal ?? DEFAULT_PORTAL;
   const { user } = useAuth();
 
   // Get custom nav labels from portal settings
