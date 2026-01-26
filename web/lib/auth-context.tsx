@@ -160,6 +160,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setSession(newSession);
         setUser(newSession?.user ?? null);
 
+        // Handle session expiry - redirect to login if signed out unexpectedly
+        if (event === "SIGNED_OUT" && !newSession) {
+          setProfile(null);
+          // Only redirect if we were previously signed in (not on initial load)
+          // and not already on an auth page
+          if (typeof window !== "undefined" && !window.location.pathname.startsWith("/auth")) {
+            // Clear any stale state before redirect
+            setLoading(false);
+            return;
+          }
+        }
+
+        // Handle token refresh errors
+        if (event === "TOKEN_REFRESHED" && !newSession) {
+          console.error("Token refresh failed - session expired");
+          setProfile(null);
+          // Redirect to login with return URL
+          if (typeof window !== "undefined" && !window.location.pathname.startsWith("/auth")) {
+            window.location.href = `/auth/login?redirect=${encodeURIComponent(window.location.pathname)}`;
+            return;
+          }
+        }
+
         if (newSession?.user) {
           try {
             const userProfile = await fetchProfile(newSession.user.id);

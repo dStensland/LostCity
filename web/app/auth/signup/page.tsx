@@ -4,6 +4,7 @@ import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Logo from "@/components/Logo";
+import { PasswordStrength } from "@/components/PasswordStrength";
 import { createClient } from "@/lib/supabase/client";
 import { getAuthErrorMessage } from "@/lib/auth-errors";
 import type { Database } from "@/lib/types";
@@ -387,7 +388,7 @@ function SignupForm() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  minLength={6}
+                  minLength={8}
                   autoComplete="new-password"
                   aria-describedby="password-hint"
                   className="w-full px-3 py-2.5 pr-12 rounded-lg bg-[var(--dusk)] border border-[var(--twilight)] text-[var(--cream)] font-mono text-sm focus:outline-none focus:border-[var(--coral)] transition-colors"
@@ -411,9 +412,7 @@ function SignupForm() {
                   )}
                 </button>
               </div>
-              <p id="password-hint" className="mt-1 font-mono text-[0.65rem] text-[var(--muted)]">
-                At least 6 characters
-              </p>
+              <PasswordStrength password={password} />
             </div>
 
             <button

@@ -57,7 +57,7 @@ export async function GET(request: NextRequest) {
     }
 
     if (data.user) {
-      console.log("Auth callback - user authenticated:", data.user.id, data.user.email);
+      console.log("Auth callback - user authenticated:", data.user.id);
 
       // Check if profile exists - use maybeSingle() to avoid error when no rows
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
