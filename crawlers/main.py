@@ -149,6 +149,13 @@ SOURCE_MODULES = {
     "atlanta-tech-village": "sources.atlanta_tech_village",
     "render-atl": "sources.render_atl",
     "freeside-atlanta": "sources.freeside_atlanta",
+    "decatur-makers": "sources.decatur_makers",
+    "the-maker-station": "sources.maker_station",
+    # ===== Art Studios & Creative Spaces =====
+    "janke-studios": "sources.janke_studios",
+    "mudfire": "sources.mudfire",
+    "spruill-center": "sources.spruill_center",
+    "atlanta-clay-works": "sources.atlanta_clay_works",
     "atlanta-tech-week": "sources.atlanta_tech_week",
     "ypa-atlanta": "sources.ypa_atlanta",
     # ===== Festivals & Conventions =====
