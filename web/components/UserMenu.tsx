@@ -144,66 +144,50 @@ export default function UserMenu() {
 
       {/* Dropdown menu */}
       {isOpen && (
-        <div className="absolute right-0 top-full mt-2 w-48 py-1 bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg shadow-lg z-[1050]">
+        <div className="absolute right-0 top-full mt-2 w-52 py-1 bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg shadow-lg z-[1050]">
+          {/* Header - display name and @username */}
           <div className="px-4 py-2 border-b border-[var(--twilight)]">
-            <p className="font-mono text-sm text-[var(--cream)]">
+            <p className="font-mono text-sm text-[var(--cream)] truncate max-w-[180px]">
               {profile?.display_name || profile?.username || user.email?.split("@")[0] || "User"}
             </p>
-            <p className="font-mono text-xs text-[var(--muted)]">
-              {profile?.username ? `@${profile.username}` : user.email}
+            <p className="font-mono text-xs text-[var(--muted)] truncate max-w-[180px]">
+              @{profile?.username || user.email?.split("@")[0] || "user"}
             </p>
           </div>
 
-          {profile?.username && (
-            <Link
-              href={`/profile/${profile.username}`}
-              onClick={() => setIsOpen(false)}
-              className="block px-4 py-2 font-mono text-xs text-[var(--soft)] hover:bg-[var(--twilight)] transition-colors"
-            >
-              Your Profile
-            </Link>
-          )}
-
+          {/* Profile link */}
           <Link
-            href="/dashboard"
+            href={profile?.username ? `/profile/${profile.username}` : "/settings"}
             onClick={() => setIsOpen(false)}
-            className="block px-4 py-2 font-mono text-xs text-[var(--soft)] hover:bg-[var(--twilight)] transition-colors"
+            className="flex items-center gap-2 px-4 py-2 font-mono text-xs text-[var(--soft)] hover:bg-[var(--twilight)] transition-colors"
           >
-            Your Scene
+            <span>👤</span>
+            <span>Profile</span>
           </Link>
 
-          <Link
-            href="/dashboard?tab=planning"
-            onClick={() => setIsOpen(false)}
-            className="block px-4 py-2 font-mono text-xs text-[var(--soft)] hover:bg-[var(--twilight)] transition-colors"
-          >
-            Your Moves
-          </Link>
-
-          <Link
-            href="/dashboard?tab=activity"
-            onClick={() => setIsOpen(false)}
-            className="block px-4 py-2 font-mono text-xs text-[var(--soft)] hover:bg-[var(--twilight)] transition-colors"
-          >
-            The Scene
-          </Link>
-
-          <Link
-            href="/people"
-            onClick={() => setIsOpen(false)}
-            className="block px-4 py-2 font-mono text-xs text-[var(--soft)] hover:bg-[var(--twilight)] transition-colors"
-          >
-            Find Friends
-          </Link>
-
+          {/* Settings link */}
           <Link
             href="/settings"
             onClick={() => setIsOpen(false)}
-            className="block px-4 py-2 font-mono text-xs text-[var(--soft)] hover:bg-[var(--twilight)] transition-colors"
+            className="flex items-center gap-2 px-4 py-2 font-mono text-xs text-[var(--soft)] hover:bg-[var(--twilight)] transition-colors"
           >
-            Settings
+            <span>⚙️</span>
+            <span>Settings</span>
           </Link>
 
+          {/* Admin link - only shown for admins */}
+          {profile?.is_admin && (
+            <Link
+              href="/admin"
+              onClick={() => setIsOpen(false)}
+              className="flex items-center gap-2 px-4 py-2 font-mono text-xs text-[var(--soft)] hover:bg-[var(--twilight)] transition-colors"
+            >
+              <span>🔧</span>
+              <span>Admin</span>
+            </Link>
+          )}
+
+          {/* Sign out */}
           <div className="border-t border-[var(--twilight)] mt-1">
             <button
               onClick={() => {
