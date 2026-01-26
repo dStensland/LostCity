@@ -67,15 +67,22 @@ export async function GET(request: NextRequest) {
         .eq("id", data.user.id)
         .maybeSingle();
 
-      if (profileCheckError) {
+      // If RLS recursion error (42P17), the profile might exist but we can't check
+      // In that case, we'll try to create and handle the conflict
+      const hasRlsError = profileCheckError?.code === "42P17";
+      if (profileCheckError && !hasRlsError) {
         console.error("Profile check error:", profileCheckError);
       }
 
-      console.log("Profile check result:", profile ? "exists" : "not found");
+      console.log("Profile check result:", profile ? "exists" : "not found", hasRlsError ? "(RLS error - will try create)" : "");
 
-      // If no profile exists, create one (for OAuth users or email confirmation)
-      if (!profile) {
-        // Use username from metadata (email signup) or generate from email (OAuth)
+      // If profile exists, redirect to home
+      if (profile) {
+        return NextResponse.redirect(`${origin}${redirect}`);
+      }
+
+      // If no profile exists (or RLS error), try to create one
+      // Use username from metadata (email signup) or generate from email (OAuth)
         const metadataUsername = data.user.user_metadata?.username;
         const email = data.user.email || "";
         let emailUsername = email.split("@")[0].toLowerCase().replace(/[^a-z0-9_]/g, "");
@@ -122,9 +129,10 @@ export async function GET(request: NextRequest) {
 
         // Create profile with retry logic for race conditions
         let profileCreated = false;
+        let profileAlreadyExists = false;
         let profileAttempts = 0;
 
-        while (!profileCreated && profileAttempts < 3) {
+        while (!profileCreated && !profileAlreadyExists && profileAttempts < 3) {
           const profileData = {
             id: data.user.id,
             username,
@@ -142,14 +150,31 @@ export async function GET(request: NextRequest) {
             console.log("Profile created successfully");
             profileCreated = true;
           } else if (profileError.code === "23505") {
-            // Unique constraint violation - use ID-based username
-            console.log("Username conflict, retrying with new username");
-            profileAttempts++;
-            username = `user_${data.user.id.slice(0, 8)}_${profileAttempts}`;
+            // Unique constraint violation
+            // Check the constraint/detail field to determine if it's id or username
+            const detail = profileError.details || profileError.message || "";
+            console.log("Constraint violation detail:", detail);
+
+            if (detail.includes("id") || detail.includes("Key (id)")) {
+              // Primary key conflict - profile already exists
+              console.log("Profile already exists (id conflict) - returning user");
+              profileAlreadyExists = true;
+            } else {
+              // Assume username conflict - try with different username
+              console.log("Username conflict, retrying with new username");
+              profileAttempts++;
+              username = `user_${data.user.id.slice(0, 8)}_${profileAttempts}`;
+            }
           } else {
             console.error("Profile creation error:", JSON.stringify(profileError), "Code:", profileError.code, "Message:", profileError.message);
             return NextResponse.redirect(`${origin}/auth/login?error=profile_failed`);
           }
+        }
+
+        // If profile already exists (returning user), just redirect to home
+        if (profileAlreadyExists) {
+          console.log("Returning user detected, redirecting to home");
+          return NextResponse.redirect(`${origin}${redirect}`);
         }
 
         if (!profileCreated) {
@@ -157,7 +182,7 @@ export async function GET(request: NextRequest) {
           return NextResponse.redirect(`${origin}/auth/login?error=profile_failed`);
         }
 
-        // Create default preferences with error handling
+        // Create default preferences with error handling (only for new users)
         try {
           const prefsData = {
             user_id: data.user.id,
@@ -176,9 +201,8 @@ export async function GET(request: NextRequest) {
           console.error("Preferences creation exception:", err);
         }
 
-        // Redirect new users (OAuth or email confirmation) to Discovery Mode onboarding
-        return NextResponse.redirect(`${origin}/onboarding`);
-      }
+      // Redirect new users (OAuth or email confirmation) to Discovery Mode onboarding
+      return NextResponse.redirect(`${origin}/onboarding`);
     }
   }
 
