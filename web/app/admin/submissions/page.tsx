@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import UnifiedHeader from "@/components/UnifiedHeader";
 import { useAuth } from "@/lib/auth-context";
 import type { SubmissionWithProfile, SubmissionStatus, SubmissionType } from "@/lib/types";
 
@@ -128,18 +127,14 @@ export default function AdminSubmissionsPage() {
 
   if (!profile?.is_admin) {
     return (
-      <div className="min-h-screen">
-        <UnifiedHeader />
-        <main className="max-w-4xl mx-auto px-4 py-12 text-center">
-          <p className="text-[var(--muted)]">Access denied. Admin only.</p>
-        </main>
+      <div className="max-w-4xl mx-auto px-4 py-12 text-center">
+        <p className="text-[var(--muted)]">Access denied. Admin only.</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen">
-      <UnifiedHeader />
+    <div>
 
       <main className="max-w-6xl mx-auto px-4 py-8">
         {/* Header */}

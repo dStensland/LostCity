@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
-import { usePortal } from "@/lib/portal-context";
+import { usePortalOptional, DEFAULT_PORTAL } from "@/lib/portal-context";
 import type { SearchResult, SearchFacet } from "@/lib/unified-search";
 import type { SearchSuggestion } from "@/lib/search-suggestions";
 
@@ -27,7 +27,8 @@ function useDebounce<T>(value: T, delay: number): T {
 }
 
 export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
-  const { portal } = usePortal();
+  const portalContext = usePortalOptional();
+  const portal = portalContext?.portal ?? DEFAULT_PORTAL;
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResult[]>([]);
   const [facets, setFacets] = useState<SearchFacet[]>([]);

@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useAuth } from "@/lib/auth-context";
-import { usePortal } from "@/lib/portal-context";
+import { usePortalOptional, DEFAULT_PORTAL } from "@/lib/portal-context";
 import { formatDistanceToNow } from "date-fns";
 
 type NotificationType =
@@ -254,7 +254,8 @@ function NotificationItem({
   notification: Notification;
   onClick: () => void;
 }) {
-  const { portal } = usePortal();
+  const portalContext = usePortalOptional();
+  const portal = portalContext?.portal ?? DEFAULT_PORTAL;
   const isUnread = !notification.read_at;
   const timeAgo = formatDistanceToNow(new Date(notification.created_at), { addSuffix: true });
 
