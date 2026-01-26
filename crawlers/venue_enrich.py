@@ -1,16 +1,23 @@
 """
 Venue Enrichment Script
-Enriches venue data using Google Places API.
+Enriches venue data using Google Places API and website analysis.
 """
 
 import os
 import re
 import time
 import math
+import json
+import logging
 import requests
 from typing import Optional
 from dotenv import load_dotenv
+from anthropic import Anthropic
 from db import get_client
+from utils import fetch_page, extract_text_content
+from config import get_config
+
+logger = logging.getLogger(__name__)
 
 # Load .env file
 load_dotenv()
@@ -86,6 +93,76 @@ GOOGLE_TYPE_MAP = {
     "wine_bar": "bar",
     "pub": "bar",
 }
+
+# Valid spot_type values (from GOOGLE_TYPE_MAP)
+VALID_SPOT_TYPES = list(set(GOOGLE_TYPE_MAP.values())) + [
+    "music_venue", "event_space", "hotel", "church", "community_center",
+    "comedy_club", "coworking", "food_hall"
+]
+
+# Standardized vibes taxonomy
+VALID_VIBES = [
+    # Atmosphere
+    "intimate", "chill", "high-energy", "rowdy", "upscale", "divey", "artsy",
+    # Features
+    "outdoor-seating", "rooftop", "patio", "live-music", "dj", "karaoke",
+    "trivia", "games", "dancing", "craft-cocktails", "craft-beer",
+    # Audience
+    "date-spot", "late-night", "family-friendly", "dog-friendly", "lgbtq-friendly",
+]
+
+WEBSITE_ANALYSIS_PROMPT = """You are a venue analyst. Given text from a venue's website, extract structured information about the venue.
+
+RULES:
+1. Extract ONLY information explicitly stated or clearly implied. Never invent details.
+2. If a field is unclear or missing, use null.
+3. For vibes, only use values from the allowed list.
+4. Set confidence (0.0-1.0) based on how clear the website content was.
+
+VIBES (pick all that apply from this list only):
+intimate, chill, high-energy, rowdy, upscale, divey, artsy, outdoor-seating, rooftop, patio, live-music, dj, karaoke, trivia, games, dancing, craft-cocktails, craft-beer, date-spot, late-night, family-friendly, dog-friendly, lgbtq-friendly
+
+SPOT_TYPE (pick ONE primary type):
+bar, restaurant, coffee_shop, music_venue, theater, cinema, gallery, museum, arena, club, brewery, park, fitness, wellness, bookstore, library, games, event_space, hotel, church, community_center, comedy_club, coworking, food_hall
+
+PRICE_LEVEL (1-4 scale):
+1 = Budget/cheap ($, dive bars, casual spots)
+2 = Moderate ($$, standard restaurants/bars)
+3 = Upscale ($$$, nice restaurants, craft cocktail bars)
+4 = Luxury ($$$$, fine dining, exclusive clubs)
+
+IS_EVENT_VENUE detection:
+Look for these indicators that the venue hosts events:
+- Event calendar or "upcoming events/shows" section
+- Ticket purchasing options
+- Concert/show listings
+- "Live music" or "live entertainment" mentions
+- "Book artists" or talent booking info
+- Festival or event hosting mentions
+If the venue clearly hosts scheduled public events (concerts, comedy shows, art openings, etc.), set is_event_venue to true.
+
+OUTPUT FORMAT:
+Return valid JSON matching this schema:
+{
+  "vibes": ["vibe1", "vibe2"] | null,
+  "spot_type": "type" | null,
+  "price_level": 1-4 | null,
+  "is_event_venue": true | false | null,
+  "confidence": 0.0-1.0,
+  "reasoning": "Brief explanation of findings"
+}"""
+
+# Anthropic client singleton
+_anthropic_client: Optional[Anthropic] = None
+
+
+def get_anthropic_client() -> Anthropic:
+    """Get or create Anthropic client."""
+    global _anthropic_client
+    if _anthropic_client is None:
+        cfg = get_config()
+        _anthropic_client = Anthropic(api_key=cfg.llm.anthropic_api_key)
+    return _anthropic_client
 
 
 def haversine_distance(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
@@ -216,6 +293,86 @@ def map_price_level(google_price: Optional[str]) -> Optional[int]:
         "PRICE_LEVEL_VERY_EXPENSIVE": 4,
     }
     return mapping.get(google_price)
+
+
+def extract_venue_info_from_website(website_url: str) -> Optional[dict]:
+    """
+    Crawl venue website and extract vibes/price/type using LLM.
+
+    Args:
+        website_url: URL of the venue's website
+
+    Returns:
+        Dict with vibes, spot_type, price_level, is_event_venue, confidence
+        or None if extraction failed
+    """
+    cfg = get_config()
+
+    try:
+        # Fetch the website HTML
+        html = fetch_page(website_url)
+        text_content = extract_text_content(html)
+
+        # Truncate if too long
+        if len(text_content) > 15000:
+            text_content = text_content[:15000] + "\n\n[Content truncated...]"
+
+        if not text_content or len(text_content) < 100:
+            logger.warning(f"Insufficient content from {website_url}")
+            return None
+
+        # Call Claude for extraction
+        client = get_anthropic_client()
+
+        user_message = f"""Venue Website URL: {website_url}
+
+Website Content:
+{text_content}"""
+
+        response = client.messages.create(
+            model=cfg.llm.model,
+            max_tokens=1024,
+            temperature=cfg.llm.temperature,
+            system=WEBSITE_ANALYSIS_PROMPT,
+            messages=[{"role": "user", "content": user_message}]
+        )
+
+        # Parse the response
+        response_text = response.content[0].text
+
+        # Extract JSON from response
+        json_str = response_text
+        if "```json" in response_text:
+            json_str = response_text.split("```json")[1].split("```")[0]
+        elif "```" in response_text:
+            json_str = response_text.split("```")[1].split("```")[0]
+
+        data = json.loads(json_str)
+
+        # Validate vibes
+        if data.get("vibes"):
+            data["vibes"] = [v for v in data["vibes"] if v in VALID_VIBES]
+            if not data["vibes"]:
+                data["vibes"] = None
+
+        # Validate spot_type
+        if data.get("spot_type") and data["spot_type"] not in VALID_SPOT_TYPES:
+            logger.warning(f"Invalid spot_type '{data['spot_type']}' - ignoring")
+            data["spot_type"] = None
+
+        # Validate price_level
+        if data.get("price_level"):
+            if not isinstance(data["price_level"], int) or data["price_level"] < 1 or data["price_level"] > 4:
+                data["price_level"] = None
+
+        return data
+
+    except json.JSONDecodeError as e:
+        logger.error(f"Failed to parse LLM response as JSON for {website_url}: {e}")
+        return None
+    except Exception as e:
+        logger.error(f"Website extraction failed for {website_url}: {e}")
+        return None
 
 
 def enrich_venue(venue_id: int, google_place: dict, dry_run: bool = False) -> dict:
@@ -403,7 +560,7 @@ def enrich_address_venues(limit: int = 50, dry_run: bool = False) -> dict:
                     print(f"  Found venue: {found_name}")
                     print(f"  Address: {found_address}")
 
-                    updates = enrich_venue(venue["id"], place, dry_run=dry_run)
+                    enrich_venue(venue["id"], place, dry_run=dry_run)
 
                     # Also update the name if it's different
                     if not dry_run:
@@ -433,24 +590,147 @@ def enrich_address_venues(limit: int = 50, dry_run: bool = False) -> dict:
     return stats
 
 
+def enrich_websites_only(limit: int = 50, dry_run: bool = False) -> dict:
+    """
+    Find venues with websites missing enrichment data and analyze them via LLM.
+
+    Targets venues that:
+    - Have website URL populated
+    - Are missing vibes, spot_type, price_level, or is_event_venue
+
+    Returns stats about the enrichment run.
+    """
+    client = get_client()
+
+    # Find venues with websites that need enrichment
+    # Query: active=true, website IS NOT NULL, (vibes IS NULL OR spot_type IS NULL OR price_level IS NULL)
+    # Note: is_event_venue check is done in Python to handle case where column doesn't exist yet
+    result = client.table("venues").select("*").eq("active", True).not_.is_("website", "null").or_(
+        "vibes.is.null,spot_type.is.null,price_level.is.null"
+    ).order("name").limit(limit).execute()
+
+    venues = result.data or []
+
+    stats = {
+        "total": len(venues),
+        "enriched": 0,
+        "failed": 0,
+        "skipped": 0,
+    }
+
+    print(f"\nFound {len(venues)} venues with websites to analyze")
+    print("=" * 60)
+
+    for i, venue in enumerate(venues, 1):
+        print(f"\n[{i}/{len(venues)}] {venue['name']}")
+        print(f"  Website: {venue.get('website', 'N/A')}")
+
+        website = venue.get("website")
+        if not website:
+            print("  Skipping: no website")
+            stats["skipped"] += 1
+            continue
+
+        # Skip if already has all the main data (is_event_venue may not exist yet)
+        if (venue.get("vibes") and venue.get("spot_type") and venue.get("price_level")):
+            # Check is_event_venue only if column exists
+            if "is_event_venue" in venue and venue.get("is_event_venue") is not None:
+                print("  Skipping: already complete")
+                stats["skipped"] += 1
+                continue
+
+        try:
+            extracted = extract_venue_info_from_website(website)
+
+            if not extracted:
+                print("  No data extracted")
+                stats["failed"] += 1
+                continue
+
+            confidence = extracted.get("confidence", 0)
+            print(f"  Confidence: {confidence:.2f}")
+            print(f"  Reasoning: {extracted.get('reasoning', 'N/A')}")
+
+            # Build update dict - merge with existing data
+            updates = {}
+
+            # Vibes: union of existing + new
+            new_vibes = extracted.get("vibes")
+            if new_vibes:
+                existing_vibes = venue.get("vibes") or []
+                combined_vibes = list(set(existing_vibes + new_vibes))
+                if combined_vibes != existing_vibes:
+                    updates["vibes"] = combined_vibes
+                    print(f"  Vibes: {combined_vibes}")
+
+            # spot_type: use new if missing
+            new_spot_type = extracted.get("spot_type")
+            if new_spot_type and not venue.get("spot_type"):
+                updates["spot_type"] = new_spot_type
+                print(f"  Spot type: {new_spot_type}")
+
+            # price_level: use new if missing
+            new_price_level = extracted.get("price_level")
+            if new_price_level and not venue.get("price_level"):
+                updates["price_level"] = new_price_level
+                print(f"  Price level: {new_price_level}")
+
+            # is_event_venue: always set from website analysis
+            is_event_venue = extracted.get("is_event_venue")
+            if is_event_venue is not None and venue.get("is_event_venue") is None:
+                updates["is_event_venue"] = is_event_venue
+                print(f"  Is event venue: {is_event_venue}")
+
+            if updates:
+                if dry_run:
+                    print(f"  [DRY RUN] Would update: {updates}")
+                else:
+                    client.table("venues").update(updates).eq("id", venue["id"]).execute()
+                    print("  Updated successfully")
+                stats["enriched"] += 1
+            else:
+                print("  No new data to update")
+                stats["skipped"] += 1
+
+        except Exception as e:
+            print(f"  Error: {e}")
+            stats["failed"] += 1
+
+        # Rate limit: 2 seconds between requests (LLM calls are slower)
+        time.sleep(2)
+
+    return stats
+
+
 if __name__ == "__main__":
     import argparse
 
-    parser = argparse.ArgumentParser(description="Enrich venue data via Google Places")
+    parser = argparse.ArgumentParser(description="Enrich venue data via Google Places or website analysis")
     parser.add_argument("--limit", type=int, default=50, help="Max venues to process")
     parser.add_argument("--dry-run", action="store_true", help="Don't actually update database")
     parser.add_argument("--addresses", action="store_true", help="Process address-like venue names")
+    parser.add_argument("--website-enrich", action="store_true", help="Analyze venue websites for vibes/type/price")
 
     args = parser.parse_args()
 
-    if not GOOGLE_API_KEY:
-        print("Error: GOOGLE_PLACES_API_KEY environment variable not set")
-        print("Set it with: export GOOGLE_PLACES_API_KEY=your_key_here")
-        exit(1)
-
-    if args.addresses:
+    if args.website_enrich:
+        # Website enrichment uses Anthropic API, not Google
+        cfg = get_config()
+        if not cfg.llm.anthropic_api_key:
+            print("Error: ANTHROPIC_API_KEY environment variable not set")
+            exit(1)
+        stats = enrich_websites_only(limit=args.limit, dry_run=args.dry_run)
+    elif args.addresses:
+        if not GOOGLE_API_KEY:
+            print("Error: GOOGLE_PLACES_API_KEY environment variable not set")
+            print("Set it with: export GOOGLE_PLACES_API_KEY=your_key_here")
+            exit(1)
         stats = enrich_address_venues(limit=args.limit, dry_run=args.dry_run)
     else:
+        if not GOOGLE_API_KEY:
+            print("Error: GOOGLE_PLACES_API_KEY environment variable not set")
+            print("Set it with: export GOOGLE_PLACES_API_KEY=your_key_here")
+            exit(1)
         stats = enrich_incomplete_venues(limit=args.limit, dry_run=args.dry_run)
 
     print("\n" + "=" * 60)
