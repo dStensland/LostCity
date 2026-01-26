@@ -65,11 +65,30 @@ export async function GET(request: NextRequest) {
     searchQuery = searchQuery.or("is_verified.eq.true,is_verified.is.null");
   }
 
-  const { data: producers, error } = await searchQuery;
+  const { data: producersData, error } = await searchQuery;
 
   if (error) {
     return errorResponse(error, "producer search");
   }
+
+  type ProducerResult = {
+    id: string;
+    name: string;
+    slug: string;
+    org_type: string | null;
+    website: string | null;
+    neighborhood: string | null;
+    city: string | null;
+    categories: string[] | null;
+    description: string | null;
+    logo_url: string | null;
+    featured: boolean | null;
+    hidden: boolean | null;
+    is_verified: boolean | null;
+    total_events_tracked: number | null;
+  };
+
+  const producers = producersData as ProducerResult[] | null;
 
   // Sort results: exact matches first, then prefix matches, then featured, then by event count
   const sortedProducers = (producers || []).sort((a, b) => {

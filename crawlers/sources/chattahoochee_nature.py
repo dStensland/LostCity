@@ -2,6 +2,7 @@
 Crawler for Chattahoochee Nature Center (chattnaturecenter.org).
 
 Site uses JavaScript rendering - must use Playwright.
+Events are displayed with Modern Events Calendar plugin.
 """
 
 from __future__ import annotations
@@ -10,12 +11,12 @@ import re
 import logging
 from datetime import datetime
 from typing import Optional
+from urllib.parse import urlparse, parse_qs
 
 from playwright.sync_api import sync_playwright
 
 from db import get_or_create_venue, insert_event, find_event_by_hash
 from dedupe import generate_content_hash
-from utils import extract_images_from_page
 
 logger = logging.getLogger(__name__)
 
@@ -38,8 +39,22 @@ VENUE_DATA = {
 }
 
 
+def parse_date_from_occurrence(url: str) -> Optional[str]:
+    """Extract date from occurrence URL parameter."""
+    try:
+        parsed = urlparse(url)
+        query_params = parse_qs(parsed.query)
+        occurrence = query_params.get('occurrence', [None])[0]
+        if occurrence:
+            # Format: 2026-01-25
+            return occurrence
+    except Exception:
+        pass
+    return None
+
+
 def parse_time(time_text: str) -> Optional[str]:
-    """Parse time from '7:00 PM' format."""
+    """Parse time from '7:00 PM' or '7:00 pm' format."""
     match = re.search(r"(\d{1,2}):(\d{2})\s*(am|pm)", time_text, re.IGNORECASE)
     if match:
         hour, minute, period = match.groups()
@@ -74,75 +89,83 @@ def crawl(source: dict) -> tuple[int, int, int]:
             page.goto(EVENTS_URL, wait_until="domcontentloaded", timeout=30000)
             page.wait_for_timeout(3000)
 
-            # Extract images from page
-            image_map = extract_images_from_page(page)
-
             # Scroll to load all content
             for _ in range(5):
                 page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
                 page.wait_for_timeout(1000)
 
-            # Get page text and parse line by line
-            body_text = page.inner_text("body")
-            lines = [l.strip() for l in body_text.split("\n") if l.strip()]
+            # Track seen event IDs to avoid duplicates (events repeat for each occurrence)
+            seen_event_ids = set()
 
-            # Parse events - look for date patterns
-            i = 0
-            while i < len(lines):
-                line = lines[i]
+            # Find all event articles
+            event_articles = page.query_selector_all("article.mec-event-article")
+            logger.info(f"Found {len(event_articles)} event article elements")
 
-                # Skip navigation items
-                if len(line) < 3:
-                    i += 1
-                    continue
-
-                # Look for date patterns
-                date_match = re.match(
-                    r"(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)?,?\s*(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{1,2})(?:,?\s+(\d{4}))?",
-                    line,
-                    re.IGNORECASE
-                )
-
-                if date_match:
-                    month = date_match.group(1)
-                    day = date_match.group(2)
-                    year = date_match.group(3) if date_match.group(3) else str(datetime.now().year)
-
-                    # Look for title in surrounding lines
-                    title = None
-                    start_time = None
-
-                    for offset in [-2, -1, 1, 2, 3]:
-                        idx = i + offset
-                        if 0 <= idx < len(lines):
-                            check_line = lines[idx]
-                            if re.match(r"(January|February|March)", check_line, re.IGNORECASE):
-                                continue
-                            if not start_time:
-                                time_result = parse_time(check_line)
-                                if time_result:
-                                    start_time = time_result
-                                    continue
-                            if not title and len(check_line) > 5:
-                                if not re.match(r"\d{1,2}[:/]", check_line):
-                                    if not re.match(r"(free|tickets|register|\$|more info)", check_line.lower()):
-                                        title = check_line
-                                        break
-
-                    if not title:
-                        i += 1
+            for article in event_articles:
+                try:
+                    # Get event title and link
+                    title_link = article.query_selector("h3.mec-event-title a")
+                    if not title_link:
+                        logger.debug("No title link found, skipping")
                         continue
 
-                    # Parse date
+                    title = title_link.inner_text().strip()
+                    event_url = title_link.get_attribute("href")
+                    event_id_attr = title_link.get_attribute("data-event-id")
+
+                    if not title or not event_url:
+                        logger.debug(f"Missing title or URL, skipping")
+                        continue
+
+                    # Skip duplicate events (same event on different days)
+                    if event_id_attr in seen_event_ids:
+                        continue
+                    seen_event_ids.add(event_id_attr)
+
+                    # Get description
+                    description_elem = article.query_selector(".mec-event-description")
+                    description = description_elem.inner_text().strip() if description_elem else ""
+
+                    # Extract start date from occurrence parameter in URL
+                    start_date = parse_date_from_occurrence(event_url)
+                    if not start_date:
+                        logger.debug(f"Could not extract date from URL: {event_url}")
+                        continue
+
+                    # Parse the date to ensure it's valid
                     try:
-                        month_str = month[:3] if len(month) > 3 else month
-                        dt = datetime.strptime(f"{month_str} {day} {year}", "%b %d %Y")
+                        dt = datetime.strptime(start_date, "%Y-%m-%d")
+                        # Skip past events
                         if dt.date() < datetime.now().date():
-                            dt = datetime.strptime(f"{month_str} {day} {int(year) + 1}", "%b %d %Y")
-                        start_date = dt.strftime("%Y-%m-%d")
+                            continue
                     except ValueError:
-                        i += 1
+                        logger.debug(f"Invalid date format: {start_date}")
                         continue
+
+                    # Get time from meta section
+                    start_time = None
+                    time_elem = article.query_selector(".mec-start-time")
+                    if time_elem:
+                        time_text = time_elem.inner_text().strip()
+                        if time_text.lower() != "all day":
+                            start_time = parse_time(time_text)
+
+                    # Get image
+                    image_url = None
+                    img_elem = article.query_selector("img.mec-event-image")
+                    if img_elem:
+                        image_url = img_elem.get_attribute("src") or img_elem.get_attribute("data-src")
+
+                    # Get price/registration info
+                    price_note = None
+                    is_free = False
+                    cost_elem = article.query_selector(".mec-event-cost, .mec-booking-button")
+                    if cost_elem:
+                        cost_text = cost_elem.inner_text().strip().lower()
+                        if "free" in cost_text:
+                            is_free = True
+                        elif cost_text:
+                            price_note = cost_text
 
                     events_found += 1
 
@@ -150,37 +173,49 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     if find_event_by_hash(content_hash):
                         events_updated += 1
-                        i += 1
                         continue
+
+                    # Determine category from title/description
+                    category = "community"
+                    tags = ["chattahoochee", "nature", "roswell", "outdoor", "education"]
+
+                    title_lower = title.lower()
+                    desc_lower = description.lower()
+
+                    if any(word in title_lower or word in desc_lower for word in ["hike", "trail", "walk"]):
+                        tags.append("hiking")
+                    if any(word in title_lower or word in desc_lower for word in ["bird", "wildlife", "animal"]):
+                        tags.append("wildlife")
+                    if any(word in title_lower or word in desc_lower for word in ["kid", "child", "family"]):
+                        tags.append("family-friendly")
+                    if any(word in title_lower or word in desc_lower for word in ["kayak", "canoe", "paddle"]):
+                        tags.append("kayaking")
+                    if any(word in title_lower or word in desc_lower for word in ["art", "gallery", "exhibit"]):
+                        category = "art"
+                        tags.append("gallery")
 
                     event_record = {
                         "source_id": source_id,
                         "venue_id": venue_id,
                         "title": title,
-                        "description": "Event at Chattahoochee Nature Center",
+                        "description": description if description else f"Event at Chattahoochee Nature Center",
                         "start_date": start_date,
                         "start_time": start_time,
                         "end_date": None,
                         "end_time": None,
                         "is_all_day": start_time is None,
-                        "category": "community",
+                        "category": category,
                         "subcategory": None,
-                        "tags": [
-                        "chattahoochee",
-                        "nature",
-                        "roswell",
-                        "outdoor",
-                        "education",
-                    ],
+                        "tags": tags,
                         "price_min": None,
                         "price_max": None,
-                        "price_note": None,
-                        "is_free": False,
-                        "source_url": EVENTS_URL,
-                        "ticket_url": EVENTS_URL,
-                        "image_url": image_map.get(title),
-                        "raw_text": f"{title} - {start_date}",
-                        "extraction_confidence": 0.80,
+                        "price_note": price_note,
+                        "is_free": is_free,
+                        "source_url": event_url,
+                        "ticket_url": event_url,
+                        "image_url": image_url,
+                        "raw_text": f"{title} - {description[:200] if description else ''}",
+                        "extraction_confidence": 0.85,
                         "is_recurring": False,
                         "recurrence_rule": None,
                         "content_hash": content_hash,
@@ -193,7 +228,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     except Exception as e:
                         logger.error(f"Failed to insert: {title}: {e}")
 
-                i += 1
+                except Exception as e:
+                    logger.error(f"Error processing event article: {e}")
+                    continue
 
             browser.close()
 

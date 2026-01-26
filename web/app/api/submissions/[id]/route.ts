@@ -21,7 +21,7 @@ export async function GET(request: NextRequest, { params }: Props) {
 
   const supabase = await createClient();
 
-  const { data: submission, error } = await supabase
+  const { data: submissionData, error } = await supabase
     .from("submissions")
     .select(
       `
@@ -66,13 +66,27 @@ export async function GET(request: NextRequest, { params }: Props) {
     return errorResponse(error, "submission detail");
   }
 
+  const submission = submissionData as {
+    submitted_by: string;
+    portal_id: string | null;
+    status: string;
+    potential_duplicate_id: number | null;
+    potential_duplicate_type: string | null;
+    approved_event_id: number | null;
+    approved_venue_id: number | null;
+    approved_producer_id: string | null;
+    [key: string]: unknown;
+  };
+
   // Check if user can view this submission
   // User can view their own submissions, admins can view all
-  const { data: profile } = await supabase
+  const { data: profileData } = await supabase
     .from("profiles")
     .select("is_admin")
     .eq("id", user.id)
     .single();
+
+  const profile = profileData as { is_admin: boolean } | null;
 
   if (submission.submitted_by !== user.id && !profile?.is_admin) {
     // Check if user is portal admin
@@ -84,7 +98,8 @@ export async function GET(request: NextRequest, { params }: Props) {
         .eq("user_id", user.id)
         .single();
 
-      if (!portalMember || !["owner", "admin"].includes(portalMember.role)) {
+      const member = portalMember as { role: string } | null;
+      if (!member || !["owner", "admin"].includes(member.role)) {
         return NextResponse.json({ error: "Access denied" }, { status: 403 });
       }
     } else {
@@ -113,7 +128,7 @@ export async function GET(request: NextRequest, { params }: Props) {
   }
 
   // If approved, fetch the approved entity details
-  let approvedEntity = null;
+  let approvedEntity: { type: string; data: unknown } | null = null;
   if (submission.status === "approved") {
     if (submission.approved_event_id) {
       const { data: event } = await supabase
@@ -121,21 +136,21 @@ export async function GET(request: NextRequest, { params }: Props) {
         .select("id, title, start_date, source_url")
         .eq("id", submission.approved_event_id)
         .single();
-      approvedEntity = { type: "event", ...event };
+      approvedEntity = { type: "event", data: event };
     } else if (submission.approved_venue_id) {
       const { data: venue } = await supabase
         .from("venues")
         .select("id, name, slug")
         .eq("id", submission.approved_venue_id)
         .single();
-      approvedEntity = { type: "venue", ...venue };
+      approvedEntity = { type: "venue", data: venue };
     } else if (submission.approved_producer_id) {
       const { data: producer } = await supabase
         .from("event_producers")
         .select("id, name, slug")
         .eq("id", submission.approved_producer_id)
         .single();
-      approvedEntity = { type: "producer", ...producer };
+      approvedEntity = { type: "producer", data: producer };
     }
   }
 
@@ -162,15 +177,17 @@ export async function PUT(request: NextRequest, { params }: Props) {
   const supabase = await createClient();
 
   // Check if submission exists and belongs to user
-  const { data: existing, error: fetchError } = await supabase
+  const { data: existingData, error: fetchError } = await supabase
     .from("submissions")
     .select("id, submitted_by, status")
     .eq("id", id)
     .single();
 
-  if (fetchError || !existing) {
+  if (fetchError || !existingData) {
     return NextResponse.json({ error: "Submission not found" }, { status: 404 });
   }
+
+  const existing = existingData as { id: string; submitted_by: string; status: string };
 
   // Only owner can update
   if (existing.submitted_by !== user.id) {
@@ -234,23 +251,25 @@ export async function DELETE(request: NextRequest, { params }: Props) {
   const supabase = await createClient();
 
   // Check if submission exists and belongs to user
-  const { data: existing, error: fetchError } = await supabase
+  const { data: existingDeleteData, error: fetchError } = await supabase
     .from("submissions")
     .select("id, submitted_by, status")
     .eq("id", id)
     .single();
 
-  if (fetchError || !existing) {
+  if (fetchError || !existingDeleteData) {
     return NextResponse.json({ error: "Submission not found" }, { status: 404 });
   }
 
+  const existingDelete = existingDeleteData as { id: string; submitted_by: string; status: string };
+
   // Only owner can delete
-  if (existing.submitted_by !== user.id) {
+  if (existingDelete.submitted_by !== user.id) {
     return NextResponse.json({ error: "Access denied" }, { status: 403 });
   }
 
   // Can only delete pending submissions
-  if (existing.status !== "pending") {
+  if (existingDelete.status !== "pending") {
     return NextResponse.json(
       { error: "Can only delete pending submissions" },
       { status: 400 }

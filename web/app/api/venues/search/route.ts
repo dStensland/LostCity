@@ -57,11 +57,25 @@ export async function GET(request: NextRequest) {
     searchQuery = searchQuery.eq("neighborhood", neighborhood);
   }
 
-  const { data: venues, error } = await searchQuery;
+  const { data: venuesData, error } = await searchQuery;
 
   if (error) {
     return errorResponse(error, "venue search");
   }
+
+  type VenueResult = {
+    id: number;
+    name: string;
+    slug: string;
+    address: string | null;
+    neighborhood: string | null;
+    city: string | null;
+    state: string | null;
+    venue_type: string | null;
+    aliases: string[] | null;
+  };
+
+  const venues = venuesData as VenueResult[] | null;
 
   // Sort results: exact matches first, then prefix matches, then contains matches
   const sortedVenues = (venues || []).sort((a, b) => {

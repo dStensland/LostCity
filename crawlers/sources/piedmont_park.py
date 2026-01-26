@@ -1,7 +1,7 @@
 """
 Crawler for Piedmont Park Conservancy (piedmontpark.org).
 
-Site uses JavaScript rendering - must use Playwright.
+Uses The Events Calendar REST API to fetch event data.
 """
 
 from __future__ import annotations
@@ -10,17 +10,15 @@ import re
 import logging
 from datetime import datetime
 from typing import Optional
-
-from playwright.sync_api import sync_playwright
+import httpx
 
 from db import get_or_create_venue, insert_event, find_event_by_hash
 from dedupe import generate_content_hash
-from utils import extract_images_from_page
 
 logger = logging.getLogger(__name__)
 
 BASE_URL = "https://www.piedmontpark.org"
-EVENTS_URL = f"{BASE_URL}/events"
+API_URL = "https://piedmontpark.org/wp-json/tribe/events/v1/events"
 
 VENUE_DATA = {
     "name": "Piedmont Park",
@@ -38,176 +36,185 @@ VENUE_DATA = {
 }
 
 
-def parse_time(time_text: str) -> Optional[str]:
-    """Parse time from '7:00 PM' format."""
-    match = re.search(r"(\d{1,2}):(\d{2})\s*(am|pm)", time_text, re.IGNORECASE)
-    if match:
-        hour, minute, period = match.groups()
-        hour = int(hour)
-        if period.lower() == "pm" and hour != 12:
-            hour += 12
-        elif period.lower() == "am" and hour == 12:
-            hour = 0
-        return f"{hour:02d}:{minute}"
+def parse_datetime(dt_str: str) -> tuple[str, str]:
+    """Parse datetime string from API into date and time."""
+    # Format: "2026-01-24 08:30:00"
+    dt = datetime.strptime(dt_str, "%Y-%m-%d %H:%M:%S")
+    return dt.strftime("%Y-%m-%d"), dt.strftime("%H:%M")
+
+
+def extract_image_from_description(description: str) -> Optional[str]:
+    """Extract image URL from HTML description."""
+    img_match = re.search(r'<img[^>]+src="([^"]+)"', description)
+    if img_match:
+        url = img_match.group(1)
+        # Convert .webp to .png if needed, or just return the webp
+        return url
     return None
 
 
+def categorize_event(title: str, description: str) -> str:
+    """Determine category based on title and description."""
+    text = (title + " " + description).lower()
+
+    if any(w in text for w in ["yoga", "fitness", "run", "5k", "race", "walk", "hike"]):
+        return "fitness"
+    elif any(w in text for w in ["concert", "music", "band", "jazz", "festival"]):
+        return "music"
+    elif any(w in text for w in ["market", "food", "farmers", "vendor"]):
+        return "food_drink"
+    elif any(w in text for w in ["art", "gallery", "exhibition", "show"]):
+        return "arts"
+    elif any(w in text for w in ["movie", "film", "cinema"]):
+        return "film"
+    elif any(w in text for w in ["kids", "children", "family"]):
+        return "family"
+    else:
+        return "outdoors"
+
+
 def crawl(source: dict) -> tuple[int, int, int]:
-    """Crawl Piedmont Park events using Playwright."""
+    """Crawl Piedmont Park events using The Events Calendar REST API."""
     source_id = source["id"]
     events_found = 0
     events_new = 0
     events_updated = 0
 
     try:
-        with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
-            context = browser.new_context(
-                user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
-                viewport={"width": 1920, "height": 1080},
+        venue_id = get_or_create_venue(VENUE_DATA)
+
+        # Fetch events from API - use 50 per page (API's max limit)
+        page = 1
+        per_page = 50
+        total_pages = 1
+
+        while page <= total_pages:
+            logger.info(f"Fetching Piedmont Park events (page {page}/{total_pages})")
+
+            response = httpx.get(
+                API_URL,
+                params={"per_page": per_page, "page": page},
+                timeout=30.0,
+                follow_redirects=True,
             )
-            page = context.new_page()
+            response.raise_for_status()
+            data = response.json()
 
-            venue_id = get_or_create_venue(VENUE_DATA)
+            # Update total pages from response
+            if page == 1:
+                total = data.get("total", 0)
+                total_pages = (total + per_page - 1) // per_page  # Round up
+                logger.info(f"Found {total} total events across {total_pages} pages")
 
-            logger.info(f"Fetching Piedmont Park: {EVENTS_URL}")
-            page.goto(EVENTS_URL, wait_until="domcontentloaded", timeout=30000)
-            page.wait_for_timeout(3000)
+            events = data.get("events", [])
 
-            # Extract images from page
-            image_map = extract_images_from_page(page)
+            for event_data in events:
+                events_found += 1
 
-            # Scroll to load all content
-            for _ in range(5):
-                page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
-                page.wait_for_timeout(1000)
-
-            # Get page text and parse line by line
-            body_text = page.inner_text("body")
-            lines = [l.strip() for l in body_text.split("\n") if l.strip()]
-
-            # Parse events - look for date patterns
-            i = 0
-            while i < len(lines):
-                line = lines[i]
-
-                # Skip navigation items
-                if len(line) < 3:
-                    i += 1
+                title = event_data.get("title", "").strip()
+                if not title:
                     continue
 
-                # Look for date patterns
-                date_match = re.match(
-                    r"(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)?,?\s*(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{1,2})(?:,?\s+(\d{4}))?",
-                    line,
-                    re.IGNORECASE
-                )
+                # Parse dates and times
+                start_date_str = event_data.get("start_date")
+                end_date_str = event_data.get("end_date")
 
-                if date_match:
-                    month = date_match.group(1)
-                    day = date_match.group(2)
-                    year = date_match.group(3) if date_match.group(3) else str(datetime.now().year)
+                if not start_date_str:
+                    logger.warning(f"Skipping event without start date: {title}")
+                    continue
 
-                    # Look for title in surrounding lines
-                    title = None
-                    start_time = None
+                start_date, start_time = parse_datetime(start_date_str)
+                end_date, end_time = None, None
 
-                    for offset in [-2, -1, 1, 2, 3]:
-                        idx = i + offset
-                        if 0 <= idx < len(lines):
-                            check_line = lines[idx]
-                            if re.match(r"(January|February|March)", check_line, re.IGNORECASE):
-                                continue
-                            if not start_time:
-                                time_result = parse_time(check_line)
-                                if time_result:
-                                    start_time = time_result
-                                    continue
-                            if not title and len(check_line) > 5:
-                                if not re.match(r"\d{1,2}[:/]", check_line):
-                                    if not re.match(r"(free|tickets|register|\$|more info)", check_line.lower()):
-                                        title = check_line
-                                        break
+                if end_date_str:
+                    end_date, end_time = parse_datetime(end_date_str)
 
-                    if not title:
-                        i += 1
-                        continue
+                # Get description and extract image
+                description = event_data.get("description", "")
+                # Strip HTML for cleaner description
+                description_clean = re.sub(r"<[^>]+>", " ", description)
+                description_clean = re.sub(r"\s+", " ", description_clean).strip()
 
-                    # Parse date
-                    try:
-                        month_str = month[:3] if len(month) > 3 else month
-                        dt = datetime.strptime(f"{month_str} {day} {year}", "%b %d %Y")
-                        if dt.date() < datetime.now().date():
-                            dt = datetime.strptime(f"{month_str} {day} {int(year) + 1}", "%b %d %Y")
-                        start_date = dt.strftime("%Y-%m-%d")
-                    except ValueError:
-                        i += 1
-                        continue
+                # Truncate very long descriptions
+                if len(description_clean) > 500:
+                    description_clean = description_clean[:497] + "..."
 
-                    events_found += 1
+                # Extract image
+                image_url = extract_image_from_description(description)
 
-                    content_hash = generate_content_hash(title, "Piedmont Park", start_date)
+                # Get event URL
+                source_url = event_data.get("url", "https://piedmontpark.org/calendar/")
 
-                    if find_event_by_hash(content_hash):
-                        events_updated += 1
-                        i += 1
-                        continue
+                # Determine if free
+                cost = event_data.get("cost", "")
+                is_free = not cost or "free" in cost.lower()
 
-                    # Determine category based on title
-                    title_lower = title.lower()
-                    if any(w in title_lower for w in ["run", "5k", "race", "yoga", "fitness"]):
-                        category = "fitness"
-                    elif any(w in title_lower for w in ["concert", "music", "festival"]):
-                        category = "music"
-                    elif any(w in title_lower for w in ["market", "food", "taste"]):
-                        category = "food_drink"
-                    else:
-                        # Default for park events is outdoors
-                        category = "outdoors"
+                # Parse cost if present
+                price_min, price_max = None, None
+                if cost and not is_free:
+                    # Try to extract numeric values
+                    price_matches = re.findall(r"\$?(\d+(?:\.\d{2})?)", cost)
+                    if price_matches:
+                        prices = [float(p) for p in price_matches]
+                        price_min = min(prices)
+                        price_max = max(prices)
 
-                    event_record = {
-                        "source_id": source_id,
-                        "venue_id": venue_id,
-                        "title": title,
-                        "description": "Event at Piedmont Park",
-                        "start_date": start_date,
-                        "start_time": start_time,
-                        "end_date": None,
-                        "end_time": None,
-                        "is_all_day": start_time is None,
-                        "category": category,
-                        "subcategory": None,
-                        "tags": [
-                            "piedmont-park",
-                            "midtown",
-                            "outdoor",
-                            "park",
-                            "family-friendly",
-                        ],
-                        "price_min": None,
-                        "price_max": None,
-                        "price_note": None,
-                        "is_free": False,
-                        "source_url": EVENTS_URL,
-                        "ticket_url": EVENTS_URL,
-                        "image_url": image_map.get(title),
-                        "raw_text": f"{title} - {start_date}",
-                        "extraction_confidence": 0.80,
-                        "is_recurring": False,
-                        "recurrence_rule": None,
-                        "content_hash": content_hash,
-                    }
+                # Check if all-day event
+                is_all_day = event_data.get("all_day", False)
 
-                    try:
-                        insert_event(event_record)
-                        events_new += 1
-                        logger.info(f"Added: {title} on {start_date}")
-                    except Exception as e:
-                        logger.error(f"Failed to insert: {title}: {e}")
+                # Determine category
+                category = categorize_event(title, description_clean)
 
-                i += 1
+                # Generate content hash
+                content_hash = generate_content_hash(title, "Piedmont Park", start_date)
 
-            browser.close()
+                # Check if event exists
+                if find_event_by_hash(content_hash):
+                    events_updated += 1
+                    continue
+
+                # Build event record
+                event_record = {
+                    "source_id": source_id,
+                    "venue_id": venue_id,
+                    "title": title,
+                    "description": description_clean if description_clean else "Event at Piedmont Park",
+                    "start_date": start_date,
+                    "start_time": None if is_all_day else start_time,
+                    "end_date": end_date if end_date != start_date else None,
+                    "end_time": None if is_all_day else end_time,
+                    "is_all_day": is_all_day,
+                    "category": category,
+                    "subcategory": None,
+                    "tags": [
+                        "piedmont-park",
+                        "midtown",
+                        "outdoor",
+                        "park",
+                        "family-friendly",
+                    ],
+                    "price_min": price_min,
+                    "price_max": price_max,
+                    "price_note": cost if cost else None,
+                    "is_free": is_free,
+                    "source_url": source_url,
+                    "ticket_url": source_url,
+                    "image_url": image_url,
+                    "raw_text": f"{title} - {start_date}",
+                    "extraction_confidence": 0.95,  # High confidence from structured API
+                    "is_recurring": False,
+                    "recurrence_rule": None,
+                    "content_hash": content_hash,
+                }
+
+                try:
+                    insert_event(event_record)
+                    events_new += 1
+                    logger.info(f"Added: {title} on {start_date}")
+                except Exception as e:
+                    logger.error(f"Failed to insert event '{title}': {e}")
+
+            page += 1
 
         logger.info(
             f"Piedmont Park crawl complete: {events_found} found, {events_new} new, {events_updated} updated"

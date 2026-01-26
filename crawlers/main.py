@@ -80,6 +80,8 @@ SOURCE_MODULES = {
     # Libraries
     "fulton-library": "sources.fulton_library",
     "dekalb-library": "sources.dekalb_library",
+    "gwinnett-library": "sources.gwinnett_library",
+    "cobb-library": "sources.cobb_library",
     # Electronic/DJ
     "resident-advisor": "sources.resident_advisor",
     # Farmers Markets
@@ -118,14 +120,18 @@ SOURCE_MODULES = {
     "strand-theatre": "sources.strand_theatre",
     "roswell-cultural-arts": "sources.roswell_cultural_arts",
     "sandy-springs-pac": "sources.sandy_springs_pac",
+    "city-springs": "sources.city_springs",
     # ===== Museums =====
     "fernbank": "sources.fernbank",
     "atlanta-history-center": "sources.atlanta_history_center",
     "carlos-museum": "sources.carlos_museum",
+    "breman-museum": "sources.breman_museum",
     "childrens-museum": "sources.childrens_museum",
     "civil-rights-center": "sources.civil_rights_center",
     "college-football-hof": "sources.college_football_hof",
     "world-of-coca-cola": "sources.world_of_coca_cola",
+    # ===== Historic Sites & Cultural Venues =====
+    "oakland-cemetery": "sources.oakland_cemetery",
     # ===== Food Halls & Markets =====
     "ponce-city-market": "sources.ponce_city_market",
     "krog-street-market": "sources.krog_street_market",
@@ -285,6 +291,7 @@ SOURCE_MODULES = {
     "industrious-atlanta": "sources.industrious_atlanta",
     # Community Centers
     "decatur-recreation": "sources.decatur_recreation",
+    "atlanta-parks-rec": "sources.atlanta_parks_rec",
     # Sports Bar Networks
     "atlutd-pubs": "sources.atlutd_pubs",
     "hawks-bars": "sources.hawks_bars",
@@ -292,6 +299,7 @@ SOURCE_MODULES = {
     "atlanta-track-club": "sources.atlanta_track_club",
     "atlanta-outdoor-club": "sources.atlanta_outdoor_club",
     "blk-hiking-club": "sources.blk_hiking_club",
+    "trees-atlanta": "sources.trees_atlanta",
     # ===== NEW: Dance Studios =====
     "pasofino-dance": "sources.pasofino_dance",
     "salsa-atlanta": "sources.salsa_atlanta",
@@ -430,6 +438,7 @@ SOURCE_MODULES = {
     # ===== Attractions =====
     "fun-spot-america-atlanta": "sources.fun_spot_atlanta",
     "stone-mountain-park": "sources.stone_mountain_park",
+    "six-flags-over-georgia": "sources.six_flags",
     "trap-music-museum": "sources.trap_music_museum",
     # ===== Hotel Venues =====
     "hotel-clermont": "sources.hotel_clermont",

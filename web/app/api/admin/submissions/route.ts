@@ -43,7 +43,8 @@ export async function GET(request: NextRequest) {
       .eq("user_id", user.id)
       .single();
 
-    if (!portalMember || !["owner", "admin"].includes(portalMember.role)) {
+    const member = portalMember as { role: string } | null;
+    if (!member || !["owner", "admin"].includes(member.role)) {
       return NextResponse.json({ error: "Access denied" }, { status: 403 });
     }
   }
@@ -102,16 +103,27 @@ export async function GET(request: NextRequest) {
     query = query.eq("submitted_by", submittedBy);
   }
 
-  const { data, error, count } = await query;
+  const { data: queryData, error, count } = await query;
 
   if (error) {
     return adminErrorResponse(error, "submissions list");
   }
 
+  const data = queryData as Array<{
+    id: string;
+    submission_type: string;
+    status: string;
+    data: Record<string, unknown>;
+    submitter: { approved_count: number; rejected_count: number } | null;
+    [key: string]: unknown;
+  }> | null;
+
   // Get summary counts
-  const { data: allSubmissions } = await supabase
+  const { data: allSubmissionsData } = await supabase
     .from("submissions")
     .select("status, submission_type");
+
+  const allSubmissions = allSubmissionsData as { status: string; submission_type: string }[] | null;
 
   const summary = {
     total: allSubmissions?.length || 0,

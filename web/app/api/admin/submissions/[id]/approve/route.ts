@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient, isAdmin, getUser } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { isValidUUID, adminErrorResponse } from "@/lib/api-utils";
-import type { EventSubmissionData, VenueSubmissionData, ProducerSubmissionData } from "@/lib/types";
+import type { EventSubmissionData, VenueSubmissionData, ProducerSubmissionData, Submission } from "@/lib/types";
 
 type Props = {
   params: Promise<{ id: string }>;
@@ -25,15 +25,17 @@ export async function POST(request: NextRequest, { params }: Props) {
   const supabase = await createClient();
 
   // Get submission
-  const { data: submission, error: fetchError } = await supabase
+  const { data: submissionData, error: fetchError } = await supabase
     .from("submissions")
     .select("*")
     .eq("id", id)
     .single();
 
-  if (fetchError || !submission) {
+  if (fetchError || !submissionData) {
     return NextResponse.json({ error: "Submission not found" }, { status: 404 });
   }
+
+  const submission = submissionData as Submission;
 
   // Check permissions
   if (!isGlobalAdmin && submission.portal_id) {
@@ -44,7 +46,8 @@ export async function POST(request: NextRequest, { params }: Props) {
       .eq("user_id", user.id)
       .single();
 
-    if (!portalMember || !["owner", "admin"].includes(portalMember.role)) {
+    const member = portalMember as { role: string } | null;
+    if (!member || !["owner", "admin"].includes(member.role)) {
       return NextResponse.json({ error: "Access denied" }, { status: 403 });
     }
   } else if (!isGlobalAdmin) {
@@ -73,21 +76,21 @@ export async function POST(request: NextRequest, { params }: Props) {
     if (submission.submission_type === "event") {
       approvedEntityId = await createEventFromSubmission(
         serviceClient,
-        submission.data as EventSubmissionData,
+        submission.data as unknown as EventSubmissionData,
         submission.submitted_by,
         submission.id
       );
     } else if (submission.submission_type === "venue") {
       approvedEntityId = await createVenueFromSubmission(
         serviceClient,
-        submission.data as VenueSubmissionData,
+        submission.data as unknown as VenueSubmissionData,
         submission.submitted_by,
         submission.id
       );
     } else if (submission.submission_type === "producer") {
       approvedEntityId = await createProducerFromSubmission(
         serviceClient,
-        submission.data as ProducerSubmissionData,
+        submission.data as unknown as ProducerSubmissionData,
         submission.submitted_by,
         submission.id
       );
@@ -139,12 +142,13 @@ async function createEventFromSubmission(
   submissionId: string
 ): Promise<number> {
   // Get user submissions source ID
-  const { data: source } = await supabase
+  const { data: sourceData } = await supabase
     .from("sources")
     .select("id")
     .eq("slug", "user-submissions")
     .single();
 
+  const source = sourceData as { id: number } | null;
   if (!source) {
     throw new Error("User submissions source not found");
   }
@@ -172,7 +176,7 @@ async function createEventFromSubmission(
   }
 
   // Create the event
-  const { data: event, error } = await supabase
+  const { data: eventData, error } = await supabase
     .from("events")
     .insert({
       source_id: source.id,
@@ -201,6 +205,7 @@ async function createEventFromSubmission(
     .select("id")
     .single();
 
+  const event = eventData as { id: number } | null;
   if (error || !event) {
     throw error || new Error("Failed to create event");
   }
@@ -233,7 +238,7 @@ async function createVenueFromSubmission(
     ? `${slug}-${Date.now().toString(36)}`
     : slug;
 
-  const { data: venue, error } = await supabase
+  const { data: venueData, error } = await supabase
     .from("venues")
     .insert({
       name: data.name,
@@ -251,6 +256,7 @@ async function createVenueFromSubmission(
     .select("id")
     .single();
 
+  const venue = venueData as { id: number } | null;
   if (error || !venue) {
     throw error || new Error("Failed to create venue");
   }
@@ -283,7 +289,7 @@ async function createProducerFromSubmission(
     ? `${baseSlug}-${Date.now().toString(36)}`
     : baseSlug;
 
-  const { data: producer, error } = await supabase
+  const { data: producerData, error } = await supabase
     .from("event_producers")
     .insert({
       id: finalId,
@@ -304,6 +310,7 @@ async function createProducerFromSubmission(
     .select("id")
     .single();
 
+  const producer = producerData as { id: string } | null;
   if (error || !producer) {
     throw error || new Error("Failed to create producer");
   }

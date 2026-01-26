@@ -84,10 +84,12 @@ export async function GET(request: NextRequest) {
   }
 
   // Get counts by status
-  const { data: statusCounts } = await supabase
+  const { data: statusCountsData } = await supabase
     .from("submissions")
     .select("status")
     .eq("submitted_by", user.id);
+
+  const statusCounts = statusCountsData as { status: string }[] | null;
 
   const counts = {
     total: statusCounts?.length || 0,
@@ -195,11 +197,13 @@ export async function POST(request: NextRequest) {
 
   // Check portal permissions if portal_id provided
   if (portal_id) {
-    const { data: portal } = await supabase
+    const { data: portalData } = await supabase
       .from("portals")
       .select("id, settings")
       .eq("id", portal_id)
       .single();
+
+    const portal = portalData as { id: string; settings: Record<string, unknown> | null } | null;
 
     if (!portal) {
       return NextResponse.json({ error: "Portal not found" }, { status: 404 });
@@ -352,20 +356,21 @@ async function findEventDuplicate(
   contentHash: string
 ): Promise<{ id: number; type: string } | null> {
   // Check by content hash first
-  const { data: hashMatch } = await supabase
+  const { data: hashMatchData } = await supabase
     .from("events")
     .select("id, title")
     .eq("content_hash", contentHash)
     .limit(1)
     .single();
 
+  const hashMatch = hashMatchData as { id: number; title: string } | null;
   if (hashMatch) {
     return { id: hashMatch.id, type: "event" };
   }
 
   // Check by title similarity on same date
   if (data.venue_id) {
-    const { data: titleMatch } = await supabase
+    const { data: titleMatchData } = await supabase
       .from("events")
       .select("id, title")
       .eq("start_date", data.start_date)
@@ -374,6 +379,7 @@ async function findEventDuplicate(
       .limit(1)
       .single();
 
+    const titleMatch = titleMatchData as { id: number; title: string } | null;
     if (titleMatch) {
       return { id: titleMatch.id, type: "event" };
     }
@@ -388,26 +394,28 @@ async function findVenueDuplicate(
   data: VenueSubmissionData
 ): Promise<{ id: number; type: string } | null> {
   // Check by exact name match
-  const { data: nameMatch } = await supabase
+  const { data: nameMatchData } = await supabase
     .from("venues")
     .select("id, name")
     .ilike("name", data.name)
     .limit(1)
     .single();
 
+  const nameMatch = nameMatchData as { id: number; name: string } | null;
   if (nameMatch) {
     return { id: nameMatch.id, type: "venue" };
   }
 
   // Check aliases
   if (data.name) {
-    const { data: aliasMatch } = await supabase
+    const { data: aliasMatchData } = await supabase
       .from("venues")
       .select("id, name")
       .contains("aliases", [data.name])
       .limit(1)
       .single();
 
+    const aliasMatch = aliasMatchData as { id: number; name: string } | null;
     if (aliasMatch) {
       return { id: aliasMatch.id, type: "venue" };
     }

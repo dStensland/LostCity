@@ -1,189 +1,321 @@
 """
 Crawler for Atlanta-Fulton Public Library System events.
 
-Site uses JavaScript rendering - must use Playwright.
+Uses the BiblioCommons Events API to fetch events from all library branches.
+Includes storytimes, book clubs, computer classes, author talks, and more.
 """
 
 from __future__ import annotations
 
-import re
 import logging
+import re
+import requests
 from datetime import datetime
 from typing import Optional
+from bs4 import BeautifulSoup
 
-from playwright.sync_api import sync_playwright
-
+from utils import slugify
 from db import get_or_create_venue, insert_event, find_event_by_hash
 from dedupe import generate_content_hash
-from utils import extract_images_from_page
 
 logger = logging.getLogger(__name__)
 
-BASE_URL = "https://fulcolibrary.bibliocommons.com"
-EVENTS_URL = "https://fulcolibrary.bibliocommons.com"
+# BiblioCommons API endpoints
+API_BASE = "https://gateway.bibliocommons.com/v2/libraries/fulcolibrary"
+EVENTS_URL = f"{API_BASE}/events"
+LOCATIONS_URL = f"{API_BASE}/locations"
+IMAGE_BASE = "https://d2snwnmzyr8jue.cloudfront.net"
 
-VENUE_DATA = {}
+# Category mapping based on event types
+CATEGORY_MAP = {
+    "book": "words",
+    "storytime": "words",
+    "author": "words",
+    "writing": "words",
+    "reading": "words",
+    "computer": "learning",
+    "technology": "learning",
+    "esl": "learning",
+    "class": "learning",
+    "career": "learning",
+    "music": "music",
+    "film": "film",
+    "movie": "film",
+    "craft": "art",
+    "art": "art",
+    "fitness": "fitness",
+    "yoga": "fitness",
+    "game": "play",
+    "gaming": "play",
+}
 
 
-def parse_time(time_text: str) -> Optional[str]:
-    """Parse time from '7:00 PM' format."""
-    match = re.search(r"(\d{1,2}):(\d{2})\s*(am|pm)", time_text, re.IGNORECASE)
-    if match:
-        hour, minute, period = match.groups()
-        hour = int(hour)
-        if period.lower() == "pm" and hour != 12:
-            hour += 12
-        elif period.lower() == "am" and hour == 12:
-            hour = 0
-        return f"{hour:02d}:{minute}"
-    return None
+def determine_category(title: str, description: str, type_ids: list) -> str:
+    """Determine event category from title and description."""
+    text = f"{title} {description}".lower()
+
+    for keyword, category in CATEGORY_MAP.items():
+        if keyword in text:
+            return category
+
+    return "words"  # Default for library events
+
+
+def parse_datetime(dt_str: str) -> tuple[Optional[str], Optional[str]]:
+    """
+    Parse BiblioCommons datetime string to date and time.
+    Format: "2026-01-27T10:00" or "2026-01-27T10:00:00Z"
+    Returns: (date, time) tuple
+    """
+    if not dt_str:
+        return None, None
+
+    try:
+        # Remove timezone if present
+        dt_str = dt_str.replace("Z", "")
+
+        # Parse the datetime
+        if "T" in dt_str:
+            date_part, time_part = dt_str.split("T")
+            # Extract just HH:MM
+            time_clean = time_part[:5]
+            return date_part, time_clean
+        else:
+            return dt_str[:10], None
+    except Exception as e:
+        logger.warning(f"Failed to parse datetime '{dt_str}': {e}")
+        return None, None
+
+
+def strip_html(html: str) -> str:
+    """Strip HTML tags and clean up description text."""
+    if not html:
+        return ""
+
+    soup = BeautifulSoup(html, "html.parser")
+    text = soup.get_text(separator=" ", strip=True)
+    # Clean up whitespace
+    text = re.sub(r"\s+", " ", text).strip()
+    return text
+
+
+def fetch_locations() -> dict[str, dict]:
+    """Fetch all library branch locations."""
+    locations = {}
+    page = 1
+
+    try:
+        while True:
+            url = f"{LOCATIONS_URL}?page={page}&pageSize=50"
+            response = requests.get(url, headers={"accept": "application/json"}, timeout=30)
+            response.raise_for_status()
+
+            data = response.json()
+            entities = data.get("entities", {}).get("locations", {})
+
+            if not entities:
+                break
+
+            for loc_id, loc_data in entities.items():
+                locations[loc_id] = {
+                    "name": loc_data.get("name", ""),
+                    "address": loc_data.get("address", {}),
+                }
+
+            # Check if there are more pages
+            pagination = data.get("locations", {}).get("pagination", {})
+            if page >= pagination.get("pages", 1):
+                break
+
+            page += 1
+
+        logger.info(f"Fetched {len(locations)} library locations")
+        return locations
+
+    except Exception as e:
+        logger.error(f"Failed to fetch locations: {e}")
+        return {}
 
 
 def crawl(source: dict) -> tuple[int, int, int]:
-    """Crawl Unknown events using Playwright."""
+    """Crawl Fulton County Library events."""
     source_id = source["id"]
     events_found = 0
     events_new = 0
     events_updated = 0
 
     try:
-        with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
-            context = browser.new_context(
-                user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
-                viewport={"width": 1920, "height": 1080},
-            )
-            page = context.new_page()
+        # Fetch library locations first
+        locations = fetch_locations()
 
-            venue_id = get_or_create_venue(VENUE_DATA)
+        # Fetch events from API (paginated)
+        page = 1
+        max_pages = 50  # Limit to first 500 events (they have 5000+)
 
-            logger.info(f"Fetching Unknown: {EVENTS_URL}")
-            page.goto(EVENTS_URL, wait_until="domcontentloaded", timeout=30000)
-            page.wait_for_timeout(3000)
+        while page <= max_pages:
+            url = f"{EVENTS_URL}?page={page}&pageSize=50"
+            logger.info(f"Fetching page {page}: {url}")
 
-            # Extract images from page
-            image_map = extract_images_from_page(page)
+            try:
+                response = requests.get(url, headers={"accept": "application/json"}, timeout=30)
+                response.raise_for_status()
+                data = response.json()
+            except Exception as e:
+                logger.error(f"Failed to fetch/parse JSON from page {page}: {e}")
+                break
 
-            # Scroll to load all content
-            for _ in range(5):
-                page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
-                page.wait_for_timeout(1000)
+            # Extract events from entities
+            entities = data.get("entities", {}).get("events", {})
+            if not entities:
+                logger.info(f"No events found on page {page}")
+                break
 
-            # Get page text and parse line by line
-            body_text = page.inner_text("body")
-            lines = [l.strip() for l in body_text.split("\n") if l.strip()]
-
-            # Parse events - look for date patterns
-            i = 0
-            while i < len(lines):
-                line = lines[i]
-
-                # Skip navigation items
-                if len(line) < 3:
-                    i += 1
-                    continue
-
-                # Look for date patterns
-                date_match = re.match(
-                    r"(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)?,?\s*(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{1,2})(?:,?\s+(\d{4}))?",
-                    line,
-                    re.IGNORECASE
-                )
-
-                if date_match:
-                    month = date_match.group(1)
-                    day = date_match.group(2)
-                    year = date_match.group(3) if date_match.group(3) else str(datetime.now().year)
-
-                    # Look for title in surrounding lines
-                    title = None
-                    start_time = None
-
-                    for offset in [-2, -1, 1, 2, 3]:
-                        idx = i + offset
-                        if 0 <= idx < len(lines):
-                            check_line = lines[idx]
-                            if re.match(r"(January|February|March)", check_line, re.IGNORECASE):
-                                continue
-                            if not start_time:
-                                time_result = parse_time(check_line)
-                                if time_result:
-                                    start_time = time_result
-                                    continue
-                            if not title and len(check_line) > 5:
-                                if not re.match(r"\d{1,2}[:/]", check_line):
-                                    if not re.match(r"(free|tickets|register|\$|more info)", check_line.lower()):
-                                        title = check_line
-                                        break
-
-                    if not title:
-                        i += 1
-                        continue
-
-                    # Parse date
-                    try:
-                        month_str = month[:3] if len(month) > 3 else month
-                        dt = datetime.strptime(f"{month_str} {day} {year}", "%b %d %Y")
-                        if dt.date() < datetime.now().date():
-                            dt = datetime.strptime(f"{month_str} {day} {int(year) + 1}", "%b %d %Y")
-                        start_date = dt.strftime("%Y-%m-%d")
-                    except ValueError:
-                        i += 1
-                        continue
-
+            # Process each event
+            for event_id, event_data in entities.items():
+                try:
                     events_found += 1
 
-                    content_hash = generate_content_hash(title, "Unknown", start_date)
+                    # Extract event definition
+                    defn = event_data.get("definition", {})
 
-                    if find_event_by_hash(content_hash):
-                        events_updated += 1
-                        i += 1
+                    # Skip cancelled events
+                    if defn.get("isCancelled", False):
                         continue
 
+                    # Parse dates
+                    start_date, start_time = parse_datetime(defn.get("start"))
+                    end_date, end_time = parse_datetime(defn.get("end"))
+
+                    if not start_date:
+                        logger.warning(f"Event {event_id} has no start date, skipping")
+                        continue
+
+                    # Skip past events (before today)
+                    try:
+                        event_date = datetime.strptime(start_date, "%Y-%m-%d")
+                        if event_date.date() < datetime.now().date():
+                            continue
+                    except ValueError:
+                        continue
+
+                    # Extract basic info
+                    title = defn.get("title", "").strip()
+                    if not title:
+                        continue
+
+                    description = strip_html(defn.get("description", ""))
+
+                    # Get venue info
+                    branch_id = defn.get("branchLocationId")
+                    location_details = defn.get("locationDetails", "")
+
+                    if branch_id and branch_id in locations:
+                        branch = locations[branch_id]
+                        venue_name = branch["name"]
+                        address = branch.get("address", {})
+
+                        venue_data = {
+                            "name": venue_name,
+                            "slug": slugify(venue_name),
+                            "address": address.get("street"),
+                            "city": address.get("city", "Atlanta"),
+                            "state": address.get("region", "GA"),
+                            "zip": address.get("postalCode"),
+                            "venue_type": "library",
+                        }
+                    else:
+                        # Fallback to generic library venue
+                        venue_data = {
+                            "name": "Fulton County Library System",
+                            "slug": "fulton-county-library-system",
+                            "city": "Atlanta",
+                            "state": "GA",
+                            "venue_type": "library",
+                        }
+
+                    venue_id = get_or_create_venue(venue_data)
+
+                    # Build event URL
+                    event_url = f"https://fulcolibrary.bibliocommons.com/events/{event_id}"
+
+                    # Get image URL if available
+                    image_url = None
+                    if defn.get("featuredImageId"):
+                        image_url = f"{IMAGE_BASE}/{defn['featuredImageId']}"
+
+                    # Determine category
+                    category = determine_category(title, description, defn.get("typeIds", []))
+
+                    # Check for registration info
+                    reg_info = defn.get("registrationInfo", {})
+                    is_registration_required = bool(reg_info.get("enabledMethods"))
+
+                    # Build full description
+                    full_description = description
+                    if location_details:
+                        full_description = f"{description}\n\nLocation: {location_details}"
+
+                    # Generate content hash
+                    content_hash = generate_content_hash(title, venue_data["name"], start_date)
+
+                    # Check if event already exists
+                    if find_event_by_hash(content_hash):
+                        events_updated += 1
+                        continue
+
+                    # Create event record
                     event_record = {
                         "source_id": source_id,
                         "venue_id": venue_id,
                         "title": title,
-                        "description": "Event at Unknown",
+                        "description": full_description[:5000] if full_description else None,
                         "start_date": start_date,
                         "start_time": start_time,
-                        "end_date": None,
-                        "end_time": None,
+                        "end_date": end_date,
+                        "end_time": end_time,
                         "is_all_day": start_time is None,
-                        "category": "words",
+                        "category": category,
                         "subcategory": None,
                         "tags": ["library", "free", "public"],
                         "price_min": None,
                         "price_max": None,
                         "price_note": None,
-                        "is_free": False,
-                        "source_url": EVENTS_URL,
-                        "ticket_url": EVENTS_URL,
-                        "image_url": image_map.get(title),
-                        "raw_text": f"{title} - {start_date}",
-                        "extraction_confidence": 0.80,
-                        "is_recurring": False,
+                        "is_free": True,
+                        "source_url": event_url,
+                        "ticket_url": event_url if is_registration_required else None,
+                        "image_url": image_url,
+                        "raw_text": None,
+                        "extraction_confidence": 0.95,  # API data is highly reliable
+                        "is_recurring": event_data.get("isRecurring", False),
                         "recurrence_rule": None,
                         "content_hash": content_hash,
                     }
 
-                    try:
-                        insert_event(event_record)
-                        events_new += 1
-                        logger.info(f"Added: {title} on {start_date}")
-                    except Exception as e:
-                        logger.error(f"Failed to insert: {title}: {e}")
+                    # Insert event
+                    insert_event(event_record)
+                    events_new += 1
+                    logger.info(f"Added: {title} on {start_date} at {venue_data['name']}")
 
-                i += 1
+                except Exception as e:
+                    logger.error(f"Failed to process event {event_id}: {e}")
+                    continue
 
-            browser.close()
+            # Check pagination
+            pagination = data.get("events", {}).get("pagination", {})
+            total_pages = pagination.get("pages", 1)
+
+            if page >= total_pages:
+                break
+
+            page += 1
 
         logger.info(
-            f"Unknown crawl complete: {events_found} found, {events_new} new, {events_updated} updated"
+            f"Fulton County Library crawl complete: {events_found} found, "
+            f"{events_new} new, {events_updated} updated"
         )
 
     except Exception as e:
-        logger.error(f"Failed to crawl Unknown: {e}")
+        logger.error(f"Failed to crawl Fulton County Library: {e}")
         raise
 
     return events_found, events_new, events_updated

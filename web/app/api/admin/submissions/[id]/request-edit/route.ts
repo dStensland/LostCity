@@ -23,15 +23,17 @@ export async function POST(request: NextRequest, { params }: Props) {
   const supabase = await createClient();
 
   // Get submission
-  const { data: submission, error: fetchError } = await supabase
+  const { data: submissionData, error: fetchError } = await supabase
     .from("submissions")
     .select("id, status, portal_id")
     .eq("id", id)
     .single();
 
-  if (fetchError || !submission) {
+  if (fetchError || !submissionData) {
     return NextResponse.json({ error: "Submission not found" }, { status: 404 });
   }
+
+  const submission = submissionData as { id: string; status: string; portal_id: string | null };
 
   // Check permissions
   if (!isGlobalAdmin && submission.portal_id) {
@@ -42,7 +44,8 @@ export async function POST(request: NextRequest, { params }: Props) {
       .eq("user_id", user.id)
       .single();
 
-    if (!portalMember || !["owner", "admin"].includes(portalMember.role)) {
+    const member = portalMember as { role: string } | null;
+    if (!member || !["owner", "admin"].includes(member.role)) {
       return NextResponse.json({ error: "Access denied" }, { status: 403 });
     }
   } else if (!isGlobalAdmin) {

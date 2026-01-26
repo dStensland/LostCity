@@ -39,6 +39,18 @@ CONTENT_TAGS = {
     "one-night-only",  # Single performance
     "opening-night",   # Theater/show opening
     "closing-night",   # Final performance
+    "library",         # Library event
+    "educational",     # Educational/learning focused
+    "kids",            # For children
+    "teens",           # For teenagers
+    "adults",          # For adults
+    "play",            # Games/playful activities
+    "hands-on",        # Interactive/participatory
+    "volunteer",       # Volunteer opportunity
+    "gwinnett",        # Gwinnett County location
+    "fulton",          # Fulton County location
+    "dekalb",          # DeKalb County location
+    "cobb",            # Cobb County location
 }
 
 # Combined set of all valid tags
