@@ -11,6 +11,7 @@ import type { Database } from "@/lib/types";
 type RecommendButtonProps = {
   eventId?: number;
   venueId?: number;
+  producerId?: string;
   size?: "sm" | "md";
   className?: string;
 };
@@ -20,6 +21,7 @@ type RecommendationRow = Database["public"]["Tables"]["recommendations"]["Row"];
 export default function RecommendButton({
   eventId,
   venueId,
+  producerId,
   size = "md",
   className = "",
 }: RecommendButtonProps) {
@@ -104,6 +106,8 @@ export default function RecommendButton({
         query = query.eq("event_id", eventId);
       } else if (venueId) {
         query = query.eq("venue_id", venueId);
+      } else if (producerId) {
+        query = query.eq("producer_id", producerId);
       }
 
       const { data } = await query.single();
@@ -118,7 +122,7 @@ export default function RecommendButton({
     }
 
     loadRecommendation();
-  }, [user, eventId, venueId, supabase]);
+  }, [user, eventId, venueId, producerId, supabase]);
 
   const handleClick = () => {
     if (!user) {
@@ -151,6 +155,8 @@ export default function RecommendButton({
       recData.event_id = eventId;
     } else if (venueId) {
       recData.venue_id = venueId;
+    } else if (producerId) {
+      recData.producer_id = producerId;
     }
 
     if (isRecommended) {
@@ -164,6 +170,8 @@ export default function RecommendButton({
         query = query.eq("event_id", eventId);
       } else if (venueId) {
         query = query.eq("venue_id", venueId);
+      } else if (producerId) {
+        query = query.eq("producer_id", producerId);
       }
 
       await query;
@@ -191,6 +199,8 @@ export default function RecommendButton({
       query = query.eq("event_id", eventId);
     } else if (venueId) {
       query = query.eq("venue_id", venueId);
+    } else if (producerId) {
+      query = query.eq("producer_id", producerId);
     }
 
     await query;

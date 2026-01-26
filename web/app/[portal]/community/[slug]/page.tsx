@@ -8,6 +8,7 @@ import GlassHeader from "@/components/GlassHeader";
 import MainNav from "@/components/MainNav";
 import PageFooter from "@/components/PageFooter";
 import FollowButton from "@/components/FollowButton";
+import RecommendButton from "@/components/RecommendButton";
 import EventCard from "@/components/EventCard";
 import CategoryIcon, { getCategoryColor } from "@/components/CategoryIcon";
 import FlagButton from "@/components/FlagButton";
@@ -200,7 +201,10 @@ export default async function PortalOrganizerPage({ params }: Props) {
                     )}
                   </div>
                 </div>
-                <FollowButton targetProducerId={producer.id} />
+                <div className="flex items-center gap-2">
+                  <FollowButton targetProducerId={producer.id} size="sm" />
+                  <RecommendButton producerId={producer.id} size="sm" />
+                </div>
               </div>
 
               {/* Description */}
