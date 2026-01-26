@@ -170,6 +170,7 @@ SOURCE_MODULES = {
     # ===== Additional Theaters =====
     "aurora-theatre": "sources.aurora_theatre",
     "horizon-theatre": "sources.horizon_theatre",
+    "georgia-ensemble-theatre": "sources.georgia_ensemble",
     "actors-express": "sources.actors_express",
     "out-of-box-theatre": "sources.out_of_box_theatre",
     "stage-door-players": "sources.stage_door_players",

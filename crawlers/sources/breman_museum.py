@@ -72,16 +72,17 @@ def extract_event_details(content: str) -> dict:
     }
 
     # Extract "When:" field
-    # Match: "When: Wednesday, January 28th at 7 p.m."
+    # Match formats:
+    # - "When: Wednesday, January 28th at 7 p.m."
+    # - "When: February 15th, 3 p.m."
     when_match = re.search(
-        r"When[:\s]+(.+?)(?:\s+at\s+(\d{1,2}(?::\d{2})?\s*(?:a\.?m\.?|p\.?m\.?)))?(?:\.|$|\n|Where)",
+        r"When[:\s]+(.+?)(?:\s+\(|Where|How Much|$)",
         content,
-        re.IGNORECASE
+        re.IGNORECASE | re.DOTALL
     )
 
     if when_match:
-        date_str = when_match.group(1).strip()
-        time_str = when_match.group(2)
+        when_text = when_match.group(1).strip()
 
         # Parse date from various formats
         # "Wednesday, January 28th" or "February 15th" or "January 25th"
@@ -91,7 +92,7 @@ def extract_event_details(content: str) -> dict:
         ]
 
         for pattern in date_patterns:
-            date_match = re.search(pattern, date_str, re.IGNORECASE)
+            date_match = re.search(pattern, when_text, re.IGNORECASE)
             if date_match:
                 month = date_match.group(1)
                 day = date_match.group(2)
@@ -107,24 +108,24 @@ def extract_event_details(content: str) -> dict:
                     pass
                 break
 
-        # Parse time
-        if time_str:
-            time_match = re.search(
-                r"(\d{1,2})(?::(\d{2}))?\s*(a\.?m\.?|p\.?m\.?)",
-                time_str,
-                re.IGNORECASE
-            )
-            if time_match:
-                hour = int(time_match.group(1))
-                minute = int(time_match.group(2)) if time_match.group(2) else 0
-                period = time_match.group(3).lower().replace(".", "")
+        # Parse time from the when text
+        # Handles "at 7 p.m." or ", 3 p.m." or just "3 p.m."
+        time_match = re.search(
+            r"(?:at\s+|,\s*)?(\d{1,2})(?::(\d{2}))?\s*(a\.?m\.?|p\.?m\.?)",
+            when_text,
+            re.IGNORECASE
+        )
+        if time_match:
+            hour = int(time_match.group(1))
+            minute = int(time_match.group(2)) if time_match.group(2) else 0
+            period = time_match.group(3).lower().replace(".", "")
 
-                if "p" in period and hour != 12:
-                    hour += 12
-                elif "a" in period and hour == 12:
-                    hour = 0
+            if "p" in period and hour != 12:
+                hour += 12
+            elif "a" in period and hour == 12:
+                hour = 0
 
-                details["time"] = f"{hour:02d}:{minute:02d}"
+            details["time"] = f"{hour:02d}:{minute:02d}"
 
     # Extract "Where:" field (though it's usually The Breman)
     where_match = re.search(r"Where[:\s]+([^\.]+)", content, re.IGNORECASE)
@@ -132,10 +133,15 @@ def extract_event_details(content: str) -> dict:
         details["location"] = where_match.group(1).strip()
 
     # Extract "How Much:" field
-    price_match = re.search(r"How Much[:\s]+([^\.]+)", content, re.IGNORECASE)
+    price_match = re.search(
+        r"How Much[:\s]+(.+?)(?:\n\n|PURCHASE|RSVP|By attending|Security Protocols|$)",
+        content,
+        re.IGNORECASE | re.DOTALL
+    )
     if price_match:
         price_str = price_match.group(1).strip()
-        details["price_note"] = price_str
+        # Limit to first 200 chars to avoid excessive text
+        details["price_note"] = price_str[:200].strip()
 
         # Check if free
         if re.search(r"\bfree\b", price_str, re.IGNORECASE):
