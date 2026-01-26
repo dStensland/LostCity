@@ -6,7 +6,7 @@ import {
   isValidString,
   isValidUUID,
 } from "@/lib/api-utils";
-import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
+import { applyRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import type {
   SubmissionType,
   EventSubmissionData,

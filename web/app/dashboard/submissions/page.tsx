@@ -48,7 +48,7 @@ export default function UserSubmissionsPage() {
         const res = await fetch(url);
         const data = await res.json();
         setSubmissions(data.submissions || []);
-        setCounts(data.counts || counts);
+        setCounts(c => data.counts || c);
       } catch (err) {
         console.error("Failed to fetch submissions:", err);
       } finally {

@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import UnifiedHeader from "@/components/UnifiedHeader";
 import { useAuth } from "@/lib/auth-context";
 
@@ -47,7 +46,6 @@ const submissionTypes = [
 
 export default function SubmitPage() {
   const { user } = useAuth();
-  const router = useRouter();
 
   if (!user) {
     return (

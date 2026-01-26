@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import type { SubmissionWithProfile, SubmissionStatus, SubmissionType } from "@/lib/types";
 
@@ -33,11 +33,7 @@ export default function AdminSubmissionsPage() {
   const [actionLoading, setActionLoading] = useState(false);
   const [rejectionReason, setRejectionReason] = useState("");
 
-  useEffect(() => {
-    fetchSubmissions();
-  }, [statusFilter, typeFilter]);
-
-  const fetchSubmissions = async () => {
+  const fetchSubmissions = useCallback(async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams();
@@ -48,13 +44,17 @@ export default function AdminSubmissionsPage() {
       if (!res.ok) throw new Error("Failed to fetch");
       const data = await res.json();
       setSubmissions(data.submissions || []);
-      setSummary(data.summary || summary);
+      setSummary(s => data.summary || s);
     } catch (err) {
       console.error("Failed to fetch submissions:", err);
     } finally {
       setLoading(false);
     }
-  };
+  }, [statusFilter, typeFilter]);
+
+  useEffect(() => {
+    fetchSubmissions();
+  }, [fetchSubmissions]);
 
   const handleApprove = async (id: string) => {
     setActionLoading(true);
