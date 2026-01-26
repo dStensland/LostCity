@@ -76,6 +76,9 @@ export type Database = {
           website: string | null;
           is_public: boolean;
           is_admin: boolean;
+          submission_count: number;
+          approved_count: number;
+          rejected_count: number;
           created_at: string;
           updated_at: string;
         };
@@ -89,6 +92,9 @@ export type Database = {
           website?: string | null;
           is_public?: boolean;
           is_admin?: boolean;
+          submission_count?: number;
+          approved_count?: number;
+          rejected_count?: number;
         };
         Update: {
           username?: string;
@@ -99,6 +105,9 @@ export type Database = {
           website?: string | null;
           is_public?: boolean;
           is_admin?: boolean;
+          submission_count?: number;
+          approved_count?: number;
+          rejected_count?: number;
         };
       };
       user_preferences: {
@@ -447,6 +456,59 @@ export type Database = {
           rejection_reason?: string | null;
         };
       };
+      submissions: {
+        Row: {
+          id: string;
+          submission_type: "event" | "venue" | "producer";
+          submitted_by: string;
+          portal_id: string | null;
+          status: "pending" | "approved" | "rejected" | "needs_edit";
+          reviewed_by: string | null;
+          reviewed_at: string | null;
+          rejection_reason: string | null;
+          admin_notes: string | null;
+          data: Record<string, unknown>;
+          content_hash: string | null;
+          potential_duplicate_id: number | null;
+          potential_duplicate_type: string | null;
+          duplicate_acknowledged: boolean;
+          approved_event_id: number | null;
+          approved_venue_id: number | null;
+          approved_producer_id: string | null;
+          image_urls: string[] | null;
+          ip_address: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          submission_type: "event" | "venue" | "producer";
+          submitted_by: string;
+          portal_id?: string | null;
+          status?: "pending" | "approved" | "rejected" | "needs_edit";
+          data: Record<string, unknown>;
+          content_hash?: string | null;
+          potential_duplicate_id?: number | null;
+          potential_duplicate_type?: string | null;
+          duplicate_acknowledged?: boolean;
+          image_urls?: string[] | null;
+          ip_address?: string | null;
+        };
+        Update: {
+          status?: "pending" | "approved" | "rejected" | "needs_edit";
+          reviewed_by?: string | null;
+          reviewed_at?: string | null;
+          rejection_reason?: string | null;
+          admin_notes?: string | null;
+          data?: Record<string, unknown>;
+          potential_duplicate_id?: number | null;
+          potential_duplicate_type?: string | null;
+          duplicate_acknowledged?: boolean;
+          approved_event_id?: number | null;
+          approved_venue_id?: number | null;
+          approved_producer_id?: string | null;
+          image_urls?: string[] | null;
+        };
+      };
     };
   };
 };
@@ -651,4 +713,126 @@ export interface OnboardingState {
   likedEventDetails: OnboardingSwipeEvent[];
   selectedNeighborhoods: string[];
   followedProducers: number[];
+}
+
+// ============================================================================
+// SUBMISSIONS TYPES
+// ============================================================================
+
+export type SubmissionType = "event" | "venue" | "producer";
+export type SubmissionStatus = "pending" | "approved" | "rejected" | "needs_edit";
+
+export type Submission = Database["public"]["Tables"]["submissions"]["Row"];
+export type SubmissionInsert = Database["public"]["Tables"]["submissions"]["Insert"];
+export type SubmissionUpdate = Database["public"]["Tables"]["submissions"]["Update"];
+
+// Event submission data structure
+export interface EventSubmissionData {
+  title: string;
+  description?: string;
+  start_date: string;
+  start_time?: string;
+  end_date?: string;
+  end_time?: string;
+  is_all_day?: boolean;
+  category?: string;
+  subcategory?: string;
+  tags?: string[];
+  price_min?: number;
+  price_max?: number;
+  price_note?: string;
+  is_free?: boolean;
+  ticket_url?: string;
+  source_url?: string;
+  image_url?: string;
+  // Venue reference or inline venue
+  venue_id?: number;
+  venue?: VenueSubmissionData;
+  // Producer reference or inline producer
+  producer_id?: string;
+  producer?: ProducerSubmissionData;
+}
+
+// Venue submission data structure
+export interface VenueSubmissionData {
+  name: string;
+  address?: string;
+  neighborhood?: string;
+  city?: string;
+  state?: string;
+  zip?: string;
+  website?: string;
+  venue_type?: string;
+}
+
+// Producer submission data structure
+export interface ProducerSubmissionData {
+  name: string;
+  org_type?: string;
+  website?: string;
+  email?: string;
+  instagram?: string;
+  facebook?: string;
+  neighborhood?: string;
+  description?: string;
+  categories?: string[];
+}
+
+// Submission with submitter profile info
+export interface SubmissionWithProfile extends Submission {
+  submitter?: {
+    id: string;
+    username: string;
+    display_name: string | null;
+    avatar_url: string | null;
+    submission_count: number;
+    approved_count: number;
+    rejected_count: number;
+  };
+  reviewer?: {
+    id: string;
+    username: string;
+    display_name: string | null;
+  } | null;
+  portal?: {
+    id: string;
+    name: string;
+    slug: string;
+  } | null;
+}
+
+// For duplicate detection results
+export interface PotentialDuplicate {
+  id: number;
+  type: "event" | "venue" | "producer";
+  title: string;
+  match_score: number;
+  details: Record<string, unknown>;
+}
+
+// Submission stats for a user
+export interface SubmissionStats {
+  total: number;
+  pending: number;
+  approved: number;
+  rejected: number;
+  needs_edit: number;
+  trust_score: number | null;
+  is_trusted: boolean;
+}
+
+// Portal submission settings
+export interface PortalSubmissionSettings {
+  enabled: boolean;
+  who_can_submit: "anyone" | "members" | "verified" | "owners_only";
+  require_approval: boolean;
+  categories_allowed?: string[];
+}
+
+// Rate limit configuration
+export interface SubmissionRateLimits {
+  events_per_day: number;
+  venues_per_day: number;
+  producers_per_day: number;
+  cooldown_seconds: number;
 }
