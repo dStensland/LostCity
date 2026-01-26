@@ -59,41 +59,58 @@ export async function GET(request: NextRequest) {
         }
       }
 
-      const { data: list, error } = await query.single();
+      const { data: list, error } = await query.maybeSingle();
 
       if (error) {
-        if (error.code === "PGRST116") {
-          return NextResponse.json({ error: "List not found" }, { status: 404 });
-        }
         console.error("Error fetching list by slug:", error);
         return NextResponse.json({ error: "Failed to fetch list" }, { status: 500 });
       }
 
-      // Get vote counts for each item
-      const itemIds = list.items?.map((item: { id: string }) => item.id) || [];
-      const { data: itemVotes } = await supabase
-        .from("list_item_votes")
-        .select("item_id, vote_type")
-        .in("item_id", itemIds);
+      if (!list) {
+        return NextResponse.json({ error: "List not found" }, { status: 404 });
+      }
 
-      // Get current user's votes
-      const { data: { user } } = await supabase.auth.getUser();
-      const { data: userVotes } = user ? await supabase
-        .from("list_item_votes")
-        .select("item_id, vote_type")
-        .eq("user_id", user.id)
-        .in("item_id", itemIds) : { data: [] };
+      // Fetch creator profile separately
+      const { data: creator } = await supabase
+        .from("profiles")
+        .select("username, display_name, avatar_url")
+        .eq("id", list.creator_id)
+        .maybeSingle();
+
+      // Get vote counts for each item (only if there are items)
+      const itemIds = list.items?.map((item: { id: string }) => item.id) || [];
+      let itemVotes: { item_id: string; vote_type: string }[] = [];
+      let userVotes: { item_id: string; vote_type: string }[] = [];
+
+      if (itemIds.length > 0) {
+        const { data: votes } = await supabase
+          .from("list_item_votes")
+          .select("item_id, vote_type")
+          .in("item_id", itemIds);
+        itemVotes = votes || [];
+
+        // Get current user's votes
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: uVotes } = await supabase
+            .from("list_item_votes")
+            .select("item_id, vote_type")
+            .eq("user_id", user.id)
+            .in("item_id", itemIds);
+          userVotes = uVotes || [];
+        }
+      }
 
       // Calculate vote counts per item
       const voteCountMap: Record<string, number> = {};
       const userVoteMap: Record<string, "up" | "down"> = {};
 
-      itemVotes?.forEach((vote: { item_id: string; vote_type: string }) => {
+      itemVotes.forEach((vote) => {
         const delta = vote.vote_type === "up" ? 1 : -1;
         voteCountMap[vote.item_id] = (voteCountMap[vote.item_id] || 0) + delta;
       });
 
-      userVotes?.forEach((vote: { item_id: string; vote_type: string }) => {
+      userVotes.forEach((vote) => {
         userVoteMap[vote.item_id] = vote.vote_type as "up" | "down";
       });
 
@@ -123,6 +140,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({
         list: {
           ...list,
+          creator: creator || null,
           items: transformedItems,
           item_count: list.items?.length || 0,
           vote_count: list.votes?.[0]?.count || 0,
@@ -178,6 +196,19 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Failed to fetch lists", details: error.message }, { status: 500 });
     }
 
+    // Fetch creator profiles for all lists
+    const creatorIds = [...new Set((data || []).map((l: { creator_id: string }) => l.creator_id))];
+    const { data: creators } = creatorIds.length > 0
+      ? await supabase
+          .from("profiles")
+          .select("id, username, display_name, avatar_url")
+          .in("id", creatorIds)
+      : { data: [] };
+
+    const creatorMap = new Map(
+      (creators || []).map((c: { id: string; username: string; display_name: string | null; avatar_url: string | null }) => [c.id, c])
+    );
+
     // Transform the data to include counts and thumbnails
     interface ItemPreview {
       position: number;
@@ -185,6 +216,7 @@ export async function GET(request: NextRequest) {
       event?: { image_url: string | null } | null;
     }
     interface ListWithCounts {
+      creator_id: string;
       list_items?: ItemPreview[];
       votes?: { count: number }[];
       created_at?: string;
@@ -204,8 +236,14 @@ export async function GET(request: NextRequest) {
         }
       }
 
+      const creator = creatorMap.get(list.creator_id);
       return {
         ...list,
+        creator: creator ? {
+          username: creator.username,
+          display_name: creator.display_name,
+          avatar_url: creator.avatar_url,
+        } : null,
         item_count: sortedPreviews.length,
         vote_count: list.votes?.[0]?.count || 0,
         thumbnails,
