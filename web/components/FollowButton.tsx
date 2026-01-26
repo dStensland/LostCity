@@ -41,24 +41,34 @@ export default function FollowButton({
         return;
       }
 
-      let query = supabase
-        .from("follows")
-        .select("id")
-        .eq("follower_id", user.id);
+      try {
+        let query = supabase
+          .from("follows")
+          .select("id")
+          .eq("follower_id", user.id);
 
-      if (targetUserId) {
-        query = query.eq("followed_user_id", targetUserId);
-      } else if (targetVenueId) {
-        query = query.eq("followed_venue_id", targetVenueId);
-      } else if (targetOrgId) {
-        query = query.eq("followed_org_id", targetOrgId);
-      } else if (targetProducerId) {
-        query = query.eq("followed_producer_id", targetProducerId);
+        if (targetUserId) {
+          query = query.eq("followed_user_id", targetUserId);
+        } else if (targetVenueId) {
+          query = query.eq("followed_venue_id", targetVenueId);
+        } else if (targetOrgId) {
+          query = query.eq("followed_org_id", targetOrgId);
+        } else if (targetProducerId) {
+          query = query.eq("followed_producer_id", targetProducerId);
+        }
+
+        const { data, error } = await query.maybeSingle();
+
+        if (error) {
+          console.error("Error checking follow status:", error);
+        }
+
+        setIsFollowing(!!data);
+      } catch (err) {
+        console.error("Exception checking follow status:", err);
+      } finally {
+        setLoading(false);
       }
-
-      const { data } = await query.maybeSingle();
-      setIsFollowing(!!data);
-      setLoading(false);
     }
 
     checkFollowStatus();

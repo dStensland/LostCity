@@ -97,28 +97,38 @@ export default function RecommendButton({
         return;
       }
 
-      let query = supabase
-        .from("recommendations")
-        .select("*")
-        .eq("user_id", user.id);
+      try {
+        let query = supabase
+          .from("recommendations")
+          .select("*")
+          .eq("user_id", user.id);
 
-      if (eventId) {
-        query = query.eq("event_id", eventId);
-      } else if (venueId) {
-        query = query.eq("venue_id", venueId);
-      } else if (producerId) {
-        query = query.eq("producer_id", producerId);
+        if (eventId) {
+          query = query.eq("event_id", eventId);
+        } else if (venueId) {
+          query = query.eq("venue_id", venueId);
+        } else if (producerId) {
+          query = query.eq("producer_id", producerId);
+        }
+
+        const { data, error } = await query.maybeSingle();
+
+        if (error) {
+          console.error("Error loading recommendation:", error);
+        }
+
+        const rec = data as RecommendationRow | null;
+
+        if (rec) {
+          setIsRecommended(true);
+          setNote(rec.note || "");
+          setVisibility(rec.visibility as Visibility);
+        }
+      } catch (err) {
+        console.error("Exception loading recommendation:", err);
+      } finally {
+        setLoading(false);
       }
-
-      const { data } = await query.single();
-      const rec = data as RecommendationRow | null;
-
-      if (rec) {
-        setIsRecommended(true);
-        setNote(rec.note || "");
-        setVisibility(rec.visibility as Visibility);
-      }
-      setLoading(false);
     }
 
     loadRecommendation();
