@@ -56,13 +56,14 @@ export default function FollowButton({
         query = query.eq("followed_producer_id", targetProducerId);
       }
 
-      const { data } = await query.single();
+      const { data } = await query.maybeSingle();
       setIsFollowing(!!data);
       setLoading(false);
     }
 
     checkFollowStatus();
-  }, [user, targetUserId, targetVenueId, targetOrgId, targetProducerId, supabase]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- supabase client is stable
+  }, [user, targetUserId, targetVenueId, targetOrgId, targetProducerId]);
 
   // Don't show follow button for own profile
   if (targetUserId && user?.id === targetUserId) {
