@@ -24,7 +24,7 @@ export default function FollowButton({
   className = "",
 }: FollowButtonProps) {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const supabase = createClient();
   const { showToast } = useToast();
 
@@ -36,6 +36,11 @@ export default function FollowButton({
   // Check if already following
   useEffect(() => {
     async function checkFollowStatus() {
+      // Wait for auth to finish loading
+      if (authLoading) {
+        return;
+      }
+
       if (!user) {
         setLoading(false);
         return;
@@ -73,7 +78,7 @@ export default function FollowButton({
 
     checkFollowStatus();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- supabase client is stable
-  }, [user, targetUserId, targetVenueId, targetOrgId, targetProducerId]);
+  }, [user, authLoading, targetUserId, targetVenueId, targetOrgId, targetProducerId]);
 
   // Don't show follow button for own profile
   if (targetUserId && user?.id === targetUserId) {
@@ -94,60 +99,67 @@ export default function FollowButton({
     setIsAnimating(true);
     setTimeout(() => setIsAnimating(false), 150);
 
-    if (isFollowing) {
-      // Unfollow
-      let query = supabase
-        .from("follows")
-        .delete()
-        .eq("follower_id", user.id);
+    try {
+      if (isFollowing) {
+        // Unfollow
+        let query = supabase
+          .from("follows")
+          .delete()
+          .eq("follower_id", user.id);
 
-      if (targetUserId) {
-        query = query.eq("followed_user_id", targetUserId);
-      } else if (targetVenueId) {
-        query = query.eq("followed_venue_id", targetVenueId);
-      } else if (targetOrgId) {
-        query = query.eq("followed_org_id", targetOrgId);
-      } else if (targetProducerId) {
-        query = query.eq("followed_producer_id", targetProducerId);
-      }
+        if (targetUserId) {
+          query = query.eq("followed_user_id", targetUserId);
+        } else if (targetVenueId) {
+          query = query.eq("followed_venue_id", targetVenueId);
+        } else if (targetOrgId) {
+          query = query.eq("followed_org_id", targetOrgId);
+        } else if (targetProducerId) {
+          query = query.eq("followed_producer_id", targetProducerId);
+        }
 
-      const { error } = await query;
+        const { error } = await query;
 
-      if (!error) {
-        setIsFollowing(false);
-        showToast("Unfollowed");
+        if (!error) {
+          setIsFollowing(false);
+          showToast("Unfollowed");
+        } else {
+          console.error("Unfollow error:", error);
+          showToast("Failed to unfollow", "error");
+        }
       } else {
-        showToast("Failed to unfollow", "error");
-      }
-    } else {
-      // Follow
-      const followData: Record<string, unknown> = {
-        follower_id: user.id,
-      };
+        // Follow
+        const followData: Record<string, unknown> = {
+          follower_id: user.id,
+        };
 
-      if (targetUserId) {
-        followData.followed_user_id = targetUserId;
-      } else if (targetVenueId) {
-        followData.followed_venue_id = targetVenueId;
-      } else if (targetOrgId) {
-        followData.followed_org_id = targetOrgId;
-      } else if (targetProducerId) {
-        followData.followed_producer_id = targetProducerId;
-      }
+        if (targetUserId) {
+          followData.followed_user_id = targetUserId;
+        } else if (targetVenueId) {
+          followData.followed_venue_id = targetVenueId;
+        } else if (targetOrgId) {
+          followData.followed_org_id = targetOrgId;
+        } else if (targetProducerId) {
+          followData.followed_producer_id = targetProducerId;
+        }
 
-      const { error } = await supabase
-        .from("follows")
-        .insert(followData as never);
+        const { error } = await supabase
+          .from("follows")
+          .insert(followData as never);
 
-      if (!error) {
-        setIsFollowing(true);
-        showToast("Following");
-      } else {
-        showToast("Failed to follow", "error");
+        if (!error) {
+          setIsFollowing(true);
+          showToast("Following");
+        } else {
+          console.error("Follow error:", error);
+          showToast("Failed to follow", "error");
+        }
       }
+    } catch (err) {
+      console.error("Follow action error:", err);
+      showToast("Something went wrong", "error");
+    } finally {
+      setActionLoading(false);
     }
-
-    setActionLoading(false);
   };
 
   const sizeClasses = {

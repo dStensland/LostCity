@@ -26,7 +26,7 @@ export default function RecommendButton({
   className = "",
 }: RecommendButtonProps) {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const supabase = createClient();
   const modalRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -92,6 +92,11 @@ export default function RecommendButton({
   // Load existing recommendation
   useEffect(() => {
     async function loadRecommendation() {
+      // Wait for auth to finish loading
+      if (authLoading) {
+        return;
+      }
+
       if (!user) {
         setLoading(false);
         return;
@@ -132,7 +137,7 @@ export default function RecommendButton({
     }
 
     loadRecommendation();
-  }, [user, eventId, venueId, producerId, supabase]);
+  }, [user, authLoading, eventId, venueId, producerId, supabase]);
 
   const handleClick = () => {
     if (!user) {
@@ -155,25 +160,66 @@ export default function RecommendButton({
 
     setActionLoading(true);
 
-    const recData: Record<string, unknown> = {
-      user_id: user.id,
-      note: note.trim() || null,
-      visibility,
-    };
+    try {
+      const recData: Record<string, unknown> = {
+        user_id: user.id,
+        note: note.trim() || null,
+        visibility,
+      };
 
-    if (eventId) {
-      recData.event_id = eventId;
-    } else if (venueId) {
-      recData.venue_id = venueId;
-    } else if (producerId) {
-      recData.producer_id = producerId;
+      if (eventId) {
+        recData.event_id = eventId;
+      } else if (venueId) {
+        recData.venue_id = venueId;
+      } else if (producerId) {
+        recData.producer_id = producerId;
+      }
+
+      if (isRecommended) {
+        // Update existing
+        let query = supabase
+          .from("recommendations")
+          .update({ note: note.trim() || null, visibility } as never)
+          .eq("user_id", user.id);
+
+        if (eventId) {
+          query = query.eq("event_id", eventId);
+        } else if (venueId) {
+          query = query.eq("venue_id", venueId);
+        } else if (producerId) {
+          query = query.eq("producer_id", producerId);
+        }
+
+        const { error } = await query;
+        if (error) {
+          console.error("Update recommendation error:", error);
+        }
+      } else {
+        // Create new
+        const { error } = await supabase.from("recommendations").insert(recData as never);
+        if (error) {
+          console.error("Create recommendation error:", error);
+        }
+      }
+
+      setIsRecommended(true);
+      setModalOpen(false);
+    } catch (err) {
+      console.error("Recommendation submit error:", err);
+    } finally {
+      setActionLoading(false);
     }
+  };
 
-    if (isRecommended) {
-      // Update existing
+  const handleRemove = async () => {
+    if (!user) return;
+
+    setActionLoading(true);
+
+    try {
       let query = supabase
         .from("recommendations")
-        .update({ note: note.trim() || null, visibility } as never)
+        .delete()
         .eq("user_id", user.id);
 
       if (eventId) {
@@ -184,41 +230,19 @@ export default function RecommendButton({
         query = query.eq("producer_id", producerId);
       }
 
-      await query;
-    } else {
-      // Create new
-      await supabase.from("recommendations").insert(recData as never);
+      const { error } = await query;
+      if (error) {
+        console.error("Remove recommendation error:", error);
+      }
+
+      setIsRecommended(false);
+      setNote("");
+      setModalOpen(false);
+    } catch (err) {
+      console.error("Recommendation remove error:", err);
+    } finally {
+      setActionLoading(false);
     }
-
-    setIsRecommended(true);
-    setModalOpen(false);
-    setActionLoading(false);
-  };
-
-  const handleRemove = async () => {
-    if (!user) return;
-
-    setActionLoading(true);
-
-    let query = supabase
-      .from("recommendations")
-      .delete()
-      .eq("user_id", user.id);
-
-    if (eventId) {
-      query = query.eq("event_id", eventId);
-    } else if (venueId) {
-      query = query.eq("venue_id", venueId);
-    } else if (producerId) {
-      query = query.eq("producer_id", producerId);
-    }
-
-    await query;
-
-    setIsRecommended(false);
-    setNote("");
-    setModalOpen(false);
-    setActionLoading(false);
   };
 
   const sizeClasses = {
