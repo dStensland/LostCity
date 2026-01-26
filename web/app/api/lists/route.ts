@@ -40,8 +40,7 @@ export async function GET(request: NextRequest) {
             position,
             venue:venues(id, name, slug, neighborhood, spot_type, image_url),
             event:events(id, title, start_date, image_url, venue:venues(name))
-          ),
-          votes:list_votes(count)
+          )
         `)
         .eq("slug", slug)
         .eq("status", "active");
@@ -137,13 +136,19 @@ export async function GET(request: NextRequest) {
         user_vote: userVoteMap[item.id] || null,
       })) || [];
 
+      // Get total vote count for the list
+      const { count: voteCount } = await supabase
+        .from("list_votes")
+        .select("*", { count: "exact", head: true })
+        .eq("list_id", list.id);
+
       return NextResponse.json({
         list: {
           ...list,
           creator: creator || null,
           items: transformedItems,
           item_count: list.items?.length || 0,
-          vote_count: list.votes?.[0]?.count || 0,
+          vote_count: voteCount || 0,
         },
       });
     }
@@ -157,8 +162,7 @@ export async function GET(request: NextRequest) {
           position,
           venue:venues(image_url),
           event:events(image_url)
-        ),
-        votes:list_votes(count)
+        )
       `)
       .eq("status", "active")
       .eq("is_public", true)
@@ -198,12 +202,28 @@ export async function GET(request: NextRequest) {
 
     // Fetch creator profiles for all lists
     const creatorIds = [...new Set((data || []).map((l: { creator_id: string }) => l.creator_id))];
+    const listIds = (data || []).map((l: { id: string }) => l.id);
+
     const { data: creators } = creatorIds.length > 0
       ? await supabase
           .from("profiles")
           .select("id, username, display_name, avatar_url")
           .in("id", creatorIds)
       : { data: [] };
+
+    // Fetch vote counts for all lists
+    const { data: voteCounts } = listIds.length > 0
+      ? await supabase
+          .from("list_votes")
+          .select("list_id")
+          .in("list_id", listIds)
+      : { data: [] };
+
+    // Count votes per list
+    const voteCountMap: Record<string, number> = {};
+    (voteCounts || []).forEach((v: { list_id: string }) => {
+      voteCountMap[v.list_id] = (voteCountMap[v.list_id] || 0) + 1;
+    });
 
     const creatorMap = new Map(
       (creators || []).map((c: { id: string; username: string; display_name: string | null; avatar_url: string | null }) => [c.id, c])
@@ -215,14 +235,14 @@ export async function GET(request: NextRequest) {
       venue?: { image_url: string | null } | null;
       event?: { image_url: string | null } | null;
     }
-    interface ListWithCounts {
+    interface ListData {
+      id: string;
       creator_id: string;
       list_items?: ItemPreview[];
-      votes?: { count: number }[];
       created_at?: string;
       [key: string]: unknown;
     }
-    let lists = (data || []).map((list: ListWithCounts) => {
+    let lists = (data || []).map((list: ListData) => {
       // Extract thumbnail URLs from first 3 items with images
       const thumbnails: string[] = [];
       const sortedPreviews = (list.list_items || [])
@@ -245,10 +265,9 @@ export async function GET(request: NextRequest) {
           avatar_url: creator.avatar_url,
         } : null,
         item_count: sortedPreviews.length,
-        vote_count: list.votes?.[0]?.count || 0,
+        vote_count: voteCountMap[list.id] || 0,
         thumbnails,
         list_items: undefined,
-        votes: undefined,
       };
     });
 
