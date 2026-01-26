@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState, useRef } from "react";
+import { createContext, useContext, useEffect, useState, useRef, useCallback } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 
@@ -45,169 +45,140 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const isMountedRef = useRef(true);
+  const profileFetchRef = useRef<string | null>(null);
 
   const supabase = createClient();
 
-  const fetchProfile = async (userId: string): Promise<Profile | null> => {
+  const fetchProfile = useCallback(async (userId: string): Promise<Profile | null> => {
+    // Prevent duplicate fetches for same user
+    if (profileFetchRef.current === userId) {
+      return profile;
+    }
+    profileFetchRef.current = userId;
+
     try {
       const { data, error: fetchError } = await supabase
         .from("profiles")
         .select("*")
         .eq("id", userId)
-        .single();
+        .maybeSingle();
 
       if (fetchError) {
         console.error("Error fetching profile:", fetchError);
-        // Don't set error state for "not found" - that's expected for new users
-        if (fetchError.code !== "PGRST116") {
-          throw new Error(`Profile fetch failed: ${fetchError.message}`);
-        }
         return null;
       }
 
-      return data as Profile;
+      return data as Profile | null;
     } catch (err) {
       console.error("Exception fetching profile:", err);
-      throw err;
+      return null;
     }
-  };
+  }, [supabase, profile]);
 
-  const refreshProfile = async () => {
+  const refreshProfile = useCallback(async () => {
     if (user) {
-      try {
-        const newProfile = await fetchProfile(user.id);
-        if (isMountedRef.current) {
-          setProfile(newProfile);
-        }
-      } catch (err) {
-        console.error("Error refreshing profile:", err);
-        if (isMountedRef.current) {
-          setError(err instanceof Error ? err : new Error("Failed to refresh profile"));
-        }
+      profileFetchRef.current = null; // Reset to allow refresh
+      const newProfile = await fetchProfile(user.id);
+      if (isMountedRef.current) {
+        setProfile(newProfile);
       }
     }
-  };
+  }, [user, fetchProfile]);
 
   useEffect(() => {
-    // Reset mounted ref on each effect run
     isMountedRef.current = true;
-
-    // Use a local flag to prevent race conditions within this effect instance
     let isCurrentEffect = true;
 
-    // Get initial session
-    const getInitialSession = async () => {
+    const initAuth = async () => {
       try {
-        const {
-          data: { session: initialSession },
-          error: sessionError,
-        } = await supabase.auth.getSession();
+        // Use getUser() which validates the session with the server
+        // This is more reliable than getSession() which only checks local storage
+        const { data: { user: authUser }, error: userError } = await supabase.auth.getUser();
 
         if (!isMountedRef.current || !isCurrentEffect) return;
 
-        if (sessionError) {
-          console.error("Error getting session:", sessionError);
-          setError(new Error(`Session error: ${sessionError.message}`));
-          setLoading(false);
-          return;
+        if (userError) {
+          // PGRST116 or similar "not authenticated" errors are expected
+          // Just means no valid session exists
+          if (userError.message?.includes("Auth session missing")) {
+            setLoading(false);
+            return;
+          }
+          console.error("Error getting user:", userError);
         }
 
-        setSession(initialSession);
-        setUser(initialSession?.user ?? null);
+        if (authUser) {
+          setUser(authUser);
 
-        if (initialSession?.user) {
-          try {
-            const userProfile = await fetchProfile(initialSession.user.id);
-            if (isMountedRef.current) {
-              setProfile(userProfile);
-            }
-          } catch (profileErr) {
-            // Profile fetch failed but session is valid - log but continue
-            console.error("Profile fetch failed during init:", profileErr);
-            if (isMountedRef.current) {
-              setError(profileErr instanceof Error ? profileErr : new Error("Profile fetch failed"));
-            }
+          // Get session for completeness (already validated by getUser)
+          const { data: { session: authSession } } = await supabase.auth.getSession();
+          if (isMountedRef.current) {
+            setSession(authSession);
+          }
+
+          // Fetch profile - don't block on this
+          const userProfile = await fetchProfile(authUser.id);
+          if (isMountedRef.current) {
+            setProfile(userProfile);
           }
         }
       } catch (err) {
-        // Ignore AbortError - expected during React StrictMode unmount/remount
         if (err instanceof Error && err.name === "AbortError") {
           return;
         }
-        console.error("Error getting initial session:", err);
+        console.error("Auth init error:", err);
         if (isMountedRef.current && isCurrentEffect) {
           setError(err instanceof Error ? err : new Error("Auth initialization failed"));
         }
       } finally {
-        // Always set loading to false if this is the current effect and component is mounted
         if (isMountedRef.current && isCurrentEffect) {
           setLoading(false);
         }
       }
     };
 
-    getInitialSession();
+    initAuth();
 
     // Listen for auth changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, newSession) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, newSession) => {
       if (!isMountedRef.current) return;
 
-      try {
-        // Clear previous errors on auth state change
-        setError(null);
-        setSession(newSession);
-        setUser(newSession?.user ?? null);
+      // Clear errors on any auth event
+      setError(null);
 
-        // Handle session expiry - redirect to login if signed out unexpectedly
-        if (event === "SIGNED_OUT" && !newSession) {
-          setProfile(null);
-          // Only redirect if we were previously signed in (not on initial load)
-          // and not already on an auth page
-          if (typeof window !== "undefined" && !window.location.pathname.startsWith("/auth")) {
-            // Clear any stale state before redirect
-            setLoading(false);
-            return;
-          }
-        }
-
-        // Handle token refresh errors
-        if (event === "TOKEN_REFRESHED" && !newSession) {
-          console.error("Token refresh failed - session expired");
-          setProfile(null);
-          // Redirect to login with return URL
-          if (typeof window !== "undefined" && !window.location.pathname.startsWith("/auth")) {
-            window.location.href = `/auth/login?redirect=${encodeURIComponent(window.location.pathname)}`;
-            return;
-          }
-        }
-
-        if (newSession?.user) {
-          try {
-            const userProfile = await fetchProfile(newSession.user.id);
-            if (isMountedRef.current) {
-              setProfile(userProfile);
-            }
-          } catch (profileErr) {
-            console.error("Profile fetch failed on auth change:", profileErr);
-            if (isMountedRef.current) {
-              setError(profileErr instanceof Error ? profileErr : new Error("Profile fetch failed"));
-            }
-          }
-        } else {
-          setProfile(null);
-        }
-      } catch (err) {
-        console.error("Error handling auth state change:", err);
-        if (isMountedRef.current) {
-          setError(err instanceof Error ? err : new Error("Auth state change failed"));
-        }
-      } finally {
-        if (isMountedRef.current) {
-          setLoading(false);
-        }
+      if (event === "SIGNED_OUT") {
+        setUser(null);
+        setSession(null);
+        setProfile(null);
+        profileFetchRef.current = null;
+        setLoading(false);
+        return;
       }
+
+      if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED" || event === "USER_UPDATED") {
+        if (newSession?.user) {
+          setUser(newSession.user);
+          setSession(newSession);
+
+          // Fetch profile for new session
+          profileFetchRef.current = null; // Reset to allow new fetch
+          const userProfile = await fetchProfile(newSession.user.id);
+          if (isMountedRef.current) {
+            setProfile(userProfile);
+          }
+        }
+        setLoading(false);
+        return;
+      }
+
+      // For other events, just update state
+      setSession(newSession);
+      setUser(newSession?.user ?? null);
+      if (!newSession?.user) {
+        setProfile(null);
+        profileFetchRef.current = null;
+      }
+      setLoading(false);
     });
 
     return () => {
@@ -215,26 +186,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       isCurrentEffect = false;
       subscription.unsubscribe();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- Run only on mount, supabase client is stable
-  }, []);
+  }, [supabase, fetchProfile]);
 
-  const signOut = async () => {
+  const signOut = useCallback(async () => {
     try {
-      const { error } = await supabase.auth.signOut();
-      if (error) {
-        console.error("Sign out error:", error);
-      }
+      await supabase.auth.signOut();
     } catch (err) {
-      console.error("Sign out exception:", err);
+      console.error("Sign out error:", err);
     } finally {
-      // Always clear local state and redirect, even if API call fails
       setUser(null);
       setSession(null);
       setProfile(null);
-      // Redirect to home page
+      profileFetchRef.current = null;
       window.location.href = "/";
     }
-  };
+  }, [supabase]);
 
   return (
     <AuthContext.Provider
