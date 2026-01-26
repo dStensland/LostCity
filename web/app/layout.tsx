@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { Outfit, Instrument_Serif, JetBrains_Mono, Space_Grotesk, Bebas_Neue } from "next/font/google";
+import { Analytics } from "@vercel/analytics/react";
 import { AuthProvider } from "@/lib/auth-context";
 import { ThemeProvider } from "@/lib/theme-context";
 import { ToastProvider } from "@/components/Toast";
@@ -87,6 +88,7 @@ export default function RootLayout({
             </AuthProvider>
           </QueryProvider>
         </ThemeProvider>
+        <Analytics />
       </body>
     </html>
   );
