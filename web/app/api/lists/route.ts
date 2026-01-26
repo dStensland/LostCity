@@ -259,20 +259,25 @@ export async function POST(request: NextRequest) {
         category: category || null,
         is_public: is_public !== false,
       })
-      .select(`
-        *,
-        creator:profiles!creator_id(username, display_name, avatar_url)
-      `)
+      .select("*")
       .single();
 
     if (error) {
       console.error("Error creating list:", error);
-      return NextResponse.json({ error: "Failed to create list" }, { status: 500 });
+      return NextResponse.json({ error: "Failed to create list", details: error.message }, { status: 500 });
     }
+
+    // Fetch creator profile separately (creator_id FK is to auth.users, not profiles)
+    const { data: creator } = await supabase
+      .from("profiles")
+      .select("username, display_name, avatar_url")
+      .eq("id", user.id)
+      .single();
 
     return NextResponse.json({
       list: {
         ...list,
+        creator: creator || null,
         item_count: 0,
         vote_count: 0,
       },
