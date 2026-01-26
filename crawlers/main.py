@@ -15,11 +15,9 @@ import os
 import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from importlib import import_module
-from typing import Optional
 
-from config import get_config
 from db import get_active_sources, get_source_by_slug, create_crawl_log, update_crawl_log, refresh_available_filters
-from utils import setup_logging, slugify
+from utils import setup_logging
 from circuit_breaker import should_skip_source, get_all_circuit_states
 from fetch_logos import fetch_logos
 
@@ -145,6 +143,7 @@ SOURCE_MODULES = {
     # ===== Sports & Entertainment =====
     "truist-park": "sources.truist_park",
     "live-at-battery": "sources.live_at_battery",
+    "battery-atlanta": "sources.battery_atlanta",
     "atlanta-motor-speedway": "sources.atlanta_motor_speedway",
     # ===== Tech & Community Organizations =====
     "atlanta-tech-village": "sources.atlanta_tech_village",
@@ -226,7 +225,8 @@ SOURCE_MODULES = {
     "lyfe-atlanta": "sources.lyfe_atlanta",
     "church-atlanta": "sources.church_atlanta",
     # ===== Additional Theaters =====
-    "seven-stages": "sources.seven_stages",
+    "7-stages": "sources.seven_stages",
+    "seven-stages": "sources.seven_stages",  # Alias for backward compatibility
     "theatrical-outfit": "sources.theatrical_outfit",
     "true-colors-theatre": "sources.true_colors_theatre",
     "synchronicity-theatre": "sources.synchronicity_theatre",

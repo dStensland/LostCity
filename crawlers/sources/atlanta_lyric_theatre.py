@@ -1,7 +1,9 @@
 """
-Crawler for Atlanta Lyric Theatre (atlantalyrictheatre.com).
+Crawler for Atlanta Lyric Theatre.
 
-Site uses JavaScript rendering - must use Playwright.
+NOTE: The original domain (atlantalyrictheatre.com) was taken over by spam content
+after September 2024. This crawler now checks their Eventbrite organizer page.
+If no events are found, the venue may have permanently closed.
 """
 
 from __future__ import annotations
@@ -11,16 +13,16 @@ import logging
 from datetime import datetime
 from typing import Optional
 
-from playwright.sync_api import sync_playwright
+from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
 
 from db import get_or_create_venue, insert_event, find_event_by_hash
 from dedupe import generate_content_hash
-from utils import extract_images_from_page
 
 logger = logging.getLogger(__name__)
 
-BASE_URL = "https://www.atlantalyrictheatre.com"
-EVENTS_URL = f"{BASE_URL}/shows"
+# Original site is down, trying Eventbrite
+EVENTBRITE_URL = "https://www.eventbrite.com/o/atlanta-lyric-theatre-31645477533"
+FALLBACK_SITE_URL = "https://www.atlantalyrictheatre.com"
 
 VENUE_DATA = {
     "name": "Atlanta Lyric Theatre",
@@ -34,26 +36,64 @@ VENUE_DATA = {
     "lng": -84.5454,
     "venue_type": "theater",
     "spot_type": "theater",
-    "website": BASE_URL,
+    "website": FALLBACK_SITE_URL,
 }
 
 
-def parse_time(time_text: str) -> Optional[str]:
-    """Parse time from '7:00 PM' format."""
-    match = re.search(r"(\d{1,2}):(\d{2})\s*(am|pm)", time_text, re.IGNORECASE)
-    if match:
-        hour, minute, period = match.groups()
-        hour = int(hour)
-        if period.lower() == "pm" and hour != 12:
-            hour += 12
-        elif period.lower() == "am" and hour == 12:
-            hour = 0
-        return f"{hour:02d}:{minute}"
-    return None
+def check_if_spam_site(page) -> bool:
+    """Check if the page has been taken over by spam/gambling content."""
+    body_text = page.inner_text("body").lower()
+    spam_indicators = ["slot", "gacor", "rtp tinggi", "bocoran", "judi", "casino"]
+    spam_count = sum(1 for indicator in spam_indicators if indicator in body_text)
+    return spam_count >= 2
+
+
+def parse_eventbrite_date(date_str: str) -> Optional[dict]:
+    """Parse Eventbrite date formats like 'Sat, Jan 25, 7:30 PM' or 'Jan 25, 2026'."""
+    # Try full format with time
+    match = re.search(
+        r"(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun)?,?\s*"
+        r"(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{1,2})(?:,\s*(\d{4}))?"
+        r"(?:\s*[•,]\s*(\d{1,2}):(\d{2})\s*(AM|PM))?",
+        date_str,
+        re.IGNORECASE
+    )
+
+    if not match:
+        return None
+
+    month, day, year, hour, minute, period = match.groups()
+
+    # Default to current year if not specified
+    if not year:
+        year = str(datetime.now().year)
+
+    # Parse date
+    try:
+        dt = datetime.strptime(f"{month} {day} {year}", "%b %d %Y")
+    except ValueError:
+        return None
+
+    start_date = dt.strftime("%Y-%m-%d")
+    start_time = None
+
+    # Parse time if available
+    if hour and minute and period:
+        hour_int = int(hour)
+        if period.upper() == "PM" and hour_int != 12:
+            hour_int += 12
+        elif period.upper() == "AM" and hour_int == 12:
+            hour_int = 0
+        start_time = f"{hour_int:02d}:{minute}"
+
+    return {
+        "date": start_date,
+        "time": start_time
+    }
 
 
 def crawl(source: dict) -> tuple[int, int, int]:
-    """Crawl Atlanta Lyric Theatre events using Playwright."""
+    """Crawl Atlanta Lyric Theatre events from Eventbrite."""
     source_id = source["id"]
     events_found = 0
     events_new = 0
@@ -70,130 +110,138 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             venue_id = get_or_create_venue(VENUE_DATA)
 
-            logger.info(f"Fetching Atlanta Lyric Theatre: {EVENTS_URL}")
-            page.goto(EVENTS_URL, wait_until="domcontentloaded", timeout=30000)
-            page.wait_for_timeout(3000)
+            # Try Eventbrite first
+            logger.info(f"Fetching Atlanta Lyric Theatre from Eventbrite: {EVENTBRITE_URL}")
+            try:
+                page.goto(EVENTBRITE_URL, wait_until="domcontentloaded", timeout=30000)
+                page.wait_for_timeout(3000)
 
-            # Extract images from page
-            image_map = extract_images_from_page(page)
+                # Check if Eventbrite page exists
+                body_text = page.inner_text("body").lower()
+                if "page or event you are looking for was not found" in body_text:
+                    logger.error(
+                        "Eventbrite organizer page has been removed (404). "
+                        "Atlanta Lyric Theatre has likely permanently closed."
+                    )
+                    raise Exception("Eventbrite organizer page no longer exists")
 
-            # Scroll to load all content
-            for _ in range(5):
-                page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
-                page.wait_for_timeout(1000)
+                # Check for events on Eventbrite
+                # Look for event cards or listings
+                event_elements = page.query_selector_all("[data-event-id], .event-card, .search-event-card")
 
-            # Get page text and parse line by line
-            body_text = page.inner_text("body")
-            lines = [l.strip() for l in body_text.split("\n") if l.strip()]
+                if len(event_elements) > 0:
+                    logger.info(f"Found {len(event_elements)} potential events on Eventbrite")
 
-            # Parse events - look for date patterns
-            i = 0
-            while i < len(lines):
-                line = lines[i]
-
-                # Skip navigation items
-                if len(line) < 3:
-                    i += 1
-                    continue
-
-                # Look for date patterns
-                date_match = re.match(
-                    r"(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)?,?\s*(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{1,2})(?:,?\s+(\d{4}))?",
-                    line,
-                    re.IGNORECASE
-                )
-
-                if date_match:
-                    month = date_match.group(1)
-                    day = date_match.group(2)
-                    year = date_match.group(3) if date_match.group(3) else str(datetime.now().year)
-
-                    # Look for title in surrounding lines
-                    title = None
-                    start_time = None
-
-                    for offset in [-2, -1, 1, 2, 3]:
-                        idx = i + offset
-                        if 0 <= idx < len(lines):
-                            check_line = lines[idx]
-                            if re.match(r"(January|February|March)", check_line, re.IGNORECASE):
+                    for elem in event_elements:
+                        try:
+                            # Extract title
+                            title_elem = elem.query_selector("h3, .event-card__title, .eds-event-card__formatted-name--is-clamped")
+                            if not title_elem:
                                 continue
-                            if not start_time:
-                                time_result = parse_time(check_line)
-                                if time_result:
-                                    start_time = time_result
-                                    continue
-                            if not title and len(check_line) > 5:
-                                if not re.match(r"\d{1,2}[:/]", check_line):
-                                    if not re.match(r"(free|tickets|register|\$|more info)", check_line.lower()):
-                                        title = check_line
-                                        break
 
-                    if not title:
-                        i += 1
-                        continue
+                            title = title_elem.inner_text().strip()
+                            if not title or len(title) < 3:
+                                continue
 
-                    # Parse date
-                    try:
-                        month_str = month[:3] if len(month) > 3 else month
-                        dt = datetime.strptime(f"{month_str} {day} {year}", "%b %d %Y")
-                        if dt.date() < datetime.now().date():
-                            dt = datetime.strptime(f"{month_str} {day} {int(year) + 1}", "%b %d %Y")
-                        start_date = dt.strftime("%Y-%m-%d")
-                    except ValueError:
-                        i += 1
-                        continue
+                            # Extract date
+                            date_elem = elem.query_selector(".event-card__date, [data-spec='event-card-date']")
+                            if not date_elem:
+                                continue
 
-                    events_found += 1
+                            date_text = date_elem.inner_text().strip()
+                            parsed_date = parse_eventbrite_date(date_text)
 
-                    content_hash = generate_content_hash(title, "Atlanta Lyric Theatre", start_date)
+                            if not parsed_date:
+                                logger.warning(f"Could not parse date: {date_text}")
+                                continue
 
-                    if find_event_by_hash(content_hash):
-                        events_updated += 1
-                        i += 1
-                        continue
+                            start_date = parsed_date["date"]
+                            start_time = parsed_date["time"]
 
-                    event_record = {
-                        "source_id": source_id,
-                        "venue_id": venue_id,
-                        "title": title,
-                        "description": "Event at Atlanta Lyric Theatre",
-                        "start_date": start_date,
-                        "start_time": start_time,
-                        "end_date": None,
-                        "end_time": None,
-                        "is_all_day": start_time is None,
-                        "category": "theater",
-                        "subcategory": "performance",
-                        "tags": [
-                        "atlanta-lyric",
-                        "theater",
-                        "marietta",
-                        "musical",
-                        "broadway",
-                    ],
-                        "price_min": None,
-                        "price_max": None,
-                        "price_note": None,
-                        "is_free": False,
-                        "source_url": EVENTS_URL,
-                        "ticket_url": EVENTS_URL,
-                        "image_url": image_map.get(title),
-                        "raw_text": f"{title} - {start_date}",
-                        "extraction_confidence": 0.80,
-                        "is_recurring": False,
-                        "recurrence_rule": None,
-                        "content_hash": content_hash,
-                    }
+                            # Extract event URL
+                            link_elem = elem.query_selector("a[href*='/e/']")
+                            event_url = link_elem.get_attribute("href") if link_elem else EVENTBRITE_URL
+                            if event_url and not event_url.startswith("http"):
+                                event_url = f"https://www.eventbrite.com{event_url}"
 
-                    try:
-                        insert_event(event_record)
-                        events_new += 1
-                        logger.info(f"Added: {title} on {start_date}")
-                    except Exception as e:
-                        logger.error(f"Failed to insert: {title}: {e}")
+                            # Extract image
+                            img_elem = elem.query_selector("img")
+                            image_url = img_elem.get_attribute("src") if img_elem else None
 
-                i += 1
+                            events_found += 1
+
+                            content_hash = generate_content_hash(title, "Atlanta Lyric Theatre", start_date)
+
+                            if find_event_by_hash(content_hash):
+                                events_updated += 1
+                                continue
+
+                            event_record = {
+                                "source_id": source_id,
+                                "venue_id": venue_id,
+                                "title": title,
+                                "description": "Musical theater performance at Atlanta Lyric Theatre",
+                                "start_date": start_date,
+                                "start_time": start_time,
+                                "end_date": None,
+                                "end_time": None,
+                                "is_all_day": start_time is None,
+                                "category": "theater",
+                                "subcategory": "performance",
+                                "tags": [
+                                    "atlanta-lyric",
+                                    "theater",
+                                    "marietta",
+                                    "musical",
+                                    "broadway",
+                                ],
+                                "price_min": None,
+                                "price_max": None,
+                                "price_note": None,
+                                "is_free": False,
+                                "source_url": event_url,
+                                "ticket_url": event_url,
+                                "image_url": image_url,
+                                "raw_text": f"{title} - {start_date}",
+                                "extraction_confidence": 0.75,
+                                "is_recurring": False,
+                                "recurrence_rule": None,
+                                "content_hash": content_hash,
+                            }
+
+                            try:
+                                insert_event(event_record)
+                                events_new += 1
+                                logger.info(f"Added: {title} on {start_date}")
+                            except Exception as e:
+                                logger.error(f"Failed to insert: {title}: {e}")
+
+                        except Exception as e:
+                            logger.error(f"Error processing event element: {e}")
+                            continue
+
+                else:
+                    # No events found on Eventbrite
+                    logger.warning("No events found on Eventbrite organizer page")
+
+                    # Check if original site is back online (not spam)
+                    logger.info(f"Checking original site: {FALLBACK_SITE_URL}")
+                    page.goto(f"{FALLBACK_SITE_URL}/shows", wait_until="domcontentloaded", timeout=30000)
+                    page.wait_for_timeout(2000)
+
+                    if check_if_spam_site(page):
+                        logger.error(
+                            "Original domain has been taken over by spam content. "
+                            "Atlanta Lyric Theatre may have permanently closed. "
+                            "Consider marking this source as inactive."
+                        )
+                    else:
+                        logger.info("Original site appears to be back online. Site structure may have changed.")
+
+            except PlaywrightTimeout:
+                logger.error("Timeout loading Eventbrite page")
+            except Exception as e:
+                logger.error(f"Error fetching from Eventbrite: {e}")
 
             browser.close()
 

@@ -1,6 +1,8 @@
 """
-Crawler for Gas South District (gassouthdistrict.com).
+Crawler for Gas South Arena (gassouthdistrict.com).
+Formerly known as Infinite Energy Arena.
 
+Hosts concerts, hockey (Atlanta Gladiators), and major events in Gwinnett County.
 Site uses JavaScript rendering - must use Playwright.
 """
 
@@ -22,7 +24,20 @@ logger = logging.getLogger(__name__)
 BASE_URL = "https://www.gassouthdistrict.com"
 EVENTS_URL = f"{BASE_URL}/events"
 
-VENUE_DATA = {}
+VENUE_DATA = {
+    "name": "Gas South Arena",
+    "slug": "gas-south-arena",
+    "address": "6400 Sugarloaf Pkwy",
+    "neighborhood": "Duluth",
+    "city": "Duluth",
+    "state": "GA",
+    "zip": "30097",
+    "lat": 33.9618,
+    "lng": -84.0965,
+    "venue_type": "arena",
+    "spot_type": "stadium",
+    "website": BASE_URL,
+}
 
 
 def parse_time(time_text: str) -> Optional[str]:
@@ -40,7 +55,7 @@ def parse_time(time_text: str) -> Optional[str]:
 
 
 def crawl(source: dict) -> tuple[int, int, int]:
-    """Crawl Unknown events using Playwright."""
+    """Crawl Gas South Arena events using Playwright."""
     source_id = source["id"]
     events_found = 0
     events_new = 0
@@ -57,7 +72,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             venue_id = get_or_create_venue(VENUE_DATA)
 
-            logger.info(f"Fetching Unknown: {EVENTS_URL}")
+            logger.info(f"Fetching Gas South Arena: {EVENTS_URL}")
             page.goto(EVENTS_URL, wait_until="domcontentloaded", timeout=30000)
             page.wait_for_timeout(3000)
 
@@ -133,7 +148,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     events_found += 1
 
-                    content_hash = generate_content_hash(title, "Unknown", start_date)
+                    content_hash = generate_content_hash(title, "Gas South Arena", start_date)
 
                     if find_event_by_hash(content_hash):
                         events_updated += 1
@@ -144,7 +159,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "source_id": source_id,
                         "venue_id": venue_id,
                         "title": title,
-                        "description": "Event at Unknown",
+                        "description": "Event at Gas South Arena",
                         "start_date": start_date,
                         "start_time": start_time,
                         "end_date": None,
@@ -179,11 +194,11 @@ def crawl(source: dict) -> tuple[int, int, int]:
             browser.close()
 
         logger.info(
-            f"Unknown crawl complete: {events_found} found, {events_new} new, {events_updated} updated"
+            f"Gas South Arena crawl complete: {events_found} found, {events_new} new, {events_updated} updated"
         )
 
     except Exception as e:
-        logger.error(f"Failed to crawl Unknown: {e}")
+        logger.error(f"Failed to crawl Gas South Arena: {e}")
         raise
 
     return events_found, events_new, events_updated

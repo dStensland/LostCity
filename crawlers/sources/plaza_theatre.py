@@ -343,8 +343,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             # Load the now-showing page
             logger.info(f"Fetching Plaza Theatre: {NOW_SHOWING_URL}")
-            page.goto(NOW_SHOWING_URL, wait_until="networkidle", timeout=30000)
-            page.wait_for_timeout(3000)  # Wait for JS to load
+            page.goto(NOW_SHOWING_URL, wait_until="domcontentloaded", timeout=30000)
+            page.wait_for_timeout(4000)  # Wait for JS to load
 
             # Click on Plaza Theatre tab if needed (there's also The Tara)
             try:

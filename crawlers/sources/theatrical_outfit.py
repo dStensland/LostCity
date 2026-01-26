@@ -143,8 +143,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
             # We'll try to discover show URLs from the main page
 
             logger.info(f"Fetching Theatrical Outfit: {BASE_URL}")
-            page.goto(BASE_URL, wait_until="networkidle", timeout=30000)
-            page.wait_for_timeout(2000)
+            page.goto(BASE_URL, wait_until="domcontentloaded", timeout=30000)
+            page.wait_for_timeout(4000)
 
             # Find all internal links that might be shows
             all_links = page.query_selector_all("a[href]")
@@ -178,11 +178,10 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             for show_url in show_urls:
                 try:
-                    response = page.goto(show_url, wait_until="networkidle", timeout=15000)
+                    response = page.goto(show_url, wait_until="domcontentloaded", timeout=15000)
+                    page.wait_for_timeout(3000)
                     if not response or response.status >= 400:
                         continue
-
-                    page.wait_for_timeout(1000)
 
                     # Get title
                     title = None

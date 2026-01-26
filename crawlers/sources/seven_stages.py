@@ -24,14 +24,14 @@ SHOWS_URL = f"{BASE_URL}/shows"
 
 VENUE_DATA = {
     "name": "7 Stages",
-    "slug": "seven-stages",
+    "slug": "7-stages",
     "address": "1105 Euclid Ave NE",
     "neighborhood": "Little Five Points",
     "city": "Atlanta",
     "state": "GA",
     "zip": "30307",
-    "lat": 33.7651,
-    "lng": -84.3502,
+    "lat": 33.7647,
+    "lng": -84.3494,
     "venue_type": "theater",
     "spot_type": "theater",
     "website": BASE_URL,
@@ -66,7 +66,33 @@ def parse_date_range(date_text: str) -> tuple[Optional[str], Optional[str]]:
 
     date_text = date_text.strip()
 
-    # Pattern: "Month Day - Month Day, Year" or embedded date like "2.14.2026"
+    # Pattern: Date range like "2.6-7.2026" (Month.Day-Day.Year) or "1.15-24.2026"
+    range_embedded_match = re.search(r"(\d{1,2})\.(\d{1,2})-(\d{1,2})\.(\d{4})", date_text)
+    if range_embedded_match:
+        start_month, start_day, end_day, year = range_embedded_match.groups()
+        try:
+            start_dt = datetime(int(year), int(start_month), int(start_day))
+            end_dt = datetime(int(year), int(start_month), int(end_day))
+            return start_dt.strftime("%Y-%m-%d"), end_dt.strftime("%Y-%m-%d")
+        except ValueError:
+            pass
+
+    # Pattern: Date range like "12.11-28.25" (month.day-day.year with shortened year)
+    # or with full year "12.11-28.2025"
+    range_embedded_match2 = re.search(r"(\d{1,2})\.(\d{1,2})-(\d{1,2})\.(\d{2,4})", date_text)
+    if range_embedded_match2:
+        start_month, start_day, end_day, year = range_embedded_match2.groups()
+        try:
+            # If year is 2 digits, assume 20xx
+            if len(year) == 2:
+                year = f"20{year}"
+            start_dt = datetime(int(year), int(start_month), int(start_day))
+            end_dt = datetime(int(year), int(start_month), int(end_day))
+            return start_dt.strftime("%Y-%m-%d"), end_dt.strftime("%Y-%m-%d")
+        except ValueError:
+            pass
+
+    # Pattern: Single embedded date like "2.14.2026"
     # 7 Stages sometimes uses format like "Game. Set. Match. 2.14.2026"
     embedded_match = re.search(r"(\d{1,2})\.(\d{1,2})\.(\d{4})", date_text)
     if embedded_match:
@@ -132,8 +158,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
             venue_id = get_or_create_venue(VENUE_DATA)
 
             logger.info(f"Fetching 7 Stages: {SHOWS_URL}")
-            page.goto(SHOWS_URL, wait_until="networkidle", timeout=30000)
-            page.wait_for_timeout(2000)
+            page.goto(SHOWS_URL, wait_until="domcontentloaded", timeout=30000)
+            page.wait_for_timeout(4000)
 
             # Scroll to load lazy content
             for _ in range(3):
@@ -204,8 +230,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     if not show_url:
                         continue
 
-                    page.goto(show_url, wait_until="networkidle", timeout=20000)
-                    page.wait_for_timeout(1000)
+                    page.goto(show_url, wait_until="domcontentloaded", timeout=20000)
+                    page.wait_for_timeout(3000)
 
                     # Get dates from show page
                     body_text = page.inner_text("body")

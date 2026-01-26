@@ -7,7 +7,6 @@ Uses The Events Calendar API for event data.
 
 from __future__ import annotations
 
-import re
 import logging
 import requests
 from datetime import datetime

@@ -1,6 +1,7 @@
 """
 Crawler for Aisle 5 (aisle5atl.com).
 
+Music venue in Little Five Points using SeeTickets plugin for event listings.
 Site uses JavaScript rendering - must use Playwright.
 """
 
@@ -12,15 +13,15 @@ from datetime import datetime
 from typing import Optional
 
 from playwright.sync_api import sync_playwright
+from bs4 import BeautifulSoup
 
 from db import get_or_create_venue, insert_event, find_event_by_hash
 from dedupe import generate_content_hash
-from utils import extract_images_from_page
 
 logger = logging.getLogger(__name__)
 
 BASE_URL = "https://aisle5atl.com"
-EVENTS_URL = "https://aisle5atl.com"
+EVENTS_URL = "https://aisle5atl.com/calendar/"
 
 VENUE_DATA = {
     "name": "Aisle 5",
@@ -30,16 +31,15 @@ VENUE_DATA = {
     "city": "Atlanta",
     "state": "GA",
     "zip": "30307",
-    "lat": 33.7644,
-    "lng": -84.3493,
-    "venue_type": "bar",
-    "spot_type": "bar",
+    "lat": 33.7645,
+    "lng": -84.3489,
+    "venue_type": "music_venue",
     "website": BASE_URL,
 }
 
 
 def parse_time(time_text: str) -> Optional[str]:
-    """Parse time from '7:00 PM' format."""
+    """Parse time from '7:00PM' or '7:00 PM' format to 24-hour time."""
     match = re.search(r"(\d{1,2}):(\d{2})\s*(am|pm)", time_text, re.IGNORECASE)
     if match:
         hour, minute, period = match.groups()
@@ -52,8 +52,38 @@ def parse_time(time_text: str) -> Optional[str]:
     return None
 
 
+def parse_date(date_text: str) -> Optional[str]:
+    """Parse 'Mon Jan 26' or 'MonJan26' format to YYYY-MM-DD."""
+    # Try to parse date like "Mon Jan 26" or "MonJan26" (with or without spaces)
+    match = re.match(
+        r"(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun)\s*([A-Za-z]+)\s*(\d{1,2})",
+        date_text
+    )
+    if match:
+        month_str, day = match.groups()
+        current_year = datetime.now().year
+        try:
+            dt = datetime.strptime(f"{month_str} {day} {current_year}", "%b %d %Y")
+            # If date is in the past, assume next year
+            if dt.date() < datetime.now().date():
+                dt = datetime.strptime(f"{month_str} {day} {current_year + 1}", "%b %d %Y")
+            return dt.strftime("%Y-%m-%d")
+        except ValueError:
+            return None
+    return None
+
+
+def parse_price(price_text: str) -> tuple[Optional[float], Optional[float], Optional[str]]:
+    """Parse price from '$25.00' format. Returns (min, max, note)."""
+    match = re.search(r"\$(\d+(?:\.\d{2})?)", price_text)
+    if match:
+        price = float(match.group(1))
+        return price, price, None
+    return None, None, None
+
+
 def crawl(source: dict) -> tuple[int, int, int]:
-    """Crawl Aisle 5 events using Playwright."""
+    """Crawl Aisle 5 events using Playwright and parse SeeTickets event listings."""
     source_id = source["id"]
     events_found = 0
     events_new = 0
@@ -72,77 +102,98 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             logger.info(f"Fetching Aisle 5: {EVENTS_URL}")
             page.goto(EVENTS_URL, wait_until="domcontentloaded", timeout=30000)
+
+            # Wait for SeeTickets events to load
             page.wait_for_timeout(3000)
 
-            # Extract images from page
-            image_map = extract_images_from_page(page)
-
             # Scroll to load all content
-            for _ in range(5):
+            for _ in range(3):
                 page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
                 page.wait_for_timeout(1000)
 
-            # Get page text and parse line by line
-            body_text = page.inner_text("body")
-            lines = [l.strip() for l in body_text.split("\n") if l.strip()]
+            # Get page HTML and parse with BeautifulSoup
+            html = page.content()
+            soup = BeautifulSoup(html, "html.parser")
 
-            # Parse events - look for date patterns
-            i = 0
-            while i < len(lines):
-                line = lines[i]
+            # Find all event containers
+            event_containers = soup.find_all("div", class_="seetickets-list-event-container")
 
-                # Skip navigation items
-                if len(line) < 3:
-                    i += 1
-                    continue
+            logger.info(f"Found {len(event_containers)} event containers")
 
-                # Look for date patterns
-                date_match = re.match(
-                    r"(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)?,?\s*(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{1,2})(?:,?\s+(\d{4}))?",
-                    line,
-                    re.IGNORECASE
-                )
+            for container in event_containers:
+                try:
+                    # Extract title
+                    title_elem = container.find("p", class_="event-title")
+                    if not title_elem:
+                        continue
+                    title_link = title_elem.find("a")
+                    title = title_link.get_text(strip=True) if title_link else title_elem.get_text(strip=True)
 
-                if date_match:
-                    month = date_match.group(1)
-                    day = date_match.group(2)
-                    year = date_match.group(3) if date_match.group(3) else str(datetime.now().year)
-
-                    # Look for title in surrounding lines
-                    title = None
-                    start_time = None
-
-                    for offset in [-2, -1, 1, 2, 3]:
-                        idx = i + offset
-                        if 0 <= idx < len(lines):
-                            check_line = lines[idx]
-                            if re.match(r"(January|February|March)", check_line, re.IGNORECASE):
-                                continue
-                            if not start_time:
-                                time_result = parse_time(check_line)
-                                if time_result:
-                                    start_time = time_result
-                                    continue
-                            if not title and len(check_line) > 5:
-                                if not re.match(r"\d{1,2}[:/]", check_line):
-                                    if not re.match(r"(free|tickets|register|\$|more info)", check_line.lower()):
-                                        title = check_line
-                                        break
-
-                    if not title:
-                        i += 1
+                    # Extract date
+                    date_elem = container.find("p", class_="event-date")
+                    if not date_elem:
+                        continue
+                    date_text = date_elem.get_text(strip=True)
+                    start_date = parse_date(date_text)
+                    if not start_date:
+                        logger.warning(f"Could not parse date: {date_text}")
                         continue
 
-                    # Parse date
-                    try:
-                        month_str = month[:3] if len(month) > 3 else month
-                        dt = datetime.strptime(f"{month_str} {day} {year}", "%b %d %Y")
-                        if dt.date() < datetime.now().date():
-                            dt = datetime.strptime(f"{month_str} {day} {int(year) + 1}", "%b %d %Y")
-                        start_date = dt.strftime("%Y-%m-%d")
-                    except ValueError:
-                        i += 1
-                        continue
+                    # Extract times (door time and show time)
+                    door_time = None
+                    show_time = None
+                    door_elem = container.find("span", class_="see-doortime")
+                    show_elem = container.find("span", class_="see-showtime")
+
+                    if show_elem:
+                        show_time_text = show_elem.get_text(strip=True)
+                        show_time = parse_time(show_time_text)
+
+                    if door_elem:
+                        door_time_text = door_elem.get_text(strip=True)
+                        door_time = parse_time(door_time_text)
+
+                    # Use show time as primary start time, door time as backup
+                    start_time = show_time or door_time
+
+                    # Extract supporting talent/subtitle
+                    supporting_elem = container.find("p", class_="supporting-talent")
+                    supporting = supporting_elem.get_text(strip=True) if supporting_elem else None
+
+                    # Extract genre
+                    genre_elem = container.find("p", class_="genre")
+                    genre = genre_elem.get_text(strip=True) if genre_elem else None
+
+                    # Extract price
+                    price_min = None
+                    price_max = None
+                    price_note = None
+                    price_elem = container.find("span", class_="price")
+                    if price_elem:
+                        price_text = price_elem.get_text(strip=True)
+                        price_min, price_max, price_note = parse_price(price_text)
+
+                    # Extract ticket URL
+                    ticket_url = EVENTS_URL
+                    ticket_link = container.find("a", class_="seetickets-buy-btn")
+                    if ticket_link and ticket_link.get("href"):
+                        ticket_url = ticket_link["href"]
+
+                    # Extract image URL
+                    image_url = None
+                    img_elem = container.find("img", class_="seetickets-list-view-event-image")
+                    if img_elem and img_elem.get("src"):
+                        image_url = img_elem["src"]
+
+                    # Build description
+                    description_parts = []
+                    if supporting:
+                        description_parts.append(f"Featuring {supporting}")
+                    if genre:
+                        description_parts.append(f"Genre: {genre}")
+                    if door_time and show_time:
+                        description_parts.append(f"Doors at {door_time_text}, show at {show_time_text}")
+                    description = ". ".join(description_parts) if description_parts else "Live music at Aisle 5"
 
                     events_found += 1
 
@@ -150,14 +201,18 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     if find_event_by_hash(content_hash):
                         events_updated += 1
-                        i += 1
                         continue
+
+                    # Build tags
+                    tags = ["aisle-5", "little-five-points", "live-music"]
+                    if genre:
+                        tags.append(genre.lower().replace(" ", "-"))
 
                     event_record = {
                         "source_id": source_id,
                         "venue_id": venue_id,
                         "title": title,
-                        "description": "Event at Aisle 5",
+                        "description": description,
                         "start_date": start_date,
                         "start_time": start_time,
                         "end_date": None,
@@ -165,29 +220,28 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "is_all_day": start_time is None,
                         "category": "music",
                         "subcategory": "concert",
-                        "tags": ["aisle-5", "little-five-points", "live-music"],
-                        "price_min": None,
-                        "price_max": None,
-                        "price_note": None,
+                        "tags": tags,
+                        "price_min": price_min,
+                        "price_max": price_max,
+                        "price_note": price_note,
                         "is_free": False,
                         "source_url": EVENTS_URL,
-                        "ticket_url": EVENTS_URL,
-                        "image_url": image_map.get(title),
-                        "raw_text": f"{title} - {start_date}",
-                        "extraction_confidence": 0.80,
+                        "ticket_url": ticket_url,
+                        "image_url": image_url,
+                        "raw_text": f"{title} - {date_text} - {description}",
+                        "extraction_confidence": 0.95,
                         "is_recurring": False,
                         "recurrence_rule": None,
                         "content_hash": content_hash,
                     }
 
-                    try:
-                        insert_event(event_record)
-                        events_new += 1
-                        logger.info(f"Added: {title} on {start_date}")
-                    except Exception as e:
-                        logger.error(f"Failed to insert: {title}: {e}")
+                    insert_event(event_record)
+                    events_new += 1
+                    logger.info(f"Added: {title} on {start_date}")
 
-                i += 1
+                except Exception as e:
+                    logger.error(f"Failed to parse event: {e}")
+                    continue
 
             browser.close()
 

@@ -4,7 +4,6 @@ Performing arts, concerts, theater, exhibitions at Georgia Tech including Ferst 
 Uses Playwright to handle JavaScript-rendered content.
 """
 
-import json
 import logging
 import re
 from datetime import datetime

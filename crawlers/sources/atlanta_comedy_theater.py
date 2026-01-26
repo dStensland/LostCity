@@ -126,8 +126,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
             venue_id = get_or_create_venue(VENUE_DATA)
 
             logger.info(f"Fetching Atlanta Comedy Theater: {BASE_URL}")
-            page.goto(BASE_URL, wait_until="networkidle", timeout=30000)
-            page.wait_for_timeout(2000)
+            page.goto(BASE_URL, wait_until="domcontentloaded", timeout=30000)
+            page.wait_for_timeout(4000)
 
             # Scroll to load content
             for _ in range(3):

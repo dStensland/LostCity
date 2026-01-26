@@ -137,8 +137,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 venue_ids[venue_key] = get_or_create_venue(venue_data)
 
             logger.info(f"Fetching Center Stage: {BASE_URL}")
-            page.goto(BASE_URL, wait_until="networkidle", timeout=60000)
-            page.wait_for_timeout(3000)
+            page.goto(BASE_URL, wait_until="domcontentloaded", timeout=60000)
+            page.wait_for_timeout(5000)
 
             # Extract images from page
             image_map = extract_images_from_page(page)

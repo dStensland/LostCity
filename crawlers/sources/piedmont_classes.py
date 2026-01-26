@@ -339,14 +339,14 @@ def crawl_category(page: Page, category: str, source_id: int, portal_id: str) ->
                 logger.error(f"Failed to insert: {title}: {e}")
 
         # Go back to main page for next category
-        page.goto(CLASSES_URL, wait_until="networkidle", timeout=60000)
+        page.goto(CLASSES_URL, wait_until="domcontentloaded", timeout=60000)
         page.wait_for_timeout(2000)
 
     except Exception as e:
         logger.error(f"Error crawling category {category}: {e}")
         # Try to recover by going back to main page
         try:
-            page.goto(CLASSES_URL, wait_until="networkidle", timeout=60000)
+            page.goto(CLASSES_URL, wait_until="domcontentloaded", timeout=60000)
             page.wait_for_timeout(2000)
         except:
             pass
@@ -374,7 +374,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             page = context.new_page()
 
             logger.info(f"Fetching Piedmont Classes: {CLASSES_URL}")
-            page.goto(CLASSES_URL, wait_until="networkidle", timeout=60000)
+            page.goto(CLASSES_URL, wait_until="domcontentloaded", timeout=60000)
             page.wait_for_timeout(3000)
 
             # Crawl each category

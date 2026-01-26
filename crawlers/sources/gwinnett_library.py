@@ -15,7 +15,7 @@ from playwright.sync_api import sync_playwright
 
 from db import get_or_create_venue, insert_event, find_event_by_hash
 from dedupe import generate_content_hash
-from utils import extract_images_from_page, slugify
+from utils import extract_images_from_page
 
 logger = logging.getLogger(__name__)
 
@@ -298,8 +298,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
             page = context.new_page()
 
             logger.info(f"Fetching Gwinnett Library events: {EVENTS_URL}")
-            page.goto(EVENTS_URL, wait_until="networkidle", timeout=30000)
-            page.wait_for_timeout(3000)
+            page.goto(EVENTS_URL, wait_until="domcontentloaded", timeout=30000)
+            page.wait_for_timeout(4000)
 
             # Scroll down to load more events (Communico lazy-loads content)
             for _ in range(3):

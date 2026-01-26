@@ -17,7 +17,6 @@ from playwright.sync_api import sync_playwright
 
 from db import get_or_create_venue, insert_event, find_event_by_hash
 from dedupe import generate_content_hash
-from series import get_or_create_series
 
 logger = logging.getLogger(__name__)
 
@@ -79,8 +78,9 @@ def parse_date_range(date_text: str) -> tuple[Optional[str], Optional[str]]:
     date_text = date_text.strip()
 
     # Pattern: "Month Day - Month Day, Year" (cross-month range)
+    # Note: \s* to handle concatenated text without spaces
     cross_month_match = re.search(
-        r"(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2})\s*[-–—]\s*(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2}),?\s*(\d{4})",
+        r"(January|February|March|April|May|June|July|August|September|October|November|December)\s*(\d{1,2})\s*[-–—]\s*(January|February|March|April|May|June|July|August|September|October|November|December)\s*(\d{1,2}),?\s*(\d{4})",
         date_text,
         re.IGNORECASE
     )
@@ -94,8 +94,9 @@ def parse_date_range(date_text: str) -> tuple[Optional[str], Optional[str]]:
             pass
 
     # Pattern: "Month Day-Day, Year" (same month range)
+    # Note: \s* to handle concatenated text without spaces
     same_month_match = re.search(
-        r"(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2})\s*[-–—]\s*(\d{1,2}),?\s*(\d{4})",
+        r"(January|February|March|April|May|June|July|August|September|October|November|December)\s*(\d{1,2})\s*[-–—]\s*(\d{1,2}),?\s*(\d{4})",
         date_text,
         re.IGNORECASE
     )
@@ -109,8 +110,9 @@ def parse_date_range(date_text: str) -> tuple[Optional[str], Optional[str]]:
             pass
 
     # Pattern: Single date "Month Day, Year"
+    # Note: \s* to handle concatenated text without spaces
     single_match = re.search(
-        r"(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2}),?\s*(\d{4})",
+        r"(January|February|March|April|May|June|July|August|September|October|November|December)\s*(\d{1,2}),?\s*(\d{4})",
         date_text,
         re.IGNORECASE
     )
@@ -130,12 +132,15 @@ def extract_title_from_heading(heading_text: str) -> Optional[str]:
     Extract clean title from h5 headings like:
     'DRAGONS LOVE TACOS, adapted by Ernie Nolan... November 22 - December 13, 2025'
     Returns just 'Dragons Love Tacos'
+
+    Note: Site may concatenate text without spaces, so we handle both cases.
     """
     if not heading_text:
         return None
 
     # Remove content after the first date pattern or director credit
-    heading_text = re.sub(r'\s*(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2}.*', '', heading_text, flags=re.IGNORECASE)
+    # Use \s* to handle both spaced and non-spaced text
+    heading_text = re.sub(r'\s*(January|February|March|April|May|June|July|August|September|October|November|December)\s*\d{1,2}.*', '', heading_text, flags=re.IGNORECASE)
     heading_text = re.sub(r'\s*Directed by.*', '', heading_text, flags=re.IGNORECASE)
     heading_text = re.sub(r'\s*by\s+\w+.*', '', heading_text, flags=re.IGNORECASE)
     heading_text = re.sub(r',\s*(adapted|created|written|based on).*', '', heading_text, flags=re.IGNORECASE)
@@ -152,6 +157,28 @@ def extract_title_from_heading(heading_text: str) -> Optional[str]:
     title = re.sub(r'<[^>]+>', '', title)
     title = re.sub(r'\s+', ' ', title).strip()
     title = title.rstrip(',').strip()  # Remove trailing commas
+
+    # Handle ALLCAPSCONCATENATED titles by inserting spaces
+    # Look for lowercase followed by uppercase, or letter followed by number
+    if title.isupper() and ' ' not in title:
+        # Insert spaces before capital letters that follow lowercase
+        # This handles cases like "DRAGONSLOVETACOS" -> still all caps, need different approach
+        # Try to match known titles or use word boundaries
+        known_titles = {
+            'DRAGONSLOVETACOS': 'Dragons Love Tacos',
+            'THEGIVER': 'The Giver',
+            'FORBIDDENBROADWAY': 'Forbidden Broadway',
+            'AWRINKLEINTIME': 'A Wrinkle In Time',
+            'RINGOFFIRE': 'Ring of Fire',
+        }
+        # Check if title starts with any known pattern
+        for concat, proper in known_titles.items():
+            if title.upper().startswith(concat):
+                title = proper
+                break
+        else:
+            # Fallback: title case for all caps without spaces
+            title = title.title()
 
     return title if is_valid_title(title) else None
 

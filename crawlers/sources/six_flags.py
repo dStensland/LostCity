@@ -211,8 +211,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
             page = context.new_page()
 
             logger.info(f"Fetching Six Flags events: {EVENTS_URL}")
-            page.goto(EVENTS_URL, wait_until="networkidle", timeout=60000)
-            page.wait_for_timeout(3000)
+            page.goto(EVENTS_URL, wait_until="domcontentloaded", timeout=60000)
+            page.wait_for_timeout(5000)
 
             # Extract images from page
             image_map = extract_images_from_page(page)
@@ -299,8 +299,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     if event_url and event_url.startswith('http'):
                         try:
                             detail_page = context.new_page()
-                            detail_page.goto(event_url, wait_until="networkidle", timeout=30000)
-                            detail_page.wait_for_timeout(2000)
+                            detail_page.goto(event_url, wait_until="domcontentloaded", timeout=30000)
+                            detail_page.wait_for_timeout(3000)
 
                             detail_text = detail_page.inner_text("body")
 

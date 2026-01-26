@@ -123,8 +123,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
             venue_id = get_or_create_venue(VENUE_DATA)
 
             logger.info(f"Fetching Dad's Garage: {SHOWS_URL}")
-            page.goto(SHOWS_URL, wait_until="networkidle", timeout=30000)
-            page.wait_for_timeout(3000)
+            page.goto(SHOWS_URL, wait_until="domcontentloaded", timeout=30000)
+            page.wait_for_timeout(4000)
 
             # Scroll to load more events
             for _ in range(5):

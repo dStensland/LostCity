@@ -84,7 +84,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             page = context.new_page()
 
             logger.info(f"Fetching Resident Advisor: {EVENTS_URL}")
-            page.goto(EVENTS_URL, wait_until="networkidle", timeout=60000)
+            page.goto(EVENTS_URL, wait_until="domcontentloaded", timeout=60000)
             page.wait_for_timeout(5000)  # Extra time for JS rendering
 
             # Extract images from page

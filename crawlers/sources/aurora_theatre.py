@@ -142,8 +142,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
             venue_id = get_or_create_venue(VENUE_DATA)
 
             logger.info(f"Fetching Aurora Theatre: {PRODUCTIONS_URL}")
-            page.goto(PRODUCTIONS_URL, wait_until="networkidle", timeout=30000)
-            page.wait_for_timeout(2000)
+            page.goto(PRODUCTIONS_URL, wait_until="domcontentloaded", timeout=30000)
+            page.wait_for_timeout(4000)
 
             # Scroll to load content
             for _ in range(5):
@@ -165,8 +165,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
             # Process each show page
             for show_url in show_urls:
                 try:
-                    page.goto(show_url, wait_until="networkidle", timeout=20000)
-                    page.wait_for_timeout(1000)
+                    page.goto(show_url, wait_until="domcontentloaded", timeout=20000)
+                    page.wait_for_timeout(3000)
 
                     # Get title
                     title = None

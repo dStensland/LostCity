@@ -1,15 +1,18 @@
 """
-Crawler for Buckhead Theatre (buckheadtheatre.com).
+Crawler for Buckhead Theatre (Live Nation venue in Atlanta).
+
+NOTE: As of Jan 2026, the original buckheadtheatre.com site is defunct (parked domain).
+Now crawling from Live Nation venue page which uses standard Live Nation format.
+The venue shows "PAGE IS STILL IN SOUND CHECK" - may be temporarily closed or not booking.
 
 Site uses JavaScript rendering - must use Playwright.
+Format: DAY (3-letter), DD, MON (3-letter), TITLE (same as Tabernacle)
 """
 
 from __future__ import annotations
 
-import re
 import logging
 from datetime import datetime
-from typing import Optional
 
 from playwright.sync_api import sync_playwright
 
@@ -19,8 +22,9 @@ from utils import extract_images_from_page
 
 logger = logging.getLogger(__name__)
 
-BASE_URL = "https://www.buckheadtheatre.com"
-EVENTS_URL = f"{BASE_URL}/events"
+# Updated to use Live Nation venue page
+BASE_URL = "https://www.livenation.com"
+VENUE_URL = f"{BASE_URL}/venue/KovZpaIJZ7A/buckhead-theatre-events"
 
 VENUE_DATA = {
     "name": "Buckhead Theatre",
@@ -34,26 +38,36 @@ VENUE_DATA = {
     "lng": -84.3798,
     "venue_type": "theater",
     "spot_type": "theater",
-    "website": BASE_URL,
+    "website": VENUE_URL,
+}
+
+# 3-letter day names for validation
+DAY_NAMES = {"MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"}
+
+# 3-letter month names to full month numbers
+MONTH_MAP = {
+    "JAN": 1,
+    "FEB": 2,
+    "MAR": 3,
+    "APR": 4,
+    "MAY": 5,
+    "JUN": 6,
+    "JUL": 7,
+    "AUG": 8,
+    "SEP": 9,
+    "OCT": 10,
+    "NOV": 11,
+    "DEC": 12,
 }
 
 
-def parse_time(time_text: str) -> Optional[str]:
-    """Parse time from '7:00 PM' format."""
-    match = re.search(r"(\d{1,2}):(\d{2})\s*(am|pm)", time_text, re.IGNORECASE)
-    if match:
-        hour, minute, period = match.groups()
-        hour = int(hour)
-        if period.lower() == "pm" and hour != 12:
-            hour += 12
-        elif period.lower() == "am" and hour == 12:
-            hour = 0
-        return f"{hour:02d}:{minute}"
-    return None
-
-
 def crawl(source: dict) -> tuple[int, int, int]:
-    """Crawl Buckhead Theatre events using Playwright."""
+    """Crawl Buckhead Theatre events using Playwright.
+
+    Uses Live Nation venue page with standard format:
+    DAY (3-letter), DD, MMM (3-letter), TITLE
+    Same parsing logic as Tabernacle crawler.
+    """
     source_id = source["id"]
     events_found = 0
     events_new = 0
@@ -70,8 +84,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             venue_id = get_or_create_venue(VENUE_DATA)
 
-            logger.info(f"Fetching Buckhead Theatre: {EVENTS_URL}")
-            page.goto(EVENTS_URL, wait_until="domcontentloaded", timeout=30000)
+            logger.info(f"Fetching Buckhead Theatre: {VENUE_URL}")
+            page.goto(VENUE_URL, wait_until="networkidle", timeout=30000)
             page.wait_for_timeout(3000)
 
             # Extract images from page
@@ -82,110 +96,163 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
                 page.wait_for_timeout(1000)
 
-            # Get page text and parse line by line
+            # Get page text
             body_text = page.inner_text("body")
-            lines = [l.strip() for l in body_text.split("\n") if l.strip()]
+            lines = [line.strip() for line in body_text.split("\n") if line.strip()]
 
-            # Parse events - look for date patterns
+            # Check for "sound check" message indicating no events
+            if any("SOUND CHECK" in line.upper() for line in lines[:20]):
+                logger.info("Venue page shows 'SOUND CHECK' - no events currently listed")
+
+            # Skip navigation items
+            skip_items = [
+                "skip to content",
+                "search",
+                "artists",
+                "venues",
+                "sign in",
+                "sound check",
+                "go home",
+                "browse",
+                "all access",
+                "exclusives",
+                "shows near you",
+                "gifts",
+                "ticketmaster",
+                "house of blues",
+                "get tickets",
+                "about",
+                "contact",
+                "privacy policy",
+                "terms of use",
+            ]
+
             i = 0
-            while i < len(lines):
-                line = lines[i]
+            seen_events = set()
+            current_year = datetime.now().year
 
-                # Skip navigation items
-                if len(line) < 3:
+            while i < len(lines):
+                line = lines[i].upper()
+
+                # Skip nav/UI items
+                if line.lower() in skip_items or len(line) < 2:
                     i += 1
                     continue
 
-                # Look for date patterns
-                date_match = re.match(
-                    r"(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)?,?\s*(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{1,2})(?:,?\s+(\d{4}))?",
-                    line,
-                    re.IGNORECASE
-                )
+                # Look for 3-letter day name (SAT, TUE, etc.) - same format as Tabernacle
+                if line in DAY_NAMES:
+                    # Next lines should be: day number, month, title
+                    if i + 3 < len(lines):
+                        day_num = lines[i + 1].strip()
+                        month = lines[i + 2].strip().upper()
+                        title = lines[i + 3].strip()
 
-                if date_match:
-                    month = date_match.group(1)
-                    day = date_match.group(2)
-                    year = date_match.group(3) if date_match.group(3) else str(datetime.now().year)
+                        # Validate day number (1-31)
+                        if not day_num.isdigit() or not (1 <= int(day_num) <= 31):
+                            i += 1
+                            continue
 
-                    # Look for title in surrounding lines
-                    title = None
-                    start_time = None
+                        # Validate month
+                        if month not in MONTH_MAP:
+                            i += 1
+                            continue
 
-                    for offset in [-2, -1, 1, 2, 3]:
-                        idx = i + offset
-                        if 0 <= idx < len(lines):
-                            check_line = lines[idx]
-                            if re.match(r"(January|February|March)", check_line, re.IGNORECASE):
-                                continue
-                            if not start_time:
-                                time_result = parse_time(check_line)
-                                if time_result:
-                                    start_time = time_result
-                                    continue
-                            if not title and len(check_line) > 5:
-                                if not re.match(r"\d{1,2}[:/]", check_line):
-                                    if not re.match(r"(free|tickets|register|\$|more info)", check_line.lower()):
-                                        title = check_line
-                                        break
+                        # Skip if title is another day name (malformed data)
+                        if title.upper() in DAY_NAMES:
+                            i += 1
+                            continue
 
-                    if not title:
-                        i += 1
+                        # Build date
+                        day = int(day_num)
+                        month_num = MONTH_MAP[month]
+
+                        # Determine year - if month is in the past, use next year
+                        year = current_year
+                        try:
+                            event_date = datetime(year, month_num, day)
+                            if event_date < datetime.now():
+                                year += 1
+                                event_date = datetime(year, month_num, day)
+                            start_date = event_date.strftime("%Y-%m-%d")
+                        except ValueError:
+                            i += 1
+                            continue
+
+                        # Check for duplicates (same show on multiple dates)
+                        event_key = f"{title}|{start_date}"
+                        if event_key in seen_events:
+                            i += 4
+                            continue
+                        seen_events.add(event_key)
+
+                        events_found += 1
+
+                        # Generate content hash
+                        content_hash = generate_content_hash(
+                            title, "Buckhead Theatre", start_date
+                        )
+
+                        # Check for existing
+                        existing = find_event_by_hash(content_hash)
+                        if existing:
+                            events_updated += 1
+                            i += 4
+                            continue
+
+                        # Determine category based on title
+                        category = "music"
+                        subcategory = "concert"
+                        tags = ["music", "concert", "buckhead-theatre", "buckhead"]
+
+                        title_lower = title.lower()
+                        if any(
+                            w in title_lower
+                            for w in ["comedy", "comedian", "stand-up", "stand up"]
+                        ):
+                            category = "comedy"
+                            subcategory = None
+                            tags = ["comedy", "buckhead-theatre", "buckhead"]
+                        elif any(w in title_lower for w in ["theater", "theatre", "play"]):
+                            category = "arts_culture"
+                            subcategory = "theater"
+                            tags = ["theater", "buckhead-theatre", "buckhead"]
+
+                        event_record = {
+                            "source_id": source_id,
+                            "venue_id": venue_id,
+                            "title": title,
+                            "description": None,
+                            "start_date": start_date,
+                            "start_time": None,
+                            "end_date": None,
+                            "end_time": None,
+                            "is_all_day": False,
+                            "category": category,
+                            "subcategory": subcategory,
+                            "tags": tags,
+                            "price_min": None,
+                            "price_max": None,
+                            "price_note": None,
+                            "is_free": False,
+                            "source_url": VENUE_URL,
+                            "ticket_url": VENUE_URL,
+                            "image_url": image_map.get(title),
+                            "raw_text": f"{line} {day_num} {month} - {title}",
+                            "extraction_confidence": 0.90,
+                            "is_recurring": False,
+                            "recurrence_rule": None,
+                            "content_hash": content_hash,
+                        }
+
+                        try:
+                            insert_event(event_record)
+                            events_new += 1
+                            logger.info(f"Added: {title} on {start_date}")
+                        except Exception as e:
+                            logger.error(f"Failed to insert: {title}: {e}")
+
+                        i += 4
                         continue
-
-                    # Parse date
-                    try:
-                        month_str = month[:3] if len(month) > 3 else month
-                        dt = datetime.strptime(f"{month_str} {day} {year}", "%b %d %Y")
-                        if dt.date() < datetime.now().date():
-                            dt = datetime.strptime(f"{month_str} {day} {int(year) + 1}", "%b %d %Y")
-                        start_date = dt.strftime("%Y-%m-%d")
-                    except ValueError:
-                        i += 1
-                        continue
-
-                    events_found += 1
-
-                    content_hash = generate_content_hash(title, "Buckhead Theatre", start_date)
-
-                    if find_event_by_hash(content_hash):
-                        events_updated += 1
-                        i += 1
-                        continue
-
-                    event_record = {
-                        "source_id": source_id,
-                        "venue_id": venue_id,
-                        "title": title,
-                        "description": "Event at Buckhead Theatre",
-                        "start_date": start_date,
-                        "start_time": start_time,
-                        "end_date": None,
-                        "end_time": None,
-                        "is_all_day": start_time is None,
-                        "category": "community",
-                        "subcategory": None,
-                        "tags": ["buckhead-theatre", "live-music", "buckhead"],
-                        "price_min": None,
-                        "price_max": None,
-                        "price_note": None,
-                        "is_free": False,
-                        "source_url": EVENTS_URL,
-                        "ticket_url": EVENTS_URL,
-                        "image_url": image_map.get(title),
-                        "raw_text": f"{title} - {start_date}",
-                        "extraction_confidence": 0.80,
-                        "is_recurring": False,
-                        "recurrence_rule": None,
-                        "content_hash": content_hash,
-                    }
-
-                    try:
-                        insert_event(event_record)
-                        events_new += 1
-                        logger.info(f"Added: {title} on {start_date}")
-                    except Exception as e:
-                        logger.error(f"Failed to insert: {title}: {e}")
 
                 i += 1
 

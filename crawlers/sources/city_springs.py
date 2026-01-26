@@ -14,7 +14,6 @@ from __future__ import annotations
 import re
 import logging
 import requests
-from datetime import datetime
 from typing import Optional
 
 from db import get_or_create_venue, insert_event, find_event_by_hash

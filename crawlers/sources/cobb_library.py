@@ -13,7 +13,7 @@ from __future__ import annotations
 import json
 import logging
 import re
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Optional
 
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
@@ -252,7 +252,8 @@ def fetch_events_from_page(url: str) -> list[dict]:
             page = browser.new_page()
 
             logger.info(f"Loading page: {url}")
-            page.goto(url, wait_until="networkidle", timeout=30000)
+            page.goto(url, wait_until="domcontentloaded", timeout=30000)
+            page.wait_for_timeout(4000)
 
             # Wait for events to load (they're rendered client-side)
             try:
@@ -319,7 +320,8 @@ def fetch_event_details(event_url: str) -> dict:
             browser = p.chromium.launch(headless=True)
             page = browser.new_page()
 
-            page.goto(event_url, wait_until="networkidle", timeout=30000)
+            page.goto(event_url, wait_until="domcontentloaded", timeout=30000)
+            page.wait_for_timeout(3000)
 
             # Get the rendered HTML
             html = page.content()

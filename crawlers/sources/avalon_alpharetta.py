@@ -217,7 +217,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     "source_id": source_id,
                     "venue_id": venue_id,
                     "title": title,
-                    "description": description if description else f"Event at Avalon in Alpharetta",
+                    "description": description if description else "Event at Avalon in Alpharetta",
                     "start_date": start_date,
                     "start_time": None,  # Time not available on listing page
                     "end_date": end_date,

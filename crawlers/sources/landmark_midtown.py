@@ -81,6 +81,8 @@ def extract_movies_for_date(
         if not main:
             main = page.query_selector("body")
 
+        # Use inner_text which preserves some spacing (better than textContent)
+        # but dates and times can still be concatenated in the DOM
         text = main.inner_text()
 
         # Stop at Film Series section (special events handled separately)
@@ -100,9 +102,14 @@ def extract_movies_for_date(
             re.IGNORECASE
         )
 
+        # Normalize text - add space after date numbers to prevent "January 261:10PM"
+        # Pattern matches: "January 26" or "Today, January 26" followed directly by time
+        text = re.sub(r'(\w+,?\s+\w+\s+\d{1,2})(\d{1,2}:\d{2}(?:AM|PM))', r'\1 \2', text, flags=re.IGNORECASE)
+
         # Showtime pattern: times like "4:00PM", "3:10PM" (no space before AM/PM)
         # Can be concatenated: "1:10PM4:00PM7:00PM"
-        showtime_pattern = re.compile(r'(\d{1,2}:\d{2}(?:AM|PM))', re.IGNORECASE)
+        # Updated to avoid matching date numbers like "261:10PM" from "January 261:10PM"
+        showtime_pattern = re.compile(r'(?<!\d)(\d{1,2}:\d{2}(?:AM|PM))', re.IGNORECASE)
 
         # Find all movies
         movies = []
@@ -156,6 +163,14 @@ def extract_movies_for_date(
             showtimes = []
             for st_match in showtime_pattern.finditer(section):
                 time_str = st_match.group(1)
+                # Validate time - hour must be 1-12, minute 00-59
+                match_parts = re.match(r"(\d{1,2}):(\d{2})", time_str)
+                if match_parts:
+                    hour_val = int(match_parts.group(1))
+                    min_val = int(match_parts.group(2))
+                    if hour_val < 1 or hour_val > 12 or min_val > 59:
+                        logger.debug(f"Skipping invalid time: {time_str} (hour={hour_val}, min={min_val})")
+                        continue
                 # Skip if this looks like part of duration (preceded by "hr" or "min")
                 prefix = section[max(0, st_match.start()-15):st_match.start()].lower()
                 if "hr" in prefix or "min" in prefix:

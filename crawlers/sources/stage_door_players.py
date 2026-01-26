@@ -136,8 +136,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
             for url in [TICKETS_URL, BASE_URL]:
                 logger.info(f"Fetching Stage Door Theatre: {url}")
                 try:
-                    page.goto(url, wait_until="networkidle", timeout=30000)
-                    page.wait_for_timeout(2000)
+                    page.goto(url, wait_until="domcontentloaded", timeout=30000)
+                    page.wait_for_timeout(4000)
                     break
                 except Exception:
                     continue

@@ -4,7 +4,6 @@ Yellow Jackets sports events - football, basketball, baseball, etc.
 Scrapes sport-specific schedule pages for game information.
 """
 
-import json
 import logging
 import re
 from datetime import datetime, timedelta
@@ -156,6 +155,10 @@ def parse_schedule_page(soup: BeautifulSoup, sport_name: str) -> list[dict]:
             opponent = logos[1].get("alt", "").strip()
 
             # Extract time if available
+            # NOTE: ramblinwreck.com typically does not publish game times until closer
+            # to game day (usually 1-2 weeks before). The <div class="time"> element
+            # only appears on the schedule page once times are announced. This is normal
+            # for college athletics - most future games will have date but no time.
             time_div = item.select_one("div.time")
             game_time = None
             if time_div:
@@ -170,6 +173,7 @@ def parse_schedule_page(soup: BeautifulSoup, sport_name: str) -> list[dict]:
                     elif period.upper() == "AM" and hour == 12:
                         hour = 0
                     game_time = f"{hour:02d}:{minute}"
+                    logger.debug(f"Found game time: {game_time}")
 
             games.append({
                 "date": parsed_date,

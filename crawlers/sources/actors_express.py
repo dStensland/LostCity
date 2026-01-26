@@ -132,8 +132,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
             venue_id = get_or_create_venue(VENUE_DATA)
 
             logger.info(f"Fetching Actor's Express: {BASE_URL}")
-            page.goto(BASE_URL, wait_until="networkidle", timeout=30000)
-            page.wait_for_timeout(2000)
+            page.goto(BASE_URL, wait_until="domcontentloaded", timeout=30000)
+            page.wait_for_timeout(4000)
 
             # Scroll to load content
             for _ in range(3):
@@ -163,8 +163,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
             # Visit each show page
             for show_url in show_urls:
                 try:
-                    page.goto(show_url, wait_until="networkidle", timeout=20000)
-                    page.wait_for_timeout(1000)
+                    page.goto(show_url, wait_until="domcontentloaded", timeout=20000)
+                    page.wait_for_timeout(3000)
 
                     # Get title from h1 or page title
                     title = None

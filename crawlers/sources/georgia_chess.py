@@ -127,8 +127,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
             page = context.new_page()
 
             logger.info(f"Fetching Georgia Chess: {EVENTS_URL}")
-            page.goto(EVENTS_URL, wait_until="networkidle", timeout=30000)
-            page.wait_for_timeout(2000)
+            page.goto(EVENTS_URL, wait_until="domcontentloaded", timeout=30000)
+            page.wait_for_timeout(4000)
 
             # Extract images from page
             image_map = extract_images_from_page(page)
