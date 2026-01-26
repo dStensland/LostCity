@@ -25,7 +25,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
       `)
       .eq("id", id)
       .eq("status", "active")
-      .single();
+      .maybeSingle();
 
     if (listError || !list) {
       return NextResponse.json({ error: "List not found" }, { status: 404 });
@@ -132,9 +132,12 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       .from("lists")
       .select("creator_id")
       .eq("id", id)
-      .single();
+      .maybeSingle();
 
-    if (!existingList || existingList.creator_id !== user.id) {
+    if (!existingList) {
+      return NextResponse.json({ error: "List not found" }, { status: 404 });
+    }
+    if (existingList.creator_id !== user.id) {
       return NextResponse.json({ error: "Not authorized to update this list" }, { status: 403 });
     }
 
@@ -183,9 +186,12 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
       .from("lists")
       .select("creator_id")
       .eq("id", id)
-      .single();
+      .maybeSingle();
 
-    if (!existingList || existingList.creator_id !== user.id) {
+    if (!existingList) {
+      return NextResponse.json({ error: "List not found" }, { status: 404 });
+    }
+    if (existingList.creator_id !== user.id) {
       return NextResponse.json({ error: "Not authorized to delete this list" }, { status: 403 });
     }
 

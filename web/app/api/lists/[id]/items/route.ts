@@ -56,9 +56,12 @@ export async function POST(request: NextRequest, context: RouteContext) {
       .from("lists")
       .select("creator_id")
       .eq("id", listId)
-      .single();
+      .maybeSingle();
 
-    if (!list || list.creator_id !== user.id) {
+    if (!list) {
+      return NextResponse.json({ error: "List not found" }, { status: 404 });
+    }
+    if (list.creator_id !== user.id) {
       return NextResponse.json({ error: "Not authorized to add items to this list" }, { status: 403 });
     }
 
@@ -81,9 +84,9 @@ export async function POST(request: NextRequest, context: RouteContext) {
       .eq("list_id", listId)
       .order("position", { ascending: false })
       .limit(1)
-      .single();
+      .maybeSingle();
 
-    const nextPosition = (lastItem?.position || 0) + 1;
+    const nextPosition = (lastItem?.position ?? 0) + 1;
 
     const { data: item, error } = await supabase
       .from("list_items")

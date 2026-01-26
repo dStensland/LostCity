@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
           .from("portals")
           .select("id")
           .eq("slug", portalSlug)
-          .single();
+          .maybeSingle();
 
         if (portal) {
           query = query.eq("portal_id", portal.id);
@@ -174,7 +174,7 @@ export async function GET(request: NextRequest) {
         .from("portals")
         .select("id")
         .eq("slug", portalSlug)
-        .single();
+        .maybeSingle();
 
       if (portal) {
         query = query.eq("portal_id", portal.id);
@@ -310,7 +310,7 @@ export async function POST(request: NextRequest) {
       .from("profiles")
       .select("username, display_name, avatar_url")
       .eq("id", user.id)
-      .single();
+      .maybeSingle();
 
     return NextResponse.json({
       list: {

@@ -36,7 +36,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
       .select("id, is_public")
       .eq("id", listId)
       .eq("status", "active")
-      .single();
+      .maybeSingle();
 
     if (!list) {
       return NextResponse.json({ error: "List not found" }, { status: 404 });
@@ -53,7 +53,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
         .select("id")
         .eq("id", item_id)
         .eq("list_id", listId)
-        .single();
+        .maybeSingle();
 
       if (!item) {
         return NextResponse.json({ error: "Item not found" }, { status: 404 });
@@ -67,7 +67,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
       .eq("list_id", listId)
       .eq("user_id", user.id)
       .is("item_id", item_id || null)
-      .single();
+      .maybeSingle();
 
     if (existingVote) {
       if (!vote_type || existingVote.vote_type === vote_type) {
