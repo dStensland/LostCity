@@ -33,6 +33,7 @@ SOURCE_MODULES = {
     "eventbrite": "sources.eventbrite",
     "terminal-west": "sources.terminal_west",
     "the-earl": "sources.the_earl",
+    "drunken-unicorn": "sources.drunken_unicorn",
     "dads-garage": "sources.dads_garage",
     "atlanta-botanical-garden": "sources.atlanta_botanical",
     "high-museum": "sources.high_museum",
@@ -108,6 +109,8 @@ SOURCE_MODULES = {
     "the-loft": "sources.the_loft",
     "center-stage": "sources.center_stage",
     "buckhead-theatre": "sources.buckhead_theatre",
+    "boot-barn-hall": "sources.boot_barn_hall",
+    "trolley-barn": "sources.trolley_barn",
     # ===== Comedy Venues =====
     "helium-comedy": "sources.helium_comedy",
     "uptown-comedy": "sources.uptown_comedy",
@@ -130,6 +133,7 @@ SOURCE_MODULES = {
     "world-of-coca-cola": "sources.world_of_coca_cola",
     # ===== Historic Sites & Cultural Venues =====
     "oakland-cemetery": "sources.oakland_cemetery",
+    "shrine-cultural-center": "sources.shrine_cultural_center",
     # ===== Food Halls & Markets =====
     "ponce-city-market": "sources.ponce_city_market",
     "krog-street-market": "sources.krog_street_market",
@@ -453,6 +457,10 @@ SOURCE_MODULES = {
     "hotel-clermont": "sources.hotel_clermont",
     "georgian-terrace-hotel": "sources.georgian_terrace",
     "skylounge-glenn-hotel": "sources.skylounge_glenn",
+    # ===== Restaurants =====
+    "le-colonial-atlanta": "sources.le_colonial",
+    # ===== Additional Music Venues =====
+    "echo-room": "sources.echo_room",
 }
 
 
