@@ -321,7 +321,7 @@ def extract_venue_info_from_website(website_url: str) -> Optional[dict]:
             logger.warning(f"Insufficient content from {website_url}")
             return None
 
-        # Call Claude for extraction
+        # Call Claude for extraction (use Haiku for cost efficiency)
         client = get_anthropic_client()
 
         user_message = f"""Venue Website URL: {website_url}
@@ -330,8 +330,8 @@ Website Content:
 {text_content}"""
 
         response = client.messages.create(
-            model=cfg.llm.model,
-            max_tokens=1024,
+            model="claude-3-haiku-20240307",
+            max_tokens=512,
             temperature=cfg.llm.temperature,
             system=WEBSITE_ANALYSIS_PROMPT,
             messages=[{"role": "user", "content": user_message}]
@@ -696,8 +696,8 @@ def enrich_websites_only(limit: int = 50, dry_run: bool = False) -> dict:
             print(f"  Error: {e}")
             stats["failed"] += 1
 
-        # Rate limit: 2 seconds between requests (LLM calls are slower)
-        time.sleep(2)
+        # Rate limit: 1 second between requests (Haiku is fast)
+        time.sleep(1)
 
     return stats
 

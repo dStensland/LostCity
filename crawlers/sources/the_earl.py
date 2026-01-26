@@ -49,6 +49,19 @@ def parse_time(time_text: str) -> Optional[str]:
     return None
 
 
+def parse_price(lines: list, start_idx: int) -> tuple[Optional[float], Optional[float], bool]:
+    """Parse price from lines like '$20 ADV' or 'FREE SHOW!'."""
+    for i in range(start_idx, min(start_idx + 6, len(lines))):
+        line = lines[i].upper()
+        if "FREE" in line:
+            return None, None, True
+        price_match = re.search(r"\$(\d+)", line)
+        if price_match:
+            price = float(price_match.group(1))
+            return price, price, False
+    return None, None, False
+
+
 def crawl(source: dict) -> tuple[int, int, int]:
     """Crawl The Earl events using Playwright."""
     source_id = source["id"]
@@ -68,7 +81,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             venue_id = get_or_create_venue(VENUE_DATA)
 
             logger.info(f"Fetching The Earl: {EVENTS_URL}")
-            page.goto(EVENTS_URL, wait_until="domcontentloaded", timeout=30000)
+            page.goto(EVENTS_URL, wait_until="networkidle", timeout=30000)
             page.wait_for_timeout(3000)
 
             # Extract images from page
@@ -83,19 +96,21 @@ def crawl(source: dict) -> tuple[int, int, int]:
             body_text = page.inner_text("body")
             lines = [l.strip() for l in body_text.split("\n") if l.strip()]
 
-            # Parse events - look for date patterns
+            # Parse events - look for date patterns like "FRIDAY, JAN. 30, 2026"
             i = 0
             while i < len(lines):
                 line = lines[i]
 
-                # Skip navigation items
-                if len(line) < 3:
+                # Skip short lines
+                if len(line) < 10:
                     i += 1
                     continue
 
-                # Look for date patterns
+                # Look for date patterns: "FRIDAY, JAN. 30, 2026" or "SUNDAY, FEB. 1, 2026"
                 date_match = re.match(
-                    r"(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)?,?\s*(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{1,2})(?:,?\s+(\d{4}))?",
+                    r"(?:MONDAY|TUESDAY|WEDNESDAY|THURSDAY|FRIDAY|SATURDAY|SUNDAY),\s+"
+                    r"(JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)\.?\s+"
+                    r"(\d{1,2}),\s+(\d{4})",
                     line,
                     re.IGNORECASE
                 )
@@ -103,41 +118,58 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 if date_match:
                     month = date_match.group(1)
                     day = date_match.group(2)
-                    year = date_match.group(3) if date_match.group(3) else str(datetime.now().year)
-
-                    # Look for title in surrounding lines
-                    title = None
-                    start_time = None
-
-                    for offset in [-2, -1, 1, 2, 3]:
-                        idx = i + offset
-                        if 0 <= idx < len(lines):
-                            check_line = lines[idx]
-                            if re.match(r"(January|February|March)", check_line, re.IGNORECASE):
-                                continue
-                            if not start_time:
-                                time_result = parse_time(check_line)
-                                if time_result:
-                                    start_time = time_result
-                                    continue
-                            if not title and len(check_line) > 5:
-                                if not re.match(r"\d{1,2}[:/]", check_line):
-                                    if not re.match(r"(free|tickets|register|\$|more info)", check_line.lower()):
-                                        title = check_line
-                                        break
-
-                    if not title:
-                        i += 1
-                        continue
+                    year = date_match.group(3)
 
                     # Parse date
                     try:
-                        month_str = month[:3] if len(month) > 3 else month
-                        dt = datetime.strptime(f"{month_str} {day} {year}", "%b %d %Y")
+                        dt = datetime.strptime(f"{month} {day} {year}", "%b %d %Y")
                         if dt.date() < datetime.now().date():
-                            dt = datetime.strptime(f"{month_str} {day} {int(year) + 1}", "%b %d %Y")
+                            i += 1
+                            continue
                         start_date = dt.strftime("%Y-%m-%d")
                     except ValueError:
+                        i += 1
+                        continue
+
+                    # Look for show time (line with "SHOW" in it)
+                    start_time = None
+                    for j in range(i + 1, min(i + 5, len(lines))):
+                        if "SHOW" in lines[j].upper():
+                            time_result = parse_time(lines[j])
+                            if time_result:
+                                start_time = time_result
+                                break
+
+                    # Parse price
+                    price_min, price_max, is_free = parse_price(lines, i + 1)
+
+                    # Find the headliner - skip time/price lines, find first artist name
+                    title = None
+                    for j in range(i + 1, min(i + 10, len(lines))):
+                        check_line = lines[j]
+                        # Skip common non-title lines
+                        if re.match(r"^\d{1,2}:\d{2}", check_line):  # Time
+                            continue
+                        if re.match(r"^\$\d+", check_line):  # Price
+                            continue
+                        if "DOORS" in check_line.upper():
+                            continue
+                        if "SHOW" in check_line.upper() and len(check_line) < 20:
+                            continue
+                        if "ADV" in check_line.upper() or "DOS" in check_line.upper():
+                            continue
+                        if "MORE INFO" in check_line.upper():
+                            break
+                        if "RESCHEDULED" in check_line.upper() or "POSTPONED" in check_line.upper():
+                            continue
+                        if "FREE" in check_line.upper() and len(check_line) < 15:
+                            continue
+                        # Found a potential title (artist name)
+                        if len(check_line) > 3:
+                            title = check_line
+                            break
+
+                    if not title:
                         i += 1
                         continue
 
@@ -154,24 +186,24 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "source_id": source_id,
                         "venue_id": venue_id,
                         "title": title,
-                        "description": "Event at The Earl",
+                        "description": f"Live music at The Earl featuring {title}",
                         "start_date": start_date,
                         "start_time": start_time,
                         "end_date": None,
                         "end_time": None,
                         "is_all_day": start_time is None,
-                        "category": "community",
-                        "subcategory": None,
-                        "tags": ["event"],
-                        "price_min": None,
-                        "price_max": None,
+                        "category": "music",
+                        "subcategory": "concert",
+                        "tags": ["live-music", "concert"],
+                        "price_min": price_min,
+                        "price_max": price_max,
                         "price_note": None,
-                        "is_free": False,
+                        "is_free": is_free,
                         "source_url": EVENTS_URL,
                         "ticket_url": EVENTS_URL,
                         "image_url": image_map.get(title),
                         "raw_text": f"{title} - {start_date}",
-                        "extraction_confidence": 0.80,
+                        "extraction_confidence": 0.85,
                         "is_recurring": False,
                         "recurrence_rule": None,
                         "content_hash": content_hash,

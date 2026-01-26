@@ -212,7 +212,49 @@ Content to extract:
         elif "```" in response_text:
             json_str = response_text.split("```")[1].split("```")[0]
 
-        data = json.loads(json_str)
+        # Try to parse, with fallback for trailing commas
+        try:
+            data = json.loads(json_str)
+        except json.JSONDecodeError:
+            # Try fixing common issues: trailing commas, unquoted keys
+            import re
+            # Remove trailing commas before } or ]
+            fixed = re.sub(r',\s*([}\]])', r'\1', json_str)
+            data = json.loads(fixed)
+
+        # Clean up event data - filter out events with missing required fields
+        valid_events = []
+        for event_data in data.get("events", []):
+            # Skip events without a date
+            if not event_data.get("start_date"):
+                logger.debug(f"Skipping event without date: {event_data.get('title', 'Unknown')}")
+                continue
+
+            # Ensure venue has a name
+            if event_data.get("venue") and not event_data["venue"].get("name"):
+                # Use source name as venue name
+                event_data["venue"]["name"] = "Unknown Venue"
+
+            # Set defaults for missing boolean/list fields
+            if event_data.get("is_free") is None:
+                event_data["is_free"] = False
+            if event_data.get("is_all_day") is None:
+                event_data["is_all_day"] = False
+            if event_data.get("is_recurring") is None:
+                event_data["is_recurring"] = False
+            if event_data.get("genres") is None:
+                event_data["genres"] = []
+            if event_data.get("tags") is None:
+                event_data["tags"] = []
+
+            # Clean up series_hint
+            if event_data.get("series_hint"):
+                if event_data["series_hint"].get("genres") is None:
+                    event_data["series_hint"]["genres"] = []
+
+            valid_events.append(event_data)
+
+        data["events"] = valid_events
         result = ExtractionResult(**data)
 
         logger.info(f"Extracted {len(result.events)} events from {source_name}")

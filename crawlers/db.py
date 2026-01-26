@@ -334,3 +334,48 @@ def refresh_available_filters() -> bool:
     except Exception as e:
         print(f"Error refreshing available filters: {e}")
         return False
+
+
+def update_source_health_tags(source_id: int, health_tags: list[str], active_months: Optional[list[int]] = None) -> bool:
+    """
+    Update the health_tags and optionally active_months for a source.
+
+    Args:
+        source_id: The source ID to update
+        health_tags: List of health tag strings (e.g., ['timeout', 'no-events'])
+        active_months: Optional list of active months (1-12), None means year-round
+
+    Returns:
+        True on success, False on error
+    """
+    client = get_client()
+    try:
+        update_data = {"health_tags": health_tags}
+        if active_months is not None:
+            update_data["active_months"] = active_months
+
+        client.table("sources").update(update_data).eq("id", source_id).execute()
+        return True
+    except Exception as e:
+        print(f"Error updating source health tags: {e}")
+        return False
+
+
+def get_source_health_tags(source_id: int) -> tuple[list[str], Optional[list[int]]]:
+    """
+    Get the current health_tags and active_months for a source.
+
+    Returns:
+        Tuple of (health_tags, active_months)
+    """
+    client = get_client()
+    try:
+        result = client.table("sources").select("health_tags, active_months").eq("id", source_id).execute()
+        if result.data and len(result.data) > 0:
+            return (
+                result.data[0].get("health_tags") or [],
+                result.data[0].get("active_months")
+            )
+    except Exception:
+        pass
+    return [], None
