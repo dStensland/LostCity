@@ -21,7 +21,7 @@ const TYPE_OPTIONS: { value: SubmissionType | "all"; label: string }[] = [
 ];
 
 export default function AdminSubmissionsPage() {
-  const { profile } = useAuth();
+  const { profile, loading: authLoading } = useAuth();
 
   const [submissions, setSubmissions] = useState<SubmissionWithProfile[]>([]);
   const [summary, setSummary] = useState({
@@ -125,7 +125,16 @@ export default function AdminSubmissionsPage() {
     }
   };
 
-  if (!profile?.is_admin) {
+  // Show loading while auth is loading (server already verified admin status)
+  if (authLoading || !profile) {
+    return (
+      <div className="max-w-4xl mx-auto px-4 py-12 text-center">
+        <div className="w-8 h-8 border-2 border-[var(--coral)] border-t-transparent rounded-full animate-spin mx-auto" />
+      </div>
+    );
+  }
+
+  if (!profile.is_admin) {
     return (
       <div className="max-w-4xl mx-auto px-4 py-12 text-center">
         <p className="text-[var(--muted)]">Access denied. Admin only.</p>
