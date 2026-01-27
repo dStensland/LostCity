@@ -40,16 +40,13 @@ export default function ScrollableRow({ children, className = "" }: ScrollableRo
     };
   }, []);
 
+  // Note: canScrollLeft and canScrollRight are tracked but fade overlays removed
+  // as they obscure content. Could be used for scroll indicators if needed.
+  void canScrollLeft;
+  void canScrollRight;
+
   return (
     <div className="relative">
-      {/* Left fade gradient */}
-      <div
-        className={`absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-[var(--night)] to-transparent pointer-events-none z-10 transition-opacity duration-200 ${
-          canScrollLeft ? "opacity-100" : "opacity-0"
-        }`}
-        aria-hidden="true"
-      />
-
       {/* Scrollable content */}
       <div
         ref={scrollRef}
@@ -57,14 +54,6 @@ export default function ScrollableRow({ children, className = "" }: ScrollableRo
       >
         {children}
       </div>
-
-      {/* Right fade gradient */}
-      <div
-        className={`absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-[var(--night)] to-transparent pointer-events-none z-10 transition-opacity duration-200 ${
-          canScrollRight ? "opacity-100" : "opacity-0"
-        }`}
-        aria-hidden="true"
-      />
     </div>
   );
 }

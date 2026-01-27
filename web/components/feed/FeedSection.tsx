@@ -444,49 +444,33 @@ function EventCards({ section, portalSlug, hideImages }: { section: FeedSectionD
       <SectionHeader section={section} portalSlug={portalSlug} />
 
       {/* Cards container with carousel enhancements */}
-      <div className={isCarousel ? "relative -mx-4" : "relative"}>
-        {/* Scroll buttons for desktop */}
-        {isCarousel && (
-          <>
-            {canScrollLeft && (
-              <button
-                onClick={() => scroll("left")}
-                className="hidden sm:flex absolute left-2 top-1/2 -translate-y-1/2 z-10 w-8 h-8 rounded-full bg-[var(--night)] border border-[var(--twilight)] items-center justify-center text-[var(--cream)] hover:bg-[var(--twilight)] transition-colors shadow-lg"
-                aria-label="Scroll left"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                </svg>
-              </button>
-            )}
-            {canScrollRight && (
-              <button
-                onClick={() => scroll("right")}
-                className="hidden sm:flex absolute right-2 top-1/2 -translate-y-1/2 z-10 w-8 h-8 rounded-full bg-[var(--night)] border border-[var(--twilight)] items-center justify-center text-[var(--cream)] hover:bg-[var(--twilight)] transition-colors shadow-lg"
-                aria-label="Scroll right"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-              </button>
-            )}
-          </>
+      <div className={isCarousel ? "relative -mx-4 group/carousel" : "relative"}>
+        {/* Scroll buttons for desktop - subtle edge arrows that appear on hover */}
+        {isCarousel && canScrollLeft && (
+          <button
+            onClick={() => scroll("left")}
+            className="hidden sm:flex absolute left-0 top-0 bottom-0 z-10 w-12 items-center justify-start pl-1 opacity-0 group-hover/carousel:opacity-100 transition-opacity bg-gradient-to-r from-[var(--void)]/80 to-transparent"
+            aria-label="Scroll left"
+          >
+            <div className="w-8 h-8 rounded-full bg-[var(--night)]/90 border border-[var(--twilight)] flex items-center justify-center text-[var(--soft)] hover:text-[var(--cream)] hover:bg-[var(--twilight)] transition-colors">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+            </div>
+          </button>
         )}
-
-        {/* Fade gradients for carousel */}
-        {isCarousel && (
-          <>
-            <div
-              className={`absolute left-0 top-0 bottom-0 w-12 bg-gradient-to-r from-[var(--void)] to-transparent z-[1] pointer-events-none transition-opacity ${
-                canScrollLeft ? "opacity-100" : "opacity-0"
-              }`}
-            />
-            <div
-              className={`absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-[var(--void)] to-transparent z-[1] pointer-events-none transition-opacity ${
-                canScrollRight ? "opacity-100" : "opacity-0"
-              }`}
-            />
-          </>
+        {isCarousel && canScrollRight && (
+          <button
+            onClick={() => scroll("right")}
+            className="hidden sm:flex absolute right-0 top-0 bottom-0 z-10 w-12 items-center justify-end pr-1 opacity-0 group-hover/carousel:opacity-100 transition-opacity bg-gradient-to-l from-[var(--void)]/80 to-transparent"
+            aria-label="Scroll right"
+          >
+            <div className="w-8 h-8 rounded-full bg-[var(--night)]/90 border border-[var(--twilight)] flex items-center justify-center text-[var(--soft)] hover:text-[var(--cream)] hover:bg-[var(--twilight)] transition-colors">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </div>
+          </button>
         )}
 
         <div
@@ -557,8 +541,8 @@ function EventCard({ event, isCarousel, hideImages, portalSlug }: { event: FeedE
       } ${isPopular ? "border-[var(--coral)]/20 coral-glow" : "border-[var(--twilight)]"}`}
       style={{ backgroundColor: "var(--card-bg)" }}
     >
-      {/* Image - only show if there's an actual image available */}
-      {showImage && !imageError && (
+      {/* Image section */}
+      {showImage && !imageError ? (
         <div className="h-36 bg-[var(--twilight)] relative overflow-hidden rounded-t-xl">
           {/* Blur placeholder */}
           {!imageLoaded && (
@@ -589,7 +573,54 @@ function EventCard({ event, isCarousel, hideImages, portalSlug }: { event: FeedE
             </div>
           )}
         </div>
-      )}
+      ) : isCarousel ? (
+        /* No-image fallback for carousel cards - styled placeholder */
+        <div className="h-28 relative overflow-hidden rounded-t-xl bg-[var(--night)]">
+          {/* Layered gradient background */}
+          <div
+            className="absolute inset-0"
+            style={{
+              background: `
+                radial-gradient(ellipse 80% 60% at 50% -20%, ${categoryColor || "var(--coral)"}15 0%, transparent 50%),
+                linear-gradient(135deg, var(--twilight) 0%, var(--dusk) 100%)
+              `,
+            }}
+          />
+
+          {/* Subtle grid */}
+          <div
+            className="absolute inset-0 opacity-[0.04]"
+            style={{
+              backgroundImage: `linear-gradient(${categoryColor || "var(--coral)"} 1px, transparent 1px), linear-gradient(90deg, ${categoryColor || "var(--coral)"} 1px, transparent 1px)`,
+              backgroundSize: "20px 20px",
+            }}
+          />
+
+          {/* Category icon */}
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div
+              className="w-12 h-12 rounded-xl flex items-center justify-center"
+              style={{
+                background: `linear-gradient(135deg, ${categoryColor || "var(--coral)"}15 0%, ${categoryColor || "var(--coral)"}08 100%)`,
+                border: `1px solid ${categoryColor || "var(--coral)"}20`,
+              }}
+            >
+              {event.category && (
+                <CategoryIcon type={event.category} size={24} style={{ color: categoryColor || undefined, opacity: 0.6 }} />
+              )}
+            </div>
+          </div>
+
+          {/* Popular indicator */}
+          {isPopular && (
+            <div className="absolute top-2 right-2">
+              <span className="flex items-center gap-1 px-2 py-1 rounded-full bg-[var(--coral)] text-[var(--void)] text-[0.6rem] font-mono font-medium shadow-lg">
+                🔥 Popular
+              </span>
+            </div>
+          )}
+        </div>
+      ) : null}
 
       {/* Content */}
       <div className="flex-1 p-3">
@@ -602,8 +633,8 @@ function EventCard({ event, isCarousel, hideImages, portalSlug }: { event: FeedE
             {getSmartDate(event.start_date)}
             {event.start_time && ` · ${getSmartTime(event.start_date, event.start_time)}`}
           </span>
-          {/* Show popular badge inline when no image */}
-          {isPopular && (!showImage || imageError) && (
+          {/* Show popular badge inline when no image and not carousel (carousel has image area) */}
+          {isPopular && !isCarousel && (!showImage || imageError) && (
             <span className="ml-auto flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-[var(--coral)] text-[var(--void)] text-[0.55rem] font-mono font-medium">
               🔥 Popular
             </span>

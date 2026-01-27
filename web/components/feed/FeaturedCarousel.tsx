@@ -96,43 +96,41 @@ export function FeaturedCarousel({ events }: Props) {
             Handpicked by our editors
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => scroll("left")}
-            disabled={!canScrollLeft}
-            className="hidden sm:flex w-9 h-9 rounded-full bg-[var(--night)] border border-[var(--twilight)] items-center justify-center text-[var(--cream)] hover:bg-[var(--twilight)] transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-            aria-label="Scroll left"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-          </button>
-          <button
-            onClick={() => scroll("right")}
-            disabled={!canScrollRight}
-            className="hidden sm:flex w-9 h-9 rounded-full bg-[var(--night)] border border-[var(--twilight)] items-center justify-center text-[var(--cream)] hover:bg-[var(--twilight)] transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-            aria-label="Scroll right"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
-          </button>
-        </div>
+        {/* Navigation arrows - only show when scrollable */}
+        {(canScrollLeft || canScrollRight) && (
+          <div className="hidden sm:flex items-center gap-1">
+            {canScrollLeft ? (
+              <button
+                onClick={() => scroll("left")}
+                className="w-8 h-8 rounded-full bg-[var(--night)] border border-[var(--twilight)] flex items-center justify-center text-[var(--soft)] hover:text-[var(--cream)] hover:bg-[var(--twilight)] transition-colors"
+                aria-label="Scroll left"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+              </button>
+            ) : (
+              <div className="w-8 h-8" />
+            )}
+            {canScrollRight ? (
+              <button
+                onClick={() => scroll("right")}
+                className="w-8 h-8 rounded-full bg-[var(--night)] border border-[var(--twilight)] flex items-center justify-center text-[var(--soft)] hover:text-[var(--cream)] hover:bg-[var(--twilight)] transition-colors"
+                aria-label="Scroll right"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+            ) : (
+              <div className="w-8 h-8" />
+            )}
+          </div>
+        )}
       </div>
 
       {/* Carousel container */}
       <div className="relative -mx-4">
-        {/* Fade gradients */}
-        <div
-          className={`absolute left-0 top-0 bottom-0 w-12 bg-gradient-to-r from-[var(--void)] to-transparent z-[1] pointer-events-none transition-opacity ${
-            canScrollLeft ? "opacity-100" : "opacity-0"
-          }`}
-        />
-        <div
-          className={`absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-[var(--void)] to-transparent z-[1] pointer-events-none transition-opacity ${
-            canScrollRight ? "opacity-100" : "opacity-0"
-          }`}
-        />
 
         {/* Scrollable cards */}
         <div
