@@ -342,7 +342,7 @@ export default function PortalSpotsView({ portalId, portalSlug, isExclusive = fa
     return (
       <CategorySkeleton
         count={10}
-        title="Places"
+        title="Destinations"
         subtitle="Loading venues..."
       />
     );
@@ -380,7 +380,7 @@ export default function PortalSpotsView({ portalId, portalSlug, isExclusive = fa
       <div className="mb-6">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h2 className="text-xl font-semibold text-[var(--cream)]">Places</h2>
+            <h2 className="text-xl font-semibold text-[var(--cream)]">Destinations</h2>
             <p className="text-sm text-[var(--muted)] mt-1">
               <span className="text-[var(--soft)]">{spots.length}</span> venues in the city
             </p>

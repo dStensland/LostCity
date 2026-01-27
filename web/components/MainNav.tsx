@@ -20,7 +20,7 @@ const DEFAULT_TABS: NavTab[] = [
   { key: "feed", defaultLabel: "Highlights", href: "feed" },
   { key: "your_stuff", defaultLabel: "Your scene", href: "foryou", authRequired: true },
   { key: "events", defaultLabel: "Events", href: "events" },
-  { key: "spots", defaultLabel: "Places", href: "spots" },
+  { key: "spots", defaultLabel: "Destinations", href: "spots" },
   { key: "community", defaultLabel: "Groups", href: "community" },
 ];
 

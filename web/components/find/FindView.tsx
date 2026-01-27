@@ -9,7 +9,7 @@ import CalendarView from "@/components/CalendarView";
 import PortalSpotsView from "@/components/PortalSpotsView";
 import PortalCommunityView from "@/components/PortalCommunityView";
 
-type FindType = "events" | "places" | "orgs";
+type FindType = "events" | "destinations" | "orgs";
 type DisplayMode = "list" | "map" | "calendar";
 
 interface FindViewProps {
@@ -32,8 +32,8 @@ const TYPE_OPTIONS: { key: FindType; label: string; icon: React.ReactNode }[] = 
     ),
   },
   {
-    key: "places",
-    label: "Places",
+    key: "destinations",
+    label: "Destinations",
     icon: (
       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
@@ -131,8 +131,8 @@ function FindViewInner({
         </div>
       )}
 
-      {findType === "places" && displayMode === "list" && (
-        <Suspense fallback={<div className="py-16 text-center text-[var(--muted)]">Loading places...</div>}>
+      {findType === "destinations" && displayMode === "list" && (
+        <Suspense fallback={<div className="py-16 text-center text-[var(--muted)]">Loading destinations...</div>}>
           <PortalSpotsView
             portalId={portalId}
             portalSlug={portalSlug}
@@ -141,7 +141,7 @@ function FindViewInner({
         </Suspense>
       )}
 
-      {findType === "places" && displayMode === "map" && (
+      {findType === "destinations" && displayMode === "map" && (
         <div className="h-[calc(100vh-180px)] -mx-4">
           {/* TODO: Add showVenuesOnly support to MapViewWrapper */}
           <MapViewWrapper

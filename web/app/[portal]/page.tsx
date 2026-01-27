@@ -14,7 +14,7 @@ export const revalidate = 60;
 
 type ViewMode = "feed" | "find" | "community";
 type FeedTab = "curated" | "foryou" | "activity";
-type FindType = "events" | "places" | "orgs";
+type FindType = "events" | "destinations" | "orgs";
 type FindDisplay = "list" | "map" | "calendar";
 
 type Props = {
@@ -74,7 +74,7 @@ export default async function PortalPage({ params, searchParams }: Props) {
   if (searchParamsData.type) {
     findType = searchParamsData.type as FindType;
   } else if (viewParam === "spots") {
-    findType = "places";
+    findType = "destinations";
   }
 
   // Determine display mode - support legacy view params

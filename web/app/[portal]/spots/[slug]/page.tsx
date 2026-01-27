@@ -144,7 +144,7 @@ export default async function PortalSpotPage({ params }: Props) {
         <UnifiedHeader
           portalSlug={activePortalSlug}
           portalName={activePortalName}
-          backLink={{ href: `/${activePortalSlug}?view=find&type=places`, label: "Places" }}
+          backLink={{ href: `/${activePortalSlug}?view=find&type=destinations`, label: "Destinations" }}
         />
 
         <main className="max-w-3xl mx-auto px-4 py-6 pb-28 space-y-8">
