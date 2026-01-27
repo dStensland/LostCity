@@ -1,6 +1,5 @@
 import { Suspense } from "react";
-import GlassHeader from "@/components/GlassHeader";
-import MainNav from "@/components/MainNav";
+import UnifiedHeader from "@/components/UnifiedHeader";
 import PageFooter from "@/components/PageFooter";
 import ListDetailView from "@/components/community/ListDetailView";
 
@@ -24,11 +23,7 @@ export default async function ListDetailPage({ params }: Props) {
 
   return (
     <div className="min-h-screen">
-      <GlassHeader portalSlug={portalSlug} />
-
-      <Suspense fallback={<div className="h-10 bg-[var(--night)]" />}>
-        <MainNav portalSlug={portalSlug} />
-      </Suspense>
+      <UnifiedHeader portalSlug={portalSlug} />
 
       <div className="max-w-3xl mx-auto px-4 py-6 pb-28">
         <Suspense
