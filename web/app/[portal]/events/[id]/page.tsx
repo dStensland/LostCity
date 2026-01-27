@@ -15,14 +15,23 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import DirectionsDropdown from "@/components/DirectionsDropdown";
-import EventStickyBar from "@/components/EventStickyBar";
-import EventHeroImage from "@/components/EventHeroImage";
-import EventQuickActions from "@/components/EventQuickActions";
 import VenueVibes from "@/components/VenueVibes";
 import LinkifyText from "@/components/LinkifyText";
-import { formatTimeSplit } from "@/lib/formats";
+import { formatTimeSplit, formatPriceDetailed } from "@/lib/formats";
 import VenueTagList from "@/components/VenueTagList";
 import FlagButton from "@/components/FlagButton";
+import LiveIndicator from "@/components/LiveIndicator";
+import RSVPButton from "@/components/RSVPButton";
+import AddToCalendar from "@/components/AddToCalendar";
+import {
+  DetailHero,
+  InfoCard,
+  MetadataGrid,
+  SectionHeader,
+  RelatedSection,
+  RelatedCard,
+  DetailStickyBar,
+} from "@/components/detail";
 
 export const revalidate = 60;
 
@@ -223,6 +232,20 @@ export default async function PortalEventPage({ params }: Props) {
   const recurrenceText = parseRecurrenceRule(event.recurrence_rule);
   const categoryColor = event.category ? getCategoryColor(event.category) : "var(--coral)";
 
+  // Format metadata
+  const dateObj = parseISO(event.start_date);
+  const formattedDate = format(dateObj, "EEEE, MMMM d, yyyy");
+  const { text: priceText, isFree } = formatPriceDetailed(event);
+
+  const timeDisplay = event.is_all_day
+    ? "All Day"
+    : event.start_time
+      ? (() => {
+          const { time, period } = formatTimeSplit(event.start_time);
+          return `${time} ${period}`;
+        })()
+      : "Time TBA";
+
   return (
     <>
       {/* Schema.org JSON-LD */}
@@ -241,50 +264,39 @@ export default async function PortalEventPage({ params }: Props) {
           backLink={{ href: `/${activePortalSlug}?view=events`, label: "Events" }}
         />
 
-        <main className="max-w-3xl mx-auto px-4 py-6 pb-28">
-          {/* Hero Section - compact 2:1 ratio for faster access to CTAs */}
-          <div
-            className={`relative aspect-[2/1] bg-[var(--night)] rounded-xl overflow-hidden mb-4 animate-fade-in ${
-              isLive ? "live-border-glow" : ""
-            }`}
-            style={{
-              "--glow-color": categoryColor,
-            } as React.CSSProperties}
-          >
-            <EventHeroImage
-              src={event.image_url || ""}
-              alt={event.title}
-              category={event.category}
-              title={event.title}
-              venueName={event.venue?.name}
-              neighborhood={event.venue?.neighborhood}
-              isLive={isLive}
-              eventId={event.id}
-            />
-
-            {/* Live event heat effect */}
-            {isLive && (
-              <div
-                className="absolute inset-0 pointer-events-none"
-                style={{
-                  boxShadow: "inset 0 0 60px rgba(255, 90, 90, 0.15)",
-                }}
-              />
-            )}
-          </div>
-
-          {/* Quick Actions - Price, Date, Time + Primary CTA */}
-          <EventQuickActions
-            event={event}
+        <main className="max-w-3xl mx-auto px-4 py-6 pb-28 space-y-8">
+          {/* Hero Section */}
+          <DetailHero
+            mode={event.image_url ? "image" : "fallback"}
+            imageUrl={event.image_url}
+            title={event.title}
+            subtitle={event.venue?.name}
+            categoryColor={categoryColor}
+            categoryIcon={<CategoryIcon type={event.category || "other"} size={48} />}
+            badge={
+              <div className="flex items-center gap-2">
+                <span
+                  className="inline-flex items-center gap-2 px-3 py-1.5 rounded text-xs font-mono uppercase tracking-wider"
+                  style={{
+                    backgroundColor: `${categoryColor}20`,
+                    color: categoryColor,
+                    border: `1px solid ${categoryColor}40`,
+                  }}
+                >
+                  <CategoryIcon type={event.category || "other"} size={16} />
+                  {event.category}
+                </span>
+                {isLive && <LiveIndicator eventId={event.id} initialIsLive={isLive} />}
+              </div>
+            }
             isLive={isLive}
-            className="mb-6"
           />
 
-          {/* Recurring Event Badge */}
+          {/* Recurring Event Notice */}
           {event.is_recurring && recurrenceText && (
             <div
-              className="flex items-center gap-3 p-4 rounded-lg border border-[var(--twilight)] mb-6 animate-fade-up"
-              style={{ backgroundColor: "var(--card-bg)", animationDelay: "0.15s" }}
+              className="flex items-center gap-3 p-4 rounded-lg border border-[var(--twilight)]"
+              style={{ backgroundColor: "var(--card-bg)" }}
             >
               <div className="w-10 h-10 rounded-full bg-[var(--twilight)] flex items-center justify-center flex-shrink-0">
                 <svg className="w-5 h-5 text-[var(--coral)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -298,80 +310,89 @@ export default async function PortalEventPage({ params }: Props) {
             </div>
           )}
 
-          {/* Main event info card */}
-          <div
-            className="border border-[var(--twilight)] rounded-xl p-5 sm:p-6 animate-fade-up"
-            style={{ backgroundColor: "var(--card-bg)", animationDelay: "0.2s" }}
-          >
-            {/* 1. Description - primary content, what is this event? */}
+          {/* Main Content Card */}
+          <InfoCard accentColor={categoryColor}>
+            {/* Metadata Grid */}
+            <MetadataGrid
+              items={[
+                { label: "Date", value: formattedDate },
+                { label: "Time", value: timeDisplay },
+                {
+                  label: "Price",
+                  value: priceText,
+                  color: isFree ? "var(--neon-green)" : "var(--gold)"
+                },
+              ]}
+              className="mb-8"
+            />
+
+            {/* Description */}
             {event.description && (
-              <div className="mb-5">
-                <h2 className="font-mono text-[0.65rem] font-medium text-[var(--muted)] uppercase tracking-widest mb-3">
-                  About
-                </h2>
-                <p className="text-[var(--soft)] whitespace-pre-wrap leading-relaxed">
+              <>
+                <SectionHeader title="About" />
+                <p className="text-[var(--soft)] whitespace-pre-wrap leading-relaxed mb-6">
                   <LinkifyText text={event.description} />
                 </p>
-              </div>
+              </>
             )}
 
-            {/* 2. Location - where is it? (important decision info) */}
+            {/* Location */}
             {event.venue && event.venue.address && (
-              <div className={`mb-5 ${event.description ? "pt-5 border-t border-[var(--twilight)]" : ""}`}>
-                <div className="flex items-center justify-between mb-3">
-                  <h2 className="font-mono text-[0.65rem] font-medium text-[var(--muted)] uppercase tracking-widest">
-                    Location
-                  </h2>
-                  <DirectionsDropdown
-                    venueName={event.venue.name}
-                    address={event.venue.address}
-                    city={event.venue.city}
-                    state={event.venue.state}
-                  />
-                </div>
-                <Link
-                  href={`/${activePortalSlug}?spot=${event.venue.slug}`}
-                  scroll={false}
-                  className="block p-3 rounded-lg border border-[var(--twilight)] transition-colors hover:border-[var(--coral)]/50 group"
-                  style={{ backgroundColor: "var(--void)" }}
-                >
-                  <p className="text-[var(--soft)]">
-                    <span className="text-[var(--cream)] font-medium group-hover:text-[var(--coral)] transition-colors">
-                      {event.venue.name}
-                    </span>
-                    <svg className="inline-block w-4 h-4 ml-1 text-[var(--muted)] group-hover:text-[var(--coral)] transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
-                    <br />
-                    <span className="text-sm text-[var(--muted)]">
-                      {event.venue.address} · {event.venue.city}, {event.venue.state}
-                    </span>
-                  </p>
+              <>
+                <SectionHeader title="Location" />
+                <div className="mb-6">
+                  <div className="flex items-center justify-between mb-3">
+                    <DirectionsDropdown
+                      venueName={event.venue.name}
+                      address={event.venue.address}
+                      city={event.venue.city}
+                      state={event.venue.state}
+                    />
+                  </div>
+                  <Link
+                    href={`/${activePortalSlug}?spot=${event.venue.slug}`}
+                    scroll={false}
+                    className="block p-4 rounded-lg border border-[var(--twilight)] transition-all hover:bg-[var(--card-bg-hover)] hover:border-[var(--soft)] group"
+                    style={{ backgroundColor: "var(--void)" }}
+                  >
+                    <p className="text-[var(--soft)]">
+                      <span className="text-[var(--cream)] font-medium group-hover:text-[var(--coral)] transition-colors">
+                        {event.venue.name}
+                      </span>
+                      <svg className="inline-block w-4 h-4 ml-1 text-[var(--muted)] group-hover:text-[var(--coral)] transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                      <br />
+                      <span className="text-sm text-[var(--muted)]">
+                        {event.venue.address} · {event.venue.city}, {event.venue.state}
+                      </span>
+                    </p>
 
-                  {/* Venue Vibes */}
-                  <VenueVibes vibes={event.venue.vibes} className="mt-2" />
-                </Link>
+                    <VenueVibes vibes={event.venue.vibes} className="mt-3" />
+                  </Link>
 
-                {/* Community Tags */}
-                <div className="mt-3">
-                  <VenueTagList venueId={event.venue.id} />
+                  <div className="mt-3">
+                    <VenueTagList venueId={event.venue.id} />
+                  </div>
                 </div>
-              </div>
+              </>
             )}
 
-            {/* 3. Social proof - friends and who's going */}
-            <div className="pt-5 border-t border-[var(--twilight)]">
+            {/* Social Proof */}
+            <SectionHeader title="Who's Going" />
+            <div className="mb-6">
               <FriendsGoing eventId={event.id} className="mb-4" />
               <WhosGoing eventId={event.id} />
             </div>
 
-            {/* 4. Series link (if part of series) */}
+            {/* Series Link */}
             {event.series && (
-              <div className="pt-5 border-t border-[var(--twilight)]">
+              <>
+                <SectionHeader title="Series" />
                 <Link
                   href={`/${activePortalSlug}?series=${event.series.slug}`}
                   scroll={false}
-                  className="flex items-center gap-3 p-3 rounded-lg border border-[var(--twilight)] transition-colors hover:border-[var(--coral)]/50 group"
+                  className="flex items-center gap-3 p-4 rounded-lg border border-[var(--twilight)] transition-all hover:bg-[var(--card-bg-hover)] hover:border-[var(--soft)] group mb-6"
                   style={{ backgroundColor: "var(--void)" }}
                 >
                   <svg
@@ -406,16 +427,14 @@ export default async function PortalEventPage({ params }: Props) {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                   </svg>
                 </Link>
-              </div>
+              </>
             )}
 
-            {/* 5. Producer/Presented by */}
+            {/* Producer */}
             {event.producer && (
-              <div className="pt-5 border-t border-[var(--twilight)]">
-                <h2 className="font-mono text-[0.65rem] font-medium text-[var(--muted)] uppercase tracking-widest mb-3">
-                  Presented by
-                </h2>
-                <div className="flex items-center justify-between gap-4 p-3 rounded-lg border border-[var(--twilight)]" style={{ backgroundColor: "var(--void)" }}>
+              <>
+                <SectionHeader title="Presented by" />
+                <div className="flex items-center justify-between gap-4 p-4 rounded-lg border border-[var(--twilight)] mb-6" style={{ backgroundColor: "var(--void)" }}>
                   <div className="flex items-center gap-3 min-w-0">
                     {event.producer.logo_url ? (
                       <Image
@@ -444,16 +463,14 @@ export default async function PortalEventPage({ params }: Props) {
                   </div>
                   <FollowButton targetProducerId={event.producer.id} size="sm" />
                 </div>
-              </div>
+              </>
             )}
 
-            {/* 6. Tags (if any) */}
+            {/* Tags */}
             {event.tags && event.tags.length > 0 && (
-              <div className="pt-5 border-t border-[var(--twilight)]">
-                <h2 className="font-mono text-[0.65rem] font-medium text-[var(--muted)] uppercase tracking-widest mb-3">
-                  Also Featuring
-                </h2>
-                <div className="flex flex-wrap gap-2">
+              <>
+                <SectionHeader title="Also Featuring" count={event.tags.length} />
+                <div className="flex flex-wrap gap-2 mb-6">
                   {event.tags.map((tag) => (
                     <span
                       key={tag}
@@ -464,132 +481,91 @@ export default async function PortalEventPage({ params }: Props) {
                     </span>
                   ))}
                 </div>
-              </div>
+              </>
             )}
 
-            {/* 7. Flag for QA (minimal) */}
-            <div className="pt-5 border-t border-[var(--twilight)]">
-              <FlagButton
-                entityType="event"
-                entityId={event.id}
-                entityName={event.title}
-              />
-            </div>
-          </div>
+            {/* Flag for QA */}
+            <SectionHeader title="Report an Issue" />
+            <FlagButton
+              entityType="event"
+              entityId={event.id}
+              entityName={event.title}
+            />
+          </InfoCard>
 
           {/* Before & After - Nearby Spots */}
           {nearbySpots.length > 0 && event.venue?.neighborhood && (
-            <div className="mt-8 animate-fade-up" style={{ animationDelay: "0.3s" }}>
-              <h2 className="font-mono text-[0.65rem] font-medium text-[var(--muted)] uppercase tracking-widest mb-4">
-                Before & After in {event.venue.neighborhood}
-              </h2>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                {nearbySpots.map((spot, index) => (
-                  <Link
-                    key={spot.id}
-                    href={`/${activePortalSlug}?spot=${spot.slug}`}
-                    scroll={false}
-                    className={`group p-3 border border-[var(--twilight)] rounded-lg transition-colors card-hover-lift stagger-${Math.min(index + 1, 6)}`}
-                    style={{ backgroundColor: "var(--card-bg)" }}
-                  >
-                    <div className="flex items-start gap-2">
-                      <CategoryIcon
-                        type={spot.spot_type || "bar"}
-                        size={16}
-                        className="mt-0.5 flex-shrink-0"
-                      />
-                      <div className="min-w-0 flex-1">
-                        <h3 className="text-[var(--cream)] text-sm font-medium truncate group-hover:text-[var(--coral)] transition-colors">
-                          {spot.name}
-                        </h3>
-                        <p className="text-[0.65rem] text-[var(--muted)] font-mono uppercase tracking-wider mt-0.5">
-                          {getSpotTypeLabel(spot.spot_type)}
-                        </p>
-                      </div>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            </div>
+            <RelatedSection
+              title={`Before & After in ${event.venue.neighborhood}`}
+              count={nearbySpots.length}
+            >
+              {nearbySpots.map((spot) => (
+                <RelatedCard
+                  key={spot.id}
+                  variant="image"
+                  href={`/${activePortalSlug}?spot=${spot.slug}`}
+                  title={spot.name}
+                  subtitle={getSpotTypeLabel(spot.spot_type)}
+                  imageUrl={spot.image_url || undefined}
+                  icon={<CategoryIcon type={spot.spot_type || "bar"} size={20} />}
+                />
+              ))}
+            </RelatedSection>
           )}
 
-          {/* Related Events */}
-          {(venueEvents.length > 0 || sameDateEvents.length > 0) && (
-            <div className="mt-8 space-y-8 animate-fade-up" style={{ animationDelay: "0.35s" }}>
-              {/* More at this venue */}
-              {venueEvents.length > 0 && event.venue && (
-                <div>
-                  <h2 className="font-mono text-[0.65rem] font-medium text-[var(--muted)] uppercase tracking-widest mb-4">
-                    More at {event.venue.name}
-                  </h2>
-                  <div className="space-y-2">
-                    {venueEvents.map((relatedEvent, index) => (
-                      <Link
-                        key={relatedEvent.id}
-                        href={`/${activePortalSlug}?event=${relatedEvent.id}`}
-                        scroll={false}
-                        className={`block p-4 border border-[var(--twilight)] rounded-lg transition-colors group card-hover-lift stagger-${Math.min(index + 1, 6)}`}
-                        style={{ backgroundColor: "var(--card-bg)" }}
-                      >
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="flex-1 min-w-0">
-                            <h3 className="text-[var(--cream)] font-medium truncate group-hover:text-[var(--coral)] transition-colors">
-                              {relatedEvent.title}
-                            </h3>
-                            <p className="text-sm text-[var(--muted)] mt-1">
-                              {format(parseISO(relatedEvent.start_date), "EEE, MMM d")}
-                              {relatedEvent.start_time && ` · ${formatTimeSplit(relatedEvent.start_time).time} ${formatTimeSplit(relatedEvent.start_time).period}`}
-                            </p>
-                          </div>
-                          <span className="text-[var(--muted)] group-hover:text-[var(--coral)] transition-colors">
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                            </svg>
-                          </span>
-                        </div>
-                      </Link>
-                    ))}
-                  </div>
-                </div>
-              )}
+          {/* More at Venue */}
+          {venueEvents.length > 0 && event.venue && (
+            <RelatedSection
+              title={`More at ${event.venue.name}`}
+              count={venueEvents.length}
+            >
+              {venueEvents.map((relatedEvent) => {
+                const eventColor = relatedEvent.category ? getCategoryColor(relatedEvent.category) : "var(--coral)";
+                const timeStr = relatedEvent.start_time
+                  ? `${formatTimeSplit(relatedEvent.start_time).time} ${formatTimeSplit(relatedEvent.start_time).period}`
+                  : format(parseISO(relatedEvent.start_date), "EEE, MMM d");
 
-              {/* Same night */}
-              {sameDateEvents.length > 0 && (
-                <div>
-                  <h2 className="font-mono text-[0.65rem] font-medium text-[var(--muted)] uppercase tracking-widest mb-4">
-                    That same night
-                  </h2>
-                  <div className="space-y-2">
-                    {sameDateEvents.map((relatedEvent, index) => (
-                      <Link
-                        key={relatedEvent.id}
-                        href={`/${activePortalSlug}?event=${relatedEvent.id}`}
-                        scroll={false}
-                        className={`block p-4 border border-[var(--twilight)] rounded-lg transition-colors group card-hover-lift stagger-${Math.min(index + 1, 6)}`}
-                        style={{ backgroundColor: "var(--card-bg)" }}
-                      >
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="flex-1 min-w-0">
-                            <h3 className="text-[var(--cream)] font-medium truncate group-hover:text-[var(--coral)] transition-colors">
-                              {relatedEvent.title}
-                            </h3>
-                            <p className="text-sm text-[var(--muted)] mt-1">
-                              {relatedEvent.venue?.name || "Venue TBA"}
-                              {relatedEvent.start_time && ` · ${formatTimeSplit(relatedEvent.start_time).time} ${formatTimeSplit(relatedEvent.start_time).period}`}
-                            </p>
-                          </div>
-                          <span className="text-[var(--muted)] group-hover:text-[var(--coral)] transition-colors">
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                            </svg>
-                          </span>
-                        </div>
-                      </Link>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
+                return (
+                  <RelatedCard
+                    key={relatedEvent.id}
+                    variant="compact"
+                    href={`/${activePortalSlug}/events/${relatedEvent.id}`}
+                    title={relatedEvent.title}
+                    subtitle={timeStr}
+                    icon={<CategoryIcon type={relatedEvent.category || "other"} size={20} />}
+                    accentColor={eventColor}
+                  />
+                );
+              })}
+            </RelatedSection>
+          )}
+
+          {/* Same Night */}
+          {sameDateEvents.length > 0 && (
+            <RelatedSection
+              title="That same night"
+              count={sameDateEvents.length}
+            >
+              {sameDateEvents.map((relatedEvent) => {
+                const eventColor = relatedEvent.category ? getCategoryColor(relatedEvent.category) : "var(--coral)";
+                const subtitle = [
+                  relatedEvent.venue?.name || "Venue TBA",
+                  relatedEvent.start_time && `${formatTimeSplit(relatedEvent.start_time).time} ${formatTimeSplit(relatedEvent.start_time).period}`
+                ].filter(Boolean).join(" · ");
+
+                return (
+                  <RelatedCard
+                    key={relatedEvent.id}
+                    variant="compact"
+                    href={`/${activePortalSlug}/events/${relatedEvent.id}`}
+                    title={relatedEvent.title}
+                    subtitle={subtitle}
+                    icon={<CategoryIcon type={relatedEvent.category || "other"} size={20} />}
+                    accentColor={eventColor}
+                  />
+                );
+              })}
+            </RelatedSection>
           )}
         </main>
 
@@ -597,11 +573,36 @@ export default async function PortalEventPage({ params }: Props) {
       </div>
 
       {/* Sticky bottom bar with CTAs */}
-      <EventStickyBar
-        eventId={event.id}
-        eventTitle={event.title}
-        ticketUrl={event.ticket_url}
-        eventCategory={event.category}
+      <DetailStickyBar
+        shareLabel="Share Event"
+        secondaryActions={
+          <>
+            <AddToCalendar
+              title={event.title}
+              date={event.start_date}
+              time={event.start_time}
+              venue={event.venue?.name}
+              address={event.venue?.address}
+              city={event.venue?.city}
+              state={event.venue?.state}
+              variant="icon"
+            />
+            <RSVPButton eventId={event.id} variant="compact" />
+          </>
+        }
+        primaryAction={
+          event.ticket_url
+            ? {
+                label: isLive ? "Join Now" : "Get Tickets",
+                href: event.ticket_url,
+                icon: (
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+                  </svg>
+                ),
+              }
+            : undefined
+        }
       />
     </>
   );
