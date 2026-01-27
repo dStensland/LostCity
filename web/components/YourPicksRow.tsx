@@ -207,7 +207,7 @@ export default function YourPicksRow({ portalSlug }: YourPicksRowProps) {
         {canScrollLeft && (
           <button
             onClick={() => scroll("left")}
-            className="hidden sm:flex absolute left-2 top-1/2 -translate-y-1/2 z-10 w-7 h-7 rounded-full bg-[var(--night)] border border-[var(--twilight)] items-center justify-center text-[var(--cream)] hover:bg-[var(--twilight)] transition-colors shadow-lg"
+            className="hidden sm:flex absolute left-2 top-1/2 -translate-y-1/2 z-10 w-7 h-7 rounded-full bg-[var(--night)] border border-[var(--twilight)] items-center justify-center text-[var(--cream)] hover:bg-[var(--twilight)] transition-colors "
             aria-label="Scroll left"
           >
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -218,7 +218,7 @@ export default function YourPicksRow({ portalSlug }: YourPicksRowProps) {
         {canScrollRight && (
           <button
             onClick={() => scroll("right")}
-            className="hidden sm:flex absolute right-2 top-1/2 -translate-y-1/2 z-10 w-7 h-7 rounded-full bg-[var(--night)] border border-[var(--twilight)] items-center justify-center text-[var(--cream)] hover:bg-[var(--twilight)] transition-colors shadow-lg"
+            className="hidden sm:flex absolute right-2 top-1/2 -translate-y-1/2 z-10 w-7 h-7 rounded-full bg-[var(--night)] border border-[var(--twilight)] items-center justify-center text-[var(--cream)] hover:bg-[var(--twilight)] transition-colors "
             aria-label="Scroll right"
           >
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
