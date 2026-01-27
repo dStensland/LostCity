@@ -41,18 +41,13 @@ export default function FollowButton({
     async function checkFollowStatus() {
       // Wait for auth to finish loading, but with a timeout
       if (authLoading) {
-        // Set a timeout - if auth takes longer than 5s, stop loading anyway
+        // Set a timeout - if auth takes longer than 2s, stop loading anyway
         timeoutId = setTimeout(() => {
           if (!cancelled) {
             setLoading(false);
           }
-        }, 5000);
+        }, 2000);
         return;
-      }
-
-      // Clear any pending timeout since auth is done
-      if (timeoutId) {
-        clearTimeout(timeoutId);
       }
 
       if (!user) {
@@ -65,6 +60,14 @@ export default function FollowButton({
         setLoading(false);
         return;
       }
+
+      // Set a hard timeout for the query
+      const queryTimeout = setTimeout(() => {
+        if (!cancelled) {
+          console.warn("Follow status query timed out");
+          setLoading(false);
+        }
+      }, 3000);
 
       try {
         let query = supabase
@@ -84,6 +87,7 @@ export default function FollowButton({
 
         const { data, error } = await query.maybeSingle();
 
+        clearTimeout(queryTimeout);
         if (cancelled) return;
 
         if (error) {
@@ -92,6 +96,7 @@ export default function FollowButton({
 
         setIsFollowing(!!data);
       } catch (err) {
+        clearTimeout(queryTimeout);
         console.error("Exception checking follow status:", err);
       } finally {
         if (!cancelled) {

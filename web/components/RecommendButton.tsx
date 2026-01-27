@@ -97,18 +97,13 @@ export default function RecommendButton({
     async function loadRecommendation() {
       // Wait for auth to finish loading, but with a timeout
       if (authLoading) {
-        // Set a timeout - if auth takes longer than 3s, enable button anyway
+        // Set a timeout - if auth takes longer than 2s, enable button anyway
         timeoutId = setTimeout(() => {
           if (!cancelled) {
             setLoading(false);
           }
-        }, 3000);
+        }, 2000);
         return;
-      }
-
-      // Clear any pending timeout since auth is done
-      if (timeoutId) {
-        clearTimeout(timeoutId);
       }
 
       if (!user) {
@@ -121,6 +116,14 @@ export default function RecommendButton({
         if (!cancelled) setLoading(false);
         return;
       }
+
+      // Set a hard timeout for the query
+      const queryTimeout = setTimeout(() => {
+        if (!cancelled) {
+          console.warn("Recommendation query timed out");
+          setLoading(false);
+        }
+      }, 3000);
 
       try {
         let query = supabase
@@ -138,6 +141,7 @@ export default function RecommendButton({
 
         const { data, error } = await query.maybeSingle();
 
+        clearTimeout(queryTimeout);
         if (cancelled) return;
 
         if (error) {
@@ -152,6 +156,7 @@ export default function RecommendButton({
           setVisibility(rec.visibility as Visibility);
         }
       } catch (err) {
+        clearTimeout(queryTimeout);
         console.error("Exception loading recommendation:", err);
       } finally {
         if (!cancelled) {
