@@ -480,6 +480,12 @@ SOURCE_MODULES = {
     "glahr": "sources.glahr",
     "atlanta-liberation-center": "sources.atlanta_liberation_center",
     "indivisible-atl": "sources.indivisible_atl",
+    # ===== Arts Centers =====
+    "goat-farm-arts-center": "sources.goat_farm",
+    # ===== Immersive Experiences =====
+    "illuminarium-atlanta": "sources.illuminarium",
+    # ===== Community Film =====
+    "wewatchstuff": "sources.wewatchstuff",
 }
 
 

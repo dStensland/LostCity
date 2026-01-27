@@ -81,7 +81,7 @@ export default function LazyImage({
           width={!fill ? width : undefined}
           height={!fill ? height : undefined}
           sizes={sizes}
-          className={`transition-opacity duration-300 ${isLoaded ? "opacity-100" : "opacity-0"} ${fill ? "object-cover" : ""}`}
+          className={`transition-opacity duration-300 ${isLoaded ? "opacity-100" : "opacity-0"} ${fill ? "object-contain" : ""}`}
           onLoad={() => setIsLoaded(true)}
           onError={() => {
             setIsLoaded(true);

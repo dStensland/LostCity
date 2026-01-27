@@ -9,6 +9,8 @@ from supabase import create_client, Client
 from config import get_config
 from tag_inference import infer_tags
 from series import get_or_create_series
+from posters import get_poster_for_film_event
+from artist_images import get_image_for_music_event
 
 
 _client: Optional[Client] = None
@@ -165,6 +167,24 @@ def insert_event(event_data: dict, series_hint: dict = None, genres: list = None
         venue = get_venue_by_id(event_data["venue_id"])
         if venue:
             venue_vibes = venue.get("vibes") or []
+
+    # Auto-fetch movie poster for film events without images
+    if event_data.get("category") == "film" and not event_data.get("image_url"):
+        poster_url = get_poster_for_film_event(
+            event_data.get("title", ""),
+            event_data.get("image_url")
+        )
+        if poster_url:
+            event_data["image_url"] = poster_url
+
+    # Auto-fetch artist image for music events without images
+    if event_data.get("category") == "music" and not event_data.get("image_url"):
+        artist_image = get_image_for_music_event(
+            event_data.get("title", ""),
+            event_data.get("image_url")
+        )
+        if artist_image:
+            event_data["image_url"] = artist_image
 
     # Infer and merge tags
     event_data["tags"] = infer_tags(event_data, venue_vibes)
