@@ -133,6 +133,7 @@ SOURCE_MODULES = {
     "world-of-coca-cola": "sources.world_of_coca_cola",
     # ===== Historic Sites & Cultural Venues =====
     "oakland-cemetery": "sources.oakland_cemetery",
+    "wrens-nest": "sources.wrens_nest",
     "shrine-cultural-center": "sources.shrine_cultural_center",
     # ===== Food Halls & Markets =====
     "ponce-city-market": "sources.ponce_city_market",
@@ -420,6 +421,8 @@ SOURCE_MODULES = {
     "oglethorpe-university": "sources.oglethorpe_university",
     # ===== Community Centers =====
     "ymca-atlanta": "sources.ymca_atlanta",
+    # ===== Faith Communities =====
+    "ebenezer-baptist-church": "sources.ebenezer_church",
     # ===== New Venues =====
     "knock-music-house": "sources.knock_music_house",
     "side-saddle": "sources.side_saddle",
@@ -461,6 +464,17 @@ SOURCE_MODULES = {
     "le-colonial-atlanta": "sources.le_colonial",
     # ===== Additional Music Venues =====
     "echo-room": "sources.echo_room",
+    # ===== Historic Sites & Memorials =====
+    "king-center": "sources.king_center",
+    # ===== Libraries & Archives =====
+    "auburn-ave-library": "sources.auburn_ave_library",
+    # ===== Museums: African American History =====
+    "apex-museum": "sources.apex_museum",
+    # ===== City & Park Events =====
+    "decatur-city": "sources.decatur_city",
+    "johns-creek": "sources.johns_creek",
+    # ===== Recurring Social Events =====
+    "atlanta-recurring-social": "sources.recurring_social_events",
 }
 
 
