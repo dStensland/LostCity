@@ -25,8 +25,8 @@ API_URL = f"{BASE_URL}/wp-json/tribe/events/v1/events"
 VENUE_DATA = {
     "name": "Stone Mountain Park",
     "slug": "stone-mountain-park",
-    "address": "1000 Robert E. Lee Blvd",
-    "neighborhood": None,
+    "address": "1000 Robert E Lee Blvd",
+    "neighborhood": "Stone Mountain",
     "city": "Stone Mountain",
     "state": "GA",
     "zip": "30083",
@@ -63,7 +63,10 @@ def categorize_event(title: str, description: str) -> tuple[str, Optional[str], 
     if any(kw in text for kw in ["lasershow", "laser show", "fireworks"]):
         return "music", "festival", tags + ["laser-show", "night-show", "spectacle"]
 
-    # Check major festivals
+    # Check major festivals and holidays
+    if "lunar new year" in text or "chinese new year" in text:
+        return "community", "festival", tags + ["lunar-new-year", "cultural", "asian"]
+
     if "yellow daisy" in text:
         return "community", "festival", tags + ["yellow-daisy-festival", "arts-crafts", "shopping"]
 
