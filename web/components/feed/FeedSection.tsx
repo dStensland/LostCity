@@ -8,6 +8,7 @@ import { LiveBadge, SoonBadge, FreeBadge } from "../Badge";
 import { formatTime } from "@/lib/formats";
 import { usePortal } from "@/lib/portal-context";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
+import { FeaturedCarousel } from "./FeaturedCarousel";
 
 // Types
 export type FeedEvent = {
@@ -146,6 +147,8 @@ export default function FeedSection({ section, isFirst }: Props) {
   // Render content based on block type
   const renderContent = () => {
     switch (section.block_type) {
+      case "featured_carousel":
+        return <FeaturedCarousel events={section.events} />;
       case "hero_banner":
         return <HeroBanner section={section} portalSlug={portal.slug} hideImages={hideImages} />;
       case "category_grid":

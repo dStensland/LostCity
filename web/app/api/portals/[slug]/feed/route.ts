@@ -414,7 +414,251 @@ export async function GET(request: NextRequest, { params }: Props) {
     }
   }
 
-  // Step 5: Build sections synchronously using pre-fetched data
+  // Step 5: Add programmatic featured events and holiday sections
+  const holidaySections: Section[] = [];
+  const currentDate = new Date();
+  const currentMonth = currentDate.getMonth() + 1; // 1-12
+  const currentDay = currentDate.getDate();
+
+  // Featured events carousel (always show if there are featured events)
+  holidaySections.push({
+    id: "featured-events",
+    title: "Featured Events",
+    slug: "featured-events",
+    description: "Handpicked by our editors",
+    section_type: "auto",
+    block_type: "featured_carousel",
+    layout: "carousel",
+    items_per_row: 3,
+    max_items: 10,
+    auto_filter: {
+      date_filter: "next_30_days",
+      sort_by: "date",
+    },
+    block_content: null,
+    display_order: -10,
+    is_visible: true,
+    schedule_start: null,
+    schedule_end: null,
+    show_on_days: null,
+    show_after_time: null,
+    show_before_time: null,
+    style: null,
+    portal_section_items: [],
+  });
+
+  // Only add holiday sections in February (and early March for Mardi Gras)
+  if (currentMonth === 2 || (currentMonth === 3 && currentDay <= 5)) {
+    // Valentine's Day section (Feb 1-16)
+    if (currentMonth === 2 && currentDay <= 16) {
+      holidaySections.push({
+        id: "valentines-2025",
+        title: "Valentine's Day",
+        slug: "valentines-day",
+        description: "Celebrate love and connection",
+        section_type: "auto",
+        block_type: "event_carousel",
+        layout: "carousel",
+        items_per_row: 2,
+        max_items: 8,
+        auto_filter: {
+          tags: ["valentines"],
+          date_filter: "next_30_days",
+          sort_by: "date",
+        },
+        block_content: null,
+        display_order: -2,
+        is_visible: true,
+        schedule_start: null,
+        schedule_end: null,
+        show_on_days: null,
+        show_after_time: null,
+        show_before_time: null,
+        style: {
+          accent_color: "var(--rose)",
+        },
+        portal_section_items: [],
+      });
+    }
+
+    // Lunar New Year section (Feb 1-28)
+    if (currentMonth === 2) {
+      holidaySections.push({
+        id: "lunar-new-year-2025",
+        title: "Lunar New Year",
+        slug: "lunar-new-year",
+        description: "Welcome the Year of the Snake",
+        section_type: "auto",
+        block_type: "event_carousel",
+        layout: "carousel",
+        items_per_row: 2,
+        max_items: 8,
+        auto_filter: {
+          tags: ["lunar-new-year"],
+          date_filter: "next_30_days",
+          sort_by: "date",
+        },
+        block_content: null,
+        display_order: -1,
+        is_visible: true,
+        schedule_start: null,
+        schedule_end: null,
+        show_on_days: null,
+        show_after_time: null,
+        show_before_time: null,
+        style: {
+          accent_color: "var(--coral)",
+        },
+        portal_section_items: [],
+      });
+    }
+
+    // Super Bowl section (Feb 7-9)
+    if (currentMonth === 2 && currentDay >= 5 && currentDay <= 10) {
+      holidaySections.push({
+        id: "super-bowl-2026",
+        title: "Super Bowl Sunday",
+        slug: "super-bowl",
+        description: "Watch parties and game day events",
+        section_type: "auto",
+        block_type: "event_carousel",
+        layout: "carousel",
+        items_per_row: 2,
+        max_items: 8,
+        auto_filter: {
+          tags: ["super-bowl"],
+          date_filter: "next_7_days",
+          sort_by: "date",
+        },
+        block_content: null,
+        display_order: -3,
+        is_visible: true,
+        schedule_start: null,
+        schedule_end: null,
+        show_on_days: null,
+        show_after_time: null,
+        show_before_time: null,
+        style: {
+          accent_color: "var(--neon-green)",
+        },
+        portal_section_items: [],
+      });
+    }
+
+    // Black History Month section (all of February)
+    if (currentMonth === 2) {
+      holidaySections.push({
+        id: "black-history-month-2026",
+        title: "Black History Month",
+        slug: "black-history-month",
+        description: "Celebrate and learn",
+        section_type: "auto",
+        block_type: "event_carousel",
+        layout: "carousel",
+        items_per_row: 2,
+        max_items: 8,
+        auto_filter: {
+          tags: ["black-history-month"],
+          date_filter: "next_30_days",
+          sort_by: "date",
+        },
+        block_content: null,
+        display_order: 0,
+        is_visible: true,
+        schedule_start: null,
+        schedule_end: null,
+        show_on_days: null,
+        show_after_time: null,
+        show_before_time: null,
+        style: {
+          accent_color: "var(--neon-cyan)",
+        },
+        portal_section_items: [],
+      });
+    }
+  }
+
+  // Fetch featured events for carousel
+  let featuredEvents: Event[] = [];
+  const { data: featuredEventsData } = await supabase
+    .from("events")
+    .select(`
+      id,
+      title,
+      start_date,
+      start_time,
+      end_time,
+      is_all_day,
+      is_free,
+      price_min,
+      price_max,
+      category,
+      subcategory,
+      image_url,
+      description,
+      venue:venues(id, name, neighborhood, slug)
+    `)
+    .eq("is_featured", true)
+    .gte("start_date", today)
+    .lte("start_date", addDays(new Date(), 30).toISOString().split("T")[0])
+    .is("canonical_event_id", null)
+    .order("start_date", { ascending: true })
+    .limit(10);
+
+  if (featuredEventsData && featuredEventsData.length > 0) {
+    featuredEvents = featuredEventsData as Event[];
+    for (const event of featuredEvents) {
+      eventMap.set(event.id, event);
+    }
+  }
+
+  // Fetch events for holiday sections and track them by tag
+  const holidayEventsByTag = new Map<string, Event[]>();
+  if (holidaySections.length > 0) {
+    for (const holidaySection of holidaySections) {
+      // Skip featured events section (handled separately)
+      if (holidaySection.block_type === "featured_carousel") continue;
+
+      const tag = holidaySection.auto_filter?.tags?.[0];
+      if (tag) {
+        const { data: holidayEvents } = await supabase
+          .from("events")
+          .select(`
+            id,
+            title,
+            start_date,
+            start_time,
+            end_time,
+            is_all_day,
+            is_free,
+            price_min,
+            price_max,
+            category,
+            subcategory,
+            image_url,
+            description,
+            venue:venues(id, name, neighborhood, slug)
+          `)
+          .contains("tags", [tag])
+          .gte("start_date", today)
+          .lte("start_date", addDays(new Date(), 30).toISOString().split("T")[0])
+          .is("canonical_event_id", null)
+          .order("start_date", { ascending: true })
+          .limit(holidaySection.max_items);
+
+        // Store by tag for section building
+        if (holidayEvents && holidayEvents.length > 0) {
+          holidayEventsByTag.set(tag, holidayEvents as Event[]);
+          // Also store in eventMap
+          for (const event of holidayEvents as Event[]) {
+            eventMap.set(event.id, event);
+          }
+        }
+      }
+    }
+  }
+
+  // Step 6: Build sections synchronously using pre-fetched data
   const feedSections = sections.map((section) => {
     let events: Event[] = [];
     const limit = section.max_items || feedSettings.items_per_section || defaultLimit;
@@ -549,6 +793,41 @@ export async function GET(request: NextRequest, { params }: Props) {
     };
   });
 
+  // Step 7: Build holiday sections using the same pattern
+  const holidayFeedSections = holidaySections.map((section) => {
+    let events: Event[] = [];
+
+    // Featured carousel gets featured events
+    if (section.block_type === "featured_carousel") {
+      events = featuredEvents;
+    } else {
+      // Holiday sections get events by tag
+      const tag = section.auto_filter?.tags?.[0];
+      events = tag ? (holidayEventsByTag.get(tag) || []) : [];
+    }
+
+    return {
+      id: section.id,
+      title: section.title,
+      slug: section.slug,
+      description: section.description,
+      section_type: section.section_type,
+      block_type: section.block_type,
+      layout: section.layout,
+      items_per_row: section.items_per_row,
+      style: section.style,
+      block_content: section.block_content,
+      auto_filter: section.auto_filter,
+      events,
+    };
+  });
+
+  // Combine holiday sections (at top) with regular sections, filtering out empty sections
+  const finalSections = [
+    ...holidayFeedSections.filter(s => s.events.length > 0),
+    ...feedSections
+  ];
+
   return NextResponse.json(
     {
       portal: {
@@ -560,7 +839,7 @@ export async function GET(request: NextRequest, { params }: Props) {
         items_per_section: feedSettings.items_per_section || 5,
         default_layout: feedSettings.default_layout || "list",
       },
-      sections: feedSections,
+      sections: finalSections,
     },
     {
       headers: {
