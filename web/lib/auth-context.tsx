@@ -43,16 +43,11 @@ const AuthContext = createContext<AuthContextType>({
   refreshProfile: async () => {},
 });
 
-type AuthProviderProps = {
-  children: React.ReactNode;
-  initialProfile?: Profile | null;
-};
-
-export function AuthProvider({ children, initialProfile }: AuthProviderProps) {
+export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
-  const [profile, setProfile] = useState<Profile | null>(initialProfile ?? null);
+  const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [authState, setAuthState] = useState<AuthState>("initializing");
   const [error, setError] = useState<Error | null>(null);
@@ -145,20 +140,8 @@ export function AuthProvider({ children, initialProfile }: AuthProviderProps) {
       try {
         setAuthState("checking");
 
-        // Always validate with server to ensure session is fresh
-        // The middleware refreshes tokens, but we need to get the updated session
-        const { data: { user: validatedUser }, error: userError } = await supabase.auth.getUser();
-
-        if (!isMountedRef.current || !isCurrentEffect) return;
-
-        if (userError || !validatedUser) {
-          // No valid session
-          setAuthState("unauthenticated");
-          setLoading(false);
-          return;
-        }
-
-        // Get the session (now with fresh tokens from getUser)
+        // The proxy/middleware already refreshed tokens via getUser()
+        // We just need to read the session from cookies
         const { data: { session } } = await supabase.auth.getSession();
 
         if (!isMountedRef.current || !isCurrentEffect) return;
@@ -170,18 +153,14 @@ export function AuthProvider({ children, initialProfile }: AuthProviderProps) {
           setAuthState("authenticated");
           setLoading(false);
 
-          // Fetch profile in parallel (don't block) - skip if already hydrated from server
-          if (!initialProfile) {
-            fetchProfile(session.user.id).then((userProfile) => {
-              if (isMountedRef.current) {
-                setProfile(userProfile);
-              }
-            });
-          } else {
-            profileFetchRef.current = session.user.id;
-          }
+          // Fetch profile in parallel (don't block)
+          fetchProfile(session.user.id).then((userProfile) => {
+            if (isMountedRef.current) {
+              setProfile(userProfile);
+            }
+          });
         } else {
-          // No session after validation - user is not logged in
+          // No session - user is not logged in
           setAuthState("unauthenticated");
           setLoading(false);
         }
@@ -262,7 +241,6 @@ export function AuthProvider({ children, initialProfile }: AuthProviderProps) {
       isCurrentEffect = false;
       subscription.unsubscribe();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- initialProfile is only used on mount
   }, [supabase, fetchProfile]);
 
   const signOut = useCallback(async () => {
