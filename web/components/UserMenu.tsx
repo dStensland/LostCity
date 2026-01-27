@@ -107,7 +107,7 @@ export default function UserMenu() {
       <ShareInviteLink variant="icon" />
 
       {/* Avatar and dropdown */}
-      <div className="relative flex items-center" ref={menuRef}>
+      <div className="relative flex items-center z-[60]" ref={menuRef}>
         {/* Avatar - clicks through to profile (or settings if no profile) */}
         <Link
           href={profile?.username ? `/profile/${profile.username}` : "/settings"}
