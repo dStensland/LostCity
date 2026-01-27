@@ -182,8 +182,7 @@ export default function SearchBar() {
         onBlur={handleBlur}
         onKeyDown={handleKeyDown}
         placeholder="Search events, venues, organizers..."
-        className="block w-full pl-11 pr-10 py-2.5 border border-[var(--twilight)] rounded-lg text-[var(--cream)] placeholder-[var(--muted)] text-sm focus:outline-none focus:border-[var(--coral)] focus:ring-2 focus:ring-[var(--coral)]/30 focus:shadow-[0_0_0_4px_var(--coral)/10,0_0_20px_var(--coral)/15] transition-all duration-200"
-        style={{ backgroundColor: "var(--card-bg)" }}
+        className="block w-full pl-11 pr-10 py-2.5 border border-[var(--twilight)] rounded-lg bg-[var(--night)] text-[var(--cream)] placeholder-[var(--muted)] text-sm focus:outline-none focus:border-[var(--coral)] focus:ring-2 focus:ring-[var(--coral)]/30 focus:shadow-[0_0_0_4px_var(--coral)/10,0_0_20px_var(--coral)/15] transition-all duration-200"
         role="combobox"
         aria-expanded={shouldShowDropdown}
         aria-controls={suggestionsId}
@@ -209,8 +208,8 @@ export default function SearchBar() {
           id={suggestionsId}
           role="listbox"
           aria-label="Search suggestions"
-          className="absolute top-full left-0 right-0 mt-1 border border-[var(--twilight)] rounded-lg shadow-xl z-[1050] overflow-hidden animate-dropdown-in"
-          style={{ backgroundColor: "var(--card-bg)", boxShadow: "0 4px 20px rgba(0, 0, 0, 0.3)" }}
+          className="absolute top-full left-0 right-0 mt-1 border border-[var(--twilight)] rounded-lg shadow-xl z-[10000] overflow-hidden animate-dropdown-in bg-[var(--dusk)]"
+          style={{ boxShadow: "0 4px 20px rgba(0, 0, 0, 0.5)" }}
         >
           {showRecent && (
             <div className="p-2">
