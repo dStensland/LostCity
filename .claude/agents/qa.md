@@ -54,7 +54,7 @@ Test recently added features by:
 
 ## Base URLs
 - Local: http://localhost:3000
-- Production: https://lostcity.app
+- Production: https://lostcity.ai
 
 ## Testing Process
 
