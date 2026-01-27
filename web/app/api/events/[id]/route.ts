@@ -14,19 +14,18 @@ export async function GET(
 
   const supabase = await createClient();
 
-  // Fetch event with venue, producer, and series
+  // Fetch event with venue (producer/series joins removed - FKs don't exist)
   const { data: event, error } = await supabase
     .from("events")
     .select(`
       *,
-      venue:venues(id, name, slug, address, neighborhood, city, state, vibes, description, lat, lng),
-      producer:event_producers(id, name, slug, org_type, website, instagram, logo_url, description),
-      series:event_series(id, title, slug, series_type, description)
+      venue:venues(id, name, slug, address, neighborhood, city, state, vibes, description, lat, lng)
     `)
     .eq("id", eventId)
     .single();
 
   if (error || !event) {
+    console.error("Event fetch error:", error);
     return Response.json({ error: "Event not found" }, { status: 404 });
   }
 
