@@ -29,6 +29,7 @@ type ActivityItem = {
   venue?: {
     id: number;
     name: string;
+    slug: string;
     neighborhood: string | null;
   } | null;
   target_user?: {
@@ -99,7 +100,7 @@ export default function ActivityFeed({ limit = 20, className = "" }: ActivityFee
               id, title, start_date,
               venue:venues(name)
             ),
-            venue:venues(id, name, neighborhood),
+            venue:venues(id, name, slug, neighborhood),
             target_user:profiles!activities_target_user_id_fkey(
               id, username, display_name
             )
@@ -289,7 +290,7 @@ function ActivityText({ activity, portalSlug }: { activity: ActivityItem; portal
           {statusText}{" "}
           {activity.event ? (
             <Link
-              href={portalSlug ? `/${portalSlug}/events/${activity.event.id}` : `/events/${activity.event.id}`}
+              href={portalSlug ? `/${portalSlug}?event=${activity.event.id}` : `/events/${activity.event.id}`}
               className="font-medium text-[var(--cream)] hover:text-[var(--coral)] transition-colors"
             >
               {activity.event.title}
@@ -306,14 +307,15 @@ function ActivityText({ activity, portalSlug }: { activity: ActivityItem; portal
           recommended{" "}
           {activity.event ? (
             <Link
-              href={portalSlug ? `/${portalSlug}/events/${activity.event.id}` : `/events/${activity.event.id}`}
+              href={portalSlug ? `/${portalSlug}?event=${activity.event.id}` : `/events/${activity.event.id}`}
               className="font-medium text-[var(--cream)] hover:text-[var(--coral)] transition-colors"
             >
               {activity.event.title}
             </Link>
           ) : activity.venue ? (
             <Link
-              href={`/spots/${activity.venue.id}`}
+              href={portalSlug ? `/${portalSlug}?spot=${activity.venue.slug}` : `/spots/${activity.venue.slug}`}
+              scroll={false}
               className="font-medium text-[var(--cream)] hover:text-[var(--coral)] transition-colors"
             >
               {activity.venue.name}
@@ -337,7 +339,8 @@ function ActivityText({ activity, portalSlug }: { activity: ActivityItem; portal
             </Link>
           ) : activity.venue ? (
             <Link
-              href={`/spots/${activity.venue.id}`}
+              href={portalSlug ? `/${portalSlug}?spot=${activity.venue.slug}` : `/spots/${activity.venue.slug}`}
+              scroll={false}
               className="font-medium text-[var(--cream)] hover:text-[var(--coral)] transition-colors"
             >
               {activity.venue.name}

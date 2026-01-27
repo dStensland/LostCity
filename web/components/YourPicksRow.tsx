@@ -252,7 +252,8 @@ function PickCard({ event, portalSlug }: { event: PickEvent; portalSlug: string 
 
   return (
     <Link
-      href={`/${portalSlug}/events/${event.id}`}
+      href={`/${portalSlug}?event=${event.id}`}
+      scroll={false}
       className="flex-shrink-0 w-[220px] snap-start rounded-xl overflow-hidden border border-[var(--twilight)] hover:border-[var(--coral)]/30 transition-all group"
       style={{ backgroundColor: "var(--card-bg)" }}
     >

@@ -184,7 +184,8 @@ function SpotCard({
 
   return (
     <Link
-      href={`/${portalSlug}/spots/${spot.slug}`}
+      href={`/${portalSlug}?spot=${spot.slug}`}
+      scroll={false}
       className={`block p-4 rounded-lg border border-[var(--twilight)] card-atmospheric ${reflectionClass} group`}
       style={{
         backgroundColor: "var(--card-bg)",

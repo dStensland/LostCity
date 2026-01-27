@@ -28,6 +28,7 @@ interface Props {
   spot: Spot;
   index?: number;
   showDistance?: { lat: number; lng: number };
+  portalSlug?: string;
 }
 
 // Calculate distance between two points using Haversine formula
@@ -49,7 +50,7 @@ function formatDistance(miles: number): string {
   return `${Math.round(miles)} mi`;
 }
 
-export default function SpotCard({ spot, index = 0, showDistance }: Props) {
+export default function SpotCard({ spot, index = 0, showDistance, portalSlug }: Props) {
   // Stagger animation class
   const staggerClass = index < 10 ? `stagger-${index + 1}` : "";
   const priceDisplay = formatPriceLevel(spot.price_level);
@@ -64,7 +65,8 @@ export default function SpotCard({ spot, index = 0, showDistance }: Props) {
 
   return (
     <Link
-      href={`/spots/${spot.slug}`}
+      href={portalSlug ? `/${portalSlug}?spot=${spot.slug}` : `/spots/${spot.slug}`}
+      scroll={false}
       className={`event-item animate-fade-in ${staggerClass} group card-atmospheric ${reflectionClass}`}
       style={{
         "--glow-color": categoryColor,

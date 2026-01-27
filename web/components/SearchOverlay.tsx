@@ -157,16 +157,16 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
   function mapToPortalPath(result: SearchResult, portalSlug?: string): string {
     if (!portalSlug) return result.href;
 
-    // Map based on type
+    // Map based on type - use ?param=value format for in-page detail views
     if (result.type === "event") {
-      return `/${portalSlug}/events/${result.id}`;
+      return `/${portalSlug}?event=${result.id}`;
     } else if (result.type === "venue") {
       // Extract slug from href like /venue/slug
       const slug = result.href.split("/").pop();
-      return `/${portalSlug}/spots/${slug}`;
+      return `/${portalSlug}?spot=${slug}`;
     } else if (result.type === "organizer") {
       const slug = result.href.split("/").pop();
-      return `/${portalSlug}/community/${slug}`;
+      return `/${portalSlug}?org=${slug}`;
     }
     return result.href;
   }
@@ -452,7 +452,8 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
                             .map((result) => (
                               <Link
                                 key={result.id}
-                                href={result.href}
+                                href={mapToPortalPath(result, portal?.slug)}
+                                scroll={false}
                                 onClick={handleResultClick}
                                 className="flex items-center gap-3 p-2 rounded-lg hover:bg-[var(--twilight)] transition-colors group"
                               >
@@ -516,7 +517,8 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
                             .map((result) => (
                               <Link
                                 key={result.id}
-                                href={result.href}
+                                href={mapToPortalPath(result, portal?.slug)}
+                                scroll={false}
                                 onClick={handleResultClick}
                                 className="flex items-center gap-3 p-2 rounded-lg hover:bg-[var(--twilight)] transition-colors group"
                               >
@@ -572,7 +574,8 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
                             .map((result) => (
                               <Link
                                 key={result.id}
-                                href={result.href}
+                                href={mapToPortalPath(result, portal?.slug)}
+                                scroll={false}
                                 onClick={handleResultClick}
                                 className="flex items-center gap-3 p-2 rounded-lg hover:bg-[var(--twilight)] transition-colors group"
                               >

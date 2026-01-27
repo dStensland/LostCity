@@ -63,7 +63,8 @@ function PopularEventCard({ event, portalSlug }: { event: EventWithLocation; por
 
   return (
     <Link
-      href={portalSlug ? `/${portalSlug}/events/${event.id}` : `/events/${event.id}`}
+      href={portalSlug ? `/${portalSlug}?event=${event.id}` : `/events/${event.id}`}
+      scroll={false}
       className={`flex-shrink-0 w-64 p-3 bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg hover:border-[var(--coral)] transition-colors group card-atmospheric ${reflectionClass}`}
       style={{
         "--glow-color": categoryColor || "var(--coral)",

@@ -63,7 +63,8 @@ export function PortalSection({ section, portalSlug }: PortalSectionProps) {
             return (
               <Link
                 key={item.id}
-                href={portalSlug ? `/${portalSlug}/events/${event.id}` : `/events/${event.id}`}
+                href={portalSlug ? `/${portalSlug}?event=${event.id}` : `/events/${event.id}`}
+                scroll={false}
                 className={`group flex items-start gap-4 p-3 bg-[var(--night)] hover:bg-[var(--dusk)] rounded-lg border border-[var(--twilight)] hover:border-[var(--portal-primary,var(--neon-magenta))]/30 transition-all card-atmospheric ${reflectionClass}`}
                 style={{
                   "--glow-color": categoryColor || "var(--portal-primary, var(--neon-magenta))",

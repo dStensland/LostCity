@@ -1,20 +1,79 @@
 // Shared preference options for user onboarding and settings
 
 export const PREFERENCE_CATEGORIES = [
-  { value: "music", label: "Music", icon: "music" },
-  { value: "film", label: "Film", icon: "film" },
-  { value: "comedy", label: "Comedy", icon: "comedy" },
-  { value: "theater", label: "Theater", icon: "theater" },
-  { value: "art", label: "Art", icon: "art" },
-  { value: "sports", label: "Sports", icon: "sports" },
-  { value: "food_drink", label: "Food & Drink", icon: "food_drink" },
-  { value: "nightlife", label: "Nightlife", icon: "nightlife" },
-  { value: "community", label: "Community", icon: "community" },
-  { value: "fitness", label: "Fitness", icon: "fitness" },
-  { value: "family", label: "Family", icon: "family" },
-  { value: "meetup", label: "Meetup", icon: "meetup" },
-  { value: "words", label: "Words", icon: "words" },
+  { value: "music", label: "Music", icon: "music", emoji: "🎵" },
+  { value: "comedy", label: "Comedy", icon: "comedy", emoji: "😂" },
+  { value: "art", label: "Art", icon: "art", emoji: "🎨" },
+  { value: "theater", label: "Theater", icon: "theater", emoji: "🎭" },
+  { value: "film", label: "Film", icon: "film", emoji: "🎬" },
+  { value: "food_drink", label: "Food & Drink", icon: "food_drink", emoji: "🍽️" },
+  { value: "nightlife", label: "Nightlife", icon: "nightlife", emoji: "🌙" },
+  { value: "sports", label: "Sports", icon: "sports", emoji: "⚽" },
+  { value: "community", label: "Community", icon: "community", emoji: "🤝" },
+  { value: "fitness", label: "Fitness", icon: "fitness", emoji: "💪" },
+  { value: "family", label: "Family", icon: "family", emoji: "👨‍👩‍👧" },
+  { value: "meetup", label: "Meetup", icon: "meetup", emoji: "👋" },
+  { value: "words", label: "Words", icon: "words", emoji: "📚" },
 ] as const;
+
+// Subcategories organized by parent category
+export const PREFERENCE_SUBCATEGORIES: Record<string, { value: string; label: string }[]> = {
+  music: [
+    { value: "music.live", label: "Live Music" },
+    { value: "music.rock_indie", label: "Rock/Indie" },
+    { value: "music.hip_hop", label: "Hip-Hop" },
+    { value: "music.electronic", label: "Electronic/DJ" },
+    { value: "music.jazz_blues", label: "Jazz/Blues" },
+    { value: "music.country_folk", label: "Country/Folk" },
+    { value: "music.classical", label: "Classical" },
+    { value: "music.open_mic", label: "Open Mic" },
+  ],
+  comedy: [
+    { value: "comedy.standup", label: "Stand-Up" },
+    { value: "comedy.improv", label: "Improv" },
+    { value: "comedy.open_mic", label: "Open Mic" },
+    { value: "comedy.sketch", label: "Sketch" },
+  ],
+  art: [
+    { value: "art.gallery", label: "Gallery Opening" },
+    { value: "art.workshop", label: "Art Workshop" },
+    { value: "art.market", label: "Art Market" },
+    { value: "art.street", label: "Street Art" },
+  ],
+  theater: [
+    { value: "theater.play", label: "Play" },
+    { value: "theater.musical", label: "Musical" },
+    { value: "theater.dance", label: "Dance" },
+    { value: "theater.opera", label: "Opera" },
+  ],
+  film: [
+    { value: "film.screening", label: "Film Screening" },
+    { value: "film.indie", label: "Indie Film" },
+    { value: "film.documentary", label: "Documentary" },
+    { value: "film.horror", label: "Horror Night" },
+  ],
+  food_drink: [
+    { value: "food_drink.tasting", label: "Tasting" },
+    { value: "food_drink.brunch", label: "Brunch" },
+    { value: "food_drink.happy_hour", label: "Happy Hour" },
+    { value: "food_drink.popup", label: "Pop-up" },
+  ],
+  nightlife: [
+    { value: "nightlife.club", label: "Club Night" },
+    { value: "nightlife.bar", label: "Bar Event" },
+    { value: "nightlife.karaoke", label: "Karaoke" },
+    { value: "nightlife.drag", label: "Drag Show" },
+  ],
+  sports: [
+    { value: "sports.watch_party", label: "Watch Party" },
+    { value: "sports.pickup", label: "Pickup Game" },
+    { value: "sports.league", label: "League" },
+    { value: "sports.outdoors", label: "Outdoor Sports" },
+  ],
+};
+
+// Categories that have subcategories available
+export const CATEGORIES_WITH_SUBCATEGORIES = Object.keys(PREFERENCE_SUBCATEGORIES);
 
 export const PREFERENCE_NEIGHBORHOODS = [
   "Midtown",

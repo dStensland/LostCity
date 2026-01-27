@@ -160,9 +160,13 @@ function EventCard({ event, index = 0, skipAnimation = false, portalSlug, friend
     event.category_data?.typical_price_max
   );
 
+  // Use query param navigation for in-app detail views (preserves auth state)
+  const eventHref = portalSlug ? `/${portalSlug}?event=${event.id}` : `/events/${event.id}`;
+
   return (
     <Link
-      href={portalSlug ? `/${portalSlug}/events/${event.id}` : `/events/${event.id}`}
+      href={eventHref}
+      scroll={false}
       className={`block p-3 mb-4 rounded-lg border border-[var(--twilight)] card-atmospheric ${reflectionClass} ${liveHeatClass} ${animationClass} ${staggerClass} group overflow-hidden`}
       style={{
         borderLeftWidth: categoryColor ? "3px" : undefined,

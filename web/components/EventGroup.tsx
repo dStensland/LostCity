@@ -210,7 +210,8 @@ export default function EventGroup({
                 {group.events.map((event) => (
                   <Link
                     key={event.id}
-                    href={portalSlug ? `/${portalSlug}/events/${event.id}` : `/events/${event.id}`}
+                    href={portalSlug ? `/${portalSlug}?event=${event.id}` : `/events/${event.id}`}
+                    scroll={false}
                     className="font-mono text-xs px-2 py-0.5 rounded bg-[var(--twilight)]/40 text-[var(--muted)] hover:bg-[var(--twilight)] hover:text-[var(--cream)] transition-colors"
                   >
                     {formatTime(event.start_time)}

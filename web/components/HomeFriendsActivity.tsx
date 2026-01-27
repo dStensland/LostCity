@@ -176,7 +176,8 @@ export default function HomeFriendsActivity() {
               {" "}
               {activity.event && (
                 <Link
-                  href={portal?.slug ? `/${portal.slug}/events/${activity.event.id}` : `/events/${activity.event.id}`}
+                  href={portal?.slug ? `/${portal.slug}?event=${activity.event.id}` : `/events/${activity.event.id}`}
+                  scroll={false}
                   className="text-[var(--cream)] hover:text-[var(--coral)] transition-colors"
                 >
                   {activity.event.title}

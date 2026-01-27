@@ -92,7 +92,7 @@ export default function ListItemCard({
           ? SPOT_TYPE_LABELS[item.venue.spot_type] || item.venue.spot_type
           : null,
         location: item.venue.neighborhood,
-        href: `/${portalSlug}/spots/${item.venue.slug}`,
+        href: `/${portalSlug}?spot=${item.venue.slug}`,
         image: item.venue.image_url,
       };
     }
@@ -101,7 +101,7 @@ export default function ListItemCard({
         name: item.event.title,
         subtitle: "Event",
         location: item.event.venue?.name,
-        href: `/${portalSlug}/events/${item.event.id}`,
+        href: `/${portalSlug}?event=${item.event.id}`,
         image: item.event.image_url,
       };
     }
@@ -110,7 +110,7 @@ export default function ListItemCard({
         name: item.producer.name,
         subtitle: "Organizer",
         location: null,
-        href: `/${portalSlug}/organizers/${item.producer.slug}`,
+        href: `/${portalSlug}?org=${item.producer.slug}`,
         image: item.producer.image_url,
       };
     }
@@ -363,6 +363,7 @@ export default function ListItemCard({
     return (
       <Link
         href={display.href}
+        scroll={false}
         className="block p-3 rounded-xl border border-[var(--twilight)] bg-[var(--card-bg)] hover:bg-[var(--card-bg-hover)] hover:border-[var(--twilight)]/80 transition-all group"
       >
         {content}

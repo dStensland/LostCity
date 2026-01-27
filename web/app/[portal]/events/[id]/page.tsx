@@ -330,7 +330,8 @@ export default async function PortalEventPage({ params }: Props) {
                   />
                 </div>
                 <Link
-                  href={`/${activePortalSlug}/spots/${event.venue.slug}`}
+                  href={`/${activePortalSlug}?spot=${event.venue.slug}`}
+                  scroll={false}
                   className="block p-3 rounded-lg border border-[var(--twilight)] transition-colors hover:border-[var(--coral)]/50 group"
                   style={{ backgroundColor: "var(--void)" }}
                 >
@@ -368,7 +369,8 @@ export default async function PortalEventPage({ params }: Props) {
             {event.series && (
               <div className="pt-5 border-t border-[var(--twilight)]">
                 <Link
-                  href={`/${activePortalSlug}/series/${event.series.slug}`}
+                  href={`/${activePortalSlug}?series=${event.series.slug}`}
+                  scroll={false}
                   className="flex items-center gap-3 p-3 rounded-lg border border-[var(--twilight)] transition-colors hover:border-[var(--coral)]/50 group"
                   style={{ backgroundColor: "var(--void)" }}
                 >
@@ -485,7 +487,8 @@ export default async function PortalEventPage({ params }: Props) {
                 {nearbySpots.map((spot, index) => (
                   <Link
                     key={spot.id}
-                    href={`/${activePortalSlug}/spots/${spot.slug}`}
+                    href={`/${activePortalSlug}?spot=${spot.slug}`}
+                    scroll={false}
                     className={`group p-3 border border-[var(--twilight)] rounded-lg transition-colors card-hover-lift stagger-${Math.min(index + 1, 6)}`}
                     style={{ backgroundColor: "var(--card-bg)" }}
                   >
@@ -523,7 +526,8 @@ export default async function PortalEventPage({ params }: Props) {
                     {venueEvents.map((relatedEvent, index) => (
                       <Link
                         key={relatedEvent.id}
-                        href={`/${activePortalSlug}/events/${relatedEvent.id}`}
+                        href={`/${activePortalSlug}?event=${relatedEvent.id}`}
+                        scroll={false}
                         className={`block p-4 border border-[var(--twilight)] rounded-lg transition-colors group card-hover-lift stagger-${Math.min(index + 1, 6)}`}
                         style={{ backgroundColor: "var(--card-bg)" }}
                       >
@@ -559,7 +563,8 @@ export default async function PortalEventPage({ params }: Props) {
                     {sameDateEvents.map((relatedEvent, index) => (
                       <Link
                         key={relatedEvent.id}
-                        href={`/${activePortalSlug}/events/${relatedEvent.id}`}
+                        href={`/${activePortalSlug}?event=${relatedEvent.id}`}
+                        scroll={false}
                         className={`block p-4 border border-[var(--twilight)] rounded-lg transition-colors group card-hover-lift stagger-${Math.min(index + 1, 6)}`}
                         style={{ backgroundColor: "var(--card-bg)" }}
                       >

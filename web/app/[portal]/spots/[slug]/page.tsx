@@ -258,7 +258,8 @@ export default async function PortalSpotPage({ params }: Props) {
                   return (
                     <Link
                       key={event.id}
-                      href={`/${portalSlug}/events/${event.id}`}
+                      href={`/${portalSlug}?event=${event.id}`}
+                      scroll={false}
                       className="block p-4 card-interactive rounded-xl group"
                     >
                       <div className="flex items-start justify-between gap-4">

@@ -7,12 +7,10 @@ import Image from "next/image";
 import { useAuth } from "@/lib/auth-context";
 import { createClient } from "@/lib/supabase/client";
 import { OnboardingProgress } from "./components/OnboardingProgress";
-import { WelcomeSplash } from "./steps/WelcomeSplash";
-import { MoodPicker } from "./steps/MoodPicker";
-import { SwipeDiscovery } from "./steps/SwipeDiscovery";
-import { NeighborhoodMap } from "./steps/NeighborhoodMap";
-import { FeedPreview } from "./steps/FeedPreview";
-import type { OnboardingStep, OnboardingSwipeEvent, OnboardingMood, OnboardingAction } from "@/lib/types";
+import { CategoryPicker } from "./steps/CategoryPicker";
+import { SubcategoryPicker } from "./steps/SubcategoryPicker";
+import { NeighborhoodPicker } from "./steps/NeighborhoodPicker";
+import type { OnboardingStep } from "@/lib/types";
 
 type Portal = {
   id: string;
@@ -23,12 +21,6 @@ type Portal = {
   };
 };
 
-interface OnboardingInteraction {
-  step: string;
-  event_id?: number;
-  action: OnboardingAction;
-}
-
 function OnboardingContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -37,12 +29,12 @@ function OnboardingContent() {
   const supabase = createClient();
 
   // State
-  const [step, setStep] = useState<OnboardingStep>("splash");
-  const [mood, setMood] = useState<OnboardingMood | null>(null);
-  const [likedEvents, setLikedEvents] = useState<OnboardingSwipeEvent[]>([]);
+  const [step, setStep] = useState<OnboardingStep>("categories");
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [selectedSubcategories, setSelectedSubcategories] = useState<string[]>([]);
   const [selectedNeighborhoods, setSelectedNeighborhoods] = useState<string[]>([]);
+  const [showSubcategories, setShowSubcategories] = useState(false);
   const [portal, setPortal] = useState<Portal | null>(null);
-  const [interactions, setInteractions] = useState<OnboardingInteraction[]>([]);
 
   // Redirect if not logged in
   useEffect(() => {
@@ -70,116 +62,87 @@ function OnboardingContent() {
     loadPortal();
   }, [portalSlug, supabase]);
 
-  // Track interaction
-  const trackInteraction = useCallback((step: string, action: OnboardingAction, eventId?: number) => {
-    setInteractions((prev) => [
-      ...prev,
-      { step, action, event_id: eventId },
-    ]);
-  }, []);
-
   // Step handlers
-  const handleSplashComplete = useCallback(() => {
-    setStep("mood");
+  const handleCategoryComplete = useCallback(
+    (categories: string[], hasSubcategories: boolean) => {
+      setSelectedCategories(categories);
+      setShowSubcategories(hasSubcategories);
+
+      if (hasSubcategories && categories.length > 0) {
+        setStep("subcategories");
+      } else {
+        setStep("neighborhoods");
+      }
+    },
+    []
+  );
+
+  const handleCategorySkip = useCallback(() => {
+    setShowSubcategories(false);
+    setStep("neighborhoods");
   }, []);
 
-  const handleMoodSelect = useCallback(
-    (selectedMood: OnboardingMood) => {
-      setMood(selectedMood);
-      trackInteraction("mood", "select");
-      setStep("swipe");
-    },
-    [trackInteraction]
-  );
+  const handleSubcategoryComplete = useCallback((subcategories: string[]) => {
+    setSelectedSubcategories(subcategories);
+    setStep("neighborhoods");
+  }, []);
 
-  const handleMoodSkip = useCallback(() => {
-    trackInteraction("mood", "skip");
-    setStep("swipe");
-  }, [trackInteraction]);
-
-  const handleSwipeComplete = useCallback(
-    (events: OnboardingSwipeEvent[]) => {
-      setLikedEvents(events);
-      // Track likes
-      events.forEach((event) => {
-        trackInteraction("swipe", "like", event.id);
-      });
-      setStep("neighborhood");
-    },
-    [trackInteraction]
-  );
-
-  const handleSwipeSkip = useCallback(() => {
-    trackInteraction("swipe", "skip");
-    setStep("neighborhood");
-  }, [trackInteraction]);
+  const handleSubcategorySkip = useCallback(() => {
+    setStep("neighborhoods");
+  }, []);
 
   const handleNeighborhoodComplete = useCallback(
-    (neighborhoods: string[]) => {
+    async (neighborhoods: string[]) => {
       setSelectedNeighborhoods(neighborhoods);
-      neighborhoods.forEach(() => {
-        trackInteraction("neighborhood", "select");
-      });
-      setStep("preview");
+      await completeOnboarding(neighborhoods);
     },
-    [trackInteraction]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [selectedCategories, selectedSubcategories]
   );
 
-  const handleNeighborhoodSkip = useCallback(() => {
-    trackInteraction("neighborhood", "skip");
-    setStep("preview");
-  }, [trackInteraction]);
+  const handleNeighborhoodSkip = useCallback(async () => {
+    await completeOnboarding([]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedCategories, selectedSubcategories]);
 
-  const handleFinalComplete = useCallback(
-    async (followedProducerIds: number[]) => {
-      if (!user) return;
+  // Complete onboarding and save preferences
+  const completeOnboarding = async (neighborhoods: string[]) => {
+    if (!user) return;
 
-      // Track producer follows
-      followedProducerIds.forEach(() => {
-        trackInteraction("producer", "follow");
+    try {
+      await fetch("/api/onboarding/complete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          selectedCategories,
+          selectedSubcategories,
+          selectedNeighborhoods: neighborhoods,
+        }),
       });
+    } catch (err) {
+      console.error("Failed to save onboarding data:", err);
+      // Continue anyway - don't block the user
+    }
 
-      try {
-        // Save all onboarding data via API
-        await fetch("/api/onboarding/complete", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            mood,
-            likedEventIds: likedEvents.map((e) => e.id),
-            selectedNeighborhoods,
-            followedProducerIds,
-            interactions,
-          }),
-        });
-      } catch (err) {
-        console.error("Failed to save onboarding data:", err);
-        // Continue anyway - don't block the user
-      }
-
-      // Navigate to feed
-      if (portalSlug) {
-        router.push(`/${portalSlug}`);
-      } else {
-        router.push("/foryou");
-      }
-    },
-    [user, mood, likedEvents, selectedNeighborhoods, interactions, portalSlug, router, trackInteraction]
-  );
+    // Navigate to feed
+    if (portalSlug) {
+      router.push(`/${portalSlug}`);
+    } else {
+      router.push("/atlanta");
+    }
+  };
 
   // Handle exit (X button)
   const handleExit = useCallback(() => {
-    // Save partial progress if we have any
-    if (user && (mood || likedEvents.length > 0)) {
+    // Save partial progress if we have any selections
+    if (user && (selectedCategories.length > 0 || selectedNeighborhoods.length > 0)) {
       fetch("/api/onboarding/complete", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          mood,
-          likedEventIds: likedEvents.map((e) => e.id),
-          selectedNeighborhoods: [],
-          followedProducerIds: [],
-          interactions,
+          selectedCategories,
+          selectedSubcategories,
+          selectedNeighborhoods,
         }),
       }).catch(console.error);
     }
@@ -188,9 +151,9 @@ function OnboardingContent() {
     if (portalSlug) {
       router.push(`/${portalSlug}`);
     } else {
-      router.push("/");
+      router.push("/atlanta");
     }
-  }, [user, mood, likedEvents, interactions, portalSlug, router]);
+  }, [user, selectedCategories, selectedSubcategories, selectedNeighborhoods, portalSlug, router]);
 
   // Loading state
   if (authLoading || !user) {
@@ -198,17 +161,6 @@ function OnboardingContent() {
       <div className="min-h-screen flex items-center justify-center bg-[var(--void)]">
         <div className="w-8 h-8 border-2 border-[var(--coral)] border-t-transparent rounded-full animate-spin" />
       </div>
-    );
-  }
-
-  // Splash screen (full screen, no header)
-  if (step === "splash") {
-    return (
-      <WelcomeSplash
-        onComplete={handleSplashComplete}
-        portalLogo={portal?.branding?.logo_url}
-        portalName={portal?.name}
-      />
     );
   }
 
@@ -246,36 +198,29 @@ function OnboardingContent() {
       </header>
 
       {/* Progress bar */}
-      <OnboardingProgress currentStep={step} />
+      <OnboardingProgress currentStep={step} showSubcategories={showSubcategories} />
 
       {/* Main content */}
       <main className="flex-1">
-        {step === "mood" && (
-          <MoodPicker onSelect={handleMoodSelect} onSkip={handleMoodSkip} />
-        )}
-
-        {step === "swipe" && (
-          <SwipeDiscovery
-            mood={mood}
-            portalId={portal?.id || null}
-            onComplete={handleSwipeComplete}
-            onSkip={handleSwipeSkip}
+        {step === "categories" && (
+          <CategoryPicker
+            onComplete={handleCategoryComplete}
+            onSkip={handleCategorySkip}
           />
         )}
 
-        {step === "neighborhood" && (
-          <NeighborhoodMap
-            likedEvents={likedEvents}
+        {step === "subcategories" && (
+          <SubcategoryPicker
+            selectedCategories={selectedCategories}
+            onComplete={handleSubcategoryComplete}
+            onSkip={handleSubcategorySkip}
+          />
+        )}
+
+        {step === "neighborhoods" && (
+          <NeighborhoodPicker
             onComplete={handleNeighborhoodComplete}
             onSkip={handleNeighborhoodSkip}
-          />
-        )}
-
-        {step === "preview" && (
-          <FeedPreview
-            likedEvents={likedEvents}
-            onComplete={handleFinalComplete}
-            portalSlug={portalSlug}
           />
         )}
       </main>

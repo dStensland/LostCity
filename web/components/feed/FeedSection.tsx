@@ -285,7 +285,7 @@ function HeroBanner({ section, portalSlug, hideImages }: { section: FeedSectionD
   return (
     <section className="mb-10">
       <Link
-        href={`/${portalSlug}/events/${event.id}`}
+        href={`/${portalSlug}?event=${event.id}`}
         className="block relative rounded-2xl overflow-hidden group hero-featured coral-glow-hover"
         aria-label={`Featured event: ${event.title}`}
       >
@@ -551,7 +551,7 @@ function EventCard({ event, isCarousel, hideImages, portalSlug }: { event: FeedE
 
   return (
     <Link
-      href={portalSlug ? `/${portalSlug}/events/${event.id}` : `/events/${event.id}`}
+      href={portalSlug ? `/${portalSlug}?event=${event.id}` : `/events/${event.id}`}
       className={`group flex flex-col rounded-xl overflow-hidden border transition-all hover:border-[var(--coral)]/30 coral-glow-hover ${
         isCarousel ? "flex-shrink-0 w-72 snap-start" : ""
       } ${isPopular ? "border-[var(--coral)]/20 coral-glow" : "border-[var(--twilight)]"}`}
@@ -739,7 +739,7 @@ function EventListItem({ event, isAlternate, showDate = true, portalSlug }: { ev
 
   return (
     <Link
-      href={portalSlug ? `/${portalSlug}/events/${event.id}` : `/events/${event.id}`}
+      href={portalSlug ? `/${portalSlug}?event=${event.id}` : `/events/${event.id}`}
       className={`flex items-center gap-3 px-3 py-3 rounded-lg border transition-all group card-atmospheric ${reflectionClass} ${hierarchyClass} hover:border-[var(--coral)]/30 ${
         isPopular || isTrending
           ? "border-[var(--coral)]/20"
@@ -1039,7 +1039,7 @@ function VenueList({ section, portalSlug }: { section: FeedSectionData; portalSl
                             {group.events.map((event) => (
                               <Link
                                 key={event.id}
-                                href={`/${portalSlug}/events/${event.id}`}
+                                href={`/${portalSlug}?event=${event.id}`}
                                 className="font-mono text-xs px-2 py-0.5 rounded bg-[var(--twilight)]/40 text-[var(--muted)] hover:bg-[var(--twilight)] hover:text-[var(--cream)] transition-colors"
                               >
                                 {formatTime(event.start_time)}

@@ -6,6 +6,7 @@ import FeedShell from "@/components/feed/FeedShell";
 import CuratedContent from "@/components/feed/CuratedContent";
 import FindView from "@/components/find/FindView";
 import CommunityView from "@/components/community/CommunityView";
+import DetailViewRouter from "@/components/views/DetailViewRouter";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 
@@ -33,6 +34,11 @@ type Props = {
     type?: string;
     display?: string;
     mood?: string;
+    // Detail view params
+    event?: string;
+    spot?: string;
+    series?: string;
+    org?: string;
   }>;
 };
 
@@ -121,44 +127,59 @@ export default async function PortalPage({ params, searchParams }: Props) {
       )}
 
       <main className={findDisplay === "map" && viewMode === "find" ? "" : "max-w-3xl mx-auto px-4 pb-16"}>
-        {viewMode === "feed" && (
-          <FeedShell
-            portalId={portal.id}
-            portalSlug={portal.slug}
-            activeTab={feedTab}
-            curatedContent={<CuratedContent portalSlug={portal.slug} />}
-          />
-        )}
+        <Suspense fallback={<DetailViewSkeleton />}>
+          <DetailViewRouter portalSlug={portal.slug}>
+            {viewMode === "feed" && (
+              <FeedShell
+                portalId={portal.id}
+                portalSlug={portal.slug}
+                activeTab={feedTab}
+                curatedContent={<CuratedContent portalSlug={portal.slug} />}
+              />
+            )}
 
-        {viewMode === "find" && (
-          <Suspense fallback={<FindViewSkeleton />}>
-            <FindView
-              portalId={portal.id}
-              portalSlug={portal.slug}
-              portalExclusive={portal.portal_type === "business"}
-              findType={findType}
-              displayMode={findDisplay}
-              hasActiveFilters={hasActiveFilters}
-            />
-          </Suspense>
-        )}
+            {viewMode === "find" && (
+              <Suspense fallback={<FindViewSkeleton />}>
+                <FindView
+                  portalId={portal.id}
+                  portalSlug={portal.slug}
+                  portalExclusive={portal.portal_type === "business"}
+                  findType={findType}
+                  displayMode={findDisplay}
+                  hasActiveFilters={hasActiveFilters}
+                />
+              </Suspense>
+            )}
 
-        {viewMode === "community" && (
-          <Suspense fallback={<CommunityViewSkeleton />}>
-            <CommunityView
-              portalId={portal.id}
-              portalSlug={portal.slug}
-              portalName={portal.name}
-              activeTab={communityTab}
-            />
-          </Suspense>
-        )}
+            {viewMode === "community" && (
+              <Suspense fallback={<CommunityViewSkeleton />}>
+                <CommunityView
+                  portalId={portal.id}
+                  portalSlug={portal.slug}
+                  portalName={portal.name}
+                  activeTab={communityTab}
+                />
+              </Suspense>
+            )}
+          </DetailViewRouter>
+        </Suspense>
       </main>
     </div>
   );
 }
 
 // Loading skeletons
+function DetailViewSkeleton() {
+  return (
+    <div className="py-6 space-y-4">
+      <div className="h-6 w-16 skeleton-shimmer rounded" />
+      <div className="aspect-[2/1] skeleton-shimmer rounded-xl" />
+      <div className="h-24 skeleton-shimmer rounded-xl" />
+      <div className="h-48 skeleton-shimmer rounded-xl" />
+    </div>
+  );
+}
+
 function FindViewSkeleton() {
   return (
     <div className="py-6 space-y-4">

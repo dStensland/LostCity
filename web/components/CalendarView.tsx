@@ -340,7 +340,8 @@ export default function CalendarView({ portalId, portalSlug = DEFAULT_PORTAL_SLU
                     return (
                       <Link
                         key={event.id}
-                        href={`/${portalSlug}/events/${event.id}`}
+                        href={`/${portalSlug}?event=${event.id}`}
+                        scroll={false}
                         className={`block p-3 rounded-lg border border-[var(--twilight)] card-atmospheric ${reflectionClass} group`}
                         style={{
                           borderLeftWidth: categoryColor ? "3px" : undefined,

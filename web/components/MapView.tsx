@@ -315,7 +315,8 @@ const EventMarker = memo(function EventMarker({ event, portalSlug }: EventMarker
 
           {/* Title */}
           <Link
-            href={`/${portalSlug}/events/${event.id}`}
+            href={`/${portalSlug}?event=${event.id}`}
+            scroll={false}
             className="block font-medium text-sm text-[var(--cream)] hover:text-[var(--coral)] transition-colors line-clamp-2 mb-2"
           >
             {event.title}
@@ -357,7 +358,8 @@ const EventMarker = memo(function EventMarker({ event, portalSlug }: EventMarker
               </span>
             )}
             <Link
-              href={`/${portalSlug}/events/${event.id}`}
+              href={`/${portalSlug}?event=${event.id}`}
+              scroll={false}
               className="ml-auto text-[0.6rem] font-mono text-[var(--coral)] hover:underline"
             >
               View details →

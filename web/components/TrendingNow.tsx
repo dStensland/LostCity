@@ -79,7 +79,8 @@ function TrendingEventCard({ event, portalSlug }: { event: EventWithLocation; po
 
   return (
     <Link
-      href={portalSlug ? `/${portalSlug}/events/${event.id}` : `/events/${event.id}`}
+      href={portalSlug ? `/${portalSlug}?event=${event.id}` : `/events/${event.id}`}
+      scroll={false}
       className={`flex-shrink-0 w-72 p-3 bg-[var(--dusk)] rounded-lg transition-all group card-atmospheric card-trending ${reflectionClass}`}
       style={{
         "--glow-color": categoryColor || "var(--neon-magenta)",

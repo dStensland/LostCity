@@ -105,7 +105,8 @@ export default async function TonightsPicks({ portalSlug }: { portalSlug?: strin
 
         {/* Hero card */}
         <Link
-          href={portalSlug ? `/${portalSlug}/events/${heroEvent.id}` : `/events/${heroEvent.id}`}
+          href={portalSlug ? `/${portalSlug}?event=${heroEvent.id}` : `/events/${heroEvent.id}`}
+          scroll={false}
           className="block relative rounded-2xl overflow-hidden mb-4 group card-atmospheric card-hero"
           style={{
             "--glow-color": heroCategory,
@@ -194,7 +195,8 @@ export default async function TonightsPicks({ portalSlug }: { portalSlug?: strin
               return (
                 <Link
                   key={event.id}
-                  href={portalSlug ? `/${portalSlug}/events/${event.id}` : `/events/${event.id}`}
+                  href={portalSlug ? `/${portalSlug}?event=${event.id}` : `/events/${event.id}`}
+                  scroll={false}
                   className="block p-3 rounded-xl bg-[var(--dusk)]/80 border border-[var(--twilight)] hover:border-[var(--neon-magenta)]/40 transition-all group card-atmospheric"
                   style={{
                     "--glow-color": categoryColor || "var(--neon-magenta)",

@@ -27,7 +27,7 @@ export async function GET(request: Request) {
         id, username, display_name, avatar_url
       ),
       event:events(id, title),
-      venue:venues(id, name)
+      venue:venues(id, name, slug)
     `)
     .eq("user_id", user.id)
     .order("created_at", { ascending: false })

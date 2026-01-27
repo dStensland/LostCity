@@ -423,7 +423,8 @@ export default function PortalHappeningNowPage() {
                         return (
                           <Link
                             key={event.id}
-                            href={`/events/${event.id}`}
+                            href={portal?.slug ? `/${portal.slug}?event=${event.id}` : `/events/${event.id}`}
+                            scroll={false}
                             className="flex items-center gap-3 px-3 py-2 rounded-lg border border-[var(--twilight)] bg-[var(--dusk)]/30 hover:bg-[var(--dusk)]/60 transition-colors group"
                             style={{
                               borderLeftWidth: categoryColor ? "3px" : undefined,
@@ -488,7 +489,8 @@ export default function PortalHappeningNowPage() {
                         return (
                           <Link
                             key={spot.id}
-                            href={`/spots/${spot.slug}`}
+                            href={portal?.slug ? `/${portal.slug}?spot=${spot.slug}` : `/spots/${spot.slug}`}
+                            scroll={false}
                             className="p-3 rounded-lg border border-[var(--twilight)] bg-[var(--dusk)]/30 hover:bg-[var(--dusk)]/60 transition-colors group"
                           >
                             <div className="font-medium text-sm text-[var(--cream)] truncate group-hover:text-[var(--neon-cyan)] transition-colors">

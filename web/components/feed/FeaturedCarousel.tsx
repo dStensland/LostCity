@@ -181,11 +181,9 @@ function FeaturedCard({ event, portalSlug }: { event: FeaturedEvent; portalSlug:
 
   return (
     <Link
-      href={`/${portalSlug}/events/${event.id}`}
-      className="group flex-shrink-0 w-80 snap-start flex flex-col rounded-2xl overflow-hidden border border-[var(--gold)]/30 transition-all hover:border-[var(--gold)] bg-gradient-to-br from-[var(--night)] to-[var(--void)] relative"
-      style={{
-        boxShadow: "0 0 20px rgba(255, 215, 0, 0.1)",
-      }}
+      href={`/${portalSlug}?event=${event.id}`}
+      scroll={false}
+      className="group flex-shrink-0 w-80 snap-start flex flex-col rounded-2xl overflow-hidden border border-[var(--gold)]/20 transition-all hover:border-[var(--gold)]/50 bg-gradient-to-br from-[var(--night)] to-[var(--void)] relative"
     >
       {/* Featured badge - top left */}
       <div className="absolute top-3 left-3 z-10">

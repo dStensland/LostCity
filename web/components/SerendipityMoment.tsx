@@ -161,7 +161,8 @@ export default function SerendipityMoment({ type, event, portalSlug, onDismiss }
 
         {/* Event card */}
         <Link
-          href={portalSlug ? `/${portalSlug}/events/${event.id}` : `/events/${event.id}`}
+          href={portalSlug ? `/${portalSlug}?event=${event.id}` : `/events/${event.id}`}
+          scroll={false}
           className="block mx-3 mb-3 p-3 rounded-xl bg-[var(--card-bg)] border border-[var(--twilight)] hover:border-[var(--neon-magenta)]/30 transition-all group card-atmospheric"
           style={{
             "--glow-color": categoryColor,

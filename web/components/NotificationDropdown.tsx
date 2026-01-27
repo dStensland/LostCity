@@ -32,6 +32,7 @@ type Notification = {
   venue: {
     id: number;
     name: string;
+    slug: string;
   } | null;
 };
 
@@ -318,10 +319,10 @@ function NotificationItem({
       return `/profile/${notification.actor.username}`;
     }
     if (notification.event) {
-      return portal?.slug ? `/${portal.slug}/events/${notification.event.id}` : `/events/${notification.event.id}`;
+      return portal?.slug ? `/${portal.slug}?event=${notification.event.id}` : `/events/${notification.event.id}`;
     }
     if (notification.venue) {
-      return `/spots/${notification.venue.id}`;
+      return portal?.slug ? `/${portal.slug}?spot=${notification.venue.slug}` : `/spots/${notification.venue.slug}`;
     }
     return "#";
   };
@@ -329,6 +330,7 @@ function NotificationItem({
   return (
     <Link
       href={getNotificationLink()}
+      scroll={false}
       onClick={onClick}
       className={`block p-3 hover:bg-[var(--twilight)] transition-colors ${
         isUnread ? "bg-[var(--night)]/50" : ""

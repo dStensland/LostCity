@@ -26,7 +26,7 @@ export default function FestivalCard({
 }: Props) {
   const typeColor = getSeriesTypeColor(series.series_type);
   const typeLabel = getSeriesTypeLabel(series.series_type);
-  const seriesUrl = portalSlug ? `/${portalSlug}/series/${series.slug}` : `/series/${series.slug}`;
+  const seriesUrl = portalSlug ? `/${portalSlug}?series=${series.slug}` : `/series/${series.slug}`;
 
   // Format date range
   const startDate = parseISO(summary.startDate);
@@ -96,6 +96,7 @@ export default function FestivalCard({
             </div>
             <Link
               href={seriesUrl}
+              scroll={false}
               className="font-medium text-[var(--cream)] hover:text-[var(--coral)] transition-colors line-clamp-2 block"
             >
               {series.title}
@@ -147,7 +148,8 @@ export default function FestivalCard({
             {summary.venues.slice(0, 3).map((venue) => (
               <Link
                 key={venue.id}
-                href={portalSlug ? `/${portalSlug}/spots/${venue.slug}` : `/spots/${venue.slug}`}
+                href={portalSlug ? `/${portalSlug}?spot=${venue.slug}` : `/spots/${venue.slug}`}
+                scroll={false}
                 className="text-[0.65rem] px-1.5 py-0.5 rounded bg-[var(--twilight)]/30 text-[var(--soft)] hover:bg-[var(--twilight)]/50 hover:text-[var(--cream)] transition-colors"
               >
                 {venue.name}
@@ -165,6 +167,7 @@ export default function FestivalCard({
       {/* Footer link */}
       <Link
         href={seriesUrl}
+        scroll={false}
         className="flex items-center justify-end gap-1 px-3 py-2 border-t border-[var(--twilight)]/30 text-xs text-[var(--muted)] hover:text-[var(--coral)] hover:bg-[var(--twilight)]/20 transition-colors"
       >
         View Schedule

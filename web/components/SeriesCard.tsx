@@ -38,7 +38,7 @@ export default function SeriesCard({
 }: Props) {
   const typeColor = getSeriesTypeColor(series.series_type);
   const typeLabel = getSeriesTypeLabel(series.series_type);
-  const seriesUrl = portalSlug ? `/${portalSlug}/series/${series.slug}` : `/series/${series.slug}`;
+  const seriesUrl = portalSlug ? `/${portalSlug}?series=${series.slug}` : `/series/${series.slug}`;
 
   // Get total showtime count
   const totalShowtimes = venueGroups.reduce((sum, vg) => sum + vg.showtimes.length, 0);
@@ -99,6 +99,7 @@ export default function SeriesCard({
             </div>
             <Link
               href={seriesUrl}
+              scroll={false}
               className="font-medium text-[var(--cream)] hover:text-[var(--coral)] transition-colors line-clamp-2 block"
             >
               {series.title}
@@ -116,7 +117,8 @@ export default function SeriesCard({
           {venueGroups.map((vg) => (
             <div key={vg.venue.id} className="flex items-baseline gap-2">
               <Link
-                href={portalSlug ? `/${portalSlug}/spots/${vg.venue.slug}` : `/spots/${vg.venue.slug}`}
+                href={portalSlug ? `/${portalSlug}?spot=${vg.venue.slug}` : `/spots/${vg.venue.slug}`}
+                scroll={false}
                 className="text-sm text-[var(--soft)] hover:text-[var(--cream)] transition-colors flex-shrink-0"
               >
                 {vg.venue.name}:
@@ -125,7 +127,8 @@ export default function SeriesCard({
                 {vg.showtimes.map((st) => (
                   <Link
                     key={st.id}
-                    href={portalSlug ? `/${portalSlug}/events/${st.id}` : `/events/${st.id}`}
+                    href={portalSlug ? `/${portalSlug}?event=${st.id}` : `/events/${st.id}`}
+                    scroll={false}
                     className="font-mono text-xs px-1.5 py-0.5 rounded bg-[var(--twilight)]/40 text-[var(--muted)] hover:bg-[var(--twilight)] hover:text-[var(--cream)] transition-colors"
                   >
                     {formatTime(st.time)}
@@ -140,6 +143,7 @@ export default function SeriesCard({
       {/* Footer link */}
       <Link
         href={seriesUrl}
+        scroll={false}
         className="flex items-center justify-end gap-1 px-3 py-2 border-t border-[var(--twilight)]/30 text-xs text-[var(--muted)] hover:text-[var(--coral)] hover:bg-[var(--twilight)]/20 transition-colors"
       >
         All Showtimes

@@ -64,7 +64,8 @@ function ProducerCard({
 
   return (
     <Link
-      href={`/${portalSlug}/community/${producer.slug}`}
+      href={`/${portalSlug}?org=${producer.slug}`}
+      scroll={false}
       className="block p-5 rounded-xl border border-[var(--twilight)] card-atmospheric group"
       style={{
         backgroundColor: "var(--card-bg)",
