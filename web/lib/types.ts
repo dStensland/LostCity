@@ -179,6 +179,18 @@ export type Database = {
           followed_producer_id?: string | null;
         };
       };
+      username_reservations: {
+        Row: {
+          id: string;
+          username: string;
+          expires_at: string;
+          created_at: string;
+        };
+        Insert: {
+          username: string;
+          expires_at: string;
+        };
+      };
       user_blocks: {
         Row: {
           id: string;

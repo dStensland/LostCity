@@ -1,9 +1,7 @@
-import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import GlassHeader from "@/components/GlassHeader";
-import MainNav from "@/components/MainNav";
+import UnifiedHeader from "@/components/UnifiedHeader";
 import PageFooter from "@/components/PageFooter";
 import {
   getSeriesBySlug,
@@ -80,11 +78,7 @@ export default async function SeriesPage({ params }: Props) {
 
   return (
     <div className="min-h-screen">
-      <GlassHeader />
-
-      <Suspense fallback={<div className="h-10 bg-[var(--night)]" />}>
-        <MainNav />
-      </Suspense>
+      <UnifiedHeader />
 
       {/* Hero Section */}
       <section className="relative">

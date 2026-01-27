@@ -34,6 +34,7 @@ type ActivityItem = {
   venue?: {
     id: number;
     name: string;
+    slug: string | null;
     neighborhood: string | null;
   } | null;
   target_user?: {
@@ -455,11 +456,11 @@ function ActivityCard({ activity }: { activity: ActivityItem }) {
               {activity.target_user.display_name || `@${activity.target_user.username}`}
             </Link>
           </>
-        ) : activity.venue ? (
+        ) : activity.venue?.slug ? (
           <>
             started following{" "}
             <Link
-              href={`/spots/${activity.venue.id}`}
+              href={`/spots/${activity.venue.slug}`}
               className="font-medium text-[var(--cream)] hover:text-[var(--coral)]"
             >
               {activity.venue.name}
@@ -480,11 +481,11 @@ function ActivityCard({ activity }: { activity: ActivityItem }) {
               {activity.event.title}
             </Link>
           </>
-        ) : activity.venue ? (
+        ) : activity.venue?.slug ? (
           <>
             recommended{" "}
             <Link
-              href={`/spots/${activity.venue.id}`}
+              href={`/spots/${activity.venue.slug}`}
               className="font-medium text-[var(--cream)] hover:text-[var(--coral)]"
             >
               {activity.venue.name}

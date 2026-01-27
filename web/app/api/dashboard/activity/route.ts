@@ -49,7 +49,7 @@ export async function GET(request: Request) {
         id, title, start_date, start_time,
         venue:venues(name)
       ),
-      venue:venues(id, name, neighborhood),
+      venue:venues(id, name, slug, neighborhood),
       target_user:profiles!activities_target_user_id_fkey(
         id, username, display_name
       )
@@ -85,6 +85,7 @@ export async function GET(request: Request) {
     venue: {
       id: number;
       name: string;
+      slug: string | null;
       neighborhood: string | null;
     } | null;
     target_user: {
