@@ -187,7 +187,15 @@ export async function addTagToVenue(
   tagId: string,
   userId: string
 ): Promise<{ success: boolean; error?: string }> {
-  const { error } = await (supabase as UntypedTable)
+  // Use service client to bypass RLS - auth is validated in API route
+  let serviceClient;
+  try {
+    serviceClient = createServiceClient();
+  } catch {
+    return { success: false, error: "Service unavailable" };
+  }
+
+  const { error } = await (serviceClient as UntypedTable)
     .from("venue_tags")
     .insert({ venue_id: venueId, tag_id: tagId, added_by: userId });
 
@@ -211,7 +219,15 @@ export async function removeTagFromVenue(
   tagId: string,
   userId: string
 ): Promise<{ success: boolean; error?: string }> {
-  const { error } = await (supabase as UntypedTable)
+  // Use service client to bypass RLS - auth is validated in API route
+  let serviceClient;
+  try {
+    serviceClient = createServiceClient();
+  } catch {
+    return { success: false, error: "Service unavailable" };
+  }
+
+  const { error } = await (serviceClient as UntypedTable)
     .from("venue_tags")
     .delete()
     .eq("venue_id", venueId)
@@ -235,8 +251,16 @@ export async function voteOnTag(
   userId: string,
   voteType: "up" | "down" | null
 ): Promise<{ success: boolean; error?: string }> {
+  // Use service client to bypass RLS - auth is validated in API route
+  let serviceClient;
+  try {
+    serviceClient = createServiceClient();
+  } catch {
+    return { success: false, error: "Service unavailable" };
+  }
+
   // First, find the venue_tag record
-  const { data: venueTags } = await (supabase as UntypedTable)
+  const { data: venueTags } = await (serviceClient as UntypedTable)
     .from("venue_tags")
     .select("id")
     .eq("venue_id", venueId)
@@ -254,7 +278,7 @@ export async function voteOnTag(
 
   if (voteType === null) {
     // Remove vote
-    const { error } = await (supabase as UntypedTable)
+    const { error } = await (serviceClient as UntypedTable)
       .from("venue_tag_votes")
       .delete()
       .eq("venue_tag_id", venueTagId)
@@ -266,7 +290,7 @@ export async function voteOnTag(
     }
   } else {
     // Upsert vote
-    const { error } = await (supabase as UntypedTable)
+    const { error } = await (serviceClient as UntypedTable)
       .from("venue_tag_votes")
       .upsert(
         { venue_tag_id: venueTagId, user_id: userId, vote_type: voteType },
@@ -291,7 +315,15 @@ export async function suggestTag(
   category: VenueTagCategory,
   userId: string
 ): Promise<{ success: boolean; suggestionId?: string; error?: string }> {
-  const { data, error } = await (supabase as UntypedTable)
+  // Use service client to bypass RLS - auth is validated in API route
+  let serviceClient;
+  try {
+    serviceClient = createServiceClient();
+  } catch {
+    return { success: false, error: "Service unavailable" };
+  }
+
+  const { data, error } = await (serviceClient as UntypedTable)
     .from("venue_tag_suggestions")
     .insert({
       venue_id: venueId,
