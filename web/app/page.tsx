@@ -40,7 +40,7 @@ export default async function Home() {
 
         <Logo size="lg" href={undefined} />
         <p className="font-serif text-[var(--muted)] mt-4 mb-8 text-lg text-center max-w-md">
-          what's going on out there?
+          what&apos;s going on out there?
         </p>
         <Link
           href={`/${DEFAULT_PORTAL_SLUG}`}

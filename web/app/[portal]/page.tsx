@@ -122,14 +122,12 @@ export default async function PortalPage({ params, searchParams }: Props) {
 
       <main className={findDisplay === "map" && viewMode === "find" ? "" : "max-w-3xl mx-auto px-4 pb-16"}>
         {viewMode === "feed" && (
-          <Suspense fallback={<FeedShellSkeleton />}>
-            <FeedShell
-              portalId={portal.id}
-              portalSlug={portal.slug}
-              activeTab={feedTab}
-              curatedContent={<CuratedContent portalSlug={portal.slug} />}
-            />
-          </Suspense>
+          <FeedShell
+            portalId={portal.id}
+            portalSlug={portal.slug}
+            activeTab={feedTab}
+            curatedContent={<CuratedContent portalSlug={portal.slug} />}
+          />
         )}
 
         {viewMode === "find" && (
@@ -161,26 +159,6 @@ export default async function PortalPage({ params, searchParams }: Props) {
 }
 
 // Loading skeletons
-function FeedShellSkeleton() {
-  return (
-    <div className="py-6 space-y-6">
-      {/* Sub-nav skeleton */}
-      <div className="flex gap-1 p-1 bg-[var(--night)] rounded-lg">
-        {[1, 2, 3].map((i) => (
-          <div key={i} className="flex-1 h-9 skeleton-shimmer rounded-md" />
-        ))}
-      </div>
-      {/* Content skeleton */}
-      <div className="rounded-2xl h-56 skeleton-shimmer" />
-      <div className="space-y-3">
-        {[1, 2, 3].map((i) => (
-          <div key={i} className="h-20 skeleton-shimmer rounded-xl" />
-        ))}
-      </div>
-    </div>
-  );
-}
-
 function FindViewSkeleton() {
   return (
     <div className="py-6 space-y-4">
