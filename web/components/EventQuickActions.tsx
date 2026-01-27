@@ -51,7 +51,7 @@ export default function EventQuickActions({ event, isLive, className = "" }: Eve
 
   return (
     <div
-      className={`rounded-xl border border-[var(--twilight)] overflow-hidden ${className}`}
+      className={`rounded-xl border border-[var(--twilight)] ${className}`}
       style={{ backgroundColor: "var(--card-bg)" }}
     >
       {/* Summary row: Price | Date | Time */}

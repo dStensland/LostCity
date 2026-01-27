@@ -171,23 +171,20 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
   if (loading) {
     return (
       <div className="animate-fadeIn">
-        {/* Back button */}
-        <button
-          onClick={onClose}
-          className="flex items-center gap-2 text-[var(--muted)] hover:text-[var(--cream)] transition-colors mb-4 font-mono text-sm"
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-          Back
-        </button>
-
-        {/* Loading skeleton */}
-        <div className="space-y-4">
-          <div className="aspect-[2/1] skeleton-shimmer rounded-xl" />
-          <div className="h-24 skeleton-shimmer rounded-xl" />
-          <div className="h-48 skeleton-shimmer rounded-xl" />
+        {/* Loading skeleton with back button integrated */}
+        <div className="relative aspect-[2/1] skeleton-shimmer rounded-xl mb-4">
+          <button
+            onClick={onClose}
+            className="absolute top-3 left-3 flex items-center gap-1.5 px-3 py-1.5 bg-[var(--twilight)] text-[var(--muted)] hover:text-[var(--cream)] hover:bg-[var(--dusk)] rounded-full font-mono text-xs transition-all z-10"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            Back
+          </button>
         </div>
+        <div className="h-24 skeleton-shimmer rounded-xl mb-4" />
+        <div className="h-48 skeleton-shimmer rounded-xl" />
       </div>
     );
   }
@@ -195,17 +192,16 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
   if (error || !event) {
     return (
       <div className="animate-fadeIn">
-        <button
-          onClick={onClose}
-          className="flex items-center gap-2 text-[var(--muted)] hover:text-[var(--cream)] transition-colors mb-4 font-mono text-sm"
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-          Back
-        </button>
-
-        <div className="text-center py-12">
+        <div className="relative aspect-[2/1] bg-[var(--dusk)] rounded-xl mb-4 flex items-center justify-center">
+          <button
+            onClick={onClose}
+            className="absolute top-3 left-3 flex items-center gap-1.5 px-3 py-1.5 bg-[var(--twilight)] text-[var(--muted)] hover:text-[var(--cream)] hover:bg-[var(--night)] rounded-full font-mono text-xs transition-all z-10"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            Back
+          </button>
           <p className="text-[var(--muted)]">{error || "Event not found"}</p>
         </div>
       </div>
@@ -218,18 +214,7 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
 
   return (
     <div className="animate-fadeIn pb-8">
-      {/* Back button */}
-      <button
-        onClick={onClose}
-        className="flex items-center gap-2 text-[var(--muted)] hover:text-[var(--cream)] transition-colors mb-4 font-mono text-sm"
-      >
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-        </svg>
-        Back
-      </button>
-
-      {/* Hero Image */}
+      {/* Hero Image with integrated back button */}
       <div
         className={`relative aspect-[2/1] bg-[var(--night)] rounded-xl overflow-hidden mb-4 ${
           isLive ? "ring-2 ring-[var(--coral)] ring-opacity-50" : ""
@@ -256,9 +241,20 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
           <CategoryPlaceholder category={event.category || "other"} size="lg" />
         )}
 
+        {/* Back button - floating in top left */}
+        <button
+          onClick={onClose}
+          className="absolute top-3 left-3 flex items-center gap-1.5 px-3 py-1.5 bg-black/50 backdrop-blur-sm text-white/90 hover:text-white hover:bg-black/70 rounded-full font-mono text-xs transition-all z-10"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+          Back
+        </button>
+
         {/* Live badge */}
         {isLive && (
-          <div className="absolute top-3 left-3 flex items-center gap-2 px-3 py-1.5 bg-[var(--coral)] text-[var(--void)] rounded-full font-mono text-xs font-medium">
+          <div className="absolute top-3 left-20 flex items-center gap-2 px-3 py-1.5 bg-[var(--coral)] text-[var(--void)] rounded-full font-mono text-xs font-medium">
             <span className="w-2 h-2 bg-[var(--void)] rounded-full animate-pulse" />
             LIVE NOW
           </div>
@@ -434,65 +430,6 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
                 </div>
               </div>
               <FollowButton targetProducerId={event.producer.id} size="sm" />
-            </div>
-          </div>
-        )}
-
-        {/* Tags */}
-        {event.tags && event.tags.length > 0 && (
-          <div className="pt-5 border-t border-[var(--twilight)]">
-            <h2 className="font-mono text-[0.65rem] font-medium text-[var(--muted)] uppercase tracking-widest mb-3">
-              Also Featuring
-            </h2>
-            <div className="flex flex-wrap gap-2">
-              {event.tags.map((tag) => {
-                // Seasonal/special tags get accent colors
-                const isValentines = tag.toLowerCase().includes("valentine") || tag.toLowerCase().includes("love");
-                const isHoliday = tag.toLowerCase().includes("holiday") || tag.toLowerCase().includes("christmas") || tag.toLowerCase().includes("new year");
-                const isSummer = tag.toLowerCase().includes("summer") || tag.toLowerCase().includes("beach") || tag.toLowerCase().includes("outdoor");
-                const isSpooky = tag.toLowerCase().includes("halloween") || tag.toLowerCase().includes("spooky") || tag.toLowerCase().includes("horror");
-                const isPride = tag.toLowerCase().includes("pride") || tag.toLowerCase().includes("lgbtq");
-
-                let tagColor = "var(--soft)";
-                let tagBg = "var(--void)";
-                let tagBorder = "var(--twilight)";
-
-                if (isValentines) {
-                  tagColor = "var(--rose)";
-                  tagBg = "rgba(255, 107, 122, 0.1)";
-                  tagBorder = "rgba(255, 107, 122, 0.3)";
-                } else if (isHoliday) {
-                  tagColor = "var(--neon-green)";
-                  tagBg = "rgba(34, 197, 94, 0.1)";
-                  tagBorder = "rgba(34, 197, 94, 0.3)";
-                } else if (isSummer) {
-                  tagColor = "var(--neon-amber)";
-                  tagBg = "rgba(245, 158, 11, 0.1)";
-                  tagBorder = "rgba(245, 158, 11, 0.3)";
-                } else if (isSpooky) {
-                  tagColor = "var(--neon-purple)";
-                  tagBg = "rgba(168, 85, 247, 0.1)";
-                  tagBorder = "rgba(168, 85, 247, 0.3)";
-                } else if (isPride) {
-                  tagColor = "var(--neon-magenta)";
-                  tagBg = "rgba(236, 72, 153, 0.1)";
-                  tagBorder = "rgba(236, 72, 153, 0.3)";
-                }
-
-                return (
-                  <span
-                    key={tag}
-                    className="px-3 py-1.5 rounded-full text-xs font-mono"
-                    style={{
-                      color: tagColor,
-                      backgroundColor: tagBg,
-                      border: `1px solid ${tagBorder}`,
-                    }}
-                  >
-                    {tag}
-                  </span>
-                );
-              })}
             </div>
           </div>
         )}

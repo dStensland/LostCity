@@ -126,23 +126,8 @@ export default function WhosGoing({ eventId, className = "" }: WhosGoingProps) {
     };
   }, [user, eventId, supabase]);
 
-  if (loading) {
-    return (
-      <div className={`${className}`}>
-        <h2 className="font-mono text-[0.65rem] font-medium text-[var(--muted)] uppercase tracking-widest mb-4">
-          Who&apos;s in
-        </h2>
-        <div className="animate-pulse flex gap-2">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="w-10 h-10 rounded-full bg-[var(--twilight)]" />
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  // Hide completely when no attendees
-  if (attendees.length === 0) {
+  // Hide while loading or when no attendees
+  if (loading || attendees.length === 0) {
     return null;
   }
 
