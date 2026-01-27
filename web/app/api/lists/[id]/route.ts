@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 // Type helper for tables not yet in generated types
@@ -150,7 +151,15 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     if (body.is_public !== undefined) updates.is_public = body.is_public;
     if (body.status !== undefined) updates.status = body.status;
 
-    const { data: list, error } = await supabase
+    // Use service client to bypass RLS - auth already validated above
+    let serviceClient: AnySupabase;
+    try {
+      serviceClient = createServiceClient() as AnySupabase;
+    } catch {
+      return NextResponse.json({ error: "Service unavailable" }, { status: 500 });
+    }
+
+    const { data: list, error } = await serviceClient
       .from("lists")
       .update(updates)
       .eq("id", id)
@@ -195,8 +204,16 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
       return NextResponse.json({ error: "Not authorized to delete this list" }, { status: 403 });
     }
 
+    // Use service client to bypass RLS - auth already validated above
+    let serviceClient: AnySupabase;
+    try {
+      serviceClient = createServiceClient() as AnySupabase;
+    } catch {
+      return NextResponse.json({ error: "Service unavailable" }, { status: 500 });
+    }
+
     // Soft delete
-    const { error } = await supabase
+    const { error } = await serviceClient
       .from("lists")
       .update({ status: "deleted" })
       .eq("id", id);
