@@ -46,6 +46,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [error, setError] = useState<Error | null>(null);
   const isMountedRef = useRef(true);
   const profileFetchRef = useRef<string | null>(null);
+  const initializedRef = useRef(false);
 
   const supabase = createClient();
 
@@ -89,38 +90,50 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     isMountedRef.current = true;
     let isCurrentEffect = true;
 
+    // Skip if already initialized (prevents re-init on hot reload)
+    if (initializedRef.current) {
+      return;
+    }
+    initializedRef.current = true;
+
     const initAuth = async () => {
       try {
-        // Use getUser() which validates the session with the server
-        // This is more reliable than getSession() which only checks local storage
-        const { data: { user: authUser }, error: userError } = await supabase.auth.getUser();
+        // FAST PATH: Check local session first (instant, from localStorage)
+        // This lets UI render immediately with cached auth state
+        const { data: { session: cachedSession } } = await supabase.auth.getSession();
 
         if (!isMountedRef.current || !isCurrentEffect) return;
 
-        if (userError) {
-          // PGRST116 or similar "not authenticated" errors are expected
-          // Just means no valid session exists
-          if (userError.message?.includes("Auth session missing")) {
-            setLoading(false);
-            return;
-          }
-          console.error("Error getting user:", userError);
-        }
+        if (cachedSession?.user) {
+          // Immediately set user from cache - UI can render now
+          setUser(cachedSession.user);
+          setSession(cachedSession);
+          setLoading(false);
 
-        if (authUser) {
-          setUser(authUser);
+          // Fetch profile in parallel (don't block)
+          fetchProfile(cachedSession.user.id).then((userProfile) => {
+            if (isMountedRef.current) {
+              setProfile(userProfile);
+            }
+          });
 
-          // Get session for completeness (already validated by getUser)
-          const { data: { session: authSession } } = await supabase.auth.getSession();
-          if (isMountedRef.current) {
-            setSession(authSession);
-          }
+          // SLOW PATH: Validate session with server in background
+          // This catches expired/revoked tokens without blocking UI
+          supabase.auth.getUser().then(({ data: { user: validatedUser }, error: userError }) => {
+            if (!isMountedRef.current) return;
 
-          // Fetch profile - don't block on this
-          const userProfile = await fetchProfile(authUser.id);
-          if (isMountedRef.current) {
-            setProfile(userProfile);
-          }
+            if (userError || !validatedUser) {
+              // Session was invalid - clear state
+              console.log("Session invalid, clearing auth state");
+              setUser(null);
+              setSession(null);
+              setProfile(null);
+              profileFetchRef.current = null;
+            }
+          });
+        } else {
+          // No cached session - user is not logged in
+          setLoading(false);
         }
       } catch (err) {
         if (err instanceof Error && err.name === "AbortError") {
@@ -129,9 +142,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.error("Auth init error:", err);
         if (isMountedRef.current && isCurrentEffect) {
           setError(err instanceof Error ? err : new Error("Auth initialization failed"));
-        }
-      } finally {
-        if (isMountedRef.current && isCurrentEffect) {
           setLoading(false);
         }
       }
