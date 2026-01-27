@@ -218,16 +218,57 @@ function FeaturedCard({ event, portalSlug }: { event: FeaturedEvent; portalSlug:
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
         </div>
       ) : (
-        <div
-          className="h-44 bg-gradient-to-br from-[var(--twilight)] to-[var(--dusk)] flex items-center justify-center"
-        >
-          {event.category && (
-            <CategoryIcon
-              type={event.category}
-              size={48}
-              style={{ color: categoryColor, opacity: 0.3 }}
-            />
-          )}
+        <div className="h-44 relative overflow-hidden bg-[var(--night)]">
+          {/* Layered background */}
+          <div
+            className="absolute inset-0"
+            style={{
+              background: `
+                radial-gradient(ellipse 100% 80% at 50% -30%, ${categoryColor}20 0%, transparent 50%),
+                radial-gradient(ellipse 50% 50% at 100% 100%, ${categoryColor}10 0%, transparent 40%),
+                linear-gradient(135deg, var(--twilight) 0%, var(--dusk) 100%)
+              `,
+            }}
+          />
+
+          {/* Subtle grid */}
+          <div
+            className="absolute inset-0 opacity-[0.04]"
+            style={{
+              backgroundImage: `
+                linear-gradient(${categoryColor} 1px, transparent 1px),
+                linear-gradient(90deg, ${categoryColor} 1px, transparent 1px)
+              `,
+              backgroundSize: "24px 24px",
+            }}
+          />
+
+          {/* Decorative accent */}
+          <div
+            className="absolute -top-10 -right-10 w-32 h-32 rounded-full opacity-[0.1]"
+            style={{
+              background: `radial-gradient(circle, ${categoryColor} 0%, transparent 70%)`,
+            }}
+          />
+
+          {/* Centered icon with container */}
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div
+              className="flex items-center justify-center w-16 h-16 rounded-xl"
+              style={{
+                background: `linear-gradient(135deg, ${categoryColor}12 0%, ${categoryColor}05 100%)`,
+                border: `1px solid ${categoryColor}15`,
+              }}
+            >
+              {event.category && (
+                <CategoryIcon
+                  type={event.category}
+                  size={32}
+                  style={{ color: categoryColor, opacity: 0.5 }}
+                />
+              )}
+            </div>
+          </div>
         </div>
       )}
 

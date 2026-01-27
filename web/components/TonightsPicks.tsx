@@ -126,12 +126,52 @@ export default async function TonightsPicks({ portalSlug }: { portalSlug?: strin
               <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/60 to-black/20" />
             </>
           ) : (
-            <div
-              className="absolute inset-0"
-              style={{
-                background: `linear-gradient(135deg, var(--dusk) 0%, var(--void) 100%)`,
-              }}
-            />
+            <>
+              {/* Layered fallback background */}
+              <div
+                className="absolute inset-0"
+                style={{
+                  background: `
+                    radial-gradient(ellipse 80% 50% at 50% -20%, ${heroCategory}20 0%, transparent 50%),
+                    radial-gradient(ellipse 60% 40% at 100% 100%, ${heroCategory}15 0%, transparent 40%),
+                    linear-gradient(135deg, var(--dusk) 0%, var(--void) 100%)
+                  `,
+                }}
+              />
+
+              {/* Subtle grid */}
+              <div
+                className="absolute inset-0 opacity-[0.03]"
+                style={{
+                  backgroundImage: `
+                    linear-gradient(${heroCategory} 1px, transparent 1px),
+                    linear-gradient(90deg, ${heroCategory} 1px, transparent 1px)
+                  `,
+                  backgroundSize: "32px 32px",
+                }}
+              />
+
+              {/* Decorative shapes */}
+              <div
+                className="absolute -top-16 -right-16 w-48 h-48 rounded-full opacity-[0.08]"
+                style={{
+                  background: `radial-gradient(circle, ${heroCategory} 0%, transparent 70%)`,
+                }}
+              />
+              <div
+                className="absolute -bottom-20 -left-20 w-56 h-56 rounded-full opacity-[0.05]"
+                style={{
+                  background: `radial-gradient(circle, ${heroCategory} 0%, transparent 70%)`,
+                }}
+              />
+
+              {/* Category icon watermark */}
+              {heroEvent.category && (
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none opacity-[0.07]">
+                  <CategoryIcon type={heroEvent.category} size={120} glow="none" />
+                </div>
+              )}
+            </>
           )}
 
           {/* Content */}

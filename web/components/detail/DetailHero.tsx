@@ -38,19 +38,65 @@ export function DetailHero({
 
   if (effectiveMode === "fallback") {
     return (
-      <div className="relative w-full aspect-video sm:rounded-lg overflow-hidden">
-        <div
-          className="w-full h-full flex items-center justify-center"
-          style={{
-            background: `linear-gradient(135deg, ${categoryColor}15 0%, ${categoryColor}05 100%)`,
-          }}
-        >
-          <div className="flex flex-col items-center gap-3 opacity-60">
-            {categoryIcon || (
-              <svg className="w-16 h-16 text-[var(--muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-            )}
+      <div className="relative w-full aspect-video sm:rounded-lg overflow-hidden bg-[var(--night)]">
+        {/* Layered background with subtle pattern */}
+        <div className="absolute inset-0">
+          {/* Base gradient */}
+          <div
+            className="absolute inset-0"
+            style={{
+              background: `
+                radial-gradient(ellipse 80% 50% at 50% -20%, ${categoryColor}15 0%, transparent 50%),
+                radial-gradient(ellipse 60% 40% at 100% 100%, ${categoryColor}10 0%, transparent 40%),
+                linear-gradient(180deg, var(--night) 0%, var(--void) 100%)
+              `,
+            }}
+          />
+
+          {/* Subtle grid pattern */}
+          <div
+            className="absolute inset-0 opacity-[0.03]"
+            style={{
+              backgroundImage: `
+                linear-gradient(${categoryColor} 1px, transparent 1px),
+                linear-gradient(90deg, ${categoryColor} 1px, transparent 1px)
+              `,
+              backgroundSize: "40px 40px",
+            }}
+          />
+
+          {/* Decorative circles */}
+          <div
+            className="absolute -top-20 -right-20 w-64 h-64 rounded-full opacity-[0.08]"
+            style={{
+              background: `radial-gradient(circle, ${categoryColor} 0%, transparent 70%)`,
+            }}
+          />
+          <div
+            className="absolute -bottom-32 -left-32 w-80 h-80 rounded-full opacity-[0.05]"
+            style={{
+              background: `radial-gradient(circle, ${categoryColor} 0%, transparent 70%)`,
+            }}
+          />
+        </div>
+
+        {/* Category icon - larger and more prominent */}
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div
+            className="relative flex items-center justify-center w-24 h-24 rounded-2xl"
+            style={{
+              background: `linear-gradient(135deg, ${categoryColor}15 0%, ${categoryColor}08 100%)`,
+              border: `1px solid ${categoryColor}20`,
+              boxShadow: `0 0 60px ${categoryColor}10`,
+            }}
+          >
+            <div style={{ color: categoryColor, opacity: 0.6 }}>
+              {categoryIcon || (
+                <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" />
+                </svg>
+              )}
+            </div>
           </div>
         </div>
 

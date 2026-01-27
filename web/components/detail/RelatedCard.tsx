@@ -58,7 +58,7 @@ export function RelatedCard({
       href={href}
       className="group block rounded-lg border border-[var(--twilight)] bg-[var(--card-bg)] overflow-hidden transition-all hover:bg-[var(--card-bg-hover)] hover:border-[var(--soft)] snap-start min-w-[280px] sm:min-w-0"
     >
-      <div className="relative w-full aspect-video bg-[var(--dusk)]">
+      <div className="relative w-full aspect-video bg-[var(--night)] overflow-hidden">
         {imageUrl ? (
           <Image
             src={imageUrl}
@@ -67,13 +67,57 @@ export function RelatedCard({
             className="object-cover"
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center">
-            {icon || (
-              <svg className="w-12 h-12 text-[var(--muted)] opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-            )}
-          </div>
+          <>
+            {/* Layered background */}
+            <div
+              className="absolute inset-0"
+              style={{
+                background: `
+                  radial-gradient(ellipse 80% 60% at 50% -20%, ${accentColor}15 0%, transparent 50%),
+                  linear-gradient(135deg, var(--twilight) 0%, var(--dusk) 100%)
+                `,
+              }}
+            />
+
+            {/* Subtle grid */}
+            <div
+              className="absolute inset-0 opacity-[0.03]"
+              style={{
+                backgroundImage: `
+                  linear-gradient(${accentColor} 1px, transparent 1px),
+                  linear-gradient(90deg, ${accentColor} 1px, transparent 1px)
+                `,
+                backgroundSize: "20px 20px",
+              }}
+            />
+
+            {/* Decorative accent */}
+            <div
+              className="absolute -top-6 -right-6 w-20 h-20 rounded-full opacity-[0.1]"
+              style={{
+                background: `radial-gradient(circle, ${accentColor} 0%, transparent 70%)`,
+              }}
+            />
+
+            {/* Icon */}
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div
+                className="flex items-center justify-center w-12 h-12 rounded-lg"
+                style={{
+                  background: `linear-gradient(135deg, ${accentColor}10 0%, ${accentColor}05 100%)`,
+                  border: `1px solid ${accentColor}15`,
+                }}
+              >
+                {icon ? (
+                  <div style={{ color: accentColor, opacity: 0.5 }}>{icon}</div>
+                ) : (
+                  <svg className="w-6 h-6" style={{ color: accentColor, opacity: 0.4 }} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" />
+                  </svg>
+                )}
+              </div>
+            </div>
+          </>
         )}
       </div>
       <div className="p-4">
