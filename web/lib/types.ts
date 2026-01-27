@@ -168,6 +168,7 @@ export type Database = {
           followed_user_id: string | null;
           followed_venue_id: number | null;
           followed_org_id: number | null;
+          followed_producer_id: string | null;
           created_at: string;
         };
         Insert: {
@@ -175,6 +176,7 @@ export type Database = {
           followed_user_id?: string | null;
           followed_venue_id?: number | null;
           followed_org_id?: number | null;
+          followed_producer_id?: string | null;
         };
       };
       user_blocks: {

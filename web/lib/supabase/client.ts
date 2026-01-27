@@ -28,6 +28,7 @@ export function createClient() {
       eq: () => mockChain,
       in: () => mockChain,
       single: async () => ({ data: null, error: null }),
+      maybeSingle: async () => ({ data: null, error: null }),
       update: () => mockChain,
       insert: () => mockChain,
       delete: () => mockChain,
