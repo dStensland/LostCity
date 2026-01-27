@@ -682,7 +682,7 @@ export interface ListItemWithData extends ListItem {
 
 // Discovery Mode Onboarding types
 export type OnboardingMood = "chill" | "wild" | "social" | "culture";
-export type OnboardingStep = "splash" | "mood" | "swipe" | "neighborhood" | "preview";
+export type OnboardingStep = "categories" | "subcategories" | "neighborhoods";
 export type OnboardingAction = "select" | "like" | "skip" | "follow";
 
 export interface OnboardingSwipeEvent {
