@@ -25,7 +25,7 @@ class LLMConfig(BaseModel):
     """LLM API settings."""
     anthropic_api_key: str = Field(default_factory=lambda: os.getenv("ANTHROPIC_API_KEY", ""))
     model: str = "claude-sonnet-4-20250514"
-    max_tokens: int = 4096
+    max_tokens: int = 16384  # Increased to handle pages with many events
     temperature: float = 0.0
 
 
