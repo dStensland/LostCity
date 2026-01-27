@@ -36,13 +36,13 @@ export default function RSVPButton({
   onRSVPChange,
 }: RSVPButtonProps) {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const supabase = createClient();
   const menuRef = useRef<HTMLDivElement>(null);
 
   const [status, setStatus] = useState<RSVPStatus>(null);
   const [visibility, setVisibility] = useState<Visibility>(DEFAULT_VISIBILITY);
-  const [loading, setLoading] = useState(true);
+  const [dataLoaded, setDataLoaded] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
@@ -108,8 +108,11 @@ export default function RSVPButton({
   // Load existing RSVP
   useEffect(() => {
     async function loadRSVP() {
+      // Wait for auth to settle
+      if (authLoading) return;
+
       if (!user) {
-        setLoading(false);
+        setDataLoaded(true);
         return;
       }
 
@@ -125,11 +128,11 @@ export default function RSVPButton({
         setStatus(rsvp.status as RSVPStatus);
         setVisibility(rsvp.visibility as Visibility);
       }
-      setLoading(false);
+      setDataLoaded(true);
     }
 
     loadRSVP();
-  }, [user, eventId, supabase]);
+  }, [user, authLoading, eventId, supabase]);
 
   const handleStatusChange = async (newStatus: RSVPStatus) => {
     if (!user) {
@@ -253,17 +256,8 @@ export default function RSVPButton({
     } ${animationClass}`;
   };
 
-  if (loading) {
-    if (variant === "compact") {
-      return <div className={`w-11 h-11 rounded-lg bg-[var(--twilight)] animate-pulse ${className}`} />;
-    }
-    return (
-      <div
-        className={`${sizeClasses[size]} rounded-lg bg-[var(--twilight)] animate-pulse ${className}`}
-        style={{ width: size === "sm" ? 80 : 100 }}
-      />
-    );
-  }
+  // No loading skeleton - show functional button immediately
+  // Button works for logged-out users too (redirects to login on click)
 
   const currentConfig = status ? STATUS_CONFIG[status] : null;
 

@@ -4,7 +4,7 @@ import { useRef, useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { format, parseISO } from "date-fns";
 import { usePortal } from "@/lib/portal-context";
-import CategoryIcon, { getCategoryColor } from "../CategoryIcon";
+import { getCategoryColor } from "../CategoryIcon";
 import CategoryPlaceholder from "../CategoryPlaceholder";
 import LinkifyText from "../LinkifyText";
 import { FreeBadge } from "../Badge";

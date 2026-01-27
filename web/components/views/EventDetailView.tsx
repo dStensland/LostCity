@@ -4,7 +4,8 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { format, parseISO } from "date-fns";
-import CategoryIcon, { getCategoryColor } from "@/components/CategoryIcon";
+import CategoryIcon from "@/components/CategoryIcon";
+import CategoryPlaceholder from "@/components/CategoryPlaceholder";
 import FollowButton from "@/components/FollowButton";
 import FriendsGoing from "@/components/FriendsGoing";
 import WhosGoing from "@/components/WhosGoing";
@@ -15,9 +16,6 @@ import LinkifyText from "@/components/LinkifyText";
 import { formatTimeSplit } from "@/lib/formats";
 import VenueTagList from "@/components/VenueTagList";
 import FlagButton from "@/components/FlagButton";
-import RSVPButton from "@/components/RSVPButton";
-import ShareEventButton from "@/components/ShareEventButton";
-import AddToCalendar from "@/components/AddToCalendar";
 import { getSpotTypeLabel } from "@/lib/spots";
 import { getSeriesTypeLabel, getSeriesTypeColor } from "@/lib/series-utils";
 
@@ -113,6 +111,13 @@ function parseRecurrenceRule(rule: string | null | undefined): string | null {
   return null;
 }
 
+// Spot type categories for "In the area" tabs
+const FOOD_TYPES = ["restaurant", "food_hall", "cooking_school"];
+const DRINKS_TYPES = ["bar", "brewery", "distillery", "winery", "rooftop", "sports_bar", "coffee_shop"];
+const FUN_TYPES = ["club", "games", "eatertainment", "music_venue", "comedy_club", "theater", "cinema", "attraction", "gallery", "museum", "arcade"];
+
+type InAreaTab = "events" | "food" | "drinks" | "fun";
+
 export default function EventDetailView({ eventId, portalSlug, onClose }: EventDetailViewProps) {
   const router = useRouter();
   const [event, setEvent] = useState<EventData | null>(null);
@@ -123,6 +128,7 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
   const [error, setError] = useState<string | null>(null);
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
+  const [inAreaTab, setInAreaTab] = useState<InAreaTab>("events");
 
   useEffect(() => {
     async function fetchEvent() {
@@ -208,7 +214,6 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
 
   const isLive = event.is_live || false;
   const recurrenceText = parseRecurrenceRule(event.recurrence_rule);
-  const categoryColor = event.category ? getCategoryColor(event.category) : "var(--coral)";
   const showImage = event.image_url && !imageError;
 
   return (
@@ -248,15 +253,7 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
             <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
           </>
         ) : (
-          <div className="absolute inset-0 bg-gradient-to-br from-[var(--twilight)] to-[var(--dusk)] flex items-center justify-center">
-            {event.category && (
-              <CategoryIcon
-                type={event.category}
-                size={64}
-                style={{ color: categoryColor, opacity: 0.3 }}
-              />
-            )}
-          </div>
+          <CategoryPlaceholder category={event.category || "other"} size="lg" />
         )}
 
         {/* Live badge */}
@@ -274,7 +271,12 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
           </h1>
           {event.venue && (
             <p className="text-sm text-white/80 mt-1">
-              {event.venue.name}
+              <button
+                onClick={() => handleSpotClick(event.venue!.slug)}
+                className="hover:text-white hover:underline transition-colors"
+              >
+                {event.venue.name}
+              </button>
               {event.venue.neighborhood && ` · ${event.venue.neighborhood}`}
             </p>
           )}
@@ -443,14 +445,54 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
               Also Featuring
             </h2>
             <div className="flex flex-wrap gap-2">
-              {event.tags.map((tag) => (
-                <span
-                  key={tag}
-                  className="px-2.5 py-1 text-[var(--soft)] rounded border border-[var(--twilight)] text-xs bg-[var(--void)]"
-                >
-                  {tag}
-                </span>
-              ))}
+              {event.tags.map((tag) => {
+                // Seasonal/special tags get accent colors
+                const isValentines = tag.toLowerCase().includes("valentine") || tag.toLowerCase().includes("love");
+                const isHoliday = tag.toLowerCase().includes("holiday") || tag.toLowerCase().includes("christmas") || tag.toLowerCase().includes("new year");
+                const isSummer = tag.toLowerCase().includes("summer") || tag.toLowerCase().includes("beach") || tag.toLowerCase().includes("outdoor");
+                const isSpooky = tag.toLowerCase().includes("halloween") || tag.toLowerCase().includes("spooky") || tag.toLowerCase().includes("horror");
+                const isPride = tag.toLowerCase().includes("pride") || tag.toLowerCase().includes("lgbtq");
+
+                let tagColor = "var(--soft)";
+                let tagBg = "var(--void)";
+                let tagBorder = "var(--twilight)";
+
+                if (isValentines) {
+                  tagColor = "var(--rose)";
+                  tagBg = "rgba(255, 107, 122, 0.1)";
+                  tagBorder = "rgba(255, 107, 122, 0.3)";
+                } else if (isHoliday) {
+                  tagColor = "var(--neon-green)";
+                  tagBg = "rgba(34, 197, 94, 0.1)";
+                  tagBorder = "rgba(34, 197, 94, 0.3)";
+                } else if (isSummer) {
+                  tagColor = "var(--neon-amber)";
+                  tagBg = "rgba(245, 158, 11, 0.1)";
+                  tagBorder = "rgba(245, 158, 11, 0.3)";
+                } else if (isSpooky) {
+                  tagColor = "var(--neon-purple)";
+                  tagBg = "rgba(168, 85, 247, 0.1)";
+                  tagBorder = "rgba(168, 85, 247, 0.3)";
+                } else if (isPride) {
+                  tagColor = "var(--neon-magenta)";
+                  tagBg = "rgba(236, 72, 153, 0.1)";
+                  tagBorder = "rgba(236, 72, 153, 0.3)";
+                }
+
+                return (
+                  <span
+                    key={tag}
+                    className="px-3 py-1.5 rounded-full text-xs font-mono"
+                    style={{
+                      color: tagColor,
+                      backgroundColor: tagBg,
+                      border: `1px solid ${tagBorder}`,
+                    }}
+                  >
+                    {tag}
+                  </span>
+                );
+              })}
             </div>
           </div>
         )}
@@ -465,54 +507,27 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
         </div>
       </div>
 
-      {/* Nearby Spots */}
-      {nearbySpots.length > 0 && event.venue?.neighborhood && (
-        <div className="mt-8">
-          <h2 className="font-mono text-[0.65rem] font-medium text-[var(--muted)] uppercase tracking-widest mb-4">
-            Before & After in {event.venue.neighborhood}
-          </h2>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-            {nearbySpots.map((spot) => (
-              <button
-                key={spot.id}
-                onClick={() => handleSpotClick(spot.slug)}
-                className="group p-3 border border-[var(--twilight)] rounded-lg transition-colors hover:border-[var(--coral)]/50 bg-[var(--dusk)] text-left"
-              >
-                <div className="flex items-start gap-2">
-                  <CategoryIcon
-                    type={spot.spot_type || "bar"}
-                    size={16}
-                    className="mt-0.5 flex-shrink-0"
-                  />
-                  <div className="min-w-0 flex-1">
-                    <h3 className="text-[var(--cream)] text-sm font-medium truncate group-hover:text-[var(--coral)] transition-colors">
-                      {spot.name}
-                    </h3>
-                    <p className="text-[0.65rem] text-[var(--muted)] font-mono uppercase tracking-wider mt-0.5">
-                      {getSpotTypeLabel(spot.spot_type)}
-                    </p>
-                  </div>
-                </div>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
       {/* Related Events */}
       {(venueEvents.length > 0 || sameDateEvents.length > 0) && (
         <div className="mt-8 space-y-8">
           {venueEvents.length > 0 && event.venue && (
             <div>
-              <h2 className="font-mono text-[0.65rem] font-medium text-[var(--muted)] uppercase tracking-widest mb-4">
-                More at {event.venue.name}
-              </h2>
-              <div className="space-y-2">
-                {venueEvents.map((relatedEvent) => (
+              <div className="flex items-center gap-3 mb-4">
+                <h2 className="font-mono text-[0.65rem] font-medium text-[var(--muted)] uppercase tracking-widest">
+                  More at {event.venue.name}
+                </h2>
+                <span className="px-2 py-0.5 rounded-full bg-[var(--coral)]/20 text-[var(--coral)] text-[0.6rem] font-mono">
+                  {venueEvents.length} upcoming
+                </span>
+              </div>
+              <div className="border border-[var(--twilight)] rounded-xl overflow-hidden bg-[var(--dusk)]">
+                {venueEvents.map((relatedEvent, index) => (
                   <button
                     key={relatedEvent.id}
                     onClick={() => handleEventClick(relatedEvent.id)}
-                    className="block w-full p-4 border border-[var(--twilight)] rounded-lg transition-colors group hover:border-[var(--coral)]/50 bg-[var(--dusk)] text-left"
+                    className={`block w-full p-4 transition-colors group hover:bg-[var(--twilight)]/50 text-left ${
+                      index !== venueEvents.length - 1 ? "border-b border-[var(--twilight)]" : ""
+                    }`}
                   >
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex-1 min-w-0">
@@ -536,37 +551,151 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
             </div>
           )}
 
-          {sameDateEvents.length > 0 && (
+          {/* In the area - tabbed section for same-night events and nearby spots by category */}
+          {(sameDateEvents.length > 0 || nearbySpots.length > 0) && (
             <div>
-              <h2 className="font-mono text-[0.65rem] font-medium text-[var(--muted)] uppercase tracking-widest mb-4">
-                That same night
+              <h2 className="font-mono text-[0.65rem] font-medium text-[var(--muted)] uppercase tracking-widest mb-3">
+                In the area
               </h2>
-              <div className="space-y-2">
-                {sameDateEvents.map((relatedEvent) => (
+
+              {/* Tab selector */}
+              <div className="flex gap-1 p-1 bg-[var(--night)] rounded-lg mb-4 overflow-x-auto">
+                {[
+                  { key: "events" as InAreaTab, label: "Events", count: sameDateEvents.length },
+                  { key: "food" as InAreaTab, label: "Food", count: nearbySpots.filter(s => FOOD_TYPES.includes(s.spot_type || "")).length },
+                  { key: "drinks" as InAreaTab, label: "Drinks", count: nearbySpots.filter(s => DRINKS_TYPES.includes(s.spot_type || "")).length },
+                  { key: "fun" as InAreaTab, label: "Fun", count: nearbySpots.filter(s => FUN_TYPES.includes(s.spot_type || "")).length },
+                ].filter(tab => tab.count > 0).map((tab) => (
                   <button
-                    key={relatedEvent.id}
-                    onClick={() => handleEventClick(relatedEvent.id)}
-                    className="block w-full p-4 border border-[var(--twilight)] rounded-lg transition-colors group hover:border-[var(--coral)]/50 bg-[var(--dusk)] text-left"
+                    key={tab.key}
+                    onClick={() => setInAreaTab(tab.key)}
+                    className={`flex-1 min-w-[70px] px-3 py-2 rounded-md font-mono text-xs whitespace-nowrap transition-all ${
+                      inAreaTab === tab.key
+                        ? "bg-[var(--coral)] text-[var(--void)] font-medium"
+                        : "text-[var(--muted)] hover:text-[var(--cream)] hover:bg-[var(--twilight)]/50"
+                    }`}
                   >
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1 min-w-0">
-                        <h3 className="text-[var(--cream)] font-medium truncate group-hover:text-[var(--coral)] transition-colors">
-                          {relatedEvent.title}
-                        </h3>
-                        <p className="text-sm text-[var(--muted)] mt-1">
-                          {relatedEvent.venue?.name || "Venue TBA"}
-                          {relatedEvent.start_time && ` · ${formatTimeSplit(relatedEvent.start_time).time} ${formatTimeSplit(relatedEvent.start_time).period}`}
-                        </p>
-                      </div>
-                      <span className="text-[var(--muted)] group-hover:text-[var(--coral)] transition-colors">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                        </svg>
-                      </span>
-                    </div>
+                    {tab.label}
+                    <span className={`ml-1.5 ${inAreaTab === tab.key ? "text-[var(--void)]/70" : "text-[var(--muted)]"}`}>
+                      {tab.count}
+                    </span>
                   </button>
                 ))}
               </div>
+
+              {/* Tab content */}
+              {inAreaTab === "events" && sameDateEvents.length > 0 && (
+                <div className="space-y-2">
+                  {sameDateEvents.map((relatedEvent) => (
+                    <button
+                      key={relatedEvent.id}
+                      onClick={() => handleEventClick(relatedEvent.id)}
+                      className="block w-full p-4 border border-[var(--twilight)] rounded-lg transition-colors group hover:border-[var(--coral)]/50 bg-[var(--dusk)] text-left"
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1 min-w-0">
+                          <h3 className="text-[var(--cream)] font-medium truncate group-hover:text-[var(--coral)] transition-colors">
+                            {relatedEvent.title}
+                          </h3>
+                          <p className="text-sm text-[var(--muted)] mt-1">
+                            {relatedEvent.venue?.name || "Venue TBA"}
+                            {relatedEvent.start_time && ` · ${formatTimeSplit(relatedEvent.start_time).time} ${formatTimeSplit(relatedEvent.start_time).period}`}
+                          </p>
+                        </div>
+                        <span className="text-[var(--muted)] group-hover:text-[var(--coral)] transition-colors">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
+                        </span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {inAreaTab === "food" && (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {nearbySpots.filter(s => FOOD_TYPES.includes(s.spot_type || "")).map((spot) => (
+                    <button
+                      key={spot.id}
+                      onClick={() => handleSpotClick(spot.slug)}
+                      className="group p-3 border border-[var(--twilight)] rounded-lg transition-colors hover:border-[var(--coral)]/50 bg-[var(--dusk)] text-left"
+                    >
+                      <div className="flex items-start gap-2">
+                        <CategoryIcon
+                          type={spot.spot_type || "restaurant"}
+                          size={16}
+                          className="mt-0.5 flex-shrink-0"
+                        />
+                        <div className="min-w-0 flex-1">
+                          <h3 className="text-[var(--cream)] text-sm font-medium truncate group-hover:text-[var(--coral)] transition-colors">
+                            {spot.name}
+                          </h3>
+                          <p className="text-[0.65rem] text-[var(--muted)] font-mono uppercase tracking-wider mt-0.5">
+                            {getSpotTypeLabel(spot.spot_type)}
+                          </p>
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {inAreaTab === "drinks" && (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {nearbySpots.filter(s => DRINKS_TYPES.includes(s.spot_type || "")).map((spot) => (
+                    <button
+                      key={spot.id}
+                      onClick={() => handleSpotClick(spot.slug)}
+                      className="group p-3 border border-[var(--twilight)] rounded-lg transition-colors hover:border-[var(--coral)]/50 bg-[var(--dusk)] text-left"
+                    >
+                      <div className="flex items-start gap-2">
+                        <CategoryIcon
+                          type={spot.spot_type || "bar"}
+                          size={16}
+                          className="mt-0.5 flex-shrink-0"
+                        />
+                        <div className="min-w-0 flex-1">
+                          <h3 className="text-[var(--cream)] text-sm font-medium truncate group-hover:text-[var(--coral)] transition-colors">
+                            {spot.name}
+                          </h3>
+                          <p className="text-[0.65rem] text-[var(--muted)] font-mono uppercase tracking-wider mt-0.5">
+                            {getSpotTypeLabel(spot.spot_type)}
+                          </p>
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {inAreaTab === "fun" && (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {nearbySpots.filter(s => FUN_TYPES.includes(s.spot_type || "")).map((spot) => (
+                    <button
+                      key={spot.id}
+                      onClick={() => handleSpotClick(spot.slug)}
+                      className="group p-3 border border-[var(--twilight)] rounded-lg transition-colors hover:border-[var(--coral)]/50 bg-[var(--dusk)] text-left"
+                    >
+                      <div className="flex items-start gap-2">
+                        <CategoryIcon
+                          type={spot.spot_type || "attraction"}
+                          size={16}
+                          className="mt-0.5 flex-shrink-0"
+                        />
+                        <div className="min-w-0 flex-1">
+                          <h3 className="text-[var(--cream)] text-sm font-medium truncate group-hover:text-[var(--coral)] transition-colors">
+                            {spot.name}
+                          </h3>
+                          <p className="text-[0.65rem] text-[var(--muted)] font-mono uppercase tracking-wider mt-0.5">
+                            {getSpotTypeLabel(spot.spot_type)}
+                          </p>
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>

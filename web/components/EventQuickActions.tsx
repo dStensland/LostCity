@@ -15,6 +15,7 @@ interface EventQuickActionsProps {
     end_time: string | null;
     is_all_day?: boolean;
     ticket_url: string | null;
+    source_url: string | null;
     is_free: boolean;
     price_min: number | null;
     price_max: number | null;
@@ -56,16 +57,19 @@ export default function EventQuickActions({ event, isLive, className = "" }: Eve
       {/* Summary row: Price | Date | Time */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--twilight)]">
         <div className="flex items-center gap-4 text-sm">
-          {/* Price - prominent */}
-          <span
-            className={`font-mono font-bold text-base ${
-              isFree ? "text-[var(--neon-green)]" : "text-[var(--gold)]"
-            }`}
-          >
-            {priceText}
-          </span>
-
-          <span className="text-[var(--twilight)]">·</span>
+          {/* Price - prominent (hide if unknown/dash) */}
+          {priceText !== "—" && (
+            <>
+              <span
+                className={`font-mono font-bold text-base ${
+                  isFree ? "text-[var(--neon-green)]" : "text-[var(--gold)]"
+                }`}
+              >
+                {priceText}
+              </span>
+              <span className="text-[var(--twilight)]">·</span>
+            </>
+          )}
 
           {/* Date */}
           <span className="text-[var(--cream)] font-medium">
@@ -98,7 +102,7 @@ export default function EventQuickActions({ event, isLive, className = "" }: Eve
 
       {/* Primary CTA row */}
       <div className="p-3 flex items-center gap-3">
-        {/* Primary CTA - Get Tickets or RSVP */}
+        {/* Primary CTA - Get Tickets, View Source, or RSVP */}
         {event.ticket_url ? (
           <a
             href={event.ticket_url}
@@ -113,12 +117,24 @@ export default function EventQuickActions({ event, isLive, className = "" }: Eve
             </svg>
             {isLive ? "Join Now" : "Get Tickets"}
           </a>
+        ) : event.source_url ? (
+          <a
+            href={event.source_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex-1 inline-flex items-center justify-center gap-2 px-6 py-3.5 border border-[var(--twilight)] text-[var(--cream)] text-base font-semibold rounded-lg hover:bg-[var(--twilight)] transition-all"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+            </svg>
+            View Details
+          </a>
         ) : (
           <RSVPButton eventId={event.id} variant="primary" className="flex-1 justify-center py-3.5 text-base" />
         )}
 
-        {/* RSVP as secondary when there's a ticket URL */}
-        {event.ticket_url && (
+        {/* RSVP as secondary when there's a ticket URL or source URL */}
+        {(event.ticket_url || event.source_url) && (
           <RSVPButton eventId={event.id} variant="compact" />
         )}
 

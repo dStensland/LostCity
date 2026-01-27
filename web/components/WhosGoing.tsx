@@ -141,17 +141,9 @@ export default function WhosGoing({ eventId, className = "" }: WhosGoingProps) {
     );
   }
 
+  // Hide completely when no attendees
   if (attendees.length === 0) {
-    return (
-      <div className={`${className}`}>
-        <h2 className="font-mono text-[0.65rem] font-medium text-[var(--muted)] uppercase tracking-widest mb-4">
-          Who&apos;s in
-        </h2>
-        <p className="text-sm text-[var(--muted)] italic">
-          Be the first. Claim it.
-        </p>
-      </div>
-    );
+    return null;
   }
 
   const displayLimit = expanded ? attendees.length : 12;

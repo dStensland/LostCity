@@ -137,7 +137,7 @@ END:VCALENDAR`;
       </button>
 
       {isOpen && (
-        <div className="absolute bottom-full left-0 mb-2 w-48 bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg shadow-2xl shadow-black/50 z-[1050] overflow-hidden">
+        <div className="absolute left-0 sm:left-auto sm:right-0 mb-2 w-48 bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg shadow-2xl shadow-black/50 z-[1050] overflow-hidden bottom-full sm:bottom-auto sm:top-full sm:mt-2">
           <a
             href={googleUrl}
             target="_blank"
