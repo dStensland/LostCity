@@ -22,7 +22,7 @@ RULES:
 5. If the listing contains multiple events, return an array.
 6. Set confidence score based on how complete/clear the source data was.
 7. TIME VALIDATION: Be careful with AM/PM. Events between 1:00-5:00 AM are rare except for nightlife/music venues. If an event seems like daytime (workshops, volunteer events, family events) but parses to early AM, the source probably meant PM or there's an error - use null instead.
-8. For all-day events (no specific time), set is_all_day to true and start_time to null.
+8. ALL-DAY EVENTS: Set is_all_day=true ONLY for events that genuinely span the entire day (festivals, exhibitions, markets, open houses). Do NOT set is_all_day=true just because a specific time is unknown. "Night", "Evening", "Afternoon" events are NOT all-day - set is_all_day=false and start_time=null if time is unknown.
 9. YEAR INFERENCE: When a date has no year specified, use 2026 for dates from January-December. Only use a past year if the content explicitly shows a past year.
 
 CATEGORIES (pick one):
