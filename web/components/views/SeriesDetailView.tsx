@@ -139,27 +139,27 @@ export default function SeriesDetailView({ slug, portalSlug, onClose }: SeriesDe
   if (loading) {
     return (
       <div className="animate-fadeIn">
-        <button
-          onClick={onClose}
-          className="flex items-center gap-2 text-[var(--muted)] hover:text-[var(--cream)] transition-colors mb-4 font-mono text-sm"
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-          Back
-        </button>
-
-        <div className="space-y-4">
-          <div className="flex gap-4">
-            <div className="w-32 h-48 skeleton-shimmer rounded-xl" />
-            <div className="flex-1 space-y-2">
-              <div className="h-6 skeleton-shimmer rounded w-1/3" />
-              <div className="h-8 skeleton-shimmer rounded w-3/4" />
+        {/* Hero skeleton with floating back button */}
+        <div className="relative rounded-xl overflow-hidden mb-6 bg-[var(--dusk)]">
+          <button
+            onClick={onClose}
+            className="absolute top-3 left-3 flex items-center gap-1.5 px-3 py-1.5 bg-black/50 backdrop-blur-sm text-white/90 hover:text-white hover:bg-black/70 rounded-full font-mono text-xs transition-all z-10"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            Back
+          </button>
+          <div className="p-6 flex items-start gap-4">
+            <div className="w-28 h-40 skeleton-shimmer rounded-lg" />
+            <div className="flex-1 space-y-3 pt-2">
+              <div className="h-5 skeleton-shimmer rounded w-20" />
+              <div className="h-7 skeleton-shimmer rounded w-3/4" />
               <div className="h-4 skeleton-shimmer rounded w-1/2" />
             </div>
           </div>
-          <div className="h-48 skeleton-shimmer rounded-xl" />
         </div>
+        <div className="h-32 skeleton-shimmer rounded-xl" />
       </div>
     );
   }
@@ -167,18 +167,24 @@ export default function SeriesDetailView({ slug, portalSlug, onClose }: SeriesDe
   if (error || !series) {
     return (
       <div className="animate-fadeIn">
-        <button
-          onClick={onClose}
-          className="flex items-center gap-2 text-[var(--muted)] hover:text-[var(--cream)] transition-colors mb-4 font-mono text-sm"
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-          Back
-        </button>
-
-        <div className="text-center py-12">
-          <p className="text-[var(--muted)]">{error || "Series not found"}</p>
+        <div className="relative rounded-xl overflow-hidden mb-6 bg-[var(--dusk)] border border-[var(--twilight)]">
+          <button
+            onClick={onClose}
+            className="absolute top-3 left-3 flex items-center gap-1.5 px-3 py-1.5 bg-black/50 backdrop-blur-sm text-white/90 hover:text-white hover:bg-black/70 rounded-full font-mono text-xs transition-all z-10"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            Back
+          </button>
+          <div className="text-center py-16">
+            <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-[var(--twilight)]/50 flex items-center justify-center">
+              <svg className="w-6 h-6 text-[var(--muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <p className="text-[var(--muted)]">{error || "Series not found"}</p>
+          </div>
         </div>
       </div>
     );
@@ -191,24 +197,23 @@ export default function SeriesDetailView({ slug, portalSlug, onClose }: SeriesDe
 
   return (
     <div className="animate-fadeIn pb-8">
-      {/* Back button */}
-      <button
-        onClick={onClose}
-        className="flex items-center gap-2 text-[var(--muted)] hover:text-[var(--cream)] transition-colors mb-4 font-mono text-sm"
-      >
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-        </svg>
-        Back
-      </button>
-
       {/* Hero with poster and info */}
       <div
-        className="relative rounded-xl overflow-hidden mb-6"
+        className="relative rounded-xl overflow-hidden mb-6 border border-[var(--twilight)]"
         style={{
-          background: `linear-gradient(to bottom, ${typeColor}15, var(--dusk))`,
+          background: `linear-gradient(to bottom, ${typeColor}10, var(--dusk))`,
         }}
       >
+        {/* Floating back button */}
+        <button
+          onClick={onClose}
+          className="absolute top-3 left-3 flex items-center gap-1.5 px-3 py-1.5 bg-black/50 backdrop-blur-sm text-white/90 hover:text-white hover:bg-black/70 rounded-full font-mono text-xs transition-all z-10"
+        >
+          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+          Back
+        </button>
         <div className="p-6 flex items-start gap-4">
           {/* Poster */}
           <div className="flex-shrink-0">
