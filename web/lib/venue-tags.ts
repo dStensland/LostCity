@@ -585,3 +585,148 @@ export async function rejectSuggestion(
 
   return { success: true };
 }
+
+// =====================
+// GENERIC ENTITY TAG FUNCTIONS
+// =====================
+
+/**
+ * Get tags for any entity type with user status
+ */
+export async function getEntityTagsWithUserStatus(
+  entityType: TagEntityType,
+  entityId: number | string,
+  userId: string | null
+): Promise<VenueTagWithVote[]> {
+  // For venues, use the existing function
+  if (entityType === "venue" && typeof entityId === "number") {
+    return getVenueTagsWithUserStatus(entityId, userId);
+  }
+
+  // For events and orgs, query the appropriate tables
+  const summaryTable = entityType === "event" ? "event_tag_summary" : "org_tag_summary";
+  const tagsTable = entityType === "event" ? "event_tags" : "org_tags";
+  const votesTable = entityType === "event" ? "event_tag_votes" : "org_tag_votes";
+  const idColumn = entityType === "event" ? "event_id" : "org_id";
+  const tagIdColumn = entityType === "event" ? "event_tag_id" : "org_tag_id";
+
+  // Get tags from summary view
+  const { data: summaryData, error: summaryError } = await (supabase as UntypedTable)
+    .from(summaryTable)
+    .select("*")
+    .eq(idColumn, entityId)
+    .order("score", { ascending: false });
+
+  if (summaryError) {
+    console.error(`Error fetching ${entityType} tags:`, summaryError);
+    return [];
+  }
+
+  const tags = (summaryData || []) as VenueTagSummary[];
+
+  if (!userId || tags.length === 0) {
+    return tags.map((t) => ({ ...t, user_vote: null, user_added: false }));
+  }
+
+  // Get user's votes
+  const { data: votes } = await (supabase as UntypedTable)
+    .from(votesTable)
+    .select(`${tagIdColumn}, vote_type`)
+    .eq("user_id", userId);
+
+  // Get user's added tags
+  const { data: userTags } = await (supabase as UntypedTable)
+    .from(tagsTable)
+    .select("tag_id")
+    .eq(idColumn, entityId)
+    .eq("added_by", userId);
+
+  // Get tag mappings
+  const { data: tagMappings } = await (supabase as UntypedTable)
+    .from(tagsTable)
+    .select("id, tag_id")
+    .eq(idColumn, entityId);
+
+  type VoteRow = { [key: string]: string };
+  type MappingRow = { id: string; tag_id: string };
+  type UserTagRow = { tag_id: string };
+
+  const voteMap = new Map<string, "up" | "down">();
+  if (votes && tagMappings) {
+    const mappings = tagMappings as MappingRow[];
+    const voteRows = votes as VoteRow[];
+
+    for (const vote of voteRows) {
+      const voteTagId = vote[tagIdColumn];
+      const mapping = mappings.find((m) => m.id === voteTagId);
+      if (mapping) {
+        voteMap.set(mapping.tag_id, vote.vote_type as "up" | "down");
+      }
+    }
+  }
+
+  const addedTagIds = new Set(
+    (userTags as UserTagRow[] | null)?.map((t) => t.tag_id) || []
+  );
+
+  return tags.map((tag) => ({
+    ...tag,
+    user_vote: voteMap.get(tag.tag_id) || null,
+    user_added: addedTagIds.has(tag.tag_id),
+  }));
+}
+
+/**
+ * Add a tag to any entity type
+ */
+export async function addTagToEntity(
+  entityType: TagEntityType,
+  entityId: number | string,
+  tagId: string,
+  userId: string
+): Promise<{ success: boolean; error?: string }> {
+  // For venues, use existing function
+  if (entityType === "venue" && typeof entityId === "number") {
+    return addTagToVenue(entityId, tagId, userId);
+  }
+
+  // Use service client to bypass RLS
+  let serviceClient;
+  try {
+    serviceClient = createServiceClient();
+  } catch {
+    return { success: false, error: "Service unavailable" };
+  }
+
+  const tableName = entityType === "event" ? "event_tags" : "org_tags";
+  const idColumn = entityType === "event" ? "event_id" : "org_id";
+
+  const insertData: Record<string, unknown> = {
+    [idColumn]: entityId,
+    tag_id: tagId,
+    added_by: userId,
+  };
+
+  const { error } = await (serviceClient as UntypedTable)
+    .from(tableName)
+    .insert(insertData);
+
+  if (error) {
+    if (error.code === "23505") {
+      // Unique constraint violation - already added
+      return { success: true };
+    }
+    console.error(`Error adding tag to ${entityType}:`, error);
+    return { success: false, error: error.message };
+  }
+
+  // Refresh the materialized view
+  const viewName = entityType === "event" ? "event_tag_summary" : "org_tag_summary";
+  await (serviceClient as UntypedTable).rpc("refresh_materialized_view_concurrently", {
+    view_name: viewName,
+  }).catch(() => {
+    // View refresh is optional - might not have the function
+  });
+
+  return { success: true };
+}

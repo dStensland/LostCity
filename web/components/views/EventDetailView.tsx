@@ -14,7 +14,7 @@ import EventQuickActions from "@/components/EventQuickActions";
 import VenueVibes from "@/components/VenueVibes";
 import LinkifyText from "@/components/LinkifyText";
 import { formatTimeSplit } from "@/lib/formats";
-import VenueTagList from "@/components/VenueTagList";
+import EntityTagList from "@/components/EntityTagList";
 import FlagButton from "@/components/FlagButton";
 import { getSpotTypeLabel } from "@/lib/spots";
 import { getSeriesTypeLabel, getSeriesTypeColor } from "@/lib/series-utils";
@@ -430,43 +430,56 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
           </div>
         )}
 
-        {/* Tags Section - Event tags + Venue community tags */}
-        {(event.tags?.length || event.venue) && (
-          <div className="pt-5 border-t border-[var(--twilight)]">
-            <h2 className="font-mono text-[0.65rem] font-medium text-[var(--muted)] uppercase tracking-widest mb-3">
-              Tags
-            </h2>
+        {/* Tags Section - Event tags + Venue tags + Org tags */}
+        <div className="pt-5 border-t border-[var(--twilight)]">
+          <h2 className="font-mono text-[0.65rem] font-medium text-[var(--muted)] uppercase tracking-widest mb-3">
+            Community Tags
+          </h2>
 
-            {/* Event tags */}
-            {event.tags && event.tags.length > 0 && (
-              <div className="mb-4">
-                <p className="text-[0.6rem] text-[var(--muted)] font-mono uppercase tracking-wider mb-2">
-                  This Event
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {event.tags.map((tag) => (
-                    <span
-                      key={tag}
-                      className="px-2.5 py-1 rounded-full text-xs font-mono bg-[var(--coral)]/10 text-[var(--coral)] border border-[var(--coral)]/20"
-                    >
-                      {tag.replace(/-/g, " ")}
-                    </span>
-                  ))}
-                </div>
+          {/* Event system tags (from crawlers) */}
+          {event.tags && event.tags.length > 0 && (
+            <div className="mb-4">
+              <div className="flex flex-wrap gap-2 mb-2">
+                {event.tags.map((tag) => (
+                  <span
+                    key={tag}
+                    className="px-2.5 py-1 rounded-full text-xs font-mono bg-[var(--coral)]/10 text-[var(--coral)] border border-[var(--coral)]/20"
+                  >
+                    {tag.replace(/-/g, " ")}
+                  </span>
+                ))}
               </div>
-            )}
+            </div>
+          )}
 
-            {/* Venue community tags */}
-            {event.venue && (
-              <div>
-                <p className="text-[0.6rem] text-[var(--muted)] font-mono uppercase tracking-wider mb-2">
-                  {event.venue.name}
-                </p>
-                <VenueTagList venueId={event.venue.id} />
-              </div>
-            )}
+          {/* Event community tags */}
+          <div className="mb-4">
+            <p className="text-[0.6rem] text-[var(--muted)] font-mono uppercase tracking-wider mb-2">
+              This Event
+            </p>
+            <EntityTagList entityType="event" entityId={event.id} compact />
           </div>
-        )}
+
+          {/* Venue community tags */}
+          {event.venue && (
+            <div className="mb-4">
+              <p className="text-[0.6rem] text-[var(--muted)] font-mono uppercase tracking-wider mb-2">
+                {event.venue.name}
+              </p>
+              <EntityTagList entityType="venue" entityId={event.venue.id} compact />
+            </div>
+          )}
+
+          {/* Org community tags */}
+          {event.producer && (
+            <div>
+              <p className="text-[0.6rem] text-[var(--muted)] font-mono uppercase tracking-wider mb-2">
+                {event.producer.name}
+              </p>
+              <EntityTagList entityType="org" entityId={event.producer.id} compact />
+            </div>
+          )}
+        </div>
 
         {/* Flag */}
         <div className="pt-5 border-t border-[var(--twilight)]">
