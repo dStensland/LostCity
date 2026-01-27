@@ -33,20 +33,21 @@ export default function FollowButton({
   const [actionLoading, setActionLoading] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
 
+  // Safety timeout - ensure loading never stays true forever
+  useEffect(() => {
+    const safetyTimeout = setTimeout(() => {
+      setLoading(false);
+    }, 5000);
+    return () => clearTimeout(safetyTimeout);
+  }, []);
+
   // Check if already following
   useEffect(() => {
     let cancelled = false;
-    let timeoutId: NodeJS.Timeout;
 
     async function checkFollowStatus() {
-      // Wait for auth to finish loading, but with a timeout
+      // Quick exit if auth still loading - we'll re-run when it's done
       if (authLoading) {
-        // Set a timeout - if auth takes longer than 2s, stop loading anyway
-        timeoutId = setTimeout(() => {
-          if (!cancelled) {
-            setLoading(false);
-          }
-        }, 2000);
         return;
       }
 
@@ -60,14 +61,6 @@ export default function FollowButton({
         setLoading(false);
         return;
       }
-
-      // Set a hard timeout for the query
-      const queryTimeout = setTimeout(() => {
-        if (!cancelled) {
-          console.warn("Follow status query timed out");
-          setLoading(false);
-        }
-      }, 3000);
 
       try {
         let query = supabase
@@ -85,18 +78,22 @@ export default function FollowButton({
           query = query.eq("followed_producer_id", targetProducerId);
         }
 
-        const { data, error } = await query.maybeSingle();
+        // Race the query against a timeout
+        const result = await Promise.race([
+          query.maybeSingle(),
+          new Promise<{ data: null; error: { message: string } }>((resolve) =>
+            setTimeout(() => resolve({ data: null, error: { message: "Query timeout" } }), 3000)
+          ),
+        ]);
 
-        clearTimeout(queryTimeout);
         if (cancelled) return;
 
-        if (error) {
-          console.error("Error checking follow status:", error);
+        if (result.error) {
+          console.error("Error checking follow status:", result.error);
         }
 
-        setIsFollowing(!!data);
+        setIsFollowing(!!result.data);
       } catch (err) {
-        clearTimeout(queryTimeout);
         console.error("Exception checking follow status:", err);
       } finally {
         if (!cancelled) {
@@ -109,9 +106,6 @@ export default function FollowButton({
 
     return () => {
       cancelled = true;
-      if (timeoutId) {
-        clearTimeout(timeoutId);
-      }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- supabase client is stable
   }, [user, authLoading, targetUserId, targetVenueId, targetOrgId, targetProducerId]);

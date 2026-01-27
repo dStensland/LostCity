@@ -38,6 +38,14 @@ export default function RecommendButton({
   const [note, setNote] = useState("");
   const [visibility, setVisibility] = useState<Visibility>(DEFAULT_VISIBILITY);
 
+  // Safety timeout - ensure loading never stays true forever
+  useEffect(() => {
+    const safetyTimeout = setTimeout(() => {
+      setLoading(false);
+    }, 5000);
+    return () => clearTimeout(safetyTimeout);
+  }, []);
+
   // Focus trap and keyboard handling
   useEffect(() => {
     if (!modalOpen) return;
@@ -92,17 +100,10 @@ export default function RecommendButton({
   // Load existing recommendation
   useEffect(() => {
     let cancelled = false;
-    let timeoutId: NodeJS.Timeout;
 
     async function loadRecommendation() {
-      // Wait for auth to finish loading, but with a timeout
+      // Quick exit if auth still loading - we'll re-run when it's done
       if (authLoading) {
-        // Set a timeout - if auth takes longer than 2s, enable button anyway
-        timeoutId = setTimeout(() => {
-          if (!cancelled) {
-            setLoading(false);
-          }
-        }, 2000);
         return;
       }
 
@@ -116,14 +117,6 @@ export default function RecommendButton({
         if (!cancelled) setLoading(false);
         return;
       }
-
-      // Set a hard timeout for the query
-      const queryTimeout = setTimeout(() => {
-        if (!cancelled) {
-          console.warn("Recommendation query timed out");
-          setLoading(false);
-        }
-      }, 3000);
 
       try {
         let query = supabase
@@ -139,16 +132,21 @@ export default function RecommendButton({
           query = query.eq("producer_id", producerId);
         }
 
-        const { data, error } = await query.maybeSingle();
+        // Race the query against a timeout
+        const result = await Promise.race([
+          query.maybeSingle(),
+          new Promise<{ data: null; error: { message: string } }>((resolve) =>
+            setTimeout(() => resolve({ data: null, error: { message: "Query timeout" } }), 3000)
+          ),
+        ]);
 
-        clearTimeout(queryTimeout);
         if (cancelled) return;
 
-        if (error) {
-          console.error("Error loading recommendation:", error);
+        if (result.error) {
+          console.error("Error loading recommendation:", result.error);
         }
 
-        const rec = data as RecommendationRow | null;
+        const rec = result.data as RecommendationRow | null;
 
         if (rec) {
           setIsRecommended(true);
@@ -156,7 +154,6 @@ export default function RecommendButton({
           setVisibility(rec.visibility as Visibility);
         }
       } catch (err) {
-        clearTimeout(queryTimeout);
         console.error("Exception loading recommendation:", err);
       } finally {
         if (!cancelled) {
@@ -169,9 +166,6 @@ export default function RecommendButton({
 
     return () => {
       cancelled = true;
-      if (timeoutId) {
-        clearTimeout(timeoutId);
-      }
     };
   }, [user, authLoading, eventId, venueId, producerId, supabase]);
 
