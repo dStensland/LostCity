@@ -4,32 +4,77 @@ import type {
   VenueTagDefinition,
   VenueTagSummary,
   VenueTagWithVote,
-  VenueTagCategory,
+  TagEntityType,
+  VenueTagGroup,
+  EventTagGroup,
+  OrgTagGroup,
+  TagGroup,
 } from "./types";
 
-// Category display configuration
-export const TAG_CATEGORIES: Record<VenueTagCategory, { label: string; color: string }> = {
-  vibe: { label: "Vibes", color: "var(--neon-cyan)" },
-  amenity: { label: "Amenities", color: "var(--sage)" },
+// Tag group display configuration by entity type
+export const VENUE_TAG_GROUPS: Record<VenueTagGroup, { label: string; color: string }> = {
+  vibes: { label: "Vibes", color: "var(--neon-cyan)" },
+  amenities: { label: "Amenities", color: "var(--sage)" },
   good_for: { label: "Good For", color: "var(--coral)" },
-  food_drink: { label: "Food & Drink", color: "var(--gold)" },
   accessibility: { label: "Accessibility", color: "var(--lavender)" },
+  heads_up: { label: "Heads Up", color: "var(--gold)" },
 };
+
+export const EVENT_TAG_GROUPS: Record<EventTagGroup, { label: string; color: string }> = {
+  audience: { label: "Audience", color: "var(--lavender)" },
+  social: { label: "Social", color: "var(--coral)" },
+  vibe: { label: "Vibe", color: "var(--neon-cyan)" },
+  format: { label: "Format", color: "var(--sage)" },
+  practical: { label: "Practical", color: "var(--twilight)" },
+  heads_up: { label: "Heads Up", color: "var(--gold)" },
+};
+
+export const ORG_TAG_GROUPS: Record<OrgTagGroup, { label: string; color: string }> = {
+  values: { label: "Values", color: "var(--lavender)" },
+  structure: { label: "Structure", color: "var(--sage)" },
+  engagement: { label: "Engagement", color: "var(--coral)" },
+  heads_up: { label: "Heads Up", color: "var(--gold)" },
+};
+
+// Get tag groups config for an entity type
+export function getTagGroupsForEntity(
+  entityType: TagEntityType
+): Record<string, { label: string; color: string }> {
+  switch (entityType) {
+    case "venue":
+      return VENUE_TAG_GROUPS;
+    case "event":
+      return EVENT_TAG_GROUPS;
+    case "org":
+      return ORG_TAG_GROUPS;
+    default:
+      return VENUE_TAG_GROUPS;
+  }
+}
+
+// Legacy alias for backwards compatibility
+export const TAG_CATEGORIES = VENUE_TAG_GROUPS;
 
 // Type helper for untyped tables (new tables not yet in generated types)
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type UntypedTable = any;
 
 /**
- * Get all active tag definitions for autocomplete
+ * Get all active tag definitions for autocomplete, optionally filtered by entity type
  */
-export async function getAllTagDefinitions(): Promise<VenueTagDefinition[]> {
-  const { data, error } = await (supabase as UntypedTable)
+export async function getAllTagDefinitions(
+  entityType?: TagEntityType
+): Promise<VenueTagDefinition[]> {
+  let query = (supabase as UntypedTable)
     .from("venue_tag_definitions")
     .select("*")
-    .eq("is_active", true)
-    .order("category")
-    .order("label");
+    .eq("is_active", true);
+
+  if (entityType) {
+    query = query.eq("entity_type", entityType);
+  }
+
+  const { data, error } = await query.order("tag_group").order("label");
 
   if (error) {
     console.error("Error fetching tag definitions:", error);
@@ -40,30 +85,28 @@ export async function getAllTagDefinitions(): Promise<VenueTagDefinition[]> {
 }
 
 /**
- * Get tag definitions grouped by category
+ * Get tag definitions grouped by tag_group, optionally filtered by entity type
  */
-export async function getTagDefinitionsByCategory(): Promise<
-  Record<VenueTagCategory, VenueTagDefinition[]>
-> {
-  const definitions = await getAllTagDefinitions();
+export async function getTagDefinitionsByGroup(
+  entityType?: TagEntityType
+): Promise<Record<string, VenueTagDefinition[]>> {
+  const definitions = await getAllTagDefinitions(entityType);
 
-  const grouped: Record<VenueTagCategory, VenueTagDefinition[]> = {
-    vibe: [],
-    amenity: [],
-    good_for: [],
-    food_drink: [],
-    accessibility: [],
-  };
+  const grouped: Record<string, VenueTagDefinition[]> = {};
 
   for (const def of definitions) {
-    const category = def.category as VenueTagCategory;
-    if (grouped[category]) {
-      grouped[category].push(def);
+    const group = def.tag_group as TagGroup;
+    if (!grouped[group]) {
+      grouped[group] = [];
     }
+    grouped[group].push(def);
   }
 
   return grouped;
 }
+
+// Legacy alias for backwards compatibility
+export const getTagDefinitionsByCategory = getTagDefinitionsByGroup;
 
 /**
  * Get tags for a specific venue with scores
@@ -308,12 +351,14 @@ export async function voteOnTag(
 
 /**
  * Suggest a new tag
+ * Note: entityType parameter reserved for future use when expanding suggestions to events/orgs
  */
 export async function suggestTag(
   venueId: number,
   label: string,
-  category: VenueTagCategory,
-  userId: string
+  tagGroup: TagGroup,
+  userId: string,
+  _entityType: TagEntityType = "venue"
 ): Promise<{ success: boolean; suggestionId?: string; error?: string }> {
   // Use service client to bypass RLS - auth is validated in API route
   let serviceClient;
@@ -328,7 +373,7 @@ export async function suggestTag(
     .insert({
       venue_id: venueId,
       suggested_label: label,
-      suggested_category: category,
+      suggested_tag_group: tagGroup,
       suggested_by: userId,
     })
     .select("id")
@@ -351,7 +396,7 @@ export async function getPendingSuggestions(): Promise<
     venue_id: number;
     venue_name?: string;
     suggested_label: string;
-    suggested_category: string;
+    suggested_tag_group: string;
     suggested_by: string;
     suggester_username?: string;
     created_at: string;
@@ -370,7 +415,7 @@ export async function getPendingSuggestions(): Promise<
       id,
       venue_id,
       suggested_label,
-      suggested_category,
+      suggested_tag_group,
       suggested_by,
       created_at,
       venues(name),
@@ -388,7 +433,7 @@ export async function getPendingSuggestions(): Promise<
     id: string;
     venue_id: number;
     suggested_label: string;
-    suggested_category: string;
+    suggested_tag_group: string;
     suggested_by: string;
     created_at: string;
     venues: { name: string } | null;
@@ -400,7 +445,7 @@ export async function getPendingSuggestions(): Promise<
     venue_id: s.venue_id,
     venue_name: s.venues?.name,
     suggested_label: s.suggested_label,
-    suggested_category: s.suggested_category,
+    suggested_tag_group: s.suggested_tag_group,
     suggested_by: s.suggested_by,
     suggester_username: s.profiles?.username,
     created_at: s.created_at,
@@ -412,7 +457,8 @@ export async function getPendingSuggestions(): Promise<
  */
 export async function approveSuggestion(
   suggestionId: string,
-  adminId: string
+  adminId: string,
+  entityType: TagEntityType = "venue"
 ): Promise<{ success: boolean; tagId?: string; error?: string }> {
   let serviceClient;
   try {
@@ -431,7 +477,7 @@ export async function approveSuggestion(
   type SuggestionData = {
     venue_id: number;
     suggested_label: string;
-    suggested_category: string;
+    suggested_tag_group: string;
     suggested_by: string;
   };
 
@@ -452,6 +498,7 @@ export async function approveSuggestion(
     .from("venue_tag_definitions")
     .select("id")
     .eq("slug", slug)
+    .eq("entity_type", entityType)
     .maybeSingle();
 
   let tagId: string;
@@ -465,7 +512,8 @@ export async function approveSuggestion(
       .insert({
         slug,
         label: suggestionData.suggested_label,
-        category: suggestionData.suggested_category,
+        tag_group: suggestionData.suggested_tag_group,
+        entity_type: entityType,
         is_official: false,
         is_active: true,
         created_by: suggestionData.suggested_by,

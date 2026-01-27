@@ -6,7 +6,7 @@ import {
   removeTagFromVenue,
   suggestTag,
 } from "@/lib/venue-tags";
-import type { VenueTagCategory } from "@/lib/types";
+import type { VenueTagGroup, TagGroup } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -67,24 +67,25 @@ export async function POST(request: NextRequest, { params }: Props) {
   }
 
   // If suggesting a new tag
-  if (body.suggestedLabel && body.suggestedCategory) {
-    const validCategories: VenueTagCategory[] = [
-      "vibe",
-      "amenity",
+  if (body.suggestedLabel && body.suggestedTagGroup) {
+    const validVenueGroups: VenueTagGroup[] = [
+      "vibes",
+      "amenities",
       "good_for",
-      "food_drink",
       "accessibility",
+      "heads_up",
     ];
 
-    if (!validCategories.includes(body.suggestedCategory)) {
-      return NextResponse.json({ error: "Invalid category" }, { status: 400 });
+    if (!validVenueGroups.includes(body.suggestedTagGroup)) {
+      return NextResponse.json({ error: "Invalid tag group" }, { status: 400 });
     }
 
     const result = await suggestTag(
       venueId,
       body.suggestedLabel,
-      body.suggestedCategory,
-      user.id
+      body.suggestedTagGroup as TagGroup,
+      user.id,
+      "venue"
     );
 
     if (!result.success) {
@@ -99,7 +100,7 @@ export async function POST(request: NextRequest, { params }: Props) {
   }
 
   return NextResponse.json(
-    { error: "Either tagId or suggestedLabel and suggestedCategory required" },
+    { error: "Either tagId or suggestedLabel and suggestedTagGroup required" },
     { status: 400 }
   );
 }

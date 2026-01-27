@@ -527,8 +527,30 @@ export type Database = {
   };
 };
 
-// Venue tag types for use throughout the app
-export type VenueTagDefinition = Database["public"]["Tables"]["venue_tag_definitions"]["Row"];
+// Tag entity types
+export type TagEntityType = "venue" | "event" | "org";
+
+// Tag groups by entity type
+export type VenueTagGroup = "vibes" | "amenities" | "good_for" | "accessibility" | "heads_up";
+export type EventTagGroup = "audience" | "social" | "vibe" | "format" | "practical" | "heads_up";
+export type OrgTagGroup = "values" | "structure" | "engagement" | "heads_up";
+export type TagGroup = VenueTagGroup | EventTagGroup | OrgTagGroup;
+
+// Legacy alias for backwards compatibility
+export type VenueTagCategory = VenueTagGroup;
+
+// Venue tag types - manually defined to match new schema with tag_group and entity_type
+export interface VenueTagDefinition {
+  id: string;
+  slug: string;
+  label: string;
+  tag_group: TagGroup;
+  entity_type: TagEntityType;
+  is_official: boolean;
+  is_active: boolean;
+  created_by: string | null;
+  created_at: string;
+}
 
 export type VenueTag = Database["public"]["Tables"]["venue_tags"]["Row"];
 
@@ -536,15 +558,14 @@ export type VenueTagVote = Database["public"]["Tables"]["venue_tag_votes"]["Row"
 
 export type VenueTagSuggestion = Database["public"]["Tables"]["venue_tag_suggestions"]["Row"];
 
-export type VenueTagCategory = "vibe" | "amenity" | "good_for" | "food_drink" | "accessibility";
-
 // Tag summary from materialized view
 export interface VenueTagSummary {
   venue_id: number;
   tag_id: string;
   tag_slug: string;
   tag_label: string;
-  tag_category: VenueTagCategory;
+  tag_group: TagGroup;
+  entity_type: TagEntityType;
   is_official: boolean;
   add_count: number;
   upvote_count: number;

@@ -1,24 +1,28 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { TAG_CATEGORIES } from "@/lib/venue-tags";
-import type { VenueTagDefinition, VenueTagCategory } from "@/lib/types";
+import { getTagGroupsForEntity } from "@/lib/venue-tags";
+import type { VenueTagDefinition, TagEntityType, TagGroup } from "@/lib/types";
 
 interface AddTagModalProps {
   venueId: number;
+  entityType?: TagEntityType;
   onClose: () => void;
   onTagAdded: () => void;
 }
 
-export default function AddTagModal({ venueId, onClose, onTagAdded }: AddTagModalProps) {
+export default function AddTagModal({ venueId, entityType = "venue", onClose, onTagAdded }: AddTagModalProps) {
   const [searchQuery, setSearchQuery] = useState("");
-  const [tagsByCategory, setTagsByCategory] = useState<Record<string, VenueTagDefinition[]>>({});
+  const [tagsByGroup, setTagsByGroup] = useState<Record<string, VenueTagDefinition[]>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showSuggestForm, setShowSuggestForm] = useState(false);
   const [suggestedLabel, setSuggestedLabel] = useState("");
-  const [suggestedCategory, setSuggestedCategory] = useState<VenueTagCategory>("vibe");
+  const [suggestedGroup, setSuggestedGroup] = useState<TagGroup>("vibes");
+
+  // Get tag groups config for current entity type
+  const tagGroupsConfig = getTagGroupsForEntity(entityType);
 
   const modalRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -27,10 +31,15 @@ export default function AddTagModal({ venueId, onClose, onTagAdded }: AddTagModa
   useEffect(() => {
     const fetchTags = async () => {
       try {
-        const res = await fetch("/api/tags?grouped=true");
+        const res = await fetch(`/api/tags?grouped=true&entityType=${entityType}`);
         if (!res.ok) throw new Error("Failed to fetch tags");
         const data = await res.json();
-        setTagsByCategory(data.tags || {});
+        setTagsByGroup(data.tags || {});
+        // Set default suggested group to first available group
+        const groups = Object.keys(data.tags || {});
+        if (groups.length > 0) {
+          setSuggestedGroup(groups[0] as TagGroup);
+        }
       } catch (err) {
         console.error("Error fetching tags:", err);
         setError("Failed to load tags");
@@ -41,7 +50,7 @@ export default function AddTagModal({ venueId, onClose, onTagAdded }: AddTagModa
 
     fetchTags();
     inputRef.current?.focus();
-  }, []);
+  }, [entityType]);
 
   // Close on escape
   useEffect(() => {
@@ -64,13 +73,13 @@ export default function AddTagModal({ venueId, onClose, onTagAdded }: AddTagModa
   }, [onClose]);
 
   // Filter tags by search
-  const filteredTags = Object.entries(tagsByCategory).reduce(
-    (acc, [category, tags]) => {
+  const filteredTags = Object.entries(tagsByGroup).reduce(
+    (acc, [group, tags]) => {
       const filtered = tags.filter((tag) =>
         tag.label.toLowerCase().includes(searchQuery.toLowerCase())
       );
       if (filtered.length > 0) {
-        acc[category] = filtered;
+        acc[group] = filtered;
       }
       return acc;
     },
@@ -119,7 +128,8 @@ export default function AddTagModal({ venueId, onClose, onTagAdded }: AddTagModa
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           suggestedLabel: suggestedLabel.trim(),
-          suggestedCategory,
+          suggestedTagGroup: suggestedGroup,
+          entityType,
         }),
       });
 
@@ -186,14 +196,14 @@ export default function AddTagModal({ venueId, onClose, onTagAdded }: AddTagModa
 
               <div>
                 <label className="block font-mono text-xs text-[var(--muted)] mb-1.5">
-                  Category
+                  Tag Group
                 </label>
                 <select
-                  value={suggestedCategory}
-                  onChange={(e) => setSuggestedCategory(e.target.value as VenueTagCategory)}
+                  value={suggestedGroup}
+                  onChange={(e) => setSuggestedGroup(e.target.value as TagGroup)}
                   className="w-full px-3 py-2 rounded-lg bg-[var(--twilight)] text-[var(--cream)] font-mono text-sm border-none focus:outline-none focus:ring-2 focus:ring-[var(--coral)]"
                 >
-                  {Object.entries(TAG_CATEGORIES).map(([key, config]) => (
+                  {Object.entries(tagGroupsConfig).map(([key, config]) => (
                     <option key={key} value={key}>
                       {config.label}
                     </option>
@@ -240,15 +250,15 @@ export default function AddTagModal({ venueId, onClose, onTagAdded }: AddTagModa
                 <div className="text-center py-8 text-[var(--muted)]">Loading tags...</div>
               ) : hasResults ? (
                 <div className="space-y-4">
-                  {Object.entries(filteredTags).map(([category, tags]) => {
-                    const categoryConfig = TAG_CATEGORIES[category as VenueTagCategory];
+                  {Object.entries(filteredTags).map(([group, tags]) => {
+                    const groupConfig = tagGroupsConfig[group];
                     return (
-                      <div key={category}>
+                      <div key={group}>
                         <h3
                           className="font-mono text-[0.65rem] uppercase tracking-wider mb-2"
-                          style={{ color: categoryConfig?.color || "var(--muted)" }}
+                          style={{ color: groupConfig?.color || "var(--muted)" }}
                         >
-                          {categoryConfig?.label || category}
+                          {groupConfig?.label || group}
                         </h3>
                         <div className="flex flex-wrap gap-1.5">
                           {tags.map((tag) => (
@@ -258,9 +268,9 @@ export default function AddTagModal({ venueId, onClose, onTagAdded }: AddTagModa
                               disabled={isSubmitting}
                               className="px-2.5 py-1 rounded-lg font-mono text-xs font-medium transition-colors hover:opacity-80 disabled:opacity-50"
                               style={{
-                                backgroundColor: `color-mix(in srgb, ${categoryConfig?.color || "var(--twilight)"} 15%, transparent)`,
-                                color: categoryConfig?.color || "var(--cream)",
-                                border: `1px solid color-mix(in srgb, ${categoryConfig?.color || "var(--twilight)"} 30%, transparent)`,
+                                backgroundColor: `color-mix(in srgb, ${groupConfig?.color || "var(--twilight)"} 15%, transparent)`,
+                                color: groupConfig?.color || "var(--cream)",
+                                border: `1px solid color-mix(in srgb, ${groupConfig?.color || "var(--twilight)"} 30%, transparent)`,
                               }}
                             >
                               {tag.label}

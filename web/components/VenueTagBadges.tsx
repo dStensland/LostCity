@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { TAG_CATEGORIES } from "@/lib/venue-tags";
-import type { VenueTagSummary, VenueTagCategory } from "@/lib/types";
+import { VENUE_TAG_GROUPS } from "@/lib/venue-tags";
+import type { VenueTagSummary, VenueTagGroup } from "@/lib/types";
 
 interface VenueTagBadgesProps {
   venueId: number;
@@ -44,8 +44,8 @@ export default function VenueTagBadges({ venueId, maxTags = 3 }: VenueTagBadgesP
   return (
     <div className="flex items-center gap-1 mt-1.5 flex-wrap">
       {displayTags.map((tag) => {
-        const categoryConfig = TAG_CATEGORIES[tag.tag_category as VenueTagCategory];
-        const color = categoryConfig?.color || "var(--cream)";
+        const groupConfig = VENUE_TAG_GROUPS[tag.tag_group as VenueTagGroup];
+        const color = groupConfig?.color || "var(--cream)";
 
         return (
           <span
