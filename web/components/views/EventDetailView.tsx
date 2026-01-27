@@ -18,6 +18,8 @@ import EntityTagList from "@/components/EntityTagList";
 import FlagButton from "@/components/FlagButton";
 import { getSpotTypeLabel } from "@/lib/spots";
 import { getSeriesTypeLabel, getSeriesTypeColor } from "@/lib/series-utils";
+import CollapsibleSection, { CategoryIcons } from "@/components/CollapsibleSection";
+import { formatCloseTime } from "@/lib/hours";
 
 type EventData = {
   id: number;
@@ -80,6 +82,15 @@ type NearbySpot = {
   slug: string;
   spot_type: string | null;
   neighborhood: string | null;
+  closesAt?: string;
+};
+
+type NearbyDestinations = {
+  food: NearbySpot[];
+  drinks: NearbySpot[];
+  nightlife: NearbySpot[];
+  caffeine: NearbySpot[];
+  fun: NearbySpot[];
 };
 
 interface EventDetailViewProps {
@@ -111,24 +122,23 @@ function parseRecurrenceRule(rule: string | null | undefined): string | null {
   return null;
 }
 
-// Spot type categories for "In the area" tabs
-const FOOD_TYPES = ["restaurant", "food_hall", "cooking_school"];
-const DRINKS_TYPES = ["bar", "brewery", "distillery", "winery", "rooftop", "sports_bar", "coffee_shop"];
-const FUN_TYPES = ["club", "games", "eatertainment", "music_venue", "comedy_club", "theater", "cinema", "attraction", "gallery", "museum", "arcade"];
-
-type InAreaTab = "events" | "food" | "drinks" | "fun";
-
 export default function EventDetailView({ eventId, portalSlug, onClose }: EventDetailViewProps) {
   const router = useRouter();
   const [event, setEvent] = useState<EventData | null>(null);
   const [venueEvents, setVenueEvents] = useState<RelatedEvent[]>([]);
-  const [sameDateEvents, setSameDateEvents] = useState<RelatedEvent[]>([]);
-  const [nearbySpots, setNearbySpots] = useState<NearbySpot[]>([]);
+  const [nearbyEvents, setNearbyEvents] = useState<RelatedEvent[]>([]);
+  const [nearbyDestinations, setNearbyDestinations] = useState<NearbyDestinations>({
+    food: [],
+    drinks: [],
+    nightlife: [],
+    caffeine: [],
+    fun: [],
+  });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
-  const [inAreaTab, setInAreaTab] = useState<InAreaTab>("events");
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     async function fetchEvent() {
@@ -143,8 +153,14 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
         const data = await res.json();
         setEvent(data.event);
         setVenueEvents(data.venueEvents || []);
-        setSameDateEvents(data.sameDateEvents || []);
-        setNearbySpots(data.nearbySpots || []);
+        setNearbyEvents(data.nearbyEvents || []);
+        setNearbyDestinations(data.nearbyDestinations || {
+          food: [],
+          drinks: [],
+          nightlife: [],
+          caffeine: [],
+          fun: [],
+        });
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to load event");
       } finally {
@@ -166,6 +182,10 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
 
   const handleSeriesClick = (slug: string) => {
     router.push(`/${portalSlug}?series=${slug}`, { scroll: false });
+  };
+
+  const toggleSection = (key: string) => {
+    setExpandedSections(prev => ({ ...prev, [key]: !prev[key] }));
   };
 
   if (loading) {
@@ -211,6 +231,16 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
   const isLive = event.is_live || false;
   const recurrenceText = parseRecurrenceRule(event.recurrence_rule);
   const showImage = event.image_url && !imageError;
+
+  // Count items for related sections
+  const hasVenueEvents = venueEvents.length > 0;
+  const hasNearbyEvents = nearbyEvents.length > 0;
+  const hasFood = nearbyDestinations.food.length > 0;
+  const hasDrinks = nearbyDestinations.drinks.length > 0;
+  const hasNightlife = nearbyDestinations.nightlife.length > 0;
+  const hasCaffeine = nearbyDestinations.caffeine.length > 0;
+  const hasFun = nearbyDestinations.fun.length > 0;
+  const hasRelatedContent = hasVenueEvents || hasNearbyEvents || hasFood || hasDrinks || hasNightlife || hasCaffeine || hasFun;
 
   return (
     <div className="animate-fadeIn pb-8">
@@ -491,199 +521,234 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
         </div>
       </div>
 
-      {/* Related Events */}
-      {(venueEvents.length > 0 || sameDateEvents.length > 0) && (
-        <div className="mt-8 space-y-8">
-          {venueEvents.length > 0 && event.venue && (
-            <div>
-              <div className="flex items-center gap-3 mb-4">
-                <h2 className="font-mono text-[0.65rem] font-medium text-[var(--muted)] uppercase tracking-widest">
-                  More at {event.venue.name}
-                </h2>
-                <span className="px-2 py-0.5 rounded-full bg-[var(--coral)]/20 text-[var(--coral)] text-[0.6rem] font-mono">
-                  {venueEvents.length} upcoming
-                </span>
-              </div>
-              <div className="border border-[var(--twilight)] rounded-xl overflow-hidden bg-[var(--dusk)]">
-                {venueEvents.map((relatedEvent, index) => (
+      {/* Related Sections - All Collapsible */}
+      {hasRelatedContent && (
+        <div className="mt-8 space-y-3">
+          {/* More at Venue */}
+          {hasVenueEvents && event.venue && (
+            <CollapsibleSection
+              title={`More at ${event.venue.name}`}
+              count={venueEvents.length}
+              category="venue"
+              icon={CategoryIcons.venue}
+              maxItems={5}
+              totalItems={venueEvents.length}
+              onSeeAll={() => toggleSection('venue')}
+            >
+              <div className="space-y-2">
+                {(expandedSections.venue ? venueEvents : venueEvents.slice(0, 5)).map((relatedEvent) => (
                   <button
                     key={relatedEvent.id}
                     onClick={() => handleEventClick(relatedEvent.id)}
-                    className={`block w-full p-4 transition-colors group hover:bg-[var(--twilight)]/50 text-left ${
-                      index !== venueEvents.length - 1 ? "border-b border-[var(--twilight)]" : ""
-                    }`}
+                    className="block w-full p-3 border border-[var(--twilight)] rounded-lg transition-colors group hover:border-[var(--coral)]/50 bg-[var(--void)] text-left"
                   >
-                    <div className="flex items-start justify-between gap-4">
+                    <div className="flex items-start justify-between gap-3">
                       <div className="flex-1 min-w-0">
-                        <h3 className="text-[var(--cream)] font-medium truncate group-hover:text-[var(--coral)] transition-colors">
+                        <h3 className="text-[var(--cream)] text-sm font-medium truncate group-hover:text-[var(--coral)] transition-colors">
                           {relatedEvent.title}
                         </h3>
-                        <p className="text-sm text-[var(--muted)] mt-1">
+                        <p className="text-xs text-[var(--muted)] mt-0.5">
                           {format(parseISO(relatedEvent.start_date), "EEE, MMM d")}
-                          {relatedEvent.start_time && ` · ${formatTimeSplit(relatedEvent.start_time).time} ${formatTimeSplit(relatedEvent.start_time).period}`}
+                          {relatedEvent.start_time && ` · ${formatTimeSplit(relatedEvent.start_time).time}${formatTimeSplit(relatedEvent.start_time).period}`}
                         </p>
                       </div>
-                      <span className="text-[var(--muted)] group-hover:text-[var(--coral)] transition-colors">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                        </svg>
-                      </span>
+                      <svg className="w-4 h-4 text-[var(--muted)] group-hover:text-[var(--coral)] transition-colors flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
                     </div>
                   </button>
                 ))}
               </div>
-            </div>
+            </CollapsibleSection>
           )}
 
-          {/* In the area - tabbed section for same-night events and nearby spots by category */}
-          {(sameDateEvents.length > 0 || nearbySpots.length > 0) && (
-            <div>
-              <h2 className="font-mono text-[0.65rem] font-medium text-[var(--muted)] uppercase tracking-widest mb-3">
-                In the area
-              </h2>
-
-              {/* Tab selector */}
-              <div className="flex gap-1 p-1 bg-[var(--night)] rounded-lg mb-4 overflow-x-auto">
-                {[
-                  { key: "events" as InAreaTab, label: "Events", count: sameDateEvents.length },
-                  { key: "food" as InAreaTab, label: "Food", count: nearbySpots.filter(s => FOOD_TYPES.includes(s.spot_type || "")).length },
-                  { key: "drinks" as InAreaTab, label: "Drinks", count: nearbySpots.filter(s => DRINKS_TYPES.includes(s.spot_type || "")).length },
-                  { key: "fun" as InAreaTab, label: "Fun", count: nearbySpots.filter(s => FUN_TYPES.includes(s.spot_type || "")).length },
-                ].filter(tab => tab.count > 0).map((tab) => (
+          {/* Other Events Nearby */}
+          {hasNearbyEvents && (
+            <CollapsibleSection
+              title="Other Events"
+              count={nearbyEvents.length}
+              category="events"
+              icon={CategoryIcons.events}
+              maxItems={5}
+              totalItems={nearbyEvents.length}
+              onSeeAll={() => toggleSection('events')}
+            >
+              <div className="space-y-2">
+                {(expandedSections.events ? nearbyEvents : nearbyEvents.slice(0, 5)).map((relatedEvent) => (
                   <button
-                    key={tab.key}
-                    onClick={() => setInAreaTab(tab.key)}
-                    className={`flex-1 min-w-[70px] px-3 py-2 rounded-md font-mono text-xs whitespace-nowrap transition-all ${
-                      inAreaTab === tab.key
-                        ? "bg-[var(--coral)] text-[var(--void)] font-medium"
-                        : "text-[var(--muted)] hover:text-[var(--cream)] hover:bg-[var(--twilight)]/50"
-                    }`}
+                    key={relatedEvent.id}
+                    onClick={() => handleEventClick(relatedEvent.id)}
+                    className="block w-full p-3 border border-[var(--twilight)] rounded-lg transition-colors group hover:border-[var(--coral)]/50 bg-[var(--void)] text-left"
                   >
-                    {tab.label}
-                    <span className={`ml-1.5 ${inAreaTab === tab.key ? "text-[var(--void)]/70" : "text-[var(--muted)]"}`}>
-                      {tab.count}
-                    </span>
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-[var(--cream)] text-sm font-medium truncate group-hover:text-[var(--coral)] transition-colors">
+                          {relatedEvent.title}
+                        </h3>
+                        <p className="text-xs text-[var(--muted)] mt-0.5">
+                          {relatedEvent.venue?.name || "Venue TBA"}
+                          {relatedEvent.start_time && ` · ${formatTimeSplit(relatedEvent.start_time).time}${formatTimeSplit(relatedEvent.start_time).period}`}
+                        </p>
+                      </div>
+                      <svg className="w-4 h-4 text-[var(--muted)] group-hover:text-[var(--coral)] transition-colors flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </div>
                   </button>
                 ))}
               </div>
+            </CollapsibleSection>
+          )}
 
-              {/* Tab content */}
-              {inAreaTab === "events" && sameDateEvents.length > 0 && (
-                <div className="space-y-2">
-                  {sameDateEvents.map((relatedEvent) => (
-                    <button
-                      key={relatedEvent.id}
-                      onClick={() => handleEventClick(relatedEvent.id)}
-                      className="block w-full p-4 border border-[var(--twilight)] rounded-lg transition-colors group hover:border-[var(--coral)]/50 bg-[var(--dusk)] text-left"
-                    >
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="flex-1 min-w-0">
-                          <h3 className="text-[var(--cream)] font-medium truncate group-hover:text-[var(--coral)] transition-colors">
-                            {relatedEvent.title}
-                          </h3>
-                          <p className="text-sm text-[var(--muted)] mt-1">
-                            {relatedEvent.venue?.name || "Venue TBA"}
-                            {relatedEvent.start_time && ` · ${formatTimeSplit(relatedEvent.start_time).time} ${formatTimeSplit(relatedEvent.start_time).period}`}
-                          </p>
-                        </div>
-                        <span className="text-[var(--muted)] group-hover:text-[var(--coral)] transition-colors">
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                          </svg>
-                        </span>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              )}
+          {/* Food */}
+          {hasFood && (
+            <CollapsibleSection
+              title="Food"
+              count={nearbyDestinations.food.length}
+              category="food"
+              icon={<span className="text-base">🍽️</span>}
+              maxItems={5}
+              totalItems={nearbyDestinations.food.length}
+              onSeeAll={() => toggleSection('food')}
+            >
+              <div className="grid grid-cols-2 gap-2">
+                {(expandedSections.food ? nearbyDestinations.food : nearbyDestinations.food.slice(0, 5)).map((spot) => (
+                  <SpotCard
+                    key={spot.id}
+                    spot={spot}
+                    onClick={() => handleSpotClick(spot.slug)}
+                  />
+                ))}
+              </div>
+            </CollapsibleSection>
+          )}
 
-              {inAreaTab === "food" && (
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                  {nearbySpots.filter(s => FOOD_TYPES.includes(s.spot_type || "")).map((spot) => (
-                    <button
-                      key={spot.id}
-                      onClick={() => handleSpotClick(spot.slug)}
-                      className="group p-3 border border-[var(--twilight)] rounded-lg transition-colors hover:border-[var(--coral)]/50 bg-[var(--dusk)] text-left"
-                    >
-                      <div className="flex items-start gap-2">
-                        <CategoryIcon
-                          type={spot.spot_type || "restaurant"}
-                          size={16}
-                          className="mt-0.5 flex-shrink-0"
-                        />
-                        <div className="min-w-0 flex-1">
-                          <h3 className="text-[var(--cream)] text-sm font-medium truncate group-hover:text-[var(--coral)] transition-colors">
-                            {spot.name}
-                          </h3>
-                          <p className="text-[0.65rem] text-[var(--muted)] font-mono uppercase tracking-wider mt-0.5">
-                            {getSpotTypeLabel(spot.spot_type)}
-                          </p>
-                        </div>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              )}
+          {/* Drinks */}
+          {hasDrinks && (
+            <CollapsibleSection
+              title="Drinks"
+              count={nearbyDestinations.drinks.length}
+              category="drinks"
+              icon={<span className="text-base">🍺</span>}
+              maxItems={5}
+              totalItems={nearbyDestinations.drinks.length}
+              onSeeAll={() => toggleSection('drinks')}
+            >
+              <div className="grid grid-cols-2 gap-2">
+                {(expandedSections.drinks ? nearbyDestinations.drinks : nearbyDestinations.drinks.slice(0, 5)).map((spot) => (
+                  <SpotCard
+                    key={spot.id}
+                    spot={spot}
+                    onClick={() => handleSpotClick(spot.slug)}
+                  />
+                ))}
+              </div>
+            </CollapsibleSection>
+          )}
 
-              {inAreaTab === "drinks" && (
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                  {nearbySpots.filter(s => DRINKS_TYPES.includes(s.spot_type || "")).map((spot) => (
-                    <button
-                      key={spot.id}
-                      onClick={() => handleSpotClick(spot.slug)}
-                      className="group p-3 border border-[var(--twilight)] rounded-lg transition-colors hover:border-[var(--coral)]/50 bg-[var(--dusk)] text-left"
-                    >
-                      <div className="flex items-start gap-2">
-                        <CategoryIcon
-                          type={spot.spot_type || "bar"}
-                          size={16}
-                          className="mt-0.5 flex-shrink-0"
-                        />
-                        <div className="min-w-0 flex-1">
-                          <h3 className="text-[var(--cream)] text-sm font-medium truncate group-hover:text-[var(--coral)] transition-colors">
-                            {spot.name}
-                          </h3>
-                          <p className="text-[0.65rem] text-[var(--muted)] font-mono uppercase tracking-wider mt-0.5">
-                            {getSpotTypeLabel(spot.spot_type)}
-                          </p>
-                        </div>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              )}
+          {/* Nightlife */}
+          {hasNightlife && (
+            <CollapsibleSection
+              title="Nightlife"
+              count={nearbyDestinations.nightlife.length}
+              category="nightlife"
+              icon={<span className="text-base">🪩</span>}
+              maxItems={5}
+              totalItems={nearbyDestinations.nightlife.length}
+              onSeeAll={() => toggleSection('nightlife')}
+            >
+              <div className="grid grid-cols-2 gap-2">
+                {(expandedSections.nightlife ? nearbyDestinations.nightlife : nearbyDestinations.nightlife.slice(0, 5)).map((spot) => (
+                  <SpotCard
+                    key={spot.id}
+                    spot={spot}
+                    onClick={() => handleSpotClick(spot.slug)}
+                  />
+                ))}
+              </div>
+            </CollapsibleSection>
+          )}
 
-              {inAreaTab === "fun" && (
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                  {nearbySpots.filter(s => FUN_TYPES.includes(s.spot_type || "")).map((spot) => (
-                    <button
-                      key={spot.id}
-                      onClick={() => handleSpotClick(spot.slug)}
-                      className="group p-3 border border-[var(--twilight)] rounded-lg transition-colors hover:border-[var(--coral)]/50 bg-[var(--dusk)] text-left"
-                    >
-                      <div className="flex items-start gap-2">
-                        <CategoryIcon
-                          type={spot.spot_type || "attraction"}
-                          size={16}
-                          className="mt-0.5 flex-shrink-0"
-                        />
-                        <div className="min-w-0 flex-1">
-                          <h3 className="text-[var(--cream)] text-sm font-medium truncate group-hover:text-[var(--coral)] transition-colors">
-                            {spot.name}
-                          </h3>
-                          <p className="text-[0.65rem] text-[var(--muted)] font-mono uppercase tracking-wider mt-0.5">
-                            {getSpotTypeLabel(spot.spot_type)}
-                          </p>
-                        </div>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
+          {/* Caffeine */}
+          {hasCaffeine && (
+            <CollapsibleSection
+              title="Caffeine"
+              count={nearbyDestinations.caffeine.length}
+              category="caffeine"
+              icon={<span className="text-base">☕</span>}
+              maxItems={5}
+              totalItems={nearbyDestinations.caffeine.length}
+              onSeeAll={() => toggleSection('caffeine')}
+            >
+              <div className="grid grid-cols-2 gap-2">
+                {(expandedSections.caffeine ? nearbyDestinations.caffeine : nearbyDestinations.caffeine.slice(0, 5)).map((spot) => (
+                  <SpotCard
+                    key={spot.id}
+                    spot={spot}
+                    onClick={() => handleSpotClick(spot.slug)}
+                  />
+                ))}
+              </div>
+            </CollapsibleSection>
+          )}
+
+          {/* Fun */}
+          {hasFun && (
+            <CollapsibleSection
+              title="Fun"
+              count={nearbyDestinations.fun.length}
+              category="fun"
+              icon={<span className="text-base">🎯</span>}
+              maxItems={5}
+              totalItems={nearbyDestinations.fun.length}
+              onSeeAll={() => toggleSection('fun')}
+            >
+              <div className="grid grid-cols-2 gap-2">
+                {(expandedSections.fun ? nearbyDestinations.fun : nearbyDestinations.fun.slice(0, 5)).map((spot) => (
+                  <SpotCard
+                    key={spot.id}
+                    spot={spot}
+                    onClick={() => handleSpotClick(spot.slug)}
+                  />
+                ))}
+              </div>
+            </CollapsibleSection>
           )}
         </div>
       )}
     </div>
+  );
+}
+
+// Spot card component for destination categories
+function SpotCard({ spot, onClick }: { spot: NearbySpot; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className="group p-3 border border-[var(--twilight)] rounded-lg transition-colors hover:border-[var(--coral)]/50 bg-[var(--void)] text-left"
+    >
+      <div className="flex items-start gap-2">
+        <CategoryIcon
+          type={spot.spot_type || "restaurant"}
+          size={16}
+          className="mt-0.5 flex-shrink-0"
+        />
+        <div className="min-w-0 flex-1">
+          <h3 className="text-[var(--cream)] text-sm font-medium truncate group-hover:text-[var(--coral)] transition-colors">
+            {spot.name}
+          </h3>
+          <div className="flex items-center gap-1.5 mt-0.5">
+            <p className="text-[0.65rem] text-[var(--muted)] font-mono uppercase tracking-wider">
+              {getSpotTypeLabel(spot.spot_type)}
+            </p>
+            {spot.closesAt && (
+              <span className="text-[0.6rem] text-[var(--neon-amber)] font-mono">
+                til {formatCloseTime(spot.closesAt)}
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+    </button>
   );
 }

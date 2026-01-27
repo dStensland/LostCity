@@ -46,6 +46,8 @@ export const SPOT_TYPES = {
 
   // Recreation
   games: { label: "Games", icon: "🎯" },
+  arcade: { label: "Arcade", icon: "🕹️" },
+  karaoke: { label: "Karaoke", icon: "🎤" },
   park: { label: "Park", icon: "🌳" },
   garden: { label: "Garden", icon: "🌷" },
   outdoor: { label: "Outdoor", icon: "⛰️" },
@@ -106,6 +108,8 @@ export const PLACE_TYPES = [
   "rooftop",
   "sports_bar",
   "games",
+  "arcade",
+  "karaoke",
   "bookstore",
   "library",
   "farmers_market",
@@ -115,6 +119,17 @@ export const PLACE_TYPES = [
   "food_hall",
   "eatertainment",
 ] as const;
+
+// Category groupings for "In the area" section on event detail page
+export const DESTINATION_CATEGORIES = {
+  food: ["restaurant", "food_hall", "cooking_school"],
+  drinks: ["bar", "brewery", "distillery", "winery", "rooftop", "sports_bar"],
+  nightlife: ["club"],
+  caffeine: ["coffee_shop"],
+  fun: ["games", "eatertainment", "arcade", "karaoke"],
+} as const;
+
+export type DestinationCategory = keyof typeof DESTINATION_CATEGORIES;
 
 export type SpotCategory = "venues" | "places";
 
