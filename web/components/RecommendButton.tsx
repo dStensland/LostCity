@@ -231,18 +231,18 @@ export default function RecommendButton({
           query = query.eq("producer_id", producerId);
         }
 
-        const { error } = await withTimeout(query, 8000);
-        if (error) {
-          console.error("Update recommendation error:", error);
+        const updateResult = await withTimeout(Promise.resolve(query), 8000);
+        if (updateResult?.error) {
+          console.error("Update recommendation error:", updateResult.error);
         }
       } else {
         // Create new
-        const { error } = await withTimeout(
-          supabase.from("recommendations").insert(recData as never),
+        const insertResult = await withTimeout(
+          Promise.resolve(supabase.from("recommendations").insert(recData as never)),
           8000
         );
-        if (error) {
-          console.error("Create recommendation error:", error);
+        if (insertResult?.error) {
+          console.error("Create recommendation error:", insertResult.error);
         }
       }
 
@@ -288,9 +288,9 @@ export default function RecommendButton({
         query = query.eq("producer_id", producerId);
       }
 
-      const { error } = await withTimeout(query, 8000);
-      if (error) {
-        console.error("Remove recommendation error:", error);
+      const deleteResult = await withTimeout(Promise.resolve(query), 8000);
+      if (deleteResult?.error) {
+        console.error("Remove recommendation error:", deleteResult.error);
       }
 
       setIsRecommended(false);

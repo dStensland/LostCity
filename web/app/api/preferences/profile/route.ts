@@ -33,7 +33,7 @@ export async function GET() {
       .from("user_preferences")
       .select("*")
       .eq("user_id", user.id)
-      .single() as { data: UserPreferences | null };
+      .maybeSingle() as { data: UserPreferences | null };
 
     // Get inferred preferences (top 20 by score)
     const { data: inferredPrefs } = await supabase

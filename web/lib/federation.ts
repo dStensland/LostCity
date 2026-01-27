@@ -124,7 +124,7 @@ export async function canPortalAccessEvent(
     .select("accessible_categories")
     .eq("portal_id", portalId)
     .eq("source_id", sourceId)
-    .single();
+    .maybeSingle();
 
   const row = data as { accessible_categories: string[] | null } | null;
 

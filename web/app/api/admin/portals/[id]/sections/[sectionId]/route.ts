@@ -37,7 +37,7 @@ export async function GET(
       )
     `)
     .eq("id", sectionId)
-    .single();
+    .maybeSingle();
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
@@ -76,7 +76,7 @@ export async function PATCH(
     .update(updates)
     .eq("id", sectionId)
     .select()
-    .single();
+    .maybeSingle();
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });

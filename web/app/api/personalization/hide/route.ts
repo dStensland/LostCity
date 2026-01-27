@@ -27,7 +27,7 @@ export async function POST(request: Request) {
     .select("user_id")
     .eq("user_id", user.id)
     .eq("event_id", eventId)
-    .single();
+    .maybeSingle();
 
   if (existing) {
     return NextResponse.json({ success: true, message: "Already hidden" });

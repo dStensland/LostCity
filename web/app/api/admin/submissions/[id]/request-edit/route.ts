@@ -27,7 +27,7 @@ export async function POST(request: NextRequest, { params }: Props) {
     .from("submissions")
     .select("id, status, portal_id")
     .eq("id", id)
-    .single();
+    .maybeSingle();
 
   if (fetchError || !submissionData) {
     return NextResponse.json({ error: "Submission not found" }, { status: 404 });
@@ -42,7 +42,7 @@ export async function POST(request: NextRequest, { params }: Props) {
       .select("role")
       .eq("portal_id", submission.portal_id)
       .eq("user_id", user.id)
-      .single();
+      .maybeSingle();
 
     const member = portalMember as { role: string } | null;
     if (!member || !["owner", "admin"].includes(member.role)) {
@@ -87,7 +87,7 @@ export async function POST(request: NextRequest, { params }: Props) {
     } as never)
     .eq("id", id)
     .select()
-    .single();
+    .maybeSingle();
 
   if (updateError) {
     return adminErrorResponse(updateError, "submission edit request");

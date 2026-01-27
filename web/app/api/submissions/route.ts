@@ -201,7 +201,7 @@ export async function POST(request: NextRequest) {
       .from("portals")
       .select("id, settings")
       .eq("id", portal_id)
-      .single();
+      .maybeSingle();
 
     const portal = portalData as { id: string; settings: Record<string, unknown> | null } | null;
 
@@ -265,7 +265,7 @@ export async function POST(request: NextRequest) {
       ip_address: ip,
     } as never)
     .select()
-    .single();
+    .maybeSingle();
 
   if (error) {
     console.error("Submission creation error:", error);
@@ -361,7 +361,7 @@ async function findEventDuplicate(
     .select("id, title")
     .eq("content_hash", contentHash)
     .limit(1)
-    .single();
+    .maybeSingle();
 
   const hashMatch = hashMatchData as { id: number; title: string } | null;
   if (hashMatch) {
@@ -377,7 +377,7 @@ async function findEventDuplicate(
       .eq("venue_id", data.venue_id)
       .ilike("title", `%${data.title?.substring(0, 20)}%`)
       .limit(1)
-      .single();
+      .maybeSingle();
 
     const titleMatch = titleMatchData as { id: number; title: string } | null;
     if (titleMatch) {
@@ -399,7 +399,7 @@ async function findVenueDuplicate(
     .select("id, name")
     .ilike("name", data.name)
     .limit(1)
-    .single();
+    .maybeSingle();
 
   const nameMatch = nameMatchData as { id: number; name: string } | null;
   if (nameMatch) {
@@ -413,7 +413,7 @@ async function findVenueDuplicate(
       .select("id, name")
       .contains("aliases", [data.name])
       .limit(1)
-      .single();
+      .maybeSingle();
 
     const aliasMatch = aliasMatchData as { id: number; name: string } | null;
     if (aliasMatch) {

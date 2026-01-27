@@ -41,7 +41,7 @@ export async function POST(
     .eq("section_id", sectionId)
     .order("display_order", { ascending: false })
     .limit(1)
-    .single();
+    .maybeSingle();
 
   const display_order = ((maxOrder as { display_order: number } | null)?.display_order || 0) + 1;
 
@@ -56,7 +56,7 @@ export async function POST(
       display_order,
     })
     .select()
-    .single();
+    .maybeSingle();
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });

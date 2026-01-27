@@ -18,7 +18,7 @@ export async function GET(
     .from("event_series")
     .select("*")
     .eq("slug", slug)
-    .single();
+    .maybeSingle();
 
   if (error || !seriesData) {
     return Response.json({ error: "Series not found" }, { status: 404 });

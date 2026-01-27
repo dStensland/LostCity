@@ -164,7 +164,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       .update(updates)
       .eq("id", id)
       .select()
-      .single();
+      .maybeSingle();
 
     if (error) {
       console.error("Error updating list:", error);

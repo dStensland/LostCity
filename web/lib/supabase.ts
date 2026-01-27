@@ -168,9 +168,9 @@ export async function getEventById(id: number): Promise<EventWithProducer | null
     `
     )
     .eq("id", id)
-    .single();
+    .maybeSingle();
 
-  if (error) {
+  if (error || !data) {
     console.error("Error fetching event:", error);
     return null;
   }

@@ -57,13 +57,13 @@ export async function GET(request: NextRequest, { params }: Props) {
     `
     )
     .eq("id", id)
-    .single();
+    .maybeSingle();
 
-  if (error) {
-    if (error.code === "PGRST116") {
+  if (error || !submissionData) {
+    if (error?.code === "PGRST116") {
       return NextResponse.json({ error: "Submission not found" }, { status: 404 });
     }
-    return errorResponse(error, "submission detail");
+    return NextResponse.json({ error: "Submission not found" }, { status: 404 });
   }
 
   const submission = submissionData as {
@@ -84,7 +84,7 @@ export async function GET(request: NextRequest, { params }: Props) {
     .from("profiles")
     .select("is_admin")
     .eq("id", user.id)
-    .single();
+    .maybeSingle();
 
   const profile = profileData as { is_admin: boolean } | null;
 
@@ -96,7 +96,7 @@ export async function GET(request: NextRequest, { params }: Props) {
         .select("role")
         .eq("portal_id", submission.portal_id)
         .eq("user_id", user.id)
-        .single();
+        .maybeSingle();
 
       const member = portalMember as { role: string } | null;
       if (!member || !["owner", "admin"].includes(member.role)) {
@@ -115,14 +115,14 @@ export async function GET(request: NextRequest, { params }: Props) {
         .from("events")
         .select("id, title, start_date, venue:venues(name)")
         .eq("id", submission.potential_duplicate_id)
-        .single();
+        .maybeSingle();
       duplicateDetails = event;
     } else if (submission.potential_duplicate_type === "venue") {
       const { data: venue } = await supabase
         .from("venues")
         .select("id, name, address, neighborhood")
         .eq("id", submission.potential_duplicate_id)
-        .single();
+        .maybeSingle();
       duplicateDetails = venue;
     }
   }
@@ -135,21 +135,21 @@ export async function GET(request: NextRequest, { params }: Props) {
         .from("events")
         .select("id, title, start_date, source_url")
         .eq("id", submission.approved_event_id)
-        .single();
+        .maybeSingle();
       approvedEntity = { type: "event", data: event };
     } else if (submission.approved_venue_id) {
       const { data: venue } = await supabase
         .from("venues")
         .select("id, name, slug")
         .eq("id", submission.approved_venue_id)
-        .single();
+        .maybeSingle();
       approvedEntity = { type: "venue", data: venue };
     } else if (submission.approved_producer_id) {
       const { data: producer } = await supabase
         .from("event_producers")
         .select("id, name, slug")
         .eq("id", submission.approved_producer_id)
-        .single();
+        .maybeSingle();
       approvedEntity = { type: "producer", data: producer };
     }
   }
@@ -181,7 +181,7 @@ export async function PUT(request: NextRequest, { params }: Props) {
     .from("submissions")
     .select("id, submitted_by, status")
     .eq("id", id)
-    .single();
+    .maybeSingle();
 
   if (fetchError || !existingData) {
     return NextResponse.json({ error: "Submission not found" }, { status: 404 });
@@ -226,7 +226,7 @@ export async function PUT(request: NextRequest, { params }: Props) {
     .update(updates as never)
     .eq("id", id)
     .select()
-    .single();
+    .maybeSingle();
 
   if (error) {
     return errorResponse(error, "submission update");
@@ -255,7 +255,7 @@ export async function DELETE(request: NextRequest, { params }: Props) {
     .from("submissions")
     .select("id, submitted_by, status")
     .eq("id", id)
-    .single();
+    .maybeSingle();
 
   if (fetchError || !existingDeleteData) {
     return NextResponse.json({ error: "Submission not found" }, { status: 404 });

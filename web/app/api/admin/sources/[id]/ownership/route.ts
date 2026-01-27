@@ -35,7 +35,7 @@ export async function GET(request: NextRequest, { params }: Props) {
       owner_portal:portals!sources_owner_portal_id_fkey(id, slug, name)
     `)
     .eq("id", sourceId)
-    .single();
+    .maybeSingle();
 
   if (error || !source) {
     return NextResponse.json({ error: "Source not found" }, { status: 404 });
@@ -73,7 +73,7 @@ export async function PATCH(request: NextRequest, { params }: Props) {
       .from("portals")
       .select("id")
       .eq("id", owner_portal_id)
-      .single();
+      .maybeSingle();
 
     if (!portal) {
       return NextResponse.json({ error: "Portal not found" }, { status: 404 });

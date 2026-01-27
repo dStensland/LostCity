@@ -65,7 +65,7 @@ export async function POST(request: Request) {
         venue:venues(id, name, neighborhood)
       `)
       .eq("id", event_id)
-      .single() as { data: EventWithVenue | null; error: Error | null };
+      .maybeSingle() as { data: EventWithVenue | null; error: Error | null };
 
     if (eventError || !event) {
       return NextResponse.json(
@@ -112,7 +112,7 @@ export async function POST(request: Request) {
             .eq("user_id", user.id)
             .eq("signal_type", signal.type)
             .eq("signal_value", signal.value)
-            .single() as { data: InferredPref | null };
+            .maybeSingle() as { data: InferredPref | null };
 
           if (existing) {
             await supabase

@@ -49,7 +49,7 @@ export async function GET(request: NextRequest, { params }: Props) {
     .from("sources")
     .select("id, name, slug, health_tags, active_months")
     .eq("id", sourceId)
-    .single();
+    .maybeSingle();
 
   if (error || !sourceData) {
     return NextResponse.json({ error: "Source not found" }, { status: 404 });
@@ -82,7 +82,7 @@ export async function PATCH(request: NextRequest, { params }: Props) {
     .from("sources")
     .select("id, name, owner_portal_id")
     .eq("id", sourceId)
-    .single();
+    .maybeSingle();
 
   if (sourceError || !sourceData) {
     return NextResponse.json({ error: "Source not found" }, { status: 404 });

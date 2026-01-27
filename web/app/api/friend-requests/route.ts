@@ -92,7 +92,7 @@ export async function POST(request: Request) {
       .from("profiles")
       .select("id")
       .eq("username", inviter_username.toLowerCase())
-      .single();
+      .maybeSingle();
 
     if (!inviterProfile) {
       return NextResponse.json({ error: "Inviter not found" }, { status: 404 });
@@ -146,7 +146,7 @@ export async function POST(request: Request) {
     .or(
       `and(blocker_id.eq.${user.id},blocked_id.eq.${resolvedInviterId}),and(blocker_id.eq.${resolvedInviterId},blocked_id.eq.${user.id})`
     )
-    .single();
+    .maybeSingle();
 
   if (block) {
     return NextResponse.json(
@@ -163,7 +163,7 @@ export async function POST(request: Request) {
     .or(
       `and(inviter_id.eq.${user.id},invitee_id.eq.${resolvedInviterId}),and(inviter_id.eq.${resolvedInviterId},invitee_id.eq.${user.id})`
     )
-    .single();
+    .maybeSingle();
 
   type ExistingRequestType = { id: string; status: string; inviter_id: string } | null;
   const existingReq = existingRequest as ExistingRequestType;
@@ -204,7 +204,7 @@ export async function POST(request: Request) {
       status: "pending",
     } as never)
     .select()
-    .single();
+    .maybeSingle();
 
   if (insertError) {
     return errorResponse(insertError, "friend-requests:POST:create");

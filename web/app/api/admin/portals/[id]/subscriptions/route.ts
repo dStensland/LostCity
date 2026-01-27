@@ -32,7 +32,7 @@ export async function GET(request: NextRequest, { params }: Props) {
     .from("portals")
     .select("id, slug, name")
     .eq("id", id)
-    .single();
+    .maybeSingle();
 
   if (portalError || !portal) {
     return NextResponse.json({ error: "Portal not found" }, { status: 404 });
@@ -67,7 +67,7 @@ export async function POST(request: NextRequest, { params }: Props) {
     .from("portals")
     .select("id")
     .eq("id", id)
-    .single();
+    .maybeSingle();
 
   if (portalError || !portal) {
     return NextResponse.json({ error: "Portal not found" }, { status: 404 });
@@ -86,7 +86,7 @@ export async function POST(request: NextRequest, { params }: Props) {
     .from("source_sharing_rules")
     .select("share_scope, allowed_categories, owner_portal_id")
     .eq("source_id", source_id)
-    .single();
+    .maybeSingle();
 
   const sharingRule = sharingRuleData as {
     share_scope: string;
@@ -173,7 +173,7 @@ export async function PATCH(request: NextRequest, { params }: Props) {
     .from("source_subscriptions")
     .select("id, subscriber_portal_id")
     .eq("id", subscription_id)
-    .single();
+    .maybeSingle();
 
   const subscription = subscriptionData as {
     id: string;
@@ -248,7 +248,7 @@ export async function DELETE(request: NextRequest, { params }: Props) {
     .from("source_subscriptions")
     .select("id, subscriber_portal_id")
     .eq("id", subscriptionId)
-    .single();
+    .maybeSingle();
 
   const subscription2 = subscriptionData2 as {
     id: string;

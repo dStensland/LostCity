@@ -144,7 +144,7 @@ export async function POST(request: NextRequest) {
       created_by: user.id,
     })
     .select("id, key_prefix, name, portal_id, scopes, is_active, expires_at, created_at")
-    .single();
+    .maybeSingle();
 
   if (error) {
     if (error.code === "42P01") {
@@ -225,7 +225,7 @@ export async function PATCH(request: NextRequest) {
     .update(updates)
     .eq("id", id)
     .select("id, key_prefix, name, portal_id, scopes, is_active, expires_at, last_used_at, created_at")
-    .single();
+    .maybeSingle();
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });

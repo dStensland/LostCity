@@ -19,7 +19,7 @@ export async function GET(
     .select("*")
     .eq("slug", slug)
     .eq("hidden", false)
-    .single();
+    .maybeSingle();
 
   if (error || !producerData) {
     return Response.json({ error: "Organizer not found" }, { status: 404 });

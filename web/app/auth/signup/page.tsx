@@ -8,10 +8,6 @@ import { PasswordStrength } from "@/components/PasswordStrength";
 import { createClient } from "@/lib/supabase/client";
 import { getAuthErrorMessage } from "@/lib/auth-errors";
 import { getSafeRedirectUrl } from "@/lib/auth-utils";
-import type { Database } from "@/lib/types";
-
-type ProfileInsert = Database["public"]["Tables"]["profiles"]["Insert"];
-type PreferencesInsert = Database["public"]["Tables"]["user_preferences"]["Insert"];
 
 // Extract portal slug from redirect URL (e.g., "/piedmont/events" -> "piedmont")
 function extractPortalFromRedirect(redirect: string): string | null {
@@ -95,14 +91,14 @@ function SignupForm() {
 
     setLoading(true);
 
-    // Sign up the user
+    // Sign up the user - profile is created automatically by database trigger
     const { data: authData, error: signUpError } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback?redirect=${encodeURIComponent(redirect)}`,
+        emailRedirectTo: `${window.location.origin}/auth/callback?redirect=${encodeURIComponent(redirect)}&new=true`,
         data: {
-          username,
+          username, // Passed to trigger via raw_user_meta_data
         },
       },
     });
@@ -116,67 +112,13 @@ function SignupForm() {
     // Check if we have a session (email confirmation disabled) or need email confirmation
     if (authData.session && authData.user) {
       // Email confirmation is disabled - user is logged in immediately
-      // Create the profile with retry logic for username conflicts
-      let finalUsername = username;
-      let profileCreated = false;
-      let attempts = 0;
-      const maxAttempts = 5;
-
-      while (!profileCreated && attempts < maxAttempts) {
-        const profileData: ProfileInsert = {
-          id: authData.user.id,
-          username: finalUsername,
-          display_name: null,
-        };
-        const { error: profileError } = await supabase
-          .from("profiles")
-          .insert(profileData as never);
-
-        if (!profileError) {
-          profileCreated = true;
-        } else if (profileError.code === "23505") {
-          // Unique constraint violation - try with a suffix
-          attempts++;
-          finalUsername = `${username.slice(0, 25)}_${Math.floor(Math.random() * 10000)}`;
-        } else {
-          console.error("Profile creation error:", profileError);
-          setError("Failed to create profile. Please try again.");
-          setLoading(false);
-          return;
-        }
-      }
-
-      if (!profileCreated) {
-        setError("Unable to create a unique username. Please try a different one.");
-        setLoading(false);
-        return;
-      }
-
-      // Create default preferences with error handling
-      try {
-        const prefsData: PreferencesInsert = {
-          user_id: authData.user.id,
-        };
-        const { error: prefsError } = await supabase
-          .from("user_preferences")
-          .insert(prefsData as never);
-
-        if (prefsError) {
-          // Log but don't block signup - preferences can be created later
-          console.error("Preferences creation error:", prefsError);
-        }
-      } catch (err) {
-        // Log but don't block signup - preferences can be created later
-        console.error("Preferences creation exception:", err);
-      }
-
-      // Redirect new users to onboarding
+      // Profile is created automatically by database trigger (handle_new_user)
       const onboardingUrl = portalSlug ? `/onboarding?portal=${portalSlug}` : "/onboarding";
       router.push(onboardingUrl);
       router.refresh();
     } else if (authData.user) {
       // Email confirmation is enabled - show confirmation message
-      // Profile will be created in auth callback when user confirms email
+      // Profile is already created by trigger when auth.users row was inserted
       setEmailSent(true);
       setLoading(false);
     }

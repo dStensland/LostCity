@@ -25,7 +25,7 @@ export async function GET(request: Request) {
       .select("id, filters")
       .eq("slug", portalSlug)
       .eq("status", "active")
-      .single();
+      .maybeSingle();
 
     const portalData = portal as { id: string; filters: typeof portalFilters } | null;
     if (portalData) {

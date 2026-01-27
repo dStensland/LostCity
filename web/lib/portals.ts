@@ -98,7 +98,7 @@ export async function getPortalBySlug(slug: string): Promise<Portal | null> {
     .select("*")
     .eq("slug", slug)
     .eq("status", "active")
-    .single();
+    .maybeSingle();
 
   if (error || !data) {
     console.error("Error fetching portal:", error);

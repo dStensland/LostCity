@@ -29,7 +29,7 @@ export async function POST(request: NextRequest, { params }: Props) {
     .from("submissions")
     .select("*")
     .eq("id", id)
-    .single();
+    .maybeSingle();
 
   if (fetchError || !submissionData) {
     return NextResponse.json({ error: "Submission not found" }, { status: 404 });
@@ -44,7 +44,7 @@ export async function POST(request: NextRequest, { params }: Props) {
       .select("role")
       .eq("portal_id", submission.portal_id)
       .eq("user_id", user.id)
-      .single();
+      .maybeSingle();
 
     const member = portalMember as { role: string } | null;
     if (!member || !["owner", "admin"].includes(member.role)) {
@@ -121,7 +121,7 @@ export async function POST(request: NextRequest, { params }: Props) {
     .update(updateData as never)
     .eq("id", id)
     .select()
-    .single();
+    .maybeSingle();
 
   if (updateError) {
     return adminErrorResponse(updateError, "submission approval");
@@ -146,7 +146,7 @@ async function createEventFromSubmission(
     .from("sources")
     .select("id")
     .eq("slug", "user-submissions")
-    .single();
+    .maybeSingle();
 
   const source = sourceData as { id: number } | null;
   if (!source) {
@@ -203,7 +203,7 @@ async function createEventFromSubmission(
       from_submission: submissionId,
     } as never)
     .select("id")
-    .single();
+    .maybeSingle();
 
   const event = eventData as { id: number } | null;
   if (error || !event) {
@@ -231,7 +231,7 @@ async function createVenueFromSubmission(
     .from("venues")
     .select("id")
     .eq("slug", slug)
-    .single();
+    .maybeSingle();
 
   // If exists, add a unique suffix
   const finalSlug = existing
@@ -254,7 +254,7 @@ async function createVenueFromSubmission(
       from_submission: submissionId,
     } as never)
     .select("id")
-    .single();
+    .maybeSingle();
 
   const venue = venueData as { id: number } | null;
   if (error || !venue) {
@@ -282,7 +282,7 @@ async function createProducerFromSubmission(
     .from("event_producers")
     .select("id")
     .eq("id", baseSlug)
-    .single();
+    .maybeSingle();
 
   // If exists, add a unique suffix
   const finalId = existing
@@ -308,7 +308,7 @@ async function createProducerFromSubmission(
       from_submission: submissionId,
     } as never)
     .select("id")
-    .single();
+    .maybeSingle();
 
   const producer = producerData as { id: string } | null;
   if (error || !producer) {

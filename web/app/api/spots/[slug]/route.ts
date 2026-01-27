@@ -18,7 +18,7 @@ export async function GET(
     .from("venues")
     .select("*")
     .eq("slug", slug)
-    .single();
+    .maybeSingle();
 
   if (error || !spotData) {
     return Response.json({ error: "Spot not found" }, { status: 404 });

@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
         user_id: user?.id || null,
       })
       .select()
-      .single();
+      .maybeSingle();
 
     if (error) {
       console.error("Flag creation error:", error);

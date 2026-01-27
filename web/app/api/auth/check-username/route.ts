@@ -36,7 +36,7 @@ export async function POST(request: Request) {
       .from("profiles")
       .select("id")
       .eq("username", normalizedUsername)
-      .single();
+      .maybeSingle();
 
     if (existingProfile) {
       return NextResponse.json({ available: false, error: "Username is taken" });
@@ -50,7 +50,7 @@ export async function POST(request: Request) {
       .select("id, expires_at")
       .eq("username", normalizedUsername)
       .gt("expires_at", new Date().toISOString())
-      .single();
+      .maybeSingle();
 
     if (existingReservation) {
       return NextResponse.json({
@@ -78,7 +78,7 @@ export async function POST(request: Request) {
           expires_at: expiresAt,
         })
         .select("id")
-        .single();
+        .maybeSingle();
 
       if (reserveError) {
         // If unique constraint error, username was just taken/reserved

@@ -97,7 +97,7 @@ async function upsertInferredPreference(
     .eq("user_id", userId)
     .eq("signal_type", signalType)
     .eq("signal_value", signalValue)
-    .single();
+    .maybeSingle();
 
   const existingPref = existing as InferredPref | null;
 

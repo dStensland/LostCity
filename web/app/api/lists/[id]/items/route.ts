@@ -116,7 +116,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
         event:events(id, title, start_date, venue:venues(name)),
         producer:producers(id, name, slug)
       `)
-      .single();
+      .maybeSingle();
 
     if (error) {
       console.error("Error adding list item:", error);

@@ -33,7 +33,7 @@ export async function GET(
     .from("profiles")
     .select("id, username, display_name, avatar_url, bio, location, is_public")
     .eq("username", username.toLowerCase())
-    .single();
+    .maybeSingle();
 
   const profile = data as ProfileData | null;
 
@@ -82,7 +82,7 @@ export async function GET(
         .or(
           `and(inviter_id.eq.${currentUser.id},invitee_id.eq.${profile.id}),and(inviter_id.eq.${profile.id},invitee_id.eq.${currentUser.id})`
         )
-        .single();
+        .maybeSingle();
 
       const pendingReq = pendingRequest as FriendRequestRow | null;
 

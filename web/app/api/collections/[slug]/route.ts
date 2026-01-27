@@ -44,7 +44,7 @@ export async function GET(request: NextRequest, { params }: Props) {
       owner:profiles!collections_user_id_fkey(username, display_name, avatar_url)
     `)
     .eq("slug", slug)
-    .single();
+    .maybeSingle();
 
   const collection = collectionData as CollectionData | null;
 
@@ -107,7 +107,7 @@ export async function DELETE(request: NextRequest, { params }: Props) {
     .from("collections")
     .select("id, user_id")
     .eq("slug", slug)
-    .single();
+    .maybeSingle();
 
   const collection = collectionData as { id: number; user_id: string | null } | null;
 

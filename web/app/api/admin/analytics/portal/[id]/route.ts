@@ -48,7 +48,7 @@ export async function GET(request: NextRequest, { params }: Props) {
     .from("portals")
     .select("id, name, slug, status, created_at")
     .eq("id", portalId)
-    .single();
+    .maybeSingle();
 
   if (portalError || !portal) {
     return NextResponse.json({ error: "Portal not found" }, { status: 404 });

@@ -344,9 +344,9 @@ export async function getSpotBySlug(slug: string): Promise<Spot | null> {
     .from("venues")
     .select("*")
     .eq("slug", slug)
-    .single();
+    .maybeSingle();
 
-  if (error) {
+  if (error || !data) {
     console.error("Error fetching spot:", error);
     return null;
   }
@@ -481,7 +481,7 @@ export async function getNearbySpots(
     .from("venues")
     .select("neighborhood")
     .eq("id", venueId)
-    .single<{ neighborhood: string | null }>();
+    .maybeSingle<{ neighborhood: string | null }>();
 
   if (!venue?.neighborhood) return [];
 

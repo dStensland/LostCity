@@ -43,7 +43,7 @@ export async function PATCH(
     .from("friend_requests" as never)
     .select("id, inviter_id, invitee_id, status")
     .eq("id", id)
-    .single();
+    .maybeSingle();
 
   const friendRequest = data as FriendRequest | null;
 
@@ -112,7 +112,7 @@ export async function DELETE(
     .from("friend_requests" as never)
     .select("id, inviter_id, invitee_id")
     .eq("id", id)
-    .single();
+    .maybeSingle();
 
   const friendRequest = data2 as FriendRequest | null;
 

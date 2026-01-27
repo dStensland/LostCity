@@ -55,7 +55,7 @@ export async function GET(request: NextRequest, { params }: Props) {
       updated_at
     `)
     .eq("id", id)
-    .single();
+    .maybeSingle();
 
   const portal = portalData as PortalData | null;
 
@@ -130,7 +130,7 @@ export async function PATCH(request: NextRequest, { params }: Props) {
     .update(updates)
     .eq("id", id)
     .select()
-    .single();
+    .maybeSingle();
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
@@ -155,7 +155,7 @@ export async function DELETE(request: NextRequest, { params }: Props) {
     .from("portals")
     .select("id, slug")
     .eq("id", id)
-    .single();
+    .maybeSingle();
 
   const portal = portalData as { id: string; slug: string } | null;
 

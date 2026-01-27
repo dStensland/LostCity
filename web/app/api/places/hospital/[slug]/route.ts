@@ -23,7 +23,7 @@ export async function GET(
     .from("hospitals")
     .select("*")
     .eq("slug", slug)
-    .single();
+    .maybeSingle();
 
   if (hospitalError || !hospital) {
     return NextResponse.json({ error: "Hospital not found" }, { status: 404 });

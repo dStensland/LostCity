@@ -85,7 +85,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
           .update({ vote_type })
           .eq("id", existingVote.id)
           .select()
-          .single();
+          .maybeSingle();
 
         return NextResponse.json({ vote, action: "updated" });
       }
@@ -100,7 +100,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
           vote_type: vote_type || "up",
         })
         .select()
-        .single();
+        .maybeSingle();
 
       if (error) {
         console.error("Error creating vote:", error);

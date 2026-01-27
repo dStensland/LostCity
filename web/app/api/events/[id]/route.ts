@@ -22,7 +22,7 @@ export async function GET(
       venue:venues(id, name, slug, address, neighborhood, city, state, vibes, description, lat, lng)
     `)
     .eq("id", eventId)
-    .single();
+    .maybeSingle();
 
   if (error || !event) {
     console.error("Event fetch error:", error);

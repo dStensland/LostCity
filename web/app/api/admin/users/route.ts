@@ -102,7 +102,7 @@ export async function GET(request: Request) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const sb = supabase as any;
       const [profileResult, followerCount, followingCount, rsvpCount] = await Promise.all([
-        sb.from("profiles").select("*").eq("id", userId).single(),
+        sb.from("profiles").select("*").eq("id", userId).maybeSingle(),
         sb.from("follows").select("*", { count: "exact", head: true }).eq("followed_user_id", userId),
         sb.from("follows").select("*", { count: "exact", head: true }).eq("follower_id", userId),
         sb.from("event_rsvps").select("*", { count: "exact", head: true }).eq("user_id", userId),

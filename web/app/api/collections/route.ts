@@ -102,7 +102,7 @@ export async function POST(request: NextRequest) {
       visibility,
     })
     .select()
-    .single();
+    .maybeSingle();
 
   if (error) {
     return errorResponse(error, "collections:POST");

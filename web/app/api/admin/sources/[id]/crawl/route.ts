@@ -38,7 +38,7 @@ export async function POST(request: NextRequest, { params }: Props) {
     .from("sources")
     .select("id, name, slug, is_active, owner_portal_id")
     .eq("id", sourceId)
-    .single();
+    .maybeSingle();
 
   if (sourceError || !sourceData) {
     return NextResponse.json({ error: "Source not found" }, { status: 404 });
@@ -109,7 +109,7 @@ export async function POST(request: NextRequest, { params }: Props) {
       status: "queued",
     })
     .select("id")
-    .single();
+    .maybeSingle();
 
   if (insertError || !crawlLogData) {
     console.error("Error creating crawl log:", insertError);

@@ -15,7 +15,7 @@ export async function GET() {
     .from("user_preferences")
     .select("*")
     .eq("user_id", user.id)
-    .single();
+    .maybeSingle();
 
   if (error && error.code !== "PGRST116") {
     // PGRST116 is "not found" which is fine
@@ -67,7 +67,7 @@ export async function PATCH(request: Request) {
     .from("user_preferences")
     .select("user_id")
     .eq("user_id", user.id)
-    .single();
+    .maybeSingle();
 
   if (existing) {
     // Update existing
@@ -76,7 +76,7 @@ export async function PATCH(request: Request) {
       .update(updates as never)
       .eq("user_id", user.id)
       .select()
-      .single();
+      .maybeSingle();
 
     if (error) {
       return errorResponse(error, "preferences");
@@ -92,7 +92,7 @@ export async function PATCH(request: Request) {
         ...updates,
       } as never)
       .select()
-      .single();
+      .maybeSingle();
 
     if (error) {
       return errorResponse(error, "preferences");

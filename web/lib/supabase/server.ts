@@ -98,7 +98,7 @@ export async function getUserProfile() {
         user_preferences(*)
       `)
       .eq("id", user.id)
-      .single();
+      .maybeSingle();
 
     if (profileError) {
       // PGRST116 = "not found" - expected for new users before profile creation
@@ -125,7 +125,7 @@ export async function isAdmin(): Promise<boolean> {
     .from("profiles")
     .select("is_admin")
     .eq("id", user.id)
-    .single();
+    .maybeSingle();
 
   const profile = data as { is_admin: boolean } | null;
   return profile?.is_admin === true;
@@ -146,7 +146,7 @@ export async function canManagePortal(portalId: string): Promise<boolean> {
     .select("role")
     .eq("portal_id", portalId)
     .eq("user_id", user.id)
-    .single();
+    .maybeSingle();
 
   const member = data as { role: string } | null;
   return member?.role === "owner";

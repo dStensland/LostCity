@@ -167,7 +167,7 @@ export function useRealtimeActivity(options: UseRealtimeActivityOptions = {}) {
               )
             `)
             .eq("id", activity.id)
-            .single();
+            .maybeSingle();
 
           const typedActivity = fullActivity as RealtimeActivity | null;
           if (typedActivity && typedActivity.user) {

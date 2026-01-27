@@ -324,7 +324,7 @@ export async function POST(request: NextRequest) {
         is_public: is_public !== false,
       })
       .select("*")
-      .single();
+      .maybeSingle();
 
     if (error) {
       console.error("Error creating list:", error);

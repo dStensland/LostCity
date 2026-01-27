@@ -57,7 +57,7 @@ async function validateApiKey(request: NextRequest): Promise<{ valid: boolean; p
     .from("api_keys")
     .select("id, key_hash, portal_id, scopes, is_active, expires_at")
     .eq("key_hash", keyHash)
-    .single();
+    .maybeSingle();
 
   if (error || !keyRecord) {
     return { valid: false, portalId: null, error: "Invalid API key" };

@@ -25,7 +25,7 @@ export async function GET(request: NextRequest, { params }: Props) {
     .from("sources")
     .select("id, name, slug, url, source_type, is_active")
     .eq("id", sourceId)
-    .single();
+    .maybeSingle();
 
   if (basicError || !basicSource) {
     return NextResponse.json({ error: "Source not found" }, { status: 404 });
@@ -52,7 +52,7 @@ export async function GET(request: NextRequest, { params }: Props) {
         owner_portal:portals!sources_owner_portal_id_fkey(id, slug, name)
       `)
       .eq("id", sourceId)
-      .single();
+      .maybeSingle();
 
     if (!ownerError && sourceWithOwner) {
       const ownerData = sourceWithOwner as {
@@ -68,7 +68,7 @@ export async function GET(request: NextRequest, { params }: Props) {
       .from("source_sharing_rules")
       .select("*")
       .eq("source_id", sourceId)
-      .single();
+      .maybeSingle();
     sharingRule = sharingData || null;
 
     // Try to get subscriber count
@@ -141,7 +141,7 @@ export async function PUT(request: NextRequest, { params }: Props) {
     .from("sources")
     .select("id, owner_portal_id")
     .eq("id", sourceId)
-    .single();
+    .maybeSingle();
 
   const source2 = sourceData2 as {
     id: number;

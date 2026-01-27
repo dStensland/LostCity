@@ -332,7 +332,7 @@ export async function suggestTag(
       suggested_by: userId,
     })
     .select("id")
-    .single();
+    .maybeSingle();
 
   if (error) {
     console.error("Error suggesting tag:", error);
@@ -426,7 +426,7 @@ export async function approveSuggestion(
     .from("venue_tag_suggestions")
     .select("*")
     .eq("id", suggestionId)
-    .single();
+    .maybeSingle();
 
   type SuggestionData = {
     venue_id: number;
@@ -452,7 +452,7 @@ export async function approveSuggestion(
     .from("venue_tag_definitions")
     .select("id")
     .eq("slug", slug)
-    .single();
+    .maybeSingle();
 
   let tagId: string;
 
@@ -471,7 +471,7 @@ export async function approveSuggestion(
         created_by: suggestionData.suggested_by,
       })
       .select("id")
-      .single();
+      .maybeSingle();
 
     if (createError || !newTag) {
       return { success: false, error: "Failed to create tag" };

@@ -140,7 +140,7 @@ export async function POST(request: NextRequest) {
       owner_id: userId,
     })
     .select()
-    .single();
+    .maybeSingle();
 
   if (error) {
     if (error.code === "23505") {

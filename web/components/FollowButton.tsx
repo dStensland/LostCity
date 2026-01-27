@@ -158,7 +158,8 @@ export default function FollowButton({
           query = query.eq("followed_producer_id", targetProducerId);
         }
 
-        const { error } = await withTimeout(query, 8000);
+        const result = await withTimeout(Promise.resolve(query), 8000);
+        const error = result?.error;
 
         if (!error) {
           setIsFollowing(false);
@@ -183,10 +184,11 @@ export default function FollowButton({
           followData.followed_producer_id = targetProducerId;
         }
 
-        const { error } = await withTimeout(
-          supabase.from("follows").insert(followData as never),
+        const insertResult = await withTimeout(
+          Promise.resolve(supabase.from("follows").insert(followData as never)),
           8000
         );
+        const error = insertResult?.error;
 
         if (!error) {
           setIsFollowing(true);

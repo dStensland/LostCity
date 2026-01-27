@@ -105,7 +105,7 @@ export async function POST(request: Request) {
     .from("events")
     .select("id")
     .eq("id", eventId)
-    .single();
+    .maybeSingle();
 
   if (!event) {
     return NextResponse.json({ error: "Event not found" }, { status: 404 });
@@ -116,7 +116,7 @@ export async function POST(request: Request) {
     .from("profiles")
     .select("id")
     .eq("id", inviteeId)
-    .single();
+    .maybeSingle();
 
   if (!invitee) {
     return NextResponse.json({ error: "User not found" }, { status: 404 });
@@ -129,7 +129,7 @@ export async function POST(request: Request) {
     .eq("event_id", eventId)
     .eq("inviter_id", user.id)
     .eq("invitee_id", inviteeId)
-    .single();
+    .maybeSingle();
 
   if (existingInvite) {
     return NextResponse.json(
@@ -148,7 +148,7 @@ export async function POST(request: Request) {
       note: note || null,
     } as never)
     .select()
-    .single();
+    .maybeSingle();
 
   if (error) {
     return errorResponse(error, "invite");

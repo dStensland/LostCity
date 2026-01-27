@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
       .select("role")
       .eq("portal_id", portalId)
       .eq("user_id", user.id)
-      .single();
+      .maybeSingle();
 
     const member = portalMember as { role: string } | null;
     if (!member || !["owner", "admin"].includes(member.role)) {

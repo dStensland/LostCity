@@ -36,7 +36,7 @@ export async function GET(
       )
     `)
     .eq("id", id)
-    .single();
+    .maybeSingle();
 
   if (error) {
     return errorResponse(error, "invite");
@@ -78,7 +78,7 @@ export async function PATCH(
     .from("event_invites")
     .select("id, invitee_id, status")
     .eq("id", id)
-    .single();
+    .maybeSingle();
 
   const inviteData = invite as { id: string; invitee_id: string; status: string } | null;
 
@@ -102,7 +102,7 @@ export async function PATCH(
     } as never)
     .eq("id", id)
     .select()
-    .single();
+    .maybeSingle();
 
   if (error) {
     return errorResponse(error, "invite");
@@ -130,7 +130,7 @@ export async function DELETE(
     .from("event_invites")
     .select("id, inviter_id")
     .eq("id", id)
-    .single();
+    .maybeSingle();
 
   const inviteData = invite as { id: string; inviter_id: string } | null;
 

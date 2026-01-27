@@ -31,7 +31,7 @@ export async function POST(request: NextRequest, { params }: Props) {
     .from("collections")
     .select("id, user_id")
     .eq("slug", slug)
-    .single();
+    .maybeSingle();
 
   const collection = collectionData as CollectionRow | null;
 
@@ -50,7 +50,7 @@ export async function POST(request: NextRequest, { params }: Props) {
     .eq("collection_id", collection.id)
     .order("position", { ascending: false })
     .limit(1)
-    .single();
+    .maybeSingle();
 
   const maxPos = maxPosData as { position: number } | null;
   const nextPosition = (maxPos?.position || 0) + 1;
@@ -66,7 +66,7 @@ export async function POST(request: NextRequest, { params }: Props) {
       position: nextPosition,
     })
     .select()
-    .single();
+    .maybeSingle();
 
   if (error) {
     if (error.code === "23505") {
@@ -99,7 +99,7 @@ export async function DELETE(request: NextRequest, { params }: Props) {
     .from("collections")
     .select("id, user_id")
     .eq("slug", slug)
-    .single();
+    .maybeSingle();
 
   const collection = collectionData2 as CollectionRow | null;
 

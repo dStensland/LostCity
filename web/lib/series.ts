@@ -73,7 +73,7 @@ export async function getSeriesBySlug(slug: string): Promise<Series | null> {
     .from("series")
     .select("*")
     .eq("slug", slug)
-    .single();
+    .maybeSingle();
 
   if (error || !data) {
     return null;

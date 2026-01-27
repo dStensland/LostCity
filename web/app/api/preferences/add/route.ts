@@ -47,7 +47,7 @@ export async function POST(request: Request) {
       .from("user_preferences")
       .select("*")
       .eq("user_id", user.id)
-      .single();
+      .maybeSingle();
 
     if (fetchError && fetchError.code !== "PGRST116") {
       // PGRST116 = no rows found, which is fine

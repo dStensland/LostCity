@@ -18,7 +18,7 @@ export async function GET(request: NextRequest, { params }: Props) {
     .select("id, slug, name")
     .eq("slug", slug)
     .eq("status", "active")
-    .single();
+    .maybeSingle();
 
   const portal = portalData as {
     id: string;

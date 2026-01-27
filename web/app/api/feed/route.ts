@@ -35,7 +35,7 @@ export async function GET(request: Request) {
       .select("id, filters")
       .eq("slug", portalSlug)
       .eq("status", "active")
-      .single();
+      .maybeSingle();
 
     const portalData = portal as { id: string; filters: typeof portalFilters } | null;
     if (portalData) {
@@ -49,7 +49,7 @@ export async function GET(request: Request) {
     .from("user_preferences")
     .select("*")
     .eq("user_id", user.id)
-    .single();
+    .maybeSingle();
 
   type UserPrefs = {
     favorite_categories: string[] | null;
