@@ -346,10 +346,6 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
               )}
             </button>
 
-            {/* Community Tags */}
-            <div className="mt-3">
-              <VenueTagList venueId={event.venue.id} />
-            </div>
           </div>
         )}
 
@@ -431,6 +427,44 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
               </div>
               <FollowButton targetProducerId={event.producer.id} size="sm" />
             </div>
+          </div>
+        )}
+
+        {/* Tags Section - Event tags + Venue community tags */}
+        {(event.tags?.length || event.venue) && (
+          <div className="pt-5 border-t border-[var(--twilight)]">
+            <h2 className="font-mono text-[0.65rem] font-medium text-[var(--muted)] uppercase tracking-widest mb-3">
+              Tags
+            </h2>
+
+            {/* Event tags */}
+            {event.tags && event.tags.length > 0 && (
+              <div className="mb-4">
+                <p className="text-[0.6rem] text-[var(--muted)] font-mono uppercase tracking-wider mb-2">
+                  This Event
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {event.tags.map((tag) => (
+                    <span
+                      key={tag}
+                      className="px-2.5 py-1 rounded-full text-xs font-mono bg-[var(--coral)]/10 text-[var(--coral)] border border-[var(--coral)]/20"
+                    >
+                      {tag.replace(/-/g, " ")}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Venue community tags */}
+            {event.venue && (
+              <div>
+                <p className="text-[0.6rem] text-[var(--muted)] font-mono uppercase tracking-wider mb-2">
+                  {event.venue.name}
+                </p>
+                <VenueTagList venueId={event.venue.id} />
+              </div>
+            )}
           </div>
         )}
 
