@@ -303,15 +303,15 @@ VENUES = {
         "venue_type": "bar",
     },
     "529-bar": {
-        "name": "529 Bar",
+        "name": "529",
         "slug": "529-bar",
         "address": "529 Flat Shoals Ave SE",
-        "neighborhood": "East Atlanta",
+        "neighborhood": "East Atlanta Village",
         "city": "Atlanta",
         "state": "GA",
         "zip": "30316",
         "venue_type": "bar",
-        "website": "https://529atl.com",
+        "website": "https://529atlanta.com",
     },
     # Game night venues
     "jasons-deli": {
@@ -401,22 +401,43 @@ WEEKLY_EVENTS = [
     {
         "venue_key": "boggs",
         "day": 2,  # Wednesday
-        "title": "Karaoke Night",
-        "description": "Weekly karaoke at Boggs Social & Supply in West End.",
+        "title": "Karaoke Night W/ Music Mike",
+        "description": "Weekly karaoke night with Music Mike at Boggs Social & Supply in West End.",
         "start_time": "19:00",
         "category": "nightlife",
         "subcategory": "nightlife.karaoke",
         "tags": ["karaoke", "nightlife", "weekly"],
     },
+    # TEN ATL verified events (not karaoke as badslava listed)
+    {
+        "venue_key": "ten-atl",
+        "day": 0,  # Monday
+        "title": "Monday Night Jazz Jam",
+        "description": "Weekly jazz jam session at TEN ATL featuring the Churchill Grounds Trio. Keeping jazz alive one Monday at a time.",
+        "start_time": "22:00",
+        "category": "music",
+        "subcategory": "music.jazz",
+        "tags": ["jazz", "live-music", "jam-session", "weekly"],
+    },
     {
         "venue_key": "ten-atl",
         "day": 2,  # Wednesday
-        "title": "Karaoke Night",
-        "description": "Weekly karaoke at TEN ATL in East Atlanta.",
+        "title": "Bourbon & Blues Wednesday",
+        "description": "Weekly Bourbon & Blues night at TEN ATL. Premium hookah, fine bourbon, and blues music in an intimate setting.",
         "start_time": "20:00",
+        "category": "music",
+        "subcategory": "music.blues",
+        "tags": ["blues", "live-music", "nightlife", "weekly"],
+    },
+    {
+        "venue_key": "ten-atl",
+        "day": 3,  # Thursday
+        "title": "R&B Thursday Vibez",
+        "description": "Thursday night R&B vibes at TEN ATL with DJ KASHii. Happy hour 8-10PM, music starts at 10PM.",
+        "start_time": "22:00",
         "category": "nightlife",
-        "subcategory": "nightlife.karaoke",
-        "tags": ["karaoke", "nightlife", "weekly"],
+        "subcategory": "nightlife.dj",
+        "tags": ["r&b", "dj", "nightlife", "weekly"],
     },
     {
         "venue_key": "daiquiriville",
@@ -500,15 +521,42 @@ WEEKLY_EVENTS = [
         "subcategory": None,
         "tags": ["open-mic", "comedy", "music", "poetry", "weekly"],
     },
+    # Laughing Skull verified: Open mics Mon-Wed at 8PM, $15
     {
         "venue_key": "laughing-skull",
-        "day": 1,  # Tuesday
+        "day": 0,  # Monday
         "title": "Open Mic Comedy Night",
-        "description": "Weekly comedy open mic at Laughing Skull Lounge, Atlanta's premier comedy club in Midtown.",
+        "description": "Weekly comedy open mic at Laughing Skull Lounge, Atlanta's premier comedy club in Midtown. $15 cover.",
         "start_time": "20:00",
         "category": "comedy",
         "subcategory": "comedy.standup",
         "tags": ["open-mic", "comedy", "standup", "weekly"],
+        "price_min": 15,
+        "price_max": 15,
+    },
+    {
+        "venue_key": "laughing-skull",
+        "day": 1,  # Tuesday
+        "title": "Open Mic Comedy Night",
+        "description": "Weekly comedy open mic at Laughing Skull Lounge, Atlanta's premier comedy club in Midtown. $15 cover.",
+        "start_time": "20:00",
+        "category": "comedy",
+        "subcategory": "comedy.standup",
+        "tags": ["open-mic", "comedy", "standup", "weekly"],
+        "price_min": 15,
+        "price_max": 15,
+    },
+    {
+        "venue_key": "laughing-skull",
+        "day": 2,  # Wednesday
+        "title": "Open Mic Comedy Night",
+        "description": "Weekly comedy open mic at Laughing Skull Lounge, Atlanta's premier comedy club in Midtown. $15 cover.",
+        "start_time": "20:00",
+        "category": "comedy",
+        "subcategory": "comedy.standup",
+        "tags": ["open-mic", "comedy", "standup", "weekly"],
+        "price_min": 15,
+        "price_max": 15,
     },
     {
         "venue_key": "limerick-junction",
@@ -543,22 +591,43 @@ WEEKLY_EVENTS = [
     {
         "venue_key": "red-light-cafe",
         "day": 2,  # Wednesday
-        "title": "Open Mic Night",
-        "description": "Wednesday open mic at Red Light Cafe in Midtown. A staple of Atlanta's acoustic music scene.",
-        "start_time": "19:00",
+        "title": "Wednesday Jazz Jam",
+        "description": "Weekly jazz jam session at Red Light Cafe in Midtown. Musicians welcome to sit in. A staple of Atlanta's jazz scene since 1996.",
+        "start_time": "21:00",
         "category": "music",
-        "subcategory": "music.acoustic",
-        "tags": ["open-mic", "music", "acoustic", "weekly"],
+        "subcategory": "music.jazz",
+        "tags": ["jazz", "jam-session", "live-music", "weekly"],
+    },
+    # Smith's Olde Bar verified events
+    {
+        "venue_key": "smiths-olde-bar",
+        "day": 0,  # Monday
+        "title": "Open Mic Live Band Night",
+        "description": "Monday open mic with live band backing at Smith's Olde Bar. Legendary Atlanta music venue since 1994.",
+        "start_time": "19:30",
+        "category": "music",
+        "subcategory": "music.rock",
+        "tags": ["open-mic", "live-music", "live-band", "weekly"],
     },
     {
         "venue_key": "smiths-olde-bar",
         "day": 2,  # Wednesday
-        "title": "Open Mic Night",
-        "description": "Wednesday open mic at Smith's Olde Bar, a legendary Atlanta music venue since 1994.",
-        "start_time": "20:00",
-        "category": "music",
+        "title": "Open Mic Comedy Night",
+        "description": "Wednesday comedy open mic at Smith's Olde Bar. Atlanta's legendary music venue since 1994.",
+        "start_time": "19:30",
+        "category": "comedy",
+        "subcategory": "comedy.standup",
+        "tags": ["open-mic", "comedy", "standup", "weekly"],
+    },
+    {
+        "venue_key": "smiths-olde-bar",
+        "day": 3,  # Thursday
+        "title": "Team Trivia",
+        "description": "Thursday Team Trivia night at Smith's Olde Bar. Test your knowledge before karaoke starts at 10PM.",
+        "start_time": "19:30",
+        "category": "community",
         "subcategory": None,
-        "tags": ["open-mic", "music", "weekly"],
+        "tags": ["trivia", "games", "weekly"],
     },
     {
         "venue_key": "pullman-yards",
@@ -566,16 +635,6 @@ WEEKLY_EVENTS = [
         "title": "Open Mic Night",
         "description": "Wednesday open mic at Pullman Yards in Kirkwood.",
         "start_time": "20:00",
-        "category": "community",
-        "subcategory": None,
-        "tags": ["open-mic", "comedy", "music", "weekly"],
-    },
-    {
-        "venue_key": "ten-atl",
-        "day": 3,  # Thursday
-        "title": "Open Mic Night",
-        "description": "Thursday open mic at TEN ATL in East Atlanta.",
-        "start_time": "18:00",
         "category": "community",
         "subcategory": None,
         "tags": ["open-mic", "comedy", "music", "weekly"],
@@ -630,15 +689,26 @@ WEEKLY_EVENTS = [
         "subcategory": None,
         "tags": ["open-mic", "comedy", "music", "weekly"],
     },
+    # Joystick verified from Instagram: Wednesday gaming, Thursday karaoke (NOT open mic as badslava listed)
+    {
+        "venue_key": "joystick",
+        "day": 2,  # Wednesday
+        "title": "Press Start Gaming Night",
+        "description": "Wednesday gaming night at Joystick Gamebar. Rotating video games each week including Rock Band, fighting games, and more. 7PM-11PM.",
+        "start_time": "19:00",
+        "category": "community",
+        "subcategory": None,
+        "tags": ["games", "video-games", "arcade", "weekly"],
+    },
     {
         "venue_key": "joystick",
         "day": 3,  # Thursday
-        "title": "Open Mic Comedy Night",
-        "description": "Thursday comedy open mic at Joystick Gamebar, the barcade on Edgewood Ave.",
-        "start_time": "19:30",
-        "category": "comedy",
-        "subcategory": "comedy.standup",
-        "tags": ["open-mic", "comedy", "arcade", "weekly"],
+        "title": "Regular A$$ Karaoke",
+        "description": "Thursday karaoke night at Joystick Gamebar, hosted by Grant. Nerdy dive bar vibes on Edgewood Ave.",
+        "start_time": "21:00",
+        "category": "nightlife",
+        "subcategory": "nightlife.karaoke",
+        "tags": ["karaoke", "nightlife", "weekly"],
     },
     {
         "venue_key": "peters-street",
@@ -660,15 +730,16 @@ WEEKLY_EVENTS = [
         "subcategory": None,
         "tags": ["open-mic", "comedy", "music", "weekly", "late-night"],
     },
+    # 529 verified: Saturday 3PM Open Mic Comedy (website: 529atlanta.com, not 529atl.com which is hijacked)
     {
         "venue_key": "529-bar",
         "day": 5,  # Saturday
-        "title": "Afternoon Open Mic",
-        "description": "Saturday afternoon open mic at 529 Bar in East Atlanta Village.",
-        "start_time": "15:30",
-        "category": "music",
-        "subcategory": None,
-        "tags": ["open-mic", "music", "weekly"],
+        "title": "3PM Open Mic Comedy",
+        "description": "Saturday afternoon open mic comedy at 529 in East Atlanta Village. 3:00-5:30pm, hosted by Kelly Mendez.",
+        "start_time": "15:00",
+        "category": "comedy",
+        "subcategory": "comedy.standup",
+        "tags": ["open-mic", "comedy", "standup", "weekly", "afternoon"],
     },
 
     # ========== GAME NIGHTS ==========
@@ -682,15 +753,16 @@ WEEKLY_EVENTS = [
         "subcategory": None,
         "tags": ["games", "board-games", "weekly", "family-friendly"],
     },
+    # Manuel's Tavern verified: Sunday Team Trivia at 7PM (NOT Wednesday game night as badslava listed)
     {
         "venue_key": "manuels-tavern",
-        "day": 2,  # Wednesday
-        "title": "Game Night",
-        "description": "Wednesday game night at Manuel's Tavern, Atlanta's legendary political bar since 1956.",
+        "day": 6,  # Sunday
+        "title": "Team Trivia",
+        "description": "Sunday Team Trivia at Manuel's Tavern, Atlanta's legendary political bar since 1956. Categories include Sports, History, Music, Science, TV, and Movies.",
         "start_time": "19:00",
         "category": "community",
         "subcategory": None,
-        "tags": ["games", "board-games", "weekly"],
+        "tags": ["trivia", "games", "weekly"],
     },
     {
         "venue_key": "church-epiphany",
@@ -785,6 +857,11 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 events_updated += 1
                 continue
 
+            # Support optional price fields in event templates
+            price_min = event_template.get("price_min")
+            price_max = event_template.get("price_max")
+            is_free = price_min is None and price_max is None
+
             event_record = {
                 "source_id": source_id,
                 "venue_id": venue_id,
@@ -798,10 +875,10 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 "category": event_template["category"],
                 "subcategory": event_template.get("subcategory"),
                 "tags": event_template["tags"],
-                "price_min": None,
-                "price_max": None,
-                "price_note": None,
-                "is_free": True,
+                "price_min": price_min,
+                "price_max": price_max,
+                "price_note": event_template.get("price_note"),
+                "is_free": is_free,
                 "source_url": venue_data.get("website", "https://badslava.com/"),
                 "ticket_url": None,
                 "image_url": None,
