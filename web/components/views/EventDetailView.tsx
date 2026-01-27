@@ -520,199 +520,228 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
         </div>
       </div>
 
-      {/* Related Sections - All Collapsible */}
+      {/* Related Sections - Neon styled */}
       {hasRelatedContent && (
-        <div className="mt-8 space-y-3">
-          {/* More at Venue */}
-          {hasVenueEvents && event.venue && (
-            <CollapsibleSection
-              title={`More at ${event.venue.name}`}
-              count={venueEvents.length}
-              category="venue"
-              icon={CategoryIcons.venue}
-              maxItems={5}
-              totalItems={venueEvents.length}
-              onSeeAll={() => toggleSection('venue')}
-            >
-              <div className="space-y-2">
-                {(expandedSections.venue ? venueEvents : venueEvents.slice(0, 5)).map((relatedEvent) => (
-                  <button
-                    key={relatedEvent.id}
-                    onClick={() => handleEventClick(relatedEvent.id)}
-                    className="block w-full p-3 border border-[var(--twilight)] rounded-lg transition-colors group hover:border-[var(--coral)]/50 bg-[var(--void)] text-left"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex-1 min-w-0">
-                        <h3 className="text-[var(--cream)] text-sm font-medium truncate group-hover:text-[var(--coral)] transition-colors">
-                          {relatedEvent.title}
-                        </h3>
-                        <p className="text-xs text-[var(--muted)] mt-0.5">
-                          {format(parseISO(relatedEvent.start_date), "EEE, MMM d")}
-                          {relatedEvent.start_time && ` · ${formatTimeSplit(relatedEvent.start_time).time}${formatTimeSplit(relatedEvent.start_time).period}`}
-                        </p>
+        <div className="mt-8">
+          {/* Section Header with neon styling */}
+          <div className="relative mb-6">
+            {/* Glowing line */}
+            <div
+              className="absolute left-0 right-0 top-1/2 h-px"
+              style={{
+                background: 'linear-gradient(90deg, transparent 0%, var(--coral) 20%, var(--neon-magenta) 50%, var(--neon-cyan) 80%, transparent 100%)',
+                opacity: 0.4,
+              }}
+            />
+            {/* Title */}
+            <div className="relative flex justify-center">
+              <h2
+                className="px-4 py-2 font-bold text-base tracking-wide"
+                style={{
+                  background: 'var(--night)',
+                  color: 'var(--cream)',
+                  textShadow: '0 0 30px var(--coral)',
+                }}
+              >
+                <span className="text-[var(--coral)]">✦</span>
+                {' '}Happening Around Here{' '}
+                <span className="text-[var(--neon-cyan)]">✦</span>
+              </h2>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            {/* More at Venue */}
+            {hasVenueEvents && event.venue && (
+              <CollapsibleSection
+                title={event.venue.name}
+                count={venueEvents.length}
+                category="venue"
+                icon={CategoryIcons.venue}
+                maxItems={5}
+                totalItems={venueEvents.length}
+                onSeeAll={() => toggleSection('venue')}
+              >
+                <div className="space-y-2">
+                  {(expandedSections.venue ? venueEvents : venueEvents.slice(0, 5)).map((relatedEvent) => (
+                    <button
+                      key={relatedEvent.id}
+                      onClick={() => handleEventClick(relatedEvent.id)}
+                      className="block w-full p-3 border border-[var(--twilight)] rounded-lg transition-colors group hover:border-[var(--coral)]/50 bg-[var(--void)] text-left"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <h3 className="text-[var(--cream)] text-sm font-medium truncate group-hover:text-[var(--coral)] transition-colors">
+                            {relatedEvent.title}
+                          </h3>
+                          <p className="text-xs text-[var(--muted)] mt-0.5">
+                            {format(parseISO(relatedEvent.start_date), "EEE, MMM d")}
+                            {relatedEvent.start_time && ` · ${formatTimeSplit(relatedEvent.start_time).time}${formatTimeSplit(relatedEvent.start_time).period}`}
+                          </p>
+                        </div>
+                        <svg className="w-4 h-4 text-[var(--muted)] group-hover:text-[var(--coral)] transition-colors flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
                       </div>
-                      <svg className="w-4 h-4 text-[var(--muted)] group-hover:text-[var(--coral)] transition-colors flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                      </svg>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </CollapsibleSection>
-          )}
+                    </button>
+                  ))}
+                </div>
+              </CollapsibleSection>
+            )}
 
-          {/* Other Events Nearby */}
-          {hasNearbyEvents && (
-            <CollapsibleSection
-              title="Other Events"
-              count={nearbyEvents.length}
-              category="events"
-              icon={CategoryIcons.events}
-              maxItems={5}
-              totalItems={nearbyEvents.length}
-              onSeeAll={() => toggleSection('events')}
-            >
-              <div className="space-y-2">
-                {(expandedSections.events ? nearbyEvents : nearbyEvents.slice(0, 5)).map((relatedEvent) => (
-                  <button
-                    key={relatedEvent.id}
-                    onClick={() => handleEventClick(relatedEvent.id)}
-                    className="block w-full p-3 border border-[var(--twilight)] rounded-lg transition-colors group hover:border-[var(--coral)]/50 bg-[var(--void)] text-left"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex-1 min-w-0">
-                        <h3 className="text-[var(--cream)] text-sm font-medium truncate group-hover:text-[var(--coral)] transition-colors">
-                          {relatedEvent.title}
-                        </h3>
-                        <p className="text-xs text-[var(--muted)] mt-0.5">
-                          {relatedEvent.venue?.name || "Venue TBA"}
-                          {relatedEvent.start_time && ` · ${formatTimeSplit(relatedEvent.start_time).time}${formatTimeSplit(relatedEvent.start_time).period}`}
-                        </p>
+            {/* Other Events Nearby */}
+            {hasNearbyEvents && (
+              <CollapsibleSection
+                title="Nearby"
+                count={nearbyEvents.length}
+                category="events"
+                icon={CategoryIcons.events}
+                maxItems={5}
+                totalItems={nearbyEvents.length}
+                onSeeAll={() => toggleSection('events')}
+              >
+                <div className="space-y-2">
+                  {(expandedSections.events ? nearbyEvents : nearbyEvents.slice(0, 5)).map((relatedEvent) => (
+                    <button
+                      key={relatedEvent.id}
+                      onClick={() => handleEventClick(relatedEvent.id)}
+                      className="block w-full p-3 border border-[var(--twilight)] rounded-lg transition-colors group hover:border-[var(--coral)]/50 bg-[var(--void)] text-left"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <h3 className="text-[var(--cream)] text-sm font-medium truncate group-hover:text-[var(--coral)] transition-colors">
+                            {relatedEvent.title}
+                          </h3>
+                          <p className="text-xs text-[var(--muted)] mt-0.5">
+                            {relatedEvent.venue?.name || "Venue TBA"}
+                            {relatedEvent.start_time && ` · ${formatTimeSplit(relatedEvent.start_time).time}${formatTimeSplit(relatedEvent.start_time).period}`}
+                          </p>
+                        </div>
+                        <svg className="w-4 h-4 text-[var(--muted)] group-hover:text-[var(--coral)] transition-colors flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
                       </div>
-                      <svg className="w-4 h-4 text-[var(--muted)] group-hover:text-[var(--coral)] transition-colors flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                      </svg>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </CollapsibleSection>
-          )}
+                    </button>
+                  ))}
+                </div>
+              </CollapsibleSection>
+            )}
 
-          {/* Food */}
-          {hasFood && (
-            <CollapsibleSection
-              title="Food"
-              count={nearbyDestinations.food.length}
-              category="food"
-              icon={<span className="text-base">🍽️</span>}
-              maxItems={5}
-              totalItems={nearbyDestinations.food.length}
-              onSeeAll={() => toggleSection('food')}
-            >
-              <div className="grid grid-cols-2 gap-2">
-                {(expandedSections.food ? nearbyDestinations.food : nearbyDestinations.food.slice(0, 5)).map((spot) => (
-                  <SpotCard
-                    key={spot.id}
-                    spot={spot}
-                    onClick={() => handleSpotClick(spot.slug)}
-                  />
-                ))}
-              </div>
-            </CollapsibleSection>
-          )}
+            {/* Food */}
+            {hasFood && (
+              <CollapsibleSection
+                title="Nearby"
+                count={nearbyDestinations.food.length}
+                category="food"
+                icon={CategoryIcons.food}
+                maxItems={5}
+                totalItems={nearbyDestinations.food.length}
+                onSeeAll={() => toggleSection('food')}
+              >
+                <div className="grid grid-cols-2 gap-2">
+                  {(expandedSections.food ? nearbyDestinations.food : nearbyDestinations.food.slice(0, 5)).map((spot) => (
+                    <SpotCard
+                      key={spot.id}
+                      spot={spot}
+                      onClick={() => handleSpotClick(spot.slug)}
+                    />
+                  ))}
+                </div>
+              </CollapsibleSection>
+            )}
 
-          {/* Drinks */}
-          {hasDrinks && (
-            <CollapsibleSection
-              title="Drinks"
-              count={nearbyDestinations.drinks.length}
-              category="drinks"
-              icon={<span className="text-base">🍺</span>}
-              maxItems={5}
-              totalItems={nearbyDestinations.drinks.length}
-              onSeeAll={() => toggleSection('drinks')}
-            >
-              <div className="grid grid-cols-2 gap-2">
-                {(expandedSections.drinks ? nearbyDestinations.drinks : nearbyDestinations.drinks.slice(0, 5)).map((spot) => (
-                  <SpotCard
-                    key={spot.id}
-                    spot={spot}
-                    onClick={() => handleSpotClick(spot.slug)}
-                  />
-                ))}
-              </div>
-            </CollapsibleSection>
-          )}
+            {/* Drinks */}
+            {hasDrinks && (
+              <CollapsibleSection
+                title="Nearby"
+                count={nearbyDestinations.drinks.length}
+                category="drinks"
+                icon={CategoryIcons.drinks}
+                maxItems={5}
+                totalItems={nearbyDestinations.drinks.length}
+                onSeeAll={() => toggleSection('drinks')}
+              >
+                <div className="grid grid-cols-2 gap-2">
+                  {(expandedSections.drinks ? nearbyDestinations.drinks : nearbyDestinations.drinks.slice(0, 5)).map((spot) => (
+                    <SpotCard
+                      key={spot.id}
+                      spot={spot}
+                      onClick={() => handleSpotClick(spot.slug)}
+                    />
+                  ))}
+                </div>
+              </CollapsibleSection>
+            )}
 
-          {/* Nightlife */}
-          {hasNightlife && (
-            <CollapsibleSection
-              title="Nightlife"
-              count={nearbyDestinations.nightlife.length}
-              category="nightlife"
-              icon={<span className="text-base">🪩</span>}
-              maxItems={5}
-              totalItems={nearbyDestinations.nightlife.length}
-              onSeeAll={() => toggleSection('nightlife')}
-            >
-              <div className="grid grid-cols-2 gap-2">
-                {(expandedSections.nightlife ? nearbyDestinations.nightlife : nearbyDestinations.nightlife.slice(0, 5)).map((spot) => (
-                  <SpotCard
-                    key={spot.id}
-                    spot={spot}
-                    onClick={() => handleSpotClick(spot.slug)}
-                  />
-                ))}
-              </div>
-            </CollapsibleSection>
-          )}
+            {/* Nightlife */}
+            {hasNightlife && (
+              <CollapsibleSection
+                title="Nearby"
+                count={nearbyDestinations.nightlife.length}
+                category="nightlife"
+                icon={CategoryIcons.nightlife}
+                maxItems={5}
+                totalItems={nearbyDestinations.nightlife.length}
+                onSeeAll={() => toggleSection('nightlife')}
+              >
+                <div className="grid grid-cols-2 gap-2">
+                  {(expandedSections.nightlife ? nearbyDestinations.nightlife : nearbyDestinations.nightlife.slice(0, 5)).map((spot) => (
+                    <SpotCard
+                      key={spot.id}
+                      spot={spot}
+                      onClick={() => handleSpotClick(spot.slug)}
+                    />
+                  ))}
+                </div>
+              </CollapsibleSection>
+            )}
 
-          {/* Caffeine */}
-          {hasCaffeine && (
-            <CollapsibleSection
-              title="Caffeine"
-              count={nearbyDestinations.caffeine.length}
-              category="caffeine"
-              icon={<span className="text-base">☕</span>}
-              maxItems={5}
-              totalItems={nearbyDestinations.caffeine.length}
-              onSeeAll={() => toggleSection('caffeine')}
-            >
-              <div className="grid grid-cols-2 gap-2">
-                {(expandedSections.caffeine ? nearbyDestinations.caffeine : nearbyDestinations.caffeine.slice(0, 5)).map((spot) => (
-                  <SpotCard
-                    key={spot.id}
-                    spot={spot}
-                    onClick={() => handleSpotClick(spot.slug)}
-                  />
-                ))}
-              </div>
-            </CollapsibleSection>
-          )}
+            {/* Caffeine */}
+            {hasCaffeine && (
+              <CollapsibleSection
+                title="Nearby"
+                count={nearbyDestinations.caffeine.length}
+                category="caffeine"
+                icon={CategoryIcons.caffeine}
+                maxItems={5}
+                totalItems={nearbyDestinations.caffeine.length}
+                onSeeAll={() => toggleSection('caffeine')}
+              >
+                <div className="grid grid-cols-2 gap-2">
+                  {(expandedSections.caffeine ? nearbyDestinations.caffeine : nearbyDestinations.caffeine.slice(0, 5)).map((spot) => (
+                    <SpotCard
+                      key={spot.id}
+                      spot={spot}
+                      onClick={() => handleSpotClick(spot.slug)}
+                    />
+                  ))}
+                </div>
+              </CollapsibleSection>
+            )}
 
-          {/* Fun */}
-          {hasFun && (
-            <CollapsibleSection
-              title="Fun"
-              count={nearbyDestinations.fun.length}
-              category="fun"
-              icon={<span className="text-base">🎯</span>}
-              maxItems={5}
-              totalItems={nearbyDestinations.fun.length}
-              onSeeAll={() => toggleSection('fun')}
-            >
-              <div className="grid grid-cols-2 gap-2">
-                {(expandedSections.fun ? nearbyDestinations.fun : nearbyDestinations.fun.slice(0, 5)).map((spot) => (
-                  <SpotCard
-                    key={spot.id}
-                    spot={spot}
-                    onClick={() => handleSpotClick(spot.slug)}
-                  />
-                ))}
-              </div>
-            </CollapsibleSection>
-          )}
+            {/* Fun */}
+            {hasFun && (
+              <CollapsibleSection
+                title="Nearby"
+                count={nearbyDestinations.fun.length}
+                category="fun"
+                icon={CategoryIcons.fun}
+                maxItems={5}
+                totalItems={nearbyDestinations.fun.length}
+                onSeeAll={() => toggleSection('fun')}
+              >
+                <div className="grid grid-cols-2 gap-2">
+                  {(expandedSections.fun ? nearbyDestinations.fun : nearbyDestinations.fun.slice(0, 5)).map((spot) => (
+                    <SpotCard
+                      key={spot.id}
+                      spot={spot}
+                      onClick={() => handleSpotClick(spot.slug)}
+                    />
+                  ))}
+                </div>
+              </CollapsibleSection>
+            )}
+          </div>
         </div>
       )}
     </div>
