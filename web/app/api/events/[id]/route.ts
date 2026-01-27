@@ -181,10 +181,15 @@ export async function GET(
       for (const spot of spots) {
         const s = spot as NearbyDestination;
 
-        // Check distance
-        if (!s.lat || !s.lng) continue;
-        const distance = getDistanceMiles(venueLat, venueLng, s.lat, s.lng);
-        if (distance > NEARBY_RADIUS_MILES) continue;
+        // Check distance if spot has coordinates, otherwise check neighborhood
+        let distance: number | undefined;
+        if (s.lat && s.lng) {
+          distance = getDistanceMiles(venueLat, venueLng, s.lat, s.lng);
+          if (distance > NEARBY_RADIUS_MILES) continue;
+        } else {
+          // No coordinates - include if same neighborhood
+          if (s.neighborhood !== eventData.venue?.neighborhood) continue;
+        }
 
         // Check if spot is open during event (if we have hours data)
         let closesAt: string | undefined;
