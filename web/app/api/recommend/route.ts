@@ -1,0 +1,167 @@
+import { createClient } from "@/lib/supabase/server";
+import { NextRequest, NextResponse } from "next/server";
+
+export async function GET(request: NextRequest) {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return NextResponse.json({ isRecommended: false });
+  }
+
+  const { searchParams } = new URL(request.url);
+  const eventId = searchParams.get("eventId");
+  const venueId = searchParams.get("venueId");
+  const producerId = searchParams.get("producerId");
+
+  if (!eventId && !venueId && !producerId) {
+    return NextResponse.json({ error: "Missing target" }, { status: 400 });
+  }
+
+  try {
+    let query = supabase
+      .from("recommendations")
+      .select("*")
+      .eq("user_id", user.id);
+
+    if (eventId) {
+      query = query.eq("event_id", parseInt(eventId));
+    } else if (venueId) {
+      query = query.eq("venue_id", parseInt(venueId));
+    } else if (producerId) {
+      query = query.eq("producer_id", producerId);
+    }
+
+    const { data, error } = await query.maybeSingle();
+
+    if (error) {
+      console.error("Recommendation check error:", error);
+      return NextResponse.json({ isRecommended: false, error: error.message });
+    }
+
+    const rec = data as { note?: string | null; visibility?: string | null } | null;
+
+    return NextResponse.json({
+      isRecommended: !!rec,
+      note: rec?.note || "",
+      visibility: rec?.visibility || "public",
+    });
+  } catch (err) {
+    console.error("Recommendation check exception:", err);
+    return NextResponse.json({ isRecommended: false, error: "Server error" });
+  }
+}
+
+export async function POST(request: NextRequest) {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+  }
+
+  const body = await request.json();
+  const { eventId, venueId, producerId, action, note, visibility } = body;
+
+  if (!eventId && !venueId && !producerId) {
+    return NextResponse.json({ error: "Missing target" }, { status: 400 });
+  }
+
+  try {
+    if (action === "remove") {
+      let query = supabase
+        .from("recommendations")
+        .delete()
+        .eq("user_id", user.id);
+
+      if (eventId) {
+        query = query.eq("event_id", eventId);
+      } else if (venueId) {
+        query = query.eq("venue_id", venueId);
+      } else if (producerId) {
+        query = query.eq("producer_id", producerId);
+      }
+
+      const { error } = await query;
+
+      if (error) {
+        console.error("Remove recommendation error:", error);
+        return NextResponse.json({ error: error.message }, { status: 500 });
+      }
+
+      return NextResponse.json({ success: true, isRecommended: false });
+    } else {
+      // Check if already exists
+      let checkQuery = supabase
+        .from("recommendations")
+        .select("id")
+        .eq("user_id", user.id);
+
+      if (eventId) {
+        checkQuery = checkQuery.eq("event_id", eventId);
+      } else if (venueId) {
+        checkQuery = checkQuery.eq("venue_id", venueId);
+      } else if (producerId) {
+        checkQuery = checkQuery.eq("producer_id", producerId);
+      }
+
+      const { data: existing } = await checkQuery.maybeSingle();
+
+      if (existing) {
+        // Update existing
+        let updateQuery = supabase
+          .from("recommendations")
+          .update({ note: note || null, visibility: visibility || "public" } as never)
+          .eq("user_id", user.id);
+
+        if (eventId) {
+          updateQuery = updateQuery.eq("event_id", eventId);
+        } else if (venueId) {
+          updateQuery = updateQuery.eq("venue_id", venueId);
+        } else if (producerId) {
+          updateQuery = updateQuery.eq("producer_id", producerId);
+        }
+
+        const { error } = await updateQuery;
+
+        if (error) {
+          console.error("Update recommendation error:", error);
+          return NextResponse.json({ error: error.message }, { status: 500 });
+        }
+      } else {
+        // Create new
+        const recData: Record<string, unknown> = {
+          user_id: user.id,
+          note: note || null,
+          visibility: visibility || "public",
+        };
+
+        if (eventId) {
+          recData.event_id = eventId;
+        } else if (venueId) {
+          recData.venue_id = venueId;
+        } else if (producerId) {
+          recData.producer_id = producerId;
+        }
+
+        const { error } = await supabase.from("recommendations").insert(recData as never);
+
+        if (error) {
+          console.error("Create recommendation error:", error);
+          return NextResponse.json({ error: error.message }, { status: 500 });
+        }
+      }
+
+      return NextResponse.json({ success: true, isRecommended: true });
+    }
+  } catch (err) {
+    console.error("Recommendation action exception:", err);
+    return NextResponse.json({ error: "Server error" }, { status: 500 });
+  }
+}

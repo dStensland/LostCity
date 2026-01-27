@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/components/Toast";
 
@@ -25,7 +24,6 @@ export default function FollowButton({
 }: FollowButtonProps) {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
-  const supabase = createClient();
   const { showToast } = useToast();
 
   const [isFollowing, setIsFollowing] = useState(false);
@@ -33,68 +31,43 @@ export default function FollowButton({
   const [actionLoading, setActionLoading] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
 
-  // Safety timeout - ensure loading never stays true forever
-  useEffect(() => {
-    const safetyTimeout = setTimeout(() => {
-      setLoading(false);
-    }, 5000);
-    return () => clearTimeout(safetyTimeout);
-  }, []);
-
-  // Check if already following
+  // Check if already following via API
   useEffect(() => {
     let cancelled = false;
 
     async function checkFollowStatus() {
-      // Quick exit if auth still loading - we'll re-run when it's done
+      // Wait for auth to finish
       if (authLoading) {
         return;
       }
 
+      // Not logged in - show button as not following
       if (!user) {
         setLoading(false);
         return;
       }
 
-      // Ensure we have a valid target
+      // No valid target
       if (!targetUserId && !targetVenueId && !targetOrgId && !targetProducerId) {
         setLoading(false);
         return;
       }
 
       try {
-        let query = supabase
-          .from("follows")
-          .select("id")
-          .eq("follower_id", user.id);
+        const params = new URLSearchParams();
+        if (targetUserId) params.set("userId", targetUserId);
+        else if (targetVenueId) params.set("venueId", targetVenueId.toString());
+        else if (targetProducerId) params.set("producerId", targetProducerId);
+        // Note: targetOrgId uses same column as producerId in some cases
 
-        if (targetUserId) {
-          query = query.eq("followed_user_id", targetUserId);
-        } else if (targetVenueId) {
-          query = query.eq("followed_venue_id", targetVenueId);
-        } else if (targetOrgId) {
-          query = query.eq("followed_org_id", targetOrgId);
-        } else if (targetProducerId) {
-          query = query.eq("followed_producer_id", targetProducerId);
+        const res = await fetch(`/api/follow?${params.toString()}`);
+        const data = await res.json();
+
+        if (!cancelled) {
+          setIsFollowing(data.isFollowing || false);
         }
-
-        // Race the query against a timeout
-        const result = await Promise.race([
-          query.maybeSingle(),
-          new Promise<{ data: null; error: { message: string } }>((resolve) =>
-            setTimeout(() => resolve({ data: null, error: { message: "Query timeout" } }), 3000)
-          ),
-        ]);
-
-        if (cancelled) return;
-
-        if (result.error) {
-          console.error("Error checking follow status:", result.error);
-        }
-
-        setIsFollowing(!!result.data);
       } catch (err) {
-        console.error("Exception checking follow status:", err);
+        console.error("Error checking follow status:", err);
       } finally {
         if (!cancelled) {
           setLoading(false);
@@ -107,7 +80,6 @@ export default function FollowButton({
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- supabase client is stable
   }, [user, authLoading, targetUserId, targetVenueId, targetOrgId, targetProducerId]);
 
   // Don't show follow button for own profile
@@ -117,73 +89,38 @@ export default function FollowButton({
 
   const handleClick = async () => {
     if (!user) {
-      // Redirect to login
       const currentPath = window.location.pathname;
       router.push(`/auth/login?redirect=${encodeURIComponent(currentPath)}`);
       return;
     }
 
     setActionLoading(true);
-
-    // Trigger pop animation
     setIsAnimating(true);
     setTimeout(() => setIsAnimating(false), 150);
 
     try {
-      if (isFollowing) {
-        // Unfollow
-        let query = supabase
-          .from("follows")
-          .delete()
-          .eq("follower_id", user.id);
+      const res = await fetch("/api/follow", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          targetUserId,
+          targetVenueId,
+          targetProducerId,
+          action: isFollowing ? "unfollow" : "follow",
+        }),
+      });
 
-        if (targetUserId) {
-          query = query.eq("followed_user_id", targetUserId);
-        } else if (targetVenueId) {
-          query = query.eq("followed_venue_id", targetVenueId);
-        } else if (targetOrgId) {
-          query = query.eq("followed_org_id", targetOrgId);
-        } else if (targetProducerId) {
-          query = query.eq("followed_producer_id", targetProducerId);
-        }
+      const data = await res.json();
 
-        const { error } = await query;
-
-        if (!error) {
-          setIsFollowing(false);
-          showToast("Unfollowed");
-        } else {
-          console.error("Unfollow error:", error);
-          showToast("Failed to unfollow", "error");
-        }
+      if (data.success) {
+        setIsFollowing(data.isFollowing);
+        showToast(data.isFollowing ? "Following" : "Unfollowed");
       } else {
-        // Follow
-        const followData: Record<string, unknown> = {
-          follower_id: user.id,
-        };
-
-        if (targetUserId) {
-          followData.followed_user_id = targetUserId;
-        } else if (targetVenueId) {
-          followData.followed_venue_id = targetVenueId;
-        } else if (targetOrgId) {
-          followData.followed_org_id = targetOrgId;
-        } else if (targetProducerId) {
-          followData.followed_producer_id = targetProducerId;
-        }
-
-        const { error } = await supabase.from("follows").insert(followData as never);
-
-        if (!error) {
-          setIsFollowing(true);
-          showToast("Following");
-        } else {
-          console.error("Follow error:", error);
-          showToast("Failed to follow", "error");
-        }
+        console.error("Follow action error:", data.error);
+        showToast("Something went wrong", "error");
       }
     } catch (err) {
-      console.error("Follow action error:", err);
+      console.error("Follow action exception:", err);
       showToast("Something went wrong", "error");
     } finally {
       setActionLoading(false);

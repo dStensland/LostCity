@@ -3,10 +3,8 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/lib/auth-context";
 import { VISIBILITY_OPTIONS, DEFAULT_VISIBILITY, type Visibility } from "@/lib/visibility";
-import type { Database } from "@/lib/types";
 
 type RecommendButtonProps = {
   eventId?: number;
@@ -15,8 +13,6 @@ type RecommendButtonProps = {
   size?: "sm" | "md";
   className?: string;
 };
-
-type RecommendationRow = Database["public"]["Tables"]["recommendations"]["Row"];
 
 export default function RecommendButton({
   eventId,
@@ -27,7 +23,6 @@ export default function RecommendButton({
 }: RecommendButtonProps) {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
-  const supabase = createClient();
   const modalRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -37,14 +32,6 @@ export default function RecommendButton({
   const [modalOpen, setModalOpen] = useState(false);
   const [note, setNote] = useState("");
   const [visibility, setVisibility] = useState<Visibility>(DEFAULT_VISIBILITY);
-
-  // Safety timeout - ensure loading never stays true forever
-  useEffect(() => {
-    const safetyTimeout = setTimeout(() => {
-      setLoading(false);
-    }, 5000);
-    return () => clearTimeout(safetyTimeout);
-  }, []);
 
   // Focus trap and keyboard handling
   useEffect(() => {
@@ -97,12 +84,11 @@ export default function RecommendButton({
     [actionLoading]
   );
 
-  // Load existing recommendation
+  // Load existing recommendation via API
   useEffect(() => {
     let cancelled = false;
 
     async function loadRecommendation() {
-      // Quick exit if auth still loading - we'll re-run when it's done
       if (authLoading) {
         return;
       }
@@ -112,49 +98,27 @@ export default function RecommendButton({
         return;
       }
 
-      // Ensure we have a valid target
       if (!eventId && !venueId && !producerId) {
         if (!cancelled) setLoading(false);
         return;
       }
 
       try {
-        let query = supabase
-          .from("recommendations")
-          .select("*")
-          .eq("user_id", user.id);
+        const params = new URLSearchParams();
+        if (eventId) params.set("eventId", eventId.toString());
+        else if (venueId) params.set("venueId", venueId.toString());
+        else if (producerId) params.set("producerId", producerId);
 
-        if (eventId) {
-          query = query.eq("event_id", eventId);
-        } else if (venueId) {
-          query = query.eq("venue_id", venueId);
-        } else if (producerId) {
-          query = query.eq("producer_id", producerId);
-        }
+        const res = await fetch(`/api/recommend?${params.toString()}`);
+        const data = await res.json();
 
-        // Race the query against a timeout
-        const result = await Promise.race([
-          query.maybeSingle(),
-          new Promise<{ data: null; error: { message: string } }>((resolve) =>
-            setTimeout(() => resolve({ data: null, error: { message: "Query timeout" } }), 3000)
-          ),
-        ]);
-
-        if (cancelled) return;
-
-        if (result.error) {
-          console.error("Error loading recommendation:", result.error);
-        }
-
-        const rec = result.data as RecommendationRow | null;
-
-        if (rec) {
-          setIsRecommended(true);
-          setNote(rec.note || "");
-          setVisibility(rec.visibility as Visibility);
+        if (!cancelled) {
+          setIsRecommended(data.isRecommended || false);
+          if (data.note) setNote(data.note);
+          if (data.visibility) setVisibility(data.visibility as Visibility);
         }
       } catch (err) {
-        console.error("Exception loading recommendation:", err);
+        console.error("Error loading recommendation:", err);
       } finally {
         if (!cancelled) {
           setLoading(false);
@@ -167,7 +131,7 @@ export default function RecommendButton({
     return () => {
       cancelled = true;
     };
-  }, [user, authLoading, eventId, venueId, producerId, supabase]);
+  }, [user, authLoading, eventId, venueId, producerId]);
 
   const handleClick = () => {
     if (!user) {
@@ -190,53 +154,30 @@ export default function RecommendButton({
 
     setActionLoading(true);
 
-    // Timeout wrapper to prevent indefinite hangs
     try {
-      const recData: Record<string, unknown> = {
-        user_id: user.id,
-        note: note.trim() || null,
-        visibility,
-      };
+      const res = await fetch("/api/recommend", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          eventId,
+          venueId,
+          producerId,
+          action: "save",
+          note: note.trim() || null,
+          visibility,
+        }),
+      });
 
-      if (eventId) {
-        recData.event_id = eventId;
-      } else if (venueId) {
-        recData.venue_id = venueId;
-      } else if (producerId) {
-        recData.producer_id = producerId;
-      }
+      const data = await res.json();
 
-      if (isRecommended) {
-        // Update existing
-        let query = supabase
-          .from("recommendations")
-          .update({ note: note.trim() || null, visibility } as never)
-          .eq("user_id", user.id);
-
-        if (eventId) {
-          query = query.eq("event_id", eventId);
-        } else if (venueId) {
-          query = query.eq("venue_id", venueId);
-        } else if (producerId) {
-          query = query.eq("producer_id", producerId);
-        }
-
-        const { error } = await query;
-        if (error) {
-          console.error("Update recommendation error:", error);
-        }
+      if (data.success) {
+        setIsRecommended(true);
+        setModalOpen(false);
       } else {
-        // Create new
-        const { error } = await supabase.from("recommendations").insert(recData as never);
-        if (error) {
-          console.error("Create recommendation error:", error);
-        }
+        console.error("Recommendation submit error:", data.error);
       }
-
-      setIsRecommended(true);
-      setModalOpen(false);
     } catch (err) {
-      console.error("Recommendation submit error:", err);
+      console.error("Recommendation submit exception:", err);
     } finally {
       setActionLoading(false);
     }
@@ -248,29 +189,28 @@ export default function RecommendButton({
     setActionLoading(true);
 
     try {
-      let query = supabase
-        .from("recommendations")
-        .delete()
-        .eq("user_id", user.id);
+      const res = await fetch("/api/recommend", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          eventId,
+          venueId,
+          producerId,
+          action: "remove",
+        }),
+      });
 
-      if (eventId) {
-        query = query.eq("event_id", eventId);
-      } else if (venueId) {
-        query = query.eq("venue_id", venueId);
-      } else if (producerId) {
-        query = query.eq("producer_id", producerId);
+      const data = await res.json();
+
+      if (data.success) {
+        setIsRecommended(false);
+        setNote("");
+        setModalOpen(false);
+      } else {
+        console.error("Remove recommendation error:", data.error);
       }
-
-      const { error } = await query;
-      if (error) {
-        console.error("Remove recommendation error:", error);
-      }
-
-      setIsRecommended(false);
-      setNote("");
-      setModalOpen(false);
     } catch (err) {
-      console.error("Recommendation remove error:", err);
+      console.error("Recommendation remove exception:", err);
     } finally {
       setActionLoading(false);
     }
