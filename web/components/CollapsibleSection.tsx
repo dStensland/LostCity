@@ -257,13 +257,67 @@ export default function CollapsibleSection({
   );
 }
 
-// Category icons for use with CollapsibleSection - now using emojis for more fun
+// Category icons for use with CollapsibleSection - neon outline style
 export const CategoryIcons = {
-  food: "🍽️",
-  drinks: "🍺",
-  nightlife: "🪩",
-  caffeine: "☕",
-  fun: "🎮",
-  events: "📅",
-  venue: "📍",
+  // Food - Cloche / dome
+  food: (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+      <ellipse cx="12" cy="17" rx="9" ry="4" strokeWidth={1.5} />
+      <path d="M4 15c0-6 4-10 8-10s8 4 8 10" strokeWidth={1.5} />
+      <circle cx="12" cy="5" r="1" fill="currentColor" />
+    </svg>
+  ),
+  // Drinks - Tilted glass with bubbles
+  drinks: (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+      <path d="M6 4h10l-2 15H8L6 4z" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" transform="rotate(-10, 12, 12)" />
+      <ellipse cx="11" cy="6" rx="4" ry="1.5" strokeWidth={1.5} transform="rotate(-10, 12, 12)" />
+      <circle cx="10" cy="11" r="0.8" fill="currentColor" opacity={0.5} />
+      <circle cx="12" cy="14" r="0.6" fill="currentColor" opacity={0.4} />
+    </svg>
+  ),
+  // Nightlife - Disco ball
+  nightlife: (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+      <circle cx="12" cy="12" r="7" strokeWidth={1.5} />
+      <path d="M5 12h14M12 5v14" strokeWidth={1.5} opacity={0.4} />
+      <path d="M7 7l10 10M17 7L7 17" strokeWidth={1.5} opacity={0.25} />
+      <circle cx="12" cy="12" r="2" fill="currentColor" />
+    </svg>
+  ),
+  // Caffeine - Steaming cup
+  caffeine: (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+      <path d="M5 9h11v8a3 3 0 01-3 3H8a3 3 0 01-3-3V9z" strokeWidth={1.5} />
+      <path d="M16 11h1.5a2.5 2.5 0 010 5H16" strokeWidth={1.5} />
+      <path d="M8 4c0 2 2 3 2 5M12 4c0 2 2 3 2 5" strokeWidth={1.5} strokeLinecap="round" opacity={0.5} />
+    </svg>
+  ),
+  // Fun - Game controller
+  fun: (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+      <rect x="3" y="7" width="18" height="10" rx="3" strokeWidth={1.5} />
+      <path d="M7 10v4M5 12h4" strokeWidth={1.5} strokeLinecap="round" />
+      <circle cx="15" cy="11" r="1" fill="currentColor" />
+      <circle cx="18" cy="13" r="1" fill="currentColor" opacity={0.6} />
+    </svg>
+  ),
+  // Events - Calendar
+  events: (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+      <rect x="3" y="4" width="18" height="18" rx="2" strokeWidth={1.5} />
+      <path d="M3 10h18" strokeWidth={1.5} />
+      <path d="M8 2v4M16 2v4" strokeWidth={1.5} strokeLinecap="round" />
+      <circle cx="8" cy="15" r="1.5" fill="currentColor" />
+      <circle cx="12" cy="15" r="1.5" fill="currentColor" opacity={0.6} />
+      <circle cx="16" cy="15" r="1.5" fill="currentColor" opacity={0.4} />
+    </svg>
+  ),
+  // Venue - Location pin
+  venue: (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+      <path d="M12 2C8 2 5 5.5 5 9c0 5 7 13 7 13s7-8 7-13c0-3.5-3-7-7-7z" strokeWidth={1.5} />
+      <circle cx="12" cy="9" r="2.5" strokeWidth={1.5} />
+    </svg>
+  ),
 };

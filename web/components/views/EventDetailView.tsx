@@ -537,31 +537,57 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
       {/* Related Sections - Neon styled */}
       {hasRelatedContent && (
         <div className="mt-8">
-          {/* Section Header with neon styling */}
-          <div className="relative mb-6">
-            {/* Glowing line */}
+          {/* Neon Sign Header - Blade Runner aesthetic */}
+          <div className="relative mb-8 py-4">
+            {/* Background glow wash */}
             <div
-              className="absolute left-0 right-0 top-1/2 h-px"
+              className="absolute inset-0 blur-2xl opacity-20"
               style={{
-                background: 'linear-gradient(90deg, transparent 0%, var(--coral) 20%, var(--neon-magenta) 50%, var(--neon-cyan) 80%, transparent 100%)',
-                opacity: 0.4,
+                background: 'radial-gradient(ellipse at center, var(--coral) 0%, transparent 70%)',
               }}
             />
-            {/* Title */}
+
+            {/* Neon tube lines */}
+            <div className="absolute left-0 right-0 top-0 h-px opacity-30" style={{ background: 'var(--coral)' }} />
+            <div className="absolute left-0 right-0 bottom-0 h-px opacity-30" style={{ background: 'var(--coral)' }} />
+
+            {/* Title container */}
             <div className="relative flex justify-center">
-              <h2
-                className="px-4 py-2 font-bold text-base tracking-wide"
-                style={{
-                  background: 'var(--night)',
-                  color: 'var(--cream)',
-                  textShadow: '0 0 30px var(--coral)',
-                }}
-              >
-                <span className="text-[var(--coral)]">✦</span>
-                {' '}Happening Around Here{' '}
-                <span className="text-[var(--neon-cyan)]">✦</span>
-              </h2>
+              <div className="relative">
+                {/* Outer glow layer */}
+                <h2
+                  className="absolute inset-0 font-bold text-lg sm:text-xl tracking-[0.2em] uppercase blur-md opacity-60"
+                  style={{ color: 'var(--coral)' }}
+                  aria-hidden="true"
+                >
+                  Happening Around Here
+                </h2>
+                {/* Mid glow layer */}
+                <h2
+                  className="absolute inset-0 font-bold text-lg sm:text-xl tracking-[0.2em] uppercase blur-sm opacity-80"
+                  style={{ color: 'var(--coral)' }}
+                  aria-hidden="true"
+                >
+                  Happening Around Here
+                </h2>
+                {/* Main text */}
+                <h2
+                  className="relative font-bold text-lg sm:text-xl tracking-[0.2em] uppercase"
+                  style={{
+                    color: '#FFE4E1',
+                    textShadow: `
+                      0 0 5px var(--coral),
+                      0 0 10px var(--coral),
+                      0 0 20px var(--coral),
+                      0 0 40px rgba(255,107,107,0.5)
+                    `,
+                  }}
+                >
+                  Happening Around Here
+                </h2>
+              </div>
             </div>
+
           </div>
 
           <div className="space-y-3">
