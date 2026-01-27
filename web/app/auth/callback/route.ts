@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import type { Database } from "@/lib/types";
+import { isValidRedirect } from "@/lib/auth-utils";
 
 // Sanitize API key - remove any whitespace, control chars, or URL encoding artifacts
 function sanitizeKey(key: string | undefined): string | undefined {
@@ -12,12 +13,6 @@ function sanitizeKey(key: string | undefined): string | undefined {
     .replace(/%0A/gi, '')
     .replace(/%0D/gi, '')
     .replace(/[^\x20-\x7E]/g, '');
-}
-
-// Validate redirect URL to prevent Open Redirect attacks
-function isValidRedirect(redirect: string): boolean {
-  // Only allow relative URLs starting with / (not //)
-  return redirect.startsWith("/") && !redirect.startsWith("//") && !redirect.includes(":");
 }
 
 export async function GET(request: NextRequest) {
@@ -127,43 +122,64 @@ export async function GET(request: NextRequest) {
 
         console.log("Creating profile with username:", username, "for user:", data.user.id);
 
-        // Create profile with retry logic for race conditions
+        // Use upsert to handle race conditions atomically
+        // If profile exists (by id), do nothing (ignoreDuplicates)
+        // If username conflict, retry with different username
         let profileCreated = false;
         let profileAlreadyExists = false;
         let profileAttempts = 0;
+        const maxProfileAttempts = 3;
 
-        while (!profileCreated && !profileAlreadyExists && profileAttempts < 3) {
+        while (!profileCreated && !profileAlreadyExists && profileAttempts < maxProfileAttempts) {
           const profileData = {
             id: data.user.id,
             username,
             display_name: data.user.user_metadata?.full_name || null,
             avatar_url: data.user.user_metadata?.avatar_url || null,
           };
-          console.log("Profile insert attempt", profileAttempts + 1, "data:", JSON.stringify(profileData));
+          console.log("Profile upsert attempt", profileAttempts + 1, "data:", JSON.stringify(profileData));
 
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const { error: profileError } = await (supabase as any)
             .from("profiles")
-            .insert(profileData);
+            .upsert(profileData, {
+              onConflict: "id",
+              ignoreDuplicates: true  // If profile exists by id, don't error or update
+            });
 
           if (!profileError) {
-            console.log("Profile created successfully");
-            profileCreated = true;
+            // Check if this was an insert or a no-op (profile already existed)
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const { data: existingProfile } = await (supabase as any)
+              .from("profiles")
+              .select("created_at")
+              .eq("id", data.user.id)
+              .single();
+
+            // If profile was created recently (within last 5 seconds), it's new
+            const createdAt = new Date(existingProfile?.created_at);
+            const isNewProfile = (Date.now() - createdAt.getTime()) < 5000;
+
+            if (isNewProfile) {
+              console.log("Profile created successfully");
+              profileCreated = true;
+            } else {
+              console.log("Profile already exists (returning user)");
+              profileAlreadyExists = true;
+            }
           } else if (profileError.code === "23505") {
-            // Unique constraint violation
-            // Check the constraint/detail field to determine if it's id or username
+            // Username unique constraint violation - try with different username
             const detail = profileError.details || profileError.message || "";
             console.log("Constraint violation detail:", detail);
 
-            if (detail.includes("id") || detail.includes("Key (id)")) {
-              // Primary key conflict - profile already exists
-              console.log("Profile already exists (id conflict) - returning user");
-              profileAlreadyExists = true;
-            } else {
-              // Assume username conflict - try with different username
+            if (detail.includes("username") || detail.includes("Key (username)")) {
               console.log("Username conflict, retrying with new username");
               profileAttempts++;
               username = `user_${data.user.id.slice(0, 8)}_${profileAttempts}`;
+            } else {
+              // Profile already exists (id conflict from race condition)
+              console.log("Profile already exists (id conflict) - returning user");
+              profileAlreadyExists = true;
             }
           } else {
             console.error("Profile creation error:", JSON.stringify(profileError), "Code:", profileError.code, "Message:", profileError.message);

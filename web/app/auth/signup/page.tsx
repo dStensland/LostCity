@@ -7,15 +7,11 @@ import Logo from "@/components/Logo";
 import { PasswordStrength } from "@/components/PasswordStrength";
 import { createClient } from "@/lib/supabase/client";
 import { getAuthErrorMessage } from "@/lib/auth-errors";
+import { getSafeRedirectUrl } from "@/lib/auth-utils";
 import type { Database } from "@/lib/types";
 
 type ProfileInsert = Database["public"]["Tables"]["profiles"]["Insert"];
 type PreferencesInsert = Database["public"]["Tables"]["user_preferences"]["Insert"];
-
-// Validate redirect URL to prevent Open Redirect attacks
-function isValidRedirect(redirect: string): boolean {
-  return redirect.startsWith("/") && !redirect.startsWith("//") && !redirect.includes(":");
-}
 
 // Extract portal slug from redirect URL (e.g., "/piedmont/events" -> "piedmont")
 function extractPortalFromRedirect(redirect: string): string | null {
@@ -32,11 +28,11 @@ function extractPortalFromRedirect(redirect: string): string | null {
 function SignupForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const rawRedirect = searchParams.get("redirect") || "/";
-  const redirect = isValidRedirect(rawRedirect) ? rawRedirect : "/";
+  const rawRedirect = searchParams.get("redirect");
+  const redirect = getSafeRedirectUrl(rawRedirect);
 
   // Capture portal context for onboarding
-  const portalSlug = searchParams.get("portal") || extractPortalFromRedirect(rawRedirect);
+  const portalSlug = searchParams.get("portal") || extractPortalFromRedirect(rawRedirect || "/");
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { Outfit, Instrument_Serif, JetBrains_Mono, Space_Grotesk, Bebas_Neue } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
-import { AuthProvider } from "@/lib/auth-context";
+import AuthProviderWrapper from "@/components/AuthProviderWrapper";
 import { ThemeProvider } from "@/lib/theme-context";
 import { ToastProvider } from "@/components/Toast";
 import { QueryProvider } from "@/lib/providers/QueryProvider";
@@ -82,10 +82,10 @@ export default function RootLayout({
             <RainEffect />
             {/* Cursor glow effect */}
             <CursorGlow />
-            <AuthProvider>
+            <AuthProviderWrapper>
               <DarkHoursTheme />
               <ToastProvider>{children}</ToastProvider>
-            </AuthProvider>
+            </AuthProviderWrapper>
           </QueryProvider>
         </ThemeProvider>
         <Analytics />

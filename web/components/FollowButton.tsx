@@ -35,13 +35,33 @@ export default function FollowButton({
 
   // Check if already following
   useEffect(() => {
+    let cancelled = false;
+    let timeoutId: NodeJS.Timeout;
+
     async function checkFollowStatus() {
-      // Wait for auth to finish loading
+      // Wait for auth to finish loading, but with a timeout
       if (authLoading) {
+        // Set a timeout - if auth takes longer than 5s, stop loading anyway
+        timeoutId = setTimeout(() => {
+          if (!cancelled) {
+            setLoading(false);
+          }
+        }, 5000);
         return;
       }
 
+      // Clear any pending timeout since auth is done
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+
       if (!user) {
+        setLoading(false);
+        return;
+      }
+
+      // Ensure we have a valid target
+      if (!targetUserId && !targetVenueId && !targetOrgId && !targetProducerId) {
         setLoading(false);
         return;
       }
@@ -64,6 +84,8 @@ export default function FollowButton({
 
         const { data, error } = await query.maybeSingle();
 
+        if (cancelled) return;
+
         if (error) {
           console.error("Error checking follow status:", error);
         }
@@ -72,11 +94,20 @@ export default function FollowButton({
       } catch (err) {
         console.error("Exception checking follow status:", err);
       } finally {
-        setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     }
 
     checkFollowStatus();
+
+    return () => {
+      cancelled = true;
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- supabase client is stable
   }, [user, authLoading, targetUserId, targetVenueId, targetOrgId, targetProducerId]);
 

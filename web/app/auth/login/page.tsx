@@ -6,17 +6,13 @@ import Link from "next/link";
 import Logo from "@/components/Logo";
 import { createClient } from "@/lib/supabase/client";
 import { getAuthErrorMessage } from "@/lib/auth-errors";
-
-// Validate redirect URL to prevent Open Redirect attacks
-function isValidRedirect(redirect: string): boolean {
-  return redirect.startsWith("/") && !redirect.startsWith("//") && !redirect.includes(":");
-}
+import { getSafeRedirectUrl } from "@/lib/auth-utils";
 
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const rawRedirect = searchParams.get("redirect") || "/";
-  const redirect = isValidRedirect(rawRedirect) ? rawRedirect : "/";
+  const rawRedirect = searchParams.get("redirect");
+  const redirect = getSafeRedirectUrl(rawRedirect);
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -24,11 +20,29 @@ function LoginForm() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  // Rate limiting state
+  const [attempts, setAttempts] = useState(0);
+  const [lockedUntil, setLockedUntil] = useState<Date | null>(null);
+
   const supabase = createClient();
 
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+
+    // Check if locked out from too many attempts
+    if (lockedUntil && new Date() < lockedUntil) {
+      const remaining = Math.ceil((lockedUntil.getTime() - Date.now()) / 1000);
+      setError(`Too many attempts. Try again in ${remaining} seconds.`);
+      return;
+    }
+
+    // Clear lockout if expired
+    if (lockedUntil && new Date() >= lockedUntil) {
+      setLockedUntil(null);
+      setAttempts(0);
+    }
+
     setLoading(true);
 
     const { error: signInError } = await supabase.auth.signInWithPassword({
@@ -37,11 +51,24 @@ function LoginForm() {
     });
 
     if (signInError) {
-      setError(getAuthErrorMessage(signInError.message));
+      const newAttempts = attempts + 1;
+      setAttempts(newAttempts);
+
+      // Lock out after 5 failed attempts for 30 seconds
+      if (newAttempts >= 5) {
+        setLockedUntil(new Date(Date.now() + 30000));
+        setAttempts(0);
+        setError("Too many failed attempts. Try again in 30 seconds.");
+      } else {
+        setError(getAuthErrorMessage(signInError.message));
+      }
+
       setLoading(false);
       return;
     }
 
+    // Reset attempts on successful login
+    setAttempts(0);
     router.push(redirect);
     router.refresh();
   };

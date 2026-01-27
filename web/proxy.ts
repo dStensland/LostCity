@@ -29,7 +29,7 @@ export async function proxy(request: NextRequest) {
 
   // Skip auth if Supabase isn't configured
   if (!supabaseUrl || !supabaseKey) {
-    return handleSubdomainRouting(request, response, null, []);
+    return handleSubdomainRouting(request, response, []);
   }
 
   // Track cookies that need to be set (with full options)
@@ -58,32 +58,41 @@ export async function proxy(request: NextRequest) {
     }
   );
 
-  // Use getUser() to refresh session - this validates the JWT
-  const { data: { user } } = await supabase.auth.getUser();
-
-  // Protected routes - redirect to login if not authenticated
+  // Protected routes that require authentication
   const protectedPaths = ["/dashboard", "/admin", "/settings", "/onboarding", "/foryou", "/saved"];
   const isProtectedPath = protectedPaths.some((path) =>
     request.nextUrl.pathname.startsWith(path)
   );
 
-  if (isProtectedPath && !user) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/auth/login";
-    url.searchParams.set("redirect", request.nextUrl.pathname);
-    return NextResponse.redirect(url);
+  // PERFORMANCE OPTIMIZATION:
+  // - For non-protected routes: Use getSession() which reads from cookies (fast, no network)
+  // - For protected routes: Use getUser() to validate with server (slower, but secure)
+  // This avoids a network call on every single page load.
+
+  if (isProtectedPath) {
+    // Protected route - validate session with server
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/auth/login";
+      url.searchParams.set("redirect", request.nextUrl.pathname);
+      return NextResponse.redirect(url);
+    }
+  } else {
+    // Non-protected route - just refresh cookies from local session (no network call)
+    // This keeps the session cookies fresh without blocking on network
+    await supabase.auth.getSession();
   }
 
-  return handleSubdomainRouting(request, response, user, cookiesToSet);
+  return handleSubdomainRouting(request, response, cookiesToSet);
 }
 
 function handleSubdomainRouting(
   request: NextRequest,
   response: NextResponse,
-  user: unknown,
   cookiesToSet: Array<{ name: string; value: string; options: CookieOptions }>
 ) {
-  void user; // Reserved for future user-specific subdomain logic
   const host = request.headers.get("host") || "";
   const url = request.nextUrl.clone();
 

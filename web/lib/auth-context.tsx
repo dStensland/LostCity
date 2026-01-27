@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState, useRef, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { User, Session } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 
@@ -18,11 +19,14 @@ export type Profile = {
   updated_at: string;
 };
 
+type AuthState = "initializing" | "checking" | "authenticated" | "unauthenticated";
+
 type AuthContextType = {
   user: User | null;
   session: Session | null;
   profile: Profile | null;
   loading: boolean;
+  authState: AuthState;
   error: Error | null;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
@@ -33,20 +37,29 @@ const AuthContext = createContext<AuthContextType>({
   session: null,
   profile: null,
   loading: true,
+  authState: "initializing",
   error: null,
   signOut: async () => {},
   refreshProfile: async () => {},
 });
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
+type AuthProviderProps = {
+  children: React.ReactNode;
+  initialProfile?: Profile | null;
+};
+
+export function AuthProvider({ children, initialProfile }: AuthProviderProps) {
+  const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
-  const [profile, setProfile] = useState<Profile | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(initialProfile ?? null);
   const [loading, setLoading] = useState(true);
+  const [authState, setAuthState] = useState<AuthState>("initializing");
   const [error, setError] = useState<Error | null>(null);
   const isMountedRef = useRef(true);
   const profileFetchRef = useRef<string | null>(null);
   const initializedRef = useRef(false);
+  const currentUserIdRef = useRef<string | null>(null);
 
   const supabase = createClient();
 
@@ -86,6 +99,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [user, fetchProfile]);
 
+  // Session refresh on tab focus - only revalidate when user returns after being away
+  useEffect(() => {
+    let lastHiddenTime: number | null = null;
+
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        lastHiddenTime = Date.now();
+      } else if (lastHiddenTime && user) {
+        // Only revalidate if tab was hidden for more than 5 minutes
+        const hiddenDuration = Date.now() - lastHiddenTime;
+        if (hiddenDuration > 5 * 60 * 1000) {
+          supabase.auth.getUser().then(({ data: { user: validatedUser }, error }) => {
+            if (!isMountedRef.current) return;
+            if (error || !validatedUser) {
+              console.log("Session expired during tab inactivity");
+              setUser(null);
+              setSession(null);
+              setProfile(null);
+              profileFetchRef.current = null;
+              currentUserIdRef.current = null;
+              setAuthState("unauthenticated");
+            }
+          });
+        }
+        lastHiddenTime = null;
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
+  }, [supabase, user]);
+
   useEffect(() => {
     isMountedRef.current = true;
     let isCurrentEffect = true;
@@ -98,6 +143,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const initAuth = async () => {
       try {
+        setAuthState("checking");
+
         // FAST PATH: Check local session first (instant, from localStorage)
         // This lets UI render immediately with cached auth state
         const { data: { session: cachedSession } } = await supabase.auth.getSession();
@@ -108,31 +155,48 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           // Immediately set user from cache - UI can render now
           setUser(cachedSession.user);
           setSession(cachedSession);
+          currentUserIdRef.current = cachedSession.user.id;
+          setAuthState("authenticated");
           setLoading(false);
 
-          // Fetch profile in parallel (don't block)
-          fetchProfile(cachedSession.user.id).then((userProfile) => {
-            if (isMountedRef.current) {
-              setProfile(userProfile);
-            }
-          });
+          // Fetch profile in parallel (don't block) - skip if already hydrated from server
+          if (!initialProfile) {
+            fetchProfile(cachedSession.user.id).then((userProfile) => {
+              if (isMountedRef.current) {
+                setProfile(userProfile);
+              }
+            });
+          } else {
+            profileFetchRef.current = cachedSession.user.id;
+          }
 
-          // SLOW PATH: Validate session with server in background
-          // This catches expired/revoked tokens without blocking UI
-          supabase.auth.getUser().then(({ data: { user: validatedUser }, error: userError }) => {
-            if (!isMountedRef.current) return;
+          // BACKGROUND VALIDATION: Only validate with server occasionally
+          // The middleware handles validation for protected routes, so we only
+          // need to catch edge cases like token revocation here.
+          // Check if session will expire in less than 10 minutes
+          const expiresAt = cachedSession.expires_at ? cachedSession.expires_at * 1000 : 0;
+          const timeToExpiry = expiresAt - Date.now();
+          const shouldValidate = timeToExpiry < 10 * 60 * 1000; // 10 minutes
 
-            if (userError || !validatedUser) {
-              // Session was invalid - clear state
-              console.log("Session invalid, clearing auth state");
-              setUser(null);
-              setSession(null);
-              setProfile(null);
-              profileFetchRef.current = null;
-            }
-          });
+          if (shouldValidate) {
+            supabase.auth.getUser().then(({ data: { user: validatedUser }, error: userError }) => {
+              if (!isMountedRef.current) return;
+
+              if (userError || !validatedUser) {
+                // Session was invalid - clear state
+                console.log("Session invalid, clearing auth state");
+                setUser(null);
+                setSession(null);
+                setProfile(null);
+                profileFetchRef.current = null;
+                currentUserIdRef.current = null;
+                setAuthState("unauthenticated");
+              }
+            });
+          }
         } else {
           // No cached session - user is not logged in
+          setAuthState("unauthenticated");
           setLoading(false);
         }
       } catch (err) {
@@ -142,6 +206,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.error("Auth init error:", err);
         if (isMountedRef.current && isCurrentEffect) {
           setError(err instanceof Error ? err : new Error("Auth initialization failed"));
+          setAuthState("unauthenticated");
           setLoading(false);
         }
       }
@@ -161,14 +226,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setSession(null);
         setProfile(null);
         profileFetchRef.current = null;
+        currentUserIdRef.current = null;
+        setAuthState("unauthenticated");
         setLoading(false);
         return;
+      }
+
+      if (event === "TOKEN_REFRESHED" && newSession?.user) {
+        // Validate session hasn't been tampered with
+        if (currentUserIdRef.current && newSession.user.id !== currentUserIdRef.current) {
+          console.warn("Session user mismatch detected - signing out for security");
+          await supabase.auth.signOut();
+          return;
+        }
       }
 
       if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED" || event === "USER_UPDATED") {
         if (newSession?.user) {
           setUser(newSession.user);
           setSession(newSession);
+          currentUserIdRef.current = newSession.user.id;
+          setAuthState("authenticated");
 
           // Fetch profile for new session
           profileFetchRef.current = null; // Reset to allow new fetch
@@ -187,6 +265,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (!newSession?.user) {
         setProfile(null);
         profileFetchRef.current = null;
+        currentUserIdRef.current = null;
+        setAuthState("unauthenticated");
       }
       setLoading(false);
     });
@@ -196,6 +276,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       isCurrentEffect = false;
       subscription.unsubscribe();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- initialProfile is only used on mount
   }, [supabase, fetchProfile]);
 
   const signOut = useCallback(async () => {
@@ -208,9 +289,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setSession(null);
       setProfile(null);
       profileFetchRef.current = null;
-      window.location.href = "/";
+      currentUserIdRef.current = null;
+      setAuthState("unauthenticated");
+      // Use soft navigation to preserve React state
+      router.push("/");
     }
-  }, [supabase]);
+  }, [supabase, router]);
 
   return (
     <AuthContext.Provider
@@ -219,6 +303,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         session,
         profile,
         loading,
+        authState,
         error,
         signOut,
         refreshProfile,
