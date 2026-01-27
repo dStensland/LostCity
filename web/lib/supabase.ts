@@ -302,8 +302,7 @@ export async function getPlatformStats(): Promise<{ eventCount: number; venueCou
       .select("id", { count: "exact", head: true }),
     supabase
       .from("sources")
-      .select("id", { count: "exact", head: true })
-      .eq("is_active", true),
+      .select("id", { count: "exact", head: true }),
   ]);
 
   return {
