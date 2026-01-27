@@ -61,7 +61,7 @@ function SignupForm() {
       .from("profiles")
       .select("id")
       .eq("username", u)
-      .single();
+      .maybeSingle();
 
     setUsernameAvailable(!data);
     setCheckingUsername(false);

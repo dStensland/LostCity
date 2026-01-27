@@ -176,7 +176,7 @@ function WelcomeContent() {
         .select("id, slug, name, filters, branding")
         .eq("slug", portalSlug)
         .eq("status", "active")
-        .single();
+        .maybeSingle();
 
       if (data) {
         setPortal(data as Portal);

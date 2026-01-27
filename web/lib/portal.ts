@@ -22,7 +22,7 @@ export async function getPortalBySlug(slug: string): Promise<Portal | null> {
     `)
     .eq("slug", slug)
     .eq("status", "active")
-    .single();
+    .maybeSingle();
 
   if (error || !data) {
     return null;
@@ -51,7 +51,7 @@ export async function getPortalById(id: string): Promise<Portal | null> {
     `)
     .eq("id", id)
     .eq("status", "active")
-    .single();
+    .maybeSingle();
 
   if (error || !data) {
     return null;

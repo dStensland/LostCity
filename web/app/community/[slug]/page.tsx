@@ -53,7 +53,7 @@ const getProducer = unstable_cache(
       .select("*")
       .eq("slug", slug)
       .eq("hidden", false)
-      .single();
+      .maybeSingle();
 
     if (error || !data) {
       return null;

@@ -67,7 +67,7 @@ async function getCollection(slug: string) {
     `)
     .eq("slug", slug)
     .eq("visibility", "public")
-    .single();
+    .maybeSingle();
 
   if (error || !collectionData) return null;
 
@@ -79,7 +79,7 @@ async function getCollection(slug: string) {
       .from("profiles")
       .select("username, display_name, avatar_url")
       .eq("id", collectionData.user_id)
-      .single();
+      .maybeSingle();
     owner = profileData;
   }
 

@@ -24,7 +24,7 @@ export default async function FollowingPage({ params }: Props) {
     .from("profiles")
     .select("id, username, display_name")
     .eq("username", username)
-    .single();
+    .maybeSingle();
 
   if (!profileData) {
     notFound();

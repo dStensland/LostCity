@@ -140,9 +140,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         setAuthState("checking");
 
-        // The proxy/middleware already refreshed tokens via getUser()
-        // We just need to read the session from cookies
-        const { data: { session } } = await supabase.auth.getSession();
+        // Try to get session - if it fails, retry once after a short delay
+        // This handles the case where cookies aren't immediately available after OAuth redirect
+        let session = null;
+        let attempts = 0;
+        const maxAttempts = 2;
+
+        while (!session && attempts < maxAttempts) {
+          const { data } = await supabase.auth.getSession();
+          session = data.session;
+
+          if (!session && attempts < maxAttempts - 1) {
+            // Wait a bit and retry - cookies might not be synced yet
+            await new Promise(resolve => setTimeout(resolve, 100));
+          }
+          attempts++;
+        }
 
         if (!isMountedRef.current || !isCurrentEffect) return;
 

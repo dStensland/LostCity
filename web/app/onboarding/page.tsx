@@ -53,7 +53,7 @@ function OnboardingContent() {
         .select("id, slug, name, branding")
         .eq("slug", portalSlug)
         .eq("status", "active")
-        .single();
+        .maybeSingle();
 
       if (data) {
         setPortal(data as Portal);

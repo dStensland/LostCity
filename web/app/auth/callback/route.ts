@@ -106,7 +106,7 @@ export async function GET(request: NextRequest) {
             .from("profiles")
             .select("id")
             .eq("username", checkUsername)
-            .single();
+            .maybeSingle();
 
           if (!existing) {
             username = checkUsername;

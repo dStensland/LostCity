@@ -118,7 +118,7 @@ export default function RSVPButton({
         .select("*")
         .eq("user_id", user.id)
         .eq("event_id", eventId)
-        .single();
+        .maybeSingle();
 
       const rsvp = data as RSVPRow | null;
       if (rsvp) {

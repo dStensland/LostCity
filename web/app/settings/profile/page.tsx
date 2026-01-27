@@ -41,7 +41,7 @@ export default function ProfileSettingsPage() {
           .from("profiles")
           .select("*")
           .eq("id", userId)
-          .single();
+          .maybeSingle();
 
         type ProfileData = {
           display_name: string | null;

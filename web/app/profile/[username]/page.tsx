@@ -27,7 +27,7 @@ export async function generateMetadata({ params }: Props) {
     .from("profiles")
     .select("display_name, username")
     .eq("username", username)
-    .single();
+    .maybeSingle();
 
   const profile = data as Pick<Profile, "display_name" | "username"> | null;
 
@@ -49,7 +49,7 @@ export default async function ProfilePage({ params }: Props) {
     .from("profiles")
     .select("*")
     .eq("username", username)
-    .single();
+    .maybeSingle();
 
   const profile = profileData as Profile | null;
 
