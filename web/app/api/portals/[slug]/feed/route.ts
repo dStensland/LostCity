@@ -447,10 +447,15 @@ export async function GET(request: NextRequest, { params }: Props) {
     portal_section_items: [],
   });
 
-  // Only add holiday sections in February (and early March for Mardi Gras)
-  if (currentMonth === 2 || (currentMonth === 3 && currentDay <= 5)) {
-    // Valentine's Day section (Feb 1-16)
-    if (currentMonth === 2 && currentDay <= 16) {
+  // Add holiday sections starting late January through early March
+  const showHolidaySections =
+    (currentMonth === 1 && currentDay >= 20) || // Late January
+    currentMonth === 2 || // All of February
+    (currentMonth === 3 && currentDay <= 5); // Early March for Mardi Gras
+
+  if (showHolidaySections) {
+    // Valentine's Day section (Jan 20 - Feb 16)
+    if ((currentMonth === 1 && currentDay >= 20) || (currentMonth === 2 && currentDay <= 16)) {
       holidaySections.push({
         id: "valentines-2025",
         title: "Valentine's Day",
@@ -481,8 +486,8 @@ export async function GET(request: NextRequest, { params }: Props) {
       });
     }
 
-    // Lunar New Year section (Feb 1-28)
-    if (currentMonth === 2) {
+    // Lunar New Year section (Jan 20 - Feb 28)
+    if ((currentMonth === 1 && currentDay >= 20) || currentMonth === 2) {
       holidaySections.push({
         id: "lunar-new-year-2025",
         title: "Lunar New Year",
@@ -545,8 +550,8 @@ export async function GET(request: NextRequest, { params }: Props) {
       });
     }
 
-    // Black History Month section (all of February)
-    if (currentMonth === 2) {
+    // Black History Month section (Jan 20 - Feb 28)
+    if ((currentMonth === 1 && currentDay >= 20) || currentMonth === 2) {
       holidaySections.push({
         id: "black-history-month-2026",
         title: "Black History Month",
