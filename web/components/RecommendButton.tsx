@@ -91,14 +91,34 @@ export default function RecommendButton({
 
   // Load existing recommendation
   useEffect(() => {
+    let cancelled = false;
+    let timeoutId: NodeJS.Timeout;
+
     async function loadRecommendation() {
-      // Wait for auth to finish loading
+      // Wait for auth to finish loading, but with a timeout
       if (authLoading) {
+        // Set a timeout - if auth takes longer than 3s, enable button anyway
+        timeoutId = setTimeout(() => {
+          if (!cancelled) {
+            setLoading(false);
+          }
+        }, 3000);
         return;
       }
 
+      // Clear any pending timeout since auth is done
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+
       if (!user) {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
+        return;
+      }
+
+      // Ensure we have a valid target
+      if (!eventId && !venueId && !producerId) {
+        if (!cancelled) setLoading(false);
         return;
       }
 
@@ -118,6 +138,8 @@ export default function RecommendButton({
 
         const { data, error } = await query.maybeSingle();
 
+        if (cancelled) return;
+
         if (error) {
           console.error("Error loading recommendation:", error);
         }
@@ -132,11 +154,20 @@ export default function RecommendButton({
       } catch (err) {
         console.error("Exception loading recommendation:", err);
       } finally {
-        setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     }
 
     loadRecommendation();
+
+    return () => {
+      cancelled = true;
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
   }, [user, authLoading, eventId, venueId, producerId, supabase]);
 
   const handleClick = () => {

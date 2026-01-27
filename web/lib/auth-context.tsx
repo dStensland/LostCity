@@ -145,57 +145,43 @@ export function AuthProvider({ children, initialProfile }: AuthProviderProps) {
       try {
         setAuthState("checking");
 
-        // FAST PATH: Check local session first (instant, from localStorage)
-        // This lets UI render immediately with cached auth state
-        const { data: { session: cachedSession } } = await supabase.auth.getSession();
+        // Always validate with server to ensure session is fresh
+        // The middleware refreshes tokens, but we need to get the updated session
+        const { data: { user: validatedUser }, error: userError } = await supabase.auth.getUser();
 
         if (!isMountedRef.current || !isCurrentEffect) return;
 
-        if (cachedSession?.user) {
-          // Immediately set user from cache - UI can render now
-          setUser(cachedSession.user);
-          setSession(cachedSession);
-          currentUserIdRef.current = cachedSession.user.id;
+        if (userError || !validatedUser) {
+          // No valid session
+          setAuthState("unauthenticated");
+          setLoading(false);
+          return;
+        }
+
+        // Get the session (now with fresh tokens from getUser)
+        const { data: { session } } = await supabase.auth.getSession();
+
+        if (!isMountedRef.current || !isCurrentEffect) return;
+
+        if (session?.user) {
+          setUser(session.user);
+          setSession(session);
+          currentUserIdRef.current = session.user.id;
           setAuthState("authenticated");
           setLoading(false);
 
           // Fetch profile in parallel (don't block) - skip if already hydrated from server
           if (!initialProfile) {
-            fetchProfile(cachedSession.user.id).then((userProfile) => {
+            fetchProfile(session.user.id).then((userProfile) => {
               if (isMountedRef.current) {
                 setProfile(userProfile);
               }
             });
           } else {
-            profileFetchRef.current = cachedSession.user.id;
-          }
-
-          // BACKGROUND VALIDATION: Only validate with server occasionally
-          // The middleware handles validation for protected routes, so we only
-          // need to catch edge cases like token revocation here.
-          // Check if session will expire in less than 10 minutes
-          const expiresAt = cachedSession.expires_at ? cachedSession.expires_at * 1000 : 0;
-          const timeToExpiry = expiresAt - Date.now();
-          const shouldValidate = timeToExpiry < 10 * 60 * 1000; // 10 minutes
-
-          if (shouldValidate) {
-            supabase.auth.getUser().then(({ data: { user: validatedUser }, error: userError }) => {
-              if (!isMountedRef.current) return;
-
-              if (userError || !validatedUser) {
-                // Session was invalid - clear state
-                console.log("Session invalid, clearing auth state");
-                setUser(null);
-                setSession(null);
-                setProfile(null);
-                profileFetchRef.current = null;
-                currentUserIdRef.current = null;
-                setAuthState("unauthenticated");
-              }
-            });
+            profileFetchRef.current = session.user.id;
           }
         } else {
-          // No cached session - user is not logged in
+          // No session after validation - user is not logged in
           setAuthState("unauthenticated");
           setLoading(false);
         }

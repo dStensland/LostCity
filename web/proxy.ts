@@ -64,25 +64,17 @@ export async function proxy(request: NextRequest) {
     request.nextUrl.pathname.startsWith(path)
   );
 
-  // PERFORMANCE OPTIMIZATION:
-  // - For non-protected routes: Use getSession() which reads from cookies (fast, no network)
-  // - For protected routes: Use getUser() to validate with server (slower, but secure)
-  // This avoids a network call on every single page load.
+  // IMPORTANT: Always call getUser() to ensure session tokens are refreshed.
+  // getSession() only reads from cookies and won't refresh expired access tokens.
+  // getUser() validates with the server and triggers token refresh if needed.
+  const { data: { user } } = await supabase.auth.getUser();
 
-  if (isProtectedPath) {
-    // Protected route - validate session with server
-    const { data: { user } } = await supabase.auth.getUser();
-
-    if (!user) {
-      const url = request.nextUrl.clone();
-      url.pathname = "/auth/login";
-      url.searchParams.set("redirect", request.nextUrl.pathname);
-      return NextResponse.redirect(url);
-    }
-  } else {
-    // Non-protected route - just refresh cookies from local session (no network call)
-    // This keeps the session cookies fresh without blocking on network
-    await supabase.auth.getSession();
+  // Redirect to login if accessing protected route without auth
+  if (isProtectedPath && !user) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/auth/login";
+    url.searchParams.set("redirect", request.nextUrl.pathname);
+    return NextResponse.redirect(url);
   }
 
   return handleSubdomainRouting(request, response, cookiesToSet);
