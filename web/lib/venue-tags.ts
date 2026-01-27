@@ -730,3 +730,89 @@ export async function addTagToEntity(
 
   return { success: true };
 }
+
+/**
+ * Vote on a tag for any entity type
+ */
+export async function voteOnEntityTag(
+  entityType: TagEntityType,
+  entityId: number | string,
+  tagId: string,
+  userId: string,
+  voteType: "up" | "down" | null
+): Promise<{ success: boolean; error?: string }> {
+  // For venues, use existing function
+  if (entityType === "venue" && typeof entityId === "number") {
+    return voteOnTag(entityId, tagId, userId, voteType);
+  }
+
+  // Use service client to bypass RLS
+  let serviceClient;
+  try {
+    serviceClient = createServiceClient();
+  } catch {
+    return { success: false, error: "Service unavailable" };
+  }
+
+  const tagsTable = entityType === "event" ? "event_tags" : "org_tags";
+  const votesTable = entityType === "event" ? "event_tag_votes" : "org_tag_votes";
+  const idColumn = entityType === "event" ? "event_id" : "org_id";
+  const tagIdColumn = entityType === "event" ? "event_tag_id" : "org_tag_id";
+
+  // First, find the entity_tag record
+  const { data: entityTags } = await (serviceClient as UntypedTable)
+    .from(tagsTable)
+    .select("id")
+    .eq(idColumn, entityId)
+    .eq("tag_id", tagId)
+    .limit(1);
+
+  type EntityTagRow = { id: string };
+  const tags = entityTags as EntityTagRow[] | null;
+
+  if (!tags || tags.length === 0) {
+    return { success: false, error: `Tag not found on ${entityType}` };
+  }
+
+  const entityTagId = tags[0].id;
+
+  if (voteType === null) {
+    // Remove vote
+    const { error } = await (serviceClient as UntypedTable)
+      .from(votesTable)
+      .delete()
+      .eq(tagIdColumn, entityTagId)
+      .eq("user_id", userId);
+
+    if (error) {
+      console.error("Error removing vote:", error);
+      return { success: false, error: error.message };
+    }
+  } else {
+    // Upsert vote
+    const insertData: Record<string, unknown> = {
+      [tagIdColumn]: entityTagId,
+      user_id: userId,
+      vote_type: voteType,
+    };
+
+    const { error } = await (serviceClient as UntypedTable)
+      .from(votesTable)
+      .upsert(insertData, { onConflict: `${tagIdColumn},user_id` });
+
+    if (error) {
+      console.error("Error voting:", error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  // Refresh the materialized view
+  const voteViewName = entityType === "event" ? "event_tag_summary" : "org_tag_summary";
+  await (serviceClient as UntypedTable).rpc("refresh_materialized_view_concurrently", {
+    view_name: voteViewName,
+  }).catch(() => {
+    // View refresh is optional - might not have the function
+  });
+
+  return { success: true };
+}
