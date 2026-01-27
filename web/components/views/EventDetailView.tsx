@@ -295,9 +295,9 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
         {/* Back button - neon styled */}
         <NeonBackButton />
 
-        {/* Live badge */}
+        {/* Live badge - positioned on the right to avoid overlapping back button */}
         {isLive && (
-          <div className="absolute top-3 left-20 flex items-center gap-2 px-3 py-1.5 bg-[var(--coral)] text-[var(--void)] rounded-full font-mono text-xs font-medium">
+          <div className="absolute top-3 right-3 flex items-center gap-2 px-3 py-1.5 bg-[var(--coral)] text-[var(--void)] rounded-full font-mono text-xs font-medium z-10">
             <span className="w-2 h-2 bg-[var(--void)] rounded-full animate-pulse" />
             LIVE NOW
           </div>

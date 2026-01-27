@@ -96,6 +96,44 @@ function groupEventsByDate(
   return groups;
 }
 
+// Neon-styled floating back button matching EventDetailView
+const NeonFloatingBackButton = ({ onClose }: { onClose: () => void }) => (
+  <button
+    onClick={onClose}
+    className="group absolute top-3 left-3 flex items-center gap-2 px-3.5 py-2 rounded-full font-mono text-xs font-semibold tracking-wide uppercase transition-all duration-300 z-10 hover:scale-105"
+    style={{
+      background: 'linear-gradient(135deg, rgba(0,0,0,0.7) 0%, rgba(20,20,30,0.8) 100%)',
+      backdropFilter: 'blur(8px)',
+      border: '1px solid rgba(255,107,107,0.3)',
+      boxShadow: '0 0 15px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.1)',
+    }}
+    onMouseEnter={(e) => {
+      e.currentTarget.style.borderColor = 'rgba(255,107,107,0.6)';
+      e.currentTarget.style.boxShadow = '0 0 20px rgba(255,107,107,0.3), 0 0 40px rgba(255,107,107,0.1), inset 0 1px 0 rgba(255,255,255,0.1)';
+    }}
+    onMouseLeave={(e) => {
+      e.currentTarget.style.borderColor = 'rgba(255,107,107,0.3)';
+      e.currentTarget.style.boxShadow = '0 0 15px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.1)';
+    }}
+  >
+    <svg
+      className="w-4 h-4 transition-transform duration-300 group-hover:-translate-x-0.5"
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+      style={{ filter: 'drop-shadow(0 0 3px rgba(255,107,107,0.5))' }}
+    >
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
+    </svg>
+    <span
+      className="transition-all duration-300 group-hover:text-[var(--coral)]"
+      style={{ textShadow: '0 0 10px rgba(255,107,107,0.3)' }}
+    >
+      Back
+    </span>
+  </button>
+);
+
 export default function SeriesDetailView({ slug, portalSlug, onClose }: SeriesDetailViewProps) {
   const router = useRouter();
   const [series, setSeries] = useState<SeriesData | null>(null);
@@ -141,15 +179,7 @@ export default function SeriesDetailView({ slug, portalSlug, onClose }: SeriesDe
       <div className="animate-fadeIn">
         {/* Hero skeleton with floating back button */}
         <div className="relative rounded-xl overflow-hidden mb-6 bg-[var(--dusk)]">
-          <button
-            onClick={onClose}
-            className="absolute top-3 left-3 flex items-center gap-1.5 px-3 py-1.5 bg-black/50 backdrop-blur-sm text-white/90 hover:text-white hover:bg-black/70 rounded-full font-mono text-xs transition-all z-10"
-          >
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-            Back
-          </button>
+          <NeonFloatingBackButton onClose={onClose} />
           <div className="p-6 flex items-start gap-4">
             <div className="w-28 h-40 skeleton-shimmer rounded-lg" />
             <div className="flex-1 space-y-3 pt-2">
@@ -168,15 +198,7 @@ export default function SeriesDetailView({ slug, portalSlug, onClose }: SeriesDe
     return (
       <div className="animate-fadeIn">
         <div className="relative rounded-xl overflow-hidden mb-6 bg-[var(--dusk)] border border-[var(--twilight)]">
-          <button
-            onClick={onClose}
-            className="absolute top-3 left-3 flex items-center gap-1.5 px-3 py-1.5 bg-black/50 backdrop-blur-sm text-white/90 hover:text-white hover:bg-black/70 rounded-full font-mono text-xs transition-all z-10"
-          >
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-            Back
-          </button>
+          <NeonFloatingBackButton onClose={onClose} />
           <div className="text-center py-16">
             <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-[var(--twilight)]/50 flex items-center justify-center">
               <svg className="w-6 h-6 text-[var(--muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -205,15 +227,7 @@ export default function SeriesDetailView({ slug, portalSlug, onClose }: SeriesDe
         }}
       >
         {/* Floating back button */}
-        <button
-          onClick={onClose}
-          className="absolute top-3 left-3 flex items-center gap-1.5 px-3 py-1.5 bg-black/50 backdrop-blur-sm text-white/90 hover:text-white hover:bg-black/70 rounded-full font-mono text-xs transition-all z-10"
-        >
-          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-          Back
-        </button>
+        <NeonFloatingBackButton onClose={onClose} />
         <div className="p-6 flex items-start gap-4">
           {/* Poster */}
           <div className="flex-shrink-0">

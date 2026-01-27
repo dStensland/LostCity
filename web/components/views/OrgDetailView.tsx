@@ -9,6 +9,7 @@ import FollowButton from "@/components/FollowButton";
 import RecommendButton from "@/components/RecommendButton";
 import CategoryIcon, { getCategoryColor } from "@/components/CategoryIcon";
 import LinkifyText from "@/components/LinkifyText";
+import CollapsibleSection, { CategoryIcons, CATEGORY_COLORS } from "@/components/CollapsibleSection";
 
 type ProducerData = {
   id: string;
@@ -71,6 +72,44 @@ function getDomainFromUrl(url: string): string {
   }
 }
 
+// Neon-styled back button matching EventDetailView
+const NeonBackButton = ({ onClose }: { onClose: () => void }) => (
+  <button
+    onClick={onClose}
+    className="group flex items-center gap-2 px-3.5 py-2 rounded-full font-mono text-xs font-semibold tracking-wide uppercase transition-all duration-300 hover:scale-105 mb-4"
+    style={{
+      background: 'linear-gradient(135deg, rgba(0,0,0,0.7) 0%, rgba(20,20,30,0.8) 100%)',
+      backdropFilter: 'blur(8px)',
+      border: '1px solid rgba(255,107,107,0.3)',
+      boxShadow: '0 0 15px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.1)',
+    }}
+    onMouseEnter={(e) => {
+      e.currentTarget.style.borderColor = 'rgba(255,107,107,0.6)';
+      e.currentTarget.style.boxShadow = '0 0 20px rgba(255,107,107,0.3), 0 0 40px rgba(255,107,107,0.1), inset 0 1px 0 rgba(255,255,255,0.1)';
+    }}
+    onMouseLeave={(e) => {
+      e.currentTarget.style.borderColor = 'rgba(255,107,107,0.3)';
+      e.currentTarget.style.boxShadow = '0 0 15px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.1)';
+    }}
+  >
+    <svg
+      className="w-4 h-4 transition-transform duration-300 group-hover:-translate-x-0.5"
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+      style={{ filter: 'drop-shadow(0 0 3px rgba(255,107,107,0.5))' }}
+    >
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
+    </svg>
+    <span
+      className="transition-all duration-300 group-hover:text-[var(--coral)]"
+      style={{ textShadow: '0 0 10px rgba(255,107,107,0.3)' }}
+    >
+      Back
+    </span>
+  </button>
+);
+
 export default function OrgDetailView({ slug, portalSlug, onClose }: OrgDetailViewProps) {
   const router = useRouter();
   const [producer, setProducer] = useState<ProducerData | null>(null);
@@ -110,16 +149,7 @@ export default function OrgDetailView({ slug, portalSlug, onClose }: OrgDetailVi
   if (loading) {
     return (
       <div className="animate-fadeIn">
-        <button
-          onClick={onClose}
-          className="flex items-center gap-2 text-[var(--muted)] hover:text-[var(--cream)] transition-colors mb-4 font-mono text-sm"
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-          Back
-        </button>
-
+        <NeonBackButton onClose={onClose} />
         <div className="space-y-4">
           <div className="flex gap-4">
             <div className="w-20 h-20 skeleton-shimmer rounded-xl" />
@@ -137,16 +167,7 @@ export default function OrgDetailView({ slug, portalSlug, onClose }: OrgDetailVi
   if (error || !producer) {
     return (
       <div className="animate-fadeIn">
-        <button
-          onClick={onClose}
-          className="flex items-center gap-2 text-[var(--muted)] hover:text-[var(--cream)] transition-colors mb-4 font-mono text-sm"
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-          Back
-        </button>
-
+        <NeonBackButton onClose={onClose} />
         <div className="text-center py-12">
           <p className="text-[var(--muted)]">{error || "Organizer not found"}</p>
         </div>
@@ -160,15 +181,7 @@ export default function OrgDetailView({ slug, portalSlug, onClose }: OrgDetailVi
   return (
     <div className="animate-fadeIn pb-8">
       {/* Back button */}
-      <button
-        onClick={onClose}
-        className="flex items-center gap-2 text-[var(--muted)] hover:text-[var(--cream)] transition-colors mb-4 font-mono text-sm"
-      >
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-        </svg>
-        Back
-      </button>
+      <NeonBackButton onClose={onClose} />
 
       {/* Main info card */}
       <div className="border border-[var(--twilight)] rounded-xl p-6 bg-[var(--dusk)]">
@@ -316,52 +329,57 @@ export default function OrgDetailView({ slug, portalSlug, onClose }: OrgDetailVi
             </a>
           )}
         </div>
+
       </div>
 
       {/* Upcoming Events */}
       <div className="mt-8">
-        <h2 className="font-mono text-[0.65rem] font-medium text-[var(--muted)] uppercase tracking-widest mb-4">
-          Upcoming Events ({events.length})
-        </h2>
-
         {events.length > 0 ? (
-          <div className="space-y-2">
-            {events.map((event) => {
-              const dateObj = parseISO(event.start_date);
-              const { time, period } = formatTimeSplit(event.start_time);
+          <CollapsibleSection
+            title="Upcoming Events"
+            count={events.length}
+            icon={CategoryIcons.events}
+            accentColor={CATEGORY_COLORS.events}
+            defaultOpen={false}
+          >
+            <div className="space-y-2">
+              {events.map((event) => {
+                const dateObj = parseISO(event.start_date);
+                const { time, period } = formatTimeSplit(event.start_time);
 
-              return (
-                <button
-                  key={event.id}
-                  onClick={() => handleEventClick(event.id)}
-                  className="block w-full text-left p-4 border border-[var(--twilight)] rounded-xl bg-[var(--dusk)] hover:border-[var(--coral)]/50 transition-colors group"
-                >
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex-1 min-w-0">
-                      <h3 className="text-[var(--cream)] font-medium truncate group-hover:text-[var(--coral)] transition-colors">
-                        {event.title}
-                      </h3>
-                      <p className="text-sm text-[var(--muted)] mt-1">
-                        {format(dateObj, "EEE, MMM d")}
-                        {event.start_time && ` · ${time} ${period}`}
-                      </p>
-                      {event.venue && (
-                        <p className="text-sm text-[var(--muted)] mt-0.5">
-                          {event.venue.name}
-                          {event.venue.neighborhood && ` · ${event.venue.neighborhood}`}
+                return (
+                  <button
+                    key={event.id}
+                    onClick={() => handleEventClick(event.id)}
+                    className="block w-full text-left p-4 border border-[var(--twilight)] rounded-xl bg-[var(--dusk)] hover:border-[var(--coral)]/50 transition-colors group"
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-[var(--cream)] font-medium truncate group-hover:text-[var(--coral)] transition-colors">
+                          {event.title}
+                        </h3>
+                        <p className="text-sm text-[var(--muted)] mt-1">
+                          {format(dateObj, "EEE, MMM d")}
+                          {event.start_time && ` · ${time} ${period}`}
                         </p>
-                      )}
+                        {event.venue && (
+                          <p className="text-sm text-[var(--muted)] mt-0.5">
+                            {event.venue.name}
+                            {event.venue.neighborhood && ` · ${event.venue.neighborhood}`}
+                          </p>
+                        )}
+                      </div>
+                      <span className="text-[var(--muted)] group-hover:text-[var(--coral)] transition-colors">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                      </span>
                     </div>
-                    <span className="text-[var(--muted)] group-hover:text-[var(--coral)] transition-colors">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                      </svg>
-                    </span>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
+                  </button>
+                );
+              })}
+            </div>
+          </CollapsibleSection>
         ) : (
           <div className="py-8 text-center border border-[var(--twilight)] rounded-xl bg-[var(--dusk)]">
             <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-[var(--twilight)]/30 flex items-center justify-center">

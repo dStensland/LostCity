@@ -11,6 +11,7 @@ import RecommendButton from "@/components/RecommendButton";
 import VenueTagList from "@/components/VenueTagList";
 import FlagButton from "@/components/FlagButton";
 import LinkifyText from "@/components/LinkifyText";
+import CollapsibleSection, { CategoryIcons, CATEGORY_COLORS } from "@/components/CollapsibleSection";
 
 type SpotData = {
   id: number;
@@ -43,16 +44,72 @@ type UpcomingEvent = {
   category: string | null;
 };
 
+type NearbyDestination = {
+  id: number;
+  name: string;
+  slug: string;
+  spot_type: string | null;
+  neighborhood: string | null;
+  distance?: number;
+};
+
+type NearbyDestinations = {
+  food: NearbyDestination[];
+  drinks: NearbyDestination[];
+  nightlife: NearbyDestination[];
+  caffeine: NearbyDestination[];
+  fun: NearbyDestination[];
+};
+
 interface VenueDetailViewProps {
   slug: string;
   portalSlug: string;
   onClose: () => void;
 }
 
+// Neon-styled back button matching EventDetailView
+const NeonBackButton = ({ onClose }: { onClose: () => void }) => (
+  <button
+    onClick={onClose}
+    className="group flex items-center gap-2 px-3.5 py-2 rounded-full font-mono text-xs font-semibold tracking-wide uppercase transition-all duration-300 hover:scale-105 mb-4"
+    style={{
+      background: 'linear-gradient(135deg, rgba(0,0,0,0.7) 0%, rgba(20,20,30,0.8) 100%)',
+      backdropFilter: 'blur(8px)',
+      border: '1px solid rgba(255,107,107,0.3)',
+      boxShadow: '0 0 15px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.1)',
+    }}
+    onMouseEnter={(e) => {
+      e.currentTarget.style.borderColor = 'rgba(255,107,107,0.6)';
+      e.currentTarget.style.boxShadow = '0 0 20px rgba(255,107,107,0.3), 0 0 40px rgba(255,107,107,0.1), inset 0 1px 0 rgba(255,255,255,0.1)';
+    }}
+    onMouseLeave={(e) => {
+      e.currentTarget.style.borderColor = 'rgba(255,107,107,0.3)';
+      e.currentTarget.style.boxShadow = '0 0 15px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.1)';
+    }}
+  >
+    <svg
+      className="w-4 h-4 transition-transform duration-300 group-hover:-translate-x-0.5"
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+      style={{ filter: 'drop-shadow(0 0 3px rgba(255,107,107,0.5))' }}
+    >
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
+    </svg>
+    <span
+      className="transition-all duration-300 group-hover:text-[var(--coral)]"
+      style={{ textShadow: '0 0 10px rgba(255,107,107,0.3)' }}
+    >
+      Back
+    </span>
+  </button>
+);
+
 export default function VenueDetailView({ slug, portalSlug, onClose }: VenueDetailViewProps) {
   const router = useRouter();
   const [spot, setSpot] = useState<SpotData | null>(null);
   const [upcomingEvents, setUpcomingEvents] = useState<UpcomingEvent[]>([]);
+  const [nearbyDestinations, setNearbyDestinations] = useState<NearbyDestinations | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [imageLoaded, setImageLoaded] = useState(false);
@@ -71,6 +128,7 @@ export default function VenueDetailView({ slug, portalSlug, onClose }: VenueDeta
         const data = await res.json();
         setSpot(data.spot);
         setUpcomingEvents(data.upcomingEvents || []);
+        setNearbyDestinations(data.nearbyDestinations || null);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to load spot");
       } finally {
@@ -85,19 +143,14 @@ export default function VenueDetailView({ slug, portalSlug, onClose }: VenueDeta
     router.push(`/${portalSlug}?event=${id}`, { scroll: false });
   };
 
+  const handleSpotClick = (spotSlug: string) => {
+    router.push(`/${portalSlug}?spot=${spotSlug}`, { scroll: false });
+  };
+
   if (loading) {
     return (
       <div className="animate-fadeIn">
-        <button
-          onClick={onClose}
-          className="flex items-center gap-2 text-[var(--muted)] hover:text-[var(--cream)] transition-colors mb-4 font-mono text-sm"
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-          Back
-        </button>
-
+        <NeonBackButton onClose={onClose} />
         <div className="space-y-4">
           <div className="aspect-video skeleton-shimmer rounded-xl" />
           <div className="h-48 skeleton-shimmer rounded-xl" />
@@ -109,16 +162,7 @@ export default function VenueDetailView({ slug, portalSlug, onClose }: VenueDeta
   if (error || !spot) {
     return (
       <div className="animate-fadeIn">
-        <button
-          onClick={onClose}
-          className="flex items-center gap-2 text-[var(--muted)] hover:text-[var(--cream)] transition-colors mb-4 font-mono text-sm"
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-          Back
-        </button>
-
+        <NeonBackButton onClose={onClose} />
         <div className="text-center py-12">
           <p className="text-[var(--muted)]">{error || "Spot not found"}</p>
         </div>
@@ -134,15 +178,7 @@ export default function VenueDetailView({ slug, portalSlug, onClose }: VenueDeta
   return (
     <div className="animate-fadeIn pb-8">
       {/* Back button */}
-      <button
-        onClick={onClose}
-        className="flex items-center gap-2 text-[var(--muted)] hover:text-[var(--cream)] transition-colors mb-4 font-mono text-sm"
-      >
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-        </svg>
-        Back
-      </button>
+      <NeonBackButton onClose={onClose} />
 
       {/* Spot image */}
       {showImage && (
@@ -310,41 +346,130 @@ export default function VenueDetailView({ slug, portalSlug, onClose }: VenueDeta
       {/* Upcoming Events */}
       {upcomingEvents.length > 0 && (
         <div className="mt-8">
-          <h2 className="font-mono text-[0.65rem] font-medium text-[var(--muted)] uppercase tracking-widest mb-4">
-            Upcoming Events
-          </h2>
-          <div className="space-y-2">
-            {upcomingEvents.map((event) => {
-              const dateObj = parseISO(event.start_date);
-              const { time, period } = formatTimeSplit(event.start_time);
+          <CollapsibleSection
+            title="Upcoming Events"
+            count={upcomingEvents.length}
+            icon={CategoryIcons.events}
+            accentColor={CATEGORY_COLORS.events}
+            defaultOpen={false}
+          >
+            <div className="space-y-2">
+              {upcomingEvents.map((event) => {
+                const dateObj = parseISO(event.start_date);
+                const { time, period } = formatTimeSplit(event.start_time);
 
-              return (
-                <button
-                  key={event.id}
-                  onClick={() => handleEventClick(event.id)}
-                  className="block w-full text-left p-4 border border-[var(--twilight)] rounded-xl bg-[var(--dusk)] hover:border-[var(--coral)]/50 transition-colors group"
-                >
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex-1 min-w-0">
-                      <h3 className="text-[var(--cream)] font-medium truncate group-hover:text-[var(--coral)] transition-colors">
-                        {event.title}
-                      </h3>
-                      <p className="text-sm text-[var(--muted)] mt-1">
-                        {format(dateObj, "EEE, MMM d")}
-                        {event.start_time && ` · ${time} ${period}`}
-                      </p>
+                return (
+                  <button
+                    key={event.id}
+                    onClick={() => handleEventClick(event.id)}
+                    className="block w-full text-left p-4 border border-[var(--twilight)] rounded-xl bg-[var(--dusk)] hover:border-[var(--coral)]/50 transition-colors group"
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-[var(--cream)] font-medium truncate group-hover:text-[var(--coral)] transition-colors">
+                          {event.title}
+                        </h3>
+                        <p className="text-sm text-[var(--muted)] mt-1">
+                          {format(dateObj, "EEE, MMM d")}
+                          {event.start_time && ` · ${time} ${period}`}
+                        </p>
+                      </div>
+                      <span className="text-[var(--muted)] group-hover:text-[var(--coral)] transition-colors">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                      </span>
                     </div>
-                    <span className="text-[var(--muted)] group-hover:text-[var(--coral)] transition-colors">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                      </svg>
-                    </span>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
+                  </button>
+                );
+              })}
+            </div>
+          </CollapsibleSection>
         </div>
+      )}
+
+      {/* Happening Around Here */}
+      {nearbyDestinations && (
+        (() => {
+          const totalDestinations = Object.values(nearbyDestinations).flat().length;
+          if (totalDestinations === 0) return null;
+
+          const categories = [
+            { key: "food" as const, label: "Food" },
+            { key: "drinks" as const, label: "Drinks" },
+            { key: "nightlife" as const, label: "Nightlife" },
+            { key: "caffeine" as const, label: "Caffeine" },
+            { key: "fun" as const, label: "Fun" },
+          ];
+
+          return (
+            <div className="mt-8">
+              {/* Neon header */}
+              <div className="mb-6 relative">
+                <h2
+                  className="font-mono text-lg font-bold uppercase tracking-wider"
+                  style={{
+                    color: 'var(--coral)',
+                    textShadow: '0 0 10px rgba(255,107,107,0.5), 0 0 20px rgba(255,107,107,0.3), 0 0 30px rgba(255,107,107,0.2)',
+                  }}
+                >
+                  <span style={{ filter: 'blur(0.5px)' }}>Happening Around Here</span>
+                </h2>
+                <div
+                  className="absolute inset-0 pointer-events-none"
+                  style={{
+                    background: 'linear-gradient(90deg, transparent, rgba(255,107,107,0.1) 50%, transparent)',
+                    filter: 'blur(8px)',
+                  }}
+                />
+              </div>
+
+              <div className="space-y-3">
+                {categories.map(({ key, label }) => {
+                  const items = nearbyDestinations[key];
+                  if (!items || items.length === 0) return null;
+
+                  return (
+                    <CollapsibleSection
+                      key={key}
+                      title={label}
+                      count={items.length}
+                      icon={CategoryIcons[key]}
+                      accentColor={CATEGORY_COLORS[key]}
+                      defaultOpen={false}
+                    >
+                      <div className="space-y-2">
+                        {items.map((dest) => (
+                          <button
+                            key={dest.id}
+                            onClick={() => handleSpotClick(dest.slug)}
+                            className="block w-full text-left p-3 border border-[var(--twilight)] rounded-lg bg-[var(--dusk)] hover:border-[var(--coral)]/50 transition-colors group"
+                          >
+                            <div className="flex items-center justify-between gap-3">
+                              <div className="flex-1 min-w-0">
+                                <h4 className="text-[var(--cream)] font-medium truncate group-hover:text-[var(--coral)] transition-colors">
+                                  {dest.name}
+                                </h4>
+                                {dest.distance !== undefined && (
+                                  <p className="text-xs text-[var(--muted)] mt-0.5">
+                                    {dest.distance < 0.1 ? "Nearby" : `${dest.distance.toFixed(1)} mi`}
+                                  </p>
+                                )}
+                              </div>
+                              <svg className="w-4 h-4 text-[var(--muted)] group-hover:text-[var(--coral)] transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                              </svg>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    </CollapsibleSection>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })()
       )}
     </div>
   );

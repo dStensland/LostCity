@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect, ReactNode } from "react";
 
 // Category accent colors - vibrant neon palette
-const CATEGORY_COLORS = {
+export const CATEGORY_COLORS = {
   food: "#FFD700", // gold
   drinks: "#FF6B6B", // coral/red
   nightlife: "#FF00FF", // magenta

@@ -1,5 +1,26 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextRequest } from "next/server";
+import { getDistanceMiles } from "@/lib/geo";
+
+// Destination category mappings for venues
+const DESTINATION_CATEGORIES: Record<string, string[]> = {
+  food: ["restaurant", "food_hall", "cooking_school"],
+  drinks: ["bar", "brewery", "distillery", "winery", "rooftop", "sports_bar"],
+  nightlife: ["club"],
+  caffeine: ["coffee_shop"],
+  fun: ["games", "eatertainment", "arcade", "karaoke"],
+};
+
+type NearbyDestination = {
+  id: number;
+  name: string;
+  slug: string;
+  spot_type: string | null;
+  neighborhood: string | null;
+  lat: number | null;
+  lng: number | null;
+  distance?: number;
+};
 
 export async function GET(
   request: NextRequest,
@@ -25,7 +46,13 @@ export async function GET(
   }
 
   // Cast to avoid TypeScript 'never' type issue
-  const spot = spotData as { id: number; [key: string]: unknown };
+  const spot = spotData as {
+    id: number;
+    neighborhood?: string | null;
+    lat?: number | null;
+    lng?: number | null;
+    [key: string]: unknown;
+  };
 
   // Get today's date for filtering upcoming events
   const today = new Date().toISOString().split("T")[0];
@@ -42,8 +69,108 @@ export async function GET(
     .order("start_time", { ascending: true })
     .limit(20);
 
+  // Fetch nearby destinations
+  const nearbyDestinations: Record<string, NearbyDestination[]> = {
+    food: [],
+    drinks: [],
+    nightlife: [],
+    caffeine: [],
+    fun: [],
+  };
+
+  const allDestinationTypes = Object.values(DESTINATION_CATEGORIES).flat();
+
+  // Filter by neighborhood if available
+  if (spot.neighborhood) {
+    const { data: spots } = await supabase
+      .from("venues")
+      .select("id, name, slug, spot_type, neighborhood, lat, lng")
+      .eq("neighborhood", spot.neighborhood)
+      .in("spot_type", allDestinationTypes)
+      .eq("active", true)
+      .neq("id", spot.id);
+
+    if (spots) {
+      for (const s of spots) {
+        const dest = s as NearbyDestination;
+
+        // Calculate distance if we have coordinates (for sorting)
+        let distance: number | undefined;
+        if (dest.lat && dest.lng && spot.lat && spot.lng) {
+          distance = getDistanceMiles(spot.lat, spot.lng, dest.lat, dest.lng);
+        }
+
+        // Determine category
+        const spotType = dest.spot_type || "";
+        let category: string | null = null;
+
+        for (const [cat, types] of Object.entries(DESTINATION_CATEGORIES)) {
+          if (types.includes(spotType)) {
+            category = cat;
+            break;
+          }
+        }
+
+        if (category && nearbyDestinations[category]) {
+          nearbyDestinations[category].push({ ...dest, distance });
+        }
+      }
+
+      // Sort each category by distance and limit
+      for (const category of Object.keys(nearbyDestinations)) {
+        nearbyDestinations[category].sort((a, b) => (a.distance || 999) - (b.distance || 999));
+        nearbyDestinations[category] = nearbyDestinations[category].slice(0, 10);
+      }
+    }
+  } else if (spot.lat && spot.lng) {
+    // Fallback: distance-based if no neighborhood (within 2 miles)
+    const { data: spots } = await supabase
+      .from("venues")
+      .select("id, name, slug, spot_type, neighborhood, lat, lng")
+      .in("spot_type", allDestinationTypes)
+      .eq("active", true)
+      .neq("id", spot.id);
+
+    if (spots) {
+      for (const s of spots) {
+        const dest = s as NearbyDestination;
+
+        // Filter by distance (2 miles max when no neighborhood)
+        let distance: number | undefined;
+        if (dest.lat && dest.lng) {
+          distance = getDistanceMiles(spot.lat, spot.lng, dest.lat, dest.lng);
+          if (distance > 2) continue;
+        } else {
+          continue;
+        }
+
+        // Determine category
+        const spotType = dest.spot_type || "";
+        let category: string | null = null;
+
+        for (const [cat, types] of Object.entries(DESTINATION_CATEGORIES)) {
+          if (types.includes(spotType)) {
+            category = cat;
+            break;
+          }
+        }
+
+        if (category && nearbyDestinations[category]) {
+          nearbyDestinations[category].push({ ...dest, distance });
+        }
+      }
+
+      // Sort by distance and limit
+      for (const category of Object.keys(nearbyDestinations)) {
+        nearbyDestinations[category].sort((a, b) => (a.distance || 999) - (b.distance || 999));
+        nearbyDestinations[category] = nearbyDestinations[category].slice(0, 10);
+      }
+    }
+  }
+
   return Response.json({
     spot: spotData,
     upcomingEvents: upcomingEvents || [],
+    nearbyDestinations,
   });
 }
