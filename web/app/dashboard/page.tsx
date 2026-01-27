@@ -7,17 +7,17 @@ import DashboardShell from "@/components/dashboard/DashboardShell";
 import DashboardFeed from "@/components/dashboard/DashboardFeed";
 import DashboardActivity from "@/components/dashboard/DashboardActivity";
 import DashboardPlanning from "@/components/dashboard/DashboardPlanning";
-import { usePortal, DEFAULT_PORTAL_SLUG } from "@/lib/portal-context";
+import { usePortalOptional, DEFAULT_PORTAL_SLUG } from "@/lib/portal-context";
 
 type DashboardTab = "feed" | "activity" | "planning";
 
 function RedirectBanner() {
-  const { portal } = usePortal();
+  const portalContext = usePortalOptional();
   const [dismissed, setDismissed] = useState(false);
 
   if (dismissed) return null;
 
-  const newUrl = `/${portal?.slug || DEFAULT_PORTAL_SLUG}?view=feed&tab=foryou`;
+  const newUrl = `/${portalContext?.portal?.slug || DEFAULT_PORTAL_SLUG}?view=feed&tab=foryou`;
 
   return (
     <div className="mb-4 p-3 rounded-lg bg-[var(--coral)]/10 border border-[var(--coral)]/30 flex items-center justify-between gap-4">
