@@ -151,7 +151,6 @@ export async function GET(
     lat: number | null;
     lng: number | null;
     hours: HoursData | null;
-    is_24_hours: boolean | null;
     closesAt?: string;
     distance?: number;
   };
@@ -171,7 +170,7 @@ export async function GET(
     // Fetch venues that match destination types
     const { data: spots } = await supabase
       .from("venues")
-      .select("id, name, slug, spot_type, neighborhood, lat, lng, hours, is_24_hours")
+      .select("id, name, slug, spot_type, neighborhood, lat, lng, hours")
       .in("spot_type", allDestinationTypes)
       .eq("active", true)
       .neq("id", eventData.venue?.id || 0);
@@ -199,7 +198,7 @@ export async function GET(
             eventDate,
             eventData.start_time,
             eventData.end_time || null,
-            s.is_24_hours || false
+            false
           );
 
           // Skip spots that aren't open during the event (only if we have hours data)
@@ -240,7 +239,7 @@ export async function GET(
 
     const { data: spots } = await supabase
       .from("venues")
-      .select("id, name, slug, spot_type, neighborhood, lat, lng, hours, is_24_hours")
+      .select("id, name, slug, spot_type, neighborhood, lat, lng, hours")
       .eq("neighborhood", eventData.venue.neighborhood)
       .in("spot_type", allDestinationTypes)
       .eq("active", true)
@@ -259,7 +258,7 @@ export async function GET(
             eventDate,
             eventData.start_time,
             eventData.end_time || null,
-            s.is_24_hours || false
+            false
           );
           if (!openStatus.isRelevant) continue;
           closesAt = openStatus.closesAt;
