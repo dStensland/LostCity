@@ -168,24 +168,17 @@ export default function FollowButton({
     lg: "px-6 py-3 text-base",
   };
 
-  if (loading) {
-    return (
-      <div
-        className={`${sizeClasses[size]} rounded-full bg-[var(--twilight)] animate-pulse ${className}`}
-        style={{ width: size === "sm" ? 70 : size === "lg" ? "100%" : 85 }}
-      />
-    );
-  }
+  const isDisabled = loading || actionLoading;
 
   return (
     <button
       onClick={handleClick}
-      disabled={actionLoading}
-      className={`font-mono font-medium rounded-full transition-all duration-150 disabled:opacity-50 ${sizeClasses[size]} ${
+      disabled={isDisabled}
+      className={`font-mono font-medium rounded-full transition-all duration-150 ${sizeClasses[size]} ${
         isFollowing
           ? "bg-[var(--twilight)] text-[var(--cream)] hover:bg-[var(--coral)] hover:text-[var(--void)]"
           : "bg-[var(--coral)] text-[var(--void)] hover:bg-[var(--rose)]"
-      } ${isAnimating ? "scale-95" : "scale-100"} ${className}`}
+      } ${isDisabled ? "opacity-50 cursor-not-allowed" : ""} ${isAnimating ? "scale-95" : "scale-100"} ${className}`}
     >
       {actionLoading ? (
         <span className="inline-block w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />

@@ -250,24 +250,18 @@ export default function RecommendButton({
     md: "px-4 py-2 text-sm",
   };
 
-  if (loading) {
-    return (
-      <div
-        className={`${sizeClasses[size]} rounded-lg bg-[var(--twilight)] animate-pulse ${className}`}
-        style={{ width: size === "sm" ? 90 : 110 }}
-      />
-    );
-  }
+  const isDisabled = loading;
 
   return (
     <>
       <button
         onClick={handleClick}
+        disabled={isDisabled}
         className={`font-mono font-medium rounded-lg transition-colors flex items-center gap-2 ${sizeClasses[size]} ${
           isRecommended
             ? "bg-[var(--rose)] text-[var(--void)]"
             : "bg-[var(--dusk)] text-[var(--muted)] hover:text-[var(--cream)] border border-[var(--twilight)]"
-        } ${className}`}
+        } ${isDisabled ? "opacity-50 cursor-not-allowed" : ""} ${className}`}
       >
         <svg
           className="w-4 h-4"
