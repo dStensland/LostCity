@@ -201,12 +201,17 @@ export function isSpotOpenDuringEvent(
   is24Hours?: boolean
 ): { isRelevant: boolean; closesAt?: string } {
   if (is24Hours) return { isRelevant: true };
-  if (!hours) return { isRelevant: false };
+
+  // If no hours data or empty hours, assume spot is relevant (we just don't know when it closes)
+  if (!hours || Object.keys(hours).length === 0) {
+    return { isRelevant: true };
+  }
 
   const day = getDayName(eventDate);
   const todayHours = hours[day];
 
-  if (!todayHours) return { isRelevant: false };
+  // If no hours for this specific day, assume open (could be missing data)
+  if (!todayHours) return { isRelevant: true };
 
   const { open, close } = todayHours;
   const openMins = timeToMinutes(open);
