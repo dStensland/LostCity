@@ -8,6 +8,7 @@ import { formatTimeSplit } from "@/lib/formats";
 import FollowButton from "@/components/FollowButton";
 import RecommendButton from "@/components/RecommendButton";
 import CategoryIcon, { getCategoryColor } from "@/components/CategoryIcon";
+import LinkifyText from "@/components/LinkifyText";
 
 type ProducerData = {
   id: string;
@@ -247,8 +248,8 @@ export default function OrgDetailView({ slug, portalSlug, onClose }: OrgDetailVi
             <h2 className="font-mono text-[0.65rem] font-medium text-[var(--muted)] uppercase tracking-widest mb-2">
               About
             </h2>
-            <p className="text-[var(--soft)] text-sm leading-relaxed">
-              {producer.description}
+            <p className="text-[var(--soft)] text-sm leading-relaxed whitespace-pre-wrap">
+              <LinkifyText text={producer.description} />
             </p>
           </div>
         )}

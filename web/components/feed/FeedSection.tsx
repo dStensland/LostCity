@@ -4,11 +4,13 @@ import { useRef, useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { format, parseISO, isToday, isTomorrow } from "date-fns";
 import CategoryIcon, { getCategoryColor, CATEGORY_CONFIG, type CategoryType } from "../CategoryIcon";
+import CategoryPlaceholder from "../CategoryPlaceholder";
 import { LiveBadge, SoonBadge, FreeBadge } from "../Badge";
 import { formatTime } from "@/lib/formats";
 import { usePortal } from "@/lib/portal-context";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 import { FeaturedCarousel } from "./FeaturedCarousel";
+import LinkifyText from "../LinkifyText";
 
 // Types
 export type FeedEvent = {
@@ -574,46 +576,12 @@ function EventCard({ event, isCarousel, hideImages, portalSlug }: { event: FeedE
           )}
         </div>
       ) : isCarousel ? (
-        /* No-image fallback for carousel cards - styled placeholder */
-        <div className="h-28 relative overflow-hidden rounded-t-xl bg-[var(--night)]">
-          {/* Layered gradient background */}
-          <div
-            className="absolute inset-0"
-            style={{
-              background: `
-                radial-gradient(ellipse 80% 60% at 50% -20%, ${categoryColor || "var(--coral)"}15 0%, transparent 50%),
-                linear-gradient(135deg, var(--twilight) 0%, var(--dusk) 100%)
-              `,
-            }}
-          />
-
-          {/* Subtle grid */}
-          <div
-            className="absolute inset-0 opacity-[0.04]"
-            style={{
-              backgroundImage: `linear-gradient(${categoryColor || "var(--coral)"} 1px, transparent 1px), linear-gradient(90deg, ${categoryColor || "var(--coral)"} 1px, transparent 1px)`,
-              backgroundSize: "20px 20px",
-            }}
-          />
-
-          {/* Category icon */}
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div
-              className="w-12 h-12 rounded-xl flex items-center justify-center"
-              style={{
-                background: `linear-gradient(135deg, ${categoryColor || "var(--coral)"}15 0%, ${categoryColor || "var(--coral)"}08 100%)`,
-                border: `1px solid ${categoryColor || "var(--coral)"}20`,
-              }}
-            >
-              {event.category && (
-                <CategoryIcon type={event.category} size={24} style={{ color: categoryColor || undefined, opacity: 0.6 }} />
-              )}
-            </div>
-          </div>
-
+        /* No-image fallback for carousel cards - category placeholder */
+        <div className="h-32 relative overflow-hidden rounded-t-xl">
+          <CategoryPlaceholder category={event.category} />
           {/* Popular indicator */}
           {isPopular && (
-            <div className="absolute top-2 right-2">
+            <div className="absolute top-2 right-2 z-10">
               <span className="flex items-center gap-1 px-2 py-1 rounded-full bg-[var(--coral)] text-[var(--void)] text-[0.6rem] font-mono font-medium shadow-lg">
                 🔥 Popular
               </span>
@@ -1023,7 +991,7 @@ function VenueList({ section, portalSlug }: { section: FeedSectionData; portalSl
                 <div className="flex-1 min-w-0 text-left">
                   <span className="font-medium text-sm text-[var(--cream)] truncate block">{venue.name}</span>
                   {venue.description && (
-                    <span className="text-xs text-[var(--muted)]">{venue.description}</span>
+                    <span className="text-xs text-[var(--muted)]"><LinkifyText text={venue.description} /></span>
                   )}
                 </div>
                 {events.length > 0 && (

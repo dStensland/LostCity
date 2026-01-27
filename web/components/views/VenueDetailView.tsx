@@ -10,6 +10,7 @@ import FollowButton from "@/components/FollowButton";
 import RecommendButton from "@/components/RecommendButton";
 import VenueTagList from "@/components/VenueTagList";
 import FlagButton from "@/components/FlagButton";
+import LinkifyText from "@/components/LinkifyText";
 
 type SpotData = {
   id: number;
@@ -253,7 +254,7 @@ export default function VenueDetailView({ slug, portalSlug, onClose }: VenueDeta
               About
             </h2>
             <p className="text-[var(--soft)] whitespace-pre-wrap leading-relaxed">
-              {spot.description}
+              <LinkifyText text={spot.description} />
             </p>
           </div>
         )}

@@ -5,6 +5,8 @@ import Link from "next/link";
 import { format, parseISO } from "date-fns";
 import { usePortal } from "@/lib/portal-context";
 import CategoryIcon, { getCategoryColor } from "../CategoryIcon";
+import CategoryPlaceholder from "../CategoryPlaceholder";
+import LinkifyText from "../LinkifyText";
 import { FreeBadge } from "../Badge";
 
 type FeaturedEvent = {
@@ -183,10 +185,19 @@ function FeaturedCard({ event, portalSlug }: { event: FeaturedEvent; portalSlug:
       scroll={false}
       className="group flex-shrink-0 w-80 snap-start flex flex-col rounded-2xl overflow-hidden border border-[var(--gold)]/20 transition-all hover:border-[var(--gold)]/50 bg-gradient-to-br from-[var(--night)] to-[var(--void)] relative"
     >
-      {/* Featured badge - top left */}
+      {/* Featured badge - top left with glow */}
       <div className="absolute top-3 left-3 z-10">
-        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[var(--gold)] text-[var(--void)] text-xs font-mono font-medium">
-          <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+        <span
+          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-mono font-medium border"
+          style={{
+            background: "linear-gradient(135deg, rgba(255, 215, 0, 0.2) 0%, rgba(255, 180, 0, 0.1) 100%)",
+            borderColor: "rgba(255, 215, 0, 0.4)",
+            color: "var(--gold)",
+            boxShadow: "0 0 12px rgba(255, 215, 0, 0.3), 0 0 24px rgba(255, 215, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.1)",
+            backdropFilter: "blur(8px)",
+          }}
+        >
+          <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20" style={{ filter: "drop-shadow(0 0 3px rgba(255, 215, 0, 0.6))" }}>
             <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
           </svg>
           Featured
@@ -216,57 +227,8 @@ function FeaturedCard({ event, portalSlug }: { event: FeaturedEvent; portalSlug:
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
         </div>
       ) : (
-        <div className="h-44 relative overflow-hidden bg-[var(--night)]">
-          {/* Layered background */}
-          <div
-            className="absolute inset-0"
-            style={{
-              background: `
-                radial-gradient(ellipse 100% 80% at 50% -30%, ${categoryColor}20 0%, transparent 50%),
-                radial-gradient(ellipse 50% 50% at 100% 100%, ${categoryColor}10 0%, transparent 40%),
-                linear-gradient(135deg, var(--twilight) 0%, var(--dusk) 100%)
-              `,
-            }}
-          />
-
-          {/* Subtle grid */}
-          <div
-            className="absolute inset-0 opacity-[0.04]"
-            style={{
-              backgroundImage: `
-                linear-gradient(${categoryColor} 1px, transparent 1px),
-                linear-gradient(90deg, ${categoryColor} 1px, transparent 1px)
-              `,
-              backgroundSize: "24px 24px",
-            }}
-          />
-
-          {/* Decorative accent */}
-          <div
-            className="absolute -top-10 -right-10 w-32 h-32 rounded-full opacity-[0.1]"
-            style={{
-              background: `radial-gradient(circle, ${categoryColor} 0%, transparent 70%)`,
-            }}
-          />
-
-          {/* Centered icon with container */}
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div
-              className="flex items-center justify-center w-16 h-16 rounded-xl"
-              style={{
-                background: `linear-gradient(135deg, ${categoryColor}12 0%, ${categoryColor}05 100%)`,
-                border: `1px solid ${categoryColor}15`,
-              }}
-            >
-              {event.category && (
-                <CategoryIcon
-                  type={event.category}
-                  size={32}
-                  style={{ color: categoryColor, opacity: 0.5 }}
-                />
-              )}
-            </div>
-          </div>
+        <div className="h-44 relative overflow-hidden">
+          <CategoryPlaceholder category={event.category} />
         </div>
       )}
 
@@ -304,7 +266,7 @@ function FeaturedCard({ event, portalSlug }: { event: FeaturedEvent; portalSlug:
         {/* Description preview */}
         {event.description && (
           <p className="text-xs text-[var(--soft)] line-clamp-2 leading-relaxed mb-3">
-            {event.description}
+            <LinkifyText text={event.description} />
           </p>
         )}
 

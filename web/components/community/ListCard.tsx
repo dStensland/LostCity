@@ -3,6 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import type { List } from "./ListsView";
+import LinkifyText from "@/components/LinkifyText";
 
 interface ListCardProps {
   list: List;
@@ -120,7 +121,7 @@ export default function ListCard({ list, portalSlug }: ListCardProps) {
 
           {list.description && (
             <p className="text-sm text-[var(--muted)] mt-1 line-clamp-2">
-              {list.description}
+              <LinkifyText text={list.description} />
             </p>
           )}
 

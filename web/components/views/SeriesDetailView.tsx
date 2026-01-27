@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { format, parseISO } from "date-fns";
+import LinkifyText from "../LinkifyText";
 
 type SeriesData = {
   id: string;
@@ -315,8 +316,8 @@ export default function SeriesDetailView({ slug, portalSlug, onClose }: SeriesDe
           <h2 className="font-mono text-[0.65rem] font-medium text-[var(--muted)] uppercase tracking-widest mb-2">
             About
           </h2>
-          <p className="text-[var(--soft)] text-sm leading-relaxed">
-            {series.description}
+          <p className="text-[var(--soft)] text-sm leading-relaxed whitespace-pre-wrap">
+            <LinkifyText text={series.description} />
           </p>
         </div>
       )}

@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useAuth } from "@/lib/auth-context";
 import ListItemCard, { type ListItem } from "./ListItemCard";
+import LinkifyText from "@/components/LinkifyText";
 
 type ListDetail = {
   id: string;
@@ -298,8 +299,8 @@ export default function ListDetailView({ portalSlug, listSlug }: ListDetailViewP
 
         {/* Description */}
         {list.description && (
-          <p className="text-[var(--soft)] leading-relaxed mb-4">
-            {list.description}
+          <p className="text-[var(--soft)] leading-relaxed mb-4 whitespace-pre-wrap">
+            <LinkifyText text={list.description} />
           </p>
         )}
 
