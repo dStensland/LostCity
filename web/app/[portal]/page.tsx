@@ -113,7 +113,7 @@ export default async function PortalPage({ params, searchParams }: Props) {
 
       {/* Search bar for Find and Community views */}
       {viewMode !== "feed" && (
-        <div className="sticky top-[52px] z-30 border-b border-[var(--twilight)] bg-[var(--night)] backdrop-blur-md">
+        <div className="sticky top-[52px] z-[9999] border-b border-[var(--twilight)] bg-[var(--night)]">
           <div className="max-w-3xl mx-auto px-4 pt-1 pb-2">
             <SearchBar />
           </div>

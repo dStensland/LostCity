@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { usePortal, DEFAULT_PORTAL_SLUG } from "@/lib/portal-context";
+import { usePortalOptional, DEFAULT_PORTAL_SLUG } from "@/lib/portal-context";
 import { useAuth } from "@/lib/auth-context";
 
 interface Props {
@@ -25,9 +25,9 @@ const DEFAULT_TABS: NavTab[] = [
 ];
 
 export default function MainNav({ portalSlug = DEFAULT_PORTAL_SLUG }: Props) {
-  const { portal } = usePortal();
+  const portalContext = usePortalOptional();
   const { user } = useAuth();
-  const navLabels = (portal.settings?.nav_labels || {}) as Record<string, string | undefined>;
+  const navLabels = (portalContext?.portal?.settings?.nav_labels || {}) as Record<string, string | undefined>;
 
   // Build tabs with custom labels, filtering out auth-required tabs when not logged in
   const TABS = DEFAULT_TABS
