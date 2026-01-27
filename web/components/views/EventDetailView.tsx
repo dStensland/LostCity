@@ -16,7 +16,6 @@ import LinkifyText from "@/components/LinkifyText";
 import { formatTimeSplit } from "@/lib/formats";
 import EntityTagList from "@/components/EntityTagList";
 import FlagButton from "@/components/FlagButton";
-import { getSpotTypeLabel } from "@/lib/spots";
 import { getSeriesTypeLabel, getSeriesTypeColor } from "@/lib/series-utils";
 import CollapsibleSection, { CategoryIcons } from "@/components/CollapsibleSection";
 import { formatCloseTime } from "@/lib/hours";
@@ -76,21 +75,21 @@ type RelatedEvent = {
   venue: { id: number; name: string; slug: string } | null;
 };
 
-type NearbySpot = {
-  id: number;
+type NearbyPlace = {
+  id: string;
   name: string;
-  slug: string;
-  spot_type: string | null;
-  neighborhood: string | null;
+  category_id: string;
+  neighborhood_id: string | null;
+  google_maps_url: string | null;
   closesAt?: string;
 };
 
 type NearbyDestinations = {
-  food: NearbySpot[];
-  drinks: NearbySpot[];
-  nightlife: NearbySpot[];
-  caffeine: NearbySpot[];
-  fun: NearbySpot[];
+  food: NearbyPlace[];
+  drinks: NearbyPlace[];
+  nightlife: NearbyPlace[];
+  caffeine: NearbyPlace[];
+  fun: NearbyPlace[];
 };
 
 interface EventDetailViewProps {
@@ -612,11 +611,10 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
               onSeeAll={() => toggleSection('food')}
             >
               <div className="grid grid-cols-2 gap-2">
-                {(expandedSections.food ? nearbyDestinations.food : nearbyDestinations.food.slice(0, 5)).map((spot) => (
-                  <SpotCard
-                    key={spot.id}
-                    spot={spot}
-                    onClick={() => handleSpotClick(spot.slug)}
+                {(expandedSections.food ? nearbyDestinations.food : nearbyDestinations.food.slice(0, 5)).map((place) => (
+                  <PlaceCard
+                    key={place.id}
+                    place={place}
                   />
                 ))}
               </div>
@@ -635,11 +633,10 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
               onSeeAll={() => toggleSection('drinks')}
             >
               <div className="grid grid-cols-2 gap-2">
-                {(expandedSections.drinks ? nearbyDestinations.drinks : nearbyDestinations.drinks.slice(0, 5)).map((spot) => (
-                  <SpotCard
-                    key={spot.id}
-                    spot={spot}
-                    onClick={() => handleSpotClick(spot.slug)}
+                {(expandedSections.drinks ? nearbyDestinations.drinks : nearbyDestinations.drinks.slice(0, 5)).map((place) => (
+                  <PlaceCard
+                    key={place.id}
+                    place={place}
                   />
                 ))}
               </div>
@@ -658,11 +655,10 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
               onSeeAll={() => toggleSection('nightlife')}
             >
               <div className="grid grid-cols-2 gap-2">
-                {(expandedSections.nightlife ? nearbyDestinations.nightlife : nearbyDestinations.nightlife.slice(0, 5)).map((spot) => (
-                  <SpotCard
-                    key={spot.id}
-                    spot={spot}
-                    onClick={() => handleSpotClick(spot.slug)}
+                {(expandedSections.nightlife ? nearbyDestinations.nightlife : nearbyDestinations.nightlife.slice(0, 5)).map((place) => (
+                  <PlaceCard
+                    key={place.id}
+                    place={place}
                   />
                 ))}
               </div>
@@ -681,11 +677,10 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
               onSeeAll={() => toggleSection('caffeine')}
             >
               <div className="grid grid-cols-2 gap-2">
-                {(expandedSections.caffeine ? nearbyDestinations.caffeine : nearbyDestinations.caffeine.slice(0, 5)).map((spot) => (
-                  <SpotCard
-                    key={spot.id}
-                    spot={spot}
-                    onClick={() => handleSpotClick(spot.slug)}
+                {(expandedSections.caffeine ? nearbyDestinations.caffeine : nearbyDestinations.caffeine.slice(0, 5)).map((place) => (
+                  <PlaceCard
+                    key={place.id}
+                    place={place}
                   />
                 ))}
               </div>
@@ -704,11 +699,10 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
               onSeeAll={() => toggleSection('fun')}
             >
               <div className="grid grid-cols-2 gap-2">
-                {(expandedSections.fun ? nearbyDestinations.fun : nearbyDestinations.fun.slice(0, 5)).map((spot) => (
-                  <SpotCard
-                    key={spot.id}
-                    spot={spot}
-                    onClick={() => handleSpotClick(spot.slug)}
+                {(expandedSections.fun ? nearbyDestinations.fun : nearbyDestinations.fun.slice(0, 5)).map((place) => (
+                  <PlaceCard
+                    key={place.id}
+                    place={place}
                   />
                 ))}
               </div>
@@ -720,30 +714,54 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
   );
 }
 
-// Spot card component for destination categories
-function SpotCard({ spot, onClick }: { spot: NearbySpot; onClick: () => void }) {
+// Category labels for places
+const PLACE_CATEGORY_LABELS: Record<string, string> = {
+  restaurants: "Restaurant",
+  bars: "Bar",
+  nightclubs: "Club",
+  coffee: "Coffee",
+  entertainment: "Entertainment",
+};
+
+// Category icons for places
+const PLACE_CATEGORY_ICONS: Record<string, string> = {
+  restaurants: "restaurant",
+  bars: "bar",
+  nightclubs: "club",
+  coffee: "coffee_shop",
+  entertainment: "games",
+};
+
+// Place card component for destination categories
+function PlaceCard({ place }: { place: NearbyPlace }) {
+  const handleClick = () => {
+    if (place.google_maps_url) {
+      window.open(place.google_maps_url, "_blank", "noopener,noreferrer");
+    }
+  };
+
   return (
     <button
-      onClick={onClick}
+      onClick={handleClick}
       className="group p-3 border border-[var(--twilight)] rounded-lg transition-colors hover:border-[var(--coral)]/50 bg-[var(--void)] text-left"
     >
       <div className="flex items-start gap-2">
         <CategoryIcon
-          type={spot.spot_type || "restaurant"}
+          type={PLACE_CATEGORY_ICONS[place.category_id] || "restaurant"}
           size={16}
           className="mt-0.5 flex-shrink-0"
         />
         <div className="min-w-0 flex-1">
           <h3 className="text-[var(--cream)] text-sm font-medium truncate group-hover:text-[var(--coral)] transition-colors">
-            {spot.name}
+            {place.name}
           </h3>
           <div className="flex items-center gap-1.5 mt-0.5">
             <p className="text-[0.65rem] text-[var(--muted)] font-mono uppercase tracking-wider">
-              {getSpotTypeLabel(spot.spot_type)}
+              {PLACE_CATEGORY_LABELS[place.category_id] || place.category_id}
             </p>
-            {spot.closesAt && (
+            {place.closesAt && (
               <span className="text-[0.6rem] text-[var(--neon-amber)] font-mono">
-                til {formatCloseTime(spot.closesAt)}
+                til {formatCloseTime(place.closesAt)}
               </span>
             )}
           </div>

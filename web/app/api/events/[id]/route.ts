@@ -2,7 +2,6 @@ import { createClient } from "@/lib/supabase/server";
 import { NextRequest } from "next/server";
 import { getDistanceMiles } from "@/lib/geo";
 import { doTimeRangesOverlap, isSpotOpenDuringEvent, HoursData } from "@/lib/hours";
-import { DESTINATION_CATEGORIES } from "@/lib/spots";
 
 const NEARBY_RADIUS_MILES = 10;
 
@@ -134,22 +133,31 @@ export async function GET(
     nearbyEvents = sameDateEvents || [];
   }
 
-  // Fetch nearby destinations (spots within 10 miles, categorized, with hours)
-  type SpotWithHours = {
-    id: number;
+  // Fetch nearby destinations from places table (Google Places data with hours)
+  // Map places category_id to our destination categories
+  const PLACES_CATEGORY_MAP: Record<string, string> = {
+    restaurants: "food",
+    bars: "drinks",
+    nightclubs: "nightlife",
+    coffee: "caffeine",
+    entertainment: "fun",
+  };
+
+  type PlaceWithHours = {
+    id: string;
     name: string;
-    slug: string;
-    spot_type: string | null;
-    neighborhood: string | null;
-    lat: number | null;
-    lng: number | null;
-    hours: HoursData | null;
-    is_24_hours: boolean | null;
+    category_id: string;
+    neighborhood_id: string | null;
+    lat: number;
+    lng: number;
+    hours_json: { periods?: Array<{ open?: { day: number; hour: number; minute: number }; close?: { day: number; hour: number; minute: number } }> } | null;
+    is_24_hours: boolean;
+    google_maps_url: string | null;
     closesAt?: string;
     distance?: number;
   };
 
-  const nearbyDestinations: Record<string, SpotWithHours[]> = {
+  const nearbyDestinations: Record<string, PlaceWithHours[]> = {
     food: [],
     drinks: [],
     nightlife: [],
@@ -158,58 +166,61 @@ export async function GET(
   };
 
   if (venueLat && venueLng) {
-    // Get all destination types
-    const allDestinationTypes = Object.values(DESTINATION_CATEGORIES).flat();
+    // Fetch places from all relevant categories
+    const { data: places } = await supabase
+      .from("places")
+      .select("id, name, category_id, neighborhood_id, lat, lng, hours_json, is_24_hours, google_maps_url")
+      .in("category_id", Object.keys(PLACES_CATEGORY_MAP))
+      .eq("hidden", false)
+      .gte("final_score", 30);
 
-    // Fetch spots that match destination types
-    const { data: spots } = await supabase
-      .from("venues")
-      .select("id, name, slug, spot_type, neighborhood, lat, lng, hours, is_24_hours")
-      .in("spot_type", allDestinationTypes)
-      .eq("active", true)
-      .neq("id", eventData.venue?.id || 0);
-
-    if (spots) {
+    if (places) {
       // Filter by distance and categorize
-      for (const spot of spots) {
-        const s = spot as SpotWithHours;
+      for (const place of places) {
+        const p = place as PlaceWithHours;
 
         // Check distance
-        if (!s.lat || !s.lng) continue;
-        const distance = getDistanceMiles(venueLat, venueLng, s.lat, s.lng);
+        const distance = getDistanceMiles(venueLat, venueLng, p.lat, p.lng);
         if (distance > NEARBY_RADIUS_MILES) continue;
 
-        // Check if spot is open during event (if we have time data)
-        let closesAt: string | undefined;
-        if (eventData.start_time) {
-          const openStatus = isSpotOpenDuringEvent(
-            s.hours,
-            eventDate,
-            eventData.start_time,
-            eventData.end_time || null,
-            s.is_24_hours || false
-          );
-
-          // Skip spots that aren't open during the event
-          // (but include if we can't determine - no hours data)
-          if (s.hours && !openStatus.isRelevant) continue;
-          closesAt = openStatus.closesAt;
-        }
-
-        // Determine category
-        const spotType = s.spot_type || "";
-        let category: string | null = null;
-
-        for (const [cat, types] of Object.entries(DESTINATION_CATEGORIES)) {
-          if ((types as readonly string[]).includes(spotType)) {
-            category = cat;
-            break;
+        // Parse Google Places hours format to our HoursData format
+        let hoursData: HoursData | null = null;
+        if (p.hours_json?.periods) {
+          const dayNames = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
+          hoursData = {};
+          for (const period of p.hours_json.periods) {
+            if (period.open) {
+              const dayName = dayNames[period.open.day];
+              const openTime = `${period.open.hour.toString().padStart(2, "0")}:${period.open.minute.toString().padStart(2, "0")}`;
+              const closeTime = period.close
+                ? `${period.close.hour.toString().padStart(2, "0")}:${period.close.minute.toString().padStart(2, "0")}`
+                : "23:59";
+              hoursData[dayName] = { open: openTime, close: closeTime };
+            }
           }
         }
 
-        if (category && nearbyDestinations[category]) {
-          nearbyDestinations[category].push({
-            ...s,
+        // Check if place is open during event
+        let closesAt: string | undefined;
+        if (eventData.start_time && hoursData) {
+          const openStatus = isSpotOpenDuringEvent(
+            hoursData,
+            eventDate,
+            eventData.start_time,
+            eventData.end_time || null,
+            p.is_24_hours || false
+          );
+
+          // Skip places that aren't open during the event
+          if (!openStatus.isRelevant) continue;
+          closesAt = openStatus.closesAt;
+        }
+
+        // Map to destination category
+        const destCategory = PLACES_CATEGORY_MAP[p.category_id];
+        if (destCategory && nearbyDestinations[destCategory]) {
+          nearbyDestinations[destCategory].push({
+            ...p,
             closesAt,
             distance,
           });
@@ -220,58 +231,6 @@ export async function GET(
       for (const category of Object.keys(nearbyDestinations)) {
         nearbyDestinations[category].sort((a, b) => (a.distance || 0) - (b.distance || 0));
         // Limit to 10 per category
-        nearbyDestinations[category] = nearbyDestinations[category].slice(0, 10);
-      }
-    }
-  } else if (eventData.venue?.neighborhood) {
-    // Fallback: neighborhood-based if no coordinates
-    const allDestinationTypes = Object.values(DESTINATION_CATEGORIES).flat();
-
-    const { data: spots } = await supabase
-      .from("venues")
-      .select("id, name, slug, spot_type, neighborhood, lat, lng, hours, is_24_hours")
-      .eq("neighborhood", eventData.venue.neighborhood)
-      .in("spot_type", allDestinationTypes)
-      .eq("active", true)
-      .neq("id", eventData.venue?.id || 0)
-      .limit(30);
-
-    if (spots) {
-      for (const spot of spots) {
-        const s = spot as SpotWithHours;
-
-        // Check if spot is open during event
-        let closesAt: string | undefined;
-        if (eventData.start_time) {
-          const openStatus = isSpotOpenDuringEvent(
-            s.hours,
-            eventDate,
-            eventData.start_time,
-            eventData.end_time || null,
-            s.is_24_hours || false
-          );
-          if (s.hours && !openStatus.isRelevant) continue;
-          closesAt = openStatus.closesAt;
-        }
-
-        // Determine category
-        const spotType = s.spot_type || "";
-        let category: string | null = null;
-
-        for (const [cat, types] of Object.entries(DESTINATION_CATEGORIES)) {
-          if ((types as readonly string[]).includes(spotType)) {
-            category = cat;
-            break;
-          }
-        }
-
-        if (category && nearbyDestinations[category]) {
-          nearbyDestinations[category].push({ ...s, closesAt });
-        }
-      }
-
-      // Limit each category
-      for (const category of Object.keys(nearbyDestinations)) {
         nearbyDestinations[category] = nearbyDestinations[category].slice(0, 10);
       }
     }
