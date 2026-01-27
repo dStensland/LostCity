@@ -261,6 +261,10 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Find the good stuff..."
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="off"
+                spellCheck={false}
                 className="flex-1 bg-transparent text-[var(--cream)] placeholder:text-[var(--muted)] outline-none text-lg font-display"
               />
               {query && (
