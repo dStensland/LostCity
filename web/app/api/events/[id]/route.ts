@@ -163,31 +163,27 @@ export async function GET(
     fun: [],
   };
 
-  if (venueLat && venueLng) {
-    // Get all destination types
+  // Filter destinations by neighborhood
+  if (eventData.venue?.neighborhood) {
     const allDestinationTypes = Object.values(DESTINATION_CATEGORIES).flat();
 
-    // Fetch venues that match destination types
+    // Fetch venues in the same neighborhood
     const { data: spots } = await supabase
       .from("venues")
       .select("id, name, slug, spot_type, neighborhood, lat, lng, hours")
+      .eq("neighborhood", eventData.venue.neighborhood)
       .in("spot_type", allDestinationTypes)
       .eq("active", true)
       .neq("id", eventData.venue?.id || 0);
 
     if (spots) {
-      // Filter by distance and categorize
       for (const spot of spots) {
         const s = spot as NearbyDestination;
 
-        // Check distance if spot has coordinates, otherwise check neighborhood
+        // Calculate distance if we have coordinates (for sorting)
         let distance: number | undefined;
-        if (s.lat && s.lng) {
+        if (s.lat && s.lng && venueLat && venueLng) {
           distance = getDistanceMiles(venueLat, venueLng, s.lat, s.lng);
-          if (distance > NEARBY_RADIUS_MILES) continue;
-        } else {
-          // No coordinates - include if same neighborhood
-          if (s.neighborhood !== eventData.venue?.neighborhood) continue;
         }
 
         // Check if spot is open during event (if we have hours data)
@@ -226,29 +222,35 @@ export async function GET(
         }
       }
 
-      // Sort each category by distance
+      // Sort each category by distance (if available) and limit
       for (const category of Object.keys(nearbyDestinations)) {
-        nearbyDestinations[category].sort((a, b) => (a.distance || 0) - (b.distance || 0));
-        // Limit to 10 per category
+        nearbyDestinations[category].sort((a, b) => (a.distance || 999) - (b.distance || 999));
         nearbyDestinations[category] = nearbyDestinations[category].slice(0, 10);
       }
     }
-  } else if (eventData.venue?.neighborhood) {
-    // Fallback: neighborhood-based if no coordinates
+  } else if (venueLat && venueLng) {
+    // Fallback: distance-based if no neighborhood (within 2 miles)
     const allDestinationTypes = Object.values(DESTINATION_CATEGORIES).flat();
 
     const { data: spots } = await supabase
       .from("venues")
       .select("id, name, slug, spot_type, neighborhood, lat, lng, hours")
-      .eq("neighborhood", eventData.venue.neighborhood)
       .in("spot_type", allDestinationTypes)
       .eq("active", true)
-      .neq("id", eventData.venue?.id || 0)
-      .limit(30);
+      .neq("id", eventData.venue?.id || 0);
 
     if (spots) {
       for (const spot of spots) {
         const s = spot as NearbyDestination;
+
+        // Filter by distance (2 miles max when no neighborhood)
+        let distance: number | undefined;
+        if (s.lat && s.lng) {
+          distance = getDistanceMiles(venueLat, venueLng, s.lat, s.lng);
+          if (distance > 2) continue;
+        } else {
+          continue; // Skip spots without coordinates in distance fallback
+        }
 
         // Check if spot is open during event
         let closesAt: string | undefined;
@@ -276,12 +278,13 @@ export async function GET(
         }
 
         if (category && nearbyDestinations[category]) {
-          nearbyDestinations[category].push({ ...s, closesAt });
+          nearbyDestinations[category].push({ ...s, closesAt, distance });
         }
       }
 
-      // Limit each category
+      // Sort by distance and limit each category
       for (const category of Object.keys(nearbyDestinations)) {
+        nearbyDestinations[category].sort((a, b) => (a.distance || 999) - (b.distance || 999));
         nearbyDestinations[category] = nearbyDestinations[category].slice(0, 10);
       }
     }
