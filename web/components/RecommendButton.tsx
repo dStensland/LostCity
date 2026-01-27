@@ -192,15 +192,6 @@ export default function RecommendButton({
     setActionLoading(true);
 
     // Timeout wrapper to prevent indefinite hangs
-    const withTimeout = <T,>(promise: Promise<T>, ms: number): Promise<T> => {
-      return Promise.race([
-        promise,
-        new Promise<T>((_, reject) =>
-          setTimeout(() => reject(new Error("Request timeout")), ms)
-        ),
-      ]);
-    };
-
     try {
       const recData: Record<string, unknown> = {
         user_id: user.id,
@@ -231,18 +222,15 @@ export default function RecommendButton({
           query = query.eq("producer_id", producerId);
         }
 
-        const updateResult = await withTimeout(Promise.resolve(query), 8000);
-        if (updateResult?.error) {
-          console.error("Update recommendation error:", updateResult.error);
+        const { error } = await query;
+        if (error) {
+          console.error("Update recommendation error:", error);
         }
       } else {
         // Create new
-        const insertResult = await withTimeout(
-          Promise.resolve(supabase.from("recommendations").insert(recData as never)),
-          8000
-        );
-        if (insertResult?.error) {
-          console.error("Create recommendation error:", insertResult.error);
+        const { error } = await supabase.from("recommendations").insert(recData as never);
+        if (error) {
+          console.error("Create recommendation error:", error);
         }
       }
 
@@ -250,10 +238,6 @@ export default function RecommendButton({
       setModalOpen(false);
     } catch (err) {
       console.error("Recommendation submit error:", err);
-      // Close modal on timeout so user isn't stuck
-      if (err instanceof Error && err.message === "Request timeout") {
-        setModalOpen(false);
-      }
     } finally {
       setActionLoading(false);
     }
@@ -263,16 +247,6 @@ export default function RecommendButton({
     if (!user) return;
 
     setActionLoading(true);
-
-    // Timeout wrapper to prevent indefinite hangs
-    const withTimeout = <T,>(promise: Promise<T>, ms: number): Promise<T> => {
-      return Promise.race([
-        promise,
-        new Promise<T>((_, reject) =>
-          setTimeout(() => reject(new Error("Request timeout")), ms)
-        ),
-      ]);
-    };
 
     try {
       let query = supabase
@@ -288,9 +262,9 @@ export default function RecommendButton({
         query = query.eq("producer_id", producerId);
       }
 
-      const deleteResult = await withTimeout(Promise.resolve(query), 8000);
-      if (deleteResult?.error) {
-        console.error("Remove recommendation error:", deleteResult.error);
+      const { error } = await query;
+      if (error) {
+        console.error("Remove recommendation error:", error);
       }
 
       setIsRecommended(false);
@@ -298,9 +272,6 @@ export default function RecommendButton({
       setModalOpen(false);
     } catch (err) {
       console.error("Recommendation remove error:", err);
-      if (err instanceof Error && err.message === "Request timeout") {
-        setModalOpen(false);
-      }
     } finally {
       setActionLoading(false);
     }

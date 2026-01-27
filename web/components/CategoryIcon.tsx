@@ -24,6 +24,7 @@ export const CATEGORY_CONFIG = {
   wellness: { label: "Wellness", color: "#99F6E4" },
   gaming: { label: "Gaming", color: "#86EFAC" },
   outdoors: { label: "Outdoors", color: "#BEF264" },
+  activism: { label: "Activism", color: "#F87171" },
   other: { label: "Other", color: "#8B8B94" },
 
   // Spot types
@@ -498,6 +499,15 @@ const iconPaths: Record<string, ReactNode> = {
       <path d="M4 18A8 8 0 0120 18" strokeWidth={2} strokeLinecap="round" fill="none" stroke="currentColor" />
       <path d="M6 18A6 6 0 0118 18" strokeWidth={2} strokeLinecap="round" fill="none" stroke="currentColor" opacity={0.7} />
       <path d="M8 18A4 4 0 0116 18" strokeWidth={2} strokeLinecap="round" fill="none" stroke="currentColor" opacity={0.4} />
+    </>
+  ),
+
+  // Activism - Raised fist
+  activism: (
+    <>
+      <path d="M12 21v-4" strokeWidth={1.5} stroke="currentColor" />
+      <path d="M8 21h8" strokeWidth={1.5} strokeLinecap="round" stroke="currentColor" />
+      <path d="M9 17V9a1 1 0 012 0v3M11 9V6a1 1 0 012 0v6M13 7V5a1 1 0 012 0v7M15 9V8a1 1 0 012 0v5c0 2.5-1.5 4-4 4h-2c-2.5 0-4-1.5-4-4v-2a1 1 0 012 0v1" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" fill="none" stroke="currentColor" />
     </>
   ),
 

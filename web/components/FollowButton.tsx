@@ -130,16 +130,6 @@ export default function FollowButton({
     setIsAnimating(true);
     setTimeout(() => setIsAnimating(false), 150);
 
-    // Timeout wrapper to prevent indefinite hangs
-    const withTimeout = <T,>(promise: Promise<T>, ms: number): Promise<T> => {
-      return Promise.race([
-        promise,
-        new Promise<T>((_, reject) =>
-          setTimeout(() => reject(new Error("Request timeout")), ms)
-        ),
-      ]);
-    };
-
     try {
       if (isFollowing) {
         // Unfollow
@@ -158,8 +148,7 @@ export default function FollowButton({
           query = query.eq("followed_producer_id", targetProducerId);
         }
 
-        const result = await withTimeout(Promise.resolve(query), 8000);
-        const error = result?.error;
+        const { error } = await query;
 
         if (!error) {
           setIsFollowing(false);
@@ -184,11 +173,7 @@ export default function FollowButton({
           followData.followed_producer_id = targetProducerId;
         }
 
-        const insertResult = await withTimeout(
-          Promise.resolve(supabase.from("follows").insert(followData as never)),
-          8000
-        );
-        const error = insertResult?.error;
+        const { error } = await supabase.from("follows").insert(followData as never);
 
         if (!error) {
           setIsFollowing(true);
@@ -200,11 +185,7 @@ export default function FollowButton({
       }
     } catch (err) {
       console.error("Follow action error:", err);
-      if (err instanceof Error && err.message === "Request timeout") {
-        showToast("Request timed out - please try again", "error");
-      } else {
-        showToast("Something went wrong", "error");
-      }
+      showToast("Something went wrong", "error");
     } finally {
       setActionLoading(false);
     }

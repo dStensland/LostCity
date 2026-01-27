@@ -475,6 +475,11 @@ SOURCE_MODULES = {
     "johns-creek": "sources.johns_creek",
     # ===== Recurring Social Events =====
     "atlanta-recurring-social": "sources.recurring_social_events",
+    # ===== Activism Organizations =====
+    "aclu-georgia": "sources.aclu_georgia",
+    "glahr": "sources.glahr",
+    "atlanta-liberation-center": "sources.atlanta_liberation_center",
+    "indivisible-atl": "sources.indivisible_atl",
 }
 
 

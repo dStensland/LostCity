@@ -26,7 +26,7 @@ RULES:
 9. YEAR INFERENCE: When a date has no year specified, use 2026 for dates from January-December. Only use a past year if the content explicitly shows a past year.
 
 CATEGORIES (pick one):
-music, art, comedy, theater, film, sports, food_drink, nightlife, community, fitness, family, learning, dance, tours, meetup, words, religious, markets, wellness, gaming, outdoors, other
+music, art, comedy, theater, film, sports, food_drink, nightlife, community, fitness, family, learning, dance, tours, meetup, words, religious, markets, wellness, gaming, outdoors, activism, other
 
 SUBCATEGORIES for nightlife (use when applicable):
 - nightlife.dj: DJ sets, dance nights
