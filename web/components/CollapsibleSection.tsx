@@ -98,10 +98,10 @@ export default function CollapsibleSection({
       className="relative rounded-xl overflow-hidden transition-all duration-300"
       style={{
         background: `linear-gradient(135deg, rgba(20,20,30,0.9) 0%, rgba(30,30,45,0.85) 100%)`,
-        border: `1px solid ${color}20`,
+        border: `1px solid ${color}${isOpen ? '40' : '20'}`,
         boxShadow: isOpen
-          ? `0 0 12px ${color}15`
-          : `0 0 0 rgba(0,0,0,0)`,
+          ? `0 0 20px ${color}25, inset 0 1px 0 ${color}15`
+          : `0 0 8px ${color}10`,
       }}
     >
 
@@ -110,24 +110,31 @@ export default function CollapsibleSection({
         onClick={() => setIsOpen(!isOpen)}
         className="w-full flex items-center gap-3 p-4 transition-all duration-200 text-left group relative z-10"
       >
-        {/* Left accent bar - subtle, always visible */}
+        {/* Left accent bar - subtle glow when open */}
         <div
           className="absolute left-0 top-2 bottom-2 w-1 rounded-full transition-all duration-300"
           style={{
             background: color,
             opacity: isOpen ? 1 : 0.6,
+            boxShadow: isOpen ? `0 0 8px ${color}80` : 'none',
           }}
         />
 
-        {/* Icon */}
+        {/* Icon with subtle glow when open */}
         {icon && (
           <div
             className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ml-2 transition-all duration-300"
             style={{
-              background: `linear-gradient(135deg, ${color}20 0%, ${color}10 100%)`,
+              background: `linear-gradient(135deg, ${color}${isOpen ? '30' : '20'} 0%, ${color}10 100%)`,
+              boxShadow: isOpen ? `0 0 12px ${color}30` : 'none',
             }}
           >
-            <span className="text-xl">
+            <span
+              className="text-xl transition-all duration-300"
+              style={{
+                filter: isOpen ? `drop-shadow(0 0 4px ${color}80)` : 'none',
+              }}
+            >
               {icon}
             </span>
           </div>
@@ -139,6 +146,7 @@ export default function CollapsibleSection({
             className="font-semibold text-sm tracking-wide transition-all duration-300"
             style={{
               color: isOpen ? color : 'var(--cream)',
+              textShadow: isOpen ? `0 0 12px ${color}60` : 'none',
             }}
           >
             {displayTitle}
@@ -150,27 +158,29 @@ export default function CollapsibleSection({
           )}
         </div>
 
-        {/* Count badge */}
+        {/* Count badge with subtle glow */}
         {count !== undefined && count > 0 && (
           <span
-            className="px-2.5 py-1 rounded-full text-[0.7rem] font-bold font-mono"
+            className="px-2.5 py-1 rounded-full text-[0.7rem] font-bold font-mono transition-all duration-300"
             style={{
-              background: `${color}15`,
+              background: `${color}${isOpen ? '25' : '15'}`,
               color: color,
-              border: `1px solid ${color}30`,
+              border: `1px solid ${color}${isOpen ? '50' : '30'}`,
+              boxShadow: isOpen ? `0 0 8px ${color}40` : 'none',
             }}
           >
             {count}
           </span>
         )}
 
-        {/* Animated chevron */}
+        {/* Animated chevron with glow */}
         <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0">
           <svg
             className="w-5 h-5 transition-all duration-300"
             style={{
               transform: isOpen ? "rotate(180deg)" : "rotate(0deg)",
               color: isOpen ? color : 'var(--muted)',
+              filter: isOpen ? `drop-shadow(0 0 3px ${color})` : 'none',
             }}
             fill="none"
             stroke="currentColor"
