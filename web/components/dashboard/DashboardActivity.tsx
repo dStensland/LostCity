@@ -257,7 +257,7 @@ export default function DashboardActivity() {
           Sign in to see activity from people you follow
         </p>
         <Link
-          href="/auth/login?redirect=/dashboard?tab=activity"
+          href="/auth/login?redirect=/atl?view=community"
           className="inline-block mt-3 px-4 py-2 bg-[var(--coral)] text-[var(--void)] font-mono text-sm font-medium rounded-lg hover:bg-[var(--rose)] transition-colors"
         >
           Sign In

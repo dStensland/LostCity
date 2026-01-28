@@ -4,10 +4,9 @@ import { Suspense, useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import ForYouFeed from "@/components/feed/ForYouFeed";
-import DashboardActivity from "@/components/dashboard/DashboardActivity";
 import Link from "next/link";
 
-type FeedTab = "curated" | "foryou" | "activity";
+type FeedTab = "curated" | "foryou";
 
 interface FeedShellProps {
   portalId: string;
@@ -19,7 +18,6 @@ interface FeedShellProps {
 const TABS: { key: FeedTab; label: string; authRequired: boolean }[] = [
   { key: "curated", label: "Curated", authRequired: false },
   { key: "foryou", label: "For You", authRequired: true },
-  { key: "activity", label: "Your People", authRequired: true },
 ];
 
 // Loading skeleton for auth-gated content - matches ForYouFeed/DashboardActivity style
@@ -122,30 +120,6 @@ function ForYouSignedOut({ portalSlug }: { portalSlug: string }) {
   );
 }
 
-// Empty state for Activity tab when signed out
-function ActivitySignedOut({ portalSlug }: { portalSlug: string }) {
-  return (
-    <div className="py-10 text-center">
-      <div className="w-16 h-16 mx-auto mb-5 rounded-2xl bg-gradient-to-br from-[var(--twilight)] to-[var(--dusk)] border border-[var(--twilight)] flex items-center justify-center">
-        <svg className="w-8 h-8 text-[var(--muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-        </svg>
-      </div>
-      <h3 className="font-serif text-lg text-[var(--cream)] mb-2">
-        The scene is quiet... for now
-      </h3>
-      <p className="text-sm text-[var(--muted)] mb-6 max-w-xs mx-auto">
-        Sign in to see what your people are up to—who&apos;s going where, what&apos;s popping off, and who just found your new favorite spot.
-      </p>
-      <Link
-        href={`/auth/login?redirect=/${portalSlug}?view=feed&tab=activity`}
-        className="inline-flex items-center gap-2 px-5 py-2.5 bg-[var(--coral)] text-[var(--void)] rounded-lg font-mono text-sm font-medium hover:bg-[var(--rose)] transition-colors"
-      >
-        Sign In
-      </Link>
-    </div>
-  );
-}
 
 function FeedShellInner({ portalSlug, activeTab, curatedContent }: FeedShellProps) {
   const router = useRouter();
@@ -175,16 +149,14 @@ function FeedShellInner({ portalSlug, activeTab, curatedContent }: FeedShellProp
   };
 
   // Render content based on auth state for protected tabs
-  const renderProtectedContent = (tab: "foryou" | "activity", children: React.ReactNode) => {
+  const renderProtectedContent = (children: React.ReactNode) => {
     // If auth is still loading but hasn't timed out, show skeleton
     if (authLoading && !timedOut) {
       return <AuthLoadingSkeleton />;
     }
     // If no user (either auth finished or timed out), show signed out state
     if (!user) {
-      return tab === "foryou"
-        ? <ForYouSignedOut portalSlug={portalSlug} />
-        : <ActivitySignedOut portalSlug={portalSlug} />;
+      return <ForYouSignedOut portalSlug={portalSlug} />;
     }
     return children;
   };
@@ -223,9 +195,7 @@ function FeedShellInner({ portalSlug, activeTab, curatedContent }: FeedShellProp
       {/* Tab content */}
       {activeTab === "curated" && curatedContent}
 
-      {activeTab === "foryou" && renderProtectedContent("foryou", <ForYouFeed portalSlug={portalSlug} />)}
-
-      {activeTab === "activity" && renderProtectedContent("activity", <DashboardActivity />)}
+      {activeTab === "foryou" && renderProtectedContent(<ForYouFeed portalSlug={portalSlug} />)}
     </div>
   );
 }
@@ -237,7 +207,7 @@ export default function FeedShell(props: FeedShellProps) {
         <div className="py-6 space-y-6">
           {/* Tab skeleton */}
           <div className="flex gap-1 p-1 bg-[var(--night)] rounded-lg">
-            {[1, 2, 3].map((i) => (
+            {[1, 2].map((i) => (
               <div key={i} className="flex-1 h-9 skeleton-shimmer rounded-md" />
             ))}
           </div>

@@ -13,7 +13,7 @@ import { Suspense } from "react";
 export const revalidate = 60;
 
 type ViewMode = "feed" | "find" | "community";
-type FeedTab = "curated" | "foryou" | "activity";
+type FeedTab = "curated" | "foryou";
 type FindType = "events" | "destinations" | "orgs";
 type FindDisplay = "list" | "map" | "calendar";
 
@@ -66,8 +66,11 @@ export default async function PortalPage({ params, searchParams }: Props) {
     viewMode = "feed";
   }
 
-  // Parse sub-parameters
-  const feedTab: FeedTab = (searchParamsData.tab as FeedTab) || "curated";
+  // Parse sub-parameters - handle legacy "activity" tab by treating it as curated
+  let feedTab: FeedTab = "curated";
+  if (searchParamsData.tab === "foryou") {
+    feedTab = "foryou";
+  }
 
   // Determine find type - support legacy view params
   let findType: FindType = "events";
@@ -87,8 +90,13 @@ export default async function PortalPage({ params, searchParams }: Props) {
     findDisplay = "calendar";
   }
 
-  // Community sub-tab
-  const communityTab = searchParamsData.tab === "groups" ? "groups" : "lists";
+  // Community sub-tab - default to "people" (Your People)
+  let communityTab: "people" | "lists" | "groups" = "people";
+  if (searchParamsData.tab === "groups") {
+    communityTab = "groups";
+  } else if (searchParamsData.tab === "lists") {
+    communityTab = "lists";
+  }
 
   // Check for active filters
   const hasActiveFilters = !!(
@@ -203,8 +211,8 @@ function CommunityViewSkeleton() {
   return (
     <div className="py-6 space-y-4">
       {/* Tab skeleton */}
-      <div className="flex p-1 bg-[var(--night)] rounded-lg max-w-xs">
-        {[1, 2].map((i) => (
+      <div className="flex p-1 bg-[var(--night)] rounded-lg">
+        {[1, 2, 3].map((i) => (
           <div key={i} className="flex-1 h-9 skeleton-shimmer rounded-md" />
         ))}
       </div>

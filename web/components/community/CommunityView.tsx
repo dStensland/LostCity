@@ -2,10 +2,12 @@
 
 import { Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useAuth } from "@/lib/auth-context";
 import ListsView from "./ListsView";
 import PortalCommunityView from "@/components/PortalCommunityView";
+import DashboardActivity from "@/components/dashboard/DashboardActivity";
 
-type CommunityTab = "lists" | "groups";
+type CommunityTab = "lists" | "groups" | "people";
 
 interface CommunityViewProps {
   portalId: string;
@@ -14,7 +16,17 @@ interface CommunityViewProps {
   activeTab: CommunityTab;
 }
 
-const TABS: { key: CommunityTab; label: string; icon: React.ReactNode }[] = [
+const TABS: { key: CommunityTab; label: string; icon: React.ReactNode; authRequired?: boolean }[] = [
+  {
+    key: "people",
+    label: "Your People",
+    authRequired: true,
+    icon: (
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+      </svg>
+    ),
+  },
   {
     key: "lists",
     label: "Lists",
@@ -38,11 +50,12 @@ const TABS: { key: CommunityTab; label: string; icon: React.ReactNode }[] = [
 function CommunityViewInner({ portalId, portalSlug, portalName, activeTab }: CommunityViewProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { user } = useAuth();
 
   const handleTabChange = (tab: CommunityTab) => {
     const params = new URLSearchParams(searchParams?.toString() || "");
     params.set("view", "community");
-    if (tab === "lists") {
+    if (tab === "people") {
       params.delete("tab");
     } else {
       params.set("tab", tab);
@@ -53,27 +66,39 @@ function CommunityViewInner({ portalId, portalSlug, portalName, activeTab }: Com
   return (
     <div className="py-6">
       {/* Tab navigation */}
-      <div className="flex p-1 mb-6 bg-[var(--night)] rounded-lg max-w-xs">
+      <div className="flex p-1 mb-6 bg-[var(--night)] rounded-lg">
         {TABS.map((tab) => {
           const isActive = activeTab === tab.key;
+          const isLocked = tab.authRequired && !user;
           return (
             <button
               key={tab.key}
               onClick={() => handleTabChange(tab.key)}
-              className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-md font-mono text-xs transition-all ${
+              className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-md font-mono text-xs transition-all ${
                 isActive
                   ? "bg-[var(--coral)] text-[var(--void)] font-medium shadow-[0_0_12px_var(--coral)/20]"
                   : "text-[var(--muted)] hover:text-[var(--cream)] hover:bg-[var(--twilight)]/50"
               }`}
             >
               {tab.icon}
-              {tab.label}
+              <span className="hidden sm:inline">{tab.label}</span>
+              {isLocked && (
+                <svg className="w-3 h-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+              )}
             </button>
           );
         })}
       </div>
 
       {/* Tab content */}
+      {activeTab === "people" && (
+        <Suspense fallback={<PeopleLoadingSkeleton />}>
+          <DashboardActivity />
+        </Suspense>
+      )}
+
       {activeTab === "lists" && (
         <Suspense fallback={<ListsLoadingSkeleton />}>
           <ListsView portalId={portalId} portalSlug={portalSlug} />
@@ -89,6 +114,29 @@ function CommunityViewInner({ portalId, portalSlug, portalName, activeTab }: Com
           />
         </Suspense>
       )}
+    </div>
+  );
+}
+
+function PeopleLoadingSkeleton() {
+  return (
+    <div className="space-y-6">
+      {/* Search skeleton */}
+      <div className="h-12 skeleton-shimmer rounded-xl" />
+      {/* Activity skeleton */}
+      <div className="space-y-3">
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="p-4 bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 skeleton-shimmer rounded-full" />
+              <div className="flex-1 space-y-2">
+                <div className="h-4 skeleton-shimmer rounded w-3/4" />
+                <div className="h-3 skeleton-shimmer rounded w-1/2" />
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
