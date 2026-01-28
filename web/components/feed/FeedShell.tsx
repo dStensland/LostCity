@@ -16,7 +16,7 @@ interface FeedShellProps {
 }
 
 const TABS: { key: FeedTab; label: string; authRequired: boolean }[] = [
-  { key: "curated", label: "Curated", authRequired: false },
+  { key: "curated", label: "Discover", authRequired: false },
   { key: "foryou", label: "For You", authRequired: true },
 ];
 
