@@ -77,6 +77,12 @@ interface GroupedEvent {
   title: string;
   category: string | null;
   events: EventWithLocation[];
+  series?: {
+    id: string;
+    slug: string;
+    title: string;
+    series_type: string;
+  } | null;
 }
 
 function groupEventsByTitle(events: EventWithLocation[]): GroupedEvent[] {
@@ -89,6 +95,7 @@ function groupEventsByTitle(events: EventWithLocation[]): GroupedEvent[] {
         title: event.title,
         category: event.category,
         events: [],
+        series: event.series || null,
       });
     }
     groups.get(key)!.events.push(event);
@@ -112,6 +119,7 @@ interface Props {
   events: EventWithLocation[];
   portalSlug?: string;
   skipAnimation?: boolean;
+  venueSlug?: string;
 }
 
 export default function EventGroup({
@@ -121,6 +129,7 @@ export default function EventGroup({
   events,
   portalSlug,
   skipAnimation,
+  venueSlug,
 }: Props) {
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -173,7 +182,18 @@ export default function EventGroup({
           </svg>
         )}
         <div className="flex-1 min-w-0 text-left">
-          <span className="font-medium text-sm text-[var(--cream)] group-hover:text-[var(--glow-color,var(--neon-magenta))] truncate block transition-colors">{title}</span>
+          {venueSlug ? (
+            <Link
+              href={portalSlug ? `/${portalSlug}?spot=${venueSlug}` : `/spots/${venueSlug}`}
+              scroll={false}
+              onClick={(e) => e.stopPropagation()}
+              className="font-medium text-sm text-[var(--cream)] hover:text-[var(--coral)] truncate block transition-colors"
+            >
+              {title}
+            </Link>
+          ) : (
+            <span className="font-medium text-sm text-[var(--cream)] group-hover:text-[var(--glow-color,var(--neon-magenta))] truncate block transition-colors">{title}</span>
+          )}
           {subtitle && <span className="text-xs text-[var(--muted)]">{subtitle}</span>}
         </div>
         <span className="font-mono text-[0.6rem] text-[var(--muted)] bg-[var(--twilight)]/50 px-1.5 py-0.5 rounded flex-shrink-0 whitespace-nowrap">
@@ -202,7 +222,17 @@ export default function EventGroup({
                 {group.category && (
                   <CategoryIcon type={group.category} size={12} className="flex-shrink-0 opacity-50" glow="subtle" />
                 )}
-                <span className="text-sm text-[var(--cream)] truncate">{group.title}</span>
+                {group.series ? (
+                  <Link
+                    href={portalSlug ? `/${portalSlug}?series=${group.series.slug}` : `/series/${group.series.slug}`}
+                    scroll={false}
+                    className="text-sm text-[var(--cream)] hover:text-[var(--coral)] truncate transition-colors"
+                  >
+                    {group.title}
+                  </Link>
+                ) : (
+                  <span className="text-sm text-[var(--cream)] truncate">{group.title}</span>
+                )}
               </div>
 
               {/* Showtimes row */}

@@ -97,57 +97,37 @@ export default function CollapsibleSection({
     <div
       className="relative rounded-xl overflow-hidden transition-all duration-300"
       style={{
-        background: isOpen
-          ? `linear-gradient(135deg, rgba(20,20,30,0.95) 0%, rgba(30,30,45,0.9) 100%)`
-          : `linear-gradient(135deg, rgba(15,15,25,0.8) 0%, rgba(25,25,40,0.7) 100%)`,
+        background: `linear-gradient(135deg, rgba(20,20,30,0.9) 0%, rgba(30,30,45,0.85) 100%)`,
+        border: `1px solid ${color}20`,
         boxShadow: isOpen
-          ? `0 0 20px ${color}30, inset 0 1px 0 ${color}20`
-          : `0 0 0 1px rgba(255,255,255,0.05)`,
+          ? `0 0 12px ${color}15`
+          : `0 0 0 rgba(0,0,0,0)`,
       }}
     >
-      {/* Neon border glow effect */}
-      <div
-        className="absolute inset-0 rounded-xl pointer-events-none transition-opacity duration-300"
-        style={{
-          opacity: isOpen ? 1 : 0,
-          background: `linear-gradient(90deg, ${color}40 0%, transparent 50%, ${color}40 100%)`,
-          maskImage: 'linear-gradient(black, black) content-box, linear-gradient(black, black)',
-          maskComposite: 'exclude',
-          WebkitMaskComposite: 'xor',
-          padding: '1px',
-        }}
-      />
 
       {/* Header */}
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="w-full flex items-center gap-3 p-4 transition-all duration-200 text-left group relative z-10"
       >
-        {/* Glowing left accent bar */}
+        {/* Left accent bar - subtle, always visible */}
         <div
           className="absolute left-0 top-2 bottom-2 w-1 rounded-full transition-all duration-300"
           style={{
             background: color,
-            boxShadow: isOpen ? `0 0 12px ${color}, 0 0 24px ${color}60` : `0 0 4px ${color}60`,
+            opacity: isOpen ? 1 : 0.6,
           }}
         />
 
-        {/* Icon with glow */}
+        {/* Icon */}
         {icon && (
           <div
             className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ml-2 transition-all duration-300"
             style={{
-              background: `linear-gradient(135deg, ${color}30 0%, ${color}10 100%)`,
-              boxShadow: isOpen ? `0 0 16px ${color}40` : 'none',
+              background: `linear-gradient(135deg, ${color}20 0%, ${color}10 100%)`,
             }}
           >
-            <span
-              className="text-xl transition-transform duration-300"
-              style={{
-                filter: isOpen ? `drop-shadow(0 0 6px ${color})` : 'none',
-                transform: isOpen ? 'scale(1.1)' : 'scale(1)',
-              }}
-            >
+            <span className="text-xl">
               {icon}
             </span>
           </div>
@@ -159,7 +139,6 @@ export default function CollapsibleSection({
             className="font-semibold text-sm tracking-wide transition-all duration-300"
             style={{
               color: isOpen ? color : 'var(--cream)',
-              textShadow: isOpen ? `0 0 20px ${color}80` : 'none',
             }}
           >
             {displayTitle}
@@ -171,15 +150,14 @@ export default function CollapsibleSection({
           )}
         </div>
 
-        {/* Count badge with neon style */}
+        {/* Count badge */}
         {count !== undefined && count > 0 && (
           <span
-            className="px-2.5 py-1 rounded-full text-[0.7rem] font-bold font-mono transition-all duration-300"
+            className="px-2.5 py-1 rounded-full text-[0.7rem] font-bold font-mono"
             style={{
-              background: `linear-gradient(135deg, ${color}40 0%, ${color}20 100%)`,
+              background: `${color}15`,
               color: color,
-              boxShadow: isOpen ? `0 0 12px ${color}50, inset 0 0 8px ${color}20` : 'none',
-              border: `1px solid ${color}40`,
+              border: `1px solid ${color}30`,
             }}
           >
             {count}
@@ -187,18 +165,12 @@ export default function CollapsibleSection({
         )}
 
         {/* Animated chevron */}
-        <div
-          className="w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 flex-shrink-0"
-          style={{
-            background: isOpen ? `${color}20` : 'transparent',
-          }}
-        >
+        <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0">
           <svg
             className="w-5 h-5 transition-all duration-300"
             style={{
               transform: isOpen ? "rotate(180deg)" : "rotate(0deg)",
               color: isOpen ? color : 'var(--muted)',
-              filter: isOpen ? `drop-shadow(0 0 4px ${color})` : 'none',
             }}
             fill="none"
             stroke="currentColor"
@@ -221,31 +193,23 @@ export default function CollapsibleSection({
         <div className="px-4 pb-4 pt-0">
           {/* Subtle divider */}
           <div
-            className="h-px mb-4 transition-all duration-300"
+            className="h-px mb-4"
             style={{
-              background: `linear-gradient(90deg, transparent 0%, ${color}40 50%, transparent 100%)`,
+              background: `linear-gradient(90deg, transparent 0%, ${color}25 50%, transparent 100%)`,
             }}
           />
 
           {children}
 
-          {/* See all link with neon style */}
+          {/* See all link */}
           {hasMore && (
             <button
               onClick={handleSeeAll}
-              className="mt-4 w-full py-2.5 text-center text-sm font-mono font-semibold tracking-wider uppercase transition-all duration-300 rounded-lg border"
+              className="mt-4 w-full py-2.5 text-center text-sm font-mono font-semibold tracking-wider uppercase transition-all duration-200 rounded-lg border hover:opacity-80"
               style={{
                 color,
-                borderColor: `${color}40`,
-                background: `linear-gradient(135deg, ${color}10 0%, transparent 100%)`,
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = `linear-gradient(135deg, ${color}30 0%, ${color}10 100%)`;
-                e.currentTarget.style.boxShadow = `0 0 20px ${color}30`;
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = `linear-gradient(135deg, ${color}10 0%, transparent 100%)`;
-                e.currentTarget.style.boxShadow = 'none';
+                borderColor: `${color}30`,
+                background: `${color}08`,
               }}
             >
               See all {itemCount} →

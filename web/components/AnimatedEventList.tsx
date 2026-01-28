@@ -275,6 +275,7 @@ function renderItem(
         events={item.events}
         skipAnimation={skipAnimation}
         portalSlug={portalSlug}
+        venueSlug={item.venueSlug}
       />
     );
   }

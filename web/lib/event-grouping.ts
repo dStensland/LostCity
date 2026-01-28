@@ -37,7 +37,7 @@ export interface FestivalSummary {
  */
 export type DisplayItem =
   | { type: "event"; event: EventWithLocation }
-  | { type: "venue-group"; venueId: number; venueName: string; neighborhood: string | null; events: EventWithLocation[] }
+  | { type: "venue-group"; venueId: number; venueName: string; venueSlug: string; neighborhood: string | null; events: EventWithLocation[] }
   | { type: "category-group"; categoryId: string; categoryName: string; events: EventWithLocation[] }
   | { type: "series-group"; seriesId: string; series: SeriesInfo; venueGroups: SeriesVenueGroup[] }
   | { type: "festival-group"; seriesId: string; series: SeriesInfo; summary: FestivalSummary };
@@ -262,6 +262,7 @@ export function groupEventsForDisplay(events: EventWithLocation[]): DisplayItem[
         type: "venue-group",
         venueId,
         venueName: venue.name,
+        venueSlug: venue.slug,
         neighborhood: venue.neighborhood,
         events: venueEvents.sort((a, b) => (a.start_time || "").localeCompare(b.start_time || "")),
       });
