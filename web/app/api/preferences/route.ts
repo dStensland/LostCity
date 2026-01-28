@@ -1,5 +1,52 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { createClient, getUser } from "@/lib/supabase/server";
+
+export async function POST(request: NextRequest) {
+  try {
+    const user = await getUser();
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const body = await request.json();
+    const {
+      favorite_categories,
+      favorite_neighborhoods,
+      favorite_vibes,
+      price_preference,
+    } = body;
+
+    const supabase = await createClient();
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await (supabase as any)
+      .from("user_preferences")
+      .upsert(
+        {
+          user_id: user.id,
+          favorite_categories: favorite_categories || [],
+          favorite_neighborhoods: favorite_neighborhoods || [],
+          favorite_vibes: favorite_vibes || [],
+          price_preference: price_preference || "any",
+        },
+        { onConflict: "user_id" }
+      );
+
+    if (error) {
+      console.error("Error saving preferences:", error);
+      return NextResponse.json(
+        { error: "Failed to save preferences" },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (err) {
+    console.error("Preferences API error:", err);
+    const message = err instanceof Error ? err.message : String(err);
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
 
 export async function GET() {
   try {

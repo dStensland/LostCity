@@ -5,7 +5,6 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
-import NotificationDropdown from "./NotificationDropdown";
 import ShareInviteLink from "./ShareInviteLink";
 import SavedEventsButton from "./SavedEventsButton";
 
@@ -99,9 +98,6 @@ export default function UserMenu() {
     <div className="flex items-center gap-2">
       {/* Saved Events */}
       <SavedEventsButton />
-
-      {/* Notifications */}
-      <NotificationDropdown />
 
       {/* Invite Friends */}
       <ShareInviteLink variant="icon" />

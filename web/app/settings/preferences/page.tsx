@@ -33,7 +33,6 @@ export default async function PreferencesPage({ searchParams }: Props) {
 
   return (
     <PreferencesClient
-      userId={user.id}
       isWelcome={isWelcome}
       initialPreferences={{
         categories: prefs?.favorite_categories || [],

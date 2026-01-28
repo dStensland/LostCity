@@ -65,26 +65,6 @@ export default async function SettingsPage() {
             </div>
           </Link>
 
-          {/* Notifications */}
-          <Link
-            href="/settings/notifications"
-            className="block p-4 rounded-lg bg-[var(--dusk)] border border-[var(--twilight)] hover:border-[var(--coral)] transition-colors"
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="font-mono text-sm font-medium text-[var(--cream)]">
-                  Notifications
-                </h2>
-                <p className="font-mono text-xs text-[var(--muted)] mt-1">
-                  Event reminders, friend activity, and digest settings
-                </p>
-              </div>
-              <svg className="w-5 h-5 text-[var(--muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-            </div>
-          </Link>
-
           {/* Account Info */}
           <div className="p-4 rounded-lg bg-[var(--dusk)] border border-[var(--twilight)]">
             <h2 className="font-mono text-sm font-medium text-[var(--cream)]">

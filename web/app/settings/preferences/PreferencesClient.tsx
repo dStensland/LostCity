@@ -6,7 +6,6 @@ import Link from "next/link";
 import UnifiedHeader from "@/components/UnifiedHeader";
 import CategoryIcon, { CATEGORY_CONFIG, type CategoryType } from "@/components/CategoryIcon";
 import VibeIcon, { getVibeColor } from "@/components/VibeIcon";
-import { createClient } from "@/lib/supabase/client";
 import {
   PREFERENCE_CATEGORIES,
   PREFERENCE_NEIGHBORHOODS,
@@ -16,7 +15,6 @@ import {
 import { DEFAULT_PORTAL_SLUG } from "@/lib/constants";
 
 type PreferencesClientProps = {
-  userId: string;
   isWelcome: boolean;
   initialPreferences: {
     categories: string[];
@@ -27,12 +25,10 @@ type PreferencesClientProps = {
 };
 
 export default function PreferencesClient({
-  userId,
   isWelcome,
   initialPreferences,
 }: PreferencesClientProps) {
   const router = useRouter();
-  const supabase = createClient();
 
   const [saving, setSaving] = useState(false);
   const [selectedCategories, setSelectedCategories] = useState<string[]>(initialPreferences.categories);
@@ -62,22 +58,20 @@ export default function PreferencesClient({
     setSaving(true);
 
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { error } = await (supabase as any)
-        .from("user_preferences")
-        .upsert(
-          {
-            user_id: userId,
-            favorite_categories: selectedCategories,
-            favorite_neighborhoods: selectedNeighborhoods,
-            favorite_vibes: selectedVibes,
-            price_preference: pricePreference,
-          },
-          { onConflict: "user_id" }
-        );
+      const res = await fetch("/api/preferences", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          favorite_categories: selectedCategories,
+          favorite_neighborhoods: selectedNeighborhoods,
+          favorite_vibes: selectedVibes,
+          price_preference: pricePreference,
+        }),
+      });
 
-      if (error) {
-        console.error("Error saving preferences:", error);
+      if (!res.ok) {
+        const data = await res.json();
+        console.error("Error saving preferences:", data.error);
         setSaving(false);
         return;
       }
