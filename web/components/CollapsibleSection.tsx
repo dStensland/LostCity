@@ -233,21 +233,21 @@ export default function CollapsibleSection({
 
 // Category icons for use with CollapsibleSection - neon outline style
 export const CategoryIcons = {
-  // Food - Pizza slice with dripping cheese
+  // Food - Hamburger
   food: (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-      {/* Pizza slice triangle */}
-      <path d="M12 2L3 20h18L12 2z" strokeWidth={1.5} strokeLinejoin="round" />
-      {/* Crust arc */}
-      <path d="M5 17h14" strokeWidth={2} strokeLinecap="round" />
-      {/* Pepperoni */}
-      <circle cx="10" cy="12" r="1.5" fill="currentColor" />
-      <circle cx="14" cy="10" r="1.2" fill="currentColor" opacity={0.8} />
-      <circle cx="12" cy="15" r="1" fill="currentColor" opacity={0.6} />
-      {/* Dripping cheese */}
-      <path d="M7 17c0 1.5 0.5 2.5 0.5 3.5" strokeWidth={1.5} strokeLinecap="round" opacity={0.7} />
-      <path d="M11 17c0 2 0.3 3 0.3 4" strokeWidth={1.5} strokeLinecap="round" opacity={0.7} />
-      <path d="M16 17c0 1 0.4 2 0.4 2.5" strokeWidth={1.5} strokeLinecap="round" opacity={0.7} />
+      {/* Top bun */}
+      <path d="M4 10h16c0-4-3.5-6-8-6s-8 2-8 6z" strokeWidth={1.5} strokeLinejoin="round" />
+      {/* Sesame seeds */}
+      <ellipse cx="9" cy="7" rx="1" ry="0.5" fill="currentColor" opacity={0.6} />
+      <ellipse cx="14" cy="6.5" rx="1" ry="0.5" fill="currentColor" opacity={0.6} />
+      <ellipse cx="12" cy="8" rx="1" ry="0.5" fill="currentColor" opacity={0.6} />
+      {/* Lettuce */}
+      <path d="M3 11c1-0.5 2 0.5 4 0s3-0.5 5 0 3 0.5 5 0 3 0.5 4 0" strokeWidth={1.5} strokeLinecap="round" />
+      {/* Patty */}
+      <rect x="4" y="13" width="16" height="3" rx="1" strokeWidth={1.5} fill="currentColor" opacity={0.3} />
+      {/* Bottom bun */}
+      <path d="M4 18h16c0 2-3.5 3-8 3s-8-1-8-3z" strokeWidth={1.5} strokeLinejoin="round" />
     </svg>
   ),
   // Drinks - Tilted glass with bubbles
