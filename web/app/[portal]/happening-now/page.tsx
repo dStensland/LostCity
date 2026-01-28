@@ -6,10 +6,11 @@ import { useLiveEvents } from "@/lib/hooks/useLiveEvents";
 import { usePortal } from "@/lib/portal-context";
 import Link from "next/link";
 import { formatTime } from "@/lib/formats";
-import { getCategoryColor } from "@/components/CategoryIcon";
+import CategoryIcon, { getCategoryColor } from "@/components/CategoryIcon";
 import { NEIGHBORHOODS, type Spot } from "@/lib/spots";
 import UnifiedHeader from "@/components/UnifiedHeader";
 import CollapsibleSection, { CategoryIcons } from "@/components/CollapsibleSection";
+import { formatCloseTime } from "@/lib/hours";
 
 // Dynamically import components
 const MapViewWrapper = dynamic(() => import("@/components/MapViewWrapper"), { ssr: false });
@@ -26,6 +27,26 @@ const SPOT_CATEGORIES = [
 
 // Distance filter for GPS mode (miles)
 const NEARBY_RADIUS_MILES = 5;
+
+// Spot type labels for display
+const SPOT_TYPE_LABELS: Record<string, string> = {
+  restaurant: "Restaurant",
+  food_hall: "Food Hall",
+  cooking_school: "Cooking School",
+  bar: "Bar",
+  brewery: "Brewery",
+  distillery: "Distillery",
+  winery: "Winery",
+  rooftop: "Rooftop",
+  sports_bar: "Sports Bar",
+  club: "Club",
+  coffee_shop: "Coffee",
+  games: "Games",
+  eatertainment: "Eatertainment",
+  arcade: "Arcade",
+  karaoke: "Karaoke",
+  attraction: "Attraction",
+};
 
 type UserLocation = { lat: number; lng: number } | null;
 
@@ -397,127 +418,194 @@ export default function PortalHappeningNowPage() {
             </Link>
           </div>
         ) : (
-          <div className="space-y-4">
-            {/* Live Events Section */}
-            {filteredEvents.length > 0 && (
-              <CollapsibleSection
-                title="Live Events"
-                count={filteredEvents.length}
-                defaultOpen={false}
-                category="events"
-                icon={CategoryIcons.events}
-                maxItems={5}
-                totalItems={filteredEvents.length}
-              >
-                <div className="space-y-1.5">
-                  {filteredEvents.map((event) => {
-                    const eventVenue = event.venue as { lat?: number; lng?: number; name?: string } | null;
-                    const distance = eventVenue?.lat && eventVenue?.lng
-                      ? getDistance(eventVenue.lat, eventVenue.lng)
-                      : null;
-                    const categoryColor = event.category ? getCategoryColor(event.category) : null;
-                    const showDistance = userLocation && !selectedNeighborhood;
+          <div>
+            {/* Neon Sign Header - Blade Runner aesthetic */}
+            <div className="relative mb-8 py-4">
+              {/* Background glow wash */}
+              <div
+                className="absolute inset-0 blur-2xl opacity-20"
+                style={{
+                  background: 'radial-gradient(ellipse at center, var(--coral) 0%, transparent 70%)',
+                }}
+              />
 
-                    return (
-                      <Link
-                        key={event.id}
-                        href={portal?.slug ? `/${portal.slug}?event=${event.id}` : `/events/${event.id}`}
-                        scroll={false}
-                        className="flex items-center gap-3 px-3 py-2 rounded-lg border border-[var(--twilight)] bg-[var(--dusk)]/30 hover:bg-[var(--dusk)]/60 transition-colors group"
-                        style={{
-                          borderLeftWidth: categoryColor ? "3px" : undefined,
-                          borderLeftColor: categoryColor || undefined,
-                        }}
-                      >
-                        <div className="flex-shrink-0 w-12 text-center">
-                          <span className="font-mono text-xs text-[var(--soft)]">
-                            {formatTime(event.start_time)}
-                          </span>
-                          <div className="flex items-center justify-center gap-1 mt-0.5">
-                            <span
-                              className="w-1.5 h-1.5 rounded-full bg-[var(--neon-red)] animate-pulse"
-                              style={{ boxShadow: "0 0 4px var(--neon-red)" }}
-                            />
-                            <span className="font-mono text-[0.5rem] text-[var(--neon-red)]">LIVE</span>
-                          </div>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="font-medium text-sm text-[var(--cream)] truncate group-hover:text-[var(--neon-magenta)] transition-colors">
-                            {event.title}
-                          </div>
-                          <div className="flex items-center gap-1.5 font-mono text-[0.6rem] text-[var(--muted)]">
-                            <span className="truncate">{event.venue?.name}</span>
-                            {showDistance && distance !== null && (
-                              <>
-                                <span className="opacity-40">·</span>
-                                <span className="text-[var(--neon-cyan)]">
-                                  {distance < 0.1 ? "< 0.1" : distance.toFixed(1)} mi
+              {/* Neon tube lines */}
+              <div className="absolute left-0 right-0 top-0 h-px opacity-30" style={{ background: 'var(--coral)' }} />
+              <div className="absolute left-0 right-0 bottom-0 h-px opacity-30" style={{ background: 'var(--coral)' }} />
+
+              {/* Title container */}
+              <div className="relative flex justify-center">
+                <div className="relative">
+                  {/* Outer glow layer */}
+                  <h2
+                    className="absolute inset-0 font-bold text-lg sm:text-xl tracking-[0.2em] uppercase blur-md opacity-60"
+                    style={{ color: 'var(--coral)' }}
+                    aria-hidden="true"
+                  >
+                    Happening Now
+                  </h2>
+                  {/* Mid glow layer */}
+                  <h2
+                    className="absolute inset-0 font-bold text-lg sm:text-xl tracking-[0.2em] uppercase blur-sm opacity-80"
+                    style={{ color: 'var(--coral)' }}
+                    aria-hidden="true"
+                  >
+                    Happening Now
+                  </h2>
+                  {/* Main text */}
+                  <h2
+                    className="relative font-bold text-lg sm:text-xl tracking-[0.2em] uppercase"
+                    style={{
+                      color: '#FFE4E1',
+                      textShadow: `
+                        0 0 5px var(--coral),
+                        0 0 10px var(--coral),
+                        0 0 20px var(--coral),
+                        0 0 40px rgba(255,107,107,0.5)
+                      `,
+                    }}
+                  >
+                    Happening Now
+                  </h2>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              {/* Live Events Section */}
+              {filteredEvents.length > 0 && (
+                <CollapsibleSection
+                  title="Nearby"
+                  count={filteredEvents.length}
+                  defaultOpen={false}
+                  category="events"
+                  icon={CategoryIcons.events}
+                  maxItems={5}
+                  totalItems={filteredEvents.length}
+                >
+                  <div className="space-y-2">
+                    {filteredEvents.map((event) => {
+                      const eventVenue = event.venue as { lat?: number; lng?: number; name?: string } | null;
+                      const distance = eventVenue?.lat && eventVenue?.lng
+                        ? getDistance(eventVenue.lat, eventVenue.lng)
+                        : null;
+                      const categoryColor = event.category ? getCategoryColor(event.category) : null;
+                      const showDistance = userLocation && !selectedNeighborhood;
+
+                      return (
+                        <Link
+                          key={event.id}
+                          href={portal?.slug ? `/${portal.slug}?event=${event.id}` : `/events/${event.id}`}
+                          scroll={false}
+                          className="block w-full p-3 border border-[var(--twilight)] rounded-lg transition-colors group hover:border-[var(--coral)]/50 bg-[var(--void)] text-left"
+                          style={{
+                            borderLeftWidth: categoryColor ? "3px" : undefined,
+                            borderLeftColor: categoryColor || undefined,
+                          }}
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <span
+                                  className="w-2 h-2 rounded-full bg-[var(--neon-red)] animate-pulse flex-shrink-0"
+                                  style={{ boxShadow: "0 0 4px var(--neon-red)" }}
+                                />
+                                <h3 className="text-[var(--cream)] text-sm font-medium truncate group-hover:text-[var(--coral)] transition-colors">
+                                  {event.title}
+                                </h3>
+                              </div>
+                              <p className="text-xs text-[var(--muted)] mt-0.5 ml-4">
+                                {eventVenue?.name || "Venue TBA"}
+                                {event.start_time && ` · ${formatTime(event.start_time)}`}
+                                {showDistance && distance !== null && (
+                                  <span className="text-[var(--neon-cyan)]">
+                                    {" "}· {distance < 0.1 ? "< 0.1" : distance.toFixed(1)} mi
+                                  </span>
+                                )}
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-2 flex-shrink-0">
+                              {event.is_free && (
+                                <span className="px-1.5 py-0.5 text-[0.5rem] font-mono font-medium bg-[var(--neon-green)]/20 text-[var(--neon-green)] rounded">
+                                  FREE
                                 </span>
-                              </>
-                            )}
+                              )}
+                              <svg className="w-4 h-4 text-[var(--muted)] group-hover:text-[var(--coral)] transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                              </svg>
+                            </div>
                           </div>
-                        </div>
-                        {event.is_free && (
-                          <span className="flex-shrink-0 px-1.5 py-0.5 text-[0.5rem] font-mono font-medium bg-[var(--neon-green)]/20 text-[var(--neon-green)] rounded">
-                            FREE
-                          </span>
-                        )}
-                      </Link>
-                    );
-                  })}
-                </div>
-              </CollapsibleSection>
-            )}
+                        </Link>
+                      );
+                    })}
+                  </div>
+                </CollapsibleSection>
+              )}
 
-            {/* Spot Category Sections */}
-            {groupedSpots.map((category) => (
-              <CollapsibleSection
-                key={category.id}
-                title={category.label}
-                count={category.spots.length}
-                defaultOpen={false}
-                category={category.id as "food" | "drinks" | "nightlife" | "caffeine" | "fun"}
-                icon={CategoryIcons[category.id as keyof typeof CategoryIcons]}
-                maxItems={5}
-                totalItems={category.spots.length}
-              >
-                <div className="grid grid-cols-2 gap-2">
-                  {category.spots.map((spot) => {
-                    const distance = spot.lat && spot.lng
-                      ? getDistance(spot.lat, spot.lng)
-                      : null;
-                    const showDistance = userLocation && !selectedNeighborhood;
+              {/* Spot Category Sections */}
+              {groupedSpots.map((category) => (
+                <CollapsibleSection
+                  key={category.id}
+                  title="Nearby"
+                  count={category.spots.length}
+                  defaultOpen={false}
+                  category={category.id as "food" | "drinks" | "nightlife" | "caffeine" | "fun"}
+                  icon={CategoryIcons[category.id as keyof typeof CategoryIcons]}
+                  maxItems={5}
+                  totalItems={category.spots.length}
+                >
+                  <div className="grid grid-cols-2 gap-2">
+                    {category.spots.map((spot) => {
+                      const distance = spot.lat && spot.lng
+                        ? getDistance(spot.lat, spot.lng)
+                        : null;
+                      const showDistance = userLocation && !selectedNeighborhood;
+                      const spotWithHours = spot as Spot & { closesAt?: string };
 
-                    return (
-                      <Link
-                        key={spot.id}
-                        href={portal?.slug ? `/${portal.slug}?spot=${spot.slug}` : `/spots/${spot.slug}`}
-                        scroll={false}
-                        className="p-3 rounded-lg border border-[var(--twilight)] bg-[var(--dusk)]/30 hover:bg-[var(--dusk)]/60 transition-colors group"
-                      >
-                        <div className="font-medium text-sm text-[var(--cream)] truncate group-hover:text-[var(--neon-cyan)] transition-colors">
-                          {spot.name}
-                        </div>
-                        <div className="flex items-center gap-1.5 font-mono text-[0.55rem] text-[var(--muted)] mt-0.5">
-                          {spot.neighborhood && <span>{spot.neighborhood}</span>}
-                          {showDistance && distance !== null && (
-                            <>
-                              <span className="opacity-40">·</span>
-                              <span className="text-[var(--neon-cyan)]">
-                                {distance < 0.1 ? "< 0.1" : distance.toFixed(1)} mi
-                              </span>
-                            </>
-                          )}
-                        </div>
-                      </Link>
-                    );
-                  })}
-                </div>
-              </CollapsibleSection>
-            ))}
+                      return (
+                        <Link
+                          key={spot.id}
+                          href={portal?.slug ? `/${portal.slug}?spot=${spot.slug}` : `/spots/${spot.slug}`}
+                          scroll={false}
+                          className="group p-3 border border-[var(--twilight)] rounded-lg transition-colors hover:border-[var(--coral)]/50 bg-[var(--void)] text-left"
+                        >
+                          <div className="flex items-start gap-2">
+                            <CategoryIcon
+                              type={spot.spot_type || "restaurant"}
+                              size={16}
+                              className="mt-0.5 flex-shrink-0"
+                            />
+                            <div className="min-w-0 flex-1">
+                              <h3 className="text-[var(--cream)] text-sm font-medium truncate group-hover:text-[var(--coral)] transition-colors">
+                                {spot.name}
+                              </h3>
+                              <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                                <p className="text-[0.65rem] text-[var(--muted)] font-mono uppercase tracking-wider">
+                                  {SPOT_TYPE_LABELS[spot.spot_type || ""] || spot.spot_type}
+                                </p>
+                                {spotWithHours.closesAt && (
+                                  <span className="text-[0.6rem] text-[var(--neon-amber)] font-mono">
+                                    til {formatCloseTime(spotWithHours.closesAt)}
+                                  </span>
+                                )}
+                                {showDistance && distance !== null && (
+                                  <span className="text-[0.6rem] text-[var(--neon-cyan)] font-mono">
+                                    {distance < 0.1 ? "< 0.1" : distance.toFixed(1)} mi
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                </CollapsibleSection>
+              ))}
+            </div>
 
             {/* Neighborhood Grid - at bottom */}
-            <div className="mt-6 pt-6 border-t border-[var(--twilight)]/30">
+            <div className="mt-8 pt-6 border-t border-[var(--twilight)]/30">
               <h3 className="font-mono text-xs text-[var(--muted)] uppercase tracking-wider mb-3">Browse by Neighborhood</h3>
               <NeighborhoodGrid
                 neighborhoods={NEIGHBORHOODS}
