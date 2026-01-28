@@ -19,7 +19,7 @@ interface FeedShellProps {
 const TABS: { key: FeedTab; label: string; authRequired: boolean }[] = [
   { key: "curated", label: "Curated", authRequired: false },
   { key: "foryou", label: "For You", authRequired: true },
-  { key: "activity", label: "Activity", authRequired: true },
+  { key: "activity", label: "Your People", authRequired: true },
 ];
 
 // Loading skeleton for auth-gated content
