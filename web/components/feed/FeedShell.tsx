@@ -3,7 +3,7 @@
 import { Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
-import DashboardFeed from "@/components/dashboard/DashboardFeed";
+import ForYouFeed from "@/components/feed/ForYouFeed";
 import DashboardActivity from "@/components/dashboard/DashboardActivity";
 import Link from "next/link";
 
@@ -204,7 +204,7 @@ function FeedShellInner({ portalSlug, activeTab, curatedContent }: FeedShellProp
       {/* Tab content */}
       {activeTab === "curated" && curatedContent}
 
-      {activeTab === "foryou" && renderProtectedContent("foryou", <DashboardFeed />)}
+      {activeTab === "foryou" && renderProtectedContent("foryou", <ForYouFeed portalSlug={portalSlug} />)}
 
       {activeTab === "activity" && renderProtectedContent("activity", <DashboardActivity />)}
     </div>
