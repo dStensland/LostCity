@@ -86,6 +86,31 @@ export async function GET(request: Request) {
     producerIds: followedProducerIds,
   });
 
+  // Get sources that map to followed producers (for querying events via source relationship)
+  // This is more reliable than querying events.producer_id directly, since that field
+  // may not be populated for all events
+  let producerSourceIds: number[] = [];
+  const sourceProducerMap: Record<number, string> = {};
+
+  if (followedProducerIds.length > 0) {
+    const { data: producerSources } = await supabase
+      .from("sources")
+      .select("id, producer_id")
+      .in("producer_id", followedProducerIds);
+
+    if (producerSources) {
+      producerSourceIds = producerSources.map((s: { id: number }) => s.id);
+      for (const source of producerSources as { id: number; producer_id: string }[]) {
+        sourceProducerMap[source.id] = source.producer_id;
+      }
+    }
+
+    console.log("[Feed API] Producer sources found:", {
+      producerSourceIds,
+      sourceProducerMap,
+    });
+  }
+
   // Get friends (mutual follows)
   const { data: following } = await supabase
     .from("follows")
@@ -163,6 +188,7 @@ export async function GET(request: Request) {
       image_url,
       ticket_url,
       producer_id,
+      source_id,
       portal_id,
       venue:venues(id, name, neighborhood, slug)
     `)
@@ -198,7 +224,7 @@ export async function GET(request: Request) {
   // (the main query might miss them due to the limit)
   let followedEventsData: typeof eventsData = [];
 
-  if (followedVenueIds.length > 0 || followedProducerIds.length > 0) {
+  if (followedVenueIds.length > 0 || followedProducerIds.length > 0 || producerSourceIds.length > 0) {
     const eventSelect = `
       id,
       title,
@@ -212,23 +238,44 @@ export async function GET(request: Request) {
       image_url,
       ticket_url,
       producer_id,
+      source_id,
       portal_id,
       venue:venues(id, name, neighborhood, slug)
     `;
 
-    // Fetch events from followed producers
-    if (followedProducerIds.length > 0) {
-      const { data: producerEvents } = await supabase
-        .from("events")
-        .select(eventSelect)
-        .in("producer_id", followedProducerIds)
-        .gte("start_date", today)
-        .is("canonical_event_id", null)
-        .order("start_date", { ascending: true })
-        .limit(20);
+    // Fetch events from followed producers - query by both producer_id and source_id
+    // This catches events even if producer_id isn't directly set on the event
+    if (followedProducerIds.length > 0 || producerSourceIds.length > 0) {
+      // First try direct producer_id match
+      if (followedProducerIds.length > 0) {
+        const { data: producerEvents } = await supabase
+          .from("events")
+          .select(eventSelect)
+          .in("producer_id", followedProducerIds)
+          .gte("start_date", today)
+          .is("canonical_event_id", null)
+          .order("start_date", { ascending: true })
+          .limit(20);
 
-      if (producerEvents) {
-        followedEventsData = [...followedEventsData, ...producerEvents];
+        if (producerEvents) {
+          followedEventsData = [...followedEventsData, ...producerEvents];
+        }
+      }
+
+      // Also fetch by source_id (events may not have producer_id set but source does)
+      if (producerSourceIds.length > 0) {
+        const { data: sourceEvents } = await supabase
+          .from("events")
+          .select(eventSelect)
+          .in("source_id", producerSourceIds)
+          .gte("start_date", today)
+          .is("canonical_event_id", null)
+          .order("start_date", { ascending: true })
+          .limit(20);
+
+        if (sourceEvents) {
+          followedEventsData = [...followedEventsData, ...sourceEvents];
+        }
       }
     }
 
@@ -249,9 +296,62 @@ export async function GET(request: Request) {
     }
 
     console.log("[Feed API] Followed events fetched:", {
-      producerEvents: followedEventsData.filter(e => e.producer_id && followedProducerIds.includes(e.producer_id)).length,
-      venueEvents: followedEventsData.filter(e => e.venue && followedVenueIds.includes((e.venue as { id: number }).id)).length,
+      totalCount: followedEventsData.length,
+      producerSourceIds: producerSourceIds,
     });
+  }
+
+  // Fetch events from favorite neighborhoods (separate from followed venues/producers)
+  let neighborhoodEventsData: typeof eventsData = [];
+  const favoriteNeighborhoods = prefs?.favorite_neighborhoods || [];
+
+  if (favoriteNeighborhoods.length > 0) {
+    // First get venue IDs in favorite neighborhoods
+    const { data: neighborhoodVenues } = await supabase
+      .from("venues")
+      .select("id")
+      .in("neighborhood", favoriteNeighborhoods);
+
+    const neighborhoodVenueIds = (neighborhoodVenues || []).map((v: { id: number }) => v.id);
+
+    if (neighborhoodVenueIds.length > 0) {
+      const eventSelect = `
+        id,
+        title,
+        start_date,
+        start_time,
+        is_all_day,
+        is_free,
+        price_min,
+        price_max,
+        category,
+        image_url,
+        ticket_url,
+        producer_id,
+        source_id,
+        portal_id,
+        venue:venues(id, name, neighborhood, slug)
+      `;
+
+      const { data: neighborhoodEvents } = await supabase
+        .from("events")
+        .select(eventSelect)
+        .in("venue_id", neighborhoodVenueIds)
+        .gte("start_date", today)
+        .is("canonical_event_id", null)
+        .order("start_date", { ascending: true })
+        .limit(30);
+
+      if (neighborhoodEvents) {
+        neighborhoodEventsData = neighborhoodEvents;
+      }
+
+      console.log("[Feed API] Neighborhood events fetched:", {
+        favoriteNeighborhoods,
+        venueCount: neighborhoodVenueIds.length,
+        eventCount: neighborhoodEventsData.length,
+      });
+    }
   }
 
   if (error) {
@@ -262,12 +362,23 @@ export async function GET(request: Request) {
     );
   }
 
-  // Merge followed events with main results, avoiding duplicates
+  // Merge followed events and neighborhood events with main results, avoiding duplicates
   const mainEventIds = new Set((eventsData || []).map((e: { id: number }) => e.id));
   const uniqueFollowedEvents = (followedEventsData || []).filter(
     (e: { id: number }) => !mainEventIds.has(e.id)
   );
-  const mergedEventsData = [...(eventsData || []), ...uniqueFollowedEvents];
+
+  // Add followed events to the set
+  for (const e of uniqueFollowedEvents as { id: number }[]) {
+    mainEventIds.add(e.id);
+  }
+
+  // Add neighborhood events (avoiding duplicates with main + followed)
+  const uniqueNeighborhoodEvents = (neighborhoodEventsData || []).filter(
+    (e: { id: number }) => !mainEventIds.has(e.id)
+  );
+
+  const mergedEventsData = [...(eventsData || []), ...uniqueFollowedEvents, ...uniqueNeighborhoodEvents];
 
   type EventResult = {
     id: number;
@@ -282,6 +393,7 @@ export async function GET(request: Request) {
     image_url: string | null;
     ticket_url: string | null;
     producer_id: string | null;
+    source_id: number | null;
     venue: {
       id: number;
       name: string;
@@ -297,11 +409,21 @@ export async function GET(request: Request) {
 
   // Debug: log events with matching venue/producer
   const eventsWithMatchingVenue = events.filter(e => e.venue?.id && followedVenueIds.includes(e.venue.id));
-  const eventsWithMatchingProducer = events.filter(e => e.producer_id && followedProducerIds.includes(e.producer_id));
+  // Check both direct producer_id and via source mapping
+  const eventsWithMatchingProducer = events.filter(e => {
+    const producerId = e.producer_id || (e.source_id ? sourceProducerMap[e.source_id] : null);
+    return producerId && followedProducerIds.includes(producerId);
+  });
   console.log("[Feed API] Events from query:", {
     total: events.length,
     eventsFromFollowedVenues: eventsWithMatchingVenue.map(e => ({ id: e.id, title: e.title, venueId: e.venue?.id })),
-    eventsFromFollowedProducers: eventsWithMatchingProducer.map(e => ({ id: e.id, title: e.title, producerId: e.producer_id })),
+    eventsFromFollowedProducers: eventsWithMatchingProducer.map(e => ({
+      id: e.id,
+      title: e.title,
+      producerId: e.producer_id,
+      sourceId: e.source_id,
+      sourceProducerId: e.source_id ? sourceProducerMap[e.source_id] : null,
+    })),
   });
 
   // Score and sort events by relevance
@@ -336,8 +458,9 @@ export async function GET(request: Request) {
       });
     }
 
-    // Boost for followed producers
-    if (event.producer_id && followedProducerIds.includes(event.producer_id)) {
+    // Boost for followed producers - check both direct producer_id and via source mapping
+    const eventProducerId = event.producer_id || (event.source_id ? sourceProducerMap[event.source_id] : null);
+    if (eventProducerId && followedProducerIds.includes(eventProducerId)) {
       score += 45;
       reasons.push({
         type: "followed_producer",
