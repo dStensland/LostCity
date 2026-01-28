@@ -75,6 +75,29 @@ export default async function FollowingPage({ params }: Props) {
       neighborhood: string | null;
     }>;
 
+  // Get producers/orgs they're following
+  // Note: followed_producer_id references event_producers table
+  const { data: producerFollowsData } = await supabase
+    .from("follows")
+    .select(`
+      followed_producer_id,
+      producer:event_producers(
+        id, name, slug, org_type
+      )
+    `)
+    .eq("follower_id", profile.id)
+    .not("followed_producer_id", "is", null)
+    .order("created_at", { ascending: false });
+
+  const followedProducers = (producerFollowsData || [])
+    .map((f: { producer: unknown }) => f.producer)
+    .filter(Boolean) as Array<{
+      id: string;
+      name: string;
+      slug: string;
+      org_type: string | null;
+    }>;
+
   return (
     <div className="min-h-screen">
       <UnifiedHeader />
@@ -109,7 +132,7 @@ export default async function FollowingPage({ params }: Props) {
 
         {/* Venues */}
         {followedVenues.length > 0 && (
-          <section>
+          <section className="mb-8">
             <h2 className="font-mono text-xs text-[var(--muted)] uppercase tracking-wider mb-4">
               Venues
             </h2>
@@ -142,7 +165,41 @@ export default async function FollowingPage({ params }: Props) {
           </section>
         )}
 
-        {following.length === 0 && followedVenues.length === 0 && (
+        {/* Producers/Orgs */}
+        {followedProducers.length > 0 && (
+          <section>
+            <h2 className="font-mono text-xs text-[var(--muted)] uppercase tracking-wider mb-4">
+              Organizations
+            </h2>
+            <div className="divide-y divide-[var(--twilight)]">
+              {followedProducers.map((producer) => (
+                <Link
+                  key={producer.id}
+                  href={`/community/${producer.slug}`}
+                  className="py-4 flex items-center gap-4 hover:bg-[var(--dusk)] -mx-4 px-4 transition-colors"
+                >
+                  <div className="w-12 h-12 rounded-lg bg-[var(--twilight)] flex items-center justify-center flex-shrink-0">
+                    <svg className="w-6 h-6 text-[var(--muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                    </svg>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-mono text-sm text-[var(--cream)]">
+                      {producer.name}
+                    </p>
+                    {producer.org_type && (
+                      <p className="font-mono text-xs text-[var(--muted)] capitalize">
+                        {producer.org_type.replace(/_/g, " ")}
+                      </p>
+                    )}
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {following.length === 0 && followedVenues.length === 0 && followedProducers.length === 0 && (
           <p className="font-mono text-sm text-[var(--muted)] py-8 text-center">
             Not following anyone yet
           </p>

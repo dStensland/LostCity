@@ -357,6 +357,16 @@ export async function GET(request: Request) {
         prefs?.favorite_neighborhoods?.length ||
         prefs?.favorite_vibes?.length
       ),
+      // Debug info - check browser network tab to see this
+      _debug: {
+        followedVenueIds,
+        followedProducerIds,
+        totalEventsFromQuery: events.length,
+        matchedVenueEvents: eventsWithMatchingVenue.length,
+        matchedProducerEvents: eventsWithMatchingProducer.length,
+        portalId,
+        portalFilters,
+      },
     },
     {
       headers: {

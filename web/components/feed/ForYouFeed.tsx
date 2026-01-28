@@ -127,6 +127,19 @@ export default function ForYouFeed({ portalSlug }: ForYouFeedProps) {
       const prefsData = prefsRes.ok ? await prefsRes.json() : null;
 
       if (mountedRef.current) {
+        // Debug logging - visible in browser console
+        console.log("[ForYouFeed] API response:", {
+          totalEvents: feedData.events?.length || 0,
+          hasPreferences: feedData.hasPreferences,
+          eventsWithVenueReason: feedData.events?.filter((e: FeedEvent) =>
+            e.reasons?.some((r) => r.type === "followed_venue")
+          ).length || 0,
+          eventsWithProducerReason: feedData.events?.filter((e: FeedEvent) =>
+            e.reasons?.some((r) => r.type === "followed_producer")
+          ).length || 0,
+          preferences: prefsData,
+        });
+
         setEvents(feedData.events || []);
         setHasPreferences(feedData.hasPreferences);
         setTrendingEvents(trendingData.events || []);
