@@ -2,8 +2,8 @@
 
 import { useState, memo } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import type { Event } from "@/lib/supabase";
+import { AvatarStack } from "./UserAvatar";
 import { formatTimeSplit, formatSmartDate } from "@/lib/formats";
 import CategoryIcon, { getCategoryColor } from "./CategoryIcon";
 import LazyImage from "./LazyImage";
@@ -256,28 +256,17 @@ function EventCard({ event, index = 0, skipAnimation = false, portalSlug, friend
           {/* Friends going row - elevated above details for social proof */}
           {friendsGoing.length > 0 && (
             <div className="flex items-center gap-2 mt-1.5">
-              {/* Avatar stack - larger for visibility */}
-              <div className="flex -space-x-2">
-                {friendsGoing.slice(0, 3).map((friend) => (
-                  friend.user.avatar_url ? (
-                    <Image
-                      key={friend.user_id}
-                      src={friend.user.avatar_url}
-                      alt={friend.user.display_name || friend.user.username}
-                      width={20}
-                      height={20}
-                      className="w-5 h-5 rounded-full border-2 border-[var(--void)] object-cover"
-                    />
-                  ) : (
-                    <div
-                      key={friend.user_id}
-                      className="w-5 h-5 rounded-full border-2 border-[var(--void)] bg-[var(--neon-cyan)] flex items-center justify-center text-[0.5rem] font-bold text-[var(--void)]"
-                    >
-                      {(friend.user.display_name || friend.user.username)[0].toUpperCase()}
-                    </div>
-                  )
-                ))}
-              </div>
+              {/* Neon avatar stack */}
+              <AvatarStack
+                users={friendsGoing.map((f) => ({
+                  id: f.user_id,
+                  name: f.user.display_name || f.user.username,
+                  avatar_url: f.user.avatar_url,
+                }))}
+                max={3}
+                size="xs"
+                showCount={friendsGoing.length > 3}
+              />
               <span className="text-xs text-[var(--neon-cyan)] font-medium">
                 {friendsGoing.length === 1 ? (
                   <>

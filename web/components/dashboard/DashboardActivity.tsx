@@ -2,8 +2,8 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { useAuth } from "@/lib/auth-context";
+import UserAvatar, { AvatarStack } from "@/components/UserAvatar";
 import { useToast } from "@/components/Toast";
 import { useDebounce } from "@/lib/hooks/useDebounce";
 import FriendButton from "@/components/FriendButton";
@@ -369,19 +369,11 @@ export default function DashboardActivity() {
                   className="flex items-center gap-3 p-3 rounded-lg bg-[var(--dusk)] border border-[var(--twilight)]"
                 >
                   <Link href={`/profile/${profile.username}`} className="flex-shrink-0">
-                    {profile.avatar_url ? (
-                      <Image
-                        src={profile.avatar_url}
-                        alt={profile.display_name || profile.username}
-                        width={40}
-                        height={40}
-                        className="w-10 h-10 rounded-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-10 h-10 rounded-full bg-[var(--coral)] flex items-center justify-center text-[var(--void)] font-bold text-sm">
-                        {(profile.display_name || profile.username).charAt(0).toUpperCase()}
-                      </div>
-                    )}
+                    <UserAvatar
+                      src={profile.avatar_url}
+                      name={profile.display_name || profile.username}
+                      size="md"
+                    />
                   </Link>
 
                   <div className="flex-1 min-w-0">
@@ -430,19 +422,12 @@ export default function DashboardActivity() {
                   className="flex items-center gap-4 p-4 bg-[var(--dusk)] border border-[var(--coral)]/30 rounded-lg"
                 >
                   <Link href={`/profile/${otherUser.username}`}>
-                    {otherUser.avatar_url ? (
-                      <Image
-                        src={otherUser.avatar_url}
-                        alt={otherUser.display_name || otherUser.username}
-                        width={40}
-                        height={40}
-                        className="w-10 h-10 rounded-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-10 h-10 rounded-full bg-[var(--coral)] flex items-center justify-center text-[var(--void)] font-bold text-sm">
-                        {(otherUser.display_name || otherUser.username).charAt(0).toUpperCase()}
-                      </div>
-                    )}
+                    <UserAvatar
+                      src={otherUser.avatar_url}
+                      name={otherUser.display_name || otherUser.username}
+                      size="md"
+                      glow
+                    />
                   </Link>
 
                   <div className="flex-1 min-w-0">
@@ -579,28 +564,16 @@ function GroupedEventCard({ group }: { group: GroupedActivity }) {
       className="block p-4 bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg hover:border-[var(--coral)]/30 transition-all"
     >
       <div className="flex items-center gap-2 mb-2">
-        <div className="flex -space-x-2">
-          {group.users.slice(0, 4).map((user) => (
-            <div
-              key={user.id}
-              className="w-8 h-8 rounded-full bg-[var(--coral)] flex items-center justify-center text-[var(--void)] text-xs font-bold border-2 border-[var(--dusk)]"
-              title={user.display_name || `@${user.username}`}
-            >
-              {user.avatar_url ? (
-                <Image
-                  src={user.avatar_url}
-                  alt={user.display_name || user.username}
-                  width={32}
-                  height={32}
-                  className="w-full h-full rounded-full object-cover"
-                />
-              ) : (
-                (user.display_name || user.username).charAt(0).toUpperCase()
-              )}
-            </div>
-          ))}
-        </div>
-        <span className="font-mono text-xs text-[var(--coral)]">
+        <AvatarStack
+          users={group.users.map((u) => ({
+            id: u.id,
+            name: u.display_name || u.username,
+            avatar_url: u.avatar_url,
+          }))}
+          max={4}
+          size="sm"
+        />
+        <span className="font-mono text-xs text-[var(--neon-cyan)]">
           {group.users.length === 1
             ? `${group.users[0].display_name || `@${group.users[0].username}`} is going`
             : `${group.users.length} friends going`}
@@ -698,21 +671,11 @@ function ActivityCard({ activity }: { activity: ActivityItem }) {
     <div className="p-4 bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg">
       <div className="flex items-start gap-3">
         <Link href={`/profile/${activity.user.username}`} className="flex-shrink-0">
-          {activity.user.avatar_url ? (
-            <Image
-              src={activity.user.avatar_url}
-              alt={activity.user.display_name || activity.user.username}
-              width={40}
-              height={40}
-              className="w-10 h-10 rounded-full object-cover border border-[var(--twilight)]"
-            />
-          ) : (
-            <div className="w-10 h-10 rounded-full bg-[var(--coral)] flex items-center justify-center border border-[var(--twilight)]">
-              <span className="font-mono text-sm font-bold text-[var(--void)]">
-                {(activity.user.display_name || activity.user.username).charAt(0).toUpperCase()}
-              </span>
-            </div>
-          )}
+          <UserAvatar
+            src={activity.user.avatar_url}
+            name={activity.user.display_name || activity.user.username}
+            size="md"
+          />
         </Link>
 
         <div className="flex-1 min-w-0">
@@ -756,23 +719,15 @@ function FriendsList({ friends }: { friends: Profile[] }) {
         <Link
           key={friend.id}
           href={`/profile/${friend.username}`}
-          className="flex items-center gap-3 p-2 rounded-lg hover:bg-[var(--twilight)]/30 transition-colors"
+          className="flex items-center gap-3 p-2 rounded-lg hover:bg-[var(--twilight)]/30 transition-colors group"
         >
-          {friend.avatar_url ? (
-            <Image
-              src={friend.avatar_url}
-              alt={friend.display_name || friend.username}
-              width={32}
-              height={32}
-              className="w-8 h-8 rounded-full object-cover"
-            />
-          ) : (
-            <div className="w-8 h-8 rounded-full bg-[var(--coral)] flex items-center justify-center text-[var(--void)] text-xs font-bold">
-              {(friend.display_name || friend.username).charAt(0).toUpperCase()}
-            </div>
-          )}
+          <UserAvatar
+            src={friend.avatar_url}
+            name={friend.display_name || friend.username}
+            size="sm"
+          />
           <div className="flex-1 min-w-0">
-            <span className="block text-sm text-[var(--cream)] truncate">
+            <span className="block text-sm text-[var(--cream)] truncate group-hover:text-[var(--coral)] transition-colors">
               {friend.display_name || `@${friend.username}`}
             </span>
           </div>
