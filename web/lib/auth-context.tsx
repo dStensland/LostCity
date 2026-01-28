@@ -252,6 +252,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => {
       isMountedRef.current = false;
       isCurrentEffect = false;
+      initializedRef.current = false; // Reset so remount can re-initialize
       subscription.unsubscribe();
     };
   }, [supabase, fetchProfile]);
