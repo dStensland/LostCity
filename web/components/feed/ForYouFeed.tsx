@@ -1,11 +1,10 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import CategoryIcon from "@/components/CategoryIcon";
 import CollapsibleSection from "@/components/CollapsibleSection";
-import { useAuth } from "@/lib/auth-context";
 import { format, parseISO } from "date-fns";
 import { formatTime } from "@/lib/formats";
 
@@ -102,8 +101,6 @@ interface ForYouFeedProps {
 }
 
 export default function ForYouFeed({ portalSlug }: ForYouFeedProps) {
-  const { user } = useAuth();
-
   const [events, setEvents] = useState<Event[]>([]);
   const [trendingEvents, setTrendingEvents] = useState<TrendingEvent[]>([]);
   const [preferences, setPreferences] = useState<UserPreferences | null>(null);
@@ -151,16 +148,16 @@ export default function ForYouFeed({ portalSlug }: ForYouFeedProps) {
   }, [portalSlug]);
 
   useEffect(() => {
-    if (!user) return;
-
+    // FeedShell already gates this component behind auth check,
+    // so we can safely load the feed when mounted
     const controller = new AbortController();
     loadFeed(controller.signal);
 
     return () => controller.abort();
-  }, [user, loadFeed]);
+  }, [loadFeed]);
 
   // Group events by section
-  const groupedEvents = useCallback(() => {
+  const grouped = useMemo(() => {
     const seenEventIds = new Set<number>();
 
     // Events matching user's favorite categories (that don't have a more specific reason)
@@ -216,8 +213,6 @@ export default function ForYouFeed({ portalSlug }: ForYouFeedProps) {
       yourNeighborhoods: dedupeSection(yourNeighborhoods).slice(0, 6),
     };
   }, [events, preferences]);
-
-  const grouped = groupedEvents();
 
   // Check if any sections have content
   const hasSections =
