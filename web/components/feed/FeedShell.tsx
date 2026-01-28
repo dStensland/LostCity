@@ -150,6 +150,7 @@ function FeedShellInner({ portalSlug, activeTab, curatedContent }: FeedShellProp
 
   // Render content based on auth state for protected tabs
   const renderProtectedContent = (children: React.ReactNode) => {
+    console.log("[FeedShell] renderProtectedContent:", { authLoading, timedOut, hasUser: !!user });
     // If auth is still loading but hasn't timed out, show skeleton
     if (authLoading && !timedOut) {
       return <AuthLoadingSkeleton />;

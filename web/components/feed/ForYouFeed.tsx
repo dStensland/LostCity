@@ -96,6 +96,8 @@ function convertFriendsGoing(
 }
 
 export default function ForYouFeed({ portalSlug }: ForYouFeedProps) {
+  console.log("[ForYouFeed] Component mounting, portalSlug:", portalSlug);
+
   const [events, setEvents] = useState<FeedEvent[]>([]);
   const [trendingEvents, setTrendingEvents] = useState<TrendingEvent[]>([]);
   const [preferences, setPreferences] = useState<UserPreferences | null>(null);
@@ -105,6 +107,7 @@ export default function ForYouFeed({ portalSlug }: ForYouFeedProps) {
   const mountedRef = useRef(true);
 
   const loadFeed = useCallback(async () => {
+    console.log("[ForYouFeed] loadFeed called");
     try {
       setError(null);
       setLoading(true);
