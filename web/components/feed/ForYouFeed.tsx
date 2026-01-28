@@ -138,7 +138,21 @@ export default function ForYouFeed({ portalSlug }: ForYouFeedProps) {
             e.reasons?.some((r) => r.type === "followed_producer")
           ).length || 0,
           preferences: prefsData,
+          // Show debug info from API
+          _debug: feedData._debug,
         });
+
+        // Log first few events with their reasons for debugging
+        if (feedData.events?.length > 0) {
+          console.log("[ForYouFeed] Sample events with reasons:",
+            feedData.events.slice(0, 5).map((e: FeedEvent) => ({
+              id: e.id,
+              title: e.title.substring(0, 30),
+              reasons: e.reasons,
+              venueId: e.venue?.id,
+            }))
+          );
+        }
 
         setEvents(feedData.events || []);
         setHasPreferences(feedData.hasPreferences);
