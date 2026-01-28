@@ -72,6 +72,11 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "**.supabase.co",
       },
+      // Google profile pictures (OAuth)
+      {
+        protocol: "https",
+        hostname: "lh3.googleusercontent.com",
+      },
       {
         protocol: "https",
         hostname: "img.evbuc.com",
