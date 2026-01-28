@@ -72,154 +72,162 @@ export async function GET(request: Request) {
 
 // POST /api/friend-requests - Create a friend request
 export async function POST(request: Request) {
-  const user = await getUser();
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  try {
+    const user = await getUser();
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
-  const body = await request.json();
-  const { inviter_id, inviter_username } = body as {
-    inviter_id?: string;
-    inviter_username?: string;
-  };
+    const body = await request.json();
+    const { inviter_id, inviter_username } = body as {
+      inviter_id?: string;
+      inviter_username?: string;
+    };
 
-  // Validate input
-  if (inviter_id && !isValidUUID(inviter_id)) {
-    return validationError("Invalid inviter_id format");
-  }
-  if (inviter_username && !isValidString(inviter_username, 3, 30)) {
-    return validationError("Invalid username format");
-  }
+    // Validate input
+    if (inviter_id && !isValidUUID(inviter_id)) {
+      return validationError("Invalid inviter_id format");
+    }
+    if (inviter_username && !isValidString(inviter_username, 3, 30)) {
+      return validationError("Invalid username format");
+    }
 
-  const supabase = await createClient();
+    const supabase = await createClient();
 
-  // Resolve inviter_id from username if needed
-  let resolvedInviterId = inviter_id;
-  if (!resolvedInviterId && inviter_username) {
-    const { data: inviterProfile } = await supabase
-      .from("profiles")
+    // Resolve inviter_id from username if needed
+    let resolvedInviterId = inviter_id;
+    if (!resolvedInviterId && inviter_username) {
+      const { data: inviterProfile } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("username", inviter_username.toLowerCase())
+        .maybeSingle();
+
+      if (!inviterProfile) {
+        return NextResponse.json({ error: "Inviter not found" }, { status: 404 });
+      }
+      resolvedInviterId = (inviterProfile as { id: string }).id;
+    }
+
+    if (!resolvedInviterId) {
+      return NextResponse.json(
+        { error: "inviter_id or inviter_username required" },
+        { status: 400 }
+      );
+    }
+
+    // Can't send request to self
+    if (resolvedInviterId === user.id) {
+      return NextResponse.json(
+        { error: "Cannot send friend request to yourself" },
+        { status: 400 }
+      );
+    }
+
+    // Check if already friends (mutual follows)
+    const { data: follows } = await supabase
+      .from("follows")
+      .select("id, follower_id, followed_user_id")
+      .or(
+        `and(follower_id.eq.${user.id},followed_user_id.eq.${resolvedInviterId}),and(follower_id.eq.${resolvedInviterId},followed_user_id.eq.${user.id})`
+      );
+
+    type FollowRow = { follower_id: string; followed_user_id: string };
+    const followsData = follows as FollowRow[] | null;
+    const userFollowsInviter = followsData?.some(
+      (f) => f.follower_id === user.id && f.followed_user_id === resolvedInviterId
+    );
+    const inviterFollowsUser = followsData?.some(
+      (f) => f.follower_id === resolvedInviterId && f.followed_user_id === user.id
+    );
+
+    if (userFollowsInviter && inviterFollowsUser) {
+      return NextResponse.json(
+        { error: "You are already friends" },
+        { status: 400 }
+      );
+    }
+
+    // Check if blocked
+    const { data: block } = await supabase
+      .from("user_blocks" as never)
       .select("id")
-      .eq("username", inviter_username.toLowerCase())
+      .or(
+        `and(blocker_id.eq.${user.id},blocked_id.eq.${resolvedInviterId}),and(blocker_id.eq.${resolvedInviterId},blocked_id.eq.${user.id})`
+      )
       .maybeSingle();
 
-    if (!inviterProfile) {
-      return NextResponse.json({ error: "Inviter not found" }, { status: 404 });
+    if (block) {
+      return NextResponse.json(
+        { error: "Unable to send friend request" },
+        { status: 400 }
+      );
     }
-    resolvedInviterId = (inviterProfile as { id: string }).id;
-  }
 
-  if (!resolvedInviterId) {
-    return NextResponse.json(
-      { error: "inviter_id or inviter_username required" },
-      { status: 400 }
-    );
-  }
+    // Check for existing pending request in either direction
+    const { data: existingRequest } = await supabase
+      .from("friend_requests" as never)
+      .select("id, status, inviter_id")
+      .eq("status", "pending")
+      .or(
+        `and(inviter_id.eq.${user.id},invitee_id.eq.${resolvedInviterId}),and(inviter_id.eq.${resolvedInviterId},invitee_id.eq.${user.id})`
+      )
+      .maybeSingle();
 
-  // Can't send request to self
-  if (resolvedInviterId === user.id) {
-    return NextResponse.json(
-      { error: "Cannot send friend request to yourself" },
-      { status: 400 }
-    );
-  }
+    type ExistingRequestType = { id: string; status: string; inviter_id: string } | null;
+    const existingReq = existingRequest as ExistingRequestType;
 
-  // Check if already friends (mutual follows)
-  const { data: follows } = await supabase
-    .from("follows")
-    .select("id, follower_id, followed_user_id")
-    .or(
-      `and(follower_id.eq.${user.id},followed_user_id.eq.${resolvedInviterId}),and(follower_id.eq.${resolvedInviterId},followed_user_id.eq.${user.id})`
-    );
+    if (existingReq) {
+      // If there's a pending request FROM the inviter to us, auto-accept it
+      if (existingReq.inviter_id === resolvedInviterId) {
+        const { error: acceptError } = await supabase
+          .from("friend_requests" as never)
+          .update({ status: "accepted" } as never)
+          .eq("id", existingReq.id);
 
-  type FollowRow = { follower_id: string; followed_user_id: string };
-  const followsData = follows as FollowRow[] | null;
-  const userFollowsInviter = followsData?.some(
-    (f) => f.follower_id === user.id && f.followed_user_id === resolvedInviterId
-  );
-  const inviterFollowsUser = followsData?.some(
-    (f) => f.follower_id === resolvedInviterId && f.followed_user_id === user.id
-  );
+        if (acceptError) {
+          return errorResponse(acceptError, "friend-requests:POST:accept");
+        }
 
-  if (userFollowsInviter && inviterFollowsUser) {
-    return NextResponse.json(
-      { error: "You are already friends" },
-      { status: 400 }
-    );
-  }
-
-  // Check if blocked
-  const { data: block } = await supabase
-    .from("user_blocks" as never)
-    .select("id")
-    .or(
-      `and(blocker_id.eq.${user.id},blocked_id.eq.${resolvedInviterId}),and(blocker_id.eq.${resolvedInviterId},blocked_id.eq.${user.id})`
-    )
-    .maybeSingle();
-
-  if (block) {
-    return NextResponse.json(
-      { error: "Unable to send friend request" },
-      { status: 400 }
-    );
-  }
-
-  // Check for existing pending request in either direction
-  const { data: existingRequest } = await supabase
-    .from("friend_requests" as never)
-    .select("id, status, inviter_id")
-    .eq("status", "pending")
-    .or(
-      `and(inviter_id.eq.${user.id},invitee_id.eq.${resolvedInviterId}),and(inviter_id.eq.${resolvedInviterId},invitee_id.eq.${user.id})`
-    )
-    .maybeSingle();
-
-  type ExistingRequestType = { id: string; status: string; inviter_id: string } | null;
-  const existingReq = existingRequest as ExistingRequestType;
-
-  if (existingReq) {
-    // If there's a pending request FROM the inviter to us, auto-accept it
-    if (existingReq.inviter_id === resolvedInviterId) {
-      const { error: acceptError } = await supabase
-        .from("friend_requests" as never)
-        .update({ status: "accepted" } as never)
-        .eq("id", existingReq.id);
-
-      if (acceptError) {
-        return errorResponse(acceptError, "friend-requests:POST:accept");
+        return NextResponse.json({
+          success: true,
+          message: "Friend request accepted - you are now friends",
+          accepted: true,
+        });
       }
 
-      return NextResponse.json({
-        success: true,
-        message: "Friend request accepted - you are now friends",
-        accepted: true,
-      });
+      return NextResponse.json(
+        { error: "Friend request already pending" },
+        { status: 400 }
+      );
     }
 
+    // Create the friend request
+    // The inviter is the person whose link was clicked
+    // The invitee is the current user (who clicked the link)
+    const { data: newRequest, error: insertError } = await supabase
+      .from("friend_requests" as never)
+      .insert({
+        inviter_id: resolvedInviterId,
+        invitee_id: user.id,
+        status: "pending",
+      } as never)
+      .select()
+      .maybeSingle();
+
+    if (insertError) {
+      return errorResponse(insertError, "friend-requests:POST:create");
+    }
+
+    return NextResponse.json({
+      success: true,
+      request: newRequest,
+    });
+  } catch (err) {
+    console.error("friend-requests:POST unexpected error:", err);
     return NextResponse.json(
-      { error: "Friend request already pending" },
-      { status: 400 }
+      { error: "An internal error occurred" },
+      { status: 500 }
     );
   }
-
-  // Create the friend request
-  // The inviter is the person whose link was clicked
-  // The invitee is the current user (who clicked the link)
-  const { data: newRequest, error: insertError } = await supabase
-    .from("friend_requests" as never)
-    .insert({
-      inviter_id: resolvedInviterId,
-      invitee_id: user.id,
-      status: "pending",
-    } as never)
-    .select()
-    .maybeSingle();
-
-  if (insertError) {
-    return errorResponse(insertError, "friend-requests:POST:create");
-  }
-
-  return NextResponse.json({
-    success: true,
-    request: newRequest,
-  });
 }
