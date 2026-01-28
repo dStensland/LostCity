@@ -477,12 +477,15 @@ export default function DashboardActivity() {
         </section>
       )}
 
-      {/* Other Activity */}
+      {/* Other Activity - discoveries, follows, saves from friends */}
       {otherActivities.length > 0 && (
         <section>
-          <h2 className="font-mono text-sm font-medium text-[var(--cream)] uppercase tracking-wider mb-4">
-            Recent Activity
+          <h2 className="font-mono text-sm font-medium text-[var(--cream)] uppercase tracking-wider mb-1">
+            What Friends Are Into
           </h2>
+          <p className="text-xs text-[var(--muted)] mb-4">
+            Events they&apos;re recommending, venues they follow
+          </p>
           <div className="space-y-3">
             {otherActivities.map((activity) => (
               <ActivityCard key={activity.id} activity={activity} />
@@ -595,110 +598,182 @@ function GroupedEventCard({ group }: { group: GroupedActivity }) {
 function ActivityCard({ activity }: { activity: ActivityItem }) {
   const timeAgo = formatDistanceToNow(new Date(activity.created_at), { addSuffix: true });
 
-  const getActivityText = () => {
+  // Get activity icon and accent color
+  const getActivityStyle = () => {
     switch (activity.activity_type) {
       case "follow":
-        return activity.target_user ? (
-          <>
-            started following{" "}
-            <Link
-              href={`/profile/${activity.target_user.username}`}
-              className="font-medium text-[var(--cream)] hover:text-[var(--coral)]"
-            >
-              {activity.target_user.display_name || `@${activity.target_user.username}`}
-            </Link>
-          </>
-        ) : activity.venue?.slug ? (
-          <>
-            started following{" "}
-            <Link
-              href={`/spots/${activity.venue.slug}`}
-              className="font-medium text-[var(--cream)] hover:text-[var(--coral)]"
-            >
-              {activity.venue.name}
-            </Link>
-          </>
-        ) : (
-          "started following someone"
-        );
-
+        return { icon: "👋", color: "var(--neon-cyan)", label: "followed" };
       case "recommendation":
-        return activity.event ? (
-          <>
-            recommended{" "}
-            <Link
-              href={`/events/${activity.event.id}`}
-              className="font-medium text-[var(--cream)] hover:text-[var(--coral)]"
-            >
-              {activity.event.title}
-            </Link>
-          </>
-        ) : activity.venue?.slug ? (
-          <>
-            recommended{" "}
-            <Link
-              href={`/spots/${activity.venue.slug}`}
-              className="font-medium text-[var(--cream)] hover:text-[var(--coral)]"
-            >
-              {activity.venue.name}
-            </Link>
-          </>
-        ) : (
-          "recommended something"
-        );
-
+        return { icon: "⭐", color: "var(--coral)", label: "recommends" };
       case "save":
-        return activity.event ? (
-          <>
-            saved{" "}
-            <Link
-              href={`/events/${activity.event.id}`}
-              className="font-medium text-[var(--cream)] hover:text-[var(--coral)]"
-            >
-              {activity.event.title}
-            </Link>
-          </>
-        ) : (
-          "saved something"
-        );
-
+        return { icon: "🔖", color: "var(--neon-magenta)", label: "saved" };
       default:
-        return null;
+        return { icon: "•", color: "var(--muted)", label: "" };
     }
   };
 
-  return (
-    <div className="p-4 bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg">
-      <div className="flex items-start gap-3">
-        <Link href={`/profile/${activity.user.username}`} className="flex-shrink-0">
+  const style = getActivityStyle();
+
+  // Render event-based activity (recommendation or save)
+  if ((activity.activity_type === "recommendation" || activity.activity_type === "save") && activity.event) {
+    const eventDate = parseISO(activity.event.start_date);
+    const formattedDate = format(eventDate, "EEE, MMM d");
+
+    return (
+      <Link
+        href={`/events/${activity.event.id}`}
+        className="block p-4 bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg hover:border-[var(--coral)]/30 transition-all group"
+      >
+        {/* Header: who did what */}
+        <div className="flex items-center gap-2 mb-3">
           <UserAvatar
             src={activity.user.avatar_url}
             name={activity.user.display_name || activity.user.username}
-            size="md"
+            size="xs"
           />
-        </Link>
-
-        <div className="flex-1 min-w-0">
-          <p className="text-sm text-[var(--soft)]">
-            <Link
-              href={`/profile/${activity.user.username}`}
-              className="font-medium text-[var(--cream)] hover:text-[var(--coral)] transition-colors"
-            >
+          <span className="text-xs text-[var(--muted)]">
+            <span className="text-[var(--soft)]">
               {activity.user.display_name || activity.user.username}
-            </Link>{" "}
-            {getActivityText()}
-          </p>
-
-          {activity.metadata?.note && (
-            <p className="mt-2 text-sm text-[var(--muted)] italic">
-              &ldquo;{activity.metadata.note}&rdquo;
-            </p>
-          )}
-
-          <p className="mt-1 font-mono text-[0.65rem] text-[var(--muted)]">
+            </span>
+            {" "}{style.label}
+          </span>
+          <span className="ml-auto font-mono text-[0.6rem] text-[var(--muted)]">
             {timeAgo}
-          </p>
+          </span>
         </div>
+
+        {/* Event details - the main content */}
+        <h4 className="font-medium text-[var(--cream)] group-hover:text-[var(--coral)] transition-colors line-clamp-1">
+          {activity.event.title}
+        </h4>
+        <p className="font-mono text-xs text-[var(--muted)] mt-1">
+          {formattedDate}
+          {activity.event.venue && ` · ${activity.event.venue.name}`}
+        </p>
+
+        {/* Recommendation note if present */}
+        {activity.metadata?.note && (
+          <p className="mt-2 text-sm text-[var(--soft)] italic border-l-2 border-[var(--coral)]/30 pl-2">
+            &ldquo;{activity.metadata.note}&rdquo;
+          </p>
+        )}
+
+        {/* CTA hint */}
+        <div className="mt-3 flex items-center gap-1 text-xs font-mono" style={{ color: style.color }}>
+          <span>Check it out</span>
+          <svg className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+        </div>
+      </Link>
+    );
+  }
+
+  // Render venue-based activity (follow or recommendation)
+  if (activity.venue?.slug) {
+    return (
+      <Link
+        href={`/spots/${activity.venue.slug}`}
+        className="block p-4 bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg hover:border-[var(--neon-cyan)]/30 transition-all group"
+      >
+        {/* Header */}
+        <div className="flex items-center gap-2 mb-2">
+          <UserAvatar
+            src={activity.user.avatar_url}
+            name={activity.user.display_name || activity.user.username}
+            size="xs"
+          />
+          <span className="text-xs text-[var(--muted)]">
+            <span className="text-[var(--soft)]">
+              {activity.user.display_name || activity.user.username}
+            </span>
+            {" "}now follows
+          </span>
+          <span className="ml-auto font-mono text-[0.6rem] text-[var(--muted)]">
+            {timeAgo}
+          </span>
+        </div>
+
+        {/* Venue info */}
+        <h4 className="font-medium text-[var(--cream)] group-hover:text-[var(--neon-cyan)] transition-colors">
+          {activity.venue.name}
+        </h4>
+        {activity.venue.neighborhood && (
+          <p className="font-mono text-xs text-[var(--muted)] mt-0.5">
+            {activity.venue.neighborhood}
+          </p>
+        )}
+
+        {/* CTA hint */}
+        <div className="mt-2 flex items-center gap-1 text-xs font-mono text-[var(--neon-cyan)]">
+          <span>See their events</span>
+          <svg className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+        </div>
+      </Link>
+    );
+  }
+
+  // Render user follow activity
+  if (activity.activity_type === "follow" && activity.target_user) {
+    return (
+      <div className="p-4 bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg">
+        {/* Header */}
+        <div className="flex items-center gap-2 mb-3">
+          <UserAvatar
+            src={activity.user.avatar_url}
+            name={activity.user.display_name || activity.user.username}
+            size="xs"
+          />
+          <span className="text-xs text-[var(--muted)]">
+            <span className="text-[var(--soft)]">
+              {activity.user.display_name || activity.user.username}
+            </span>
+            {" "}followed someone new
+          </span>
+          <span className="ml-auto font-mono text-[0.6rem] text-[var(--muted)]">
+            {timeAgo}
+          </span>
+        </div>
+
+        {/* Target user card */}
+        <div className="flex items-center gap-3 p-2 -mx-2 rounded-lg hover:bg-[var(--twilight)]/20 transition-colors">
+          <Link href={`/profile/${activity.target_user.username}`}>
+            <UserAvatar
+              src={null}
+              name={activity.target_user.display_name || activity.target_user.username}
+              size="md"
+              glow
+            />
+          </Link>
+          <div className="flex-1 min-w-0">
+            <Link
+              href={`/profile/${activity.target_user.username}`}
+              className="font-medium text-[var(--cream)] hover:text-[var(--coral)] transition-colors block truncate"
+            >
+              {activity.target_user.display_name || `@${activity.target_user.username}`}
+            </Link>
+            <p className="text-xs text-[var(--muted)]">@{activity.target_user.username}</p>
+          </div>
+          <FollowButton targetUserId={activity.target_user.id} size="sm" />
+        </div>
+      </div>
+    );
+  }
+
+  // Fallback for unknown activity types
+  return (
+    <div className="p-4 bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg opacity-60">
+      <div className="flex items-center gap-2">
+        <UserAvatar
+          src={activity.user.avatar_url}
+          name={activity.user.display_name || activity.user.username}
+          size="sm"
+        />
+        <span className="text-sm text-[var(--muted)]">
+          {activity.user.display_name || activity.user.username} did something
+        </span>
       </div>
     </div>
   );
