@@ -6,30 +6,32 @@ import { useLiveEvents } from "@/lib/hooks/useLiveEvents";
 import { usePortal } from "@/lib/portal-context";
 import Link from "next/link";
 import { formatTime } from "@/lib/formats";
-import CategoryIcon, { getCategoryColor } from "@/components/CategoryIcon";
+import { getCategoryColor } from "@/components/CategoryIcon";
 import { NEIGHBORHOODS, type Spot } from "@/lib/spots";
 import UnifiedHeader from "@/components/UnifiedHeader";
+import CollapsibleSection, { CategoryIcons } from "@/components/CollapsibleSection";
 
 // Dynamically import components
 const MapViewWrapper = dynamic(() => import("@/components/MapViewWrapper"), { ssr: false });
 const NeighborhoodGrid = dynamic(() => import("@/components/NeighborhoodGrid"), { ssr: false });
 
-// Categories for grouping - focused on open spots
-const CATEGORIES = [
-  { id: "food_drink", label: "Food & Drinks", eventCategories: ["food_drink", "nightlife"], spotTypes: ["restaurant", "bar", "rooftop", "food_hall"] },
-  { id: "coffee", label: "Coffee & Chill", eventCategories: [], spotTypes: ["coffee_shop", "bookstore"] },
-  { id: "nightlife", label: "Nightlife & Bars", eventCategories: [], spotTypes: ["club", "sports_bar", "brewery", "distillery", "winery", "lgbtq"] },
-  { id: "music", label: "Live Entertainment", eventCategories: ["music", "comedy", "theater"], spotTypes: ["music_venue", "comedy_club", "theater", "cinema"] },
-  { id: "art", label: "Art & Culture", eventCategories: ["art", "film"], spotTypes: ["gallery", "museum", "studio"] },
-  { id: "games", label: "Fun & Games", eventCategories: [], spotTypes: ["games", "eatertainment", "attraction"] },
-  { id: "other", label: "More Places", eventCategories: ["community", "sports", "fitness"], spotTypes: ["coworking", "fitness_center"] },
+// Spot categories matching detail page taxonomy
+const SPOT_CATEGORIES = [
+  { id: "food", label: "Restaurants", spotTypes: ["restaurant", "food_hall", "cooking_school"] },
+  { id: "drinks", label: "Bars", spotTypes: ["bar", "brewery", "distillery", "winery", "rooftop", "sports_bar"] },
+  { id: "nightlife", label: "Clubs", spotTypes: ["club"] },
+  { id: "caffeine", label: "Coffee", spotTypes: ["coffee_shop"] },
+  { id: "fun", label: "Fun", spotTypes: ["games", "eatertainment", "arcade", "karaoke", "attraction"] },
 ] as const;
+
+// Distance filter for GPS mode (miles)
+const NEARBY_RADIUS_MILES = 2;
 
 type UserLocation = { lat: number; lng: number } | null;
 
 export default function PortalHappeningNowPage() {
   const { portal } = usePortal();
-  const { events, loading: eventsLoading, count } = useLiveEvents();
+  const { events, loading: eventsLoading } = useLiveEvents();
   const [userLocation, setUserLocation] = useState<UserLocation>(null);
   const [locationLoading, setLocationLoading] = useState(false);
   const [, setLocationDenied] = useState(false);
@@ -140,46 +142,63 @@ export default function PortalHappeningNowPage() {
     return R * c;
   }, [userLocation]);
 
-  // Group events and spots by category
-  const groupedContent = useMemo(() => {
-    return CATEGORIES.map((cat) => {
-      const eventCats = cat.eventCategories as readonly string[];
+  // Filter spots by distance when GPS is active (no neighborhood selected)
+  const filteredSpots = useMemo(() => {
+    if (!userLocation || selectedNeighborhood) {
+      // Neighborhood mode: return all spots in neighborhood
+      return openSpots;
+    }
+    // GPS mode: filter by distance
+    return openSpots.filter(spot => {
+      if (!spot.lat || !spot.lng) return false;
+      const distance = getDistance(spot.lat, spot.lng);
+      return distance !== null && distance <= NEARBY_RADIUS_MILES;
+    });
+  }, [openSpots, userLocation, selectedNeighborhood, getDistance]);
+
+  // Filter events by distance when GPS is active
+  const filteredEvents = useMemo(() => {
+    if (!userLocation || selectedNeighborhood) {
+      return events;
+    }
+    return events.filter(event => {
+      const venue = event.venue as { lat?: number; lng?: number } | null;
+      if (!venue?.lat || !venue?.lng) return false;
+      const distance = getDistance(venue.lat, venue.lng);
+      return distance !== null && distance <= NEARBY_RADIUS_MILES;
+    });
+  }, [events, userLocation, selectedNeighborhood, getDistance]);
+
+  // Group spots by category
+  const groupedSpots = useMemo(() => {
+    return SPOT_CATEGORIES.map((cat) => {
       const spotCats = cat.spotTypes as readonly string[];
-      const categoryEvents = events.filter((e) =>
-        eventCats.includes(e.category || "")
-      );
-      const categorySpots = openSpots.filter((s) =>
+      const categorySpots = filteredSpots.filter((s) =>
         spotCats.includes(s.spot_type || "")
       );
 
       // Sort by distance if location available
-      if (userLocation) {
-        categoryEvents.sort((a, b) => {
-          const venueA = a.venue as { lat?: number; lng?: number } | null;
-          const venueB = b.venue as { lat?: number; lng?: number } | null;
-          const distA = venueA?.lat && venueA?.lng ? getDistance(venueA.lat, venueA.lng) || 999 : 999;
-          const distB = venueB?.lat && venueB?.lng ? getDistance(venueB.lat, venueB.lng) || 999 : 999;
-          return distA - distB;
-        });
+      if (userLocation && !selectedNeighborhood) {
         categorySpots.sort((a, b) => {
           const distA = a.lat && a.lng ? getDistance(a.lat, a.lng) || 999 : 999;
           const distB = b.lat && b.lng ? getDistance(b.lat, b.lng) || 999 : 999;
           return distA - distB;
         });
+      } else {
+        // Neighborhood mode: sort alphabetically
+        categorySpots.sort((a, b) => a.name.localeCompare(b.name));
       }
 
       return {
         ...cat,
-        events: categoryEvents,
         spots: categorySpots,
-        total: categoryEvents.length + categorySpots.length,
       };
-    }).filter((cat) => cat.total > 0);
-  }, [events, openSpots, userLocation, getDistance]);
+    }).filter((cat) => cat.spots.length > 0);
+  }, [filteredSpots, userLocation, selectedNeighborhood, getDistance]);
 
   // Map events for display
   const mapEvents = useMemo(() => {
-    return events.map((e) => {
+    return filteredEvents.map((e) => {
       const venue = e.venue as Record<string, unknown> | null;
       return {
         ...e,
@@ -200,7 +219,7 @@ export default function PortalHappeningNowPage() {
         category_data: null,
       };
     });
-  }, [events]) as import("@/lib/search").EventWithLocation[];
+  }, [filteredEvents]) as import("@/lib/search").EventWithLocation[];
 
   return (
     <div className="min-h-screen bg-[var(--void)]">
@@ -288,7 +307,10 @@ export default function PortalHappeningNowPage() {
                 style={{ boxShadow: "0 0 6px var(--neon-red)" }}
               />
               <span className="font-mono text-xs text-[var(--muted)]">
-                {count} live · {openSpots.length} open
+                {filteredEvents.length} live · {filteredSpots.length} open
+                {userLocation && !selectedNeighborhood && (
+                  <span className="text-[var(--neon-cyan)]"> (within 2mi)</span>
+                )}
               </span>
             </div>
 
@@ -367,7 +389,7 @@ export default function PortalHappeningNowPage() {
               </div>
             ))}
           </div>
-        ) : groupedContent.length === 0 ? (
+        ) : filteredEvents.length === 0 && groupedSpots.length === 0 ? (
           <div className="text-center py-16">
             <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-[var(--twilight)]/30 flex items-center justify-center">
               <svg className="w-8 h-8 text-[var(--muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -376,7 +398,9 @@ export default function PortalHappeningNowPage() {
             </div>
             <h2 className="text-lg text-[var(--cream)] mb-2">Nothing happening right now</h2>
             <p className="text-[var(--muted)] text-sm max-w-xs mx-auto mb-4">
-              Check back later or browse upcoming events
+              {userLocation && !selectedNeighborhood
+                ? "No spots open within 2 miles. Try selecting a neighborhood instead."
+                : "Check back later or browse upcoming events"}
             </p>
             <Link
               href={`/${portal.slug || "atlanta"}`}
@@ -386,134 +410,123 @@ export default function PortalHappeningNowPage() {
             </Link>
           </div>
         ) : (
-          <div className="space-y-8">
-            {groupedContent.map((category) => (
-              <section key={category.id}>
-                {/* Category header */}
-                <div className="flex items-center gap-2 mb-3">
-                  <CategoryIcon type={category.id} size={18} className="opacity-70" />
-                  <h2 className="font-mono text-sm font-medium text-[var(--cream)]">
-                    {category.label}
-                  </h2>
-                  <span className="font-mono text-xs text-[var(--muted)]">
-                    ({category.total})
-                  </span>
-                </div>
+          <div className="space-y-4">
+            {/* Live Events Section */}
+            {filteredEvents.length > 0 && (
+              <CollapsibleSection
+                title="Live Events"
+                count={filteredEvents.length}
+                defaultOpen={false}
+                category="events"
+                icon={CategoryIcons.events}
+                maxItems={5}
+                totalItems={filteredEvents.length}
+              >
+                <div className="space-y-1.5">
+                  {filteredEvents.map((event) => {
+                    const eventVenue = event.venue as { lat?: number; lng?: number; name?: string } | null;
+                    const distance = eventVenue?.lat && eventVenue?.lng
+                      ? getDistance(eventVenue.lat, eventVenue.lng)
+                      : null;
+                    const categoryColor = event.category ? getCategoryColor(event.category) : null;
+                    const showDistance = userLocation && !selectedNeighborhood;
 
-                {/* Events in this category */}
-                {category.events.length > 0 && (
-                  <div className="mb-3">
-                    <div className="flex items-center gap-1.5 mb-2">
-                      <span
-                        className="w-1.5 h-1.5 rounded-full bg-[var(--neon-red)]"
-                        style={{ boxShadow: "0 0 4px var(--neon-red)" }}
-                      />
-                      <span className="font-mono text-[0.6rem] text-[var(--muted)] uppercase tracking-wider">
-                        Live Events
-                      </span>
-                    </div>
-                    <div className="space-y-1.5">
-                      {category.events.slice(0, 5).map((event) => {
-                        const eventVenue = event.venue as { lat?: number; lng?: number; name?: string } | null;
-                        const distance = eventVenue?.lat && eventVenue?.lng
-                          ? getDistance(eventVenue.lat, eventVenue.lng)
-                          : null;
-                        const categoryColor = event.category ? getCategoryColor(event.category) : null;
-
-                        return (
-                          <Link
-                            key={event.id}
-                            href={portal?.slug ? `/${portal.slug}?event=${event.id}` : `/events/${event.id}`}
-                            scroll={false}
-                            className="flex items-center gap-3 px-3 py-2 rounded-lg border border-[var(--twilight)] bg-[var(--dusk)]/30 hover:bg-[var(--dusk)]/60 transition-colors group"
-                            style={{
-                              borderLeftWidth: categoryColor ? "3px" : undefined,
-                              borderLeftColor: categoryColor || undefined,
-                            }}
-                          >
-                            <div className="flex-shrink-0 w-12 text-center">
-                              <span className="font-mono text-xs text-[var(--soft)]">
-                                {formatTime(event.start_time)}
-                              </span>
-                              <div className="flex items-center justify-center gap-1 mt-0.5">
-                                <span
-                                  className="w-1.5 h-1.5 rounded-full bg-[var(--neon-red)] animate-pulse"
-                                  style={{ boxShadow: "0 0 4px var(--neon-red)" }}
-                                />
-                                <span className="font-mono text-[0.5rem] text-[var(--neon-red)]">LIVE</span>
-                              </div>
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="font-medium text-sm text-[var(--cream)] truncate group-hover:text-[var(--neon-magenta)] transition-colors">
-                                {event.title}
-                              </div>
-                              <div className="flex items-center gap-1.5 font-mono text-[0.6rem] text-[var(--muted)]">
-                                <span className="truncate">{event.venue?.name}</span>
-                                {distance !== null && distance < 50 && (
-                                  <>
-                                    <span className="opacity-40">·</span>
-                                    <span className="text-[var(--neon-cyan)]">
-                                      {distance < 0.1 ? "< 0.1" : distance.toFixed(1)} mi
-                                    </span>
-                                  </>
-                                )}
-                              </div>
-                            </div>
-                            {event.is_free && (
-                              <span className="flex-shrink-0 px-1.5 py-0.5 text-[0.5rem] font-mono font-medium bg-[var(--neon-green)]/20 text-[var(--neon-green)] rounded">
-                                FREE
-                              </span>
+                    return (
+                      <Link
+                        key={event.id}
+                        href={portal?.slug ? `/${portal.slug}?event=${event.id}` : `/events/${event.id}`}
+                        scroll={false}
+                        className="flex items-center gap-3 px-3 py-2 rounded-lg border border-[var(--twilight)] bg-[var(--dusk)]/30 hover:bg-[var(--dusk)]/60 transition-colors group"
+                        style={{
+                          borderLeftWidth: categoryColor ? "3px" : undefined,
+                          borderLeftColor: categoryColor || undefined,
+                        }}
+                      >
+                        <div className="flex-shrink-0 w-12 text-center">
+                          <span className="font-mono text-xs text-[var(--soft)]">
+                            {formatTime(event.start_time)}
+                          </span>
+                          <div className="flex items-center justify-center gap-1 mt-0.5">
+                            <span
+                              className="w-1.5 h-1.5 rounded-full bg-[var(--neon-red)] animate-pulse"
+                              style={{ boxShadow: "0 0 4px var(--neon-red)" }}
+                            />
+                            <span className="font-mono text-[0.5rem] text-[var(--neon-red)]">LIVE</span>
+                          </div>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium text-sm text-[var(--cream)] truncate group-hover:text-[var(--neon-magenta)] transition-colors">
+                            {event.title}
+                          </div>
+                          <div className="flex items-center gap-1.5 font-mono text-[0.6rem] text-[var(--muted)]">
+                            <span className="truncate">{event.venue?.name}</span>
+                            {showDistance && distance !== null && (
+                              <>
+                                <span className="opacity-40">·</span>
+                                <span className="text-[var(--neon-cyan)]">
+                                  {distance < 0.1 ? "< 0.1" : distance.toFixed(1)} mi
+                                </span>
+                              </>
                             )}
-                          </Link>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
+                          </div>
+                        </div>
+                        {event.is_free && (
+                          <span className="flex-shrink-0 px-1.5 py-0.5 text-[0.5rem] font-mono font-medium bg-[var(--neon-green)]/20 text-[var(--neon-green)] rounded">
+                            FREE
+                          </span>
+                        )}
+                      </Link>
+                    );
+                  })}
+                </div>
+              </CollapsibleSection>
+            )}
 
-                {/* Spots in this category */}
-                {category.spots.length > 0 && (
-                  <div>
-                    <div className="flex items-center gap-1.5 mb-2">
-                      <span className="w-1.5 h-1.5 rounded-full bg-[var(--neon-green)]" />
-                      <span className="font-mono text-[0.6rem] text-[var(--muted)] uppercase tracking-wider">
-                        Open Now
-                      </span>
-                    </div>
-                    <div className="grid grid-cols-2 gap-2">
-                      {category.spots.slice(0, 6).map((spot) => {
-                        const distance = spot.lat && spot.lng
-                          ? getDistance(spot.lat, spot.lng)
-                          : null;
+            {/* Spot Category Sections */}
+            {groupedSpots.map((category) => (
+              <CollapsibleSection
+                key={category.id}
+                title={category.label}
+                count={category.spots.length}
+                defaultOpen={false}
+                category={category.id as "food" | "drinks" | "nightlife" | "caffeine" | "fun"}
+                icon={CategoryIcons[category.id as keyof typeof CategoryIcons]}
+                maxItems={5}
+                totalItems={category.spots.length}
+              >
+                <div className="grid grid-cols-2 gap-2">
+                  {category.spots.map((spot) => {
+                    const distance = spot.lat && spot.lng
+                      ? getDistance(spot.lat, spot.lng)
+                      : null;
+                    const showDistance = userLocation && !selectedNeighborhood;
 
-                        return (
-                          <Link
-                            key={spot.id}
-                            href={portal?.slug ? `/${portal.slug}?spot=${spot.slug}` : `/spots/${spot.slug}`}
-                            scroll={false}
-                            className="p-3 rounded-lg border border-[var(--twilight)] bg-[var(--dusk)]/30 hover:bg-[var(--dusk)]/60 transition-colors group"
-                          >
-                            <div className="font-medium text-sm text-[var(--cream)] truncate group-hover:text-[var(--neon-cyan)] transition-colors">
-                              {spot.name}
-                            </div>
-                            <div className="flex items-center gap-1.5 font-mono text-[0.55rem] text-[var(--muted)] mt-0.5">
-                              {spot.neighborhood && <span>{spot.neighborhood}</span>}
-                              {distance !== null && distance < 50 && (
-                                <>
-                                  <span className="opacity-40">·</span>
-                                  <span className="text-[var(--neon-cyan)]">
-                                    {distance < 0.1 ? "< 0.1" : distance.toFixed(1)} mi
-                                  </span>
-                                </>
-                              )}
-                            </div>
-                          </Link>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-              </section>
+                    return (
+                      <Link
+                        key={spot.id}
+                        href={portal?.slug ? `/${portal.slug}?spot=${spot.slug}` : `/spots/${spot.slug}`}
+                        scroll={false}
+                        className="p-3 rounded-lg border border-[var(--twilight)] bg-[var(--dusk)]/30 hover:bg-[var(--dusk)]/60 transition-colors group"
+                      >
+                        <div className="font-medium text-sm text-[var(--cream)] truncate group-hover:text-[var(--neon-cyan)] transition-colors">
+                          {spot.name}
+                        </div>
+                        <div className="flex items-center gap-1.5 font-mono text-[0.55rem] text-[var(--muted)] mt-0.5">
+                          {spot.neighborhood && <span>{spot.neighborhood}</span>}
+                          {showDistance && distance !== null && (
+                            <>
+                              <span className="opacity-40">·</span>
+                              <span className="text-[var(--neon-cyan)]">
+                                {distance < 0.1 ? "< 0.1" : distance.toFixed(1)} mi
+                              </span>
+                            </>
+                          )}
+                        </div>
+                      </Link>
+                    );
+                  })}
+                </div>
+              </CollapsibleSection>
             ))}
           </div>
         )}
