@@ -7,33 +7,34 @@ type AnyQuery = any;
 
 // GET /api/friend-requests - Get user's friend requests
 export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const type = searchParams.get("type") || "all"; // received, sent, all
+  try {
+    const { searchParams } = new URL(request.url);
+    const type = searchParams.get("type") || "all"; // received, sent, all
 
-  const user = await getUser();
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+    const user = await getUser();
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
-  const supabase = await createClient();
+    const supabase = await createClient();
 
-  let query: AnyQuery = supabase
-    .from("friend_requests" as never)
-    .select(`
-      id,
-      inviter_id,
-      invitee_id,
-      status,
-      created_at,
-      responded_at,
-      inviter:profiles!friend_requests_inviter_id_fkey(
-        id, username, display_name, avatar_url, bio
-      ),
-      invitee:profiles!friend_requests_invitee_id_fkey(
-        id, username, display_name, avatar_url, bio
-      )
-    `)
-    .order("created_at", { ascending: false });
+    let query: AnyQuery = supabase
+      .from("friend_requests" as never)
+      .select(`
+        id,
+        inviter_id,
+        invitee_id,
+        status,
+        created_at,
+        responded_at,
+        inviter:profiles!friend_requests_inviter_id_fkey(
+          id, username, display_name, avatar_url, bio
+        ),
+        invitee:profiles!friend_requests_invitee_id_fkey(
+          id, username, display_name, avatar_url, bio
+        )
+      `)
+      .order("created_at", { ascending: false });
 
   if (type === "received") {
     query = query.eq("invitee_id", user.id);
@@ -43,23 +44,30 @@ export async function GET(request: Request) {
     query = query.or(`inviter_id.eq.${user.id},invitee_id.eq.${user.id}`);
   }
 
-  const { data, error } = await query;
+    const { data, error } = await query;
 
-  if (error) {
-    return errorResponse(error, "friend-requests:GET");
+    if (error) {
+      return errorResponse(error, "friend-requests:GET");
+    }
+
+    // Get pending count (received only)
+    const { count: pendingCount } = await supabase
+      .from("friend_requests" as never)
+      .select("*", { count: "exact", head: true })
+      .eq("invitee_id", user.id)
+      .eq("status", "pending");
+
+    return NextResponse.json({
+      requests: data || [],
+      pendingCount: pendingCount || 0,
+    });
+  } catch (err) {
+    console.error("friend-requests:GET unexpected error:", err);
+    return NextResponse.json(
+      { error: "An internal error occurred" },
+      { status: 500 }
+    );
   }
-
-  // Get pending count (received only)
-  const { count: pendingCount } = await supabase
-    .from("friend_requests" as never)
-    .select("*", { count: "exact", head: true })
-    .eq("invitee_id", user.id)
-    .eq("status", "pending");
-
-  return NextResponse.json({
-    requests: data || [],
-    pendingCount: pendingCount || 0,
-  });
 }
 
 // POST /api/friend-requests - Create a friend request
