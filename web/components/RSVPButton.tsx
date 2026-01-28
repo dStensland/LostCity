@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/lib/auth-context";
+import { useToast } from "@/components/Toast";
 import { VISIBILITY_OPTIONS, DEFAULT_VISIBILITY, type Visibility } from "@/lib/visibility";
 import type { Database } from "@/lib/types";
 import Confetti from "./ui/Confetti";
@@ -37,6 +38,7 @@ export default function RSVPButton({
 }: RSVPButtonProps) {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
+  const { showToast } = useToast();
   const supabase = createClient();
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -193,6 +195,8 @@ export default function RSVPButton({
       // Rollback on error
       setStatus(previousStatus);
       console.error("Failed to update RSVP:", error);
+      const errMsg = (error as { message?: string })?.message || "Failed to save";
+      showToast(errMsg, "error");
     } finally {
       setActionLoading(false);
     }
@@ -217,6 +221,7 @@ export default function RSVPButton({
       // Rollback on error
       setVisibility(previousVisibility);
       console.error("Failed to update visibility:", error);
+      showToast("Failed to update visibility", "error");
     }
   };
 
