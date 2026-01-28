@@ -14,7 +14,7 @@ import EventQuickActions from "@/components/EventQuickActions";
 import VenueVibes from "@/components/VenueVibes";
 import LinkifyText from "@/components/LinkifyText";
 import { formatTimeSplit } from "@/lib/formats";
-import EntityTagList from "@/components/EntityTagList";
+import { EntityTagList } from "@/components/tags/EntityTagList";
 import FlagButton from "@/components/FlagButton";
 import { getSeriesTypeLabel, getSeriesTypeColor } from "@/lib/series-utils";
 import CollapsibleSection, { CategoryIcons } from "@/components/CollapsibleSection";
@@ -500,7 +500,7 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
             <p className="text-[0.6rem] text-[var(--muted)] font-mono uppercase tracking-wider mb-2">
               This Event
             </p>
-            <EntityTagList entityType="event" entityId={event.id} compact />
+            <EntityTagList entityType="event" entityId={event.id} />
           </div>
 
           {/* Venue community tags */}
@@ -509,7 +509,7 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
               <p className="text-[0.6rem] text-[var(--muted)] font-mono uppercase tracking-wider mb-2">
                 {event.venue.name}
               </p>
-              <EntityTagList entityType="venue" entityId={event.venue.id} compact />
+              <EntityTagList entityType="venue" entityId={event.venue.id} />
             </div>
           )}
 
@@ -519,7 +519,7 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
               <p className="text-[0.6rem] text-[var(--muted)] font-mono uppercase tracking-wider mb-2">
                 {event.producer.name}
               </p>
-              <EntityTagList entityType="org" entityId={event.producer.id} compact />
+              <EntityTagList entityType="org" entityId={Number(event.producer.id)} />
             </div>
           )}
         </div>

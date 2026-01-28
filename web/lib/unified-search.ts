@@ -1,11 +1,13 @@
 /**
  * Unified Search Library
  *
- * Provides full-text search across events, venues, and organizers using
- * PostgreSQL tsvector/tsquery with pg_trgm for fuzzy matching.
+ * Provides full-text search across events, venues, organizers, series, and lists
+ * using PostgreSQL tsvector/tsquery with pg_trgm for fuzzy matching.
+ * Includes multi-factor scoring and query intent analysis for improved relevance.
  */
 
 import { createServiceClient } from "./supabase/service";
+import { analyzeQueryIntent, applyIntentBoost, type QueryIntentResult, type SearchType } from "./query-intent";
 
 // ============================================
 // Types
@@ -13,7 +15,7 @@ import { createServiceClient } from "./supabase/service";
 
 export interface SearchResult {
   id: number | string;
-  type: "event" | "venue" | "organizer";
+  type: "event" | "venue" | "organizer" | "series" | "list" | "neighborhood" | "category";
   title: string;
   subtitle?: string;
   href: string;
@@ -29,23 +31,35 @@ export interface SearchResult {
     vibes?: string[];
     orgType?: string;
     eventCount?: number;
+    followerCount?: number;
+    // Series-specific
+    seriesType?: string;
+    nextEventDate?: string;
+    // List-specific
+    itemCount?: number;
+    curatorName?: string;
   };
 }
 
 export interface SearchOptions {
   query: string;
-  types?: ("event" | "venue" | "organizer")[];
+  types?: ("event" | "venue" | "organizer" | "series" | "list")[];
   limit?: number;
   offset?: number;
   categories?: string[];
+  subcategories?: string[]; // Filter by subcategory values (e.g., "nightlife.trivia")
+  tags?: string[]; // Filter by event tags (e.g., "outdoor", "21+")
   neighborhoods?: string[];
-  dateFilter?: "today" | "tomorrow" | "weekend" | "week";
+  dateFilter?: "today" | "tonight" | "tomorrow" | "weekend" | "week";
   isFree?: boolean;
   portalId?: string;
+  // Enhanced options
+  useIntentAnalysis?: boolean; // Enable query intent analysis for smarter results
+  boostExactMatches?: boolean; // Apply extra boost for exact title matches
 }
 
 export interface SearchFacet {
-  type: "event" | "venue" | "organizer";
+  type: "event" | "venue" | "organizer" | "series" | "list";
   count: number;
 }
 
@@ -136,6 +150,28 @@ interface SpellingSuggestionRow {
   similarity_score: number;
 }
 
+
+// ============================================
+// Scoring Constants
+// ============================================
+
+const SCORING = {
+  EXACT_MATCH: 100, // Title exactly matches query
+  STARTS_WITH: 50, // Title starts with query
+  WORD_MATCH: 30, // Title contains query as complete word
+  PARTIAL_MATCH: 10, // Title contains query substring
+  RECENCY_MAX: 30, // Max boost for upcoming events
+  POPULARITY_MAX: 20, // Max boost for popular items
+  TYPE_PRIORITY: {
+    // Default priority when no intent detected
+    event: 5,
+    venue: 4,
+    organizer: 3,
+    series: 2,
+    list: 1,
+  },
+} as const;
+
 // ============================================
 // Helper Functions
 // ============================================
@@ -168,9 +204,107 @@ export function parseSearchQuery(query: string): string {
  * Map date filter to the format expected by the RPC function.
  */
 function mapDateFilter(
-  filter: "today" | "tomorrow" | "weekend" | "week" | undefined
+  filter: "today" | "tonight" | "tomorrow" | "weekend" | "week" | undefined
 ): string | null {
+  // Map "tonight" to "today" for the database
+  if (filter === "tonight") return "today";
   return filter || null;
+}
+
+/**
+ * Calculate a relevance score based on multiple factors.
+ */
+function calculateRelevanceScore(
+  query: string,
+  title: string,
+  baseScore: number,
+  metadata?: {
+    date?: string;
+    eventCount?: number;
+    followerCount?: number;
+    itemCount?: number;
+  }
+): number {
+  let score = baseScore;
+  const queryLower = query.toLowerCase();
+  const titleLower = title.toLowerCase();
+
+  // Exact match bonus
+  if (titleLower === queryLower) {
+    score += SCORING.EXACT_MATCH;
+  }
+  // Starts-with bonus
+  else if (titleLower.startsWith(queryLower)) {
+    score += SCORING.STARTS_WITH;
+  }
+  // Word boundary match bonus
+  else if (new RegExp(`\\b${escapeRegex(queryLower)}\\b`).test(titleLower)) {
+    score += SCORING.WORD_MATCH;
+  }
+  // Partial match bonus
+  else if (titleLower.includes(queryLower)) {
+    score += SCORING.PARTIAL_MATCH;
+  }
+
+  // Recency boost for events
+  if (metadata?.date) {
+    const daysUntil = getDaysUntilDate(metadata.date);
+    if (daysUntil >= 0 && daysUntil <= 30) {
+      // More boost for sooner events
+      score += SCORING.RECENCY_MAX * (1 - daysUntil / 30);
+    }
+  }
+
+  // Popularity boost
+  if (metadata?.eventCount) {
+    score += Math.min(metadata.eventCount / 5, SCORING.POPULARITY_MAX);
+  }
+  if (metadata?.followerCount) {
+    score += Math.min(metadata.followerCount / 10, SCORING.POPULARITY_MAX);
+  }
+  if (metadata?.itemCount) {
+    score += Math.min(metadata.itemCount / 3, SCORING.POPULARITY_MAX);
+  }
+
+  return score;
+}
+
+/**
+ * Get days until a date (negative if past)
+ */
+function getDaysUntilDate(dateStr: string): number {
+  try {
+    const date = new Date(dateStr);
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    const diff = date.getTime() - now.getTime();
+    return Math.floor(diff / (1000 * 60 * 60 * 24));
+  } catch {
+    return 999; // Far future if can't parse
+  }
+}
+
+/**
+ * Escape special regex characters
+ */
+function escapeRegex(str: string): string {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/**
+ * Apply type priority boost based on intent analysis
+ */
+function applyTypePriorityBoost(
+  score: number,
+  type: SearchResult["type"],
+  intent?: QueryIntentResult
+): number {
+  if (intent) {
+    return applyIntentBoost(score, type as SearchType, intent);
+  }
+  // Default priority boost
+  const priority = SCORING.TYPE_PRIORITY[type as keyof typeof SCORING.TYPE_PRIORITY] || 0;
+  return score + priority;
 }
 
 // ============================================
@@ -178,8 +312,9 @@ function mapDateFilter(
 // ============================================
 
 /**
- * Perform a unified search across events, venues, and organizers.
+ * Perform a unified search across events, venues, organizers, series, and lists.
  * Uses PostgreSQL full-text search with relevance ranking and fuzzy matching.
+ * Optionally applies query intent analysis for smarter result prioritization.
  */
 export async function unifiedSearch(
   options: SearchOptions
@@ -190,10 +325,14 @@ export async function unifiedSearch(
     limit = 20,
     offset = 0,
     categories,
+    subcategories,
+    tags,
     neighborhoods,
     dateFilter,
     isFree,
     portalId,
+    useIntentAnalysis = true,
+    boostExactMatches = true,
   } = options;
 
   const trimmedQuery = query.trim();
@@ -201,49 +340,118 @@ export async function unifiedSearch(
     return { results: [], facets: [], total: 0 };
   }
 
+  // Analyze query intent for smarter results
+  const intent = useIntentAnalysis ? analyzeQueryIntent(trimmedQuery) : undefined;
+
+  // Use intent-derived date filter if not explicitly provided
+  // Map "tonight" to "today" for the event search (they're handled the same at DB level)
+  const rawDateFilter = dateFilter || intent?.dateFilter;
+  const effectiveDateFilter = rawDateFilter === "tonight" ? "today" : rawDateFilter;
+
   const client = createServiceClient();
 
   // Calculate per-type limit for balanced results
   const limitPerType = Math.ceil(limit / types.length);
 
   // Run searches in parallel
-  const [eventResults, venueResults, producerResults, facets, didYouMean] =
-    await Promise.all([
-      types.includes("event")
-        ? searchEvents(client, trimmedQuery, {
-            limit: limitPerType,
-            offset,
-            categories,
-            neighborhoods,
-            dateFilter,
-            isFree,
-            portalId,
-          })
-        : Promise.resolve([] as SearchResult[]),
-      types.includes("venue")
-        ? searchVenues(client, trimmedQuery, {
-            limit: limitPerType,
-            offset,
-            neighborhoods,
-          })
-        : Promise.resolve([] as SearchResult[]),
-      types.includes("organizer")
-        ? searchProducers(client, trimmedQuery, {
-            limit: limitPerType,
-            offset,
-            categories,
-          })
-        : Promise.resolve([] as SearchResult[]),
-      getSearchFacets(client, trimmedQuery, portalId),
-      getSpellingSuggestions(client, trimmedQuery),
-    ]);
+  const searchPromises: Promise<SearchResult[]>[] = [];
+  const searchTypes: string[] = [];
 
-  // Combine and sort all results by score
-  const allResults = [
-    ...eventResults,
-    ...venueResults,
-    ...producerResults,
-  ].sort((a, b) => b.score - a.score);
+  if (types.includes("event")) {
+    searchTypes.push("event");
+    searchPromises.push(
+      searchEvents(client, trimmedQuery, {
+        limit: limitPerType,
+        offset,
+        categories,
+        subcategories,
+        tags,
+        neighborhoods,
+        dateFilter: effectiveDateFilter,
+        isFree,
+        portalId,
+      })
+    );
+  }
+
+  if (types.includes("venue")) {
+    searchTypes.push("venue");
+    searchPromises.push(
+      searchVenues(client, trimmedQuery, {
+        limit: limitPerType,
+        offset,
+        neighborhoods,
+      })
+    );
+  }
+
+  if (types.includes("organizer")) {
+    searchTypes.push("organizer");
+    searchPromises.push(
+      searchProducers(client, trimmedQuery, {
+        limit: limitPerType,
+        offset,
+        categories,
+      })
+    );
+  }
+
+  if (types.includes("series")) {
+    searchTypes.push("series");
+    searchPromises.push(
+      searchSeries(client, trimmedQuery, {
+        limit: limitPerType,
+        offset,
+        categories,
+      })
+    );
+  }
+
+  if (types.includes("list")) {
+    searchTypes.push("list");
+    searchPromises.push(
+      searchLists(client, trimmedQuery, {
+        limit: limitPerType,
+        offset,
+        portalId,
+      })
+    );
+  }
+
+  // Execute searches, facets, and spelling suggestions in parallel
+  const [searchResultsArrays, facets, didYouMean] = await Promise.all([
+    Promise.all(searchPromises),
+    getSearchFacets(client, trimmedQuery, portalId),
+    getSpellingSuggestions(client, trimmedQuery),
+  ]);
+
+  // Combine all results
+  let allResults: SearchResult[] = searchResultsArrays.flat();
+
+  // Apply enhanced scoring
+  if (boostExactMatches || intent) {
+    allResults = allResults.map((result) => {
+      let newScore = result.score;
+
+      // Apply relevance scoring
+      if (boostExactMatches) {
+        newScore = calculateRelevanceScore(trimmedQuery, result.title, newScore, {
+          date: result.metadata?.date,
+          eventCount: result.metadata?.eventCount,
+          followerCount: result.metadata?.followerCount,
+          itemCount: result.metadata?.itemCount,
+        });
+      }
+
+      // Apply intent-based type priority
+      newScore = applyTypePriorityBoost(newScore, result.type, intent);
+
+      return { ...result, score: newScore };
+    });
+  }
+
+  // Sort by enhanced score
+  allResults.sort((a, b) => b.score - a.score);
 
   // Calculate total from facets
   const total = facets.reduce((sum, f) => sum + f.count, 0);
@@ -266,16 +474,23 @@ async function searchEvents(
     limit: number;
     offset: number;
     categories?: string[];
+    subcategories?: string[];
+    tags?: string[];
     neighborhoods?: string[];
     dateFilter?: "today" | "tomorrow" | "weekend" | "week";
     isFree?: boolean;
     portalId?: string;
   }
 ): Promise<SearchResult[]> {
+  // Request more results if we have client-side filters that may reduce count
+  const hasClientFilters = (options.subcategories && options.subcategories.length > 0) ||
+    (options.tags && options.tags.length > 0);
+  const fetchLimit = hasClientFilters ? options.limit * 3 : options.limit;
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data, error } = await (client.rpc as any)("search_events_ranked", {
     p_query: query,
-    p_limit: options.limit,
+    p_limit: fetchLimit,
     p_offset: options.offset,
     p_categories: options.categories || null,
     p_neighborhoods: options.neighborhoods || null,
@@ -289,7 +504,24 @@ async function searchEvents(
     return [];
   }
 
-  const rows = (data as EventSearchRow[]) || [];
+  let rows = (data as EventSearchRow[]) || [];
+
+  // Apply client-side subcategory filter
+  if (options.subcategories && options.subcategories.length > 0) {
+    rows = rows.filter((row) =>
+      row.subcategory && options.subcategories!.includes(row.subcategory)
+    );
+  }
+
+  // Apply client-side tags filter (match any tag)
+  if (options.tags && options.tags.length > 0) {
+    rows = rows.filter((row) =>
+      row.tags && row.tags.some((tag) => options.tags!.includes(tag))
+    );
+  }
+
+  // Respect the original limit
+  rows = rows.slice(0, options.limit);
 
   return rows.map((row) => ({
     id: row.id,
@@ -399,6 +631,224 @@ async function searchProducers(
 }
 
 /**
+ * Search series using direct table query with trigram similarity.
+ */
+async function searchSeries(
+  client: ReturnType<typeof createServiceClient>,
+  query: string,
+  options: {
+    limit: number;
+    offset: number;
+    categories?: string[];
+  }
+): Promise<SearchResult[]> {
+  try {
+    // Build query with trigram similarity
+    let supabaseQuery = client
+      .from("series")
+      .select(`
+        id,
+        title,
+        slug,
+        description,
+        series_type,
+        image_url,
+        category,
+        is_active
+      `)
+      .eq("is_active", true)
+      .ilike("title", `%${query}%`)
+      .limit(options.limit)
+      .range(options.offset, options.offset + options.limit - 1);
+
+    // Apply category filter
+    if (options.categories && options.categories.length > 0) {
+      supabaseQuery = supabaseQuery.in("category", options.categories);
+    }
+
+    const { data, error } = await supabaseQuery;
+
+    if (error) {
+      console.error("Error searching series:", error);
+      return [];
+    }
+
+    if (!data || data.length === 0) {
+      return [];
+    }
+
+    // Type the data explicitly
+    type SeriesRow = {
+      id: string;
+      title: string;
+      slug: string;
+      description: string | null;
+      series_type: string | null;
+      image_url: string | null;
+      category: string | null;
+      is_active: boolean;
+    };
+    const typedData = data as SeriesRow[];
+
+    // Get event counts for each series
+    const seriesIds = typedData.map((s) => s.id);
+    const { data: eventCounts } = await client
+      .from("events")
+      .select("series_id")
+      .in("series_id", seriesIds)
+      .gte("start_date", new Date().toISOString().split("T")[0]);
+
+    const countMap = new Map<string, number>();
+    (eventCounts as Array<{ series_id: string | null }> | null)?.forEach((e) => {
+      const id = e.series_id as string;
+      if (id) {
+        countMap.set(id, (countMap.get(id) || 0) + 1);
+      }
+    });
+
+    return typedData.map((row) => {
+      // Calculate similarity score
+      const titleLower = row.title.toLowerCase();
+      const queryLower = query.toLowerCase();
+      const similarity = titleLower.includes(queryLower)
+        ? titleLower.startsWith(queryLower)
+          ? 0.9
+          : 0.6
+        : 0.3;
+
+      return {
+        id: row.id,
+        type: "series" as const,
+        title: row.title,
+        subtitle: row.series_type || undefined,
+        href: `/series/${row.slug}`,
+        score: similarity * 100,
+        metadata: {
+          category: row.category || undefined,
+          seriesType: row.series_type || undefined,
+          eventCount: countMap.get(row.id) || 0,
+        },
+      };
+    });
+  } catch (error) {
+    console.error("Error in searchSeries:", error);
+    return [];
+  }
+}
+
+/**
+ * Search lists using direct table query with trigram similarity.
+ */
+async function searchLists(
+  client: ReturnType<typeof createServiceClient>,
+  query: string,
+  options: {
+    limit: number;
+    offset: number;
+    portalId?: string;
+  }
+): Promise<SearchResult[]> {
+  try {
+    // Build query
+    let supabaseQuery = client
+      .from("lists")
+      .select(`
+        id,
+        title,
+        slug,
+        description,
+        category,
+        creator_id,
+        is_public,
+        status
+      `)
+      .eq("is_public", true)
+      .eq("status", "active")
+      .ilike("title", `%${query}%`)
+      .limit(options.limit)
+      .range(options.offset, options.offset + options.limit - 1);
+
+    // Apply portal filter
+    if (options.portalId) {
+      supabaseQuery = supabaseQuery.eq("portal_id", options.portalId);
+    }
+
+    const { data, error } = await supabaseQuery;
+
+    if (error) {
+      console.error("Error searching lists:", error);
+      return [];
+    }
+
+    if (!data || data.length === 0) {
+      return [];
+    }
+
+    // Type the data explicitly
+    type ListRow = {
+      id: string;
+      title: string;
+      slug: string;
+      description: string | null;
+      category: string | null;
+      creator_id: string;
+      is_public: boolean;
+      status: string;
+    };
+    const typedData = data as ListRow[];
+
+    // Get item counts and creator names
+    const listIds = typedData.map((l) => l.id);
+    const [itemCountsResult, creatorsResult] = await Promise.all([
+      client.from("list_items").select("list_id").in("list_id", listIds),
+      client.from("profiles").select("id, display_name").in(
+        "id",
+        typedData.map((l) => l.creator_id)
+      ),
+    ]);
+
+    const itemCountMap = new Map<string, number>();
+    (itemCountsResult.data as Array<{ list_id: string }> | null)?.forEach((item) => {
+      const id = item.list_id;
+      itemCountMap.set(id, (itemCountMap.get(id) || 0) + 1);
+    });
+
+    const creatorMap = new Map<string, string>();
+    (creatorsResult.data as Array<{ id: string; display_name: string | null }> | null)?.forEach((profile) => {
+      creatorMap.set(profile.id, profile.display_name || "Unknown");
+    });
+
+    return typedData.map((row) => {
+      // Calculate similarity score
+      const titleLower = row.title.toLowerCase();
+      const queryLower = query.toLowerCase();
+      const similarity = titleLower.includes(queryLower)
+        ? titleLower.startsWith(queryLower)
+          ? 0.9
+          : 0.6
+        : 0.3;
+
+      return {
+        id: row.id,
+        type: "list" as const,
+        title: row.title,
+        subtitle: row.category || undefined,
+        href: `/list/${row.slug}`,
+        score: similarity * 100,
+        metadata: {
+          category: row.category || undefined,
+          itemCount: itemCountMap.get(row.id) || 0,
+          curatorName: creatorMap.get(row.creator_id) || undefined,
+        },
+      };
+    });
+  } catch (error) {
+    console.error("Error in searchLists:", error);
+    return [];
+  }
+}
+
+/**
  * Get search facets (counts per entity type).
  */
 async function getSearchFacets(
@@ -462,6 +912,8 @@ export async function searchEventsOnly(
     limit?: number;
     offset?: number;
     categories?: string[];
+    subcategories?: string[];
+    tags?: string[];
     neighborhoods?: string[];
     dateFilter?: "today" | "tomorrow" | "weekend" | "week";
     isFree?: boolean;
@@ -470,10 +922,15 @@ export async function searchEventsOnly(
 ): Promise<EventSearchRow[]> {
   const client = createServiceClient();
 
+  // Request more results if we have client-side filters
+  const hasClientFilters = (options.subcategories && options.subcategories.length > 0) ||
+    (options.tags && options.tags.length > 0);
+  const fetchLimit = hasClientFilters ? (options.limit || 20) * 3 : (options.limit || 20);
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data, error } = await (client.rpc as any)("search_events_ranked", {
     p_query: query.trim(),
-    p_limit: options.limit || 20,
+    p_limit: fetchLimit,
     p_offset: options.offset || 0,
     p_categories: options.categories || null,
     p_neighborhoods: options.neighborhoods || null,
@@ -487,7 +944,24 @@ export async function searchEventsOnly(
     return [];
   }
 
-  return (data as EventSearchRow[]) || [];
+  let rows = (data as EventSearchRow[]) || [];
+
+  // Apply client-side subcategory filter
+  if (options.subcategories && options.subcategories.length > 0) {
+    rows = rows.filter((row) =>
+      row.subcategory && options.subcategories!.includes(row.subcategory)
+    );
+  }
+
+  // Apply client-side tags filter (match any tag)
+  if (options.tags && options.tags.length > 0) {
+    rows = rows.filter((row) =>
+      row.tags && row.tags.some((tag) => options.tags!.includes(tag))
+    );
+  }
+
+  // Respect the original limit
+  return rows.slice(0, options.limit || 20);
 }
 
 /**
@@ -556,3 +1030,66 @@ export async function searchProducersOnly(
 
 // Re-export types for convenience
 export type { EventSearchRow, VenueSearchRow, ProducerSearchRow };
+
+// ============================================
+// Quick Search (for instant endpoint)
+// ============================================
+
+export interface InstantSearchResponse {
+  suggestions: SearchResult[];
+  topResults: SearchResult[];
+  intent?: {
+    type: string;
+    confidence: number;
+    dateFilter?: string;
+  };
+}
+
+/**
+ * Perform a quick search optimized for instant/autocomplete use.
+ * Returns both autocomplete suggestions and top results in a single call.
+ */
+export async function instantSearch(
+  query: string,
+  options: {
+    portalId?: string;
+    limit?: number;
+  } = {}
+): Promise<InstantSearchResponse> {
+  const { portalId, limit = 8 } = options;
+  const trimmedQuery = query.trim();
+
+  if (!trimmedQuery || trimmedQuery.length < 2) {
+    return { suggestions: [], topResults: [] };
+  }
+
+  // Analyze intent
+  const intent = analyzeQueryIntent(trimmedQuery);
+
+  // Perform unified search with all types
+  const searchResult = await unifiedSearch({
+    query: trimmedQuery,
+    types: ["event", "venue", "organizer", "series", "list"],
+    limit: limit * 2, // Get more to split between suggestions and results
+    portalId,
+    useIntentAnalysis: true,
+    boostExactMatches: true,
+  });
+
+  // Split results: top matches as suggestions, rest as results
+  const suggestions = searchResult.results.slice(0, limit);
+  const topResults = searchResult.results.slice(limit, limit * 2);
+
+  return {
+    suggestions,
+    topResults,
+    intent: {
+      type: intent.intent,
+      confidence: intent.confidence,
+      dateFilter: intent.dateFilter,
+    },
+  };
+}
+
+// Export intent analysis for use in other modules
+export { analyzeQueryIntent, type QueryIntentResult } from "./query-intent";

@@ -26,6 +26,8 @@ function safeParseInt(
  * - limit: Maximum number of results (default: 20, max: 50)
  * - offset: Result offset for pagination (default: 0)
  * - categories: Comma-separated list of category filters
+ * - subcategories: Comma-separated list of subcategory filters (e.g., "nightlife.trivia")
+ * - tags: Comma-separated list of tag filters (e.g., "outdoor,21+")
  * - neighborhoods: Comma-separated list of neighborhood filters
  * - date: Date filter (today, tomorrow, weekend, week)
  * - free: If "true", only return free events
@@ -64,11 +66,11 @@ export async function GET(request: NextRequest) {
 
     // Parse types
     const typesParam = searchParams.get("types");
-    const validTypes = ["event", "venue", "organizer"] as const;
+    const validTypes = ["event", "venue", "organizer", "series", "list"] as const;
     const types = typesParam
       ? (typesParam.split(",").filter((t) =>
           validTypes.includes(t as (typeof validTypes)[number])
-        ) as ("event" | "venue" | "organizer")[])
+        ) as ("event" | "venue" | "organizer" | "series" | "list")[])
       : undefined;
 
     // Parse other parameters
@@ -80,6 +82,16 @@ export async function GET(request: NextRequest) {
       ? categoriesParam.split(",").filter(Boolean)
       : undefined;
 
+    const subcategoriesParam = searchParams.get("subcategories");
+    const subcategories = subcategoriesParam
+      ? subcategoriesParam.split(",").filter(Boolean)
+      : undefined;
+
+    const tagsParam = searchParams.get("tags");
+    const tags = tagsParam
+      ? tagsParam.split(",").filter(Boolean)
+      : undefined;
+
     const neighborhoodsParam = searchParams.get("neighborhoods");
     const neighborhoods = neighborhoodsParam
       ? neighborhoodsParam.split(",").filter(Boolean)
@@ -88,8 +100,8 @@ export async function GET(request: NextRequest) {
     const dateParam = searchParams.get("date");
     const dateFilter =
       dateParam &&
-      ["today", "tomorrow", "weekend", "week"].includes(dateParam)
-        ? (dateParam as "today" | "tomorrow" | "weekend" | "week")
+      ["today", "tonight", "tomorrow", "weekend", "week"].includes(dateParam)
+        ? (dateParam as "today" | "tonight" | "tomorrow" | "weekend" | "week")
         : undefined;
 
     const isFree = searchParams.get("free") === "true" ? true : undefined;
@@ -103,6 +115,8 @@ export async function GET(request: NextRequest) {
       limit,
       offset,
       categories,
+      subcategories,
+      tags,
       neighborhoods,
       dateFilter,
       isFree,

@@ -9,7 +9,7 @@ import FollowButton from "@/components/FollowButton";
 import RecommendButton from "@/components/RecommendButton";
 import CategoryIcon, { getCategoryColor } from "@/components/CategoryIcon";
 import FlagButton from "@/components/FlagButton";
-import EntityTagList from "@/components/EntityTagList";
+import { EntityTagList } from "@/components/tags/EntityTagList";
 import type { Event } from "@/lib/supabase";
 import type { Metadata } from "next";
 import {
@@ -464,7 +464,7 @@ export default async function PortalOrganizerPage({ params }: Props) {
             {/* Community Tags */}
             <SectionHeader title="Community Tags" />
             <div className="mb-6">
-              <EntityTagList entityType="org" entityId={producer.id} compact />
+              <EntityTagList entityType="org" entityId={parseInt(producer.id, 10)} />
             </div>
 
             {/* Flag for QA */}

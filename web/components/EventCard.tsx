@@ -10,6 +10,7 @@ import LazyImage from "./LazyImage";
 import SeriesBadge from "./SeriesBadge";
 import ReasonBadge, { getTopReasons, type RecommendationReason } from "./ReasonBadge";
 import EventCardMenu from "./EventCardMenu";
+import { SubcategoryChip, getSubcategoryLabel, shouldShowSubcategory } from "./ActivityChip";
 import type { Frequency, DayOfWeek } from "@/lib/recurrence";
 
 type EventCardEvent = Event & {
@@ -317,6 +318,17 @@ function EventCard({ event, index = 0, skipAnimation = false, portalSlug, friend
           <div className="flex items-center gap-1.5 text-xs text-[var(--muted)] mt-1">
             {event.venue && (
               <span className="truncate max-w-[40%]" title={event.venue.name}>{event.venue.name}</span>
+            )}
+            {/* Subcategory chip - shows activity type when useful */}
+            {shouldShowSubcategory(event.subcategory, event.category) && (
+              <>
+                <span className="opacity-40">·</span>
+                <SubcategoryChip
+                  label={getSubcategoryLabel(event.subcategory!)!}
+                  value={event.subcategory!}
+                  portalSlug={portalSlug}
+                />
+              </>
             )}
             {event.venue?.neighborhood && (
               <>

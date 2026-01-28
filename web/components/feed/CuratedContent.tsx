@@ -5,6 +5,7 @@ import TrendingNow from "@/components/TrendingNow";
 import TonightsPicksSkeleton from "@/components/TonightsPicksSkeleton";
 import TrendingNowSkeleton from "@/components/TrendingNowSkeleton";
 import HappeningNowCTA from "./HappeningNowCTA";
+import BrowseByActivity from "@/components/BrowseByActivity";
 
 interface CuratedContentProps {
   portalSlug: string;
@@ -26,6 +27,11 @@ export default function CuratedContent({ portalSlug }: CuratedContentProps) {
       {/* Trending Now */}
       <Suspense fallback={<TrendingNowSkeleton />}>
         <TrendingNow portalSlug={portalSlug} />
+      </Suspense>
+
+      {/* Browse by Activity */}
+      <Suspense fallback={null}>
+        <BrowseByActivity portalSlug={portalSlug} />
       </Suspense>
 
       {/* Main Feed */}
