@@ -174,7 +174,8 @@ export async function GET(request: Request) {
   // Apply portal filter if specified
   if (portalId) {
     // Show portal-specific events + public events
-    query = query.or(`portal_id.eq."${portalId.replace(/"/g, "")}",portal_id.is.null`);
+    // Note: portal_id is UUID, no quotes needed in PostgREST filter syntax
+    query = query.or(`portal_id.eq.${portalId},portal_id.is.null`);
 
     // Apply portal category filters if specified
     if (portalFilters.categories?.length) {
@@ -184,6 +185,8 @@ export async function GET(request: Request) {
     // No portal - only show public events
     query = query.is("portal_id", null);
   }
+
+  console.log("[Feed API] Portal filter:", { portalId, portalFilters });
 
   // NOTE: We intentionally don't filter by user's favorite_categories here
   // because we want to show ALL events from followed venues/orgs regardless of category.
@@ -224,6 +227,15 @@ export async function GET(request: Request) {
   };
 
   let events = (eventsData || []) as EventResult[];
+
+  // Debug: log events with matching venue/producer
+  const eventsWithMatchingVenue = events.filter(e => e.venue?.id && followedVenueIds.includes(e.venue.id));
+  const eventsWithMatchingProducer = events.filter(e => e.producer_id && followedProducerIds.includes(e.producer_id));
+  console.log("[Feed API] Events from query:", {
+    total: events.length,
+    eventsFromFollowedVenues: eventsWithMatchingVenue.map(e => ({ id: e.id, title: e.title, venueId: e.venue?.id })),
+    eventsFromFollowedProducers: eventsWithMatchingProducer.map(e => ({ id: e.id, title: e.title, producerId: e.producer_id })),
+  });
 
   // Score and sort events by relevance
   events = events.map((event) => {
