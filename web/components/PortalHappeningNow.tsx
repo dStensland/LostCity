@@ -206,8 +206,8 @@ export default function PortalHappeningNow({ portalId, portalSlug, isExclusive =
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
           <span className="relative flex h-3 w-3">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--neon-red)] opacity-50" />
-            <span className="relative inline-flex rounded-full h-3 w-3 bg-[var(--neon-red)]" />
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--neon-red)] opacity-30" />
+            <span className="relative inline-flex rounded-full h-3 w-3 bg-[var(--neon-red)] opacity-80" />
           </span>
           <p className="font-mono text-sm font-medium text-[var(--cream)]">
             {events.length} live now
