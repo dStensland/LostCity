@@ -159,7 +159,7 @@ function FeedShellInner({ portalSlug, activeTab, curatedContent }: FeedShellProp
 
   // Render content based on auth state for protected tabs
   const renderProtectedContent = (tab: "foryou" | "activity", children: React.ReactNode) => {
-    console.log("[FeedShell] renderProtectedContent", { tab, authLoading, hasUser: !!user });
+    console.log(`[FeedShell] tab=${tab} authLoading=${authLoading} hasUser=${!!user}`);
     if (authLoading) {
       return <AuthLoadingSkeleton />;
     }
