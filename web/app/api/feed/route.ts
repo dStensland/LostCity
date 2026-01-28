@@ -80,6 +80,12 @@ export async function GET(request: Request) {
   const followedProducers = followedProducersData as { followed_producer_id: string | null }[] | null;
   const followedProducerIds = followedProducers?.map((f) => f.followed_producer_id).filter(Boolean) as string[] || [];
 
+  // Debug logging
+  console.log("[Feed API] User follows:", {
+    venueIds: followedVenueIds,
+    producerIds: followedProducerIds,
+  });
+
   // Get friends (mutual follows)
   const { data: following } = await supabase
     .from("follows")
@@ -311,6 +317,15 @@ export async function GET(request: Request) {
       reasons: reasons.length > 0 ? reasons : undefined,
       friends_going: friendsGoing.length > 0 ? friendsGoing : undefined,
     };
+  });
+
+  // Debug: count events by reason
+  const venueMatches = events.filter(e => e.reasons?.some(r => r.type === "followed_venue")).length;
+  const producerMatches = events.filter(e => e.reasons?.some(r => r.type === "followed_producer")).length;
+  console.log("[Feed API] Matched events:", {
+    total: events.length,
+    fromFollowedVenues: venueMatches,
+    fromFollowedProducers: producerMatches,
   });
 
   // Sort by score descending, then by date
