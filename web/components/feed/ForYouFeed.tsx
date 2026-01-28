@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import CategoryIcon from "@/components/CategoryIcon";
@@ -107,54 +107,53 @@ export default function ForYouFeed({ portalSlug }: ForYouFeedProps) {
   const [loading, setLoading] = useState(true);
   const [hasPreferences, setHasPreferences] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const loadFeed = useCallback(async (signal: AbortSignal) => {
-    try {
-      setError(null);
-
-      const [feedRes, trendingRes, prefsRes] = await Promise.all([
-        fetch(`/api/feed?limit=50&portal=${portalSlug}`, { signal }),
-        fetch(`/api/trending?limit=10&portal=${portalSlug}`, { signal }),
-        fetch(`/api/preferences`, { signal }),
-      ]);
-
-      if (!feedRes.ok) {
-        const errorData = await feedRes.json().catch(() => ({}));
-        throw new Error(errorData.error || `Failed to load feed (${feedRes.status})`);
-      }
-
-      const feedData = await feedRes.json();
-      const trendingData = trendingRes.ok ? await trendingRes.json() : { events: [] };
-      const prefsData = prefsRes.ok ? await prefsRes.json() : null;
-
-      if (!signal.aborted) {
-        setEvents(feedData.events || []);
-        setHasPreferences(feedData.hasPreferences);
-        setTrendingEvents(trendingData.events || []);
-        setPreferences(prefsData);
-        setLoading(false);
-      }
-    } catch (err) {
-      if (
-        signal.aborted ||
-        (err instanceof Error && (err.name === "AbortError" || err.message.includes("aborted")))
-      ) {
-        return;
-      }
-      console.error("Failed to load feed:", err);
-      setError("Failed to load feed");
-      setLoading(false);
-    }
-  }, [portalSlug]);
+  const mountedRef = useRef(true);
 
   useEffect(() => {
-    // FeedShell already gates this component behind auth check,
-    // so we can safely load the feed when mounted
-    const controller = new AbortController();
-    loadFeed(controller.signal);
+    mountedRef.current = true;
 
-    return () => controller.abort();
-  }, [loadFeed]);
+    const loadFeed = async () => {
+      try {
+        setError(null);
+
+        const [feedRes, trendingRes, prefsRes] = await Promise.all([
+          fetch(`/api/feed?limit=50&portal=${portalSlug}`),
+          fetch(`/api/trending?limit=10&portal=${portalSlug}`),
+          fetch(`/api/preferences`),
+        ]);
+
+        if (!mountedRef.current) return;
+
+        if (!feedRes.ok) {
+          const errorData = await feedRes.json().catch(() => ({}));
+          throw new Error(errorData.error || `Failed to load feed (${feedRes.status})`);
+        }
+
+        const feedData = await feedRes.json();
+        const trendingData = trendingRes.ok ? await trendingRes.json() : { events: [] };
+        const prefsData = prefsRes.ok ? await prefsRes.json() : null;
+
+        if (mountedRef.current) {
+          setEvents(feedData.events || []);
+          setHasPreferences(feedData.hasPreferences);
+          setTrendingEvents(trendingData.events || []);
+          setPreferences(prefsData);
+          setLoading(false);
+        }
+      } catch (err) {
+        if (!mountedRef.current) return;
+        console.error("Failed to load feed:", err);
+        setError("Failed to load feed");
+        setLoading(false);
+      }
+    };
+
+    loadFeed();
+
+    return () => {
+      mountedRef.current = false;
+    };
+  }, [portalSlug]);
 
   // Group events by section
   const grouped = useMemo(() => {
