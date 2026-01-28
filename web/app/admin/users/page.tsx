@@ -112,6 +112,7 @@ export default function AdminUsersPage() {
         body: JSON.stringify({
           userId: selectedUser.id,
           updates: {
+            username: selectedUser.username,
             display_name: selectedUser.display_name,
             bio: selectedUser.bio,
             location: selectedUser.location,
@@ -332,10 +333,35 @@ export default function AdminUsersPage() {
                       </span>
                     </div>
                   )}
-                  <div>
-                    <p className="font-mono text-lg text-[var(--cream)]">
-                      @{selectedUser.username}
-                    </p>
+                  <div className="flex-1">
+                    {editMode ? (
+                      <div>
+                        <div className="flex items-center gap-1">
+                          <span className="font-mono text-lg text-[var(--muted)]">@</span>
+                          <input
+                            type="text"
+                            value={selectedUser.username}
+                            onChange={(e) => {
+                              const value = e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, "");
+                              setSelectedUser({
+                                ...selectedUser,
+                                username: value,
+                              });
+                            }}
+                            maxLength={30}
+                            className="flex-1 px-2 py-1 rounded bg-[var(--night)] border border-[var(--twilight)] text-[var(--cream)] font-mono text-lg focus:outline-none focus:border-[var(--coral)]"
+                            placeholder="username"
+                          />
+                        </div>
+                        <p className="font-mono text-[0.6rem] text-[var(--muted)] mt-1">
+                          3-30 chars, lowercase letters, numbers, underscores only
+                        </p>
+                      </div>
+                    ) : (
+                      <p className="font-mono text-lg text-[var(--cream)]">
+                        @{selectedUser.username}
+                      </p>
+                    )}
                     <p className="font-mono text-xs text-[var(--muted)]">
                       ID: {selectedUser.id.slice(0, 8)}...
                     </p>

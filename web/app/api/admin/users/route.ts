@@ -1,6 +1,25 @@
 import { NextResponse } from "next/server";
 import { createClient as createServerClient, getUser, isAdmin } from "@/lib/supabase/server";
 
+// Username validation: lowercase alphanumeric + underscore, 3-30 chars
+const USERNAME_REGEX = /^[a-z0-9_]{3,30}$/;
+
+function validateUsername(username: string): { valid: boolean; error?: string } {
+  if (!username) {
+    return { valid: false, error: "Username is required" };
+  }
+  if (username.length < 3) {
+    return { valid: false, error: "Username must be at least 3 characters" };
+  }
+  if (username.length > 30) {
+    return { valid: false, error: "Username must be 30 characters or less" };
+  }
+  if (!USERNAME_REGEX.test(username)) {
+    return { valid: false, error: "Username can only contain lowercase letters, numbers, and underscores" };
+  }
+  return { valid: true };
+}
+
 // PATCH /api/admin/users - Update a user's profile
 export async function PATCH(request: Request) {
   try {
@@ -16,9 +35,30 @@ export async function PATCH(request: Request) {
     }
 
     const supabase = await createServerClient();
-
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error } = await (supabase as any)
+    const sb = supabase as any;
+
+    // If username is being updated, validate it
+    if (updates.username !== undefined) {
+      const validation = validateUsername(updates.username);
+      if (!validation.valid) {
+        return NextResponse.json({ error: validation.error }, { status: 400 });
+      }
+
+      // Check if username is already taken by another user
+      const { data: existingUser } = await sb
+        .from("profiles")
+        .select("id")
+        .eq("username", updates.username)
+        .neq("id", userId)
+        .maybeSingle();
+
+      if (existingUser) {
+        return NextResponse.json({ error: "Username is already taken" }, { status: 400 });
+      }
+    }
+
+    const { error } = await sb
       .from("profiles")
       .update(updates)
       .eq("id", userId);
