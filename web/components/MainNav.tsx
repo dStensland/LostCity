@@ -55,7 +55,7 @@ export default function MainNav({ portalSlug = DEFAULT_PORTAL_SLUG }: Props) {
 
   const isActive = (tab: NavTab & { label: string }) => {
     if (tab.key === "your_stuff") {
-      return pathname === "/foryou" || pathname === "/saved";
+      return pathname === "/foryou";
     }
     const isPortalPage = pathname === `/${portalSlug}`;
     if (tab.key === "feed") {
