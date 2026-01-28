@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, memo, useRef } from "react";
+import { useEffect, useMemo, useState, memo } from "react";
 import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import MarkerClusterGroup from "react-leaflet-cluster";
 import L from "leaflet";
@@ -527,11 +527,6 @@ const SpotMarkers = memo(function SpotMarkers({ spots, portalSlug }: SpotMarkers
   return true;
 });
 
-function applyLiveFilter(events: EventWithLocation[], liveOnly: boolean) {
-  if (!liveOnly) return events;
-  return events.filter((event) => event.is_live);
-}
-
 export default function MapView({ events, spots = [], userLocation, viewRadius }: Props) {
   const { portal } = usePortal();
   const isLightTheme = (portal.branding?.theme_mode as string) === "light";
@@ -540,10 +535,6 @@ export default function MapView({ events, spots = [], userLocation, viewRadius }
 
   const [mounted, setMounted] = useState(false);
   const [localUserLocation, setLocalUserLocation] = useState<{ lat: number; lng: number } | null>(userLocation || null);
-  const [locating, setLocating] = useState(false);
-  const [locationDenied, setLocationDenied] = useState(false);
-  const [liveOnly, setLiveOnly] = useState(false);
-  const [isFullscreen, setIsFullscreen] = useState(false);
 
   // All hooks must be called before any early returns
   useEffect(() => {
@@ -558,33 +549,10 @@ export default function MapView({ events, spots = [], userLocation, viewRadius }
     }
   }, [userLocation]);
 
-  const requestUserLocation = useCallback(() => {
-    if (!navigator.geolocation) {
-      setLocationDenied(true);
-      return;
-    }
-    setLocating(true);
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        setLocalUserLocation({ lat: position.coords.latitude, lng: position.coords.longitude });
-        setLocating(false);
-      },
-      () => {
-        setLocating(false);
-        setLocationDenied(true);
-      }
-    );
-  }, []);
-
-  const filteredEvents = useMemo(
-    () => applyLiveFilter(events, liveOnly),
-    [events, liveOnly]
-  );
-
   // Filter events with valid coordinates
   const mappableEvents = useMemo(
-    () => filteredEvents.filter((e) => e.venue?.lat && e.venue?.lng),
-    [filteredEvents]
+    () => events.filter((e) => e.venue?.lat && e.venue?.lng),
+    [events]
   );
 
   // Filter spots with valid coordinates
@@ -665,24 +633,6 @@ export default function MapView({ events, spots = [], userLocation, viewRadius }
       ? L.latLngBounds(allMarkerCoords)
       : null;
 
-  // Memoize allMarkersBounds for MapOverlay to prevent unnecessary re-renders
-  const allMarkersBounds = useMemo(() => {
-    const coords: [number, number][] = [
-      ...mappableEvents.map((e) => [e.venue!.lat!, e.venue!.lng!] as [number, number]),
-      ...mappableSpots.map((s) => [s.lat!, s.lng!] as [number, number]),
-    ];
-    if (coords.length === 0) return null;
-    return L.latLngBounds(coords);
-  }, [mappableEvents, mappableSpots]);
-
-  const categoryLegend = [
-    { key: "music", label: "Music", color: CATEGORY_CONFIG.music.color },
-    { key: "food_drink", label: "Food & Drink", color: CATEGORY_CONFIG.food_drink.color },
-    { key: "art", label: "Art", color: CATEGORY_CONFIG.art.color },
-    { key: "comedy", label: "Comedy", color: CATEGORY_CONFIG.comedy.color },
-    { key: "community", label: "Community", color: CATEGORY_CONFIG.community.color },
-  ];
-
   // Early return AFTER all hooks
   if (!mounted) {
     return (
@@ -695,11 +645,7 @@ export default function MapView({ events, spots = [], userLocation, viewRadius }
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: mapStyles }} />
-      <div className={`rounded-lg overflow-hidden border border-[var(--twilight)] relative ${
-        isFullscreen
-          ? "fixed inset-0 z-[9999] rounded-none border-0"
-          : "w-full h-full"
-      }`}>
+      <div className="w-full h-full rounded-lg overflow-hidden border border-[var(--twilight)] relative">
         <MapContainer
           center={mapCenter}
           zoom={defaultZoom}
@@ -718,22 +664,6 @@ export default function MapView({ events, spots = [], userLocation, viewRadius }
           <TileLayer
             attribution={mapTiles.attribution}
             url={mapTiles.url}
-          />
-          <MapOverlay
-            totalEvents={filteredEvents.length}
-            totalSpots={mappableSpots.length}
-            mappableCount={mappableEvents.length + mappableSpots.length}
-            allMarkersBounds={allMarkersBounds}
-            hasUserLocation={!!localUserLocation}
-            userLocation={localUserLocation}
-            locating={locating}
-            locationDenied={locationDenied}
-            onRequestLocation={requestUserLocation}
-            legend={categoryLegend}
-            liveOnly={liveOnly}
-            onToggleLiveOnly={() => setLiveOnly((prev) => !prev)}
-            isFullscreen={isFullscreen}
-            onToggleFullscreen={() => setIsFullscreen((prev) => !prev)}
           />
           <EventMarkers events={mappableEvents} portalSlug={portal.slug} />
           {mappableSpots.length > 0 && (
@@ -764,152 +694,6 @@ export default function MapView({ events, spots = [], userLocation, viewRadius }
             <p className="text-[var(--muted)] font-mono text-sm">Nothing to see here. Literally.</p>
           </div>
         )}
-      </div>
-    </>
-  );
-}
-
-function MapOverlay({
-  totalEvents,
-  totalSpots,
-  mappableCount,
-  allMarkersBounds,
-  hasUserLocation,
-  userLocation,
-  locating,
-  locationDenied,
-  onRequestLocation,
-  legend,
-  liveOnly,
-  onToggleLiveOnly,
-  isFullscreen,
-  onToggleFullscreen,
-}: {
-  totalEvents: number;
-  totalSpots: number;
-  mappableCount: number;
-  allMarkersBounds: L.LatLngBounds | null;
-  hasUserLocation: boolean;
-  userLocation: { lat: number; lng: number } | null;
-  locating: boolean;
-  locationDenied: boolean;
-  onRequestLocation: () => void;
-  legend: { key: string; label: string; color: string }[];
-  liveOnly: boolean;
-  onToggleLiveOnly: () => void;
-  isFullscreen: boolean;
-  onToggleFullscreen: () => void;
-}) {
-  const map = useMap();
-  const initialFitDoneRef = useRef(false);
-
-  const fitToMarkers = useCallback(() => {
-    if (allMarkersBounds) {
-      map.fitBounds(allMarkersBounds, { padding: [60, 60] });
-    } else {
-      map.setView([33.7725, -84.3655], 12); // Ponce City Market area
-    }
-  }, [allMarkersBounds, map]);
-
-  const centerOnUser = useCallback(() => {
-    if (userLocation) {
-      map.setView([userLocation.lat, userLocation.lng], 12); // ~5 mile radius
-    }
-  }, [userLocation, map]);
-
-  // Only auto-fit to bounds ONCE on initial load, not on every change
-  useEffect(() => {
-    if (!initialFitDoneRef.current && !hasUserLocation && allMarkersBounds) {
-      map.fitBounds(allMarkersBounds, { padding: [60, 60] });
-      initialFitDoneRef.current = true;
-    }
-  }, [allMarkersBounds, hasUserLocation, map]);
-
-  return (
-    <>
-      <div className="absolute top-4 left-4 z-[1000] rounded-lg px-3 py-2 glass-panel">
-        <div className="text-xs font-mono text-[var(--muted)] uppercase tracking-wider">
-          Map View
-        </div>
-        <div className="text-sm text-[var(--cream)]">
-          {mappableCount} pins · {totalEvents} events · {totalSpots} spots
-        </div>
-        {mappableCount === 0 && (
-          <div className="text-[0.65rem] text-[var(--muted)] mt-1">
-            Try broadening filters
-          </div>
-        )}
-      </div>
-
-      <div className="absolute top-4 right-4 z-[1000] flex flex-col gap-2">
-        <button
-          onClick={onToggleFullscreen}
-          className={`rounded-lg px-3 py-2 text-[0.65rem] font-mono glass-panel-compact ${
-            isFullscreen ? "text-[var(--coral)]" : "text-[var(--muted)] hover:text-[var(--cream)]"
-          }`}
-          title={isFullscreen ? "Exit fullscreen" : "Fullscreen"}
-        >
-          {isFullscreen ? (
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          ) : (
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
-            </svg>
-          )}
-        </button>
-        <button
-          onClick={fitToMarkers}
-          className="rounded-lg px-3 py-2 text-[0.65rem] font-mono text-[var(--muted)] hover:text-[var(--cream)] glass-panel-compact"
-        >
-          Fit all
-        </button>
-        {hasUserLocation && (
-          <button
-            onClick={centerOnUser}
-            className="rounded-lg px-3 py-2 text-[0.65rem] font-mono text-[var(--neon-cyan)] hover:text-[var(--cream)] glass-panel-compact"
-          >
-            Center on me
-          </button>
-        )}
-        <button
-          onClick={onToggleLiveOnly}
-          className={`rounded-lg px-3 py-2 text-[0.65rem] font-mono glass-panel-compact ${
-            liveOnly ? "text-[var(--neon-red)]" : "text-[var(--muted)] hover:text-[var(--cream)]"
-          }`}
-        >
-          {liveOnly ? "Live only: On" : "Live only: Off"}
-        </button>
-        <button
-          onClick={onRequestLocation}
-          className="rounded-lg px-3 py-2 text-[0.65rem] font-mono text-[var(--muted)] hover:text-[var(--cream)] glass-panel-compact"
-          disabled={locating}
-        >
-          {locating ? "Locating..." : hasUserLocation ? "Update location" : "Use my location"}
-        </button>
-        {locationDenied && (
-          <div className="rounded-lg px-3 py-2 text-[0.6rem] font-mono text-[var(--muted)] glass-panel-compact">
-            Location blocked
-          </div>
-        )}
-      </div>
-
-      <div className="absolute bottom-4 left-4 z-[1000] rounded-lg px-3 py-2 glass-panel">
-        <div className="text-[0.6rem] font-mono text-[var(--muted)] uppercase tracking-wider mb-2">
-          Legend
-        </div>
-        <div className="flex items-center gap-3 flex-wrap">
-          {legend.map((item) => (
-            <div key={item.key} className="flex items-center gap-1.5 text-[0.65rem] text-[var(--soft)] font-mono">
-              <span
-                className="inline-block w-2 h-2 rounded-full"
-                style={{ backgroundColor: item.color }}
-              />
-              {item.label}
-            </div>
-          ))}
-        </div>
       </div>
     </>
   );
