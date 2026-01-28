@@ -354,6 +354,48 @@ export async function GET(request: Request) {
     }
   }
 
+  // Fetch events matching user's favorite categories (interests)
+  let categoryEventsData: typeof eventsData = [];
+  const favoriteCategories = prefs?.favorite_categories || [];
+
+  if (favoriteCategories.length > 0) {
+    const eventSelect = `
+      id,
+      title,
+      start_date,
+      start_time,
+      is_all_day,
+      is_free,
+      price_min,
+      price_max,
+      category,
+      image_url,
+      ticket_url,
+      producer_id,
+      source_id,
+      portal_id,
+      venue:venues(id, name, neighborhood, slug)
+    `;
+
+    const { data: categoryEvents } = await supabase
+      .from("events")
+      .select(eventSelect)
+      .in("category", favoriteCategories)
+      .gte("start_date", today)
+      .is("canonical_event_id", null)
+      .order("start_date", { ascending: true })
+      .limit(30);
+
+    if (categoryEvents) {
+      categoryEventsData = categoryEvents;
+    }
+
+    console.log("[Feed API] Category events fetched:", {
+      favoriteCategories,
+      eventCount: categoryEventsData.length,
+    });
+  }
+
   if (error) {
     console.error("Feed API query error:", error);
     return NextResponse.json(
@@ -362,7 +404,7 @@ export async function GET(request: Request) {
     );
   }
 
-  // Merge followed events and neighborhood events with main results, avoiding duplicates
+  // Merge followed events, neighborhood events, and category events with main results
   const mainEventIds = new Set((eventsData || []).map((e: { id: number }) => e.id));
   const uniqueFollowedEvents = (followedEventsData || []).filter(
     (e: { id: number }) => !mainEventIds.has(e.id)
@@ -378,7 +420,17 @@ export async function GET(request: Request) {
     (e: { id: number }) => !mainEventIds.has(e.id)
   );
 
-  const mergedEventsData = [...(eventsData || []), ...uniqueFollowedEvents, ...uniqueNeighborhoodEvents];
+  // Add neighborhood events to the set
+  for (const e of uniqueNeighborhoodEvents as { id: number }[]) {
+    mainEventIds.add(e.id);
+  }
+
+  // Add category events (avoiding duplicates with main + followed + neighborhood)
+  const uniqueCategoryEvents = (categoryEventsData || []).filter(
+    (e: { id: number }) => !mainEventIds.has(e.id)
+  );
+
+  const mergedEventsData = [...(eventsData || []), ...uniqueFollowedEvents, ...uniqueNeighborhoodEvents, ...uniqueCategoryEvents];
 
   type EventResult = {
     id: number;
