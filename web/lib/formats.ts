@@ -26,7 +26,7 @@ export function formatTime(time: string | null, isAllDay?: boolean): string {
  * Returns { time: "7:30", period: "pm" }
  */
 export function formatTimeSplit(time: string | null, isAllDay?: boolean): { time: string; period: string } {
-  if (isAllDay) return { time: "All", period: "Day" };
+  if (isAllDay) return { time: "All Day", period: "" };
   if (!time) return { time: "TBA", period: "" };
 
   const [hours, minutes] = time.split(":");
@@ -160,5 +160,5 @@ export function formatPriceDetailed(event: PriceableEvent): PriceFormatResult {
     return { text: `~$${catMin}–${catMax}`, isFree: false, isEstimate: true };
   }
 
-  return { text: "—", isFree: false, isEstimate: false };
+  return { text: "", isFree: false, isEstimate: false };
 }

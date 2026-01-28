@@ -317,11 +317,11 @@ export default async function PortalEventPage({ params }: Props) {
               items={[
                 { label: "Date", value: formattedDate },
                 { label: "Time", value: timeDisplay },
-                {
+                ...(priceText ? [{
                   label: "Price",
                   value: priceText,
                   color: isFree ? "var(--neon-green)" : "var(--gold)"
-                },
+                }] : []),
               ]}
               className="mb-8"
             />

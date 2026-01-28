@@ -235,9 +235,12 @@ function EventCard({ event, index = 0, skipAnimation = false, portalSlug, friend
               {event.title}
             </span>
             {isLive && (
-              <span className="flex-shrink-0 relative flex h-2.5 w-2.5">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--neon-red)] opacity-30" />
-                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[var(--neon-red)] opacity-80" />
+              <span className="flex-shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 rounded border bg-[var(--neon-red)]/15 border-[var(--neon-red)]/30">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--neon-red)] opacity-40" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-[var(--neon-red)]" />
+                </span>
+                <span className="font-mono text-[0.55rem] font-medium text-[var(--neon-red)] uppercase tracking-wide">Live</span>
               </span>
             )}
             {/* Kebab menu for hide/report */}
@@ -255,7 +258,7 @@ function EventCard({ event, index = 0, skipAnimation = false, portalSlug, friend
                 <span className="truncate" title={event.venue.neighborhood}>{event.venue.neighborhood}</span>
               </>
             )}
-            {price && (
+            {price && price.text && (
               <>
                 <span className="opacity-40">·</span>
                 {price.isFree ? (

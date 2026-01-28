@@ -120,9 +120,24 @@ export default function VenueTagList({ venueId, initialTags = [] }: VenueTagList
           ))}
         </div>
       ) : (
-        <div className="text-sm text-[var(--muted)] py-4 text-center border border-dashed border-[var(--twilight)] rounded-lg">
-          No tags yet. Be the first to add one!
-        </div>
+        <button
+          onClick={() => setShowAddModal(true)}
+          className="w-full py-4 px-4 border border-dashed border-[var(--twilight)] rounded-lg hover:border-[var(--coral)]/30 hover:bg-[var(--twilight)]/20 transition-all group"
+        >
+          <p className="text-sm text-[var(--muted)] text-center mb-2">
+            What&apos;s the vibe here?
+          </p>
+          <div className="flex flex-wrap justify-center gap-2">
+            {["chill", "loud", "trendy", "divey", "date night"].map((example) => (
+              <span
+                key={example}
+                className="px-2 py-1 rounded-md bg-[var(--twilight)]/50 text-[var(--soft)] font-mono text-xs opacity-60 group-hover:opacity-100 transition-opacity"
+              >
+                {example}
+              </span>
+            ))}
+          </div>
+        </button>
       )}
 
       {/* Add tag modal */}
