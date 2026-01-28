@@ -373,14 +373,16 @@ export default function PortalHappeningNowPage() {
       </div>
 
       {/* Map - at top */}
-      <div className="h-[250px] border-b border-[var(--twilight)]">
-        {eventsLoading ? (
-          <div className="h-full bg-[var(--dusk)] animate-pulse flex items-center justify-center">
-            <span className="text-[var(--muted)] font-mono text-sm">Loading map...</span>
-          </div>
-        ) : (
-          <MapViewWrapper events={mapEvents} userLocation={userLocation} />
-        )}
+      <div className="max-w-3xl mx-auto px-4 pt-4">
+        <div className="h-[250px] rounded-xl overflow-hidden border border-[var(--twilight)]">
+          {eventsLoading ? (
+            <div className="h-full bg-[var(--dusk)] animate-pulse flex items-center justify-center">
+              <span className="text-[var(--muted)] font-mono text-sm">Loading map...</span>
+            </div>
+          ) : (
+            <MapViewWrapper events={mapEvents} userLocation={userLocation} />
+          )}
+        </div>
       </div>
 
       {/* Content by category */}
