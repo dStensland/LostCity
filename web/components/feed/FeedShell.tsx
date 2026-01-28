@@ -145,10 +145,11 @@ function FeedShellInner({ portalSlug, activeTab, curatedContent }: FeedShellProp
   const { user, loading: authLoading } = useAuth();
   const [timedOut, setTimedOut] = useState(false);
 
-  // Timeout for auth loading - if it takes too long, assume no user
+  // Fallback timeout for auth loading - auth context has its own 6s timeout,
+  // this is a defense-in-depth backup in case something else hangs
   useEffect(() => {
     if (!authLoading) return;
-    const timer = setTimeout(() => setTimedOut(true), 2000);
+    const timer = setTimeout(() => setTimedOut(true), 8000);
     return () => clearTimeout(timer);
   }, [authLoading]);
 

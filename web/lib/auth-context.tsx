@@ -140,14 +140,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         setAuthState("checking");
 
-        // Try to get session - if it fails, retry once after a short delay
+        // Wrap getSession with timeout to prevent hanging
+        const getSessionWithTimeout = async (timeoutMs: number) => {
+          const timeoutPromise = new Promise<{ data: { session: null } }>((resolve) => {
+            setTimeout(() => resolve({ data: { session: null } }), timeoutMs);
+          });
+          return Promise.race([supabase.auth.getSession(), timeoutPromise]);
+        };
+
+        // Try to get session - if it fails or times out, retry once after a short delay
         // This handles the case where cookies aren't immediately available after OAuth redirect
         let session = null;
         let attempts = 0;
         const maxAttempts = 2;
+        const sessionTimeout = 3000; // 3 second timeout per attempt
 
         while (!session && attempts < maxAttempts) {
-          const { data } = await supabase.auth.getSession();
+          const { data } = await getSessionWithTimeout(sessionTimeout);
           session = data.session;
 
           if (!session && attempts < maxAttempts - 1) {
