@@ -351,20 +351,7 @@ export default function PortalHappeningNowPage() {
         </div>
       </div>
 
-      {/* Neighborhood Grid */}
-      {!showLocationPrompt && (
-        <div className="max-w-3xl mx-auto px-4">
-          <NeighborhoodGrid
-            neighborhoods={NEIGHBORHOODS}
-            events={events}
-            spots={openSpots}
-            selectedNeighborhood={selectedNeighborhood}
-            onSelectNeighborhood={setSelectedNeighborhood}
-          />
-        </div>
-      )}
-
-      {/* Map */}
+      {/* Map - at top */}
       <div className="h-[250px] border-b border-[var(--twilight)]">
         {eventsLoading ? (
           <div className="h-full bg-[var(--dusk)] animate-pulse flex items-center justify-center">
@@ -528,6 +515,18 @@ export default function PortalHappeningNowPage() {
                 </div>
               </CollapsibleSection>
             ))}
+
+            {/* Neighborhood Grid - at bottom */}
+            <div className="mt-6 pt-6 border-t border-[var(--twilight)]/30">
+              <h3 className="font-mono text-xs text-[var(--muted)] uppercase tracking-wider mb-3">Browse by Neighborhood</h3>
+              <NeighborhoodGrid
+                neighborhoods={NEIGHBORHOODS}
+                events={events}
+                spots={openSpots}
+                selectedNeighborhood={selectedNeighborhood}
+                onSelectNeighborhood={setSelectedNeighborhood}
+              />
+            </div>
           </div>
         )}
       </main>

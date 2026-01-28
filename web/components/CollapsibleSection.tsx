@@ -233,12 +233,21 @@ export default function CollapsibleSection({
 
 // Category icons for use with CollapsibleSection - neon outline style
 export const CategoryIcons = {
-  // Food - Cloche / dome
+  // Food - Pizza slice with dripping cheese
   food: (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-      <ellipse cx="12" cy="17" rx="9" ry="4" strokeWidth={1.5} />
-      <path d="M4 15c0-6 4-10 8-10s8 4 8 10" strokeWidth={1.5} />
-      <circle cx="12" cy="5" r="1" fill="currentColor" />
+      {/* Pizza slice triangle */}
+      <path d="M12 2L3 20h18L12 2z" strokeWidth={1.5} strokeLinejoin="round" />
+      {/* Crust arc */}
+      <path d="M5 17h14" strokeWidth={2} strokeLinecap="round" />
+      {/* Pepperoni */}
+      <circle cx="10" cy="12" r="1.5" fill="currentColor" />
+      <circle cx="14" cy="10" r="1.2" fill="currentColor" opacity={0.8} />
+      <circle cx="12" cy="15" r="1" fill="currentColor" opacity={0.6} />
+      {/* Dripping cheese */}
+      <path d="M7 17c0 1.5 0.5 2.5 0.5 3.5" strokeWidth={1.5} strokeLinecap="round" opacity={0.7} />
+      <path d="M11 17c0 2 0.3 3 0.3 4" strokeWidth={1.5} strokeLinecap="round" opacity={0.7} />
+      <path d="M16 17c0 1 0.4 2 0.4 2.5" strokeWidth={1.5} strokeLinecap="round" opacity={0.7} />
     </svg>
   ),
   // Drinks - Tilted glass with bubbles
