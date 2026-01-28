@@ -4,7 +4,7 @@ import { useState, memo } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import type { Event } from "@/lib/supabase";
-import { formatTimeSplit } from "@/lib/formats";
+import { formatTimeSplit, formatSmartDate } from "@/lib/formats";
 import CategoryIcon, { getCategoryColor } from "./CategoryIcon";
 import LazyImage from "./LazyImage";
 import SeriesBadge from "./SeriesBadge";
@@ -52,6 +52,8 @@ interface Props {
   reasons?: RecommendationReason[];
   /** Show thumbnail image on mobile when event has an image */
   showThumbnail?: boolean;
+  /** Context type for filtering redundant reason badges */
+  contextType?: "interests" | "venue" | "producer" | "neighborhood";
   /** Callback when user hides the event */
   onHide?: () => void;
 }
@@ -136,9 +138,10 @@ function getReflectionClass(category: string | null): string {
   return reflectionMap[category] || "";
 }
 
-function EventCard({ event, index = 0, skipAnimation = false, portalSlug, friendsGoing = [], reasons, showThumbnail = false, onHide }: Props) {
+function EventCard({ event, index = 0, skipAnimation = false, portalSlug, friendsGoing = [], reasons, showThumbnail = false, contextType, onHide }: Props) {
   const [thumbnailError, setThumbnailError] = useState(false);
   const { time, period } = formatTimeSplit(event.start_time, event.is_all_day);
+  const dateInfo = formatSmartDate(event.start_date);
   const isLive = event.is_live || false;
   // Only apply stagger animation to first 10 initial items, not infinite scroll items
   const staggerClass = !skipAnimation && index < 10 ? `stagger-${index + 1}` : "";
@@ -179,7 +182,12 @@ function EventCard({ event, index = 0, skipAnimation = false, portalSlug, friend
       <div className="flex gap-3">
         {/* Time cell - improved readability */}
         <div className="flex-shrink-0 w-14 flex flex-col items-center justify-center py-1">
-          <span className="font-mono text-sm font-medium text-[var(--soft)] leading-none tabular-nums">
+          <span className={`font-mono text-[0.55rem] font-medium leading-none ${
+            dateInfo.isHighlight ? "text-[var(--coral)]" : "text-[var(--muted)]"
+          }`}>
+            {dateInfo.label}
+          </span>
+          <span className="font-mono text-sm font-medium text-[var(--soft)] leading-none tabular-nums mt-0.5">
             {time}
           </span>
           {period && (
@@ -199,19 +207,17 @@ function EventCard({ event, index = 0, skipAnimation = false, portalSlug, friend
             onError={() => setThumbnailError(true)}
           />
         )}
-        {/* Mobile fallback thumbnail when image fails */}
+        {/* Mobile fallback thumbnail when image fails - category-aware gradient */}
         {showThumbnail && event.image_url && thumbnailError && (
           <div
             className="flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden relative sm:hidden border border-[var(--twilight)] flex items-center justify-center"
-            style={{ backgroundColor: categoryColor ? `${categoryColor}15` : "var(--night)" }}
+            style={{
+              background: categoryColor
+                ? `linear-gradient(135deg, ${categoryColor}25, ${categoryColor}08)`
+                : "linear-gradient(135deg, var(--twilight), var(--night))"
+            }}
           >
-            {event.category ? (
-              <CategoryIcon type={event.category} size={24} glow="subtle" />
-            ) : (
-              <svg className="w-6 h-6 text-[var(--muted)] opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-            )}
+            <CategoryIcon type={event.category || "community"} size={28} glow="intense" />
           </div>
         )}
 
@@ -246,6 +252,47 @@ function EventCard({ event, index = 0, skipAnimation = false, portalSlug, friend
             {/* Kebab menu for hide/report */}
             <EventCardMenu eventId={event.id} onHide={onHide} className="ml-auto" />
           </div>
+
+          {/* Friends going row - elevated above details for social proof */}
+          {friendsGoing.length > 0 && (
+            <div className="flex items-center gap-2 mt-1.5">
+              {/* Avatar stack - larger for visibility */}
+              <div className="flex -space-x-2">
+                {friendsGoing.slice(0, 3).map((friend) => (
+                  friend.user.avatar_url ? (
+                    <Image
+                      key={friend.user_id}
+                      src={friend.user.avatar_url}
+                      alt={friend.user.display_name || friend.user.username}
+                      width={20}
+                      height={20}
+                      className="w-5 h-5 rounded-full border-2 border-[var(--void)] object-cover"
+                    />
+                  ) : (
+                    <div
+                      key={friend.user_id}
+                      className="w-5 h-5 rounded-full border-2 border-[var(--void)] bg-[var(--neon-cyan)] flex items-center justify-center text-[0.5rem] font-bold text-[var(--void)]"
+                    >
+                      {(friend.user.display_name || friend.user.username)[0].toUpperCase()}
+                    </div>
+                  )
+                ))}
+              </div>
+              <span className="text-xs text-[var(--neon-cyan)] font-medium">
+                {friendsGoing.length === 1 ? (
+                  <>
+                    {friendsGoing[0].user.display_name || friendsGoing[0].user.username}
+                    {" "}{friendsGoing[0].status === "going" ? "is going" : "is interested"}
+                  </>
+                ) : (
+                  <>
+                    {friendsGoing.length} friends
+                    {" "}{friendsGoing.some(f => f.status === "going") ? "are in" : "are interested"}
+                  </>
+                )}
+              </span>
+            </div>
+          )}
 
           {/* Details row */}
           <div className="flex items-center gap-1.5 text-xs text-[var(--muted)] mt-1">
@@ -290,51 +337,20 @@ function EventCard({ event, index = 0, skipAnimation = false, portalSlug, friend
             )}
           </div>
 
-          {/* Friends going row */}
-          {friendsGoing.length > 0 && (
-            <div className="flex items-center gap-1.5 mt-2">
-              {/* Mini avatar stack */}
-              <div className="flex -space-x-1.5">
-                {friendsGoing.slice(0, 3).map((friend) => (
-                  friend.user.avatar_url ? (
-                    <Image
-                      key={friend.user_id}
-                      src={friend.user.avatar_url}
-                      alt={friend.user.display_name || friend.user.username}
-                      width={18}
-                      height={18}
-                      className="w-[18px] h-[18px] rounded-full border border-[var(--void)] object-cover"
-                    />
-                  ) : (
-                    <div
-                      key={friend.user_id}
-                      className="w-[18px] h-[18px] rounded-full border border-[var(--void)] bg-[var(--coral)] flex items-center justify-center text-[0.5rem] font-bold text-[var(--void)]"
-                    >
-                      {(friend.user.display_name || friend.user.username)[0].toUpperCase()}
-                    </div>
-                  )
-                ))}
-              </div>
-              <span className="text-[0.65rem] text-[var(--neon-cyan)]">
-                {friendsGoing.length === 1 ? (
-                  <>
-                    <span className="font-medium">{friendsGoing[0].user.display_name || friendsGoing[0].user.username}</span>
-                    {" "}{friendsGoing[0].status === "going" ? "is in" : "is a maybe"}
-                  </>
-                ) : (
-                  <>
-                    <span className="font-medium">{friendsGoing.length} friends</span>
-                    {" "}{friendsGoing.some(f => f.status === "going") ? "are in" : "are maybes"}
-                  </>
-                )}
-              </span>
-            </div>
-          )}
-
-          {/* Recommendation reasons (only show if no friends going, to avoid clutter) */}
+          {/* Recommendation reasons - filter redundant badges based on context */}
           {friendsGoing.length === 0 && reasons && reasons.length > 0 && (
             <div className="flex items-center gap-1.5 mt-2 flex-wrap">
-              {getTopReasons(reasons, 2).map((reason, idx) => (
+              {getTopReasons(
+                reasons.filter((r) => {
+                  // Filter out redundant badges based on section context
+                  if (contextType === "venue" && r.type === "followed_venue") return false;
+                  if (contextType === "producer" && r.type === "followed_producer") return false;
+                  if (contextType === "interests" && r.type === "category") return false;
+                  if (contextType === "neighborhood" && r.type === "neighborhood") return false;
+                  return true;
+                }),
+                2
+              ).map((reason, idx) => (
                 <ReasonBadge key={`${reason.type}-${idx}`} reason={reason} size="sm" />
               ))}
             </div>

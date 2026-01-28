@@ -255,16 +255,79 @@ export default function DashboardActivity() {
 
   if (!user) {
     return (
-      <div className="p-6 bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg text-center">
-        <p className="text-[var(--muted)] font-mono text-sm">
-          Sign in to see activity from people you follow
-        </p>
-        <Link
-          href="/auth/login?redirect=/atl?view=community"
-          className="inline-block mt-3 px-4 py-2 bg-[var(--coral)] text-[var(--void)] font-mono text-sm font-medium rounded-lg hover:bg-[var(--rose)] transition-colors"
-        >
-          Sign In
-        </Link>
+      <div className="space-y-6">
+        {/* Hero section */}
+        <div className="p-6 rounded-xl bg-gradient-to-br from-[var(--dusk)] to-[var(--night)] border border-[var(--twilight)] text-center">
+          <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-[var(--neon-cyan)]/20 to-[var(--neon-magenta)]/20 flex items-center justify-center">
+            <svg className="w-8 h-8 text-[var(--neon-cyan)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+            </svg>
+          </div>
+          <h3 className="font-serif text-xl text-[var(--cream)] mb-2">
+            See What Your Friends Are Doing
+          </h3>
+          <p className="text-sm text-[var(--muted)] mb-5 max-w-sm mx-auto">
+            Connect with friends, see where they&apos;re going, and discover events through the people you trust.
+          </p>
+          <Link
+            href="/auth/login?redirect=/atl?view=community"
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-[var(--coral)] text-[var(--void)] rounded-lg font-mono text-sm font-medium hover:bg-[var(--rose)] transition-colors"
+          >
+            Sign In to Connect
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+            </svg>
+          </Link>
+        </div>
+
+        {/* Blurred fake activity preview */}
+        <div className="relative">
+          <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
+            <span className="px-3 py-1.5 rounded-full bg-[var(--void)]/80 border border-[var(--twilight)] font-mono text-xs text-[var(--muted)]">
+              Sign in to see activity
+            </span>
+          </div>
+          <div className="space-y-3 blur-sm opacity-60 select-none" aria-hidden="true">
+            {/* Fake friend request */}
+            <div className="flex items-center gap-4 p-4 bg-[var(--dusk)] border border-[var(--coral)]/30 rounded-lg">
+              <div className="w-10 h-10 rounded-full bg-[var(--coral)]" />
+              <div className="flex-1">
+                <div className="h-4 w-32 bg-[var(--twilight)] rounded" />
+                <div className="h-3 w-20 bg-[var(--twilight)] rounded mt-1" />
+              </div>
+              <div className="flex gap-2">
+                <div className="px-3 py-1.5 bg-[var(--coral)] rounded-lg h-8 w-16" />
+                <div className="px-3 py-1.5 bg-[var(--twilight)] rounded-lg h-8 w-16" />
+              </div>
+            </div>
+
+            {/* Fake grouped activity */}
+            <div className="p-4 bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="flex -space-x-2">
+                  <div className="w-8 h-8 rounded-full bg-[var(--neon-cyan)] border-2 border-[var(--dusk)]" />
+                  <div className="w-8 h-8 rounded-full bg-[var(--coral)] border-2 border-[var(--dusk)]" />
+                </div>
+                <div className="h-3 w-24 bg-[var(--neon-cyan)]/30 rounded" />
+              </div>
+              <div className="h-5 w-48 bg-[var(--twilight)] rounded" />
+              <div className="h-3 w-32 bg-[var(--twilight)] rounded mt-2" />
+            </div>
+
+            {/* Fake activity items */}
+            {[1, 2].map((i) => (
+              <div key={i} className="p-4 bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg">
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-full bg-[var(--twilight)]" />
+                  <div className="flex-1 space-y-2">
+                    <div className="h-4 w-3/4 bg-[var(--twilight)] rounded" />
+                    <div className="h-3 w-16 bg-[var(--twilight)] rounded" />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     );
   }

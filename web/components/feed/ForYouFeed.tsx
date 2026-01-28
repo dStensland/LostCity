@@ -3,7 +3,6 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import Link from "next/link";
 import EventCard, { type FriendGoing } from "@/components/EventCard";
-import CollapsibleSection from "@/components/CollapsibleSection";
 import type { RecommendationReason } from "@/components/ReasonBadge";
 
 // Event type matching API response - compatible with EventCard
@@ -47,6 +46,11 @@ type TrendingEvent = FeedEvent & {
 
 // Section configuration with icons and colors
 const SECTION_CONFIG = {
+  friendsGoing: {
+    title: "Friends Are Going",
+    icon: "👯",
+    color: "#00FFFF", // cyan
+  },
   yourInterests: {
     title: "Based on Your Interests",
     icon: "✨",
@@ -73,6 +77,186 @@ const SECTION_CONFIG = {
     color: "#FF6B6B", // coral
   },
 } as const;
+
+// Quick filter options
+type QuickFilter = "all" | "today" | "weekend" | "free";
+
+// QuickFilters component
+function QuickFilters({
+  selected,
+  onChange
+}: {
+  selected: QuickFilter;
+  onChange: (filter: QuickFilter) => void;
+}) {
+  const filters: { key: QuickFilter; label: string }[] = [
+    { key: "all", label: "All" },
+    { key: "today", label: "Today" },
+    { key: "weekend", label: "Weekend" },
+    { key: "free", label: "Free" },
+  ];
+
+  return (
+    <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide mb-4">
+      {filters.map((filter) => (
+        <button
+          key={filter.key}
+          onClick={() => onChange(filter.key)}
+          className={`px-3 py-1.5 rounded-full font-mono text-xs whitespace-nowrap transition-all ${
+            selected === filter.key
+              ? "bg-[var(--coral)] text-[var(--void)] font-medium"
+              : "bg-[var(--twilight)] text-[var(--soft)] border border-[var(--twilight)] hover:text-[var(--cream)] hover:border-[var(--muted)]"
+          }`}
+        >
+          {filter.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+// FriendsGoingHighlight component - shows events where friends are going
+function FriendsGoingHighlight({
+  events,
+  portalSlug,
+}: {
+  events: FeedEvent[];
+  portalSlug: string;
+}) {
+  if (events.length === 0) return null;
+
+  return (
+    <section className="mb-8">
+      {/* Section header with cyan accent - improved spacing */}
+      <div className="flex items-center gap-2 mb-4 px-1">
+        <div
+          className="w-1 h-5 rounded-full"
+          style={{ backgroundColor: SECTION_CONFIG.friendsGoing.color }}
+        />
+        <span className="text-lg">{SECTION_CONFIG.friendsGoing.icon}</span>
+        <h2
+          className="font-semibold text-sm"
+          style={{ color: SECTION_CONFIG.friendsGoing.color }}
+        >
+          {SECTION_CONFIG.friendsGoing.title}
+        </h2>
+        <span
+          className="ml-auto px-2 py-0.5 rounded-full text-[0.65rem] font-mono font-medium"
+          style={{
+            backgroundColor: `${SECTION_CONFIG.friendsGoing.color}20`,
+            color: SECTION_CONFIG.friendsGoing.color,
+          }}
+        >
+          {events.length}
+        </span>
+      </div>
+
+      {/* Highlighted cards with subtle cyan background - simplified border treatment */}
+      <div className="space-y-3 p-3 rounded-xl border border-[var(--neon-cyan)]/25 bg-[var(--neon-cyan)]/5">
+        {events.slice(0, 3).map((event, idx) => (
+          <EventCard
+            key={event.id}
+            event={event as never}
+            index={idx}
+            portalSlug={portalSlug}
+            friendsGoing={convertFriendsGoing(event.friends_going)}
+            reasons={event.reasons}
+            showThumbnail={idx < 2 && !!event.image_url}
+            skipAnimation
+          />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+// ExpandableSection component - replaces CollapsibleSection
+function ExpandableSection({
+  title,
+  icon,
+  accentColor,
+  contextType,
+  events,
+  portalSlug,
+  initialVisible = 3,
+}: {
+  title: string;
+  icon: string;
+  count: number;
+  accentColor: string;
+  contextType?: "interests" | "venue" | "producer" | "neighborhood";
+  events: FeedEvent[];
+  portalSlug: string;
+  initialVisible?: number;
+}) {
+  const [showAll, setShowAll] = useState(false);
+  const visibleEvents = showAll ? events : events.slice(0, initialVisible);
+  const hiddenCount = events.length - initialVisible;
+  const hasMore = hiddenCount > 0;
+
+  if (events.length === 0) return null;
+
+  return (
+    <section className="mb-8">
+      {/* Section header - always visible, improved spacing */}
+      <div className="flex items-center gap-2 mb-4 px-1">
+        <div
+          className="w-1 h-5 rounded-full"
+          style={{ backgroundColor: accentColor }}
+        />
+        <span className="text-lg">{icon}</span>
+        <h2
+          className="font-semibold text-sm"
+          style={{ color: accentColor }}
+        >
+          {title}
+        </h2>
+        {/* Show "X of Y" only when there's more to show, otherwise just total */}
+        <span
+          className="ml-auto px-2 py-0.5 rounded-full text-[0.65rem] font-mono font-medium"
+          style={{
+            backgroundColor: `${accentColor}20`,
+            color: accentColor,
+          }}
+        >
+          {hasMore && !showAll ? `${initialVisible} of ${events.length}` : events.length}
+        </span>
+      </div>
+
+      {/* Events - always visible */}
+      <div>
+        {visibleEvents.map((event, idx) => (
+          <EventCard
+            key={event.id}
+            event={event as never}
+            index={idx}
+            portalSlug={portalSlug}
+            reasons={event.reasons}
+            friendsGoing={convertFriendsGoing(event.friends_going)}
+            contextType={contextType}
+            showThumbnail={idx < 2 && !!event.image_url}
+            skipAnimation
+          />
+        ))}
+      </div>
+
+      {/* Show more button */}
+      {!showAll && hasMore && (
+        <button
+          onClick={() => setShowAll(true)}
+          className="w-full mt-2 py-2 text-center text-xs font-mono font-medium tracking-wider rounded-lg border transition-all hover:opacity-80"
+          style={{
+            color: accentColor,
+            borderColor: `${accentColor}30`,
+            background: `${accentColor}08`,
+          }}
+        >
+          Show {hiddenCount} more
+        </button>
+      )}
+    </section>
+  );
+}
 
 interface ForYouFeedProps {
   portalSlug: string;
@@ -104,6 +288,7 @@ export default function ForYouFeed({ portalSlug }: ForYouFeedProps) {
   const [loading, setLoading] = useState(true);
   const [hasPreferences, setHasPreferences] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [quickFilter, setQuickFilter] = useState<QuickFilter>("all");
   const mountedRef = useRef(true);
 
   const loadFeed = useCallback(async () => {
@@ -180,12 +365,49 @@ export default function ForYouFeed({ portalSlug }: ForYouFeedProps) {
     };
   }, [loadFeed]);
 
+  // Apply quick filter to events
+  const filteredEvents = useMemo(() => {
+    if (quickFilter === "all") return events;
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayStr = today.toISOString().split("T")[0];
+
+    // Get weekend dates (Saturday and Sunday)
+    const dayOfWeek = today.getDay();
+    const daysUntilSaturday = (6 - dayOfWeek + 7) % 7 || 7;
+    const saturday = new Date(today);
+    saturday.setDate(saturday.getDate() + (dayOfWeek === 6 ? 0 : daysUntilSaturday));
+    const sunday = new Date(saturday);
+    sunday.setDate(sunday.getDate() + 1);
+    const saturdayStr = saturday.toISOString().split("T")[0];
+    const sundayStr = sunday.toISOString().split("T")[0];
+
+    return events.filter((e) => {
+      if (quickFilter === "today") {
+        return e.start_date === todayStr;
+      }
+      if (quickFilter === "weekend") {
+        return e.start_date === saturdayStr || e.start_date === sundayStr;
+      }
+      if (quickFilter === "free") {
+        return e.is_free;
+      }
+      return true;
+    });
+  }, [events, quickFilter]);
+
   // Group events by section
   const grouped = useMemo(() => {
     const seenEventIds = new Set<number>();
 
+    // Events where friends are going (highest priority)
+    const friendsGoing = filteredEvents.filter((e) =>
+      e.friends_going && e.friends_going.length > 0
+    );
+
     // Events matching user's favorite categories (that don't have a more specific reason)
-    const yourInterests = events.filter((e) => {
+    const yourInterests = filteredEvents.filter((e) => {
       if (!preferences?.favorite_categories?.length) return false;
       if (!e.category) return false;
       // Only include if category matches AND doesn't have a follow-based reason
@@ -196,28 +418,26 @@ export default function ForYouFeed({ portalSlug }: ForYouFeedProps) {
     });
 
     // Events from followed venues
-    const followedVenues = events.filter((e) =>
+    const followedVenues = filteredEvents.filter((e) =>
       e.reasons?.some((r) => r.type === "followed_venue")
     );
 
     // Events from followed orgs/producers
-    const followedOrgs = events.filter((e) =>
+    const followedOrgs = filteredEvents.filter((e) =>
       e.reasons?.some((r) => r.type === "followed_producer")
     );
 
-    // Events in user's favorite neighborhoods (that aren't in other sections)
-    const yourNeighborhoods = events.filter((e) => {
+    // Events in user's favorite neighborhoods (that aren't already shown via follows)
+    const yourNeighborhoods = filteredEvents.filter((e) => {
       if (!preferences?.favorite_neighborhoods?.length) return false;
       if (!e.venue?.neighborhood) return false;
-      // Only include if not already in a more specific section
+      // Only exclude if already shown via followed venue/producer
       const hasFollowReason = e.reasons?.some(
         (r) => r.type === "followed_venue" || r.type === "followed_producer"
       );
-      const matchesCategory = preferences?.favorite_categories?.includes(e.category || "");
       return (
         preferences.favorite_neighborhoods.includes(e.venue.neighborhood) &&
-        !hasFollowReason &&
-        !matchesCategory
+        !hasFollowReason
       );
     });
 
@@ -231,15 +451,17 @@ export default function ForYouFeed({ portalSlug }: ForYouFeedProps) {
     };
 
     return {
+      friendsGoing: dedupeSection(friendsGoing).slice(0, 6),
       yourInterests: dedupeSection(yourInterests).slice(0, 6),
       followedVenues: dedupeSection(followedVenues).slice(0, 6),
       followedOrgs: dedupeSection(followedOrgs).slice(0, 6),
       yourNeighborhoods: dedupeSection(yourNeighborhoods).slice(0, 6),
     };
-  }, [events, preferences]);
+  }, [filteredEvents, preferences]);
 
   // Check if any sections have content
   const hasSections =
+    grouped.friendsGoing.length > 0 ||
     grouped.yourInterests.length > 0 ||
     grouped.followedVenues.length > 0 ||
     grouped.followedOrgs.length > 0 ||
@@ -282,8 +504,9 @@ export default function ForYouFeed({ portalSlug }: ForYouFeedProps) {
     return (
       <div className="space-y-6">
         <div className="p-6 rounded-xl bg-gradient-to-br from-[var(--dusk)] to-[var(--night)] border border-[var(--twilight)] text-center">
-          <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-[var(--neon-cyan)]/20 to-[var(--neon-magenta)]/20 flex items-center justify-center">
-            <span className="text-3xl">✨</span>
+          <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-[var(--neon-cyan)]/20 via-[var(--neon-magenta)]/20 to-[var(--coral)]/20 flex items-center justify-center relative group cursor-default">
+            <span className="text-3xl animate-pulse">✨</span>
+            <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-[var(--neon-cyan)]/10 to-[var(--coral)]/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
           </div>
           <h3 className="font-serif text-lg text-[var(--cream)] mb-2">
             Tell us what you&apos;re into
@@ -302,27 +525,16 @@ export default function ForYouFeed({ portalSlug }: ForYouFeedProps) {
           </Link>
         </div>
 
-        {/* Show trending as fallback */}
+        {/* Show trending as fallback - always expanded */}
         {trendingEvents.length > 0 && (
-          <CollapsibleSection
+          <ExpandableSection
             title={SECTION_CONFIG.trending.title}
             icon={SECTION_CONFIG.trending.icon}
             count={trendingEvents.length}
             accentColor={SECTION_CONFIG.trending.color}
-            defaultOpen
-          >
-            <div>
-              {trendingEvents.slice(0, 6).map((event, idx) => (
-                <EventCard
-                  key={event.id}
-                  event={event as never}
-                  index={idx}
-                  portalSlug={portalSlug}
-                  skipAnimation
-                />
-              ))}
-            </div>
-          </CollapsibleSection>
+            events={trendingEvents}
+            portalSlug={portalSlug}
+          />
         )}
       </div>
     );
@@ -331,105 +543,58 @@ export default function ForYouFeed({ portalSlug }: ForYouFeedProps) {
   // Main content with sections
   return (
     <div className="space-y-4">
+      {/* Quick filters */}
+      <QuickFilters selected={quickFilter} onChange={setQuickFilter} />
+
+      {/* Friends Going Highlight - top priority social proof */}
+      <FriendsGoingHighlight
+        events={grouped.friendsGoing}
+        portalSlug={portalSlug}
+      />
+
       {/* Based on Your Interests */}
-      {grouped.yourInterests.length > 0 && (
-        <CollapsibleSection
-          title={SECTION_CONFIG.yourInterests.title}
-          icon={SECTION_CONFIG.yourInterests.icon}
-          count={grouped.yourInterests.length}
-          accentColor={SECTION_CONFIG.yourInterests.color}
-          defaultOpen
-        >
-          <div>
-            {grouped.yourInterests.map((event, idx) => (
-              <EventCard
-                key={event.id}
-                event={event as never}
-                index={idx}
-                portalSlug={portalSlug}
-                reasons={event.reasons}
-                friendsGoing={convertFriendsGoing(event.friends_going)}
-                skipAnimation
-              />
-            ))}
-          </div>
-        </CollapsibleSection>
-      )}
+      <ExpandableSection
+        title={SECTION_CONFIG.yourInterests.title}
+        icon={SECTION_CONFIG.yourInterests.icon}
+        count={grouped.yourInterests.length}
+        accentColor={SECTION_CONFIG.yourInterests.color}
+        contextType="interests"
+        events={grouped.yourInterests}
+        portalSlug={portalSlug}
+      />
 
       {/* From Venues You Follow */}
-      {grouped.followedVenues.length > 0 && (
-        <CollapsibleSection
-          title={SECTION_CONFIG.followedVenues.title}
-          icon={SECTION_CONFIG.followedVenues.icon}
-          count={grouped.followedVenues.length}
-          accentColor={SECTION_CONFIG.followedVenues.color}
-          defaultOpen
-        >
-          <div>
-            {grouped.followedVenues.map((event, idx) => (
-              <EventCard
-                key={event.id}
-                event={event as never}
-                index={idx}
-                portalSlug={portalSlug}
-                reasons={event.reasons}
-                friendsGoing={convertFriendsGoing(event.friends_going)}
-                skipAnimation
-              />
-            ))}
-          </div>
-        </CollapsibleSection>
-      )}
+      <ExpandableSection
+        title={SECTION_CONFIG.followedVenues.title}
+        icon={SECTION_CONFIG.followedVenues.icon}
+        count={grouped.followedVenues.length}
+        accentColor={SECTION_CONFIG.followedVenues.color}
+        contextType="venue"
+        events={grouped.followedVenues}
+        portalSlug={portalSlug}
+      />
 
       {/* From Orgs You Follow */}
-      {grouped.followedOrgs.length > 0 && (
-        <CollapsibleSection
-          title={SECTION_CONFIG.followedOrgs.title}
-          icon={SECTION_CONFIG.followedOrgs.icon}
-          count={grouped.followedOrgs.length}
-          accentColor={SECTION_CONFIG.followedOrgs.color}
-          defaultOpen
-        >
-          <div>
-            {grouped.followedOrgs.map((event, idx) => (
-              <EventCard
-                key={event.id}
-                event={event as never}
-                index={idx}
-                portalSlug={portalSlug}
-                reasons={event.reasons}
-                friendsGoing={convertFriendsGoing(event.friends_going)}
-                skipAnimation
-              />
-            ))}
-          </div>
-        </CollapsibleSection>
-      )}
+      <ExpandableSection
+        title={SECTION_CONFIG.followedOrgs.title}
+        icon={SECTION_CONFIG.followedOrgs.icon}
+        count={grouped.followedOrgs.length}
+        accentColor={SECTION_CONFIG.followedOrgs.color}
+        contextType="producer"
+        events={grouped.followedOrgs}
+        portalSlug={portalSlug}
+      />
 
       {/* In Your Neighborhoods */}
-      {grouped.yourNeighborhoods.length > 0 && (
-        <CollapsibleSection
-          title={SECTION_CONFIG.yourNeighborhoods.title}
-          icon={SECTION_CONFIG.yourNeighborhoods.icon}
-          count={grouped.yourNeighborhoods.length}
-          accentColor={SECTION_CONFIG.yourNeighborhoods.color}
-          defaultOpen={grouped.yourInterests.length === 0 && grouped.followedVenues.length === 0}
-        >
-          <div>
-            {grouped.yourNeighborhoods.map((event, idx) => (
-              <EventCard
-                key={event.id}
-                event={event as never}
-                index={idx}
-                portalSlug={portalSlug}
-                reasons={event.reasons}
-                friendsGoing={convertFriendsGoing(event.friends_going)}
-                skipAnimation
-              />
-            ))}
-          </div>
-        </CollapsibleSection>
-      )}
+      <ExpandableSection
+        title={SECTION_CONFIG.yourNeighborhoods.title}
+        icon={SECTION_CONFIG.yourNeighborhoods.icon}
+        count={grouped.yourNeighborhoods.length}
+        accentColor={SECTION_CONFIG.yourNeighborhoods.color}
+        contextType="neighborhood"
+        events={grouped.yourNeighborhoods}
+        portalSlug={portalSlug}
+      />
 
       {/* Empty state - all caught up */}
       {!hasSections && hasPreferences && (
@@ -456,26 +621,16 @@ export default function ForYouFeed({ portalSlug }: ForYouFeedProps) {
       )}
 
       {/* Show trending as fallback when few personalized events */}
-      {hasSections && trendingEvents.length > 0 && events.length < 10 && (
-        <CollapsibleSection
+      {hasSections && trendingEvents.length > 0 && filteredEvents.length < 10 && (
+        <ExpandableSection
           title={SECTION_CONFIG.trending.title}
           icon={SECTION_CONFIG.trending.icon}
           count={trendingEvents.length}
           accentColor={SECTION_CONFIG.trending.color}
-          defaultOpen={false}
-        >
-          <div>
-            {trendingEvents.slice(0, 6).map((event, idx) => (
-              <EventCard
-                key={event.id}
-                event={event as never}
-                index={idx}
-                portalSlug={portalSlug}
-                skipAnimation
-              />
-            ))}
-          </div>
-        </CollapsibleSection>
+          events={trendingEvents}
+          portalSlug={portalSlug}
+          initialVisible={3}
+        />
       )}
     </div>
   );

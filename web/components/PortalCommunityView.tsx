@@ -61,23 +61,28 @@ function ProducerCard({
   orgConfig: { label: string; color: string } | undefined;
 }) {
   const hasEvents = (producer.event_count ?? 0) > 0;
+  const glowColor = orgConfig?.color || "var(--coral)";
 
   return (
     <Link
       href={`/${portalSlug}?org=${producer.slug}`}
       scroll={false}
-      className="block p-5 rounded-xl border border-[var(--twilight)] card-atmospheric group"
+      className="block p-5 rounded-xl border border-[var(--twilight)] card-atmospheric group transition-all duration-300 hover:translate-y-[-2px]"
       style={{
         backgroundColor: "var(--card-bg)",
-        "--glow-color": orgConfig?.color || "var(--coral)",
+        "--glow-color": glowColor,
         "--reflection-color": orgConfig?.color ? `color-mix(in srgb, ${orgConfig.color} 15%, transparent)` : undefined,
       } as React.CSSProperties}
     >
       <div className="flex items-start gap-4">
-        {/* Logo */}
-        <div className="flex-shrink-0">
+        {/* Logo with subtle hover glow - reduced intensity */}
+        <div className="flex-shrink-0 relative">
+          <div
+            className="absolute inset-0 rounded-xl opacity-0 group-hover:opacity-40 transition-opacity duration-300 blur-lg"
+            style={{ backgroundColor: glowColor, transform: "scale(1.2)" }}
+          />
           {producer.logo_url ? (
-            <div className="w-[72px] h-[72px] rounded-xl bg-white flex items-center justify-center overflow-hidden">
+            <div className="relative w-[72px] h-[72px] rounded-xl bg-white flex items-center justify-center overflow-hidden">
               <Image
                 src={producer.logo_url}
                 alt={producer.name}
@@ -90,7 +95,7 @@ function ProducerCard({
             </div>
           ) : (
             <div
-              className="w-[72px] h-[72px] rounded-xl flex items-center justify-center"
+              className="relative w-[72px] h-[72px] rounded-xl flex items-center justify-center"
               style={{
                 backgroundColor: producer.categories?.[0]
                   ? `${getCategoryColor(producer.categories[0])}20`
@@ -125,13 +130,16 @@ function ProducerCard({
             </div>
           </div>
 
+          {/* Prominent upcoming events badge with pulsing indicator */}
           {hasEvents && (
-            <div className="mt-3 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[var(--coral)]/10 border border-[var(--coral)]/20">
-              <svg className="w-4 h-4 text-[var(--coral)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
+            <div className="mt-3 inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[var(--coral)]/15 border border-[var(--coral)]/30">
+              {/* Pulsing dot */}
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--coral)] opacity-50" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-[var(--coral)]" />
+              </span>
               <span className="text-[var(--coral)] font-mono text-sm font-medium">
-                {producer.event_count} upcoming event{producer.event_count !== 1 ? "s" : ""}
+                {producer.event_count} upcoming
               </span>
             </div>
           )}
@@ -156,6 +164,18 @@ function ProducerCard({
               })}
             </div>
           )}
+        </div>
+
+        {/* Arrow indicator on hover */}
+        <div className="flex-shrink-0 self-center opacity-0 group-hover:opacity-100 transition-opacity">
+          <svg
+            className="w-5 h-5 text-[var(--muted)] group-hover:translate-x-1 transition-transform"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
         </div>
       </div>
     </Link>

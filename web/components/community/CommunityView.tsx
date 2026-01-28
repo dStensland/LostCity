@@ -16,11 +16,12 @@ interface CommunityViewProps {
   activeTab: CommunityTab;
 }
 
-const TABS: { key: CommunityTab; label: string; icon: React.ReactNode; authRequired?: boolean }[] = [
+const TABS: { key: CommunityTab; label: string; icon: React.ReactNode; authRequired?: boolean; description?: string }[] = [
   {
     key: "people",
-    label: "Your People",
+    label: "Friends",
     authRequired: true,
+    description: "Activity from your friends",
     icon: (
       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
@@ -30,6 +31,7 @@ const TABS: { key: CommunityTab; label: string; icon: React.ReactNode; authRequi
   {
     key: "lists",
     label: "Lists",
+    description: "Curated event collections",
     icon: (
       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
@@ -39,6 +41,7 @@ const TABS: { key: CommunityTab; label: string; icon: React.ReactNode; authRequi
   {
     key: "groups",
     label: "Groups",
+    description: "Local organizations",
     icon: (
       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
@@ -66,30 +69,36 @@ function CommunityViewInner({ portalId, portalSlug, portalName, activeTab }: Com
   return (
     <div className="py-6">
       {/* Tab navigation */}
-      <div className="flex p-1 mb-6 bg-[var(--night)] rounded-lg">
-        {TABS.map((tab) => {
-          const isActive = activeTab === tab.key;
-          const isLocked = tab.authRequired && !user;
-          return (
-            <button
-              key={tab.key}
-              onClick={() => handleTabChange(tab.key)}
-              className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-md font-mono text-xs transition-all ${
-                isActive
-                  ? "bg-[var(--coral)] text-[var(--void)] font-medium shadow-[0_0_12px_var(--coral)/20]"
-                  : "text-[var(--muted)] hover:text-[var(--cream)] hover:bg-[var(--twilight)]/50"
-              }`}
-            >
-              {tab.icon}
-              <span className="hidden sm:inline">{tab.label}</span>
-              {isLocked && (
-                <svg className="w-3 h-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                </svg>
-              )}
-            </button>
-          );
-        })}
+      <div className="mb-6">
+        <div className="flex p-1 bg-[var(--night)] rounded-lg">
+          {TABS.map((tab) => {
+            const isActive = activeTab === tab.key;
+            const isLocked = tab.authRequired && !user;
+            return (
+              <button
+                key={tab.key}
+                onClick={() => handleTabChange(tab.key)}
+                className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-md font-mono text-xs transition-all ${
+                  isActive
+                    ? "bg-[var(--coral)] text-[var(--void)] font-medium shadow-[0_0_12px_var(--coral)/20]"
+                    : "text-[var(--muted)] hover:text-[var(--cream)] hover:bg-[var(--twilight)]/50"
+                }`}
+              >
+                {tab.icon}
+                <span className="hidden sm:inline">{tab.label}</span>
+                {isLocked && (
+                  <span className="ml-1 px-1.5 py-0.5 rounded text-[0.55rem] bg-[var(--coral)]/20 text-[var(--coral)] font-semibold">
+                    Sign in
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+        {/* Tab description */}
+        <p className="text-center text-[0.7rem] text-[var(--soft)] mt-2 font-mono">
+          {TABS.find(t => t.key === activeTab)?.description}
+        </p>
       </div>
 
       {/* Tab content */}

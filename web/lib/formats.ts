@@ -120,6 +120,41 @@ export function formatPrice(event: PriceableEvent): string {
  * Format price with metadata about whether it's free or an estimate.
  * Useful for styling (green badge for free, italics for estimate).
  */
+/**
+ * Format a date as a smart contextual label: "Today", "Tmrw", "Wed", "1/28"
+ * Uses compact format for narrow time cells
+ */
+export function formatSmartDate(dateStr: string): { label: string; isHighlight: boolean } {
+  const date = new Date(dateStr + "T00:00:00"); // Parse as local date
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+
+  const nextWeek = new Date(today);
+  nextWeek.setDate(nextWeek.getDate() + 7);
+
+  // Check if same day
+  if (date.getTime() === today.getTime()) {
+    return { label: "Today", isHighlight: true };
+  }
+
+  // Check if tomorrow - use compact "Tmrw"
+  if (date.getTime() === tomorrow.getTime()) {
+    return { label: "Tmrw", isHighlight: true };
+  }
+
+  // Within next 7 days - show day name
+  if (date < nextWeek) {
+    const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    return { label: dayNames[date.getDay()], isHighlight: false };
+  }
+
+  // Further out - show compact "M/D" format (e.g., "1/28")
+  return { label: `${date.getMonth() + 1}/${date.getDate()}`, isHighlight: false };
+}
+
 export function formatPriceDetailed(event: PriceableEvent): PriceFormatResult {
   // Explicit free
   if (event.is_free) {
