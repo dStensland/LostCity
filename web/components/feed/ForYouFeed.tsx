@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import CategoryIcon from "@/components/CategoryIcon";
@@ -109,51 +109,51 @@ export default function ForYouFeed({ portalSlug }: ForYouFeedProps) {
   const [error, setError] = useState<string | null>(null);
   const mountedRef = useRef(true);
 
-  useEffect(() => {
-    mountedRef.current = true;
+  const loadFeed = useCallback(async () => {
+    try {
+      setError(null);
+      setLoading(true);
 
-    const loadFeed = async () => {
-      try {
-        setError(null);
+      const [feedRes, trendingRes, prefsRes] = await Promise.all([
+        fetch(`/api/feed?limit=50&portal=${portalSlug}`),
+        fetch(`/api/trending?limit=10&portal=${portalSlug}`),
+        fetch(`/api/preferences`),
+      ]);
 
-        const [feedRes, trendingRes, prefsRes] = await Promise.all([
-          fetch(`/api/feed?limit=50&portal=${portalSlug}`),
-          fetch(`/api/trending?limit=10&portal=${portalSlug}`),
-          fetch(`/api/preferences`),
-        ]);
+      if (!mountedRef.current) return;
 
-        if (!mountedRef.current) return;
+      if (!feedRes.ok) {
+        const errorData = await feedRes.json().catch(() => ({}));
+        throw new Error(errorData.error || `Failed to load feed (${feedRes.status})`);
+      }
 
-        if (!feedRes.ok) {
-          const errorData = await feedRes.json().catch(() => ({}));
-          throw new Error(errorData.error || `Failed to load feed (${feedRes.status})`);
-        }
+      const feedData = await feedRes.json();
+      const trendingData = trendingRes.ok ? await trendingRes.json() : { events: [] };
+      const prefsData = prefsRes.ok ? await prefsRes.json() : null;
 
-        const feedData = await feedRes.json();
-        const trendingData = trendingRes.ok ? await trendingRes.json() : { events: [] };
-        const prefsData = prefsRes.ok ? await prefsRes.json() : null;
-
-        if (mountedRef.current) {
-          setEvents(feedData.events || []);
-          setHasPreferences(feedData.hasPreferences);
-          setTrendingEvents(trendingData.events || []);
-          setPreferences(prefsData);
-          setLoading(false);
-        }
-      } catch (err) {
-        if (!mountedRef.current) return;
-        console.error("Failed to load feed:", err);
-        setError("Failed to load feed");
+      if (mountedRef.current) {
+        setEvents(feedData.events || []);
+        setHasPreferences(feedData.hasPreferences);
+        setTrendingEvents(trendingData.events || []);
+        setPreferences(prefsData);
         setLoading(false);
       }
-    };
+    } catch (err) {
+      if (!mountedRef.current) return;
+      console.error("Failed to load feed:", err);
+      setError("Failed to load feed");
+      setLoading(false);
+    }
+  }, [portalSlug]);
 
+  useEffect(() => {
+    mountedRef.current = true;
     loadFeed();
 
     return () => {
       mountedRef.current = false;
     };
-  }, [portalSlug]);
+  }, [loadFeed]);
 
   // Group events by section
   const grouped = useMemo(() => {
@@ -243,11 +243,7 @@ export default function ForYouFeed({ portalSlug }: ForYouFeedProps) {
       <div className="p-6 bg-[var(--dusk)] border border-[var(--coral)] rounded-lg text-center">
         <p className="text-[var(--coral)] font-mono text-sm">{error}</p>
         <button
-          onClick={() => {
-            setLoading(true);
-            const controller = new AbortController();
-            loadFeed(controller.signal);
-          }}
+          onClick={() => loadFeed()}
           className="mt-3 px-4 py-2 bg-[var(--coral)] text-[var(--void)] font-mono text-xs font-medium rounded-lg hover:bg-[var(--rose)] transition-colors"
         >
           Try Again
