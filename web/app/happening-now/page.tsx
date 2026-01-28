@@ -26,7 +26,7 @@ const SPOT_CATEGORIES = [
 ] as const;
 
 // Distance filter for GPS mode (miles)
-const NEARBY_RADIUS_MILES = 2;
+const NEARBY_RADIUS_MILES = 5;
 
 type UserLocation = { lat: number; lng: number } | null;
 
@@ -149,9 +149,9 @@ export default function HappeningNowPage() {
       // Neighborhood mode: return all spots in neighborhood
       return openSpots;
     }
-    // GPS mode: filter by distance
+    // GPS mode: filter by distance (include spots without coords at the end)
     return openSpots.filter(spot => {
-      if (!spot.lat || !spot.lng) return false;
+      if (!spot.lat || !spot.lng) return true; // Include spots without coords
       const distance = getDistance(spot.lat, spot.lng);
       return distance !== null && distance <= NEARBY_RADIUS_MILES;
     });
@@ -164,7 +164,7 @@ export default function HappeningNowPage() {
     }
     return events.filter(event => {
       const venue = event.venue as { lat?: number; lng?: number } | null;
-      if (!venue?.lat || !venue?.lng) return false;
+      if (!venue?.lat || !venue?.lng) return true; // Include events without coords
       const distance = getDistance(venue.lat, venue.lng);
       return distance !== null && distance <= NEARBY_RADIUS_MILES;
     });
@@ -307,7 +307,7 @@ export default function HappeningNowPage() {
               <span className="font-mono text-xs text-[var(--muted)]">
                 {filteredEvents.length} live · {filteredSpots.length} open
                 {userLocation && !selectedNeighborhood && (
-                  <span className="text-[var(--neon-cyan)]"> (within 2mi)</span>
+                  <span className="text-[var(--neon-cyan)]"> (within 5mi)</span>
                 )}
               </span>
             </div>
@@ -397,7 +397,7 @@ export default function HappeningNowPage() {
             <h2 className="text-lg text-[var(--cream)] mb-2">Nothing happening right now</h2>
             <p className="text-[var(--muted)] text-sm max-w-xs mx-auto mb-4">
               {userLocation && !selectedNeighborhood
-                ? "No spots open within 2 miles. Try selecting a neighborhood instead."
+                ? "No spots open within 5 miles. Try selecting a neighborhood instead."
                 : "Check back later or browse upcoming events"}
             </p>
             <Link
