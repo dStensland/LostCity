@@ -21,22 +21,64 @@ export default function ResetPasswordPage() {
 
   // Check if we have a valid session from the reset link
   useEffect(() => {
-    async function checkSession() {
-      const { data: { session } } = await supabase.auth.getSession();
-      setValidSession(!!session);
-    }
-    checkSession();
+    let mounted = true;
+    let fallbackTimeout: NodeJS.Timeout | null = null;
 
-    // Listen for auth state changes (when user clicks reset link)
+    // Check if URL has recovery tokens in the hash
+    // Supabase password reset links include #access_token=...&type=recovery
+    const hash = window.location.hash;
+    const hasRecoveryToken = hash.includes("type=recovery") || hash.includes("access_token");
+
+    async function checkSession() {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+
+        if (mounted) {
+          setValidSession(!!session);
+        }
+      } catch {
+        if (mounted) {
+          setValidSession(false);
+        }
+      }
+    }
+
+    // If no recovery tokens in URL, check session immediately
+    // (this handles direct visits and already-authenticated users)
+    if (!hasRecoveryToken) {
+      checkSession();
+    } else {
+      // If there ARE recovery tokens, give Supabase time to process them
+      // but set a fallback timeout in case it fails
+      fallbackTimeout = setTimeout(() => {
+        if (mounted) {
+          checkSession();
+        }
+      }, 3000);
+    }
+
+    // Listen for auth state changes (when Supabase processes the hash tokens)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event) => {
-        if (event === "PASSWORD_RECOVERY") {
-          setValidSession(true);
+      (event, session) => {
+        if (event === "PASSWORD_RECOVERY" || event === "SIGNED_IN") {
+          if (mounted && session) {
+            setValidSession(true);
+            // Clear fallback timeout since we got a valid session
+            if (fallbackTimeout) {
+              clearTimeout(fallbackTimeout);
+            }
+          }
         }
       }
     );
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      if (fallbackTimeout) {
+        clearTimeout(fallbackTimeout);
+      }
+      subscription.unsubscribe();
+    };
   }, [supabase.auth]);
 
   const handleSubmit = async (e: React.FormEvent) => {
