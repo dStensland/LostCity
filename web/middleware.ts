@@ -67,7 +67,20 @@ export async function middleware(request: NextRequest) {
   // IMPORTANT: Always call getUser() to ensure session tokens are refreshed.
   // getSession() only reads from cookies and won't refresh expired access tokens.
   // getUser() validates with the server and triggers token refresh if needed.
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+  // If there's an auth error (stale/corrupted cookies), clear them to give user clean state
+  if (authError && !request.nextUrl.pathname.startsWith("/auth")) {
+    // Clear all Supabase auth cookies to force fresh login
+    const supabaseProject = supabaseUrl.replace("https://", "").split(".")[0];
+    const authCookiePrefix = `sb-${supabaseProject}-auth-token`;
+
+    for (const cookie of request.cookies.getAll()) {
+      if (cookie.name.startsWith(authCookiePrefix)) {
+        response.cookies.delete(cookie.name);
+      }
+    }
+  }
 
   // Redirect to login if accessing protected route without auth
   if (isProtectedPath && !user) {
