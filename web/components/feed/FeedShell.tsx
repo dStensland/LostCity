@@ -22,10 +22,23 @@ const TABS: { key: FeedTab; label: string; authRequired: boolean }[] = [
   { key: "activity", label: "Your People", authRequired: true },
 ];
 
-// Loading skeleton for auth-gated content - minimal to avoid double skeletons
-// Child components (ForYouFeed, DashboardActivity) have their own loading states
+// Loading skeleton for auth-gated content - matches ForYouFeed/DashboardActivity style
 function AuthLoadingSkeleton() {
-  return null; // Let child components handle their own loading
+  return (
+    <div className="space-y-4">
+      {[1, 2, 3].map((i) => (
+        <div key={i} className="p-3 rounded-lg border border-[var(--twilight)] bg-[var(--card-bg)]">
+          <div className="flex gap-3">
+            <div className="w-14 h-10 skeleton-shimmer rounded" />
+            <div className="flex-1 space-y-2">
+              <div className="h-4 skeleton-shimmer rounded w-3/4" />
+              <div className="h-3 skeleton-shimmer rounded w-1/2" />
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
 }
 
 // Empty state for For You tab when signed out
@@ -218,10 +231,21 @@ function FeedShellInner({ portalSlug, activeTab, curatedContent }: FeedShellProp
 }
 
 export default function FeedShell(props: FeedShellProps) {
-  // Suspense is needed for useSearchParams, but we use a minimal fallback
-  // since child components (ForYouFeed, DashboardActivity) handle their own loading
   return (
-    <Suspense fallback={null}>
+    <Suspense
+      fallback={
+        <div className="py-6 space-y-6">
+          {/* Tab skeleton */}
+          <div className="flex gap-1 p-1 bg-[var(--night)] rounded-lg">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="flex-1 h-9 skeleton-shimmer rounded-md" />
+            ))}
+          </div>
+          {/* Content skeleton - matches EventCard style */}
+          <AuthLoadingSkeleton />
+        </div>
+      }
+    >
       <FeedShellInner {...props} />
     </Suspense>
   );
