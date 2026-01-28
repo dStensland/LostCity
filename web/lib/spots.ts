@@ -419,7 +419,7 @@ type HoursData = Record<string, { open: string; close: string } | null>;
 
 export function isSpotOpen(hours: HoursData | null, is24Hours?: boolean): { isOpen: boolean; closesAt?: string } {
   if (is24Hours) return { isOpen: true };
-  if (!hours) return { isOpen: false };
+  if (!hours) return { isOpen: true }; // Assume open if no hours data
 
   const now = new Date();
   const dayNames = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
