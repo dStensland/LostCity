@@ -140,7 +140,8 @@ export async function GET(request: Request) {
     }
   }
 
-  // Build personalized event query
+  // Build personalized event query - fetch broadly, score later
+  // Don't filter by category here so we can show events from followed venues/orgs
   let query = supabase
     .from("events")
     .select(`
@@ -162,15 +163,14 @@ export async function GET(request: Request) {
     .gte("start_date", today)
     .is("canonical_event_id", null) // Only show canonical events, not duplicates
     .order("start_date", { ascending: true })
-    .limit(limit * 2); // Fetch more to filter
+    .limit(limit * 3); // Fetch more to allow filtering/scoring
 
   // Apply portal filter if specified
   if (portalId) {
     // Show portal-specific events + public events
-    // Use filter instead of .or() string interpolation to prevent injection
     query = query.or(`portal_id.eq."${portalId.replace(/"/g, "")}",portal_id.is.null`);
 
-    // Apply portal category filters
+    // Apply portal category filters if specified
     if (portalFilters.categories?.length) {
       query = query.in("category", portalFilters.categories);
     }
@@ -179,13 +179,9 @@ export async function GET(request: Request) {
     query = query.is("portal_id", null);
   }
 
-  // Apply user category filter (on top of portal filters)
-  if (prefs?.favorite_categories && prefs.favorite_categories.length > 0) {
-    // Only apply if no portal filter already set categories
-    if (!portalFilters.categories?.length) {
-      query = query.in("category", prefs.favorite_categories);
-    }
-  }
+  // NOTE: We intentionally don't filter by user's favorite_categories here
+  // because we want to show ALL events from followed venues/orgs regardless of category.
+  // The category preferences are used for scoring, not filtering.
 
   const { data: eventsData, error } = await query;
 
@@ -262,6 +258,14 @@ export async function GET(request: Request) {
         type: "followed_producer",
         label: "From an organizer you follow",
       });
+    }
+
+    // Boost for matching favorite categories
+    if (prefs?.favorite_categories && event.category) {
+      if (prefs.favorite_categories.includes(event.category)) {
+        score += 25;
+        // Don't add a reason for categories - it's implicit from the section title
+      }
     }
 
     // Boost for matching neighborhoods
