@@ -13,6 +13,7 @@ import type {
   VenueSubmissionData,
   ProducerSubmissionData,
 } from "@/lib/types";
+import { autoApproveVenue } from "@/lib/venue-auto-approve";
 import crypto from "crypto";
 
 // Rate limits for submissions (per day) - admins bypass these
@@ -242,6 +243,52 @@ export async function POST(request: NextRequest) {
       },
       { status: 409 }
     );
+  }
+
+  // Auto-approve venue with Google Place ID
+  if (submission_type === "venue") {
+    const venueData = data as VenueSubmissionData;
+    if (venueData.google_place_id) {
+      console.log(`Attempting auto-approval for venue with Google Place ID: ${venueData.google_place_id}`);
+
+      const autoApproveResult = await autoApproveVenue(
+        venueData.google_place_id,
+        user.id,
+        portal_id
+      );
+
+      if (autoApproveResult.success && autoApproveResult.venue) {
+        // Auto-approval succeeded, return success immediately
+        console.log(`Venue auto-approved: ${autoApproveResult.venue.name} (ID: ${autoApproveResult.venue.id})`);
+
+        // Fetch the submission that was created by autoApproveVenue
+        const { data: approvedSubmission } = await supabase
+          .from("submissions")
+          .select("id, status, created_at")
+          .eq("approved_venue_id", autoApproveResult.venue.id)
+          .eq("submitted_by", user.id)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        return NextResponse.json(
+          {
+            success: true,
+            submission: approvedSubmission || {
+              id: null,
+              status: "approved",
+            },
+            venue: autoApproveResult.venue,
+            autoApproved: true,
+            message: "Venue automatically approved via Google Place validation.",
+          },
+          { status: 201 }
+        );
+      } else {
+        // Auto-approval failed, log the error and fall through to normal submission
+        console.warn(`Auto-approval failed: ${autoApproveResult.error}. Falling back to pending submission.`);
+      }
+    }
   }
 
   // Get client IP for rate limiting tracking

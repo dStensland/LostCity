@@ -23,6 +23,8 @@ import FlagButton from "@/components/FlagButton";
 import LiveIndicator from "@/components/LiveIndicator";
 import RSVPButton from "@/components/RSVPButton";
 import AddToCalendar from "@/components/AddToCalendar";
+import { EntityTagList } from "@/components/tags/EntityTagList";
+import { SaveToListButton } from "@/components/SaveToListButton";
 import {
   DetailHero,
   InfoCard,
@@ -484,6 +486,11 @@ export default async function PortalEventPage({ params }: Props) {
               </>
             )}
 
+            {/* Community Tags */}
+            <div className="mb-6">
+              <EntityTagList entityType="event" entityId={event.id} />
+            </div>
+
             {/* Flag for QA */}
             <SectionHeader title="Report an Issue" />
             <FlagButton
@@ -577,6 +584,7 @@ export default async function PortalEventPage({ params }: Props) {
         shareLabel="Share Event"
         secondaryActions={
           <>
+            <SaveToListButton itemType="event" itemId={event.id} />
             <AddToCalendar
               title={event.title}
               date={event.start_date}

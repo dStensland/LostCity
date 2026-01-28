@@ -798,6 +798,7 @@ export interface VenueSubmissionData {
   zip?: string;
   website?: string;
   venue_type?: string;
+  google_place_id?: string;
 }
 
 // Producer submission data structure

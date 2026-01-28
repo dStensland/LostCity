@@ -4,9 +4,8 @@ import {
   getEntityTagsWithUserStatus,
   addTagToEntity,
   removeTagFromEntity,
-  suggestTag,
 } from "@/lib/venue-tags";
-import type { EventTagGroup, TagGroup } from "@/lib/types";
+import type { OrgTagGroup } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -14,14 +13,9 @@ type Props = {
   params: Promise<{ id: string }>;
 };
 
-// GET /api/events/[id]/tags - Get all tags for an event
+// GET /api/producers/[id]/tags - Get all tags for an org/producer
 export async function GET(request: NextRequest, { params }: Props) {
   const { id } = await params;
-
-  const eventId = parseInt(id);
-  if (isNaN(eventId)) {
-    return NextResponse.json({ error: "Invalid event ID" }, { status: 400 });
-  }
 
   // Get current user if authenticated
   const supabase = await createClient();
@@ -29,19 +23,14 @@ export async function GET(request: NextRequest, { params }: Props) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const tags = await getEntityTagsWithUserStatus("event", eventId, user?.id || null);
+  const tags = await getEntityTagsWithUserStatus("org", id, user?.id || null);
 
   return NextResponse.json({ tags });
 }
 
-// POST /api/events/[id]/tags - Add a tag to an event or suggest a new tag
+// POST /api/producers/[id]/tags - Add a tag to an org or suggest a new tag
 export async function POST(request: NextRequest, { params }: Props) {
   const { id } = await params;
-
-  const eventId = parseInt(id);
-  if (isNaN(eventId)) {
-    return NextResponse.json({ error: "Invalid event ID" }, { status: 400 });
-  }
 
   // Require authentication
   const supabase = await createClient();
@@ -57,7 +46,7 @@ export async function POST(request: NextRequest, { params }: Props) {
 
   // If tagId is provided, add existing tag
   if (body.tagId) {
-    const result = await addTagToEntity("event", eventId, body.tagId, user.id);
+    const result = await addTagToEntity("org", id, body.tagId, user.id);
 
     if (!result.success) {
       return NextResponse.json({ error: result.error }, { status: 400 });
@@ -68,36 +57,25 @@ export async function POST(request: NextRequest, { params }: Props) {
 
   // If suggesting a new tag
   if (body.suggestedLabel && body.suggestedTagGroup) {
-    const validEventGroups: EventTagGroup[] = [
-      "audience",
-      "social",
-      "vibe",
-      "format",
-      "practical",
+    const validOrgGroups: OrgTagGroup[] = [
+      "values",
+      "structure",
+      "engagement",
       "heads_up",
     ];
 
-    if (!validEventGroups.includes(body.suggestedTagGroup)) {
+    if (!validOrgGroups.includes(body.suggestedTagGroup)) {
       return NextResponse.json({ error: "Invalid tag group" }, { status: 400 });
     }
 
-    const result = await suggestTag(
-      eventId,
-      body.suggestedLabel,
-      body.suggestedTagGroup as TagGroup,
-      user.id,
-      "event"
+    // For org tags, we need to parse the id and pass it to suggestTag
+    // Since suggestTag currently expects a venue_id number, we'll need to handle orgs differently
+    // For now, return not implemented for tag suggestions on orgs
+    // TODO: Extend suggestTag to handle org entity type
+    return NextResponse.json(
+      { error: "Tag suggestions for organizations not yet supported" },
+      { status: 501 }
     );
-
-    if (!result.success) {
-      return NextResponse.json({ error: result.error }, { status: 400 });
-    }
-
-    return NextResponse.json({
-      success: true,
-      suggestionId: result.suggestionId,
-      message: "Tag suggestion submitted for review",
-    });
   }
 
   return NextResponse.json(
@@ -106,7 +84,7 @@ export async function POST(request: NextRequest, { params }: Props) {
   );
 }
 
-// DELETE /api/events/[id]/tags?tagId=xxx - Remove your own tag
+// DELETE /api/producers/[id]/tags?tagId=xxx - Remove your own tag
 export async function DELETE(request: NextRequest, { params }: Props) {
   const { id } = await params;
   const { searchParams } = new URL(request.url);
@@ -114,11 +92,6 @@ export async function DELETE(request: NextRequest, { params }: Props) {
 
   if (!tagId) {
     return NextResponse.json({ error: "tagId required" }, { status: 400 });
-  }
-
-  const eventId = parseInt(id);
-  if (isNaN(eventId)) {
-    return NextResponse.json({ error: "Invalid event ID" }, { status: 400 });
   }
 
   // Require authentication
@@ -131,7 +104,7 @@ export async function DELETE(request: NextRequest, { params }: Props) {
     return NextResponse.json({ error: "Authentication required" }, { status: 401 });
   }
 
-  const result = await removeTagFromEntity("event", eventId, tagId, user.id);
+  const result = await removeTagFromEntity("org", id, tagId, user.id);
 
   if (!result.success) {
     return NextResponse.json({ error: result.error }, { status: 400 });

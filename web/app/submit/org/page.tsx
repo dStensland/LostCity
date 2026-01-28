@@ -132,7 +132,7 @@ export default function SubmitOrgPage() {
         </div>
 
         {error && (
-          <div className="mb-6 p-4 rounded-lg bg-red-500/10 border border-red-500 text-red-400 font-mono text-sm">
+          <div className="mb-6 p-4 rounded-lg bg-[var(--coral)]/10 border border-[var(--coral)] text-[var(--coral)] font-mono text-sm">
             {error}
           </div>
         )}

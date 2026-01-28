@@ -6,6 +6,7 @@ import Image from "next/image";
 import { useAuth } from "@/lib/auth-context";
 import ListItemCard, { type ListItem } from "./ListItemCard";
 import LinkifyText from "@/components/LinkifyText";
+import { AddItemsModal } from "@/components/community/AddItemsModal";
 
 type ListDetail = {
   id: string;
@@ -101,6 +102,24 @@ export default function ListDetailView({ portalSlug, listSlug }: ListDetailViewP
   const [sortBy, setSortBy] = useState<SortOption>("position");
   const [isVoting, setIsVoting] = useState(false);
   const [userListVote, setUserListVote] = useState<"up" | null>(null);
+  const [showAddItemsModal, setShowAddItemsModal] = useState(false);
+
+  const fetchItems = async () => {
+    if (!list?.id) return;
+
+    try {
+      const res = await fetch(`/api/lists?slug=${listSlug}&portal_slug=${portalSlug}`);
+      if (!res.ok) throw new Error("Failed to load items");
+
+      const data = await res.json();
+      if (data.list?.items) {
+        setItems(data.list.items);
+        setList((prev) => prev ? { ...prev, item_count: data.list.items.length } : prev);
+      }
+    } catch (err) {
+      console.error("Error fetching items:", err);
+    }
+  };
 
   useEffect(() => {
     async function fetchList() {
@@ -379,10 +398,7 @@ export default function ListDetailView({ portalSlug, listSlug }: ListDetailViewP
           {/* Owner: Edit button */}
           {isOwner && (
             <button
-              onClick={() => {
-                // TODO: Open edit modal
-                alert("Edit feature coming soon!");
-              }}
+              onClick={() => setShowAddItemsModal(true)}
               className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border border-[var(--twilight)] text-[var(--muted)] font-mono text-sm hover:text-[var(--cream)] hover:border-[var(--soft)] transition-colors"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -431,10 +447,7 @@ export default function ListDetailView({ portalSlug, listSlug }: ListDetailViewP
           </p>
           {isOwner && (
             <button
-              onClick={() => {
-                // TODO: Open add items modal
-                alert("Add items feature coming soon!");
-              }}
+              onClick={() => setShowAddItemsModal(true)}
               className="inline-flex items-center gap-2 px-4 py-2 bg-[var(--coral)] text-[var(--void)] rounded-lg font-mono text-sm font-medium hover:bg-[var(--rose)] transition-colors"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -465,10 +478,7 @@ export default function ListDetailView({ portalSlug, listSlug }: ListDetailViewP
       {isOwner && items.length > 0 && (
         <div className="mt-6 pt-6 border-t border-[var(--twilight)]">
           <button
-            onClick={() => {
-              // TODO: Open add items modal
-              alert("Add items feature coming soon!");
-            }}
+            onClick={() => setShowAddItemsModal(true)}
             className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl border-2 border-dashed border-[var(--twilight)] text-[var(--muted)] hover:border-[var(--coral)] hover:text-[var(--coral)] transition-colors font-mono text-sm"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -477,6 +487,24 @@ export default function ListDetailView({ portalSlug, listSlug }: ListDetailViewP
             Add More Items
           </button>
         </div>
+      )}
+
+      {/* Add Items Modal */}
+      {showAddItemsModal && list && (
+        <AddItemsModal
+          listId={list.id}
+          existingItems={items.map(item => ({
+            item_type: item.item_type,
+            venue_id: item.venue_id ?? undefined,
+            event_id: item.event_id ?? undefined,
+            producer_id: item.producer_id ?? undefined
+          }))}
+          onClose={() => setShowAddItemsModal(false)}
+          onItemsAdded={() => {
+            setShowAddItemsModal(false);
+            fetchItems();
+          }}
+        />
       )}
     </div>
   );

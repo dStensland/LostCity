@@ -1,177 +1,13 @@
-"use client";
-
-import { useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import UnifiedHeader from "@/components/UnifiedHeader";
-import VenueAutocomplete from "@/components/VenueAutocomplete";
-import ProducerAutocomplete from "@/components/ProducerAutocomplete";
-import ImageUploader from "@/components/ImageUploader";
-import { useAuth } from "@/lib/auth-context";
-import type { EventSubmissionData, VenueSubmissionData, ProducerSubmissionData } from "@/lib/types";
-
-const CATEGORIES = [
-  { id: "music", label: "Music" },
-  { id: "art", label: "Art & Gallery" },
-  { id: "comedy", label: "Comedy" },
-  { id: "theater", label: "Theater" },
-  { id: "film", label: "Film" },
-  { id: "food_drink", label: "Food & Drink" },
-  { id: "nightlife", label: "Nightlife" },
-  { id: "community", label: "Community" },
-  { id: "fitness", label: "Fitness & Sports" },
-  { id: "family", label: "Family" },
-  { id: "learning", label: "Learning & Workshops" },
-  { id: "other", label: "Other" },
-];
+import Button from "@/components/ui/Button";
 
 export default function SubmitEventPage() {
-  const { user } = useAuth();
-  const router = useRouter();
-
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [duplicateWarning, setDuplicateWarning] = useState<{
-    id: number;
-    type: string;
-  } | null>(null);
-
-  // Form state
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [startDate, setStartDate] = useState("");
-  const [startTime, setStartTime] = useState("");
-  const [endDate, setEndDate] = useState("");
-  const [endTime, setEndTime] = useState("");
-  const [isAllDay, setIsAllDay] = useState(false);
-  const [category, setCategory] = useState("");
-  const [isFree, setIsFree] = useState(false);
-  const [priceMin, setPriceMin] = useState("");
-  const [priceMax, setPriceMax] = useState("");
-  const [priceNote, setPriceNote] = useState("");
-  const [ticketUrl, setTicketUrl] = useState("");
-  const [sourceUrl, setSourceUrl] = useState("");
-  const [imageUrl, setImageUrl] = useState<string | null>(null);
-
-  // Venue state
-  const [venue, setVenue] = useState<{ id: number; name: string } | null>(null);
-  const [showNewVenue, setShowNewVenue] = useState(false);
-  const [newVenue, setNewVenue] = useState<VenueSubmissionData>({
-    name: "",
-    address: "",
-    neighborhood: "",
-  });
-
-  // Producer state
-  const [producer, setProducer] = useState<{ id: string; name: string } | null>(null);
-  const [showNewProducer, setShowNewProducer] = useState(false);
-  const [newProducer, setNewProducer] = useState<ProducerSubmissionData>({
-    name: "",
-    website: "",
-  });
-
-  if (!user) {
-    router.push("/auth/login?redirect=/submit/event");
-    return null;
-  }
-
-  const handleSubmit = async (acknowledgesDuplicate = false) => {
-    setError(null);
-    setDuplicateWarning(null);
-    setSubmitting(true);
-
-    // Validate required fields
-    if (!title.trim()) {
-      setError("Event title is required");
-      setSubmitting(false);
-      return;
-    }
-
-    if (!startDate) {
-      setError("Start date is required");
-      setSubmitting(false);
-      return;
-    }
-
-    if (!venue && !newVenue.name) {
-      setError("Please select or add a venue");
-      setSubmitting(false);
-      return;
-    }
-
-    // Build submission data
-    const data: EventSubmissionData = {
-      title: title.trim(),
-      description: description.trim() || undefined,
-      start_date: startDate,
-      start_time: startTime || undefined,
-      end_date: endDate || undefined,
-      end_time: endTime || undefined,
-      is_all_day: isAllDay,
-      category: category || undefined,
-      is_free: isFree,
-      price_min: priceMin ? parseFloat(priceMin) : undefined,
-      price_max: priceMax ? parseFloat(priceMax) : undefined,
-      price_note: priceNote.trim() || undefined,
-      ticket_url: ticketUrl.trim() || undefined,
-      source_url: sourceUrl.trim() || undefined,
-      image_url: imageUrl || undefined,
-    };
-
-    // Add venue
-    if (venue) {
-      data.venue_id = venue.id;
-    } else if (newVenue.name) {
-      data.venue = newVenue;
-    }
-
-    // Add producer
-    if (producer) {
-      data.producer_id = producer.id;
-    } else if (newProducer.name) {
-      data.producer = newProducer;
-    }
-
-    try {
-      const res = await fetch("/api/submissions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          submission_type: "event",
-          data,
-          duplicate_acknowledged: acknowledgesDuplicate,
-          image_urls: imageUrl ? [imageUrl] : undefined,
-        }),
-      });
-
-      const result = await res.json();
-
-      if (res.status === 409 && result.warning) {
-        // Duplicate detected
-        setDuplicateWarning(result.duplicate);
-        setSubmitting(false);
-        return;
-      }
-
-      if (!res.ok) {
-        throw new Error(result.error || "Failed to submit event");
-      }
-
-      // Success - redirect to dashboard
-      router.push("/dashboard/submissions?success=event");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to submit event");
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
   return (
     <div className="min-h-screen">
       <UnifiedHeader />
 
       <main className="max-w-2xl mx-auto px-4 py-8">
-        {/* Header */}
         <div className="flex items-center gap-4 mb-8">
           <Link
             href="/submit"
@@ -186,366 +22,63 @@ export default function SubmitEventPage() {
           </h1>
         </div>
 
-        {/* Error */}
-        {error && (
-          <div className="mb-6 p-4 rounded-lg bg-red-500/10 border border-red-500 text-red-400 font-mono text-sm">
-            {error}
-          </div>
-        )}
+        <div className="p-8 rounded-xl bg-[var(--dusk)] border border-[var(--twilight)]">
+          <div className="max-w-lg mx-auto text-center">
+            <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-[var(--coral)]/10 flex items-center justify-center">
+              <svg className="w-8 h-8 text-[var(--coral)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+            </div>
 
-        {/* Duplicate Warning */}
-        {duplicateWarning && (
-          <div className="mb-6 p-4 rounded-lg bg-yellow-500/10 border border-yellow-500">
-            <p className="text-yellow-400 font-mono text-sm mb-3">
-              This event may already exist. Do you want to submit it anyway?
+            <h2 className="text-xl font-medium text-[var(--cream)] mb-4">
+              Working with Event Organizers
+            </h2>
+
+            <p className="text-[var(--muted)] font-mono text-sm mb-6 leading-relaxed">
+              We&apos;re currently partnering directly with event organizers and venues to ensure
+              high-quality, up-to-date event listings. If you&apos;re interested in getting your
+              events featured on LostCity, we&apos;d love to hear from you.
             </p>
-            <div className="flex gap-3">
-              <button
-                onClick={() => handleSubmit(true)}
-                className="px-4 py-2 rounded-lg bg-yellow-500 text-black font-mono text-sm hover:bg-yellow-400 transition-colors"
+
+            <div className="mb-8">
+              <a
+                href="mailto:coach@lostcity.ai"
+                className="inline-flex items-center gap-2 text-[var(--coral)] hover:text-[var(--rose)] font-mono text-sm transition-colors"
               >
-                Submit Anyway
-              </button>
-              <button
-                onClick={() => setDuplicateWarning(null)}
-                className="px-4 py-2 rounded-lg border border-yellow-500 text-yellow-400 font-mono text-sm hover:bg-yellow-500/10 transition-colors"
-              >
-                Cancel
-              </button>
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+                coach@lostcity.ai
+              </a>
             </div>
-          </div>
-        )}
 
-        <form onSubmit={(e) => { e.preventDefault(); handleSubmit(); }} className="space-y-6">
-          {/* Title */}
-          <div>
-            <label className="block font-mono text-xs text-[var(--muted)] uppercase tracking-wider mb-2">
-              Event Title *
-            </label>
-            <input
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="What's the event called?"
-              required
-              maxLength={200}
-              className="w-full px-4 py-3 rounded-lg bg-[var(--dusk)] border border-[var(--twilight)] text-[var(--cream)] font-mono text-sm placeholder:text-[var(--muted)] focus:outline-none focus:border-[var(--coral)] transition-colors"
-            />
-          </div>
-
-          {/* Description */}
-          <div>
-            <label className="block font-mono text-xs text-[var(--muted)] uppercase tracking-wider mb-2">
-              Description
-            </label>
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Tell us about this event..."
-              rows={4}
-              maxLength={2000}
-              className="w-full px-4 py-3 rounded-lg bg-[var(--dusk)] border border-[var(--twilight)] text-[var(--cream)] font-mono text-sm placeholder:text-[var(--muted)] focus:outline-none focus:border-[var(--coral)] transition-colors resize-none"
-            />
-          </div>
-
-          {/* Date & Time */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block font-mono text-xs text-[var(--muted)] uppercase tracking-wider mb-2">
-                Start Date *
-              </label>
-              <input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                required
-                min={new Date().toISOString().split("T")[0]}
-                className="w-full px-4 py-3 rounded-lg bg-[var(--dusk)] border border-[var(--twilight)] text-[var(--cream)] font-mono text-sm focus:outline-none focus:border-[var(--coral)] transition-colors"
-              />
-            </div>
-            <div>
-              <label className="block font-mono text-xs text-[var(--muted)] uppercase tracking-wider mb-2">
-                Start Time
-              </label>
-              <input
-                type="time"
-                value={startTime}
-                onChange={(e) => setStartTime(e.target.value)}
-                disabled={isAllDay}
-                className="w-full px-4 py-3 rounded-lg bg-[var(--dusk)] border border-[var(--twilight)] text-[var(--cream)] font-mono text-sm focus:outline-none focus:border-[var(--coral)] transition-colors disabled:opacity-50"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block font-mono text-xs text-[var(--muted)] uppercase tracking-wider mb-2">
-                End Date
-              </label>
-              <input
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                min={startDate || new Date().toISOString().split("T")[0]}
-                className="w-full px-4 py-3 rounded-lg bg-[var(--dusk)] border border-[var(--twilight)] text-[var(--cream)] font-mono text-sm focus:outline-none focus:border-[var(--coral)] transition-colors"
-              />
-            </div>
-            <div>
-              <label className="block font-mono text-xs text-[var(--muted)] uppercase tracking-wider mb-2">
-                End Time
-              </label>
-              <input
-                type="time"
-                value={endTime}
-                onChange={(e) => setEndTime(e.target.value)}
-                disabled={isAllDay}
-                className="w-full px-4 py-3 rounded-lg bg-[var(--dusk)] border border-[var(--twilight)] text-[var(--cream)] font-mono text-sm focus:outline-none focus:border-[var(--coral)] transition-colors disabled:opacity-50"
-              />
-            </div>
-          </div>
-
-          {/* All Day Toggle */}
-          <div className="flex items-center gap-3">
-            <input
-              type="checkbox"
-              id="isAllDay"
-              checked={isAllDay}
-              onChange={(e) => setIsAllDay(e.target.checked)}
-              className="w-4 h-4 rounded border-[var(--twilight)] bg-[var(--dusk)] text-[var(--coral)] focus:ring-[var(--coral)]"
-            />
-            <label htmlFor="isAllDay" className="font-mono text-sm text-[var(--cream)]">
-              All-day event
-            </label>
-          </div>
-
-          {/* Venue */}
-          <div>
-            <label className="block font-mono text-xs text-[var(--muted)] uppercase tracking-wider mb-2">
-              Venue *
-            </label>
-            {!showNewVenue ? (
-              <VenueAutocomplete
-                value={venue}
-                onChange={setVenue}
-                onCreateNew={(name) => {
-                  setNewVenue({ ...newVenue, name });
-                  setShowNewVenue(true);
-                  setVenue(null);
-                }}
-                required
-              />
-            ) : (
-              <div className="space-y-3 p-4 rounded-lg border border-[var(--twilight)] bg-[var(--void)]/30">
-                <div className="flex items-center justify-between">
-                  <span className="font-mono text-xs text-[var(--coral)] uppercase">New Venue</span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowNewVenue(false);
-                      setNewVenue({ name: "", address: "", neighborhood: "" });
-                    }}
-                    className="text-[var(--muted)] hover:text-[var(--cream)] text-sm"
-                  >
-                    Cancel
-                  </button>
-                </div>
-                <input
-                  type="text"
-                  value={newVenue.name}
-                  onChange={(e) => setNewVenue({ ...newVenue, name: e.target.value })}
-                  placeholder="Venue name *"
-                  required
-                  className="w-full px-4 py-3 rounded-lg bg-[var(--dusk)] border border-[var(--twilight)] text-[var(--cream)] font-mono text-sm placeholder:text-[var(--muted)] focus:outline-none focus:border-[var(--coral)] transition-colors"
-                />
-                <input
-                  type="text"
-                  value={newVenue.address || ""}
-                  onChange={(e) => setNewVenue({ ...newVenue, address: e.target.value })}
-                  placeholder="Address"
-                  className="w-full px-4 py-3 rounded-lg bg-[var(--dusk)] border border-[var(--twilight)] text-[var(--cream)] font-mono text-sm placeholder:text-[var(--muted)] focus:outline-none focus:border-[var(--coral)] transition-colors"
-                />
-                <input
-                  type="text"
-                  value={newVenue.neighborhood || ""}
-                  onChange={(e) => setNewVenue({ ...newVenue, neighborhood: e.target.value })}
-                  placeholder="Neighborhood (e.g., East Atlanta, Midtown)"
-                  className="w-full px-4 py-3 rounded-lg bg-[var(--dusk)] border border-[var(--twilight)] text-[var(--cream)] font-mono text-sm placeholder:text-[var(--muted)] focus:outline-none focus:border-[var(--coral)] transition-colors"
-                />
-              </div>
-            )}
-          </div>
-
-          {/* Category */}
-          <div>
-            <label className="block font-mono text-xs text-[var(--muted)] uppercase tracking-wider mb-2">
-              Category
-            </label>
-            <select
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-              className="w-full px-4 py-3 rounded-lg bg-[var(--dusk)] border border-[var(--twilight)] text-[var(--cream)] font-mono text-sm focus:outline-none focus:border-[var(--coral)] transition-colors"
-            >
-              <option value="">Select a category</option>
-              {CATEGORIES.map((cat) => (
-                <option key={cat.id} value={cat.id}>
-                  {cat.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Pricing */}
-          <div>
-            <label className="block font-mono text-xs text-[var(--muted)] uppercase tracking-wider mb-2">
-              Pricing
-            </label>
-            <div className="flex items-center gap-3 mb-3">
-              <input
-                type="checkbox"
-                id="isFree"
-                checked={isFree}
-                onChange={(e) => setIsFree(e.target.checked)}
-                className="w-4 h-4 rounded border-[var(--twilight)] bg-[var(--dusk)] text-[var(--coral)] focus:ring-[var(--coral)]"
-              />
-              <label htmlFor="isFree" className="font-mono text-sm text-[var(--cream)]">
-                Free event
-              </label>
-            </div>
-            {!isFree && (
-              <div className="grid grid-cols-2 gap-4">
-                <input
-                  type="number"
-                  value={priceMin}
-                  onChange={(e) => setPriceMin(e.target.value)}
-                  placeholder="Min price"
-                  min="0"
-                  step="0.01"
-                  className="w-full px-4 py-3 rounded-lg bg-[var(--dusk)] border border-[var(--twilight)] text-[var(--cream)] font-mono text-sm placeholder:text-[var(--muted)] focus:outline-none focus:border-[var(--coral)] transition-colors"
-                />
-                <input
-                  type="number"
-                  value={priceMax}
-                  onChange={(e) => setPriceMax(e.target.value)}
-                  placeholder="Max price"
-                  min="0"
-                  step="0.01"
-                  className="w-full px-4 py-3 rounded-lg bg-[var(--dusk)] border border-[var(--twilight)] text-[var(--cream)] font-mono text-sm placeholder:text-[var(--muted)] focus:outline-none focus:border-[var(--coral)] transition-colors"
-                />
-              </div>
-            )}
-            <input
-              type="text"
-              value={priceNote}
-              onChange={(e) => setPriceNote(e.target.value)}
-              placeholder="Price note (e.g., 'Donation suggested')"
-              className="w-full mt-3 px-4 py-3 rounded-lg bg-[var(--dusk)] border border-[var(--twilight)] text-[var(--cream)] font-mono text-sm placeholder:text-[var(--muted)] focus:outline-none focus:border-[var(--coral)] transition-colors"
-            />
-          </div>
-
-          {/* Organizer (optional) */}
-          <div>
-            <label className="block font-mono text-xs text-[var(--muted)] uppercase tracking-wider mb-2">
-              Organizer / Producer (optional)
-            </label>
-            {!showNewProducer ? (
-              <ProducerAutocomplete
-                value={producer}
-                onChange={setProducer}
-                onCreateNew={(name) => {
-                  setNewProducer({ ...newProducer, name });
-                  setShowNewProducer(true);
-                  setProducer(null);
-                }}
-              />
-            ) : (
-              <div className="space-y-3 p-4 rounded-lg border border-[var(--twilight)] bg-[var(--void)]/30">
-                <div className="flex items-center justify-between">
-                  <span className="font-mono text-xs text-[var(--coral)] uppercase">New Organization</span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowNewProducer(false);
-                      setNewProducer({ name: "", website: "" });
-                    }}
-                    className="text-[var(--muted)] hover:text-[var(--cream)] text-sm"
-                  >
-                    Cancel
-                  </button>
-                </div>
-                <input
-                  type="text"
-                  value={newProducer.name}
-                  onChange={(e) => setNewProducer({ ...newProducer, name: e.target.value })}
-                  placeholder="Organization name"
-                  className="w-full px-4 py-3 rounded-lg bg-[var(--dusk)] border border-[var(--twilight)] text-[var(--cream)] font-mono text-sm placeholder:text-[var(--muted)] focus:outline-none focus:border-[var(--coral)] transition-colors"
-                />
-                <input
-                  type="url"
-                  value={newProducer.website || ""}
-                  onChange={(e) => setNewProducer({ ...newProducer, website: e.target.value })}
-                  placeholder="Website (optional)"
-                  className="w-full px-4 py-3 rounded-lg bg-[var(--dusk)] border border-[var(--twilight)] text-[var(--cream)] font-mono text-sm placeholder:text-[var(--muted)] focus:outline-none focus:border-[var(--coral)] transition-colors"
-                />
-              </div>
-            )}
-          </div>
-
-          {/* Links */}
-          <div className="space-y-3">
-            <div>
-              <label className="block font-mono text-xs text-[var(--muted)] uppercase tracking-wider mb-2">
-                Ticket Link
-              </label>
-              <input
-                type="url"
-                value={ticketUrl}
-                onChange={(e) => setTicketUrl(e.target.value)}
-                placeholder="https://..."
-                className="w-full px-4 py-3 rounded-lg bg-[var(--dusk)] border border-[var(--twilight)] text-[var(--cream)] font-mono text-sm placeholder:text-[var(--muted)] focus:outline-none focus:border-[var(--coral)] transition-colors"
-              />
-            </div>
-            <div>
-              <label className="block font-mono text-xs text-[var(--muted)] uppercase tracking-wider mb-2">
-                Event Website / More Info
-              </label>
-              <input
-                type="url"
-                value={sourceUrl}
-                onChange={(e) => setSourceUrl(e.target.value)}
-                placeholder="https://..."
-                className="w-full px-4 py-3 rounded-lg bg-[var(--dusk)] border border-[var(--twilight)] text-[var(--cream)] font-mono text-sm placeholder:text-[var(--muted)] focus:outline-none focus:border-[var(--coral)] transition-colors"
-              />
-            </div>
-          </div>
-
-          {/* Image */}
-          <div>
-            <label className="block font-mono text-xs text-[var(--muted)] uppercase tracking-wider mb-2">
-              Event Image
-            </label>
-            <ImageUploader
-              value={imageUrl}
-              onChange={setImageUrl}
-            />
-          </div>
-
-          {/* Submit */}
-          <div className="flex gap-3 pt-4">
-            <Link
-              href="/submit"
-              className="px-4 py-2.5 rounded-lg font-mono text-sm text-[var(--muted)] hover:text-[var(--cream)] transition-colors"
-            >
-              Cancel
+            <Link href="/submit">
+              <Button variant="secondary" size="md">
+                Back to Submit Hub
+              </Button>
             </Link>
-            <button
-              type="submit"
-              disabled={submitting}
-              className="flex-1 sm:flex-none px-6 py-2.5 rounded-lg bg-[var(--coral)] text-[var(--void)] font-mono text-sm font-medium hover:bg-[var(--rose)] transition-colors disabled:opacity-50"
-            >
-              {submitting ? "Submitting..." : "Submit Event"}
-            </button>
           </div>
-        </form>
+        </div>
+
+        <div className="mt-8 p-6 rounded-xl bg-[var(--void)]/50 border border-[var(--twilight)]">
+          <h3 className="font-mono text-sm font-medium text-[var(--cream)] mb-3">
+            In the Meantime
+          </h3>
+          <ul className="space-y-2 text-[var(--muted)] font-mono text-xs">
+            <li className="flex items-start gap-2">
+              <span className="text-[var(--coral)]">•</span>
+              You can still submit venues and organizations through the Submit Hub
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-[var(--coral)]">•</span>
+              Event organizers can email us to discuss partnership opportunities
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-[var(--coral)]">•</span>
+              We&apos;re working on expanding our event coverage across Atlanta
+            </li>
+          </ul>
+        </div>
       </main>
     </div>
   );

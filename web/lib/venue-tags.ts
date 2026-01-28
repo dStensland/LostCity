@@ -732,6 +732,46 @@ export async function addTagToEntity(
 }
 
 /**
+ * Remove a tag from any entity type (user's own tag)
+ */
+export async function removeTagFromEntity(
+  entityType: TagEntityType,
+  entityId: number | string,
+  tagId: string,
+  userId: string
+): Promise<{ success: boolean; error?: string }> {
+  // For venues, use existing function
+  if (entityType === "venue" && typeof entityId === "number") {
+    return removeTagFromVenue(entityId, tagId, userId);
+  }
+
+  // Use service client to bypass RLS
+  let serviceClient;
+  try {
+    serviceClient = createServiceClient();
+  } catch {
+    return { success: false, error: "Service unavailable" };
+  }
+
+  const tableName = entityType === "event" ? "event_tags" : "org_tags";
+  const idColumn = entityType === "event" ? "event_id" : "org_id";
+
+  const { error } = await (serviceClient as UntypedTable)
+    .from(tableName)
+    .delete()
+    .eq(idColumn, entityId)
+    .eq("tag_id", tagId)
+    .eq("added_by", userId);
+
+  if (error) {
+    console.error(`Error removing tag from ${entityType}:`, error);
+    return { success: false, error: error.message };
+  }
+
+  return { success: true };
+}
+
+/**
  * Vote on a tag for any entity type
  */
 export async function voteOnEntityTag(

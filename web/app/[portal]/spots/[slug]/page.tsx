@@ -11,6 +11,7 @@ import VenueTagList from "@/components/VenueTagList";
 import FlagButton from "@/components/FlagButton";
 import FollowButton from "@/components/FollowButton";
 import RecommendButton from "@/components/RecommendButton";
+import { SaveToListButton } from "@/components/SaveToListButton";
 import CategoryIcon, { getCategoryColor } from "@/components/CategoryIcon";
 import {
   DetailHero,
@@ -327,6 +328,7 @@ export default async function PortalSpotPage({ params }: Props) {
         shareLabel="Share Spot"
         secondaryActions={
           <>
+            <SaveToListButton itemType="venue" itemId={spot.id} />
             <FollowButton targetVenueId={spot.id} size="sm" />
             <RecommendButton venueId={spot.id} size="sm" />
           </>

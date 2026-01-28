@@ -125,7 +125,7 @@ export default function OrgDetailView({ slug, portalSlug, onClose }: OrgDetailVi
       setError(null);
 
       try {
-        const res = await fetch(`/api/producers/${slug}`);
+        const res = await fetch(`/api/producers/by-slug/${slug}`);
         if (!res.ok) {
           throw new Error("Organizer not found");
         }

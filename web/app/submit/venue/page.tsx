@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import UnifiedHeader from "@/components/UnifiedHeader";
 import ImageUploader from "@/components/ImageUploader";
+import { GooglePlaceAutocomplete } from "@/components/GooglePlaceAutocomplete";
 import { useAuth } from "@/lib/auth-context";
 import type { VenueSubmissionData } from "@/lib/types";
 
@@ -50,6 +51,15 @@ export default function SubmitVenuePage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Google Place / Venue selection
+  const [selectedPlace, setSelectedPlace] = useState<{
+    name: string;
+    address?: string;
+    google_place_id?: string;
+    venue_id?: number;
+    location?: { lat: number; lng: number };
+  } | null>(null);
+
   // Form state
   const [name, setName] = useState("");
   const [address, setAddress] = useState("");
@@ -60,6 +70,54 @@ export default function SubmitVenuePage() {
   const [venueType, setVenueType] = useState("");
   const [website, setWebsite] = useState("");
   const [imageUrl, setImageUrl] = useState<string | null>(null);
+
+  // Handle place selection
+  const handlePlaceChange = (
+    place: {
+      name: string;
+      address?: string;
+      google_place_id?: string;
+      venue_id?: number;
+      location?: { lat: number; lng: number };
+    } | null
+  ) => {
+    setSelectedPlace(place);
+
+    if (place) {
+      setName(place.name);
+
+      // Auto-fill address if it's a Google place
+      if (place.google_place_id && place.address) {
+        // Parse the address to fill in fields
+        // Google addresses typically come as "123 Main St, Atlanta, GA 30303, USA"
+        const addressParts = place.address.split(",").map((p) => p.trim());
+
+        if (addressParts.length >= 1) {
+          setAddress(addressParts[0]); // Street address
+        }
+        if (addressParts.length >= 2) {
+          setCity(addressParts[1]); // City
+        }
+        if (addressParts.length >= 3) {
+          // State and ZIP (e.g., "GA 30303")
+          const stateZip = addressParts[2].split(" ");
+          if (stateZip.length >= 1) {
+            setState(stateZip[0]);
+          }
+          if (stateZip.length >= 2) {
+            setZip(stateZip[1]);
+          }
+        }
+      }
+    } else {
+      // Clear all fields if place is cleared
+      setName("");
+      setAddress("");
+      setCity("Atlanta");
+      setState("GA");
+      setZip("");
+    }
+  };
 
   if (!user) {
     router.push("/auth/login?redirect=/submit/venue");
@@ -86,6 +144,7 @@ export default function SubmitVenuePage() {
       zip: zip.trim() || undefined,
       venue_type: venueType || undefined,
       website: website.trim() || undefined,
+      google_place_id: selectedPlace?.google_place_id || undefined,
     };
 
     try {
@@ -133,7 +192,7 @@ export default function SubmitVenuePage() {
         </div>
 
         {error && (
-          <div className="mb-6 p-4 rounded-lg bg-red-500/10 border border-red-500 text-red-400 font-mono text-sm">
+          <div className="mb-6 p-4 rounded-lg bg-[var(--coral)]/10 border border-[var(--coral)] text-[var(--coral)] font-mono text-sm">
             {error}
           </div>
         )}
@@ -143,27 +202,105 @@ export default function SubmitVenuePage() {
             <label className="block font-mono text-xs text-[var(--muted)] uppercase tracking-wider mb-2">
               Venue Name *
             </label>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="What's this place called?"
+            <GooglePlaceAutocomplete
+              value={selectedPlace}
+              onChange={handlePlaceChange}
+              placeholder="Search for a venue or place..."
               required
-              maxLength={200}
-              className="w-full px-4 py-3 rounded-lg bg-[var(--dusk)] border border-[var(--twilight)] text-[var(--cream)] font-mono text-sm placeholder:text-[var(--muted)] focus:outline-none focus:border-[var(--coral)] transition-colors"
             />
+            <p className="mt-1 text-xs font-mono text-[var(--muted)]">
+              Search Google Places for instant approval, or enter manually
+            </p>
           </div>
 
+          {/* Instant Approval Badge */}
+          {selectedPlace?.google_place_id && (
+            <div className="p-4 rounded-lg bg-[var(--neon-green)]/10 border border-[var(--neon-green)]/20">
+              <div className="flex items-center gap-2">
+                <svg
+                  className="w-5 h-5 text-[var(--neon-green)]"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+                <div>
+                  <div className="font-mono text-sm text-[var(--neon-green)] font-medium">
+                    Instant Approval
+                  </div>
+                  <div className="font-mono text-xs text-[var(--muted)] mt-0.5">
+                    This venue is verified by Google and will be approved automatically
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Venue Already Exists Warning */}
+          {selectedPlace?.venue_id && (
+            <div className="p-4 rounded-lg bg-[var(--neon-cyan)]/10 border border-[var(--neon-cyan)]/20">
+              <div className="flex items-center gap-2">
+                <svg
+                  className="w-5 h-5 text-[var(--neon-cyan)]"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+                <div>
+                  <div className="font-mono text-sm text-[var(--neon-cyan)] font-medium">
+                    Venue Already Exists
+                  </div>
+                  <div className="font-mono text-xs text-[var(--muted)] mt-0.5">
+                    This venue is already in our database
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           <div>
-            <label className="block font-mono text-xs text-[var(--muted)] uppercase tracking-wider mb-2">
-              Address
-            </label>
+            <div className="flex items-center justify-between mb-2">
+              <label className="block font-mono text-xs text-[var(--muted)] uppercase tracking-wider">
+                Address
+              </label>
+              {selectedPlace?.google_place_id && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedPlace(null);
+                    setAddress("");
+                    setCity("Atlanta");
+                    setState("GA");
+                    setZip("");
+                  }}
+                  className="font-mono text-xs text-[var(--coral)] hover:text-[var(--rose)] transition-colors"
+                >
+                  Clear & Enter Manually
+                </button>
+              )}
+            </div>
             <input
               type="text"
               value={address}
               onChange={(e) => setAddress(e.target.value)}
               placeholder="123 Main St"
-              className="w-full px-4 py-3 rounded-lg bg-[var(--dusk)] border border-[var(--twilight)] text-[var(--cream)] font-mono text-sm placeholder:text-[var(--muted)] focus:outline-none focus:border-[var(--coral)] transition-colors"
+              readOnly={!!selectedPlace?.google_place_id}
+              className={`w-full px-4 py-3 rounded-lg bg-[var(--dusk)] border border-[var(--twilight)] text-[var(--cream)] font-mono text-sm placeholder:text-[var(--muted)] focus:outline-none focus:border-[var(--coral)] transition-colors ${
+                selectedPlace?.google_place_id ? "opacity-60 cursor-not-allowed" : ""
+              }`}
             />
           </div>
 
@@ -209,7 +346,10 @@ export default function SubmitVenuePage() {
                 type="text"
                 value={city}
                 onChange={(e) => setCity(e.target.value)}
-                className="w-full px-4 py-3 rounded-lg bg-[var(--dusk)] border border-[var(--twilight)] text-[var(--cream)] font-mono text-sm focus:outline-none focus:border-[var(--coral)] transition-colors"
+                readOnly={!!selectedPlace?.google_place_id}
+                className={`w-full px-4 py-3 rounded-lg bg-[var(--dusk)] border border-[var(--twilight)] text-[var(--cream)] font-mono text-sm focus:outline-none focus:border-[var(--coral)] transition-colors ${
+                  selectedPlace?.google_place_id ? "opacity-60 cursor-not-allowed" : ""
+                }`}
               />
             </div>
             <div>
@@ -221,7 +361,10 @@ export default function SubmitVenuePage() {
                 value={state}
                 onChange={(e) => setState(e.target.value)}
                 maxLength={2}
-                className="w-full px-4 py-3 rounded-lg bg-[var(--dusk)] border border-[var(--twilight)] text-[var(--cream)] font-mono text-sm focus:outline-none focus:border-[var(--coral)] transition-colors"
+                readOnly={!!selectedPlace?.google_place_id}
+                className={`w-full px-4 py-3 rounded-lg bg-[var(--dusk)] border border-[var(--twilight)] text-[var(--cream)] font-mono text-sm focus:outline-none focus:border-[var(--coral)] transition-colors ${
+                  selectedPlace?.google_place_id ? "opacity-60 cursor-not-allowed" : ""
+                }`}
               />
             </div>
             <div>
@@ -233,7 +376,10 @@ export default function SubmitVenuePage() {
                 value={zip}
                 onChange={(e) => setZip(e.target.value)}
                 maxLength={10}
-                className="w-full px-4 py-3 rounded-lg bg-[var(--dusk)] border border-[var(--twilight)] text-[var(--cream)] font-mono text-sm focus:outline-none focus:border-[var(--coral)] transition-colors"
+                readOnly={!!selectedPlace?.google_place_id}
+                className={`w-full px-4 py-3 rounded-lg bg-[var(--dusk)] border border-[var(--twilight)] text-[var(--cream)] font-mono text-sm focus:outline-none focus:border-[var(--coral)] transition-colors ${
+                  selectedPlace?.google_place_id ? "opacity-60 cursor-not-allowed" : ""
+                }`}
               />
             </div>
           </div>
