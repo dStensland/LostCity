@@ -378,7 +378,12 @@ export default function HappeningNowPage() {
               <span className="text-[var(--muted)] font-mono text-sm">Loading map...</span>
             </div>
           ) : (
-            <MapViewWrapper events={mapEvents} userLocation={userLocation} />
+            <MapViewWrapper
+              events={mapEvents}
+              spots={filteredSpots}
+              userLocation={userLocation}
+              viewRadius={userLocation && !selectedNeighborhood ? NEARBY_RADIUS_MILES : undefined}
+            />
           )}
         </div>
       </div>

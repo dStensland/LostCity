@@ -6,6 +6,7 @@ import MarkerClusterGroup from "react-leaflet-cluster";
 import L from "leaflet";
 import Link from "next/link";
 import type { EventWithLocation } from "@/lib/search";
+import type { Spot } from "@/lib/spots";
 import { getMapTiles } from "@/lib/map-config";
 import { usePortal } from "@/lib/portal-context";
 import { CATEGORY_CONFIG } from "./CategoryIcon";
@@ -265,7 +266,10 @@ function MapResizer() {
 
 interface Props {
   events: EventWithLocation[];
+  spots?: Spot[];
   userLocation?: { lat: number; lng: number } | null;
+  // View radius in miles for GPS mode - will constrain map to this radius around user
+  viewRadius?: number;
 }
 
 // Memoized single event marker to prevent re-renders
@@ -407,12 +411,128 @@ const EventMarkers = memo(function EventMarkers({ events, portalSlug }: EventMar
   return true;
 });
 
+// Memoized single spot marker to prevent re-renders
+interface SpotMarkerProps {
+  spot: Spot;
+  portalSlug: string;
+}
+
+const SpotMarker = memo(function SpotMarker({ spot, portalSlug }: SpotMarkerProps) {
+  const iconType = spot.spot_type || "venue";
+  const color = getCategoryColor(iconType);
+
+  return (
+    <Marker
+      position={[spot.lat!, spot.lng!]}
+      icon={createNeonIcon(color, iconType, false)}
+    >
+      <Popup className="dark-popup">
+        <div
+          className="min-w-[200px] p-4 rounded-lg"
+          style={{
+            borderLeft: `4px solid ${color}`,
+            background: `linear-gradient(135deg, ${color}08 0%, transparent 50%)`,
+          }}
+        >
+          {/* Spot type badge */}
+          <div className="flex items-center justify-between mb-2">
+            {spot.spot_type && (
+              <span
+                className="inline-flex items-center gap-1.5 px-2 py-0.5 text-[0.55rem] font-mono font-medium uppercase tracking-wide rounded"
+                style={{
+                  backgroundColor: `${color}20`,
+                  color: color,
+                }}
+              >
+                {spot.spot_type.replace(/_/g, " ")}
+              </span>
+            )}
+            <span className="flex-shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 text-[0.55rem] font-mono font-medium bg-[var(--neon-green)]/20 text-[var(--neon-green)] rounded">
+              OPEN
+            </span>
+          </div>
+
+          {/* Name */}
+          <Link
+            href={`/${portalSlug}/spots/${spot.slug}`}
+            className="block font-medium text-sm text-[var(--cream)] hover:text-[var(--coral)] transition-colors line-clamp-2 mb-2"
+          >
+            {spot.name}
+          </Link>
+
+          {/* Address */}
+          {spot.address && (
+            <div className="flex items-center gap-1.5 text-[0.7rem] text-[var(--soft)] mb-1">
+              <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+              </svg>
+              <span className="truncate">{spot.address}</span>
+            </div>
+          )}
+
+          {/* Neighborhood */}
+          {spot.neighborhood && (
+            <div className="flex items-center gap-1.5 font-mono text-[0.65rem] text-[var(--muted)]">
+              <span className="truncate">{spot.neighborhood}</span>
+            </div>
+          )}
+
+          {/* View link */}
+          <div className="mt-3">
+            <Link
+              href={`/${portalSlug}/spots/${spot.slug}`}
+              className="text-[0.6rem] font-mono text-[var(--coral)] hover:underline"
+            >
+              View details →
+            </Link>
+          </div>
+        </div>
+      </Popup>
+    </Marker>
+  );
+});
+
+// Memoized spots markers container
+interface SpotMarkersProps {
+  spots: Spot[];
+  portalSlug: string;
+}
+
+const SpotMarkers = memo(function SpotMarkers({ spots, portalSlug }: SpotMarkersProps) {
+  return (
+    <MarkerClusterGroup
+      chunkedLoading
+      iconCreateFunction={createClusterIcon}
+      maxClusterRadius={50}
+      spiderfyOnMaxZoom={true}
+      showCoverageOnHover={false}
+      animate={true}
+      animateAddingMarkers={false}
+      disableClusteringAtZoom={16}
+      zoomToBoundsOnClick={true}
+      spiderfyDistanceMultiplier={1.5}
+    >
+      {spots.map((spot) => (
+        <SpotMarker key={spot.id} spot={spot} portalSlug={portalSlug} />
+      ))}
+    </MarkerClusterGroup>
+  );
+}, (prevProps, nextProps) => {
+  // Custom comparison - only re-render if spots array length or IDs change
+  if (prevProps.spots.length !== nextProps.spots.length) return false;
+  if (prevProps.portalSlug !== nextProps.portalSlug) return false;
+  for (let i = 0; i < prevProps.spots.length; i++) {
+    if (prevProps.spots[i].id !== nextProps.spots[i].id) return false;
+  }
+  return true;
+});
+
 function applyLiveFilter(events: EventWithLocation[], liveOnly: boolean) {
   if (!liveOnly) return events;
   return events.filter((event) => event.is_live);
 }
 
-export default function MapView({ events, userLocation }: Props) {
+export default function MapView({ events, spots = [], userLocation, viewRadius }: Props) {
   const { portal } = usePortal();
   const isLightTheme = (portal.branding?.theme_mode as string) === "light";
   const mapTiles = getMapTiles(isLightTheme);
@@ -467,6 +587,12 @@ export default function MapView({ events, userLocation }: Props) {
     [filteredEvents]
   );
 
+  // Filter spots with valid coordinates
+  const mappableSpots = useMemo(
+    () => spots.filter((s) => s.lat && s.lng),
+    [spots]
+  );
+
   // Pick an active spot (venue with most events) as fallback center
   const activeSpotCenter = useMemo((): [number, number] | null => {
     if (mappableEvents.length === 0) return null;
@@ -511,24 +637,43 @@ export default function MapView({ events, userLocation }: Props) {
     ? [localUserLocation.lat, localUserLocation.lng]
     : activeSpotCenter || ATLANTA_DEFAULT;
 
-  // Zoom level: 11 for user location (roughly 20 mile view), 13 for active spot, 12 for default
-  const defaultZoom = localUserLocation ? 11 : (activeSpotCenter ? 13 : 12);
+  // Calculate zoom level based on view radius
+  // Approximate: zoom 14 = ~1mi, 13 = ~2mi, 12 = ~5mi, 11 = ~10mi, 10 = ~20mi
+  const getZoomForRadius = (radiusMiles: number): number => {
+    if (radiusMiles <= 1) return 14;
+    if (radiusMiles <= 2) return 13;
+    if (radiusMiles <= 5) return 12;
+    if (radiusMiles <= 10) return 11;
+    return 10;
+  };
 
-  // Calculate bounds if we have events (but don't auto-fit if user has location)
+  // Zoom level: use viewRadius if provided, otherwise defaults
+  const defaultZoom = localUserLocation && viewRadius
+    ? getZoomForRadius(viewRadius)
+    : localUserLocation
+      ? 11
+      : (activeSpotCenter ? 13 : 12);
+
+  // Calculate bounds from both events and spots (but don't auto-fit if user has location with radius)
+  const allMarkerCoords: [number, number][] = [
+    ...mappableEvents.map((e) => [e.venue!.lat!, e.venue!.lng!] as [number, number]),
+    ...mappableSpots.map((s) => [s.lat!, s.lng!] as [number, number]),
+  ];
+
   const bounds =
-    mappableEvents.length > 0 && !localUserLocation
-      ? L.latLngBounds(
-          mappableEvents.map((e) => [e.venue!.lat!, e.venue!.lng!] as [number, number])
-        )
+    allMarkerCoords.length > 0 && !localUserLocation
+      ? L.latLngBounds(allMarkerCoords)
       : null;
 
-  // Memoize allEventsBounds for MapOverlay to prevent unnecessary re-renders
-  const allEventsBounds = useMemo(() => {
-    if (mappableEvents.length === 0) return null;
-    return L.latLngBounds(
-      mappableEvents.map((e) => [e.venue!.lat!, e.venue!.lng!] as [number, number])
-    );
-  }, [mappableEvents]);
+  // Memoize allMarkersBounds for MapOverlay to prevent unnecessary re-renders
+  const allMarkersBounds = useMemo(() => {
+    const coords: [number, number][] = [
+      ...mappableEvents.map((e) => [e.venue!.lat!, e.venue!.lng!] as [number, number]),
+      ...mappableSpots.map((s) => [s.lat!, s.lng!] as [number, number]),
+    ];
+    if (coords.length === 0) return null;
+    return L.latLngBounds(coords);
+  }, [mappableEvents, mappableSpots]);
 
   const categoryLegend = [
     { key: "music", label: "Music", color: CATEGORY_CONFIG.music.color },
@@ -576,8 +721,9 @@ export default function MapView({ events, userLocation }: Props) {
           />
           <MapOverlay
             totalEvents={filteredEvents.length}
-            mappableCount={mappableEvents.length}
-            allEventsBounds={allEventsBounds}
+            totalSpots={mappableSpots.length}
+            mappableCount={mappableEvents.length + mappableSpots.length}
+            allMarkersBounds={allMarkersBounds}
             hasUserLocation={!!localUserLocation}
             userLocation={localUserLocation}
             locating={locating}
@@ -590,6 +736,9 @@ export default function MapView({ events, userLocation }: Props) {
             onToggleFullscreen={() => setIsFullscreen((prev) => !prev)}
           />
           <EventMarkers events={mappableEvents} portalSlug={portal.slug} />
+          {mappableSpots.length > 0 && (
+            <SpotMarkers spots={mappableSpots} portalSlug={portal.slug} />
+          )}
           {/* User location marker */}
           {localUserLocation && (
             <Marker
@@ -610,7 +759,7 @@ export default function MapView({ events, userLocation }: Props) {
             />
           )}
         </MapContainer>
-        {mappableEvents.length === 0 && (
+        {mappableEvents.length === 0 && mappableSpots.length === 0 && (
           <div className="absolute inset-0 flex items-center justify-center bg-[var(--void)]/80">
             <p className="text-[var(--muted)] font-mono text-sm">Nothing to see here. Literally.</p>
           </div>
@@ -622,8 +771,9 @@ export default function MapView({ events, userLocation }: Props) {
 
 function MapOverlay({
   totalEvents,
+  totalSpots,
   mappableCount,
-  allEventsBounds,
+  allMarkersBounds,
   hasUserLocation,
   userLocation,
   locating,
@@ -636,8 +786,9 @@ function MapOverlay({
   onToggleFullscreen,
 }: {
   totalEvents: number;
+  totalSpots: number;
   mappableCount: number;
-  allEventsBounds: L.LatLngBounds | null;
+  allMarkersBounds: L.LatLngBounds | null;
   hasUserLocation: boolean;
   userLocation: { lat: number; lng: number } | null;
   locating: boolean;
@@ -652,27 +803,27 @@ function MapOverlay({
   const map = useMap();
   const initialFitDoneRef = useRef(false);
 
-  const fitToEvents = useCallback(() => {
-    if (allEventsBounds) {
-      map.fitBounds(allEventsBounds, { padding: [60, 60] });
+  const fitToMarkers = useCallback(() => {
+    if (allMarkersBounds) {
+      map.fitBounds(allMarkersBounds, { padding: [60, 60] });
     } else {
       map.setView([33.7725, -84.3655], 12); // Ponce City Market area
     }
-  }, [allEventsBounds, map]);
+  }, [allMarkersBounds, map]);
 
   const centerOnUser = useCallback(() => {
     if (userLocation) {
-      map.setView([userLocation.lat, userLocation.lng], 11); // ~20 mile radius
+      map.setView([userLocation.lat, userLocation.lng], 12); // ~5 mile radius
     }
   }, [userLocation, map]);
 
   // Only auto-fit to bounds ONCE on initial load, not on every change
   useEffect(() => {
-    if (!initialFitDoneRef.current && !hasUserLocation && allEventsBounds) {
-      map.fitBounds(allEventsBounds, { padding: [60, 60] });
+    if (!initialFitDoneRef.current && !hasUserLocation && allMarkersBounds) {
+      map.fitBounds(allMarkersBounds, { padding: [60, 60] });
       initialFitDoneRef.current = true;
     }
-  }, [allEventsBounds, hasUserLocation, map]);
+  }, [allMarkersBounds, hasUserLocation, map]);
 
   return (
     <>
@@ -681,7 +832,7 @@ function MapOverlay({
           Map View
         </div>
         <div className="text-sm text-[var(--cream)]">
-          {mappableCount} of {totalEvents} events mapped
+          {mappableCount} pins · {totalEvents} events · {totalSpots} spots
         </div>
         {mappableCount === 0 && (
           <div className="text-[0.65rem] text-[var(--muted)] mt-1">
@@ -709,10 +860,10 @@ function MapOverlay({
           )}
         </button>
         <button
-          onClick={fitToEvents}
+          onClick={fitToMarkers}
           className="rounded-lg px-3 py-2 text-[0.65rem] font-mono text-[var(--muted)] hover:text-[var(--cream)] glass-panel-compact"
         >
-          Fit to events
+          Fit all
         </button>
         {hasUserLocation && (
           <button

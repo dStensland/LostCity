@@ -3,6 +3,7 @@
 import dynamic from "next/dynamic";
 import { useMapEvents } from "@/lib/hooks/useMapEvents";
 import type { EventWithLocation } from "@/lib/search";
+import type { Spot } from "@/lib/spots";
 
 const MapView = dynamic(() => import("./MapView"), {
   ssr: false,
@@ -19,13 +20,17 @@ const MapView = dynamic(() => import("./MapView"), {
 interface Props {
   // If events are provided directly, use them (e.g., happening-now page)
   events?: EventWithLocation[];
+  // Spots to show as pins (for happening-now page)
+  spots?: Spot[];
   userLocation?: { lat: number; lng: number } | null;
+  // View radius in miles (for GPS mode) - defaults to fitting all markers
+  viewRadius?: number;
   // If no events provided, fetch using these params
   portalId?: string;
   portalExclusive?: boolean;
 }
 
-export default function MapViewWrapper({ events: providedEvents, userLocation, portalId, portalExclusive }: Props) {
+export default function MapViewWrapper({ events: providedEvents, spots, userLocation, viewRadius, portalId, portalExclusive }: Props) {
   // Only use the hook if events aren't provided directly
   const { events: fetchedEvents, isLoading } = useMapEvents({
     portalId,
@@ -48,5 +53,5 @@ export default function MapViewWrapper({ events: providedEvents, userLocation, p
     );
   }
 
-  return <MapView events={events} userLocation={userLocation} />;
+  return <MapView events={events} spots={spots} userLocation={userLocation} viewRadius={viewRadius} />;
 }
