@@ -69,6 +69,9 @@ const ICON_PATHS: Record<string, string> = {
 
 // Theme-aware styles for Leaflet popups
 const getMapStyles = (isLight: boolean) => `
+  .leaflet-container {
+    background: ${isLight ? '#F3F4F6' : '#0F0F14'} !important;
+  }
   .leaflet-popup-content-wrapper {
     background: var(--dusk, ${isLight ? '#F9FAFB' : '#18181F'});
     border: 1px solid var(--twilight, ${isLight ? '#E5E7EB' : '#252530'});
@@ -645,13 +648,14 @@ export default function MapView({ events, spots = [], userLocation, viewRadius }
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: mapStyles }} />
-      <div className="w-full h-full rounded-lg overflow-hidden border border-[var(--twilight)] relative">
+      <div className="w-full h-full rounded-lg overflow-hidden border border-[var(--twilight)] relative bg-[var(--void)]">
         <MapContainer
           center={mapCenter}
           zoom={defaultZoom}
           bounds={!localUserLocation && bounds ? bounds : undefined}
           boundsOptions={{ padding: [50, 50] }}
           className="w-full h-full"
+          style={{ background: 'var(--void)' }}
           scrollWheelZoom={true}
           zoomAnimation={true}
           fadeAnimation={true}
