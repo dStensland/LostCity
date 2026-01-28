@@ -137,7 +137,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     initializedRef.current = true;
 
     const initAuth = async () => {
-      console.log("[AuthContext] initAuth starting");
       try {
         setAuthState("checking");
 
@@ -148,9 +147,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const maxAttempts = 2;
 
         while (!session && attempts < maxAttempts) {
-          console.log("[AuthContext] getSession attempt", attempts + 1);
-          const { data, error } = await supabase.auth.getSession();
-          console.log("[AuthContext] getSession result:", { hasSession: !!data.session, error });
+          const { data } = await supabase.auth.getSession();
           session = data.session;
 
           if (!session && attempts < maxAttempts - 1) {
@@ -160,13 +157,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           attempts++;
         }
 
-        if (!isMountedRef.current || !isCurrentEffect) {
-          console.log("[AuthContext] bailing - mounted:", isMountedRef.current, "currentEffect:", isCurrentEffect);
-          return;
-        }
+        if (!isMountedRef.current || !isCurrentEffect) return;
 
         if (session?.user) {
-          console.log("[AuthContext] session found, setting authenticated");
           setUser(session.user);
           setSession(session);
           currentUserIdRef.current = session.user.id;
@@ -181,7 +174,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           });
         } else {
           // No session - user is not logged in
-          console.log("[AuthContext] no session, setting unauthenticated");
           setAuthState("unauthenticated");
           setLoading(false);
         }

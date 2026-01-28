@@ -7,7 +7,6 @@ import UnifiedHeader from "@/components/UnifiedHeader";
 import CategoryIcon, { CATEGORY_CONFIG, type CategoryType } from "@/components/CategoryIcon";
 import VibeIcon, { getVibeColor } from "@/components/VibeIcon";
 import { createClient } from "@/lib/supabase/client";
-import { useAuth } from "@/lib/auth-context";
 import {
   PREFERENCE_CATEGORIES,
   PREFERENCE_NEIGHBORHOODS,
@@ -17,6 +16,7 @@ import {
 import { DEFAULT_PORTAL_SLUG } from "@/lib/constants";
 
 type PreferencesClientProps = {
+  userId: string;
   isWelcome: boolean;
   initialPreferences: {
     categories: string[];
@@ -27,11 +27,11 @@ type PreferencesClientProps = {
 };
 
 export default function PreferencesClient({
+  userId,
   isWelcome,
   initialPreferences,
 }: PreferencesClientProps) {
   const router = useRouter();
-  const { user } = useAuth();
   const supabase = createClient();
 
   const [saving, setSaving] = useState(false);
@@ -59,8 +59,6 @@ export default function PreferencesClient({
   };
 
   const handleSave = async () => {
-    if (!user) return;
-
     setSaving(true);
 
     try {
@@ -69,7 +67,7 @@ export default function PreferencesClient({
         .from("user_preferences")
         .upsert(
           {
-            user_id: user.id,
+            user_id: userId,
             favorite_categories: selectedCategories,
             favorite_neighborhoods: selectedNeighborhoods,
             favorite_vibes: selectedVibes,
@@ -88,7 +86,7 @@ export default function PreferencesClient({
       if (isWelcome) {
         router.push("/foryou");
       } else {
-        router.push("/settings");
+        router.back();
       }
     } catch (err) {
       console.error("Error saving preferences:", err);
