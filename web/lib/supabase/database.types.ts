@@ -572,6 +572,7 @@ export type Database = {
           end_date: string | null
           end_time: string | null
           extraction_confidence: number | null
+          featured_blurb: string | null
           from_submission: string | null
           genres: string[] | null
           id: number
@@ -616,6 +617,7 @@ export type Database = {
           end_date?: string | null
           end_time?: string | null
           extraction_confidence?: number | null
+          featured_blurb?: string | null
           from_submission?: string | null
           genres?: string[] | null
           id?: number
@@ -660,6 +662,7 @@ export type Database = {
           end_date?: string | null
           end_time?: string | null
           extraction_confidence?: number | null
+          featured_blurb?: string | null
           from_submission?: string | null
           genres?: string[] | null
           id?: number

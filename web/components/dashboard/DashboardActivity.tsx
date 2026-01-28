@@ -20,7 +20,7 @@ type Profile = {
 
 type ActivityItem = {
   id: string;
-  activity_type: "rsvp" | "recommendation" | "follow" | "save";
+  activity_type: "rsvp" | "follow" | "save";
   created_at: string;
   user: {
     id: string;
@@ -47,7 +47,6 @@ type ActivityItem = {
   } | null;
   metadata?: {
     status?: string;
-    note?: string;
   };
 };
 
@@ -598,31 +597,15 @@ function GroupedEventCard({ group }: { group: GroupedActivity }) {
 function ActivityCard({ activity }: { activity: ActivityItem }) {
   const timeAgo = formatDistanceToNow(new Date(activity.created_at), { addSuffix: true });
 
-  // Get activity icon and accent color
-  const getActivityStyle = () => {
-    switch (activity.activity_type) {
-      case "follow":
-        return { icon: "👋", color: "var(--neon-cyan)", label: "followed" };
-      case "recommendation":
-        return { icon: "⭐", color: "var(--coral)", label: "recommends" };
-      case "save":
-        return { icon: "🔖", color: "var(--neon-magenta)", label: "saved" };
-      default:
-        return { icon: "•", color: "var(--muted)", label: "" };
-    }
-  };
-
-  const style = getActivityStyle();
-
-  // Render event-based activity (recommendation or save)
-  if ((activity.activity_type === "recommendation" || activity.activity_type === "save") && activity.event) {
+  // Render saved event activity
+  if (activity.activity_type === "save" && activity.event) {
     const eventDate = parseISO(activity.event.start_date);
     const formattedDate = format(eventDate, "EEE, MMM d");
 
     return (
       <Link
         href={`/events/${activity.event.id}`}
-        className="block p-4 bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg hover:border-[var(--coral)]/30 transition-all group"
+        className="block p-4 bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg hover:border-[var(--neon-magenta)]/30 transition-all group"
       >
         {/* Header: who did what */}
         <div className="flex items-center gap-2 mb-3">
@@ -635,7 +618,7 @@ function ActivityCard({ activity }: { activity: ActivityItem }) {
             <span className="text-[var(--soft)]">
               {activity.user.display_name || activity.user.username}
             </span>
-            {" "}{style.label}
+            {" "}saved this
           </span>
           <span className="ml-auto font-mono text-[0.6rem] text-[var(--muted)]">
             {timeAgo}
@@ -643,7 +626,7 @@ function ActivityCard({ activity }: { activity: ActivityItem }) {
         </div>
 
         {/* Event details - the main content */}
-        <h4 className="font-medium text-[var(--cream)] group-hover:text-[var(--coral)] transition-colors line-clamp-1">
+        <h4 className="font-medium text-[var(--cream)] group-hover:text-[var(--neon-magenta)] transition-colors line-clamp-1">
           {activity.event.title}
         </h4>
         <p className="font-mono text-xs text-[var(--muted)] mt-1">
@@ -651,15 +634,8 @@ function ActivityCard({ activity }: { activity: ActivityItem }) {
           {activity.event.venue && ` · ${activity.event.venue.name}`}
         </p>
 
-        {/* Recommendation note if present */}
-        {activity.metadata?.note && (
-          <p className="mt-2 text-sm text-[var(--soft)] italic border-l-2 border-[var(--coral)]/30 pl-2">
-            &ldquo;{activity.metadata.note}&rdquo;
-          </p>
-        )}
-
         {/* CTA hint */}
-        <div className="mt-3 flex items-center gap-1 text-xs font-mono" style={{ color: style.color }}>
+        <div className="mt-3 flex items-center gap-1 text-xs font-mono text-[var(--neon-magenta)]">
           <span>Check it out</span>
           <svg className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -669,8 +645,8 @@ function ActivityCard({ activity }: { activity: ActivityItem }) {
     );
   }
 
-  // Render venue-based activity (follow or recommendation)
-  if (activity.venue?.slug) {
+  // Render venue follow activity
+  if (activity.activity_type === "follow" && activity.venue?.slug) {
     return (
       <Link
         href={`/spots/${activity.venue.slug}`}
@@ -762,21 +738,8 @@ function ActivityCard({ activity }: { activity: ActivityItem }) {
     );
   }
 
-  // Fallback for unknown activity types
-  return (
-    <div className="p-4 bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg opacity-60">
-      <div className="flex items-center gap-2">
-        <UserAvatar
-          src={activity.user.avatar_url}
-          name={activity.user.display_name || activity.user.username}
-          size="sm"
-        />
-        <span className="text-sm text-[var(--muted)]">
-          {activity.user.display_name || activity.user.username} did something
-        </span>
-      </div>
-    </div>
-  );
+  // Fallback - should rarely happen now
+  return null;
 }
 
 function FriendsList({ friends }: { friends: Profile[] }) {

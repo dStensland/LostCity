@@ -27,6 +27,7 @@ export type FeedEvent = {
   subcategory: string | null;
   image_url: string | null;
   description: string | null;
+  featured_blurb?: string | null;
   going_count?: number;
   is_trending?: boolean;
   venue: {

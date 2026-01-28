@@ -69,6 +69,7 @@ type Event = {
   subcategory: string | null;
   image_url: string | null;
   description: string | null;
+  featured_blurb: string | null;
   going_count?: number;
   venue: {
     id: number;
@@ -275,6 +276,7 @@ export async function GET(request: NextRequest, { params }: Props) {
         subcategory,
         image_url,
         description,
+        featured_blurb,
         venue:venues(id, name, neighborhood, slug)
       `)
       .in("id", Array.from(eventIds))
@@ -319,6 +321,7 @@ export async function GET(request: NextRequest, { params }: Props) {
         subcategory,
         image_url,
         description,
+        featured_blurb,
         venue:venues(id, name, neighborhood, slug)
       `)
       .in("id", Array.from(pinnedEventIds))
@@ -374,6 +377,7 @@ export async function GET(request: NextRequest, { params }: Props) {
         subcategory,
         image_url,
         description,
+        featured_blurb,
         venue:venues(id, name, neighborhood, slug)
       `)
       .gte("start_date", today)
@@ -601,6 +605,7 @@ export async function GET(request: NextRequest, { params }: Props) {
       subcategory,
       image_url,
       description,
+      featured_blurb,
       venue:venues(id, name, neighborhood, slug)
     `)
     .eq("is_featured", true)
@@ -642,6 +647,7 @@ export async function GET(request: NextRequest, { params }: Props) {
             subcategory,
             image_url,
             description,
+            featured_blurb,
             venue:venues(id, name, neighborhood, slug)
           `)
           .contains("tags", [tag])

@@ -23,6 +23,7 @@ type FeaturedEvent = {
   subcategory: string | null;
   image_url: string | null;
   description: string | null;
+  featured_blurb?: string | null;
   venue: {
     id: number;
     name: string;
@@ -280,10 +281,10 @@ function FeaturedCard({ event, portalSlug }: { event: FeaturedEvent; portalSlug:
           </div>
         )}
 
-        {/* Description preview */}
-        {event.description && (
+        {/* Description preview - use featured_blurb if available */}
+        {(event.featured_blurb || event.description) && (
           <p className="text-xs text-[var(--soft)] line-clamp-2 leading-relaxed mb-3">
-            <LinkifyText text={event.description} />
+            <LinkifyText text={event.featured_blurb || event.description || ""} />
           </p>
         )}
 
