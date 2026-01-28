@@ -223,8 +223,39 @@ function EventCard({ event, index = 0, skipAnimation = false, portalSlug, friend
 
         {/* Content */}
         <div className="flex-1 min-w-0">
-          {/* Title row */}
-          <div className="flex items-center gap-2">
+          {/* Mobile: Stacked layout for more title space */}
+          <div className="sm:hidden">
+            {/* Top row: category + live badge + menu */}
+            <div className="flex items-center gap-2 mb-1">
+              {event.category && (
+                <span
+                  className="inline-flex items-center justify-center w-5 h-5 rounded"
+                  style={{
+                    backgroundColor: categoryColor ? `${categoryColor}20` : undefined,
+                  }}
+                >
+                  <CategoryIcon type={event.category} size={12} glow="subtle" />
+                </span>
+              )}
+              {isLive && (
+                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded border bg-[var(--neon-red)]/15 border-[var(--neon-red)]/30">
+                  <span className="relative flex h-1.5 w-1.5">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--neon-red)] opacity-40" />
+                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-[var(--neon-red)]" />
+                  </span>
+                  <span className="font-mono text-[0.5rem] font-medium text-[var(--neon-red)] uppercase tracking-wide">Live</span>
+                </span>
+              )}
+              <EventCardMenu eventId={event.id} onHide={onHide} className="ml-auto" />
+            </div>
+            {/* Title row: full width */}
+            <h3 className="text-[var(--cream)] font-medium leading-snug line-clamp-2 group-hover:text-[var(--glow-color,var(--neon-magenta))] transition-colors">
+              {event.title}
+            </h3>
+          </div>
+
+          {/* Desktop: Inline layout */}
+          <div className="hidden sm:flex items-center gap-2">
             {event.category && (
               <span
                 className="flex-shrink-0 inline-flex items-center justify-center w-6 h-6 rounded"
@@ -236,7 +267,7 @@ function EventCard({ event, index = 0, skipAnimation = false, portalSlug, friend
               </span>
             )}
             <span
-              className="text-[var(--cream)] transition-colors truncate group-hover:text-[var(--glow-color,var(--neon-magenta))]"
+              className="text-[var(--cream)] transition-colors line-clamp-1 group-hover:text-[var(--glow-color,var(--neon-magenta))]"
             >
               {event.title}
             </span>
@@ -249,7 +280,6 @@ function EventCard({ event, index = 0, skipAnimation = false, portalSlug, friend
                 <span className="font-mono text-[0.55rem] font-medium text-[var(--neon-red)] uppercase tracking-wide">Live</span>
               </span>
             )}
-            {/* Kebab menu for hide/report */}
             <EventCardMenu eventId={event.id} onHide={onHide} className="ml-auto" />
           </div>
 

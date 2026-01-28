@@ -80,7 +80,7 @@ export default function SpotCard({ spot, index = 0, showDistance, portalSlug }: 
 
       {/* Content column */}
       <div className="min-w-0 flex-1">
-        <h3 className="font-semibold text-[var(--cream)] leading-snug line-clamp-1 group-hover:text-[var(--coral)] transition-colors">
+        <h3 className="font-semibold text-[var(--cream)] leading-snug line-clamp-2 sm:line-clamp-1 group-hover:text-[var(--coral)] transition-colors">
           {spot.name}
         </h3>
         <p className="font-serif text-sm text-[var(--soft)] mt-0.5">
@@ -134,8 +134,8 @@ export default function SpotCard({ spot, index = 0, showDistance, portalSlug }: 
         {spot.event_count !== undefined && spot.event_count > 0 && (
           <EventsBadge count={spot.event_count} />
         )}
-        {/* Arrow indicator */}
-        <div className="w-5 h-5 flex items-center justify-center text-[var(--muted)] group-hover:text-[var(--coral)] transition-colors">
+        {/* Arrow indicator - desktop only (hidden on touch devices via CSS) */}
+        <div className="w-5 h-5 items-center justify-center text-[var(--muted)] group-hover:text-[var(--coral)] transition-colors hidden md:flex desktop-hover-only">
           <svg className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
           </svg>
