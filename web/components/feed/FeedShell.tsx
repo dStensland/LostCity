@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense } from "react";
+import { Suspense, useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import ForYouFeed from "@/components/feed/ForYouFeed";
@@ -143,6 +143,14 @@ function FeedShellInner({ portalSlug, activeTab, curatedContent }: FeedShellProp
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, loading: authLoading } = useAuth();
+  const [timedOut, setTimedOut] = useState(false);
+
+  // Timeout for auth loading - if it takes too long, assume no user
+  useEffect(() => {
+    if (!authLoading) return;
+    const timer = setTimeout(() => setTimedOut(true), 2000);
+    return () => clearTimeout(timer);
+  }, [authLoading]);
 
   const handleTabChange = (tab: FeedTab) => {
     const params = new URLSearchParams(searchParams?.toString() || "");
@@ -159,9 +167,11 @@ function FeedShellInner({ portalSlug, activeTab, curatedContent }: FeedShellProp
 
   // Render content based on auth state for protected tabs
   const renderProtectedContent = (tab: "foryou" | "activity", children: React.ReactNode) => {
-    if (authLoading) {
+    // If auth is still loading but hasn't timed out, show skeleton
+    if (authLoading && !timedOut) {
       return <AuthLoadingSkeleton />;
     }
+    // If no user (either auth finished or timed out), show signed out state
     if (!user) {
       return tab === "foryou"
         ? <ForYouSignedOut portalSlug={portalSlug} />
