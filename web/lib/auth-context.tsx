@@ -148,7 +148,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const maxAttempts = 2;
 
         while (!session && attempts < maxAttempts) {
-          const { data } = await supabase.auth.getSession();
+          console.log("[AuthContext] getSession attempt", attempts + 1);
+          const { data, error } = await supabase.auth.getSession();
+          console.log("[AuthContext] getSession result:", { hasSession: !!data.session, error });
           session = data.session;
 
           if (!session && attempts < maxAttempts - 1) {

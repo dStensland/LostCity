@@ -44,6 +44,9 @@ export default async function ProfilePage({ params }: Props) {
   const { username } = await params;
   const supabase = await createClient();
 
+  // Get current user for relationship checks
+  const { data: { user: currentUser } } = await supabase.auth.getUser();
+
   // Get profile
   const { data: profileData } = await supabase
     .from("profiles")
@@ -57,12 +60,14 @@ export default async function ProfilePage({ params }: Props) {
     notFound();
   }
 
-  // Get follower/following counts and activity stats
+  // Get follower/following counts, activity stats, and current user's relationship
   const [
     { count: followerCount },
     { count: followingCount },
     { count: eventsAttended },
     { count: recommendationsMade },
+    { data: followData },
+    { data: friendData },
   ] = await Promise.all([
     supabase
       .from("follows")
@@ -81,7 +86,34 @@ export default async function ProfilePage({ params }: Props) {
       .from("recommendations")
       .select("id", { count: "exact", head: true })
       .eq("user_id", profile.id),
+    // Check if current user follows this profile
+    currentUser
+      ? supabase
+          .from("follows")
+          .select("id")
+          .eq("follower_id", currentUser.id)
+          .eq("followed_user_id", profile.id)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
+    // Check friend relationship (mutual follows)
+    currentUser
+      ? supabase
+          .from("follows")
+          .select("id")
+          .eq("follower_id", profile.id)
+          .eq("followed_user_id", currentUser.id)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
   ]);
+
+  // Determine relationship status
+  const iFollow = !!followData;
+  const theyFollowMe = !!friendData;
+  const initialIsFollowing = iFollow;
+  const initialRelationship: "none" | "friends" | "following" | "followed_by" =
+    iFollow && theyFollowMe ? "friends" :
+    iFollow ? "following" :
+    theyFollowMe ? "followed_by" : "none";
 
   // Get recent activity (public only for now)
   const { data: activityData } = await supabase
@@ -136,8 +168,8 @@ export default async function ProfilePage({ params }: Props) {
                 </p>
               </div>
               <div className="flex items-center gap-2">
-                <FriendButton targetUserId={profile.id} targetUsername={profile.username} />
-                <FollowButton targetUserId={profile.id} />
+                <FriendButton targetUserId={profile.id} targetUsername={profile.username} initialRelationship={initialRelationship} />
+                <FollowButton targetUserId={profile.id} initialIsFollowing={initialIsFollowing} />
               </div>
             </div>
 

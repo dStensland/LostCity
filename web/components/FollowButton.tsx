@@ -10,6 +10,7 @@ type FollowButtonProps = {
   targetVenueId?: number;
   targetOrgId?: string;
   targetProducerId?: string;
+  initialIsFollowing?: boolean;
   size?: "sm" | "md" | "lg";
   className?: string;
 };
@@ -19,6 +20,7 @@ export default function FollowButton({
   targetVenueId,
   targetOrgId,
   targetProducerId,
+  initialIsFollowing,
   size = "md",
   className = "",
 }: FollowButtonProps) {
@@ -26,13 +28,18 @@ export default function FollowButton({
   const { user, loading: authLoading } = useAuth();
   const { showToast } = useToast();
 
-  const [isFollowing, setIsFollowing] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [isFollowing, setIsFollowing] = useState(initialIsFollowing ?? false);
+  const [loading, setLoading] = useState(initialIsFollowing === undefined);
   const [actionLoading, setActionLoading] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
 
-  // Check if already following via API
+  // Check if already following via API (skip if initialIsFollowing provided)
   useEffect(() => {
+    // Skip API call if initial value was provided
+    if (initialIsFollowing !== undefined) {
+      return;
+    }
+
     let cancelled = false;
 
     async function checkFollowStatus() {
@@ -80,7 +87,7 @@ export default function FollowButton({
     return () => {
       cancelled = true;
     };
-  }, [user, authLoading, targetUserId, targetVenueId, targetOrgId, targetProducerId]);
+  }, [user, authLoading, targetUserId, targetVenueId, targetOrgId, targetProducerId, initialIsFollowing]);
 
   // Don't show follow button for own profile
   if (targetUserId && user?.id === targetUserId) {
