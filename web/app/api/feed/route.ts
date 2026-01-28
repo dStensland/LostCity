@@ -194,6 +194,66 @@ export async function GET(request: Request) {
 
   const { data: eventsData, error } = await query;
 
+  // Separately fetch events from followed venues/producers to ensure they're included
+  // (the main query might miss them due to the limit)
+  let followedEventsData: typeof eventsData = [];
+
+  if (followedVenueIds.length > 0 || followedProducerIds.length > 0) {
+    const eventSelect = `
+      id,
+      title,
+      start_date,
+      start_time,
+      is_all_day,
+      is_free,
+      price_min,
+      price_max,
+      category,
+      image_url,
+      ticket_url,
+      producer_id,
+      portal_id,
+      venue:venues(id, name, neighborhood, slug)
+    `;
+
+    // Fetch events from followed producers
+    if (followedProducerIds.length > 0) {
+      const { data: producerEvents } = await supabase
+        .from("events")
+        .select(eventSelect)
+        .in("producer_id", followedProducerIds)
+        .gte("start_date", today)
+        .is("canonical_event_id", null)
+        .order("start_date", { ascending: true })
+        .limit(20);
+
+      if (producerEvents) {
+        followedEventsData = [...followedEventsData, ...producerEvents];
+      }
+    }
+
+    // Fetch events from followed venues
+    if (followedVenueIds.length > 0) {
+      const { data: venueEvents } = await supabase
+        .from("events")
+        .select(eventSelect)
+        .in("venue_id", followedVenueIds)
+        .gte("start_date", today)
+        .is("canonical_event_id", null)
+        .order("start_date", { ascending: true })
+        .limit(20);
+
+      if (venueEvents) {
+        followedEventsData = [...followedEventsData, ...venueEvents];
+      }
+    }
+
+    console.log("[Feed API] Followed events fetched:", {
+      producerEvents: followedEventsData.filter(e => e.producer_id && followedProducerIds.includes(e.producer_id)).length,
+      venueEvents: followedEventsData.filter(e => e.venue && followedVenueIds.includes((e.venue as { id: number }).id)).length,
+    });
+  }
+
   if (error) {
     console.error("Feed API query error:", error);
     return NextResponse.json(
@@ -201,6 +261,13 @@ export async function GET(request: Request) {
       { status: 500 }
     );
   }
+
+  // Merge followed events with main results, avoiding duplicates
+  const mainEventIds = new Set((eventsData || []).map((e: { id: number }) => e.id));
+  const uniqueFollowedEvents = (followedEventsData || []).filter(
+    (e: { id: number }) => !mainEventIds.has(e.id)
+  );
+  const mergedEventsData = [...(eventsData || []), ...uniqueFollowedEvents];
 
   type EventResult = {
     id: number;
@@ -226,7 +293,7 @@ export async function GET(request: Request) {
     friends_going?: { user_id: string; username: string; display_name: string | null }[];
   };
 
-  let events = (eventsData || []) as EventResult[];
+  let events = (mergedEventsData || []) as EventResult[];
 
   // Debug: log events with matching venue/producer
   const eventsWithMatchingVenue = events.filter(e => e.venue?.id && followedVenueIds.includes(e.venue.id));
