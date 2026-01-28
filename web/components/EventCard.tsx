@@ -236,8 +236,8 @@ function EventCard({ event, index = 0, skipAnimation = false, portalSlug, friend
             </span>
             {isLive && (
               <span className="flex-shrink-0 relative flex h-2.5 w-2.5">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--neon-red)] opacity-75" />
-                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[var(--neon-red)] shadow-[0_0_6px_var(--neon-red)]" />
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--neon-red)] opacity-50" />
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[var(--neon-red)]" />
               </span>
             )}
             {/* Kebab menu for hide/report */}

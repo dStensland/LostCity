@@ -33,7 +33,7 @@ export default function LiveIndicator({
       <span
         className={`${dotSize} rounded-full bg-[var(--neon-red)] animate-pulse`}
         style={{
-          boxShadow: "0 0 6px var(--neon-red), 0 0 12px var(--neon-red)",
+          boxShadow: "0 0 4px var(--neon-red)",
         }}
       />
       {showText && <span className="animate-pulse-glow">LIVE</span>}
