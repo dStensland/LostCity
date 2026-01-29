@@ -182,15 +182,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     isMountedRef.current = true;
-    let isCurrentEffect = true;
-
-    // Skip if already initialized (prevents re-init on hot reload)
-    if (initializedRef.current) {
-      return;
-    }
-    initializedRef.current = true;
 
     const initAuth = async () => {
+      // Skip if already initialized (prevents re-init on hot reload)
+      // Check inside async function to handle React Strict Mode correctly
+      if (initializedRef.current) {
+        return;
+      }
+      initializedRef.current = true;
+
       try {
         setAuthState("checking");
 
@@ -199,7 +199,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const { data } = await supabase.auth.getSession();
         const session = data.session;
 
-        if (!isMountedRef.current || !isCurrentEffect) return;
+        if (!isMountedRef.current) return;
 
         if (session?.user) {
           setUser(session.user);
@@ -225,7 +225,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           return;
         }
         console.error("Auth init error:", err);
-        if (isMountedRef.current && isCurrentEffect) {
+        if (isMountedRef.current) {
           setError(err instanceof Error ? err : new Error("Auth initialization failed"));
           setAuthState("unauthenticated");
           setLoading(false);
@@ -295,9 +295,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     return () => {
       isMountedRef.current = false;
-      isCurrentEffect = false;
-      // Don't reset initializedRef - prevents re-init on hot reload in dev
-      // On actual remount (like route change), the component state is fresh anyway
       subscription.unsubscribe();
     };
   }, [supabase, fetchProfile]);
