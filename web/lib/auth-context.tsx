@@ -26,17 +26,22 @@ type AuthContextType = {
   session: Session | null;
   profile: Profile | null;
   loading: boolean;
+  profileLoading: boolean; // Separate loading state for profile
   authState: AuthState;
   error: Error | null;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
 };
 
+// BroadcastChannel for cross-tab sync
+const PROFILE_SYNC_CHANNEL = "lostcity-profile-sync";
+
 const AuthContext = createContext<AuthContextType>({
   user: null,
   session: null,
   profile: null,
   loading: true,
+  profileLoading: true,
   authState: "initializing",
   error: null,
   signOut: async () => {},
@@ -49,21 +54,65 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [profileLoading, setProfileLoading] = useState(true);
   const [authState, setAuthState] = useState<AuthState>("initializing");
   const [error, setError] = useState<Error | null>(null);
   const isMountedRef = useRef(true);
   const profileFetchRef = useRef<string | null>(null);
   const initializedRef = useRef(false);
   const currentUserIdRef = useRef<string | null>(null);
+  const broadcastChannelRef = useRef<BroadcastChannel | null>(null);
 
   const supabase = createClient();
 
-  const fetchProfile = useCallback(async (userId: string): Promise<Profile | null> => {
-    // Prevent duplicate fetches for same user
-    if (profileFetchRef.current === userId) {
+  // Set up cross-tab profile sync
+  useEffect(() => {
+    if (typeof window === "undefined" || !("BroadcastChannel" in window)) return;
+
+    const channel = new BroadcastChannel(PROFILE_SYNC_CHANNEL);
+    broadcastChannelRef.current = channel;
+
+    channel.onmessage = (event) => {
+      const { type, profile: syncedProfile, userId } = event.data;
+
+      // Only apply updates for the current user
+      if (type === "PROFILE_UPDATED" && userId === currentUserIdRef.current && syncedProfile) {
+        setProfile(syncedProfile);
+      } else if (type === "SIGNED_OUT") {
+        // Another tab signed out
+        setUser(null);
+        setSession(null);
+        setProfile(null);
+        profileFetchRef.current = null;
+        currentUserIdRef.current = null;
+        setAuthState("unauthenticated");
+      }
+    };
+
+    return () => {
+      channel.close();
+      broadcastChannelRef.current = null;
+    };
+  }, []);
+
+  // Broadcast profile updates to other tabs
+  const broadcastProfileUpdate = useCallback((updatedProfile: Profile | null, userId: string | null) => {
+    if (broadcastChannelRef.current && userId) {
+      broadcastChannelRef.current.postMessage({
+        type: "PROFILE_UPDATED",
+        profile: updatedProfile,
+        userId,
+      });
+    }
+  }, []);
+
+  const fetchProfile = useCallback(async (userId: string, forceRefresh = false): Promise<Profile | null> => {
+    // Prevent duplicate fetches for same user (unless forced)
+    if (!forceRefresh && profileFetchRef.current === userId) {
       return profile;
     }
     profileFetchRef.current = userId;
+    setProfileLoading(true);
 
     try {
       const { data, error: fetchError } = await supabase
@@ -74,25 +123,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (fetchError) {
         console.error("Error fetching profile:", fetchError);
+        setProfileLoading(false);
         return null;
       }
 
-      return data as Profile | null;
+      const fetchedProfile = data as Profile | null;
+      setProfileLoading(false);
+      return fetchedProfile;
     } catch (err) {
       console.error("Exception fetching profile:", err);
+      setProfileLoading(false);
       return null;
     }
   }, [supabase, profile]);
 
   const refreshProfile = useCallback(async () => {
     if (user) {
-      profileFetchRef.current = null; // Reset to allow refresh
-      const newProfile = await fetchProfile(user.id);
+      const newProfile = await fetchProfile(user.id, true); // Force refresh
       if (isMountedRef.current) {
         setProfile(newProfile);
+        // Broadcast to other tabs
+        broadcastProfileUpdate(newProfile, user.id);
       }
     }
-  }, [user, fetchProfile]);
+  }, [user, fetchProfile, broadcastProfileUpdate]);
 
   // Session refresh on tab focus - only revalidate when user returns after being away
   useEffect(() => {
@@ -140,31 +194,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         setAuthState("checking");
 
-        // Wrap getSession with timeout to prevent hanging
-        const getSessionWithTimeout = async (timeoutMs: number) => {
-          const timeoutPromise = new Promise<{ data: { session: null } }>((resolve) => {
-            setTimeout(() => resolve({ data: { session: null } }), timeoutMs);
-          });
-          return Promise.race([supabase.auth.getSession(), timeoutPromise]);
-        };
-
-        // Try to get session - if it fails or times out, retry once after a short delay
-        // This handles the case where cookies aren't immediately available after OAuth redirect
-        let session = null;
-        let attempts = 0;
-        const maxAttempts = 2;
-        const sessionTimeout = 3000; // 3 second timeout per attempt
-
-        while (!session && attempts < maxAttempts) {
-          const { data } = await getSessionWithTimeout(sessionTimeout);
-          session = data.session;
-
-          if (!session && attempts < maxAttempts - 1) {
-            // Wait a bit and retry - cookies might not be synced yet
-            await new Promise(resolve => setTimeout(resolve, 100));
-          }
-          attempts++;
-        }
+        // Fast path: get session without retry
+        // Retry logic only needed for OAuth callback, which is handled separately
+        const { data } = await supabase.auth.getSession();
+        const session = data.session;
 
         if (!isMountedRef.current || !isCurrentEffect) return;
 
@@ -175,7 +208,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setAuthState("authenticated");
           setLoading(false);
 
-          // Fetch profile in parallel (don't block)
+          // Fetch profile in parallel (don't block auth loading)
           fetchProfile(session.user.id).then((userProfile) => {
             if (isMountedRef.current) {
               setProfile(userProfile);
@@ -185,6 +218,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           // No session - user is not logged in
           setAuthState("unauthenticated");
           setLoading(false);
+          setProfileLoading(false);
         }
       } catch (err) {
         if (err instanceof Error && err.name === "AbortError") {
@@ -195,6 +229,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setError(err instanceof Error ? err : new Error("Auth initialization failed"));
           setAuthState("unauthenticated");
           setLoading(false);
+          setProfileLoading(false);
         }
       }
     };
@@ -261,7 +296,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => {
       isMountedRef.current = false;
       isCurrentEffect = false;
-      initializedRef.current = false; // Reset so remount can re-initialize
+      // Don't reset initializedRef - prevents re-init on hot reload in dev
+      // On actual remount (like route change), the component state is fresh anyway
       subscription.unsubscribe();
     };
   }, [supabase, fetchProfile]);
@@ -278,6 +314,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       profileFetchRef.current = null;
       currentUserIdRef.current = null;
       setAuthState("unauthenticated");
+      setProfileLoading(false);
+
+      // Broadcast sign out to other tabs
+      if (broadcastChannelRef.current) {
+        broadcastChannelRef.current.postMessage({ type: "SIGNED_OUT" });
+      }
+
       // Use soft navigation to preserve React state
       router.push("/");
     }
@@ -290,6 +333,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         session,
         profile,
         loading,
+        profileLoading,
         authState,
         error,
         signOut,

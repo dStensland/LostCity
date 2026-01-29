@@ -14,8 +14,6 @@ export default function UserMenu() {
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
   const [imgError, setImgError] = useState(false);
-  const [showLoading, setShowLoading] = useState(true);
-  const [profileTimeout, setProfileTimeout] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   // Close menu when clicking outside
@@ -30,48 +28,18 @@ export default function UserMenu() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Timeout to prevent infinite loading state - show sign in after 2s
-  useEffect(() => {
-    if (!loading) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- Sync with loading state
-      setShowLoading(false);
-      return;
-    }
-
-    const timeout = setTimeout(() => {
-      setShowLoading(false);
-    }, 2000);
-
-    return () => clearTimeout(timeout);
-  }, [loading]);
-
-  // Timeout for profile loading - if user exists but profile takes too long, show fallback
-  useEffect(() => {
-    if (!user || profile) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- Sync with profile state
-      setProfileTimeout(false);
-      return;
-    }
-
-    const timeout = setTimeout(() => {
-      setProfileTimeout(true);
-    }, 3000);
-
-    return () => clearTimeout(timeout);
-  }, [user, profile]);
-
   const loginUrl = pathname && pathname !== "/"
     ? `/auth/login?redirect=${encodeURIComponent(pathname)}`
     : "/auth/login";
 
-  // Brief loading state (max 2 seconds)
-  if (loading && showLoading) {
+  // Brief loading state during auth init only
+  if (loading) {
     return (
       <div className="w-8 h-8 rounded-full bg-[var(--twilight)] animate-pulse" />
     );
   }
 
-  // Not logged in (or loading timed out without user)
+  // Not logged in
   if (!user) {
     return (
       <Link
@@ -83,14 +51,8 @@ export default function UserMenu() {
     );
   }
 
-  // User exists but profile still loading - show loading state (with timeout fallback)
-  if (!profile && !profileTimeout) {
-    return (
-      <div className="w-8 h-8 rounded-full bg-[var(--twilight)] animate-pulse" />
-    );
-  }
-
-  // Logged in - show avatar and dropdown (profile may be null if timed out)
+  // User exists - show avatar even if profile is still loading (use fallback initials)
+  // This prevents the loading spinner from showing while profile loads
   const initials = profile?.display_name
     ? profile.display_name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
     : profile?.username?.slice(0, 2).toUpperCase() || user.email?.slice(0, 2).toUpperCase() || "U";

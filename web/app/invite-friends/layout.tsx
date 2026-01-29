@@ -12,25 +12,35 @@ export default function InviteFriendsLayout({
   children: React.ReactNode;
 }) {
   const router = useRouter();
-  const { user, loading: authLoading } = useAuth();
+  const { user, authState } = useAuth();
 
-  // Redirect to login if not authenticated
+  // Redirect to login if not authenticated (fallback for client-side nav)
   useEffect(() => {
-    if (!authLoading && !user) {
+    if (authState === "unauthenticated") {
       router.push("/auth/login?redirect=/invite-friends");
     }
-  }, [user, authLoading, router]);
+  }, [authState, router]);
 
-  if (authLoading) {
+  // Show loading during initial auth check
+  if (authState === "initializing" || authState === "checking") {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[var(--void)]">
-        <div className="w-8 h-8 border-2 border-[var(--coral)] border-t-transparent rounded-full animate-spin" />
+      <div className="min-h-screen flex flex-col bg-[var(--void)]">
+        <header className="sticky top-0 z-40 border-b bg-[var(--void)]/95 backdrop-blur-sm border-[var(--twilight)]/30">
+          <div className="px-4 py-3 flex items-center gap-4">
+            <div className="h-8 w-24 rounded skeleton-shimmer" />
+            <div className="flex-1" />
+            <div className="h-8 w-8 rounded-full skeleton-shimmer" />
+          </div>
+        </header>
+        <main className="flex-1 flex items-center justify-center">
+          <div className="w-8 h-8 border-2 border-[var(--coral)] border-t-transparent rounded-full animate-spin" />
+        </main>
       </div>
     );
   }
 
   if (!user) {
-    return null; // Will redirect
+    return null;
   }
 
   return (
