@@ -507,10 +507,23 @@ async function searchEvents(
   let rows = (data as EventSearchRow[]) || [];
 
   // Apply client-side subcategory filter
+  // If event has a subcategory, it must match one of the selected subcategories
+  // If event has no subcategory, include it if its category matches the parent category
+  // (e.g., selecting "music.live" should also include events with category="music" and subcategory=null)
   if (options.subcategories && options.subcategories.length > 0) {
-    rows = rows.filter((row) =>
-      row.subcategory && options.subcategories!.includes(row.subcategory)
+    // Extract parent categories from subcategory values (e.g., "music.live" -> "music")
+    const parentCategories = new Set(
+      options.subcategories.map((sub) => sub.split(".")[0])
     );
+
+    rows = rows.filter((row) => {
+      // If event has a subcategory, it must match exactly
+      if (row.subcategory) {
+        return options.subcategories!.includes(row.subcategory);
+      }
+      // If event has no subcategory, include it if its category matches a parent category
+      return row.category && parentCategories.has(row.category);
+    });
   }
 
   // Apply client-side tags filter (match any tag)
@@ -947,10 +960,23 @@ export async function searchEventsOnly(
   let rows = (data as EventSearchRow[]) || [];
 
   // Apply client-side subcategory filter
+  // If event has a subcategory, it must match one of the selected subcategories
+  // If event has no subcategory, include it if its category matches the parent category
+  // (e.g., selecting "music.live" should also include events with category="music" and subcategory=null)
   if (options.subcategories && options.subcategories.length > 0) {
-    rows = rows.filter((row) =>
-      row.subcategory && options.subcategories!.includes(row.subcategory)
+    // Extract parent categories from subcategory values (e.g., "music.live" -> "music")
+    const parentCategories = new Set(
+      options.subcategories.map((sub) => sub.split(".")[0])
     );
+
+    rows = rows.filter((row) => {
+      // If event has a subcategory, it must match exactly
+      if (row.subcategory) {
+        return options.subcategories!.includes(row.subcategory);
+      }
+      // If event has no subcategory, include it if its category matches a parent category
+      return row.category && parentCategories.has(row.category);
+    });
   }
 
   // Apply client-side tags filter (match any tag)

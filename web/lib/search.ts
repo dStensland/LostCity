@@ -469,8 +469,16 @@ export async function getFilteredEventsWithSearch(
   }
 
   // Apply subcategory filter
+  // If event has a subcategory, it must match one of the selected subcategories
+  // If event has no subcategory, include it if its category matches the parent category
   if (filters.subcategories && filters.subcategories.length > 0) {
-    query = query.in("subcategory", filters.subcategories);
+    // Extract parent categories from subcategory values (e.g., "music.live" -> "music")
+    const parentCategories = [...new Set(filters.subcategories.map((sub) => sub.split(".")[0]))];
+
+    // Build OR condition: exact subcategory match OR (parent category match AND subcategory is null)
+    const subcatFilter = `subcategory.in.(${filters.subcategories.join(",")})`;
+    const parentFilter = `and(category_id.in.(${parentCategories.join(",")}),subcategory.is.null)`;
+    query = query.or(`${subcatFilter},${parentFilter}`);
   }
 
   // Apply tag filter (events with ANY of the selected tags)
@@ -761,8 +769,16 @@ export async function getFilteredEventsWithCursor(
   }
 
   // Apply subcategory filter
+  // If event has a subcategory, it must match one of the selected subcategories
+  // If event has no subcategory, include it if its category matches the parent category
   if (filters.subcategories && filters.subcategories.length > 0) {
-    query = query.in("subcategory", filters.subcategories);
+    // Extract parent categories from subcategory values (e.g., "music.live" -> "music")
+    const parentCategories = [...new Set(filters.subcategories.map((sub) => sub.split(".")[0]))];
+
+    // Build OR condition: exact subcategory match OR (parent category match AND subcategory is null)
+    const subcatFilter = `subcategory.in.(${filters.subcategories.join(",")})`;
+    const parentFilter = `and(category_id.in.(${parentCategories.join(",")}),subcategory.is.null)`;
+    query = query.or(`${subcatFilter},${parentFilter}`);
   }
 
   // Apply tag filter
@@ -1023,8 +1039,17 @@ export async function getEventsForMap(
     query = query.in("category_id", filters.categories);
   }
 
+  // Apply subcategory filter
+  // If event has a subcategory, it must match one of the selected subcategories
+  // If event has no subcategory, include it if its category matches the parent category
   if (filters.subcategories && filters.subcategories.length > 0) {
-    query = query.in("subcategory", filters.subcategories);
+    // Extract parent categories from subcategory values (e.g., "music.live" -> "music")
+    const parentCategories = [...new Set(filters.subcategories.map((sub) => sub.split(".")[0]))];
+
+    // Build OR condition: exact subcategory match OR (parent category match AND subcategory is null)
+    const subcatFilter = `subcategory.in.(${filters.subcategories.join(",")})`;
+    const parentFilter = `and(category_id.in.(${parentCategories.join(",")}),subcategory.is.null)`;
+    query = query.or(`${subcatFilter},${parentFilter}`);
   }
 
   if (filters.tags && filters.tags.length > 0) {

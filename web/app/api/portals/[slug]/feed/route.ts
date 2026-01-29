@@ -672,8 +672,22 @@ export async function GET(request: NextRequest, { params }: Props) {
       }
 
       // Apply subcategory filter
+      // If event has a subcategory, it must match one of the selected subcategories
+      // If event has no subcategory, include it if its category matches the parent category
       if (filter.subcategories?.length) {
-        filtered = filtered.filter(e => e.subcategory && filter.subcategories!.includes(e.subcategory));
+        // Extract parent categories from subcategory values (e.g., "music.live" -> "music")
+        const parentCategories = new Set(
+          filter.subcategories.map((sub) => sub.split(".")[0])
+        );
+
+        filtered = filtered.filter(e => {
+          // If event has a subcategory, it must match exactly
+          if (e.subcategory) {
+            return filter.subcategories!.includes(e.subcategory);
+          }
+          // If event has no subcategory, include it if its category matches a parent category
+          return e.category && parentCategories.has(e.category);
+        });
       }
 
       // Apply free filter
