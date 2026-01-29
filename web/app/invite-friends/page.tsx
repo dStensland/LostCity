@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/components/Toast";
@@ -10,13 +10,15 @@ export default function InviteFriendsPage() {
   const { showToast } = useToast();
   const [autoFriend, setAutoFriend] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [origin, setOrigin] = useState("");
 
-  const origin = useMemo(() => {
-    if (typeof window === "undefined") return "";
-    return window.location.origin;
+  // Set origin on client side
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Need to set origin after mount
+    setOrigin(window.location.origin);
   }, []);
 
-  const baseUrl = profile?.username
+  const baseUrl = profile?.username && origin
     ? `${origin}/invite/${profile.username}`
     : "";
 
@@ -59,10 +61,32 @@ export default function InviteFriendsPage() {
     }
   };
 
-  if (!profile?.username || !origin) {
+  // Show loading only briefly - if no profile after origin loads, show anyway
+  if (!origin) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center">
         <div className="w-8 h-8 border-2 border-[var(--coral)] border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  // If profile not loaded yet, show a placeholder
+  if (!profile?.username) {
+    return (
+      <div className="max-w-lg mx-auto px-4 py-8">
+        <div className="text-center mb-8">
+          <h1 className="text-2xl font-bold text-[var(--cream)] mb-2">
+            Invite Friends
+          </h1>
+          <p className="text-[var(--muted)] font-mono text-sm">
+            Loading your invite link...
+          </p>
+        </div>
+        <div className="bg-[var(--dusk)] border border-[var(--twilight)] rounded-xl p-6 mb-6">
+          <div className="flex justify-center">
+            <div className="w-[200px] h-[200px] bg-[var(--twilight)] rounded-xl animate-pulse" />
+          </div>
+        </div>
       </div>
     );
   }
