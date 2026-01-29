@@ -459,7 +459,7 @@ export async function GET(request: NextRequest, { params }: Props) {
         show_after_time: null,
         show_before_time: null,
         style: {
-          accent_color: "var(--rose)",
+          accent_color: "#FF69B4", // Neon pink
           icon: "anatomical-heart",
         },
         portal_section_items: [],
@@ -492,7 +492,7 @@ export async function GET(request: NextRequest, { params }: Props) {
         show_after_time: null,
         show_before_time: null,
         style: {
-          accent_color: "var(--coral)",
+          accent_color: "#DC143C", // Crimson red
           icon: "fire-horse",
         },
         portal_section_items: [],
@@ -557,7 +557,8 @@ export async function GET(request: NextRequest, { params }: Props) {
         show_after_time: null,
         show_before_time: null,
         style: {
-          accent_color: "var(--neon-cyan)",
+          accent_color: "#9B59B6", // Purple
+          icon: "raised-fist",
         },
         portal_section_items: [],
       });

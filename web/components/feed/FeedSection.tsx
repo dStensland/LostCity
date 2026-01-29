@@ -212,38 +212,44 @@ export default function FeedSection({ section, isFirst }: Props) {
 // Holiday/themed section icon configurations
 const THEMED_SECTION_ICONS: Record<string, { icon: React.ReactNode; color: string }> = {
   "valentines-day": {
-    color: "var(--rose)",
+    color: "#FF69B4", // Hot pink / neon pink
     icon: (
-      // Anatomical heart icon - neon pink style
+      // Anatomical heart icon - neon pink style with arteries and veins
       <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        {/* Main heart body */}
-        <path d="M12 21c-1.5-1.5-6-5.5-7.5-8.5C3 9.5 3.5 6 6.5 5c2-.7 4 .5 5.5 2.5C13.5 5.5 15.5 4.3 17.5 5c3 1 3.5 4.5 2 7.5C18 15.5 13.5 19.5 12 21z" fill="currentColor" />
-        {/* Aorta - main artery going up */}
-        <path d="M12 7.5V4c0-1 .5-2 2-2" />
-        {/* Pulmonary artery - branches */}
-        <path d="M10 6c-1-1.5-2-2-3.5-1.5" />
-        <path d="M14 6c1-1.5 2-2 3.5-1.5" />
-        {/* Vena cava */}
-        <path d="M9 8c-1.5-.5-2.5-1-3-2" />
+        {/* Main heart body - anatomical shape */}
+        <path d="M12 21c-.5-.5-2-2-3.5-4C6.5 14.5 5 12 5 9.5c0-2 1-4 3.5-4S12 7 12 9c0-2 1.5-3.5 3.5-3.5S19 7.5 19 9.5c0 2.5-1.5 5-3.5 7.5-1.5 2-3 3.5-3.5 4z" />
+        {/* Aorta - large artery at top */}
+        <path d="M12 9V5c0-.5.5-2 2-3" />
+        <path d="M14 2c1 0 2 .5 2.5 1.5" />
+        {/* Pulmonary arteries */}
+        <path d="M10 6c-.5-.5-1.5-1.5-3-2" />
+        <path d="M7 4c-.5 0-1.5.5-2 1" />
+        {/* Superior vena cava */}
+        <path d="M16 6c.5-.5 1-1 2-1.5" />
+        {/* Coronary arteries on heart surface */}
+        <path d="M8 11c1 1 2 3 2 5" opacity="0.6" />
+        <path d="M16 11c-1 1-2 3-2 5" opacity="0.6" />
       </svg>
     ),
   },
   "lunar-new-year": {
-    color: "var(--coral)",
+    color: "#DC143C", // Crimson red
     icon: (
-      // Fire horse icon - neon style horse head with flame mane
+      // Fire horse icon - horse head with flaming mane
       <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        {/* Horse head profile */}
-        <path d="M6 18c0-2 1-3 2-4l1-1c.5-1 .5-2 0-3l-1-2c0-1 1-2 2-2h2c1 0 2-.5 3-1.5l1-1.5" fill="currentColor" />
+        {/* Horse head profile - facing left */}
+        <path d="M4 19c0-1 .5-2 1.5-3l2-2c1-1 1.5-2 1.5-3.5 0-1-.5-2-1-3l-.5-1c0-.5.5-1.5 1.5-1.5h2c1.5 0 2.5-1 3.5-2l1-1.5" />
         {/* Horse ear */}
-        <path d="M13 4l1-2 1 2" />
+        <path d="M13.5 2.5L14.5 1l1 1.5" />
         {/* Horse eye */}
-        <circle cx="8" cy="11" r="0.5" fill="currentColor" />
+        <circle cx="6.5" cy="10" r="0.75" fill="currentColor" />
         {/* Horse nostril */}
-        <circle cx="5" cy="15" r="0.5" fill="currentColor" />
+        <circle cx="3.5" cy="15" r="0.5" fill="currentColor" />
         {/* Fire mane - flowing flames */}
-        <path d="M14 5c1-2 2-3 3-2s0 2-1 3c2-1 3-1 3 1s-2 2-3 2c2 0 3 1 2 2s-2 1-3 0" strokeWidth="1.2" />
-        <path d="M16 10c1.5-1 2.5-1 2.5.5s-1.5 2-2.5 2" strokeWidth="1.2" />
+        <path d="M15 3c.5-1 1.5-2 3-1.5s1 2 0 3" stroke="#FF6B00" strokeWidth="1.3" />
+        <path d="M16 4c1.5-.5 3-.5 3.5 1s-1 2.5-2 2.5" stroke="#FF8C00" strokeWidth="1.3" />
+        <path d="M17 7c1.5 0 3 .5 2.5 2s-2 2-3 1.5" stroke="#FFA500" strokeWidth="1.3" />
+        <path d="M16 10c1 0 2.5.5 2 2s-1.5 1.5-2.5 1" stroke="#FFD700" strokeWidth="1.2" />
       </svg>
     ),
   },
@@ -257,10 +263,23 @@ const THEMED_SECTION_ICONS: Record<string, { icon: React.ReactNode; color: strin
     ),
   },
   "black-history-month": {
-    color: "var(--neon-cyan)",
+    color: "#9B59B6", // Purple
     icon: (
-      <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
+      // Raised fist icon - neon gradient style
+      <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        {/* Fist - closed hand raised */}
+        {/* Fingers */}
+        <path d="M8 8V5c0-.5.5-1 1-1s1 .5 1 1v3" />
+        <path d="M10 7V4c0-.5.5-1 1-1s1 .5 1 1v3" />
+        <path d="M12 7V4c0-.5.5-1 1-1s1 .5 1 1v3" />
+        <path d="M14 8V5.5c0-.5.5-1 1-1s1 .5 1 1V8" />
+        {/* Palm and thumb */}
+        <path d="M7 8c-.5 0-1 .5-1 1v1c0 .5.5 1 1 1" />
+        <path d="M7 11h10c.5 0 1-.5 1-1V9c0-.5-.5-1-1-1" />
+        {/* Wrist/forearm */}
+        <path d="M7 11v5c0 1 .5 2 1.5 2.5l1 .5h5l1-.5c1-.5 1.5-1.5 1.5-2.5v-5" />
+        {/* Wrist line */}
+        <path d="M8 15h8" opacity="0.5" />
       </svg>
     ),
   },
