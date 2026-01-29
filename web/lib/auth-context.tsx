@@ -184,41 +184,48 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     isMountedRef.current = true;
 
     const initAuth = async () => {
-      // Skip if already initialized (prevents re-init on hot reload)
-      // Check inside async function to handle React Strict Mode correctly
-      if (initializedRef.current) {
-        return;
-      }
+      // Only do full init once, but always ensure loading state is resolved
+      const isFirstInit = !initializedRef.current;
       initializedRef.current = true;
 
       try {
-        setAuthState("checking");
+        if (isFirstInit) {
+          setAuthState("checking");
+        }
 
-        // Fast path: get session without retry
-        // Retry logic only needed for OAuth callback, which is handled separately
+        // Always check session (needed for OAuth callback redirect)
         const { data } = await supabase.auth.getSession();
         const session = data.session;
 
         if (!isMountedRef.current) return;
 
         if (session?.user) {
-          setUser(session.user);
-          setSession(session);
-          currentUserIdRef.current = session.user.id;
-          setAuthState("authenticated");
-          setLoading(false);
+          // Only update if user changed or first init
+          if (isFirstInit || currentUserIdRef.current !== session.user.id) {
+            setUser(session.user);
+            setSession(session);
+            currentUserIdRef.current = session.user.id;
+            setAuthState("authenticated");
 
-          // Fetch profile in parallel (don't block auth loading)
-          fetchProfile(session.user.id).then((userProfile) => {
-            if (isMountedRef.current) {
-              setProfile(userProfile);
-            }
-          });
+            // Fetch profile in parallel (don't block auth loading)
+            fetchProfile(session.user.id).then((userProfile) => {
+              if (isMountedRef.current) {
+                setProfile(userProfile);
+              }
+            });
+          }
+          setLoading(false);
         } else {
           // No session - user is not logged in
-          setAuthState("unauthenticated");
+          if (isFirstInit || currentUserIdRef.current !== null) {
+            setUser(null);
+            setSession(null);
+            setProfile(null);
+            currentUserIdRef.current = null;
+            setAuthState("unauthenticated");
+            setProfileLoading(false);
+          }
           setLoading(false);
-          setProfileLoading(false);
         }
       } catch (err) {
         if (err instanceof Error && err.name === "AbortError") {
