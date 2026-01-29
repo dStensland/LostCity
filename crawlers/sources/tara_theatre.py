@@ -159,6 +159,20 @@ def extract_movies_for_date(
         if len(title) <= 5 and title.upper() in ['TBA', 'TBD', 'TBC', 'N/A']:
             continue
 
+        # Check if this movie's section contains "TBA" or no showtimes
+        # Look ahead to see if there are actual times
+        lookahead_end = movies[-1]["start"] if movies else len(body_text)
+        if start_pos < lookahead_end:
+            lookahead_end = min(start_pos + 800, len(body_text))
+        section_preview = body_text[end_pos:lookahead_end]
+
+        # Skip if section only has TBA and no actual times
+        has_tba = re.search(r'\bTBA\b', section_preview, re.IGNORECASE)
+        has_real_time = re.search(r'\d{1,2}:\d{2}\s*(?:AM|PM)', section_preview, re.IGNORECASE)
+        if has_tba and not has_real_time:
+            logger.debug(f"Skipping '{title}' - only TBA times found")
+            continue
+
         movies.append({
             "title": title,
             "duration": duration,
@@ -536,23 +550,10 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     logger.info(f"  {date_str}: No showtimes scheduled")
                     break  # Stop trying further dates
 
-            # Now scrape the Coming Soon page
-            logger.info(f"Fetching Coming Soon: {COMING_SOON_URL}")
-            page.goto(COMING_SOON_URL, wait_until="domcontentloaded", timeout=30000)
-            page.wait_for_timeout(3000)  # Wait for JS to load
-
-            # Extract images from coming soon page
-            coming_soon_images = extract_movie_images(page)
-            image_map.update(coming_soon_images)
-
-            found, new, updated = extract_upcoming_movies(
-                page, source_id, venue_id, COMING_SOON_URL, image_map
-            )
-            total_found += found
-            total_new += new
-            total_updated += updated
-            if found > 0:
-                logger.info(f"Coming Soon: {found} movies found, {new} new")
+            # Skip Coming Soon page - these movies don't have real dates/times
+            # and show up as TBA which isn't useful for users
+            # The movies will be picked up when they get actual showtimes
+            logger.info("Skipping Coming Soon page (no actual showtimes)")
 
             browser.close()
 
