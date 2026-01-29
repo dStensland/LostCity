@@ -51,6 +51,7 @@ export type FeedSectionData = {
   block_content?: Record<string, unknown> | null;
   auto_filter?: {
     categories?: string[];
+    tags?: string[];
     is_free?: boolean;
     date_filter?: string;
     sort_by?: string;
@@ -121,16 +122,32 @@ function getSeeAllUrl(section: FeedSectionData, portalSlug: string): string {
   const params = new URLSearchParams();
   const autoFilter = section.auto_filter;
 
+  // Always include view=find when there are filters to show filtered results
+  let hasFilters = false;
+
   if (autoFilter?.categories?.length) {
     params.set("categories", autoFilter.categories.join(","));
+    hasFilters = true;
+  }
+  if (autoFilter?.tags?.length) {
+    params.set("tags", autoFilter.tags.join(","));
+    hasFilters = true;
   }
   if (autoFilter?.is_free) {
     params.set("price", "free");
+    hasFilters = true;
   }
   if (autoFilter?.date_filter === "today") {
     params.set("date", "today");
+    hasFilters = true;
   } else if (autoFilter?.date_filter === "this_weekend") {
     params.set("date", "weekend");
+    hasFilters = true;
+  }
+
+  // Switch to find view when filters are applied
+  if (hasFilters) {
+    params.set("view", "find");
   }
 
   const queryString = params.toString();
@@ -192,6 +209,51 @@ export default function FeedSection({ section, isFirst }: Props) {
 // SECTION HEADER - Reusable header with "See all"
 // ============================================
 
+// Holiday/themed section icon configurations
+const THEMED_SECTION_ICONS: Record<string, { icon: React.ReactNode; color: string }> = {
+  "valentines-day": {
+    color: "var(--rose)",
+    icon: (
+      <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
+      </svg>
+    ),
+  },
+  "lunar-new-year": {
+    color: "var(--coral)",
+    icon: (
+      <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M19 5h-2V3H7v2H5c-1.1 0-2 .9-2 2v1c0 2.55 1.92 4.63 4.39 4.94.63 1.5 1.98 2.63 3.61 2.96V19H7v2h10v-2h-4v-3.1c1.63-.33 2.98-1.46 3.61-2.96C19.08 12.63 21 10.55 21 8V7c0-1.1-.9-2-2-2zM5 8V7h2v3.82C5.84 10.4 5 9.3 5 8zm14 0c0 1.3-.84 2.4-2 2.82V7h2v1z" />
+      </svg>
+    ),
+  },
+  "super-bowl": {
+    color: "var(--neon-green)",
+    icon: (
+      <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+        <ellipse cx="12" cy="12" rx="10" ry="6" />
+        <path d="M2 12c0 3.31 4.48 6 10 6s10-2.69 10-6M7 12c0-1.1.9-2 2-2h6c1.1 0 2 .9 2 2M12 6v12" stroke="var(--void)" strokeWidth="1.5" fill="none" />
+      </svg>
+    ),
+  },
+  "black-history-month": {
+    color: "var(--neon-cyan)",
+    icon: (
+      <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
+      </svg>
+    ),
+  },
+  "mardi-gras": {
+    color: "var(--violet)",
+    icon: (
+      <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M12 2L9 9H2l5.5 4.5L5 21l7-5 7 5-2.5-7.5L22 9h-7L12 2z" />
+      </svg>
+    ),
+  },
+};
+
 function SectionHeader({
   section,
   portalSlug,
@@ -210,17 +272,46 @@ function SectionHeader({
     contextDescription = `${eventCount} event${eventCount !== 1 ? "s" : ""}`;
   }
 
+  // Check if this is a themed section
+  const themedConfig = THEMED_SECTION_ICONS[section.slug];
+  const sectionStyle = section.style as { accent_color?: string } | null;
+  const accentColor = themedConfig?.color || sectionStyle?.accent_color;
+
   return (
     <div className="flex items-center justify-between mb-4">
-      <div>
-        <h3 className="text-xl font-semibold tracking-tight text-[var(--cream)]">{section.title}</h3>
-        {contextDescription && (
-          <p className="font-mono text-xs text-[var(--muted)] mt-0.5">{contextDescription}</p>
+      <div className="flex items-center gap-3">
+        {/* Themed icon with glow */}
+        {themedConfig && (
+          <div
+            className="flex items-center justify-center w-8 h-8 rounded-lg"
+            style={{
+              color: accentColor,
+              backgroundColor: `color-mix(in srgb, ${accentColor} 15%, transparent)`,
+              boxShadow: `0 0 12px color-mix(in srgb, ${accentColor} 40%, transparent)`,
+            }}
+          >
+            {themedConfig.icon}
+          </div>
         )}
+        <div>
+          <h3
+            className="text-xl font-semibold tracking-tight"
+            style={{ color: accentColor || "var(--cream)" }}
+          >
+            {section.title}
+          </h3>
+          {contextDescription && (
+            <p className="font-mono text-xs text-[var(--muted)] mt-0.5">{contextDescription}</p>
+          )}
+        </div>
       </div>
       <Link
         href={seeAllUrl}
-        className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-mono text-[var(--muted)] hover:text-[var(--cream)] hover:bg-[var(--twilight)]/50 transition-colors group"
+        className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-mono transition-colors group"
+        style={{
+          color: accentColor || "var(--muted)",
+          backgroundColor: accentColor ? `color-mix(in srgb, ${accentColor} 10%, transparent)` : undefined,
+        }}
       >
         See all
         <svg
@@ -240,6 +331,13 @@ function SectionHeader({
 // SOCIAL PROOF BADGE - Shows popularity
 // ============================================
 
+// Trending/fire icon SVG
+const TrendingIcon = ({ className }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+    <path d="M13.5.67s.74 2.65.74 4.8c0 2.06-1.35 3.73-3.41 3.73-2.07 0-3.63-1.67-3.63-3.73l.03-.36C5.21 7.51 4 10.62 4 14c0 4.42 3.58 8 8 8s8-3.58 8-8C20 8.61 17.41 3.8 13.5.67zM11.71 19c-1.78 0-3.22-1.4-3.22-3.14 0-1.62 1.05-2.76 2.81-3.12 1.77-.36 3.6-1.21 4.62-2.58.39 1.29.59 2.65.59 4.04 0 2.65-2.15 4.8-4.8 4.8z" />
+  </svg>
+);
+
 function SocialProofBadge({ count, variant = "default" }: { count: number; variant?: "default" | "compact" }) {
   if (count < 3) return null;
 
@@ -252,7 +350,7 @@ function SocialProofBadge({ count, variant = "default" }: { count: number; varia
           ? "bg-[var(--coral)]/20 text-[var(--coral)]"
           : "bg-[var(--twilight)] text-[var(--muted)]"
       }`}>
-        {isHot && <span>🔥</span>}
+        {isHot && <TrendingIcon className="w-2.5 h-2.5" />}
         {count} going
       </span>
     );
@@ -264,7 +362,7 @@ function SocialProofBadge({ count, variant = "default" }: { count: number; varia
         ? "bg-[var(--coral)]/20 text-[var(--coral)]"
         : "bg-white/20 text-white"
     }`}>
-      {isHot && <span>🔥</span>}
+      {isHot && <TrendingIcon className="w-3 h-3" />}
       {count} going
     </span>
   );
@@ -571,7 +669,7 @@ function EventCard({ event, isCarousel, hideImages, portalSlug }: { event: FeedE
           {isPopular && (
             <div className="absolute top-2 right-2">
               <span className="flex items-center gap-1 px-2 py-1 rounded-full bg-[var(--coral)] text-[var(--void)] text-[0.6rem] font-mono font-medium shadow-lg">
-                🔥 Popular
+                <TrendingIcon className="w-2.5 h-2.5" /> Popular
               </span>
             </div>
           )}
@@ -584,7 +682,7 @@ function EventCard({ event, isCarousel, hideImages, portalSlug }: { event: FeedE
           {isPopular && (
             <div className="absolute top-2 right-2 z-10">
               <span className="flex items-center gap-1 px-2 py-1 rounded-full bg-[var(--coral)] text-[var(--void)] text-[0.6rem] font-mono font-medium shadow-lg">
-                🔥 Popular
+                <TrendingIcon className="w-2.5 h-2.5" /> Popular
               </span>
             </div>
           )}
@@ -605,7 +703,7 @@ function EventCard({ event, isCarousel, hideImages, portalSlug }: { event: FeedE
           {/* Show popular badge inline when no image and not carousel (carousel has image area) */}
           {isPopular && !isCarousel && (!showImage || imageError) && (
             <span className="ml-auto flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-[var(--coral)] text-[var(--void)] text-[0.55rem] font-mono font-medium">
-              🔥 Popular
+              <TrendingIcon className="w-2.5 h-2.5" /> Popular
             </span>
           )}
         </div>
@@ -777,7 +875,9 @@ function EventListItem({ event, isAlternate, showDate = true, portalSlug }: { ev
             {event.title}
           </span>
           {isPopular && (
-            <span className="flex-shrink-0 text-[0.6rem]">🔥</span>
+            <span className="flex-shrink-0 text-[var(--coral)]">
+              <TrendingIcon className="w-3 h-3" />
+            </span>
           )}
         </div>
         <div className="flex items-center gap-1.5 font-mono text-[0.65rem] text-[var(--muted)]">

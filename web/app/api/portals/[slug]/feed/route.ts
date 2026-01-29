@@ -418,38 +418,13 @@ export async function GET(request: NextRequest, { params }: Props) {
     }
   }
 
-  // Step 5: Add programmatic featured events and holiday sections
+  // Step 5: Add programmatic holiday sections
   const holidaySections: Section[] = [];
   const currentDate = new Date();
   const currentMonth = currentDate.getMonth() + 1; // 1-12
   const currentDay = currentDate.getDate();
 
-  // Featured events carousel (always show if there are featured events)
-  holidaySections.push({
-    id: "featured-events",
-    title: "Featured Events",
-    slug: "featured-events",
-    description: "Handpicked by our editors",
-    section_type: "auto",
-    block_type: "featured_carousel",
-    layout: "carousel",
-    items_per_row: 3,
-    max_items: 10,
-    auto_filter: {
-      date_filter: "next_30_days",
-      sort_by: "date",
-    },
-    block_content: null,
-    display_order: -10,
-    is_visible: true,
-    schedule_start: null,
-    schedule_end: null,
-    show_on_days: null,
-    show_after_time: null,
-    show_before_time: null,
-    style: null,
-    portal_section_items: [],
-  });
+  // NOTE: Featured events carousel removed - can be re-enabled via portal_sections if needed
 
   // Add holiday sections starting late January through early March
   const showHolidaySections =
@@ -587,47 +562,10 @@ export async function GET(request: NextRequest, { params }: Props) {
     }
   }
 
-  // Fetch featured events for carousel
-  let featuredEvents: Event[] = [];
-  const { data: featuredEventsData } = await supabase
-    .from("events")
-    .select(`
-      id,
-      title,
-      start_date,
-      start_time,
-      end_time,
-      is_all_day,
-      is_free,
-      price_min,
-      price_max,
-      category,
-      subcategory,
-      image_url,
-      description,
-      featured_blurb,
-      venue:venues(id, name, neighborhood, slug)
-    `)
-    .eq("is_featured", true)
-    .gte("start_date", today)
-    .lte("start_date", addDays(new Date(), 30).toISOString().split("T")[0])
-    .is("canonical_event_id", null)
-    .order("start_date", { ascending: true })
-    .limit(10);
-
-  if (featuredEventsData && featuredEventsData.length > 0) {
-    featuredEvents = featuredEventsData as Event[];
-    for (const event of featuredEvents) {
-      eventMap.set(event.id, event);
-    }
-  }
-
   // Fetch events for holiday sections and track them by tag
   const holidayEventsByTag = new Map<string, Event[]>();
   if (holidaySections.length > 0) {
     for (const holidaySection of holidaySections) {
-      // Skip featured events section (handled separately)
-      if (holidaySection.block_type === "featured_carousel") continue;
 
       const tag = holidaySection.auto_filter?.tags?.[0];
       if (tag) {
@@ -806,16 +744,9 @@ export async function GET(request: NextRequest, { params }: Props) {
 
   // Step 7: Build holiday sections using the same pattern
   const holidayFeedSections = holidaySections.map((section) => {
-    let events: Event[] = [];
-
-    // Featured carousel gets featured events
-    if (section.block_type === "featured_carousel") {
-      events = featuredEvents;
-    } else {
-      // Holiday sections get events by tag
-      const tag = section.auto_filter?.tags?.[0];
-      events = tag ? (holidayEventsByTag.get(tag) || []) : [];
-    }
+    // Holiday sections get events by tag
+    const tag = section.auto_filter?.tags?.[0];
+    const events: Event[] = tag ? (holidayEventsByTag.get(tag) || []) : [];
 
     return {
       id: section.id,
