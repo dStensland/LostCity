@@ -241,11 +241,16 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     events_updated += 1
                     continue
 
+                # Build description with TBA note if no time
+                description = f"Georgia Tech Yellow Jackets {sport_display} {'home game' if is_home else 'away game'} vs {opponent}"
+                if start_time is None:
+                    description += "\n\nGame time TBA — typically announced 1-2 weeks before the game."
+
                 event_record = {
                     "source_id": source_id,
                     "venue_id": venue_id if is_home else None,
                     "title": title,
-                    "description": f"Georgia Tech Yellow Jackets {sport_display} {'home game' if is_home else 'away game'} vs {opponent}",
+                    "description": description,
                     "start_date": start_date,
                     "start_time": start_time,
                     "end_date": None,
