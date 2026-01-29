@@ -7,7 +7,8 @@ import { usePortalOptional, DEFAULT_PORTAL } from "@/lib/portal-context";
 import type { SearchResult, SearchFacet } from "@/lib/unified-search";
 import SearchResultItem, { SearchResultSection, TypeIcon } from "./SearchResultItem";
 import { getRecentSearches, addRecentSearch, clearRecentSearches } from "@/lib/searchHistory";
-import { POPULAR_ACTIVITIES } from "./ActivityChip";
+import { POPULAR_ACTIVITIES, getActivityColor } from "./ActivityChip";
+import CategoryIcon from "./CategoryIcon";
 
 interface SearchOverlayProps {
   isOpen: boolean;
@@ -309,12 +310,7 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
     const params = new URLSearchParams();
     params.set("view", "find");
     params.set("type", "events");
-
-    if (activity.type === "subcategory") {
-      params.set("subcategories", activity.value);
-    } else {
-      params.set("categories", activity.value);
-    }
+    params.set("categories", activity.value);
 
     const basePath = portal?.slug ? `/${portal.slug}` : "";
     onClose();
@@ -604,16 +600,30 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
                       Browse by Activity
                     </h3>
                     <div className="flex overflow-x-auto gap-2 pb-1 scrollbar-hide">
-                      {POPULAR_ACTIVITIES.map((activity) => (
-                        <button
-                          key={activity.value}
-                          onClick={() => handleActivityClick(activity)}
-                          className="flex items-center gap-1.5 px-3 py-2 rounded-full bg-[var(--twilight)] text-[var(--soft)] hover:text-[var(--cream)] hover:bg-[var(--coral)]/20 hover:border-[var(--coral)]/30 border border-transparent transition-colors text-sm whitespace-nowrap focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--coral)]"
-                        >
-                          <span>{activity.icon}</span>
-                          <span>{activity.label}</span>
-                        </button>
-                      ))}
+                      {POPULAR_ACTIVITIES.map((activity) => {
+                        const color = getActivityColor(activity.iconType);
+                        return (
+                          <button
+                            key={activity.value}
+                            onClick={() => handleActivityClick(activity)}
+                            className="flex items-center gap-1.5 px-3 py-2 rounded-full bg-[var(--twilight)] text-[var(--soft)] hover:text-[var(--cream)] border border-transparent transition-colors text-sm whitespace-nowrap focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--coral)]"
+                            style={{
+                              ["--chip-color" as string]: color,
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.backgroundColor = `color-mix(in srgb, ${color} 15%, transparent)`;
+                              e.currentTarget.style.borderColor = `color-mix(in srgb, ${color} 30%, transparent)`;
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.backgroundColor = "";
+                              e.currentTarget.style.borderColor = "transparent";
+                            }}
+                          >
+                            <CategoryIcon type={activity.iconType} size={14} style={{ color }} />
+                            <span>{activity.label}</span>
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
 

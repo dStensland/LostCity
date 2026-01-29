@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import CategoryIcon, { getCategoryColor } from "./CategoryIcon";
 
 export interface ActivityChipProps {
   label: string;
@@ -14,17 +15,20 @@ export interface ActivityChipProps {
   onClick?: () => void;
 }
 
-// Activity definitions with icons and display names
+// Activity definitions with vector icon types (maps to CategoryIcon)
 export const POPULAR_ACTIVITIES = [
-  { label: "Trivia", value: "nightlife.trivia", type: "subcategory" as const, icon: "🧠" },
-  { label: "DJ Night", value: "nightlife.dj", type: "subcategory" as const, icon: "🎧" },
-  { label: "Open Mic", value: "nightlife.open_mic", type: "subcategory" as const, icon: "🎤" },
-  { label: "Stand-Up", value: "comedy.standup", type: "subcategory" as const, icon: "😂" },
-  { label: "Drag", value: "nightlife.drag", type: "subcategory" as const, icon: "✨" },
-  { label: "Live Music", value: "music", type: "category" as const, icon: "🎵" },
-  { label: "Karaoke", value: "nightlife.karaoke", type: "subcategory" as const, icon: "🎶" },
-  { label: "Happy Hour", value: "nightlife.happy_hour", type: "subcategory" as const, icon: "🍹" },
+  { label: "Music", value: "music", type: "category" as const, iconType: "music" },
+  { label: "Comedy", value: "comedy", type: "category" as const, iconType: "comedy" },
+  { label: "Nightlife", value: "nightlife", type: "category" as const, iconType: "club" },
+  { label: "Art", value: "art", type: "category" as const, iconType: "art" },
+  { label: "Food & Drink", value: "food_drink", type: "category" as const, iconType: "food_drink" },
+  { label: "Community", value: "community", type: "category" as const, iconType: "community" },
 ] as const;
+
+// Helper to get icon color
+export function getActivityColor(iconType: string): string {
+  return getCategoryColor(iconType) || "#F97068";
+}
 
 // Build URL for activity filter
 function buildActivityUrl(
