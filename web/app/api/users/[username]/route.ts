@@ -14,6 +14,14 @@ type ProfileData = {
 type FollowRow = { follower_id: string; followed_user_id: string };
 type FriendRequestRow = { id: string; inviter_id: string; invitee_id: string; status: string };
 
+type RelationshipStatus =
+  | "none"
+  | "friends"
+  | "following"
+  | "followed_by"
+  | "request_sent"
+  | "request_received";
+
 // GET /api/users/[username] - Get public profile by username
 export async function GET(
   request: Request,
@@ -47,34 +55,40 @@ export async function GET(
   }
 
   // If current user is logged in, check relationship status
-  let relationship = null;
+  let relationship: RelationshipStatus | null = null;
+  let isFollowing = false;
+  let isFollowedBy = false;
+
   if (currentUser && currentUser.id !== profile.id) {
-    // Check if they're friends (mutual follows)
+    // Check if they're friends using the friendships table
+    const { data: areFriends } = await supabase.rpc(
+      "are_friends" as never,
+      { user_a: currentUser.id, user_b: profile.id } as never
+    ) as { data: boolean | null };
+
+    if (areFriends) {
+      relationship = "friends";
+    }
+
+    // Check follow status (separate from friendship)
     const { data: follows } = await supabase
       .from("follows")
-      .select("id, follower_id, followed_user_id")
+      .select("follower_id, followed_user_id")
       .or(
         `and(follower_id.eq.${currentUser.id},followed_user_id.eq.${profile.id}),and(follower_id.eq.${profile.id},followed_user_id.eq.${currentUser.id})`
       );
 
     const followsData = follows as FollowRow[] | null;
-    const currentFollowsProfile = followsData?.some(
+    isFollowing = followsData?.some(
       (f) => f.follower_id === currentUser.id && f.followed_user_id === profile.id
-    );
-    const profileFollowsCurrent = followsData?.some(
+    ) ?? false;
+    isFollowedBy = followsData?.some(
       (f) => f.follower_id === profile.id && f.followed_user_id === currentUser.id
-    );
+    ) ?? false;
 
-    if (currentFollowsProfile && profileFollowsCurrent) {
-      relationship = "friends";
-    } else if (currentFollowsProfile) {
-      relationship = "following";
-    } else if (profileFollowsCurrent) {
-      relationship = "followed_by";
-    }
-
-    // Check for pending friend request
-    if (!relationship || relationship === "following" || relationship === "followed_by") {
+    // If not friends, determine relationship based on follows and friend requests
+    if (!relationship) {
+      // Check for pending friend request first
       const { data: pendingRequest } = await supabase
         .from("friend_requests" as never)
         .select("id, inviter_id, invitee_id, status")
@@ -92,6 +106,12 @@ export async function GET(
         } else {
           relationship = "request_received";
         }
+      } else if (isFollowing) {
+        relationship = "following";
+      } else if (isFollowedBy) {
+        relationship = "followed_by";
+      } else {
+        relationship = "none";
       }
     }
   }
@@ -106,5 +126,7 @@ export async function GET(
       location: profile.location,
     },
     relationship,
+    isFollowing,
+    isFollowedBy,
   });
 }

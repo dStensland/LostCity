@@ -235,14 +235,11 @@ export default function FriendButton({
     setActionLoading(true);
 
     try {
-      // Delete our follow of them via API - this breaks the mutual friendship
-      const res = await fetch("/api/follow", {
+      // Delete the friendship via the unfriend API
+      const res = await fetch("/api/friends/unfriend", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          targetUserId,
-          action: "unfollow",
-        }),
+        body: JSON.stringify({ targetUserId }),
       });
 
       if (!res.ok) {
@@ -251,10 +248,21 @@ export default function FriendButton({
         return;
       }
 
-      // They may still follow us, so we're now "followed_by" instead of "friends"
-      setRelationship("followed_by");
+      // After unfriending, check current follow status to determine new relationship
+      // We might still be following them (following) or they might still be following us (followed_by)
+      const followRes = await fetch(`/api/users/${targetUsername}`);
+      if (followRes.ok) {
+        const data = await followRes.json();
+        const newRelationship = data.relationship || "none";
+        setRelationship(newRelationship);
+        onRelationshipChange?.(newRelationship);
+      } else {
+        // Fallback to "none" if we can't fetch the status
+        setRelationship("none");
+        onRelationshipChange?.("none");
+      }
+
       showToast("Removed from friends");
-      onRelationshipChange?.("followed_by");
     } catch {
       showToast("Failed to unfriend", "error");
     } finally {

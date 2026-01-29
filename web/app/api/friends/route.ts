@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { createClient, getUser } from "@/lib/supabase/server";
 
+type GetFriendIdsResult = { friend_id: string }[];
+
 type Profile = {
   id: string;
   username: string;
@@ -9,7 +11,7 @@ type Profile = {
   bio: string | null;
 };
 
-// GET /api/friends - Get current user's friends (mutual follows)
+// GET /api/friends - Get current user's friends from friendships table
 export async function GET() {
   const user = await getUser();
   if (!user) {
@@ -18,38 +20,24 @@ export async function GET() {
 
   const supabase = await createClient();
 
-  // Friends are users with mutual follows
-  // Step 1: Get users I follow
-  const { data: following } = await supabase
-    .from("follows")
-    .select("followed_user_id")
-    .eq("follower_id", user.id)
-    .not("followed_user_id", "is", null);
+  // Get friend IDs using the helper function
+  const { data: friendIdsData, error: friendIdsError } = await supabase.rpc(
+    "get_friend_ids" as never,
+    { user_id: user.id } as never
+  ) as { data: GetFriendIdsResult | null; error: Error | null };
 
-  const followingIds = (following || [])
-    .map((f) => (f as { followed_user_id: string }).followed_user_id)
-    .filter(Boolean);
-
-  if (followingIds.length === 0) {
-    return NextResponse.json({ friends: [] });
+  if (friendIdsError) {
+    console.error("Error fetching friend IDs:", friendIdsError);
+    return NextResponse.json({ error: "Failed to fetch friends" }, { status: 500 });
   }
 
-  // Step 2: Get users who follow me back (from the list I follow)
-  const { data: mutualFollows } = await supabase
-    .from("follows")
-    .select("follower_id")
-    .eq("followed_user_id", user.id)
-    .in("follower_id", followingIds);
-
-  const friendIds = (mutualFollows || [])
-    .map((f) => (f as { follower_id: string }).follower_id)
-    .filter(Boolean);
+  const friendIds = (friendIdsData || []).map((row) => row.friend_id);
 
   if (friendIds.length === 0) {
-    return NextResponse.json({ friends: [] });
+    return NextResponse.json({ friends: [], count: 0 });
   }
 
-  // Step 3: Fetch profiles for friends
+  // Fetch profiles for friends
   const { data: profiles, error } = await supabase
     .from("profiles")
     .select("id, username, display_name, avatar_url, bio")

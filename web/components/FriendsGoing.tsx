@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/lib/auth-context";
 
 type FriendsGoingProps = {
@@ -24,7 +23,6 @@ type FriendRSVP = {
 
 export default function FriendsGoing({ eventId, fallbackCount = 0, className = "" }: FriendsGoingProps) {
   const { user } = useAuth();
-  const supabase = createClient();
 
   const [friends, setFriends] = useState<FriendRSVP[]>([]);
   const [loading, setLoading] = useState(true);
@@ -36,83 +34,35 @@ export default function FriendsGoing({ eventId, fallbackCount = 0, className = "
         return;
       }
 
-      // First get mutual follows (friends)
-      const { data: myFollows } = await supabase
-        .from("follows")
-        .select("followed_user_id")
-        .eq("follower_id", user.id)
-        .not("followed_user_id", "is", null);
+      try {
+        // Use the friends-going API endpoint which now uses the friendships table
+        const res = await fetch(`/api/events/friends-going?event_ids=${eventId}`);
+        if (!res.ok) {
+          setLoading(false);
+          return;
+        }
 
-      const followsData = myFollows as { followed_user_id: string | null }[] | null;
-      if (!followsData || followsData.length === 0) {
+        const data = await res.json();
+        const eventFriends = data.friends?.[eventId] || [];
+
+        // Transform to match expected format
+        const friendRsvps: FriendRSVP[] = eventFriends.map(
+          (rsvp: { user: FriendRSVP["user"]; status: string }) => ({
+            user: rsvp.user,
+            status: rsvp.status,
+          })
+        );
+
+        setFriends(friendRsvps);
+      } catch (error) {
+        console.error("Error loading friends going:", error);
+      } finally {
         setLoading(false);
-        return;
       }
-
-      const followedIds = followsData.map((f) => f.followed_user_id).filter(Boolean) as string[];
-
-      // Get RSVPs from followed users who also follow back (mutual = friends)
-      // and who have visibility set to 'public' or 'friends'
-      const { data: rsvpData } = await supabase
-        .from("event_rsvps")
-        .select(`
-          status,
-          visibility,
-          user:profiles!event_rsvps_user_id_fkey(
-            id, username, display_name, avatar_url
-          )
-        `)
-        .eq("event_id", eventId)
-        .in("user_id", followedIds)
-        .in("visibility", ["public", "friends"])
-        .in("status", ["going", "interested"]);
-
-      type RSVPQueryResult = {
-        status: string;
-        visibility: string;
-        user: FriendRSVP["user"] | null;
-      };
-
-      const rsvps = rsvpData as RSVPQueryResult[] | null;
-      if (!rsvps || rsvps.length === 0) {
-        setLoading(false);
-        return;
-      }
-
-      // Get user IDs from RSVPs to check mutual follows in batch
-      const rsvpUserIds = rsvps
-        .map((r) => r.user?.id)
-        .filter((id): id is string => !!id);
-
-      if (rsvpUserIds.length === 0) {
-        setLoading(false);
-        return;
-      }
-
-      // Batch query: get all users from RSVPs who follow back (mutual = friends)
-      const { data: mutualFollows } = await supabase
-        .from("follows")
-        .select("follower_id")
-        .in("follower_id", rsvpUserIds)
-        .eq("followed_user_id", user.id);
-
-      const mutualFollowData = mutualFollows as { follower_id: string }[] | null;
-      const mutualFollowerIds = new Set(mutualFollowData?.map((f) => f.follower_id) || []);
-
-      // Filter RSVPs to only mutual follows (friends)
-      const friendRsvps: FriendRSVP[] = rsvps
-        .filter((rsvp) => rsvp.user && mutualFollowerIds.has(rsvp.user.id))
-        .map((rsvp) => ({
-          user: rsvp.user!,
-          status: rsvp.status,
-        }));
-
-      setFriends(friendRsvps);
-      setLoading(false);
     }
 
     loadFriendsGoing();
-  }, [user, eventId, supabase]);
+  }, [user, eventId]);
 
   // Show fallback count when no friends (or still loading without friends)
   if (loading) {

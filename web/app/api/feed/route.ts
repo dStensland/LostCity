@@ -142,21 +142,14 @@ export async function GET(request: Request) {
     });
   }
 
-  // Get friends (mutual follows)
-  const { data: following } = await supabase
-    .from("follows")
-    .select("followed_user_id")
-    .eq("follower_id", user.id)
-    .not("followed_user_id", "is", null);
+  // Get friends using the friendships table
+  type GetFriendIdsResult = { friend_id: string }[];
+  const { data: friendIdsData } = await supabase.rpc(
+    "get_friend_ids" as never,
+    { user_id: user.id } as never
+  ) as { data: GetFriendIdsResult | null };
 
-  const { data: followers } = await supabase
-    .from("follows")
-    .select("follower_id")
-    .eq("followed_user_id", user.id);
-
-  const followingIds = new Set((following || []).map((f: { followed_user_id: string }) => f.followed_user_id));
-  const followerIds = new Set((followers || []).map((f: { follower_id: string }) => f.follower_id));
-  const friendIds = [...followingIds].filter((id) => followerIds.has(id));
+  const friendIds = (friendIdsData || []).map((row) => row.friend_id);
 
   // Get events friends are going to
   const today = new Date().toISOString().split("T")[0];

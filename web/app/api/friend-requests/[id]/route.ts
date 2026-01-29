@@ -149,6 +149,20 @@ export async function PATCH(
       return errorResponse(updateError, "friend-requests:PATCH");
     }
 
+    // If accepted, create the friendship
+    if (action === "accept") {
+      const { error: friendshipError } = await supabase.rpc(
+        "create_friendship" as never,
+        { user_a: user.id, user_b: friendRequest.inviter_id } as never
+      ) as { error: Error | null };
+
+      if (friendshipError) {
+        console.error("Error creating friendship:", friendshipError);
+        // Don't fail the request - the status was already updated
+        // The friendship can be created later if needed
+      }
+    }
+
     return NextResponse.json({
       success: true,
       status: newStatus,
