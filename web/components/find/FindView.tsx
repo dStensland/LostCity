@@ -8,6 +8,7 @@ import MapViewWrapper from "@/components/MapViewWrapper";
 import CalendarView from "@/components/CalendarView";
 import PortalSpotsView from "@/components/PortalSpotsView";
 import PortalCommunityView from "@/components/PortalCommunityView";
+import { QuickTagsRow, SubcategoryRow, ActiveFiltersRow } from "@/components/filters";
 
 type FindType = "events" | "destinations" | "orgs";
 type DisplayMode = "list" | "map" | "calendar";
@@ -99,6 +100,17 @@ function FindViewInner({
       {findType === "events" && (
         <Suspense fallback={<div className="h-10 bg-[var(--night)]" />}>
           <SimpleFilterBar variant={displayMode === "map" ? "compact" : "full"} />
+          {/* Layered filter rows */}
+          <div className="sticky top-[139px] z-20 bg-[var(--night)] border-b border-[var(--twilight)]">
+            <div className="max-w-3xl mx-auto px-4 py-2 space-y-2">
+              {/* Quick Tags - always visible */}
+              <QuickTagsRow />
+              {/* Subcategories - appears when category selected */}
+              <SubcategoryRow />
+              {/* Active Filters - appears when filters active */}
+              <ActiveFiltersRow />
+            </div>
+          </div>
         </Suspense>
       )}
 
