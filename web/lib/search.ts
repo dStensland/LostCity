@@ -470,7 +470,7 @@ export async function getFilteredEventsWithSearch(
 
   // Apply subcategory filter
   if (filters.subcategories && filters.subcategories.length > 0) {
-    query = query.in("subcategory_id", filters.subcategories);
+    query = query.in("subcategory", filters.subcategories);
   }
 
   // Apply tag filter (events with ANY of the selected tags)
@@ -762,7 +762,7 @@ export async function getFilteredEventsWithCursor(
 
   // Apply subcategory filter
   if (filters.subcategories && filters.subcategories.length > 0) {
-    query = query.in("subcategory_id", filters.subcategories);
+    query = query.in("subcategory", filters.subcategories);
   }
 
   // Apply tag filter
@@ -1024,7 +1024,7 @@ export async function getEventsForMap(
   }
 
   if (filters.subcategories && filters.subcategories.length > 0) {
-    query = query.in("subcategory_id", filters.subcategories);
+    query = query.in("subcategory", filters.subcategories);
   }
 
   if (filters.tags && filters.tags.length > 0) {
