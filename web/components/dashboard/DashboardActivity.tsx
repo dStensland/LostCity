@@ -8,6 +8,7 @@ import { useToast } from "@/components/Toast";
 import { useDebounce } from "@/lib/hooks/useDebounce";
 import FriendButton from "@/components/FriendButton";
 import FollowButton from "@/components/FollowButton";
+import CategoryIcon, { getCategoryColor } from "@/components/CategoryIcon";
 import { formatDistanceToNow, format, parseISO } from "date-fns";
 
 type Profile = {
@@ -32,6 +33,10 @@ type ActivityItem = {
     id: number;
     title: string;
     start_date: string;
+    start_time: string | null;
+    is_all_day: boolean;
+    category: string | null;
+    image_url: string | null;
     venue?: { name: string } | null;
   } | null;
   venue?: {
@@ -65,6 +70,8 @@ type FriendRequest = {
   inviter?: Profile | null;
 };
 
+type TabType = "recommendations" | "activity";
+
 export default function DashboardActivity() {
   const { user } = useAuth();
   const { showToast } = useToast();
@@ -72,9 +79,10 @@ export default function DashboardActivity() {
   const [activities, setActivities] = useState<ActivityItem[]>([]);
   const [pendingRequests, setPendingRequests] = useState<FriendRequest[]>([]);
   const [friends, setFriends] = useState<Profile[]>([]);
-  const [, setFriendSuggestions] = useState<Profile[]>([]);
+  const [friendSuggestions, setFriendSuggestions] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
   const [showFriendsList, setShowFriendsList] = useState(false);
+  const [activeTab, setActiveTab] = useState<TabType>("activity");
 
   // Search state
   const [searchQuery, setSearchQuery] = useState("");
@@ -113,8 +121,8 @@ export default function DashboardActivity() {
       if (friendsRes.ok) {
         const data = await friendsRes.json();
         setFriends(data.friends || []);
-        // Take the first 3 suggestions if available
-        setFriendSuggestions(data.suggestions?.slice(0, 3) || []);
+        // Take up to 10 suggestions if available
+        setFriendSuggestions(data.suggestions || []);
       }
     } catch (error) {
       console.error("Failed to fetch activity data:", error);
@@ -332,8 +340,8 @@ export default function DashboardActivity() {
   }
 
   return (
-    <div className="space-y-8">
-      {/* People Search */}
+    <div className="space-y-6">
+      {/* 1. Friend Search - Always at top */}
       <section>
         <div className="relative">
           <input
@@ -363,37 +371,7 @@ export default function DashboardActivity() {
           <div className="mt-3 space-y-2">
             {searchResults.length > 0 ? (
               searchResults.map((profile) => (
-                <div
-                  key={profile.id}
-                  className="flex items-center gap-3 p-3 rounded-lg bg-[var(--dusk)] border border-[var(--twilight)]"
-                >
-                  <Link href={`/profile/${profile.username}`} className="flex-shrink-0">
-                    <UserAvatar
-                      src={profile.avatar_url}
-                      name={profile.display_name || profile.username}
-                      size="md"
-                    />
-                  </Link>
-
-                  <div className="flex-1 min-w-0">
-                    <Link
-                      href={`/profile/${profile.username}`}
-                      className="font-medium text-[var(--cream)] hover:text-[var(--coral)] transition-colors block truncate"
-                    >
-                      {profile.display_name || `@${profile.username}`}
-                    </Link>
-                    <p className="text-xs text-[var(--muted)]">@{profile.username}</p>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <FriendButton
-                      targetUserId={profile.id}
-                      targetUsername={profile.username}
-                      size="sm"
-                    />
-                    <FollowButton targetUserId={profile.id} size="sm" />
-                  </div>
-                </div>
+                <UserCard key={profile.id} profile={profile} />
               ))
             ) : !searchLoading ? (
               <p className="text-center text-[var(--muted)] text-sm py-4">
@@ -404,7 +382,55 @@ export default function DashboardActivity() {
         )}
       </section>
 
-      {/* Pending Friend Requests */}
+      {/* 2. Friend List - Collapsible, default collapsed */}
+      {friends.length > 0 && (
+        <section>
+          <button
+            onClick={() => setShowFriendsList(!showFriendsList)}
+            className="w-full flex items-center justify-between p-3 rounded-lg bg-[var(--dusk)] border border-[var(--twilight)] hover:border-[var(--coral)]/30 transition-all"
+          >
+            <span className="font-mono text-sm font-medium text-[var(--cream)] uppercase tracking-wider">
+              Your Friends ({friends.length})
+            </span>
+            <svg
+              className={`w-5 h-5 text-[var(--muted)] transition-transform ${showFriendsList ? "rotate-180" : ""}`}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+
+          {showFriendsList && (
+            <div className="mt-3 space-y-2 max-h-80 overflow-y-auto">
+              {friends.map((friend) => (
+                <Link
+                  key={friend.id}
+                  href={`/profile/${friend.username}`}
+                  className="flex items-center gap-3 p-3 rounded-lg bg-[var(--dusk)] border border-[var(--twilight)] hover:border-[var(--neon-cyan)]/30 transition-all group"
+                >
+                  <UserAvatar
+                    src={friend.avatar_url}
+                    name={friend.display_name || friend.username}
+                    size="sm"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <span className="block text-sm font-medium text-[var(--cream)] truncate group-hover:text-[var(--neon-cyan)] transition-colors">
+                      {friend.display_name || `@${friend.username}`}
+                    </span>
+                    {friend.bio && (
+                      <p className="text-xs text-[var(--muted)] truncate">{friend.bio}</p>
+                    )}
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
+
+      {/* 3. Pending Friend Requests - Always visible if any exist */}
       {pendingRequests.length > 0 && (
         <section>
           <h2 className="font-mono text-sm font-medium text-[var(--cream)] uppercase tracking-wider mb-4">
@@ -462,195 +488,366 @@ export default function DashboardActivity() {
         </section>
       )}
 
-      {/* Grouped Event Activity */}
-      {groupedActivities.length > 0 && (
-        <section>
-          <h2 className="font-mono text-sm font-medium text-[var(--cream)] uppercase tracking-wider mb-4">
-            Your Friends Are Going
-          </h2>
-          <div className="space-y-3">
-            {groupedActivities.slice(0, 5).map((group) => (
-              <GroupedEventCard key={group.event!.id} group={group} />
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* Other Activity - discoveries, follows, saves from friends */}
-      {otherActivities.length > 0 && (
-        <section>
-          <h2 className="font-mono text-sm font-medium text-[var(--cream)] uppercase tracking-wider mb-1">
-            What Friends Are Into
-          </h2>
-          <p className="text-xs text-[var(--muted)] mb-4">
-            Events they&apos;re recommending, venues they follow
-          </p>
-          <div className="space-y-3">
-            {otherActivities.map((activity) => (
-              <ActivityCard key={activity.id} activity={activity} />
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* Empty State */}
-      {activities.length === 0 && pendingRequests.length === 0 && (
-        <div className="p-6 bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg text-center">
-          <svg
-            className="w-12 h-12 mx-auto mb-3 text-[var(--muted)]"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
+      {/* 4. Tabs: Recommendations | Activity */}
+      <section>
+        <div className="flex gap-2 border-b border-[var(--twilight)] mb-4">
+          <button
+            onClick={() => setActiveTab("recommendations")}
+            className={`px-4 py-2 font-mono text-sm font-medium transition-all ${
+              activeTab === "recommendations"
+                ? "text-[var(--neon-cyan)] border-b-2 border-[var(--neon-cyan)]"
+                : "text-[var(--muted)] hover:text-[var(--soft)]"
+            }`}
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={1.5}
-              d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
-            />
-          </svg>
-          <p className="text-[var(--soft)] font-mono text-sm">
-            Your friends are suspiciously quiet.
-          </p>
-          <p className="text-[var(--muted)] font-mono text-xs mt-1">
-            Follow more people to see their activity here
-          </p>
+            Recommendations
+          </button>
+          <button
+            onClick={() => setActiveTab("activity")}
+            className={`px-4 py-2 font-mono text-sm font-medium transition-all ${
+              activeTab === "activity"
+                ? "text-[var(--neon-cyan)] border-b-2 border-[var(--neon-cyan)]"
+                : "text-[var(--muted)] hover:text-[var(--soft)]"
+            }`}
+          >
+            Activity
+          </button>
         </div>
-      )}
 
-      {/* Friends Sidebar Toggle (Mobile) */}
-      <div className="sm:hidden">
-        <button
-          onClick={() => setShowFriendsList(!showFriendsList)}
-          className="w-full px-4 py-3 bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg font-mono text-sm text-[var(--cream)] flex items-center justify-between"
-        >
-          <span>Your Friends ({friends.length})</span>
-          <svg
-            className={`w-5 h-5 transition-transform ${showFriendsList ? "rotate-180" : ""}`}
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-          </svg>
-        </button>
-
-        {showFriendsList && (
-          <div className="mt-3 p-4 bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg">
-            <FriendsList friends={friends} />
+        {/* Recommendations Tab */}
+        {activeTab === "recommendations" && (
+          <div className="space-y-3">
+            {friendSuggestions.length > 0 ? (
+              <>
+                <h3 className="font-mono text-xs text-[var(--muted)] uppercase tracking-wider mb-3">
+                  People You May Know
+                </h3>
+                {friendSuggestions.map((profile) => (
+                  <UserCard key={profile.id} profile={profile} />
+                ))}
+              </>
+            ) : (
+              <div className="p-6 bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg text-center">
+                <svg
+                  className="w-12 h-12 mx-auto mb-3 text-[var(--muted)]"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={1.5}
+                    d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+                  />
+                </svg>
+                <p className="text-[var(--soft)] font-mono text-sm">
+                  No recommendations yet
+                </p>
+                <p className="text-[var(--muted)] font-mono text-xs mt-1">
+                  Connect with more people to see suggestions
+                </p>
+              </div>
+            )}
           </div>
+        )}
+
+        {/* Activity Tab */}
+        {activeTab === "activity" && (
+          <div className="space-y-4">
+            {/* Grouped Event Activity */}
+            {groupedActivities.length > 0 && (
+              <div className="space-y-3">
+                <h3 className="font-mono text-xs text-[var(--muted)] uppercase tracking-wider">
+                  Friends Are Going
+                </h3>
+                {groupedActivities.slice(0, 5).map((group) => (
+                  <GroupedEventCard key={group.event!.id} group={group} />
+                ))}
+              </div>
+            )}
+
+            {/* Other Activity */}
+            {otherActivities.length > 0 && (
+              <div className="space-y-3">
+                <h3 className="font-mono text-xs text-[var(--muted)] uppercase tracking-wider">
+                  What Friends Are Into
+                </h3>
+                {otherActivities.map((activity) => (
+                  <ActivityCard key={activity.id} activity={activity} />
+                ))}
+              </div>
+            )}
+
+            {/* Empty State */}
+            {activities.length === 0 && (
+              <div className="p-6 bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg text-center">
+                <svg
+                  className="w-12 h-12 mx-auto mb-3 text-[var(--muted)]"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={1.5}
+                    d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+                  />
+                </svg>
+                <p className="text-[var(--soft)] font-mono text-sm">
+                  Your friends are suspiciously quiet.
+                </p>
+                <p className="text-[var(--muted)] font-mono text-xs mt-1">
+                  Follow more people to see their activity here
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+      </section>
+    </div>
+  );
+}
+
+// UserCard component - for recommendations and search results
+function UserCard({ profile }: { profile: Profile }) {
+  return (
+    <div className="flex items-center gap-3 p-3 rounded-lg bg-[var(--dusk)] border border-[var(--twilight)] hover:border-[var(--neon-cyan)]/30 transition-all group">
+      <Link href={`/profile/${profile.username}`} className="flex-shrink-0">
+        <UserAvatar
+          src={profile.avatar_url}
+          name={profile.display_name || profile.username}
+          size="md"
+          glow
+        />
+      </Link>
+
+      <div className="flex-1 min-w-0">
+        <Link
+          href={`/profile/${profile.username}`}
+          className="font-medium text-[var(--cream)] hover:text-[var(--neon-cyan)] transition-colors block truncate"
+        >
+          {profile.display_name || `@${profile.username}`}
+        </Link>
+        <p className="text-xs text-[var(--muted)] truncate">@{profile.username}</p>
+        {profile.bio && (
+          <p className="text-xs text-[var(--soft)] mt-0.5 line-clamp-1">{profile.bio}</p>
         )}
       </div>
 
-      {/* Friends Sidebar (Desktop) */}
-      <div className="hidden sm:block">
-        <div className="p-4 bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg">
-          <h3 className="font-mono text-xs text-[var(--muted)] uppercase tracking-wider mb-3">
-            Your People ({friends.length})
-          </h3>
-          <FriendsList friends={friends} />
-        </div>
+      <div className="flex items-center gap-2 flex-shrink-0">
+        <FriendButton
+          targetUserId={profile.id}
+          targetUsername={profile.username}
+          size="sm"
+        />
+        <FollowButton targetUserId={profile.id} size="sm" />
       </div>
     </div>
   );
 }
 
+// GroupedEventCard - styled like EventCard
 function GroupedEventCard({ group }: { group: GroupedActivity }) {
   const event = group.event!;
   const dateObj = parseISO(event.start_date);
-  const formattedDate = format(dateObj, "EEE, MMM d");
+  const categoryColor = event.category ? getCategoryColor(event.category) : null;
+
+  // Format time
+  const timeStr = event.is_all_day
+    ? "All Day"
+    : event.start_time
+      ? format(parseISO(`2000-01-01T${event.start_time}`), "h:mm a")
+      : "";
+
+  const dayLabel = format(dateObj, "EEE");
+  const dateLabel = format(dateObj, "MMM d");
 
   return (
     <Link
       href={`/events/${event.id}`}
-      className="block p-4 bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg hover:border-[var(--coral)]/30 transition-all"
+      className="block p-3 rounded-lg border border-[var(--twilight)] bg-[var(--dusk)] hover:border-[var(--neon-cyan)]/30 transition-all group"
+      style={{
+        borderLeftWidth: categoryColor ? "3px" : undefined,
+        borderLeftColor: categoryColor || undefined,
+      }}
     >
-      <div className="flex items-center gap-2 mb-2">
-        <AvatarStack
-          users={group.users.map((u) => ({
-            id: u.id,
-            name: u.display_name || u.username,
-            avatar_url: u.avatar_url,
-          }))}
-          max={4}
-          size="sm"
-        />
-        <span className="font-mono text-xs text-[var(--neon-cyan)]">
-          {group.users.length === 1
-            ? `${group.users[0].display_name || `@${group.users[0].username}`} is going`
-            : `${group.users.length} friends going`}
-        </span>
+      <div className="flex gap-3">
+        {/* Time cell - like EventCard */}
+        <div className="flex-shrink-0 w-14 flex flex-col items-center justify-center py-1">
+          <span className="font-mono text-[0.55rem] font-medium leading-none text-[var(--muted)]">
+            {dayLabel}
+          </span>
+          <span className="font-mono text-sm font-medium text-[var(--soft)] leading-none tabular-nums mt-0.5">
+            {dateLabel}
+          </span>
+          {timeStr && (
+            <span className="font-mono text-[0.55rem] text-[var(--muted)] mt-0.5">{timeStr}</span>
+          )}
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 min-w-0">
+          {/* Category icon + title */}
+          <div className="flex items-center gap-2 mb-1">
+            {event.category && (
+              <span
+                className="flex-shrink-0 inline-flex items-center justify-center w-5 h-5 rounded"
+                style={{
+                  backgroundColor: categoryColor ? `${categoryColor}20` : undefined,
+                }}
+              >
+                <CategoryIcon type={event.category} size={12} glow="subtle" />
+              </span>
+            )}
+            <h3 className="text-[var(--cream)] font-medium leading-snug line-clamp-1 group-hover:text-[var(--neon-cyan)] transition-colors">
+              {event.title}
+            </h3>
+          </div>
+
+          {/* Friend avatars */}
+          <div className="flex items-center gap-2 mb-1">
+            <AvatarStack
+              users={group.users.map((u) => ({
+                id: u.id,
+                name: u.display_name || u.username,
+                avatar_url: u.avatar_url,
+              }))}
+              max={4}
+              size="xs"
+            />
+            <span className="font-mono text-xs text-[var(--neon-cyan)]">
+              {group.users.length === 1
+                ? `${group.users[0].display_name || group.users[0].username} is going`
+                : `${group.users.length} friends going`}
+            </span>
+          </div>
+
+          {/* Venue details */}
+          {event.venue && (
+            <p className="font-mono text-xs text-[var(--muted)]">
+              {event.venue.name}
+            </p>
+          )}
+        </div>
+
+        {/* Thumbnail if available */}
+        {event.image_url && (
+          <div
+            className="hidden sm:block flex-shrink-0 w-16 h-16 rounded-lg border border-[var(--twilight)] bg-cover bg-center"
+            style={{ backgroundImage: `url(${event.image_url})` }}
+          />
+        )}
       </div>
-
-      <h3 className="font-semibold text-[var(--cream)] line-clamp-1">
-        {event.title}
-      </h3>
-
-      <p className="font-mono text-xs text-[var(--muted)] mt-1">
-        {formattedDate}
-        {event.venue && ` · ${event.venue.name}`}
-      </p>
     </Link>
   );
 }
 
+// ActivityCard - styled like EventCard for event activities
 function ActivityCard({ activity }: { activity: ActivityItem }) {
   const timeAgo = formatDistanceToNow(new Date(activity.created_at), { addSuffix: true });
 
-  // Render saved event activity
-  if (activity.activity_type === "save" && activity.event) {
+  // Render saved/RSVP event activity - styled like EventCard
+  if ((activity.activity_type === "save" || activity.activity_type === "rsvp") && activity.event) {
     const eventDate = parseISO(activity.event.start_date);
-    const formattedDate = format(eventDate, "EEE, MMM d");
+    const categoryColor = activity.event.category ? getCategoryColor(activity.event.category) : null;
+
+    // Format time
+    const timeStr = activity.event.is_all_day
+      ? "All Day"
+      : activity.event.start_time
+        ? format(parseISO(`2000-01-01T${activity.event.start_time}`), "h:mm a")
+        : "";
+
+    const dayLabel = format(eventDate, "EEE");
+    const dateLabel = format(eventDate, "MMM d");
 
     return (
       <Link
         href={`/events/${activity.event.id}`}
-        className="block p-4 bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg hover:border-[var(--neon-magenta)]/30 transition-all group"
+        className="block p-3 rounded-lg border border-[var(--twilight)] bg-[var(--dusk)] hover:border-[var(--neon-magenta)]/30 transition-all group"
+        style={{
+          borderLeftWidth: categoryColor ? "3px" : undefined,
+          borderLeftColor: categoryColor || undefined,
+        }}
       >
-        {/* Header: who did what */}
-        <div className="flex items-center gap-2 mb-3">
-          <UserAvatar
-            src={activity.user.avatar_url}
-            name={activity.user.display_name || activity.user.username}
-            size="xs"
-          />
-          <span className="text-xs text-[var(--muted)]">
-            <span className="text-[var(--soft)]">
-              {activity.user.display_name || activity.user.username}
+        <div className="flex gap-3">
+          {/* Time cell - like EventCard */}
+          <div className="flex-shrink-0 w-14 flex flex-col items-center justify-center py-1">
+            <span className="font-mono text-[0.55rem] font-medium leading-none text-[var(--muted)]">
+              {dayLabel}
             </span>
-            {" "}saved this
-          </span>
-          <span className="ml-auto font-mono text-[0.6rem] text-[var(--muted)]">
-            {timeAgo}
-          </span>
-        </div>
+            <span className="font-mono text-sm font-medium text-[var(--soft)] leading-none tabular-nums mt-0.5">
+              {dateLabel}
+            </span>
+            {timeStr && (
+              <span className="font-mono text-[0.55rem] text-[var(--muted)] mt-0.5">{timeStr}</span>
+            )}
+          </div>
 
-        {/* Event details - the main content */}
-        <h4 className="font-medium text-[var(--cream)] group-hover:text-[var(--neon-magenta)] transition-colors line-clamp-1">
-          {activity.event.title}
-        </h4>
-        <p className="font-mono text-xs text-[var(--muted)] mt-1">
-          {formattedDate}
-          {activity.event.venue && ` · ${activity.event.venue.name}`}
-        </p>
+          {/* Content */}
+          <div className="flex-1 min-w-0">
+            {/* User action header */}
+            <div className="flex items-center gap-2 mb-1">
+              <UserAvatar
+                src={activity.user.avatar_url}
+                name={activity.user.display_name || activity.user.username}
+                size="xs"
+              />
+              <span className="text-xs text-[var(--muted)] truncate">
+                <span className="text-[var(--soft)]">
+                  {activity.user.display_name || activity.user.username}
+                </span>
+                {" "}{activity.activity_type === "save" ? "saved" : "is interested in"} this
+              </span>
+              <span className="ml-auto font-mono text-[0.55rem] text-[var(--muted)] flex-shrink-0">
+                {timeAgo}
+              </span>
+            </div>
 
-        {/* CTA hint */}
-        <div className="mt-3 flex items-center gap-1 text-xs font-mono text-[var(--neon-magenta)]">
-          <span>Check it out</span>
-          <svg className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-          </svg>
+            {/* Category icon + title */}
+            <div className="flex items-center gap-2 mb-1">
+              {activity.event.category && (
+                <span
+                  className="flex-shrink-0 inline-flex items-center justify-center w-5 h-5 rounded"
+                  style={{
+                    backgroundColor: categoryColor ? `${categoryColor}20` : undefined,
+                  }}
+                >
+                  <CategoryIcon type={activity.event.category} size={12} glow="subtle" />
+                </span>
+              )}
+              <h3 className="text-[var(--cream)] font-medium leading-snug line-clamp-1 group-hover:text-[var(--neon-magenta)] transition-colors">
+                {activity.event.title}
+              </h3>
+            </div>
+
+            {/* Venue details */}
+            {activity.event.venue && (
+              <p className="font-mono text-xs text-[var(--muted)]">
+                {activity.event.venue.name}
+              </p>
+            )}
+          </div>
+
+          {/* Thumbnail if available */}
+          {activity.event.image_url && (
+            <div
+              className="hidden sm:block flex-shrink-0 w-16 h-16 rounded-lg border border-[var(--twilight)] bg-cover bg-center"
+              style={{ backgroundImage: `url(${activity.event.image_url})` }}
+            />
+          )}
         </div>
       </Link>
     );
   }
 
-  // Render venue follow activity
+  // Render venue follow activity - simpler card
   if (activity.activity_type === "follow" && activity.venue?.slug) {
     return (
       <Link
         href={`/spots/${activity.venue.slug}`}
-        className="block p-4 bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg hover:border-[var(--neon-cyan)]/30 transition-all group"
+        className="block p-3 rounded-lg bg-[var(--dusk)] border border-[var(--twilight)] hover:border-[var(--neon-cyan)]/30 transition-all group"
       >
         {/* Header */}
         <div className="flex items-center gap-2 mb-2">
@@ -665,7 +862,7 @@ function ActivityCard({ activity }: { activity: ActivityItem }) {
             </span>
             {" "}now follows
           </span>
-          <span className="ml-auto font-mono text-[0.6rem] text-[var(--muted)]">
+          <span className="ml-auto font-mono text-[0.55rem] text-[var(--muted)]">
             {timeAgo}
           </span>
         </div>
@@ -679,22 +876,14 @@ function ActivityCard({ activity }: { activity: ActivityItem }) {
             {activity.venue.neighborhood}
           </p>
         )}
-
-        {/* CTA hint */}
-        <div className="mt-2 flex items-center gap-1 text-xs font-mono text-[var(--neon-cyan)]">
-          <span>See their events</span>
-          <svg className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-          </svg>
-        </div>
       </Link>
     );
   }
 
-  // Render user follow activity
+  // Render user follow activity - simpler card
   if (activity.activity_type === "follow" && activity.target_user) {
     return (
-      <div className="p-4 bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg">
+      <div className="p-3 bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg">
         {/* Header */}
         <div className="flex items-center gap-2 mb-3">
           <UserAvatar
@@ -706,9 +895,9 @@ function ActivityCard({ activity }: { activity: ActivityItem }) {
             <span className="text-[var(--soft)]">
               {activity.user.display_name || activity.user.username}
             </span>
-            {" "}followed someone new
+            {" "}followed
           </span>
-          <span className="ml-auto font-mono text-[0.6rem] text-[var(--muted)]">
+          <span className="ml-auto font-mono text-[0.55rem] text-[var(--muted)]">
             {timeAgo}
           </span>
         </div>
@@ -726,7 +915,7 @@ function ActivityCard({ activity }: { activity: ActivityItem }) {
           <div className="flex-1 min-w-0">
             <Link
               href={`/profile/${activity.target_user.username}`}
-              className="font-medium text-[var(--cream)] hover:text-[var(--coral)] transition-colors block truncate"
+              className="font-medium text-[var(--cream)] hover:text-[var(--neon-cyan)] transition-colors block truncate"
             >
               {activity.target_user.display_name || `@${activity.target_user.username}`}
             </Link>
@@ -738,47 +927,7 @@ function ActivityCard({ activity }: { activity: ActivityItem }) {
     );
   }
 
-  // Fallback - should rarely happen now
+  // Fallback
   return null;
 }
 
-function FriendsList({ friends }: { friends: Profile[] }) {
-  if (friends.length === 0) {
-    return (
-      <p className="text-[var(--muted)] text-sm text-center py-4">
-        Flying solo for now
-      </p>
-    );
-  }
-
-  return (
-    <div className="space-y-2 max-h-80 overflow-y-auto">
-      {friends.slice(0, 10).map((friend) => (
-        <Link
-          key={friend.id}
-          href={`/profile/${friend.username}`}
-          className="flex items-center gap-3 p-2 rounded-lg hover:bg-[var(--twilight)]/30 transition-colors group"
-        >
-          <UserAvatar
-            src={friend.avatar_url}
-            name={friend.display_name || friend.username}
-            size="sm"
-          />
-          <div className="flex-1 min-w-0">
-            <span className="block text-sm text-[var(--cream)] truncate group-hover:text-[var(--coral)] transition-colors">
-              {friend.display_name || `@${friend.username}`}
-            </span>
-          </div>
-        </Link>
-      ))}
-      {friends.length > 10 && (
-        <Link
-          href="/friends"
-          className="block text-center text-xs font-mono text-[var(--coral)] hover:text-[var(--rose)] py-2"
-        >
-          View all {friends.length} friends
-        </Link>
-      )}
-    </div>
-  );
-}
