@@ -215,14 +215,14 @@ const THEMED_SECTION_ICONS: Record<string, { icon: React.ReactNode; color: strin
     color: "#FF69B4", // Hot pink / neon pink
     icon: (
       // eslint-disable-next-line @next/next/no-img-element
-      <img src="/icons/valentines-heart.png" alt="" className="w-8 h-8 object-contain" />
+      <img src="/icons/valentines-heart.png" alt="" className="w-full h-full object-cover" />
     ),
   },
   "lunar-new-year": {
     color: "#DC143C", // Crimson red
     icon: (
       // eslint-disable-next-line @next/next/no-img-element
-      <img src="/icons/fire-horse.png" alt="" className="w-8 h-8 object-contain" />
+      <img src="/icons/fire-horse.png" alt="" className="w-full h-full object-cover" />
     ),
   },
   "super-bowl": {
@@ -238,7 +238,7 @@ const THEMED_SECTION_ICONS: Record<string, { icon: React.ReactNode; color: strin
     color: "#9B59B6", // Purple
     icon: (
       // eslint-disable-next-line @next/next/no-img-element
-      <img src="/icons/raised-fist.png" alt="" className="w-8 h-8 object-contain" />
+      <img src="/icons/raised-fist.png" alt="" className="w-full h-full object-cover" />
     ),
   },
   "mardi-gras": {
@@ -280,11 +280,11 @@ function SectionHeader({
         {/* Themed icon with glow */}
         {themedConfig && (
           <div
-            className="flex items-center justify-center w-10 h-10 rounded-lg overflow-hidden"
+            className="flex items-center justify-center w-12 h-12 rounded-lg overflow-hidden"
             style={{
               color: accentColor,
               backgroundColor: `color-mix(in srgb, ${accentColor} 15%, transparent)`,
-              boxShadow: `0 0 16px color-mix(in srgb, ${accentColor} 50%, transparent)`,
+              boxShadow: `0 0 20px color-mix(in srgb, ${accentColor} 50%, transparent)`,
             }}
           >
             {themedConfig.icon}
