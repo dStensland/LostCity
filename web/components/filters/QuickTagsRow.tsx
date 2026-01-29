@@ -62,11 +62,11 @@ export default function QuickTagsRow({ className = "" }: QuickTagsRowProps) {
   );
 
   return (
-    <div className={`relative ${className}`}>
+    <div className={`relative overflow-hidden ${className}`}>
       {/* Horizontal scrolling container */}
       <div
         ref={scrollRef}
-        className="flex items-center gap-2 overflow-x-auto scrollbar-hide snap-x snap-mandatory md:snap-none py-1 -mx-1 px-1"
+        className="flex items-center gap-2 overflow-x-auto scrollbar-hide snap-x snap-mandatory md:snap-none py-2 -mx-4 px-4"
         style={{ WebkitOverflowScrolling: "touch" }}
       >
         {QUICK_TAGS.map((tag) => {
@@ -85,11 +85,13 @@ export default function QuickTagsRow({ className = "" }: QuickTagsRowProps) {
             </div>
           );
         })}
+        {/* Spacer for right padding */}
+        <div className="shrink-0 w-4" aria-hidden="true" />
       </div>
 
       {/* Fade gradient on right edge (desktop only) */}
       <div
-        className="hidden md:block absolute right-0 top-0 bottom-0 w-8 pointer-events-none"
+        className="hidden md:block absolute right-0 top-0 bottom-0 w-12 pointer-events-none z-10"
         style={{
           background: "linear-gradient(to right, transparent, var(--night))",
         }}

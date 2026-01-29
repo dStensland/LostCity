@@ -102,13 +102,15 @@ function FindViewInner({
           <SimpleFilterBar variant={displayMode === "map" ? "compact" : "full"} />
           {/* Layered filter rows */}
           <div className="sticky top-[139px] z-20 bg-[var(--night)] border-b border-[var(--twilight)]">
-            <div className="max-w-3xl mx-auto px-4 py-2 space-y-2">
+            <div className="max-w-3xl mx-auto">
               {/* Quick Tags - always visible */}
               <QuickTagsRow />
               {/* Subcategories - appears when category selected */}
               <SubcategoryRow />
               {/* Active Filters - appears when filters active */}
-              <ActiveFiltersRow />
+              <div className="px-4 pb-2">
+                <ActiveFiltersRow />
+              </div>
             </div>
           </div>
         </Suspense>

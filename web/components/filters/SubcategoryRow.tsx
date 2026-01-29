@@ -79,16 +79,16 @@ export default function SubcategoryRow({ className = "" }: SubcategoryRowProps) 
 
   return (
     <div
-      className={`animate-in slide-in-from-top-2 fade-in duration-200 ${className}`}
+      className={`relative overflow-hidden animate-in slide-in-from-top-2 fade-in duration-200 ${className}`}
     >
       {/* Horizontal scrolling container */}
       <div
         ref={scrollRef}
-        className="flex items-center gap-2 overflow-x-auto scrollbar-hide snap-x snap-mandatory md:snap-none py-1 -mx-1 px-1"
+        className="flex items-center gap-2 overflow-x-auto scrollbar-hide snap-x snap-mandatory md:snap-none py-2 -mx-4 px-4"
         style={{ WebkitOverflowScrolling: "touch" }}
       >
         {/* Label */}
-        <span className="shrink-0 text-[0.55rem] uppercase tracking-wider text-[var(--muted)] font-mono pl-1">
+        <span className="shrink-0 text-[0.55rem] uppercase tracking-wider text-[var(--muted)] font-mono">
           Genre:
         </span>
 
@@ -122,11 +122,13 @@ export default function SubcategoryRow({ className = "" }: SubcategoryRowProps) 
             })}
           </div>
         ))}
+        {/* Spacer for right padding */}
+        <div className="shrink-0 w-4" aria-hidden="true" />
       </div>
 
       {/* Fade gradient on right edge (desktop only) */}
       <div
-        className="hidden md:block absolute right-0 top-0 bottom-0 w-8 pointer-events-none"
+        className="hidden md:block absolute right-0 top-0 bottom-0 w-12 pointer-events-none z-10"
         style={{
           background: "linear-gradient(to right, transparent, var(--night))",
         }}
