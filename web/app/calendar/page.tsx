@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo, useCallback, useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import Image from "next/image";
 import {
   format,
   startOfMonth,
@@ -16,7 +16,6 @@ import {
   isBefore,
 } from "date-fns";
 import { useAuth } from "@/lib/auth-context";
-import { getCategoryColor } from "@/components/CategoryIcon";
 import CategoryIcon from "@/components/CategoryIcon";
 import { formatTimeSplit } from "@/lib/formats";
 import { useQuery } from "@tanstack/react-query";
@@ -52,19 +51,39 @@ interface CalendarEvent {
   } | null;
 }
 
+// Type for friend calendar events
+interface FriendCalendarEvent {
+  id: number;
+  title: string;
+  start_date: string;
+  start_time: string | null;
+  is_all_day: boolean;
+  category: string | null;
+  rsvp_status: "going" | "interested";
+  friend: {
+    id: string;
+    username: string;
+    display_name: string | null;
+    avatar_url: string | null;
+  };
+}
+
+// Type for friend profile
+interface Friend {
+  id: string;
+  username: string;
+  display_name: string | null;
+  avatar_url: string | null;
+}
+
 interface DayData {
   date: Date;
   events: CalendarEvent[];
+  friendEvents: FriendCalendarEvent[];
   isCurrentMonth: boolean;
   isToday: boolean;
   isPast: boolean;
 }
-
-// Category priority for showing dots
-const CATEGORY_PRIORITY = [
-  "music", "art", "comedy", "theater", "film", "nightlife",
-  "food_drink", "sports", "fitness", "community", "family", "other"
-];
 
 const CALENDAR_ROWS = 6;
 const CALENDAR_DAYS = CALENDAR_ROWS * 7;
@@ -73,12 +92,13 @@ const CALENDAR_DAYS = CALENDAR_ROWS * 7;
 type StatusFilter = "all" | "going" | "interested";
 
 export default function CalendarPage() {
-  const { user, loading: authLoading } = useAuth();
-  const router = useRouter();
+  const { user } = useAuth();
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [syncMenuOpen, setSyncMenuOpen] = useState(false);
+  const [friendsPanelOpen, setFriendsPanelOpen] = useState(false);
+  const [selectedFriendIds, setSelectedFriendIds] = useState<Set<string>>(new Set());
   const [feedUrls, setFeedUrls] = useState<{
     feedUrl: string;
     googleCalendarUrl: string;
@@ -86,14 +106,7 @@ export default function CalendarPage() {
   } | null>(null);
   const [copied, setCopied] = useState(false);
 
-  // Redirect to login if not authenticated
-  useEffect(() => {
-    if (!authLoading && !user) {
-      router.push("/auth/login?redirect=/calendar");
-    }
-  }, [user, authLoading, router]);
-
-  // Fetch calendar events
+  // Fetch user's calendar events
   const { data, isLoading, isRefetching } = useQuery({
     queryKey: ["user-calendar", currentMonth.getMonth(), currentMonth.getFullYear(), statusFilter],
     queryFn: async () => {
@@ -106,7 +119,35 @@ export default function CalendarPage() {
       return res.json();
     },
     enabled: !!user,
-    staleTime: 60000, // 1 minute
+    staleTime: 60000,
+  });
+
+  // Fetch friends' calendar events
+  const { data: friendsData } = useQuery({
+    queryKey: ["friends-calendar", currentMonth.getMonth(), currentMonth.getFullYear(), Array.from(selectedFriendIds)],
+    queryFn: async () => {
+      const start = format(startOfMonth(subMonths(currentMonth, 1)), "yyyy-MM-dd");
+      const end = format(addMonths(currentMonth, 2), "yyyy-MM-dd");
+      const friendIds = Array.from(selectedFriendIds).join(",");
+
+      const res = await fetch(`/api/user/calendar/friends?start=${start}&end=${end}${friendIds ? `&friend_ids=${friendIds}` : ""}`);
+      if (!res.ok) throw new Error("Failed to fetch friend calendars");
+      return res.json();
+    },
+    enabled: !!user && selectedFriendIds.size > 0,
+    staleTime: 60000,
+  });
+
+  // Fetch friends list for selector
+  const { data: friendsList } = useQuery({
+    queryKey: ["friends-list"],
+    queryFn: async () => {
+      const res = await fetch("/api/friends");
+      if (!res.ok) throw new Error("Failed to fetch friends");
+      return res.json();
+    },
+    enabled: !!user,
+    staleTime: 300000, // 5 minutes
   });
 
   // Fetch feed URLs for sync
@@ -114,12 +155,12 @@ export default function CalendarPage() {
     if (user && !feedUrls) {
       fetch("/api/user/calendar/feed-url")
         .then((res) => res.json())
-        .then((data) => setFeedUrls(data))
+        .then((urls) => setFeedUrls(urls))
         .catch(console.error);
     }
   }, [user, feedUrls]);
 
-  // Build events by date map
+  // Build events by date map (user events)
   const eventsByDate = useMemo(() => {
     const map = new Map<string, CalendarEvent[]>();
     const events = data?.events;
@@ -135,6 +176,22 @@ export default function CalendarPage() {
     return map;
   }, [data]);
 
+  // Build friend events by date map
+  const friendEventsByDate = useMemo(() => {
+    const map = new Map<string, FriendCalendarEvent[]>();
+    const events = friendsData?.events;
+    if (events) {
+      events.forEach((event: FriendCalendarEvent) => {
+        const dateKey = event.start_date;
+        if (!map.has(dateKey)) {
+          map.set(dateKey, []);
+        }
+        map.get(dateKey)!.push(event);
+      });
+    }
+    return map;
+  }, [friendsData]);
+
   // Generate calendar grid
   const calendarDays = useMemo((): DayData[] => {
     const monthStart = startOfMonth(currentMonth);
@@ -149,6 +206,7 @@ export default function CalendarPage() {
       days.push({
         date: new Date(day),
         events: eventsByDate.get(dateKey) || [],
+        friendEvents: friendEventsByDate.get(dateKey) || [],
         isCurrentMonth: isSameMonth(day, monthStart),
         isToday: isToday(day),
         isPast: isBefore(day, today) && !isToday(day),
@@ -157,14 +215,20 @@ export default function CalendarPage() {
     }
 
     return days;
-  }, [currentMonth, eventsByDate]);
+  }, [currentMonth, eventsByDate, friendEventsByDate]);
 
-  // Selected day's events
+  // Selected day's events (user + friends)
   const selectedDayEvents = useMemo(() => {
     if (!selectedDate) return [];
     const dateKey = format(selectedDate, "yyyy-MM-dd");
     return eventsByDate.get(dateKey) || [];
   }, [selectedDate, eventsByDate]);
+
+  const selectedDayFriendEvents = useMemo(() => {
+    if (!selectedDate) return [];
+    const dateKey = format(selectedDate, "yyyy-MM-dd");
+    return friendEventsByDate.get(dateKey) || [];
+  }, [selectedDate, friendEventsByDate]);
 
   // Navigation handlers
   const goToPrevMonth = useCallback(() => setCurrentMonth((m) => subMonths(m, 1)), []);
@@ -175,23 +239,18 @@ export default function CalendarPage() {
     setSelectedDate(today);
   }, []);
 
-  // Get unique categories for a day
-  const getDayCategories = useCallback((dayEvents: CalendarEvent[]) => {
-    const categories = new Set<string>();
-    dayEvents.forEach((e) => {
-      if (e.category) categories.add(e.category);
+  // Toggle friend selection
+  const toggleFriend = (friendId: string) => {
+    setSelectedFriendIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(friendId)) {
+        next.delete(friendId);
+      } else {
+        next.add(friendId);
+      }
+      return next;
     });
-    return CATEGORY_PRIORITY.filter((c) => categories.has(c)).slice(0, 4);
-  }, []);
-
-  // Calculate max events for heat map
-  const maxEventsInDay = useMemo(() => {
-    let max = 0;
-    calendarDays.forEach((d) => {
-      if (d.events.length > max) max = d.events.length;
-    });
-    return max || 1;
-  }, [calendarDays]);
+  };
 
   // Copy feed URL to clipboard
   const copyFeedUrl = async () => {
@@ -203,31 +262,43 @@ export default function CalendarPage() {
   };
 
   const weekDays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-
-  // Loading state
-  if (authLoading) {
-    return (
-      <div className="min-h-screen bg-[var(--void)] flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-[var(--coral)]/30 border-t-[var(--coral)] rounded-full animate-spin" />
-      </div>
-    );
-  }
+  const friends: Friend[] = friendsList?.friends || [];
 
   if (!user) {
-    return null; // Will redirect
+    return null; // Layout handles redirect
   }
 
   return (
-    <div className="min-h-screen bg-[var(--void)]">
-      <div className="max-w-5xl mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
-          <div>
-            <h1 className="font-serif text-3xl font-bold text-[var(--cream)]">My Calendar</h1>
-            <p className="mt-1 font-mono text-sm text-[var(--muted)]">
-              Events you&apos;re going to and interested in
-            </p>
-          </div>
+    <div className="max-w-6xl mx-auto px-4 py-8">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+        <div>
+          <h1 className="font-serif text-3xl font-bold text-[var(--cream)]">My Calendar</h1>
+          <p className="mt-1 font-mono text-sm text-[var(--muted)]">
+            Your events and friends&apos; plans
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2">
+          {/* Friends toggle */}
+          <button
+            onClick={() => setFriendsPanelOpen(!friendsPanelOpen)}
+            className={`inline-flex items-center gap-2 px-4 py-2.5 border rounded-lg font-mono text-sm transition-colors ${
+              selectedFriendIds.size > 0
+                ? "bg-[var(--coral)]/10 border-[var(--coral)] text-[var(--coral)]"
+                : "bg-[var(--dusk)] border-[var(--twilight)] text-[var(--cream)] hover:bg-[var(--twilight)]"
+            }`}
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+            </svg>
+            Friends
+            {selectedFriendIds.size > 0 && (
+              <span className="px-1.5 py-0.5 rounded-full bg-[var(--coral)] text-[var(--void)] text-[0.6rem] font-bold">
+                {selectedFriendIds.size}
+              </span>
+            )}
+          </button>
 
           {/* Sync dropdown */}
           <div className="relative">
@@ -238,10 +309,7 @@ export default function CalendarPage() {
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
               </svg>
-              Sync Calendar
-              <svg className={`w-3 h-3 transition-transform ${syncMenuOpen ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
+              Sync
             </button>
 
             {syncMenuOpen && feedUrls && (
@@ -288,220 +356,298 @@ export default function CalendarPage() {
                   </svg>
                   {copied ? "Copied!" : "Copy iCal URL"}
                 </button>
-
-                <div className="px-4 py-2 bg-[var(--night)] text-[0.65rem] text-[var(--muted)]">
-                  For Apple Calendar: Settings → Calendar → Add Subscribed Calendar
-                </div>
               </div>
             )}
           </div>
         </div>
+      </div>
 
-        {/* Status filter tabs */}
-        <div className="flex items-center gap-1 mb-6 bg-[var(--night)] rounded-lg p-1 w-fit">
-          {(["all", "going", "interested"] as StatusFilter[]).map((status) => (
-            <button
-              key={status}
-              onClick={() => setStatusFilter(status)}
-              className={`px-4 py-2 rounded-md font-mono text-xs font-medium transition-colors ${
-                statusFilter === status
-                  ? "bg-[var(--coral)] text-[var(--void)]"
-                  : "text-[var(--muted)] hover:text-[var(--cream)]"
-              }`}
-            >
-              {status === "all" ? "All" : status === "going" ? "Going" : "Interested"}
-            </button>
-          ))}
-        </div>
-
-        {/* Main content */}
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_350px] gap-8">
-          {/* Calendar Grid */}
-          <div className="bg-[var(--night)] rounded-xl p-6 border border-[var(--twilight)]">
-            {/* Month header */}
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-3">
-                <h2 className="font-mono text-2xl font-bold text-[var(--cream)]">
-                  {format(currentMonth, "MMMM yyyy")}
-                </h2>
-                {(isLoading || isRefetching) && (
-                  <span className="w-4 h-4 border-2 border-[var(--coral)]/30 border-t-[var(--coral)] rounded-full animate-spin" />
-                )}
-                {!isSameMonth(currentMonth, new Date()) && (
-                  <button
-                    onClick={goToToday}
-                    className="px-3 py-1 rounded-full font-mono text-xs font-medium bg-[var(--coral)] text-[var(--void)] hover:bg-[var(--rose)] transition-colors"
-                  >
-                    Today
-                  </button>
-                )}
-              </div>
-
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={goToPrevMonth}
-                  className="p-2 rounded-lg hover:bg-[var(--twilight)] text-[var(--muted)] hover:text-[var(--cream)] transition-colors"
-                  aria-label="Previous month"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                  </svg>
-                </button>
-                <button
-                  onClick={goToNextMonth}
-                  className="p-2 rounded-lg hover:bg-[var(--twilight)] text-[var(--muted)] hover:text-[var(--cream)] transition-colors"
-                  aria-label="Next month"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </button>
-              </div>
-            </div>
-
-            {/* Week day headers */}
-            <div className="grid grid-cols-7 mb-2">
-              {weekDays.map((day) => (
-                <div
-                  key={day}
-                  className="py-2 text-center font-mono text-[0.65rem] text-[var(--muted)] uppercase tracking-wider"
-                >
-                  {day}
-                </div>
-              ))}
-            </div>
-
-            {/* Calendar days */}
-            <div className="grid grid-cols-7 gap-1">
-              {calendarDays.map((day, idx) => {
-                const isSelected = selectedDate && isSameDay(day.date, selectedDate);
-                const hasEvents = day.events.length > 0;
-                const categories = getDayCategories(day.events);
-                const density = day.events.length / maxEventsInDay;
-                const hasGoing = day.events.some(e => e.rsvp_status === "going");
-
+      {/* Friends panel */}
+      {friendsPanelOpen && (
+        <div className="mb-6 p-4 bg-[var(--night)] rounded-xl border border-[var(--twilight)]">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-mono text-sm font-medium text-[var(--cream)]">Show friends&apos; events</h3>
+            {selectedFriendIds.size > 0 && (
+              <button
+                onClick={() => setSelectedFriendIds(new Set())}
+                className="font-mono text-xs text-[var(--muted)] hover:text-[var(--coral)] transition-colors"
+              >
+                Clear all
+              </button>
+            )}
+          </div>
+          {friends.length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {friends.map((friend) => {
+                const isSelected = selectedFriendIds.has(friend.id);
                 return (
                   <button
-                    key={idx}
-                    onClick={() => setSelectedDate(day.date)}
-                    disabled={!day.isCurrentMonth}
-                    className={`
-                      relative aspect-square p-1 rounded-lg border transition-all duration-200
-                      ${day.isCurrentMonth ? "hover:border-[var(--coral)]/50 hover:scale-[1.02]" : "opacity-30 cursor-default"}
-                      ${isSelected
-                        ? "border-[var(--coral)] bg-[var(--coral)]/15 shadow-[0_0_15px_rgba(232,145,45,0.2)]"
-                        : "border-[var(--twilight)]/50 hover:bg-[var(--twilight)]/30"
-                      }
-                      ${day.isToday ? "ring-2 ring-[var(--gold)] ring-offset-1 ring-offset-[var(--night)]" : ""}
-                    `}
-                    style={{
-                      backgroundColor: hasEvents && day.isCurrentMonth && !isSelected
-                        ? `rgba(var(--coral-rgb, 255, 107, 107), ${density * 0.15})`
-                        : undefined,
-                    }}
+                    key={friend.id}
+                    onClick={() => toggleFriend(friend.id)}
+                    className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full font-mono text-xs transition-colors ${
+                      isSelected
+                        ? "bg-[var(--coral)] text-[var(--void)]"
+                        : "bg-[var(--twilight)] text-[var(--soft)] hover:bg-[var(--twilight)]/80"
+                    }`}
                   >
-                    {/* Day number */}
-                    <span
-                      className={`
-                        absolute top-1 left-1.5 font-mono text-sm font-medium
-                        ${day.isToday ? "text-[var(--gold)]" : ""}
-                        ${isSelected ? "text-[var(--coral)]" : ""}
-                        ${!day.isToday && !isSelected ? (day.isPast ? "text-[var(--muted)]/60" : "text-[var(--cream)]") : ""}
-                      `}
-                    >
-                      {format(day.date, "d")}
-                    </span>
-
-                    {/* Event count badge */}
-                    {hasEvents && day.isCurrentMonth && (
-                      <span className={`absolute top-1 right-1.5 font-mono text-[0.6rem] font-bold ${hasGoing ? "text-[var(--coral)]" : "text-[var(--muted)]"}`}>
-                        {day.events.length}
+                    {friend.avatar_url ? (
+                      <Image
+                        src={friend.avatar_url}
+                        alt=""
+                        width={18}
+                        height={18}
+                        className="w-[18px] h-[18px] rounded-full object-cover"
+                      />
+                    ) : (
+                      <span className="w-[18px] h-[18px] rounded-full bg-[var(--dusk)] flex items-center justify-center text-[0.5rem]">
+                        {(friend.display_name || friend.username)[0].toUpperCase()}
                       </span>
                     )}
-
-                    {/* Category color dots */}
-                    {categories.length > 0 && day.isCurrentMonth && (
-                      <div className="absolute bottom-1 left-1/2 -translate-x-1/2 flex gap-0.5">
-                        {categories.map((cat) => (
-                          <span
-                            key={cat}
-                            className="w-1.5 h-1.5 rounded-full"
-                            style={{ backgroundColor: getCategoryColor(cat) || "var(--muted)" }}
-                          />
-                        ))}
-                      </div>
-                    )}
+                    {friend.display_name || friend.username}
                   </button>
                 );
               })}
             </div>
+          ) : (
+            <p className="text-[var(--muted)] font-mono text-xs">
+              No friends yet. Follow people who follow you back to see their events.
+            </p>
+          )}
+        </div>
+      )}
 
-            {/* Legend */}
-            <div className="mt-4 flex flex-wrap items-center gap-3 text-[0.65rem] text-[var(--muted)]">
-              <div className="flex items-center gap-1.5">
-                <span className="w-3 h-3 rounded border-2 border-[var(--gold)]" />
-                <span>Today</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span className="w-3 h-3 rounded bg-[var(--coral)]/20 border border-[var(--coral)]" />
-                <span>Selected</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span className="w-3 h-3 rounded bg-[var(--coral)]/15" />
-                <span>Your events</span>
-              </div>
+      {/* Status filter tabs */}
+      <div className="flex items-center gap-1 mb-6 bg-[var(--night)] rounded-lg p-1 w-fit">
+        {(["all", "going", "interested"] as StatusFilter[]).map((status) => (
+          <button
+            key={status}
+            onClick={() => setStatusFilter(status)}
+            className={`px-4 py-2 rounded-md font-mono text-xs font-medium transition-colors ${
+              statusFilter === status
+                ? status === "going"
+                  ? "bg-[var(--coral)] text-[var(--void)]"
+                  : status === "interested"
+                    ? "bg-[var(--gold)] text-[var(--void)]"
+                    : "bg-[var(--cream)] text-[var(--void)]"
+                : "text-[var(--muted)] hover:text-[var(--cream)]"
+            }`}
+          >
+            {status === "all" ? "All" : status === "going" ? "Going" : "Interested"}
+          </button>
+        ))}
+      </div>
+
+      {/* Main content */}
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-6">
+        {/* Calendar Grid */}
+        <div className="bg-[var(--night)] rounded-xl p-6 border border-[var(--twilight)]">
+          {/* Month header */}
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <h2 className="font-mono text-2xl font-bold text-[var(--cream)]">
+                {format(currentMonth, "MMMM yyyy")}
+              </h2>
+              {(isLoading || isRefetching) && (
+                <span className="w-4 h-4 border-2 border-[var(--coral)]/30 border-t-[var(--coral)] rounded-full animate-spin" />
+              )}
+              {!isSameMonth(currentMonth, new Date()) && (
+                <button
+                  onClick={goToToday}
+                  className="px-3 py-1 rounded-full font-mono text-xs font-medium bg-[var(--coral)] text-[var(--void)] hover:bg-[var(--rose)] transition-colors"
+                >
+                  Today
+                </button>
+              )}
             </div>
 
-            {/* Summary */}
-            {data?.summary && (
-              <div className="mt-4 pt-4 border-t border-[var(--twilight)]/50">
-                <div className="flex items-center gap-4 text-[var(--muted)] font-mono text-xs">
-                  <span>
-                    <span className="text-[var(--cream)] font-medium">{data.summary.going}</span> going
+            <div className="flex items-center gap-1">
+              <button
+                onClick={goToPrevMonth}
+                className="p-2 rounded-lg hover:bg-[var(--twilight)] text-[var(--muted)] hover:text-[var(--cream)] transition-colors"
+                aria-label="Previous month"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+              </button>
+              <button
+                onClick={goToNextMonth}
+                className="p-2 rounded-lg hover:bg-[var(--twilight)] text-[var(--muted)] hover:text-[var(--cream)] transition-colors"
+                aria-label="Next month"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          {/* Week day headers */}
+          <div className="grid grid-cols-7 mb-2">
+            {weekDays.map((day) => (
+              <div
+                key={day}
+                className="py-2 text-center font-mono text-[0.65rem] text-[var(--muted)] uppercase tracking-wider"
+              >
+                {day}
+              </div>
+            ))}
+          </div>
+
+          {/* Calendar days */}
+          <div className="grid grid-cols-7 gap-1">
+            {calendarDays.map((day, idx) => {
+              const isSelected = selectedDate && isSameDay(day.date, selectedDate);
+              const hasEvents = day.events.length > 0;
+              const hasFriendEvents = day.friendEvents.length > 0;
+              const hasGoing = day.events.some(e => e.rsvp_status === "going");
+              const hasInterested = day.events.some(e => e.rsvp_status === "interested");
+
+              // Get unique friend avatars for this day
+              const friendAvatars = Array.from(
+                new Map(day.friendEvents.map(e => [e.friend.id, e.friend])).values()
+              ).slice(0, 3);
+
+              return (
+                <button
+                  key={idx}
+                  onClick={() => setSelectedDate(day.date)}
+                  disabled={!day.isCurrentMonth}
+                  className={`
+                    relative aspect-square p-1 rounded-lg border transition-all duration-200
+                    ${day.isCurrentMonth ? "hover:border-[var(--coral)]/50 hover:scale-[1.02]" : "opacity-30 cursor-default"}
+                    ${isSelected
+                      ? "border-[var(--coral)] bg-[var(--coral)]/15 shadow-[0_0_15px_rgba(232,145,45,0.2)]"
+                      : "border-[var(--twilight)]/50 hover:bg-[var(--twilight)]/30"
+                    }
+                    ${day.isToday ? "ring-2 ring-[var(--gold)] ring-offset-1 ring-offset-[var(--night)]" : ""}
+                  `}
+                >
+                  {/* Day number */}
+                  <span
+                    className={`
+                      absolute top-1 left-1.5 font-mono text-sm font-medium
+                      ${day.isToday ? "text-[var(--gold)]" : ""}
+                      ${isSelected ? "text-[var(--coral)]" : ""}
+                      ${!day.isToday && !isSelected ? (day.isPast ? "text-[var(--muted)]/60" : "text-[var(--cream)]") : ""}
+                    `}
+                  >
+                    {format(day.date, "d")}
                   </span>
-                  <span>
-                    <span className="text-[var(--cream)] font-medium">{data.summary.interested}</span> interested
-                  </span>
-                </div>
+
+                  {/* Status indicators (going = coral, interested = gold) */}
+                  {hasEvents && day.isCurrentMonth && (
+                    <div className="absolute top-1 right-1.5 flex gap-0.5">
+                      {hasGoing && (
+                        <span className="w-2 h-2 rounded-full bg-[var(--coral)]" title="Going" />
+                      )}
+                      {hasInterested && !hasGoing && (
+                        <span className="w-2 h-2 rounded-full bg-[var(--gold)]" title="Interested" />
+                      )}
+                    </div>
+                  )}
+
+                  {/* Friend avatars at bottom */}
+                  {hasFriendEvents && day.isCurrentMonth && (
+                    <div className="absolute bottom-1 left-1/2 -translate-x-1/2 flex -space-x-1">
+                      {friendAvatars.map((friend) => (
+                        <div
+                          key={friend.id}
+                          className="w-4 h-4 rounded-full border border-[var(--night)] overflow-hidden bg-[var(--twilight)]"
+                          title={friend.display_name || friend.username}
+                        >
+                          {friend.avatar_url ? (
+                            <Image
+                              src={friend.avatar_url}
+                              alt=""
+                              width={16}
+                              height={16}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <span className="w-full h-full flex items-center justify-center text-[0.4rem] text-[var(--muted)]">
+                              {(friend.display_name || friend.username)[0].toUpperCase()}
+                            </span>
+                          )}
+                        </div>
+                      ))}
+                      {day.friendEvents.length > 3 && (
+                        <span className="w-4 h-4 rounded-full border border-[var(--night)] bg-[var(--twilight)] flex items-center justify-center text-[0.4rem] text-[var(--muted)]">
+                          +{day.friendEvents.length - 3}
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Legend */}
+          <div className="mt-4 flex flex-wrap items-center gap-4 text-[0.65rem] text-[var(--muted)]">
+            <div className="flex items-center gap-1.5">
+              <span className="w-3 h-3 rounded border-2 border-[var(--gold)]" />
+              <span>Today</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-[var(--coral)]" />
+              <span>Going</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-[var(--gold)]" />
+              <span>Interested</span>
+            </div>
+            {selectedFriendIds.size > 0 && (
+              <div className="flex items-center gap-1.5">
+                <span className="w-4 h-4 rounded-full bg-[var(--twilight)]" />
+                <span>Friend going</span>
               </div>
             )}
           </div>
 
-          {/* Selected Day Detail */}
-          <div className="bg-[var(--night)] rounded-xl p-6 border border-[var(--twilight)] h-fit lg:sticky lg:top-4">
-            {selectedDate ? (
-              <div>
-                {/* Date header */}
-                <div className="mb-4">
-                  <div className="font-mono text-xs text-[var(--muted)] uppercase tracking-wider">
-                    {format(selectedDate, "EEEE")}
-                  </div>
-                  <div className="font-mono text-xl font-bold text-[var(--cream)]">
-                    {format(selectedDate, "MMMM d, yyyy")}
-                  </div>
-                  {isToday(selectedDate) && (
-                    <span className="inline-block mt-1 px-2 py-0.5 rounded-full bg-[var(--gold)] text-[var(--void)] font-mono text-[0.6rem] font-medium">
-                      TODAY
-                    </span>
-                  )}
-                </div>
+          {/* Summary */}
+          {data?.summary && (
+            <div className="mt-4 pt-4 border-t border-[var(--twilight)]/50">
+              <div className="flex items-center gap-4 text-[var(--muted)] font-mono text-xs">
+                <span className="flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-[var(--coral)]" />
+                  <span className="text-[var(--cream)] font-medium">{data.summary.going}</span> going
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-[var(--gold)]" />
+                  <span className="text-[var(--cream)] font-medium">{data.summary.interested}</span> interested
+                </span>
+              </div>
+            </div>
+          )}
+        </div>
 
-                {/* Events list */}
-                {isLoading ? (
-                  <div className="space-y-3">
-                    {[1, 2, 3].map((i) => (
-                      <div key={i} className="p-3 rounded-lg border border-[var(--twilight)] bg-[var(--dusk)]">
-                        <div className="h-3 w-16 rounded skeleton-shimmer mb-2" />
-                        <div className="h-4 w-3/4 rounded skeleton-shimmer mb-1" />
-                        <div className="h-3 w-1/2 rounded skeleton-shimmer" />
-                      </div>
-                    ))}
-                  </div>
-                ) : selectedDayEvents.length > 0 ? (
-                  <div className="space-y-2 max-h-[60vh] overflow-y-auto pr-1 scrollbar-thin">
+        {/* Selected Day Detail */}
+        <div className="bg-[var(--night)] rounded-xl p-6 border border-[var(--twilight)] h-fit lg:sticky lg:top-20">
+          {selectedDate ? (
+            <div>
+              {/* Date header */}
+              <div className="mb-4">
+                <div className="font-mono text-xs text-[var(--muted)] uppercase tracking-wider">
+                  {format(selectedDate, "EEEE")}
+                </div>
+                <div className="font-mono text-xl font-bold text-[var(--cream)]">
+                  {format(selectedDate, "MMMM d, yyyy")}
+                </div>
+                {isToday(selectedDate) && (
+                  <span className="inline-block mt-1 px-2 py-0.5 rounded-full bg-[var(--gold)] text-[var(--void)] font-mono text-[0.6rem] font-medium">
+                    TODAY
+                  </span>
+                )}
+              </div>
+
+              {/* Your events */}
+              {selectedDayEvents.length > 0 && (
+                <div className="mb-4">
+                  <h4 className="font-mono text-xs text-[var(--muted)] uppercase tracking-wider mb-2">Your Events</h4>
+                  <div className="space-y-2">
                     {selectedDayEvents.map((event) => {
                       const { time, period } = formatTimeSplit(event.start_time, event.is_all_day);
-                      const categoryColor = event.category ? getCategoryColor(event.category) : null;
 
                       return (
                         <Link
@@ -510,11 +656,10 @@ export default function CalendarPage() {
                           scroll={false}
                           className="block p-3 rounded-lg border border-[var(--twilight)] bg-[var(--dusk)] hover:border-[var(--coral)]/50 transition-colors group"
                           style={{
-                            borderLeftWidth: categoryColor ? "3px" : undefined,
-                            borderLeftColor: categoryColor || undefined,
+                            borderLeftWidth: "3px",
+                            borderLeftColor: event.rsvp_status === "going" ? "var(--coral)" : "var(--gold)",
                           }}
                         >
-                          {/* Time and RSVP status */}
                           <div className="flex items-center justify-between mb-1">
                             <span className="font-mono text-xs text-[var(--muted)]">
                               {time}
@@ -529,7 +674,6 @@ export default function CalendarPage() {
                             </span>
                           </div>
 
-                          {/* Title */}
                           <div className="flex items-center gap-2">
                             {event.category && (
                               <CategoryIcon type={event.category} size={14} className="flex-shrink-0 opacity-60" />
@@ -539,54 +683,104 @@ export default function CalendarPage() {
                             </span>
                           </div>
 
-                          {/* Venue */}
                           {event.venue && (
                             <div className="mt-1 text-xs text-[var(--muted)] truncate">
                               {event.venue.name}
-                              {event.venue.neighborhood && (
-                                <span className="opacity-60"> · {event.venue.neighborhood}</span>
-                              )}
                             </div>
-                          )}
-
-                          {/* Free badge */}
-                          {event.is_free && (
-                            <span className="inline-block mt-2 px-1.5 py-0.5 rounded-full bg-[var(--neon-green)]/20 text-[var(--neon-green)] font-mono text-[0.55rem] font-medium">
-                              FREE
-                            </span>
                           )}
                         </Link>
                       );
                     })}
                   </div>
-                ) : (
-                  <div className="text-center py-12">
-                    <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-[var(--twilight)]/30 flex items-center justify-center">
-                      <svg className="w-8 h-8 text-[var(--muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                      </svg>
-                    </div>
-                    <p className="text-[var(--soft)] font-mono text-sm">No events</p>
-                    <p className="text-[var(--muted)]/60 text-xs mt-1">
-                      {isBefore(selectedDate, new Date()) && !isToday(selectedDate)
-                        ? "Nothing from this day"
-                        : "RSVP to events to see them here"}
-                    </p>
-                    <Link
-                      href="/la"
-                      className="inline-block mt-4 px-4 py-2 bg-[var(--coral)] text-[var(--void)] font-mono text-xs font-medium rounded-lg hover:bg-[var(--rose)] transition-colors"
-                    >
-                      Explore Events
-                    </Link>
+                </div>
+              )}
+
+              {/* Friends' events */}
+              {selectedDayFriendEvents.length > 0 && (
+                <div className="mb-4">
+                  <h4 className="font-mono text-xs text-[var(--muted)] uppercase tracking-wider mb-2">Friends&apos; Events</h4>
+                  <div className="space-y-2">
+                    {selectedDayFriendEvents.map((event, idx) => {
+                      const { time, period } = formatTimeSplit(event.start_time, event.is_all_day);
+
+                      return (
+                        <Link
+                          key={`${event.id}-${event.friend.id}-${idx}`}
+                          href={`/la?event=${event.id}`}
+                          scroll={false}
+                          className="block p-3 rounded-lg border border-[var(--twilight)] bg-[var(--dusk)]/50 hover:border-[var(--coral)]/50 transition-colors group"
+                        >
+                          <div className="flex items-center gap-2 mb-1">
+                            {event.friend.avatar_url ? (
+                              <Image
+                                src={event.friend.avatar_url}
+                                alt=""
+                                width={18}
+                                height={18}
+                                className="w-[18px] h-[18px] rounded-full object-cover"
+                              />
+                            ) : (
+                              <span className="w-[18px] h-[18px] rounded-full bg-[var(--twilight)] flex items-center justify-center text-[0.5rem] text-[var(--muted)]">
+                                {(event.friend.display_name || event.friend.username)[0].toUpperCase()}
+                              </span>
+                            )}
+                            <span className="font-mono text-xs text-[var(--soft)]">
+                              {event.friend.display_name || event.friend.username}
+                            </span>
+                            <span className={`ml-auto px-1.5 py-0.5 rounded-full font-mono text-[0.55rem] font-medium ${
+                              event.rsvp_status === "going"
+                                ? "bg-[var(--coral)]/20 text-[var(--coral)]"
+                                : "bg-[var(--gold)]/20 text-[var(--gold)]"
+                            }`}>
+                              {event.rsvp_status === "going" ? "GOING" : "INTERESTED"}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono text-xs text-[var(--muted)]">
+                              {time}
+                              {period && <span className="text-[0.6rem] ml-0.5 opacity-60">{period}</span>}
+                            </span>
+                          </div>
+
+                          <span className="text-sm text-[var(--cream)] group-hover:text-[var(--coral)] transition-colors line-clamp-2">
+                            {event.title}
+                          </span>
+                        </Link>
+                      );
+                    })}
                   </div>
-                )}
-              </div>
-            ) : (
-              <div className="text-center py-12 text-[var(--muted)]">
-                <p className="font-mono text-sm">Select a day to see events</p>
-              </div>
-            )}
-          </div>
+                </div>
+              )}
+
+              {/* Empty state */}
+              {selectedDayEvents.length === 0 && selectedDayFriendEvents.length === 0 && (
+                <div className="text-center py-8">
+                  <div className="w-14 h-14 mx-auto mb-4 rounded-full bg-[var(--twilight)]/30 flex items-center justify-center">
+                    <svg className="w-7 h-7 text-[var(--muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                  </div>
+                  <p className="text-[var(--soft)] font-mono text-sm">No events</p>
+                  <p className="text-[var(--muted)]/60 text-xs mt-1">
+                    {isBefore(selectedDate, new Date()) && !isToday(selectedDate)
+                      ? "Nothing from this day"
+                      : "RSVP to events to see them here"}
+                  </p>
+                  <Link
+                    href="/la"
+                    className="inline-block mt-4 px-4 py-2 bg-[var(--coral)] text-[var(--void)] font-mono text-xs font-medium rounded-lg hover:bg-[var(--rose)] transition-colors"
+                  >
+                    Explore Events
+                  </Link>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="text-center py-12 text-[var(--muted)]">
+              <p className="font-mono text-sm">Select a day to see events</p>
+            </div>
+          )}
         </div>
       </div>
     </div>
