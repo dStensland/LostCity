@@ -22,7 +22,7 @@ export default function InviteFriendsLayout({
   }, [authState, router]);
 
   // Show loading during initial auth check
-  if (authState === "initializing" || authState === "checking") {
+  if (authState === "initializing") {
     return (
       <div className="min-h-screen flex flex-col bg-[var(--void)]">
         <header className="sticky top-0 z-40 border-b bg-[var(--void)]/95 backdrop-blur-sm border-[var(--twilight)]/30">

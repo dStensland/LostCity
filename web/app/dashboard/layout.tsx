@@ -23,8 +23,7 @@ export default function DashboardLayout({
   }, [authState, router]);
 
   // Only show loading during initial auth check
-  // If authState is "checking" or "initializing", show minimal loading
-  if (authState === "initializing" || authState === "checking") {
+  if (authState === "initializing") {
     return (
       <div className="min-h-screen flex flex-col">
         {/* Show header shell to prevent layout shift */}
