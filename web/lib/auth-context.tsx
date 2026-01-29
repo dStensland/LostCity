@@ -195,12 +195,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     let loadingResolved = false;
 
     // Safety timeout - ensure loading state resolves even if Supabase has issues
+    // But preserve existing auth state if user is already logged in
     const safetyTimeout = setTimeout(() => {
       if (isMountedRef.current && !loadingResolved) {
         console.warn("Auth safety timeout triggered - forcing loading to false");
         setLoading(false);
         setProfileLoading(false);
-        setAuthState("unauthenticated");
+        // Only set unauthenticated if we don't already have a user
+        // This prevents logging out users during navigation
+        if (!currentUserIdRef.current) {
+          setAuthState("unauthenticated");
+        }
       }
     }, 5000);
 
