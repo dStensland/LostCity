@@ -272,16 +272,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED" || event === "USER_UPDATED") {
         if (newSession?.user) {
-          setUser(newSession.user);
-          setSession(newSession);
-          currentUserIdRef.current = newSession.user.id;
-          setAuthState("authenticated");
+          // Only update if user actually changed (prevents race condition with initAuth)
+          const userChanged = currentUserIdRef.current !== newSession.user.id;
 
-          // Fetch profile for new session
-          profileFetchRef.current = null; // Reset to allow new fetch
-          const userProfile = await fetchProfile(newSession.user.id);
-          if (isMountedRef.current) {
-            setProfile(userProfile);
+          if (userChanged) {
+            setUser(newSession.user);
+            setSession(newSession);
+            currentUserIdRef.current = newSession.user.id;
+            setAuthState("authenticated");
+
+            // Only fetch profile if user changed (not just re-firing the same session)
+            profileFetchRef.current = null;
+            const userProfile = await fetchProfile(newSession.user.id);
+            if (isMountedRef.current) {
+              setProfile(userProfile);
+            }
           }
         }
         setLoading(false);
