@@ -22,26 +22,74 @@ type Organization = {
 };
 
 const ORG_TYPE_CONFIG: Record<string, { label: string; color: string }> = {
+  // Arts & Culture
   arts_nonprofit: { label: "Arts & Culture", color: "#C4B5FD" },
+  arts_org: { label: "Arts Organization", color: "#C4B5FD" },
+  artist_collective: { label: "Artist Collective", color: "#DDD6FE" },
+  museum: { label: "Museum", color: "#A78BFA" },
+  // Film & Media
   film_society: { label: "Film", color: "#A5B4FC" },
+  media: { label: "Media", color: "#93C5FD" },
+  entertainment_company: { label: "Entertainment", color: "#60A5FA" },
+  // Community
   community_group: { label: "Community", color: "#6EE7B7" },
+  community_nonprofit: { label: "Community Nonprofit", color: "#34D399" },
+  mutual_aid: { label: "Mutual Aid", color: "#10B981" },
+  // Fitness & Outdoor
   running_club: { label: "Fitness", color: "#5EEAD4" },
+  environmental_nonprofit: { label: "Environmental", color: "#2DD4BF" },
+  // Cultural
   cultural_org: { label: "Cultural", color: "#FBBF24" },
+  religious_nonprofit: { label: "Religious", color: "#F59E0B" },
+  // Food & Drink
   food_festival: { label: "Food & Drink", color: "#FDBA74" },
+  food_nonprofit: { label: "Food Nonprofit", color: "#FB923C" },
+  // Venues & Events
   venue: { label: "Venue", color: "#A78BFA" },
   festival: { label: "Festival", color: "#F9A8D4" },
+  // Advocacy & Government
+  advocacy_org: { label: "Advocacy", color: "#F472B6" },
+  political_party: { label: "Political", color: "#EC4899" },
+  government: { label: "Government", color: "#94A3B8" },
+  // Youth & Safety
+  youth_nonprofit: { label: "Youth", color: "#FCD34D" },
+  safety_nonprofit: { label: "Safety", color: "#EF4444" },
 };
 
-// Order for category sorting
+// Order for category sorting - grouped by theme
 const ORG_TYPE_ORDER = [
+  // Arts & Culture
   "arts_nonprofit",
+  "arts_org",
+  "artist_collective",
+  "museum",
+  // Film & Media
   "film_society",
+  "media",
+  "entertainment_company",
+  // Community
   "community_group",
+  "community_nonprofit",
+  "mutual_aid",
+  // Fitness & Outdoor
   "running_club",
+  "environmental_nonprofit",
+  // Cultural
   "cultural_org",
+  "religious_nonprofit",
+  // Food & Drink
   "food_festival",
+  "food_nonprofit",
+  // Venues & Events
   "venue",
   "festival",
+  // Advocacy & Government
+  "advocacy_org",
+  "political_party",
+  "government",
+  // Youth & Safety
+  "youth_nonprofit",
+  "safety_nonprofit",
 ];
 
 interface Props {
