@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/components/Toast";
 
@@ -234,18 +233,21 @@ export default function FriendButton({
     if (!user) return;
 
     setActionLoading(true);
-    const supabase = createClient();
 
     try {
-      // Delete our follow of them - this breaks the mutual friendship
-      const { error } = await supabase
-        .from("follows")
-        .delete()
-        .eq("follower_id", user.id)
-        .eq("followed_user_id", targetUserId);
+      // Delete our follow of them via API - this breaks the mutual friendship
+      const res = await fetch("/api/follow", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          targetUserId,
+          action: "unfollow",
+        }),
+      });
 
-      if (error) {
-        showToast("Failed to unfriend", "error");
+      if (!res.ok) {
+        const data = await res.json();
+        showToast(data.error || "Failed to unfriend", "error");
         return;
       }
 

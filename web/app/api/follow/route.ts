@@ -81,7 +81,7 @@ export async function POST(request: NextRequest) {
       if (targetUserId) {
         query = query.eq("followed_user_id", targetUserId);
       } else if (targetVenueId) {
-        query = query.eq("followed_venue_id", targetVenueId);
+        query = query.eq("followed_venue_id", parseInt(targetVenueId));
       } else if (targetOrganizationId) {
         query = query.eq("followed_organization_id", targetOrganizationId);
       }
