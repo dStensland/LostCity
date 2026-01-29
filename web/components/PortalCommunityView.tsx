@@ -26,15 +26,17 @@ const ORG_TYPE_CONFIG: Record<string, { label: string; color: string }> = {
   arts: { label: "Arts & Culture", color: "#C4B5FD" },
   film: { label: "Film", color: "#A5B4FC" },
   entertainment: { label: "Entertainment", color: "#60A5FA" },
-  // Community & Advocacy
+  // Community & Social
   community: { label: "Community", color: "#6EE7B7" },
   advocacy: { label: "Advocacy", color: "#F472B6" },
-  // Environment & Outdoors
+  faith: { label: "Faith", color: "#FDE68A" },
+  food: { label: "Food & Hunger", color: "#FDBA74" },
+  youth: { label: "Youth", color: "#FCD34D" },
+  // Outdoors & Active
+  parks: { label: "Parks & Trails", color: "#86EFAC" },
   environmental: { label: "Environmental", color: "#2DD4BF" },
   fitness: { label: "Fitness", color: "#5EEAD4" },
-  // Food & Youth
-  food: { label: "Food & Drink", color: "#FDBA74" },
-  youth: { label: "Youth", color: "#FCD34D" },
+  sports: { label: "Sports", color: "#7DD3FC" },
 };
 
 // Order for category sorting
@@ -44,10 +46,13 @@ const ORG_TYPE_ORDER = [
   "entertainment",
   "community",
   "advocacy",
-  "environmental",
-  "fitness",
+  "faith",
   "food",
   "youth",
+  "parks",
+  "environmental",
+  "fitness",
+  "sports",
 ];
 
 interface Props {
