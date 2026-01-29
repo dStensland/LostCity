@@ -215,14 +215,14 @@ const THEMED_SECTION_ICONS: Record<string, { icon: React.ReactNode; color: strin
     color: "#FF69B4", // Hot pink / neon pink
     icon: (
       // eslint-disable-next-line @next/next/no-img-element
-      <img src="/icons/valentines-heart.png" alt="" className="w-6 h-6 object-contain" />
+      <img src="/icons/valentines-heart.png" alt="" className="w-8 h-8 object-contain" />
     ),
   },
   "lunar-new-year": {
     color: "#DC143C", // Crimson red
     icon: (
       // eslint-disable-next-line @next/next/no-img-element
-      <img src="/icons/fire-horse.png" alt="" className="w-6 h-6 object-contain" />
+      <img src="/icons/fire-horse.png" alt="" className="w-8 h-8 object-contain" />
     ),
   },
   "super-bowl": {
@@ -238,7 +238,7 @@ const THEMED_SECTION_ICONS: Record<string, { icon: React.ReactNode; color: strin
     color: "#9B59B6", // Purple
     icon: (
       // eslint-disable-next-line @next/next/no-img-element
-      <img src="/icons/raised-fist.png" alt="" className="w-6 h-6 object-contain" />
+      <img src="/icons/raised-fist.png" alt="" className="w-8 h-8 object-contain" />
     ),
   },
   "mardi-gras": {
@@ -280,11 +280,11 @@ function SectionHeader({
         {/* Themed icon with glow */}
         {themedConfig && (
           <div
-            className="flex items-center justify-center w-8 h-8 rounded-lg"
+            className="flex items-center justify-center w-10 h-10 rounded-lg overflow-hidden"
             style={{
               color: accentColor,
               backgroundColor: `color-mix(in srgb, ${accentColor} 15%, transparent)`,
-              boxShadow: `0 0 12px color-mix(in srgb, ${accentColor} 40%, transparent)`,
+              boxShadow: `0 0 16px color-mix(in srgb, ${accentColor} 50%, transparent)`,
             }}
           >
             {themedConfig.icon}
@@ -293,7 +293,10 @@ function SectionHeader({
         <div>
           <h3
             className="text-xl font-semibold tracking-tight"
-            style={{ color: accentColor || "var(--cream)" }}
+            style={{
+              color: accentColor || "var(--cream)",
+              textShadow: accentColor ? `0 0 20px color-mix(in srgb, ${accentColor} 50%, transparent)` : undefined,
+            }}
           >
             {section.title}
           </h3>
@@ -304,10 +307,11 @@ function SectionHeader({
       </div>
       <Link
         href={seeAllUrl}
-        className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-mono transition-colors group"
+        className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-mono transition-all group hover:scale-105"
         style={{
           color: accentColor || "var(--muted)",
           backgroundColor: accentColor ? `color-mix(in srgb, ${accentColor} 10%, transparent)` : undefined,
+          boxShadow: accentColor ? `0 0 12px color-mix(in srgb, ${accentColor} 30%, transparent)` : undefined,
         }}
       >
         See all
