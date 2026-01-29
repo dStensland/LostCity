@@ -214,16 +214,36 @@ const THEMED_SECTION_ICONS: Record<string, { icon: React.ReactNode; color: strin
   "valentines-day": {
     color: "var(--rose)",
     icon: (
-      <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-        <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
+      // Anatomical heart icon - neon pink style
+      <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        {/* Main heart body */}
+        <path d="M12 21c-1.5-1.5-6-5.5-7.5-8.5C3 9.5 3.5 6 6.5 5c2-.7 4 .5 5.5 2.5C13.5 5.5 15.5 4.3 17.5 5c3 1 3.5 4.5 2 7.5C18 15.5 13.5 19.5 12 21z" fill="currentColor" />
+        {/* Aorta - main artery going up */}
+        <path d="M12 7.5V4c0-1 .5-2 2-2" />
+        {/* Pulmonary artery - branches */}
+        <path d="M10 6c-1-1.5-2-2-3.5-1.5" />
+        <path d="M14 6c1-1.5 2-2 3.5-1.5" />
+        {/* Vena cava */}
+        <path d="M9 8c-1.5-.5-2.5-1-3-2" />
       </svg>
     ),
   },
   "lunar-new-year": {
     color: "var(--coral)",
     icon: (
-      <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-        <path d="M19 5h-2V3H7v2H5c-1.1 0-2 .9-2 2v1c0 2.55 1.92 4.63 4.39 4.94.63 1.5 1.98 2.63 3.61 2.96V19H7v2h10v-2h-4v-3.1c1.63-.33 2.98-1.46 3.61-2.96C19.08 12.63 21 10.55 21 8V7c0-1.1-.9-2-2-2zM5 8V7h2v3.82C5.84 10.4 5 9.3 5 8zm14 0c0 1.3-.84 2.4-2 2.82V7h2v1z" />
+      // Fire horse icon - neon style horse head with flame mane
+      <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        {/* Horse head profile */}
+        <path d="M6 18c0-2 1-3 2-4l1-1c.5-1 .5-2 0-3l-1-2c0-1 1-2 2-2h2c1 0 2-.5 3-1.5l1-1.5" fill="currentColor" />
+        {/* Horse ear */}
+        <path d="M13 4l1-2 1 2" />
+        {/* Horse eye */}
+        <circle cx="8" cy="11" r="0.5" fill="currentColor" />
+        {/* Horse nostril */}
+        <circle cx="5" cy="15" r="0.5" fill="currentColor" />
+        {/* Fire mane - flowing flames */}
+        <path d="M14 5c1-2 2-3 3-2s0 2-1 3c2-1 3-1 3 1s-2 2-3 2c2 0 3 1 2 2s-2 1-3 0" strokeWidth="1.2" />
+        <path d="M16 10c1.5-1 2.5-1 2.5.5s-1.5 2-2.5 2" strokeWidth="1.2" />
       </svg>
     ),
   },

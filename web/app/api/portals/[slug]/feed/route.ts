@@ -439,7 +439,7 @@ export async function GET(request: NextRequest, { params }: Props) {
         id: "valentines-2025",
         title: "Valentine's Day",
         slug: "valentines-day",
-        description: "You know, hearts and stuff",
+        description: "Be still thy beating heart",
         section_type: "auto",
         block_type: "event_carousel",
         layout: "carousel",
@@ -460,7 +460,7 @@ export async function GET(request: NextRequest, { params }: Props) {
         show_before_time: null,
         style: {
           accent_color: "var(--rose)",
-          icon: "heart",
+          icon: "anatomical-heart",
         },
         portal_section_items: [],
       });
@@ -472,7 +472,7 @@ export async function GET(request: NextRequest, { params }: Props) {
         id: "lunar-new-year-2025",
         title: "Lunar New Year",
         slug: "lunar-new-year",
-        description: "Year of Horsin' Around. With FIRE. 🐴🔥",
+        description: "Year of Horsin Around. With FIRE.",
         section_type: "auto",
         block_type: "event_carousel",
         layout: "carousel",
@@ -766,9 +766,17 @@ export async function GET(request: NextRequest, { params }: Props) {
     };
   });
 
-  // Combine holiday sections (at top) with regular sections, filtering out empty sections
+  // Sort holiday sections by display_order and combine with regular sections
+  const sortedHolidaySections = holidayFeedSections
+    .filter(s => s.events.length > 0)
+    .sort((a, b) => {
+      const orderA = holidaySections.find(h => h.id === a.id)?.display_order ?? 0;
+      const orderB = holidaySections.find(h => h.id === b.id)?.display_order ?? 0;
+      return orderA - orderB;
+    });
+
   const finalSections = [
-    ...holidayFeedSections.filter(s => s.events.length > 0),
+    ...sortedHolidaySections,
     ...feedSections
   ];
 
