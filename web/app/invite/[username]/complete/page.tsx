@@ -56,11 +56,23 @@ export default function InviteCompletePage({ params }: Props) {
           return;
         }
 
-        // Create friend request
+        // Check if auto-friend is enabled (stored in localStorage from invite page)
+        const autoFriendInviter = localStorage.getItem("auto_friend_inviter");
+        const shouldAutoFriend = autoFriendInviter === username;
+
+        // Clear the localStorage entry
+        if (autoFriendInviter) {
+          localStorage.removeItem("auto_friend_inviter");
+        }
+
+        // Create friend request (with auto_accept if enabled)
         const response = await fetch("/api/friend-requests", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ inviter_username: username }),
+          body: JSON.stringify({
+            inviter_username: username,
+            auto_accept: shouldAutoFriend,
+          }),
         });
 
         const data = await response.json();

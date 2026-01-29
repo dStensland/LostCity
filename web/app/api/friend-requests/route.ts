@@ -79,9 +79,10 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { inviter_id, inviter_username } = body as {
+    const { inviter_id, inviter_username, auto_accept } = body as {
       inviter_id?: string;
       inviter_username?: string;
+      auto_accept?: boolean;
     };
 
     // Validate input
@@ -124,24 +125,21 @@ export async function POST(request: Request) {
       );
     }
 
-    // Check if already friends (mutual follows)
-    const { data: follows } = await supabase
-      .from("follows")
-      .select("id, follower_id, followed_user_id")
-      .or(
-        `and(follower_id.eq.${user.id},followed_user_id.eq.${resolvedInviterId}),and(follower_id.eq.${resolvedInviterId},followed_user_id.eq.${user.id})`
+    // Check if already friends using the friendships table
+    const { data: areFriends, error: friendCheckError } = await supabase.rpc(
+      "are_friends" as never,
+      { user_a: user.id, user_b: resolvedInviterId } as never
+    ) as { data: boolean | null; error: Error | null };
+
+    if (friendCheckError) {
+      console.error("Error checking friendship:", friendCheckError);
+      return NextResponse.json(
+        { error: "Failed to check friendship status" },
+        { status: 500 }
       );
+    }
 
-    type FollowRow = { follower_id: string; followed_user_id: string };
-    const followsData = follows as FollowRow[] | null;
-    const userFollowsInviter = followsData?.some(
-      (f) => f.follower_id === user.id && f.followed_user_id === resolvedInviterId
-    );
-    const inviterFollowsUser = followsData?.some(
-      (f) => f.follower_id === resolvedInviterId && f.followed_user_id === user.id
-    );
-
-    if (userFollowsInviter && inviterFollowsUser) {
+    if (areFriends) {
       return NextResponse.json(
         { error: "You are already friends" },
         { status: 400 }
@@ -200,6 +198,36 @@ export async function POST(request: Request) {
         { error: "Friend request already pending" },
         { status: 400 }
       );
+    }
+
+    // If auto_accept is true, create friendship directly (skip the pending request)
+    if (auto_accept) {
+      // Create friendship directly using RPC
+      const { error: friendshipError } = await supabase.rpc(
+        "create_friendship" as never,
+        { user_a: resolvedInviterId, user_b: user.id } as never
+      );
+
+      if (friendshipError) {
+        console.error("Error creating auto-friendship:", friendshipError);
+        return errorResponse(friendshipError, "friend-requests:POST:auto-accept");
+      }
+
+      // Also create an "accepted" friend request record for history
+      await supabase
+        .from("friend_requests" as never)
+        .insert({
+          inviter_id: resolvedInviterId,
+          invitee_id: user.id,
+          status: "accepted",
+          responded_at: new Date().toISOString(),
+        } as never);
+
+      return NextResponse.json({
+        success: true,
+        message: "You are now friends!",
+        accepted: true,
+      });
     }
 
     // Create the friend request

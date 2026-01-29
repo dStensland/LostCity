@@ -175,6 +175,16 @@ export default function UserMenu() {
             <span>My Calendar</span>
           </Link>
 
+          {/* Invite Friends link */}
+          <Link
+            href="/invite-friends"
+            onClick={() => setIsOpen(false)}
+            className="flex items-center gap-2 px-4 py-2 font-mono text-xs text-[var(--soft)] hover:bg-[var(--twilight)] transition-colors"
+          >
+            <span>📨</span>
+            <span>Invite Friends</span>
+          </Link>
+
           {/* Settings link */}
           <Link
             href="/settings"

@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { useSearchParams } from "next/navigation";
 import Logo from "@/components/Logo";
 import { useAuth } from "@/lib/auth-context";
 import { DEFAULT_PORTAL_SLUG } from "@/lib/portal-context";
@@ -22,6 +23,7 @@ type Props = {
 
 export default function InvitePage({ params }: Props) {
   const { user, loading: authLoading } = useAuth();
+  const searchParams = useSearchParams();
   const [inviter, setInviter] = useState<InviterProfile | null>(null);
   const [relationship, setRelationship] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -29,11 +31,17 @@ export default function InvitePage({ params }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [username, setUsername] = useState<string>("");
+  const autoFriend = searchParams.get("auto") === "1";
 
   useEffect(() => {
     async function loadInviter() {
       const { username: u } = await params;
       setUsername(u);
+
+      // Store auto-friend preference in localStorage for use after signup/login
+      if (autoFriend) {
+        localStorage.setItem("auto_friend_inviter", u);
+      }
 
       try {
         const response = await fetch(`/api/users/${u}`);
@@ -57,7 +65,7 @@ export default function InvitePage({ params }: Props) {
     }
 
     loadInviter();
-  }, [params]);
+  }, [params, autoFriend]);
 
   const handleAddFriend = async () => {
     if (!inviter || !user) return;
@@ -180,18 +188,23 @@ export default function InvitePage({ params }: Props) {
             <p className="text-[var(--clay)] text-sm mt-2">
               Discover the best events happening in Atlanta
             </p>
+            {autoFriend && (
+              <p className="text-[var(--coral)] text-sm mt-2 font-medium">
+                You&apos;ll automatically become friends when you join!
+              </p>
+            )}
           </div>
 
           {/* Auth Buttons */}
           <div className="space-y-3">
             <Link
-              href={`/auth/signup?redirect=/invite/${username}/complete&inviter=${username}`}
+              href={`/auth/signup?redirect=/invite/${username}/complete&inviter=${username}${autoFriend ? "&auto=1" : ""}`}
               className="block w-full bg-[var(--coral)] text-[var(--night)] py-3 rounded font-medium text-center hover:opacity-90"
             >
               Sign Up
             </Link>
             <Link
-              href={`/auth/login?redirect=/invite/${username}/complete&inviter=${username}`}
+              href={`/auth/login?redirect=/invite/${username}/complete&inviter=${username}${autoFriend ? "&auto=1" : ""}`}
               className="block w-full bg-transparent border border-[var(--cream)] text-[var(--cream)] py-3 rounded font-medium text-center hover:bg-[var(--cream)]/10"
             >
               Log In
@@ -201,7 +214,7 @@ export default function InvitePage({ params }: Props) {
           <p className="text-center text-[var(--clay)] text-sm mt-6">
             Already have an account?{" "}
             <Link
-              href={`/auth/login?redirect=/invite/${username}/complete&inviter=${username}`}
+              href={`/auth/login?redirect=/invite/${username}/complete&inviter=${username}${autoFriend ? "&auto=1" : ""}`}
               className="text-[var(--coral)] hover:underline"
             >
               Log in
