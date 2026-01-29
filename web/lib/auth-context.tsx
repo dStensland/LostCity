@@ -247,7 +247,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           markLoadingResolved();
         }
       } catch (err) {
+        // AbortError can happen during navigation - still need to resolve loading
         if (err instanceof Error && err.name === "AbortError") {
+          console.log("Auth init aborted - likely navigation");
+          if (isMountedRef.current) {
+            setLoading(false);
+            setProfileLoading(false);
+            setAuthState("unauthenticated");
+            markLoadingResolved();
+          }
           return;
         }
         console.error("Auth init error:", err);
