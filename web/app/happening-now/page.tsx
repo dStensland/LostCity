@@ -196,7 +196,7 @@ export default function HappeningNowPage() {
     return SPOT_CATEGORIES.map((cat) => {
       const spotCats = cat.spotTypes as readonly string[];
       const categorySpots = filteredSpots.filter((s) =>
-        spotCats.includes(s.spot_type || "")
+        spotCats.includes(s.venue_type || "")
       );
 
       // Sort by distance if location available
@@ -574,7 +574,7 @@ export default function HappeningNowPage() {
                         >
                           <div className="flex items-start gap-2">
                             <CategoryIcon
-                              type={spot.spot_type || "restaurant"}
+                              type={spot.venue_type || "restaurant"}
                               size={16}
                               className="mt-0.5 flex-shrink-0"
                             />
@@ -584,7 +584,7 @@ export default function HappeningNowPage() {
                               </h3>
                               <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
                                 <p className="text-[0.65rem] text-[var(--muted)] font-mono uppercase tracking-wider">
-                                  {SPOT_TYPE_LABELS[spot.spot_type || ""] || spot.spot_type}
+                                  {SPOT_TYPE_LABELS[spot.venue_type || ""] || spot.venue_type}
                                 </p>
                                 {spotWithHours.closesAt && (
                                   <span className="text-[0.6rem] text-[var(--neon-amber)] font-mono">

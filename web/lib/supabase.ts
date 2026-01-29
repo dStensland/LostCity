@@ -153,8 +153,11 @@ export type Producer = {
   description: string | null;
 };
 
+export type Organization = Producer;
+
 export type EventWithProducer = Event & {
-  producer?: Producer | null;
+  organization?: Organization | null;
+  producer?: Producer | null; // Legacy alias for compatibility
 };
 
 export async function getEventById(id: number): Promise<EventWithProducer | null> {
@@ -164,7 +167,7 @@ export async function getEventById(id: number): Promise<EventWithProducer | null
       `
       *,
       venue:venues(id, name, slug, address, neighborhood, city, state, vibes, description),
-      producer:event_producers(id, name, slug, org_type, website, instagram, logo_url, description)
+      organization:organizations(id, name, slug, org_type, website, instagram, logo_url, description)
     `
     )
     .eq("id", id)

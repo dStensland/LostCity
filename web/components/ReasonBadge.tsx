@@ -5,7 +5,7 @@ import { memo } from "react";
 export type ReasonType =
   | "friends_going"
   | "followed_venue"
-  | "followed_producer"
+  | "followed_organization"
   | "neighborhood"
   | "price"
   | "category"
@@ -42,7 +42,7 @@ const REASON_STYLES: Record<ReasonType, { bg: string; text: string; icon: React.
       </svg>
     ),
   },
-  followed_producer: {
+  followed_organization: {
     bg: "bg-[var(--lavender)]/15",
     text: "text-[var(--lavender)]",
     icon: (
@@ -94,7 +94,7 @@ const REASON_STYLES: Record<ReasonType, { bg: string; text: string; icon: React.
 export const REASON_PRIORITY: ReasonType[] = [
   "friends_going",
   "followed_venue",
-  "followed_producer",
+  "followed_organization",
   "neighborhood",
   "category",
   "price",

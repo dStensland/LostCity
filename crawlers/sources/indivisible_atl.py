@@ -1,7 +1,7 @@
 """
 Crawler for Indivisible ATL (indivisibleatl.com/events).
 Progressive political action and organizing events.
-Uses JavaScript-based calendar - requires Playwright.
+Squarespace-based event listings with eventlist-* CSS classes.
 """
 
 from __future__ import annotations
@@ -15,7 +15,6 @@ from playwright.sync_api import sync_playwright
 
 from db import get_or_create_venue, insert_event, find_event_by_hash
 from dedupe import generate_content_hash
-from utils import extract_images_from_page
 
 logger = logging.getLogger(__name__)
 
@@ -149,258 +148,138 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             logger.info(f"Fetching Indivisible ATL events: {EVENTS_URL}")
 
-            # Navigate to events page
-            page.goto(EVENTS_URL, wait_until="domcontentloaded", timeout=60000)
-            page.wait_for_timeout(3000)
+            # Navigate to events page - use networkidle for Squarespace's JS
+            page.goto(EVENTS_URL, wait_until="networkidle", timeout=60000)
+            page.wait_for_timeout(2000)
 
-            # Wait for events to load
-            try:
-                page.wait_for_selector(".event, .event-item, [class*='event'], [class*='calendar']", timeout=10000)
-            except Exception:
-                logger.warning("Could not find event selectors, continuing anyway")
-
-            # Extract images
-            image_map = extract_images_from_page(page)
-
-            # Scroll to load all events (handle lazy loading)
+            # Scroll to load all events
             for _ in range(3):
                 page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
                 page.wait_for_timeout(1500)
 
-                # Try to click "Load More" button if present
+            # Parse Squarespace eventlist structure
+            # Each event is in a .eventlist-event article with:
+            # - .eventlist-title a (title and link)
+            # - .eventlist-meta li (date, time, calendar links)
+            # - .eventlist-event--past class indicates past events
+            event_containers = page.query_selector_all('.eventlist-event')
+
+            # Count past vs upcoming
+            past_count = sum(1 for c in event_containers if 'eventlist-event--past' in (c.get_attribute('class') or ''))
+            upcoming_count = len(event_containers) - past_count
+            logger.info(f"Found {len(event_containers)} events ({upcoming_count} upcoming, {past_count} past)")
+
+            for container in event_containers:
                 try:
-                    load_more = page.query_selector("button:has-text('Load More'), button:has-text('Show More'), a:has-text('More Events')")
-                    if load_more and load_more.is_visible():
-                        load_more.click()
-                        page.wait_for_timeout(2000)
-                except Exception:
-                    pass
-
-            # Find event links
-            event_links = page.query_selector_all('a[href*="/event"], a[href*="/events/"]')
-
-            # Filter to unique event pages
-            unique_events = {}
-            for link in event_links:
-                href = link.get_attribute('href') or ''
-                text = link.inner_text().strip()
-
-                # Skip navigation links and empty text
-                if not text or len(text) < 3:
-                    continue
-                if href == '/events' or href == '/events/' or href == EVENTS_URL:
-                    continue
-
-                # Normalize URL
-                if href.startswith('/'):
-                    href = BASE_URL + href
-                elif not href.startswith('http'):
-                    continue
-
-                # Dedupe by URL
-                if href not in unique_events:
-                    unique_events[href] = text
-
-            logger.info(f"Found {len(unique_events)} unique event links")
-
-            # If no event links found, try to parse events directly from the page
-            if not unique_events:
-                logger.info("No event links found, trying to parse events from main page")
-
-                # Look for event containers on the page
-                event_containers = page.query_selector_all('.event, .event-item, [class*="event-"]')
-
-                for container in event_containers:
-                    try:
-                        title = container.query_selector('h2, h3, h4, .title, .event-title')
-                        if not title:
-                            continue
-
-                        title_text = title.inner_text().strip()
-
-                        # Find date
-                        date_elem = container.query_selector('.date, .event-date, time, [class*="date"]')
-                        if not date_elem:
-                            continue
-
-                        date_text = date_elem.inner_text().strip()
-                        start_date, end_date = parse_date_range(date_text)
-
-                        if not start_date:
-                            continue
-
-                        events_found += 1
-
-                        # Find time
-                        time_elem = container.query_selector('.time, .event-time, [class*="time"]')
-                        time_text = time_elem.inner_text().strip() if time_elem else ""
-                        start_time = parse_time(time_text) if time_text else None
-
-                        # Find description
-                        desc_elem = container.query_selector('.description, .event-description, p')
-                        description = desc_elem.inner_text().strip() if desc_elem else ""
-                        if len(description) > 500:
-                            description = description[:497] + "..."
-
-                        if not description:
-                            description = f"{title_text} - Indivisible ATL event"
-
-                        # Generate content hash
-                        content_hash = generate_content_hash(title_text, VENUE_DATA["name"], start_date)
-
-                        # Check if exists
-                        if find_event_by_hash(content_hash):
-                            events_updated += 1
-                            continue
-
-                        # Check for free events
-                        text_content = f"{title_text} {description}".lower()
-                        is_free = any(word in text_content for word in ["free", "no cost", "no charge"])
-
-                        # Build event record
-                        event_record = {
-                            "source_id": source_id,
-                            "venue_id": venue_id,
-                            "title": title_text,
-                            "description": description,
-                            "start_date": start_date,
-                            "start_time": start_time,
-                            "end_date": end_date,
-                            "end_time": None,
-                            "is_all_day": start_time is None,
-                            "category": "activism",
-                            "subcategory": None,
-                            "tags": ["activism", "progressive", "politics", "organizing"],
-                            "price_min": None,
-                            "price_max": None,
-                            "price_note": None,
-                            "is_free": is_free,
-                            "source_url": EVENTS_URL,
-                            "ticket_url": None,
-                            "image_url": image_map.get(title_text),
-                            "raw_text": f"{title_text} - {start_date}",
-                            "extraction_confidence": 0.80,
-                            "is_recurring": False,
-                            "recurrence_rule": None,
-                            "content_hash": content_hash,
-                        }
-
-                        try:
-                            insert_event(event_record)
-                            events_new += 1
-                            logger.info(f"Added: {title_text} on {start_date}")
-                        except Exception as e:
-                            logger.error(f"Failed to insert event '{title_text}': {e}")
-
-                    except Exception as e:
-                        logger.debug(f"Error processing event container: {e}")
+                    # Skip past events (marked with eventlist-event--past class)
+                    container_class = container.get_attribute('class') or ''
+                    if 'eventlist-event--past' in container_class:
                         continue
 
-            else:
-                # Visit individual event pages
-                for event_url, title in unique_events.items():
-                    try:
-                        # Visit individual event page to get details
-                        page.goto(event_url, wait_until='domcontentloaded', timeout=30000)
-                        page.wait_for_timeout(1000)
-
-                        # Find date
-                        date_elem = page.query_selector(
-                            ".event-date, .date, [class*='date'], time, .event-meta"
-                        )
-
-                        date_text = ""
-                        if date_elem:
-                            date_text = date_elem.inner_text().strip()
-                            # Also check for datetime attribute
-                            datetime_attr = date_elem.get_attribute("datetime")
-                            if datetime_attr:
-                                date_text = datetime_attr
-
-                        start_date, end_date = parse_date_range(date_text)
-
-                        if not start_date:
-                            # Try to find date in page text
-                            page_text = page.inner_text('body')
-                            for line in page_text.split("\n"):
-                                start_date, end_date = parse_date_range(line.strip())
-                                if start_date:
-                                    break
-
-                        if not start_date:
-                            logger.debug(f"No date found for: {title}")
-                            continue
-
-                        events_found += 1
-
-                        # Find time
-                        time_elem = page.query_selector(
-                            ".time, .event-time, [class*='time']"
-                        )
-                        time_text = time_elem.inner_text().strip() if time_elem else ""
-                        start_time = parse_time(time_text) if time_text else None
-
-                        # Find description
-                        desc_elem = page.query_selector(
-                            ".event-description, .description, .content, article p"
-                        )
-                        description = desc_elem.inner_text().strip() if desc_elem else ""
-                        if len(description) > 500:
-                            description = description[:497] + "..."
-
-                        if not description:
-                            description = f"{title} - Indivisible ATL event"
-
-                        # Check for free events
-                        text_content = f"{title} {description}".lower()
-                        is_free = any(word in text_content for word in ["free", "no cost", "no charge"])
-
-                        # Generate content hash
-                        content_hash = generate_content_hash(title, VENUE_DATA["name"], start_date)
-
-                        # Check if exists
-                        if find_event_by_hash(content_hash):
-                            events_updated += 1
-                            continue
-
-                        # Build event record
-                        event_record = {
-                            "source_id": source_id,
-                            "venue_id": venue_id,
-                            "title": title,
-                            "description": description,
-                            "start_date": start_date,
-                            "start_time": start_time,
-                            "end_date": end_date,
-                            "end_time": None,
-                            "is_all_day": start_time is None,
-                            "category": "activism",
-                            "subcategory": None,
-                            "tags": ["activism", "progressive", "politics", "organizing"],
-                            "price_min": None,
-                            "price_max": None,
-                            "price_note": None,
-                            "is_free": is_free,
-                            "source_url": event_url,
-                            "ticket_url": event_url,
-                            "image_url": image_map.get(title),
-                            "raw_text": f"{title} - {start_date}",
-                            "extraction_confidence": 0.85,
-                            "is_recurring": False,
-                            "recurrence_rule": None,
-                            "content_hash": content_hash,
-                        }
-
-                        try:
-                            insert_event(event_record)
-                            events_new += 1
-                            logger.info(f"Added: {title} on {start_date}")
-                        except Exception as e:
-                            logger.error(f"Failed to insert event '{title}': {e}")
-
-                    except Exception as e:
-                        logger.debug(f"Error parsing event: {e}")
+                    # Get title and link
+                    title_link = container.query_selector('.eventlist-title a')
+                    if not title_link:
                         continue
+
+                    title = title_link.inner_text().strip()
+                    href = title_link.get_attribute('href') or ''
+
+                    if not title or not href:
+                        continue
+
+                    # Build full URL
+                    if href.startswith('/'):
+                        event_url = BASE_URL + href
+                    else:
+                        event_url = href
+
+                    # Get date and time from .eventlist-meta li elements
+                    meta_items = container.query_selector_all('.eventlist-meta li')
+                    date_text = ""
+                    time_text = ""
+
+                    for li in meta_items:
+                        li_text = li.inner_text().strip()
+                        # Lines with full date format like "Thursday, January 22, 2026"
+                        if re.search(r'(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},\s+\d{4}', li_text):
+                            date_text = li_text
+                        # Lines with time like "7:30 PM 9:30 PM"
+                        elif re.search(r'\d{1,2}:\d{2}\s*(AM|PM)', li_text, re.IGNORECASE):
+                            time_text = li_text
+
+                    # Parse date
+                    start_date, end_date = parse_date_range(date_text)
+
+                    if not start_date:
+                        logger.debug(f"Could not parse date '{date_text}' for: {title}")
+                        continue
+
+                    events_found += 1
+
+                    # Parse time
+                    start_time = parse_time(time_text) if time_text else None
+
+                    # Get image from thumbnail column
+                    img = container.query_selector('.eventlist-column-thumbnail img, img')
+                    image_url = None
+                    if img:
+                        image_url = img.get_attribute('src') or img.get_attribute('data-src')
+                        # Convert relative URLs
+                        if image_url and image_url.startswith('/'):
+                            image_url = BASE_URL + image_url
+
+                    # Generate content hash
+                    content_hash = generate_content_hash(title, VENUE_DATA["name"], start_date)
+
+                    # Check if exists
+                    if find_event_by_hash(content_hash):
+                        events_updated += 1
+                        continue
+
+                    # Default description (we could fetch detail page, but this is faster)
+                    description = f"{title} - Indivisible ATL organizing event"
+
+                    # Check for free events
+                    is_free = any(word in title.lower() for word in ["free", "no cost"])
+
+                    # Build event record
+                    event_record = {
+                        "source_id": source_id,
+                        "venue_id": venue_id,
+                        "title": title,
+                        "description": description,
+                        "start_date": start_date,
+                        "start_time": start_time,
+                        "end_date": end_date,
+                        "end_time": None,
+                        "is_all_day": start_time is None,
+                        "category": "activism",
+                        "subcategory": None,
+                        "tags": ["activism", "progressive", "politics", "organizing"],
+                        "price_min": None,
+                        "price_max": None,
+                        "price_note": None,
+                        "is_free": is_free,
+                        "source_url": event_url,
+                        "ticket_url": event_url,
+                        "image_url": image_url,
+                        "raw_text": f"{title} - {date_text}",
+                        "extraction_confidence": 0.85,
+                        "is_recurring": False,
+                        "recurrence_rule": None,
+                        "content_hash": content_hash,
+                    }
+
+                    try:
+                        insert_event(event_record)
+                        events_new += 1
+                        logger.info(f"Added: {title} on {start_date}")
+                    except Exception as e:
+                        logger.error(f"Failed to insert event '{title}': {e}")
+
+                except Exception as e:
+                    logger.debug(f"Error processing event container: {e}")
+                    continue
 
             browser.close()
 

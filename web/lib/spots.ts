@@ -1,7 +1,7 @@
 import { supabase } from "./supabase";
 import type { Event } from "./supabase";
 
-export const SPOT_TYPES = {
+export const VENUE_TYPES_MAP = {
   // Entertainment venues
   music_venue: { label: "Music Venue", icon: "🎵" },
   theater: { label: "Theater", icon: "🎭" },
@@ -40,7 +40,7 @@ export const SPOT_TYPES = {
   community_center: { label: "Community Center", icon: "🏘️" },
   event_space: { label: "Event Space", icon: "✨" },
   coworking: { label: "Coworking", icon: "💻" },
-  nonprofit_hq: { label: "Nonprofit HQ", icon: "🤝" },  // For organization headquarters
+  nonprofit_hq: { label: "Nonprofit HQ", icon: "🤝" },  // For organizations headquarters
   venue: { label: "Venue", icon: "📍" },
   festival: { label: "Festival", icon: "🎪" },
 
@@ -68,8 +68,8 @@ export const SPOT_TYPES = {
   lgbtq: { label: "LGBTQ+", icon: "🏳️‍🌈" },
 } as const;
 
-// Spot types that are event venues (host events)
-export const VENUE_TYPES = [
+// Venue types that are event venues (host events)
+export const EVENT_VENUE_TYPES = [
   "music_venue",
   "theater",
   "comedy_club",
@@ -97,8 +97,8 @@ export const VENUE_TYPES = [
   "cooking_school",
 ] as const;
 
-// Spot types that are places/amenities (food, drinks, entertainment)
-export const PLACE_TYPES = [
+// Venue types that are places/amenities (food, drinks, entertainment)
+export const PLACE_VENUE_TYPES = [
   "bar",
   "restaurant",
   "coffee_shop",
@@ -207,7 +207,7 @@ export const NEIGHBORHOODS = [
 
 export type Neighborhood = (typeof NEIGHBORHOODS)[number];
 
-export type SpotType = keyof typeof SPOT_TYPES;
+export type VenueType = keyof typeof VENUE_TYPES_MAP;
 
 export type Spot = {
   id: number;
@@ -219,8 +219,8 @@ export type Spot = {
   state: string;
   lat: number | null;
   lng: number | null;
-  spot_type: string | null;
-  spot_types: string[] | null;
+  venue_type: string | null;
+  venue_types: string[] | null;
   description: string | null;
   short_description: string | null;
   price_level: number | null;
@@ -241,7 +241,7 @@ export async function getSpots(type?: string): Promise<Spot[]> {
     .order("name");
 
   if (type && type !== "all") {
-    query = query.or(`spot_type.eq.${type},spot_types.cs.{${type}}`);
+    query = query.or(`venue_type.eq.${type},venue_types.cs.{${type}}`);
   }
 
   const { data, error } = await query;
@@ -270,18 +270,18 @@ export async function getSpotsWithEventCounts(
   if (type && type !== "all") {
     const types = type.split(",").filter(Boolean);
     if (types.length === 1) {
-      venueQuery = venueQuery.or(`spot_type.eq.${types[0]},spot_types.cs.{${types[0]}}`);
+      venueQuery = venueQuery.or(`venue_type.eq.${types[0]},venue_types.cs.{${types[0]}}`);
     } else if (types.length > 1) {
       // Build OR query for multiple types
-      const typeConditions = types.map(t => `spot_type.eq.${t}`).join(",");
+      const typeConditions = types.map(t => `venue_type.eq.${t}`).join(",");
       venueQuery = venueQuery.or(typeConditions);
     }
   } else if (category === "venues") {
     // Filter to event venues only
-    venueQuery = venueQuery.in("spot_type", [...VENUE_TYPES]);
+    venueQuery = venueQuery.in("venue_type", [...EVENT_VENUE_TYPES]);
   } else if (category === "places") {
     // Filter to places/amenities only
-    venueQuery = venueQuery.in("spot_type", [...PLACE_TYPES]);
+    venueQuery = venueQuery.in("venue_type", [...PLACE_VENUE_TYPES]);
   }
 
   if (vibe) {
@@ -402,15 +402,15 @@ export function formatPriceLevel(level: number | null): string {
   return "$".repeat(level);
 }
 
-export function getSpotTypeLabel(type: string | null): string {
+export function getVenueTypeLabel(type: string | null): string {
   if (!type) return "";
-  return SPOT_TYPES[type as SpotType]?.label || type;
+  return VENUE_TYPES_MAP[type as VenueType]?.label || type;
 }
 
-export function getSpotTypeLabels(types: string[] | null): string {
+export function getVenueTypeLabels(types: string[] | null): string {
   if (!types || types.length === 0) return "";
   return types
-    .map((t) => SPOT_TYPES[t as SpotType]?.label || t)
+    .map((t) => VENUE_TYPES_MAP[t as VenueType]?.label || t)
     .join(" + ");
 }
 
@@ -460,8 +460,8 @@ export async function getOpenSpots(
     .order("name");
 
   if (spotTypes && spotTypes.length > 0) {
-    // Filter by spot types
-    const typeFilters = spotTypes.map(t => `spot_type.eq.${t},spot_types.cs.{${t}}`).join(",");
+    // Filter by venue types
+    const typeFilters = spotTypes.map(t => `venue_type.eq.${t},venue_types.cs.{${t}}`).join(",");
     query = query.or(typeFilters);
   }
 
@@ -506,7 +506,7 @@ export async function getNearbySpots(
     .select("*")
     .eq("neighborhood", venue.neighborhood)
     .neq("id", venueId)
-    .in("spot_type", ["bar", "restaurant", "coffee_shop", "brewery"])
+    .in("venue_type", ["bar", "restaurant", "coffee_shop", "brewery"])
     .eq("active", true)
     .limit(limit);
 
@@ -517,3 +517,20 @@ export async function getNearbySpots(
 
   return (data || []) as Spot[];
 }
+
+// ============================================
+// BACKWARDS COMPATIBILITY EXPORTS
+// ============================================
+// These aliases allow old code to continue working after the rename
+
+/** @deprecated Use VENUE_TYPES_MAP instead */
+export const SPOT_TYPES = VENUE_TYPES_MAP;
+
+/** @deprecated Use VenueType instead */
+export type SpotType = VenueType;
+
+/** @deprecated Use getVenueTypeLabel instead */
+export const getSpotTypeLabel = getVenueTypeLabel;
+
+/** @deprecated Use getVenueTypeLabels instead */
+export const getSpotTypeLabels = getVenueTypeLabels;

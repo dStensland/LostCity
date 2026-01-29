@@ -101,7 +101,7 @@ function FindViewInner({
         <Suspense fallback={<div className="h-10 bg-[var(--night)]" />}>
           <SimpleFilterBar variant={displayMode === "map" ? "compact" : "full"} />
           {/* Layered filter rows */}
-          <div className="sticky top-[139px] z-20 bg-[var(--night)] border-b border-[var(--twilight)]">
+          <div className="sticky top-[139px] z-10 bg-[var(--night)] border-b border-[var(--twilight)]">
             <div className="max-w-3xl mx-auto">
               {/* Quick Tags - always visible */}
               <QuickTagsRow />

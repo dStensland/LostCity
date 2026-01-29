@@ -16,6 +16,33 @@ from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
 
+# Keywords that indicate student/alumni-only events (not public)
+STUDENT_ONLY_KEYWORDS = [
+    "orientation", "new student", "prospective", "open house",
+    "registration", "enrollment", "advising", "deadline",
+    "reunion", "alumnae weekend", "alumni weekend",
+    "virtual info session", "info session",
+    "staff meeting", "faculty meeting",
+    "commencement rehearsal", "graduation rehearsal",
+    "student only", "students only", "for students",
+    "admitted students", "accepted students",
+    "parent weekend", "family weekend",
+    "preview day", "admitted student",
+    "career fair", "graduate school fair", "job fair",
+]
+
+
+def is_public_event(title: str, description: str = "") -> bool:
+    """Check if event appears to be open to the public (not student/alumni only)."""
+    text = f"{title} {description}".lower()
+
+    for keyword in STUDENT_ONLY_KEYWORDS:
+        if keyword in text:
+            return False
+
+    return True
+
+
 BASE_URL = "https://www.spelman.edu"
 JSON_FEED_URL = f"{BASE_URL}/events/_data/current-live.json"
 EVENTS_PAGE_URL = f"{BASE_URL}/events/"
@@ -273,6 +300,12 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     logger.debug("Skipping event without title")
                     continue
 
+                # Skip student/alumni-only events
+                description = event_data.get("description", "")
+                if not is_public_event(title, description):
+                    logger.debug(f"Skipping non-public event: {title}")
+                    continue
+
                 # Parse dates
                 start_date, start_time = parse_iso_datetime(event_data.get("startDate"))
                 end_date, end_time = parse_iso_datetime(event_data.get("endDate"))
@@ -371,11 +404,16 @@ def crawl(source: dict) -> tuple[int, int, int]:
         # Process static HTML events (annual events not yet in JSON)
         for event_data in static_events:
             try:
-                events_found += 1
-
                 title = event_data.get("title", "").strip()
                 if not title:
                     continue
+
+                # Skip student/alumni-only events
+                if not is_public_event(title):
+                    logger.debug(f"Skipping non-public static event: {title}")
+                    continue
+
+                events_found += 1
 
                 start_date = event_data.get("start_date")
                 end_date = event_data.get("end_date")

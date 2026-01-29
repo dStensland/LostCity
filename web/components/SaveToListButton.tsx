@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { IconButton } from "./ui/Button";
 
 interface SaveToListButtonProps {
-  itemType: "venue" | "event" | "producer";
+  itemType: "venue" | "event" | "organization";
   itemId: number;
   className?: string;
 }
@@ -149,7 +149,7 @@ export const SaveToListButton = memo(function SaveToListButton({
           item_type: itemType,
           venue_id: itemType === "venue" ? itemId : null,
           event_id: itemType === "event" ? itemId : null,
-          producer_id: itemType === "producer" ? itemId : null,
+          organization_id: itemType === "organization" ? itemId : null,
         }),
       });
 

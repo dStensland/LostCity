@@ -19,7 +19,7 @@ type FollowingEvent = {
   ticket_url: string | null;
   source_url: string | null;
   venue_id: number | null;
-  producer_id: string | null;
+  organization_id: string | null;
   venue: {
     id: number;
     name: string;
@@ -29,7 +29,7 @@ type FollowingEvent = {
     city: string | null;
     state: string | null;
   } | null;
-  producer: {
+  organization: {
     id: string;
     name: string;
     org_type: string | null;
@@ -61,30 +61,30 @@ export async function GET(request: Request) {
       .map((f) => f.followed_venue_id)
       .filter((id): id is number => id !== null);
 
-    // Get followed producers
-    const { data: followedProducers } = await supabase
+    // Get followed organizations
+    const { data: followedOrganizations } = await supabase
       .from("follows")
-      .select("followed_producer_id")
+      .select("followed_organization_id")
       .eq("follower_id", user.id)
-      .not("followed_producer_id", "is", null) as { data: { followed_producer_id: string | null }[] | null };
+      .not("followed_organization_id", "is", null) as { data: { followed_organization_id: string | null }[] | null };
 
-    const producerIds = (followedProducers || [])
-      .map((f) => f.followed_producer_id)
+    const organizationIds = (followedOrganizations || [])
+      .map((f) => f.followed_organization_id)
       .filter((id): id is string => id !== null);
 
     // If user doesn't follow anything, return empty
-    if (venueIds.length === 0 && producerIds.length === 0) {
+    if (venueIds.length === 0 && organizationIds.length === 0) {
       return NextResponse.json({
         events: [],
         hasMore: false,
-        message: "Follow venues or producers to see their events here",
+        message: "Follow venues or organizations to see their events here",
       });
     }
 
     // Build date range (today onwards)
     const today = format(startOfDay(new Date()), "yyyy-MM-dd");
 
-    // Build query for events from followed venues or producers
+    // Build query for events from followed venues or organizations
     let query = supabase
       .from("events")
       .select(`
@@ -104,7 +104,7 @@ export async function GET(request: Request) {
         ticket_url,
         source_url,
         venue_id,
-        producer_id,
+        organization_id,
         venue:venues!left(
           id,
           name,
@@ -114,7 +114,7 @@ export async function GET(request: Request) {
           city,
           state
         ),
-        producer:producers!left(
+        organization:organizations!left(
           id,
           name,
           org_type,
@@ -126,13 +126,13 @@ export async function GET(request: Request) {
       .order("start_time", { ascending: true, nullsFirst: true })
       .range(offset, offset + limit - 1);
 
-    // Filter by followed venues OR followed producers
-    if (venueIds.length > 0 && producerIds.length > 0) {
-      query = query.or(`venue_id.in.(${venueIds.join(",")}),producer_id.in.(${producerIds.join(",")})`);
+    // Filter by followed venues OR followed organizations
+    if (venueIds.length > 0 && organizationIds.length > 0) {
+      query = query.or(`venue_id.in.(${venueIds.join(",")}),organization_id.in.(${organizationIds.join(",")})`);
     } else if (venueIds.length > 0) {
       query = query.in("venue_id", venueIds);
-    } else if (producerIds.length > 0) {
-      query = query.in("producer_id", producerIds);
+    } else if (organizationIds.length > 0) {
+      query = query.in("organization_id", organizationIds);
     }
 
     const { data: events, error } = await query as { data: FollowingEvent[] | null; error: Error | null };
@@ -159,13 +159,13 @@ export async function GET(request: Request) {
         });
       }
 
-      // Check if producer is followed
-      if (event.producer_id && producerIds.includes(event.producer_id)) {
-        const producer = event.producer as { name: string } | null;
+      // Check if organization is followed
+      if (event.organization_id && organizationIds.includes(event.organization_id)) {
+        const organization = event.organization as { name: string } | null;
         reasons.push({
-          type: "followed_producer",
-          label: "Followed producer",
-          detail: producer?.name || "A producer you follow",
+          type: "followed_organization",
+          label: "Followed organization",
+          detail: organization?.name || "An organization you follow",
         });
       }
 
@@ -179,7 +179,7 @@ export async function GET(request: Request) {
       events: eventsWithReasons,
       hasMore: (events?.length || 0) === limit,
       followingVenues: venueIds.length,
-      followingProducers: producerIds.length,
+      followingOrganizations: organizationIds.length,
     });
   } catch (err) {
     console.error("Following events API error:", err);

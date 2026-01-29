@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
       end_date,
       is_all_day,
       venue:venues(id, name, neighborhood),
-      producer:event_producers(id, name)
+      organization:organizations(id, name)
     `
     )
     .ilike("title", `%${normalizedQuery}%`)
@@ -70,7 +70,7 @@ export async function GET(request: NextRequest) {
       name: string;
       neighborhood: string | null;
     } | null;
-    producer: {
+    organization: {
       id: string;
       name: string;
     } | null;
@@ -106,7 +106,7 @@ export async function GET(request: NextRequest) {
     end_date: event.end_date,
     is_all_day: event.is_all_day,
     venue: event.venue,
-    producer: event.producer,
+    organization: event.organization,
     displayLabel: formatEventLabel(event),
   }));
 

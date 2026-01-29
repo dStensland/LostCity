@@ -6,7 +6,7 @@ import Image from "next/image";
 import CategoryIcon, { getCategoryColor } from "@/components/CategoryIcon";
 import CategorySkeleton from "@/components/CategorySkeleton";
 
-type Producer = {
+type Organization = {
   id: string;
   name: string;
   slug: string;
@@ -50,22 +50,22 @@ interface Props {
   portalName: string;
 }
 
-// Producer card component
-function ProducerCard({
-  producer,
+// Organization card component
+function OrganizationCard({
+  organization,
   portalSlug,
   orgConfig,
 }: {
-  producer: Producer;
+  organization: Organization;
   portalSlug: string;
   orgConfig: { label: string; color: string } | undefined;
 }) {
-  const hasEvents = (producer.event_count ?? 0) > 0;
+  const hasEvents = (organization.event_count ?? 0) > 0;
   const glowColor = orgConfig?.color || "var(--coral)";
 
   return (
     <Link
-      href={`/${portalSlug}?org=${producer.slug}`}
+      href={`/${portalSlug}?org=${organization.slug}`}
       scroll={false}
       className="block p-5 rounded-xl border border-[var(--twilight)] card-atmospheric group transition-all duration-300 hover:translate-y-[-2px]"
       style={{
@@ -81,11 +81,11 @@ function ProducerCard({
             className="absolute inset-0 rounded-xl opacity-0 group-hover:opacity-40 transition-opacity duration-300 blur-lg"
             style={{ backgroundColor: glowColor, transform: "scale(1.2)" }}
           />
-          {producer.logo_url ? (
+          {organization.logo_url ? (
             <div className="relative w-[72px] h-[72px] rounded-xl bg-white flex items-center justify-center overflow-hidden">
               <Image
-                src={producer.logo_url}
-                alt={producer.name}
+                src={organization.logo_url}
+                alt={organization.name}
                 width={72}
                 height={72}
                 className="object-contain"
@@ -97,13 +97,13 @@ function ProducerCard({
             <div
               className="relative w-[72px] h-[72px] rounded-xl flex items-center justify-center"
               style={{
-                backgroundColor: producer.categories?.[0]
-                  ? `${getCategoryColor(producer.categories[0])}20`
+                backgroundColor: organization.categories?.[0]
+                  ? `${getCategoryColor(organization.categories[0])}20`
                   : "var(--twilight)",
               }}
             >
               <CategoryIcon
-                type={producer.categories?.[0] || "community"}
+                type={organization.categories?.[0] || "community"}
                 size={32}
                 glow="subtle"
               />
@@ -115,7 +115,7 @@ function ProducerCard({
         <div className="flex-1 min-w-0">
           <div>
             <h3 className="text-lg text-[var(--cream)] font-medium truncate transition-colors group-hover:text-[var(--glow-color)]">
-              {producer.name}
+              {organization.name}
             </h3>
             <div className="flex items-center gap-2 mt-1">
               <span
@@ -125,7 +125,7 @@ function ProducerCard({
                   color: orgConfig?.color || "var(--muted)",
                 }}
               >
-                {orgConfig?.label || producer.org_type.replace(/_/g, " ")}
+                {orgConfig?.label || organization.org_type.replace(/_/g, " ")}
               </span>
             </div>
           </div>
@@ -139,14 +139,14 @@ function ProducerCard({
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-[var(--coral)]" />
               </span>
               <span className="text-[var(--coral)] font-mono text-sm font-medium">
-                {producer.event_count} upcoming
+                {organization.event_count} upcoming
               </span>
             </div>
           )}
 
-          {producer.categories && producer.categories.length > 0 && (
+          {organization.categories && organization.categories.length > 0 && (
             <div className="mt-3 flex flex-wrap gap-1.5">
-              {producer.categories.slice(0, 5).map((cat) => {
+              {organization.categories.slice(0, 5).map((cat) => {
                 const color = getCategoryColor(cat);
                 return (
                   <span
@@ -183,7 +183,7 @@ function ProducerCard({
 }
 
 export default function PortalCommunityView({ portalId, portalSlug, portalName }: Props) {
-  const [producers, setProducers] = useState<Producer[]>([]);
+  const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<"category" | "alphabetical">("category");
@@ -202,9 +202,9 @@ export default function PortalCommunityView({ portalId, portalSlug, portalName }
     });
   };
 
-  // Sort producers based on selected sort option
-  const sortedProducers = useMemo(() => {
-    const sorted = [...producers];
+  // Sort organizations based on selected sort option
+  const sortedOrganizations = useMemo(() => {
+    const sorted = [...organizations];
     if (sortBy === "alphabetical") {
       sorted.sort((a, b) => a.name.localeCompare(b.name));
     } else {
@@ -219,37 +219,37 @@ export default function PortalCommunityView({ portalId, portalSlug, portalName }
       });
     }
     return sorted;
-  }, [producers, sortBy]);
+  }, [organizations, sortBy]);
 
-  // Group producers by category for collapsible view
-  const groupedProducers = useMemo(() => {
+  // Group organizations by category for collapsible view
+  const groupedOrganizations = useMemo(() => {
     if (sortBy !== "category") return null;
-    const groups: Record<string, Producer[]> = {};
-    for (const producer of sortedProducers) {
-      const orgType = producer.org_type;
+    const groups: Record<string, Organization[]> = {};
+    for (const organization of sortedOrganizations) {
+      const orgType = organization.org_type;
       if (!groups[orgType]) groups[orgType] = [];
-      groups[orgType].push(producer);
+      groups[orgType].push(organization);
     }
     // Return in order
     return ORG_TYPE_ORDER
       .filter(type => groups[type]?.length > 0)
-      .map(type => ({ type, producers: groups[type] }));
-  }, [sortedProducers, sortBy]);
+      .map(type => ({ type, organizations: groups[type] }));
+  }, [sortedOrganizations, sortBy]);
 
   useEffect(() => {
-    async function loadProducers() {
+    async function loadOrganizations() {
       try {
-        const res = await fetch(`/api/producers?portal_id=${portalId}`);
+        const res = await fetch(`/api/organizations?portal_id=${portalId}`);
         if (!res.ok) throw new Error("Failed to load");
         const data = await res.json();
-        setProducers(data.producers || []);
+        setOrganizations(data.organizations || []);
       } catch {
-        // Fall back to all producers if portal-specific fails
+        // Fall back to all organizations if portal-specific fails
         try {
-          const res = await fetch("/api/producers");
+          const res = await fetch("/api/organizations");
           if (res.ok) {
             const data = await res.json();
-            setProducers(data.producers || []);
+            setOrganizations(data.organizations || []);
           }
         } catch {
           setError("Unable to load community");
@@ -258,7 +258,7 @@ export default function PortalCommunityView({ portalId, portalSlug, portalName }
         setLoading(false);
       }
     }
-    loadProducers();
+    loadOrganizations();
   }, [portalId]);
 
   if (loading) {
@@ -279,7 +279,7 @@ export default function PortalCommunityView({ portalId, portalSlug, portalName }
     );
   }
 
-  if (producers.length === 0) {
+  if (organizations.length === 0) {
     return (
       <div className="py-16 text-center">
         <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-[var(--twilight)]/50 flex items-center justify-center">
@@ -302,7 +302,7 @@ export default function PortalCommunityView({ portalId, portalSlug, portalName }
           <div>
             <h2 className="text-xl font-semibold text-[var(--cream)]">Community</h2>
             <p className="text-sm text-[var(--muted)] mt-1">
-              <span className="text-[var(--soft)]">{producers.length}</span> organizations creating events in {portalName}
+              <span className="text-[var(--soft)]">{organizations.length}</span> organizations creating events in {portalName}
             </p>
           </div>
           <div className="flex items-center gap-1">
@@ -333,9 +333,9 @@ export default function PortalCommunityView({ portalId, portalSlug, portalName }
         </div>
       </div>
 
-      {sortBy === "category" && groupedProducers ? (
+      {sortBy === "category" && groupedOrganizations ? (
         <div className="space-y-2">
-          {groupedProducers.map(({ type, producers: groupProducers }) => {
+          {groupedOrganizations.map(({ type, organizations: groupOrganizations }) => {
             const orgConfig = ORG_TYPE_CONFIG[type];
             const isExpanded = expandedCategories.has(type);
 
@@ -357,7 +357,7 @@ export default function PortalCommunityView({ portalId, portalSlug, portalName }
                     {orgConfig?.label || type.replace(/_/g, " ")}
                   </h3>
                   <span className="font-mono text-[0.6rem] text-[var(--muted)] mr-2">
-                    {groupProducers.length}
+                    {groupOrganizations.length}
                   </span>
                   <svg
                     className={`w-4 h-4 text-[var(--muted)] transition-transform ${isExpanded ? "rotate-180" : ""}`}
@@ -372,10 +372,10 @@ export default function PortalCommunityView({ portalId, portalSlug, portalName }
                 {/* Collapsible Content */}
                 {isExpanded && (
                   <div className="space-y-3 pb-4">
-                    {groupProducers.map((producer) => (
-                      <ProducerCard
-                        key={producer.id}
-                        producer={producer}
+                    {groupOrganizations.map((organization) => (
+                      <OrganizationCard
+                        key={organization.id}
+                        organization={organization}
                         portalSlug={portalSlug}
                         orgConfig={orgConfig}
                       />
@@ -388,12 +388,12 @@ export default function PortalCommunityView({ portalId, portalSlug, portalName }
         </div>
       ) : (
         <div className="space-y-4">
-          {sortedProducers.map((producer) => {
-            const orgConfig = ORG_TYPE_CONFIG[producer.org_type];
+          {sortedOrganizations.map((organization) => {
+            const orgConfig = ORG_TYPE_CONFIG[organization.org_type];
             return (
-              <ProducerCard
-                key={producer.id}
-                producer={producer}
+              <OrganizationCard
+                key={organization.id}
+                organization={organization}
                 portalSlug={portalSlug}
                 orgConfig={orgConfig}
               />

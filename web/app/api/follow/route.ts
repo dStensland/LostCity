@@ -15,9 +15,9 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const targetUserId = searchParams.get("userId");
   const targetVenueId = searchParams.get("venueId");
-  const targetProducerId = searchParams.get("producerId");
+  const targetOrganizationId = searchParams.get("organizationId");
 
-  if (!targetUserId && !targetVenueId && !targetProducerId) {
+  if (!targetUserId && !targetVenueId && !targetOrganizationId) {
     return NextResponse.json({ error: "Missing target" }, { status: 400 });
   }
 
@@ -31,8 +31,8 @@ export async function GET(request: NextRequest) {
       query = query.eq("followed_user_id", targetUserId);
     } else if (targetVenueId) {
       query = query.eq("followed_venue_id", parseInt(targetVenueId));
-    } else if (targetProducerId) {
-      query = query.eq("followed_producer_id", targetProducerId);
+    } else if (targetOrganizationId) {
+      query = query.eq("followed_organization_id", targetOrganizationId);
     }
 
     const { data, error } = await query.maybeSingle();
@@ -61,9 +61,9 @@ export async function POST(request: NextRequest) {
   }
 
   const body = await request.json();
-  const { targetUserId, targetVenueId, targetProducerId, action } = body;
+  const { targetUserId, targetVenueId, targetOrganizationId, action } = body;
 
-  if (!targetUserId && !targetVenueId && !targetProducerId) {
+  if (!targetUserId && !targetVenueId && !targetOrganizationId) {
     return NextResponse.json({ error: "Missing target" }, { status: 400 });
   }
 
@@ -82,8 +82,8 @@ export async function POST(request: NextRequest) {
         query = query.eq("followed_user_id", targetUserId);
       } else if (targetVenueId) {
         query = query.eq("followed_venue_id", targetVenueId);
-      } else if (targetProducerId) {
-        query = query.eq("followed_producer_id", targetProducerId);
+      } else if (targetOrganizationId) {
+        query = query.eq("followed_organization_id", targetOrganizationId);
       }
 
       const { error } = await query;
@@ -104,8 +104,8 @@ export async function POST(request: NextRequest) {
         followData.followed_user_id = targetUserId;
       } else if (targetVenueId) {
         followData.followed_venue_id = targetVenueId;
-      } else if (targetProducerId) {
-        followData.followed_producer_id = targetProducerId;
+      } else if (targetOrganizationId) {
+        followData.followed_organization_id = targetOrganizationId;
       }
 
       const { error } = await supabase.from("follows").insert(followData as never);

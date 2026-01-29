@@ -31,7 +31,7 @@ type Spot = {
   slug: string;
   address: string | null;
   neighborhood: string | null;
-  spot_type: string | null;
+  venue_type: string | null;
   event_count?: number;
   lat?: number | null;
   lng?: number | null;
@@ -178,9 +178,9 @@ function SpotCard({
   spot: Spot;
   portalSlug: string;
 }) {
-  const categoryColor = spot.spot_type ? getCategoryColor(spot.spot_type) : "var(--coral)";
-  const reflectionClass = getReflectionClass(spot.spot_type);
-  const config = SPOT_TYPE_CONFIG[spot.spot_type || "other"] || SPOT_TYPE_CONFIG.other;
+  const categoryColor = spot.venue_type ? getCategoryColor(spot.venue_type) : "var(--coral)";
+  const reflectionClass = getReflectionClass(spot.venue_type);
+  const config = SPOT_TYPE_CONFIG[spot.venue_type || "other"] || SPOT_TYPE_CONFIG.other;
 
   return (
     <Link
@@ -194,9 +194,9 @@ function SpotCard({
       } as React.CSSProperties}
     >
       <div className="flex items-start gap-3">
-        {spot.spot_type && (
+        {spot.venue_type && (
           <CategoryIcon
-            type={spot.spot_type}
+            type={spot.venue_type}
             size={18}
             className="flex-shrink-0 mt-0.5"
           />
@@ -206,8 +206,8 @@ function SpotCard({
             {spot.name}
           </div>
           <div className="flex items-center gap-2 font-mono text-xs text-[var(--muted)] mt-1">
-            {spot.spot_type && (
-              <span style={{ color: config.color }}>{getCategoryLabel(spot.spot_type)}</span>
+            {spot.venue_type && (
+              <span style={{ color: config.color }}>{getCategoryLabel(spot.venue_type)}</span>
             )}
             {spot.neighborhood && (
               <>
@@ -284,10 +284,10 @@ export default function PortalSpotsView({ portalId, portalSlug, isExclusive = fa
         return a.name.localeCompare(b.name);
       });
     } else {
-      // Sort by category (spot_type), then by event count within category
+      // Sort by category (venue_type), then by event count within category
       sorted.sort((a, b) => {
-        const aType = a.spot_type || "other";
-        const bType = b.spot_type || "other";
+        const aType = a.venue_type || "other";
+        const bType = b.venue_type || "other";
         const aOrder = SPOT_TYPE_ORDER.indexOf(aType);
         const bOrder = SPOT_TYPE_ORDER.indexOf(bType);
         const aIdx = aOrder === -1 ? 999 : aOrder;
@@ -310,7 +310,7 @@ export default function PortalSpotsView({ portalId, portalSlug, isExclusive = fa
     const groups: Record<string, Spot[]> = {};
     for (const spot of sortedSpots) {
       const key = sortBy === "category"
-        ? (spot.spot_type || "other")
+        ? (spot.venue_type || "other")
         : (spot.neighborhood || "Other");
       if (!groups[key]) groups[key] = [];
       groups[key].push(spot);

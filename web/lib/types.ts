@@ -167,16 +167,14 @@ export type Database = {
           follower_id: string;
           followed_user_id: string | null;
           followed_venue_id: number | null;
-          followed_org_id: number | null;
-          followed_producer_id: string | null;
+          followed_organization_id: string | null;
           created_at: string;
         };
         Insert: {
           follower_id: string;
           followed_user_id?: string | null;
           followed_venue_id?: number | null;
-          followed_org_id?: number | null;
-          followed_producer_id?: string | null;
+          followed_organization_id?: string | null;
         };
       };
       username_reservations: {
@@ -473,7 +471,7 @@ export type Database = {
       submissions: {
         Row: {
           id: string;
-          submission_type: "event" | "venue" | "producer";
+          submission_type: "event" | "venue" | "organization";
           submitted_by: string;
           portal_id: string | null;
           status: "pending" | "approved" | "rejected" | "needs_edit";
@@ -488,14 +486,14 @@ export type Database = {
           duplicate_acknowledged: boolean;
           approved_event_id: number | null;
           approved_venue_id: number | null;
-          approved_producer_id: string | null;
+          approved_organization_id: string | null;
           image_urls: string[] | null;
           ip_address: string | null;
           created_at: string;
           updated_at: string;
         };
         Insert: {
-          submission_type: "event" | "venue" | "producer";
+          submission_type: "event" | "venue" | "organization";
           submitted_by: string;
           portal_id?: string | null;
           status?: "pending" | "approved" | "rejected" | "needs_edit";
@@ -519,7 +517,7 @@ export type Database = {
           duplicate_acknowledged?: boolean;
           approved_event_id?: number | null;
           approved_venue_id?: number | null;
-          approved_producer_id?: string | null;
+          approved_organization_id?: string | null;
           image_urls?: string[] | null;
         };
       };
@@ -583,7 +581,7 @@ export interface VenueTagWithVote extends VenueTagSummary {
 export interface InferredPreference {
   id: string;
   user_id: string;
-  signal_type: "category" | "venue" | "neighborhood" | "time_slot" | "producer";
+  signal_type: "category" | "venue" | "neighborhood" | "time_slot" | "organization";
   signal_value: string;
   score: number;
   interaction_count: number;
@@ -603,7 +601,7 @@ export interface HiddenEvent {
 export type RecommendationReasonType =
   | "friends_going"
   | "followed_venue"
-  | "followed_producer"
+  | "followed_organization"
   | "neighborhood"
   | "price"
   | "category"
@@ -639,7 +637,7 @@ export type ListCategory =
   | "budget"
   | "special_occasion";
 
-export type ListItemType = "venue" | "event" | "producer" | "custom";
+export type ListItemType = "venue" | "event" | "organization" | "custom";
 
 export type ListVoteType = "up" | "down";
 
@@ -663,7 +661,7 @@ export interface ListItem {
   item_type: ListItemType;
   venue_id: number | null;
   event_id: number | null;
-  producer_id: number | null;
+  organization_id: number | null;
   custom_name: string | null;
   custom_description: string | null;
   position: number;
@@ -698,7 +696,7 @@ export interface ListItemWithData extends ListItem {
     name: string;
     slug: string;
     neighborhood: string | null;
-    spot_type: string | null;
+    venue_type: string | null;
   } | null;
   event?: {
     id: number;
@@ -706,7 +704,7 @@ export interface ListItemWithData extends ListItem {
     start_date: string;
     venue_name: string | null;
   } | null;
-  producer?: {
+  organization?: {
     id: number;
     name: string;
     slug: string;
@@ -734,7 +732,7 @@ export interface OnboardingSwipeEvent {
     name: string;
     neighborhood: string | null;
   } | null;
-  producer: {
+  organization: {
     id: number;
     name: string;
     slug: string;
@@ -747,14 +745,14 @@ export interface OnboardingState {
   likedEvents: number[];
   likedEventDetails: OnboardingSwipeEvent[];
   selectedNeighborhoods: string[];
-  followedProducers: number[];
+  followedOrganizations: number[];
 }
 
 // ============================================================================
 // SUBMISSIONS TYPES
 // ============================================================================
 
-export type SubmissionType = "event" | "venue" | "producer";
+export type SubmissionType = "event" | "venue" | "organization";
 export type SubmissionStatus = "pending" | "approved" | "rejected" | "needs_edit";
 
 export type Submission = Database["public"]["Tables"]["submissions"]["Row"];
@@ -783,9 +781,9 @@ export interface EventSubmissionData {
   // Venue reference or inline venue
   venue_id?: number;
   venue?: VenueSubmissionData;
-  // Producer reference or inline producer
-  producer_id?: string;
-  producer?: ProducerSubmissionData;
+  // Organization reference or inline organization
+  organization_id?: string;
+  organization?: OrganizationSubmissionData;
 }
 
 // Venue submission data structure
@@ -801,8 +799,8 @@ export interface VenueSubmissionData {
   google_place_id?: string;
 }
 
-// Producer submission data structure
-export interface ProducerSubmissionData {
+// Organization submission data structure
+export interface OrganizationSubmissionData {
   name: string;
   org_type?: string;
   website?: string;
@@ -840,7 +838,7 @@ export interface SubmissionWithProfile extends Submission {
 // For duplicate detection results
 export interface PotentialDuplicate {
   id: number;
-  type: "event" | "venue" | "producer";
+  type: "event" | "venue" | "organization";
   title: string;
   match_score: number;
   details: Record<string, unknown>;
@@ -869,6 +867,13 @@ export interface PortalSubmissionSettings {
 export interface SubmissionRateLimits {
   events_per_day: number;
   venues_per_day: number;
-  producers_per_day: number;
+  organizations_per_day: number;
   cooldown_seconds: number;
 }
+
+// ============================================
+// BACKWARDS COMPATIBILITY EXPORTS
+// ============================================
+
+/** @deprecated Use OrganizationSubmissionData instead */
+export type ProducerSubmissionData = OrganizationSubmissionData;

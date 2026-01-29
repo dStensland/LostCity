@@ -37,7 +37,7 @@ const ORG_TYPE_CONFIG: Record<string, { label: string; color: string }> = {
   other: { label: "Organization", color: "var(--neon-magenta)" },
 };
 
-type Producer = {
+type Organization = {
   id: string;
   name: string;
   slug: string;
@@ -55,11 +55,11 @@ type Producer = {
   featured: boolean;
 };
 
-// Cache producer data
-const getProducer = unstable_cache(
-  async (slug: string): Promise<Producer | null> => {
+// Cache organization data
+const getOrganization = unstable_cache(
+  async (slug: string): Promise<Organization | null> => {
     const { data, error } = await supabase
-      .from("event_producers")
+      .from("organizations")
       .select("*")
       .eq("slug", slug)
       .eq("hidden", false)
@@ -69,15 +69,15 @@ const getProducer = unstable_cache(
       return null;
     }
 
-    return data as Producer;
+    return data as Organization;
   },
-  ["producer-by-slug"],
-  { revalidate: 600, tags: ["producer"] }
+  ["organization-by-slug"],
+  { revalidate: 600, tags: ["organization"] }
 );
 
-// Cache producer events
-const getProducerEvents = unstable_cache(
-  async (producerId: string): Promise<Event[]> => {
+// Cache organization events
+const getOrganizationEvents = unstable_cache(
+  async (organizationId: string): Promise<Event[]> => {
     const today = new Date().toISOString().split("T")[0];
 
     const { data, error } = await supabase
@@ -86,7 +86,7 @@ const getProducerEvents = unstable_cache(
         *,
         venue:venues(id, name, slug, address, neighborhood, city, state)
       `)
-      .eq("producer_id", producerId)
+      .eq("organization_id", organizationId)
       .gte("start_date", today)
       .order("start_date", { ascending: true })
       .order("start_time", { ascending: true })
@@ -98,18 +98,18 @@ const getProducerEvents = unstable_cache(
 
     return data as Event[];
   },
-  ["producer-events"],
-  { revalidate: 300, tags: ["producer-events"] }
+  ["organization-events"],
+  { revalidate: 300, tags: ["organization-events"] }
 );
 
 // Cache similar organizations
 const getSimilarOrganizations = unstable_cache(
-  async (producerId: string, orgType: string, categories: string[] | null): Promise<Producer[]> => {
+  async (organizationId: string, orgType: string, categories: string[] | null): Promise<Organization[]> => {
     const query = supabase
-      .from("event_producers")
+      .from("organizations")
       .select("*")
       .eq("hidden", false)
-      .neq("id", producerId)
+      .neq("id", organizationId)
       .limit(6);
 
     // Try to match by org type first
@@ -123,22 +123,22 @@ const getSimilarOrganizations = unstable_cache(
       // Fallback: try matching by shared categories
       if (categories && categories.length > 0) {
         const { data: fallbackData } = await supabase
-          .from("event_producers")
+          .from("organizations")
           .select("*")
           .eq("hidden", false)
-          .neq("id", producerId)
+          .neq("id", organizationId)
           .contains("categories", categories)
           .limit(6);
 
-        return (fallbackData || []) as Producer[];
+        return (fallbackData || []) as Organization[];
       }
       return [];
     }
 
-    return data as Producer[];
+    return data as Organization[];
   },
   ["similar-orgs"],
-  { revalidate: 600, tags: ["producer"] }
+  { revalidate: 600, tags: ["organization"] }
 );
 
 // Helper to extract domain from URL
@@ -187,71 +187,71 @@ type Props = {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug, portal: portalSlug } = await params;
-  const producer = await getProducer(slug);
+  const organization = await getOrganization(slug);
   const portal = await getPortalBySlug(portalSlug);
 
-  if (!producer) {
+  if (!organization) {
     return { title: "Organization Not Found | Lost City" };
   }
 
   const portalName = portal?.name || "Lost City";
-  const description = producer.description || `Discover events and experiences from ${producer.name} in Atlanta.`;
+  const description = organization.description || `Discover events and experiences from ${organization.name} in Atlanta.`;
 
   return {
-    title: `${producer.name} | ${portalName}`,
+    title: `${organization.name} | ${portalName}`,
     description,
     openGraph: {
-      title: producer.name,
+      title: organization.name,
       description,
       type: "website",
-      images: producer.logo_url ? [{ url: producer.logo_url }] : [],
+      images: organization.logo_url ? [{ url: organization.logo_url }] : [],
     },
   };
 }
 
 // Generate Organization schema for SEO
-function generateOrganizationSchema(producer: Producer) {
+function generateOrganizationSchema(organization: Organization) {
   const schema: Record<string, unknown> = {
     "@context": "https://schema.org",
     "@type": "Organization",
-    name: producer.name,
+    name: organization.name,
   };
 
-  if (producer.description) {
-    schema.description = producer.description;
+  if (organization.description) {
+    schema.description = organization.description;
   }
 
-  if (producer.logo_url) {
-    schema.logo = producer.logo_url;
-    schema.image = producer.logo_url;
+  if (organization.logo_url) {
+    schema.logo = organization.logo_url;
+    schema.image = organization.logo_url;
   }
 
-  if (producer.website) {
-    schema.url = producer.website;
+  if (organization.website) {
+    schema.url = organization.website;
   }
 
-  if (producer.email) {
-    schema.email = producer.email;
+  if (organization.email) {
+    schema.email = organization.email;
   }
 
   const sameAs: string[] = [];
-  if (producer.instagram) {
-    sameAs.push(`https://instagram.com/${producer.instagram.replace("@", "")}`);
+  if (organization.instagram) {
+    sameAs.push(`https://instagram.com/${organization.instagram.replace("@", "")}`);
   }
-  if (producer.facebook) {
-    sameAs.push(producer.facebook);
+  if (organization.facebook) {
+    sameAs.push(organization.facebook);
   }
-  if (producer.twitter) {
-    sameAs.push(`https://twitter.com/${producer.twitter.replace("@", "")}`);
+  if (organization.twitter) {
+    sameAs.push(`https://twitter.com/${organization.twitter.replace("@", "")}`);
   }
   if (sameAs.length > 0) {
     schema.sameAs = sameAs;
   }
 
-  if (producer.city || producer.neighborhood) {
+  if (organization.city || organization.neighborhood) {
     schema.address = {
       "@type": "PostalAddress",
-      addressLocality: producer.city || "Atlanta",
+      addressLocality: organization.city || "Atlanta",
       addressRegion: "GA",
       addressCountry: "US",
     };
@@ -262,10 +262,10 @@ function generateOrganizationSchema(producer: Producer) {
 
 export default async function PortalOrganizerPage({ params }: Props) {
   const { portal: portalSlug, slug } = await params;
-  const producer = await getProducer(slug);
+  const organization = await getOrganization(slug);
   const portal = await getPortalBySlug(portalSlug);
 
-  if (!producer) {
+  if (!organization) {
     notFound();
   }
 
@@ -275,15 +275,15 @@ export default async function PortalOrganizerPage({ params }: Props) {
 
   // Fetch data in parallel
   const [events, similarOrgs] = await Promise.all([
-    getProducerEvents(producer.id),
-    getSimilarOrganizations(producer.id, producer.org_type, producer.categories),
+    getOrganizationEvents(organization.id),
+    getSimilarOrganizations(organization.id, organization.org_type, organization.categories),
   ]);
 
-  const orgColor = getOrgTypeColor(producer.org_type);
-  const organizationSchema = generateOrganizationSchema(producer);
+  const orgColor = getOrgTypeColor(organization.org_type);
+  const organizationSchema = generateOrganizationSchema(organization);
 
   // Format location display
-  const locationDisplay = [producer.neighborhood, producer.city]
+  const locationDisplay = [organization.neighborhood, organization.city]
     .filter(Boolean)
     .join(", ") || "Atlanta";
 
@@ -309,13 +309,13 @@ export default async function PortalOrganizerPage({ params }: Props) {
           {/* Hero Section */}
           <DetailHero
             mode="poster"
-            imageUrl={producer.logo_url}
-            title={producer.name}
+            imageUrl={organization.logo_url}
+            title={organization.name}
             subtitle={locationDisplay}
             categoryColor={orgColor}
             categoryIcon={
-              producer.categories?.[0] ? (
-                <CategoryIcon type={producer.categories[0]} size={48} />
+              organization.categories?.[0] ? (
+                <CategoryIcon type={organization.categories[0]} size={48} />
               ) : (
                 <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
@@ -331,14 +331,14 @@ export default async function PortalOrganizerPage({ params }: Props) {
                   border: `1px solid ${orgColor}40`,
                 }}
               >
-                {formatOrgType(producer.org_type)}
+                {formatOrgType(organization.org_type)}
               </span>
             }
           >
             {/* Follow/Recommend buttons in hero */}
             <div className="flex items-center gap-2 mt-4">
-              <FollowButton targetProducerId={producer.id} size="sm" />
-              <RecommendButton producerId={producer.id} size="sm" />
+              <FollowButton targetOrganizationId={organization.id} size="sm" />
+              <RecommendButton organizationId={organization.id} size="sm" />
             </div>
           </DetailHero>
 
@@ -347,7 +347,7 @@ export default async function PortalOrganizerPage({ params }: Props) {
             {/* Metadata Grid */}
             <MetadataGrid
               items={[
-                { label: "Type", value: formatOrgType(producer.org_type) },
+                { label: "Type", value: formatOrgType(organization.org_type) },
                 { label: "Location", value: locationDisplay },
                 { label: "Events", value: `${events.length} upcoming` },
               ]}
@@ -355,23 +355,23 @@ export default async function PortalOrganizerPage({ params }: Props) {
             />
 
             {/* Description */}
-            {producer.description && (
+            {organization.description && (
               <>
                 <SectionHeader title="About" />
                 <p className="text-[var(--soft)] whitespace-pre-wrap leading-relaxed mb-6">
-                  {producer.description}
+                  {organization.description}
                 </p>
               </>
             )}
 
             {/* Social Links */}
-            {(producer.website || producer.instagram || producer.facebook || producer.twitter || producer.email) && (
+            {(organization.website || organization.instagram || organization.facebook || organization.twitter || organization.email) && (
               <>
                 <SectionHeader title="Connect" />
                 <div className="flex flex-wrap gap-3 mb-6">
-                  {producer.website && (
+                  {organization.website && (
                     <a
-                      href={producer.website}
+                      href={organization.website}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-[var(--twilight)]/50 text-[var(--soft)] hover:text-[var(--cream)] hover:bg-[var(--twilight)] text-sm transition-colors"
@@ -379,12 +379,12 @@ export default async function PortalOrganizerPage({ params }: Props) {
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
                       </svg>
-                      {getDomainFromUrl(producer.website)}
+                      {getDomainFromUrl(organization.website)}
                     </a>
                   )}
-                  {producer.instagram && (
+                  {organization.instagram && (
                     <a
-                      href={`https://instagram.com/${producer.instagram.replace("@", "")}`}
+                      href={`https://instagram.com/${organization.instagram.replace("@", "")}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-[var(--twilight)]/50 text-[var(--soft)] hover:text-[var(--cream)] hover:bg-[var(--twilight)] text-sm transition-colors"
@@ -392,12 +392,12 @@ export default async function PortalOrganizerPage({ params }: Props) {
                       <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
                         <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z" />
                       </svg>
-                      @{producer.instagram.replace("@", "")}
+                      @{organization.instagram.replace("@", "")}
                     </a>
                   )}
-                  {producer.facebook && (
+                  {organization.facebook && (
                     <a
-                      href={producer.facebook}
+                      href={organization.facebook}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-[var(--twilight)]/50 text-[var(--soft)] hover:text-[var(--cream)] hover:bg-[var(--twilight)] text-sm transition-colors"
@@ -408,9 +408,9 @@ export default async function PortalOrganizerPage({ params }: Props) {
                       Facebook
                     </a>
                   )}
-                  {producer.twitter && (
+                  {organization.twitter && (
                     <a
-                      href={`https://twitter.com/${producer.twitter.replace("@", "")}`}
+                      href={`https://twitter.com/${organization.twitter.replace("@", "")}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-[var(--twilight)]/50 text-[var(--soft)] hover:text-[var(--cream)] hover:bg-[var(--twilight)] text-sm transition-colors"
@@ -418,12 +418,12 @@ export default async function PortalOrganizerPage({ params }: Props) {
                       <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
                         <path d="M23.953 4.57a10 10 0 01-2.825.775 4.958 4.958 0 002.163-2.723c-.951.555-2.005.959-3.127 1.184a4.92 4.92 0 00-8.384 4.482C7.69 8.095 4.067 6.13 1.64 3.162a4.822 4.822 0 00-.666 2.475c0 1.71.87 3.213 2.188 4.096a4.904 4.904 0 01-2.228-.616v.06a4.923 4.923 0 003.946 4.827 4.996 4.996 0 01-2.212.085 4.936 4.936 0 004.604 3.417 9.867 9.867 0 01-6.102 2.105c-.39 0-.779-.023-1.17-.067a13.995 13.995 0 007.557 2.209c9.053 0 13.998-7.496 13.998-13.985 0-.21 0-.42-.015-.63A9.935 9.935 0 0024 4.59z" />
                       </svg>
-                      @{producer.twitter.replace("@", "")}
+                      @{organization.twitter.replace("@", "")}
                     </a>
                   )}
-                  {producer.email && (
+                  {organization.email && (
                     <a
-                      href={`mailto:${producer.email}`}
+                      href={`mailto:${organization.email}`}
                       className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-[var(--twilight)]/50 text-[var(--soft)] hover:text-[var(--cream)] hover:bg-[var(--twilight)] text-sm transition-colors"
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -437,11 +437,11 @@ export default async function PortalOrganizerPage({ params }: Props) {
             )}
 
             {/* Categories */}
-            {producer.categories && producer.categories.length > 0 && (
+            {organization.categories && organization.categories.length > 0 && (
               <>
-                <SectionHeader title="Categories" count={producer.categories.length} />
+                <SectionHeader title="Categories" count={organization.categories.length} />
                 <div className="flex flex-wrap gap-2 mb-6">
-                  {producer.categories.map((cat) => {
+                  {organization.categories.map((cat) => {
                     const color = getCategoryColor(cat);
                     return (
                       <span
@@ -464,15 +464,15 @@ export default async function PortalOrganizerPage({ params }: Props) {
             {/* Community Tags */}
             <SectionHeader title="Community Tags" />
             <div className="mb-6">
-              <EntityTagList entityType="org" entityId={parseInt(producer.id, 10)} />
+              <EntityTagList entityType="org" entityId={parseInt(organization.id, 10)} />
             </div>
 
             {/* Flag for QA */}
             <SectionHeader title="Report an Issue" />
             <FlagButton
-              entityType="producer"
-              entityId={parseInt(producer.id, 10)}
-              entityName={producer.name}
+              entityType="organization"
+              entityId={parseInt(organization.id, 10)}
+              entityName={organization.name}
             />
           </InfoCard>
 
@@ -532,15 +532,15 @@ export default async function PortalOrganizerPage({ params }: Props) {
         shareLabel="Share"
         secondaryActions={
           <>
-            <FollowButton targetProducerId={producer.id} size="sm" />
-            <RecommendButton producerId={producer.id} size="sm" />
+            <FollowButton targetOrganizationId={organization.id} size="sm" />
+            <RecommendButton organizationId={organization.id} size="sm" />
           </>
         }
         primaryAction={
-          producer.website
+          organization.website
             ? {
                 label: "Website",
-                href: producer.website,
+                href: organization.website,
                 icon: (
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />

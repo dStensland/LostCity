@@ -159,7 +159,7 @@ export default function SimpleFilterBar({ variant = "full" }: SimpleFilterBarPro
     : `${currentCategories.length} selected`;
 
   return (
-    <div className="sticky top-[95px] z-30 bg-[var(--night)] border-b border-[var(--twilight)]">
+    <div className="sticky top-[95px] z-10 bg-[var(--night)] border-b border-[var(--twilight)]">
       <div className={`max-w-3xl mx-auto px-4 ${variant === "compact" ? "py-1.5" : "py-2"}`}>
         <div className="flex items-center gap-2">
           {/* Category dropdown */}

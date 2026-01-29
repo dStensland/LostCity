@@ -27,7 +27,7 @@ export interface SearchResult {
     category?: string;
     isLive?: boolean;
     isFree?: boolean;
-    spotType?: string;
+    venueType?: string;
     vibes?: string[];
     orgType?: string;
     eventCount?: number;
@@ -108,8 +108,8 @@ interface VenueSearchRow {
   slug: string;
   address: string | null;
   neighborhood: string | null;
-  spot_type: string | null;
-  spot_types: string[] | null;
+  venue_type: string | null;
+  venue_types: string[] | null;
   vibes: string[] | null;
   description: string | null;
   short_description: string | null;
@@ -122,7 +122,7 @@ interface VenueSearchRow {
   combined_score: number;
 }
 
-interface ProducerSearchRow {
+interface OrganizationSearchRow {
   id: string;
   name: string;
   slug: string;
@@ -388,7 +388,7 @@ export async function unifiedSearch(
   if (types.includes("organizer")) {
     searchTypes.push("organizer");
     searchPromises.push(
-      searchProducers(client, trimmedQuery, {
+      searchOrganizations(client, trimmedQuery, {
         limit: limitPerType,
         offset,
         categories,
@@ -580,16 +580,16 @@ async function searchVenues(
     score: row.combined_score,
     metadata: {
       neighborhood: row.neighborhood || undefined,
-      spotType: row.spot_type || undefined,
+      venueType: row.venue_type || undefined,
       vibes: row.vibes || undefined,
     },
   }));
 }
 
 /**
- * Search producers/organizers using the search_producers_ranked RPC function.
+ * Search organizations/organizers using the search_organizations_ranked RPC function.
  */
-async function searchProducers(
+async function searchOrganizations(
   client: ReturnType<typeof createServiceClient>,
   query: string,
   options: {
@@ -600,7 +600,7 @@ async function searchProducers(
   }
 ): Promise<SearchResult[]> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (client.rpc as any)("search_producers_ranked", {
+  const { data, error } = await (client.rpc as any)("search_organizations_ranked", {
     p_query: query,
     p_limit: options.limit,
     p_offset: options.offset,
@@ -609,11 +609,11 @@ async function searchProducers(
   });
 
   if (error) {
-    console.error("Error searching producers:", error);
+    console.error("Error searching organizations:", error);
     return [];
   }
 
-  const rows = (data as ProducerSearchRow[]) || [];
+  const rows = (data as OrganizationSearchRow[]) || [];
 
   return rows.map((row) => ({
     id: row.id,
@@ -998,9 +998,9 @@ export async function searchVenuesOnly(
 }
 
 /**
- * Search producers only (for organizer-specific search contexts).
+ * Search organizations only (for organizer-specific search contexts).
  */
-export async function searchProducersOnly(
+export async function searchOrganizationsOnly(
   query: string,
   options: {
     limit?: number;
@@ -1008,11 +1008,11 @@ export async function searchProducersOnly(
     orgTypes?: string[];
     categories?: string[];
   } = {}
-): Promise<ProducerSearchRow[]> {
+): Promise<OrganizationSearchRow[]> {
   const client = createServiceClient();
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (client.rpc as any)("search_producers_ranked", {
+  const { data, error } = await (client.rpc as any)("search_organizations_ranked", {
     p_query: query.trim(),
     p_limit: options.limit || 10,
     p_offset: options.offset || 0,
@@ -1021,15 +1021,15 @@ export async function searchProducersOnly(
   });
 
   if (error) {
-    console.error("Error searching producers:", error);
+    console.error("Error searching organizations:", error);
     return [];
   }
 
-  return (data as ProducerSearchRow[]) || [];
+  return (data as OrganizationSearchRow[]) || [];
 }
 
 // Re-export types for convenience
-export type { EventSearchRow, VenueSearchRow, ProducerSearchRow };
+export type { EventSearchRow, VenueSearchRow, OrganizationSearchRow };
 
 // ============================================
 // Quick Search (for instant endpoint)

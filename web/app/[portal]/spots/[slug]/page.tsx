@@ -108,9 +108,9 @@ export default async function PortalSpotPage({ params }: Props) {
 
   const upcomingEvents = await getUpcomingEventsForSpot(spot.id, 20);
   const nearbySpots = spot.id ? await getNearbySpots(spot.id) : [];
-  const primaryType = spot.spot_type as SpotType | null;
+  const primaryType = spot.venue_type as SpotType | null;
   const typeInfo = primaryType ? SPOT_TYPES[primaryType] : null;
-  const spotTypeColor = getSpotTypeColor(spot.spot_type);
+  const spotTypeColor = getSpotTypeColor(spot.venue_type);
   const priceDisplay = formatPriceLevel(spot.price_level);
 
   // Generate Schema.org LocalBusiness JSON-LD
@@ -157,8 +157,8 @@ export default async function PortalSpotPage({ params }: Props) {
             subtitle={spot.neighborhood || spot.city}
             categoryColor={spotTypeColor}
             categoryIcon={
-              <div className="text-6xl" role="img" aria-label={formatSpotType(spot.spot_type)}>
-                {getSpotTypeIcon(spot.spot_type)}
+              <div className="text-6xl" role="img" aria-label={formatSpotType(spot.venue_type)}>
+                {getSpotTypeIcon(spot.venue_type)}
               </div>
             }
             badge={
@@ -171,8 +171,8 @@ export default async function PortalSpotPage({ params }: Props) {
                   }}
                 >
                   <span>{typeInfo.icon}</span>
-                  {spot.spot_types && spot.spot_types.length > 1
-                    ? getSpotTypeLabels(spot.spot_types)
+                  {spot.venue_types && spot.venue_types.length > 1
+                    ? getSpotTypeLabels(spot.venue_types)
                     : typeInfo.label}
                 </span>
               )
@@ -201,9 +201,9 @@ export default async function PortalSpotPage({ params }: Props) {
                 },
                 {
                   label: "Type",
-                  value: spot.spot_types && spot.spot_types.length > 1
-                    ? getSpotTypeLabels(spot.spot_types)
-                    : formatSpotType(spot.spot_type)
+                  value: spot.venue_types && spot.venue_types.length > 1
+                    ? getSpotTypeLabels(spot.venue_types)
+                    : formatSpotType(spot.venue_type)
                 },
               ]}
               className="mb-8"
@@ -307,11 +307,11 @@ export default async function PortalSpotPage({ params }: Props) {
                   variant="image"
                   href={`/${activePortalSlug}/spots/${nearby.slug}`}
                   title={nearby.name}
-                  subtitle={getSpotTypeLabel(nearby.spot_type)}
+                  subtitle={getSpotTypeLabel(nearby.venue_type)}
                   imageUrl={nearby.image_url || undefined}
                   icon={
                     <div className="text-2xl" role="img">
-                      {getSpotTypeIcon(nearby.spot_type)}
+                      {getSpotTypeIcon(nearby.venue_type)}
                     </div>
                   }
                 />

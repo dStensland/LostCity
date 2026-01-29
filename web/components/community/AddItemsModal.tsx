@@ -4,13 +4,13 @@ import { useState, useEffect, useRef } from "react";
 import { useDebounce } from "@/lib/hooks/useDebounce";
 import Button from "@/components/ui/Button";
 
-type ItemType = "venue" | "event" | "producer";
+type ItemType = "venue" | "event" | "organization";
 
 interface ExistingItem {
   item_type: string;
   venue_id?: number;
   event_id?: number;
-  producer_id?: number;
+  organization_id?: number;
 }
 
 interface AddItemsModalProps {
@@ -36,7 +36,7 @@ interface EventResult {
   venue: { name: string } | null;
 }
 
-interface ProducerResult {
+interface OrganizationResult {
   id: string;
   name: string;
   slug: string;
@@ -49,7 +49,7 @@ export function AddItemsModal({ listId, existingItems, onClose, onItemsAdded }: 
   const [query, setQuery] = useState("");
   const [venues, setVenues] = useState<VenueResult[]>([]);
   const [events, setEvents] = useState<EventResult[]>([]);
-  const [producers, setProducers] = useState<ProducerResult[]>([]);
+  const [organizations, setOrganizations] = useState<OrganizationResult[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isAdding, setIsAdding] = useState<string | number | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -88,7 +88,7 @@ export function AddItemsModal({ listId, existingItems, onClose, onItemsAdded }: 
     if (!debouncedQuery || debouncedQuery.length < 2) {
       setVenues([]);
       setEvents([]);
-      setProducers([]);
+      setOrganizations([]);
       return;
     }
 
@@ -112,11 +112,11 @@ export function AddItemsModal({ listId, existingItems, onClose, onItemsAdded }: 
           if (!res.ok) throw new Error("Search failed");
           const data = await res.json();
           setEvents(data.events || []);
-        } else if (activeTab === "producer") {
-          const res = await fetch(`/api/producers/search?${params}`);
+        } else if (activeTab === "organization") {
+          const res = await fetch(`/api/organizations/search?${params}`);
           if (!res.ok) throw new Error("Search failed");
           const data = await res.json();
-          setProducers(data.producers || []);
+          setOrganizations(data.organizations || []);
         }
       } catch (err) {
         console.error("Search error:", err);
@@ -134,7 +134,7 @@ export function AddItemsModal({ listId, existingItems, onClose, onItemsAdded }: 
     setQuery("");
     setVenues([]);
     setEvents([]);
-    setProducers([]);
+    setOrganizations([]);
   }, [activeTab]);
 
   // Check if item is already in list
@@ -146,8 +146,8 @@ export function AddItemsModal({ listId, existingItems, onClose, onItemsAdded }: 
       if (itemType === "event" && item.item_type === "event") {
         return item.event_id === itemId;
       }
-      if (itemType === "producer" && item.item_type === "producer") {
-        return item.producer_id === itemId;
+      if (itemType === "organization" && item.item_type === "organization") {
+        return item.organization_id === itemId;
       }
       return false;
     });
@@ -162,7 +162,7 @@ export function AddItemsModal({ listId, existingItems, onClose, onItemsAdded }: 
       const body: Record<string, string | number> = { item_type: itemType };
       if (itemType === "venue") body.venue_id = itemId;
       if (itemType === "event") body.event_id = itemId;
-      if (itemType === "producer") body.producer_id = itemId;
+      if (itemType === "organization") body.organization_id = itemId;
 
       const res = await fetch(`/api/lists/${listId}/items`, {
         method: "POST",
@@ -188,13 +188,13 @@ export function AddItemsModal({ listId, existingItems, onClose, onItemsAdded }: 
   const tabs: { key: ItemType; label: string }[] = [
     { key: "venue", label: "Venues" },
     { key: "event", label: "Events" },
-    { key: "producer", label: "Orgs" },
+    { key: "organization", label: "Orgs" },
   ];
 
   const hasResults =
     (activeTab === "venue" && venues.length > 0) ||
     (activeTab === "event" && events.length > 0) ||
-    (activeTab === "producer" && producers.length > 0);
+    (activeTab === "organization" && organizations.length > 0);
 
   const showNoResults = !isLoading && !hasResults && query.length >= 2;
 
@@ -365,32 +365,32 @@ export function AddItemsModal({ listId, existingItems, onClose, onItemsAdded }: 
             </div>
           )}
 
-          {/* Producer Results */}
-          {activeTab === "producer" && producers.length > 0 && (
+          {/* Organization Results */}
+          {activeTab === "organization" && organizations.length > 0 && (
             <div className="space-y-2">
-              {producers.map((producer) => {
-                const inList = isItemInList("producer", producer.id);
+              {organizations.map((organization) => {
+                const inList = isItemInList("organization", organization.id);
                 return (
                   <div
-                    key={producer.id}
+                    key={organization.id}
                     className="flex items-center justify-between p-3 rounded-lg bg-[var(--twilight)] hover:bg-[var(--dusk)] transition-colors"
                   >
                     <div className="flex-1 min-w-0">
-                      <div className="font-mono text-sm text-[var(--cream)] truncate">{producer.name}</div>
-                      {(producer.org_type || producer.neighborhood) && (
+                      <div className="font-mono text-sm text-[var(--cream)] truncate">{organization.name}</div>
+                      {(organization.org_type || organization.neighborhood) && (
                         <div className="font-mono text-xs text-[var(--muted)] mt-0.5">
-                          {producer.org_type && producer.org_type.replace(/_/g, " ")}
-                          {producer.org_type && producer.neighborhood && " • "}
-                          {producer.neighborhood}
+                          {organization.org_type && organization.org_type.replace(/_/g, " ")}
+                          {organization.org_type && organization.neighborhood && " • "}
+                          {organization.neighborhood}
                         </div>
                       )}
                     </div>
                     <Button
                       variant={inList ? "secondary" : "primary"}
                       size="sm"
-                      onClick={() => handleAddItem("producer", producer.id)}
-                      disabled={inList || isAdding === producer.id}
-                      isLoading={isAdding === producer.id}
+                      onClick={() => handleAddItem("organization", organization.id)}
+                      disabled={inList || isAdding === organization.id}
+                      isLoading={isAdding === organization.id}
                       className="ml-3 shrink-0"
                     >
                       {inList ? (

@@ -65,7 +65,7 @@ export async function GET(request: NextRequest) {
       duplicate_acknowledged,
       approved_event_id,
       approved_venue_id,
-      approved_producer_id,
+      approved_organization_id,
       image_urls,
       created_at,
       updated_at,

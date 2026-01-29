@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
       slug: string;
       address: string | null;
       neighborhood: string | null;
-      spot_type: string | null;
+      venue_type: string | null;
       city: string;
     };
 
@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
     // Fetch all venues first
     const { data: venues, error: venuesError } = await supabase
       .from("venues")
-      .select("id, name, slug, address, neighborhood, spot_type, city")
+      .select("id, name, slug, address, neighborhood, venue_type, city")
       .eq("city", "Atlanta") // TODO: make this dynamic based on portal
       .order("name");
 
@@ -76,7 +76,7 @@ export async function GET(request: NextRequest) {
       slug: venue.slug,
       address: venue.address,
       neighborhood: venue.neighborhood,
-      spot_type: venue.spot_type,
+      venue_type: venue.venue_type,
       event_count: eventCounts.get(venue.id) || 0,
     }));
 

@@ -87,8 +87,8 @@ export async function POST(request: NextRequest, { params }: Props) {
         submission.submitted_by,
         submission.id
       );
-    } else if (submission.submission_type === "producer") {
-      approvedEntityId = await createProducerFromSubmission(
+    } else if (submission.submission_type === "organization") {
+      approvedEntityId = await createOrganizationFromSubmission(
         serviceClient,
         submission.data as unknown as ProducerSubmissionData,
         submission.submitted_by,
@@ -112,8 +112,8 @@ export async function POST(request: NextRequest, { params }: Props) {
     updateData.approved_event_id = approvedEntityId;
   } else if (submission.submission_type === "venue") {
     updateData.approved_venue_id = approvedEntityId;
-  } else if (submission.submission_type === "producer") {
-    updateData.approved_producer_id = approvedEntityId;
+  } else if (submission.submission_type === "organization") {
+    updateData.approved_organization_id = approvedEntityId;
   }
 
   const { data: updated, error: updateError } = await supabase
@@ -164,12 +164,12 @@ async function createEventFromSubmission(
     );
   }
 
-  // Handle inline producer creation if needed
-  let producerId = data.producer_id;
-  if (!producerId && data.producer) {
-    producerId = await createProducerFromSubmission(
+  // Handle inline organization creation if needed
+  let organizationId = data.organization_id;
+  if (!organizationId && data.organization) {
+    organizationId = await createOrganizationFromSubmission(
       supabase,
-      data.producer,
+      data.organization,
       submittedBy,
       submissionId
     );
@@ -181,7 +181,7 @@ async function createEventFromSubmission(
     .insert({
       source_id: source.id,
       venue_id: venueId || null,
-      producer_id: producerId || null,
+      organization_id: organizationId || null,
       title: data.title,
       description: data.description || null,
       start_date: data.start_date,
@@ -264,8 +264,8 @@ async function createVenueFromSubmission(
   return venue.id;
 }
 
-// Create producer from submission data
-async function createProducerFromSubmission(
+// Create organization from submission data
+async function createOrganizationFromSubmission(
   supabase: ReturnType<typeof createServiceClient>,
   data: ProducerSubmissionData,
   submittedBy: string,
@@ -279,7 +279,7 @@ async function createProducerFromSubmission(
 
   // Check if ID/slug exists
   const { data: existing } = await supabase
-    .from("event_producers")
+    .from("organizations")
     .select("id")
     .eq("id", baseSlug)
     .maybeSingle();
@@ -289,8 +289,8 @@ async function createProducerFromSubmission(
     ? `${baseSlug}-${Date.now().toString(36)}`
     : baseSlug;
 
-  const { data: producerData, error } = await supabase
-    .from("event_producers")
+  const { data: organizationData, error } = await supabase
+    .from("organizations")
     .insert({
       id: finalId,
       name: data.name,
@@ -303,17 +303,17 @@ async function createProducerFromSubmission(
       neighborhood: data.neighborhood || null,
       description: data.description || null,
       categories: data.categories || null,
-      is_verified: false, // User-submitted producers start unverified
+      is_verified: false, // User-submitted organizations start unverified
       submitted_by: submittedBy,
       from_submission: submissionId,
     } as never)
     .select("id")
     .maybeSingle();
 
-  const producer = producerData as { id: string } | null;
-  if (error || !producer) {
-    throw error || new Error("Failed to create producer");
+  const organization = organizationData as { id: string } | null;
+  if (error || !organization) {
+    throw error || new Error("Failed to create organization");
   }
 
-  return producer.id;
+  return organization.id;
 }

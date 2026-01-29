@@ -125,12 +125,12 @@ export default function OrgDetailView({ slug, portalSlug, onClose }: OrgDetailVi
       setError(null);
 
       try {
-        const res = await fetch(`/api/producers/by-slug/${slug}`);
+        const res = await fetch(`/api/organizations/by-slug/${slug}`);
         if (!res.ok) {
           throw new Error("Organizer not found");
         }
         const data = await res.json();
-        setProducer(data.producer);
+        setProducer(data.organization);
         setEvents(data.events || []);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to load organizer");
@@ -249,7 +249,7 @@ export default function OrgDetailView({ slug, portalSlug, onClose }: OrgDetailVi
               </div>
               <div className="flex items-center gap-2 flex-shrink-0">
                 <FollowButton targetProducerId={producer.id} size="sm" />
-                <RecommendButton producerId={producer.id} size="sm" />
+                <RecommendButton organizationId={producer.id} size="sm" />
               </div>
             </div>
           </div>

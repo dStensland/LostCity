@@ -54,9 +54,9 @@ export default function SpotCard({ spot, index = 0, showDistance, portalSlug }: 
   // Stagger animation class
   const staggerClass = index < 10 ? `stagger-${index + 1}` : "";
   const priceDisplay = formatPriceLevel(spot.price_level);
-  const spotType = spot.spot_type || "music_venue";
-  const categoryColor = getCategoryColor(spotType);
-  const reflectionClass = getReflectionClass(spotType);
+  const venueType = spot.venue_type || "music_venue";
+  const categoryColor = getCategoryColor(venueType);
+  const reflectionClass = getReflectionClass(venueType);
 
   // Calculate distance if we have user location and spot coordinates
   const distance = showDistance && spot.lat && spot.lng
@@ -75,7 +75,7 @@ export default function SpotCard({ spot, index = 0, showDistance, portalSlug }: 
     >
       {/* Icon column */}
       <div className="w-10 flex-shrink-0 flex items-center justify-center">
-        <CategoryIcon type={spotType} size={24} />
+        <CategoryIcon type={venueType} size={24} />
       </div>
 
       {/* Content column */}
@@ -84,7 +84,7 @@ export default function SpotCard({ spot, index = 0, showDistance, portalSlug }: 
           {spot.name}
         </h3>
         <p className="font-serif text-sm text-[var(--soft)] mt-0.5">
-          {getCategoryLabel(spotType)}
+          {getCategoryLabel(venueType)}
           {spot.neighborhood && (
             <span className="text-[var(--muted)]"> · {spot.neighborhood}</span>
           )}

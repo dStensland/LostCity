@@ -3,7 +3,7 @@
 import { useState } from "react";
 
 interface FlagButtonProps {
-  entityType: "event" | "venue" | "producer";
+  entityType: "event" | "venue" | "organization" | "producer";
   entityId: number;
   entityName?: string;
   className?: string;

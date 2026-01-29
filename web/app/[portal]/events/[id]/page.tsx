@@ -79,7 +79,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 
-function generateEventSchema(event: NonNullable<Awaited<ReturnType<typeof getEventById>>>) {
+type EventWithOrganization = NonNullable<Awaited<ReturnType<typeof getEventById>>>;
+
+function generateEventSchema(event: EventWithOrganization) {
   const startDateTime = event.start_time
     ? `${event.start_date}T${event.start_time}:00`
     : event.start_date;
@@ -129,12 +131,12 @@ function generateEventSchema(event: NonNullable<Awaited<ReturnType<typeof getEve
     };
   }
 
-  // Organizer (use producer if available, otherwise venue)
-  if (event.producer) {
+  // Organizer (use organization if available, otherwise venue)
+  if (event.organization) {
     schema.organizer = {
       "@type": "Organization",
-      name: event.producer.name,
-      url: event.producer.website || undefined,
+      name: event.organization.name,
+      url: event.organization.website || undefined,
     };
   } else if (event.venue) {
     schema.organizer = {
@@ -352,7 +354,7 @@ export default async function PortalEventPage({ params }: Props) {
                     />
                   </div>
                   <Link
-                    href={`/${activePortalSlug}?spot=${event.venue.slug}`}
+                    href={`/${activePortalSlug}?venue=${event.venue.slug}`}
                     scroll={false}
                     className="block p-4 rounded-lg border border-[var(--twilight)] transition-all hover:bg-[var(--card-bg-hover)] hover:border-[var(--soft)] group"
                     style={{ backgroundColor: "var(--void)" }}
@@ -432,16 +434,16 @@ export default async function PortalEventPage({ params }: Props) {
               </>
             )}
 
-            {/* Producer */}
-            {event.producer && (
+            {/* Organization */}
+            {event.organization && (
               <>
                 <SectionHeader title="Presented by" />
                 <div className="flex items-center justify-between gap-4 p-4 rounded-lg border border-[var(--twilight)] mb-6" style={{ backgroundColor: "var(--void)" }}>
                   <div className="flex items-center gap-3 min-w-0">
-                    {event.producer.logo_url ? (
+                    {event.organization.logo_url ? (
                       <Image
-                        src={event.producer.logo_url}
-                        alt={event.producer.name}
+                        src={event.organization.logo_url}
+                        alt={event.organization.name}
                         width={40}
                         height={40}
                         className="rounded-lg object-cover flex-shrink-0"
@@ -456,14 +458,14 @@ export default async function PortalEventPage({ params }: Props) {
                     )}
                     <div className="min-w-0">
                       <h3 className="text-[var(--cream)] font-medium truncate text-sm">
-                        {event.producer.name}
+                        {event.organization.name}
                       </h3>
                       <p className="text-[0.65rem] text-[var(--muted)] font-mono uppercase tracking-wider">
-                        {event.producer.org_type.replace(/_/g, " ")}
+                        {event.organization.org_type.replace(/_/g, " ")}
                       </p>
                     </div>
                   </div>
-                  <FollowButton targetProducerId={event.producer.id} size="sm" />
+                  <FollowButton targetOrganizationId={event.organization.id} size="sm" />
                 </div>
               </>
             )}
@@ -510,11 +512,11 @@ export default async function PortalEventPage({ params }: Props) {
                 <RelatedCard
                   key={spot.id}
                   variant="image"
-                  href={`/${activePortalSlug}?spot=${spot.slug}`}
+                  href={`/${activePortalSlug}?venue=${spot.slug}`}
                   title={spot.name}
-                  subtitle={getSpotTypeLabel(spot.spot_type)}
+                  subtitle={getSpotTypeLabel(spot.venue_type)}
                   imageUrl={spot.image_url || undefined}
-                  icon={<CategoryIcon type={spot.spot_type || "bar"} size={20} />}
+                  icon={<CategoryIcon type={spot.venue_type || "bar"} size={20} />}
                 />
               ))}
             </RelatedSection>

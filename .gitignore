@@ -59,3 +59,6 @@ htmlcov/
 *.db
 *.sqlite3
 .env*.local
+
+# Private scripts (discovery scrapers, not for public)
+crawlers/scripts/private/

@@ -8,7 +8,7 @@ import CommunityContent from "./CommunityContent";
 
 export const revalidate = 300; // 5 minutes for the page
 
-export type Producer = {
+export type Organization = {
   id: string;
   name: string;
   slug: string;
@@ -28,59 +28,59 @@ const getEventCounts = unstable_cache(
   async (): Promise<Record<string, number>> => {
     const today = new Date().toISOString().split("T")[0];
 
-    // Efficient query: only fetch producer_id, let DB do the heavy lifting
+    // Efficient query: only fetch organization_id, let DB do the heavy lifting
     const { data: events } = await supabase
       .from("events")
-      .select("producer_id")
+      .select("organization_id")
       .gte("start_date", today)
-      .not("producer_id", "is", null);
+      .not("organization_id", "is", null);
 
     const counts: Record<string, number> = {};
-    for (const event of (events || []) as { producer_id: string }[]) {
-      counts[event.producer_id] = (counts[event.producer_id] || 0) + 1;
+    for (const event of (events || []) as { organization_id: string }[]) {
+      counts[event.organization_id] = (counts[event.organization_id] || 0) + 1;
     }
     return counts;
   },
-  ["producer-event-counts"],
-  { revalidate: 300, tags: ["producer-counts"] } // 5 minute cache
+  ["organization-event-counts"],
+  { revalidate: 300, tags: ["organization-counts"] } // 5 minute cache
 );
 
-// Cache producer data - changes less frequently
-const getProducersData = unstable_cache(
-  async (): Promise<Producer[]> => {
-    const { data: producers, error } = await supabase
-      .from("event_producers")
+// Cache organization data - changes less frequently
+const getOrganizationsData = unstable_cache(
+  async (): Promise<Organization[]> => {
+    const { data: organizations, error } = await supabase
+      .from("organizations")
       .select("id, name, slug, org_type, website, instagram, logo_url, description, categories, neighborhood, featured")
       .eq("hidden", false)
       .order("featured", { ascending: false })
       .order("name");
 
-    if (error || !producers) {
-      console.error("Error fetching producers:", error);
+    if (error || !organizations) {
+      console.error("Error fetching organizations:", error);
       return [];
     }
 
-    return producers as Producer[];
+    return organizations as Organization[];
   },
-  ["producers-list"],
-  { revalidate: 600, tags: ["producers"] } // 10 minute cache
+  ["organizations-list"],
+  { revalidate: 600, tags: ["organizations"] } // 10 minute cache
 );
 
-async function getProducersWithCounts(): Promise<Producer[]> {
+async function getOrganizationsWithCounts(): Promise<Organization[]> {
   // Fetch both in parallel
-  const [producers, counts] = await Promise.all([
-    getProducersData(),
+  const [organizations, counts] = await Promise.all([
+    getOrganizationsData(),
     getEventCounts(),
   ]);
 
   // Merge counts
-  const producersWithCounts = producers.map((p) => ({
+  const organizationsWithCounts = organizations.map((p) => ({
     ...p,
     event_count: counts[p.id] || 0,
   }));
 
   // Sort: featured first, then by event count, then by name
-  producersWithCounts.sort((a, b) => {
+  organizationsWithCounts.sort((a, b) => {
     if (a.featured !== b.featured) return a.featured ? -1 : 1;
     if ((b.event_count || 0) !== (a.event_count || 0)) {
       return (b.event_count || 0) - (a.event_count || 0);
@@ -88,7 +88,7 @@ async function getProducersWithCounts(): Promise<Producer[]> {
     return a.name.localeCompare(b.name);
   });
 
-  return producersWithCounts;
+  return organizationsWithCounts;
 }
 
 type Props = {
@@ -105,25 +105,25 @@ export default async function CommunityPage({ searchParams }: Props) {
   const selectedCategories = params.category?.split(",").filter(Boolean) || [];
   const searchQuery = params.search || "";
 
-  const producers = await getProducersWithCounts();
+  const organizations = await getOrganizationsWithCounts();
 
   // Filter by type, category, and search
-  let filteredProducers = producers;
+  let filteredOrganizations = organizations;
 
   if (selectedType && selectedType !== "all") {
-    filteredProducers = filteredProducers.filter((p) => p.org_type === selectedType);
+    filteredOrganizations = filteredOrganizations.filter((p) => p.org_type === selectedType);
   }
 
-  // Filter by event categories (producers who create events in these categories)
+  // Filter by event categories (organizations who create events in these categories)
   if (selectedCategories.length > 0) {
-    filteredProducers = filteredProducers.filter((p) =>
+    filteredOrganizations = filteredOrganizations.filter((p) =>
       p.categories?.some((cat) => selectedCategories.includes(cat))
     );
   }
 
   if (searchQuery) {
     const query = searchQuery.toLowerCase();
-    filteredProducers = filteredProducers.filter(
+    filteredOrganizations = filteredOrganizations.filter(
       (p) =>
         p.name.toLowerCase().includes(query) ||
         p.description?.toLowerCase().includes(query) ||
@@ -141,7 +141,7 @@ export default async function CommunityPage({ searchParams }: Props) {
 
       <Suspense fallback={<div className="h-12 bg-[var(--night)]" />}>
         <CommunityContent
-          producers={filteredProducers}
+          organizations={filteredOrganizations}
           selectedType={selectedType}
           selectedCategories={selectedCategories}
           searchQuery={searchQuery}

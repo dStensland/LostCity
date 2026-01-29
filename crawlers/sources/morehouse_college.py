@@ -16,6 +16,33 @@ from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
 
+# Keywords that indicate student/alumni-only events (not public)
+STUDENT_ONLY_KEYWORDS = [
+    "orientation", "new student", "prospective", "open house",
+    "registration", "enrollment", "advising", "deadline",
+    "reunion", "alumni weekend", "homecoming weekend",
+    "virtual info session", "info session",
+    "staff meeting", "faculty meeting",
+    "commencement rehearsal", "graduation rehearsal",
+    "student only", "students only", "for students",
+    "admitted students", "accepted students",
+    "parent weekend", "family weekend",
+    "preview day", "admitted student",
+    "career fair", "graduate school fair", "job fair",
+]
+
+
+def is_public_event(title: str, description: str = "") -> bool:
+    """Check if event appears to be open to the public (not student/alumni only)."""
+    text = f"{title} {description}".lower()
+
+    for keyword in STUDENT_ONLY_KEYWORDS:
+        if keyword in text:
+            return False
+
+    return True
+
+
 BASE_URL = "https://events.morehouse.edu"
 EVENTS_URL = BASE_URL
 
@@ -110,11 +137,17 @@ def crawl(source: dict) -> tuple[int, int, int]:
         json_events = parse_jsonld_events(soup)
 
         for event_data in json_events:
-            events_found += 1
-
             title = event_data.get("name", "").strip()
             if not title:
                 continue
+
+            # Skip student/alumni-only events
+            description = event_data.get("description", "")
+            if not is_public_event(title, description):
+                logger.debug(f"Skipping non-public event: {title}")
+                continue
+
+            events_found += 1
 
             # Parse dates
             start_date, start_time = parse_datetime(event_data.get("startDate", ""))

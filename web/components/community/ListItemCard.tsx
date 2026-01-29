@@ -8,10 +8,10 @@ import { useAuth } from "@/lib/auth-context";
 export type ListItem = {
   id: string;
   list_id: string;
-  item_type: "venue" | "event" | "producer" | "custom";
+  item_type: "venue" | "event" | "organization" | "custom";
   venue_id: number | null;
   event_id: number | null;
-  producer_id: number | null;
+  organization_id: number | null;
   custom_name: string | null;
   custom_description: string | null;
   note?: string | null;
@@ -23,7 +23,7 @@ export type ListItem = {
     name: string;
     slug: string;
     neighborhood: string | null;
-    spot_type: string | null;
+    venue_type: string | null;
     image_url?: string | null;
   } | null;
   event?: {
@@ -33,7 +33,7 @@ export type ListItem = {
     image_url?: string | null;
     venue?: { name: string } | null;
   } | null;
-  producer?: {
+  organization?: {
     id: number;
     name: string;
     slug: string;
@@ -88,8 +88,8 @@ export default function ListItemCard({
     if (item.item_type === "venue" && item.venue) {
       return {
         name: item.venue.name,
-        subtitle: item.venue.spot_type
-          ? SPOT_TYPE_LABELS[item.venue.spot_type] || item.venue.spot_type
+        subtitle: item.venue.venue_type
+          ? SPOT_TYPE_LABELS[item.venue.venue_type] || item.venue.venue_type
           : null,
         location: item.venue.neighborhood,
         href: `/${portalSlug}?spot=${item.venue.slug}`,
@@ -105,13 +105,13 @@ export default function ListItemCard({
         image: item.event.image_url,
       };
     }
-    if (item.item_type === "producer" && item.producer) {
+    if (item.item_type === "organization" && item.organization) {
       return {
-        name: item.producer.name,
-        subtitle: "Organizer",
+        name: item.organization.name,
+        subtitle: "Organization",
         location: null,
-        href: `/${portalSlug}?org=${item.producer.slug}`,
-        image: item.producer.image_url,
+        href: `/${portalSlug}?org=${item.organization.slug}`,
+        image: item.organization.image_url,
       };
     }
     // Custom item
@@ -209,7 +209,7 @@ export default function ListItemCard({
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
             )}
-            {item.item_type === "producer" && (
+            {item.item_type === "organization" && (
               <svg className="w-6 h-6" style={{ color: categoryColor }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
               </svg>

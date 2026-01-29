@@ -22,7 +22,7 @@ function getReasonGroup(type: RecommendationReason["type"]): ReasonGroup {
     case "friends_going":
       return "social";
     case "followed_venue":
-    case "followed_producer":
+    case "followed_organization":
     case "neighborhood":
     case "category":
     case "price":

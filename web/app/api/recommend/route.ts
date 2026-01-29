@@ -15,9 +15,9 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const eventId = searchParams.get("eventId");
   const venueId = searchParams.get("venueId");
-  const producerId = searchParams.get("producerId");
+  const organizationId = searchParams.get("organizationId");
 
-  if (!eventId && !venueId && !producerId) {
+  if (!eventId && !venueId && !organizationId) {
     return NextResponse.json({ error: "Missing target" }, { status: 400 });
   }
 
@@ -31,8 +31,8 @@ export async function GET(request: NextRequest) {
       query = query.eq("event_id", parseInt(eventId));
     } else if (venueId) {
       query = query.eq("venue_id", parseInt(venueId));
-    } else if (producerId) {
-      query = query.eq("producer_id", producerId);
+    } else if (organizationId) {
+      query = query.eq("organization_id", organizationId);
     }
 
     const { data, error } = await query.maybeSingle();
@@ -67,9 +67,9 @@ export async function POST(request: NextRequest) {
   }
 
   const body = await request.json();
-  const { eventId, venueId, producerId, action, note, visibility } = body;
+  const { eventId, venueId, organizationId, action, note, visibility } = body;
 
-  if (!eventId && !venueId && !producerId) {
+  if (!eventId && !venueId && !organizationId) {
     return NextResponse.json({ error: "Missing target" }, { status: 400 });
   }
 
@@ -84,8 +84,8 @@ export async function POST(request: NextRequest) {
         query = query.eq("event_id", eventId);
       } else if (venueId) {
         query = query.eq("venue_id", venueId);
-      } else if (producerId) {
-        query = query.eq("producer_id", producerId);
+      } else if (organizationId) {
+        query = query.eq("organization_id", organizationId);
       }
 
       const { error } = await query;
@@ -107,8 +107,8 @@ export async function POST(request: NextRequest) {
         checkQuery = checkQuery.eq("event_id", eventId);
       } else if (venueId) {
         checkQuery = checkQuery.eq("venue_id", venueId);
-      } else if (producerId) {
-        checkQuery = checkQuery.eq("producer_id", producerId);
+      } else if (organizationId) {
+        checkQuery = checkQuery.eq("organization_id", organizationId);
       }
 
       const { data: existing } = await checkQuery.maybeSingle();
@@ -124,8 +124,8 @@ export async function POST(request: NextRequest) {
           updateQuery = updateQuery.eq("event_id", eventId);
         } else if (venueId) {
           updateQuery = updateQuery.eq("venue_id", venueId);
-        } else if (producerId) {
-          updateQuery = updateQuery.eq("producer_id", producerId);
+        } else if (organizationId) {
+          updateQuery = updateQuery.eq("organization_id", organizationId);
         }
 
         const { error } = await updateQuery;
@@ -146,8 +146,8 @@ export async function POST(request: NextRequest) {
           recData.event_id = eventId;
         } else if (venueId) {
           recData.venue_id = venueId;
-        } else if (producerId) {
-          recData.producer_id = producerId;
+        } else if (organizationId) {
+          recData.organization_id = organizationId;
         }
 
         const { error } = await supabase.from("recommendations").insert(recData as never);

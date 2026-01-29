@@ -17,7 +17,7 @@ const STATUS_LABELS: Record<SubmissionStatus, { label: string; color: string }> 
 const TYPE_LABELS: Record<SubmissionType, string> = {
   event: "Event",
   venue: "Venue",
-  producer: "Organization",
+  organization: "Organization",
 };
 
 export default function UserSubmissionsPage() {
@@ -242,7 +242,7 @@ export default function UserSubmissionsPage() {
                     </div>
                     {submission.status === "needs_edit" && (
                       <Link
-                        href={`/submit/${submission.submission_type === "producer" ? "org" : submission.submission_type}?edit=${submission.id}`}
+                        href={`/submit/${submission.submission_type === "organization" ? "org" : submission.submission_type}?edit=${submission.id}`}
                         className="px-3 py-1.5 rounded-lg border border-orange-500 text-orange-400 font-mono text-xs hover:bg-orange-500/10 transition-colors"
                       >
                         Edit

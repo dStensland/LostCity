@@ -121,7 +121,7 @@ export function formatPrice(event: PriceableEvent): string {
  * Useful for styling (green badge for free, italics for estimate).
  */
 /**
- * Format a date as a smart contextual label: "Today", "Tmrw", "Wed", "1/28"
+ * Format a date as a smart contextual label: "Today", "Wed", "1/28"
  * Uses compact format for narrow time cells
  */
 export function formatSmartDate(dateStr: string): { label: string; isHighlight: boolean } {
@@ -140,14 +140,15 @@ export function formatSmartDate(dateStr: string): { label: string; isHighlight: 
     return { label: "Today", isHighlight: true };
   }
 
-  // Check if tomorrow - use compact "Tmrw"
+  const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+  // Check if tomorrow - show day abbreviation with highlight
   if (date.getTime() === tomorrow.getTime()) {
-    return { label: "Tmrw", isHighlight: true };
+    return { label: dayNames[date.getDay()], isHighlight: true };
   }
 
   // Within next 7 days - show day name
   if (date < nextWeek) {
-    const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
     return { label: dayNames[date.getDay()], isHighlight: false };
   }
 

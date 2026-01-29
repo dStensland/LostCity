@@ -70,7 +70,7 @@ ITP_NEIGHBORHOODS = [
     {"id": "sweet-auburn", "name": "Sweet Auburn", "lat": 33.755, "lng": -84.376, "radius": 1000},
 ]
 
-# Google type to our spot_type mapping
+# Google type to our venue_type mapping
 GOOGLE_TYPE_MAP = {
     "night_club": "club",
     "bar": "bar",
@@ -94,8 +94,8 @@ GOOGLE_TYPE_MAP = {
     "pub": "bar",
 }
 
-# Valid spot_type values (from GOOGLE_TYPE_MAP)
-VALID_SPOT_TYPES = list(set(GOOGLE_TYPE_MAP.values())) + [
+# Valid venue_type values (from GOOGLE_TYPE_MAP)
+VALID_VENUE_TYPES = list(set(GOOGLE_TYPE_MAP.values())) + [
     "music_venue", "event_space", "hotel", "church", "community_center",
     "comedy_club", "coworking", "food_hall"
 ]
@@ -145,7 +145,7 @@ OUTPUT FORMAT:
 Return valid JSON matching this schema:
 {
   "vibes": ["vibe1", "vibe2"] | null,
-  "spot_type": "type" | null,
+  "venue_type": "type" | null,
   "price_level": 1-4 | null,
   "is_event_venue": true | false | null,
   "confidence": 0.0-1.0,
@@ -240,16 +240,16 @@ def search_google_places(query: str, location_bias: Optional[dict] = None) -> Op
         return None
 
 
-def map_google_to_spot_type(google_types: list[str]) -> Optional[str]:
-    """Map Google place types to our spot_type."""
+def map_google_to_venue_type(google_types: list[str]) -> Optional[str]:
+    """Map Google place types to our venue_type."""
     for gtype in google_types:
         if gtype in GOOGLE_TYPE_MAP:
             return GOOGLE_TYPE_MAP[gtype]
     return None
 
 
-def map_google_to_spot_types(google_types: list[str]) -> list[str]:
-    """Map Google place types to our spot_types array."""
+def map_google_to_venue_types(google_types: list[str]) -> list[str]:
+    """Map Google place types to our venue_types array."""
     our_types = []
     for gtype in google_types:
         if gtype in GOOGLE_TYPE_MAP:
@@ -303,7 +303,7 @@ def extract_venue_info_from_website(website_url: str) -> Optional[dict]:
         website_url: URL of the venue's website
 
     Returns:
-        Dict with vibes, spot_type, price_level, is_event_venue, confidence
+        Dict with vibes, venue_type, price_level, is_event_venue, confidence
         or None if extraction failed
     """
     cfg = get_config()
@@ -355,10 +355,10 @@ Website Content:
             if not data["vibes"]:
                 data["vibes"] = None
 
-        # Validate spot_type
-        if data.get("spot_type") and data["spot_type"] not in VALID_SPOT_TYPES:
-            logger.warning(f"Invalid spot_type '{data['spot_type']}' - ignoring")
-            data["spot_type"] = None
+        # Validate venue_type
+        if data.get("venue_type") and data["venue_type"] not in VALID_VENUE_TYPES:
+            logger.warning(f"Invalid venue_type '{data['venue_type']}' - ignoring")
+            data["venue_type"] = None
 
         # Validate price_level
         if data.get("price_level"):
@@ -400,13 +400,13 @@ def enrich_venue(venue_id: int, google_place: dict, dry_run: bool = False) -> di
     }
 
     # Map types
-    spot_type = map_google_to_spot_type(google_types)
-    if spot_type:
-        updates["spot_type"] = spot_type
+    venue_type = map_google_to_venue_type(google_types)
+    if venue_type:
+        updates["venue_type"] = venue_type
 
-    spot_types = map_google_to_spot_types(google_types)
-    if spot_types:
-        updates["spot_types"] = spot_types
+    venue_types = map_google_to_venue_types(google_types)
+    if venue_types:
+        updates["venue_types"] = venue_types
 
     # Map vibes
     vibes = map_google_to_vibes(google_place)
@@ -467,7 +467,7 @@ def enrich_incomplete_venues(limit: int = 50, dry_run: bool = False) -> dict:
 
     # Find incomplete venues (missing neighborhood, type, or coordinates)
     result = client.table("venues").select("*").eq("active", True).or_(
-        "neighborhood.is.null,spot_type.is.null,lat.is.null"
+        "neighborhood.is.null,venue_type.is.null,lat.is.null"
     ).order("name").limit(limit).execute()
 
     venues = result.data or []
@@ -486,7 +486,7 @@ def enrich_incomplete_venues(limit: int = 50, dry_run: bool = False) -> dict:
         print(f"\n[{i}/{len(venues)}] {venue['name']}")
 
         # Skip if already has coordinates and neighborhood
-        if venue.get("lat") and venue.get("lng") and venue.get("neighborhood") and venue.get("spot_type"):
+        if venue.get("lat") and venue.get("lng") and venue.get("neighborhood") and venue.get("venue_type"):
             print("  Skipping: already complete")
             stats["skipped"] += 1
             continue
@@ -496,9 +496,9 @@ def enrich_incomplete_venues(limit: int = 50, dry_run: bool = False) -> dict:
             if result:
                 stats["enriched"] += 1
                 if dry_run:
-                    print(f"  [DRY RUN] Would update with: neighborhood={result.get('neighborhood')}, type={result.get('spot_type')}")
+                    print(f"  [DRY RUN] Would update with: neighborhood={result.get('neighborhood')}, type={result.get('venue_type')}")
                 else:
-                    print(f"  Updated: neighborhood={result.get('neighborhood')}, type={result.get('spot_type')}")
+                    print(f"  Updated: neighborhood={result.get('neighborhood')}, type={result.get('venue_type')}")
             else:
                 stats["failed"] += 1
         except Exception as e:
@@ -519,7 +519,7 @@ def enrich_address_venues(limit: int = 50, dry_run: bool = False) -> dict:
 
     # Get all incomplete venues
     result = client.table("venues").select("*").eq("active", True).or_(
-        "neighborhood.is.null,spot_type.is.null"
+        "neighborhood.is.null,venue_type.is.null"
     ).order("name").execute()
 
     venues = result.data or []
@@ -596,17 +596,17 @@ def enrich_websites_only(limit: int = 50, dry_run: bool = False) -> dict:
 
     Targets venues that:
     - Have website URL populated
-    - Are missing vibes, spot_type, price_level, or is_event_venue
+    - Are missing vibes, venue_type, price_level, or is_event_venue
 
     Returns stats about the enrichment run.
     """
     client = get_client()
 
     # Find venues with websites that need enrichment
-    # Query: active=true, website IS NOT NULL, (vibes IS NULL OR spot_type IS NULL OR price_level IS NULL)
+    # Query: active=true, website IS NOT NULL, (vibes IS NULL OR venue_type IS NULL OR price_level IS NULL)
     # Note: is_event_venue check is done in Python to handle case where column doesn't exist yet
     result = client.table("venues").select("*").eq("active", True).not_.is_("website", "null").or_(
-        "vibes.is.null,spot_type.is.null,price_level.is.null"
+        "vibes.is.null,venue_type.is.null,price_level.is.null"
     ).order("name").limit(limit).execute()
 
     venues = result.data or []
@@ -632,7 +632,7 @@ def enrich_websites_only(limit: int = 50, dry_run: bool = False) -> dict:
             continue
 
         # Skip if already has all the main data (is_event_venue may not exist yet)
-        if (venue.get("vibes") and venue.get("spot_type") and venue.get("price_level")):
+        if (venue.get("vibes") and venue.get("venue_type") and venue.get("price_level")):
             # Check is_event_venue only if column exists
             if "is_event_venue" in venue and venue.get("is_event_venue") is not None:
                 print("  Skipping: already complete")
@@ -663,11 +663,11 @@ def enrich_websites_only(limit: int = 50, dry_run: bool = False) -> dict:
                     updates["vibes"] = combined_vibes
                     print(f"  Vibes: {combined_vibes}")
 
-            # spot_type: use new if missing
-            new_spot_type = extracted.get("spot_type")
-            if new_spot_type and not venue.get("spot_type"):
-                updates["spot_type"] = new_spot_type
-                print(f"  Spot type: {new_spot_type}")
+            # venue_type: use new if missing
+            new_venue_type = extracted.get("venue_type")
+            if new_venue_type and not venue.get("venue_type"):
+                updates["venue_type"] = new_venue_type
+                print(f"  Spot type: {new_venue_type}")
 
             # price_level: use new if missing
             new_price_level = extracted.get("price_level")

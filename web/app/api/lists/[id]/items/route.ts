@@ -21,9 +21,9 @@ export async function GET(request: NextRequest, context: RouteContext) {
       .from("list_items")
       .select(`
         *,
-        venue:venues(id, name, slug, neighborhood, spot_type),
+        venue:venues(id, name, slug, neighborhood, venue_type),
         event:events(id, title, start_date, venue:venues(name)),
-        producer:producers(id, name, slug)
+        organization:producers(id, name, slug)
       `)
       .eq("list_id", listId)
       .order("position", { ascending: true });
@@ -67,15 +67,15 @@ export async function POST(request: NextRequest, context: RouteContext) {
     }
 
     const body = await request.json();
-    const { item_type, venue_id, event_id, producer_id, custom_name, custom_description } = body;
+    const { item_type, venue_id, event_id, organization_id, custom_name, custom_description } = body;
 
     if (!item_type) {
       return NextResponse.json({ error: "Item type is required" }, { status: 400 });
     }
 
     // Validate that we have a reference
-    if (!venue_id && !event_id && !producer_id && !custom_name) {
-      return NextResponse.json({ error: "Item must have a venue, event, producer, or custom name" }, { status: 400 });
+    if (!venue_id && !event_id && !organization_id && !custom_name) {
+      return NextResponse.json({ error: "Item must have a venue, event, organization, or custom name" }, { status: 400 });
     }
 
     // Get the next position
@@ -104,7 +104,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
         item_type,
         venue_id: venue_id || null,
         event_id: event_id || null,
-        producer_id: producer_id || null,
+        organization_id: organization_id || null,
         custom_name: custom_name || null,
         custom_description: custom_description || null,
         position: nextPosition,
@@ -112,9 +112,9 @@ export async function POST(request: NextRequest, context: RouteContext) {
       })
       .select(`
         *,
-        venue:venues(id, name, slug, neighborhood, spot_type),
+        venue:venues(id, name, slug, neighborhood, venue_type),
         event:events(id, title, start_date, venue:venues(name)),
-        producer:producers(id, name, slug)
+        organization:organizations(id, name, slug)
       `)
       .maybeSingle();
 

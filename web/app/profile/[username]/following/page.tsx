@@ -75,22 +75,21 @@ export default async function FollowingPage({ params }: Props) {
       neighborhood: string | null;
     }>;
 
-  // Get producers/orgs they're following
-  // Note: followed_producer_id references event_producers table
-  const { data: producerFollowsData } = await supabase
+  // Get organizations they're following
+  const { data: organizationFollowsData } = await supabase
     .from("follows")
     .select(`
-      followed_producer_id,
-      producer:event_producers(
+      followed_organization_id,
+      organization:organizations(
         id, name, slug, org_type
       )
     `)
     .eq("follower_id", profile.id)
-    .not("followed_producer_id", "is", null)
+    .not("followed_organization_id", "is", null)
     .order("created_at", { ascending: false });
 
-  const followedProducers = (producerFollowsData || [])
-    .map((f: { producer: unknown }) => f.producer)
+  const followedOrganizations = (organizationFollowsData || [])
+    .map((f: { organization: unknown }) => f.organization)
     .filter(Boolean) as Array<{
       id: string;
       name: string;
@@ -165,17 +164,17 @@ export default async function FollowingPage({ params }: Props) {
           </section>
         )}
 
-        {/* Producers/Orgs */}
-        {followedProducers.length > 0 && (
+        {/* Organizations */}
+        {followedOrganizations.length > 0 && (
           <section>
             <h2 className="font-mono text-xs text-[var(--muted)] uppercase tracking-wider mb-4">
               Organizations
             </h2>
             <div className="divide-y divide-[var(--twilight)]">
-              {followedProducers.map((producer) => (
+              {followedOrganizations.map((organization) => (
                 <Link
-                  key={producer.id}
-                  href={`/community/${producer.slug}`}
+                  key={organization.id}
+                  href={`/community/${organization.slug}`}
                   className="py-4 flex items-center gap-4 hover:bg-[var(--dusk)] -mx-4 px-4 transition-colors"
                 >
                   <div className="w-12 h-12 rounded-lg bg-[var(--twilight)] flex items-center justify-center flex-shrink-0">
@@ -185,11 +184,11 @@ export default async function FollowingPage({ params }: Props) {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-mono text-sm text-[var(--cream)]">
-                      {producer.name}
+                      {organization.name}
                     </p>
-                    {producer.org_type && (
+                    {organization.org_type && (
                       <p className="font-mono text-xs text-[var(--muted)] capitalize">
-                        {producer.org_type.replace(/_/g, " ")}
+                        {organization.org_type.replace(/_/g, " ")}
                       </p>
                     )}
                   </div>
@@ -199,7 +198,7 @@ export default async function FollowingPage({ params }: Props) {
           </section>
         )}
 
-        {following.length === 0 && followedVenues.length === 0 && followedProducers.length === 0 && (
+        {following.length === 0 && followedVenues.length === 0 && followedOrganizations.length === 0 && (
           <p className="font-mono text-sm text-[var(--muted)] py-8 text-center">
             Not following anyone yet
           </p>

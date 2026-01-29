@@ -497,7 +497,7 @@ export default function ListDetailView({ portalSlug, listSlug }: ListDetailViewP
             item_type: item.item_type,
             venue_id: item.venue_id ?? undefined,
             event_id: item.event_id ?? undefined,
-            producer_id: item.producer_id ?? undefined
+            organization_id: item.organization_id ?? undefined
           }))}
           onClose={() => setShowAddItemsModal(false)}
           onItemsAdded={() => {

@@ -282,7 +282,7 @@ interface EventMarkerProps {
 }
 
 const EventMarker = memo(function EventMarker({ event, portalSlug }: EventMarkerProps) {
-  const iconType = event.venue?.spot_type || event.category || null;
+  const iconType = event.venue?.venue_type || event.category || null;
   const color = getCategoryColor(iconType);
   const isLive = event.is_live || false;
 
@@ -421,7 +421,7 @@ interface SpotMarkerProps {
 }
 
 const SpotMarker = memo(function SpotMarker({ spot, portalSlug }: SpotMarkerProps) {
-  const iconType = spot.spot_type || "venue";
+  const iconType = spot.venue_type || "venue";
   const color = getCategoryColor(iconType);
 
   return (
@@ -437,9 +437,9 @@ const SpotMarker = memo(function SpotMarker({ spot, portalSlug }: SpotMarkerProp
             background: `linear-gradient(135deg, ${color}08 0%, transparent 50%)`,
           }}
         >
-          {/* Spot type badge */}
+          {/* Venue type badge */}
           <div className="flex items-center justify-between mb-2">
-            {spot.spot_type && (
+            {spot.venue_type && (
               <span
                 className="inline-flex items-center gap-1.5 px-2 py-0.5 text-[0.55rem] font-mono font-medium uppercase tracking-wide rounded"
                 style={{
@@ -447,7 +447,7 @@ const SpotMarker = memo(function SpotMarker({ spot, portalSlug }: SpotMarkerProp
                   color: color,
                 }}
               >
-                {spot.spot_type.replace(/_/g, " ")}
+                {spot.venue_type.replace(/_/g, " ")}
               </span>
             )}
             <span className="flex-shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 text-[0.55rem] font-mono font-medium bg-[var(--neon-green)]/20 text-[var(--neon-green)] rounded">

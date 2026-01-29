@@ -61,8 +61,8 @@ const SECTION_CONFIG = {
     icon: "📍",
     color: "#FF00FF", // magenta
   },
-  followedOrgs: {
-    title: "From Orgs You Follow",
+  followedOrganizations: {
+    title: "From Organizations You Follow",
     icon: "🎭",
     color: "#FFD700", // gold
   },
@@ -322,8 +322,8 @@ export default function ForYouFeed({ portalSlug }: ForYouFeedProps) {
           eventsWithVenueReason: feedData.events?.filter((e: FeedEvent) =>
             e.reasons?.some((r) => r.type === "followed_venue")
           ).length || 0,
-          eventsWithProducerReason: feedData.events?.filter((e: FeedEvent) =>
-            e.reasons?.some((r) => r.type === "followed_producer")
+          eventsWithOrganizationReason: feedData.events?.filter((e: FeedEvent) =>
+            e.reasons?.some((r) => r.type === "followed_organization")
           ).length || 0,
           preferences: prefsData,
           // Show debug info from API
@@ -412,7 +412,7 @@ export default function ForYouFeed({ portalSlug }: ForYouFeedProps) {
       if (!e.category) return false;
       // Only include if category matches AND doesn't have a follow-based reason
       const hasFollowReason = e.reasons?.some(
-        (r) => r.type === "followed_venue" || r.type === "followed_producer"
+        (r) => r.type === "followed_venue" || r.type === "followed_organization"
       );
       return preferences.favorite_categories.includes(e.category) && !hasFollowReason;
     });
@@ -422,18 +422,18 @@ export default function ForYouFeed({ portalSlug }: ForYouFeedProps) {
       e.reasons?.some((r) => r.type === "followed_venue")
     );
 
-    // Events from followed orgs/producers
-    const followedOrgs = filteredEvents.filter((e) =>
-      e.reasons?.some((r) => r.type === "followed_producer")
+    // Events from followed organizations
+    const followedOrganizations = filteredEvents.filter((e) =>
+      e.reasons?.some((r) => r.type === "followed_organization")
     );
 
     // Events in user's favorite neighborhoods (that aren't already shown via follows)
     const yourNeighborhoods = filteredEvents.filter((e) => {
       if (!preferences?.favorite_neighborhoods?.length) return false;
       if (!e.venue?.neighborhood) return false;
-      // Only exclude if already shown via followed venue/producer
+      // Only exclude if already shown via followed venue/organization
       const hasFollowReason = e.reasons?.some(
-        (r) => r.type === "followed_venue" || r.type === "followed_producer"
+        (r) => r.type === "followed_venue" || r.type === "followed_organization"
       );
       return (
         preferences.favorite_neighborhoods.includes(e.venue.neighborhood) &&
@@ -454,7 +454,7 @@ export default function ForYouFeed({ portalSlug }: ForYouFeedProps) {
       friendsGoing: dedupeSection(friendsGoing).slice(0, 6),
       yourInterests: dedupeSection(yourInterests).slice(0, 6),
       followedVenues: dedupeSection(followedVenues).slice(0, 6),
-      followedOrgs: dedupeSection(followedOrgs).slice(0, 6),
+      followedOrganizations: dedupeSection(followedOrganizations).slice(0, 6),
       yourNeighborhoods: dedupeSection(yourNeighborhoods).slice(0, 6),
     };
   }, [filteredEvents, preferences]);
@@ -464,7 +464,7 @@ export default function ForYouFeed({ portalSlug }: ForYouFeedProps) {
     grouped.friendsGoing.length > 0 ||
     grouped.yourInterests.length > 0 ||
     grouped.followedVenues.length > 0 ||
-    grouped.followedOrgs.length > 0 ||
+    grouped.followedOrganizations.length > 0 ||
     grouped.yourNeighborhoods.length > 0;
 
   if (loading) {
@@ -574,14 +574,14 @@ export default function ForYouFeed({ portalSlug }: ForYouFeedProps) {
         portalSlug={portalSlug}
       />
 
-      {/* From Orgs You Follow */}
+      {/* From Organizations You Follow */}
       <ExpandableSection
-        title={SECTION_CONFIG.followedOrgs.title}
-        icon={SECTION_CONFIG.followedOrgs.icon}
-        count={grouped.followedOrgs.length}
-        accentColor={SECTION_CONFIG.followedOrgs.color}
+        title={SECTION_CONFIG.followedOrganizations.title}
+        icon={SECTION_CONFIG.followedOrganizations.icon}
+        count={grouped.followedOrganizations.length}
+        accentColor={SECTION_CONFIG.followedOrganizations.color}
         contextType="producer"
-        events={grouped.followedOrgs}
+        events={grouped.followedOrganizations}
         portalSlug={portalSlug}
       />
 

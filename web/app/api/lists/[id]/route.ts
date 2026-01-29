@@ -40,9 +40,9 @@ export async function GET(request: NextRequest, context: RouteContext) {
       .from("list_items")
       .select(`
         *,
-        venue:venues(id, name, slug, neighborhood, spot_type),
+        venue:venues(id, name, slug, neighborhood, venue_type),
         event:events(id, title, start_date, venue:venues(name)),
-        producer:producers(id, name, slug)
+        organization:organizations(id, name, slug)
       `)
       .eq("list_id", id)
       .order("position", { ascending: true });

@@ -375,7 +375,7 @@ function EventCard({ event, index = 0, skipAnimation = false, portalSlug, friend
                 reasons.filter((r) => {
                   // Filter out redundant badges based on section context
                   if (contextType === "venue" && r.type === "followed_venue") return false;
-                  if (contextType === "producer" && r.type === "followed_producer") return false;
+                  if (contextType === "producer" && r.type === "followed_organization") return false;
                   if (contextType === "interests" && r.type === "category") return false;
                   if (contextType === "neighborhood" && r.type === "neighborhood") return false;
                   return true;

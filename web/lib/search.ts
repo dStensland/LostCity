@@ -97,7 +97,7 @@ export function isEventGroup(item: EventOrGroup): item is EventGroup {
 
 // Recommendation reason type for personalization
 export type RecommendationReason = {
-  type: "friends_going" | "followed_venue" | "followed_producer" | "neighborhood" | "price" | "category" | "trending";
+  type: "friends_going" | "followed_venue" | "followed_organization" | "neighborhood" | "price" | "category" | "trending";
   label: string;
   detail?: string;
 };
@@ -108,7 +108,7 @@ export type EventWithLocation = Event & {
     lng: number | null;
     typical_price_min: number | null;
     typical_price_max: number | null;
-    spot_type?: string | null;
+    venue_type?: string | null;
     vibes?: string[] | null;
     description?: string | null;
   } | null;
@@ -366,7 +366,7 @@ export async function getFilteredEventsWithSearch(
     .select(
       `
       *,
-      venue:venues(id, name, slug, address, neighborhood, city, state, lat, lng, typical_price_min, typical_price_max, spot_type),
+      venue:venues(id, name, slug, address, neighborhood, city, state, lat, lng, typical_price_min, typical_price_max, venue_type),
       category_data:categories(typical_price_min, typical_price_max),
       series:series(id, slug, title, series_type, image_url)
     `,
@@ -674,7 +674,7 @@ export async function getFilteredEventsWithCursor(
     .select(
       `
       *,
-      venue:venues(id, name, slug, address, neighborhood, city, state, lat, lng, typical_price_min, typical_price_max, spot_type),
+      venue:venues(id, name, slug, address, neighborhood, city, state, lat, lng, typical_price_min, typical_price_max, venue_type),
       category_data:categories(typical_price_min, typical_price_max),
       series:series(id, slug, title, series_type, image_url)
     `
@@ -974,7 +974,7 @@ export async function getEventsForMap(
       category_id,
       is_free,
       is_live,
-      venue:venues!inner(id, name, slug, address, neighborhood, city, state, lat, lng, spot_type)
+      venue:venues!inner(id, name, slug, address, neighborhood, city, state, lat, lng, venue_type)
     `
     )
     .gte("start_date", today)
@@ -1364,7 +1364,7 @@ export async function getSearchSuggestions(prefix: string): Promise<SearchSugges
       .not("neighborhood", "is", null)
       .limit(3),
     supabase
-      .from("event_producers")
+      .from("organizations")
       .select("name")
       .ilike("name", searchTerm)
       .eq("hidden", false)
@@ -1581,7 +1581,7 @@ export async function getFilteredEventsWithRollups(
       .select(
         `
         *,
-        venue:venues(id, name, slug, address, neighborhood, city, state, lat, lng, typical_price_min, typical_price_max, spot_type)
+        venue:venues(id, name, slug, address, neighborhood, city, state, lat, lng, typical_price_min, typical_price_max, venue_type)
       `
       )
       .eq("venue_id", vr.venueId)
@@ -1609,7 +1609,7 @@ export async function getFilteredEventsWithRollups(
       .select(
         `
         *,
-        venue:venues(id, name, slug, address, neighborhood, city, state, lat, lng, typical_price_min, typical_price_max, spot_type)
+        venue:venues(id, name, slug, address, neighborhood, city, state, lat, lng, typical_price_min, typical_price_max, venue_type)
       `
       )
       .eq("source_id", sr.sourceId)

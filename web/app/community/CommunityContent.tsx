@@ -7,7 +7,7 @@ import Image from "next/image";
 import FollowButton from "@/components/FollowButton";
 import CategoryIcon, { getCategoryColor, CATEGORY_CONFIG } from "@/components/CategoryIcon";
 import { EventsBadge } from "@/components/Badge";
-import type { Producer } from "./page";
+import type { Organization } from "./page";
 
 // Event categories that producers can create events in
 const EVENT_CATEGORIES = [
@@ -39,7 +39,7 @@ const ORG_TYPES = {
 } as const;
 
 interface Props {
-  producers: Producer[];
+  organizations: Organization[];
   selectedType: string;
   selectedCategories: string[];
   searchQuery: string;
@@ -58,7 +58,7 @@ const ORG_TYPE_ORDER = [
 ];
 
 export default function CommunityContent({
-  producers,
+  organizations,
   selectedType,
   selectedCategories,
   searchQuery,
@@ -68,9 +68,9 @@ export default function CommunityContent({
   const [search, setSearch] = useState(searchQuery);
   const [sortBy, setSortBy] = useState<"category" | "alphabetical">("category");
 
-  // Sort producers based on selected sort option
-  const sortedProducers = useMemo(() => {
-    const sorted = [...producers];
+  // Sort organizations based on selected sort option
+  const sortedOrganizations = useMemo(() => {
+    const sorted = [...organizations];
     if (sortBy === "alphabetical") {
       sorted.sort((a, b) => a.name.localeCompare(b.name));
     } else {
@@ -85,7 +85,7 @@ export default function CommunityContent({
       });
     }
     return sorted;
-  }, [producers, sortBy]);
+  }, [organizations, sortBy]);
 
   const handleTypeChange = (type: string) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -234,7 +234,7 @@ export default function CommunityContent({
       <div className="max-w-3xl mx-auto px-4 border-b border-[var(--twilight)]">
         <div className="flex items-center justify-between py-3">
           <p className="font-mono text-xs text-[var(--muted)]">
-            <span className="text-[var(--soft)]">{producers.length}</span> organizers
+            <span className="text-[var(--soft)]">{organizations.length}</span> organizers
             {searchQuery && ` matching "${searchQuery}"`}
           </p>
           <div className="flex items-center gap-1">
@@ -265,15 +265,15 @@ export default function CommunityContent({
         </div>
       </div>
 
-      {/* Producers List */}
+      {/* Organizations List */}
       <main className="max-w-3xl mx-auto px-4 py-6 pb-12">
-        {sortedProducers.length > 0 ? (
+        {sortedOrganizations.length > 0 ? (
           <div className="space-y-4">
-            {sortedProducers.map((producer, index) => {
+            {sortedOrganizations.map((producer, index) => {
               // Show category header when sorting by category
               const showCategoryHeader = sortBy === "category" && (
                 index === 0 ||
-                sortedProducers[index - 1].org_type !== producer.org_type
+                sortedOrganizations[index - 1].org_type !== producer.org_type
               );
               const orgConfig = ORG_TYPE_CONFIG[producer.org_type];
               const hasEvents = (producer.event_count ?? 0) > 0;

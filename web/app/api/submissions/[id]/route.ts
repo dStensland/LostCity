@@ -40,7 +40,7 @@ export async function GET(request: NextRequest, { params }: Props) {
       duplicate_acknowledged,
       approved_event_id,
       approved_venue_id,
-      approved_producer_id,
+      approved_organization_id,
       image_urls,
       created_at,
       updated_at,
@@ -74,7 +74,7 @@ export async function GET(request: NextRequest, { params }: Props) {
     potential_duplicate_type: string | null;
     approved_event_id: number | null;
     approved_venue_id: number | null;
-    approved_producer_id: string | null;
+    approved_organization_id: string | null;
     [key: string]: unknown;
   };
 
@@ -144,13 +144,13 @@ export async function GET(request: NextRequest, { params }: Props) {
         .eq("id", submission.approved_venue_id)
         .maybeSingle();
       approvedEntity = { type: "venue", data: venue };
-    } else if (submission.approved_producer_id) {
-      const { data: producer } = await supabase
-        .from("event_producers")
+    } else if (submission.approved_organization_id) {
+      const { data: organization } = await supabase
+        .from("organizations")
         .select("id, name, slug")
-        .eq("id", submission.approved_producer_id)
+        .eq("id", submission.approved_organization_id)
         .maybeSingle();
-      approvedEntity = { type: "producer", data: producer };
+      approvedEntity = { type: "organization", data: organization };
     }
   }
 

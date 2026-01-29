@@ -23,7 +23,7 @@ const ENTITY_CONFIG = {
     examples: ["must-see", "intimate", "high-energy", "family-friendly", "cutting-edge"],
   },
   org: {
-    apiPath: "producers",
+    apiPath: "organizations",
     emptyStateQuestion: "How would you describe this org?",
     examples: ["innovative", "community-focused", "established", "experimental", "accessible"],
   },

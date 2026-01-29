@@ -9,7 +9,8 @@ type FollowButtonProps = {
   targetUserId?: string;
   targetVenueId?: number;
   targetOrgId?: string;
-  targetProducerId?: string;
+  targetOrganizationId?: string; // New name (preferred)
+  targetProducerId?: string; // Legacy name (deprecated)
   initialIsFollowing?: boolean;
   size?: "sm" | "md" | "lg";
   className?: string;
@@ -19,11 +20,14 @@ export default function FollowButton({
   targetUserId,
   targetVenueId,
   targetOrgId,
+  targetOrganizationId,
   targetProducerId,
   initialIsFollowing,
   size = "md",
   className = "",
 }: FollowButtonProps) {
+  // Support both old and new prop names
+  const organizationId = targetOrganizationId || targetProducerId;
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
   const { showToast } = useToast();
@@ -55,7 +59,7 @@ export default function FollowButton({
       }
 
       // No valid target
-      if (!targetUserId && !targetVenueId && !targetOrgId && !targetProducerId) {
+      if (!targetUserId && !targetVenueId && !targetOrgId && !organizationId) {
         setLoading(false);
         return;
       }
@@ -64,8 +68,8 @@ export default function FollowButton({
         const params = new URLSearchParams();
         if (targetUserId) params.set("userId", targetUserId);
         else if (targetVenueId) params.set("venueId", targetVenueId.toString());
-        else if (targetProducerId) params.set("producerId", targetProducerId);
-        // Note: targetOrgId uses same column as producerId in some cases
+        else if (organizationId) params.set("organizationId", organizationId);
+        // Note: targetOrgId uses same column as organizationId in some cases
 
         const res = await fetch(`/api/follow?${params.toString()}`);
         const data = await res.json();
@@ -87,7 +91,7 @@ export default function FollowButton({
     return () => {
       cancelled = true;
     };
-  }, [user, authLoading, targetUserId, targetVenueId, targetOrgId, targetProducerId, initialIsFollowing]);
+  }, [user, authLoading, targetUserId, targetVenueId, targetOrgId, organizationId, initialIsFollowing]);
 
   // Don't show follow button for own profile
   if (targetUserId && user?.id === targetUserId) {
@@ -112,7 +116,7 @@ export default function FollowButton({
         body: JSON.stringify({
           targetUserId,
           targetVenueId,
-          targetProducerId,
+          targetOrganizationId: organizationId,
           action: isFollowing ? "unfollow" : "follow",
         }),
       });

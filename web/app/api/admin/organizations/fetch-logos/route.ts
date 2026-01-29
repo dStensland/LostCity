@@ -134,49 +134,49 @@ async function fetchInstagramAvatar(instagramHandle: string): Promise<string | n
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { producerIds, overwrite = false } = body as {
-      producerIds?: string[];
+    const { organizationIds, overwrite = false } = body as {
+      organizationIds?: string[];
       overwrite?: boolean;
     };
 
     const supabase = getSupabaseAdmin();
 
-    // Fetch producers to update
+    // Fetch organizations to update
     let query = supabase
-      .from("event_producers")
+      .from("organizations")
       .select("id, name, website, instagram, logo_url")
       .eq("hidden", false);
 
-    if (producerIds && producerIds.length > 0) {
-      query = query.in("id", producerIds);
+    if (organizationIds && organizationIds.length > 0) {
+      query = query.in("id", organizationIds);
     }
 
     if (!overwrite) {
       query = query.is("logo_url", null);
     }
 
-    const { data: producers, error } = await query;
+    const { data: organizations, error } = await query;
 
     if (error) {
-      console.error("Error fetching producers:", error);
-      return NextResponse.json({ error: "Failed to fetch producers" }, { status: 500 });
+      console.error("Error fetching organizations:", error);
+      return NextResponse.json({ error: "Failed to fetch organizations" }, { status: 500 });
     }
 
-    if (!producers || producers.length === 0) {
+    if (!organizations || organizations.length === 0) {
       return NextResponse.json({
-        message: "No producers to update",
+        message: "No organizations to update",
         results: []
       });
     }
 
     const results: LogoResult[] = [];
 
-    for (const producer of producers) {
+    for (const organization of organizations) {
       // Skip if already has logo and not overwriting
-      if (producer.logo_url && !overwrite) {
+      if (organization.logo_url && !overwrite) {
         results.push({
-          id: producer.id,
-          name: producer.name,
+          id: organization.id,
+          name: organization.name,
           status: "skipped",
         });
         continue;
@@ -185,41 +185,41 @@ export async function POST(request: NextRequest) {
       let logoUrl: string | null = null;
 
       // Try website first
-      if (producer.website) {
-        logoUrl = await fetchLogoFromWebsite(producer.website);
+      if (organization.website) {
+        logoUrl = await fetchLogoFromWebsite(organization.website);
       }
 
       // Fall back to Instagram
-      if (!logoUrl && producer.instagram) {
-        logoUrl = await fetchInstagramAvatar(producer.instagram);
+      if (!logoUrl && organization.instagram) {
+        logoUrl = await fetchInstagramAvatar(organization.instagram);
       }
 
       if (logoUrl) {
         // Update the database
         const { error: updateError } = await supabase
-          .from("event_producers")
+          .from("organizations")
           .update({ logo_url: logoUrl, updated_at: new Date().toISOString() })
-          .eq("id", producer.id);
+          .eq("id", organization.id);
 
         if (updateError) {
           results.push({
-            id: producer.id,
-            name: producer.name,
+            id: organization.id,
+            name: organization.name,
             status: "failed",
             error: updateError.message,
           });
         } else {
           results.push({
-            id: producer.id,
-            name: producer.name,
+            id: organization.id,
+            name: organization.name,
             status: "success",
             logo_url: logoUrl,
           });
         }
       } else {
         results.push({
-          id: producer.id,
-          name: producer.name,
+          id: organization.id,
+          name: organization.name,
           status: "failed",
           error: "No logo found from website or Instagram",
         });
@@ -231,7 +231,7 @@ export async function POST(request: NextRequest) {
     const skippedCount = results.filter(r => r.status === "skipped").length;
 
     return NextResponse.json({
-      message: `Processed ${results.length} producers: ${successCount} success, ${failedCount} failed, ${skippedCount} skipped`,
+      message: `Processed ${results.length} organizations: ${successCount} success, ${failedCount} failed, ${skippedCount} skipped`,
       results,
       summary: { success: successCount, failed: failedCount, skipped: skippedCount },
     });
@@ -241,35 +241,35 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// GET endpoint to check producers without logos
+// GET endpoint to check organizations without logos
 export async function GET() {
   try {
     const supabase = getSupabaseAdmin();
 
-    const { data: producers, error } = await supabase
-      .from("event_producers")
+    const { data: organizations, error } = await supabase
+      .from("organizations")
       .select("id, name, website, instagram, logo_url")
       .eq("hidden", false)
       .is("logo_url", null)
       .order("name");
 
     if (error) {
-      return NextResponse.json({ error: "Failed to fetch producers" }, { status: 500 });
+      return NextResponse.json({ error: "Failed to fetch organizations" }, { status: 500 });
     }
 
-    const withWebsite = producers?.filter(p => p.website) || [];
-    const withInstagram = producers?.filter(p => p.instagram) || [];
-    const canFetch = producers?.filter(p => p.website || p.instagram) || [];
+    const withWebsite = organizations?.filter(p => p.website) || [];
+    const withInstagram = organizations?.filter(p => p.instagram) || [];
+    const canFetch = organizations?.filter(p => p.website || p.instagram) || [];
 
     return NextResponse.json({
-      total_without_logos: producers?.length || 0,
+      total_without_logos: organizations?.length || 0,
       with_website: withWebsite.length,
       with_instagram: withInstagram.length,
       can_fetch: canFetch.length,
-      producers: producers || [],
+      organizations: organizations || [],
     });
   } catch (err) {
-    console.error("Error checking producers:", err);
+    console.error("Error checking organizations:", err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

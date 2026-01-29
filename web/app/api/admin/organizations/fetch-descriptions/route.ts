@@ -118,85 +118,85 @@ async function fetchDescriptionFromWebsite(websiteUrl: string): Promise<string |
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { producerIds, overwrite = false } = body as {
-      producerIds?: string[];
+    const { organizationIds, overwrite = false } = body as {
+      organizationIds?: string[];
       overwrite?: boolean;
     };
 
     const supabase = getSupabaseAdmin();
 
-    // Fetch producers to update
+    // Fetch organizations to update
     let query = supabase
-      .from("event_producers")
+      .from("organizations")
       .select("id, name, website, description")
       .eq("hidden", false);
 
-    if (producerIds && producerIds.length > 0) {
-      query = query.in("id", producerIds);
+    if (organizationIds && organizationIds.length > 0) {
+      query = query.in("id", organizationIds);
     }
 
     if (!overwrite) {
       query = query.is("description", null);
     }
 
-    const { data: producers, error } = await query;
+    const { data: organizations, error } = await query;
 
     if (error) {
-      console.error("Error fetching producers:", error);
-      return NextResponse.json({ error: "Failed to fetch producers" }, { status: 500 });
+      console.error("Error fetching organizations:", error);
+      return NextResponse.json({ error: "Failed to fetch organizations" }, { status: 500 });
     }
 
     // Filter to only those with websites
-    const producersWithWebsites = (producers || []).filter(p => p.website);
+    const organizationsWithWebsites = (organizations || []).filter(p => p.website);
 
-    if (producersWithWebsites.length === 0) {
+    if (organizationsWithWebsites.length === 0) {
       return NextResponse.json({
-        message: "No producers to update (no websites available)",
+        message: "No organizations to update (no websites available)",
         results: []
       });
     }
 
     const results: DescriptionResult[] = [];
 
-    for (const producer of producersWithWebsites) {
+    for (const organization of organizationsWithWebsites) {
       // Skip if already has description and not overwriting
-      if (producer.description && !overwrite) {
+      if (organization.description && !overwrite) {
         results.push({
-          id: producer.id,
-          name: producer.name,
+          id: organization.id,
+          name: organization.name,
           status: "skipped",
         });
         continue;
       }
 
-      const description = await fetchDescriptionFromWebsite(producer.website);
+      const description = await fetchDescriptionFromWebsite(organization.website);
 
       if (description) {
         // Update the database
         const { error: updateError } = await supabase
-          .from("event_producers")
+          .from("organizations")
           .update({ description, updated_at: new Date().toISOString() })
-          .eq("id", producer.id);
+          .eq("id", organization.id);
 
         if (updateError) {
           results.push({
-            id: producer.id,
-            name: producer.name,
+            id: organization.id,
+            name: organization.name,
             status: "failed",
             error: updateError.message,
           });
         } else {
           results.push({
-            id: producer.id,
-            name: producer.name,
+            id: organization.id,
+            name: organization.name,
             status: "success",
             description,
           });
         }
       } else {
         results.push({
-          id: producer.id,
-          name: producer.name,
+          id: organization.id,
+          name: organization.name,
           status: "failed",
           error: "No description found on website",
         });
@@ -208,7 +208,7 @@ export async function POST(request: NextRequest) {
     const skippedCount = results.filter(r => r.status === "skipped").length;
 
     return NextResponse.json({
-      message: `Processed ${results.length} producers: ${successCount} success, ${failedCount} failed, ${skippedCount} skipped`,
+      message: `Processed ${results.length} organizations: ${successCount} success, ${failedCount} failed, ${skippedCount} skipped`,
       results,
       summary: { success: successCount, failed: failedCount, skipped: skippedCount },
     });
@@ -218,32 +218,32 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// GET endpoint to check producers without descriptions
+// GET endpoint to check organizations without descriptions
 export async function GET() {
   try {
     const supabase = getSupabaseAdmin();
 
-    const { data: producers, error } = await supabase
-      .from("event_producers")
+    const { data: organizations, error } = await supabase
+      .from("organizations")
       .select("id, name, website, description")
       .eq("hidden", false)
       .is("description", null)
       .order("name");
 
     if (error) {
-      return NextResponse.json({ error: "Failed to fetch producers" }, { status: 500 });
+      return NextResponse.json({ error: "Failed to fetch organizations" }, { status: 500 });
     }
 
-    const withWebsite = producers?.filter(p => p.website) || [];
+    const withWebsite = organizations?.filter(p => p.website) || [];
 
     return NextResponse.json({
-      total_without_descriptions: producers?.length || 0,
+      total_without_descriptions: organizations?.length || 0,
       with_website: withWebsite.length,
       can_fetch: withWebsite.length,
-      producers: producers || [],
+      organizations: organizations || [],
     });
   } catch (err) {
-    console.error("Error checking producers:", err);
+    console.error("Error checking organizations:", err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

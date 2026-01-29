@@ -9,7 +9,8 @@ import { VISIBILITY_OPTIONS, DEFAULT_VISIBILITY, type Visibility } from "@/lib/v
 type RecommendButtonProps = {
   eventId?: number;
   venueId?: number;
-  producerId?: string;
+  organizationId?: string; // New name (preferred)
+  producerId?: string; // Legacy name (deprecated)
   size?: "sm" | "md";
   className?: string;
 };
@@ -17,10 +18,13 @@ type RecommendButtonProps = {
 export default function RecommendButton({
   eventId,
   venueId,
+  organizationId: organizationIdProp,
   producerId,
   size = "md",
   className = "",
 }: RecommendButtonProps) {
+  // Support both old and new prop names
+  const organizationId = organizationIdProp || producerId;
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
   const modalRef = useRef<HTMLDivElement>(null);
@@ -98,7 +102,7 @@ export default function RecommendButton({
         return;
       }
 
-      if (!eventId && !venueId && !producerId) {
+      if (!eventId && !venueId && !organizationId) {
         if (!cancelled) setLoading(false);
         return;
       }
@@ -107,7 +111,7 @@ export default function RecommendButton({
         const params = new URLSearchParams();
         if (eventId) params.set("eventId", eventId.toString());
         else if (venueId) params.set("venueId", venueId.toString());
-        else if (producerId) params.set("producerId", producerId);
+        else if (organizationId) params.set("organizationId", organizationId);
 
         const res = await fetch(`/api/recommend?${params.toString()}`);
         const data = await res.json();
@@ -131,7 +135,7 @@ export default function RecommendButton({
     return () => {
       cancelled = true;
     };
-  }, [user, authLoading, eventId, venueId, producerId]);
+  }, [user, authLoading, eventId, venueId, organizationId]);
 
   const handleClick = () => {
     if (!user) {
@@ -161,7 +165,7 @@ export default function RecommendButton({
         body: JSON.stringify({
           eventId,
           venueId,
-          producerId,
+          organizationId,
           action: "save",
           note: note.trim() || null,
           visibility,
@@ -195,7 +199,7 @@ export default function RecommendButton({
         body: JSON.stringify({
           eventId,
           venueId,
-          producerId,
+          organizationId,
           action: "remove",
         }),
       });

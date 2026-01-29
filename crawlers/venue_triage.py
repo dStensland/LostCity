@@ -16,7 +16,7 @@ class VenueTriage:
     name: str
     slug: str
     neighborhood: Optional[str]
-    spot_type: Optional[str]
+    venue_type: Optional[str]
     category: str  # 'real_venue', 'address_only', 'duplicate', 'needs_review'
     issue: str
     suggested_action: str
@@ -71,7 +71,7 @@ def triage_venues(limit: int = None, include_all: bool = False) -> list[VenueTri
 
     if not include_all:
         # Focus on incomplete venues
-        query = query.or_("neighborhood.is.null,spot_type.is.null,spot_types.is.null")
+        query = query.or_("neighborhood.is.null,venue_type.is.null,venue_types.is.null")
 
     if limit:
         query = query.limit(limit)
@@ -98,8 +98,8 @@ def analyze_venue(client, venue: dict) -> Optional[VenueTriage]:
     name = venue.get("name", "")
     slug = venue.get("slug", "")
     neighborhood = venue.get("neighborhood")
-    spot_type = venue.get("spot_type")
-    spot_types = venue.get("spot_types") or []
+    venue_type = venue.get("venue_type")
+    venue_types = venue.get("venue_types") or []
     vibes = venue.get("vibes") or []
     lat = venue.get("lat")
     lng = venue.get("lng")
@@ -114,7 +114,7 @@ def analyze_venue(client, venue: dict) -> Optional[VenueTriage]:
             name=name,
             slug=slug,
             neighborhood=neighborhood,
-            spot_type=spot_type,
+            venue_type=venue_type,
             category="address_only",
             issue="Name looks like street address",
             suggested_action="Search Google Places to find actual venue name, or flag as address-only location",
@@ -128,7 +128,7 @@ def analyze_venue(client, venue: dict) -> Optional[VenueTriage]:
             name=name,
             slug=slug,
             neighborhood=neighborhood,
-            spot_type=spot_type,
+            venue_type=venue_type,
             category="needs_review",
             issue="Name is too generic or indicates virtual/TBD",
             suggested_action="Review events at this venue to determine if real or should be deleted",
@@ -138,7 +138,7 @@ def analyze_venue(client, venue: dict) -> Optional[VenueTriage]:
     # Check for missing critical data
     if not neighborhood:
         issues.append("missing neighborhood")
-    if not spot_type and not spot_types:
+    if not venue_type and not venue_types:
         issues.append("missing type")
     if not lat or not lng:
         issues.append("missing coordinates")
@@ -149,7 +149,7 @@ def analyze_venue(client, venue: dict) -> Optional[VenueTriage]:
             name=name,
             slug=slug,
             neighborhood=neighborhood,
-            spot_type=spot_type,
+            venue_type=venue_type,
             category="real_venue",
             issue=", ".join(issues),
             suggested_action="Enrich via Google Places API",
@@ -187,7 +187,7 @@ def print_triage_report(triaged: list[VenueTriage]) -> None:
         for t in items[:20]:  # Show first 20
             print(f"\n  [{t.id}] {t.name}")
             print(f"      Neighborhood: {t.neighborhood or 'None'}")
-            print(f"      Type: {t.spot_type or 'None'}")
+            print(f"      Type: {t.venue_type or 'None'}")
             print(f"      Issue: {t.issue}")
             print(f"      Events: {t.event_count}")
             print(f"      Action: {t.suggested_action}")
@@ -204,7 +204,7 @@ def export_triage_json(triaged: list[VenueTriage], filename: str = "venue_triage
             "name": t.name,
             "slug": t.slug,
             "neighborhood": t.neighborhood,
-            "spot_type": t.spot_type,
+            "venue_type": t.venue_type,
             "category": t.category,
             "issue": t.issue,
             "suggested_action": t.suggested_action,

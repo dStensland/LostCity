@@ -20,7 +20,7 @@ type LiveEventRow = {
     neighborhood: string | null;
     lat: number | null;
     lng: number | null;
-    spot_type: string | null;
+    venue_type: string | null;
   } | null;
 };
 
@@ -54,7 +54,7 @@ export async function GET(request: Request) {
           neighborhood,
           lat,
           lng,
-          spot_type
+          venue_type
         )
       `)
       .eq("is_live", true)

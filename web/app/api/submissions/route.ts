@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
       duplicate_acknowledged,
       approved_event_id,
       approved_venue_id,
-      approved_producer_id,
+      approved_organization_id,
       image_urls,
       created_at,
       updated_at,
@@ -361,7 +361,7 @@ function validateSubmissionData(
     if (!isValidString(venueData.name, 2, 200)) {
       return "Venue name is required (2-200 characters)";
     }
-  } else if (type === "producer") {
+  } else if (type === "organization" || type === "producer") {
     const producerData = data as ProducerSubmissionData;
     if (!isValidString(producerData.name, 2, 200)) {
       return "Organization name is required (2-200 characters)";

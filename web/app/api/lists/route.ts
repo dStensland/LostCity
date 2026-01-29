@@ -34,11 +34,11 @@ export async function GET(request: NextRequest) {
             item_type,
             venue_id,
             event_id,
-            producer_id,
+            organization_id,
             custom_name,
             custom_description,
             position,
-            venue:venues(id, name, slug, neighborhood, spot_type, image_url),
+            venue:venues(id, name, slug, neighborhood, venue_type, image_url),
             event:events(id, title, start_date, image_url, venue:venues(name))
           )
         `)
@@ -119,13 +119,13 @@ export async function GET(request: NextRequest) {
         item_type: string;
         venue_id: number | null;
         event_id: number | null;
-        producer_id: number | null;
+        organization_id: number | null;
         custom_name: string | null;
         custom_description: string | null;
         position: number;
         venue?: unknown;
         event?: unknown;
-        producer?: unknown;
+        organization?: unknown;
       }
 
       const transformedItems = list.items?.map((item: ListItemRaw) => ({

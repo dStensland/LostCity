@@ -50,8 +50,8 @@ export async function GET(request: NextRequest) {
           query = query.eq("venue_id", parseInt(itemId));
         } else if (itemType === "event") {
           query = query.eq("event_id", parseInt(itemId));
-        } else if (itemType === "producer") {
-          query = query.eq("producer_id", parseInt(itemId));
+        } else if (itemType === "organization") {
+          query = query.eq("organization_id", parseInt(itemId));
         }
 
         const { data: itemMembership } = await query;

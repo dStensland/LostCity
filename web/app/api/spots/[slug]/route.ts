@@ -15,7 +15,7 @@ type NearbyDestination = {
   id: number;
   name: string;
   slug: string;
-  spot_type: string | null;
+  venue_type: string | null;
   neighborhood: string | null;
   lat: number | null;
   lng: number | null;
@@ -84,9 +84,9 @@ export async function GET(
   if (spot.neighborhood) {
     const { data: spots } = await supabase
       .from("venues")
-      .select("id, name, slug, spot_type, neighborhood, lat, lng")
+      .select("id, name, slug, venue_type, neighborhood, lat, lng")
       .eq("neighborhood", spot.neighborhood)
-      .in("spot_type", allDestinationTypes)
+      .in("venue_type", allDestinationTypes)
       .eq("active", true)
       .neq("id", spot.id);
 
@@ -101,11 +101,11 @@ export async function GET(
         }
 
         // Determine category
-        const spotType = dest.spot_type || "";
+        const venueType = dest.venue_type || "";
         let category: string | null = null;
 
         for (const [cat, types] of Object.entries(DESTINATION_CATEGORIES)) {
-          if (types.includes(spotType)) {
+          if (types.includes(venueType)) {
             category = cat;
             break;
           }
@@ -126,8 +126,8 @@ export async function GET(
     // Fallback: distance-based if no neighborhood (within 2 miles)
     const { data: spots } = await supabase
       .from("venues")
-      .select("id, name, slug, spot_type, neighborhood, lat, lng")
-      .in("spot_type", allDestinationTypes)
+      .select("id, name, slug, venue_type, neighborhood, lat, lng")
+      .in("venue_type", allDestinationTypes)
       .eq("active", true)
       .neq("id", spot.id);
 
@@ -145,11 +145,11 @@ export async function GET(
         }
 
         // Determine category
-        const spotType = dest.spot_type || "";
+        const venueType = dest.venue_type || "";
         let category: string | null = null;
 
         for (const [cat, types] of Object.entries(DESTINATION_CATEGORIES)) {
-          if (types.includes(spotType)) {
+          if (types.includes(venueType)) {
             category = cat;
             break;
           }

@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      accounts: {
+        Row: {
+          contact_email: string | null
+          contact_name: string | null
+          created_at: string | null
+          id: string
+          name: string
+          plan: string | null
+          slug: string
+          updated_at: string | null
+        }
+        Insert: {
+          contact_email?: string | null
+          contact_name?: string | null
+          created_at?: string | null
+          id?: string
+          name: string
+          plan?: string | null
+          slug: string
+          updated_at?: string | null
+        }
+        Update: {
+          contact_email?: string | null
+          contact_name?: string | null
+          created_at?: string | null
+          id?: string
+          name?: string
+          plan?: string | null
+          slug?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       activities: {
         Row: {
           activity_type: string
@@ -22,6 +55,7 @@ export type Database = {
           id: string
           metadata: Json | null
           org_id: string | null
+          organization_id: string | null
           target_user_id: string | null
           user_id: string
           venue_id: number | null
@@ -34,6 +68,7 @@ export type Database = {
           id?: string
           metadata?: Json | null
           org_id?: string | null
+          organization_id?: string | null
           target_user_id?: string | null
           user_id: string
           venue_id?: number | null
@@ -46,6 +81,7 @@ export type Database = {
           id?: string
           metadata?: Json | null
           org_id?: string | null
+          organization_id?: string | null
           target_user_id?: string | null
           user_id?: string
           venue_id?: number | null
@@ -67,8 +103,8 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "activities_org_id_fkey"
-            columns: ["org_id"]
+            foreignKeyName: "activities_producer_id_fkey"
+            columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
@@ -404,110 +440,6 @@ export type Database = {
           },
         ]
       }
-      event_producers: {
-        Row: {
-          categories: string[] | null
-          city: string | null
-          created_at: string | null
-          description: string | null
-          email: string | null
-          eventbrite_organizer_id: string | null
-          events_per_month_avg: number | null
-          events_url: string | null
-          facebook: string | null
-          featured: boolean | null
-          from_submission: string | null
-          hidden: boolean | null
-          ical_url: string | null
-          id: string
-          instagram: string | null
-          is_verified: boolean | null
-          last_event_date: string | null
-          logo_url: string | null
-          name: string
-          neighborhood: string | null
-          org_type: string
-          phone: string | null
-          search_vector: unknown
-          slug: string
-          submitted_by: string | null
-          total_events_tracked: number | null
-          twitter: string | null
-          updated_at: string | null
-          website: string | null
-        }
-        Insert: {
-          categories?: string[] | null
-          city?: string | null
-          created_at?: string | null
-          description?: string | null
-          email?: string | null
-          eventbrite_organizer_id?: string | null
-          events_per_month_avg?: number | null
-          events_url?: string | null
-          facebook?: string | null
-          featured?: boolean | null
-          from_submission?: string | null
-          hidden?: boolean | null
-          ical_url?: string | null
-          id: string
-          instagram?: string | null
-          is_verified?: boolean | null
-          last_event_date?: string | null
-          logo_url?: string | null
-          name: string
-          neighborhood?: string | null
-          org_type: string
-          phone?: string | null
-          search_vector?: unknown
-          slug: string
-          submitted_by?: string | null
-          total_events_tracked?: number | null
-          twitter?: string | null
-          updated_at?: string | null
-          website?: string | null
-        }
-        Update: {
-          categories?: string[] | null
-          city?: string | null
-          created_at?: string | null
-          description?: string | null
-          email?: string | null
-          eventbrite_organizer_id?: string | null
-          events_per_month_avg?: number | null
-          events_url?: string | null
-          facebook?: string | null
-          featured?: boolean | null
-          from_submission?: string | null
-          hidden?: boolean | null
-          ical_url?: string | null
-          id?: string
-          instagram?: string | null
-          is_verified?: boolean | null
-          last_event_date?: string | null
-          logo_url?: string | null
-          name?: string
-          neighborhood?: string | null
-          org_type?: string
-          phone?: string | null
-          search_vector?: unknown
-          slug?: string
-          submitted_by?: string | null
-          total_events_tracked?: number | null
-          twitter?: string | null
-          updated_at?: string | null
-          website?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "event_producers_submitted_by_fkey"
-            columns: ["submitted_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       event_rsvps: {
         Row: {
           created_at: string | null
@@ -584,11 +516,11 @@ export type Database = {
           is_live: boolean | null
           is_recurring: boolean | null
           is_trending: boolean | null
+          organization_id: string | null
           portal_id: string | null
           price_max: number | null
           price_min: number | null
           price_note: string | null
-          producer_id: string | null
           raw_text: string | null
           recurrence_rule: string | null
           search_vector: unknown
@@ -629,11 +561,11 @@ export type Database = {
           is_live?: boolean | null
           is_recurring?: boolean | null
           is_trending?: boolean | null
+          organization_id?: string | null
           portal_id?: string | null
           price_max?: number | null
           price_min?: number | null
           price_note?: string | null
-          producer_id?: string | null
           raw_text?: string | null
           recurrence_rule?: string | null
           search_vector?: unknown
@@ -674,11 +606,11 @@ export type Database = {
           is_live?: boolean | null
           is_recurring?: boolean | null
           is_trending?: boolean | null
+          organization_id?: string | null
           portal_id?: string | null
           price_max?: number | null
           price_min?: number | null
           price_note?: string | null
-          producer_id?: string | null
           raw_text?: string | null
           recurrence_rule?: string | null
           search_vector?: unknown
@@ -734,9 +666,9 @@ export type Database = {
           },
           {
             foreignKeyName: "events_producer_id_fkey"
-            columns: ["producer_id"]
+            columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "event_producers"
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
           {
@@ -800,7 +732,7 @@ export type Database = {
           name: string
           neighborhood: string | null
           notes: string | null
-          producer_id: string | null
+          organization_id: string | null
           slug: string
           ticket_url: string | null
           typical_duration_days: number | null
@@ -824,7 +756,7 @@ export type Database = {
           name: string
           neighborhood?: string | null
           notes?: string | null
-          producer_id?: string | null
+          organization_id?: string | null
           slug: string
           ticket_url?: string | null
           typical_duration_days?: number | null
@@ -848,7 +780,7 @@ export type Database = {
           name?: string
           neighborhood?: string | null
           notes?: string | null
-          producer_id?: string | null
+          organization_id?: string | null
           slug?: string
           ticket_url?: string | null
           typical_duration_days?: number | null
@@ -859,9 +791,9 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "festivals_producer_id_fkey"
-            columns: ["producer_id"]
+            columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "event_producers"
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
         ]
@@ -870,6 +802,7 @@ export type Database = {
         Row: {
           created_at: string | null
           followed_org_id: string | null
+          followed_organization_id: string | null
           followed_user_id: string | null
           followed_venue_id: number | null
           follower_id: string
@@ -878,6 +811,7 @@ export type Database = {
         Insert: {
           created_at?: string | null
           followed_org_id?: string | null
+          followed_organization_id?: string | null
           followed_user_id?: string | null
           followed_venue_id?: number | null
           follower_id: string
@@ -886,6 +820,7 @@ export type Database = {
         Update: {
           created_at?: string | null
           followed_org_id?: string | null
+          followed_organization_id?: string | null
           followed_user_id?: string | null
           followed_venue_id?: number | null
           follower_id?: string
@@ -893,8 +828,8 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "follows_followed_org_id_fkey"
-            columns: ["followed_org_id"]
+            foreignKeyName: "follows_followed_producer_id_fkey"
+            columns: ["followed_organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
@@ -1064,8 +999,8 @@ export type Database = {
           id: string
           item_type: string
           list_id: string
+          organization_id: string | null
           position: number | null
-          producer_id: string | null
           venue_id: number | null
         }
         Insert: {
@@ -1077,8 +1012,8 @@ export type Database = {
           id?: string
           item_type: string
           list_id: string
+          organization_id?: string | null
           position?: number | null
-          producer_id?: string | null
           venue_id?: number | null
         }
         Update: {
@@ -1090,8 +1025,8 @@ export type Database = {
           id?: string
           item_type?: string
           list_id?: string
+          organization_id?: string | null
           position?: number | null
-          producer_id?: string | null
           venue_id?: number | null
         }
         Relationships: [
@@ -1118,9 +1053,9 @@ export type Database = {
           },
           {
             foreignKeyName: "list_items_producer_id_fkey"
-            columns: ["producer_id"]
+            columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "event_producers"
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
           {
@@ -1315,36 +1250,107 @@ export type Database = {
       }
       organizations: {
         Row: {
-          contact_email: string | null
-          contact_name: string | null
+          categories: string[] | null
+          city: string | null
           created_at: string | null
+          description: string | null
+          email: string | null
+          eventbrite_organizer_id: string | null
+          events_per_month_avg: number | null
+          events_url: string | null
+          facebook: string | null
+          featured: boolean | null
+          from_submission: string | null
+          hidden: boolean | null
+          ical_url: string | null
           id: string
+          instagram: string | null
+          is_verified: boolean | null
+          last_event_date: string | null
+          logo_url: string | null
           name: string
-          plan: string | null
-          slug: string | null
+          neighborhood: string | null
+          org_type: string
+          phone: string | null
+          search_vector: unknown
+          slug: string
+          submitted_by: string | null
+          total_events_tracked: number | null
+          twitter: string | null
           updated_at: string | null
+          website: string | null
         }
         Insert: {
-          contact_email?: string | null
-          contact_name?: string | null
+          categories?: string[] | null
+          city?: string | null
           created_at?: string | null
-          id?: string
+          description?: string | null
+          email?: string | null
+          eventbrite_organizer_id?: string | null
+          events_per_month_avg?: number | null
+          events_url?: string | null
+          facebook?: string | null
+          featured?: boolean | null
+          from_submission?: string | null
+          hidden?: boolean | null
+          ical_url?: string | null
+          id: string
+          instagram?: string | null
+          is_verified?: boolean | null
+          last_event_date?: string | null
+          logo_url?: string | null
           name: string
-          plan?: string | null
-          slug?: string | null
+          neighborhood?: string | null
+          org_type: string
+          phone?: string | null
+          search_vector?: unknown
+          slug: string
+          submitted_by?: string | null
+          total_events_tracked?: number | null
+          twitter?: string | null
           updated_at?: string | null
+          website?: string | null
         }
         Update: {
-          contact_email?: string | null
-          contact_name?: string | null
+          categories?: string[] | null
+          city?: string | null
           created_at?: string | null
+          description?: string | null
+          email?: string | null
+          eventbrite_organizer_id?: string | null
+          events_per_month_avg?: number | null
+          events_url?: string | null
+          facebook?: string | null
+          featured?: boolean | null
+          from_submission?: string | null
+          hidden?: boolean | null
+          ical_url?: string | null
           id?: string
+          instagram?: string | null
+          is_verified?: boolean | null
+          last_event_date?: string | null
+          logo_url?: string | null
           name?: string
-          plan?: string | null
-          slug?: string | null
+          neighborhood?: string | null
+          org_type?: string
+          phone?: string | null
+          search_vector?: unknown
+          slug?: string
+          submitted_by?: string | null
+          total_events_tracked?: number | null
+          twitter?: string | null
           updated_at?: string | null
+          website?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "event_producers_submitted_by_fkey"
+            columns: ["submitted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       portal_content: {
         Row: {
@@ -1569,6 +1575,7 @@ export type Database = {
       }
       portals: {
         Row: {
+          account_id: string | null
           branding: Json | null
           created_at: string | null
           filters: Json | null
@@ -1585,6 +1592,7 @@ export type Database = {
           visibility: string | null
         }
         Insert: {
+          account_id?: string | null
           branding?: Json | null
           created_at?: string | null
           filters?: Json | null
@@ -1601,6 +1609,7 @@ export type Database = {
           visibility?: string | null
         }
         Update: {
+          account_id?: string | null
           branding?: Json | null
           created_at?: string | null
           filters?: Json | null
@@ -1616,7 +1625,15 @@ export type Database = {
           updated_at?: string | null
           visibility?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "portals_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -1676,6 +1693,7 @@ export type Database = {
           id: string
           note: string | null
           org_id: string | null
+          organization_id: string | null
           user_id: string
           venue_id: number | null
           visibility: string | null
@@ -1686,6 +1704,7 @@ export type Database = {
           id?: string
           note?: string | null
           org_id?: string | null
+          organization_id?: string | null
           user_id: string
           venue_id?: number | null
           visibility?: string | null
@@ -1696,6 +1715,7 @@ export type Database = {
           id?: string
           note?: string | null
           org_id?: string | null
+          organization_id?: string | null
           user_id?: string
           venue_id?: number | null
           visibility?: string | null
@@ -1716,8 +1736,8 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "recommendations_org_id_fkey"
-            columns: ["org_id"]
+            foreignKeyName: "recommendations_producer_id_fkey"
+            columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
@@ -1804,7 +1824,7 @@ export type Database = {
           image_url: string | null
           imdb_id: string | null
           is_active: boolean | null
-          producer_id: string | null
+          organization_id: string | null
           rating: string | null
           runtime_minutes: number | null
           series_type: string
@@ -1828,7 +1848,7 @@ export type Database = {
           image_url?: string | null
           imdb_id?: string | null
           is_active?: boolean | null
-          producer_id?: string | null
+          organization_id?: string | null
           rating?: string | null
           runtime_minutes?: number | null
           series_type: string
@@ -1852,7 +1872,7 @@ export type Database = {
           image_url?: string | null
           imdb_id?: string | null
           is_active?: boolean | null
-          producer_id?: string | null
+          organization_id?: string | null
           rating?: string | null
           runtime_minutes?: number | null
           series_type?: string
@@ -1986,11 +2006,14 @@ export type Database = {
       }
       sources: {
         Row: {
+          active_months: number[] | null
           crawl_frequency: string | null
           created_at: string | null
+          health_tags: string[] | null
           id: number
           is_active: boolean | null
           name: string
+          organization_id: string | null
           owner_portal_id: string | null
           rollup_behavior: string | null
           slug: string
@@ -1998,11 +2021,14 @@ export type Database = {
           url: string
         }
         Insert: {
+          active_months?: number[] | null
           crawl_frequency?: string | null
           created_at?: string | null
+          health_tags?: string[] | null
           id?: number
           is_active?: boolean | null
           name: string
+          organization_id?: string | null
           owner_portal_id?: string | null
           rollup_behavior?: string | null
           slug: string
@@ -2010,11 +2036,14 @@ export type Database = {
           url: string
         }
         Update: {
+          active_months?: number[] | null
           crawl_frequency?: string | null
           created_at?: string | null
+          health_tags?: string[] | null
           id?: number
           is_active?: boolean | null
           name?: string
+          organization_id?: string | null
           owner_portal_id?: string | null
           rollup_behavior?: string | null
           slug?: string
@@ -2034,6 +2063,13 @@ export type Database = {
             columns: ["owner_portal_id"]
             isOneToOne: false
             referencedRelation: "portals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sources_producer_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
         ]
@@ -2071,7 +2107,7 @@ export type Database = {
         Row: {
           admin_notes: string | null
           approved_event_id: number | null
-          approved_producer_id: string | null
+          approved_organization_id: string | null
           approved_venue_id: number | null
           content_hash: string | null
           created_at: string | null
@@ -2094,7 +2130,7 @@ export type Database = {
         Insert: {
           admin_notes?: string | null
           approved_event_id?: number | null
-          approved_producer_id?: string | null
+          approved_organization_id?: string | null
           approved_venue_id?: number | null
           content_hash?: string | null
           created_at?: string | null
@@ -2117,7 +2153,7 @@ export type Database = {
         Update: {
           admin_notes?: string | null
           approved_event_id?: number | null
-          approved_producer_id?: string | null
+          approved_organization_id?: string | null
           approved_venue_id?: number | null
           content_hash?: string | null
           created_at?: string | null
@@ -2154,9 +2190,9 @@ export type Database = {
           },
           {
             foreignKeyName: "submissions_approved_producer_id_fkey"
-            columns: ["approved_producer_id"]
+            columns: ["approved_organization_id"]
             isOneToOne: false
-            referencedRelation: "event_producers"
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
           {
@@ -2276,36 +2312,60 @@ export type Database = {
           },
         ]
       }
+      username_reservations: {
+        Row: {
+          created_at: string | null
+          expires_at: string
+          id: string
+          username: string
+        }
+        Insert: {
+          created_at?: string | null
+          expires_at: string
+          id?: string
+          username: string
+        }
+        Update: {
+          created_at?: string | null
+          expires_at?: string
+          id?: string
+          username?: string
+        }
+        Relationships: []
+      }
       venue_tag_definitions: {
         Row: {
-          category: string
           created_at: string | null
           created_by: string | null
+          entity_type: string | null
           id: string
           is_active: boolean | null
           is_official: boolean | null
           label: string
           slug: string
+          tag_group: string
         }
         Insert: {
-          category: string
           created_at?: string | null
           created_by?: string | null
+          entity_type?: string | null
           id?: string
           is_active?: boolean | null
           is_official?: boolean | null
           label: string
           slug: string
+          tag_group: string
         }
         Update: {
-          category?: string
           created_at?: string | null
           created_by?: string | null
+          entity_type?: string | null
           id?: string
           is_active?: boolean | null
           is_official?: boolean | null
           label?: string
           slug?: string
+          tag_group?: string
         }
         Relationships: [
           {
@@ -2326,8 +2386,8 @@ export type Database = {
           reviewed_by: string | null
           status: string | null
           suggested_by: string
-          suggested_category: string
           suggested_label: string
+          suggested_tag_group: string
           venue_id: number
         }
         Insert: {
@@ -2338,8 +2398,8 @@ export type Database = {
           reviewed_by?: string | null
           status?: string | null
           suggested_by: string
-          suggested_category: string
           suggested_label: string
+          suggested_tag_group: string
           venue_id: number
         }
         Update: {
@@ -2350,8 +2410,8 @@ export type Database = {
           reviewed_by?: string | null
           status?: string | null
           suggested_by?: string
-          suggested_category?: string
           suggested_label?: string
+          suggested_tag_group?: string
           venue_id?: number
         }
         Relationships: [
@@ -2486,12 +2546,13 @@ export type Database = {
           image_url: string | null
           instagram: string | null
           is_adult: boolean | null
+          is_event_venue: boolean | null
           lat: number | null
           lng: number | null
           name: string
           neighborhood: string | null
+          organization_id: string | null
           price_level: number | null
-          producer_id: string | null
           search_vector: unknown
           short_description: string | null
           slug: string
@@ -2502,6 +2563,7 @@ export type Database = {
           typical_price_max: number | null
           typical_price_min: number | null
           venue_type: string | null
+          venue_types: string[] | null
           vibes: string[] | null
           website: string | null
           zip: string | null
@@ -2521,12 +2583,13 @@ export type Database = {
           image_url?: string | null
           instagram?: string | null
           is_adult?: boolean | null
+          is_event_venue?: boolean | null
           lat?: number | null
           lng?: number | null
           name: string
           neighborhood?: string | null
+          organization_id?: string | null
           price_level?: number | null
-          producer_id?: string | null
           search_vector?: unknown
           short_description?: string | null
           slug: string
@@ -2537,6 +2600,7 @@ export type Database = {
           typical_price_max?: number | null
           typical_price_min?: number | null
           venue_type?: string | null
+          venue_types?: string[] | null
           vibes?: string[] | null
           website?: string | null
           zip?: string | null
@@ -2556,12 +2620,13 @@ export type Database = {
           image_url?: string | null
           instagram?: string | null
           is_adult?: boolean | null
+          is_event_venue?: boolean | null
           lat?: number | null
           lng?: number | null
           name?: string
           neighborhood?: string | null
+          organization_id?: string | null
           price_level?: number | null
-          producer_id?: string | null
           search_vector?: unknown
           short_description?: string | null
           slug?: string
@@ -2572,6 +2637,7 @@ export type Database = {
           typical_price_max?: number | null
           typical_price_min?: number | null
           venue_type?: string | null
+          venue_types?: string[] | null
           vibes?: string[] | null
           website?: string | null
           zip?: string | null
@@ -2579,9 +2645,9 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "venues_producer_id_fkey"
-            columns: ["producer_id"]
+            columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "event_producers"
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
           {
@@ -2750,7 +2816,7 @@ export type Database = {
             foreignKeyName: "events_producer_id_fkey"
             columns: ["producer_id"]
             isOneToOne: false
-            referencedRelation: "event_producers"
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
           {
@@ -2805,9 +2871,10 @@ export type Database = {
         Row: {
           add_count: number | null
           downvote_count: number | null
+          entity_type: string | null
           is_official: boolean | null
           score: number | null
-          tag_category: string | null
+          tag_group: string | null
           tag_id: string | null
           tag_label: string | null
           tag_slug: string | null
@@ -2835,6 +2902,13 @@ export type Database = {
         Returns: boolean
       }
       calculate_trending_events: { Args: never; Returns: undefined }
+      check_and_reserve_username: {
+        Args: { p_reservation_ttl?: unknown; p_username: string }
+        Returns: {
+          available: boolean
+          reservation_id: string
+        }[]
+      }
       get_follower_count: { Args: { target_user_id: string }; Returns: number }
       get_following_count: { Args: { target_user_id: string }; Returns: number }
       get_friend_count: { Args: { target_user_id: string }; Returns: number }
@@ -2905,6 +2979,10 @@ export type Database = {
       }
       refresh_portal_source_access: { Args: never; Returns: undefined }
       refresh_search_suggestions: { Args: never; Returns: undefined }
+      release_username_reservation: {
+        Args: { p_reservation_id: string }
+        Returns: boolean
+      }
       search_events_ranked: {
         Args: {
           p_categories?: string[]

@@ -50,11 +50,11 @@ export async function GET() {
       .eq("follower_id", user.id)
       .not("followed_venue_id", "is", null);
 
-    const { count: producerFollowCount } = await supabase
+    const { count: organizationFollowCount } = await supabase
       .from("follows")
       .select("*", { count: "exact", head: true })
       .eq("follower_id", user.id)
-      .not("followed_producer_id", "is", null);
+      .not("followed_organization_id", "is", null);
 
     // Get RSVP stats
     const { data: rsvpStats } = await supabase
@@ -112,7 +112,7 @@ export async function GET() {
         topVenues: venuePrefs,
         topNeighborhoods: neighborhoodPrefs,
         followedVenues: venueFollowCount || 0,
-        followedProducers: producerFollowCount || 0,
+        followedOrganizations: organizationFollowCount || 0,
         rsvps: {
           going: rsvpCounts["going"] || 0,
           interested: rsvpCounts["interested"] || 0,

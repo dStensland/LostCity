@@ -17,6 +17,33 @@ from utils import extract_image_url
 
 logger = logging.getLogger(__name__)
 
+# Keywords that indicate student/alumni-only events (not public)
+STUDENT_ONLY_KEYWORDS = [
+    "orientation", "new student", "prospective", "open house",
+    "registration", "enrollment", "advising", "deadline",
+    "reunion", "alumni weekend", "homecoming weekend",
+    "virtual info session", "info session",
+    "staff meeting", "faculty meeting",
+    "commencement rehearsal", "graduation rehearsal",
+    "student only", "students only", "for students",
+    "admitted students", "accepted students",
+    "parent weekend", "family weekend",
+    "preview day", "admitted student",
+    "career fair", "graduate school fair", "job fair",
+]
+
+
+def is_public_event(title: str, description: str = "") -> bool:
+    """Check if event appears to be open to the public (not student/alumni only)."""
+    text = f"{title} {description}".lower()
+
+    for keyword in STUDENT_ONLY_KEYWORDS:
+        if keyword in text:
+            return False
+
+    return True
+
+
 BASE_URL = "https://www.cau.edu"
 EVENTS_URL = f"{BASE_URL}/events"
 ATHLETICS_URL = "https://caupanthers.com/calendar"
@@ -130,10 +157,17 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
         if json_events:
             for event_data in json_events:
-                events_found += 1
                 title = event_data.get("name", "").strip()
                 if not title:
                     continue
+
+                # Skip student/alumni-only events
+                description = event_data.get("description", "")
+                if not is_public_event(title, description):
+                    logger.debug(f"Skipping non-public event: {title}")
+                    continue
+
+                events_found += 1
 
                 start_date = event_data.get("startDate", "")[:10] if event_data.get("startDate") else None
                 if not start_date:
@@ -181,12 +215,18 @@ def crawl(source: dict) -> tuple[int, int, int]:
             # Fall back to text parsing
             text_events = parse_text_events(soup)
             for event_data in text_events:
-                events_found += 1
                 title = event_data.get("title", "")
                 start_date = event_data.get("date")
 
                 if not title or not start_date:
                     continue
+
+                # Skip student/alumni-only events
+                if not is_public_event(title):
+                    logger.debug(f"Skipping non-public event: {title}")
+                    continue
+
+                events_found += 1
 
                 content_hash = generate_content_hash(title, venue_data["name"], start_date)
                 existing = find_event_by_hash(content_hash)

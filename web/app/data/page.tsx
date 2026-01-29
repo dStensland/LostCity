@@ -20,8 +20,8 @@ type Venue = {
   name: string;
   slug: string;
   neighborhood: string | null;
-  spot_type: string | null;
-  spot_types: string[] | null;
+  venue_type: string | null;
+  venue_types: string[] | null;
   vibes: string[] | null;
   active: boolean;
 };
@@ -42,7 +42,7 @@ async function getData() {
   // Fetch venues/spots with counts
   const { data: venues } = await supabase
     .from("venues")
-    .select("id, name, slug, neighborhood, spot_type, spot_types, vibes, active")
+    .select("id, name, slug, neighborhood, venue_type, venue_types, vibes, active")
     .eq("active", true)
     .order("name");
 
@@ -108,7 +108,7 @@ export default async function DataPage() {
       name: v.name,
       slug: v.slug,
       neighborhood: v.neighborhood,
-      types: v.spot_types || (v.spot_type ? [v.spot_type] : []),
+      types: v.venue_types || (v.venue_type ? [v.venue_type] : []),
       vibes: v.vibes || [],
     })),
     stats: {

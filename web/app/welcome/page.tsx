@@ -34,7 +34,7 @@ type Neighborhood = {
   label: string;
 };
 
-type Producer = {
+type Organization = {
   id: string;
   name: string;
   slug: string;
@@ -153,8 +153,8 @@ function WelcomeContent() {
   const [step, setStep] = useState<Step>("categories");
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [selectedNeighborhoods, setSelectedNeighborhoods] = useState<string[]>([]);
-  const [selectedProducers, setSelectedProducers] = useState<string[]>([]);
-  const [producers, setProducers] = useState<Producer[]>([]);
+  const [selectedOrganizations, setSelectedOrganizations] = useState<string[]>([]);
+  const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [portal, setPortal] = useState<Portal | null>(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -185,25 +185,25 @@ function WelcomeContent() {
     loadPortal();
   }, [portalSlug, supabase]);
 
-  // Load featured producers (portal-filtered if applicable)
+  // Load featured organizations (portal-filtered if applicable)
   useEffect(() => {
-    async function loadProducers() {
+    async function loadOrganizations() {
       setLoading(true);
       const url = portal
-        ? `/api/producers?limit=12&portal_id=${portal.id}`
-        : "/api/producers?limit=12";
+        ? `/api/organizations?limit=12&portal_id=${portal.id}`
+        : "/api/organizations?limit=12";
       const res = await fetch(url);
       if (res.ok) {
         const data = await res.json();
         // Sort by event count and take top ones
-        const sorted = (data.producers || [])
-          .sort((a: Producer, b: Producer) => (b.event_count || 0) - (a.event_count || 0))
+        const sorted = (data.organizations || [])
+          .sort((a: Organization, b: Organization) => (b.event_count || 0) - (a.event_count || 0))
           .slice(0, 12);
-        setProducers(sorted);
+        setOrganizations(sorted);
       }
       setLoading(false);
     }
-    loadProducers();
+    loadOrganizations();
   }, [portal]);
 
   // Filter categories and neighborhoods based on portal
@@ -227,8 +227,8 @@ function WelcomeContent() {
     );
   };
 
-  const toggleProducer = (id: string) => {
-    setSelectedProducers((prev) =>
+  const toggleOrganization = (id: string) => {
+    setSelectedOrganizations((prev) =>
       prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id]
     );
   };
@@ -269,11 +269,11 @@ function WelcomeContent() {
         } as never);
     }
 
-    // Follow selected producers
-    if (selectedProducers.length > 0) {
-      const follows = selectedProducers.map((producerId) => ({
+    // Follow selected organizations
+    if (selectedOrganizations.length > 0) {
+      const follows = selectedOrganizations.map((organizationId) => ({
         follower_id: user.id,
-        followed_producer_id: producerId,
+        followed_organization_id: organizationId,
       }));
       await supabase.from("follows").insert(follows as never);
     }
@@ -421,12 +421,12 @@ function WelcomeContent() {
                 </div>
               ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-8">
-                  {producers.map((producer) => {
-                    const isSelected = selectedProducers.includes(producer.id);
+                  {organizations.map((organization) => {
+                    const isSelected = selectedOrganizations.includes(organization.id);
                     return (
                       <button
-                        key={producer.id}
-                        onClick={() => toggleProducer(producer.id)}
+                        key={organization.id}
+                        onClick={() => toggleOrganization(organization.id)}
                         className={`p-4 rounded-xl border-2 transition-all text-left ${
                           isSelected
                             ? "border-[var(--coral)] bg-[var(--coral)]/10"
@@ -434,10 +434,10 @@ function WelcomeContent() {
                         }`}
                       >
                         <div className="flex items-center gap-3">
-                          {producer.logo_url ? (
+                          {organization.logo_url ? (
                             <Image
-                              src={producer.logo_url}
-                              alt={producer.name}
+                              src={organization.logo_url}
+                              alt={organization.name}
                               width={40}
                               height={40}
                               className="rounded-lg object-cover"
@@ -445,17 +445,17 @@ function WelcomeContent() {
                           ) : (
                             <div className="w-10 h-10 rounded-lg bg-[var(--twilight)] flex items-center justify-center">
                               <span className="font-mono text-sm text-[var(--muted)]">
-                                {producer.name.charAt(0)}
+                                {organization.name.charAt(0)}
                               </span>
                             </div>
                           )}
                           <div className="min-w-0 flex-1">
                             <p className="font-medium text-sm text-[var(--cream)] truncate">
-                              {producer.name}
+                              {organization.name}
                             </p>
-                            {producer.event_count > 0 && (
+                            {organization.event_count > 0 && (
                               <p className="font-mono text-xs text-[var(--muted)]">
-                                {producer.event_count} events
+                                {organization.event_count} events
                               </p>
                             )}
                           </div>

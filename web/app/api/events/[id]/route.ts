@@ -146,7 +146,7 @@ export async function GET(
     id: number;
     name: string;
     slug: string;
-    spot_type: string | null;
+    venue_type: string | null;
     neighborhood: string | null;
     lat: number | null;
     lng: number | null;
@@ -170,9 +170,9 @@ export async function GET(
     // Fetch venues in the same neighborhood
     const { data: spots } = await supabase
       .from("venues")
-      .select("id, name, slug, spot_type, neighborhood, lat, lng, hours")
+      .select("id, name, slug, venue_type, neighborhood, lat, lng, hours")
       .eq("neighborhood", eventData.venue.neighborhood)
-      .in("spot_type", allDestinationTypes)
+      .in("venue_type", allDestinationTypes)
       .eq("active", true)
       .neq("id", eventData.venue?.id || 0);
 
@@ -203,11 +203,11 @@ export async function GET(
         }
 
         // Determine category
-        const spotType = s.spot_type || "";
+        const venueType = s.venue_type || "";
         let category: string | null = null;
 
         for (const [cat, types] of Object.entries(DESTINATION_CATEGORIES)) {
-          if (types.includes(spotType)) {
+          if (types.includes(venueType)) {
             category = cat;
             break;
           }
@@ -234,8 +234,8 @@ export async function GET(
 
     const { data: spots } = await supabase
       .from("venues")
-      .select("id, name, slug, spot_type, neighborhood, lat, lng, hours")
-      .in("spot_type", allDestinationTypes)
+      .select("id, name, slug, venue_type, neighborhood, lat, lng, hours")
+      .in("venue_type", allDestinationTypes)
       .eq("active", true)
       .neq("id", eventData.venue?.id || 0);
 
@@ -267,11 +267,11 @@ export async function GET(
         }
 
         // Determine category
-        const spotType = s.spot_type || "";
+        const venueType = s.venue_type || "";
         let category: string | null = null;
 
         for (const [cat, types] of Object.entries(DESTINATION_CATEGORIES)) {
-          if (types.includes(spotType)) {
+          if (types.includes(venueType)) {
             category = cat;
             break;
           }

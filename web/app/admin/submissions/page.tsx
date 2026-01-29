@@ -16,7 +16,7 @@ const TYPE_OPTIONS: { value: SubmissionType | "all"; label: string }[] = [
   { value: "all", label: "All Types" },
   { value: "event", label: "Events" },
   { value: "venue", label: "Venues" },
-  { value: "producer", label: "Organizations" },
+  { value: "organization", label: "Organizations" },
 ];
 
 export default function AdminSubmissionsPage() {
