@@ -10,7 +10,7 @@ from config import get_config
 from tag_inference import infer_tags
 from series import get_or_create_series
 from posters import get_poster_for_film_event
-from artist_images import get_image_for_music_event
+from artist_images import get_info_for_music_event
 
 
 _client: Optional[Client] = None
@@ -177,14 +177,18 @@ def insert_event(event_data: dict, series_hint: dict = None, genres: list = None
         if poster_url:
             event_data["image_url"] = poster_url
 
-    # Auto-fetch artist image for music events without images
-    if event_data.get("category") == "music" and not event_data.get("image_url"):
-        artist_image = get_image_for_music_event(
+    # Auto-fetch artist image and genres for music events
+    if event_data.get("category") == "music":
+        music_info = get_info_for_music_event(
             event_data.get("title", ""),
-            event_data.get("image_url")
+            event_data.get("image_url"),
+            genres  # Pass existing genres if any
         )
-        if artist_image:
-            event_data["image_url"] = artist_image
+        if music_info.image_url and not event_data.get("image_url"):
+            event_data["image_url"] = music_info.image_url
+        # Use fetched genres if none provided
+        if music_info.genres and not genres:
+            genres = music_info.genres
 
     # Infer and merge tags
     event_data["tags"] = infer_tags(event_data, venue_vibes)
