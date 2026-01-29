@@ -383,6 +383,13 @@ export default function PortalSpotsView({ portalId, portalSlug, isExclusive = fa
             <h2 className="text-xl font-semibold text-[var(--cream)]">Destinations</h2>
             <p className="text-sm text-[var(--muted)] mt-1">
               <span className="text-[var(--soft)]">{spots.length}</span> venues in the city
+              <span className="mx-2 opacity-40">·</span>
+              <Link
+                href="/submit/venue"
+                className="text-[var(--coral)] hover:text-[var(--rose)] transition-colors"
+              >
+                Add a venue
+              </Link>
             </p>
           </div>
           <div className="flex items-center gap-1">

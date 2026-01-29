@@ -223,6 +223,13 @@ export default function ListsView({ portalId, portalSlug }: ListsViewProps) {
           <h2 className="text-xl font-semibold text-[var(--cream)]">Lists</h2>
           <p className="text-sm text-[var(--muted)] mt-1">
             Community-curated recommendations
+            <span className="mx-2 opacity-40">·</span>
+            <Link
+              href="/submit/venue"
+              className="text-[var(--coral)] hover:text-[var(--rose)] transition-colors"
+            >
+              Add a venue
+            </Link>
           </p>
         </div>
 
