@@ -36,6 +36,15 @@ type AuthContextType = {
 // BroadcastChannel for cross-tab sync
 const PROFILE_SYNC_CHANNEL = "lostcity-profile-sync";
 
+// Create supabase client once at module level to avoid re-creation issues
+let supabaseClient: ReturnType<typeof createClient> | null = null;
+function getSupabaseClient() {
+  if (!supabaseClient) {
+    supabaseClient = createClient();
+  }
+  return supabaseClient;
+}
+
 const AuthContext = createContext<AuthContextType>({
   user: null,
   session: null,
@@ -63,7 +72,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const currentUserIdRef = useRef<string | null>(null);
   const broadcastChannelRef = useRef<BroadcastChannel | null>(null);
 
-  const supabase = createClient();
+  // Use stable supabase client reference
+  const supabase = getSupabaseClient();
 
   // Set up cross-tab profile sync
   useEffect(() => {
@@ -247,15 +257,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           markLoadingResolved();
         }
       } catch (err) {
-        // AbortError can happen during navigation - still need to resolve loading
+        // AbortError can happen during navigation - let onAuthStateChange handle auth state
+        // Don't set unauthenticated here as the user might actually be logged in
         if (err instanceof Error && err.name === "AbortError") {
-          console.log("Auth init aborted - likely navigation");
-          if (isMountedRef.current) {
-            setLoading(false);
-            setProfileLoading(false);
-            setAuthState("unauthenticated");
-            markLoadingResolved();
-          }
+          console.log("Auth init aborted - waiting for onAuthStateChange");
+          // Don't mark loading resolved - let onAuthStateChange or safety timeout handle it
           return;
         }
         console.error("Auth init error:", err);
