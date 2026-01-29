@@ -175,72 +175,91 @@ def extract_movies_for_date(
                 prefix = section[max(0, st_match.start()-15):st_match.start()].lower()
                 if "hr" in prefix or "min" in prefix:
                     continue
-                showtimes.append(time_str)
+                parsed = parse_time(time_str)
+                if parsed:
+                    showtimes.append(parsed)
 
-            # Create events for each showtime
-            for showtime in showtimes:
-                start_time = parse_time(showtime)
-                if not start_time:
-                    continue
+            # Skip if no valid showtimes found
+            if not showtimes:
+                continue
 
-                movie_key = f"{movie['title']}|{date_str}|{start_time}"
-                if movie_key in seen_movies:
-                    continue
+            # Create ONE event per movie per day (not per showtime)
+            movie_key = f"{movie['title']}|{date_str}"
+            if movie_key in seen_movies:
+                continue
 
-                seen_movies.add(movie_key)
-                events_found += 1
+            seen_movies.add(movie_key)
+            events_found += 1
 
-                content_hash = generate_content_hash(
-                    movie["title"], "Landmark Midtown Art Cinema", f"{date_str}|{start_time}"
-                )
+            # Sort showtimes and use earliest as the event start_time
+            showtimes = sorted(set(showtimes))
+            earliest_time = showtimes[0]
 
-                existing = find_event_by_hash(content_hash)
-                if existing:
-                    events_updated += 1
-                else:
-                    event_record = {
-                        "source_id": source_id,
-                        "venue_id": venue_id,
-                        "title": movie["title"],
-                        "description": movie["rating_duration"],
-                        "start_date": date_str,
-                        "start_time": start_time,
-                        "end_date": None,
-                        "end_time": None,
-                        "is_all_day": False,
-                        "category": "film",
-                        "subcategory": "cinema",
-                        "tags": ["film", "cinema", "arthouse", "landmark"],
-                        "price_min": None,
-                        "price_max": None,
-                        "price_note": None,
-                        "is_free": False,
-                        "source_url": SHOWTIMES_URL,
-                        "ticket_url": None,
-                        # Case-insensitive image lookup
-                        "image_url": next(
-                            (url for title, url in (image_map or {}).items()
-                             if title.lower() == movie["title"].lower()),
-                            None
-                        ),
-                        "raw_text": None,
-                        "extraction_confidence": 0.90,
-                        "is_recurring": False,
-                        "recurrence_rule": None,
-                        "content_hash": content_hash,
-                    }
+            # Format showtimes for display (convert back to 12-hour format)
+            def format_showtime(t):
+                h, m = map(int, t.split(':'))
+                period = 'AM' if h < 12 else 'PM'
+                h = h % 12 or 12
+                return f"{h}:{m:02d} {period}"
 
-                    series_hint = {
-                        "series_type": "film",
-                        "series_title": movie["title"],
-                    }
+            showtimes_display = ", ".join(format_showtime(t) for t in showtimes)
 
-                    try:
-                        insert_event(event_record, series_hint=series_hint)
-                        events_new += 1
-                        logger.info(f"Added: {movie['title']} on {date_str} at {start_time}")
-                    except Exception as e:
-                        logger.error(f"Failed to insert: {movie['title']}: {e}")
+            # Build description with rating/duration and showtimes
+            description = f"{movie['rating_duration']}\n\nShowtimes: {showtimes_display}"
+
+            # Content hash based on title + venue + date only (NOT time)
+            # This prevents duplicates when showtimes change
+            content_hash = generate_content_hash(
+                movie["title"], "Landmark Midtown Art Cinema", date_str
+            )
+
+            existing = find_event_by_hash(content_hash)
+            if existing:
+                events_updated += 1
+            else:
+                event_record = {
+                    "source_id": source_id,
+                    "venue_id": venue_id,
+                    "title": movie["title"],
+                    "description": description,
+                    "start_date": date_str,
+                    "start_time": earliest_time,
+                    "end_date": None,
+                    "end_time": None,
+                    "is_all_day": False,
+                    "category": "film",
+                    "subcategory": "cinema",
+                    "tags": ["film", "cinema", "arthouse", "landmark"],
+                    "price_min": None,
+                    "price_max": None,
+                    "price_note": None,
+                    "is_free": False,
+                    "source_url": SHOWTIMES_URL,
+                    "ticket_url": None,
+                    # Case-insensitive image lookup
+                    "image_url": next(
+                        (url for title, url in (image_map or {}).items()
+                         if title.lower() == movie["title"].lower()),
+                        None
+                    ),
+                    "raw_text": None,
+                    "extraction_confidence": 0.90,
+                    "is_recurring": False,
+                    "recurrence_rule": None,
+                    "content_hash": content_hash,
+                }
+
+                series_hint = {
+                    "series_type": "film",
+                    "series_title": movie["title"],
+                }
+
+                try:
+                    insert_event(event_record, series_hint=series_hint)
+                    events_new += 1
+                    logger.info(f"Added: {movie['title']} on {date_str} ({len(showtimes)} showtimes)")
+                except Exception as e:
+                    logger.error(f"Failed to insert: {movie['title']}: {e}")
 
     except Exception as e:
         logger.error(f"Error extracting movies: {e}")
