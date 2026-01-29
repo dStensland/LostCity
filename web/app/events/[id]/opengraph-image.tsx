@@ -62,6 +62,9 @@ export default async function Image({ params }: { params: { id: string } }) {
     ? categoryColors[event.category] || "#FF6B6B"
     : "#FF6B6B";
 
+  // If event has an image, use it as background
+  const hasImage = event.image_url && event.image_url.length > 0;
+
   return new ImageResponse(
     (
       <div
@@ -71,10 +74,39 @@ export default async function Image({ params }: { params: { id: string } }) {
           width: "100%",
           height: "100%",
           backgroundColor: "#0D0D10",
-          padding: 60,
           position: "relative",
         }}
       >
+        {/* Background image with overlay */}
+        {hasImage && (
+          <>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={event.image_url || ""}
+              alt=""
+              style={{
+                position: "absolute",
+                top: 0,
+                left: 0,
+                width: "100%",
+                height: "100%",
+                objectFit: "cover",
+              }}
+            />
+            {/* Dark gradient overlay for text readability */}
+            <div
+              style={{
+                position: "absolute",
+                top: 0,
+                left: 0,
+                width: "100%",
+                height: "100%",
+                background: "linear-gradient(to top, rgba(13, 13, 16, 0.95) 0%, rgba(13, 13, 16, 0.7) 50%, rgba(13, 13, 16, 0.4) 100%)",
+              }}
+            />
+          </>
+        )}
+
         {/* Gradient accent */}
         <div
           style={{
@@ -93,7 +125,9 @@ export default async function Image({ params }: { params: { id: string } }) {
             display: "flex",
             flexDirection: "column",
             flex: 1,
-            justifyContent: "center",
+            justifyContent: "flex-end",
+            padding: 60,
+            position: "relative",
           }}
         >
           {/* Category badge */}
@@ -102,16 +136,19 @@ export default async function Image({ params }: { params: { id: string } }) {
               style={{
                 display: "flex",
                 alignItems: "center",
-                marginBottom: 24,
+                marginBottom: 16,
               }}
             >
               <span
                 style={{
-                  fontSize: 20,
+                  fontSize: 18,
                   fontWeight: 600,
-                  color: accentColor,
+                  color: hasImage ? "#FFFFFF" : accentColor,
                   textTransform: "uppercase",
                   letterSpacing: "0.1em",
+                  backgroundColor: hasImage ? accentColor : "transparent",
+                  padding: hasImage ? "6px 12px" : 0,
+                  borderRadius: 6,
                 }}
               >
                 {event.category.replace("_", " ")}
@@ -122,29 +159,30 @@ export default async function Image({ params }: { params: { id: string } }) {
           {/* Event title */}
           <h1
             style={{
-              fontSize: event.title.length > 50 ? 48 : 64,
+              fontSize: event.title.length > 50 ? 44 : 56,
               fontWeight: 700,
-              color: "#F5F5DC",
-              lineHeight: 1.1,
-              marginBottom: 32,
-              maxWidth: "90%",
+              color: "#FFFFFF",
+              lineHeight: 1.15,
+              marginBottom: 20,
+              maxWidth: "95%",
+              textShadow: hasImage ? "0 2px 10px rgba(0,0,0,0.5)" : "none",
             }}
           >
             {event.title}
           </h1>
 
-          {/* Date and time */}
+          {/* Date, time, and venue */}
           <div
             style={{
               display: "flex",
               alignItems: "center",
-              gap: 24,
-              marginBottom: 16,
+              gap: 16,
+              marginBottom: 8,
             }}
           >
             <span
               style={{
-                fontSize: 32,
+                fontSize: 26,
                 fontWeight: 600,
                 color: "#FF6B6B",
               }}
@@ -153,12 +191,26 @@ export default async function Image({ params }: { params: { id: string } }) {
             </span>
             <span
               style={{
-                fontSize: 28,
-                color: "#8B8B94",
+                fontSize: 24,
+                color: hasImage ? "#E5E5E5" : "#8B8B94",
               }}
             >
               {formattedTime}
             </span>
+            {event.is_free && (
+              <span
+                style={{
+                  fontSize: 16,
+                  fontWeight: 600,
+                  color: "#34D399",
+                  backgroundColor: "rgba(52, 211, 153, 0.2)",
+                  padding: "4px 10px",
+                  borderRadius: 6,
+                }}
+              >
+                FREE
+              </span>
+            )}
           </div>
 
           {/* Venue */}
@@ -167,12 +219,13 @@ export default async function Image({ params }: { params: { id: string } }) {
               display: "flex",
               alignItems: "center",
               gap: 8,
+              marginBottom: 24,
             }}
           >
             <span
               style={{
-                fontSize: 24,
-                color: "#8B8B94",
+                fontSize: 22,
+                color: hasImage ? "#D0D0D0" : "#8B8B94",
               }}
             >
               {venueName}
@@ -180,24 +233,16 @@ export default async function Image({ params }: { params: { id: string } }) {
             {neighborhood && (
               <span
                 style={{
-                  fontSize: 20,
-                  color: "#555560",
+                  fontSize: 18,
+                  color: hasImage ? "#A0A0A0" : "#555560",
                 }}
               >
                 &bull; {neighborhood}
               </span>
             )}
           </div>
-        </div>
 
-        {/* Footer with branding */}
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
+          {/* Footer with branding */}
           <div
             style={{
               display: "flex",
@@ -207,7 +252,7 @@ export default async function Image({ params }: { params: { id: string } }) {
           >
             <span
               style={{
-                fontSize: 24,
+                fontSize: 20,
                 fontWeight: 700,
                 color: "#FF6B6B",
               }}
@@ -216,27 +261,13 @@ export default async function Image({ params }: { params: { id: string } }) {
             </span>
             <span
               style={{
-                fontSize: 20,
-                color: "#555560",
+                fontSize: 16,
+                color: hasImage ? "#999999" : "#555560",
               }}
             >
-              Discover local events
+              lostcity.ai
             </span>
           </div>
-          {event.is_free && (
-            <span
-              style={{
-                fontSize: 20,
-                fontWeight: 600,
-                color: "#34D399",
-                backgroundColor: "rgba(52, 211, 153, 0.15)",
-                padding: "8px 16px",
-                borderRadius: 8,
-              }}
-            >
-              FREE
-            </span>
-          )}
         </div>
       </div>
     ),
