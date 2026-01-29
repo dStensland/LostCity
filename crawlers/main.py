@@ -480,8 +480,30 @@ SOURCE_MODULES = {
     "glahr": "sources.glahr",
     "atlanta-liberation-center": "sources.atlanta_liberation_center",
     "indivisible-atl": "sources.indivisible_atl",
+    # ===== ArtsATL =====
+    "artsatl-calendar": "sources.artsatl",
+    # ===== Mobilize.us Organizations =====
+    "mobilize-dekalb-dems": "sources.mobilize",
+    "mobilize-ga-dems": "sources.mobilize",
+    "mobilize-indivisible-atl": "sources.mobilize",
+    "mobilize-indivisible-cobb": "sources.mobilize",
+    "mobilize-indivisible-cherokee": "sources.mobilize",
+    "mobilize-indivisible-ga10": "sources.mobilize",
+    "mobilize-hrc-georgia": "sources.mobilize",
+    "mobilize-50501-georgia": "sources.mobilize",
+    "mobilize-necessary-trouble": "sources.mobilize",
+    "mobilize-voteriders": "sources.mobilize",
     # ===== Arts Centers =====
     "goat-farm-arts-center": "sources.goat_farm",
+    # ===== Creative Spaces & Venues =====
+    "supermarket-atl": "sources.supermarket_atl",
+    "oddities-museum": "sources.oddities_museum",
+    "404-found-atl": "sources.four04_found_atl",
+    "mass-collective": "sources.mass_collective",
+    "avondale-arts": "sources.avondale_arts",
+    "hambidge-center": "sources.hambidge",
+    "blue-merle-studios": "sources.blue_merle",
+    "south-river-art": "sources.south_river_art",
     # ===== Immersive Experiences =====
     "illuminarium-atlanta": "sources.illuminarium",
     # ===== Community Film =====

@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useState, useEffect, useRef, useCallback } from "react";
 import CategoryIcon from "./CategoryIcon";
 
 interface PreferencePromptProps {
@@ -58,6 +57,7 @@ export function markPromptDismissed(category: string): void {
 /**
  * Inline slide-down prompt that appears after RSVP
  * Asks if user wants to add the event's category to their preferences
+ * Uses CSS animations instead of framer-motion for better performance
  */
 export default function PreferencePrompt({
   category,
@@ -67,82 +67,120 @@ export default function PreferencePrompt({
   autoDismissMs = 5000,
 }: PreferencePromptProps) {
   const [visible, setVisible] = useState(true);
+  const [isExiting, setIsExiting] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const handleExit = useCallback((callback: () => void) => {
+    setIsExiting(true);
+    // Wait for CSS animation to complete
+    setTimeout(() => {
+      setVisible(false);
+      callback();
+    }, 150); // Match CSS transition duration
+  }, []);
 
   // Auto-dismiss timer
   useEffect(() => {
-    if (!visible) return;
+    if (!visible || isExiting) return;
 
     const timer = setTimeout(() => {
-      setVisible(false);
-      markPromptDismissed(category);
-      onDismiss();
+      handleExit(() => {
+        markPromptDismissed(category);
+        onDismiss();
+      });
     }, autoDismissMs);
 
     return () => clearTimeout(timer);
-  }, [visible, autoDismissMs, category, onDismiss]);
+  }, [visible, isExiting, autoDismissMs, category, onDismiss, handleExit]);
 
   const handleAccept = () => {
-    setVisible(false);
-    onAccept();
+    handleExit(onAccept);
   };
 
   const handleDismiss = () => {
-    setVisible(false);
-    markPromptDismissed(category);
-    onDismiss();
+    handleExit(() => {
+      markPromptDismissed(category);
+      onDismiss();
+    });
   };
 
+  if (!visible) return null;
+
   return (
-    <AnimatePresence>
-      {visible && (
-        <motion.div
-          initial={{ opacity: 0, height: 0, marginTop: 0 }}
-          animate={{ opacity: 1, height: "auto", marginTop: 12 }}
-          exit={{ opacity: 0, height: 0, marginTop: 0 }}
-          transition={{ duration: 0.2, ease: "easeOut" }}
-          className="overflow-hidden"
-        >
-          <div className="flex items-center gap-3 p-3 rounded-lg bg-[var(--dusk)] border border-[var(--twilight)]">
-            {/* Category icon */}
-            <div className="flex-shrink-0">
-              <CategoryIcon type={category} size={20} glow="subtle" />
-            </div>
+    <div
+      ref={containerRef}
+      className={`overflow-hidden transition-all duration-150 ease-out ${
+        isExiting ? "opacity-0 max-h-0 mt-0" : "opacity-100 max-h-32 mt-3"
+      }`}
+      style={{
+        // Initial animation on mount
+        animation: isExiting ? undefined : "slideDown 0.15s ease-out",
+      }}
+    >
+      <div className="flex items-center gap-3 p-3 rounded-lg bg-[var(--dusk)] border border-[var(--twilight)]">
+        {/* Category icon */}
+        <div className="flex-shrink-0">
+          <CategoryIcon type={category} size={20} glow="subtle" />
+        </div>
 
-            {/* Prompt text */}
-            <div className="flex-1 min-w-0">
-              <p className="text-sm text-[var(--cream)]">
-                Want more <span className="font-medium">{categoryLabel}</span> events?
-              </p>
-            </div>
+        {/* Prompt text */}
+        <div className="flex-1 min-w-0">
+          <p className="text-sm text-[var(--cream)]">
+            Want more <span className="font-medium">{categoryLabel}</span> events?
+          </p>
+        </div>
 
-            {/* Action buttons */}
-            <div className="flex items-center gap-2 flex-shrink-0">
-              <button
-                onClick={handleAccept}
-                className="px-3 py-1.5 rounded-lg bg-[var(--coral)] text-[var(--void)] font-mono text-xs font-medium hover:bg-[var(--rose)] transition-colors"
-              >
-                Yes please
-              </button>
-              <button
-                onClick={handleDismiss}
-                className="px-3 py-1.5 rounded-lg bg-transparent text-[var(--muted)] font-mono text-xs hover:text-[var(--cream)] hover:bg-[var(--twilight)] transition-colors"
-              >
-                Not now
-              </button>
-            </div>
-          </div>
+        {/* Action buttons */}
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <button
+            onClick={handleAccept}
+            className="px-3 py-1.5 rounded-lg bg-[var(--coral)] text-[var(--void)] font-mono text-xs font-medium hover:bg-[var(--rose)] transition-colors min-h-[44px] sm:min-h-[32px]"
+          >
+            Yes please
+          </button>
+          <button
+            onClick={handleDismiss}
+            className="px-3 py-1.5 rounded-lg bg-transparent text-[var(--muted)] font-mono text-xs hover:text-[var(--cream)] hover:bg-[var(--twilight)] transition-colors min-h-[44px] sm:min-h-[32px]"
+          >
+            Not now
+          </button>
+        </div>
+      </div>
 
-          {/* Progress bar for auto-dismiss */}
-          <div className="h-0.5 mt-1 rounded-full overflow-hidden bg-[var(--twilight)]">
-            <motion.div
-              initial={{ width: "100%" }}
-              animate={{ width: "0%" }}
-              transition={{ duration: autoDismissMs / 1000, ease: "linear" }}
-              className="h-full bg-[var(--coral)]/50"
-            />
-          </div>
-        </motion.div>
-      )}
-    </AnimatePresence>
+      {/* Progress bar for auto-dismiss */}
+      <div className="h-0.5 mt-1 rounded-full overflow-hidden bg-[var(--twilight)]">
+        <div
+          className="h-full bg-[var(--coral)]/50"
+          style={{
+            width: "100%",
+            animation: `shrinkWidth ${autoDismissMs}ms linear forwards`,
+          }}
+        />
+      </div>
+
+      {/* CSS keyframes injected via style tag */}
+      <style jsx>{`
+        @keyframes slideDown {
+          from {
+            opacity: 0;
+            max-height: 0;
+            margin-top: 0;
+          }
+          to {
+            opacity: 1;
+            max-height: 8rem;
+            margin-top: 0.75rem;
+          }
+        }
+        @keyframes shrinkWidth {
+          from {
+            width: 100%;
+          }
+          to {
+            width: 0%;
+          }
+        }
+      `}</style>
+    </div>
   );
 }

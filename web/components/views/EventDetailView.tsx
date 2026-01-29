@@ -303,6 +303,23 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
           </div>
         )}
 
+        {/* Image source attribution - subtle link to original source */}
+        {showImage && event.source_url && (
+          <a
+            href={event.source_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="absolute top-3 right-3 px-2 py-1 bg-black/60 backdrop-blur-sm rounded text-[0.55rem] font-mono text-[var(--muted)] hover:text-[var(--soft)] transition-colors z-10"
+            style={{ display: isLive ? "none" : undefined }}
+            title="View original source"
+          >
+            <svg className="w-3 h-3 inline-block mr-1 -mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+            </svg>
+            Source
+          </a>
+        )}
+
         {/* Title overlay */}
         <div className="absolute bottom-0 left-0 right-0 p-4">
           <h1 className="text-xl sm:text-2xl font-bold text-white drop-shadow-lg">

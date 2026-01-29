@@ -521,8 +521,8 @@ body::after {
 .stagger-9 { animation-delay: 0.18s; }
 .stagger-10 { animation-delay: 0.20s; }
 
-/* Responsive event grid */
-@media (max-width: 600px) {
+/* Responsive event grid - standardized to sm breakpoint (640px) */
+@media (max-width: 640px) {
   .event-item {
     grid-template-columns: 60px 1fr;
   }
@@ -1670,12 +1670,124 @@ textarea:focus-visible {
   }
 }
 
-/* Reduce rain on mobile for performance */
+/* Reduce rain on mobile for performance - standardized to md breakpoint */
 @media (max-width: 768px) {
   .rain-overlay {
     opacity: 0.06;
     animation-duration: 0.8s;
   }
+}
+
+/* ============================================
+   SCROLL SNAP UTILITIES
+   ============================================ */
+
+/* Scroll snap container - horizontal */
+.scroll-snap-x {
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Scroll snap container - optional (only snaps near snap points) */
+.scroll-snap-x-proximity {
+  scroll-snap-type: x proximity;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Scroll snap alignment */
+.snap-start {
+  scroll-snap-align: start;
+}
+
+.snap-center {
+  scroll-snap-align: center;
+}
+
+.snap-end {
+  scroll-snap-align: end;
+}
+
+/* Scroll padding to account for edge gaps */
+.scroll-px-4 {
+  scroll-padding-inline: 1rem;
+}
+
+/* Disable scroll snap on desktop (hover devices) */
+@media (hover: hover) {
+  .md\:snap-none {
+    scroll-snap-type: none;
+  }
+}
+
+/* ============================================
+   SAFE AREA UTILITIES (Notched Devices)
+   ============================================ */
+
+/* Padding utilities for safe areas */
+.safe-area-top {
+  padding-top: env(safe-area-inset-top, 0);
+}
+
+.safe-area-left {
+  padding-left: env(safe-area-inset-left, 0);
+}
+
+.safe-area-right {
+  padding-right: env(safe-area-inset-right, 0);
+}
+
+/* Combined safe areas for landscape mode */
+.safe-area-x {
+  padding-left: env(safe-area-inset-left, 0);
+  padding-right: env(safe-area-inset-right, 0);
+}
+
+.safe-area-y {
+  padding-top: env(safe-area-inset-top, 0);
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+.safe-area-all {
+  padding-top: env(safe-area-inset-top, 0);
+  padding-right: env(safe-area-inset-right, 0);
+  padding-bottom: env(safe-area-inset-bottom, 0);
+  padding-left: env(safe-area-inset-left, 0);
+}
+
+/* Margin variants for safe areas */
+.safe-margin-bottom {
+  margin-bottom: env(safe-area-inset-bottom, 0);
+}
+
+.safe-margin-top {
+  margin-top: env(safe-area-inset-top, 0);
+}
+
+/* Min-height accounting for safe areas (useful for fixed bottom bars) */
+.min-h-safe-bottom {
+  min-height: calc(100% + env(safe-area-inset-bottom, 0));
+}
+
+/* Fixed bottom element with safe area */
+.fixed-bottom-safe {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding-bottom: env(safe-area-inset-bottom, 0);
+  padding-left: env(safe-area-inset-left, 0);
+  padding-right: env(safe-area-inset-right, 0);
+}
+
+/* Fixed header with safe area */
+.fixed-top-safe {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  padding-top: env(safe-area-inset-top, 0);
+  padding-left: env(safe-area-inset-left, 0);
+  padding-right: env(safe-area-inset-right, 0);
 }
 
 /* ============================================
@@ -2083,4 +2195,218 @@ textarea:focus-visible {
 /* Gradient radial for splash screen */
 .bg-gradient-radial {
   background: radial-gradient(ellipse at center, var(--tw-gradient-stops));
+}
+
+/* ============================================
+   MOBILE / TOUCH DEVICE OPTIMIZATIONS
+   ============================================ */
+
+/* Desktop-only hover effects - hidden on mobile/touch */
+@media (max-width: 768px), (hover: none) {
+  .desktop-hover-only {
+    display: none !important;
+  }
+
+  .desktop-hover-opacity {
+    opacity: 1 !important;
+  }
+}
+
+/* Near-instant animations on mobile/touch devices */
+@media (max-width: 768px), (hover: none) {
+  .mobile-instant,
+  .mobile-instant * {
+    transition-duration: 50ms !important;
+    animation-duration: 50ms !important;
+  }
+
+  /* Animation classes get instant duration */
+  .animate-fade-in,
+  .animate-fade-up,
+  .animate-scale-in,
+  .animate-slide-in-right,
+  .animate-page-enter,
+  .animate-card-emerge,
+  .animate-card-emerge-glow,
+  .animate-dropdown-in {
+    animation-duration: 50ms !important;
+    transition-duration: 50ms !important;
+  }
+
+  /* Stagger delays reduced to near-zero */
+  .stagger-1,
+  .stagger-2,
+  .stagger-3,
+  .stagger-4,
+  .stagger-5,
+  .stagger-6,
+  .stagger-7,
+  .stagger-8,
+  .stagger-9,
+  .stagger-10,
+  [class*="stagger-"] {
+    animation-delay: 0ms !important;
+  }
+
+  /* Animation delays also reduced */
+  .delay-100,
+  .delay-200,
+  .delay-300,
+  .delay-400,
+  .delay-500 {
+    animation-delay: 0ms !important;
+  }
+}
+
+/* Desktop-only hover effects - only apply on devices with hover capability */
+@media (hover: hover) {
+  /* Card hover lift effect */
+  .card-hover-lift:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px -5px rgba(0, 0, 0, 0.3),
+                0 4px 10px -5px rgba(0, 0, 0, 0.2);
+  }
+
+  /* Card interactive glow effects */
+  .card-interactive:hover {
+    border-color: hsl(var(--neon-magenta-hsl) / 0.4);
+    box-shadow:
+      0 4px 25px hsl(240 10% 0% / 0.5),
+      0 0 30px hsl(var(--neon-magenta-hsl) / 0.1);
+    transform: translateY(-2px);
+  }
+
+  /* Card atmospheric hover */
+  .card-atmospheric:hover {
+    transform: translateY(-2px) scale(1.002);
+    box-shadow:
+      0 4px 15px -4px var(--glow-color, var(--neon-magenta)),
+      0 0 25px -8px var(--glow-color, var(--neon-magenta)),
+      inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  }
+
+  .card-atmospheric:hover::after {
+    opacity: 0.6;
+    height: 24px;
+    bottom: -8px;
+  }
+
+  /* Card event hover */
+  .card-event-hover:hover {
+    transform: translateY(-1px);
+    border-color: color-mix(in srgb, var(--glow-color) 40%, transparent);
+    box-shadow: 0 0 15px color-mix(in srgb, var(--glow-color) 12%, transparent),
+                0 4px 12px rgba(0, 0, 0, 0.15);
+    background-color: var(--card-bg-hover);
+  }
+
+  /* Card hover ignite */
+  .card-hover-ignite:hover {
+    transform: translateY(-2px);
+    box-shadow:
+      0 4px 20px -4px var(--glow-color, var(--neon-magenta)),
+      0 0 40px -10px var(--glow-color, var(--neon-magenta));
+  }
+
+  /* Card reflection intensify on hover */
+  .card-reflection:hover::after {
+    opacity: 0.6;
+    height: 20px;
+  }
+
+  /* Icon neon hover */
+  .icon-neon-hover:hover {
+    filter:
+      drop-shadow(0 0 3px currentColor)
+      drop-shadow(0 0 6px currentColor)
+      drop-shadow(0 0 12px currentColor);
+  }
+
+  /* Link underline hover */
+  .link-underline:hover::after {
+    width: 100%;
+  }
+
+  /* Hero featured hover */
+  .hero-featured:hover::before {
+    opacity: 1;
+  }
+
+  /* Filter button hover */
+  .filter-btn:hover {
+    border-color: var(--soft);
+    color: var(--cream);
+  }
+
+  /* Active filter chip hover */
+  .active-filter-chip:hover {
+    background: var(--twilight);
+    color: var(--cream);
+    border-color: var(--muted);
+  }
+
+  /* Time tab hover */
+  .time-tab:hover {
+    color: var(--cream);
+  }
+
+  /* Navigation tab hover */
+  .nav-tab:not(.nav-tab-active):hover {
+    background: hsl(var(--neon-amber-hsl) / 0.15);
+  }
+
+  /* Mobile menu item hover */
+  .mobile-menu-item:hover {
+    background: linear-gradient(
+      90deg,
+      hsl(var(--neon-amber-hsl) / 0.1) 0%,
+      transparent 100%
+    );
+  }
+
+  /* Event item hover */
+  .event-item:hover {
+    background: var(--night);
+    padding-right: 1rem;
+    margin-right: -1rem;
+  }
+
+  /* Scrollbar thumb hover */
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--muted);
+  }
+
+  /* Card hover glow */
+  .card-hover-glow:hover {
+    border-color: color-mix(in srgb, var(--glow-color) 40%, transparent);
+    box-shadow: 0 0 20px color-mix(in srgb, var(--glow-color) 15%, transparent),
+                0 4px 15px rgba(0, 0, 0, 0.2);
+  }
+
+  /* Coral glow hover */
+  .coral-glow-hover:hover {
+    box-shadow: 0 0 25px rgba(255, 107, 122, 0.2),
+                0 0 50px rgba(255, 107, 122, 0.1),
+                0 8px 20px rgba(0, 0, 0, 0.2);
+  }
+}
+
+/* Disable hover transforms on touch devices (tap should not lift/scale) */
+@media (hover: none) {
+  .card-hover-lift,
+  .card-interactive,
+  .card-atmospheric,
+  .card-event-hover,
+  .card-hover-ignite {
+    transform: none !important;
+  }
+
+  /* Keep base shadows but remove hover-specific glow */
+  .card-interactive,
+  .card-atmospheric,
+  .card-event-hover,
+  .card-hover-ignite,
+  .card-hover-glow {
+    box-shadow: 0 4px 20px hsl(240 10% 0% / 0.4);
+  }
 }

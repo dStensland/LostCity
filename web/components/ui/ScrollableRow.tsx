@@ -47,10 +47,10 @@ export default function ScrollableRow({ children, className = "" }: ScrollableRo
 
   return (
     <div className="relative">
-      {/* Scrollable content */}
+      {/* Scrollable content with scroll snap for mobile */}
       <div
         ref={scrollRef}
-        className={`flex gap-2 overflow-x-auto scrollbar-hide ${className}`}
+        className={`flex gap-2 overflow-x-auto scrollbar-hide snap-x snap-mandatory md:snap-none ${className}`}
       >
         {children}
       </div>

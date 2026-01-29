@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useMemo, useState, useRef, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
 import EventCard from "./EventCard";
 import EventGroup from "./EventGroup";
 import SeriesCard from "./SeriesCard";
@@ -44,38 +43,6 @@ const TIME_PERIOD_ICONS: Record<TimePeriod, React.ReactNode> = {
   ),
 };
 
-// Animation variants with proper typing
-const itemVariants = {
-  hidden: { opacity: 0, scale: 0.95, y: 10 },
-  visible: (index: number) => ({
-    opacity: 1,
-    scale: 1,
-    y: 0,
-    transition: {
-      delay: Math.min(index * 0.03, 0.3), // Stagger with max delay
-      duration: 0.2,
-      ease: [0.25, 0.1, 0.25, 1] as const, // easeOut cubic bezier
-    },
-  }),
-  exit: {
-    opacity: 0,
-    scale: 0.95,
-    transition: {
-      duration: 0.15,
-      ease: [0.4, 0, 1, 1] as const, // easeIn cubic bezier
-    },
-  },
-};
-
-const dateHeaderVariants = {
-  hidden: { opacity: 0, x: -10 },
-  visible: {
-    opacity: 1,
-    x: 0,
-    transition: { duration: 0.2 },
-  },
-};
-
 interface AnimatedEventListProps {
   events: EventWithLocation[];
   portalSlug?: string;
@@ -86,8 +53,9 @@ interface AnimatedEventListProps {
 }
 
 /**
- * Animated event list component with Framer Motion
+ * Animated event list component with CSS animations
  * Handles optimistic fade-out when filters change and smooth loading of new content
+ * Uses CSS animations for better performance on mobile devices
  */
 export default function AnimatedEventList({
   events,
@@ -128,101 +96,92 @@ export default function AnimatedEventList({
 
   return (
     <div className={showDimmed ? "opacity-60 transition-opacity duration-200" : ""}>
-      <AnimatePresence mode="popLayout">
-        {dates.map((date) => {
-          const dateEvents = eventsByDate[date];
-          const displayItems = groupEventsForDisplay(dateEvents);
-          const timePeriods = groupByTimePeriod(displayItems);
-          const eventCount = dateEvents.length;
+      {dates.map((date, dateIndex) => {
+        const dateEvents = eventsByDate[date];
+        const displayItems = groupEventsForDisplay(dateEvents);
+        const timePeriods = groupByTimePeriod(displayItems);
+        const eventCount = dateEvents.length;
 
-          return (
-            <motion.section
-              key={date}
-              variants={dateHeaderVariants}
-              initial="hidden"
-              animate="visible"
-              exit="exit"
-              layout
-            >
-              {/* Date header - improved typography hierarchy */}
-              <div className="sticky top-[148px] bg-[var(--void)]/95 backdrop-blur-sm z-20 py-3 -mx-4 px-4 border-b border-[var(--twilight)]/30">
-                <div className="flex items-center gap-3">
-                  <span className="font-serif text-sm font-medium text-[var(--cream)] tracking-wide">
-                    {getDateLabel(date)}
-                  </span>
-                  <span className="font-mono text-[0.6rem] text-[var(--muted)] bg-[var(--twilight)]/50 px-2 py-0.5 rounded-full">
-                    {eventCount} event{eventCount !== 1 ? "s" : ""}
-                  </span>
-                  <div className="flex-1 h-px bg-gradient-to-r from-[var(--twilight)]/50 to-transparent" />
-                </div>
+        return (
+          <section
+            key={date}
+            className="animate-fade-in"
+            style={{ animationDelay: `${dateIndex * 0.05}s` }}
+          >
+            {/* Date header - improved typography hierarchy */}
+            <div className="sticky top-[148px] bg-[var(--void)]/95 backdrop-blur-sm z-20 py-3 -mx-4 px-4 border-b border-[var(--twilight)]/30">
+              <div className="flex items-center gap-3">
+                <span className="font-serif text-sm font-medium text-[var(--cream)] tracking-wide">
+                  {getDateLabel(date)}
+                </span>
+                <span className="font-mono text-[0.6rem] text-[var(--muted)] bg-[var(--twilight)]/50 px-2 py-0.5 rounded-full">
+                  {eventCount} event{eventCount !== 1 ? "s" : ""}
+                </span>
+                <div className="flex-1 h-px bg-gradient-to-r from-[var(--twilight)]/50 to-transparent" />
               </div>
+            </div>
 
-              {/* Events grouped by time period */}
-              <div className="pt-4">
-                {timePeriods.map(({ period, items }) => (
-                  <div key={period}>
-                    {/* Time period divider - only show if multiple periods */}
-                    {timePeriods.length > 1 && (
-                      <div className="flex items-center gap-2 py-2 mt-3">
-                        <span className="text-[var(--muted)]/50">
-                          {TIME_PERIOD_ICONS[period]}
-                        </span>
-                        <span className="font-mono text-[0.55rem] text-[var(--muted)]/70 uppercase tracking-wider">
-                          {TIME_PERIOD_LABELS[period]}
-                        </span>
-                        <div className="flex-1 h-px bg-[var(--twilight)]/30" />
-                        <span className="font-mono text-[0.5rem] text-[var(--muted)]/50">
-                          {items.length}
-                        </span>
+            {/* Events grouped by time period */}
+            <div className="pt-4">
+              {timePeriods.map(({ period, items }) => (
+                <div key={period}>
+                  {/* Time period divider - only show if multiple periods */}
+                  {timePeriods.length > 1 && (
+                    <div className="flex items-center gap-2 py-2 mt-3">
+                      <span className="text-[var(--muted)]/50">
+                        {TIME_PERIOD_ICONS[period]}
+                      </span>
+                      <span className="font-mono text-[0.55rem] text-[var(--muted)]/70 uppercase tracking-wider">
+                        {TIME_PERIOD_LABELS[period]}
+                      </span>
+                      <div className="flex-1 h-px bg-[var(--twilight)]/30" />
+                      <span className="font-mono text-[0.5rem] text-[var(--muted)]/50">
+                        {items.length}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Events in this period */}
+                  {items.map((item, idx) => {
+                    const isInfiniteScrollItem = item.type === "event"
+                      ? !initialEventIds.has(item.event.id)
+                      : item.type === "series-group"
+                      ? item.venueGroups.some((vg) => vg.showtimes.some((st) => !initialEventIds.has(st.id)))
+                      : item.type === "festival-group"
+                      ? true // Festival groups are always treated as new for animation
+                      : item.type === "venue-group" || item.type === "category-group"
+                      ? item.events.some((e) => !initialEventIds.has(e.id))
+                      : false;
+
+                    const key =
+                      item.type === "event"
+                        ? `event-${item.event.id}`
+                        : item.type === "venue-group"
+                        ? `venue-${item.venueId}`
+                        : item.type === "series-group"
+                        ? `series-${item.seriesId}`
+                        : item.type === "festival-group"
+                        ? `festival-${item.seriesId}`
+                        : `cat-${item.categoryId}`;
+
+                    return (
+                      <div
+                        key={key}
+                        className={isInfiniteScrollItem ? "" : "animate-card-emerge"}
+                        style={{
+                          animationDelay: isInfiniteScrollItem ? undefined : `${idx * 0.03}s`,
+                        }}
+                      >
+                        {renderItem(item, idx, portalSlug, isInfiniteScrollItem, getFriendsForEvent)}
                       </div>
-                    )}
-
-                    {/* Events in this period */}
-                    <AnimatePresence mode="popLayout">
-                      {items.map((item, idx) => {
-                        const isInfiniteScrollItem = item.type === "event"
-                          ? !initialEventIds.has(item.event.id)
-                          : item.type === "series-group"
-                          ? item.venueGroups.some((vg) => vg.showtimes.some((st) => !initialEventIds.has(st.id)))
-                          : item.type === "festival-group"
-                          ? true // Festival groups are always treated as new for animation
-                          : item.type === "venue-group" || item.type === "category-group"
-                          ? item.events.some((e) => !initialEventIds.has(e.id))
-                          : false;
-
-                        const key =
-                          item.type === "event"
-                            ? `event-${item.event.id}`
-                            : item.type === "venue-group"
-                            ? `venue-${item.venueId}`
-                            : item.type === "series-group"
-                            ? `series-${item.seriesId}`
-                            : item.type === "festival-group"
-                            ? `festival-${item.seriesId}`
-                            : `cat-${item.categoryId}`;
-
-                        return (
-                          <motion.div
-                            key={key}
-                            custom={idx}
-                            variants={itemVariants}
-                            initial={isInfiniteScrollItem ? false : "hidden"}
-                            animate="visible"
-                            exit="exit"
-                            layout
-                          >
-                            {renderItem(item, idx, portalSlug, isInfiniteScrollItem, getFriendsForEvent)}
-                          </motion.div>
-                        );
-                      })}
-                    </AnimatePresence>
-                  </div>
-                ))}
-              </div>
-            </motion.section>
-          );
-        })}
-      </AnimatePresence>
+                    );
+                  })}
+                </div>
+              ))}
+            </div>
+          </section>
+        );
+      })}
 
       {/* Loading more indicator */}
       {isFetchingNextPage && (

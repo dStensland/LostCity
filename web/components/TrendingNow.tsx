@@ -59,8 +59,8 @@ export default async function TrendingNow({ portalSlug }: { portalSlug?: string 
           </span>
         </div>
 
-        {/* Horizontal scroll container */}
-        <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
+        {/* Horizontal scroll container with scroll snap on mobile */}
+        <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide snap-x snap-mandatory md:snap-none">
           {events.map((event) => (
             <TrendingEventCard key={event.id} event={event} portalSlug={portalSlug} />
           ))}
@@ -81,7 +81,7 @@ function TrendingEventCard({ event, portalSlug }: { event: EventWithLocation; po
     <Link
       href={portalSlug ? `/${portalSlug}?event=${event.id}` : `/events/${event.id}`}
       scroll={false}
-      className={`flex-shrink-0 w-72 p-3 bg-[var(--dusk)] rounded-lg transition-all group card-atmospheric card-trending ${reflectionClass}`}
+      className={`flex-shrink-0 w-72 p-3 bg-[var(--dusk)] rounded-lg transition-all group card-atmospheric card-trending snap-start ${reflectionClass}`}
       style={{
         "--glow-color": categoryColor || "var(--neon-magenta)",
         "--reflection-color": categoryColor ? `color-mix(in srgb, ${categoryColor} 15%, transparent)` : undefined,

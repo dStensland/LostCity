@@ -4,6 +4,7 @@ import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { getSearchSuggestions, type SearchSuggestion } from "@/lib/search";
 import { getRecentSearches, addRecentSearch } from "@/lib/searchHistory";
+import { TypeIcon } from "./SearchResultItem";
 
 export default function SearchBar() {
   const router = useRouter();
@@ -159,14 +160,14 @@ export default function SearchBar() {
 
   return (
     <div className="relative w-full" ref={dropdownRef} role="search">
-      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none" aria-hidden="true">
+      <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none" aria-hidden="true">
         {isSearching ? (
-          <svg className="h-4 w-4 text-[var(--coral)] animate-spin" fill="none" viewBox="0 0 24 24">
+          <svg className="h-5 w-5 text-[var(--coral)] animate-spin" fill="none" viewBox="0 0 24 24">
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
           </svg>
         ) : (
-          <svg className="h-4 w-4 text-[var(--muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="h-5 w-5 text-[var(--muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
         )}
@@ -182,7 +183,7 @@ export default function SearchBar() {
         onBlur={handleBlur}
         onKeyDown={handleKeyDown}
         placeholder="Search events, venues, organizers..."
-        className="block w-full pl-11 pr-10 py-2.5 border border-[var(--twilight)] rounded-lg bg-[var(--night)] text-[var(--cream)] placeholder-[var(--muted)] text-sm focus:outline-none focus:border-[var(--coral)] focus:ring-2 focus:ring-[var(--coral)]/30 focus:shadow-[0_0_0_4px_var(--coral)/10,0_0_20px_var(--coral)/15] transition-all duration-200"
+        className="block w-full pl-14 pr-12 py-3.5 border border-[var(--twilight)] rounded-xl bg-[var(--night)] text-[var(--cream)] placeholder-[var(--muted)] text-sm focus:outline-none focus:border-[var(--coral)] focus:ring-2 focus:ring-[var(--coral)]/30 focus:shadow-[0_0_0_4px_var(--coral)/10,0_0_20px_var(--coral)/15] transition-all duration-200"
         role="combobox"
         aria-expanded={shouldShowDropdown}
         aria-controls={suggestionsId}
@@ -193,10 +194,10 @@ export default function SearchBar() {
         <button
           type="button"
           onClick={handleClear}
-          className="absolute inset-y-0 right-0 pr-4 flex items-center group"
+          className="absolute inset-y-0 right-0 pr-5 flex items-center group"
           aria-label="Clear search"
         >
-          <svg className="h-4 w-4 text-[var(--muted)] group-hover:text-[var(--cream)] transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="h-5 w-5 text-[var(--muted)] group-hover:text-[var(--cream)] transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
@@ -330,32 +331,12 @@ function HighlightMatch({ text, query }: { text: string; query: string }) {
 }
 
 function SuggestionIcon({ type }: { type: "venue" | "event" | "neighborhood" | "organizer" }) {
-  if (type === "venue") {
-    return (
-      <svg className="h-3 w-3 text-[var(--coral)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-      </svg>
-    );
-  }
-  if (type === "neighborhood") {
-    return (
-      <svg className="h-3 w-3 text-[var(--gold)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-      </svg>
-    );
-  }
-  if (type === "organizer") {
-    return (
-      <svg className="h-3 w-3 text-[var(--coral)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-      </svg>
-    );
-  }
-  // event
-  return (
-    <svg className="h-3 w-3 text-[var(--muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-    </svg>
-  );
+  const colorMap: Record<string, string> = {
+    venue: "text-[var(--neon-cyan)]",
+    event: "text-[var(--neon-magenta)]",
+    neighborhood: "text-[var(--gold)]",
+    organizer: "text-[var(--coral)]",
+  };
+
+  return <TypeIcon type={type} className={`h-3 w-3 ${colorMap[type] || "text-[var(--muted)]"}`} />;
 }
