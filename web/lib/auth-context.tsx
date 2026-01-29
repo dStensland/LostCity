@@ -208,8 +208,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setAuthState("authenticated");
 
             // Fetch profile in parallel (don't block auth loading)
+            // Only set profile if we got a result (null means dedup - already fetching)
             fetchProfile(session.user.id).then((userProfile) => {
-              if (isMountedRef.current) {
+              if (isMountedRef.current && userProfile !== null) {
                 setProfile(userProfile);
               }
             });
@@ -270,7 +271,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       }
 
-      if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED" || event === "USER_UPDATED") {
+      // Handle INITIAL_SESSION (fires on page load with existing session) and auth events
+      if (event === "INITIAL_SESSION" || event === "SIGNED_IN" || event === "TOKEN_REFRESHED" || event === "USER_UPDATED") {
         if (newSession?.user) {
           // Only update if user actually changed (prevents race condition with initAuth)
           const userChanged = currentUserIdRef.current !== newSession.user.id;
@@ -284,10 +286,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             // Only fetch profile if user changed (not just re-firing the same session)
             profileFetchRef.current = null;
             const userProfile = await fetchProfile(newSession.user.id);
-            if (isMountedRef.current) {
+            // Only set profile if we got a result (null means dedup or error)
+            if (isMountedRef.current && userProfile !== null) {
               setProfile(userProfile);
             }
           }
+        } else if (event === "INITIAL_SESSION") {
+          // No session on initial load - user is not logged in
+          setUser(null);
+          setSession(null);
+          setProfile(null);
+          currentUserIdRef.current = null;
+          setAuthState("unauthenticated");
+          setProfileLoading(false);
         }
         setLoading(false);
         return;
