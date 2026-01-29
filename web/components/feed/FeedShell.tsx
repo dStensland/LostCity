@@ -3,7 +3,7 @@
 import { Suspense, useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
-import ForYouFeed from "@/components/feed/ForYouFeed";
+import ForYouView from "@/components/feed/ForYouView";
 import Link from "next/link";
 
 type FeedTab = "curated" | "foryou";
@@ -121,7 +121,7 @@ function ForYouSignedOut({ portalSlug }: { portalSlug: string }) {
 }
 
 
-function FeedShellInner({ portalSlug, activeTab, curatedContent }: FeedShellProps) {
+function FeedShellInner({ portalId, portalSlug, activeTab, curatedContent }: FeedShellProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, loading: authLoading } = useAuth();
@@ -196,7 +196,7 @@ function FeedShellInner({ portalSlug, activeTab, curatedContent }: FeedShellProp
       {/* Tab content */}
       {activeTab === "curated" && curatedContent}
 
-      {activeTab === "foryou" && renderProtectedContent(<ForYouFeed portalSlug={portalSlug} />)}
+      {activeTab === "foryou" && renderProtectedContent(<ForYouView portalSlug={portalSlug} portalId={portalId} />)}
     </div>
   );
 }
