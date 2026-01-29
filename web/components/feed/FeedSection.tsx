@@ -585,11 +585,11 @@ function EventCards({ section, portalSlug, hideImages }: { section: FeedSectionD
 
       {/* Cards container with carousel enhancements */}
       <div className={isCarousel ? "relative -mx-4 group/carousel" : "relative"}>
-        {/* Scroll buttons for desktop - subtle edge arrows that appear on hover */}
+        {/* Scroll buttons for desktop - appear on hover */}
         {isCarousel && canScrollLeft && (
           <button
             onClick={() => scroll("left")}
-            className="hidden sm:flex absolute left-0 top-0 bottom-0 z-10 w-12 items-center justify-start pl-1 opacity-0 group-hover/carousel:opacity-100 transition-opacity bg-gradient-to-r from-[var(--void)]/80 to-transparent"
+            className="hidden sm:flex absolute left-0 top-1/2 -translate-y-1/2 z-10 opacity-0 group-hover/carousel:opacity-100 transition-opacity"
             aria-label="Scroll left"
           >
             <div className="w-8 h-8 rounded-full bg-[var(--night)]/90 border border-[var(--twilight)] flex items-center justify-center text-[var(--soft)] hover:text-[var(--cream)] hover:bg-[var(--twilight)] transition-colors">
@@ -602,7 +602,7 @@ function EventCards({ section, portalSlug, hideImages }: { section: FeedSectionD
         {isCarousel && canScrollRight && (
           <button
             onClick={() => scroll("right")}
-            className="hidden sm:flex absolute right-0 top-0 bottom-0 z-10 w-12 items-center justify-end pr-1 opacity-0 group-hover/carousel:opacity-100 transition-opacity bg-gradient-to-l from-[var(--void)]/80 to-transparent"
+            className="hidden sm:flex absolute right-0 top-1/2 -translate-y-1/2 z-10 opacity-0 group-hover/carousel:opacity-100 transition-opacity"
             aria-label="Scroll right"
           >
             <div className="w-8 h-8 rounded-full bg-[var(--night)]/90 border border-[var(--twilight)] flex items-center justify-center text-[var(--soft)] hover:text-[var(--cream)] hover:bg-[var(--twilight)] transition-colors">

@@ -227,10 +227,6 @@ export default function YourPicksRow({ portalSlug }: YourPicksRowProps) {
           </button>
         )}
 
-        {/* Fade gradients */}
-        <div className={`absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-[var(--void)] to-transparent z-[1] pointer-events-none transition-opacity ${canScrollLeft ? "opacity-100" : "opacity-0"}`} />
-        <div className={`absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-[var(--void)] to-transparent z-[1] pointer-events-none transition-opacity ${canScrollRight ? "opacity-100" : "opacity-0"}`} />
-
         {/* Cards */}
         <div
           ref={scrollRef}
