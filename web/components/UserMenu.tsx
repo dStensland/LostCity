@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import ShareInviteLink from "./ShareInviteLink";
 import NotificationDropdown from "./NotificationDropdown";
@@ -12,6 +12,7 @@ import CalendarButton from "./CalendarButton";
 export default function UserMenu() {
   const { user, profile, loading, signOut } = useAuth();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [isOpen, setIsOpen] = useState(false);
   const [imgError, setImgError] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -28,8 +29,14 @@ export default function UserMenu() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const loginUrl = pathname && pathname !== "/"
-    ? `/auth/login?redirect=${encodeURIComponent(pathname)}`
+  // Build full URL with query params for redirect
+  const currentUrl = pathname && pathname !== "/"
+    ? searchParams.toString()
+      ? `${pathname}?${searchParams.toString()}`
+      : pathname
+    : null;
+  const loginUrl = currentUrl
+    ? `/auth/login?redirect=${encodeURIComponent(currentUrl)}`
     : "/auth/login";
 
   // Brief loading state during auth init only

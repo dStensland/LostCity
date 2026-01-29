@@ -35,34 +35,12 @@ export function getSafeRedirectUrl(
     return defaultUrl;
   }
 
-  // Whitelist allowed path prefixes
-  const allowedPrefixes = [
-    "/dashboard",
-    "/admin",
-    "/settings",
-    "/onboarding",
-    "/events",
-    "/venues",
-    "/profile",
-    "/friends",
-    "/people",
-    "/foryou",
-    "/saved",
-    "/notifications",
-    "/community",
-    "/",
-  ];
+  // Allow any relative path that looks like a valid app route
+  // This includes portal slugs (e.g., /atlanta), event pages, profiles, etc.
+  // The important security checks (no protocol, no //) are already done above
+  const isValidPath = /^\/[a-zA-Z0-9]/.test(redirect);
 
-  // Check if the redirect starts with any allowed prefix
-  const isAllowed = allowedPrefixes.some((prefix) => {
-    if (prefix === "/") {
-      // Root path is allowed, but we need to check it doesn't start with other dangerous patterns
-      return redirect === "/" || redirect.match(/^\/[a-z0-9-]+/i);
-    }
-    return redirect.startsWith(prefix);
-  });
-
-  if (!isAllowed) {
+  if (!isValidPath && redirect !== "/") {
     return defaultUrl;
   }
 
