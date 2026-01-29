@@ -182,6 +182,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     isMountedRef.current = true;
+    let loadingResolved = false;
+
+    // Safety timeout - ensure loading state resolves even if Supabase has issues
+    const safetyTimeout = setTimeout(() => {
+      if (isMountedRef.current && !loadingResolved) {
+        console.warn("Auth safety timeout triggered - forcing loading to false");
+        setLoading(false);
+        setProfileLoading(false);
+        setAuthState("unauthenticated");
+      }
+    }, 5000);
+
+    const markLoadingResolved = () => {
+      loadingResolved = true;
+      clearTimeout(safetyTimeout);
+    };
 
     const initAuth = async () => {
       // Only do full init once, but always ensure loading state is resolved
@@ -216,6 +232,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             });
           }
           setLoading(false);
+          markLoadingResolved();
         } else {
           // No session - user is not logged in
           if (isFirstInit || currentUserIdRef.current !== null) {
@@ -227,6 +244,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setProfileLoading(false);
           }
           setLoading(false);
+          markLoadingResolved();
         }
       } catch (err) {
         if (err instanceof Error && err.name === "AbortError") {
@@ -238,6 +256,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setAuthState("unauthenticated");
           setLoading(false);
           setProfileLoading(false);
+          markLoadingResolved();
         }
       }
     };
@@ -259,6 +278,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         currentUserIdRef.current = null;
         setAuthState("unauthenticated");
         setLoading(false);
+        markLoadingResolved();
         return;
       }
 
@@ -301,6 +321,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setProfileLoading(false);
         }
         setLoading(false);
+        markLoadingResolved();
         return;
       }
 
@@ -314,10 +335,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setAuthState("unauthenticated");
       }
       setLoading(false);
+      markLoadingResolved();
     });
 
     return () => {
       isMountedRef.current = false;
+      clearTimeout(safetyTimeout);
       subscription.unsubscribe();
     };
   }, [supabase, fetchProfile]);
