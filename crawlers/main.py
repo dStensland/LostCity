@@ -508,6 +508,10 @@ SOURCE_MODULES = {
     "illuminarium-atlanta": "sources.illuminarium",
     # ===== Community Film =====
     "wewatchstuff": "sources.wewatchstuff",
+    # ===== Museums =====
+    "moda": "sources.moda",
+    # ===== Art Galleries =====
+    "eyedrum": "sources.eyedrum",
 }
 
 

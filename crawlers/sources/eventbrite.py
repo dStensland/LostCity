@@ -1,295 +1,350 @@
 """
-Crawler for Eventbrite events in Atlanta.
-Scrapes JSON-LD data from Eventbrite's search pages.
-
-Note: Eventbrite's public event discovery API requires partner access.
-The free API only allows managing your own events. Scraping JSON-LD
-from public search pages is the only option for discovery.
+Eventbrite hybrid crawler for Atlanta metro area events.
+Discovers events via website, fetches structured data via API.
 """
 
-import json
-import logging
-from typing import Optional
-from bs4 import BeautifulSoup
+from __future__ import annotations
 
-from utils import fetch_page, slugify
-from db import get_or_create_venue, get_or_create_virtual_venue, insert_event, find_event_by_hash
+import logging
+import re
+import time
+import requests
+from datetime import datetime
+from typing import Optional
+from playwright.sync_api import sync_playwright
+
+from config import get_config
+from db import get_or_create_venue, insert_event, find_event_by_hash
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
 
-# Eventbrite Atlanta search URLs
-SEARCH_URLS = [
-    "https://www.eventbrite.com/d/ga--atlanta/events/",
-    "https://www.eventbrite.com/d/ga--atlanta/music/",
-    "https://www.eventbrite.com/d/ga--atlanta/food-and-drink/",
-    "https://www.eventbrite.com/d/ga--atlanta/arts/",
-]
+API_BASE = "https://www.eventbriteapi.com/v3/"
+BROWSE_URL = "https://www.eventbrite.com/d/ga--atlanta/all-events/"
 
-# Category mapping from Eventbrite to our categories
+# Category mapping from Eventbrite to Lost City
 CATEGORY_MAP = {
-    "music": "music",
-    "food-and-drink": "food_drink",
-    "arts": "art",
-    "nightlife": "nightlife",
-    "performing-arts": "theater",
-    "comedy": "comedy",
-    "film": "film",
-    "sports-and-fitness": "sports",
-    "health": "fitness",
-    "community": "community",
-    "family-and-education": "family",
+    "Music": ("music", "concert"),
+    "Business & Professional": ("business", "networking"),
+    "Food & Drink": ("food", "dining"),
+    "Community & Culture": ("community", "cultural"),
+    "Performing & Visual Arts": ("art", "performance"),
+    "Film, Media & Entertainment": ("film", "screening"),
+    "Sports & Fitness": ("sports", "fitness"),
+    "Health & Wellness": ("wellness", "health"),
+    "Science & Technology": ("tech", "meetup"),
+    "Travel & Outdoor": ("outdoors", "adventure"),
+    "Charity & Causes": ("community", "charity"),
+    "Religion & Spirituality": ("community", "spiritual"),
+    "Family & Education": ("family", "kids"),
+    "Seasonal & Holiday": ("community", "holiday"),
+    "Government & Politics": ("community", "civic"),
+    "Fashion & Beauty": ("lifestyle", "fashion"),
+    "Home & Lifestyle": ("lifestyle", "home"),
+    "Auto, Boat & Air": ("lifestyle", "automotive"),
+    "Hobbies & Special Interest": ("community", "hobby"),
+    "Other": ("community", "other"),
+    "Nightlife": ("nightlife", "party"),
 }
 
 
-def parse_eventbrite_date(date_str: str) -> Optional[str]:
-    """Parse Eventbrite date format to YYYY-MM-DD."""
-    if not date_str:
-        return None
+def get_api_headers() -> dict:
+    """Get API request headers with authentication."""
+    cfg = get_config()
+    api_key = cfg.api.eventbrite_api_key
+    if not api_key:
+        raise ValueError("EVENTBRITE_API_KEY not configured")
+    return {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+    }
+
+
+def discover_event_ids(max_events: int = 500) -> list[str]:
+    """Discover event IDs by browsing Eventbrite website."""
+    event_ids = set()
+
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        context = browser.new_context(
+            user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+            viewport={"width": 1920, "height": 1080},
+        )
+        page = context.new_page()
+
+        logger.info(f"Browsing Eventbrite Atlanta events...")
+        page.goto(BROWSE_URL, wait_until="domcontentloaded", timeout=30000)
+        page.wait_for_timeout(3000)
+
+        # Scroll and collect event IDs
+        scroll_count = 0
+        max_scrolls = 50
+        last_count = 0
+        no_new_count = 0
+
+        while scroll_count < max_scrolls and len(event_ids) < max_events:
+            # Find all event links on page
+            links = page.query_selector_all('a[href*="/e/"]')
+
+            for link in links:
+                href = link.get_attribute("href")
+                if href:
+                    # Extract event ID from URL like /e/event-name-123456789
+                    match = re.search(r'/e/[^/]+-(\d+)', href)
+                    if match:
+                        event_ids.add(match.group(1))
+
+            # Check if we're finding new events
+            if len(event_ids) == last_count:
+                no_new_count += 1
+                # Try clicking "See more" or "Load more" button
+                try:
+                    load_more = page.query_selector('button:has-text("See more"), button:has-text("Load more"), [data-testid="load-more-button"]')
+                    if load_more and load_more.is_visible():
+                        load_more.click()
+                        page.wait_for_timeout(2000)
+                        no_new_count = 0  # Reset counter after clicking
+                        continue
+                except Exception:
+                    pass
+
+                if no_new_count >= 5:
+                    logger.info("No new events found after 5 attempts, stopping")
+                    break
+            else:
+                no_new_count = 0
+                last_count = len(event_ids)
+
+            logger.info(f"Scroll {scroll_count + 1}: Found {len(event_ids)} unique events so far")
+
+            # Scroll down
+            page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+            page.wait_for_timeout(2000)
+            scroll_count += 1
+
+        browser.close()
+
+    logger.info(f"Discovered {len(event_ids)} unique event IDs")
+    return list(event_ids)[:max_events]
+
+
+def fetch_event_from_api(event_id: str) -> Optional[dict]:
+    """Fetch event details from Eventbrite API."""
     try:
-        # Handle ISO format: 2026-01-16T20:00:00
-        if "T" in date_str:
-            return date_str.split("T")[0]
-        return date_str[:10]
-    except Exception:
+        url = f"{API_BASE}events/{event_id}/"
+        params = {"expand": "venue,organizer,category,format,ticket_availability"}
+        
+        response = requests.get(url, headers=get_api_headers(), params=params, timeout=15)
+        
+        if response.status_code == 404:
+            logger.debug(f"Event {event_id} not found (may be private or ended)")
+            return None
+        elif response.status_code == 429:
+            logger.warning("Rate limited, waiting 30 seconds...")
+            time.sleep(30)
+            return fetch_event_from_api(event_id)  # Retry once
+        
+        response.raise_for_status()
+        return response.json()
+        
+    except Exception as e:
+        logger.error(f"Error fetching event {event_id}: {e}")
         return None
 
 
-def parse_eventbrite_time(date_str: str) -> Optional[str]:
-    """Parse Eventbrite datetime to HH:MM time."""
-    if not date_str or "T" not in date_str:
-        return None
+def parse_datetime(dt_str: str) -> tuple[Optional[str], Optional[str]]:
+    """Parse Eventbrite datetime to date and time strings."""
+    if not dt_str:
+        return None, None
     try:
-        time_part = date_str.split("T")[1]
-        return time_part[:5]  # HH:MM
+        dt = datetime.fromisoformat(dt_str.replace("Z", "+00:00"))
+        return dt.strftime("%Y-%m-%d"), dt.strftime("%H:%M:%S")
     except Exception:
-        return None
+        return None, None
 
 
-def extract_category_from_url(url: str) -> str:
-    """Extract category from Eventbrite URL."""
-    for cat_slug, our_cat in CATEGORY_MAP.items():
-        if f"/{cat_slug}/" in url or f"/{cat_slug}?" in url:
-            return our_cat
-    return "other"
+def get_category(eventbrite_category: Optional[str]) -> tuple[str, str]:
+    """Map Eventbrite category to Lost City category/subcategory."""
+    if not eventbrite_category:
+        return "community", "other"
+    return CATEGORY_MAP.get(eventbrite_category, ("community", "other"))
 
 
-def extract_events_from_page(html: str, search_url: str) -> list[dict]:
-    """Extract events from Eventbrite page using JSON-LD data."""
-    soup = BeautifulSoup(html, "lxml")
-    events = []
+def process_event(event_data: dict, source_id: int, producer_id: Optional[int]) -> Optional[dict]:
+    """Process API event data into our format."""
+    try:
+        # Extract basic info
+        title = event_data.get("name", {}).get("text", "").strip()
+        if not title:
+            return None
 
-    # Find JSON-LD scripts
-    scripts = soup.find_all("script", type="application/ld+json")
+        # Skip past events
+        start_info = event_data.get("start", {})
+        start_date, start_time = parse_datetime(start_info.get("local"))
+        if not start_date:
+            return None
+        
+        if start_date < datetime.now().strftime("%Y-%m-%d"):
+            return None
 
-    for script in scripts:
-        try:
-            data = json.loads(script.string)
+        description = event_data.get("description", {}).get("text", "")
+        if description:
+            description = description[:2000]
 
-            # Handle array format
-            if isinstance(data, list):
-                for item in data:
-                    if item.get("@type") == "ItemList":
-                        events.extend(process_item_list(item, search_url))
-            # Handle object format
-            elif data.get("@type") == "ItemList":
-                events.extend(process_item_list(data, search_url))
+        end_info = event_data.get("end", {})
+        end_date, end_time = parse_datetime(end_info.get("local"))
 
-        except json.JSONDecodeError as e:
-            logger.warning(f"Failed to parse JSON-LD: {e}")
-            continue
+        # Get venue info
+        venue_data = event_data.get("venue") or {}
+        venue_id = None
+        venue_name = "TBA"
 
-    return events
+        if venue_data and venue_data.get("name"):
+            venue_name = venue_data.get("name", "").strip()
+            address = venue_data.get("address", {})
 
+            # Skip if not in Georgia
+            region = address.get("region", "")
+            if region and region not in ["GA", "Georgia"]:
+                return None
 
-def process_item_list(item_list: dict, search_url: str) -> list[dict]:
-    """Process an ItemList and extract events."""
-    events = []
-    items = item_list.get("itemListElement", [])
-
-    for item in items:
-        event_data = item.get("item", {})
-        if not event_data:
-            continue
-
-        try:
-            event = {
-                "title": event_data.get("name", "").strip(),
-                "description": event_data.get("description", ""),
-                "start_date": parse_eventbrite_date(event_data.get("startDate")),
-                "start_time": parse_eventbrite_time(event_data.get("startDate")),
-                "end_date": parse_eventbrite_date(event_data.get("endDate")),
-                "end_time": parse_eventbrite_time(event_data.get("endDate")),
-                "source_url": event_data.get("url", ""),
-                "image_url": event_data.get("image", ""),
-                "category": extract_category_from_url(search_url),
+            venue_record = {
+                "name": venue_name,
+                "slug": re.sub(r'[^a-z0-9-]', '', venue_name.lower().replace(" ", "-"))[:50],
+                "address": address.get("address_1"),
+                "city": address.get("city", "Atlanta"),
+                "state": "GA",
+                "zip": address.get("postal_code"),
+                "venue_type": "event_space",
+                "website": None,
             }
+            venue_id = get_or_create_venue(venue_record)
 
-            # Skip if no title or date
-            if not event["title"] or not event["start_date"]:
-                continue
+        # Get category
+        category_data = event_data.get("category") or {}
+        category_name = category_data.get("name") if category_data else None
+        category, subcategory = get_category(category_name)
 
-            # Extract venue info
-            location = event_data.get("location", {})
-            if location:
-                venue_name = location.get("name", "")
-                address_obj = location.get("address", {})
+        # Check if free
+        is_free = event_data.get("is_free", False)
 
-                event["venue"] = {
-                    "name": venue_name,
-                    "address": address_obj.get("streetAddress"),
-                    "city": address_obj.get("addressLocality", "Atlanta"),
-                    "state": address_obj.get("addressRegion", "GA"),
-                    "zip": address_obj.get("postalCode"),
-                }
+        # Get image
+        logo = event_data.get("logo") or {}
+        image_url = None
+        if logo:
+            original = logo.get("original") or {}
+            image_url = original.get("url")
 
-            # Extract price info from offers
-            offers = event_data.get("offers", {})
-            if offers:
-                price = offers.get("price")
-                if price is not None:
-                    try:
-                        event["price_min"] = float(price)
-                        event["price_max"] = float(price)
-                        event["is_free"] = float(price) == 0
-                    except (ValueError, TypeError):
-                        pass
+        # Get URL
+        event_url = event_data.get("url", "")
 
-                low_price = offers.get("lowPrice")
-                high_price = offers.get("highPrice")
-                if low_price is not None:
-                    try:
-                        event["price_min"] = float(low_price)
-                        event["is_free"] = float(low_price) == 0
-                    except (ValueError, TypeError):
-                        pass
-                if high_price is not None:
-                    try:
-                        event["price_max"] = float(high_price)
-                    except (ValueError, TypeError):
-                        pass
+        # Generate content hash
+        content_hash = generate_content_hash(title, venue_name, start_date)
 
-            events.append(event)
+        # Check if already exists
+        if find_event_by_hash(content_hash):
+            return {"status": "exists"}
 
-        except Exception as e:
-            logger.warning(f"Failed to process event: {e}")
-            continue
+        # Build tags
+        tags = ["eventbrite", category]
+        if is_free:
+            tags.append("free")
+        
+        format_data = event_data.get("format") or {}
+        if format_data.get("short_name"):
+            tags.append(format_data.get("short_name").lower())
 
-    return events
+        # Get organizer info
+        organizer = event_data.get("organizer") or {}
+        organizer_name = organizer.get("name", "") if organizer else ""
+
+        return {
+            "source_id": source_id,
+            "venue_id": venue_id,
+            "producer_id": producer_id,
+            "title": title[:500],
+            "description": description,
+            "start_date": start_date,
+            "start_time": start_time,
+            "end_date": end_date or start_date,
+            "end_time": end_time,
+            "is_all_day": start_time is None,
+            "category": category,
+            "subcategory": subcategory,
+            "tags": tags,
+            "price_min": None,
+            "price_max": None,
+            "price_note": "Free" if is_free else "See Eventbrite",
+            "is_free": is_free,
+            "source_url": event_url,
+            "ticket_url": event_url,
+            "image_url": image_url,
+            "raw_text": None,
+            "extraction_confidence": 0.95,
+            "is_recurring": False,
+            "recurrence_rule": None,
+            "content_hash": content_hash,
+        }
+    except Exception as e:
+        logger.error(f"Error processing event: {e}")
+        return None
 
 
 def crawl(source: dict) -> tuple[int, int, int]:
-    """
-    Crawl Eventbrite events for Atlanta.
-
-    Args:
-        source: Source record from database
-
-    Returns:
-        Tuple of (events_found, events_new, events_updated)
-    """
+    """Hybrid crawl: discover via website, fetch via API."""
     source_id = source["id"]
+    producer_id = source.get("producer_id")
+
     events_found = 0
     events_new = 0
     events_updated = 0
-    seen_urls = set()
 
     try:
-        all_events = []
+        # Step 1: Discover event IDs from website
+        logger.info("Step 1: Discovering events from Eventbrite website...")
+        event_ids = discover_event_ids(max_events=500)
+        
+        if not event_ids:
+            logger.warning("No event IDs discovered")
+            return 0, 0, 0
 
-        for search_url in SEARCH_URLS:
-            logger.info(f"Fetching Eventbrite: {search_url}")
-
-            try:
-                html = fetch_page(search_url)
-                page_events = extract_events_from_page(html, search_url)
-                logger.info(f"Found {len(page_events)} events from {search_url}")
-
-                # Deduplicate by URL
-                for event in page_events:
-                    url = event.get("source_url", "")
-                    if url and url not in seen_urls:
-                        seen_urls.add(url)
-                        all_events.append(event)
-
-            except Exception as e:
-                logger.error(f"Failed to fetch {search_url}: {e}")
+        # Step 2: Fetch each event from API
+        logger.info(f"Step 2: Fetching {len(event_ids)} events from API...")
+        
+        for i, event_id in enumerate(event_ids):
+            if i > 0 and i % 50 == 0:
+                logger.info(f"Progress: {i}/{len(event_ids)} events processed, {events_new} new")
+            
+            # Fetch from API
+            event_data = fetch_event_from_api(event_id)
+            if not event_data:
+                continue
+            
+            events_found += 1
+            
+            # Process into our format
+            result = process_event(event_data, source_id, producer_id)
+            if not result:
                 continue
 
-        logger.info(f"Total unique events from Eventbrite: {len(all_events)}")
-
-        for event_data in all_events:
-            events_found += 1
-
-            # Get or create venue
-            venue_id = None
-            venue_info = event_data.get("venue")
-            if venue_info and venue_info.get("name"):
-                venue_record = {
-                    "name": venue_info["name"],
-                    "slug": slugify(venue_info["name"]),
-                    "address": venue_info.get("address"),
-                    "city": venue_info.get("city", "Atlanta"),
-                    "state": venue_info.get("state", "GA"),
-                    "zip": venue_info.get("zip"),
-                }
-                try:
-                    venue_id = get_or_create_venue(venue_record)
-                except Exception as e:
-                    logger.warning(f"Failed to create venue {venue_info['name']}: {e}")
-
-            # Fallback to virtual venue if no venue was resolved
-            if venue_id is None:
-                venue_id = get_or_create_virtual_venue()
-
-            # Generate content hash
-            venue_name = venue_info.get("name", "") if venue_info else ""
-            content_hash = generate_content_hash(
-                event_data["title"], venue_name, event_data["start_date"]
-            )
-
-            # Check for existing event
-            existing = find_event_by_hash(content_hash)
-            if existing:
+            if result.get("status") == "exists":
                 events_updated += 1
                 continue
 
-            # Insert new event
-            event_record = {
-                "source_id": source_id,
-                "venue_id": venue_id,
-                "title": event_data["title"],
-                "description": event_data.get("description"),
-                "start_date": event_data["start_date"],
-                "start_time": event_data.get("start_time"),
-                "end_date": event_data.get("end_date"),
-                "end_time": event_data.get("end_time"),
-                "is_all_day": False,
-                "category": event_data.get("category", "other"),
-                "subcategory": None,
-                "tags": [],
-                "price_min": event_data.get("price_min"),
-                "price_max": event_data.get("price_max"),
-                "price_note": None,
-                "is_free": event_data.get("is_free", False),
-                "source_url": event_data["source_url"],
-                "ticket_url": event_data[
-                    "source_url"
-                ],  # Eventbrite URL is the ticket URL
-                "image_url": event_data.get("image_url"),
-                "raw_text": None,
-                "extraction_confidence": 0.90,
-                "is_recurring": False,
-                "recurrence_rule": None,
-                "content_hash": content_hash,
-            }
-
+            # Insert
             try:
-                insert_event(event_record)
+                insert_event(result)
                 events_new += 1
-                logger.debug(f"Added: {event_data['title']}")
+                logger.debug(f"Added: {result['title'][:50]}... on {result['start_date']}")
             except Exception as e:
-                logger.error(f"Failed to insert event {event_data['title']}: {e}")
+                logger.error(f"Failed to insert: {result['title'][:50]}: {e}")
+            
+            # Small delay to be nice to API
+            time.sleep(0.2)
+
+        logger.info(
+            f"Eventbrite crawl complete: {events_found} found, {events_new} new, {events_updated} existing"
+        )
 
     except Exception as e:
         logger.error(f"Failed to crawl Eventbrite: {e}")
