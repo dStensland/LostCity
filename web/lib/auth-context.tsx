@@ -109,7 +109,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const fetchProfile = useCallback(async (userId: string, forceRefresh = false): Promise<Profile | null> => {
     // Prevent duplicate fetches for same user (unless forced)
     if (!forceRefresh && profileFetchRef.current === userId) {
-      return profile;
+      return null; // Already fetching or fetched
     }
     profileFetchRef.current = userId;
     setProfileLoading(true);
@@ -135,7 +135,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setProfileLoading(false);
       return null;
     }
-  }, [supabase, profile]);
+  }, [supabase]);
 
   const refreshProfile = useCallback(async () => {
     if (user) {

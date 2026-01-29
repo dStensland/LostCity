@@ -39,7 +39,7 @@ type Notification = {
 };
 
 export default function NotificationDropdown() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const [isOpen, setIsOpen] = useState(false);
@@ -60,7 +60,8 @@ export default function NotificationDropdown() {
 
   // Fetch notifications when dropdown opens
   useEffect(() => {
-    if (!user || !isOpen) return;
+    // Wait for auth to settle before fetching
+    if (authLoading || !user || !isOpen) return;
 
     const controller = new AbortController();
 
@@ -87,11 +88,12 @@ export default function NotificationDropdown() {
 
     fetchNotifications();
     return () => controller.abort();
-  }, [user, isOpen]);
+  }, [user, isOpen, authLoading]);
 
   // Poll for unread count periodically
   useEffect(() => {
-    if (!user) return;
+    // Wait for auth to settle before starting polls
+    if (authLoading || !user) return;
 
     const controller = new AbortController();
 
@@ -117,7 +119,7 @@ export default function NotificationDropdown() {
       controller.abort();
       clearInterval(interval);
     };
-  }, [user]);
+  }, [user, authLoading]);
 
   const handleMarkAllRead = async () => {
     try {
@@ -158,7 +160,8 @@ export default function NotificationDropdown() {
     }
   };
 
-  if (!user) return null;
+  // Don't render while auth is loading or if not logged in
+  if (authLoading || !user) return null;
 
   return (
     <div className="relative" ref={dropdownRef}>
