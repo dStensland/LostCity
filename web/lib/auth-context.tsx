@@ -19,14 +19,14 @@ export type Profile = {
   updated_at: string;
 };
 
-type AuthState = "initializing" | "checking" | "authenticated" | "unauthenticated";
+type AuthState = "initializing" | "authenticated" | "unauthenticated";
 
 type AuthContextType = {
   user: User | null;
   session: Session | null;
   profile: Profile | null;
   loading: boolean;
-  profileLoading: boolean; // Separate loading state for profile
+  profileLoading: boolean;
   authState: AuthState;
   error: Error | null;
   signOut: () => Promise<void>;
@@ -36,7 +36,8 @@ type AuthContextType = {
 // BroadcastChannel for cross-tab sync
 const PROFILE_SYNC_CHANNEL = "lostcity-profile-sync";
 
-// Create supabase client once at module level to avoid re-creation issues
+// Singleton Supabase client - created once per browser session
+// This is the recommended pattern for client-side Supabase in Next.js
 let supabaseClient: ReturnType<typeof createClient> | null = null;
 function getSupabaseClient() {
   if (!supabaseClient) {
@@ -66,13 +67,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [profileLoading, setProfileLoading] = useState(true);
   const [authState, setAuthState] = useState<AuthState>("initializing");
   const [error, setError] = useState<Error | null>(null);
+
+  // Refs for tracking state across async operations
   const isMountedRef = useRef(true);
-  const profileFetchRef = useRef<string | null>(null);
-  const initializedRef = useRef(false);
   const currentUserIdRef = useRef<string | null>(null);
+  const profileFetchAbortRef = useRef<AbortController | null>(null);
   const broadcastChannelRef = useRef<BroadcastChannel | null>(null);
 
-  // Use stable supabase client reference
   const supabase = getSupabaseClient();
 
   // Set up cross-tab profile sync
@@ -89,13 +90,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (type === "PROFILE_UPDATED" && userId === currentUserIdRef.current && syncedProfile) {
         setProfile(syncedProfile);
       } else if (type === "SIGNED_OUT") {
-        // Another tab signed out
+        // Another tab signed out - cancel any profile fetch and clear state
+        if (profileFetchAbortRef.current) {
+          profileFetchAbortRef.current.abort();
+        }
         setUser(null);
         setSession(null);
         setProfile(null);
-        profileFetchRef.current = null;
         currentUserIdRef.current = null;
         setAuthState("unauthenticated");
+        setProfileLoading(false);
       }
     };
 
@@ -116,12 +120,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  const fetchProfile = useCallback(async (userId: string, forceRefresh = false): Promise<Profile | null> => {
-    // Prevent duplicate fetches for same user (unless forced)
-    if (!forceRefresh && profileFetchRef.current === userId) {
-      return null; // Already fetching or fetched
+  // Fetch profile with automatic abort on unmount or user change
+  const fetchProfile = useCallback(async (userId: string): Promise<Profile | null> => {
+    // Cancel any in-flight profile fetch
+    if (profileFetchAbortRef.current) {
+      profileFetchAbortRef.current.abort();
     }
-    profileFetchRef.current = userId;
+
+    const abortController = new AbortController();
+    profileFetchAbortRef.current = abortController;
     setProfileLoading(true);
 
     try {
@@ -129,43 +136,52 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .from("profiles")
         .select("*")
         .eq("id", userId)
-        .maybeSingle();
+        .maybeSingle()
+        .abortSignal(abortController.signal);
 
-      if (fetchError) {
-        console.error("Error fetching profile:", fetchError);
-        setProfileLoading(false);
+      if (abortController.signal.aborted) {
         return null;
       }
 
-      const fetchedProfile = data as Profile | null;
-      setProfileLoading(false);
-      return fetchedProfile;
+      if (fetchError) {
+        console.error("Error fetching profile:", fetchError);
+        if (isMountedRef.current) setProfileLoading(false);
+        return null;
+      }
+
+      if (isMountedRef.current) setProfileLoading(false);
+      return data as Profile | null;
     } catch (err) {
+      // Ignore abort errors
+      if (err instanceof Error && err.name === "AbortError") {
+        return null;
+      }
       console.error("Exception fetching profile:", err);
-      setProfileLoading(false);
+      if (isMountedRef.current) setProfileLoading(false);
       return null;
     }
   }, [supabase]);
 
   const refreshProfile = useCallback(async () => {
-    if (user) {
-      const newProfile = await fetchProfile(user.id, true); // Force refresh
-      if (isMountedRef.current) {
+    const userId = currentUserIdRef.current;
+    if (userId) {
+      const newProfile = await fetchProfile(userId);
+      if (isMountedRef.current && newProfile) {
         setProfile(newProfile);
         // Broadcast to other tabs
-        broadcastProfileUpdate(newProfile, user.id);
+        broadcastProfileUpdate(newProfile, userId);
       }
     }
-  }, [user, fetchProfile, broadcastProfileUpdate]);
+  }, [fetchProfile, broadcastProfileUpdate]);
 
-  // Session refresh on tab focus - only revalidate when user returns after being away
+  // Session refresh on tab focus - revalidate when user returns after being away
   useEffect(() => {
     let lastHiddenTime: number | null = null;
 
     const handleVisibilityChange = () => {
       if (document.hidden) {
         lastHiddenTime = Date.now();
-      } else if (lastHiddenTime && user) {
+      } else if (lastHiddenTime && currentUserIdRef.current) {
         // Only revalidate if tab was hidden for more than 5 minutes
         const hiddenDuration = Date.now() - lastHiddenTime;
         if (hiddenDuration > 5 * 60 * 1000) {
@@ -176,7 +192,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               setUser(null);
               setSession(null);
               setProfile(null);
-              profileFetchRef.current = null;
               currentUserIdRef.current = null;
               setAuthState("unauthenticated");
             }
@@ -188,183 +203,129 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     document.addEventListener("visibilitychange", handleVisibilityChange);
     return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
-  }, [supabase, user]);
+  }, [supabase]);
 
+  // Main auth initialization - relies solely on onAuthStateChange
+  // This is the recommended Supabase pattern and avoids race conditions
   useEffect(() => {
     isMountedRef.current = true;
-    let loadingResolved = false;
 
-    // Safety timeout - ensure loading state resolves even if Supabase has issues
-    // But preserve existing auth state if user is already logged in
-    const safetyTimeout = setTimeout(() => {
-      if (isMountedRef.current && !loadingResolved) {
-        console.warn("Auth safety timeout triggered - forcing loading to false");
+    // Helper to handle authenticated user
+    const handleAuthenticatedUser = async (newSession: Session) => {
+      const userId = newSession.user.id;
+      const userChanged = currentUserIdRef.current !== userId;
+
+      // Always update session (it may have refreshed tokens)
+      setSession(newSession);
+
+      if (userChanged) {
+        // New user or first auth - update everything
+        setUser(newSession.user);
+        currentUserIdRef.current = userId;
+        setAuthState("authenticated");
         setLoading(false);
-        setProfileLoading(false);
-        // Only set unauthenticated if we don't already have a user
-        // This prevents logging out users during navigation
-        if (!currentUserIdRef.current) {
-          setAuthState("unauthenticated");
+
+        // Fetch profile (non-blocking for initial render)
+        const userProfile = await fetchProfile(userId);
+        if (isMountedRef.current && userProfile) {
+          setProfile(userProfile);
         }
-      }
-    }, 5000);
-
-    const markLoadingResolved = () => {
-      loadingResolved = true;
-      clearTimeout(safetyTimeout);
-    };
-
-    const initAuth = async () => {
-      // Only do full init once, but always ensure loading state is resolved
-      const isFirstInit = !initializedRef.current;
-      initializedRef.current = true;
-
-      try {
-        if (isFirstInit) {
-          setAuthState("checking");
-        }
-
-        // Always check session (needed for OAuth callback redirect)
-        const { data } = await supabase.auth.getSession();
-        const session = data.session;
-
-        if (!isMountedRef.current) return;
-
-        if (session?.user) {
-          // Only update if user changed or first init
-          if (isFirstInit || currentUserIdRef.current !== session.user.id) {
-            setUser(session.user);
-            setSession(session);
-            currentUserIdRef.current = session.user.id;
-            setAuthState("authenticated");
-
-            // Fetch profile in parallel (don't block auth loading)
-            // Only set profile if we got a result (null means dedup - already fetching)
-            fetchProfile(session.user.id).then((userProfile) => {
-              if (isMountedRef.current && userProfile !== null) {
-                setProfile(userProfile);
-              }
-            });
-          }
-          setLoading(false);
-          markLoadingResolved();
-        } else {
-          // No session - user is not logged in
-          if (isFirstInit || currentUserIdRef.current !== null) {
-            setUser(null);
-            setSession(null);
-            setProfile(null);
-            currentUserIdRef.current = null;
-            setAuthState("unauthenticated");
-            setProfileLoading(false);
-          }
-          setLoading(false);
-          markLoadingResolved();
-        }
-      } catch (err) {
-        // AbortError can happen during navigation - let onAuthStateChange handle auth state
-        // Don't set unauthenticated here as the user might actually be logged in
-        if (err instanceof Error && err.name === "AbortError") {
-          console.log("Auth init aborted - waiting for onAuthStateChange");
-          // Don't mark loading resolved - let onAuthStateChange or safety timeout handle it
-          return;
-        }
-        console.error("Auth init error:", err);
-        if (isMountedRef.current) {
-          setError(err instanceof Error ? err : new Error("Auth initialization failed"));
-          setAuthState("unauthenticated");
-          setLoading(false);
-          setProfileLoading(false);
-          markLoadingResolved();
-        }
+      } else {
+        // Same user, just ensure loading is resolved
+        setUser(newSession.user);
+        setLoading(false);
       }
     };
 
-    initAuth();
+    // Helper to handle unauthenticated state
+    const handleUnauthenticated = () => {
+      setUser(null);
+      setSession(null);
+      setProfile(null);
+      currentUserIdRef.current = null;
+      setAuthState("unauthenticated");
+      setLoading(false);
+      setProfileLoading(false);
+    };
 
-    // Listen for auth changes
+    // Set up auth state listener FIRST - this is key to avoiding race conditions
+    // Supabase will fire INITIAL_SESSION immediately with current auth state
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, newSession) => {
       if (!isMountedRef.current) return;
 
-      // Clear errors on any auth event
+      // Clear any previous errors
       setError(null);
 
-      if (event === "SIGNED_OUT") {
-        setUser(null);
-        setSession(null);
-        setProfile(null);
-        profileFetchRef.current = null;
-        currentUserIdRef.current = null;
-        setAuthState("unauthenticated");
-        setLoading(false);
-        markLoadingResolved();
-        return;
-      }
+      switch (event) {
+        case "INITIAL_SESSION":
+          // This fires immediately when the listener is set up
+          // It contains the current session state from cookies/storage
+          if (newSession?.user) {
+            await handleAuthenticatedUser(newSession);
+          } else {
+            handleUnauthenticated();
+          }
+          break;
 
-      if (event === "TOKEN_REFRESHED" && newSession?.user) {
-        // Validate session hasn't been tampered with
-        if (currentUserIdRef.current && newSession.user.id !== currentUserIdRef.current) {
-          console.warn("Session user mismatch detected - signing out for security");
-          await supabase.auth.signOut();
-          return;
-        }
-      }
+        case "SIGNED_IN":
+          // User just signed in (OAuth redirect, email link, etc.)
+          if (newSession?.user) {
+            await handleAuthenticatedUser(newSession);
+          }
+          break;
 
-      // Handle INITIAL_SESSION (fires on page load with existing session) and auth events
-      if (event === "INITIAL_SESSION" || event === "SIGNED_IN" || event === "TOKEN_REFRESHED" || event === "USER_UPDATED") {
-        if (newSession?.user) {
-          // Only update if user actually changed (prevents race condition with initAuth)
-          const userChanged = currentUserIdRef.current !== newSession.user.id;
+        case "SIGNED_OUT":
+          handleUnauthenticated();
+          break;
 
-          if (userChanged) {
+        case "TOKEN_REFRESHED":
+          // Session tokens were refreshed - verify user hasn't changed
+          if (newSession?.user) {
+            if (currentUserIdRef.current && newSession.user.id !== currentUserIdRef.current) {
+              console.warn("Session user mismatch on token refresh - signing out");
+              await supabase.auth.signOut();
+              return;
+            }
+            // Update session with new tokens
+            setSession(newSession);
+            setUser(newSession.user);
+          }
+          break;
+
+        case "USER_UPDATED":
+          // User profile was updated (email, metadata, etc.)
+          if (newSession?.user) {
             setUser(newSession.user);
             setSession(newSession);
-            currentUserIdRef.current = newSession.user.id;
-            setAuthState("authenticated");
-
-            // Only fetch profile if user changed (not just re-firing the same session)
-            profileFetchRef.current = null;
-            const userProfile = await fetchProfile(newSession.user.id);
-            // Only set profile if we got a result (null means dedup or error)
-            if (isMountedRef.current && userProfile !== null) {
-              setProfile(userProfile);
-            }
           }
-        } else if (event === "INITIAL_SESSION") {
-          // No session on initial load - user is not logged in
-          setUser(null);
-          setSession(null);
-          setProfile(null);
-          currentUserIdRef.current = null;
-          setAuthState("unauthenticated");
-          setProfileLoading(false);
-        }
-        setLoading(false);
-        markLoadingResolved();
-        return;
-      }
+          break;
 
-      // For other events, just update state
-      setSession(newSession);
-      setUser(newSession?.user ?? null);
-      if (!newSession?.user) {
-        setProfile(null);
-        profileFetchRef.current = null;
-        currentUserIdRef.current = null;
-        setAuthState("unauthenticated");
+        default:
+          // Handle any other events gracefully
+          if (newSession?.user) {
+            setUser(newSession.user);
+            setSession(newSession);
+          }
+          break;
       }
-      setLoading(false);
-      markLoadingResolved();
     });
 
     return () => {
       isMountedRef.current = false;
-      clearTimeout(safetyTimeout);
+      // Cancel any in-flight profile fetch
+      if (profileFetchAbortRef.current) {
+        profileFetchAbortRef.current.abort();
+      }
       subscription.unsubscribe();
     };
   }, [supabase, fetchProfile]);
 
   const signOut = useCallback(async () => {
+    // Cancel any in-flight profile fetch
+    if (profileFetchAbortRef.current) {
+      profileFetchAbortRef.current.abort();
+    }
+
     try {
       await supabase.auth.signOut();
     } catch (err) {
@@ -373,7 +334,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(null);
       setSession(null);
       setProfile(null);
-      profileFetchRef.current = null;
       currentUserIdRef.current = null;
       setAuthState("unauthenticated");
       setProfileLoading(false);
