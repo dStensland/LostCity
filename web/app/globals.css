@@ -796,6 +796,47 @@ body::after {
   animation: confetti-fall 2s ease-out forwards;
 }
 
+/* Laser animations for RSVP */
+@keyframes laser-shoot {
+  0% {
+    opacity: 0;
+    transform: scaleX(0);
+  }
+  10% {
+    opacity: 1;
+  }
+  30% {
+    transform: scaleX(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scaleX(1.2);
+  }
+}
+
+@keyframes laser-flash {
+  0% {
+    transform: scale(0);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(2);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(4);
+    opacity: 0;
+  }
+}
+
+.animate-laser-shoot {
+  animation: laser-shoot 0.8s ease-out forwards;
+}
+
+.animate-laser-flash {
+  animation: laser-flash 0.4s ease-out forwards;
+}
+
 /* Neon spinner */
 @keyframes neon-spin {
   0% {
