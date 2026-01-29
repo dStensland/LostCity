@@ -352,7 +352,7 @@ export default function ForYouFeed({ portalSlug }: ForYouFeedProps) {
       setLoading(true);
 
       const [feedRes, trendingRes, prefsRes] = await Promise.all([
-        fetch(`/api/feed?limit=50&portal=${portalSlug}`),
+        fetch(`/api/feed?limit=100&portal=${portalSlug}`),
         fetch(`/api/trending?limit=10&portal=${portalSlug}`),
         fetch(`/api/preferences`),
       ]);
@@ -505,11 +505,11 @@ export default function ForYouFeed({ portalSlug }: ForYouFeedProps) {
     };
 
     return {
-      friendsGoing: dedupeSection(friendsGoing).slice(0, 6),
-      yourInterests: dedupeSection(yourInterests).slice(0, 6),
-      followedVenues: dedupeSection(followedVenues).slice(0, 6),
-      followedOrganizations: dedupeSection(followedOrganizations).slice(0, 6),
-      yourNeighborhoods: dedupeSection(yourNeighborhoods).slice(0, 6),
+      friendsGoing: dedupeSection(friendsGoing).slice(0, 15),
+      yourInterests: dedupeSection(yourInterests).slice(0, 15),
+      followedVenues: dedupeSection(followedVenues).slice(0, 15),
+      followedOrganizations: dedupeSection(followedOrganizations).slice(0, 15),
+      yourNeighborhoods: dedupeSection(yourNeighborhoods).slice(0, 15),
     };
   }, [filteredEvents, preferences]);
 

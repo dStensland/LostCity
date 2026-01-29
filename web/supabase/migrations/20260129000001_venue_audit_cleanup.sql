@@ -4,11 +4,11 @@
 -- 3. Delete bad data entries
 
 -- ============================================================================
--- PART 1: Delete bad data entries
+-- PART 1: Deactivate bad data entries (can't delete due to FK constraints)
 -- ============================================================================
 
--- Delete placeholder/garbage venue entries
-DELETE FROM venues WHERE name IN (
+-- Deactivate placeholder/garbage venue entries
+UPDATE venues SET active = false WHERE name IN (
   'Online / Virtual Event',
   'Atlanta',
   'Atlanta Area',
@@ -17,8 +17,8 @@ DELETE FROM venues WHERE name IN (
   'Various'
 );
 
--- Delete venues with promotional text or dates as names
-DELETE FROM venues WHERE
+-- Deactivate venues with promotional text or dates as names
+UPDATE venues SET active = false WHERE
   name LIKE '%returns in%' OR
   name LIKE 'April%2026%' OR
   name LIKE 'March%2026%' OR
