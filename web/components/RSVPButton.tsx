@@ -44,7 +44,6 @@ export default function RSVPButton({
 
   const [status, setStatus] = useState<RSVPStatus>(null);
   const [visibility, setVisibility] = useState<Visibility>(DEFAULT_VISIBILITY);
-  const [dataLoaded, setDataLoaded] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
@@ -109,31 +108,48 @@ export default function RSVPButton({
 
   // Load existing RSVP
   useEffect(() => {
+    let isMounted = true;
+
     async function loadRSVP() {
       // Wait for auth to settle
       if (authLoading) return;
 
       if (!user) {
-        setDataLoaded(true);
         return;
       }
 
-      const { data } = await supabase
-        .from("event_rsvps")
-        .select("*")
-        .eq("user_id", user.id)
-        .eq("event_id", eventId)
-        .maybeSingle();
+      try {
+        // Add timeout to prevent hanging
+        const timeoutPromise = new Promise<{ data: null }>((resolve) =>
+          setTimeout(() => resolve({ data: null }), 5000)
+        );
 
-      const rsvp = data as RSVPRow | null;
-      if (rsvp) {
-        setStatus(rsvp.status as RSVPStatus);
-        setVisibility(rsvp.visibility as Visibility);
+        const queryPromise = supabase
+          .from("event_rsvps")
+          .select("*")
+          .eq("user_id", user.id)
+          .eq("event_id", eventId)
+          .maybeSingle();
+
+        const { data } = await Promise.race([queryPromise, timeoutPromise]);
+
+        if (!isMounted) return;
+
+        const rsvp = data as RSVPRow | null;
+        if (rsvp) {
+          setStatus(rsvp.status as RSVPStatus);
+          setVisibility(rsvp.visibility as Visibility);
+        }
+      } catch (err) {
+        console.error("Failed to load RSVP:", err);
       }
-      setDataLoaded(true);
     }
 
     loadRSVP();
+
+    return () => {
+      isMounted = false;
+    };
   }, [user, authLoading, eventId, supabase]);
 
   const handleStatusChange = async (newStatus: RSVPStatus) => {
@@ -158,32 +174,51 @@ export default function RSVPButton({
     // Optimistic update
     setStatus(newStatus);
 
+    // Helper to add timeout to Supabase operations
+    const withTimeout = <T,>(
+      queryBuilder: PromiseLike<T>,
+      ms: number = 10000
+    ): Promise<T> => {
+      return Promise.race([
+        Promise.resolve(queryBuilder),
+        new Promise<T>((_, reject) =>
+          setTimeout(() => reject(new Error("Request timed out")), ms)
+        ),
+      ]);
+    };
+
     try {
       if (newStatus === null) {
         // Remove RSVP
-        const { error } = await supabase
-          .from("event_rsvps")
-          .delete()
-          .eq("user_id", user.id)
-          .eq("event_id", eventId);
-        if (error) throw error;
+        const result = await withTimeout(
+          supabase
+            .from("event_rsvps")
+            .delete()
+            .eq("user_id", user.id)
+            .eq("event_id", eventId)
+        );
+        if ((result as { error?: unknown }).error) throw (result as { error: unknown }).error;
       } else if (previousStatus === null) {
         // Create new RSVP
-        const { error } = await supabase.from("event_rsvps").insert({
-          user_id: user.id,
-          event_id: eventId,
-          status: newStatus,
-          visibility,
-        } as never);
-        if (error) throw error;
+        const result = await withTimeout(
+          supabase.from("event_rsvps").insert({
+            user_id: user.id,
+            event_id: eventId,
+            status: newStatus,
+            visibility,
+          } as never)
+        );
+        if ((result as { error?: unknown }).error) throw (result as { error: unknown }).error;
       } else {
         // Update existing RSVP
-        const { error } = await supabase
-          .from("event_rsvps")
-          .update({ status: newStatus } as never)
-          .eq("user_id", user.id)
-          .eq("event_id", eventId);
-        if (error) throw error;
+        const result = await withTimeout(
+          supabase
+            .from("event_rsvps")
+            .update({ status: newStatus } as never)
+            .eq("user_id", user.id)
+            .eq("event_id", eventId)
+        );
+        if ((result as { error?: unknown }).error) throw (result as { error: unknown }).error;
       }
       setMenuOpen(false);
 
