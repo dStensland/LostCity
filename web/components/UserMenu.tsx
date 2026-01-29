@@ -7,6 +7,7 @@ import { usePathname } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import ShareInviteLink from "./ShareInviteLink";
 import NotificationDropdown from "./NotificationDropdown";
+import CalendarButton from "./CalendarButton";
 
 export default function UserMenu() {
   const { user, profile, loading, signOut } = useAuth();
@@ -102,6 +103,9 @@ export default function UserMenu() {
       {/* Invite Friends */}
       <ShareInviteLink variant="icon" />
 
+      {/* Calendar */}
+      <CalendarButton />
+
       {/* Avatar and dropdown */}
       <div className="relative flex items-center z-[60]" ref={menuRef}>
         {/* Avatar - clicks through to profile (or settings if no profile) */}
@@ -159,6 +163,16 @@ export default function UserMenu() {
           >
             <span>👤</span>
             <span>Profile</span>
+          </Link>
+
+          {/* Calendar link */}
+          <Link
+            href="/calendar"
+            onClick={() => setIsOpen(false)}
+            className="flex items-center gap-2 px-4 py-2 font-mono text-xs text-[var(--soft)] hover:bg-[var(--twilight)] transition-colors"
+          >
+            <span>📅</span>
+            <span>My Calendar</span>
           </Link>
 
           {/* Settings link */}
