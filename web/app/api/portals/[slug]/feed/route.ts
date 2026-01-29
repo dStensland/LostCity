@@ -472,7 +472,7 @@ export async function GET(request: NextRequest, { params }: Props) {
         id: "lunar-new-year-2025",
         title: "Lunar New Year",
         slug: "lunar-new-year",
-        description: "Year of Horsin Around. With FIRE.",
+        description: "A whole year of fire horsin around",
         section_type: "auto",
         block_type: "event_carousel",
         layout: "carousel",
