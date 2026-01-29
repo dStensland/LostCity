@@ -44,36 +44,90 @@ type TrendingEvent = FeedEvent & {
   rsvp_count?: number;
 };
 
+// Lost City style SVG icons for each section
+const SectionIcons = {
+  // Friends going - Two connected people
+  friendsGoing: (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="8" cy="6" r="3" strokeWidth={1.5} fill="none" stroke="currentColor" />
+      <circle cx="16" cy="6" r="3" strokeWidth={1.5} fill="none" stroke="currentColor" />
+      <path d="M2 20c0-4 3-6 6-6M22 20c0-4-3-6-6-6" strokeWidth={1.5} strokeLinecap="round" fill="none" stroke="currentColor" />
+      <path d="M8 14h8" strokeWidth={1.5} stroke="currentColor" opacity={0.6} />
+    </svg>
+  ),
+  // Your interests - Sparkle / star burst
+  yourInterests: (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M12 2v4M12 18v4M2 12h4M18 12h4" strokeWidth={1.5} strokeLinecap="round" stroke="currentColor" />
+      <path d="M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M5.6 18.4l2.8-2.8M15.6 8.4l2.8-2.8" strokeWidth={1.5} strokeLinecap="round" stroke="currentColor" opacity={0.6} />
+      <circle cx="12" cy="12" r="3" fill="currentColor" />
+    </svg>
+  ),
+  // Followed venues - Pin / marker
+  followedVenues: (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M12 2C8 2 5 5.5 5 9c0 5 7 13 7 13s7-8 7-13c0-3.5-3-7-7-7z" strokeWidth={1.5} fill="none" stroke="currentColor" />
+      <circle cx="12" cy="9" r="2.5" fill="currentColor" />
+    </svg>
+  ),
+  // Followed organizations - Theater curtains
+  followedOrganizations: (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M2 3h20v2c0 1-1 2-2 2H4c-1 0-2-1-2-2V3z" strokeWidth={1.5} fill="none" stroke="currentColor" />
+      <path d="M4 7c1 2 1 6 0 14" strokeWidth={1.5} strokeLinecap="round" fill="none" stroke="currentColor" />
+      <path d="M7 7c.5 3 0 8-2 14" strokeWidth={1.5} strokeLinecap="round" fill="none" stroke="currentColor" opacity={0.5} />
+      <path d="M20 7c-1 2-1 6 0 14" strokeWidth={1.5} strokeLinecap="round" fill="none" stroke="currentColor" />
+      <path d="M17 7c-.5 3 0 8 2 14" strokeWidth={1.5} strokeLinecap="round" fill="none" stroke="currentColor" opacity={0.5} />
+      <circle cx="12" cy="14" r="2" fill="currentColor" opacity={0.4} />
+    </svg>
+  ),
+  // Neighborhoods - Compass
+  yourNeighborhoods: (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="12" cy="12" r="9" strokeWidth={1.5} fill="none" stroke="currentColor" />
+      <polygon points="12,3 14,12 12,10 10,12" fill="currentColor" />
+      <polygon points="12,21 10,12 12,14 14,12" fill="currentColor" opacity={0.4} />
+    </svg>
+  ),
+  // Trending - Flame
+  trending: (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M12 2c-2 4-5 6-5 10a5 5 0 0010 0c0-4-3-6-5-10z" strokeWidth={1.5} fill="none" stroke="currentColor" />
+      <path d="M12 8c-1 2-2 3-2 5a2 2 0 004 0c0-2-1-3-2-5z" fill="currentColor" opacity={0.5} />
+    </svg>
+  ),
+};
+
 // Section configuration with icons and colors
 const SECTION_CONFIG = {
   friendsGoing: {
     title: "Friends Are Going",
-    icon: "👯",
+    icon: SectionIcons.friendsGoing,
     color: "#00FFFF", // cyan
   },
   yourInterests: {
     title: "Based on Your Interests",
-    icon: "✨",
+    icon: SectionIcons.yourInterests,
     color: "#00FFFF", // cyan
   },
   followedVenues: {
     title: "From Venues You Follow",
-    icon: "📍",
+    icon: SectionIcons.followedVenues,
     color: "#FF00FF", // magenta
   },
   followedOrganizations: {
     title: "From Organizations You Follow",
-    icon: "🎭",
+    icon: SectionIcons.followedOrganizations,
     color: "#FFD700", // gold
   },
   yourNeighborhoods: {
     title: "In Your Neighborhoods",
-    icon: "🗺️",
+    icon: SectionIcons.yourNeighborhoods,
     color: "#FFA500", // orange
   },
   trending: {
     title: "Trending This Week",
-    icon: "🔥",
+    icon: SectionIcons.trending,
     color: "#FF6B6B", // coral
   },
 } as const;
@@ -133,7 +187,7 @@ function FriendsGoingHighlight({
           className="w-1 h-5 rounded-full"
           style={{ backgroundColor: SECTION_CONFIG.friendsGoing.color }}
         />
-        <span className="text-lg">{SECTION_CONFIG.friendsGoing.icon}</span>
+        <span className="icon-neon-subtle" style={{ color: SECTION_CONFIG.friendsGoing.color }}>{SECTION_CONFIG.friendsGoing.icon}</span>
         <h2
           className="font-semibold text-sm"
           style={{ color: SECTION_CONFIG.friendsGoing.color }}
@@ -181,7 +235,7 @@ function ExpandableSection({
   initialVisible = 3,
 }: {
   title: string;
-  icon: string;
+  icon: React.ReactNode;
   count: number;
   accentColor: string;
   contextType?: "interests" | "venue" | "producer" | "neighborhood";
@@ -204,7 +258,7 @@ function ExpandableSection({
           className="w-1 h-5 rounded-full"
           style={{ backgroundColor: accentColor }}
         />
-        <span className="text-lg">{icon}</span>
+        <span className="icon-neon-subtle" style={{ color: accentColor }}>{icon}</span>
         <h2
           className="font-semibold text-sm"
           style={{ color: accentColor }}
@@ -505,7 +559,11 @@ export default function ForYouFeed({ portalSlug }: ForYouFeedProps) {
       <div className="space-y-6">
         <div className="p-6 rounded-xl bg-gradient-to-br from-[var(--dusk)] to-[var(--night)] border border-[var(--twilight)] text-center">
           <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-[var(--neon-cyan)]/20 via-[var(--neon-magenta)]/20 to-[var(--coral)]/20 flex items-center justify-center relative group cursor-default">
-            <span className="text-3xl animate-pulse">✨</span>
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-[var(--neon-cyan)] icon-neon-pulse">
+              <path d="M12 2v4M12 18v4M2 12h4M18 12h4" strokeWidth={1.5} strokeLinecap="round" stroke="currentColor" />
+              <path d="M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M5.6 18.4l2.8-2.8M15.6 8.4l2.8-2.8" strokeWidth={1.5} strokeLinecap="round" stroke="currentColor" opacity={0.6} />
+              <circle cx="12" cy="12" r="3" fill="currentColor" />
+            </svg>
             <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-[var(--neon-cyan)]/10 to-[var(--coral)]/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
           </div>
           <h3 className="font-serif text-lg text-[var(--cream)] mb-2">
