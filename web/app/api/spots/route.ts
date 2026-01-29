@@ -26,11 +26,12 @@ export async function GET(request: NextRequest) {
       venue_id: number;
     };
 
-    // Fetch all venues first
+    // Fetch all active venues
     const { data: venues, error: venuesError } = await supabase
       .from("venues")
       .select("id, name, slug, address, neighborhood, venue_type, city")
       .eq("city", "Atlanta") // TODO: make this dynamic based on portal
+      .neq("active", false) // Exclude deactivated venues
       .order("name");
 
     if (venuesError) {
