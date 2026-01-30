@@ -344,13 +344,25 @@ export default function BrowseByActivity({ portalSlug }: BrowseByActivityProps) 
                 onClick={(e) => handleCategoryClick(activity, e)}
                 isExpanded={expandedCategory === activity.value}
                 hasSubcategories={hasSubcategoriesWithEvents(activity.value)}
-                subcategories={subcategoriesByParent[activity.value] || []}
-                selectedSubcategories={selectedSubcategories}
-                onToggleSubcategory={toggleSubcategory}
-                onViewEvents={handleViewEvents}
               />
             ))}
           </div>
+
+          {/* Expanded Category Panel - renders below grid */}
+          {expandedCategory && primaryActivities.some(a => a.value === expandedCategory) && (
+            <ExpandedCategoryPanel
+              activity={primaryActivities.find(a => a.value === expandedCategory)!}
+              countLabel={getCountLabel(primaryActivities.find(a => a.value === expandedCategory)?.count || 0)}
+              subcategories={subcategoriesByParent[expandedCategory] || []}
+              selectedSubcategories={selectedSubcategories}
+              onToggleSubcategory={toggleSubcategory}
+              onViewEvents={handleViewEvents}
+              onClose={() => {
+                setExpandedCategory(null);
+                setSelectedSubcategories([]);
+              }}
+            />
+          )}
 
           {/* Show More / Show Fewer Button */}
           {secondaryActivities.length > 0 && (
@@ -380,23 +392,37 @@ export default function BrowseByActivity({ portalSlug }: BrowseByActivityProps) 
 
           {/* Secondary Categories (expanded) */}
           {showMore && (
-            <div className="grid grid-cols-2 gap-2 mt-2 animate-in slide-in-from-top-2 duration-200">
-              {secondaryActivities.map((activity) => (
-                <CategoryCard
-                  key={activity.value}
-                  activity={activity}
-                  countLabel={getCountLabel(activity.count)}
-                  buildUrl={() => buildUrl(activity)}
-                  onClick={(e) => handleCategoryClick(activity, e)}
-                  isExpanded={expandedCategory === activity.value}
-                  hasSubcategories={hasSubcategoriesWithEvents(activity.value)}
-                  subcategories={subcategoriesByParent[activity.value] || []}
+            <>
+              <div className="grid grid-cols-2 gap-2 mt-2 animate-in slide-in-from-top-2 duration-200">
+                {secondaryActivities.map((activity) => (
+                  <CategoryCard
+                    key={activity.value}
+                    activity={activity}
+                    countLabel={getCountLabel(activity.count)}
+                    buildUrl={() => buildUrl(activity)}
+                    onClick={(e) => handleCategoryClick(activity, e)}
+                    isExpanded={expandedCategory === activity.value}
+                    hasSubcategories={hasSubcategoriesWithEvents(activity.value)}
+                  />
+                ))}
+              </div>
+
+              {/* Expanded Category Panel for secondary categories */}
+              {expandedCategory && secondaryActivities.some(a => a.value === expandedCategory) && (
+                <ExpandedCategoryPanel
+                  activity={secondaryActivities.find(a => a.value === expandedCategory)!}
+                  countLabel={getCountLabel(secondaryActivities.find(a => a.value === expandedCategory)?.count || 0)}
+                  subcategories={subcategoriesByParent[expandedCategory] || []}
                   selectedSubcategories={selectedSubcategories}
                   onToggleSubcategory={toggleSubcategory}
                   onViewEvents={handleViewEvents}
+                  onClose={() => {
+                    setExpandedCategory(null);
+                    setSelectedSubcategories([]);
+                  }}
                 />
-              ))}
-            </div>
+              )}
+            </>
           )}
         </>
       )}
@@ -412,11 +438,6 @@ interface CategoryCardProps {
   onClick: (e: React.MouseEvent) => void;
   isExpanded: boolean;
   hasSubcategories: boolean;
-  // Expanded state props
-  subcategories?: { value: string; label: string; count: number }[];
-  selectedSubcategories?: string[];
-  onToggleSubcategory?: (value: string) => void;
-  onViewEvents?: () => void;
 }
 
 function CategoryCard({
@@ -426,115 +447,18 @@ function CategoryCard({
   onClick,
   isExpanded,
   hasSubcategories,
-  subcategories = [],
-  selectedSubcategories = [],
-  onToggleSubcategory,
-  onViewEvents,
 }: CategoryCardProps) {
-
-  // When expanded, render as a div instead of Link
-  if (isExpanded && hasSubcategories) {
-    return (
-      <div
-        className="relative flex flex-col p-3 rounded-xl bg-[var(--card-bg)] border transition-all duration-200 overflow-hidden col-span-2"
-        style={{
-          borderColor: activity.color,
-          boxShadow: `0 0 16px color-mix(in srgb, ${activity.color} 20%, transparent)`,
-        }}
-      >
-        {/* Header row */}
-        <div className="flex items-center gap-3 mb-3">
-          <div
-            className="w-9 h-9 flex-shrink-0 flex items-center justify-center rounded-lg"
-            style={{
-              backgroundColor: `color-mix(in srgb, ${activity.color} 15%, transparent)`,
-            }}
-          >
-            <CategoryIcon
-              type={activity.iconType}
-              size={18}
-              glow="subtle"
-              style={{ color: activity.color }}
-            />
-          </div>
-          <div className="flex-1 min-w-0">
-            <h3 className="font-medium text-sm text-[var(--cream)]" style={{ color: activity.color }}>
-              {activity.label}
-            </h3>
-            {countLabel && (
-              <p className="text-xs text-[var(--muted)] font-mono">{countLabel}</p>
-            )}
-          </div>
-          <button
-            onClick={onClick}
-            className="flex-shrink-0 p-1.5 text-[var(--muted)] hover:text-[var(--cream)] transition-colors rounded-lg hover:bg-[var(--twilight)]"
-            aria-label="Close"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-
-        {/* Subcategory chips */}
-        <div className="flex flex-wrap gap-1.5 mb-3">
-          {/* All option */}
-          <button
-            onClick={() => onToggleSubcategory?.("__all__")}
-            className={`
-              px-2.5 py-1 rounded-full text-xs font-mono font-medium transition-all duration-150
-              ${selectedSubcategories.length === 0
-                ? "bg-[var(--cream)] text-[var(--void)]"
-                : "bg-[var(--twilight)] text-[var(--muted)] hover:text-[var(--cream)]"
-              }
-            `}
-          >
-            All ({activity.count})
-          </button>
-          {subcategories.map((subcat) => {
-            const isSelected = selectedSubcategories.includes(subcat.value);
-            return (
-              <button
-                key={subcat.value}
-                onClick={() => onToggleSubcategory?.(subcat.value)}
-                className={`
-                  px-2.5 py-1 rounded-full text-xs font-mono font-medium transition-all duration-150
-                  ${isSelected
-                    ? "text-[var(--void)]"
-                    : "bg-[var(--twilight)] text-[var(--muted)] hover:text-[var(--cream)]"
-                  }
-                `}
-                style={isSelected ? { backgroundColor: activity.color } : {}}
-              >
-                {subcat.label} ({subcat.count})
-              </button>
-            );
-          })}
-        </div>
-
-        {/* View Events button */}
-        <button
-          onClick={onViewEvents}
-          className="w-full py-2 rounded-lg font-medium text-sm transition-all duration-150 hover:brightness-110"
-          style={{
-            backgroundColor: activity.color,
-            color: "var(--void)",
-          }}
-        >
-          View Events
-        </button>
-      </div>
-    );
-  }
-
   return (
     <Link
       href={buildUrl()}
       onClick={onClick}
-      className="group relative flex items-center gap-3 p-3 rounded-xl bg-[var(--card-bg)] border hover:border-opacity-60 hover:bg-[var(--twilight)]/30 transition-all duration-200 overflow-hidden"
+      className={`group relative flex items-center gap-3 p-3 rounded-xl bg-[var(--card-bg)] border hover:border-opacity-60 hover:bg-[var(--twilight)]/30 transition-all duration-200 overflow-hidden ${
+        isExpanded ? "ring-2 ring-offset-1 ring-offset-[var(--void)]" : ""
+      }`}
       style={{
         "--activity-color": activity.color,
-        borderColor: `color-mix(in srgb, ${activity.color} 20%, transparent)`,
+        borderColor: isExpanded ? activity.color : `color-mix(in srgb, ${activity.color} 20%, transparent)`,
+        ...(isExpanded && { ringColor: activity.color }),
       } as React.CSSProperties}
     >
       {/* Subtle glow on hover */}
@@ -575,12 +499,16 @@ function CategoryCard({
         )}
       </div>
 
-      {/* Indicator: chevron-down for subcategories, arrow for direct nav */}
+      {/* Indicator: chevron-up when expanded, chevron-down for subcategories, arrow for direct nav */}
       <span
-        className="relative z-10 flex-shrink-0 opacity-50 group-hover:opacity-100 transition-opacity"
+        className="relative z-10 flex-shrink-0 opacity-50 group-hover:opacity-100 transition-all"
         style={{ color: activity.color }}
       >
-        {hasSubcategories ? (
+        {isExpanded ? (
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+          </svg>
+        ) : hasSubcategories ? (
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
           </svg>
@@ -591,5 +519,118 @@ function CategoryCard({
         )}
       </span>
     </Link>
+  );
+}
+
+// Expanded panel that appears below the grid
+interface ExpandedCategoryPanelProps {
+  activity: ActivityWithCount;
+  countLabel: string;
+  subcategories: { value: string; label: string; count: number }[];
+  selectedSubcategories: string[];
+  onToggleSubcategory: (value: string) => void;
+  onViewEvents: () => void;
+  onClose: () => void;
+}
+
+function ExpandedCategoryPanel({
+  activity,
+  countLabel,
+  subcategories,
+  selectedSubcategories,
+  onToggleSubcategory,
+  onViewEvents,
+  onClose,
+}: ExpandedCategoryPanelProps) {
+  return (
+    <div
+      className="mt-2 p-3 rounded-xl bg-[var(--card-bg)] border transition-all duration-300 overflow-hidden animate-in fade-in-0 slide-in-from-top-2"
+      style={{
+        borderColor: activity.color,
+        boxShadow: `0 0 20px color-mix(in srgb, ${activity.color} 15%, transparent)`,
+      }}
+    >
+      {/* Header row */}
+      <div className="flex items-center gap-3 mb-3">
+        <div
+          className="w-9 h-9 flex-shrink-0 flex items-center justify-center rounded-lg"
+          style={{
+            backgroundColor: `color-mix(in srgb, ${activity.color} 15%, transparent)`,
+          }}
+        >
+          <CategoryIcon
+            type={activity.iconType}
+            size={18}
+            glow="subtle"
+            style={{ color: activity.color }}
+          />
+        </div>
+        <div className="flex-1 min-w-0">
+          <h3 className="font-medium text-sm" style={{ color: activity.color }}>
+            {activity.label}
+          </h3>
+          {countLabel && (
+            <p className="text-xs text-[var(--muted)] font-mono">{countLabel}</p>
+          )}
+        </div>
+        <button
+          onClick={onClose}
+          className="flex-shrink-0 p-1.5 text-[var(--muted)] hover:text-[var(--cream)] transition-colors rounded-lg hover:bg-[var(--twilight)]"
+          aria-label="Close"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+
+      {/* Subcategory chips */}
+      <div className="flex flex-wrap gap-1.5 mb-3">
+        {/* All option */}
+        <button
+          onClick={() => onToggleSubcategory("__all__")}
+          className={`
+            px-2.5 py-1 rounded-full text-xs font-mono font-medium transition-all duration-150
+            ${selectedSubcategories.length === 0
+              ? "bg-[var(--cream)] text-[var(--void)]"
+              : "bg-[var(--twilight)] text-[var(--muted)] hover:text-[var(--cream)]"
+            }
+          `}
+        >
+          All ({activity.count})
+        </button>
+        {subcategories.map((subcat) => {
+          const isSelected = selectedSubcategories.includes(subcat.value);
+          return (
+            <button
+              key={subcat.value}
+              onClick={() => onToggleSubcategory(subcat.value)}
+              className={`
+                px-2.5 py-1 rounded-full text-xs font-mono font-medium transition-all duration-150
+                ${isSelected
+                  ? "text-[var(--void)]"
+                  : "bg-[var(--twilight)] text-[var(--muted)] hover:text-[var(--cream)]"
+                }
+              `}
+              style={isSelected ? { backgroundColor: activity.color } : {}}
+            >
+              {subcat.label} ({subcat.count})
+            </button>
+          );
+        })}
+      </div>
+
+      {/* View Events button */}
+      <button
+        onClick={onViewEvents}
+        className="w-full py-2 rounded-lg font-medium text-sm transition-all duration-150 hover:brightness-110"
+        style={{
+          backgroundColor: activity.color,
+          color: "var(--void)",
+        }}
+      >
+        View Events
+      </button>
+    </div>
   );
 }
