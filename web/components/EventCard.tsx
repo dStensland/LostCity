@@ -149,8 +149,6 @@ function EventCard({ event, index = 0, skipAnimation = false, portalSlug, friend
   const animationClass = skipAnimation ? "" : "animate-card-emerge";
   const categoryColor = event.category ? getCategoryColor(event.category) : null;
   const reflectionClass = getReflectionClass(event.category);
-  // Add live heat class for live events
-  const liveHeatClass = isLive ? "card-live-heat" : "";
   // Show thumbnail on mobile if enabled and event has an image
   const hasThumbnail = showThumbnail && event.image_url && !thumbnailError;
 
@@ -171,7 +169,7 @@ function EventCard({ event, index = 0, skipAnimation = false, portalSlug, friend
     <Link
       href={eventHref}
       scroll={false}
-      className={`block p-3 mb-4 rounded-lg border border-[var(--twilight)] card-atmospheric ${reflectionClass} ${liveHeatClass} ${animationClass} ${staggerClass} group overflow-hidden`}
+      className={`block p-3 mb-4 rounded-lg border border-[var(--twilight)] card-atmospheric ${reflectionClass} ${animationClass} ${staggerClass} group overflow-hidden`}
       style={{
         borderLeftWidth: categoryColor ? "3px" : undefined,
         borderLeftColor: categoryColor || undefined,
