@@ -1,12 +1,84 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import CategoryIcon, { getCategoryColor, CATEGORY_CONFIG } from "./CategoryIcon";
-import { CATEGORIES, SUBCATEGORIES } from "@/lib/search";
+import { CATEGORIES } from "@/lib/search";
 
 type DateFilter = "today" | "week" | "month";
+
+// Map subcategory keys to display labels and parent categories
+// This handles the various formats in the database
+function parseSubcategory(key: string): { parent: string; label: string } | null {
+  // Format: "category.subcategory" (e.g., "nightlife.dj", "comedy.standup")
+  if (key.includes(".")) {
+    const [parent, ...rest] = key.split(".");
+    const subKey = rest.join(".");
+    return { parent, label: formatLabel(subKey) };
+  }
+
+  // Known mappings for non-dotted subcategories
+  const parentMappings: Record<string, string> = {
+    // Music subcategories
+    live_music: "music", concert: "music", rock: "music", jazz: "music",
+    pop: "music", hiphop: "music", indie: "music", acoustic: "music",
+    electronic: "music", classical: "music", country: "music", metal: "music",
+    punk: "music", alternative: "music", rnb: "music", live: "music",
+    open_mic: "music",
+    // Comedy
+    standup: "comedy", improv: "comedy",
+    // Film
+    cinema: "film", screening: "film", "special-screening": "film",
+    // Theater
+    play: "theater", ballet: "theater", broadway: "theater", performance: "theater",
+    // Nightlife
+    club: "nightlife", karaoke: "nightlife", drag: "nightlife",
+    // Sports
+    baseball: "sports", softball: "sports", mens_basketball: "sports",
+    womens_basketball: "sports", cycling: "sports", running: "sports",
+    // Community
+    volunteer: "community", lgbtq: "community", activism: "community", social: "community",
+    // Food & Drink
+    dining: "food_drink", farmers_market: "food_drink",
+    // Words
+    literary: "words", book_club: "words", storytime: "words", podcast: "words",
+    // Art
+    gallery: "art", museum: "art", exhibition: "art",
+    // Learning
+    education: "learning", campus: "learning", workshop: "learning",
+    // Family
+    kids: "family", maternity: "family",
+    // Wellness
+    spiritual: "wellness", nutrition: "wellness", health: "wellness",
+    // Outdoors
+    adventure: "outdoors", sightseeing: "outdoors", outdoor: "outdoors",
+    // Gaming
+    gaming: "gaming",
+    // Fitness
+    fitness: "fitness", dance: "fitness",
+    // Other/special
+    special_event: "other", convention: "other", festival: "other", reception: "other",
+    experimental: "other", safety: "other", "support-group": "community",
+    "health-screening": "wellness",
+  };
+
+  const parent = parentMappings[key];
+  if (parent) {
+    return { parent, label: formatLabel(key) };
+  }
+
+  return null;
+}
+
+function formatLabel(key: string): string {
+  return key
+    .replace(/[_-]/g, " ")
+    .replace(/\./g, " ")
+    .split(" ")
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+}
 
 interface ActivityWithCount {
   value: string;
@@ -57,6 +129,34 @@ export default function BrowseByActivity({ portalSlug }: BrowseByActivityProps) 
   const [showMore, setShowMore] = useState(false);
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
   const [selectedSubcategories, setSelectedSubcategories] = useState<string[]>([]);
+
+  // Build subcategories grouped by parent category from API data
+  const subcategoriesByParent = useMemo(() => {
+    const grouped: Record<string, { value: string; label: string; count: number }[]> = {};
+
+    for (const [key, count] of Object.entries(subcategoryCounts)) {
+      if (count === 0) continue;
+
+      const parsed = parseSubcategory(key);
+      if (!parsed) continue;
+
+      if (!grouped[parsed.parent]) {
+        grouped[parsed.parent] = [];
+      }
+      grouped[parsed.parent].push({
+        value: key,
+        label: parsed.label,
+        count: count as number,
+      });
+    }
+
+    // Sort each group by count descending
+    for (const parent of Object.keys(grouped)) {
+      grouped[parent].sort((a, b) => b.count - a.count);
+    }
+
+    return grouped;
+  }, [subcategoryCounts]);
 
   const fetchActivityCounts = useCallback(async (filter: DateFilter) => {
     try {
@@ -130,9 +230,8 @@ export default function BrowseByActivity({ portalSlug }: BrowseByActivityProps) 
 
   // Check if a category has subcategories with events
   function hasSubcategoriesWithEvents(categoryValue: string): boolean {
-    const subcats = SUBCATEGORIES[categoryValue];
-    if (!subcats || subcats.length === 0) return false;
-    return subcats.some((sub) => (subcategoryCounts[sub.value] || 0) > 0);
+    const subcats = subcategoriesByParent[categoryValue];
+    return subcats && subcats.length > 0;
   }
 
   // Handle category click - expand subcategories or navigate
@@ -182,9 +281,9 @@ export default function BrowseByActivity({ portalSlug }: BrowseByActivityProps) 
     .filter((a) => !PRIMARY_CATEGORIES.includes(a.value))
     .filter((a) => a.count > 0);
 
-  // Get subcategories for expanded category - only show subcategories with events
+  // Get subcategories for expanded category (already filtered to only those with events)
   const expandedSubcategories = expandedCategory
-    ? (SUBCATEGORIES[expandedCategory] || []).filter((sub) => (subcategoryCounts[sub.value] || 0) > 0)
+    ? subcategoriesByParent[expandedCategory] || []
     : [];
   const expandedActivity = expandedCategory ? activities.find((a) => a.value === expandedCategory) : null;
 
@@ -292,7 +391,6 @@ export default function BrowseByActivity({ portalSlug }: BrowseByActivityProps) 
                 </button>
                 {expandedSubcategories.map((subcat) => {
                   const isSelected = selectedSubcategories.includes(subcat.value);
-                  const count = subcategoryCounts[subcat.value] || 0;
                   return (
                     <button
                       key={subcat.value}
@@ -307,7 +405,7 @@ export default function BrowseByActivity({ portalSlug }: BrowseByActivityProps) 
                       style={isSelected ? { backgroundColor: expandedActivity.color } : {}}
                     >
                       {subcat.label}
-                      <span className="ml-1.5 opacity-70">({count})</span>
+                      <span className="ml-1.5 opacity-70">({subcat.count})</span>
                     </button>
                   );
                 })}
