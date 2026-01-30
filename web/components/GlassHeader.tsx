@@ -52,7 +52,7 @@ export default function GlassHeader({ portalSlug = DEFAULT_PORTAL_SLUG, portalNa
 
   return (
     <header
-      className={`sticky top-0 z-40 px-4 py-3 flex justify-between items-center border-b transition-all duration-500 ease-out ${
+      className={`sticky top-0 z-[100] px-4 py-3 flex justify-between items-center border-b transition-all duration-500 ease-out ${
         isScrolled
           ? "glass border-[var(--twilight)]/50"
           : "bg-transparent border-[var(--twilight)]/30"

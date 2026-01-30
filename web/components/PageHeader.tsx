@@ -50,7 +50,7 @@ export default function PageHeader({
 
   return (
     <>
-      <header className="sticky top-0 z-40 px-4 sm:px-6 py-4 flex justify-between items-center border-b border-[var(--twilight)] bg-[var(--void)]/95 backdrop-blur-sm">
+      <header className="sticky top-0 z-[100] px-4 sm:px-6 py-4 flex justify-between items-center border-b border-[var(--twilight)] bg-[var(--void)]/95 backdrop-blur-sm">
         <div className="flex items-center gap-3">
           {backLink && (
             <button

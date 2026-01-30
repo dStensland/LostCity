@@ -48,26 +48,31 @@ export default function SwipeableEventCard({
   }, [event.id, onSave]);
 
   const handleShare = useCallback(async () => {
+    // Use portal-aware URL structure
+    const shareUrl = portalSlug
+      ? `${window.location.origin}/${portalSlug}?event=${event.id}`
+      : `${window.location.origin}/events/${event.id}`;
+
     if (navigator.share) {
       try {
         await navigator.share({
           title: event.title,
           text: `Check out ${event.title}`,
-          url: `${window.location.origin}/events/${event.id}`,
+          url: shareUrl,
         });
       } catch (err) {
         // User cancelled or share failed
         if ((err as Error).name !== "AbortError") {
           // Fallback: copy to clipboard
-          navigator.clipboard.writeText(`${window.location.origin}/events/${event.id}`);
+          navigator.clipboard.writeText(shareUrl);
         }
       }
     } else {
       // Fallback: copy to clipboard
-      navigator.clipboard.writeText(`${window.location.origin}/events/${event.id}`);
+      navigator.clipboard.writeText(shareUrl);
     }
     onShare?.(event.id);
-  }, [event.id, event.title, onShare]);
+  }, [event.id, event.title, portalSlug, onShare]);
 
   const { containerRef, contentStyle, swipeOffset, isSwipingLeft, isSwipingRight, leftActionRevealed, rightActionRevealed } =
     useSwipeGesture({

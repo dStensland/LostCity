@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useToast } from "@/components/Toast";
+import { usePortalOptional, DEFAULT_PORTAL_SLUG } from "@/lib/portal-context";
 
 interface ShareEventButtonProps {
   eventId: number;
@@ -9,6 +10,8 @@ interface ShareEventButtonProps {
   className?: string;
   /** "default" shows full button with text, "icon" shows compact icon-only button */
   variant?: "default" | "icon";
+  /** Portal slug for constructing the correct share URL (auto-detected from context if not provided) */
+  portalSlug?: string;
 }
 
 export default function ShareEventButton({
@@ -16,12 +19,18 @@ export default function ShareEventButton({
   eventTitle,
   className = "",
   variant = "default",
+  portalSlug: portalSlugProp,
 }: ShareEventButtonProps) {
   const { showToast } = useToast();
   const [isSharing, setIsSharing] = useState(false);
+  const portalContext = usePortalOptional();
+
+  // Use provided slug, or get from context, or fall back to default
+  const portalSlug = portalSlugProp ?? portalContext?.portal?.slug ?? DEFAULT_PORTAL_SLUG;
 
   const handleShare = async () => {
-    const url = `${window.location.origin}/events/${eventId}`;
+    // Use portal-aware URL structure: /{portal}?event={id}
+    const url = `${window.location.origin}/${portalSlug}?event=${eventId}`;
     const shareData = {
       title: eventTitle,
       text: `Check out ${eventTitle} on Lost City`,

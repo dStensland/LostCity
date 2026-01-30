@@ -4,7 +4,6 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import UnifiedHeader from "@/components/UnifiedHeader";
-import ImageUploader from "@/components/ImageUploader";
 import { GooglePlaceAutocomplete } from "@/components/GooglePlaceAutocomplete";
 import { useAuth } from "@/lib/auth-context";
 import type { VenueSubmissionData } from "@/lib/types";
@@ -51,7 +50,7 @@ export default function SubmitVenuePage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Google Place / Venue selection
+  // Google Place selection (required)
   const [selectedPlace, setSelectedPlace] = useState<{
     name: string;
     address?: string;
@@ -60,64 +59,10 @@ export default function SubmitVenuePage() {
     location?: { lat: number; lng: number };
   } | null>(null);
 
-  // Form state
-  const [name, setName] = useState("");
-  const [address, setAddress] = useState("");
-  const [neighborhood, setNeighborhood] = useState("");
-  const [city, setCity] = useState("Atlanta");
-  const [state, setState] = useState("GA");
-  const [zip, setZip] = useState("");
+  // Additional optional fields
   const [venueType, setVenueType] = useState("");
+  const [neighborhood, setNeighborhood] = useState("");
   const [website, setWebsite] = useState("");
-  const [imageUrl, setImageUrl] = useState<string | null>(null);
-
-  // Handle place selection
-  const handlePlaceChange = (
-    place: {
-      name: string;
-      address?: string;
-      google_place_id?: string;
-      venue_id?: number;
-      location?: { lat: number; lng: number };
-    } | null
-  ) => {
-    setSelectedPlace(place);
-
-    if (place) {
-      setName(place.name);
-
-      // Auto-fill address if it's a Google place
-      if (place.google_place_id && place.address) {
-        // Parse the address to fill in fields
-        // Google addresses typically come as "123 Main St, Atlanta, GA 30303, USA"
-        const addressParts = place.address.split(",").map((p) => p.trim());
-
-        if (addressParts.length >= 1) {
-          setAddress(addressParts[0]); // Street address
-        }
-        if (addressParts.length >= 2) {
-          setCity(addressParts[1]); // City
-        }
-        if (addressParts.length >= 3) {
-          // State and ZIP (e.g., "GA 30303")
-          const stateZip = addressParts[2].split(" ");
-          if (stateZip.length >= 1) {
-            setState(stateZip[0]);
-          }
-          if (stateZip.length >= 2) {
-            setZip(stateZip[1]);
-          }
-        }
-      }
-    } else {
-      // Clear all fields if place is cleared
-      setName("");
-      setAddress("");
-      setCity("Atlanta");
-      setState("GA");
-      setZip("");
-    }
-  };
 
   if (!user) {
     router.push("/auth/login?redirect=/submit/venue");
@@ -129,22 +74,50 @@ export default function SubmitVenuePage() {
     setError(null);
     setSubmitting(true);
 
-    if (!name.trim()) {
-      setError("Venue name is required");
+    if (!selectedPlace?.google_place_id) {
+      setError("Please select a place from Google");
       setSubmitting(false);
       return;
     }
 
+    // If venue already exists in our DB, just redirect to it
+    if (selectedPlace.venue_id) {
+      setError("This venue is already in Lost City!");
+      setSubmitting(false);
+      return;
+    }
+
+    // Parse address from Google's format
+    let city = "Atlanta";
+    let state = "GA";
+    let zip = "";
+    let streetAddress = "";
+
+    if (selectedPlace.address) {
+      const addressParts = selectedPlace.address.split(",").map((p) => p.trim());
+      if (addressParts.length >= 1) {
+        streetAddress = addressParts[0];
+      }
+      if (addressParts.length >= 2) {
+        city = addressParts[1];
+      }
+      if (addressParts.length >= 3) {
+        const stateZip = addressParts[2].split(" ");
+        if (stateZip.length >= 1) state = stateZip[0];
+        if (stateZip.length >= 2) zip = stateZip[1];
+      }
+    }
+
     const data: VenueSubmissionData = {
-      name: name.trim(),
-      address: address.trim() || undefined,
+      name: selectedPlace.name,
+      address: streetAddress || undefined,
       neighborhood: neighborhood || undefined,
-      city: city.trim() || "Atlanta",
-      state: state.trim() || "GA",
-      zip: zip.trim() || undefined,
+      city,
+      state,
+      zip: zip || undefined,
       venue_type: venueType || undefined,
       website: website.trim() || undefined,
-      google_place_id: selectedPlace?.google_place_id || undefined,
+      google_place_id: selectedPlace.google_place_id,
     };
 
     try {
@@ -154,7 +127,6 @@ export default function SubmitVenuePage() {
         body: JSON.stringify({
           submission_type: "venue",
           data,
-          image_urls: imageUrl ? [imageUrl] : undefined,
         }),
       });
 
@@ -164,7 +136,12 @@ export default function SubmitVenuePage() {
         throw new Error(result.error || "Failed to submit venue");
       }
 
-      router.push("/dashboard/submissions?success=venue");
+      // Check if it was auto-approved (has venue data)
+      if (result.venue) {
+        router.push(`/atl/spots/${result.venue.slug}?submitted=true`);
+      } else {
+        router.push("/dashboard/submissions?success=venue");
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to submit venue");
     } finally {
@@ -187,9 +164,13 @@ export default function SubmitVenuePage() {
             </svg>
           </Link>
           <h1 className="text-2xl font-semibold text-[var(--cream)]">
-            Add a Venue
+            Add a Destination
           </h1>
         </div>
+
+        <p className="text-[var(--soft)] mb-6">
+          Search for a place on Google Maps to add it to Lost City. Verified places are approved instantly.
+        </p>
 
         {error && (
           <div className="mb-6 p-4 rounded-lg bg-[var(--coral)]/10 border border-[var(--coral)] text-[var(--coral)] font-mono text-sm">
@@ -198,27 +179,25 @@ export default function SubmitVenuePage() {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Google Places Search - Required */}
           <div>
             <label className="block font-mono text-xs text-[var(--muted)] uppercase tracking-wider mb-2">
-              Venue Name *
+              Search Google Maps *
             </label>
             <GooglePlaceAutocomplete
               value={selectedPlace}
-              onChange={handlePlaceChange}
-              placeholder="Search for a venue or place..."
+              onChange={setSelectedPlace}
+              placeholder="Search for a bar, restaurant, venue..."
               required
             />
-            <p className="mt-1 text-xs font-mono text-[var(--muted)]">
-              Search Google Places for instant approval, or enter manually
-            </p>
           </div>
 
-          {/* Instant Approval Badge */}
+          {/* Show selected place details */}
           {selectedPlace?.google_place_id && (
             <div className="p-4 rounded-lg bg-[var(--neon-green)]/10 border border-[var(--neon-green)]/20">
-              <div className="flex items-center gap-2">
+              <div className="flex items-start gap-3">
                 <svg
-                  className="w-5 h-5 text-[var(--neon-green)]"
+                  className="w-5 h-5 text-[var(--neon-green)] flex-shrink-0 mt-0.5"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -230,19 +209,24 @@ export default function SubmitVenuePage() {
                     d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
                   />
                 </svg>
-                <div>
+                <div className="flex-1 min-w-0">
                   <div className="font-mono text-sm text-[var(--neon-green)] font-medium">
                     Instant Approval
                   </div>
-                  <div className="font-mono text-xs text-[var(--muted)] mt-0.5">
-                    This venue is verified by Google and will be approved automatically
+                  <div className="text-[var(--cream)] font-medium mt-1">
+                    {selectedPlace.name}
                   </div>
+                  {selectedPlace.address && (
+                    <div className="font-mono text-xs text-[var(--muted)] mt-0.5">
+                      {selectedPlace.address}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
           )}
 
-          {/* Venue Already Exists Warning */}
+          {/* Venue Already Exists */}
           {selectedPlace?.venue_id && (
             <div className="p-4 rounded-lg bg-[var(--neon-cyan)]/10 border border-[var(--neon-cyan)]/20">
               <div className="flex items-center gap-2">
@@ -261,148 +245,73 @@ export default function SubmitVenuePage() {
                 </svg>
                 <div>
                   <div className="font-mono text-sm text-[var(--neon-cyan)] font-medium">
-                    Venue Already Exists
+                    Already on Lost City
                   </div>
                   <div className="font-mono text-xs text-[var(--muted)] mt-0.5">
-                    This venue is already in our database
+                    This place is already in our database
                   </div>
                 </div>
               </div>
             </div>
           )}
 
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <label className="block font-mono text-xs text-[var(--muted)] uppercase tracking-wider">
-                Address
-              </label>
-              {selectedPlace?.google_place_id && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSelectedPlace(null);
-                    setAddress("");
-                    setCity("Atlanta");
-                    setState("GA");
-                    setZip("");
-                  }}
-                  className="font-mono text-xs text-[var(--coral)] hover:text-[var(--rose)] transition-colors"
-                >
-                  Clear & Enter Manually
-                </button>
-              )}
-            </div>
-            <input
-              type="text"
-              value={address}
-              onChange={(e) => setAddress(e.target.value)}
-              placeholder="123 Main St"
-              readOnly={!!selectedPlace?.google_place_id}
-              className={`w-full px-4 py-3 rounded-lg bg-[var(--dusk)] border border-[var(--twilight)] text-[var(--cream)] font-mono text-sm placeholder:text-[var(--muted)] focus:outline-none focus:border-[var(--coral)] transition-colors ${
-                selectedPlace?.google_place_id ? "opacity-60 cursor-not-allowed" : ""
-              }`}
-            />
-          </div>
+          {/* Optional fields - only show when a place is selected */}
+          {selectedPlace?.google_place_id && !selectedPlace?.venue_id && (
+            <>
+              <div className="border-t border-[var(--twilight)] pt-6">
+                <h3 className="font-mono text-xs text-[var(--muted)] uppercase tracking-wider mb-4">
+                  Additional Details (Optional)
+                </h3>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block font-mono text-xs text-[var(--muted)] uppercase tracking-wider mb-2">
-                Neighborhood
-              </label>
-              <select
-                value={neighborhood}
-                onChange={(e) => setNeighborhood(e.target.value)}
-                className="w-full px-4 py-3 rounded-lg bg-[var(--dusk)] border border-[var(--twilight)] text-[var(--cream)] font-mono text-sm focus:outline-none focus:border-[var(--coral)] transition-colors"
-              >
-                <option value="">Select neighborhood</option>
-                {NEIGHBORHOODS.map((n) => (
-                  <option key={n} value={n}>{n}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block font-mono text-xs text-[var(--muted)] uppercase tracking-wider mb-2">
-                Venue Type
-              </label>
-              <select
-                value={venueType}
-                onChange={(e) => setVenueType(e.target.value)}
-                className="w-full px-4 py-3 rounded-lg bg-[var(--dusk)] border border-[var(--twilight)] text-[var(--cream)] font-mono text-sm focus:outline-none focus:border-[var(--coral)] transition-colors"
-              >
-                <option value="">Select type</option>
-                {VENUE_TYPES.map((t) => (
-                  <option key={t.id} value={t.id}>{t.label}</option>
-                ))}
-              </select>
-            </div>
-          </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block font-mono text-xs text-[var(--muted)] uppercase tracking-wider mb-2">
+                      Type
+                    </label>
+                    <select
+                      value={venueType}
+                      onChange={(e) => setVenueType(e.target.value)}
+                      className="w-full px-4 py-3 rounded-lg bg-[var(--dusk)] border border-[var(--twilight)] text-[var(--cream)] font-mono text-sm focus:outline-none focus:border-[var(--coral)] transition-colors"
+                    >
+                      <option value="">Select type</option>
+                      {VENUE_TYPES.map((t) => (
+                        <option key={t.id} value={t.id}>{t.label}</option>
+                      ))}
+                    </select>
+                  </div>
 
-          <div className="grid grid-cols-3 gap-4">
-            <div className="col-span-1">
-              <label className="block font-mono text-xs text-[var(--muted)] uppercase tracking-wider mb-2">
-                City
-              </label>
-              <input
-                type="text"
-                value={city}
-                onChange={(e) => setCity(e.target.value)}
-                readOnly={!!selectedPlace?.google_place_id}
-                className={`w-full px-4 py-3 rounded-lg bg-[var(--dusk)] border border-[var(--twilight)] text-[var(--cream)] font-mono text-sm focus:outline-none focus:border-[var(--coral)] transition-colors ${
-                  selectedPlace?.google_place_id ? "opacity-60 cursor-not-allowed" : ""
-                }`}
-              />
-            </div>
-            <div>
-              <label className="block font-mono text-xs text-[var(--muted)] uppercase tracking-wider mb-2">
-                State
-              </label>
-              <input
-                type="text"
-                value={state}
-                onChange={(e) => setState(e.target.value)}
-                maxLength={2}
-                readOnly={!!selectedPlace?.google_place_id}
-                className={`w-full px-4 py-3 rounded-lg bg-[var(--dusk)] border border-[var(--twilight)] text-[var(--cream)] font-mono text-sm focus:outline-none focus:border-[var(--coral)] transition-colors ${
-                  selectedPlace?.google_place_id ? "opacity-60 cursor-not-allowed" : ""
-                }`}
-              />
-            </div>
-            <div>
-              <label className="block font-mono text-xs text-[var(--muted)] uppercase tracking-wider mb-2">
-                ZIP
-              </label>
-              <input
-                type="text"
-                value={zip}
-                onChange={(e) => setZip(e.target.value)}
-                maxLength={10}
-                readOnly={!!selectedPlace?.google_place_id}
-                className={`w-full px-4 py-3 rounded-lg bg-[var(--dusk)] border border-[var(--twilight)] text-[var(--cream)] font-mono text-sm focus:outline-none focus:border-[var(--coral)] transition-colors ${
-                  selectedPlace?.google_place_id ? "opacity-60 cursor-not-allowed" : ""
-                }`}
-              />
-            </div>
-          </div>
+                  <div>
+                    <label className="block font-mono text-xs text-[var(--muted)] uppercase tracking-wider mb-2">
+                      Neighborhood
+                    </label>
+                    <select
+                      value={neighborhood}
+                      onChange={(e) => setNeighborhood(e.target.value)}
+                      className="w-full px-4 py-3 rounded-lg bg-[var(--dusk)] border border-[var(--twilight)] text-[var(--cream)] font-mono text-sm focus:outline-none focus:border-[var(--coral)] transition-colors"
+                    >
+                      <option value="">Select neighborhood</option>
+                      {NEIGHBORHOODS.map((n) => (
+                        <option key={n} value={n}>{n}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
 
-          <div>
-            <label className="block font-mono text-xs text-[var(--muted)] uppercase tracking-wider mb-2">
-              Website
-            </label>
-            <input
-              type="url"
-              value={website}
-              onChange={(e) => setWebsite(e.target.value)}
-              placeholder="https://..."
-              className="w-full px-4 py-3 rounded-lg bg-[var(--dusk)] border border-[var(--twilight)] text-[var(--cream)] font-mono text-sm placeholder:text-[var(--muted)] focus:outline-none focus:border-[var(--coral)] transition-colors"
-            />
-          </div>
-
-          <div>
-            <label className="block font-mono text-xs text-[var(--muted)] uppercase tracking-wider mb-2">
-              Venue Image
-            </label>
-            <ImageUploader value={imageUrl} onChange={setImageUrl} />
-          </div>
+                <div className="mt-4">
+                  <label className="block font-mono text-xs text-[var(--muted)] uppercase tracking-wider mb-2">
+                    Website
+                  </label>
+                  <input
+                    type="url"
+                    value={website}
+                    onChange={(e) => setWebsite(e.target.value)}
+                    placeholder="https://..."
+                    className="w-full px-4 py-3 rounded-lg bg-[var(--dusk)] border border-[var(--twilight)] text-[var(--cream)] font-mono text-sm placeholder:text-[var(--muted)] focus:outline-none focus:border-[var(--coral)] transition-colors"
+                  />
+                </div>
+              </div>
+            </>
+          )}
 
           <div className="flex gap-3 pt-4">
             <Link
@@ -413,10 +322,10 @@ export default function SubmitVenuePage() {
             </Link>
             <button
               type="submit"
-              disabled={submitting}
-              className="flex-1 sm:flex-none px-6 py-2.5 rounded-lg bg-[var(--coral)] text-[var(--void)] font-mono text-sm font-medium hover:bg-[var(--rose)] transition-colors disabled:opacity-50"
+              disabled={submitting || !selectedPlace?.google_place_id || !!selectedPlace?.venue_id}
+              className="flex-1 sm:flex-none px-6 py-2.5 rounded-lg bg-[var(--coral)] text-[var(--void)] font-mono text-sm font-medium hover:bg-[var(--rose)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {submitting ? "Submitting..." : "Submit Venue"}
+              {submitting ? "Adding..." : "Add Destination"}
             </button>
           </div>
         </form>

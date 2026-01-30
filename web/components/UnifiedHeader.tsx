@@ -150,7 +150,7 @@ function UnifiedHeaderInner({
     <>
       {/* Main Header Bar */}
       <header
-        className={`sticky top-0 z-40 border-b transition-all duration-300 ${
+        className={`sticky top-0 z-[100] border-b transition-all duration-300 ${
           isScrolled
             ? "glass border-[var(--twilight)]/50"
             : "bg-[var(--void)]/95 backdrop-blur-sm border-[var(--twilight)]/30"
@@ -326,7 +326,7 @@ function UnifiedHeaderInner({
 export default function UnifiedHeader(props: UnifiedHeaderProps) {
   return (
     <Suspense fallback={
-      <header className="sticky top-0 z-40 border-b bg-[var(--void)]/95 backdrop-blur-sm border-[var(--twilight)]/30">
+      <header className="sticky top-0 z-[100] border-b bg-[var(--void)]/95 backdrop-blur-sm border-[var(--twilight)]/30">
         <div className="px-4 py-3 flex items-center gap-4">
           <div className="h-8 w-24 rounded skeleton-shimmer" />
           <div className="flex-1" />
