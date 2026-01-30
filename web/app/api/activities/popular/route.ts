@@ -18,8 +18,10 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const dateFilter = searchParams.get("date_filter") || "week";
 
-    // Get current date and calculate end date based on filter
-    const today = new Date().toISOString().split("T")[0];
+    // Get current date/time and calculate end date based on filter
+    const now = new Date();
+    const today = now.toISOString().split("T")[0];
+    const currentTime = now.toTimeString().split(" ")[0]; // HH:MM:SS format
     let endDate: string;
     let cacheSeconds: number;
 
@@ -43,24 +45,37 @@ export async function GET(request: NextRequest) {
         break;
     }
 
-    // Query subcategory counts
+    // Build time-based filter to hide events that have already started/ended today
+    // This matches the logic in search.ts to ensure counts match what users see
+    const timeFilter = `start_date.gt.${today},end_time.gte.${currentTime},and(end_time.is.null,start_time.gte.${currentTime}),is_all_day.eq.true`;
+
+    // Query subcategory counts with same filters as search:
+    // - Time filter (hide past events)
+    // - Dedup filter (canonical_event_id is null)
+    // - Portal filter (portal_id is null for public events)
     const { data: subcategoryCounts, error: subError } = await client
       .from("events")
       .select("subcategory")
       .gte("start_date", today)
       .lte("start_date", endDate)
+      .is("canonical_event_id", null)
+      .is("portal_id", null)
+      .or(timeFilter)
       .not("subcategory", "is", null);
 
     if (subError) {
       console.error("Error fetching subcategory counts:", subError);
     }
 
-    // Query category counts
+    // Query category counts with same filters
     const { data: categoryCounts, error: catError } = await client
       .from("events")
       .select("category, subcategory")
       .gte("start_date", today)
       .lte("start_date", endDate)
+      .is("canonical_event_id", null)
+      .is("portal_id", null)
+      .or(timeFilter)
       .not("category", "is", null);
 
     if (catError) {
