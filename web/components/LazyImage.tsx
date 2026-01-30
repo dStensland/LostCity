@@ -14,6 +14,8 @@ interface LazyImageProps {
   priority?: boolean;
   onError?: () => void;
   placeholderColor?: string;
+  /** How to fit the image: 'cover' fills container (crops), 'contain' fits inside (letterbox) */
+  objectFit?: "cover" | "contain";
 }
 
 /**
@@ -31,6 +33,7 @@ export default function LazyImage({
   priority = false,
   onError,
   placeholderColor = "var(--twilight)",
+  objectFit = "cover",
 }: LazyImageProps) {
   const [isLoaded, setIsLoaded] = useState(false);
 
@@ -58,7 +61,7 @@ export default function LazyImage({
         height={!fill ? height : undefined}
         sizes={sizes}
         loading={priority ? "eager" : "lazy"}
-        className={`transition-opacity duration-300 ${isLoaded ? "opacity-100" : "opacity-0"} ${fill ? "object-contain" : ""}`}
+        className={`transition-opacity duration-300 ${isLoaded ? "opacity-100" : "opacity-0"} ${fill ? (objectFit === "cover" ? "object-cover object-center" : "object-contain object-center") : ""}`}
         onLoad={() => setIsLoaded(true)}
         onError={() => {
           setIsLoaded(true);
