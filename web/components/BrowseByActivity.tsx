@@ -323,18 +323,18 @@ export default function BrowseByActivity({ portalSlug }: BrowseByActivityProps) 
       </div>
 
       {isLoading ? (
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 gap-2">
           {[1, 2, 3, 4, 5, 6].map((i) => (
             <div
               key={i}
-              className="h-24 rounded-xl skeleton-shimmer"
+              className="h-14 rounded-xl skeleton-shimmer"
             />
           ))}
         </div>
       ) : (
         <>
           {/* Category Grid */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 gap-2">
             {primaryActivities.map((activity) => (
               <CategoryCard
                 key={activity.value}
@@ -356,7 +356,7 @@ export default function BrowseByActivity({ portalSlug }: BrowseByActivityProps) 
           {secondaryActivities.length > 0 && (
             <button
               onClick={() => setShowMore(!showMore)}
-              className="w-full mt-3 py-2.5 px-4 rounded-xl bg-[var(--twilight)]/50 border border-[var(--twilight)]
+              className="w-full mt-2 py-2 px-4 rounded-xl bg-[var(--twilight)]/50 border border-[var(--twilight)]
                 text-[var(--muted)] hover:text-[var(--cream)] hover:bg-[var(--twilight)]
                 transition-all duration-200 flex items-center justify-center gap-2 text-sm font-medium"
             >
@@ -380,7 +380,7 @@ export default function BrowseByActivity({ portalSlug }: BrowseByActivityProps) 
 
           {/* Secondary Categories (expanded) */}
           {showMore && (
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-3 animate-in slide-in-from-top-2 duration-200">
+            <div className="grid grid-cols-2 gap-2 mt-2 animate-in slide-in-from-top-2 duration-200">
               {secondaryActivities.map((activity) => (
                 <CategoryCard
                   key={activity.value}
@@ -436,40 +436,38 @@ function CategoryCard({
   if (isExpanded && hasSubcategories) {
     return (
       <div
-        className="relative flex flex-col p-4 rounded-xl bg-[var(--card-bg)] border transition-all duration-200 overflow-hidden col-span-2 sm:col-span-2"
+        className="relative flex flex-col p-3 rounded-xl bg-[var(--card-bg)] border transition-all duration-200 overflow-hidden col-span-2"
         style={{
           borderColor: activity.color,
-          boxShadow: `0 0 20px color-mix(in srgb, ${activity.color} 20%, transparent)`,
+          boxShadow: `0 0 16px color-mix(in srgb, ${activity.color} 20%, transparent)`,
         }}
       >
         {/* Header row */}
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-3">
-            <div
-              className="w-10 h-10 flex items-center justify-center rounded-lg"
-              style={{
-                backgroundColor: `color-mix(in srgb, ${activity.color} 15%, transparent)`,
-              }}
-            >
-              <CategoryIcon
-                type={activity.iconType}
-                size={22}
-                glow="subtle"
-                style={{ color: activity.color }}
-              />
-            </div>
-            <div>
-              <h3 className="font-medium text-[var(--cream)]" style={{ color: activity.color }}>
-                {activity.label}
-              </h3>
-              {countLabel && (
-                <p className="text-xs text-[var(--muted)] font-mono">{countLabel}</p>
-              )}
-            </div>
+        <div className="flex items-center gap-3 mb-3">
+          <div
+            className="w-9 h-9 flex-shrink-0 flex items-center justify-center rounded-lg"
+            style={{
+              backgroundColor: `color-mix(in srgb, ${activity.color} 15%, transparent)`,
+            }}
+          >
+            <CategoryIcon
+              type={activity.iconType}
+              size={18}
+              glow="subtle"
+              style={{ color: activity.color }}
+            />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h3 className="font-medium text-sm text-[var(--cream)]" style={{ color: activity.color }}>
+              {activity.label}
+            </h3>
+            {countLabel && (
+              <p className="text-xs text-[var(--muted)] font-mono">{countLabel}</p>
+            )}
           </div>
           <button
             onClick={onClick}
-            className="p-1.5 text-[var(--muted)] hover:text-[var(--cream)] transition-colors rounded-lg hover:bg-[var(--twilight)]"
+            className="flex-shrink-0 p-1.5 text-[var(--muted)] hover:text-[var(--cream)] transition-colors rounded-lg hover:bg-[var(--twilight)]"
             aria-label="Close"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -479,12 +477,12 @@ function CategoryCard({
         </div>
 
         {/* Subcategory chips */}
-        <div className="flex flex-wrap gap-2 mb-3">
+        <div className="flex flex-wrap gap-1.5 mb-3">
           {/* All option */}
           <button
             onClick={() => onToggleSubcategory?.("__all__")}
             className={`
-              px-3 py-1.5 rounded-full text-xs font-mono font-medium transition-all duration-150
+              px-2.5 py-1 rounded-full text-xs font-mono font-medium transition-all duration-150
               ${selectedSubcategories.length === 0
                 ? "bg-[var(--cream)] text-[var(--void)]"
                 : "bg-[var(--twilight)] text-[var(--muted)] hover:text-[var(--cream)]"
@@ -500,7 +498,7 @@ function CategoryCard({
                 key={subcat.value}
                 onClick={() => onToggleSubcategory?.(subcat.value)}
                 className={`
-                  px-3 py-1.5 rounded-full text-xs font-mono font-medium transition-all duration-150
+                  px-2.5 py-1 rounded-full text-xs font-mono font-medium transition-all duration-150
                   ${isSelected
                     ? "text-[var(--void)]"
                     : "bg-[var(--twilight)] text-[var(--muted)] hover:text-[var(--cream)]"
@@ -533,7 +531,7 @@ function CategoryCard({
     <Link
       href={buildUrl()}
       onClick={onClick}
-      className="group relative flex flex-col justify-between p-4 rounded-xl bg-[var(--card-bg)] border hover:border-opacity-60 hover:bg-[var(--twilight)]/30 transition-all duration-200 overflow-hidden"
+      className="group relative flex items-center gap-3 p-3 rounded-xl bg-[var(--card-bg)] border hover:border-opacity-60 hover:bg-[var(--twilight)]/30 transition-all duration-200 overflow-hidden"
       style={{
         "--activity-color": activity.color,
         borderColor: `color-mix(in srgb, ${activity.color} 20%, transparent)`,
@@ -543,43 +541,43 @@ function CategoryCard({
       <div
         className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
         style={{
-          background: `radial-gradient(circle at 30% 30%, color-mix(in srgb, ${activity.color} 8%, transparent), transparent 70%)`,
+          background: `radial-gradient(circle at 20% 50%, color-mix(in srgb, ${activity.color} 8%, transparent), transparent 70%)`,
         }}
       />
 
       {/* Icon with glow */}
       <div
-        className="relative z-10 w-10 h-10 flex items-center justify-center rounded-lg mb-3 transition-all duration-200 group-hover:scale-110"
+        className="relative z-10 w-9 h-9 flex-shrink-0 flex items-center justify-center rounded-lg transition-all duration-200 group-hover:scale-110"
         style={{
           backgroundColor: `color-mix(in srgb, ${activity.color} 15%, transparent)`,
         }}
       >
         <CategoryIcon
           type={activity.iconType}
-          size={22}
+          size={18}
           glow="subtle"
           style={{ color: activity.color }}
         />
       </div>
 
       {/* Label and count */}
-      <div className="relative z-10">
+      <div className="relative z-10 flex-1 min-w-0">
         <h3
-          className="font-medium text-[var(--cream)] transition-colors group-hover:text-[var(--activity-color)]"
+          className="font-medium text-sm text-[var(--cream)] transition-colors group-hover:text-[var(--activity-color)] truncate"
           style={{ "--activity-color": activity.color } as React.CSSProperties}
         >
           {activity.label}
         </h3>
         {countLabel && (
-          <p className="text-xs text-[var(--muted)] mt-0.5 font-mono">
+          <p className="text-xs text-[var(--muted)] font-mono truncate">
             {countLabel}
           </p>
         )}
       </div>
 
-      {/* Indicator: arrow for direct nav, chevron-down for subcategories */}
+      {/* Indicator: chevron-down for subcategories, arrow for direct nav */}
       <span
-        className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity"
+        className="relative z-10 flex-shrink-0 opacity-50 group-hover:opacity-100 transition-opacity"
         style={{ color: activity.color }}
       >
         {hasSubcategories ? (
