@@ -217,6 +217,14 @@ export default function BrowseByActivity({ portalSlug }: BrowseByActivityProps) 
     params.set("view", "find");
     params.set("type", "events");
 
+    // Apply date filter
+    if (dateFilter === "today") {
+      params.set("date", "today");
+    } else if (dateFilter === "week") {
+      params.set("date", "week");
+    }
+    // "month" doesn't have a direct equivalent filter, so we skip it
+
     if (subcats && subcats.length > 0) {
       params.set("subcategories", subcats.join(","));
     } else if (activity.type === "subcategory") {
