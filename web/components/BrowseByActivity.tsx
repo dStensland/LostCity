@@ -117,7 +117,7 @@ const ALL_ACTIVITY_CONFIG = buildActivityConfig();
 const DATE_FILTER_OPTIONS: { value: DateFilter; label: string }[] = [
   { value: "today", label: "Today" },
   { value: "week", label: "This Week" },
-  { value: "month", label: "This Month" },
+  { value: "month", label: "Next 30 Days" },
 ];
 
 export default function BrowseByActivity({ portalSlug }: BrowseByActivityProps) {
@@ -205,7 +205,7 @@ export default function BrowseByActivity({ portalSlug }: BrowseByActivityProps) 
       case "week":
         return `${count} this week`;
       case "month":
-        return `${count} this month`;
+        return `${count} upcoming`;
       default:
         return `${count} this week`;
     }
@@ -222,8 +222,9 @@ export default function BrowseByActivity({ portalSlug }: BrowseByActivityProps) 
       params.set("date", "today");
     } else if (dateFilter === "week") {
       params.set("date", "week");
+    } else if (dateFilter === "month") {
+      params.set("date", "month");
     }
-    // "month" doesn't have a direct equivalent filter, so we skip it
 
     if (subcats && subcats.length > 0) {
       params.set("subcategories", subcats.join(","));

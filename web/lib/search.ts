@@ -56,7 +56,7 @@ export interface SearchFilters {
   tags?: string[];
   is_free?: boolean;
   price_max?: number;
-  date_filter?: "now" | "today" | "tomorrow" | "weekend" | "week";
+  date_filter?: "now" | "today" | "tomorrow" | "weekend" | "week" | "month";
   date_range_start?: string; // Portal date range filter
   date_range_end?: string;   // Portal date range filter
   venue_id?: number;
@@ -170,7 +170,7 @@ function escapePostgrestValue(value: string): string {
     .replace(/\./g, "\\.");  // Escape periods
 }
 
-function getDateRange(filter: "now" | "today" | "tomorrow" | "weekend" | "week"): {
+function getDateRange(filter: "now" | "today" | "tomorrow" | "weekend" | "week" | "month"): {
   start: string;
   end: string;
 } {
@@ -218,6 +218,12 @@ function getDateRange(filter: "now" | "today" | "tomorrow" | "weekend" | "week")
       return {
         start: format(today, "yyyy-MM-dd"),
         end: format(addDays(today, 7), "yyyy-MM-dd"),
+      };
+
+    case "month":
+      return {
+        start: format(today, "yyyy-MM-dd"),
+        end: format(addDays(today, 30), "yyyy-MM-dd"),
       };
 
     default:
@@ -1267,6 +1273,7 @@ export const DATE_FILTERS = [
   { value: "tomorrow", label: "Tomorrow" },
   { value: "weekend", label: "The weekend" },
   { value: "week", label: "This Week" },
+  { value: "month", label: "Next 30 Days" },
 ] as const;
 
 export const PRICE_FILTERS = [
