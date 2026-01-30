@@ -6,11 +6,6 @@ import { getRecentSearches, addRecentSearch } from "@/lib/searchHistory";
 import { useSearchContext } from "@/lib/search-context";
 import { useSearchPersonalization } from "@/lib/hooks/useSearchPersonalization";
 import {
-  getNavigationAction,
-  buildNavigationUrl,
-  type NavigationContext,
-} from "@/lib/search-navigation";
-import {
   type QuickAction,
   rankResults,
   detectQuickActions,
@@ -88,13 +83,6 @@ export default function SearchBar() {
     portalId: searchContext?.portalId,
     userPreferences: preferences || undefined,
   }), [searchContext, portalSlug, preferences]);
-
-  // Build navigation context
-  const navigationContext = useMemo<NavigationContext>(() => ({
-    viewMode: searchContext?.viewMode || "feed",
-    findType: searchContext?.findType || null,
-    portalSlug,
-  }), [searchContext, portalSlug]);
 
   // Derive isSearching from query vs URL mismatch
   const isSearching = query.trim() !== currentSearchParam || isLoading;
@@ -216,38 +204,56 @@ export default function SearchBar() {
   // Handle selecting a suggestion
   const selectSuggestion = useCallback(
     (result: SearchResult) => {
-      // Get navigation action based on result type and context
-      const action = getNavigationAction(
-        {
-          type: result.type,
-          id: result.id,
-          slug: result.href?.split("/").pop(),
-          title: result.title,
-          href: result.href,
-        },
-        navigationContext
-      );
-
-      // Build the full URL
-      const url = buildNavigationUrl(action, searchParams, portalSlug);
-
       // Track the search
-      addRecentSearch(query.trim());
-      setRecentSearches(getRecentSearches());
+      if (query.trim()) {
+        addRecentSearch(query.trim());
+        setRecentSearches(getRecentSearches());
+      }
 
       // Close dropdown
       setShowDropdown(false);
       setSelectedIndex(-1);
+      setQuery("");
 
-      // Navigate
-      if (action.type === "applyFilter") {
-        // For filters, update the query to show what was selected
-        setQuery("");
+      // Build URL based on result type
+      // Use simple modal pattern: /{portal}?{type}={id or slug}
+      const slug = result.href?.split("/").pop();
+      let url: string;
+
+      switch (result.type) {
+        case "event":
+          url = `/${portalSlug}?event=${result.id}`;
+          break;
+        case "venue":
+          url = `/${portalSlug}?spot=${slug || result.id}`;
+          break;
+        case "organizer":
+          url = `/${portalSlug}?org=${slug || result.id}`;
+          break;
+        case "series":
+          url = `/${portalSlug}?series=${slug || result.id}`;
+          break;
+        case "list":
+          // Lists go to their own page
+          url = result.href || `/list/${slug || result.id}`;
+          break;
+        case "neighborhood":
+          // Apply as filter
+          url = `/${portalSlug}?view=find&type=events&neighborhoods=${encodeURIComponent(result.title)}`;
+          break;
+        case "category":
+          // Apply as filter
+          url = `/${portalSlug}?view=find&type=events&categories=${encodeURIComponent(result.title)}`;
+          break;
+        default:
+          // Fallback to href or portal home
+          url = result.href || `/${portalSlug}`;
       }
+
       router.push(url, { scroll: false });
       inputRef.current?.blur();
     },
-    [navigationContext, searchParams, portalSlug, query, router]
+    [portalSlug, query, router]
   );
 
   // Handle selecting a quick action
