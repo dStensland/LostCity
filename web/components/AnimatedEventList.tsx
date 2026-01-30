@@ -122,7 +122,7 @@ export default function AnimatedEventList({
             </div>
 
             {/* Events grouped by time period */}
-            <div className="pt-4">
+            <div className="pt-2">
               {timePeriods.map(({ period, items }) => (
                 <div key={period}>
                   {/* Time period divider - only show if multiple periods */}

@@ -87,10 +87,6 @@ export default function SubcategoryRow({ className = "" }: SubcategoryRowProps) 
         className="flex items-center gap-2 overflow-x-auto scrollbar-hide snap-x snap-mandatory md:snap-none py-2 -mx-4 px-4"
         style={{ WebkitOverflowScrolling: "touch" }}
       >
-        {/* Label */}
-        <span className="shrink-0 text-[0.55rem] uppercase tracking-wider text-[var(--muted)] font-mono">
-          Genre:
-        </span>
 
         {subcategoriesByCategory.map((group, groupIndex) => (
           <div key={group.category} className="contents">

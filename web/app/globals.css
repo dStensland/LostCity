@@ -2086,20 +2086,20 @@ textarea:focus-visible {
    LIVE EVENT HEAT EFFECTS
    ============================================ */
 
-/* Live event pulsing red reflection */
+/* Live event subtle red reflection */
 .card-live-heat::after {
-  --reflection-color: rgba(255, 90, 90, 0.12);
-  animation: live-heat-pulse 2s ease-in-out infinite;
+  --reflection-color: rgba(255, 90, 90, 0.06);
+  animation: live-heat-pulse 3s ease-in-out infinite;
 }
 
 @keyframes live-heat-pulse {
   0%, 100% {
-    opacity: 0.4;
-    height: 16px;
+    opacity: 0.3;
+    height: 12px;
   }
   50% {
-    opacity: 0.7;
-    height: 20px;
+    opacity: 0.5;
+    height: 14px;
   }
 }
 
