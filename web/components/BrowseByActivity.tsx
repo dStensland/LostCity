@@ -80,6 +80,15 @@ function formatLabel(key: string): string {
     .join(" ");
 }
 
+// Helper to chunk array into groups of n
+function chunkArray<T>(array: T[], size: number): T[][] {
+  const chunks: T[][] = [];
+  for (let i = 0; i < array.length; i += size) {
+    chunks.push(array.slice(i, i + size));
+  }
+  return chunks;
+}
+
 interface ActivityWithCount {
   value: string;
   label: string;
@@ -333,36 +342,44 @@ export default function BrowseByActivity({ portalSlug }: BrowseByActivityProps) 
         </div>
       ) : (
         <>
-          {/* Category Grid */}
-          <div className="grid grid-cols-2 gap-2">
-            {primaryActivities.map((activity) => (
-              <CategoryCard
-                key={activity.value}
-                activity={activity}
-                countLabel={getCountLabel(activity.count)}
-                buildUrl={() => buildUrl(activity)}
-                onClick={(e) => handleCategoryClick(activity, e)}
-                isExpanded={expandedCategory === activity.value}
-                hasSubcategories={hasSubcategoriesWithEvents(activity.value)}
-              />
-            ))}
+          {/* Category Grid - render in rows with expand panel after each row */}
+          <div className="flex flex-col gap-2">
+            {chunkArray(primaryActivities, 2).map((row, rowIndex) => {
+              const expandedInRow = row.find(a => a.value === expandedCategory);
+              return (
+                <div key={rowIndex}>
+                  <div className="grid grid-cols-2 gap-2">
+                    {row.map((activity) => (
+                      <CategoryCard
+                        key={activity.value}
+                        activity={activity}
+                        countLabel={getCountLabel(activity.count)}
+                        buildUrl={() => buildUrl(activity)}
+                        onClick={(e) => handleCategoryClick(activity, e)}
+                        isExpanded={expandedCategory === activity.value}
+                        hasSubcategories={hasSubcategoriesWithEvents(activity.value)}
+                      />
+                    ))}
+                  </div>
+                  {/* Expanded panel appears directly below this row */}
+                  {expandedInRow && (
+                    <ExpandedCategoryPanel
+                      activity={expandedInRow}
+                      countLabel={getCountLabel(expandedInRow.count)}
+                      subcategories={subcategoriesByParent[expandedCategory!] || []}
+                      selectedSubcategories={selectedSubcategories}
+                      onToggleSubcategory={toggleSubcategory}
+                      onViewEvents={handleViewEvents}
+                      onClose={() => {
+                        setExpandedCategory(null);
+                        setSelectedSubcategories([]);
+                      }}
+                    />
+                  )}
+                </div>
+              );
+            })}
           </div>
-
-          {/* Expanded Category Panel - renders below grid */}
-          {expandedCategory && primaryActivities.some(a => a.value === expandedCategory) && (
-            <ExpandedCategoryPanel
-              activity={primaryActivities.find(a => a.value === expandedCategory)!}
-              countLabel={getCountLabel(primaryActivities.find(a => a.value === expandedCategory)?.count || 0)}
-              subcategories={subcategoriesByParent[expandedCategory] || []}
-              selectedSubcategories={selectedSubcategories}
-              onToggleSubcategory={toggleSubcategory}
-              onViewEvents={handleViewEvents}
-              onClose={() => {
-                setExpandedCategory(null);
-                setSelectedSubcategories([]);
-              }}
-            />
-          )}
 
           {/* Show More / Show Fewer Button */}
           {secondaryActivities.length > 0 && (
@@ -392,37 +409,43 @@ export default function BrowseByActivity({ portalSlug }: BrowseByActivityProps) 
 
           {/* Secondary Categories (expanded) */}
           {showMore && (
-            <>
-              <div className="grid grid-cols-2 gap-2 mt-2 animate-in slide-in-from-top-2 duration-200">
-                {secondaryActivities.map((activity) => (
-                  <CategoryCard
-                    key={activity.value}
-                    activity={activity}
-                    countLabel={getCountLabel(activity.count)}
-                    buildUrl={() => buildUrl(activity)}
-                    onClick={(e) => handleCategoryClick(activity, e)}
-                    isExpanded={expandedCategory === activity.value}
-                    hasSubcategories={hasSubcategoriesWithEvents(activity.value)}
-                  />
-                ))}
-              </div>
-
-              {/* Expanded Category Panel for secondary categories */}
-              {expandedCategory && secondaryActivities.some(a => a.value === expandedCategory) && (
-                <ExpandedCategoryPanel
-                  activity={secondaryActivities.find(a => a.value === expandedCategory)!}
-                  countLabel={getCountLabel(secondaryActivities.find(a => a.value === expandedCategory)?.count || 0)}
-                  subcategories={subcategoriesByParent[expandedCategory] || []}
-                  selectedSubcategories={selectedSubcategories}
-                  onToggleSubcategory={toggleSubcategory}
-                  onViewEvents={handleViewEvents}
-                  onClose={() => {
-                    setExpandedCategory(null);
-                    setSelectedSubcategories([]);
-                  }}
-                />
-              )}
-            </>
+            <div className="flex flex-col gap-2 mt-2 animate-in slide-in-from-top-2 duration-200">
+              {chunkArray(secondaryActivities, 2).map((row, rowIndex) => {
+                const expandedInRow = row.find(a => a.value === expandedCategory);
+                return (
+                  <div key={rowIndex}>
+                    <div className="grid grid-cols-2 gap-2">
+                      {row.map((activity) => (
+                        <CategoryCard
+                          key={activity.value}
+                          activity={activity}
+                          countLabel={getCountLabel(activity.count)}
+                          buildUrl={() => buildUrl(activity)}
+                          onClick={(e) => handleCategoryClick(activity, e)}
+                          isExpanded={expandedCategory === activity.value}
+                          hasSubcategories={hasSubcategoriesWithEvents(activity.value)}
+                        />
+                      ))}
+                    </div>
+                    {/* Expanded panel appears directly below this row */}
+                    {expandedInRow && (
+                      <ExpandedCategoryPanel
+                        activity={expandedInRow}
+                        countLabel={getCountLabel(expandedInRow.count)}
+                        subcategories={subcategoriesByParent[expandedCategory!] || []}
+                        selectedSubcategories={selectedSubcategories}
+                        onToggleSubcategory={toggleSubcategory}
+                        onViewEvents={handleViewEvents}
+                        onClose={() => {
+                          setExpandedCategory(null);
+                          setSelectedSubcategories([]);
+                        }}
+                      />
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           )}
         </>
       )}
