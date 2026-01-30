@@ -1,20 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const GOOGLE_API_KEY = process.env.GOOGLE_PLACES_API_KEY || "";
+const FOURSQUARE_API_KEY = process.env.FOURSQUARE_API_KEY || "";
 
 // Default location: Atlanta
 const DEFAULT_LOCATION = {
   lat: 33.749,
   lng: -84.388,
 };
-
-// Field mask for Text Search API - simplified for search results
-const FIELD_MASK = [
-  "places.id",
-  "places.displayName",
-  "places.formattedAddress",
-  "places.location",
-].join(",");
 
 interface SearchRequest {
   query: string;
@@ -34,8 +26,26 @@ interface PlaceResult {
   };
 }
 
+interface FoursquarePlace {
+  fsq_id: string;
+  name: string;
+  location: {
+    formatted_address?: string;
+    address?: string;
+    locality?: string;
+    region?: string;
+    postcode?: string;
+  };
+  geocodes?: {
+    main?: {
+      latitude: number;
+      longitude: number;
+    };
+  };
+}
+
 /**
- * Google Places Text Search API endpoint.
+ * Places Search API endpoint using Foursquare.
  *
  * POST /api/places/search
  *
@@ -53,10 +63,10 @@ interface PlaceResult {
 export async function POST(request: NextRequest) {
   try {
     // Check API key
-    if (!GOOGLE_API_KEY) {
-      console.error("GOOGLE_PLACES_API_KEY is not set");
+    if (!FOURSQUARE_API_KEY) {
+      console.error("FOURSQUARE_API_KEY is not set");
       return NextResponse.json(
-        { error: "Google Places API is not configured" },
+        { error: "Places API is not configured" },
         { status: 500 }
       );
     }
@@ -104,36 +114,29 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Call Google Places Text Search API
+    // Call Foursquare Places API
+    const params = new URLSearchParams({
+      query: query,
+      ll: `${searchLocation.lat},${searchLocation.lng}`,
+      radius: "50000", // 50km radius
+      limit: "10",
+    });
+
     const response = await fetch(
-      "https://places.googleapis.com/v1/places:searchText",
+      `https://api.foursquare.com/v3/places/search?${params}`,
       {
-        method: "POST",
+        method: "GET",
         headers: {
-          "Content-Type": "application/json",
-          "X-Goog-Api-Key": GOOGLE_API_KEY,
-          "X-Goog-FieldMask": FIELD_MASK,
+          Authorization: FOURSQUARE_API_KEY,
+          Accept: "application/json",
         },
-        body: JSON.stringify({
-          textQuery: query,
-          locationBias: {
-            circle: {
-              center: {
-                latitude: searchLocation.lat,
-                longitude: searchLocation.lng,
-              },
-              radius: 50000, // 50km radius for biasing results
-            },
-          },
-          maxResultCount: 20,
-        }),
       }
     );
 
     if (!response.ok) {
       const errorText = await response.text();
       console.error(
-        `Google Places API error: ${response.status}`,
+        `Foursquare API error: ${response.status}`,
         errorText
       );
       return NextResponse.json(
@@ -143,18 +146,27 @@ export async function POST(request: NextRequest) {
     }
 
     const data = await response.json();
-    const places = data.places || [];
+    const places: FoursquarePlace[] = data.results || [];
 
     // Map to simplified format
-    const results: PlaceResult[] = places.map((place: { id: string; displayName?: { text: string }; formattedAddress?: string; location?: { latitude: number; longitude: number } }) => ({
-      id: place.id,
-      name: place.displayName?.text || "Unknown",
-      address: place.formattedAddress || "",
-      location: {
-        lat: place.location?.latitude || 0,
-        lng: place.location?.longitude || 0,
-      },
-    }));
+    const results: PlaceResult[] = places.map((place) => {
+      // Build formatted address
+      const loc = place.location;
+      const address = loc.formatted_address ||
+        [loc.address, loc.locality, loc.region, loc.postcode]
+          .filter(Boolean)
+          .join(", ");
+
+      return {
+        id: place.fsq_id,
+        name: place.name,
+        address: address || "",
+        location: {
+          lat: place.geocodes?.main?.latitude || 0,
+          lng: place.geocodes?.main?.longitude || 0,
+        },
+      };
+    });
 
     return NextResponse.json(
       { places: results },

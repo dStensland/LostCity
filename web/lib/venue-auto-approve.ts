@@ -1,7 +1,7 @@
 import { createServiceClient } from "@/lib/supabase/service";
 import { isValidString } from "@/lib/api-utils";
 
-const GOOGLE_API_KEY = process.env.GOOGLE_PLACES_API_KEY || "";
+const FOURSQUARE_API_KEY = process.env.FOURSQUARE_API_KEY || "";
 
 export interface AutoApproveResult {
   success: boolean;
@@ -9,78 +9,68 @@ export interface AutoApproveResult {
   error?: string;
 }
 
-interface GooglePlaceDetails {
-  id: string;
-  displayName?: { text: string };
-  formattedAddress?: string;
-  addressComponents?: Array<{
-    longText: string;
-    shortText: string;
-    types: string[];
-  }>;
-  location?: { latitude: number; longitude: number };
+interface FoursquarePlaceDetails {
+  fsq_id: string;
+  name: string;
+  location: {
+    formatted_address?: string;
+    address?: string;
+    locality?: string;
+    region?: string;
+    postcode?: string;
+    neighborhood?: string[];
+  };
+  geocodes?: {
+    main?: {
+      latitude: number;
+      longitude: number;
+    };
+  };
 }
 
 /**
- * Fetch place details from Google Places API
+ * Fetch place details from Foursquare Places API
  */
-async function fetchGooglePlaceDetails(
-  googlePlaceId: string
-): Promise<GooglePlaceDetails | null> {
-  if (!GOOGLE_API_KEY) {
-    console.error("GOOGLE_PLACES_API_KEY is not set");
+async function fetchFoursquarePlaceDetails(
+  fsqId: string
+): Promise<FoursquarePlaceDetails | null> {
+  if (!FOURSQUARE_API_KEY) {
+    console.error("FOURSQUARE_API_KEY is not set");
     return null;
   }
 
   const response = await fetch(
-    `https://places.googleapis.com/v1/places/${googlePlaceId}`,
+    `https://api.foursquare.com/v3/places/${fsqId}`,
     {
       method: "GET",
       headers: {
-        "X-Goog-Api-Key": GOOGLE_API_KEY,
-        "X-Goog-FieldMask":
-          "id,displayName,formattedAddress,addressComponents,location",
+        Authorization: FOURSQUARE_API_KEY,
+        Accept: "application/json",
       },
     }
   );
 
   if (!response.ok) {
     console.error(
-      `Google Places API error: ${response.status}`,
+      `Foursquare API error: ${response.status}`,
       await response.text()
     );
     return null;
   }
 
-  return (await response.json()) as GooglePlaceDetails;
+  return (await response.json()) as FoursquarePlaceDetails;
 }
 
 /**
- * Parse address components from Google Place
+ * Parse address components from Foursquare Place
  */
-function parseAddressComponents(components: GooglePlaceDetails["addressComponents"]) {
-  const result = {
-    neighborhood: null as string | null,
-    city: "Atlanta",
-    state: "GA",
-    zip: null as string | null,
+function parseAddressComponents(location: FoursquarePlaceDetails["location"]) {
+  return {
+    neighborhood: location.neighborhood?.[0] || null,
+    city: location.locality || "Atlanta",
+    state: location.region || "GA",
+    zip: location.postcode || null,
   };
-
-  if (!components) return result;
-
-  for (const component of components) {
-    if (component.types.includes("locality")) {
-      result.city = component.longText;
-    } else if (component.types.includes("administrative_area_level_1")) {
-      result.state = component.shortText;
-    } else if (component.types.includes("postal_code")) {
-      result.zip = component.shortText;
-    } else if (component.types.includes("neighborhood")) {
-      result.neighborhood = component.longText;
-    }
-  }
-
-  return result;
 }
 
 /**
@@ -111,30 +101,30 @@ async function generateUniqueSlug(
 }
 
 /**
- * Auto-approve a venue with Google Place validation
+ * Auto-approve a venue with Foursquare Place validation
  *
  * This function:
- * 1. Validates the Place ID with Google Places API
+ * 1. Validates the Place ID with Foursquare Places API
  * 2. Checks if venue already exists
- * 3. Creates a new venue with Google data if needed
+ * 3. Creates a new venue with Foursquare data if needed
  * 4. Creates an approved submission record
  * 5. Returns the venue data
  *
- * @param googlePlaceId - Google Place ID to validate
+ * @param placeId - Foursquare Place ID to validate
  * @param submittedBy - User ID who submitted the venue
  * @param portalId - Optional portal ID for the submission
  * @returns Result object with success status and venue data or error
  */
 export async function autoApproveVenue(
-  googlePlaceId: string,
+  placeId: string,
   submittedBy: string,
   portalId?: string
 ): Promise<AutoApproveResult> {
   // Validate inputs
-  if (!isValidString(googlePlaceId, 1, 500)) {
+  if (!isValidString(placeId, 1, 500)) {
     return {
       success: false,
-      error: "Invalid Google Place ID",
+      error: "Invalid Place ID",
     };
   }
 
@@ -148,11 +138,11 @@ export async function autoApproveVenue(
   const serviceClient = createServiceClient();
 
   try {
-    // Check if venue with this google_place_id already exists
+    // Check if venue with this place_id already exists (check both fields for compatibility)
     const { data: existingVenue } = await serviceClient
       .from("venues")
       .select("id, name, slug")
-      .eq("google_place_id", googlePlaceId)
+      .or(`google_place_id.eq.${placeId},foursquare_id.eq.${placeId}`)
       .maybeSingle();
 
     if (existingVenue) {
@@ -162,25 +152,32 @@ export async function autoApproveVenue(
       };
     }
 
-    // Fetch place details from Google
-    const placeDetails = await fetchGooglePlaceDetails(googlePlaceId);
+    // Fetch place details from Foursquare
+    const placeDetails = await fetchFoursquarePlaceDetails(placeId);
     if (!placeDetails) {
       return {
         success: false,
-        error: "Failed to fetch place details from Google Places API",
+        error: "Failed to fetch place details from Foursquare API",
       };
     }
 
-    const name = placeDetails.displayName?.text;
+    const name = placeDetails.name;
     if (!name) {
       return {
         success: false,
-        error: "Place name not found in Google Places API response",
+        error: "Place name not found in Foursquare API response",
       };
     }
 
     // Parse address components
-    const addressData = parseAddressComponents(placeDetails.addressComponents);
+    const addressData = parseAddressComponents(placeDetails.location);
+
+    // Build formatted address
+    const loc = placeDetails.location;
+    const formattedAddress = loc.formatted_address ||
+      [loc.address, loc.locality, loc.region, loc.postcode]
+        .filter(Boolean)
+        .join(", ");
 
     // Generate unique slug
     const slug = await generateUniqueSlug(name, serviceClient);
@@ -191,14 +188,14 @@ export async function autoApproveVenue(
       .insert({
         name,
         slug,
-        address: placeDetails.formattedAddress || null,
+        address: formattedAddress || null,
         neighborhood: addressData.neighborhood,
         city: addressData.city,
         state: addressData.state,
         zip: addressData.zip,
-        lat: placeDetails.location?.latitude ?? null,
-        lng: placeDetails.location?.longitude ?? null,
-        google_place_id: googlePlaceId,
+        lat: placeDetails.geocodes?.main?.latitude ?? null,
+        lng: placeDetails.geocodes?.main?.longitude ?? null,
+        foursquare_id: placeId,
         submitted_by: submittedBy,
         active: true,
       } as never)
@@ -225,12 +222,12 @@ export async function autoApproveVenue(
         portal_id: portalId || null,
         data: {
           name,
-          address: placeDetails.formattedAddress,
-          google_place_id: googlePlaceId,
+          address: formattedAddress,
+          foursquare_id: placeId,
         },
         approved_venue_id: venue.id,
         reviewed_at: new Date().toISOString(),
-        admin_notes: "Auto-approved via Google Place ID validation",
+        admin_notes: "Auto-approved via Foursquare Place ID validation",
       } as never);
 
     if (submissionError) {

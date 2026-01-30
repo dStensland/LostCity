@@ -797,6 +797,7 @@ export interface VenueSubmissionData {
   website?: string;
   venue_type?: string;
   google_place_id?: string;
+  foursquare_id?: string;
 }
 
 // Organization submission data structure

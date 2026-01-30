@@ -117,7 +117,7 @@ export default function SubmitVenuePage() {
       zip: zip || undefined,
       venue_type: venueType || undefined,
       website: website.trim() || undefined,
-      google_place_id: selectedPlace.google_place_id,
+      foursquare_id: selectedPlace.google_place_id, // Field name is google_place_id but contains Foursquare ID
     };
 
     try {

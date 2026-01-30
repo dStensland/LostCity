@@ -245,14 +245,15 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // Auto-approve venue with Google Place ID
+  // Auto-approve venue with Foursquare Place ID
   if (submission_type === "venue") {
     const venueData = data as VenueSubmissionData;
-    if (venueData.google_place_id) {
-      console.log(`Attempting auto-approval for venue with Google Place ID: ${venueData.google_place_id}`);
+    const placeId = venueData.foursquare_id || venueData.google_place_id;
+    if (placeId) {
+      console.log(`Attempting auto-approval for venue with Place ID: ${placeId}`);
 
       const autoApproveResult = await autoApproveVenue(
-        venueData.google_place_id,
+        placeId,
         user.id,
         portal_id
       );
@@ -280,7 +281,7 @@ export async function POST(request: NextRequest) {
             },
             venue: autoApproveResult.venue,
             autoApproved: true,
-            message: "Venue automatically approved via Google Place validation.",
+            message: "Venue automatically approved via Foursquare Place validation.",
           },
           { status: 201 }
         );
