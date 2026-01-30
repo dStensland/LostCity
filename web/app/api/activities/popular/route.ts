@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createServiceClient } from "@/lib/supabase/service";
+import { supabase } from "@/lib/supabase";
 
 /**
  * GET /api/activities/popular
@@ -12,7 +12,9 @@ import { createServiceClient } from "@/lib/supabase/service";
  */
 export async function GET(request: NextRequest) {
   try {
-    const client = createServiceClient();
+    // Use the same supabase client as search to ensure counts match what users see
+    // (respects RLS policies)
+    const client = supabase;
     const { searchParams } = new URL(request.url);
     const dateFilter = searchParams.get("date_filter") || "week";
 
