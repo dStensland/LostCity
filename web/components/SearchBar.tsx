@@ -2,65 +2,165 @@
 
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
-import { getSearchSuggestions, type SearchSuggestion } from "@/lib/search";
 import { getRecentSearches, addRecentSearch } from "@/lib/searchHistory";
+import { useSearchContext } from "@/lib/search-context";
+import { useSearchPersonalization } from "@/lib/hooks/useSearchPersonalization";
+import {
+  getNavigationAction,
+  buildNavigationUrl,
+  type NavigationContext,
+} from "@/lib/search-navigation";
+import {
+  type QuickAction,
+  rankResults,
+  detectQuickActions,
+  groupResultsByType,
+  getGroupDisplayOrder,
+  type SearchContext as RankingContext,
+} from "@/lib/search-ranking";
+import { type SearchResult } from "@/lib/unified-search";
+import { SuggestionGroup, QuickActionsList } from "./search";
 import { TypeIcon } from "./SearchResultItem";
+
+// ============================================
+// Types
+// ============================================
+
+interface InstantSearchResponse {
+  suggestions: (SearchResult & { personalizationReason?: string })[];
+  topResults: SearchResult[];
+  quickActions: QuickAction[];
+  groupedResults: Record<string, SearchResult[]>;
+  groupOrder: string[];
+  intent?: {
+    type: string;
+    confidence: number;
+    dateFilter?: string;
+  };
+}
+
+// ============================================
+// Component
+// ============================================
 
 export default function SearchBar() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const currentSearchParam = searchParams.get("search") || "";
+
+  // Context
+  const searchContext = useSearchContext();
+  const { preferences } = useSearchPersonalization();
+
+  // State
   const [query, setQuery] = useState(currentSearchParam);
   const [showDropdown, setShowDropdown] = useState(false);
-  const [suggestions, setSuggestions] = useState<SearchSuggestion[]>([]);
+  const [suggestions, setSuggestions] = useState<(SearchResult & { personalizationReason?: string })[]>([]);
+  const [quickActions, setQuickActions] = useState<QuickAction[]>([]);
   const [recentSearches, setRecentSearches] = useState<string[]>(() => {
-    // Initialize with recent searches from localStorage (client-side only)
     if (typeof window !== "undefined") {
       return getRecentSearches();
     }
     return [];
   });
   const [selectedIndex, setSelectedIndex] = useState(-1);
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Refs
   const inputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isInitialMount = useRef(true);
+  const fetchIdRef = useRef(0);
+
+  // Derive portal slug from pathname
+  const portalSlug = useMemo(() => {
+    const match = pathname.match(/^\/([^/]+)/);
+    return match ? match[1] : "atlanta";
+  }, [pathname]);
+
+  // Build ranking context
+  const rankingContext = useMemo<RankingContext>(() => ({
+    viewMode: searchContext?.viewMode || "feed",
+    findType: searchContext?.findType || null,
+    portalSlug,
+    portalId: searchContext?.portalId,
+    userPreferences: preferences || undefined,
+  }), [searchContext, portalSlug, preferences]);
+
+  // Build navigation context
+  const navigationContext = useMemo<NavigationContext>(() => ({
+    viewMode: searchContext?.viewMode || "feed",
+    findType: searchContext?.findType || null,
+    portalSlug,
+  }), [searchContext, portalSlug]);
 
   // Derive isSearching from query vs URL mismatch
-  const isSearching = query.trim() !== currentSearchParam;
+  const isSearching = query.trim() !== currentSearchParam || isLoading;
 
   // Fetch suggestions as user types
   useEffect(() => {
-    // Clear suggestions for short queries immediately via cleanup pattern
     if (query.length < 2) {
+      setSuggestions([]);
+      setQuickActions([]);
       return;
     }
 
-    let cancelled = false;
+    const fetchId = ++fetchIdRef.current;
+
     const timer = setTimeout(async () => {
-      const results = await getSearchSuggestions(query);
-      if (!cancelled) {
-        setSuggestions(results);
+      setIsLoading(true);
+
+      try {
+        // Build API URL with context params
+        const params = new URLSearchParams({
+          q: query,
+          limit: "8",
+          portalSlug,
+          viewMode: rankingContext.viewMode,
+        });
+        if (rankingContext.findType) {
+          params.set("findType", rankingContext.findType);
+        }
+        if (rankingContext.portalId) {
+          params.set("portal", rankingContext.portalId);
+        }
+
+        const response = await fetch(`/api/search/instant?${params.toString()}`);
+
+        if (fetchId !== fetchIdRef.current) return; // Stale request
+
+        if (!response.ok) {
+          throw new Error("Search failed");
+        }
+
+        const data: InstantSearchResponse = await response.json();
+
+        // Apply client-side ranking with personalization
+        const rankedResults = rankResults(data.suggestions, rankingContext);
+
+        setSuggestions(rankedResults);
+        setQuickActions(data.quickActions || detectQuickActions(query, portalSlug));
         setSelectedIndex(-1);
+      } catch (err) {
+        console.error("Search error:", err);
+        setSuggestions([]);
+        setQuickActions([]);
+      } finally {
+        if (fetchId === fetchIdRef.current) {
+          setIsLoading(false);
+        }
       }
     }, 100);
 
     return () => {
-      cancelled = true;
       clearTimeout(timer);
     };
-  }, [query]);
+  }, [query, portalSlug, rankingContext]);
 
-  // Clear suggestions when query is too short (derived state approach)
-  const activeSuggestions = useMemo(
-    () => (query.length >= 2 ? suggestions : []),
-    [query.length, suggestions]
-  );
-
-  // Debounced search update - only when query changes from user input
+  // Debounced URL update - only when query changes from user input
   useEffect(() => {
-    // Skip the initial mount to avoid redirect loop
     if (isInitialMount.current) {
       isInitialMount.current = false;
       return;
@@ -82,7 +182,6 @@ export default function SearchBar() {
       }
 
       params.delete("page");
-      // Stay on current path instead of going to /
       const newUrl = params.toString() ? `${pathname}?${params.toString()}` : pathname;
       router.push(newUrl, { scroll: false });
     }, 150);
@@ -94,10 +193,13 @@ export default function SearchBar() {
     };
   }, [query, router, searchParams, pathname]);
 
+  // Handlers
   const handleClear = useCallback(() => {
     setQuery("");
     setShowDropdown(false);
     setSelectedIndex(-1);
+    setSuggestions([]);
+    setQuickActions([]);
   }, []);
 
   const handleFocus = useCallback(() => {
@@ -111,25 +213,131 @@ export default function SearchBar() {
     }, 200);
   }, []);
 
-  const selectSuggestion = useCallback((term: string) => {
-    setQuery(term);
-    setShowDropdown(false);
-    setSelectedIndex(-1);
-    inputRef.current?.blur();
-  }, []);
+  // Handle selecting a suggestion
+  const selectSuggestion = useCallback(
+    (result: SearchResult) => {
+      // Get navigation action based on result type and context
+      const action = getNavigationAction(
+        {
+          type: result.type,
+          id: result.id,
+          slug: result.href?.split("/").pop(),
+          title: result.title,
+          href: result.href,
+        },
+        navigationContext
+      );
 
-  // Build flat list of all selectable items
-  const showRecent = query.length < 2 && recentSearches.length > 0;
-  const showSuggestions = query.length >= 2 && activeSuggestions.length > 0;
-  const allItems = useMemo(
-    () =>
-      showRecent
-        ? recentSearches.map((t) => ({ text: t, type: "recent" as const }))
-        : showSuggestions
-        ? activeSuggestions
-        : [],
-    [showRecent, showSuggestions, recentSearches, activeSuggestions]
+      // Build the full URL
+      const url = buildNavigationUrl(action, searchParams, portalSlug);
+
+      // Track the search
+      addRecentSearch(query.trim());
+      setRecentSearches(getRecentSearches());
+
+      // Close dropdown
+      setShowDropdown(false);
+      setSelectedIndex(-1);
+
+      // Navigate
+      if (action.type === "applyFilter") {
+        // For filters, update the query to show what was selected
+        setQuery("");
+      }
+      router.push(url, { scroll: false });
+      inputRef.current?.blur();
+    },
+    [navigationContext, searchParams, portalSlug, query, router]
   );
+
+  // Handle selecting a quick action
+  const selectQuickAction = useCallback(
+    (action: QuickAction) => {
+      // Track the search
+      if (query.trim()) {
+        addRecentSearch(query.trim());
+        setRecentSearches(getRecentSearches());
+      }
+
+      // Close dropdown and clear query
+      setShowDropdown(false);
+      setSelectedIndex(-1);
+      setQuery("");
+
+      // Navigate to the action URL
+      router.push(action.url, { scroll: false });
+      inputRef.current?.blur();
+    },
+    [query, router]
+  );
+
+  // Handle selecting a recent search
+  const selectRecentSearch = useCallback(
+    (term: string) => {
+      setQuery(term);
+      setShowDropdown(false);
+      setSelectedIndex(-1);
+      inputRef.current?.blur();
+    },
+    []
+  );
+
+  // Build flat list of all selectable items for keyboard navigation
+  const showRecent = query.length < 2 && recentSearches.length > 0;
+  const showSuggestions = query.length >= 2 && suggestions.length > 0;
+  const showQuickActions = query.length >= 2 && quickActions.length > 0;
+
+  // Group suggestions by type for display
+  const groupedSuggestions = useMemo<Record<SearchResult["type"], SearchResult[]>>(() => {
+    if (!showSuggestions) {
+      return {
+        event: [],
+        venue: [],
+        organizer: [],
+        series: [],
+        list: [],
+        neighborhood: [],
+        category: [],
+      };
+    }
+    return groupResultsByType(suggestions);
+  }, [showSuggestions, suggestions]);
+
+  const groupOrder = useMemo(() => {
+    return getGroupDisplayOrder(rankingContext);
+  }, [rankingContext]);
+
+  // Build flat list for keyboard navigation
+  const allItems = useMemo(() => {
+    const items: Array<
+      | { type: "recent"; text: string }
+      | { type: "quickAction"; action: QuickAction }
+      | { type: "suggestion"; result: SearchResult & { personalizationReason?: string } }
+    > = [];
+
+    if (showRecent) {
+      for (const term of recentSearches) {
+        items.push({ type: "recent", text: term });
+      }
+    } else if (showSuggestions) {
+      // Add quick actions first
+      if (showQuickActions) {
+        for (const action of quickActions) {
+          items.push({ type: "quickAction", action });
+        }
+      }
+
+      // Add suggestions grouped by type
+      for (const type of groupOrder) {
+        const results = groupedSuggestions[type] || [];
+        for (const result of results.slice(0, 3)) {
+          items.push({ type: "suggestion", result });
+        }
+      }
+    }
+
+    return items;
+  }, [showRecent, showSuggestions, showQuickActions, recentSearches, quickActions, groupOrder, groupedSuggestions]);
 
   // Keyboard navigation
   const handleKeyDown = useCallback(
@@ -144,13 +352,20 @@ export default function SearchBar() {
         setSelectedIndex((prev) => (prev > 0 ? prev - 1 : allItems.length - 1));
       } else if (e.key === "Enter" && selectedIndex >= 0) {
         e.preventDefault();
-        selectSuggestion(allItems[selectedIndex].text);
+        const item = allItems[selectedIndex];
+        if (item.type === "recent") {
+          selectRecentSearch(item.text);
+        } else if (item.type === "quickAction") {
+          selectQuickAction(item.action);
+        } else if (item.type === "suggestion") {
+          selectSuggestion(item.result);
+        }
       } else if (e.key === "Escape") {
         setShowDropdown(false);
         setSelectedIndex(-1);
       }
     },
-    [showDropdown, allItems, selectedIndex, selectSuggestion]
+    [showDropdown, allItems, selectedIndex, selectRecentSearch, selectQuickAction, selectSuggestion]
   );
 
   const shouldShowDropdown = showDropdown && (showRecent || showSuggestions);
@@ -158,8 +373,12 @@ export default function SearchBar() {
   const searchId = "event-search";
   const suggestionsId = "search-suggestions";
 
+  // Calculate indices for grouped display
+  let currentIndex = 0;
+
   return (
     <div className="relative w-full" ref={dropdownRef} role="search">
+      {/* Search Input */}
       <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none" aria-hidden="true">
         {isSearching ? (
           <svg className="h-5 w-5 text-[var(--coral)] animate-spin" fill="none" viewBox="0 0 24 24">
@@ -189,6 +408,7 @@ export default function SearchBar() {
         aria-controls={suggestionsId}
         aria-activedescendant={selectedIndex >= 0 ? `suggestion-${selectedIndex}` : undefined}
         aria-autocomplete="list"
+        autoComplete="off"
       />
       {query && (
         <button
@@ -212,6 +432,7 @@ export default function SearchBar() {
           className="absolute top-full left-0 right-0 mt-1 border border-[var(--twilight)] rounded-lg shadow-xl z-[10000] overflow-hidden animate-dropdown-in bg-[var(--dusk)]"
           style={{ boxShadow: "0 4px 20px rgba(0, 0, 0, 0.5)" }}
         >
+          {/* Recent Searches */}
           {showRecent && (
             <div className="p-2">
               <div className="flex items-center gap-2 px-2 pb-2">
@@ -223,7 +444,10 @@ export default function SearchBar() {
               {recentSearches.map((term, idx) => (
                 <button
                   key={term}
-                  onMouseDown={() => selectSuggestion(term)}
+                  id={`suggestion-${idx}`}
+                  role="option"
+                  aria-selected={selectedIndex === idx}
+                  onMouseDown={() => selectRecentSearch(term)}
                   onMouseEnter={() => setSelectedIndex(idx)}
                   className={`flex items-center gap-2.5 w-full text-left px-3 py-2 text-sm rounded-lg transition-all ${
                     selectedIndex === idx
@@ -240,40 +464,45 @@ export default function SearchBar() {
             </div>
           )}
 
+          {/* Quick Actions */}
+          {showQuickActions && (
+            <QuickActionsList
+              actions={quickActions}
+              selectedIndex={selectedIndex}
+              startIndex={(() => {
+                const idx = currentIndex;
+                currentIndex += quickActions.length;
+                return idx;
+              })()}
+              onSelect={selectQuickAction}
+              onHover={setSelectedIndex}
+            />
+          )}
+
+          {/* Grouped Suggestions */}
           {showSuggestions && (
             <div className="p-2">
-              <div className="flex items-center gap-2 px-2 pb-2">
-                <svg className="h-3 w-3 text-[var(--coral)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
-                <p className="text-[0.65rem] text-[var(--muted)] font-mono uppercase tracking-wider">Suggestions</p>
-              </div>
-              {activeSuggestions.map((suggestion, idx) => (
-                <button
-                  key={`${suggestion.type}-${suggestion.text}`}
-                  onMouseDown={() => selectSuggestion(suggestion.text)}
-                  onMouseEnter={() => setSelectedIndex(idx)}
-                  className={`flex items-center gap-2.5 w-full text-left px-3 py-2 text-sm rounded-lg transition-all ${
-                    selectedIndex === idx
-                      ? "bg-[var(--twilight)] text-[var(--cream)] translate-x-0.5"
-                      : "text-[var(--cream)] hover:bg-[var(--twilight)]/50"
-                  }`}
-                >
-                  <SuggestionIcon type={suggestion.type} />
-                  <span className="flex-1 truncate">
-                    <HighlightMatch text={suggestion.text} query={query} />
-                  </span>
-                  <span
-                    className="text-[0.55rem] font-mono uppercase tracking-wide px-1.5 py-0.5 rounded"
-                    style={{
-                      backgroundColor: getSuggestionTypeColor(suggestion.type) + "20",
-                      color: getSuggestionTypeColor(suggestion.type),
-                    }}
-                  >
-                    {suggestion.type}
-                  </span>
-                </button>
-              ))}
+              {groupOrder.map((type) => {
+                const results = groupedSuggestions[type as SearchResult["type"]] || [];
+                if (results.length === 0) return null;
+
+                const startIdx = currentIndex;
+                currentIndex += Math.min(results.length, 3);
+
+                return (
+                  <SuggestionGroup
+                    key={type}
+                    type={type as SearchResult["type"]}
+                    results={results}
+                    query={query}
+                    selectedIndex={selectedIndex}
+                    startIndex={startIdx}
+                    onSelect={selectSuggestion}
+                    onHover={setSelectedIndex}
+                    maxItems={3}
+                  />
+                );
+              })}
             </div>
           )}
 
@@ -281,11 +510,11 @@ export default function SearchBar() {
           <div className="px-3 py-2 border-t border-[var(--twilight)] bg-[var(--night)]/50">
             <p className="text-[0.6rem] text-[var(--muted)] flex items-center gap-3">
               <span className="flex items-center gap-1">
-                <kbd className="px-1.5 py-0.5 bg-[var(--twilight)] rounded text-[var(--soft)] text-[0.55rem]">↑↓</kbd>
+                <kbd className="px-1.5 py-0.5 bg-[var(--twilight)] rounded text-[var(--soft)] text-[0.55rem]">&#8593;&#8595;</kbd>
                 <span>navigate</span>
               </span>
               <span className="flex items-center gap-1">
-                <kbd className="px-1.5 py-0.5 bg-[var(--twilight)] rounded text-[var(--soft)] text-[0.55rem]">↵</kbd>
+                <kbd className="px-1.5 py-0.5 bg-[var(--twilight)] rounded text-[var(--soft)] text-[0.55rem]">&#8629;</kbd>
                 <span>select</span>
               </span>
               <span className="flex items-center gap-1">
@@ -300,43 +529,5 @@ export default function SearchBar() {
   );
 }
 
-// Get color for suggestion type
-function getSuggestionTypeColor(type: string): string {
-  const colors: Record<string, string> = {
-    venue: "var(--coral)",
-    neighborhood: "var(--gold)",
-    organizer: "var(--neon-cyan)",
-    event: "var(--neon-magenta)",
-  };
-  return colors[type] || "var(--muted)";
-}
-
-// Highlight matching text in suggestions
-function HighlightMatch({ text, query }: { text: string; query: string }) {
-  if (!query || query.length < 2) return <>{text}</>;
-
-  const lowerText = text.toLowerCase();
-  const lowerQuery = query.toLowerCase();
-  const index = lowerText.indexOf(lowerQuery);
-
-  if (index === -1) return <>{text}</>;
-
-  return (
-    <>
-      {text.slice(0, index)}
-      <span className="text-[var(--coral)] font-medium">{text.slice(index, index + query.length)}</span>
-      {text.slice(index + query.length)}
-    </>
-  );
-}
-
-function SuggestionIcon({ type }: { type: "venue" | "event" | "neighborhood" | "organizer" }) {
-  const colorMap: Record<string, string> = {
-    venue: "text-[var(--neon-cyan)]",
-    event: "text-[var(--neon-magenta)]",
-    neighborhood: "text-[var(--gold)]",
-    organizer: "text-[var(--coral)]",
-  };
-
-  return <TypeIcon type={type} className={`h-3 w-3 ${colorMap[type] || "text-[var(--muted)]"}`} />;
-}
+// Re-export TypeIcon for backwards compatibility
+export { TypeIcon };

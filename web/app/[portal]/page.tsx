@@ -1,6 +1,6 @@
 import { getPortalBySlug } from "@/lib/portal";
 import UnifiedHeader from "@/components/UnifiedHeader";
-import SearchBar from "@/components/SearchBar";
+import SearchBarWrapper from "@/components/SearchBarWrapper";
 import DynamicAmbient from "@/components/DynamicAmbient";
 import FeedShell from "@/components/feed/FeedShell";
 import CuratedContent from "@/components/feed/CuratedContent";
@@ -129,7 +129,12 @@ export default async function PortalPage({ params, searchParams }: Props) {
       {viewMode !== "feed" && (
         <div className="sticky top-[52px] z-[9999] border-b border-[var(--twilight)] bg-[var(--night)]">
           <div className="max-w-3xl mx-auto px-4 pt-1 pb-2">
-            <SearchBar />
+            <SearchBarWrapper
+              viewMode={viewMode}
+              findType={viewMode === "find" ? findType : null}
+              portalSlug={portal.slug}
+              portalId={portal.id}
+            />
           </div>
         </div>
       )}
