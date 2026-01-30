@@ -50,11 +50,11 @@ export default function SubmitVenuePage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Google Place selection (required)
+  // Place selection (required)
   const [selectedPlace, setSelectedPlace] = useState<{
     name: string;
     address?: string;
-    google_place_id?: string;
+    google_place_id?: string; // Field name kept for compatibility, contains Foursquare ID
     venue_id?: number;
     location?: { lat: number; lng: number };
   } | null>(null);
@@ -75,7 +75,7 @@ export default function SubmitVenuePage() {
     setSubmitting(true);
 
     if (!selectedPlace?.google_place_id) {
-      setError("Please select a place from Google");
+      setError("Please select a place from the search results");
       setSubmitting(false);
       return;
     }
@@ -87,7 +87,7 @@ export default function SubmitVenuePage() {
       return;
     }
 
-    // Parse address from Google's format
+    // Parse address from Foursquare's format
     let city = "Atlanta";
     let state = "GA";
     let zip = "";
@@ -169,7 +169,7 @@ export default function SubmitVenuePage() {
         </div>
 
         <p className="text-[var(--soft)] mb-6">
-          Search for a place on Google Maps to add it to Lost City. Verified places are approved instantly.
+          Search for a place to add it to Lost City. Verified places are approved instantly.
         </p>
 
         {error && (
@@ -179,10 +179,10 @@ export default function SubmitVenuePage() {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Google Places Search - Required */}
+          {/* Place Search - Required */}
           <div>
             <label className="block font-mono text-xs text-[var(--muted)] uppercase tracking-wider mb-2">
-              Search Google Maps *
+              Search for a place *
             </label>
             <GooglePlaceAutocomplete
               value={selectedPlace}
