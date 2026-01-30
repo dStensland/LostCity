@@ -71,7 +71,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Refs for tracking state across async operations
   const isMountedRef = useRef(true);
   const currentUserIdRef = useRef<string | null>(null);
-  const profileFetchAbortRef = useRef<AbortController | null>(null);
+  const profileFetchIdRef = useRef<number | null>(null);
   const broadcastChannelRef = useRef<BroadcastChannel | null>(null);
 
   const supabase = getSupabaseClient();
@@ -90,10 +90,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (type === "PROFILE_UPDATED" && userId === currentUserIdRef.current && syncedProfile) {
         setProfile(syncedProfile);
       } else if (type === "SIGNED_OUT") {
-        // Another tab signed out - cancel any profile fetch and clear state
-        if (profileFetchAbortRef.current) {
-          profileFetchAbortRef.current.abort();
-        }
+        // Another tab signed out - invalidate any pending fetch and clear state
+        profileFetchIdRef.current = null;
         setUser(null);
         setSession(null);
         setProfile(null);
@@ -120,15 +118,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  // Fetch profile with automatic abort on unmount or user change
+  // Fetch profile - tracks current fetch to ignore stale responses
   const fetchProfile = useCallback(async (userId: string): Promise<Profile | null> => {
-    // Cancel any in-flight profile fetch
-    if (profileFetchAbortRef.current) {
-      profileFetchAbortRef.current.abort();
-    }
-
-    const abortController = new AbortController();
-    profileFetchAbortRef.current = abortController;
+    // Track this fetch ID to detect if a newer fetch has started
+    const fetchId = Date.now();
+    profileFetchIdRef.current = fetchId;
     setProfileLoading(true);
 
     try {
@@ -136,10 +130,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .from("profiles")
         .select("*")
         .eq("id", userId)
-        .maybeSingle()
-        .abortSignal(abortController.signal);
+        .maybeSingle();
 
-      if (abortController.signal.aborted) {
+      // Check if this fetch is still the current one
+      if (profileFetchIdRef.current !== fetchId) {
+        // A newer fetch has started, ignore this result
         return null;
       }
 
@@ -152,10 +147,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (isMountedRef.current) setProfileLoading(false);
       return data as Profile | null;
     } catch (err) {
-      // Ignore abort errors
-      if (err instanceof Error && err.name === "AbortError") {
-        return null;
-      }
       console.error("Exception fetching profile:", err);
       if (isMountedRef.current) setProfileLoading(false);
       return null;
@@ -312,19 +303,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     return () => {
       isMountedRef.current = false;
-      // Cancel any in-flight profile fetch
-      if (profileFetchAbortRef.current) {
-        profileFetchAbortRef.current.abort();
-      }
+      // Invalidate any pending profile fetch
+      profileFetchIdRef.current = null;
       subscription.unsubscribe();
     };
   }, [supabase, fetchProfile]);
 
   const signOut = useCallback(async () => {
-    // Cancel any in-flight profile fetch
-    if (profileFetchAbortRef.current) {
-      profileFetchAbortRef.current.abort();
-    }
+    // Invalidate any pending profile fetch
+    profileFetchIdRef.current = null;
 
     try {
       await supabase.auth.signOut();
