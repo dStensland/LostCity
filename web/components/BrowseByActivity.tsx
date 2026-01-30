@@ -128,12 +128,17 @@ export default function BrowseByActivity({ portalSlug }: BrowseByActivityProps) 
     return `/${portalSlug}?${params.toString()}`;
   }
 
+  // Check if a category has subcategories with events
+  function hasSubcategoriesWithEvents(categoryValue: string): boolean {
+    const subcats = SUBCATEGORIES[categoryValue];
+    if (!subcats || subcats.length === 0) return false;
+    return subcats.some((sub) => (subcategoryCounts[sub.value] || 0) > 0);
+  }
+
   // Handle category click - expand subcategories or navigate
   function handleCategoryClick(activity: ActivityWithCount, e: React.MouseEvent) {
-    const subcats = SUBCATEGORIES[activity.value];
-
-    // If category has subcategories, expand instead of navigating
-    if (subcats && subcats.length > 0) {
+    // Only expand if category has subcategories with events
+    if (hasSubcategoriesWithEvents(activity.value)) {
       e.preventDefault();
       if (expandedCategory === activity.value) {
         // Clicking again closes
@@ -144,7 +149,7 @@ export default function BrowseByActivity({ portalSlug }: BrowseByActivityProps) 
         setSelectedSubcategories([]);
       }
     }
-    // If no subcategories, let the Link navigate normally
+    // If no subcategories with events, let the Link navigate normally
   }
 
   // Toggle subcategory selection
@@ -169,12 +174,18 @@ export default function BrowseByActivity({ portalSlug }: BrowseByActivityProps) 
     router.push(url);
   }
 
-  // Split activities into primary and secondary
-  const primaryActivities = activities.filter((a) => PRIMARY_CATEGORIES.includes(a.value));
-  const secondaryActivities = activities.filter((a) => !PRIMARY_CATEGORIES.includes(a.value));
+  // Split activities into primary and secondary - only show categories with events
+  const primaryActivities = activities
+    .filter((a) => PRIMARY_CATEGORIES.includes(a.value))
+    .filter((a) => a.count > 0);
+  const secondaryActivities = activities
+    .filter((a) => !PRIMARY_CATEGORIES.includes(a.value))
+    .filter((a) => a.count > 0);
 
-  // Get subcategories for expanded category
-  const expandedSubcategories = expandedCategory ? SUBCATEGORIES[expandedCategory] || [] : [];
+  // Get subcategories for expanded category - only show subcategories with events
+  const expandedSubcategories = expandedCategory
+    ? (SUBCATEGORIES[expandedCategory] || []).filter((sub) => (subcategoryCounts[sub.value] || 0) > 0)
+    : [];
   const expandedActivity = expandedCategory ? activities.find((a) => a.value === expandedCategory) : null;
 
   return (
@@ -226,6 +237,7 @@ export default function BrowseByActivity({ portalSlug }: BrowseByActivityProps) 
                 buildUrl={() => buildUrl(activity)}
                 onClick={(e) => handleCategoryClick(activity, e)}
                 isExpanded={expandedCategory === activity.value}
+                hasSubcategories={hasSubcategoriesWithEvents(activity.value)}
               />
             ))}
           </div>
@@ -295,9 +307,7 @@ export default function BrowseByActivity({ portalSlug }: BrowseByActivityProps) 
                       style={isSelected ? { backgroundColor: expandedActivity.color } : {}}
                     >
                       {subcat.label}
-                      {count > 0 && (
-                        <span className="ml-1.5 opacity-70">({count})</span>
-                      )}
+                      <span className="ml-1.5 opacity-70">({count})</span>
                     </button>
                   );
                 })}
@@ -354,6 +364,7 @@ export default function BrowseByActivity({ portalSlug }: BrowseByActivityProps) 
                   buildUrl={() => buildUrl(activity)}
                   onClick={(e) => handleCategoryClick(activity, e)}
                   isExpanded={expandedCategory === activity.value}
+                  hasSubcategories={hasSubcategoriesWithEvents(activity.value)}
                 />
               ))}
             </div>
@@ -371,10 +382,10 @@ interface CategoryCardProps {
   buildUrl: () => string;
   onClick: (e: React.MouseEvent) => void;
   isExpanded: boolean;
+  hasSubcategories: boolean;
 }
 
-function CategoryCard({ activity, countLabel, buildUrl, onClick, isExpanded }: CategoryCardProps) {
-  const hasSubcategories = SUBCATEGORIES[activity.value]?.length > 0;
+function CategoryCard({ activity, countLabel, buildUrl, onClick, isExpanded, hasSubcategories }: CategoryCardProps) {
 
   return (
     <Link
