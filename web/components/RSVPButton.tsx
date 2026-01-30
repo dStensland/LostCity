@@ -174,52 +174,40 @@ export default function RSVPButton({
     // Optimistic update
     setStatus(newStatus);
 
-    // Helper to add timeout to Supabase operations
-    const withTimeout = <T,>(
-      queryBuilder: PromiseLike<T>,
-      ms: number = 10000
-    ): Promise<T> => {
-      return Promise.race([
-        Promise.resolve(queryBuilder),
-        new Promise<T>((_, reject) =>
-          setTimeout(() => reject(new Error("Request timed out")), ms)
-        ),
-      ]);
-    };
-
     try {
+      let error: unknown = null;
+
       if (newStatus === null) {
         // Remove RSVP
-        const result = await withTimeout(
-          supabase
-            .from("event_rsvps")
-            .delete()
-            .eq("user_id", user.id)
-            .eq("event_id", eventId)
-        );
-        if ((result as { error?: unknown }).error) throw (result as { error: unknown }).error;
+        const result = await supabase
+          .from("event_rsvps")
+          .delete()
+          .eq("user_id", user.id)
+          .eq("event_id", eventId);
+        error = result.error;
       } else if (previousStatus === null) {
         // Create new RSVP
-        const result = await withTimeout(
-          supabase.from("event_rsvps").insert({
-            user_id: user.id,
-            event_id: eventId,
-            status: newStatus,
-            visibility,
-          } as never)
-        );
-        if ((result as { error?: unknown }).error) throw (result as { error: unknown }).error;
+        const result = await supabase.from("event_rsvps").insert({
+          user_id: user.id,
+          event_id: eventId,
+          status: newStatus,
+          visibility,
+        } as never);
+        error = result.error;
       } else {
         // Update existing RSVP
-        const result = await withTimeout(
-          supabase
-            .from("event_rsvps")
-            .update({ status: newStatus } as never)
-            .eq("user_id", user.id)
-            .eq("event_id", eventId)
-        );
-        if ((result as { error?: unknown }).error) throw (result as { error: unknown }).error;
+        const result = await supabase
+          .from("event_rsvps")
+          .update({ status: newStatus } as never)
+          .eq("user_id", user.id)
+          .eq("event_id", eventId);
+        error = result.error;
       }
+
+      if (error) {
+        throw error;
+      }
+
       setMenuOpen(false);
 
       // Notify parent of successful status change
