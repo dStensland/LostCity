@@ -8,7 +8,7 @@ import FollowButton from "@/components/FollowButton";
 import FriendsGoing from "@/components/FriendsGoing";
 import WhosGoing from "@/components/WhosGoing";
 import UnifiedHeader from "@/components/UnifiedHeader";
-import PageFooter from "@/components/PageFooter";
+import PortalFooter from "@/components/PortalFooter";
 import { PortalTheme } from "@/components/PortalTheme";
 import { format, parseISO } from "date-fns";
 import Link from "next/link";
@@ -34,6 +34,7 @@ import {
   RelatedCard,
   DetailStickyBar,
 } from "@/components/detail";
+import VenueEventsByDay from "@/components/VenueEventsByDay";
 
 export const revalidate = 60;
 
@@ -528,24 +529,12 @@ export default async function PortalEventPage({ params }: Props) {
               title={`More at ${event.venue.name}`}
               count={venueEvents.length}
             >
-              {venueEvents.map((relatedEvent) => {
-                const eventColor = relatedEvent.category ? getCategoryColor(relatedEvent.category) : "var(--coral)";
-                const timeStr = relatedEvent.start_time
-                  ? `${formatTimeSplit(relatedEvent.start_time).time} ${formatTimeSplit(relatedEvent.start_time).period}`
-                  : format(parseISO(relatedEvent.start_date), "EEE, MMM d");
-
-                return (
-                  <RelatedCard
-                    key={relatedEvent.id}
-                    variant="compact"
-                    href={`/${activePortalSlug}/events/${relatedEvent.id}`}
-                    title={relatedEvent.title}
-                    subtitle={timeStr}
-                    icon={<CategoryIcon type={relatedEvent.category || "other"} size={20} />}
-                    accentColor={eventColor}
-                  />
-                );
-              })}
+              <VenueEventsByDay
+                events={venueEvents}
+                getEventHref={(id) => `/${activePortalSlug}/events/${id}`}
+                maxDates={5}
+                compact={true}
+              />
             </RelatedSection>
           )}
 
@@ -578,7 +567,7 @@ export default async function PortalEventPage({ params }: Props) {
           )}
         </main>
 
-        <PageFooter />
+        <PortalFooter />
       </div>
 
       {/* Sticky bottom bar with CTAs */}

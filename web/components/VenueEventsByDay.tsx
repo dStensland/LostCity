@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useMemo } from "react";
+import Link from "next/link";
 import {
   format,
   parseISO,
@@ -27,7 +28,8 @@ export type VenueEvent = {
 
 interface VenueEventsByDayProps {
   events: VenueEvent[];
-  onEventClick: (eventId: number) => void;
+  onEventClick?: (eventId: number) => void; // For client-side navigation
+  getEventHref?: (eventId: number) => string; // For SSR/Link-based navigation
   maxDates?: number; // Limit visible date tabs (default: 7)
   showDatePicker?: boolean; // Show "jump to date" option (default: false)
   compact?: boolean; // Smaller variant for detail pages (default: false)
@@ -36,6 +38,7 @@ interface VenueEventsByDayProps {
 export default function VenueEventsByDay({
   events,
   onEventClick,
+  getEventHref,
   maxDates = 7,
   showDatePicker = false,
   compact = false,
@@ -127,7 +130,8 @@ export default function VenueEventsByDay({
           <EventCard
             key={event.id}
             event={event}
-            onClick={() => onEventClick(event.id)}
+            onClick={onEventClick ? () => onEventClick(event.id) : undefined}
+            href={getEventHref ? getEventHref(event.id) : undefined}
             compact={compact}
           />
         ))}
@@ -267,7 +271,8 @@ export default function VenueEventsByDay({
             <EventCard
               key={event.id}
               event={event}
-              onClick={() => onEventClick(event.id)}
+              onClick={onEventClick ? () => onEventClick(event.id) : undefined}
+              href={getEventHref ? getEventHref(event.id) : undefined}
               compact={compact}
             />
           ))
@@ -281,83 +286,97 @@ export default function VenueEventsByDay({
 function EventCard({
   event,
   onClick,
+  href,
   compact,
 }: {
   event: VenueEvent;
-  onClick: () => void;
+  onClick?: () => void;
+  href?: string;
   compact: boolean;
 }) {
   const { time, period } = formatTimeSplit(event.start_time);
   const categoryColor = event.category ? getCategoryColor(event.category) : null;
 
-  return (
-    <button
-      onClick={onClick}
-      className={`block w-full text-left border border-[var(--twilight)] rounded-lg bg-[var(--dusk)] hover:border-[var(--coral)]/50 transition-colors group ${
-        compact ? "p-3" : "p-4"
-      }`}
-      style={{
-        borderLeftWidth: categoryColor ? "3px" : undefined,
-        borderLeftColor: categoryColor || undefined,
-      }}
-    >
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            {event.category && (
-              <span
-                className="flex-shrink-0 inline-flex items-center justify-center w-4 h-4 rounded"
-                style={{
-                  backgroundColor: categoryColor ? `${categoryColor}20` : undefined,
-                }}
-              >
-                <CategoryIcon type={event.category} size={10} glow="subtle" />
-              </span>
-            )}
-            <h3
-              className={`text-[var(--cream)] font-medium truncate group-hover:text-[var(--coral)] transition-colors ${
-                compact ? "text-sm" : ""
-              }`}
+  const cardContent = (
+    <div className="flex items-start justify-between gap-3">
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2">
+          {event.category && (
+            <span
+              className="flex-shrink-0 inline-flex items-center justify-center w-4 h-4 rounded"
+              style={{
+                backgroundColor: categoryColor ? `${categoryColor}20` : undefined,
+              }}
             >
-              {event.title}
-            </h3>
-          </div>
-          <div
-            className={`flex items-center gap-2 mt-1 text-[var(--muted)] ${
-              compact ? "text-xs" : "text-sm"
+              <CategoryIcon type={event.category} size={10} glow="subtle" />
+            </span>
+          )}
+          <h3
+            className={`text-[var(--cream)] font-medium truncate group-hover:text-[var(--coral)] transition-colors ${
+              compact ? "text-sm" : ""
             }`}
           >
-            {event.start_time && (
-              <span className="font-mono">
-                {time}
-                {period}
-              </span>
-            )}
-            {event.is_free ? (
-              <span className="px-1.5 py-0.5 rounded border bg-[var(--neon-green)]/15 text-[var(--neon-green)] border-[var(--neon-green)]/25 font-mono text-[0.55rem]">
-                Free
-              </span>
-            ) : event.price_min ? (
-              <span>${event.price_min}+</span>
-            ) : null}
-          </div>
+            {event.title}
+          </h3>
         </div>
-        <span className="text-[var(--muted)] group-hover:text-[var(--coral)] transition-colors flex-shrink-0">
-          <svg
-            className="w-4 h-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M9 5l7 7-7 7"
-            />
-          </svg>
-        </span>
+        <div
+          className={`flex items-center gap-2 mt-1 text-[var(--muted)] ${
+            compact ? "text-xs" : "text-sm"
+          }`}
+        >
+          {event.start_time && (
+            <span className="font-mono">
+              {time}
+              {period}
+            </span>
+          )}
+          {event.is_free ? (
+            <span className="px-1.5 py-0.5 rounded border bg-[var(--neon-green)]/15 text-[var(--neon-green)] border-[var(--neon-green)]/25 font-mono text-[0.55rem]">
+              Free
+            </span>
+          ) : event.price_min ? (
+            <span>${event.price_min}+</span>
+          ) : null}
+        </div>
       </div>
+      <span className="text-[var(--muted)] group-hover:text-[var(--coral)] transition-colors flex-shrink-0">
+        <svg
+          className="w-4 h-4"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M9 5l7 7-7 7"
+          />
+        </svg>
+      </span>
+    </div>
+  );
+
+  const cardStyles = {
+    borderLeftWidth: categoryColor ? "3px" : undefined,
+    borderLeftColor: categoryColor || undefined,
+  };
+
+  const cardClassName = `block w-full text-left border border-[var(--twilight)] rounded-lg bg-[var(--dusk)] hover:border-[var(--coral)]/50 transition-colors group ${
+    compact ? "p-3" : "p-4"
+  }`;
+
+  if (href) {
+    return (
+      <Link href={href} className={cardClassName} style={cardStyles}>
+        {cardContent}
+      </Link>
+    );
+  }
+
+  return (
+    <button onClick={onClick} className={cardClassName} style={cardStyles}>
+      {cardContent}
     </button>
   );
 }
