@@ -156,23 +156,21 @@ const iconPaths: Record<string, ReactNode> = {
   // COMEDY & THEATER
   // ═══════════════════════════════════════════
 
-  // Comedy - Laughing mask with attitude (theatrical, not emoji)
+  // Comedy - Smile face (minimal, iconic)
   comedy: (
     <>
-      <path d="M4 8c0-2 2-4 4-4h8c2 0 4 2 4 4v4c0 4-3 8-8 8s-8-4-8-8V8z" strokeWidth={1.5} fill="none" stroke="currentColor" />
-      <path d="M8 12c0 3 2 5 4 5s4-2 4-5" strokeWidth={1.5} strokeLinecap="round" fill="none" stroke="currentColor" />
-      <path d="M8 9l2 1M16 9l-2 1" strokeWidth={1.5} strokeLinecap="round" stroke="currentColor" />
-      <circle cx="9" cy="10" r="0.5" fill="currentColor" />
-      <circle cx="15" cy="10" r="0.5" fill="currentColor" />
+      <circle cx="12" cy="12" r="9" strokeWidth={1.5} fill="none" stroke="currentColor" />
+      <path d="M8 14c1.5 2 2.5 3 4 3s2.5-1 4-3" strokeWidth={1.5} strokeLinecap="round" fill="none" stroke="currentColor" />
+      <circle cx="9" cy="10" r="1" fill="currentColor" />
+      <circle cx="15" cy="10" r="1" fill="currentColor" />
     </>
   ),
   comedy_club: (
     <>
-      <path d="M4 8c0-2 2-4 4-4h8c2 0 4 2 4 4v4c0 4-3 8-8 8s-8-4-8-8V8z" strokeWidth={1.5} fill="none" stroke="currentColor" />
-      <path d="M8 12c0 3 2 5 4 5s4-2 4-5" strokeWidth={1.5} strokeLinecap="round" fill="none" stroke="currentColor" />
-      <path d="M8 9l2 1M16 9l-2 1" strokeWidth={1.5} strokeLinecap="round" stroke="currentColor" />
-      <circle cx="9" cy="10" r="0.5" fill="currentColor" />
-      <circle cx="15" cy="10" r="0.5" fill="currentColor" />
+      <circle cx="12" cy="12" r="9" strokeWidth={1.5} fill="none" stroke="currentColor" />
+      <path d="M8 14c1.5 2 2.5 3 4 3s2.5-1 4-3" strokeWidth={1.5} strokeLinecap="round" fill="none" stroke="currentColor" />
+      <circle cx="9" cy="10" r="1" fill="currentColor" />
+      <circle cx="15" cy="10" r="1" fill="currentColor" />
     </>
   ),
 
