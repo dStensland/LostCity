@@ -6,19 +6,8 @@ import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/lib/auth-context";
 
-// Timeout wrapper for Supabase queries to prevent indefinite hanging
+// Timeout constant for Supabase queries to prevent indefinite hanging
 const QUERY_TIMEOUT = 8000; // 8 seconds
-async function withTimeout<T>(
-  queryFn: () => Promise<T>,
-  ms: number = QUERY_TIMEOUT
-): Promise<T> {
-  return Promise.race([
-    queryFn(),
-    new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error("Query timeout")), ms)
-    ),
-  ]);
-}
 
 type WhosGoingProps = {
   eventId: number;
@@ -55,23 +44,29 @@ export default function WhosGoing({ eventId, className = "" }: WhosGoingProps) {
     async function loadAttendees() {
       try {
         // Run RSVP query and friend queries in parallel with timeout protection
-        const rsvpPromise = withTimeout(() =>
-          supabase
-            .from("event_rsvps")
-            .select(`
-              status,
-              user:profiles!event_rsvps_user_id_fkey(
-                id, username, display_name, avatar_url
-              )
-            `)
-            .eq("event_id", eventId)
-            .eq("visibility", "public")
-            .in("status", ["going", "interested"])
-        );
+        const rsvpQuery = supabase
+          .from("event_rsvps")
+          .select(`
+            status,
+            user:profiles!event_rsvps_user_id_fkey(
+              id, username, display_name, avatar_url
+            )
+          `)
+          .eq("event_id", eventId)
+          .eq("visibility", "public")
+          .in("status", ["going", "interested"]);
+
+        const rsvpPromise = Promise.race([
+          rsvpQuery,
+          new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error("Query timeout")), QUERY_TIMEOUT)
+          ),
+        ]);
 
         // Get current user's friend IDs in parallel (only if logged in)
         const friendIdsPromise = user
-          ? withTimeout(async () => {
+          ? Promise.race([
+              (async () => {
               const friendIds: Set<string> = new Set();
 
               const { data: myFollows } = await supabase
@@ -97,7 +92,11 @@ export default function WhosGoing({ eventId, className = "" }: WhosGoingProps) {
                 }
               }
               return friendIds;
-            })
+            })(),
+              new Promise<never>((_, reject) =>
+                setTimeout(() => reject(new Error("Query timeout")), QUERY_TIMEOUT)
+              ),
+            ])
           : Promise.resolve(new Set<string>());
 
         // Wait for both queries in parallel

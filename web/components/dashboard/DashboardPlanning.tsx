@@ -12,19 +12,8 @@ import { createClient } from "@/lib/supabase/client";
 import { format, parseISO, startOfDay } from "date-fns";
 import { formatTime } from "@/lib/formats";
 
-// Timeout wrapper for Supabase queries to prevent indefinite hanging
+// Timeout constant for Supabase queries to prevent indefinite hanging
 const QUERY_TIMEOUT = 8000;
-async function withTimeout<T>(
-  queryFn: () => Promise<T>,
-  ms: number = QUERY_TIMEOUT
-): Promise<T> {
-  return Promise.race([
-    queryFn(),
-    new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error("Query timeout")), ms)
-    ),
-  ]);
-}
 
 type EventData = {
   id: number;
@@ -93,101 +82,105 @@ export default function DashboardPlanning() {
       setLoading(true);
 
       // Load all data in parallel - with timeout protection
+      // Build queries
+      const savedQuery = supabase
+        .from("saved_items")
+        .select(`
+          id,
+          created_at,
+          event:events (
+            id,
+            title,
+            start_date,
+            start_time,
+            is_all_day,
+            is_free,
+            price_min,
+            price_max,
+            category,
+            image_url,
+            venue:venues (
+              id,
+              name,
+              neighborhood
+            )
+          )
+        `)
+        .eq("user_id", user.id)
+        .not("event_id", "is", null)
+        .order("created_at", { ascending: false });
+
+      const rsvpQuery = supabase
+        .from("event_rsvps")
+        .select(`
+          id,
+          status,
+          created_at,
+          event:events (
+            id,
+            title,
+            start_date,
+            start_time,
+            is_all_day,
+            is_free,
+            price_min,
+            price_max,
+            category,
+            image_url,
+            venue:venues (
+              id,
+              name,
+              neighborhood
+            )
+          )
+        `)
+        .eq("user_id", user.id)
+        .in("status", ["going", "interested"])
+        .order("created_at", { ascending: false });
+
+      const invitesQuery = supabase
+        .from("event_invites")
+        .select(`
+          id,
+          note,
+          status,
+          created_at,
+          inviter:profiles!event_invites_inviter_id_fkey (
+            id,
+            username,
+            display_name,
+            avatar_url
+          ),
+          event:events (
+            id,
+            title,
+            start_date,
+            start_time,
+            is_all_day,
+            is_free,
+            price_min,
+            price_max,
+            category,
+            image_url,
+            venue:venues (
+              id,
+              name,
+              neighborhood
+            )
+          )
+        `)
+        .eq("invitee_id", user.id)
+        .order("created_at", { ascending: false });
+
+      // Execute with timeout protection
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error("Query timeout")), QUERY_TIMEOUT)
+      );
+
       const [savedRes, rsvpRes, invitesRes] = await Promise.all([
-        withTimeout(() =>
-          supabase
-            .from("saved_items")
-            .select(`
-              id,
-              created_at,
-              event:events (
-                id,
-                title,
-                start_date,
-                start_time,
-                is_all_day,
-                is_free,
-                price_min,
-                price_max,
-                category,
-                image_url,
-                venue:venues (
-                  id,
-                  name,
-                  neighborhood
-                )
-              )
-            `)
-            .eq("user_id", user.id)
-            .not("event_id", "is", null)
-            .order("created_at", { ascending: false })
-        ),
-
-        withTimeout(() =>
-          supabase
-            .from("event_rsvps")
-            .select(`
-              id,
-              status,
-              created_at,
-              event:events (
-                id,
-                title,
-                start_date,
-                start_time,
-                is_all_day,
-                is_free,
-                price_min,
-                price_max,
-                category,
-                image_url,
-                venue:venues (
-                  id,
-                  name,
-                  neighborhood
-                )
-              )
-            `)
-            .eq("user_id", user.id)
-            .in("status", ["going", "interested"])
-            .order("created_at", { ascending: false })
-        ),
-
-        withTimeout(() =>
-          supabase
-            .from("event_invites")
-            .select(`
-              id,
-              note,
-              status,
-              created_at,
-              inviter:profiles!event_invites_inviter_id_fkey (
-                id,
-                username,
-                display_name,
-                avatar_url
-              ),
-              event:events (
-                id,
-                title,
-                start_date,
-                start_time,
-                is_all_day,
-                is_free,
-                price_min,
-                price_max,
-                category,
-                image_url,
-                venue:venues (
-                  id,
-                  name,
-                  neighborhood
-                )
-              )
-            `)
-            .eq("invitee_id", user.id)
-            .order("created_at", { ascending: false })
-        ),
+        Promise.race([savedQuery, timeoutPromise]),
+        Promise.race([rsvpQuery, timeoutPromise]),
+        Promise.race([invitesQuery, timeoutPromise]),
       ]);
 
       if (savedRes.data) {

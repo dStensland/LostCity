@@ -6,19 +6,8 @@ import { useAuth } from "@/lib/auth-context";
 import { createClient } from "@/lib/supabase/client";
 import { getLocalDateString } from "@/lib/formats";
 
-// Timeout wrapper for queries to prevent indefinite hanging
+// Timeout constant for queries to prevent indefinite hanging
 const QUERY_TIMEOUT = 8000;
-async function withTimeout<T>(
-  queryFn: () => Promise<T>,
-  ms: number = QUERY_TIMEOUT
-): Promise<T> {
-  return Promise.race([
-    queryFn(),
-    new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error("Query timeout")), ms)
-    ),
-  ]);
-}
 
 export default function SavedEventsButton() {
   const { user } = useAuth();
@@ -37,14 +26,19 @@ export default function SavedEventsButton() {
         const today = getLocalDateString();
 
         // Count upcoming saved events only - with timeout protection
-        const { count, error } = await withTimeout(() =>
-          supabase
-            .from("saved_items")
-            .select("event:events!inner(start_date)", { count: "exact", head: true })
-            .eq("user_id", userId)
-            .not("event_id", "is", null)
-            .gte("event.start_date", today)
-        );
+        const countQuery = supabase
+          .from("saved_items")
+          .select("event:events!inner(start_date)", { count: "exact", head: true })
+          .eq("user_id", userId)
+          .not("event_id", "is", null)
+          .gte("event.start_date", today);
+
+        const { count, error } = await Promise.race([
+          countQuery,
+          new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error("Query timeout")), QUERY_TIMEOUT)
+          ),
+        ]);
 
         if (!error && count !== null && isMounted) {
           setSavedCount(count);
