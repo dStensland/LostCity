@@ -10,9 +10,12 @@ import { formatDistanceToNow } from "date-fns";
 
 // Timeout wrapper for Supabase queries to prevent indefinite hanging
 const QUERY_TIMEOUT = 8000;
-function withTimeout<T>(promise: Promise<T>, ms: number = QUERY_TIMEOUT): Promise<T> {
+async function withTimeout<T>(
+  queryFn: () => Promise<T>,
+  ms: number = QUERY_TIMEOUT
+): Promise<T> {
   return Promise.race([
-    promise,
+    queryFn(),
     new Promise<never>((_, reject) =>
       setTimeout(() => reject(new Error("Query timeout")), ms)
     ),
@@ -78,17 +81,17 @@ export default function ActivityFeed({ limit = 20, className = "" }: ActivityFee
 
       try {
         // Get users we follow - with timeout protection
-        const followsResult = await withTimeout(
+        const { data: followsData } = await withTimeout(() =>
           supabase
             .from("follows")
             .select("followed_user_id")
             .eq("follower_id", user.id)
             .not("followed_user_id", "is", null)
-        ) as { data: { followed_user_id: string | null }[] | null };
+        );
 
         if (!isMounted) return;
 
-        const follows = followsResult.data;
+        const follows = followsData as { followed_user_id: string | null }[] | null;
         if (!follows || follows.length === 0) {
           setLoading(false);
           return;
@@ -110,7 +113,7 @@ export default function ActivityFeed({ limit = 20, className = "" }: ActivityFee
           target_user: ActivityItem["target_user"] | null;
         };
 
-        const activityResult = await withTimeout(
+        const { data: activityData } = await withTimeout(() =>
           supabase
             .from("activities")
             .select(`
@@ -134,11 +137,11 @@ export default function ActivityFeed({ limit = 20, className = "" }: ActivityFee
             .in("visibility", ["public", "friends"])
             .order("created_at", { ascending: false })
             .limit(limit)
-        ) as { data: ActivityQueryResult[] | null };
+        );
 
         if (!isMounted) return;
 
-        const rawActivities = activityResult.data;
+        const rawActivities = activityData as ActivityQueryResult[] | null;
         if (!rawActivities) {
           setLoading(false);
           return;

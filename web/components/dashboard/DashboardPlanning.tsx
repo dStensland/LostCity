@@ -14,9 +14,12 @@ import { formatTime } from "@/lib/formats";
 
 // Timeout wrapper for Supabase queries to prevent indefinite hanging
 const QUERY_TIMEOUT = 8000;
-function withTimeout<T>(promise: Promise<T>, ms: number = QUERY_TIMEOUT): Promise<T> {
+async function withTimeout<T>(
+  queryFn: () => Promise<T>,
+  ms: number = QUERY_TIMEOUT
+): Promise<T> {
   return Promise.race([
-    promise,
+    queryFn(),
     new Promise<never>((_, reject) =>
       setTimeout(() => reject(new Error("Query timeout")), ms)
     ),
@@ -90,10 +93,8 @@ export default function DashboardPlanning() {
       setLoading(true);
 
       // Load all data in parallel - with timeout protection
-      type QueryResult<T> = { data: T[] | null; error: unknown };
-
       const [savedRes, rsvpRes, invitesRes] = await Promise.all([
-        withTimeout(
+        withTimeout(() =>
           supabase
             .from("saved_items")
             .select(`
@@ -120,9 +121,9 @@ export default function DashboardPlanning() {
             .eq("user_id", user.id)
             .not("event_id", "is", null)
             .order("created_at", { ascending: false })
-        ) as Promise<QueryResult<SavedEvent>>,
+        ),
 
-        withTimeout(
+        withTimeout(() =>
           supabase
             .from("event_rsvps")
             .select(`
@@ -150,9 +151,9 @@ export default function DashboardPlanning() {
             .eq("user_id", user.id)
             .in("status", ["going", "interested"])
             .order("created_at", { ascending: false })
-        ) as Promise<QueryResult<RSVP>>,
+        ),
 
-        withTimeout(
+        withTimeout(() =>
           supabase
             .from("event_invites")
             .select(`
@@ -186,19 +187,19 @@ export default function DashboardPlanning() {
             `)
             .eq("invitee_id", user.id)
             .order("created_at", { ascending: false })
-        ) as Promise<QueryResult<EventInvite>>,
+        ),
       ]);
 
       if (savedRes.data) {
-        setSavedItems(savedRes.data);
+        setSavedItems(savedRes.data as SavedEvent[]);
       }
 
       if (rsvpRes.data) {
-        setRsvps(rsvpRes.data);
+        setRsvps(rsvpRes.data as RSVP[]);
       }
 
       if (invitesRes.data) {
-        setInvites(invitesRes.data);
+        setInvites(invitesRes.data as EventInvite[]);
       }
     } catch (error) {
       console.error("Failed to load planning data:", error);

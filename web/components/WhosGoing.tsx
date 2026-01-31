@@ -8,9 +8,12 @@ import { useAuth } from "@/lib/auth-context";
 
 // Timeout wrapper for Supabase queries to prevent indefinite hanging
 const QUERY_TIMEOUT = 8000; // 8 seconds
-function withTimeout<T>(promise: Promise<T>, ms: number = QUERY_TIMEOUT): Promise<T> {
+async function withTimeout<T>(
+  queryFn: () => Promise<T>,
+  ms: number = QUERY_TIMEOUT
+): Promise<T> {
   return Promise.race([
-    promise,
+    queryFn(),
     new Promise<never>((_, reject) =>
       setTimeout(() => reject(new Error("Query timeout")), ms)
     ),
@@ -52,7 +55,7 @@ export default function WhosGoing({ eventId, className = "" }: WhosGoingProps) {
     async function loadAttendees() {
       try {
         // Run RSVP query and friend queries in parallel with timeout protection
-        const rsvpPromise = withTimeout(
+        const rsvpPromise = withTimeout(() =>
           supabase
             .from("event_rsvps")
             .select(`
@@ -68,7 +71,7 @@ export default function WhosGoing({ eventId, className = "" }: WhosGoingProps) {
 
         // Get current user's friend IDs in parallel (only if logged in)
         const friendIdsPromise = user
-          ? withTimeout((async () => {
+          ? withTimeout(async () => {
               const friendIds: Set<string> = new Set();
 
               const { data: myFollows } = await supabase
@@ -94,7 +97,7 @@ export default function WhosGoing({ eventId, className = "" }: WhosGoingProps) {
                 }
               }
               return friendIds;
-            })())
+            })
           : Promise.resolve(new Set<string>());
 
         // Wait for both queries in parallel

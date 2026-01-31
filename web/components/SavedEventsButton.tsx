@@ -8,9 +8,12 @@ import { getLocalDateString } from "@/lib/formats";
 
 // Timeout wrapper for queries to prevent indefinite hanging
 const QUERY_TIMEOUT = 8000;
-function withTimeout<T>(promise: Promise<T>, ms: number = QUERY_TIMEOUT): Promise<T> {
+async function withTimeout<T>(
+  queryFn: () => Promise<T>,
+  ms: number = QUERY_TIMEOUT
+): Promise<T> {
   return Promise.race([
-    promise,
+    queryFn(),
     new Promise<never>((_, reject) =>
       setTimeout(() => reject(new Error("Query timeout")), ms)
     ),
@@ -34,7 +37,7 @@ export default function SavedEventsButton() {
         const today = getLocalDateString();
 
         // Count upcoming saved events only - with timeout protection
-        const { count, error } = await withTimeout(
+        const { count, error } = await withTimeout(() =>
           supabase
             .from("saved_items")
             .select("event:events!inner(start_date)", { count: "exact", head: true })
