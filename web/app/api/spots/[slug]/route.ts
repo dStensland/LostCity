@@ -21,6 +21,13 @@ type NearbyDestination = {
   lat: number | null;
   lng: number | null;
   distance?: number;
+  // Enhanced data for better display
+  image_url: string | null;
+  short_description: string | null;
+  hours: Record<string, { open: string; close: string } | null> | null;
+  hours_display: string | null;
+  is_24_hours: boolean | null;
+  vibes: string[] | null;
 };
 
 export async function GET(
@@ -85,7 +92,7 @@ export async function GET(
   if (spot.neighborhood) {
     const { data: spots } = await supabase
       .from("venues")
-      .select("id, name, slug, venue_type, neighborhood, lat, lng")
+      .select("id, name, slug, venue_type, neighborhood, lat, lng, image_url, short_description, hours, hours_display, is_24_hours, vibes")
       .eq("neighborhood", spot.neighborhood)
       .in("venue_type", allDestinationTypes)
       .eq("active", true)
@@ -127,7 +134,7 @@ export async function GET(
     // Fallback: distance-based if no neighborhood (within 2 miles)
     const { data: spots } = await supabase
       .from("venues")
-      .select("id, name, slug, venue_type, neighborhood, lat, lng")
+      .select("id, name, slug, venue_type, neighborhood, lat, lng, image_url, short_description, hours, hours_display, is_24_hours, vibes")
       .in("venue_type", allDestinationTypes)
       .eq("active", true)
       .neq("id", spot.id);

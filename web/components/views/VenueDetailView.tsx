@@ -13,6 +13,8 @@ import FlagButton from "@/components/FlagButton";
 import LinkifyText from "@/components/LinkifyText";
 import CollapsibleSection, { CategoryIcons, CATEGORY_COLORS } from "@/components/CollapsibleSection";
 import CategoryIcon, { getCategoryColor } from "@/components/CategoryIcon";
+import HoursSection, { OpenStatusBadge } from "@/components/HoursSection";
+import { type HoursData } from "@/lib/hours";
 
 type SpotData = {
   id: number;
@@ -28,7 +30,9 @@ type SpotData = {
   website: string | null;
   instagram: string | null;
   phone: string | null;
+  hours: HoursData | null;
   hours_display: string | null;
+  is_24_hours: boolean | null;
   price_level: number | null;
   spot_type: string | null;
   spot_types: string[] | null;
@@ -52,6 +56,12 @@ type NearbyDestination = {
   spot_type: string | null;
   neighborhood: string | null;
   distance?: number;
+  image_url?: string | null;
+  short_description?: string | null;
+  hours?: HoursData | null;
+  hours_display?: string | null;
+  is_24_hours?: boolean | null;
+  vibes?: string[] | null;
 };
 
 type NearbyDestinations = {
@@ -545,10 +555,17 @@ export default function VenueDetailView({ slug, portalSlug, onClose }: VenueDeta
         </div>
 
         {/* Hours */}
-        {spot.hours_display && (
-          <p className="mt-4 font-mono text-sm text-[var(--muted)]">
-            {spot.hours_display}
-          </p>
+        {(spot.hours || spot.hours_display || spot.is_24_hours) && (
+          <div className="mt-6 pt-6 border-t border-[var(--twilight)]">
+            <h2 className="font-mono text-[0.65rem] font-medium text-[var(--muted)] uppercase tracking-widest mb-3">
+              Hours
+            </h2>
+            <HoursSection
+              hours={spot.hours}
+              hoursDisplay={spot.hours_display}
+              is24Hours={spot.is_24_hours || false}
+            />
+          </div>
         )}
 
         {/* Description */}
@@ -677,18 +694,51 @@ export default function VenueDetailView({ slug, portalSlug, onClose }: VenueDeta
                             onClick={() => handleSpotClick(dest.slug)}
                             className="block w-full text-left p-3 border border-[var(--twilight)] rounded-lg bg-[var(--dusk)] hover:border-[var(--coral)]/50 transition-colors group"
                           >
-                            <div className="flex items-center justify-between gap-3">
+                            <div className="flex items-start gap-3">
+                              {/* Thumbnail */}
+                              {dest.image_url && (
+                                <div className="w-14 h-14 rounded-lg overflow-hidden flex-shrink-0 bg-[var(--twilight)]">
+                                  <Image
+                                    src={dest.image_url}
+                                    alt={dest.name}
+                                    width={56}
+                                    height={56}
+                                    className="w-full h-full object-cover"
+                                    unoptimized
+                                  />
+                                </div>
+                              )}
                               <div className="flex-1 min-w-0">
-                                <h4 className="text-[var(--cream)] font-medium truncate group-hover:text-[var(--coral)] transition-colors">
-                                  {dest.name}
-                                </h4>
-                                {dest.distance !== undefined && (
-                                  <p className="text-xs text-[var(--muted)] mt-0.5">
-                                    {dest.distance < 0.1 ? "Nearby" : `${dest.distance.toFixed(1)} mi`}
+                                <div className="flex items-center gap-2">
+                                  <h4 className="text-[var(--cream)] font-medium truncate group-hover:text-[var(--coral)] transition-colors">
+                                    {dest.name}
+                                  </h4>
+                                  {(dest.hours || dest.is_24_hours) && (
+                                    <OpenStatusBadge
+                                      hours={dest.hours || null}
+                                      is24Hours={dest.is_24_hours || false}
+                                    />
+                                  )}
+                                </div>
+                                {dest.short_description && (
+                                  <p className="text-xs text-[var(--soft)] mt-0.5 line-clamp-1">
+                                    {dest.short_description}
                                   </p>
                                 )}
+                                <div className="flex items-center gap-2 mt-1">
+                                  {dest.distance !== undefined && (
+                                    <span className="text-[0.65rem] text-[var(--muted)] font-mono">
+                                      {dest.distance < 0.1 ? "Nearby" : `${dest.distance.toFixed(1)} mi`}
+                                    </span>
+                                  )}
+                                  {dest.vibes && dest.vibes.length > 0 && (
+                                    <span className="text-[0.65rem] text-[var(--neon-cyan)]/70">
+                                      {dest.vibes.slice(0, 2).map(v => v.replace(/-/g, " ")).join(" · ")}
+                                    </span>
+                                  )}
+                                </div>
                               </div>
-                              <svg className="w-4 h-4 text-[var(--muted)] group-hover:text-[var(--coral)] transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <svg className="w-4 h-4 text-[var(--muted)] group-hover:text-[var(--coral)] transition-colors flex-shrink-0 mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                               </svg>
                             </div>
