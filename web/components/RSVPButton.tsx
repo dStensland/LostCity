@@ -2,11 +2,9 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/components/Toast";
 import { VISIBILITY_OPTIONS, DEFAULT_VISIBILITY, type Visibility } from "@/lib/visibility";
-import type { Database } from "@/lib/types";
 import Lasers from "./ui/Lasers";
 
 export type RSVPStatus = "going" | "interested" | "went" | null;
@@ -19,8 +17,6 @@ type RSVPButtonProps = {
   /** Callback when RSVP status changes successfully */
   onRSVPChange?: (newStatus: RSVPStatus, prevStatus: RSVPStatus) => void;
 };
-
-type RSVPRow = Database["public"]["Tables"]["event_rsvps"]["Row"];
 
 const STATUS_CONFIG = {
   going: { label: "I'm in", icon: "check", color: "bg-[var(--coral)]" },
@@ -39,7 +35,6 @@ export default function RSVPButton({
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
   const { showToast } = useToast();
-  const supabase = createClient();
   const menuRef = useRef<HTMLDivElement>(null);
 
   const [status, setStatus] = useState<RSVPStatus>(null);
@@ -106,7 +101,7 @@ export default function RSVPButton({
     }
   }, [menuOpen]);
 
-  // Load existing RSVP
+  // Load existing RSVP via API
   useEffect(() => {
     let isMounted = true;
 
@@ -119,29 +114,27 @@ export default function RSVPButton({
       }
 
       try {
-        // Add timeout to prevent hanging
-        const timeoutPromise = new Promise<{ data: null }>((resolve) =>
-          setTimeout(() => resolve({ data: null }), 5000)
-        );
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000);
 
-        const queryPromise = supabase
-          .from("event_rsvps")
-          .select("*")
-          .eq("user_id", user.id)
-          .eq("event_id", eventId)
-          .maybeSingle();
-
-        const { data } = await Promise.race([queryPromise, timeoutPromise]);
+        const response = await fetch(`/api/rsvp?event_id=${eventId}`, {
+          signal: controller.signal,
+        });
+        clearTimeout(timeoutId);
 
         if (!isMounted) return;
 
-        const rsvp = data as RSVPRow | null;
-        if (rsvp) {
-          setStatus(rsvp.status as RSVPStatus);
-          setVisibility(rsvp.visibility as Visibility);
+        if (response.ok) {
+          const { rsvp } = await response.json();
+          if (rsvp) {
+            setStatus(rsvp.status as RSVPStatus);
+            setVisibility(rsvp.visibility as Visibility);
+          }
         }
       } catch (err) {
-        console.error("Failed to load RSVP:", err);
+        if ((err as Error).name !== "AbortError") {
+          console.error("Failed to load RSVP:", err);
+        }
       }
     }
 
@@ -150,7 +143,7 @@ export default function RSVPButton({
     return () => {
       isMounted = false;
     };
-  }, [user, authLoading, eventId, supabase]);
+  }, [user, authLoading, eventId]);
 
   const handleStatusChange = async (newStatus: RSVPStatus) => {
     if (!user) {
@@ -175,37 +168,36 @@ export default function RSVPButton({
     setStatus(newStatus);
 
     try {
-      let error: unknown = null;
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 8000);
+
+      let response: Response;
 
       if (newStatus === null) {
         // Remove RSVP
-        const result = await supabase
-          .from("event_rsvps")
-          .delete()
-          .eq("user_id", user.id)
-          .eq("event_id", eventId);
-        error = result.error;
-      } else if (previousStatus === null) {
-        // Create new RSVP
-        const result = await supabase.from("event_rsvps").insert({
-          user_id: user.id,
-          event_id: eventId,
-          status: newStatus,
-          visibility,
-        } as never);
-        error = result.error;
+        response = await fetch(`/api/rsvp?event_id=${eventId}`, {
+          method: "DELETE",
+          signal: controller.signal,
+        });
       } else {
-        // Update existing RSVP
-        const result = await supabase
-          .from("event_rsvps")
-          .update({ status: newStatus } as never)
-          .eq("user_id", user.id)
-          .eq("event_id", eventId);
-        error = result.error;
+        // Create or update RSVP
+        response = await fetch("/api/rsvp", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            event_id: eventId,
+            status: newStatus,
+            visibility,
+          }),
+          signal: controller.signal,
+        });
       }
 
-      if (error) {
-        throw error;
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Failed to save");
       }
 
       setMenuOpen(false);
@@ -245,12 +237,20 @@ export default function RSVPButton({
     setVisibility(newVisibility);
 
     try {
-      const { error } = await supabase
-        .from("event_rsvps")
-        .update({ visibility: newVisibility } as never)
-        .eq("user_id", user.id)
-        .eq("event_id", eventId);
-      if (error) throw error;
+      const response = await fetch("/api/rsvp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          event_id: eventId,
+          status,
+          visibility: newVisibility,
+        }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Failed to update visibility");
+      }
     } catch (error) {
       // Rollback on error
       setVisibility(previousVisibility);
