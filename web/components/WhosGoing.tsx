@@ -6,6 +6,17 @@ import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/lib/auth-context";
 
+// Timeout wrapper for Supabase queries to prevent indefinite hanging
+const QUERY_TIMEOUT = 8000; // 8 seconds
+function withTimeout<T>(promise: Promise<T>, ms: number = QUERY_TIMEOUT): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error("Query timeout")), ms)
+    ),
+  ]);
+}
+
 type WhosGoingProps = {
   eventId: number;
   className?: string;
@@ -39,52 +50,55 @@ export default function WhosGoing({ eventId, className = "" }: WhosGoingProps) {
     let isMounted = true;
 
     async function loadAttendees() {
-      // Run RSVP query and friend queries in parallel
-      const rsvpPromise = supabase
-        .from("event_rsvps")
-        .select(`
-          status,
-          user:profiles!event_rsvps_user_id_fkey(
-            id, username, display_name, avatar_url
-          )
-        `)
-        .eq("event_id", eventId)
-        .eq("visibility", "public")
-        .in("status", ["going", "interested"]);
+      try {
+        // Run RSVP query and friend queries in parallel with timeout protection
+        const rsvpPromise = withTimeout(
+          supabase
+            .from("event_rsvps")
+            .select(`
+              status,
+              user:profiles!event_rsvps_user_id_fkey(
+                id, username, display_name, avatar_url
+              )
+            `)
+            .eq("event_id", eventId)
+            .eq("visibility", "public")
+            .in("status", ["going", "interested"])
+        );
 
-      // Get current user's friend IDs in parallel (only if logged in)
-      const friendIdsPromise = user
-        ? (async () => {
-            const friendIds: Set<string> = new Set();
+        // Get current user's friend IDs in parallel (only if logged in)
+        const friendIdsPromise = user
+          ? withTimeout((async () => {
+              const friendIds: Set<string> = new Set();
 
-            const { data: myFollows } = await supabase
-              .from("follows")
-              .select("followed_user_id")
-              .eq("follower_id", user.id)
-              .not("followed_user_id", "is", null);
-
-            const followsData = myFollows as { followed_user_id: string | null }[] | null;
-            if (followsData && followsData.length > 0) {
-              const followedIds = followsData.map((f) => f.followed_user_id).filter(Boolean) as string[];
-
-              // Batch query: get all who follow back (mutual = friends)
-              const { data: mutualFollows } = await supabase
+              const { data: myFollows } = await supabase
                 .from("follows")
-                .select("follower_id")
-                .in("follower_id", followedIds)
-                .eq("followed_user_id", user.id);
+                .select("followed_user_id")
+                .eq("follower_id", user.id)
+                .not("followed_user_id", "is", null);
 
-              const mutualData = mutualFollows as { follower_id: string }[] | null;
-              if (mutualData) {
-                mutualData.forEach((f) => friendIds.add(f.follower_id));
+              const followsData = myFollows as { followed_user_id: string | null }[] | null;
+              if (followsData && followsData.length > 0) {
+                const followedIds = followsData.map((f) => f.followed_user_id).filter(Boolean) as string[];
+
+                // Batch query: get all who follow back (mutual = friends)
+                const { data: mutualFollows } = await supabase
+                  .from("follows")
+                  .select("follower_id")
+                  .in("follower_id", followedIds)
+                  .eq("followed_user_id", user.id);
+
+                const mutualData = mutualFollows as { follower_id: string }[] | null;
+                if (mutualData) {
+                  mutualData.forEach((f) => friendIds.add(f.follower_id));
+                }
               }
-            }
-            return friendIds;
-          })()
-        : Promise.resolve(new Set<string>());
+              return friendIds;
+            })())
+          : Promise.resolve(new Set<string>());
 
-      // Wait for both queries in parallel
-      const [{ data: rsvpData }, friendIds] = await Promise.all([rsvpPromise, friendIdsPromise]);
+        // Wait for both queries in parallel
+        const [{ data: rsvpData }, friendIds] = await Promise.all([rsvpPromise, friendIdsPromise]);
 
       if (!isMounted) return;
 
@@ -117,6 +131,13 @@ export default function WhosGoing({ eventId, className = "" }: WhosGoingProps) {
 
       setAttendees(attendeeList);
       setLoading(false);
+      } catch (error) {
+        // Handle timeout or other errors gracefully - just stop loading
+        console.error("WhosGoing query error:", error);
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
     }
 
     loadAttendees();

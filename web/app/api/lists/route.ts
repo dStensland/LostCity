@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
+import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 // Type helper for tables not yet in generated types
@@ -9,6 +10,8 @@ type AnySupabase = SupabaseClient<any, any, any>;
 
 // GET /api/lists - List all public lists, optionally filtered
 export async function GET(request: NextRequest) {
+  const rateLimitResult = applyRateLimit(request, RATE_LIMITS.read, getClientIdentifier(request));
+  if (rateLimitResult) return rateLimitResult;
   const supabase = await createClient() as AnySupabase;
   const searchParams = request.nextUrl.searchParams;
 
@@ -289,6 +292,9 @@ export async function GET(request: NextRequest) {
 
 // POST /api/lists - Create a new list
 export async function POST(request: NextRequest) {
+  const rateLimitResult = applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
+  if (rateLimitResult) return rateLimitResult;
+
   const supabase = await createClient() as AnySupabase;
 
   // Check auth

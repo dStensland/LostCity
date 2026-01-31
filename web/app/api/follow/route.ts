@@ -1,5 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 import { NextRequest, NextResponse } from "next/server";
+import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 
 export async function GET(request: NextRequest) {
   const supabase = await createClient();
@@ -50,13 +52,18 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const supabase = await createClient();
+  // Apply rate limiting
+  const rateLimitResult = applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
+  if (rateLimitResult) return rateLimitResult;
 
+  // Verify auth with server client
+  const supabase = await createClient();
   const {
     data: { user },
+    error: authError,
   } = await supabase.auth.getUser();
 
-  if (!user) {
+  if (authError || !user) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 
@@ -71,9 +78,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid action" }, { status: 400 });
   }
 
+  // Use service client for mutations to avoid RLS issues
+  const serviceClient = createServiceClient();
+
   try {
     if (action === "unfollow") {
-      let query = supabase
+      let query = serviceClient
         .from("follows")
         .delete()
         .eq("follower_id", user.id);
@@ -90,7 +100,7 @@ export async function POST(request: NextRequest) {
 
       if (error) {
         console.error("Unfollow error:", error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        return NextResponse.json({ error: "Unable to unfollow" }, { status: 500 });
       }
 
       return NextResponse.json({ success: true, isFollowing: false });
@@ -108,7 +118,7 @@ export async function POST(request: NextRequest) {
         followData.followed_organization_id = targetOrganizationId;
       }
 
-      const { error } = await supabase.from("follows").insert(followData as never);
+      const { error } = await serviceClient.from("follows").insert(followData as never);
 
       if (error) {
         // Check if it's a duplicate
@@ -116,7 +126,7 @@ export async function POST(request: NextRequest) {
           return NextResponse.json({ success: true, isFollowing: true });
         }
         console.error("Follow error:", error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        return NextResponse.json({ error: "Unable to follow" }, { status: 500 });
       }
 
       return NextResponse.json({ success: true, isFollowing: true });

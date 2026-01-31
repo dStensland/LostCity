@@ -1,6 +1,8 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { createClient, getUser } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 import { errorResponse, isValidUUID, isValidString, validationError } from "@/lib/api-utils";
+import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyQuery = any;
@@ -71,8 +73,12 @@ export async function GET(request: Request) {
 }
 
 // POST /api/friend-requests - Create a friend request
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
+    // Apply rate limiting
+    const rateLimitResult = applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
+    if (rateLimitResult) return rateLimitResult;
+
     const user = await getUser();
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -93,7 +99,9 @@ export async function POST(request: Request) {
       return validationError("Invalid username format");
     }
 
+    // Use regular client for reads, service client for mutations
     const supabase = await createClient();
+    const serviceClient = createServiceClient();
 
     // Resolve inviter_id from username if needed
     let resolvedInviterId = inviter_id;
@@ -178,7 +186,7 @@ export async function POST(request: Request) {
     if (existingReq) {
       // If there's a pending request FROM the inviter to us, auto-accept it
       if (existingReq.inviter_id === resolvedInviterId) {
-        const { error: acceptError } = await supabase
+        const { error: acceptError } = await serviceClient
           .from("friend_requests" as never)
           .update({ status: "accepted" } as never)
           .eq("id", existingReq.id);
@@ -202,8 +210,8 @@ export async function POST(request: Request) {
 
     // If auto_accept is true, create friendship directly (skip the pending request)
     if (auto_accept) {
-      // Create friendship directly using RPC
-      const { error: friendshipError } = await supabase.rpc(
+      // Create friendship directly using RPC via service client
+      const { error: friendshipError } = await serviceClient.rpc(
         "create_friendship" as never,
         { user_a: resolvedInviterId, user_b: user.id } as never
       );
@@ -214,7 +222,7 @@ export async function POST(request: Request) {
       }
 
       // Also create an "accepted" friend request record for history
-      await supabase
+      await serviceClient
         .from("friend_requests" as never)
         .insert({
           inviter_id: resolvedInviterId,
@@ -230,10 +238,10 @@ export async function POST(request: Request) {
       });
     }
 
-    // Create the friend request
+    // Create the friend request using service client
     // The inviter is the person whose link was clicked
     // The invitee is the current user (who clicked the link)
-    const { data: newRequest, error: insertError } = await supabase
+    const { data: newRequest, error: insertError } = await serviceClient
       .from("friend_requests" as never)
       .insert({
         inviter_id: resolvedInviterId,

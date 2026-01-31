@@ -12,6 +12,17 @@ import { createClient } from "@/lib/supabase/client";
 import { format, parseISO, startOfDay } from "date-fns";
 import { formatTime } from "@/lib/formats";
 
+// Timeout wrapper for Supabase queries to prevent indefinite hanging
+const QUERY_TIMEOUT = 8000;
+function withTimeout<T>(promise: Promise<T>, ms: number = QUERY_TIMEOUT): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error("Query timeout")), ms)
+    ),
+  ]);
+}
+
 type EventData = {
   id: number;
   title: string;
@@ -78,96 +89,102 @@ export default function DashboardPlanning() {
     try {
       setLoading(true);
 
-      // Load all data in parallel
+      // Load all data in parallel - with timeout protection
       const [savedRes, rsvpRes, invitesRes] = await Promise.all([
-        supabase
-          .from("saved_items")
-          .select(`
-            id,
-            created_at,
-            event:events (
+        withTimeout(
+          supabase
+            .from("saved_items")
+            .select(`
               id,
-              title,
-              start_date,
-              start_time,
-              is_all_day,
-              is_free,
-              price_min,
-              price_max,
-              category,
-              image_url,
-              venue:venues (
+              created_at,
+              event:events (
                 id,
-                name,
-                neighborhood
+                title,
+                start_date,
+                start_time,
+                is_all_day,
+                is_free,
+                price_min,
+                price_max,
+                category,
+                image_url,
+                venue:venues (
+                  id,
+                  name,
+                  neighborhood
+                )
               )
-            )
-          `)
-          .eq("user_id", user.id)
-          .not("event_id", "is", null)
-          .order("created_at", { ascending: false }),
+            `)
+            .eq("user_id", user.id)
+            .not("event_id", "is", null)
+            .order("created_at", { ascending: false })
+        ),
 
-        supabase
-          .from("event_rsvps")
-          .select(`
-            id,
-            status,
-            created_at,
-            event:events (
+        withTimeout(
+          supabase
+            .from("event_rsvps")
+            .select(`
               id,
-              title,
-              start_date,
-              start_time,
-              is_all_day,
-              is_free,
-              price_min,
-              price_max,
-              category,
-              image_url,
-              venue:venues (
+              status,
+              created_at,
+              event:events (
                 id,
-                name,
-                neighborhood
+                title,
+                start_date,
+                start_time,
+                is_all_day,
+                is_free,
+                price_min,
+                price_max,
+                category,
+                image_url,
+                venue:venues (
+                  id,
+                  name,
+                  neighborhood
+                )
               )
-            )
-          `)
-          .eq("user_id", user.id)
-          .in("status", ["going", "interested"])
-          .order("created_at", { ascending: false }),
+            `)
+            .eq("user_id", user.id)
+            .in("status", ["going", "interested"])
+            .order("created_at", { ascending: false })
+        ),
 
-        supabase
-          .from("event_invites")
-          .select(`
-            id,
-            note,
-            status,
-            created_at,
-            inviter:profiles!event_invites_inviter_id_fkey (
+        withTimeout(
+          supabase
+            .from("event_invites")
+            .select(`
               id,
-              username,
-              display_name,
-              avatar_url
-            ),
-            event:events (
-              id,
-              title,
-              start_date,
-              start_time,
-              is_all_day,
-              is_free,
-              price_min,
-              price_max,
-              category,
-              image_url,
-              venue:venues (
+              note,
+              status,
+              created_at,
+              inviter:profiles!event_invites_inviter_id_fkey (
                 id,
-                name,
-                neighborhood
+                username,
+                display_name,
+                avatar_url
+              ),
+              event:events (
+                id,
+                title,
+                start_date,
+                start_time,
+                is_all_day,
+                is_free,
+                price_min,
+                price_max,
+                category,
+                image_url,
+                venue:venues (
+                  id,
+                  name,
+                  neighborhood
+                )
               )
-            )
-          `)
-          .eq("invitee_id", user.id)
-          .order("created_at", { ascending: false }),
+            `)
+            .eq("invitee_id", user.id)
+            .order("created_at", { ascending: false })
+        ),
       ]);
 
       if (savedRes.data) {

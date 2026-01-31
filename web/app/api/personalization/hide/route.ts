@@ -1,9 +1,15 @@
-import { NextResponse } from "next/server";
-import { createClient, getUser } from "@/lib/supabase/server";
+import { NextRequest, NextResponse } from "next/server";
+import { getUser } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 import { errorResponse } from "@/lib/api-utils";
+import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 
 // POST /api/personalization/hide - Hide an event from recommendations
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
+  // Apply rate limiting
+  const rateLimitResult = applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
+  if (rateLimitResult) return rateLimitResult;
+
   const user = await getUser();
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -19,7 +25,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "eventId is required" }, { status: 400 });
   }
 
-  const supabase = await createClient();
+  // Use service client for mutations to avoid RLS issues
+  const supabase = createServiceClient();
 
   // Check if already hidden
   const { data: existing } = await supabase
@@ -48,7 +55,11 @@ export async function POST(request: Request) {
 }
 
 // DELETE /api/personalization/hide - Unhide an event
-export async function DELETE(request: Request) {
+export async function DELETE(request: NextRequest) {
+  // Apply rate limiting
+  const rateLimitResult = applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
+  if (rateLimitResult) return rateLimitResult;
+
   const user = await getUser();
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -61,7 +72,8 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ error: "eventId is required" }, { status: 400 });
   }
 
-  const supabase = await createClient();
+  // Use service client for mutations to avoid RLS issues
+  const supabase = createServiceClient();
 
   const { error } = await supabase
     .from("hidden_events")

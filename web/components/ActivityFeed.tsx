@@ -8,6 +8,17 @@ import { useAuth } from "@/lib/auth-context";
 import { usePortal } from "@/lib/portal-context";
 import { formatDistanceToNow } from "date-fns";
 
+// Timeout wrapper for Supabase queries to prevent indefinite hanging
+const QUERY_TIMEOUT = 8000;
+function withTimeout<T>(promise: Promise<T>, ms: number = QUERY_TIMEOUT): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error("Query timeout")), ms)
+    ),
+  ]);
+}
+
 type ActivityType = "rsvp" | "recommendation" | "follow";
 
 type ActivityItem = {
@@ -66,12 +77,14 @@ export default function ActivityFeed({ limit = 20, className = "" }: ActivityFee
       }
 
       try {
-        // Get users we follow
-        const { data: followsData } = await supabase
-          .from("follows")
-          .select("followed_user_id")
-          .eq("follower_id", user.id)
-          .not("followed_user_id", "is", null);
+        // Get users we follow - with timeout protection
+        const { data: followsData } = await withTimeout(
+          supabase
+            .from("follows")
+            .select("followed_user_id")
+            .eq("follower_id", user.id)
+            .not("followed_user_id", "is", null)
+        );
 
         if (!isMounted) return;
 
@@ -85,30 +98,32 @@ export default function ActivityFeed({ limit = 20, className = "" }: ActivityFee
           .map((f) => f.followed_user_id)
           .filter(Boolean) as string[];
 
-        // Get activities from followed users
-        const { data: activityData } = await supabase
-          .from("activities")
-          .select(`
-            id,
-            activity_type,
-            created_at,
-            metadata,
-            user:profiles!activities_user_id_fkey(
-              id, username, display_name, avatar_url
-            ),
-            event:events(
-              id, title, start_date,
-              venue:venues(name)
-            ),
-            venue:venues(id, name, slug, neighborhood),
-            target_user:profiles!activities_target_user_id_fkey(
-              id, username, display_name
-            )
-          `)
-          .in("user_id", followedIds)
-          .in("visibility", ["public", "friends"])
-          .order("created_at", { ascending: false })
-          .limit(limit);
+        // Get activities from followed users - with timeout protection
+        const { data: activityData } = await withTimeout(
+          supabase
+            .from("activities")
+            .select(`
+              id,
+              activity_type,
+              created_at,
+              metadata,
+              user:profiles!activities_user_id_fkey(
+                id, username, display_name, avatar_url
+              ),
+              event:events(
+                id, title, start_date,
+                venue:venues(name)
+              ),
+              venue:venues(id, name, slug, neighborhood),
+              target_user:profiles!activities_target_user_id_fkey(
+                id, username, display_name
+              )
+            `)
+            .in("user_id", followedIds)
+            .in("visibility", ["public", "friends"])
+            .order("created_at", { ascending: false })
+            .limit(limit)
+        );
 
         if (!isMounted) return;
 

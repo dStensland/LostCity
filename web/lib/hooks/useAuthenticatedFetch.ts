@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/components/Toast";
@@ -48,6 +48,12 @@ export function useAuthenticatedFetch() {
   const { user, loading: authLoading } = useAuth();
   const { showToast } = useToast();
 
+  // Use ref to track latest authLoading value to avoid stale closures in the wait loop
+  const authLoadingRef = useRef(authLoading);
+  useEffect(() => {
+    authLoadingRef.current = authLoading;
+  }, [authLoading]);
+
   const authFetch = useCallback(
     async <T = unknown>(
       url: string,
@@ -62,19 +68,20 @@ export function useAuthenticatedFetch() {
       } = options;
 
       // Check auth if required
-      if (requireAuth && !authLoading && !user) {
+      if (requireAuth && !authLoadingRef.current && !user) {
         router.push(`/auth/login?redirect=${encodeURIComponent(window.location.pathname)}`);
         return { data: null, error: "Please log in to continue", status: 401 };
       }
 
       // Wait for auth to settle if still loading
-      if (authLoading && requireAuth) {
+      if (authLoadingRef.current && requireAuth) {
         // Wait up to 3 seconds for auth to settle
         let waited = 0;
         while (waited < 3000) {
           await new Promise((r) => setTimeout(r, 100));
           waited += 100;
-          if (!authLoading) break;
+          // Use ref to get latest value, not stale closure value
+          if (!authLoadingRef.current) break;
         }
       }
 

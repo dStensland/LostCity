@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 // Type helper for tables not yet in generated types
@@ -12,6 +13,8 @@ type RouteContext = {
 
 // POST /api/lists/[id]/vote - Vote on a list or item
 export async function POST(request: NextRequest, context: RouteContext) {
+  const rateLimitResult = applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
+  if (rateLimitResult) return rateLimitResult;
   const supabase = await createClient() as AnySupabase;
   const { id: listId } = await context.params;
 

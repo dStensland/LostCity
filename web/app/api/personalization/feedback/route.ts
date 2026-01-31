@@ -1,8 +1,14 @@
-import { NextResponse } from "next/server";
-import { createClient, getUser } from "@/lib/supabase/server";
+import { NextRequest, NextResponse } from "next/server";
+import { getUser } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
+import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 
 // POST /api/personalization/feedback - Record user feedback on events
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
+  // Apply rate limiting
+  const rateLimitResult = applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
+  if (rateLimitResult) return rateLimitResult;
+
   const user = await getUser();
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -25,7 +31,8 @@ export async function POST(request: Request) {
     );
   }
 
-  const supabase = await createClient();
+  // Use service client for mutations to avoid RLS issues
+  const supabase = createServiceClient();
 
   // Update inferred preferences based on feedback
   const signalMultiplier = signal === "positive" ? 1 : -0.5;
@@ -82,7 +89,7 @@ export async function POST(request: Request) {
 }
 
 async function upsertInferredPreference(
-  supabase: Awaited<ReturnType<typeof createClient>>,
+  supabase: ReturnType<typeof createServiceClient>,
   userId: string,
   signalType: string,
   signalValue: string,

@@ -1,6 +1,8 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { createClient, getUser } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 import { errorResponse } from "@/lib/api-utils";
+import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 
 // GET /api/invites - Get user's invites
 export async function GET(request: Request) {
@@ -70,7 +72,11 @@ export async function GET(request: Request) {
 }
 
 // POST /api/invites - Create a new invite
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
+  // Apply rate limiting
+  const rateLimitResult = applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
+  if (rateLimitResult) return rateLimitResult;
+
   const user = await getUser();
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -98,7 +104,9 @@ export async function POST(request: Request) {
     );
   }
 
+  // Use regular client for reads, service client for mutations
   const supabase = await createClient();
+  const serviceClient = createServiceClient();
 
   // Check if event exists
   const { data: event } = await supabase
@@ -138,8 +146,8 @@ export async function POST(request: Request) {
     );
   }
 
-  // Create invite
-  const { data: invite, error } = await supabase
+  // Create invite using service client
+  const { data: invite, error } = await serviceClient
     .from("event_invites")
     .insert({
       event_id: eventId,

@@ -1,5 +1,6 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { createClient, getUser } from "@/lib/supabase/server";
+import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 
 type ActionType = "view" | "save" | "share" | "rsvp_going" | "rsvp_interested" | "went";
 
@@ -29,7 +30,10 @@ const ACTION_WEIGHTS: Record<ActionType, number> = {
   went: 12,          // Mark "went"
 };
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
+  const rateLimitResult = applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
+  if (rateLimitResult) return rateLimitResult;
+
   try {
     const user = await getUser();
     if (!user) {

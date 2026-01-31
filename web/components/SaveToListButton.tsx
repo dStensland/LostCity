@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, memo, useCallback } from "react";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/client";
+import { useAuth } from "@/lib/auth-context";
 import { IconButton } from "./ui/Button";
 
 interface SaveToListButtonProps {
@@ -27,22 +27,16 @@ export const SaveToListButton = memo(function SaveToListButton({
   itemId,
   className = "",
 }: SaveToListButtonProps) {
+  // Use AuthContext for auth state - syncs across tabs and components
+  const { user } = useAuth();
+
   const [isOpen, setIsOpen] = useState(false);
   const [lists, setLists] = useState<UserList[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [user, setUser] = useState<{ id: string } | null>(null);
   const [savingToList, setSavingToList] = useState<string | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
-
-  // Check auth status
-  useEffect(() => {
-    const supabase = createClient();
-    supabase.auth.getUser().then(({ data }) => {
-      setUser(data.user);
-    });
-  }, []);
 
   // Fetch user's lists when dropdown opens
   const fetchLists = useCallback(async () => {

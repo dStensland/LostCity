@@ -70,8 +70,20 @@ export async function getUser() {
   return user;
 }
 
-// Get current session from server context
+/**
+ * @deprecated Use getUser() instead. getSession() only reads from cookies
+ * and does NOT validate tokens with the Supabase server. This can return
+ * stale or invalid sessions, causing auth issues. getUser() validates
+ * tokens and triggers automatic refresh when needed.
+ *
+ * If you need both user and session, call getUser() first to validate,
+ * then call supabase.auth.getSession() only if validation succeeded.
+ */
 export async function getSession() {
+  console.warn(
+    "DEPRECATED: getSession() called - use getUser() instead. " +
+    "getSession() does not validate tokens and can return stale sessions."
+  );
   const supabase = await createClient();
   const { data: { session } } = await supabase.auth.getSession();
   return session;
