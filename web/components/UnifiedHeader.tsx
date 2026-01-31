@@ -9,10 +9,13 @@ import UserMenu from "./UserMenu";
 import HeaderSearchButton from "./HeaderSearchButton";
 import { usePortalOptional, DEFAULT_PORTAL, DEFAULT_PORTAL_SLUG, DEFAULT_PORTAL_NAME } from "@/lib/portal-context";
 import { useAuth } from "@/lib/auth-context";
+import { useLogoUrl } from "@/lib/hooks/useDesignOverrides";
 
 interface PortalBranding {
   logo_url?: string;
   primary_color?: string;
+  /** Enterprise only: Hide "Powered by LostCity" attribution */
+  hide_attribution?: boolean;
   [key: string]: unknown;
 }
 
@@ -86,6 +89,7 @@ function UnifiedHeaderInner({
   const portalContext = usePortalOptional();
   const portal = portalContext?.portal ?? DEFAULT_PORTAL;
   const { user } = useAuth();
+  const logoUrl = useLogoUrl(branding?.logo_url as string | undefined);
 
   // Get custom nav labels from portal settings
   const navLabels = (portal.settings?.nav_labels || {}) as Record<string, string | undefined>;
@@ -172,17 +176,20 @@ function UnifiedHeaderInner({
               </Link>
             )}
 
-            {branding?.logo_url ? (
+            {logoUrl ? (
               <div className="flex items-center gap-2">
                 <Link href={`/${portalSlug}`}>
-                  <Image src={branding.logo_url} alt={portalName} width={120} height={32} className="h-8 w-auto object-contain" />
+                  <Image src={logoUrl} alt={portalName} width={120} height={32} className="h-8 w-auto object-contain" />
                 </Link>
-                <div className="hidden lg:flex items-center gap-1 text-[0.6rem] text-[var(--muted)] font-mono">
-                  <span>powered by</span>
-                  <Link href={`/${DEFAULT_PORTAL_SLUG}`} className="text-[var(--coral)] hover:opacity-80 transition-opacity">
-                    Lost City
-                  </Link>
-                </div>
+                {/* Only show "powered by" if attribution is not hidden (Enterprise feature) */}
+                {!branding?.hide_attribution && (
+                  <div className="hidden lg:flex items-center gap-1 text-[0.6rem] text-[var(--muted)] font-mono">
+                    <span>powered by</span>
+                    <Link href={`/${DEFAULT_PORTAL_SLUG}`} className="text-[var(--coral)] hover:opacity-80 transition-opacity">
+                      Lost City
+                    </Link>
+                  </div>
+                )}
               </div>
             ) : (
               <Logo href={`/${portalSlug}`} size="sm" portal={portalSlug} />

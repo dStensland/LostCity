@@ -1,7 +1,7 @@
 import { getPortalBySlug } from "@/lib/portal";
-import UnifiedHeader from "@/components/UnifiedHeader";
+import { PortalHeader } from "@/components/headers";
+import { AmbientBackground } from "@/components/ambient";
 import SearchBarWrapper from "@/components/SearchBarWrapper";
-import DynamicAmbient from "@/components/DynamicAmbient";
 import FeedShell from "@/components/feed/FeedShell";
 import CuratedContent from "@/components/feed/CuratedContent";
 import FindView from "@/components/find/FindView";
@@ -114,15 +114,13 @@ export default async function PortalPage({ params, searchParams }: Props) {
 
   return (
     <div className="min-h-screen">
-      {/* Dynamic ambient glow based on category */}
-      <Suspense fallback={null}>
-        <DynamicAmbient />
-      </Suspense>
+      {/* Portal-aware ambient background effect */}
+      <AmbientBackground />
 
-      <UnifiedHeader
+      {/* Portal-aware header (template selected from branding) */}
+      <PortalHeader
         portalSlug={portal.slug}
         portalName={portal.name}
-        branding={portal.branding}
       />
 
       {/* Search bar for Find and Community views */}

@@ -12,6 +12,8 @@ interface Props {
   state?: string;
   /** "default" shows full button, "icon" shows compact icon-only button */
   variant?: "default" | "icon";
+  /** Custom brand name for sharing (Enterprise feature) */
+  brandName?: string;
 }
 
 export default function AddToCalendar({
@@ -23,6 +25,7 @@ export default function AddToCalendar({
   city,
   state,
   variant = "default",
+  brandName = "Lost City",
 }: Props) {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -67,20 +70,26 @@ export default function AddToCalendar({
     return `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}T${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
   };
 
+  // Build event description with brand name
+  const eventDescription = brandName === "Lost City"
+    ? `Event discovered on Lost City - lostcity.ai`
+    : `Event discovered on ${brandName}`;
+
   // Google Calendar URL
-  const googleUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(title)}&dates=${formatGoogleDate(startDate)}/${formatGoogleDate(endDate)}&location=${encodeURIComponent(location)}&details=${encodeURIComponent(`Event discovered on Lost City - lostcity.ai`)}`;
+  const googleUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(title)}&dates=${formatGoogleDate(startDate)}/${formatGoogleDate(endDate)}&location=${encodeURIComponent(location)}&details=${encodeURIComponent(eventDescription)}`;
 
   // Generate ICS file content
   const generateICS = () => {
+    const prodId = brandName === "Lost City" ? "Lost City" : brandName;
     const icsContent = `BEGIN:VCALENDAR
 VERSION:2.0
-PRODID:-//Lost City//Event Calendar//EN
+PRODID:-//${prodId}//Event Calendar//EN
 BEGIN:VEVENT
 DTSTART:${formatICSDate(startDate)}
 DTEND:${formatICSDate(endDate)}
 SUMMARY:${title}
 LOCATION:${location}
-DESCRIPTION:Event discovered on Lost City - lostcity.ai
+DESCRIPTION:${eventDescription}
 END:VEVENT
 END:VCALENDAR`;
 
@@ -97,7 +106,7 @@ END:VCALENDAR`;
   };
 
   // Outlook Web URL
-  const outlookUrl = `https://outlook.live.com/calendar/0/deeplink/compose?subject=${encodeURIComponent(title)}&startdt=${startDate.toISOString()}&enddt=${endDate.toISOString()}&location=${encodeURIComponent(location)}&body=${encodeURIComponent(`Event discovered on Lost City - lostcity.ai`)}`;
+  const outlookUrl = `https://outlook.live.com/calendar/0/deeplink/compose?subject=${encodeURIComponent(title)}&startdt=${startDate.toISOString()}&enddt=${endDate.toISOString()}&location=${encodeURIComponent(location)}&body=${encodeURIComponent(eventDescription)}`;
 
   const isIcon = variant === "icon";
 

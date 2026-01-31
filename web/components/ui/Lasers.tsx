@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 
 interface LasersProps {
   isActive: boolean;
@@ -23,39 +23,55 @@ const COLORS = [
   "var(--gold)",
 ];
 
+function generateBeams(): LaserBeam[] {
+  return Array.from({ length: 16 }, (_, i) => ({
+    id: i,
+    angle: (i * 360) / 16 + (Math.random() * 10 - 5), // Evenly spaced with slight randomness
+    color: COLORS[Math.floor(Math.random() * COLORS.length)],
+    delay: Math.random() * 0.15,
+    length: 80 + Math.random() * 40, // Variable beam lengths
+  }));
+}
+
 export default function Lasers({ isActive, duration = 1500 }: LasersProps) {
-  const [beams, setBeams] = useState<LaserBeam[]>([]);
-  const [show, setShow] = useState(false);
+  const [showState, setShowState] = useState<{
+    isVisible: boolean;
+    beams: LaserBeam[];
+  }>({
+    isVisible: false,
+    beams: [],
+  });
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    if (!isActive) return;
+    if (!isActive) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Laser animation lifecycle
+      setShowState({ isVisible: false, beams: [] });
+      return;
+    }
 
     // Check for reduced motion preference
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
       return;
     }
 
-    // Generate laser beams shooting outward in all directions
-    const newBeams: LaserBeam[] = Array.from({ length: 16 }, (_, i) => ({
-      id: i,
-      angle: (i * 360) / 16 + (Math.random() * 10 - 5), // Evenly spaced with slight randomness
-      color: COLORS[Math.floor(Math.random() * COLORS.length)],
-      delay: Math.random() * 0.15,
-      length: 80 + Math.random() * 40, // Variable beam lengths
-    }));
+    // Generate and show beams in a single state update
+    const newBeams = generateBeams();
+    setShowState({ isVisible: true, beams: newBeams });
 
-    setBeams(newBeams);
-    setShow(true);
-
-    const timer = setTimeout(() => {
-      setShow(false);
-      setBeams([]);
+    // Schedule hide and reset
+    timerRef.current = setTimeout(() => {
+      setShowState({ isVisible: false, beams: [] });
     }, duration);
 
-    return () => clearTimeout(timer);
+    return () => {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+      }
+    };
   }, [isActive, duration]);
 
-  if (!show || beams.length === 0) return null;
+  if (!showState.isVisible || showState.beams.length === 0) return null;
 
   return (
     <div className="fixed inset-0 pointer-events-none z-[200] overflow-hidden">
@@ -68,7 +84,7 @@ export default function Lasers({ isActive, duration = 1500 }: LasersProps) {
         <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white animate-laser-flash" />
 
         {/* Laser beams */}
-        {beams.map((beam) => (
+        {showState.beams.map((beam) => (
           <div
             key={beam.id}
             className="absolute left-1/2 top-1/2 origin-left animate-laser-shoot"

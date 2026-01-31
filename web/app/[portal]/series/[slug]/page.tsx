@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import type { ReactElement } from "react";
 import UnifiedHeader from "@/components/UnifiedHeader";
-import PageFooter from "@/components/PageFooter";
+import PortalFooter from "@/components/PortalFooter";
 import { PortalTheme } from "@/components/PortalTheme";
 import { getPortalBySlug } from "@/lib/portal";
 import {
@@ -570,7 +570,7 @@ export default async function PortalSeriesPage({ params }: Props) {
           )}
         </main>
 
-        <PageFooter />
+        <PortalFooter />
       </div>
 
       {/* Sticky bar with actions */}

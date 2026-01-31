@@ -194,6 +194,161 @@
   --series-default: #57534E;
 }
 
+/* ============================================
+   COMPONENT STYLE DEFAULTS
+   Portal-specific overrides via PortalTheme.tsx
+   ============================================ */
+:root {
+  /* Border radius scale */
+  --radius-base: 0.5rem;
+  --radius-card: var(--radius-base);
+  --radius-button: var(--radius-base);
+
+  /* Shadow defaults */
+  --shadow-card: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+
+  /* Glow settings */
+  --glow-opacity: 0.5;
+
+  /* Glass settings */
+  --glass-blur: 12px;
+
+  /* Animation settings */
+  --animation-duration-multiplier: 1;
+  --animation-play-state: running;
+}
+
+/* ============================================
+   CARD STYLE VARIANTS
+   Applied via body[data-card-style="..."]
+   ============================================ */
+
+/* Flat card style - no shadows, minimal depth */
+body[data-card-style="flat"] .card,
+body[data-card-style="flat"] .event-card,
+body[data-card-style="flat"] .venue-card {
+  box-shadow: none;
+  background: var(--dusk);
+}
+
+/* Elevated card style - prominent shadows */
+body[data-card-style="elevated"] .card,
+body[data-card-style="elevated"] .event-card,
+body[data-card-style="elevated"] .venue-card {
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+}
+
+/* Outlined card style - border only, no background */
+body[data-card-style="outlined"] .card,
+body[data-card-style="outlined"] .event-card,
+body[data-card-style="outlined"] .venue-card {
+  background: transparent;
+  border: 1px solid var(--twilight);
+  box-shadow: none;
+}
+
+/* Glass card style - frosted glass effect */
+body[data-card-style="glass"] .card,
+body[data-card-style="glass"] .event-card,
+body[data-card-style="glass"] .venue-card {
+  background: var(--glass-bg, linear-gradient(135deg, rgba(15, 15, 20, 0.9), rgba(20, 20, 30, 0.8)));
+  backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.06));
+}
+
+/* Neumorphic card style - soft shadows inset */
+body[data-card-style="neumorphic"] .card,
+body[data-card-style="neumorphic"] .event-card,
+body[data-card-style="neumorphic"] .venue-card {
+  background: var(--dusk);
+  box-shadow:
+    4px 4px 8px rgba(0, 0, 0, 0.3),
+    -4px -4px 8px rgba(255, 255, 255, 0.05);
+}
+
+/* ============================================
+   BUTTON STYLE VARIANTS
+   Applied via body[data-button-style="..."]
+   ============================================ */
+
+/* Outline button style */
+body[data-button-style="outline"] .btn,
+body[data-button-style="outline"] button[class*="bg-"] {
+  background: transparent;
+  border: 2px solid currentColor;
+}
+
+/* Ghost button style - minimal */
+body[data-button-style="ghost"] .btn,
+body[data-button-style="ghost"] button[class*="bg-"] {
+  background: transparent;
+  border: none;
+}
+
+body[data-button-style="ghost"] .btn:hover,
+body[data-button-style="ghost"] button[class*="bg-"]:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* Pill button style - full rounded */
+body[data-button-style="pill"] .btn,
+body[data-button-style="pill"] button {
+  border-radius: 9999px;
+}
+
+/* Sharp button style - no radius */
+body[data-button-style="sharp"] .btn,
+body[data-button-style="sharp"] button {
+  border-radius: 0;
+}
+
+/* ============================================
+   GLOW DISABLED STATE
+   Applied via body[data-glow="disabled"]
+   ============================================ */
+
+body[data-glow="disabled"] .glow,
+body[data-glow="disabled"] .neon-glow,
+body[data-glow="disabled"] .icon-neon,
+body[data-glow="disabled"] .icon-neon-subtle,
+body[data-glow="disabled"] .icon-neon-intense {
+  filter: none !important;
+  text-shadow: none !important;
+  box-shadow: none !important;
+}
+
+body[data-glow="disabled"] .nav-tab.active::after {
+  display: none;
+}
+
+/* ============================================
+   GLASS DISABLED STATE
+   Applied via body[data-glass="disabled"]
+   ============================================ */
+
+body[data-glass="disabled"] .glass-panel,
+body[data-glass="disabled"] .glass-panel-compact {
+  backdrop-filter: none;
+  background: var(--dusk);
+}
+
+/* ============================================
+   ANIMATION STATES
+   Applied via body[data-animations="none|subtle"]
+   ============================================ */
+
+body[data-animations="none"] *,
+body[data-animations="none"] *::before,
+body[data-animations="none"] *::after {
+  animation: none !important;
+  transition: none !important;
+}
+
+body[data-animations="subtle"] * {
+  animation-duration: calc(var(--animation-duration-multiplier) * 0.5s) !important;
+  transition-duration: 0.1s !important;
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -424,6 +579,61 @@ body::after {
   .nav-tab-active {
     box-shadow: inset 0 1px 0 hsl(0 0% 100% / 0.2);
   }
+}
+
+/* ============================================
+   NAV STYLE VARIANTS
+   Applied via nav container class
+   ============================================ */
+
+/* Pills style - rounded pill buttons */
+.nav-tab-pills .nav-tab {
+  border-radius: 9999px;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+.nav-tab-pills .nav-tab-active {
+  border-radius: 9999px;
+}
+
+/* Underline style - bottom border only */
+.nav-tab-underline .nav-tab {
+  border-radius: 0;
+  background: transparent;
+  border-bottom: 2px solid transparent;
+  padding-bottom: 0.5rem;
+}
+
+.nav-tab-underline .nav-tab-active {
+  background: transparent;
+  border-bottom: 2px solid var(--coral);
+  box-shadow: none;
+  color: var(--cream);
+}
+
+.nav-tab-underline .nav-tab:not(.nav-tab-active):hover {
+  background: transparent;
+  border-bottom-color: var(--muted);
+}
+
+/* Minimal style - text only, no backgrounds */
+.nav-tab-minimal .nav-tab {
+  border-radius: 0;
+  background: transparent;
+  padding: 0.5rem 0;
+}
+
+.nav-tab-minimal .nav-tab-active {
+  background: transparent;
+  box-shadow: none;
+  color: var(--coral);
+  font-weight: 600;
+}
+
+.nav-tab-minimal .nav-tab:not(.nav-tab-active):hover {
+  background: transparent;
+  color: var(--cream);
 }
 
 /* Mobile menu items - streetlight aesthetic */

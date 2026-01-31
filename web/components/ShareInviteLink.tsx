@@ -7,11 +7,17 @@ import { useAuth } from "@/lib/auth-context";
 type ShareInviteLinkProps = {
   className?: string;
   variant?: "button" | "icon";
+  /** Custom brand name for sharing text (Enterprise feature) */
+  brandName?: string;
+  /** Custom city name for the sharing message */
+  cityName?: string;
 };
 
 export default function ShareInviteLink({
   className = "",
   variant = "button",
+  brandName = "Lost City",
+  cityName = "Atlanta",
 }: ShareInviteLinkProps) {
   const { user, profile } = useAuth();
   const [copied, setCopied] = useState(false);
@@ -100,9 +106,16 @@ export default function ShareInviteLink({
   const handleShare = async () => {
     if (navigator.share) {
       try {
+        const shareTitle = brandName === "Lost City"
+          ? "Join me on Lost City"
+          : `Join me on ${brandName}`;
+        const shareText = brandName === "Lost City"
+          ? `Join me on Lost City - discover the best events happening in ${cityName}!`
+          : `Join me on ${brandName} - discover the best events happening in ${cityName}!`;
+
         await navigator.share({
-          title: "Join me on Lost City",
-          text: `Join me on Lost City - discover the best events happening in Atlanta!`,
+          title: shareTitle,
+          text: shareText,
           url: inviteUrl,
         });
       } catch {

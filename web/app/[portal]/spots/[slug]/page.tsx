@@ -5,7 +5,7 @@ import type { Metadata } from "next";
 import { format, parseISO } from "date-fns";
 import { formatTimeSplit } from "@/lib/formats";
 import UnifiedHeader from "@/components/UnifiedHeader";
-import PageFooter from "@/components/PageFooter";
+import PortalFooter from "@/components/PortalFooter";
 import { PortalTheme } from "@/components/PortalTheme";
 import VenueTagList from "@/components/VenueTagList";
 import FlagButton from "@/components/FlagButton";
@@ -320,7 +320,7 @@ export default async function PortalSpotPage({ params }: Props) {
           )}
         </main>
 
-        <PageFooter />
+        <PortalFooter />
       </div>
 
       {/* Sticky bottom bar with CTAs */}

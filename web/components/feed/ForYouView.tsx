@@ -260,7 +260,7 @@ export default function ForYouView(props: ForYouViewProps) {
       <Suspense fallback={<div className="h-10 bg-[var(--night)]" />}>
         <SimpleFilterBar variant="full" />
         {/* Layered filter rows */}
-        <div className="sticky top-[139px] z-10 bg-[var(--night)] border-b border-[var(--twilight)]">
+        <div className="sticky top-[156px] z-10 bg-[var(--night)] border-b border-[var(--twilight)]">
           <div className="max-w-3xl mx-auto">
             {/* Quick Tags - always visible */}
             <QuickTagsRow />

@@ -12,6 +12,8 @@ import { DEFAULT_PORTAL_SLUG, DEFAULT_PORTAL_NAME } from "@/lib/portal-context";
 interface PortalBranding {
   logo_url?: string;
   primary_color?: string;
+  /** Enterprise only: Hide "Powered by LostCity" attribution */
+  hide_attribution?: boolean;
   [key: string]: unknown;
 }
 
@@ -65,12 +67,15 @@ export default function GlassHeader({ portalSlug = DEFAULT_PORTAL_SLUG, portalNa
             <Link href={`/${portalSlug}`}>
               <Image src={branding.logo_url} alt={portalName} width={120} height={32} className="h-8 w-auto object-contain" />
             </Link>
-            <div className="hidden sm:flex items-center gap-1 text-[0.6rem] text-[var(--muted)] font-mono">
-              <span>powered by</span>
-              <Link href={`/${DEFAULT_PORTAL_SLUG}`} className="text-[var(--coral)] hover:opacity-80 transition-opacity">
-                Lost City
-              </Link>
-            </div>
+            {/* Only show "powered by" if attribution is not hidden (Enterprise feature) */}
+            {!branding?.hide_attribution && (
+              <div className="hidden sm:flex items-center gap-1 text-[0.6rem] text-[var(--muted)] font-mono">
+                <span>powered by</span>
+                <Link href={`/${DEFAULT_PORTAL_SLUG}`} className="text-[var(--coral)] hover:opacity-80 transition-opacity">
+                  Lost City
+                </Link>
+              </div>
+            )}
           </>
         ) : (
           <Logo href={`/${portalSlug}`} size="sm" portal={portalSlug} />

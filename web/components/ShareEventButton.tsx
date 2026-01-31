@@ -12,6 +12,8 @@ interface ShareEventButtonProps {
   variant?: "default" | "icon";
   /** Portal slug for constructing the correct share URL (auto-detected from context if not provided) */
   portalSlug?: string;
+  /** Custom brand name for sharing text (Enterprise feature) */
+  brandName?: string;
 }
 
 export default function ShareEventButton({
@@ -20,6 +22,7 @@ export default function ShareEventButton({
   className = "",
   variant = "default",
   portalSlug: portalSlugProp,
+  brandName = "Lost City",
 }: ShareEventButtonProps) {
   const { showToast } = useToast();
   const [isSharing, setIsSharing] = useState(false);
@@ -31,9 +34,12 @@ export default function ShareEventButton({
   const handleShare = async () => {
     // Use portal-aware URL structure: /{portal}?event={id}
     const url = `${window.location.origin}/${portalSlug}?event=${eventId}`;
+    const shareText = brandName === "Lost City"
+      ? `Check out ${eventTitle} on Lost City`
+      : `Check out ${eventTitle} on ${brandName}`;
     const shareData = {
       title: eventTitle,
-      text: `Check out ${eventTitle} on Lost City`,
+      text: shareText,
       url,
     };
 

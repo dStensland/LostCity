@@ -3,7 +3,7 @@ import { unstable_cache } from "next/cache";
 import { supabase } from "@/lib/supabase";
 import { getPortalBySlug } from "@/lib/portal";
 import UnifiedHeader from "@/components/UnifiedHeader";
-import PageFooter from "@/components/PageFooter";
+import PortalFooter from "@/components/PortalFooter";
 import { PortalTheme } from "@/components/PortalTheme";
 import FollowButton from "@/components/FollowButton";
 import RecommendButton from "@/components/RecommendButton";
@@ -525,7 +525,7 @@ export default async function PortalOrganizerPage({ params }: Props) {
           )}
         </main>
 
-        <PageFooter />
+        <PortalFooter />
       </div>
 
       {/* Sticky bottom bar with CTAs */}

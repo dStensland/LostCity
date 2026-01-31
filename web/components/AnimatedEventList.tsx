@@ -109,7 +109,7 @@ export default function AnimatedEventList({
             style={{ animationDelay: `${dateIndex * 0.05}s` }}
           >
             {/* Date header - improved typography hierarchy */}
-            <div className="sticky top-[148px] bg-[var(--void)]/95 backdrop-blur-sm z-20 py-3 -mx-4 px-4 border-b border-[var(--twilight)]/30">
+            <div className="sticky top-[165px] bg-[var(--void)]/95 backdrop-blur-sm z-20 py-3 -mx-4 px-4 border-b border-[var(--twilight)]/30">
               <div className="flex items-center gap-3">
                 <span className="font-serif text-sm font-medium text-[var(--cream)] tracking-wide">
                   {getDateLabel(date)}

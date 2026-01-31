@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { getPortalBySlug } from "@/lib/portal";
 import { PortalProvider } from "@/lib/portal-context";
 import { PortalTheme } from "@/components/PortalTheme";
+import { DesignTesterPanel } from "@/components/DesignTesterPanel";
 import type { Metadata } from "next";
 
 type Props = {
@@ -51,6 +52,7 @@ export default async function PortalLayout({ children, params }: Props) {
     <PortalProvider portal={portal}>
       <PortalTheme portal={portal} />
       {children}
+      <DesignTesterPanel />
     </PortalProvider>
   );
 }

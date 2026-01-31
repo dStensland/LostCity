@@ -2,9 +2,174 @@
 
 import { createContext, useContext, ReactNode } from "react";
 import { DEFAULT_PORTAL_SLUG, DEFAULT_PORTAL_NAME } from "./constants";
+import type {
+  VisualPresetId,
+  HeaderTemplate,
+  AmbientEffect,
+  BorderRadius,
+  ShadowLevel,
+  CardStyle,
+  ButtonStyle,
+  GlowIntensity,
+  AnimationLevel,
+  IntensityLevel,
+  SpeedLevel,
+  LogoPosition,
+  LogoSize,
+  NavStyle,
+  HeroHeight,
+} from "./visual-presets";
 
 // Re-export from shared constants for backwards compatibility
 export { DEFAULT_PORTAL_SLUG, DEFAULT_PORTAL_NAME };
+
+// Re-export visual preset types for convenience
+export type {
+  VisualPresetId,
+  HeaderTemplate,
+  AmbientEffect,
+  BorderRadius,
+  ShadowLevel,
+  CardStyle,
+  ButtonStyle,
+  GlowIntensity,
+  AnimationLevel,
+  IntensityLevel,
+  SpeedLevel,
+  LogoPosition,
+  LogoSize,
+  NavStyle,
+  HeroHeight,
+};
+
+// ============================================================================
+// Header Configuration Type
+// ============================================================================
+
+export interface PortalHeaderConfig {
+  /** Header layout template */
+  template: HeaderTemplate;
+  /** Logo position: left or center */
+  logo_position?: LogoPosition;
+  /** Logo size */
+  logo_size?: LogoSize;
+  /** Navigation style */
+  nav_style?: NavStyle;
+  /** Show search button in header */
+  show_search_in_header?: boolean;
+  /** Make header transparent when at top of page (for immersive) */
+  transparent_on_top?: boolean;
+  /** Hero section configuration (for branded/immersive headers) */
+  hero?: {
+    image_url?: string;
+    height?: HeroHeight;
+    overlay_opacity?: number;
+    title_visible?: boolean;
+    tagline_visible?: boolean;
+  } | null;
+}
+
+// ============================================================================
+// Ambient Effects Configuration Type
+// ============================================================================
+
+export interface PortalAmbientConfig {
+  /** Background effect type */
+  effect: AmbientEffect;
+  /** Effect intensity */
+  intensity?: IntensityLevel;
+  /** Custom colors for the effect */
+  colors?: {
+    primary?: string;
+    secondary?: string;
+  };
+  /** Number of particles (for particle_field effect) */
+  particle_count?: number;
+  /** Animation speed */
+  animation_speed?: SpeedLevel;
+}
+
+// ============================================================================
+// Component Style Configuration Type
+// ============================================================================
+
+export interface PortalComponentStyle {
+  /** Border radius for cards, buttons, etc. */
+  border_radius?: BorderRadius;
+  /** Shadow level for cards */
+  shadows?: ShadowLevel;
+  /** Card visual style */
+  card_style?: CardStyle;
+  /** Button visual style */
+  button_style?: ButtonStyle;
+  /** Enable neon glow effects */
+  glow_enabled?: boolean;
+  /** Glow effect intensity */
+  glow_intensity?: GlowIntensity;
+  /** Animation level */
+  animations?: AnimationLevel;
+  /** Enable glass/frosted effects */
+  glass_enabled?: boolean;
+}
+
+// ============================================================================
+// Portal Branding Type (Extended)
+// ============================================================================
+
+export interface PortalBranding {
+  // Core asset URLs
+  logo_url?: string;
+  hero_image_url?: string;
+  favicon_url?: string;
+  og_image_url?: string;
+
+  // Color palette
+  primary_color?: string;
+  secondary_color?: string;
+  accent_color?: string;
+  background_color?: string;
+  text_color?: string;
+  muted_color?: string;
+  button_color?: string;
+  button_text_color?: string;
+  border_color?: string;
+  card_color?: string;
+
+  // Typography
+  font_heading?: string;
+  font_body?: string;
+
+  // Theme mode
+  theme_mode?: "dark" | "light";
+
+  // Enterprise-only branding
+  /** Enterprise only: Hide "Powered by LostCity" attribution */
+  hide_attribution?: boolean;
+  /** Enterprise only: Custom footer text replacing "© LostCity" */
+  footer_text?: string;
+  /** Enterprise only: Custom footer links */
+  footer_links?: { label: string; url: string }[];
+  /** Enterprise only: Brand name for sharing (e.g., "Discovered on {brand}") */
+  sharing_brand_name?: string;
+
+  // NEW: Visual preset (base theme package)
+  visual_preset?: VisualPresetId;
+
+  // NEW: Header configuration
+  header?: Partial<PortalHeaderConfig>;
+
+  // NEW: Ambient/background effects
+  ambient?: Partial<PortalAmbientConfig>;
+
+  // NEW: Portal-specific category colors (overrides global category colors)
+  category_colors?: Record<string, string>;
+
+  // NEW: Component style variants
+  component_style?: Partial<PortalComponentStyle>;
+
+  // Allow additional fields for extensibility
+  [key: string]: unknown;
+}
 
 export type Portal = {
   id: string;
@@ -14,6 +179,12 @@ export type Portal = {
   portal_type: "city" | "event" | "business" | "personal";
   status: string;
   visibility: string;
+  /** Plan tier: starter (free), professional, or enterprise */
+  plan?: "starter" | "professional" | "enterprise";
+  /** Custom domain for white-label portals (e.g., events.marriott.com) */
+  custom_domain?: string | null;
+  /** Parent city portal ID for B2B portals */
+  parent_portal_id?: string | null;
   filters: {
     city?: string;
     geo_center?: [number, number];
@@ -27,26 +198,7 @@ export type Portal = {
     venue_ids?: number[];
     tags?: string[];
   };
-  branding: {
-    logo_url?: string;
-    hero_image_url?: string;
-    favicon_url?: string;
-    og_image_url?: string;
-    primary_color?: string;
-    secondary_color?: string;
-    accent_color?: string;
-    background_color?: string;
-    text_color?: string;
-    muted_color?: string;
-    button_color?: string;
-    button_text_color?: string;
-    border_color?: string;
-    card_color?: string;
-    font_heading?: string;
-    font_body?: string;
-    theme_mode?: "dark" | "light";
-    [key: string]: unknown;
-  };
+  branding: PortalBranding;
   settings: {
     nav_labels?: {
       feed?: string;

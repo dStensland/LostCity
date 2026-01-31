@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import UnifiedHeader from "@/components/UnifiedHeader";
-import PageFooter from "@/components/PageFooter";
+import PortalFooter from "@/components/PortalFooter";
 import ListDetailView from "@/components/community/ListDetailView";
 
 export const dynamic = "force-dynamic";
@@ -61,7 +61,7 @@ export default async function ListDetailPage({ params }: Props) {
         </Suspense>
       </div>
 
-      <PageFooter />
+      <PortalFooter />
     </div>
   );
 }

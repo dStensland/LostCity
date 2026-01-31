@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import type { CookieOptions } from "@supabase/ssr";
+import { getCachedDomain, setCachedDomain } from "@/lib/domain-cache";
 
 // Sanitize API key - remove any whitespace, control chars, or URL encoding artifacts
 function sanitizeKey(key: string | undefined): string | undefined {
@@ -11,6 +12,74 @@ function sanitizeKey(key: string | undefined): string | undefined {
     .replace(/%0A/gi, '')
     .replace(/%0D/gi, '')
     .replace(/[^\x20-\x7E]/g, '');
+}
+
+// Known LostCity domains that should NOT be treated as custom domains
+const LOSTCITY_DOMAINS = [
+  'lostcity.ai',
+  'lostcity.com',
+  'localhost',
+  'vercel.app',
+];
+
+/**
+ * Check if a host is a custom domain (not a LostCity subdomain)
+ */
+function isCustomDomain(host: string): boolean {
+  const lowerHost = host.toLowerCase();
+
+  // Check if it's a known LostCity domain or subdomain
+  for (const domain of LOSTCITY_DOMAINS) {
+    if (lowerHost === domain || lowerHost.endsWith(`.${domain}`)) {
+      return false;
+    }
+  }
+
+  // It's a custom domain if it has a TLD (contains at least one dot)
+  return lowerHost.includes('.');
+}
+
+/**
+ * Resolve custom domain to portal slug using edge-compatible approach
+ * Uses cached values when available, falls back to API call
+ */
+async function resolveCustomDomainInMiddleware(
+  host: string,
+  request: NextRequest
+): Promise<string | null> {
+  const normalizedDomain = host.toLowerCase().replace(/^www\./, '');
+
+  // Check in-memory cache first
+  const cached = getCachedDomain(normalizedDomain);
+  if (cached !== undefined) {
+    return cached;
+  }
+
+  // For edge runtime, we can't use Supabase directly - use internal API
+  // This API call will be very fast since it's same-origin
+  try {
+    const apiUrl = new URL('/api/internal/resolve-domain', request.url);
+    apiUrl.searchParams.set('domain', normalizedDomain);
+
+    const response = await fetch(apiUrl.toString(), {
+      headers: {
+        'x-internal-request': 'true',
+      },
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      const slug = data.slug || null;
+      setCachedDomain(normalizedDomain, slug);
+      return slug;
+    }
+  } catch {
+    // Fall through - treat as no custom domain
+  }
+
+  // Cache the negative result
+  setCachedDomain(normalizedDomain, null);
+  return null;
 }
 
 /**
@@ -101,10 +170,10 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  return handleSubdomainRouting(request, response, cookiesToSet);
+  return await handleSubdomainRouting(request, response, cookiesToSet);
 }
 
-function handleSubdomainRouting(
+async function handleSubdomainRouting(
   request: NextRequest,
   response: NextResponse,
   cookiesToSet: Array<{ name: string; value: string; options: CookieOptions }>
@@ -112,9 +181,45 @@ function handleSubdomainRouting(
   const host = request.headers.get("host") || "";
   const url = request.nextUrl.clone();
 
-  // Parse subdomain from host
-  let subdomain: string | null = null;
+  // Don't process API routes
+  if (url.pathname.startsWith("/api/")) {
+    return response;
+  }
 
+  let portalSlug: string | null = null;
+
+  // Step 1: Check for custom domain first (highest priority)
+  // Custom domains are non-LostCity domains like events.marriott.com
+  if (isCustomDomain(host)) {
+    portalSlug = await resolveCustomDomainInMiddleware(host, request);
+
+    // If custom domain resolved, handle routing
+    if (portalSlug) {
+      // Only rewrite root path to portal page
+      if (url.pathname === "/" || url.pathname === "") {
+        url.pathname = `/${portalSlug}`;
+
+        const rewriteResponse = NextResponse.rewrite(url);
+        cookiesToSet.forEach(({ name, value, options }) => {
+          rewriteResponse.cookies.set(name, value, options);
+        });
+        // Mark as custom domain for downstream code
+        rewriteResponse.headers.set("x-portal-slug", portalSlug);
+        rewriteResponse.headers.set("x-custom-domain", "true");
+        return rewriteResponse;
+      }
+
+      // For non-root paths, pass through with portal context
+      response.headers.set("x-portal-slug", portalSlug);
+      response.headers.set("x-custom-domain", "true");
+      return response;
+    }
+
+    // Custom domain didn't resolve - fall through to check subdomains
+    // This handles cases where someone points a domain but hasn't verified it
+  }
+
+  // Step 2: Parse subdomain from host (for LostCity subdomains)
   // Production: atlanta.lostcity.ai
   // Local: atlanta.localhost:3000
   if (host.includes(".")) {
@@ -124,27 +229,22 @@ function handleSubdomainRouting(
     // Skip www and the main domain parts
     const skipParts = ["www", "lostcity", "localhost", "vercel"];
     if (!skipParts.includes(firstPart) && parts.length > 1) {
-      subdomain = firstPart;
+      portalSlug = firstPart;
     }
   }
 
-  // Development fallback: ?portal=atlanta
-  if (!subdomain && process.env.NODE_ENV === "development") {
-    subdomain = request.nextUrl.searchParams.get("portal");
+  // Step 3: Development fallback: ?portal=atlanta
+  if (!portalSlug && process.env.NODE_ENV === "development") {
+    portalSlug = request.nextUrl.searchParams.get("portal");
   }
 
-  // If we have a subdomain, rewrite root to portal page
-  if (subdomain) {
-    // Don't rewrite API routes
-    if (url.pathname.startsWith("/api/")) {
-      return response;
-    }
-
+  // If we have a portal slug, rewrite root to portal page
+  if (portalSlug) {
     // Only rewrite root path to portal page
     // atlanta.lostcity.ai/ -> /atlanta
     // Other paths like /events/123 work as-is (global routes)
     if (url.pathname === "/" || url.pathname === "") {
-      url.pathname = `/${subdomain}`;
+      url.pathname = `/${portalSlug}`;
 
       // Remove the portal query param if present
       url.searchParams.delete("portal");
@@ -159,7 +259,7 @@ function handleSubdomainRouting(
 
     // For non-root paths, just pass through but store subdomain context
     // This allows events, collections, etc. to work on subdomains
-    response.headers.set("x-portal-slug", subdomain);
+    response.headers.set("x-portal-slug", portalSlug);
   }
 
   return response;

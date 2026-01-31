@@ -1,6 +1,13 @@
 "use client";
 
-import type { Portal } from "@/lib/portal-context";
+import { useEffect } from "react";
+import type { Portal, PortalBranding } from "@/lib/portal-context";
+import { applyPreset } from "@/lib/apply-preset";
+import {
+  BORDER_RADIUS_VALUES,
+  SHADOW_VALUES,
+  GLOW_OPACITY_VALUES,
+} from "@/lib/visual-presets";
 
 interface PortalThemeProps {
   portal: Portal;
@@ -9,10 +16,14 @@ interface PortalThemeProps {
 /**
  * Injects portal-specific CSS variables and loads custom fonts.
  * Renders a <style> tag with CSS custom properties that override defaults.
+ * Now supports deep white-labeling with visual presets and component styles.
  */
 export function PortalTheme({ portal }: PortalThemeProps) {
   const branding = portal.branding || {};
   const settings = portal.settings || {};
+
+  // Apply visual preset to get resolved branding with all defaults
+  const resolvedBranding = applyPreset(branding as PortalBranding);
 
   // Extract branding values with defaults
   const primaryColor = (branding.primary_color as string) || null;
@@ -169,6 +180,61 @@ export function PortalTheme({ portal }: PortalThemeProps) {
     cssVars.push(`--portal-font-body: '${fontBody}', sans-serif;`);
   }
 
+  // =========================================================================
+  // Component Style Variables (from visual preset + overrides)
+  // =========================================================================
+  const componentStyle = resolvedBranding.component_style;
+
+  // Border radius
+  if (componentStyle.border_radius) {
+    const radiusValue = BORDER_RADIUS_VALUES[componentStyle.border_radius];
+    cssVars.push(`--radius-base: ${radiusValue};`);
+    cssVars.push(`--radius-card: ${radiusValue};`);
+    cssVars.push(`--radius-button: ${radiusValue};`);
+  }
+
+  // Shadows
+  if (componentStyle.shadows) {
+    const shadowValue = SHADOW_VALUES[componentStyle.shadows];
+    cssVars.push(`--shadow-card: ${shadowValue};`);
+  }
+
+  // Glow settings
+  if (componentStyle.glow_enabled !== undefined) {
+    const glowOpacity = componentStyle.glow_enabled
+      ? GLOW_OPACITY_VALUES[componentStyle.glow_intensity || "medium"]
+      : 0;
+    cssVars.push(`--glow-opacity: ${glowOpacity};`);
+  }
+
+  // Glass blur (for glass card style)
+  if (componentStyle.glass_enabled !== undefined) {
+    cssVars.push(`--glass-blur: ${componentStyle.glass_enabled ? "12px" : "0"};`);
+    if (!componentStyle.glass_enabled) {
+      // Disable glass backdrop-filter if glass is disabled
+      cssVars.push(`--glass-backdrop: none;`);
+    }
+  }
+
+  // Animation settings
+  if (componentStyle.animations) {
+    const animMultiplier = componentStyle.animations === "none" ? 0
+      : componentStyle.animations === "subtle" ? 0.5 : 1;
+    cssVars.push(`--animation-duration-multiplier: ${animMultiplier};`);
+    if (componentStyle.animations === "none") {
+      cssVars.push(`--animation-play-state: paused;`);
+    }
+  }
+
+  // =========================================================================
+  // Category Color Overrides
+  // =========================================================================
+  if (resolvedBranding.category_colors) {
+    for (const [category, color] of Object.entries(resolvedBranding.category_colors)) {
+      cssVars.push(`--cat-${category}: ${color};`);
+    }
+  }
+
   // Build Google Fonts URL if custom fonts are specified
   const fontsToLoad: string[] = [];
   if (fontHeading) fontsToLoad.push(fontHeading.replace(/ /g, "+"));
@@ -191,10 +257,83 @@ export function PortalTheme({ portal }: PortalThemeProps) {
 }`
     : "";
 
+  // Build reduced motion override for accessibility
+  const reducedMotionCss = `
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}`;
+
   // Generate the full style block
-  const styleContent = cssVars.length > 0 || iconGlowOverride
-    ? `:root {\n  ${cssVars.join("\n  ")}\n}\n${fontHeading ? `.font-serif, .font-display, h1, h2, h3, h4, h5, h6 { font-family: var(--portal-font-heading); }` : ""}\n${fontBody ? `body, .font-sans { font-family: var(--portal-font-body); }` : ""}${iconGlowOverride}`
-    : "";
+  const rootCss = cssVars.length > 0 ? `:root {\n  ${cssVars.join("\n  ")}\n}` : "";
+  const fontCss = [
+    fontHeading ? `.font-serif, .font-display, h1, h2, h3, h4, h5, h6 { font-family: var(--portal-font-heading); }` : "",
+    fontBody ? `body, .font-sans { font-family: var(--portal-font-body); }` : "",
+  ].filter(Boolean).join("\n");
+
+  const styleContent = [rootCss, fontCss, iconGlowOverride, reducedMotionCss]
+    .filter(Boolean)
+    .join("\n");
+
+  // Set data attributes on body element for component style targeting
+  useEffect(() => {
+    const body = document.body;
+
+    // Set card style
+    if (componentStyle.card_style && componentStyle.card_style !== "default") {
+      body.dataset.cardStyle = componentStyle.card_style;
+    } else {
+      delete body.dataset.cardStyle;
+    }
+
+    // Set button style
+    if (componentStyle.button_style && componentStyle.button_style !== "default") {
+      body.dataset.buttonStyle = componentStyle.button_style;
+    } else {
+      delete body.dataset.buttonStyle;
+    }
+
+    // Set glow state
+    if (!componentStyle.glow_enabled) {
+      body.dataset.glow = "disabled";
+    } else {
+      delete body.dataset.glow;
+    }
+
+    // Set glass state
+    if (!componentStyle.glass_enabled) {
+      body.dataset.glass = "disabled";
+    } else {
+      delete body.dataset.glass;
+    }
+
+    // Set animation level
+    if (componentStyle.animations && componentStyle.animations !== "full") {
+      body.dataset.animations = componentStyle.animations;
+    } else {
+      delete body.dataset.animations;
+    }
+
+    // Set theme mode
+    if (isLight) {
+      body.dataset.theme = "light";
+    } else {
+      delete body.dataset.theme;
+    }
+
+    // Cleanup on unmount
+    return () => {
+      delete body.dataset.cardStyle;
+      delete body.dataset.buttonStyle;
+      delete body.dataset.glow;
+      delete body.dataset.glass;
+      delete body.dataset.animations;
+      delete body.dataset.theme;
+    };
+  }, [componentStyle, isLight]);
 
   // Don't render anything if no customizations
   if (!styleContent && !googleFontsUrl) {
