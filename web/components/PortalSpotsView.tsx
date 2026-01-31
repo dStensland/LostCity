@@ -1,30 +1,13 @@
 "use client";
 
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo, useCallback } from "react";
 import Link from "next/link";
 import CategoryIcon, { getCategoryLabel, getCategoryColor } from "./CategoryIcon";
 import CategorySkeleton from "./CategorySkeleton";
 import LazyImage from "./LazyImage";
-
-// Get reflection color class based on spot type
-function getReflectionClass(spotType: string | null): string {
-  if (!spotType) return "";
-  const reflectionMap: Record<string, string> = {
-    music_venue: "reflect-music",
-    comedy_club: "reflect-comedy",
-    art_gallery: "reflect-art",
-    theater: "reflect-theater",
-    movie_theater: "reflect-film",
-    community_space: "reflect-community",
-    restaurant: "reflect-food",
-    bar: "reflect-nightlife",
-    sports_venue: "reflect-sports",
-    fitness_studio: "reflect-fitness",
-    nightclub: "reflect-nightlife",
-    family_venue: "reflect-family",
-  };
-  return reflectionMap[spotType] || "";
-}
+import { OpenStatusBadge } from "./HoursSection";
+import { formatCloseTime, type HoursData } from "@/lib/hours";
+import { formatPriceLevel } from "@/lib/spots";
 
 type Spot = {
   id: number;
@@ -35,15 +18,29 @@ type Spot = {
   venue_type: string | null;
   image_url?: string | null;
   event_count?: number;
-  lat?: number | null;
-  lng?: number | null;
+  price_level?: number | null;
+  hours?: HoursData | null;
+  hours_display?: string | null;
+  is_24_hours?: boolean | null;
+  vibes?: string[] | null;
+  short_description?: string | null;
+  is_open?: boolean;
+  closes_at?: string;
 };
 
 type SortOption = "category" | "alphabetical" | "neighborhood";
 
+type FilterState = {
+  openNow: boolean;
+  priceLevel: number[];
+  venueTypes: string[];
+  neighborhoods: string[];
+  search: string;
+  withEvents: boolean;
+};
+
 // Spot type configuration with colors and labels
 const SPOT_TYPE_CONFIG: Record<string, { label: string; color: string }> = {
-  // Performance & Arts
   music_venue: { label: "Music Venues", color: "#F472B6" },
   theater: { label: "Theaters", color: "#F87171" },
   cinema: { label: "Cinemas", color: "#A5B4FC" },
@@ -51,8 +48,6 @@ const SPOT_TYPE_CONFIG: Record<string, { label: string; color: string }> = {
   gallery: { label: "Galleries", color: "#C4B5FD" },
   museum: { label: "Museums", color: "#A78BFA" },
   studio: { label: "Studios", color: "#A3E635" },
-
-  // Food & Drink
   restaurant: { label: "Restaurants", color: "#FB923C" },
   bar: { label: "Bars", color: "#C084FC" },
   sports_bar: { label: "Sports Bars", color: "#38BDF8" },
@@ -61,109 +56,53 @@ const SPOT_TYPE_CONFIG: Record<string, { label: string; color: string }> = {
   coffee_shop: { label: "Coffee Shops", color: "#D4A574" },
   food_hall: { label: "Food Halls", color: "#FB923C" },
   farmers_market: { label: "Markets", color: "#FCA5A5" },
-
-  // Nightlife
   club: { label: "Clubs", color: "#E879F9" },
   nightclub: { label: "Nightclubs", color: "#E879F9" },
-
-  // Books & Learning
   bookstore: { label: "Bookstores", color: "#93C5FD" },
   library: { label: "Libraries", color: "#60A5FA" },
   university: { label: "Universities", color: "#60A5FA" },
   college: { label: "Colleges", color: "#60A5FA" },
   cooking_school: { label: "Cooking Schools", color: "#F97316" },
   coworking: { label: "Coworking", color: "#60A5FA" },
-
-  // Community & Organizations
   organization: { label: "Organizations", color: "#6EE7B7" },
   community_center: { label: "Community Centers", color: "#6EE7B7" },
-  community_space: { label: "Community Spaces", color: "#34D399" },
   church: { label: "Churches", color: "#DDD6FE" },
-
-  // Sports & Fitness
   arena: { label: "Arenas", color: "#7DD3FC" },
   sports_venue: { label: "Sports Venues", color: "#4ADE80" },
   fitness_center: { label: "Fitness Centers", color: "#5EEAD4" },
-  fitness_studio: { label: "Fitness Studios", color: "#2DD4BF" },
-
-  // Outdoors
   park: { label: "Parks", color: "#86EFAC" },
   garden: { label: "Gardens", color: "#4ADE80" },
   outdoor: { label: "Outdoor Spaces", color: "#BEF264" },
-
-  // Entertainment & Events
   event_space: { label: "Event Spaces", color: "#A78BFA" },
   convention_center: { label: "Convention Centers", color: "#38BDF8" },
   games: { label: "Game Venues", color: "#86EFAC" },
   eatertainment: { label: "Eatertainment", color: "#22D3EE" },
   attraction: { label: "Attractions", color: "#FBBF24" },
-
-  // Hospitality & Services
   hotel: { label: "Hotels", color: "#FBBF24" },
-  hospital: { label: "Hospitals", color: "#34D399" },
-  healthcare: { label: "Healthcare", color: "#34D399" },
-
-  // Catch-all
-  venue: { label: "The Rest", color: "#94A3B8" },
+  venue: { label: "Venues", color: "#94A3B8" },
   other: { label: "Other", color: "#64748B" },
 };
 
-// Order for category sorting
 const SPOT_TYPE_ORDER = [
-  // Performance & Arts
-  "music_venue",
-  "theater",
-  "cinema",
-  "comedy_club",
-  "gallery",
-  "museum",
-  "studio",
-  // Food & Drink
-  "restaurant",
-  "bar",
-  "sports_bar",
-  "brewery",
-  "distillery",
-  "coffee_shop",
-  "food_hall",
-  "farmers_market",
-  // Nightlife
-  "club",
-  "nightclub",
-  // Books & Learning
-  "bookstore",
-  "library",
-  "university",
-  "college",
-  "cooking_school",
-  "coworking",
-  // Community & Organizations
-  "organization",
-  "community_center",
-  "community_space",
-  "church",
-  // Sports & Fitness
-  "arena",
-  "sports_venue",
-  "fitness_center",
-  "fitness_studio",
-  // Outdoors
-  "park",
-  "garden",
-  "outdoor",
-  // Entertainment & Events
-  "event_space",
-  "convention_center",
-  "games",
-  "eatertainment",
-  "attraction",
-  // Hospitality & Services
-  "hotel",
-  "hospital",
-  "healthcare",
-  // Catch-all
-  "venue",
-  "other",
+  "music_venue", "theater", "cinema", "comedy_club", "gallery", "museum", "studio",
+  "restaurant", "bar", "sports_bar", "brewery", "distillery", "coffee_shop", "food_hall", "farmers_market",
+  "club", "nightclub",
+  "bookstore", "library", "university", "college", "cooking_school", "coworking",
+  "organization", "community_center", "church",
+  "arena", "sports_venue", "fitness_center",
+  "park", "garden", "outdoor",
+  "event_space", "convention_center", "games", "eatertainment", "attraction",
+  "hotel", "venue", "other",
+];
+
+// Quick filter venue type groups
+const QUICK_VENUE_TYPES = [
+  { key: "nightlife", label: "Nightlife", types: ["bar", "club", "nightclub", "brewery", "distillery"], color: "#C084FC" },
+  { key: "food", label: "Food", types: ["restaurant", "food_hall", "farmers_market"], color: "#FB923C" },
+  { key: "music", label: "Music", types: ["music_venue"], color: "#F472B6" },
+  { key: "arts", label: "Arts", types: ["theater", "gallery", "museum", "comedy_club"], color: "#A78BFA" },
+  { key: "coffee", label: "Coffee", types: ["coffee_shop"], color: "#D4A574" },
+  { key: "games", label: "Games", types: ["games", "eatertainment", "arcade"], color: "#86EFAC" },
 ];
 
 interface Props {
@@ -172,20 +111,12 @@ interface Props {
   isExclusive?: boolean;
 }
 
-// Threshold for "featured" badge (venues with lots of events)
 const FEATURED_EVENT_THRESHOLD = 5;
 
 // Spot card component
-function SpotCard({
-  spot,
-  portalSlug,
-}: {
-  spot: Spot;
-  portalSlug: string;
-}) {
+function SpotCard({ spot, portalSlug }: { spot: Spot; portalSlug: string }) {
   const [imageError, setImageError] = useState(false);
   const categoryColor = spot.venue_type ? getCategoryColor(spot.venue_type) : "var(--coral)";
-  const reflectionClass = getReflectionClass(spot.venue_type);
   const config = SPOT_TYPE_CONFIG[spot.venue_type || "other"] || SPOT_TYPE_CONFIG.other;
   const hasImage = spot.image_url && !imageError;
   const isFeatured = (spot.event_count ?? 0) >= FEATURED_EVENT_THRESHOLD;
@@ -194,21 +125,15 @@ function SpotCard({
     <Link
       href={`/${portalSlug}?spot=${spot.slug}`}
       scroll={false}
-      className={`block p-3 rounded-sm border border-[var(--twilight)] card-atmospheric ${reflectionClass} group`}
-      style={{
-        backgroundColor: "var(--card-bg)",
-        "--glow-color": categoryColor,
-        "--reflection-color": `color-mix(in srgb, ${categoryColor} 15%, transparent)`,
-      } as React.CSSProperties}
+      className="block p-3 rounded-lg border border-[var(--twilight)] bg-[var(--card-bg)] hover:border-[var(--coral)]/50 hover:bg-[var(--card-bg-hover)] transition-all group"
+      style={{ "--glow-color": categoryColor } as React.CSSProperties}
     >
-      <div className="flex items-center gap-3">
+      <div className="flex items-start gap-3">
         {/* Thumbnail */}
         <div
-          className="flex-shrink-0 w-12 h-12 rounded-sm overflow-hidden border border-[var(--twilight)] flex items-center justify-center"
+          className="flex-shrink-0 w-14 h-14 rounded-lg overflow-hidden border border-[var(--twilight)] flex items-center justify-center"
           style={{
-            background: hasImage
-              ? undefined
-              : `linear-gradient(135deg, ${categoryColor}20, ${categoryColor}08)`,
+            background: hasImage ? undefined : `linear-gradient(135deg, ${categoryColor}20, ${categoryColor}08)`,
           }}
         >
           {hasImage ? (
@@ -216,61 +141,344 @@ function SpotCard({
               src={spot.image_url!}
               alt=""
               fill
-              sizes="48px"
+              sizes="56px"
               className="w-full h-full object-cover"
               placeholderColor={`${categoryColor}15`}
               onError={() => setImageError(true)}
             />
           ) : (
-            <CategoryIcon
-              type={spot.venue_type || "venue"}
-              size={20}
-              glow="subtle"
-            />
+            <CategoryIcon type={spot.venue_type || "venue"} size={24} glow="subtle" />
           )}
         </div>
 
         {/* Content */}
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <span className="font-medium text-[var(--cream)] group-hover:text-[var(--glow-color)] transition-colors truncate">
               {spot.name}
             </span>
+            {spot.is_open !== undefined && (
+              <OpenStatusBadge hours={spot.hours || null} is24Hours={spot.is_24_hours || false} />
+            )}
             {isFeatured && (
               <span
-                className="flex-shrink-0 px-1.5 py-0.5 rounded-sm font-mono text-[0.5rem] font-medium uppercase"
-                style={{
-                  backgroundColor: `${categoryColor}25`,
-                  color: categoryColor,
-                  border: `1px solid ${categoryColor}40`,
-                }}
+                className="flex-shrink-0 px-1.5 py-0.5 rounded font-mono text-[0.5rem] font-medium uppercase"
+                style={{ backgroundColor: `${categoryColor}25`, color: categoryColor, border: `1px solid ${categoryColor}40` }}
               >
                 Hot
               </span>
             )}
           </div>
-          <div className="flex items-center gap-2 font-mono text-[0.65rem] text-[var(--muted)] mt-0.5">
-            {spot.venue_type && (
-              <span style={{ color: config.color }}>{getCategoryLabel(spot.venue_type)}</span>
-            )}
+
+          {spot.short_description && (
+            <p className="text-xs text-[var(--soft)] mt-0.5 line-clamp-1">{spot.short_description}</p>
+          )}
+
+          <div className="flex items-center gap-2 font-mono text-[0.65rem] text-[var(--muted)] mt-1 flex-wrap">
+            {spot.venue_type && <span style={{ color: config.color }}>{getCategoryLabel(spot.venue_type)}</span>}
             {spot.neighborhood && (
               <>
                 <span className="opacity-40">·</span>
                 <span className="truncate">{spot.neighborhood}</span>
               </>
             )}
+            {spot.price_level && (
+              <>
+                <span className="opacity-40">·</span>
+                <span className="text-[var(--gold)]">{formatPriceLevel(spot.price_level)}</span>
+              </>
+            )}
+            {spot.is_open && spot.closes_at && (
+              <>
+                <span className="opacity-40">·</span>
+                <span className="text-[var(--neon-green)]">til {formatCloseTime(spot.closes_at)}</span>
+              </>
+            )}
             {(spot.event_count ?? 0) > 0 && (
               <>
                 <span className="opacity-40">·</span>
-                <span className="text-[var(--coral)] flex-shrink-0">
-                  {spot.event_count} event{spot.event_count !== 1 ? "s" : ""}
-                </span>
+                <span className="text-[var(--coral)]">{spot.event_count} event{spot.event_count !== 1 ? "s" : ""}</span>
               </>
             )}
           </div>
         </div>
+
+        <svg
+          className="w-4 h-4 text-[var(--muted)] group-hover:text-[var(--coral)] transition-colors flex-shrink-0 mt-1"
+          fill="none" stroke="currentColor" viewBox="0 0 24 24"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+        </svg>
       </div>
     </Link>
+  );
+}
+
+// Filter Control Deck
+function FilterDeck({
+  filters,
+  setFilters,
+  openCount,
+  neighborhoods,
+}: {
+  filters: FilterState;
+  setFilters: React.Dispatch<React.SetStateAction<FilterState>>;
+  openCount: number;
+  neighborhoods: string[];
+}) {
+  const [showMore, setShowMore] = useState(false);
+
+  const hasActiveFilters = filters.openNow || filters.priceLevel.length > 0 ||
+    filters.venueTypes.length > 0 || filters.neighborhoods.length > 0 ||
+    filters.search || filters.withEvents;
+
+  const clearFilters = () => {
+    setFilters({
+      openNow: false,
+      priceLevel: [],
+      venueTypes: [],
+      neighborhoods: [],
+      search: "",
+      withEvents: false,
+    });
+  };
+
+  const toggleVenueTypeGroup = (types: string[]) => {
+    const allSelected = types.every(t => filters.venueTypes.includes(t));
+    if (allSelected) {
+      setFilters(f => ({ ...f, venueTypes: f.venueTypes.filter(t => !types.includes(t)) }));
+    } else {
+      setFilters(f => ({ ...f, venueTypes: [...new Set([...f.venueTypes, ...types])] }));
+    }
+  };
+
+  const togglePriceLevel = (level: number) => {
+    setFilters(f => ({
+      ...f,
+      priceLevel: f.priceLevel.includes(level)
+        ? f.priceLevel.filter(l => l !== level)
+        : [...f.priceLevel, level],
+    }));
+  };
+
+  const toggleNeighborhood = (hood: string) => {
+    setFilters(f => ({
+      ...f,
+      neighborhoods: f.neighborhoods.includes(hood)
+        ? f.neighborhoods.filter(n => n !== hood)
+        : [...f.neighborhoods, hood],
+    }));
+  };
+
+  return (
+    <div className="mb-6 space-y-3">
+      {/* Primary Filter Row - Open Now + Search + Price */}
+      <div className="flex items-center gap-3 flex-wrap">
+        {/* Open Now Toggle - Prominent "Power Switch" Style */}
+        <button
+          onClick={() => setFilters(f => ({ ...f, openNow: !f.openNow }))}
+          className={`relative flex items-center gap-2 px-4 py-2 rounded-lg font-mono text-sm font-medium transition-all ${
+            filters.openNow
+              ? "bg-[var(--neon-green)]/20 text-[var(--neon-green)] border-2 border-[var(--neon-green)]/50 shadow-[0_0_20px_rgba(34,197,94,0.3)]"
+              : "bg-[var(--dusk)] text-[var(--muted)] border-2 border-[var(--twilight)] hover:border-[var(--neon-green)]/30 hover:text-[var(--soft)]"
+          }`}
+        >
+          <span className={`w-2.5 h-2.5 rounded-full transition-all ${
+            filters.openNow ? "bg-[var(--neon-green)] shadow-[0_0_8px_var(--neon-green)] animate-pulse" : "bg-[var(--twilight)]"
+          }`} />
+          <span>Open Now</span>
+          {openCount > 0 && (
+            <span className={`text-xs ${filters.openNow ? "text-[var(--neon-green)]/70" : "text-[var(--muted)]"}`}>
+              ({openCount})
+            </span>
+          )}
+        </button>
+
+        {/* Search Input */}
+        <div className="relative flex-1 min-w-[200px] max-w-xs">
+          <input
+            type="text"
+            placeholder="Search destinations..."
+            value={filters.search}
+            onChange={(e) => setFilters(f => ({ ...f, search: e.target.value }))}
+            className="w-full px-4 py-2 pl-10 bg-[var(--dusk)] border-2 border-[var(--twilight)] rounded-lg font-mono text-sm text-[var(--cream)] placeholder:text-[var(--muted)] focus:outline-none focus:border-[var(--coral)]/50 focus:shadow-[0_0_15px_rgba(255,107,107,0.15)] transition-all"
+          />
+          <svg
+            className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--muted)]"
+            fill="none" stroke="currentColor" viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+          {filters.search && (
+            <button
+              onClick={() => setFilters(f => ({ ...f, search: "" }))}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--muted)] hover:text-[var(--cream)]"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          )}
+        </div>
+
+        {/* Price Level Selector */}
+        <div className="flex items-center gap-1 bg-[var(--dusk)] border-2 border-[var(--twilight)] rounded-lg p-1">
+          {[1, 2, 3, 4].map((level) => (
+            <button
+              key={level}
+              onClick={() => togglePriceLevel(level)}
+              className={`px-2.5 py-1 rounded font-mono text-sm transition-all ${
+                filters.priceLevel.includes(level)
+                  ? "bg-[var(--gold)]/20 text-[var(--gold)] shadow-[0_0_10px_rgba(251,191,36,0.2)]"
+                  : "text-[var(--muted)] hover:text-[var(--gold)]"
+              }`}
+              title={`Price level ${level}`}
+            >
+              {"$".repeat(level)}
+            </button>
+          ))}
+        </div>
+
+        {/* Has Events Toggle */}
+        <button
+          onClick={() => setFilters(f => ({ ...f, withEvents: !f.withEvents }))}
+          className={`flex items-center gap-2 px-3 py-2 rounded-lg font-mono text-xs font-medium transition-all ${
+            filters.withEvents
+              ? "bg-[var(--coral)]/20 text-[var(--coral)] border border-[var(--coral)]/50"
+              : "bg-[var(--dusk)] text-[var(--muted)] border border-[var(--twilight)] hover:border-[var(--coral)]/30"
+          }`}
+        >
+          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+          </svg>
+          Events
+        </button>
+
+        {/* More Filters Toggle */}
+        <button
+          onClick={() => setShowMore(!showMore)}
+          className={`flex items-center gap-1.5 px-3 py-2 rounded-lg font-mono text-xs font-medium transition-all ${
+            showMore || filters.venueTypes.length > 0 || filters.neighborhoods.length > 0
+              ? "bg-[var(--rose)]/20 text-[var(--rose)] border border-[var(--rose)]/50"
+              : "bg-[var(--dusk)] text-[var(--muted)] border border-[var(--twilight)] hover:text-[var(--cream)]"
+          }`}
+        >
+          <svg className={`w-3.5 h-3.5 transition-transform ${showMore ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+          More
+          {(filters.venueTypes.length > 0 || filters.neighborhoods.length > 0) && (
+            <span className="ml-1 px-1.5 py-0.5 rounded bg-[var(--rose)]/30 text-[0.6rem]">
+              {filters.venueTypes.length + filters.neighborhoods.length}
+            </span>
+          )}
+        </button>
+      </div>
+
+      {/* Quick Category Chips */}
+      <div className="flex gap-2 overflow-x-auto scrollbar-hide -mx-4 px-4 pb-1">
+        {QUICK_VENUE_TYPES.map(({ key, label, types, color }) => {
+          const isActive = types.every(t => filters.venueTypes.includes(t));
+          const isPartial = types.some(t => filters.venueTypes.includes(t)) && !isActive;
+
+          return (
+            <button
+              key={key}
+              onClick={() => toggleVenueTypeGroup(types)}
+              className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full font-mono text-xs font-medium whitespace-nowrap transition-all ${
+                isActive
+                  ? "text-[var(--void)] shadow-[0_0_12px_rgba(255,255,255,0.1)]"
+                  : isPartial
+                  ? "bg-[var(--dusk)] border-2 border-dashed text-[var(--soft)]"
+                  : "bg-[var(--dusk)] text-[var(--muted)] border border-[var(--twilight)] hover:text-[var(--cream)] hover:border-[var(--soft)]"
+              }`}
+              style={{
+                backgroundColor: isActive ? `${color}` : undefined,
+                borderColor: isPartial ? color : undefined,
+              }}
+            >
+              <CategoryIcon type={types[0]} size={14} style={{ color: isActive ? "var(--void)" : color }} />
+              {label}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Expanded Filters */}
+      {showMore && (
+        <div className="pt-3 border-t border-[var(--twilight)] space-y-4">
+          {/* Neighborhoods */}
+          <div>
+            <div className="font-mono text-[0.65rem] text-[var(--muted)] uppercase tracking-wider mb-2">
+              Neighborhoods
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {neighborhoods.map((hood) => (
+                <button
+                  key={hood}
+                  onClick={() => toggleNeighborhood(hood)}
+                  className={`px-2.5 py-1 rounded font-mono text-[0.7rem] transition-all ${
+                    filters.neighborhoods.includes(hood)
+                      ? "bg-[var(--coral)] text-[var(--void)]"
+                      : "bg-[var(--dusk)] text-[var(--muted)] border border-[var(--twilight)] hover:text-[var(--cream)] hover:border-[var(--soft)]"
+                  }`}
+                >
+                  {hood}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Active Filters Summary */}
+      {hasActiveFilters && (
+        <div className="flex items-center gap-2 flex-wrap pt-2 border-t border-[var(--twilight)]/50">
+          <span className="font-mono text-[0.6rem] text-[var(--muted)] uppercase tracking-wider">
+            Active:
+          </span>
+          {filters.openNow && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-[var(--neon-green)]/20 text-[var(--neon-green)] font-mono text-[0.65rem]">
+              Open Now
+              <button onClick={() => setFilters(f => ({ ...f, openNow: false }))} className="hover:text-white">×</button>
+            </span>
+          )}
+          {filters.withEvents && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-[var(--coral)]/20 text-[var(--coral)] font-mono text-[0.65rem]">
+              Has Events
+              <button onClick={() => setFilters(f => ({ ...f, withEvents: false }))} className="hover:text-white">×</button>
+            </span>
+          )}
+          {filters.priceLevel.map(level => (
+            <span key={level} className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-[var(--gold)]/20 text-[var(--gold)] font-mono text-[0.65rem]">
+              {"$".repeat(level)}
+              <button onClick={() => togglePriceLevel(level)} className="hover:text-white">×</button>
+            </span>
+          ))}
+          {filters.venueTypes.slice(0, 3).map(type => (
+            <span key={type} className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-[var(--twilight)] text-[var(--cream)] font-mono text-[0.65rem]">
+              {getCategoryLabel(type)}
+              <button onClick={() => setFilters(f => ({ ...f, venueTypes: f.venueTypes.filter(t => t !== type) }))} className="hover:text-[var(--coral)]">×</button>
+            </span>
+          ))}
+          {filters.venueTypes.length > 3 && (
+            <span className="text-[var(--muted)] font-mono text-[0.65rem]">+{filters.venueTypes.length - 3} more</span>
+          )}
+          {filters.neighborhoods.map(hood => (
+            <span key={hood} className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-[var(--twilight)] text-[var(--cream)] font-mono text-[0.65rem]">
+              {hood}
+              <button onClick={() => toggleNeighborhood(hood)} className="hover:text-[var(--coral)]">×</button>
+            </span>
+          ))}
+          <button
+            onClick={clearFilters}
+            className="font-mono text-[0.6rem] text-[var(--coral)] hover:text-[var(--rose)] transition-colors ml-auto"
+          >
+            Clear all
+          </button>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -278,8 +486,17 @@ export default function PortalSpotsView({ portalId, portalSlug, isExclusive = fa
   const [spots, setSpots] = useState<Spot[]>([]);
   const [loading, setLoading] = useState(true);
   const [sortBy, setSortBy] = useState<SortOption>("category");
-  // Track which categories are expanded (collapsed by default)
-  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set(["music_venue", "bar", "restaurant"]));
+  const [meta, setMeta] = useState<{ openCount: number; neighborhoods: string[] }>({ openCount: 0, neighborhoods: [] });
+
+  const [filters, setFilters] = useState<FilterState>({
+    openNow: false,
+    priceLevel: [],
+    venueTypes: [],
+    neighborhoods: [],
+    search: "",
+    withEvents: false,
+  });
 
   const toggleCategory = (category: string) => {
     setExpandedCategories(prev => {
@@ -293,17 +510,31 @@ export default function PortalSpotsView({ portalId, portalSlug, isExclusive = fa
     });
   };
 
+  // Build query params from filters
+  const buildQueryParams = useCallback(() => {
+    const params = new URLSearchParams();
+    if (portalId) params.set("portal_id", portalId);
+    if (isExclusive) params.set("exclusive", "true");
+    if (filters.openNow) params.set("open_now", "true");
+    if (filters.withEvents) params.set("with_events", "true");
+    if (filters.priceLevel.length > 0) params.set("price_level", filters.priceLevel.join(","));
+    if (filters.venueTypes.length > 0) params.set("venue_type", filters.venueTypes.join(","));
+    if (filters.neighborhoods.length > 0) params.set("neighborhood", filters.neighborhoods.join(","));
+    if (filters.search) params.set("q", filters.search);
+    return params;
+  }, [portalId, isExclusive, filters]);
+
   useEffect(() => {
     async function fetchSpots() {
+      setLoading(true);
       try {
-        const params = new URLSearchParams();
-        if (portalId) params.set("portal_id", portalId);
-        if (isExclusive) params.set("exclusive", "true");
-
+        const params = buildQueryParams();
         const res = await fetch(`/api/spots?${params}`);
         const data = await res.json();
-
         setSpots(data.spots || []);
+        if (data.meta) {
+          setMeta(data.meta);
+        }
       } catch (error) {
         console.error("Failed to fetch spots:", error);
         setSpots([]);
@@ -313,7 +544,7 @@ export default function PortalSpotsView({ portalId, portalSlug, isExclusive = fa
     }
 
     fetchSpots();
-  }, [portalId, isExclusive]);
+  }, [buildQueryParams]);
 
   // Sort spots
   const sortedSpots = useMemo(() => {
@@ -328,7 +559,6 @@ export default function PortalSpotsView({ portalId, portalSlug, isExclusive = fa
         return a.name.localeCompare(b.name);
       });
     } else {
-      // Sort by category (venue_type), then by event count within category
       sorted.sort((a, b) => {
         const aType = a.venue_type || "other";
         const bType = b.venue_type || "other";
@@ -337,7 +567,6 @@ export default function PortalSpotsView({ portalId, portalSlug, isExclusive = fa
         const aIdx = aOrder === -1 ? 999 : aOrder;
         const bIdx = bOrder === -1 ? 999 : bOrder;
         if (aIdx !== bIdx) return aIdx - bIdx;
-        // Within same category, sort by event count then name
         if ((b.event_count ?? 0) !== (a.event_count ?? 0)) {
           return (b.event_count ?? 0) - (a.event_count ?? 0);
         }
@@ -347,21 +576,18 @@ export default function PortalSpotsView({ portalId, portalSlug, isExclusive = fa
     return sorted;
   }, [spots, sortBy]);
 
-  // Group spots by category or neighborhood for collapsible view
+  // Group spots by category or neighborhood
   const groupedSpots = useMemo(() => {
     if (sortBy === "alphabetical") return null;
 
     const groups: Record<string, Spot[]> = {};
     for (const spot of sortedSpots) {
-      const key = sortBy === "category"
-        ? (spot.venue_type || "other")
-        : (spot.neighborhood || "Other");
+      const key = sortBy === "category" ? (spot.venue_type || "other") : (spot.neighborhood || "Other");
       if (!groups[key]) groups[key] = [];
       groups[key].push(spot);
     }
 
     if (sortBy === "category") {
-      // Return in predefined order
       return SPOT_TYPE_ORDER
         .filter(type => groups[type]?.length > 0)
         .map(type => ({
@@ -370,7 +596,6 @@ export default function PortalSpotsView({ portalId, portalSlug, isExclusive = fa
           config: SPOT_TYPE_CONFIG[type] || SPOT_TYPE_CONFIG.other
         }));
     } else {
-      // Neighborhood - sort alphabetically
       return Object.keys(groups)
         .sort()
         .map(neighborhood => ({
@@ -381,147 +606,92 @@ export default function PortalSpotsView({ portalId, portalSlug, isExclusive = fa
     }
   }, [sortedSpots, sortBy]);
 
-  // Loading state - after hooks to follow Rules of Hooks
   if (loading) {
-    return (
-      <CategorySkeleton
-        count={10}
-        title="Destinations"
-        subtitle="Loading venues..."
-      />
-    );
-  }
-
-  if (spots.length === 0) {
-    return (
-      <div className="py-16 text-center">
-        <div className="w-16 h-16 mx-auto mb-4 rounded-sm bg-gradient-to-br from-[var(--twilight)] to-[var(--dusk)] flex items-center justify-center">
-          <svg className="w-8 h-8 text-[var(--muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-          </svg>
-        </div>
-        <p className="text-[var(--cream)] text-lg font-medium mb-1">No locations found</p>
-        <p className="text-[var(--muted)] text-sm mb-4">
-          We haven&apos;t discovered any venues for this portal yet
-        </p>
-        <Link
-          href={`/${portalSlug}`}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-sm bg-[var(--twilight)]/50 text-[var(--cream)] hover:bg-[var(--twilight)] transition-colors font-mono text-sm"
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-          View all events
-        </Link>
-      </div>
-    );
+    return <CategorySkeleton count={10} title="Destinations" subtitle="Loading venues..." />;
   }
 
   return (
     <div className="py-6">
-      {/* Header with count and controls */}
-      <div className="mb-6">
+      {/* Header */}
+      <div className="mb-4">
         <div className="flex items-start justify-between gap-4">
           <div>
             <h2 className="text-xl font-semibold text-[var(--cream)]">Destinations</h2>
             <p className="text-sm text-[var(--muted)] mt-1">
-              <span className="text-[var(--soft)]">{spots.length}</span> cool places to go
+              <span className="text-[var(--soft)]">{spots.length}</span> places to explore
               <span className="mx-2 opacity-40">·</span>
-              <Link
-                href="/submit/venue"
-                className="text-[var(--coral)] hover:text-[var(--rose)] transition-colors"
-              >
+              <Link href="/submit/venue" className="text-[var(--coral)] hover:text-[var(--rose)] transition-colors">
                 Add a venue
               </Link>
             </p>
           </div>
           <div className="flex items-center gap-1">
-            <span className="font-mono text-[0.6rem] text-[var(--muted)] uppercase tracking-wider mr-2 hidden sm:inline">
-              Sort:
-            </span>
-            <button
-              onClick={() => setSortBy("category")}
-              className={`px-2 py-1 rounded-sm font-mono text-[0.65rem] transition-all ${
-                sortBy === "category"
-                  ? "bg-[var(--coral)] text-[var(--void)]"
-                  : "bg-[var(--twilight)]/50 text-[var(--muted)] hover:text-[var(--cream)]"
-              }`}
-            >
-              Category
-            </button>
-            <button
-              onClick={() => setSortBy("neighborhood")}
-              className={`px-2 py-1 rounded-sm font-mono text-[0.65rem] transition-all ${
-                sortBy === "neighborhood"
-                  ? "bg-[var(--coral)] text-[var(--void)]"
-                  : "bg-[var(--twilight)]/50 text-[var(--muted)] hover:text-[var(--cream)]"
-              }`}
-            >
-              Area
-            </button>
-            <button
-              onClick={() => setSortBy("alphabetical")}
-              className={`px-2 py-1 rounded-sm font-mono text-[0.65rem] transition-all ${
-                sortBy === "alphabetical"
-                  ? "bg-[var(--coral)] text-[var(--void)]"
-                  : "bg-[var(--twilight)]/50 text-[var(--muted)] hover:text-[var(--cream)]"
-              }`}
-            >
-              A-Z
-            </button>
+            <span className="font-mono text-[0.6rem] text-[var(--muted)] uppercase tracking-wider mr-2 hidden sm:inline">Sort:</span>
+            {(["category", "neighborhood", "alphabetical"] as const).map((option) => (
+              <button
+                key={option}
+                onClick={() => setSortBy(option)}
+                className={`px-2 py-1 rounded font-mono text-[0.65rem] transition-all ${
+                  sortBy === option
+                    ? "bg-[var(--coral)] text-[var(--void)]"
+                    : "bg-[var(--twilight)]/50 text-[var(--muted)] hover:text-[var(--cream)]"
+                }`}
+              >
+                {option === "category" ? "Category" : option === "neighborhood" ? "Area" : "A-Z"}
+              </button>
+            ))}
           </div>
         </div>
       </div>
 
-      {/* Spots list with collapsible grouping */}
+      {/* Filter Deck */}
+      <FilterDeck
+        filters={filters}
+        setFilters={setFilters}
+        openCount={meta.openCount}
+        neighborhoods={meta.neighborhoods}
+      />
+
+      {/* Empty state */}
+      {spots.length === 0 && !loading && (
+        <div className="py-16 text-center">
+          <div className="w-16 h-16 mx-auto mb-4 rounded-lg bg-gradient-to-br from-[var(--twilight)] to-[var(--dusk)] flex items-center justify-center">
+            <svg className="w-8 h-8 text-[var(--muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+          </div>
+          <p className="text-[var(--cream)] text-lg font-medium mb-1">No destinations found</p>
+          <p className="text-[var(--muted)] text-sm mb-4">Try adjusting your filters</p>
+          <button
+            onClick={() => setFilters({ openNow: false, priceLevel: [], venueTypes: [], neighborhoods: [], search: "", withEvents: false })}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[var(--coral)] text-[var(--void)] hover:bg-[var(--rose)] transition-colors font-mono text-sm"
+          >
+            Clear filters
+          </button>
+        </div>
+      )}
+
+      {/* Spots list */}
       {groupedSpots ? (
         <div className="space-y-2">
           {groupedSpots.map(({ type, spots: groupSpots, config }) => {
             const isExpanded = expandedCategories.has(type);
-
             return (
               <div key={type}>
-                {/* Collapsible Header */}
-                <button
-                  onClick={() => toggleCategory(type)}
-                  className="w-full flex items-center gap-2 py-3 px-1 group/header"
-                >
-                  {sortBy === "category" && (
-                    <div
-                      className="w-2 h-2 rounded-sm"
-                      style={{ backgroundColor: config.color }}
-                    />
-                  )}
-                  <h3
-                    className="font-mono text-xs font-medium uppercase tracking-wider flex-1 text-left"
-                    style={{ color: sortBy === "category" ? config.color : "var(--muted)" }}
-                  >
+                <button onClick={() => toggleCategory(type)} className="w-full flex items-center gap-2 py-3 px-1 group/header">
+                  {sortBy === "category" && <div className="w-2 h-2 rounded-sm" style={{ backgroundColor: config.color }} />}
+                  <h3 className="font-mono text-xs font-medium uppercase tracking-wider flex-1 text-left" style={{ color: sortBy === "category" ? config.color : "var(--muted)" }}>
                     {config.label}
                   </h3>
-                  <span className="font-mono text-[0.6rem] text-[var(--muted)] mr-2">
-                    {groupSpots.length}
-                  </span>
-                  <svg
-                    className={`w-4 h-4 text-[var(--muted)] transition-transform ${isExpanded ? "rotate-180" : ""}`}
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
+                  <span className="font-mono text-[0.6rem] text-[var(--muted)] mr-2">{groupSpots.length}</span>
+                  <svg className={`w-4 h-4 text-[var(--muted)] transition-transform ${isExpanded ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                   </svg>
                 </button>
-
-                {/* Collapsible Content */}
                 {isExpanded && (
                   <div className="space-y-2 pb-4">
-                    {groupSpots.map((spot) => (
-                      <SpotCard
-                        key={spot.id}
-                        spot={spot}
-                        portalSlug={portalSlug}
-                      />
-                    ))}
+                    {groupSpots.map((spot) => <SpotCard key={spot.id} spot={spot} portalSlug={portalSlug} />)}
                   </div>
                 )}
               </div>
@@ -530,13 +700,7 @@ export default function PortalSpotsView({ portalId, portalSlug, isExclusive = fa
         </div>
       ) : (
         <div className="space-y-2">
-          {sortedSpots.map((spot) => (
-            <SpotCard
-              key={spot.id}
-              spot={spot}
-              portalSlug={portalSlug}
-            />
-          ))}
+          {sortedSpots.map((spot) => <SpotCard key={spot.id} spot={spot} portalSlug={portalSlug} />)}
         </div>
       )}
     </div>
