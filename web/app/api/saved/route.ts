@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
+import { parseIntParam, validationError } from "@/lib/api-utils";
+import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 
 /**
  * GET /api/saved
@@ -20,11 +22,11 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
-    const eventId = searchParams.get("event_id");
-    const venueId = searchParams.get("venue_id");
+    const eventId = parseIntParam(searchParams.get("event_id"));
+    const venueId = parseIntParam(searchParams.get("venue_id"));
 
-    if (!eventId && !venueId) {
-      return NextResponse.json({ error: "Missing event_id or venue_id" }, { status: 400 });
+    if (eventId === null && venueId === null) {
+      return validationError("Missing or invalid event_id or venue_id");
     }
 
     const serviceClient = createServiceClient();
@@ -34,10 +36,10 @@ export async function GET(request: NextRequest) {
       .select("id")
       .eq("user_id", user.id);
 
-    if (eventId) {
-      query = query.eq("event_id", parseInt(eventId));
-    } else if (venueId) {
-      query = query.eq("venue_id", parseInt(venueId));
+    if (eventId !== null) {
+      query = query.eq("event_id", eventId);
+    } else if (venueId !== null) {
+      query = query.eq("venue_id", venueId);
     }
 
     const { data } = await query.maybeSingle();
@@ -54,6 +56,10 @@ export async function GET(request: NextRequest) {
  * Save an item
  */
 export async function POST(request: NextRequest) {
+  // Apply rate limiting
+  const rateLimitResult = applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
+  if (rateLimitResult) return rateLimitResult;
+
   try {
     const supabase = await createClient();
 
@@ -69,8 +75,16 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { event_id, venue_id } = body;
 
+    // Validate IDs are numbers if provided
+    if (event_id !== undefined && (typeof event_id !== "number" || !Number.isInteger(event_id))) {
+      return validationError("Invalid event_id");
+    }
+    if (venue_id !== undefined && (typeof venue_id !== "number" || !Number.isInteger(venue_id))) {
+      return validationError("Invalid venue_id");
+    }
+
     if (!event_id && !venue_id) {
-      return NextResponse.json({ error: "Missing event_id or venue_id" }, { status: 400 });
+      return validationError("Missing event_id or venue_id");
     }
 
     const serviceClient = createServiceClient();
@@ -127,6 +141,10 @@ export async function POST(request: NextRequest) {
  * Remove a saved item
  */
 export async function DELETE(request: NextRequest) {
+  // Apply rate limiting
+  const rateLimitResult = applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
+  if (rateLimitResult) return rateLimitResult;
+
   try {
     const supabase = await createClient();
 
@@ -140,11 +158,11 @@ export async function DELETE(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
-    const eventId = searchParams.get("event_id");
-    const venueId = searchParams.get("venue_id");
+    const eventId = parseIntParam(searchParams.get("event_id"));
+    const venueId = parseIntParam(searchParams.get("venue_id"));
 
-    if (!eventId && !venueId) {
-      return NextResponse.json({ error: "Missing event_id or venue_id" }, { status: 400 });
+    if (eventId === null && venueId === null) {
+      return validationError("Missing or invalid event_id or venue_id");
     }
 
     const serviceClient = createServiceClient();
@@ -154,10 +172,10 @@ export async function DELETE(request: NextRequest) {
       .delete()
       .eq("user_id", user.id);
 
-    if (eventId) {
-      query = query.eq("event_id", parseInt(eventId));
-    } else if (venueId) {
-      query = query.eq("venue_id", parseInt(venueId));
+    if (eventId !== null) {
+      query = query.eq("event_id", eventId);
+    } else if (venueId !== null) {
+      query = query.eq("venue_id", venueId);
     }
 
     const { error } = await query;

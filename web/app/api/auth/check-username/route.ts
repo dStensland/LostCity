@@ -1,9 +1,14 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 
 // POST /api/auth/check-username
 // Check if a username is available and optionally reserve it
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
+  // Apply stricter rate limiting to prevent username enumeration
+  const rateLimitResult = applyRateLimit(request, RATE_LIMITS.auth, getClientIdentifier(request));
+  if (rateLimitResult) return rateLimitResult;
+
   try {
     const { username, reserve } = await request.json();
 
@@ -39,7 +44,8 @@ export async function POST(request: Request) {
       .maybeSingle();
 
     if (existingProfile) {
-      return NextResponse.json({ available: false, error: "Username is taken" });
+      // Use generic message to prevent username enumeration
+      return NextResponse.json({ available: false, error: "Username is not available" });
     }
 
     // Check if username is reserved (if reservations table exists)
@@ -53,9 +59,10 @@ export async function POST(request: Request) {
       .maybeSingle();
 
     if (existingReservation) {
+      // Use same generic message for consistency
       return NextResponse.json({
         available: false,
-        error: "Username is temporarily reserved",
+        error: "Username is not available",
       });
     }
 
@@ -85,7 +92,7 @@ export async function POST(request: Request) {
         if (reserveError.code === "23505") {
           return NextResponse.json({
             available: false,
-            error: "Username was just taken",
+            error: "Username is not available",
           });
         }
         console.error("Error reserving username:", reserveError);

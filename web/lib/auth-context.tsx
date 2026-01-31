@@ -180,7 +180,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           supabase.auth.getUser().then(({ data: { user: validatedUser }, error }) => {
             if (!isMountedRef.current) return;
             if (error || !validatedUser) {
-              console.log("Session expired during tab inactivity");
+              // Session expired during tab inactivity - clear state silently
               setUser(null);
               setSession(null);
               setProfile(null);

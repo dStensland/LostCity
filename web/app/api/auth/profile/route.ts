@@ -1,6 +1,7 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
+import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 
 /**
  * GET /api/auth/profile
@@ -9,7 +10,11 @@ import { createServiceClient } from "@/lib/supabase/service";
  * This is the single source of truth for profile data and ensures
  * users always have a profile before doing authenticated operations.
  */
-export async function GET() {
+export async function GET(request: NextRequest) {
+  // Apply rate limiting to prevent abuse
+  const rateLimitResult = applyRateLimit(request, RATE_LIMITS.auth, getClientIdentifier(request));
+  if (rateLimitResult) return rateLimitResult;
+
   try {
     const supabase = await createClient();
 
@@ -27,11 +32,13 @@ export async function GET() {
     const serviceClient = createServiceClient();
 
     // Try to fetch existing profile
-    let { data: profile, error: fetchError } = await serviceClient
+    const { data: existingProfile, error: fetchError } = await serviceClient
       .from("profiles")
       .select("*")
       .eq("id", user.id)
       .maybeSingle();
+
+    let profile = existingProfile;
 
     if (fetchError) {
       console.error("Error fetching profile:", fetchError);
@@ -131,7 +138,11 @@ export async function GET() {
  *
  * Updates the current user's profile.
  */
-export async function PATCH(request: Request) {
+export async function PATCH(request: NextRequest) {
+  // Apply rate limiting to prevent abuse
+  const rateLimitResult = applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
+  if (rateLimitResult) return rateLimitResult;
+
   try {
     const supabase = await createClient();
 

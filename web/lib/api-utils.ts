@@ -29,6 +29,31 @@ export function isValidPositiveInt(value: unknown): value is number {
   return typeof value === "number" && Number.isInteger(value) && value > 0;
 }
 
+// Parse and validate a numeric query parameter
+// Returns the parsed number or null if invalid
+export function parseIntParam(value: string | null, defaultValue?: number): number | null {
+  if (value === null || value === "") {
+    return defaultValue ?? null;
+  }
+  const parsed = parseInt(value, 10);
+  if (isNaN(parsed)) {
+    return null;
+  }
+  return parsed;
+}
+
+// Parse and validate a float query parameter
+export function parseFloatParam(value: string | null, defaultValue?: number): number | null {
+  if (value === null || value === "") {
+    return defaultValue ?? null;
+  }
+  const parsed = parseFloat(value);
+  if (isNaN(parsed)) {
+    return null;
+  }
+  return parsed;
+}
+
 // Validate enum value
 export function isValidEnum<T extends string>(
   value: unknown,

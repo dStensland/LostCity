@@ -1,11 +1,12 @@
 import { createClient } from "@supabase/supabase-js";
 import { NextRequest, NextResponse } from "next/server";
-import { errorResponse } from "@/lib/api-utils";
+import { errorResponse, parseFloatParam, parseIntParam, validationError } from "@/lib/api-utils";
 
 function getSupabase() {
+  // Use anon key for public read-only endpoint (never service key for public routes)
   return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
 }
 
@@ -13,18 +14,21 @@ export async function GET(req: NextRequest) {
   const supabase = getSupabase();
   const params = req.nextUrl.searchParams;
 
-  const lat = parseFloat(params.get("lat") || "0");
-  const lng = parseFloat(params.get("lng") || "0");
-  const radius = parseInt(params.get("radius") || "2000");
+  // Parse and validate numeric parameters
+  const lat = parseFloatParam(params.get("lat"));
+  const lng = parseFloatParam(params.get("lng"));
+  const radius = parseIntParam(params.get("radius"), 2000);
   const category = params.get("category");
-  const minScore = parseInt(params.get("minScore") || "40");
+  const minScore = parseIntParam(params.get("minScore"), 40);
 
   // Validate coordinates
-  if (lat === 0 || lng === 0) {
-    return NextResponse.json(
-      { error: "Valid lat and lng parameters are required" },
-      { status: 400 }
-    );
+  if (lat === null || lng === null || lat === 0 || lng === 0) {
+    return validationError("Valid lat and lng parameters are required");
+  }
+
+  // Validate other params
+  if (radius === null || minScore === null) {
+    return validationError("Invalid radius or minScore parameter");
   }
 
   // Use the database function for nearby places

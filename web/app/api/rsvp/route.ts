@@ -1,12 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
+import { parseIntParam, validationError } from "@/lib/api-utils";
+import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
+
+const VALID_STATUSES = ["going", "interested", "went"] as const;
+const VALID_VISIBILITIES = ["friends", "public", "private"] as const;
 
 /**
  * POST /api/rsvp
  * Create or update an RSVP
  */
 export async function POST(request: NextRequest) {
+  // Apply rate limiting
+  const rateLimitResult = applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
+  if (rateLimitResult) return rateLimitResult;
+
   try {
     const supabase = await createClient();
 
@@ -23,15 +32,17 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { event_id, status, visibility = "friends" } = body;
 
-    if (!event_id || !status) {
-      return NextResponse.json(
-        { error: "Missing event_id or status" },
-        { status: 400 }
-      );
+    // Validate event_id is a number
+    if (typeof event_id !== "number" || !Number.isInteger(event_id) || event_id <= 0) {
+      return validationError("Invalid event_id");
     }
 
-    if (!["going", "interested", "went"].includes(status)) {
-      return NextResponse.json({ error: "Invalid status" }, { status: 400 });
+    if (!status || !VALID_STATUSES.includes(status)) {
+      return validationError("Invalid status. Must be: going, interested, or went");
+    }
+
+    if (!VALID_VISIBILITIES.includes(visibility)) {
+      return validationError("Invalid visibility. Must be: friends, public, or private");
     }
 
     // Use service client to bypass RLS
@@ -103,6 +114,10 @@ export async function POST(request: NextRequest) {
  * Remove an RSVP
  */
 export async function DELETE(request: NextRequest) {
+  // Apply rate limiting
+  const rateLimitResult = applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
+  if (rateLimitResult) return rateLimitResult;
+
   try {
     const supabase = await createClient();
 
@@ -117,13 +132,10 @@ export async function DELETE(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
-    const event_id = searchParams.get("event_id");
+    const eventId = parseIntParam(searchParams.get("event_id"));
 
-    if (!event_id) {
-      return NextResponse.json(
-        { error: "Missing event_id" },
-        { status: 400 }
-      );
+    if (eventId === null || eventId <= 0) {
+      return validationError("Missing or invalid event_id");
     }
 
     // Use service client to bypass RLS
@@ -133,7 +145,7 @@ export async function DELETE(request: NextRequest) {
       .from("event_rsvps")
       .delete()
       .eq("user_id", user.id)
-      .eq("event_id", parseInt(event_id));
+      .eq("event_id", eventId);
 
     if (error) {
       console.error("RSVP delete error:", error);
@@ -172,13 +184,10 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
-    const event_id = searchParams.get("event_id");
+    const eventId = parseIntParam(searchParams.get("event_id"));
 
-    if (!event_id) {
-      return NextResponse.json(
-        { error: "Missing event_id" },
-        { status: 400 }
-      );
+    if (eventId === null || eventId <= 0) {
+      return validationError("Missing or invalid event_id");
     }
 
     // Use service client to bypass RLS
@@ -188,7 +197,7 @@ export async function GET(request: NextRequest) {
       .from("event_rsvps")
       .select("*")
       .eq("user_id", user.id)
-      .eq("event_id", parseInt(event_id))
+      .eq("event_id", eventId)
       .maybeSingle();
 
     if (error) {
