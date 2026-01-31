@@ -4,6 +4,7 @@ import React, { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import CategoryIcon, { getCategoryLabel, getCategoryColor } from "./CategoryIcon";
 import CategorySkeleton from "./CategorySkeleton";
+import LazyImage from "./LazyImage";
 
 // Get reflection color class based on spot type
 function getReflectionClass(spotType: string | null): string {
@@ -32,6 +33,7 @@ type Spot = {
   address: string | null;
   neighborhood: string | null;
   venue_type: string | null;
+  image_url?: string | null;
   event_count?: number;
   lat?: number | null;
   lng?: number | null;
@@ -170,6 +172,9 @@ interface Props {
   isExclusive?: boolean;
 }
 
+// Threshold for "featured" badge (venues with lots of events)
+const FEATURED_EVENT_THRESHOLD = 5;
+
 // Spot card component
 function SpotCard({
   spot,
@@ -178,47 +183,86 @@ function SpotCard({
   spot: Spot;
   portalSlug: string;
 }) {
+  const [imageError, setImageError] = useState(false);
   const categoryColor = spot.venue_type ? getCategoryColor(spot.venue_type) : "var(--coral)";
   const reflectionClass = getReflectionClass(spot.venue_type);
   const config = SPOT_TYPE_CONFIG[spot.venue_type || "other"] || SPOT_TYPE_CONFIG.other;
+  const hasImage = spot.image_url && !imageError;
+  const isFeatured = (spot.event_count ?? 0) >= FEATURED_EVENT_THRESHOLD;
 
   return (
     <Link
       href={`/${portalSlug}?spot=${spot.slug}`}
       scroll={false}
-      className={`block p-4 rounded-lg border border-[var(--twilight)] card-atmospheric ${reflectionClass} group`}
+      className={`block p-3 rounded-sm border border-[var(--twilight)] card-atmospheric ${reflectionClass} group`}
       style={{
         backgroundColor: "var(--card-bg)",
         "--glow-color": categoryColor,
         "--reflection-color": `color-mix(in srgb, ${categoryColor} 15%, transparent)`,
       } as React.CSSProperties}
     >
-      <div className="flex items-start gap-3">
-        {spot.venue_type && (
-          <CategoryIcon
-            type={spot.venue_type}
-            size={18}
-            className="flex-shrink-0 mt-0.5"
-          />
-        )}
+      <div className="flex items-center gap-3">
+        {/* Thumbnail */}
+        <div
+          className="flex-shrink-0 w-12 h-12 rounded-sm overflow-hidden border border-[var(--twilight)] flex items-center justify-center"
+          style={{
+            background: hasImage
+              ? undefined
+              : `linear-gradient(135deg, ${categoryColor}20, ${categoryColor}08)`,
+          }}
+        >
+          {hasImage ? (
+            <LazyImage
+              src={spot.image_url!}
+              alt=""
+              fill
+              sizes="48px"
+              className="w-full h-full object-cover"
+              placeholderColor={`${categoryColor}15`}
+              onError={() => setImageError(true)}
+            />
+          ) : (
+            <CategoryIcon
+              type={spot.venue_type || "venue"}
+              size={20}
+              glow="subtle"
+            />
+          )}
+        </div>
+
+        {/* Content */}
         <div className="flex-1 min-w-0">
-          <div className="font-medium text-[var(--cream)] group-hover:text-[var(--glow-color)] transition-colors">
-            {spot.name}
+          <div className="flex items-center gap-2">
+            <span className="font-medium text-[var(--cream)] group-hover:text-[var(--glow-color)] transition-colors truncate">
+              {spot.name}
+            </span>
+            {isFeatured && (
+              <span
+                className="flex-shrink-0 px-1.5 py-0.5 rounded-sm font-mono text-[0.5rem] font-medium uppercase"
+                style={{
+                  backgroundColor: `${categoryColor}25`,
+                  color: categoryColor,
+                  border: `1px solid ${categoryColor}40`,
+                }}
+              >
+                Hot
+              </span>
+            )}
           </div>
-          <div className="flex items-center gap-2 font-mono text-xs text-[var(--muted)] mt-1">
+          <div className="flex items-center gap-2 font-mono text-[0.65rem] text-[var(--muted)] mt-0.5">
             {spot.venue_type && (
               <span style={{ color: config.color }}>{getCategoryLabel(spot.venue_type)}</span>
             )}
             {spot.neighborhood && (
               <>
                 <span className="opacity-40">·</span>
-                <span>{spot.neighborhood}</span>
+                <span className="truncate">{spot.neighborhood}</span>
               </>
             )}
             {(spot.event_count ?? 0) > 0 && (
               <>
                 <span className="opacity-40">·</span>
-                <span className="text-[var(--coral)]">
+                <span className="text-[var(--coral)] flex-shrink-0">
                   {spot.event_count} event{spot.event_count !== 1 ? "s" : ""}
                 </span>
               </>
@@ -351,7 +395,7 @@ export default function PortalSpotsView({ portalId, portalSlug, isExclusive = fa
   if (spots.length === 0) {
     return (
       <div className="py-16 text-center">
-        <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-[var(--twilight)] to-[var(--dusk)] flex items-center justify-center">
+        <div className="w-16 h-16 mx-auto mb-4 rounded-sm bg-gradient-to-br from-[var(--twilight)] to-[var(--dusk)] flex items-center justify-center">
           <svg className="w-8 h-8 text-[var(--muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -363,7 +407,7 @@ export default function PortalSpotsView({ portalId, portalSlug, isExclusive = fa
         </p>
         <Link
           href={`/${portalSlug}`}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[var(--twilight)]/50 text-[var(--cream)] hover:bg-[var(--twilight)] transition-colors font-mono text-sm"
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-sm bg-[var(--twilight)]/50 text-[var(--cream)] hover:bg-[var(--twilight)] transition-colors font-mono text-sm"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -382,7 +426,7 @@ export default function PortalSpotsView({ portalId, portalSlug, isExclusive = fa
           <div>
             <h2 className="text-xl font-semibold text-[var(--cream)]">Destinations</h2>
             <p className="text-sm text-[var(--muted)] mt-1">
-              <span className="text-[var(--soft)]">{spots.length}</span> venues in the city
+              <span className="text-[var(--soft)]">{spots.length}</span> cool places to go
               <span className="mx-2 opacity-40">·</span>
               <Link
                 href="/submit/venue"
@@ -398,7 +442,7 @@ export default function PortalSpotsView({ portalId, portalSlug, isExclusive = fa
             </span>
             <button
               onClick={() => setSortBy("category")}
-              className={`px-2 py-1 rounded font-mono text-[0.65rem] transition-all ${
+              className={`px-2 py-1 rounded-sm font-mono text-[0.65rem] transition-all ${
                 sortBy === "category"
                   ? "bg-[var(--coral)] text-[var(--void)]"
                   : "bg-[var(--twilight)]/50 text-[var(--muted)] hover:text-[var(--cream)]"
@@ -408,7 +452,7 @@ export default function PortalSpotsView({ portalId, portalSlug, isExclusive = fa
             </button>
             <button
               onClick={() => setSortBy("neighborhood")}
-              className={`px-2 py-1 rounded font-mono text-[0.65rem] transition-all ${
+              className={`px-2 py-1 rounded-sm font-mono text-[0.65rem] transition-all ${
                 sortBy === "neighborhood"
                   ? "bg-[var(--coral)] text-[var(--void)]"
                   : "bg-[var(--twilight)]/50 text-[var(--muted)] hover:text-[var(--cream)]"
@@ -418,7 +462,7 @@ export default function PortalSpotsView({ portalId, portalSlug, isExclusive = fa
             </button>
             <button
               onClick={() => setSortBy("alphabetical")}
-              className={`px-2 py-1 rounded font-mono text-[0.65rem] transition-all ${
+              className={`px-2 py-1 rounded-sm font-mono text-[0.65rem] transition-all ${
                 sortBy === "alphabetical"
                   ? "bg-[var(--coral)] text-[var(--void)]"
                   : "bg-[var(--twilight)]/50 text-[var(--muted)] hover:text-[var(--cream)]"
@@ -445,7 +489,7 @@ export default function PortalSpotsView({ portalId, portalSlug, isExclusive = fa
                 >
                   {sortBy === "category" && (
                     <div
-                      className="w-2 h-2 rounded-full"
+                      className="w-2 h-2 rounded-sm"
                       style={{ backgroundColor: config.color }}
                     />
                   )}

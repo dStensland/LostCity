@@ -1,5 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import { NextRequest, NextResponse } from "next/server";
+import { getLocalDateString } from "@/lib/formats";
 
 export const dynamic = "force-dynamic";
 
@@ -9,7 +10,7 @@ export async function GET(request: NextRequest) {
   const isExclusive = searchParams.get("exclusive") === "true";
   const withEventsOnly = searchParams.get("with_events") === "true";
 
-  const today = new Date().toISOString().split("T")[0];
+  const today = getLocalDateString();
 
   try {
     type VenueRow = {
@@ -20,6 +21,7 @@ export async function GET(request: NextRequest) {
       neighborhood: string | null;
       venue_type: string | null;
       city: string;
+      image_url: string | null;
     };
 
     type EventRow = {
@@ -29,7 +31,7 @@ export async function GET(request: NextRequest) {
     // Fetch all active venues
     const { data: venues, error: venuesError } = await supabase
       .from("venues")
-      .select("id, name, slug, address, neighborhood, venue_type, city")
+      .select("id, name, slug, address, neighborhood, venue_type, city, image_url")
       .eq("city", "Atlanta") // TODO: make this dynamic based on portal
       .neq("active", false) // Exclude deactivated venues
       .order("name");
@@ -78,6 +80,7 @@ export async function GET(request: NextRequest) {
       address: venue.address,
       neighborhood: venue.neighborhood,
       venue_type: venue.venue_type,
+      image_url: venue.image_url,
       event_count: eventCounts.get(venue.id) || 0,
     }));
 
