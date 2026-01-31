@@ -156,21 +156,23 @@ const iconPaths: Record<string, ReactNode> = {
   // COMEDY & THEATER
   // ═══════════════════════════════════════════
 
-  // Comedy - Smile face (minimal, iconic)
+  // Comedy - Laughing mask with attitude (theatrical, not emoji)
   comedy: (
     <>
-      <circle cx="12" cy="12" r="9" strokeWidth={1.5} fill="none" stroke="currentColor" />
-      <path d="M8 14c1.5 2 2.5 3 4 3s2.5-1 4-3" strokeWidth={1.5} strokeLinecap="round" fill="none" stroke="currentColor" />
-      <circle cx="9" cy="10" r="1" fill="currentColor" />
-      <circle cx="15" cy="10" r="1" fill="currentColor" />
+      <path d="M4 8c0-2 2-4 4-4h8c2 0 4 2 4 4v4c0 4-3 8-8 8s-8-4-8-8V8z" strokeWidth={1.5} fill="none" stroke="currentColor" />
+      <path d="M8 12c0 3 2 5 4 5s4-2 4-5" strokeWidth={1.5} strokeLinecap="round" fill="none" stroke="currentColor" />
+      <path d="M8 9l2 1M16 9l-2 1" strokeWidth={1.5} strokeLinecap="round" stroke="currentColor" />
+      <circle cx="9" cy="10" r="0.5" fill="currentColor" />
+      <circle cx="15" cy="10" r="0.5" fill="currentColor" />
     </>
   ),
   comedy_club: (
     <>
-      <circle cx="12" cy="12" r="9" strokeWidth={1.5} fill="none" stroke="currentColor" />
-      <path d="M8 14c1.5 2 2.5 3 4 3s2.5-1 4-3" strokeWidth={1.5} strokeLinecap="round" fill="none" stroke="currentColor" />
-      <circle cx="9" cy="10" r="1" fill="currentColor" />
-      <circle cx="15" cy="10" r="1" fill="currentColor" />
+      <path d="M4 8c0-2 2-4 4-4h8c2 0 4 2 4 4v4c0 4-3 8-8 8s-8-4-8-8V8z" strokeWidth={1.5} fill="none" stroke="currentColor" />
+      <path d="M8 12c0 3 2 5 4 5s4-2 4-5" strokeWidth={1.5} strokeLinecap="round" fill="none" stroke="currentColor" />
+      <path d="M8 9l2 1M16 9l-2 1" strokeWidth={1.5} strokeLinecap="round" stroke="currentColor" />
+      <circle cx="9" cy="10" r="0.5" fill="currentColor" />
+      <circle cx="15" cy="10" r="0.5" fill="currentColor" />
     </>
   ),
 
@@ -381,12 +383,14 @@ const iconPaths: Record<string, ReactNode> = {
   // SPORTS & FITNESS
   // ═══════════════════════════════════════════
 
-  // Sports - Trophy
+  // Sports - Dynamic flame/victory burst (energy, not dusty trophy)
   sports: (
     <>
-      <path d="M6 4h12v5a6 6 0 01-12 0V4z" strokeWidth={1.5} fill="none" stroke="currentColor" />
-      <path d="M6 7H4a2 2 0 000 4h2M18 7h2a2 2 0 010 4h-2" strokeWidth={1.5} fill="none" stroke="currentColor" />
-      <path d="M12 15v4M8 21h8" strokeWidth={1.5} strokeLinecap="round" stroke="currentColor" />
+      <path d="M12 2c-2 3-4 5-4 8a4 4 0 008 0c0-3-2-5-4-8z" strokeWidth={1.5} fill="none" stroke="currentColor" />
+      <path d="M12 6c-1 2-2 3-2 5a2 2 0 004 0c0-2-1-3-2-5z" fill="currentColor" opacity={0.4} />
+      <path d="M8 16l-3 5M16 16l3 5M12 14v7" strokeWidth={1.5} strokeLinecap="round" stroke="currentColor" />
+      <circle cx="5" cy="6" r="1" fill="currentColor" opacity={0.4} />
+      <circle cx="19" cy="6" r="1" fill="currentColor" opacity={0.4} />
     </>
   ),
 
@@ -475,12 +479,14 @@ const iconPaths: Record<string, ReactNode> = {
     </>
   ),
 
-  // Family - House with heart
+  // Family - Connected figures (warmth through connection, not clipart house)
   family: (
     <>
-      <path d="M3 11l9-7 9 7" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" fill="none" stroke="currentColor" />
-      <path d="M5 10v10h14V10" strokeWidth={1.5} fill="none" stroke="currentColor" />
-      <path d="M12 12l2 2-2 2-2-2 2-2z" fill="currentColor" />
+      <circle cx="12" cy="5" r="2.5" strokeWidth={1.5} fill="none" stroke="currentColor" />
+      <circle cx="6" cy="9" r="2" strokeWidth={1.5} fill="none" stroke="currentColor" />
+      <circle cx="18" cy="9" r="2" strokeWidth={1.5} fill="none" stroke="currentColor" />
+      <path d="M12 8v3M6 11v2M18 11v2" strokeWidth={1.5} stroke="currentColor" />
+      <path d="M4 21c0-3 2-5 4-5h2c1 0 2 .5 2 1.5S11 19 12 19s1-.5 1-1.5.5-1.5 2-1.5h2c2 0 4 2 4 5" strokeWidth={1.5} strokeLinecap="round" fill="none" stroke="currentColor" />
     </>
   ),
 
@@ -644,11 +650,14 @@ const iconPaths: Record<string, ReactNode> = {
   // VENUES & SPACES
   // ═══════════════════════════════════════════
 
-  // Venue - Pin / marker
+  // Venue - Neon sign / destination beacon (not generic map pin)
   venue: (
     <>
-      <path d="M12 2C8 2 5 5.5 5 9c0 5 7 13 7 13s7-8 7-13c0-3.5-3-7-7-7z" strokeWidth={1.5} fill="none" stroke="currentColor" />
-      <circle cx="12" cy="9" r="2.5" strokeWidth={1.5} fill="none" stroke="currentColor" />
+      <rect x="5" y="3" width="14" height="14" rx="2" strokeWidth={1.5} fill="none" stroke="currentColor" />
+      <path d="M5 9h14" strokeWidth={1.5} stroke="currentColor" opacity={0.4} />
+      <circle cx="12" cy="13" r="2" fill="currentColor" />
+      <path d="M12 17v4M9 21h6" strokeWidth={1.5} strokeLinecap="round" stroke="currentColor" />
+      <path d="M8 6h.01M12 6h.01M16 6h.01" strokeWidth={2} strokeLinecap="round" stroke="currentColor" opacity={0.6} />
     </>
   ),
 
@@ -752,19 +761,25 @@ const iconPaths: Record<string, ReactNode> = {
     </>
   ),
 
-  // Other - Sparkle / star
+  // Other - Abstract intersection (mysterious, not generic star)
   other: (
     <>
-      <path d="M12 2l2 6.5L21 10l-5.5 3L17 20l-5-4-5 4 1.5-7L3 10l7-1.5L12 2z" strokeWidth={1.5} strokeLinejoin="round" fill="none" stroke="currentColor" />
+      <circle cx="12" cy="12" r="8" strokeWidth={1.5} fill="none" stroke="currentColor" opacity={0.4} />
+      <path d="M12 4v16M4 12h16" strokeWidth={1.5} stroke="currentColor" opacity={0.6} />
+      <path d="M6.5 6.5l11 11M17.5 6.5l-11 11" strokeWidth={1.5} stroke="currentColor" opacity={0.3} />
+      <circle cx="12" cy="12" r="3" strokeWidth={1.5} fill="none" stroke="currentColor" />
+      <circle cx="12" cy="12" r="1" fill="currentColor" />
     </>
   ),
 };
 
-// Default icon for unknown types
+// Default icon for unknown types - abstract pulse point
 const defaultIcon = (
   <>
-    <circle cx="12" cy="12" r="8" strokeWidth={1.5} fill="none" stroke="currentColor" />
-    <circle cx="12" cy="12" r="2" fill="currentColor" />
+    <circle cx="12" cy="12" r="8" strokeWidth={1.5} fill="none" stroke="currentColor" opacity={0.5} />
+    <circle cx="12" cy="12" r="4" strokeWidth={1.5} fill="none" stroke="currentColor" opacity={0.7} />
+    <circle cx="12" cy="12" r="1.5" fill="currentColor" />
+    <path d="M12 4v2M12 18v2M4 12h2M18 12h2" strokeWidth={1.5} strokeLinecap="round" stroke="currentColor" opacity={0.4} />
   </>
 );
 
