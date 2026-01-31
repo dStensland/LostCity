@@ -199,6 +199,65 @@ These cookies:
 
 ---
 
+## Security Best Practices
+
+### Input Validation
+
+Always validate query parameters before using them:
+
+```typescript
+import { parseIntParam, parseFloatParam, validationError } from "@/lib/api-utils";
+
+// ❌ BAD - parseInt on untrusted input can return NaN
+const eventId = parseInt(searchParams.get("event_id")); // NaN if "abc"
+
+// ✅ GOOD - Use validation helpers
+const eventId = parseIntParam(searchParams.get("event_id"));
+if (eventId === null) {
+  return validationError("Invalid event_id");
+}
+```
+
+### Rate Limiting
+
+Apply rate limiting to all API routes, especially auth-related ones:
+
+```typescript
+import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
+
+export async function POST(request: NextRequest) {
+  const rateLimitResult = applyRateLimit(request, RATE_LIMITS.auth, getClientIdentifier(request));
+  if (rateLimitResult) return rateLimitResult;
+  // ...
+}
+```
+
+Available limits:
+- `RATE_LIMITS.auth` - 10/min (login, signup, username check)
+- `RATE_LIMITS.write` - 30/min (RSVP, save, follow)
+- `RATE_LIMITS.read` - 200/min (events, search)
+- `RATE_LIMITS.standard` - 100/min (general API)
+
+### Service Key Usage
+
+- **Never use service key for public routes** - it bypasses RLS
+- Use `createClient()` (anon key) for public read-only endpoints
+- Use `createServiceClient()` only for authenticated mutations after verifying auth
+
+### Error Messages
+
+Use generic error messages to prevent information leakage:
+
+```typescript
+// ❌ BAD - Reveals information
+if (existingUser) return { error: "Email already registered" };
+
+// ✅ GOOD - Generic message
+if (existingUser) return { error: "Unable to create account" };
+```
+
+---
+
 ## Common Gotchas
 
 1. **TypeScript and Supabase**: Use `as never` for insert/update operations to bypass strict typing:
