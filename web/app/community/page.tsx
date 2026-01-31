@@ -5,6 +5,7 @@ import GlassHeader from "@/components/GlassHeader";
 import MainNav from "@/components/MainNav";
 import PageFooter from "@/components/PageFooter";
 import CommunityContent from "./CommunityContent";
+import { getLocalDateString } from "@/lib/formats";
 
 export const revalidate = 300; // 5 minutes for the page
 
@@ -26,7 +27,7 @@ export type Organization = {
 // Cache event counts separately - they change more frequently
 const getEventCounts = unstable_cache(
   async (): Promise<Record<string, number>> => {
-    const today = new Date().toISOString().split("T")[0];
+    const today = getLocalDateString();
 
     // Efficient query: only fetch organization_id, let DB do the heavy lifting
     const { data: events } = await supabase

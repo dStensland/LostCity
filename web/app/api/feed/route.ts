@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient, getUser } from "@/lib/supabase/server";
 import { applyRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
+import { getLocalDateString } from "@/lib/formats";
 
 type RecommendationReason = {
   type: "followed_venue" | "followed_organization" | "neighborhood" | "price" | "friends_going" | "trending";
@@ -152,7 +153,8 @@ export async function GET(request: Request) {
   const friendIds = (friendIdsData || []).map((row) => row.friend_id);
 
   // Get events friends are going to
-  const today = new Date().toISOString().split("T")[0];
+  // Use local date (not UTC from toISOString)
+  const today = getLocalDateString();
 
   // Calculate date range based on dateFilter parameter
   let startDateFilter = today;
@@ -170,7 +172,7 @@ export async function GET(request: Request) {
       case "tomorrow": {
         const tomorrow = new Date(now);
         tomorrow.setDate(tomorrow.getDate() + 1);
-        startDateFilter = tomorrow.toISOString().split("T")[0];
+        startDateFilter = getLocalDateString(tomorrow);
         endDateFilter = startDateFilter;
         break;
       }
@@ -181,15 +183,15 @@ export async function GET(request: Request) {
         saturday.setDate(saturday.getDate() + (dayOfWeek === 6 ? 0 : daysUntilSaturday));
         const sunday = new Date(saturday);
         sunday.setDate(sunday.getDate() + 1);
-        startDateFilter = saturday.toISOString().split("T")[0];
-        endDateFilter = sunday.toISOString().split("T")[0];
+        startDateFilter = getLocalDateString(saturday);
+        endDateFilter = getLocalDateString(sunday);
         break;
       }
       case "week": {
         const weekEnd = new Date(now);
         weekEnd.setDate(weekEnd.getDate() + 7);
         startDateFilter = today;
-        endDateFilter = weekEnd.toISOString().split("T")[0];
+        endDateFilter = getLocalDateString(weekEnd);
         break;
       }
     }

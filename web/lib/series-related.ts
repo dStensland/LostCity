@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { getLocalDateString } from "@/lib/formats";
 import type { Series } from "@/lib/series";
 
 /**
@@ -51,7 +52,7 @@ export async function getRelatedSeries(
   }
 
   // Get event counts for each series to prioritize active ones
-  const today = new Date().toISOString().split("T")[0];
+  const today = getLocalDateString();
   const seriesIds = results.map((s) => s.id);
 
   const { data: countData } = await supabase

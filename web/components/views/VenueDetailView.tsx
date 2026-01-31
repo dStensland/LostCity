@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { format, parseISO } from "date-fns";
+import { format, parseISO, isSameDay, isToday, isTomorrow, addDays, startOfDay } from "date-fns";
 import { formatTimeSplit } from "@/lib/formats";
 import { SPOT_TYPES, formatPriceLevel, getSpotTypeLabels, type SpotType } from "@/lib/spots";
 import FollowButton from "@/components/FollowButton";
@@ -12,6 +12,7 @@ import VenueTagList from "@/components/VenueTagList";
 import FlagButton from "@/components/FlagButton";
 import LinkifyText from "@/components/LinkifyText";
 import CollapsibleSection, { CategoryIcons, CATEGORY_COLORS } from "@/components/CollapsibleSection";
+import CategoryIcon, { getCategoryColor } from "@/components/CategoryIcon";
 
 type SpotData = {
   id: number;
@@ -105,6 +106,273 @@ const NeonBackButton = ({ onClose }: { onClose: () => void }) => (
   </button>
 );
 
+// Venue Events Section with day-by-day date selector
+function VenueEventsSection({
+  venueName,
+  events,
+  onEventClick,
+}: {
+  venueName: string;
+  events: UpcomingEvent[];
+  onEventClick: (id: number) => void;
+}) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [datePickerValue, setDatePickerValue] = useState("");
+
+  // Group events by date
+  const eventsByDate = useMemo(() => {
+    const grouped = new Map<string, UpcomingEvent[]>();
+    for (const event of events) {
+      const dateKey = event.start_date;
+      if (!grouped.has(dateKey)) {
+        grouped.set(dateKey, []);
+      }
+      grouped.get(dateKey)!.push(event);
+    }
+    // Sort by date
+    return new Map(
+      [...grouped.entries()].sort(([a], [b]) => a.localeCompare(b))
+    );
+  }, [events]);
+
+  // Get unique dates for the selector
+  const availableDates = useMemo(() => {
+    return [...eventsByDate.keys()].map((dateStr) => parseISO(dateStr));
+  }, [eventsByDate]);
+
+  // Selected date state
+  const [selectedDate, setSelectedDate] = useState<Date>(() => {
+    return availableDates[0] || new Date();
+  });
+
+  // Get events for selected date
+  const selectedEvents = useMemo(() => {
+    const dateKey = format(selectedDate, "yyyy-MM-dd");
+    return eventsByDate.get(dateKey) || [];
+  }, [selectedDate, eventsByDate]);
+
+  // Format date label
+  const formatDateLabel = (date: Date) => {
+    if (isToday(date)) return "Today";
+    if (isTomorrow(date)) return "Tomorrow";
+    return format(date, "EEE");
+  };
+
+  // Handle date picker change
+  const handleDatePickerChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setDatePickerValue(value);
+    if (value) {
+      const pickedDate = parseISO(value);
+      // Find closest date with events
+      const closestDate = availableDates.find(
+        (d) => startOfDay(d) >= startOfDay(pickedDate)
+      );
+      if (closestDate) {
+        setSelectedDate(closestDate);
+        // Scroll to the selected date
+        setTimeout(() => {
+          const index = availableDates.findIndex((d) => isSameDay(d, closestDate));
+          if (scrollRef.current && index >= 0) {
+            const buttons = scrollRef.current.querySelectorAll("button");
+            buttons[index]?.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+          }
+        }, 100);
+      }
+    }
+    setShowDatePicker(false);
+  };
+
+  return (
+    <div className="mt-8">
+      {/* Header */}
+      <div className="mb-4 relative">
+        <h2
+          className="font-mono text-lg font-bold uppercase tracking-wider"
+          style={{
+            color: "var(--coral)",
+            textShadow:
+              "0 0 10px rgba(255,107,107,0.5), 0 0 20px rgba(255,107,107,0.3), 0 0 30px rgba(255,107,107,0.2)",
+          }}
+        >
+          <span style={{ filter: "blur(0.5px)" }}>More at {venueName}</span>
+        </h2>
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            background:
+              "linear-gradient(90deg, transparent, rgba(255,107,107,0.1) 50%, transparent)",
+            filter: "blur(8px)",
+          }}
+        />
+      </div>
+
+      {/* Date Selector */}
+      <div className="relative mb-4">
+        <div
+          ref={scrollRef}
+          className="flex gap-2 overflow-x-auto scrollbar-hide pb-2 -mx-4 px-4"
+        >
+          {availableDates.map((date) => {
+            const isSelected = isSameDay(date, selectedDate);
+            const eventsOnDay = eventsByDate.get(format(date, "yyyy-MM-dd"))?.length || 0;
+
+            return (
+              <button
+                key={date.toISOString()}
+                onClick={() => setSelectedDate(date)}
+                className={`flex-shrink-0 flex flex-col items-center px-3 py-2 rounded-lg border transition-all ${
+                  isSelected
+                    ? "bg-[var(--coral)]/20 border-[var(--coral)]/50 text-[var(--coral)]"
+                    : "bg-[var(--dusk)] border-[var(--twilight)] text-[var(--soft)] hover:border-[var(--coral)]/30"
+                }`}
+              >
+                <span className="font-mono text-[0.65rem] uppercase tracking-wider">
+                  {formatDateLabel(date)}
+                </span>
+                <span className="font-mono text-lg font-bold leading-tight">
+                  {format(date, "d")}
+                </span>
+                <span className="font-mono text-[0.55rem] text-[var(--muted)] uppercase">
+                  {format(date, "MMM")}
+                </span>
+                {eventsOnDay > 1 && (
+                  <span className="mt-1 px-1.5 py-0.5 bg-[var(--twilight)] rounded text-[0.5rem] font-mono">
+                    {eventsOnDay}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+
+          {/* Date Picker Button */}
+          <div className="flex-shrink-0 relative">
+            <button
+              onClick={() => setShowDatePicker(!showDatePicker)}
+              className="flex flex-col items-center justify-center px-3 py-2 rounded-lg border border-dashed border-[var(--twilight)] text-[var(--muted)] hover:border-[var(--coral)]/50 hover:text-[var(--coral)] transition-all h-full min-h-[72px]"
+            >
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={1.5}
+                  d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                />
+              </svg>
+              <span className="font-mono text-[0.5rem] mt-1 uppercase">Jump</span>
+            </button>
+            {showDatePicker && (
+              <input
+                type="date"
+                value={datePickerValue}
+                onChange={handleDatePickerChange}
+                min={format(availableDates[0] || new Date(), "yyyy-MM-dd")}
+                max={format(
+                  availableDates[availableDates.length - 1] ||
+                    addDays(new Date(), 90),
+                  "yyyy-MM-dd"
+                )}
+                className="absolute top-0 left-0 w-full h-full opacity-0 cursor-pointer"
+                onBlur={() => setShowDatePicker(false)}
+                autoFocus
+              />
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Events for Selected Date */}
+      <div className="space-y-2">
+        {selectedEvents.length === 0 ? (
+          <div className="text-center py-8 text-[var(--muted)] font-mono text-sm">
+            No events on this date
+          </div>
+        ) : (
+          selectedEvents.map((event) => {
+            const { time, period } = formatTimeSplit(event.start_time);
+            const categoryColor = event.category
+              ? getCategoryColor(event.category)
+              : null;
+
+            return (
+              <button
+                key={event.id}
+                onClick={() => onEventClick(event.id)}
+                className="block w-full text-left p-4 border border-[var(--twilight)] rounded-xl bg-[var(--dusk)] hover:border-[var(--coral)]/50 transition-colors group"
+                style={{
+                  borderLeftWidth: categoryColor ? "3px" : undefined,
+                  borderLeftColor: categoryColor || undefined,
+                }}
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      {event.category && (
+                        <span
+                          className="flex-shrink-0 inline-flex items-center justify-center w-5 h-5 rounded"
+                          style={{
+                            backgroundColor: categoryColor
+                              ? `${categoryColor}20`
+                              : undefined,
+                          }}
+                        >
+                          <CategoryIcon
+                            type={event.category}
+                            size={12}
+                            glow="subtle"
+                          />
+                        </span>
+                      )}
+                      <h3 className="text-[var(--cream)] font-medium truncate group-hover:text-[var(--coral)] transition-colors">
+                        {event.title}
+                      </h3>
+                    </div>
+                    <div className="flex items-center gap-2 mt-1 text-sm text-[var(--muted)]">
+                      {event.start_time && (
+                        <span className="font-mono">
+                          {time} {period}
+                        </span>
+                      )}
+                      {event.is_free ? (
+                        <span className="px-1.5 py-0.5 rounded border bg-[var(--neon-green)]/15 text-[var(--neon-green)] border-[var(--neon-green)]/25 font-mono text-[0.55rem]">
+                          Free
+                        </span>
+                      ) : event.price_min ? (
+                        <span>${event.price_min}+</span>
+                      ) : null}
+                    </div>
+                  </div>
+                  <span className="text-[var(--muted)] group-hover:text-[var(--coral)] transition-colors flex-shrink-0">
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M9 5l7 7-7 7"
+                      />
+                    </svg>
+                  </span>
+                </div>
+              </button>
+            );
+          })
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function VenueDetailView({ slug, portalSlug, onClose }: VenueDetailViewProps) {
   const router = useRouter();
   const [spot, setSpot] = useState<SpotData | null>(null);
@@ -149,7 +417,7 @@ export default function VenueDetailView({ slug, portalSlug, onClose }: VenueDeta
 
   if (loading) {
     return (
-      <div className="animate-fadeIn">
+      <div className="animate-fadeIn pt-6">
         <NeonBackButton onClose={onClose} />
         <div className="space-y-4">
           <div className="aspect-video skeleton-shimmer rounded-xl" />
@@ -161,7 +429,7 @@ export default function VenueDetailView({ slug, portalSlug, onClose }: VenueDeta
 
   if (error || !spot) {
     return (
-      <div className="animate-fadeIn">
+      <div className="animate-fadeIn pt-6">
         <NeonBackButton onClose={onClose} />
         <div className="text-center py-12">
           <p className="text-[var(--muted)]">{error || "Spot not found"}</p>
@@ -176,7 +444,7 @@ export default function VenueDetailView({ slug, portalSlug, onClose }: VenueDeta
   const showImage = spot.image_url && !imageError;
 
   return (
-    <div className="animate-fadeIn pb-8">
+    <div className="animate-fadeIn pt-6 pb-8">
       {/* Back button */}
       <NeonBackButton onClose={onClose} />
 
@@ -343,49 +611,13 @@ export default function VenueDetailView({ slug, portalSlug, onClose }: VenueDeta
         </div>
       </div>
 
-      {/* Upcoming Events */}
+      {/* More at Venue - Day by day events */}
       {upcomingEvents.length > 0 && (
-        <div className="mt-8">
-          <CollapsibleSection
-            title="Upcoming Events"
-            count={upcomingEvents.length}
-            icon={CategoryIcons.events}
-            accentColor={CATEGORY_COLORS.events}
-            defaultOpen={false}
-          >
-            <div className="space-y-2">
-              {upcomingEvents.map((event) => {
-                const dateObj = parseISO(event.start_date);
-                const { time, period } = formatTimeSplit(event.start_time);
-
-                return (
-                  <button
-                    key={event.id}
-                    onClick={() => handleEventClick(event.id)}
-                    className="block w-full text-left p-4 border border-[var(--twilight)] rounded-xl bg-[var(--dusk)] hover:border-[var(--coral)]/50 transition-colors group"
-                  >
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1 min-w-0">
-                        <h3 className="text-[var(--cream)] font-medium truncate group-hover:text-[var(--coral)] transition-colors">
-                          {event.title}
-                        </h3>
-                        <p className="text-sm text-[var(--muted)] mt-1">
-                          {format(dateObj, "EEE, MMM d")}
-                          {event.start_time && ` · ${time} ${period}`}
-                        </p>
-                      </div>
-                      <span className="text-[var(--muted)] group-hover:text-[var(--coral)] transition-colors">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                        </svg>
-                      </span>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </CollapsibleSection>
-        </div>
+        <VenueEventsSection
+          venueName={spot.name}
+          events={upcomingEvents}
+          onEventClick={handleEventClick}
+        />
       )}
 
       {/* Happening Around Here */}

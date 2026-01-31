@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getPortalBySlug } from "@/lib/portal";
+import { getLocalDateString } from "@/lib/formats";
 
 type RouteContext = {
   params: Promise<{ slug: string }>;
@@ -22,9 +23,9 @@ export async function GET(request: NextRequest, context: RouteContext) {
       return NextResponse.json({ error: "Portal not found" }, { status: 404 });
     }
 
-    // Get current time in the portal's timezone (defaulting to America/Los_Angeles)
+    // Get current time in local timezone
     const now = new Date();
-    const today = now.toISOString().split("T")[0];
+    const today = getLocalDateString(now);
     const currentHour = now.getHours();
     const currentMinute = now.getMinutes();
     const currentTimeStr = `${currentHour.toString().padStart(2, "0")}:${currentMinute.toString().padStart(2, "0")}:00`;

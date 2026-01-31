@@ -1,6 +1,7 @@
 import { supabase } from "@/lib/supabase";
 import { NextRequest, NextResponse } from "next/server";
 import { createHash } from "crypto";
+import { getLocalDateString } from "@/lib/formats";
 
 export const dynamic = "force-dynamic";
 
@@ -102,11 +103,11 @@ export async function GET(request: NextRequest) {
   const portalIdParam = searchParams.get("portal_id");
 
   // Default to last 30 days
-  const endDate = endDateParam || new Date().toISOString().split("T")[0];
+  const endDate = endDateParam || getLocalDateString();
   const startDate = startDateParam || (() => {
     const d = new Date();
     d.setDate(d.getDate() - 30);
-    return d.toISOString().split("T")[0];
+    return getLocalDateString(d);
   })();
 
   // Determine portal scope

@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { NextRequest } from "next/server";
 import { getDistanceMiles } from "@/lib/geo";
 import { doTimeRangesOverlap, isSpotOpenDuringEvent, HoursData } from "@/lib/hours";
+import { getLocalDateString } from "@/lib/formats";
 
 const NEARBY_RADIUS_MILES = 10;
 
@@ -49,7 +50,7 @@ export async function GET(
   };
 
   // Get today's date for filtering related events
-  const today = new Date().toISOString().split("T")[0];
+  const today = getLocalDateString();
   const eventDate = new Date(eventData.start_date);
 
   // Fetch related events at the same venue

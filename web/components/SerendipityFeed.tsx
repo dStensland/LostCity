@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import SerendipityMoment, { getRandomSerendipityType } from "./SerendipityMoment";
+import { getLocalDateString } from "@/lib/formats";
 
 type SerendipityEvent = {
   id: number;
@@ -31,8 +32,9 @@ export default function SerendipityFeed({ portalSlug, position = 0 }: Props) {
     // Fetch a random "serendipity" event
     async function fetchSerendipityEvent() {
       try {
-        const today = new Date().toISOString().split("T")[0];
-        const weekFromNow = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+        const today = getLocalDateString();
+        const weekFromNowDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+        const weekFromNow = getLocalDateString(weekFromNowDate);
 
         // Fetch events with some randomization
         const res = await fetch(

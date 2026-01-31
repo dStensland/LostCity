@@ -21,6 +21,7 @@ import {
   RelatedCard,
   DetailStickyBar,
 } from "@/components/detail";
+import { getLocalDateString } from "@/lib/formats";
 
 export const revalidate = 300;
 
@@ -78,7 +79,7 @@ const getOrganization = unstable_cache(
 // Cache organization events
 const getOrganizationEvents = unstable_cache(
   async (organizationId: string): Promise<Event[]> => {
-    const today = new Date().toISOString().split("T")[0];
+    const today = getLocalDateString();
 
     const { data, error } = await supabase
       .from("events")

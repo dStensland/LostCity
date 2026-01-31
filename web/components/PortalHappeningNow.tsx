@@ -5,6 +5,7 @@ import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import EventCard from "./EventCard";
 import type { Event } from "@/lib/supabase";
+import { getLocalDateString } from "@/lib/formats";
 
 type EventWithVenue = Event & {
   venue?: {
@@ -32,7 +33,7 @@ export default function PortalHappeningNow({ portalId, portalSlug, isExclusive =
 
     async function fetchLiveEvents() {
       const now = new Date();
-      const today = now.toISOString().split("T")[0];
+      const today = getLocalDateString();
       const currentTime = now.toTimeString().slice(0, 5); // HH:MM
 
       // Build query for events happening now

@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { format, parseISO } from "date-fns";
+import { getLocalDateString } from "@/lib/formats";
 
 type EventRow = {
   id: number;
@@ -28,7 +29,7 @@ export default function AdminEventsPage() {
     let cancelled = false;
 
     async function loadEvents() {
-      const today = new Date().toISOString().split("T")[0];
+      const today = getLocalDateString();
 
       let query = supabase
         .from("events")

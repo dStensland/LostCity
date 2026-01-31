@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextRequest } from "next/server";
+import { getLocalDateString } from "@/lib/formats";
 
 export async function GET(
   request: NextRequest,
@@ -29,7 +30,7 @@ export async function GET(
   const organization = organizationData as { id: string; [key: string]: unknown };
 
   // Get today's date for filtering upcoming events
-  const today = new Date().toISOString().split("T")[0];
+  const today = getLocalDateString();
 
   // Fetch upcoming events for this organization
   const { data: eventsData } = await supabase

@@ -8,6 +8,7 @@
 
 import { createServiceClient } from "./supabase/service";
 import { analyzeQueryIntent, applyIntentBoost, type QueryIntentResult, type SearchType } from "./query-intent";
+import { getLocalDateString } from "@/lib/formats";
 
 // ============================================
 // Types
@@ -709,7 +710,7 @@ async function searchSeries(
       .from("events")
       .select("series_id")
       .in("series_id", seriesIds)
-      .gte("start_date", new Date().toISOString().split("T")[0]);
+      .gte("start_date", getLocalDateString());
 
     const countMap = new Map<string, number>();
     (eventCounts as Array<{ series_id: string | null }> | null)?.forEach((e) => {

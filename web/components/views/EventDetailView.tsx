@@ -227,7 +227,7 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
 
   if (loading) {
     return (
-      <div className="animate-fadeIn">
+      <div className="animate-fadeIn pt-6">
         {/* Loading skeleton with back button integrated */}
         <div className="relative aspect-[2/1] skeleton-shimmer rounded-xl mb-4">
           <NeonBackButton />
@@ -240,7 +240,7 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
 
   if (error || !event) {
     return (
-      <div className="animate-fadeIn">
+      <div className="animate-fadeIn pt-6">
         <div className="relative aspect-[2/1] bg-[var(--dusk)] rounded-xl mb-4 flex items-center justify-center">
           <NeonBackButton />
           <p className="text-[var(--muted)]">{error || "Event not found"}</p>
@@ -264,7 +264,7 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
   const hasRelatedContent = hasVenueEvents || hasNearbyEvents || hasFood || hasDrinks || hasNightlife || hasCaffeine || hasFun;
 
   return (
-    <div className="animate-fadeIn pb-8">
+    <div className="animate-fadeIn pt-6 pb-8">
       {/* Hero Image with integrated back button */}
       <div
         className={`relative aspect-[2/1] bg-[var(--night)] rounded-xl overflow-hidden mb-4 ${

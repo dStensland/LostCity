@@ -1,5 +1,6 @@
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "./types";
+import { getLocalDateString } from "@/lib/formats";
 
 // Sanitize API key - remove any whitespace, control chars, or URL encoding artifacts
 function sanitizeKey(key: string | undefined): string | undefined {
@@ -90,7 +91,7 @@ export type Venue = {
 };
 
 export async function getUpcomingEvents(limit = 50): Promise<Event[]> {
-  const today = new Date().toISOString().split("T")[0];
+  const today = getLocalDateString();
 
   const { data, error } = await supabase
     .from("events")
@@ -117,7 +118,7 @@ export async function getUpcomingEventsPaginated(
   page = 1,
   pageSize = 20
 ): Promise<{ events: Event[]; total: number }> {
-  const today = new Date().toISOString().split("T")[0];
+  const today = getLocalDateString();
   const offset = (page - 1) * pageSize;
 
   const { data, error, count } = await supabase
@@ -185,7 +186,7 @@ export async function getEventsByCategory(
   categoryId: string,
   limit = 50
 ): Promise<Event[]> {
-  const today = new Date().toISOString().split("T")[0];
+  const today = getLocalDateString();
 
   const { data, error } = await supabase
     .from("events")
@@ -212,7 +213,7 @@ export async function getRelatedEvents(
   event: Event,
   limit = 4
 ): Promise<{ venueEvents: Event[]; sameDateEvents: Event[] }> {
-  const today = new Date().toISOString().split("T")[0];
+  const today = getLocalDateString();
   const venueId = event.venue?.id;
 
   // Get other events at the same venue
@@ -263,7 +264,7 @@ export async function getSimilarEvents(
     return [];
   }
 
-  const today = new Date().toISOString().split("T")[0];
+  const today = getLocalDateString();
 
   // Get events in the same category, excluding same venue and same date
   const { data } = await supabase
@@ -293,7 +294,7 @@ export async function getSimilarEvents(
 
 // Get platform stats for landing page
 export async function getPlatformStats(): Promise<{ eventCount: number; venueCount: number; sourceCount: number }> {
-  const today = new Date().toISOString().split("T")[0];
+  const today = getLocalDateString();
 
   const [eventsResult, venuesResult, sourcesResult] = await Promise.all([
     supabase

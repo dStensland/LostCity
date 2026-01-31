@@ -224,6 +224,7 @@ export function AddItemsModal({ listId, existingItems, onClose, onItemsAdded }: 
               onChange={(e) => setQuery(e.target.value)}
               placeholder={`Search ${activeTab === "venue" ? "venues" : "events"}...`}
               className="w-full px-4 py-3 rounded-lg bg-[var(--dusk)] border border-[var(--twilight)] text-[var(--cream)] font-mono text-sm placeholder:text-[var(--muted)] focus:outline-none focus:border-[var(--coral)] focus:ring-2 focus:ring-[var(--coral)]/50 transition-colors"
+              autoComplete="off"
             />
             {isLoading && (
               <div className="absolute right-3 top-1/2 -translate-y-1/2">

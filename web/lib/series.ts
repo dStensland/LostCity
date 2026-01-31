@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { getLocalDateString } from "@/lib/formats";
 
 // Type for raw event data from Supabase query
 type RawSeriesEvent = {
@@ -110,7 +111,7 @@ export async function getSeriesEvents(
     .order("start_time", { ascending: true });
 
   if (futureOnly) {
-    const today = new Date().toISOString().split("T")[0];
+    const today = getLocalDateString();
     query = query.gte("start_date", today);
   }
 
@@ -161,7 +162,7 @@ export async function getSeriesWithEventCounts(
   }
 
   // Get event counts for each series
-  const today = new Date().toISOString().split("T")[0];
+  const today = getLocalDateString();
   const seriesIds = (seriesData as Series[]).map((s) => s.id);
 
   const { data: countData } = await supabase

@@ -1,6 +1,7 @@
 import { supabase } from "@/lib/supabase";
 import { NextRequest, NextResponse } from "next/server";
 import { addDays, startOfDay, nextFriday, nextSunday, isFriday, isSaturday, isSunday } from "date-fns";
+import { getLocalDateString } from "@/lib/formats";
 
 // Cache feed for 5 minutes at CDN, allow stale for 1 hour while revalidating
 export const revalidate = 300;
@@ -82,7 +83,7 @@ type Event = {
 // Check if section should be visible based on schedule rules
 function isSectionVisible(section: Section): boolean {
   const now = new Date();
-  const today = now.toISOString().split("T")[0];
+  const today = getLocalDateString();
   const currentTime = now.toTimeString().slice(0, 5); // HH:MM
   const currentDay = now.toLocaleDateString("en-US", { weekday: "long" }).toLowerCase();
 
@@ -120,14 +121,14 @@ function getDateRange(filter: string): { start: string; end: string } {
   switch (filter) {
     case "today":
       return {
-        start: today.toISOString().split("T")[0],
-        end: today.toISOString().split("T")[0],
+        start: getLocalDateString(today),
+        end: getLocalDateString(today),
       };
     case "tomorrow":
       const tomorrow = addDays(today, 1);
       return {
-        start: tomorrow.toISOString().split("T")[0],
-        end: tomorrow.toISOString().split("T")[0],
+        start: getLocalDateString(tomorrow),
+        end: getLocalDateString(tomorrow),
       };
     case "this_weekend": {
       // Friday through Sunday
@@ -145,24 +146,24 @@ function getDateRange(filter: string): { start: string; end: string } {
       }
 
       return {
-        start: friday.toISOString().split("T")[0],
-        end: sunday.toISOString().split("T")[0],
+        start: getLocalDateString(friday),
+        end: getLocalDateString(sunday),
       };
     }
     case "next_7_days":
       return {
-        start: today.toISOString().split("T")[0],
-        end: addDays(today, 7).toISOString().split("T")[0],
+        start: getLocalDateString(today),
+        end: getLocalDateString(addDays(today, 7)),
       };
     case "next_30_days":
       return {
-        start: today.toISOString().split("T")[0],
-        end: addDays(today, 30).toISOString().split("T")[0],
+        start: getLocalDateString(today),
+        end: getLocalDateString(addDays(today, 30)),
       };
     default:
       return {
-        start: today.toISOString().split("T")[0],
-        end: addDays(today, 14).toISOString().split("T")[0],
+        start: getLocalDateString(today),
+        end: getLocalDateString(addDays(today, 14)),
       };
   }
 }
@@ -280,7 +281,7 @@ export async function GET(request: NextRequest, { params }: Props) {
         venue:venues(id, name, neighborhood, slug)
       `)
       .in("id", Array.from(eventIds))
-      .gte("start_date", new Date().toISOString().split("T")[0])
+      .gte("start_date", getLocalDateString())
       .is("canonical_event_id", null); // Only show canonical events, not duplicates
 
     for (const event of (eventsData || []) as Event[]) {
@@ -291,7 +292,7 @@ export async function GET(request: NextRequest, { params }: Props) {
   // PERFORMANCE OPTIMIZATION: Batch all event fetching upfront
   // Instead of N queries (one per section), we do 1-2 queries total
 
-  const today = new Date().toISOString().split("T")[0];
+  const today = getLocalDateString();
 
   // Step 1: Collect all pinned event IDs from sections
   const pinnedEventIds = new Set<number>();
@@ -345,7 +346,7 @@ export async function GET(request: NextRequest, { params }: Props) {
 
   if (sectionsNeedingAutoEvents.length > 0) {
     // Find the widest date range needed across all sections
-    let maxEndDate = addDays(new Date(), 14).toISOString().split("T")[0]; // Default 2 weeks
+    let maxEndDate = getLocalDateString(addDays(new Date(), 14)); // Default 2 weeks
 
     for (const section of sectionsNeedingAutoEvents) {
       const filter = section.auto_filter!;
@@ -613,7 +614,7 @@ export async function GET(request: NextRequest, { params }: Props) {
     `)
     .eq("is_featured", true)
     .gte("start_date", today)
-    .lte("start_date", addDays(new Date(), 30).toISOString().split("T")[0])
+    .lte("start_date", getLocalDateString(addDays(new Date(), 30)))
     .is("canonical_event_id", null)
     .order("start_date", { ascending: true })
     .limit(10);
@@ -655,7 +656,7 @@ export async function GET(request: NextRequest, { params }: Props) {
           `)
           .contains("tags", [tag])
           .gte("start_date", today)
-          .lte("start_date", addDays(new Date(), 30).toISOString().split("T")[0])
+          .lte("start_date", getLocalDateString(addDays(new Date(), 30)))
           .is("canonical_event_id", null)
           .order("start_date", { ascending: true })
           .limit(holidaySection.max_items);

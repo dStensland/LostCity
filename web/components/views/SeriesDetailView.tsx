@@ -176,7 +176,7 @@ export default function SeriesDetailView({ slug, portalSlug, onClose }: SeriesDe
 
   if (loading) {
     return (
-      <div className="animate-fadeIn">
+      <div className="animate-fadeIn pt-6">
         {/* Hero skeleton with floating back button */}
         <div className="relative rounded-xl overflow-hidden mb-6 bg-[var(--dusk)]">
           <NeonFloatingBackButton onClose={onClose} />
@@ -196,7 +196,7 @@ export default function SeriesDetailView({ slug, portalSlug, onClose }: SeriesDe
 
   if (error || !series) {
     return (
-      <div className="animate-fadeIn">
+      <div className="animate-fadeIn pt-6">
         <div className="relative rounded-xl overflow-hidden mb-6 bg-[var(--dusk)] border border-[var(--twilight)]">
           <NeonFloatingBackButton onClose={onClose} />
           <div className="text-center py-16">
@@ -218,7 +218,7 @@ export default function SeriesDetailView({ slug, portalSlug, onClose }: SeriesDe
   const totalEvents = venueShowtimes.reduce((sum, vs) => sum + vs.events.length, 0);
 
   return (
-    <div className="animate-fadeIn pb-8">
+    <div className="animate-fadeIn pt-6 pb-8">
       {/* Hero with poster and info */}
       <div
         className="relative rounded-xl overflow-hidden mb-6 border border-[var(--twilight)]"

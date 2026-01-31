@@ -1,6 +1,7 @@
 import { supabase } from "@/lib/supabase";
 import { isAdmin } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
+import { getLocalDateString } from "@/lib/formats";
 
 export const dynamic = "force-dynamic";
 
@@ -40,11 +41,11 @@ export async function GET(request: NextRequest) {
   const endDateParam = searchParams.get("end_date");
 
   // Default to last 30 days
-  const endDate = endDateParam || new Date().toISOString().split("T")[0];
+  const endDate = endDateParam || getLocalDateString();
   const startDate = startDateParam || (() => {
     const d = new Date();
     d.setDate(d.getDate() - 30);
-    return d.toISOString().split("T")[0];
+    return getLocalDateString(d);
   })();
 
   // Get portals for name lookup
@@ -276,7 +277,7 @@ async function computeExportMetrics(
     : portals;
 
   while (current <= end) {
-    const dateStr = current.toISOString().split("T")[0];
+    const dateStr = getLocalDateString(current);
 
     for (const portal of targetPortals) {
       const crawlStats = crawlsByDate.get(dateStr) || { runs: 0, success: 0 };

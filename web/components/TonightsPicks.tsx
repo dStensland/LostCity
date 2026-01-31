@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { formatTimeSplit } from "@/lib/formats";
-import { format } from "date-fns";
+import { format, startOfDay } from "date-fns";
 import CategoryIcon, { getCategoryColor } from "./CategoryIcon";
 import CategoryPlaceholder from "./CategoryPlaceholder";
 
@@ -22,7 +22,8 @@ type TonightEvent = {
 
 async function getTonightEvents(): Promise<TonightEvent[]> {
   try {
-    const today = new Date().toISOString().split("T")[0];
+    // Use date-fns format to get local date (not UTC from toISOString)
+    const today = format(startOfDay(new Date()), "yyyy-MM-dd");
     const now = new Date();
     const currentHour = now.getHours();
 
@@ -30,6 +31,11 @@ async function getTonightEvents(): Promise<TonightEvent[]> {
     if (currentHour < 16) {
       return [];
     }
+
+    // Calculate time filter - show events that haven't ended yet
+    // Events are "tonight" if they haven't started yet or started within last 2 hours
+    const currentTime = format(now, "HH:mm:ss");
+    const twoHoursAgo = format(new Date(now.getTime() - 2 * 60 * 60 * 1000), "HH:mm:ss");
 
     const { data: events, error } = await supabase
       .from("events")
@@ -45,26 +51,23 @@ async function getTonightEvents(): Promise<TonightEvent[]> {
         venue:venues(name, neighborhood)
       `)
       .eq("start_date", today)
-      .eq("is_live", true)
+      .is("canonical_event_id", null) // Only show canonical events
+      .is("portal_id", null) // Only show public events
+      // Time filter: show events starting in future or started within last 2 hours, or all-day events
+      .or(`start_time.gte.${twoHoursAgo},is_all_day.eq.true`)
       .order("start_time", { ascending: true })
-      .limit(6);
+      .limit(12); // Fetch more to allow for filtering
 
     if (error || !events) {
       console.error("Failed to fetch tonight events:", error);
       return [];
     }
 
-    // Cast to expected type for filtering
+    // Cast to expected type
     const typedEvents = events as unknown as TonightEvent[];
 
-    // Filter to events that haven't started yet or started within last hour
-    return typedEvents.filter((event) => {
-      if (event.is_all_day) return true;
-      if (!event.start_time) return true;
-      // Include if starts in the future or started within last 2 hours
-      const twoHoursAgo = format(new Date(now.getTime() - 2 * 60 * 60 * 1000), "HH:mm:ss");
-      return event.start_time >= twoHoursAgo;
-    });
+    // Return first 6 events (already filtered by query)
+    return typedEvents.slice(0, 6);
   } catch (error) {
     console.error("Error in getTonightEvents:", error);
     return [];

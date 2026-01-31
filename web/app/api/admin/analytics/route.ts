@@ -1,6 +1,7 @@
 import { supabase } from "@/lib/supabase";
 import { isAdmin } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
+import { getLocalDateString } from "@/lib/formats";
 
 export const dynamic = "force-dynamic";
 
@@ -51,7 +52,7 @@ export async function GET(request: NextRequest) {
   const days = daysParam ? parseInt(daysParam, 10) : 30;
   const startDate = new Date();
   startDate.setDate(startDate.getDate() - days);
-  const startDateStr = startDate.toISOString().split("T")[0];
+  const startDateStr = getLocalDateString(startDate);
 
   // Get portals
   const { data: portals, error: portalsError } = await supabase
@@ -175,7 +176,7 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({
     period: {
       start: startDateStr,
-      end: new Date().toISOString().split("T")[0],
+      end: getLocalDateString(),
       days,
     },
     kpis: {
@@ -271,7 +272,7 @@ async function computeMetricsFromSources(
     : portals;
 
   while (current <= end) {
-    const dateStr = current.toISOString().split("T")[0];
+    const dateStr = getLocalDateString(current);
 
     for (const portal of targetPortals) {
       const crawlStats = crawlsByDate.get(dateStr) || { runs: 0, success: 0 };

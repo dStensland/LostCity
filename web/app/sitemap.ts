@@ -1,6 +1,7 @@
 import { MetadataRoute } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { DEFAULT_PORTAL_SLUG } from "@/lib/constants";
+import { getLocalDateString } from "@/lib/formats";
 
 const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://lostcity.ai";
 
@@ -52,7 +53,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   ];
 
   // Fetch upcoming events (limit to recent/upcoming for performance)
-  const today = new Date().toISOString().split("T")[0];
+  const today = getLocalDateString();
   const { data: eventsData } = await supabase
     .from("events")
     .select("id, start_date, updated_at")

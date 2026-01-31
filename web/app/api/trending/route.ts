@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { applyRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
+import { getLocalDateString } from "@/lib/formats";
 
 export const revalidate = 300; // Cache for 5 minutes
 
@@ -12,8 +13,10 @@ export async function GET(request: Request) {
   const limit = Math.min(parseInt(searchParams.get("limit") || "6", 10), 20);
   const portalSlug = searchParams.get("portal");
 
-  const today = new Date().toISOString().split("T")[0];
-  const nextWeek = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+  const today = getLocalDateString();
+  const nextWeekDate = new Date();
+  nextWeekDate.setDate(nextWeekDate.getDate() + 7);
+  const nextWeek = getLocalDateString(nextWeekDate);
 
   // Get portal data if specified
   let portalId: string | null = null;

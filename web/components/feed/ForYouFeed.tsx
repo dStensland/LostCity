@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import Link from "next/link";
 import EventCard, { type FriendGoing } from "@/components/EventCard";
 import type { RecommendationReason } from "@/components/ReasonBadge";
+import { getLocalDateString } from "@/lib/formats";
 
 // Event type matching API response - compatible with EventCard
 type FeedEvent = {
@@ -425,7 +426,7 @@ export default function ForYouFeed({ portalSlug }: ForYouFeedProps) {
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const todayStr = today.toISOString().split("T")[0];
+    const todayStr = getLocalDateString(today);
 
     // Get weekend dates (Saturday and Sunday)
     const dayOfWeek = today.getDay();
@@ -434,8 +435,8 @@ export default function ForYouFeed({ portalSlug }: ForYouFeedProps) {
     saturday.setDate(saturday.getDate() + (dayOfWeek === 6 ? 0 : daysUntilSaturday));
     const sunday = new Date(saturday);
     sunday.setDate(sunday.getDate() + 1);
-    const saturdayStr = saturday.toISOString().split("T")[0];
-    const sundayStr = sunday.toISOString().split("T")[0];
+    const saturdayStr = getLocalDateString(saturday);
+    const sundayStr = getLocalDateString(sunday);
 
     return events.filter((e) => {
       if (quickFilter === "today") {

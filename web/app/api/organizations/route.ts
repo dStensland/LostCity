@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { applyRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
+import { getLocalDateString } from "@/lib/formats";
 
 type Organization = {
   id: string;
@@ -23,7 +24,7 @@ export async function GET(request: NextRequest) {
 
   try {
     // Get current date for event counting
-    const today = new Date().toISOString().split("T")[0];
+    const today = getLocalDateString();
 
     // Fetch organizations
     const { data: organizations, error } = await supabase

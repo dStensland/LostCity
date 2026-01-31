@@ -1,5 +1,6 @@
 import { supabase, Event } from "./supabase";
 import { PortalFilters } from "./portals";
+import { getLocalDateString } from "@/lib/formats";
 
 export interface PaginatedResult {
   events: Event[];
@@ -15,7 +16,7 @@ export async function getFilteredEvents(
   page = 1,
   pageSize = 20
 ): Promise<PaginatedResult> {
-  const today = new Date().toISOString().split("T")[0];
+  const today = getLocalDateString();
   const offset = (page - 1) * pageSize;
 
   // Build the query
@@ -105,7 +106,7 @@ export async function getAllFilteredEvents(
   filters: PortalFilters,
   limit = 200
 ): Promise<Event[]> {
-  const today = new Date().toISOString().split("T")[0];
+  const today = getLocalDateString();
 
   let query = supabase
     .from("events")
