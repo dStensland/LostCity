@@ -69,9 +69,20 @@ export async function middleware(request: NextRequest) {
   // getUser() validates with the server and triggers token refresh if needed.
   const { data: { user }, error: authError } = await supabase.auth.getUser();
 
-  // If there's an auth error (stale/corrupted cookies), clear them to give user clean state
-  if (authError && !request.nextUrl.pathname.startsWith("/auth")) {
-    // Clear all Supabase auth cookies to force fresh login
+  // Only clear cookies for specific auth errors that indicate invalid/expired sessions.
+  // DON'T clear on network errors, timeouts, or transient issues (which can happen during deploys).
+  // Supabase error codes that mean the session is definitely invalid:
+  // - "session_not_found" - session doesn't exist
+  // - "invalid_token" - token is malformed
+  // - "user_not_found" - user was deleted
+  const invalidSessionErrors = ["session_not_found", "invalid_token", "user_not_found", "bad_jwt"];
+  const shouldClearCookies = authError &&
+    !request.nextUrl.pathname.startsWith("/auth") &&
+    authError.code &&
+    invalidSessionErrors.includes(authError.code);
+
+  if (shouldClearCookies) {
+    // Clear all Supabase auth cookies to give user clean state
     const supabaseProject = supabaseUrl.replace("https://", "").split(".")[0];
     const authCookiePrefix = `sb-${supabaseProject}-auth-token`;
 

@@ -162,6 +162,43 @@ Never assume a profile exists - always check and create if needed.
 
 ---
 
+## Deployment & Session Stability
+
+### Why Auth Can Break on Deploys
+
+During Vercel deployments, there can be brief network hiccups or race conditions when:
+- Old code is still serving requests while new code spins up
+- Edge functions restart and lose any in-memory state
+- Requests to Supabase might timeout during the transition
+
+**The Fix (already implemented):**
+
+The middleware (`middleware.ts`) only clears auth cookies for **specific** auth errors that definitely indicate an invalid session:
+- `session_not_found`
+- `invalid_token`
+- `user_not_found`
+- `bad_jwt`
+
+It does **NOT** clear cookies on:
+- Network errors
+- Timeouts
+- Any other transient errors
+
+This prevents users from being logged out due to deployment-related network blips.
+
+### Cookie Management
+
+Supabase stores auth tokens in cookies via `@supabase/ssr`. The cookie names follow the pattern:
+`sb-{project-id}-auth-token`
+
+These cookies:
+- Are HttpOnly (can't be accessed by JavaScript)
+- Are set by the server/middleware
+- Persist across page refreshes and deploys
+- Contain JWT tokens that are refreshed automatically by `getUser()`
+
+---
+
 ## Common Gotchas
 
 1. **TypeScript and Supabase**: Use `as never` for insert/update operations to bypass strict typing:
