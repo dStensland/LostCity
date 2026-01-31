@@ -41,12 +41,12 @@ export const DesignTesterPanel = memo(function DesignTesterPanel() {
   const isDev = typeof window !== "undefined" &&
     (process.env.NODE_ENV === "development" || window.location.hostname === "localhost");
 
-  // Keyboard shortcut to toggle panel (Ctrl+Shift+D)
+  // Keyboard shortcut to toggle panel (Ctrl+. or Cmd+.)
   useEffect(() => {
     if (!isDev) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.ctrlKey && e.shiftKey && e.key === "D") {
+      if ((e.ctrlKey || e.metaKey) && e.key === ".") {
         e.preventDefault();
         setIsOpen((prev) => !prev);
       }
