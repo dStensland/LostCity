@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { format, parseISO } from "date-fns";
 import CategoryIcon from "@/components/CategoryIcon";
 import CategoryPlaceholder from "@/components/CategoryPlaceholder";
 import FollowButton from "@/components/FollowButton";
@@ -19,6 +18,7 @@ import FlagButton from "@/components/FlagButton";
 import { getSeriesTypeLabel, getSeriesTypeColor } from "@/lib/series-utils";
 import CollapsibleSection, { CategoryIcons } from "@/components/CollapsibleSection";
 import { formatCloseTime } from "@/lib/hours";
+import VenueEventsByDay from "@/components/VenueEventsByDay";
 
 type EventData = {
   id: number;
@@ -615,34 +615,13 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
                 count={venueEvents.length}
                 category="venue"
                 icon={CategoryIcons.venue}
-                maxItems={5}
-                totalItems={venueEvents.length}
-                onSeeAll={() => toggleSection('venue')}
               >
-                <div className="space-y-2">
-                  {(expandedSections.venue ? venueEvents : venueEvents.slice(0, 5)).map((relatedEvent) => (
-                    <button
-                      key={relatedEvent.id}
-                      onClick={() => handleEventClick(relatedEvent.id)}
-                      className="block w-full p-3 border border-[var(--twilight)] rounded-lg transition-colors group hover:border-[var(--coral)]/50 bg-[var(--void)] text-left"
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex-1 min-w-0">
-                          <h3 className="text-[var(--cream)] text-sm font-medium truncate group-hover:text-[var(--coral)] transition-colors">
-                            {relatedEvent.title}
-                          </h3>
-                          <p className="text-xs text-[var(--muted)] mt-0.5">
-                            {format(parseISO(relatedEvent.start_date), "EEE, MMM d")}
-                            {relatedEvent.start_time && ` · ${formatTimeSplit(relatedEvent.start_time).time}${formatTimeSplit(relatedEvent.start_time).period}`}
-                          </p>
-                        </div>
-                        <svg className="w-4 h-4 text-[var(--muted)] group-hover:text-[var(--coral)] transition-colors flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                        </svg>
-                      </div>
-                    </button>
-                  ))}
-                </div>
+                <VenueEventsByDay
+                  events={venueEvents}
+                  onEventClick={handleEventClick}
+                  maxDates={5}
+                  compact={true}
+                />
               </CollapsibleSection>
             )}
 
