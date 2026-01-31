@@ -18,61 +18,65 @@ export interface FilterChipProps {
   active?: boolean;
   removable?: boolean;
   size?: "sm" | "md";
+  count?: number;        // Optional count badge
   onClick?: () => void;
   onRemove?: () => void;
   className?: string;
 }
 
-// Variant color configurations
-const VARIANT_STYLES: Record<FilterChipVariant, { active: string; inactive: string }> = {
+// Variant color configurations with glow classes
+const VARIANT_STYLES: Record<FilterChipVariant, { active: string; inactive: string; glowClass: string }> = {
   default: {
     inactive: "border-[var(--twilight)] text-[var(--muted)] hover:text-[var(--cream)] hover:border-[var(--soft)]",
     active: "bg-[var(--twilight)] text-[var(--cream)] border-[var(--soft)]",
+    glowClass: "",
   },
   category: {
     inactive: "border-[var(--twilight)] text-[var(--muted)] hover:text-[var(--cream)] hover:border-[var(--cream)]/50",
     active: "bg-[var(--cream)] text-[var(--void)] border-[var(--cream)]",
+    glowClass: "chip-glow-cream",
   },
   subcategory: {
     inactive: "border-[var(--twilight)] text-[var(--muted)] hover:text-[var(--coral)] hover:border-[var(--coral)]/50",
-    active: "bg-[var(--coral)] text-[var(--void)] border-[var(--coral)] shadow-[0_0_8px_var(--coral)/25]",
+    active: "bg-[var(--coral)] text-[var(--void)] border-[var(--coral)]",
+    glowClass: "chip-glow-coral",
   },
   date: {
     inactive: "border-[var(--twilight)] text-[var(--muted)] hover:text-[var(--gold)] hover:border-[var(--gold)]/50",
     active: "bg-[var(--gold)] text-[var(--void)] border-[var(--gold)]",
+    glowClass: "chip-glow-gold",
   },
   vibe: {
     inactive: "border-[var(--twilight)] text-[var(--muted)] hover:text-[#C4B5FD] hover:border-[#C4B5FD]/50",
     active: "bg-[#C4B5FD] text-[var(--void)] border-[#C4B5FD]",
+    glowClass: "chip-glow-vibe",
   },
   access: {
     inactive: "border-[var(--twilight)] text-[var(--muted)] hover:text-[var(--neon-cyan)] hover:border-[var(--neon-cyan)]/50",
     active: "bg-[var(--neon-cyan)] text-[var(--void)] border-[var(--neon-cyan)]",
+    glowClass: "chip-glow-cyan",
   },
   special: {
     inactive: "border-[var(--twilight)] text-[var(--muted)] hover:text-[var(--gold)] hover:border-[var(--gold)]/50",
     active: "bg-[var(--gold)] text-[var(--void)] border-[var(--gold)]",
+    glowClass: "chip-glow-gold",
   },
   free: {
     inactive: "border-[var(--twilight)] text-[var(--muted)] hover:text-[var(--neon-green)] hover:border-[var(--neon-green)]/50",
     active: "bg-[var(--neon-green)] text-[var(--void)] border-[var(--neon-green)]",
+    glowClass: "chip-glow-green",
   },
 };
 
 const FilterChip = forwardRef<HTMLButtonElement, FilterChipProps>(
-  ({ label, variant = "default", active = false, removable = false, size = "md", onClick, onRemove, className = "" }, ref) => {
+  ({ label, variant = "default", active = false, removable = false, size = "md", count, onClick, onRemove, className = "" }, ref) => {
     const sizeClasses = size === "sm"
       ? "min-h-[32px] px-2.5 text-[0.6rem]"
       : "min-h-[36px] px-3 text-[0.65rem]";
 
     const styles = VARIANT_STYLES[variant];
     const variantClasses = active ? styles.active : styles.inactive;
-
-    const handleClick = () => {
-      if (onClick) {
-        onClick();
-      }
-    };
+    const glowClasses = active ? styles.glowClass : "";
 
     const handleRemove = (e: React.MouseEvent) => {
       e.stopPropagation();
@@ -85,18 +89,30 @@ const FilterChip = forwardRef<HTMLButtonElement, FilterChipProps>(
       <button
         ref={ref}
         type="button"
-        onClick={handleClick}
+        onClick={onClick}
         className={`
           inline-flex items-center gap-1.5 rounded-full border font-mono font-medium
-          transition-all duration-150 ease-out
+          transition-all duration-150 ease-out active:animate-chip-toggle
           focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--coral)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--night)]
           ${sizeClasses}
           ${variantClasses}
+          ${glowClasses}
           ${className}
         `}
         aria-pressed={active}
       >
         <span className="whitespace-nowrap">{label}</span>
+        {/* Count badge */}
+        {count !== undefined && count > 0 && (
+          <span
+            className={`
+              flex items-center justify-center min-w-[1.25rem] h-[1.25rem] px-1 rounded-full text-[0.55rem] font-bold
+              ${active ? "bg-black/20 text-inherit" : "bg-[var(--twilight)] text-[var(--muted)]"}
+            `}
+          >
+            {count > 99 ? "99+" : count}
+          </span>
+        )}
         {removable && active && (
           <span
             role="button"

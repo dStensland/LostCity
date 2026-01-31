@@ -2,7 +2,11 @@
 
 import { ReactNode } from "react";
 
+// Pre-built variant configurations
+export type EmptyStateVariant = "no-events" | "no-results" | "no-saved" | "connect-friends" | "default";
+
 type EmptyStateProps = {
+  variant?: EmptyStateVariant;
   title?: string;
   message: string;
   icon?: ReactNode;
@@ -16,9 +20,27 @@ type EmptyStateProps = {
     onClick: () => void;
   };
   className?: string;
+  atmospheric?: boolean;
 };
 
+// Get variant-specific accent color
+function getVariantColor(variant: EmptyStateVariant): string {
+  switch (variant) {
+    case "no-events":
+      return "var(--neon-amber)";
+    case "no-results":
+      return "var(--neon-cyan)";
+    case "no-saved":
+      return "var(--neon-magenta)";
+    case "connect-friends":
+      return "var(--neon-green)";
+    default:
+      return "var(--neon-magenta)";
+  }
+}
+
 export default function EmptyState({
+  variant = "default",
   title,
   message,
   icon,
@@ -26,55 +48,88 @@ export default function EmptyState({
   action,
   secondaryAction,
   className = "",
+  atmospheric = true,
 }: EmptyStateProps) {
+  const accentColor = getVariantColor(variant);
+
   return (
-    <div className={`py-12 text-center ${className}`}>
-      {icon && (
-        <div className="mb-4 flex justify-center text-[var(--muted)]">
-          {icon}
-        </div>
-      )}
-      {title && (
-        <h3 className="text-xl font-semibold text-[var(--cream)] mb-2">
-          {title}
-        </h3>
-      )}
-      <p className="font-mono text-sm text-[var(--muted)] max-w-sm mx-auto">{message}</p>
-
-      {suggestions && suggestions.length > 0 && (
-        <div className="mt-4 text-left max-w-xs mx-auto">
-          <p className="font-mono text-[0.65rem] text-[var(--muted)] uppercase tracking-wider mb-2">Try:</p>
-          <ul className="space-y-1">
-            {suggestions.map((suggestion, i) => (
-              <li key={i} className="flex items-start gap-2 text-sm text-[var(--soft)]">
-                <span className="text-[var(--muted)]">•</span>
-                {suggestion}
-              </li>
-            ))}
-          </ul>
-        </div>
+    <div className={`py-12 text-center relative ${atmospheric ? "empty-state-atmospheric" : ""} ${className}`}>
+      {/* Radial gradient background */}
+      {atmospheric && (
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            background: `radial-gradient(ellipse at center, color-mix(in srgb, ${accentColor} 8%, transparent) 0%, transparent 60%)`,
+          }}
+        />
       )}
 
-      {(action || secondaryAction) && (
-        <div className="mt-6 flex items-center justify-center gap-3">
-          {action && (
-            <button
-              onClick={action.onClick}
-              className="px-4 py-2 rounded-lg bg-[var(--neon-magenta)] text-[var(--void)] font-mono text-sm font-medium hover:bg-[var(--neon-magenta)]/80 transition-colors"
+      {/* Content with staggered animations */}
+      <div className="relative z-10">
+        {icon && (
+          <div className={`mb-4 flex justify-center ${atmospheric ? "animate-stagger-1" : ""}`}>
+            <div
+              className={`relative flex items-center justify-center w-16 h-16 rounded-full ${atmospheric ? "empty-state-icon-glow" : ""}`}
+              style={{
+                background: `linear-gradient(135deg, var(--twilight), var(--dusk))`,
+                "--glow-color": accentColor,
+              } as React.CSSProperties}
             >
-              {action.label}
-            </button>
-          )}
-          {secondaryAction && (
-            <button
-              onClick={secondaryAction.onClick}
-              className="px-4 py-2 rounded-lg border border-[var(--twilight)] text-[var(--soft)] font-mono text-sm hover:bg-[var(--twilight)] hover:text-[var(--cream)] transition-colors"
-            >
-              {secondaryAction.label}
-            </button>
-          )}
-        </div>
-      )}
+              <div className={`text-[var(--muted)] ${atmospheric ? "animate-empty-icon-pulse" : ""}`} style={{ color: accentColor }}>
+                {icon}
+              </div>
+            </div>
+          </div>
+        )}
+        {title && (
+          <h3 className={`text-xl font-semibold text-[var(--cream)] mb-2 ${atmospheric ? "animate-stagger-2" : ""}`}>
+            {title}
+          </h3>
+        )}
+        <p className={`font-mono text-sm text-[var(--muted)] max-w-sm mx-auto ${atmospheric ? "animate-stagger-2" : ""}`}>
+          {message}
+        </p>
+
+        {suggestions && suggestions.length > 0 && (
+          <div className={`mt-4 text-left max-w-xs mx-auto ${atmospheric ? "animate-stagger-3" : ""}`}>
+            <p className="font-mono text-[0.65rem] text-[var(--muted)] uppercase tracking-wider mb-2">Try:</p>
+            <ul className="space-y-1">
+              {suggestions.map((suggestion, i) => (
+                <li key={i} className="flex items-start gap-2 text-sm text-[var(--soft)]">
+                  <span className="text-[var(--muted)]">•</span>
+                  {suggestion}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {(action || secondaryAction) && (
+          <div className={`mt-6 flex items-center justify-center gap-3 ${atmospheric ? "animate-stagger-4" : ""}`}>
+            {action && (
+              <button
+                onClick={action.onClick}
+                className="px-4 py-2 rounded-lg font-mono text-sm font-medium transition-all hover:scale-105"
+                style={{
+                  backgroundColor: accentColor,
+                  color: "var(--void)",
+                  boxShadow: `0 0 20px color-mix(in srgb, ${accentColor} 40%, transparent)`,
+                }}
+              >
+                {action.label}
+              </button>
+            )}
+            {secondaryAction && (
+              <button
+                onClick={secondaryAction.onClick}
+                className="px-4 py-2 rounded-lg border border-[var(--twilight)] text-[var(--soft)] font-mono text-sm hover:bg-[var(--twilight)] hover:text-[var(--cream)] transition-colors"
+              >
+                {secondaryAction.label}
+              </button>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

@@ -2,11 +2,47 @@
 
 import { getCategoryColor } from "./CategoryIcon";
 
+// Theme configurations for seasonal placeholders
+export type PlaceholderTheme = "valentines" | "lunar-new-year" | "black-history-month" | "mardi-gras" | "st-patricks" | "pride" | null;
+
+const THEME_CONFIG: Record<NonNullable<PlaceholderTheme>, { glowColor: string; accentColor: string; overlayIcon?: string }> = {
+  valentines: {
+    glowColor: "#FF69B4",
+    accentColor: "#DC143C",
+    overlayIcon: "❤️",
+  },
+  "lunar-new-year": {
+    glowColor: "#DC143C",
+    accentColor: "#FFD700",
+    overlayIcon: "🐉",
+  },
+  "black-history-month": {
+    glowColor: "#9B59B6",
+    accentColor: "#2ECC71",
+  },
+  "mardi-gras": {
+    glowColor: "#9B59B6",
+    accentColor: "#FFD700",
+    overlayIcon: "⚜️",
+  },
+  "st-patricks": {
+    glowColor: "#00D9A0",
+    accentColor: "#00D9A0",
+    overlayIcon: "☘️",
+  },
+  pride: {
+    glowColor: "#E855A0",
+    accentColor: "#00D4E8",
+  },
+};
+
 interface CategoryPlaceholderProps {
   category?: string | null;
   color?: string; // Override color (for non-category contexts)
   className?: string;
   size?: "sm" | "md" | "lg"; // Controls icon size and glow intensity
+  variant?: "default" | "featured"; // Featured has 1.5x glow, gold border
+  theme?: PlaceholderTheme; // Seasonal theme override
 }
 
 // Unique visual patterns and icons for each category
@@ -246,9 +282,18 @@ export default function CategoryPlaceholder({
   category,
   color: colorOverride,
   className = "",
-  size = "md"
+  size = "md",
+  variant = "default",
+  theme = null,
 }: CategoryPlaceholderProps) {
-  const color = colorOverride || getCategoryColor(category || "other");
+  // Get base color from category or override
+  const baseColor = colorOverride || getCategoryColor(category || "other");
+
+  // Apply theme overrides if provided
+  const themeConfig = theme ? THEME_CONFIG[theme] : null;
+  const color = themeConfig?.glowColor || baseColor;
+  // Note: accentColor from themeConfig is used for potential future gradient effects
+
   const config = CATEGORY_PATTERNS[category || ""] || {
     pattern: "dots" as const,
     icon: "M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
@@ -258,10 +303,21 @@ export default function CategoryPlaceholder({
   // Size variants
   const iconSize = { sm: "w-8 h-8", md: "w-14 h-14", lg: "w-20 h-20" }[size];
   const containerSize = { sm: "w-14 h-14", md: "w-24 h-24", lg: "w-32 h-32" }[size];
-  const glowIntensity = { sm: "20px", md: "40px", lg: "60px" }[size];
+
+  // Glow intensity - 1.5x for featured variant
+  const baseGlow = { sm: 20, md: 40, lg: 60 }[size];
+  const glowIntensity = variant === "featured" ? `${baseGlow * 1.5}px` : `${baseGlow}px`;
+
+  // Featured variant styling
+  const isFeatured = variant === "featured";
+  const featuredBorderColor = isFeatured ? "var(--gold)" : `${color}30`;
+  const featuredBorderWidth = isFeatured ? "2px" : "1px";
+
+  // Apply icon pulse animation for large size
+  const iconPulseClass = size === "lg" ? "animate-placeholder-icon-pulse" : "";
 
   return (
-    <div className={`relative w-full h-full overflow-hidden ${className}`}>
+    <div className={`relative w-full h-full overflow-hidden ${isFeatured ? "placeholder-featured" : ""} ${className}`}>
       {/* Deep void background */}
       <div className="absolute inset-0 bg-[var(--void)]" />
 
@@ -270,9 +326,9 @@ export default function CategoryPlaceholder({
         className="absolute inset-0"
         style={{
           background: `
-            radial-gradient(ellipse 120% 80% at 50% -20%, ${color}35 0%, transparent 50%),
-            radial-gradient(ellipse 80% 60% at 100% 100%, ${color}20 0%, transparent 45%),
-            radial-gradient(ellipse 60% 60% at 0% 80%, ${color}15 0%, transparent 40%)
+            radial-gradient(ellipse 120% 80% at 50% -20%, ${color}${isFeatured ? "50" : "35"} 0%, transparent 50%),
+            radial-gradient(ellipse 80% 60% at 100% 100%, ${color}${isFeatured ? "30" : "20"} 0%, transparent 45%),
+            radial-gradient(ellipse 60% 60% at 0% 80%, ${color}${isFeatured ? "25" : "15"} 0%, transparent 40%)
           `,
         }}
       />
@@ -281,9 +337,9 @@ export default function CategoryPlaceholder({
       <div
         className="absolute top-0 left-0 right-0 h-[2px]"
         style={{
-          background: `linear-gradient(90deg, transparent 0%, ${color} 20%, ${color} 80%, transparent 100%)`,
-          boxShadow: `0 0 20px ${color}60, 0 0 40px ${color}30`,
-          opacity: 0.8,
+          background: `linear-gradient(90deg, transparent 0%, ${isFeatured ? "var(--gold)" : color} 20%, ${isFeatured ? "var(--gold)" : color} 80%, transparent 100%)`,
+          boxShadow: `0 0 20px ${isFeatured ? "rgba(255, 215, 0, 0.6)" : `${color}60`}, 0 0 40px ${isFeatured ? "rgba(255, 215, 0, 0.3)" : `${color}30`}`,
+          opacity: isFeatured ? 1 : 0.8,
         }}
       />
 
@@ -314,6 +370,13 @@ export default function CategoryPlaceholder({
         }}
       />
 
+      {/* Theme overlay icon (for seasonal themes) */}
+      {themeConfig?.overlayIcon && (
+        <div className="absolute top-3 right-3 text-2xl opacity-30">
+          {themeConfig.overlayIcon}
+        </div>
+      )}
+
       {/* Center icon with neon glow */}
       <div className="absolute inset-0 flex items-center justify-center">
         <div
@@ -324,9 +387,10 @@ export default function CategoryPlaceholder({
               linear-gradient(315deg, ${color}08 0%, transparent 50%),
               rgba(0,0,0,0.3)
             `,
-            border: `1px solid ${color}30`,
+            border: `${featuredBorderWidth} solid ${featuredBorderColor}`,
             boxShadow: `
-              0 0 ${glowIntensity} ${color}25,
+              0 0 ${glowIntensity} ${color}${isFeatured ? "40" : "25"},
+              ${isFeatured ? `0 0 ${parseInt(glowIntensity) * 1.5}px rgba(255, 215, 0, 0.2),` : ""}
               inset 0 1px 0 ${color}15,
               inset 0 -1px 0 rgba(0,0,0,0.3)
             `,
@@ -335,7 +399,7 @@ export default function CategoryPlaceholder({
         >
           {/* Icon with neon effect */}
           <svg
-            className={iconSize}
+            className={`${iconSize} ${iconPulseClass}`}
             fill="none"
             stroke={color}
             viewBox="0 0 24 24"
@@ -365,10 +429,15 @@ export default function CategoryPlaceholder({
 
       {/* Bottom accent line */}
       <div
-        className="absolute bottom-0 left-0 right-0 h-[3px]"
+        className="absolute bottom-0 left-0 right-0"
         style={{
-          background: `linear-gradient(90deg, ${color}60 0%, ${color} 50%, ${color}60 100%)`,
-          boxShadow: `0 0 15px ${color}50, 0 -5px 20px ${color}20`,
+          height: isFeatured ? "4px" : "3px",
+          background: isFeatured
+            ? `linear-gradient(90deg, ${color}60 0%, var(--gold) 50%, ${color}60 100%)`
+            : `linear-gradient(90deg, ${color}60 0%, ${color} 50%, ${color}60 100%)`,
+          boxShadow: isFeatured
+            ? `0 0 20px rgba(255, 215, 0, 0.5), 0 -5px 25px ${color}30`
+            : `0 0 15px ${color}50, 0 -5px 20px ${color}20`,
         }}
       />
     </div>

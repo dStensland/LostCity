@@ -1,8 +1,22 @@
 "use client";
 
-import { useCallback, useMemo, useRef } from "react";
+import { useCallback, useMemo, useRef, useState, useEffect } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import FilterChip, { getTagVariant } from "./FilterChip";
+
+// Group configuration for visual separation
+type TagGroup = "access" | "vibe" | "special";
+
+const GROUP_ORDER: TagGroup[] = ["access", "vibe", "special"];
+
+// Approximate average width of a filter chip for overflow calculation
+const AVERAGE_CHIP_WIDTH = 90;
+
+const GROUP_LABELS: Record<TagGroup, string> = {
+  access: "Access",
+  vibe: "Vibe",
+  special: "Special",
+};
 
 // Curated quick tags in display order
 // Access, Vibe, Special tags that are cross-cutting (work without category)
@@ -22,21 +36,68 @@ const QUICK_TAGS = [
   { value: "holiday", label: "Holiday", group: "special" as const },
 ] as const;
 
-interface QuickTagsRowProps {
-  className?: string;
+// Group tags by their group
+function groupTagsByType() {
+  const groups: Record<TagGroup, typeof QUICK_TAGS[number][]> = {
+    access: [],
+    vibe: [],
+    special: [],
+  };
+  for (const tag of QUICK_TAGS) {
+    groups[tag.group].push(tag);
+  }
+  return groups;
 }
 
-export default function QuickTagsRow({ className = "" }: QuickTagsRowProps) {
+interface QuickTagsRowProps {
+  className?: string;
+  showGroupLabels?: boolean;
+}
+
+export default function QuickTagsRow({ className = "", showGroupLabels = false }: QuickTagsRowProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [overflowCount, setOverflowCount] = useState(0);
 
   // Get current active tags from URL
   const activeTags = useMemo(() => {
     const tagsParam = searchParams.get("tags");
     return tagsParam ? tagsParam.split(",").filter(Boolean) : [];
   }, [searchParams]);
+
+  // Group tags by type
+  const groupedTags = useMemo(() => groupTagsByType(), []);
+
+  // Check for overflow
+  useEffect(() => {
+    const checkOverflow = () => {
+      if (!scrollRef.current) return;
+      const { scrollWidth, clientWidth, scrollLeft } = scrollRef.current;
+      const isAtEnd = scrollLeft >= scrollWidth - clientWidth - 20;
+
+      if (!isAtEnd && scrollWidth > clientWidth) {
+        // Calculate approximate number of hidden items
+        const hiddenWidth = scrollWidth - clientWidth - scrollLeft;
+        const hidden = Math.max(0, Math.floor(hiddenWidth / AVERAGE_CHIP_WIDTH));
+        setOverflowCount(hidden);
+      } else {
+        setOverflowCount(0);
+      }
+    };
+
+    checkOverflow();
+    const el = scrollRef.current;
+    if (el) {
+      el.addEventListener("scroll", checkOverflow, { passive: true });
+      window.addEventListener("resize", checkOverflow);
+      return () => {
+        el.removeEventListener("scroll", checkOverflow);
+        window.removeEventListener("resize", checkOverflow);
+      };
+    }
+  }, []);
 
   // Toggle a tag on/off
   const toggleTag = useCallback(
@@ -61,27 +122,57 @@ export default function QuickTagsRow({ className = "" }: QuickTagsRowProps) {
     [router, pathname, searchParams, activeTags]
   );
 
+  // Divider component - enhanced visibility
+  const GroupDivider = () => (
+    <div className="shrink-0 flex items-center mx-2" aria-hidden="true">
+      <div className="w-px h-6 bg-[var(--twilight)]" />
+    </div>
+  );
+
   return (
     <div className={`relative overflow-hidden ${className}`}>
-      {/* Horizontal scrolling container */}
+      {/* Horizontal scrolling container - keyboard accessible */}
       <div
         ref={scrollRef}
-        className="flex items-center gap-2 overflow-x-auto scrollbar-hide snap-x snap-mandatory md:snap-none py-2 -mx-4 px-4"
+        tabIndex={0}
+        role="region"
+        aria-label="Quick filter tags"
+        className="flex items-center gap-2 overflow-x-auto scrollbar-hide snap-x snap-mandatory md:snap-none py-2 -mx-4 px-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--coral)] focus-visible:ring-inset rounded-lg"
         style={{ WebkitOverflowScrolling: "touch" }}
       >
-        {QUICK_TAGS.map((tag) => {
-          const isActive = activeTags.includes(tag.value);
-          const variant = getTagVariant(tag.value);
+        {GROUP_ORDER.map((groupKey, groupIdx) => {
+          const tags = groupedTags[groupKey];
+          if (tags.length === 0) return null;
 
           return (
-            <div key={tag.value} className="snap-start shrink-0">
-              <FilterChip
-                label={tag.label}
-                variant={variant}
-                active={isActive}
-                size="md"
-                onClick={() => toggleTag(tag.value)}
-              />
+            <div key={groupKey} className="contents">
+              {/* Group divider (except for first group) */}
+              {groupIdx > 0 && <GroupDivider />}
+
+              {/* Optional group label */}
+              {showGroupLabels && (
+                <span className="shrink-0 font-mono text-[0.55rem] text-[var(--muted)] uppercase tracking-wider px-1">
+                  {GROUP_LABELS[groupKey]}
+                </span>
+              )}
+
+              {/* Tags in this group */}
+              {tags.map((tag) => {
+                const isActive = activeTags.includes(tag.value);
+                const variant = getTagVariant(tag.value);
+
+                return (
+                  <div key={tag.value} className="snap-start shrink-0">
+                    <FilterChip
+                      label={tag.label}
+                      variant={variant}
+                      active={isActive}
+                      size="md"
+                      onClick={() => toggleTag(tag.value)}
+                    />
+                  </div>
+                );
+              })}
             </div>
           );
         })}
@@ -89,13 +180,35 @@ export default function QuickTagsRow({ className = "" }: QuickTagsRowProps) {
         <div className="shrink-0 w-4" aria-hidden="true" />
       </div>
 
-      {/* Fade gradient on right edge (desktop only) */}
-      <div
-        className="hidden md:block absolute right-0 top-0 bottom-0 w-12 pointer-events-none z-10"
-        style={{
-          background: "linear-gradient(to right, transparent, var(--night))",
-        }}
-      />
+      {/* Overflow indicator with count - accessible */}
+      {overflowCount > 0 && (
+        <div
+          className="absolute right-0 top-0 bottom-0 flex items-center pointer-events-none z-10"
+          style={{
+            background: "linear-gradient(to right, transparent, var(--night) 50%)",
+            paddingLeft: "2rem",
+            paddingRight: "0.5rem",
+          }}
+        >
+          <span
+            className="font-mono text-[0.6rem] text-[var(--soft)] bg-[var(--twilight)] px-2 py-1 rounded-full border border-[var(--muted)]/30"
+            aria-live="polite"
+            aria-atomic="true"
+          >
+            +{overflowCount} more
+          </span>
+        </div>
+      )}
+
+      {/* Fade gradient on right edge (when no overflow count shown, desktop only) */}
+      {overflowCount === 0 && (
+        <div
+          className="hidden md:block absolute right-0 top-0 bottom-0 w-12 pointer-events-none z-10"
+          style={{
+            background: "linear-gradient(to right, transparent, var(--night))",
+          }}
+        />
+      )}
     </div>
   );
 }

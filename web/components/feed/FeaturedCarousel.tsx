@@ -8,6 +8,7 @@ import { getCategoryColor } from "../CategoryIcon";
 import CategoryPlaceholder from "../CategoryPlaceholder";
 import LinkifyText from "../LinkifyText";
 import { FreeBadge } from "../Badge";
+import FeedSectionHeader from "./FeedSectionHeader";
 
 type FeaturedEvent = {
   id: number;
@@ -91,17 +92,17 @@ export function FeaturedCarousel({ events }: Props) {
 
   return (
     <section className="mb-10">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-4">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight text-[var(--cream)]">Featured Events</h2>
-          <p className="font-mono text-xs text-[var(--muted)] mt-0.5">
-            Handpicked by our editors
-          </p>
-        </div>
+      {/* Header with navigation controls */}
+      <div className="flex items-center justify-between">
+        <FeedSectionHeader
+          title="Featured Events"
+          subtitle="Handpicked by our editors"
+          priority="primary"
+          accentColor="var(--gold)"
+        />
         {/* Navigation arrows - only show when scrollable */}
         {(canScrollLeft || canScrollRight) && (
-          <div className="hidden sm:flex items-center gap-1">
+          <div className="hidden sm:flex items-center gap-1 ml-4">
             {canScrollLeft ? (
               <button
                 onClick={() => scroll("left")}

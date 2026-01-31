@@ -11,6 +11,7 @@ import { usePortal } from "@/lib/portal-context";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 import { FeaturedCarousel } from "./FeaturedCarousel";
 import LinkifyText from "../LinkifyText";
+import FeedSectionHeader, { type SectionPriority } from "./FeedSectionHeader";
 
 // Types
 export type FeedEvent = {
@@ -251,14 +252,37 @@ const THEMED_SECTION_ICONS: Record<string, { icon: React.ReactNode; color: strin
   },
 };
 
+// Determine priority based on section type/slug
+function getSectionPriority(section: FeedSectionData): SectionPriority {
+  // Featured sections get primary treatment
+  if (section.block_type === "featured_carousel" || section.block_type === "hero_banner") {
+    return "primary";
+  }
+
+  // Themed/holiday sections get secondary treatment
+  if (THEMED_SECTION_ICONS[section.slug]) {
+    return "secondary";
+  }
+
+  // Curated sections get secondary treatment
+  if (section.section_type === "curated") {
+    return "secondary";
+  }
+
+  // Default to tertiary for auto sections
+  return "tertiary";
+}
+
 function SectionHeader({
   section,
   portalSlug,
-  showCount = true
+  showCount = true,
+  priorityOverride,
 }: {
   section: FeedSectionData;
   portalSlug: string;
   showCount?: boolean;
+  priorityOverride?: SectionPriority;
 }) {
   const eventCount = section.events.length;
   const seeAllUrl = getSeeAllUrl(section, portalSlug);
@@ -274,57 +298,18 @@ function SectionHeader({
   const sectionStyle = section.style as { accent_color?: string } | null;
   const accentColor = themedConfig?.color || sectionStyle?.accent_color;
 
+  // Determine priority
+  const priority = priorityOverride || getSectionPriority(section);
+
   return (
-    <div className="flex items-center justify-between mb-4">
-      <div className="flex items-center gap-3">
-        {/* Themed icon with glow */}
-        {themedConfig && (
-          <div
-            className="flex items-center justify-center w-12 h-12 rounded-lg overflow-hidden"
-            style={{
-              color: accentColor,
-              backgroundColor: `color-mix(in srgb, ${accentColor} 15%, transparent)`,
-              boxShadow: `0 0 20px color-mix(in srgb, ${accentColor} 50%, transparent)`,
-            }}
-          >
-            {themedConfig.icon}
-          </div>
-        )}
-        <div>
-          <h3
-            className="text-xl font-semibold tracking-tight"
-            style={{
-              color: accentColor || "var(--cream)",
-              textShadow: accentColor ? `0 0 20px color-mix(in srgb, ${accentColor} 50%, transparent)` : undefined,
-            }}
-          >
-            {section.title}
-          </h3>
-          {contextDescription && (
-            <p className="font-mono text-xs text-[var(--muted)] mt-0.5">{contextDescription}</p>
-          )}
-        </div>
-      </div>
-      <Link
-        href={seeAllUrl}
-        className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-mono transition-all group hover:scale-105"
-        style={{
-          color: accentColor || "var(--muted)",
-          backgroundColor: accentColor ? `color-mix(in srgb, ${accentColor} 10%, transparent)` : undefined,
-          boxShadow: accentColor ? `0 0 12px color-mix(in srgb, ${accentColor} 30%, transparent)` : undefined,
-        }}
-      >
-        See all
-        <svg
-          className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-        </svg>
-      </Link>
-    </div>
+    <FeedSectionHeader
+      title={section.title}
+      subtitle={contextDescription || undefined}
+      priority={priority}
+      accentColor={accentColor}
+      icon={themedConfig?.icon}
+      seeAllHref={seeAllUrl}
+    />
   );
 }
 

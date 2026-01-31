@@ -1,6 +1,17 @@
 @import "tailwindcss";
 
 :root {
+  /* ============================================
+     SPACING SCALE
+     ============================================ */
+  --space-xs: 0.25rem;   /* 4px */
+  --space-sm: 0.5rem;    /* 8px */
+  --space-md: 1rem;      /* 16px */
+  --space-lg: 1.5rem;    /* 24px */
+  --space-xl: 2rem;      /* 32px */
+  --space-2xl: 2.5rem;   /* 40px */
+  --space-3xl: 4rem;     /* 64px */
+
   /* Underground dark palette */
   --void: #09090B;
   --night: #0F0F14;
@@ -57,6 +68,13 @@
   --spot-museum: #94A3B8;
   --spot-convention_center: #38BDF8;
   --spot-games: #4ADE80;
+
+  /* Series type colors */
+  --series-recurring: #00D4E8;       /* Cyan for recurring series */
+  --series-limited: #F5A623;         /* Amber for limited run */
+  --series-festival: #E855A0;        /* Magenta for festivals */
+  --series-seasonal: #00D9A0;        /* Green for seasonal */
+  --series-default: #A1A1AA;         /* Muted for default */
 
   /* Mood colors for vibe matching */
   --mood-lowkey: hsl(160, 80%, 65%);
@@ -138,6 +156,28 @@
   --glass-shadow: 0 10px 30px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.8);
   --glass-bg-compact: rgba(255, 255, 255, 0.85);
   --glass-shadow-compact: 0 6px 16px rgba(0, 0, 0, 0.08);
+
+  /* Adjusted spot type colors for light mode - deeper variants */
+  --spot-music_venue: #DB2777;
+  --spot-bar: #EA580C;
+  --spot-restaurant: #C2410C;
+  --spot-coffee_shop: #92400E;
+  --spot-brewery: #CA8A04;
+  --spot-gallery: #7C3AED;
+  --spot-club: #A21CAF;
+  --spot-arena: #0284C7;
+  --spot-comedy_club: #A16207;
+  --spot-theater: #9333EA;
+  --spot-museum: #475569;
+  --spot-convention_center: #0369A1;
+  --spot-games: #15803D;
+
+  /* Adjusted series type colors for light mode */
+  --series-recurring: #0891B2;
+  --series-limited: #D97706;
+  --series-festival: #C026D3;
+  --series-seasonal: #059669;
+  --series-default: #57534E;
 }
 
 @theme inline {
@@ -2466,4 +2506,233 @@ textarea:focus-visible {
   .card-hover-glow {
     box-shadow: 0 4px 20px hsl(240 10% 0% / 0.4);
   }
+}
+
+/* ============================================
+   SPACING UTILITY CLASSES
+   ============================================ */
+
+.section-gap {
+  margin-bottom: var(--space-2xl);
+}
+
+.card-padding {
+  padding: var(--space-md);
+}
+
+.gap-section {
+  gap: var(--space-2xl);
+}
+
+.gap-card {
+  gap: var(--space-md);
+}
+
+/* ============================================
+   FILTER CHIP ANIMATIONS
+   ============================================ */
+
+@keyframes chip-toggle {
+  0% { transform: scale(1); }
+  40% { transform: scale(0.95); }
+  70% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+.animate-chip-toggle {
+  animation: chip-toggle 0.2s ease-out;
+}
+
+/* Chip glow variants - applied when active */
+.chip-glow-cyan {
+  box-shadow: 0 0 12px hsl(var(--neon-cyan-hsl) / 0.4),
+              0 0 24px hsl(var(--neon-cyan-hsl) / 0.2);
+}
+
+.chip-glow-green {
+  box-shadow: 0 0 12px hsl(var(--neon-green-hsl) / 0.4),
+              0 0 24px hsl(var(--neon-green-hsl) / 0.2);
+}
+
+.chip-glow-gold {
+  box-shadow: 0 0 12px hsl(var(--neon-amber-hsl) / 0.4),
+              0 0 24px hsl(var(--neon-amber-hsl) / 0.2);
+}
+
+.chip-glow-vibe {
+  box-shadow: 0 0 12px rgba(196, 181, 253, 0.4),
+              0 0 24px rgba(196, 181, 253, 0.2);
+}
+
+.chip-glow-coral {
+  box-shadow: 0 0 12px rgba(255, 107, 122, 0.4),
+              0 0 24px rgba(255, 107, 122, 0.2);
+}
+
+.chip-glow-cream {
+  box-shadow: 0 0 12px rgba(250, 250, 249, 0.4),
+              0 0 24px rgba(250, 250, 249, 0.2);
+}
+
+/* ============================================
+   EMPTY STATE ENHANCEMENTS
+   ============================================ */
+
+.empty-state-atmospheric {
+  position: relative;
+  overflow: hidden;
+}
+
+.empty-state-atmospheric::before {
+  content: '';
+  position: absolute;
+  inset: -50%;
+  background: radial-gradient(
+    ellipse at center,
+    hsl(var(--neon-magenta-hsl) / 0.08) 0%,
+    transparent 50%
+  );
+  pointer-events: none;
+}
+
+.empty-state-icon-glow {
+  position: relative;
+}
+
+.empty-state-icon-glow::before {
+  content: '';
+  position: absolute;
+  inset: -8px;
+  border-radius: 50%;
+  border: 1px solid hsl(var(--neon-magenta-hsl) / 0.3);
+  box-shadow: 0 0 20px hsl(var(--neon-magenta-hsl) / 0.2),
+              inset 0 0 20px hsl(var(--neon-magenta-hsl) / 0.1);
+  animation: empty-state-ring-pulse 3s ease-in-out infinite;
+}
+
+@keyframes empty-state-ring-pulse {
+  0%, 100% {
+    opacity: 0.6;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+}
+
+@keyframes empty-state-icon-pulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 1;
+  }
+}
+
+.animate-empty-icon-pulse {
+  animation: empty-state-icon-pulse 2.5s ease-in-out infinite;
+}
+
+/* Staggered fade-in for empty state content */
+@keyframes stagger-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-stagger-1 { animation: stagger-fade-in 0.4s ease-out 0.1s backwards; }
+.animate-stagger-2 { animation: stagger-fade-in 0.4s ease-out 0.2s backwards; }
+.animate-stagger-3 { animation: stagger-fade-in 0.4s ease-out 0.3s backwards; }
+.animate-stagger-4 { animation: stagger-fade-in 0.4s ease-out 0.4s backwards; }
+
+/* ============================================
+   CATEGORY PLACEHOLDER VARIANTS
+   ============================================ */
+
+/* Featured variant - more intense glow */
+.placeholder-featured::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border: 2px solid var(--gold);
+  border-radius: inherit;
+  box-shadow: 0 0 30px rgba(255, 215, 0, 0.3),
+              inset 0 0 30px rgba(255, 215, 0, 0.1);
+  pointer-events: none;
+}
+
+/* Icon pulse for large placeholders */
+@keyframes placeholder-icon-pulse {
+  0%, 100% {
+    filter: drop-shadow(0 0 12px currentColor) drop-shadow(0 0 4px currentColor);
+  }
+  50% {
+    filter: drop-shadow(0 0 20px currentColor) drop-shadow(0 0 8px currentColor);
+  }
+}
+
+.animate-placeholder-icon-pulse {
+  animation: placeholder-icon-pulse 2s ease-in-out infinite;
+}
+
+/* ============================================
+   SECTION HEADER HIERARCHY
+   ============================================ */
+
+.section-header-primary {
+  font-family: var(--font-serif);
+  font-size: 1.5rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--cream);
+}
+
+.section-header-secondary {
+  font-family: var(--font-serif);
+  font-size: 1.25rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--cream);
+}
+
+.section-header-tertiary {
+  font-family: var(--font-mono), monospace;
+  font-size: 1rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--soft);
+}
+
+/* Section header icon containers - use --section-accent CSS variable */
+.section-header-icon {
+  --section-accent: var(--coral);
+  background-color: color-mix(in srgb, var(--section-accent) 15%, transparent);
+}
+
+.section-header-icon-primary {
+  box-shadow:
+    0 0 20px color-mix(in srgb, var(--section-accent) 50%, transparent),
+    0 0 40px color-mix(in srgb, var(--section-accent) 25%, transparent);
+}
+
+.section-header-icon-secondary {
+  box-shadow: 0 0 15px color-mix(in srgb, var(--section-accent) 40%, transparent);
+}
+
+/* Section header see-all button */
+.section-header-see-all {
+  background-color: color-mix(in srgb, var(--section-accent) 10%, transparent);
+}
+
+.section-header-see-all-primary {
+  box-shadow: 0 0 12px color-mix(in srgb, var(--section-accent) 30%, transparent);
 }
