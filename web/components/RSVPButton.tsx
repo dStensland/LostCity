@@ -218,7 +218,18 @@ export default function RSVPButton({
       // Rollback on error
       setStatus(previousStatus);
       console.error("Failed to update RSVP:", error);
-      const errMsg = (error as { message?: string })?.message || "Failed to save";
+
+      // Check for specific errors
+      const err = error as { message?: string; code?: string };
+      let errMsg = "Failed to save";
+
+      if (err.code === "23503" || err.message?.includes("foreign key") || err.message?.includes("profiles")) {
+        // Foreign key violation - user doesn't have a profile
+        errMsg = "Please complete your profile setup first";
+      } else if (err.message) {
+        errMsg = err.message;
+      }
+
       showToast(errMsg, "error");
     } finally {
       setActionLoading(false);
