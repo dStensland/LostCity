@@ -50,11 +50,11 @@ const CalendarIcon = () => (
 export default function Badge({ variant, count, className = "" }: BadgeProps) {
   const styles = BADGE_STYLES[variant];
 
-  // Live badge with pulse indicator
+  // Live badge with glitch flicker - urgent, electric, punk
   if (variant === "live") {
     return (
-      <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded border font-mono text-[0.55rem] font-medium ${styles.bg} ${styles.text} ${styles.border} ${className}`}>
-        <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse" />
+      <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-sm border font-mono text-[0.55rem] font-medium uppercase tracking-wider animate-glitch-flicker ${styles.bg} ${styles.text} ${styles.border} ${className}`}>
+        <span className="w-1.5 h-1.5 rounded-full bg-current" />
         LIVE
       </span>
     );
@@ -63,7 +63,7 @@ export default function Badge({ variant, count, className = "" }: BadgeProps) {
   // Soon badge
   if (variant === "soon") {
     return (
-      <span className={`inline-flex items-center px-1.5 py-0.5 rounded border font-mono text-[0.55rem] font-medium ${styles.bg} ${styles.text} ${styles.border} ${className}`}>
+      <span className={`inline-flex items-center px-1.5 py-0.5 rounded-sm border font-mono text-[0.55rem] font-medium ${styles.bg} ${styles.text} ${styles.border} ${className}`}>
         SOON
       </span>
     );
@@ -72,16 +72,16 @@ export default function Badge({ variant, count, className = "" }: BadgeProps) {
   // Free badge
   if (variant === "free") {
     return (
-      <span className={`inline-flex items-center px-1.5 py-0.5 rounded border font-mono text-[0.55rem] font-medium ${styles.bg} ${styles.text} ${styles.border} ${className}`}>
+      <span className={`inline-flex items-center px-1.5 py-0.5 rounded-sm border font-mono text-[0.55rem] font-medium ${styles.bg} ${styles.text} ${styles.border} ${className}`}>
         FREE
       </span>
     );
   }
 
-  // Usually Free badge (slightly muted version)
+  // Usually Free badge - dimmer color instead of opacity
   if (variant === "usually-free") {
     return (
-      <span className={`inline-flex items-center px-1.5 py-0.5 rounded border font-mono text-[0.55rem] font-medium ${styles.bg} ${styles.text} ${styles.border} opacity-90 ${className}`}>
+      <span className={`inline-flex items-center px-1.5 py-0.5 rounded-sm border font-mono text-[0.55rem] font-medium ${styles.bg} ${styles.text} ${styles.border} ${className}`}>
         Usually Free
       </span>
     );
@@ -90,7 +90,7 @@ export default function Badge({ variant, count, className = "" }: BadgeProps) {
   // Events count badge
   if (variant === "events" && count !== undefined && count > 0) {
     return (
-      <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded border font-mono text-[0.55rem] font-medium ${styles.bg} ${styles.text} ${styles.border} ${className}`}>
+      <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-sm border font-mono text-[0.55rem] font-medium ${styles.bg} ${styles.text} ${styles.border} ${className}`}>
         <CalendarIcon />
         {count}
       </span>
@@ -100,7 +100,7 @@ export default function Badge({ variant, count, className = "" }: BadgeProps) {
   // Trending badge
   if (variant === "trending") {
     return (
-      <span className={`inline-flex items-center px-1.5 py-0.5 rounded border font-mono text-[0.55rem] font-medium ${styles.bg} ${styles.text} ${styles.border} ${className}`}>
+      <span className={`inline-flex items-center px-1.5 py-0.5 rounded-sm border font-mono text-[0.55rem] font-medium ${styles.bg} ${styles.text} ${styles.border} ${className}`}>
         TRENDING
       </span>
     );

@@ -169,7 +169,7 @@ function EventCard({ event, index = 0, skipAnimation = false, portalSlug, friend
     <Link
       href={eventHref}
       scroll={false}
-      className={`block p-3 mb-4 rounded-lg border border-[var(--twilight)] card-atmospheric ${reflectionClass} ${animationClass} ${staggerClass} group overflow-hidden`}
+      className={`block p-3 mb-4 rounded-sm border border-[var(--twilight)] card-atmospheric ${reflectionClass} ${animationClass} ${staggerClass} group overflow-hidden`}
       style={{
         borderLeftWidth: categoryColor ? "3px" : undefined,
         borderLeftColor: categoryColor || undefined,
@@ -201,7 +201,7 @@ function EventCard({ event, index = 0, skipAnimation = false, portalSlug, friend
             alt=""
             fill
             sizes="64px"
-            className="flex-shrink-0 w-16 h-16 rounded-lg sm:hidden border border-[var(--twilight)]"
+            className="flex-shrink-0 w-16 h-16 rounded-sm sm:hidden border border-[var(--twilight)]"
             placeholderColor={categoryColor ? `${categoryColor}15` : "var(--night)"}
             onError={() => setThumbnailError(true)}
           />
@@ -209,7 +209,7 @@ function EventCard({ event, index = 0, skipAnimation = false, portalSlug, friend
         {/* Mobile fallback thumbnail when image fails - category-aware gradient */}
         {showThumbnail && event.image_url && thumbnailError && (
           <div
-            className="flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden relative sm:hidden border border-[var(--twilight)] flex items-center justify-center"
+            className="flex-shrink-0 w-16 h-16 rounded-sm overflow-hidden relative sm:hidden border border-[var(--twilight)] flex items-center justify-center"
             style={{
               background: categoryColor
                 ? `linear-gradient(135deg, ${categoryColor}25, ${categoryColor}08)`
@@ -393,7 +393,7 @@ function EventCard({ event, index = 0, skipAnimation = false, portalSlug, friend
             alt=""
             fill
             sizes="80px"
-            className="hidden sm:block flex-shrink-0 w-20 h-14 rounded-lg border border-[var(--twilight)] ml-auto"
+            className="hidden sm:block flex-shrink-0 w-20 h-14 rounded-sm border border-[var(--twilight)] ml-auto"
             placeholderColor={categoryColor ? `${categoryColor}15` : "var(--night)"}
             onError={() => setThumbnailError(true)}
           />

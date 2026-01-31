@@ -672,14 +672,86 @@ body::after {
 }
 
 /* ============================================
+   PUNK BUTTONS - No corporate hedging
+   ============================================ */
+
+/* Primary action - full commitment, no opacity */
+.btn-punk {
+  background: var(--coral);
+  color: var(--cream);
+  border: none;
+  font-weight: 600;
+  transition: all 0.15s ease;
+  box-shadow: 0 0 0 0 transparent;
+}
+
+.btn-punk:hover {
+  background: color-mix(in srgb, var(--coral) 85%, white);
+  box-shadow:
+    0 0 20px hsl(var(--coral-hsl) / 0.5),
+    0 0 40px hsl(var(--coral-hsl) / 0.3),
+    inset 0 1px 0 rgba(255,255,255,0.2);
+  transform: translateY(-1px);
+}
+
+.btn-punk:active {
+  background: color-mix(in srgb, var(--coral) 90%, black);
+  transform: translateY(1px);
+  box-shadow: 0 0 15px hsl(var(--coral-hsl) / 0.4);
+}
+
+/* Ghost button - sharp, not soft */
+.btn-ghost {
+  background: transparent;
+  color: var(--soft);
+  border: 1px solid var(--twilight);
+  transition: all 0.15s ease;
+}
+
+.btn-ghost:hover {
+  color: var(--cream);
+  border-color: var(--coral);
+  background: hsl(var(--coral-hsl) / 0.1);
+  box-shadow: 0 0 20px hsl(var(--coral-hsl) / 0.2);
+}
+
+.btn-ghost:active {
+  background: hsl(var(--coral-hsl) / 0.15);
+  transform: scale(0.98);
+}
+
+/* Neon variant - electric, not corporate */
+.btn-neon {
+  background: transparent;
+  color: var(--neon-cyan);
+  border: 1px solid var(--neon-cyan);
+  text-shadow: 0 0 10px currentColor;
+  transition: all 0.2s ease;
+}
+
+.btn-neon:hover {
+  background: hsl(var(--neon-cyan-hsl) / 0.15);
+  box-shadow:
+    0 0 20px hsl(var(--neon-cyan-hsl) / 0.4),
+    0 0 40px hsl(var(--neon-cyan-hsl) / 0.2),
+    inset 0 0 20px hsl(var(--neon-cyan-hsl) / 0.1);
+  text-shadow: 0 0 15px currentColor;
+}
+
+.btn-neon:active {
+  transform: scale(0.97);
+}
+
+/* ============================================
    STATUS BADGES
    ============================================ */
 
 .badge-live {
-  background: hsl(var(--neon-red-hsl) / 0.2);
+  background: hsl(var(--neon-red-hsl) / 0.25);
   color: var(--neon-red);
-  border: 1px solid hsl(var(--neon-red-hsl) / 0.3);
-  animation: pulse-glow 2s ease-in-out infinite;
+  border: 1px solid hsl(var(--neon-red-hsl) / 0.5);
+  animation: glitch-flicker 3s ease-in-out infinite;
+  text-shadow: 0 0 8px currentColor;
 }
 
 .badge-trending {
@@ -744,6 +816,73 @@ body::after {
   50% {
     opacity: 0.6;
   }
+}
+
+/* Glitch flicker for LIVE badges - electric, urgent, punk */
+@keyframes glitch-flicker {
+  0%, 100% {
+    opacity: 1;
+    transform: translate(0);
+    text-shadow: 0 0 8px currentColor;
+  }
+  5% {
+    opacity: 0.8;
+    transform: translate(-1px, 1px);
+  }
+  10% {
+    opacity: 1;
+    transform: translate(1px, -1px);
+    text-shadow: -1px 0 #00D4E8, 1px 0 #E855A0;
+  }
+  15% {
+    transform: translate(0);
+    text-shadow: 0 0 8px currentColor;
+  }
+  42% {
+    opacity: 1;
+  }
+  43% {
+    opacity: 0.4;
+    transform: translate(2px, 0);
+  }
+  44% {
+    opacity: 1;
+    transform: translate(0);
+  }
+  87% {
+    opacity: 1;
+  }
+  88% {
+    opacity: 0.6;
+    text-shadow: 2px 0 #E855A0, -2px 0 #00D4E8;
+  }
+  89% {
+    opacity: 1;
+    text-shadow: 0 0 8px currentColor;
+  }
+}
+
+.animate-glitch-flicker {
+  animation: glitch-flicker 3s ease-in-out infinite;
+}
+
+/* Neon sign flicker - for dramatic reveals */
+@keyframes neon-flicker {
+  0%, 19%, 21%, 23%, 25%, 54%, 56%, 100% {
+    opacity: 1;
+    text-shadow:
+      0 0 4px currentColor,
+      0 0 11px currentColor,
+      0 0 19px currentColor;
+  }
+  20%, 24%, 55% {
+    opacity: 0.6;
+    text-shadow: none;
+  }
+}
+
+.animate-neon-flicker {
+  animation: neon-flicker 2s linear infinite;
 }
 
 @keyframes shimmer {
@@ -1372,10 +1511,10 @@ textarea:focus-visible {
 }
 
 .card-event-hover:hover {
-  transform: translateY(-1px);
-  border-color: color-mix(in srgb, var(--glow-color) 40%, transparent);
-  box-shadow: 0 0 15px color-mix(in srgb, var(--glow-color) 12%, transparent),
-              0 4px 12px rgba(0, 0, 0, 0.15);
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--glow-color) 60%, transparent);
+  box-shadow: 0 0 25px color-mix(in srgb, var(--glow-color) 20%, transparent),
+              0 6px 16px rgba(0, 0, 0, 0.2);
   background-color: var(--card-bg-hover);
 }
 
@@ -1707,7 +1846,7 @@ textarea:focus-visible {
 }
 
 .rain-overlay::before {
-  opacity: 0.07;
+  opacity: 0.12;
   background:
     repeating-linear-gradient(-65deg, transparent 0, transparent 8px, #E855A0 8px, #E855A0 9px),
     repeating-linear-gradient(-72deg, transparent 0, transparent 15px, #E855A0 15px, #E855A0 16px),
@@ -1719,7 +1858,7 @@ textarea:focus-visible {
 }
 
 .rain-overlay::after {
-  opacity: 0.055;
+  opacity: 0.09;
   background:
     repeating-linear-gradient(-55deg, transparent 0, transparent 11px, #E855A0 11px, #E855A0 12px),
     repeating-linear-gradient(-78deg, transparent 0, transparent 20px, #E855A0 20px, #E855A0 21px),
@@ -2109,17 +2248,18 @@ textarea:focus-visible {
 }
 
 .card-atmospheric:hover {
-  transform: translateY(-2px) scale(1.002);
+  transform: translateY(-3px);
+  border-color: color-mix(in srgb, var(--glow-color, var(--neon-magenta)) 50%, transparent);
   box-shadow:
-    0 4px 15px -4px var(--glow-color, var(--neon-magenta)),
-    0 0 25px -8px var(--glow-color, var(--neon-magenta)),
-    inset 0 1px 0 rgba(255, 255, 255, 0.03);
+    0 6px 20px -4px var(--glow-color, var(--neon-magenta)),
+    0 0 35px -8px var(--glow-color, var(--neon-magenta)),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
 .card-atmospheric:hover::after {
-  opacity: 0.6;
-  height: 24px;
-  bottom: -8px;
+  opacity: 0.7;
+  height: 28px;
+  bottom: -10px;
 }
 
 /* ============================================
@@ -2373,27 +2513,28 @@ textarea:focus-visible {
     transform: translateY(-2px);
   }
 
-  /* Card atmospheric hover */
+  /* Card atmospheric hover - bolder, more confident */
   .card-atmospheric:hover {
-    transform: translateY(-2px) scale(1.002);
+    transform: translateY(-3px);
+    border-color: color-mix(in srgb, var(--glow-color, var(--neon-magenta)) 50%, transparent);
     box-shadow:
-      0 4px 15px -4px var(--glow-color, var(--neon-magenta)),
-      0 0 25px -8px var(--glow-color, var(--neon-magenta)),
-      inset 0 1px 0 rgba(255, 255, 255, 0.03);
+      0 6px 20px -4px var(--glow-color, var(--neon-magenta)),
+      0 0 35px -8px var(--glow-color, var(--neon-magenta)),
+      inset 0 1px 0 rgba(255, 255, 255, 0.05);
   }
 
   .card-atmospheric:hover::after {
-    opacity: 0.6;
-    height: 24px;
-    bottom: -8px;
+    opacity: 0.7;
+    height: 28px;
+    bottom: -10px;
   }
 
-  /* Card event hover */
+  /* Card event hover - more aggressive */
   .card-event-hover:hover {
-    transform: translateY(-1px);
-    border-color: color-mix(in srgb, var(--glow-color) 40%, transparent);
-    box-shadow: 0 0 15px color-mix(in srgb, var(--glow-color) 12%, transparent),
-                0 4px 12px rgba(0, 0, 0, 0.15);
+    transform: translateY(-2px);
+    border-color: color-mix(in srgb, var(--glow-color) 60%, transparent);
+    box-shadow: 0 0 25px color-mix(in srgb, var(--glow-color) 20%, transparent),
+                0 6px 16px rgba(0, 0, 0, 0.2);
     background-color: var(--card-bg-hover);
   }
 

@@ -44,7 +44,7 @@ export default async function Home() {
         </p>
         <Link
           href={`/${DEFAULT_PORTAL_SLUG}`}
-          className="px-8 py-4 bg-[var(--coral)]/90 text-[var(--cream)] rounded-lg font-medium transition-all text-lg hover:bg-[var(--coral)] hover:shadow-[0_0_30px_rgba(255,107,122,0.5)] hover:scale-[1.02] active:scale-[0.98]"
+          className="btn-punk px-8 py-4 rounded-sm text-lg"
         >
           Explore {DEFAULT_PORTAL_NAME}
         </Link>
@@ -53,7 +53,7 @@ export default async function Home() {
       {/* Stats Row */}
       <div className="px-4 py-8">
         <div className="max-w-2xl mx-auto grid grid-cols-3 gap-4">
-          <div className="text-center p-4 rounded-lg border border-[var(--twilight)]" style={{ backgroundColor: "var(--card-bg)" }}>
+          <div className="text-center p-4 rounded-none border-l-2 border-l-[var(--coral)] border-y border-r border-[var(--twilight)]" style={{ backgroundColor: "var(--card-bg)" }}>
             <div className="font-mono text-2xl sm:text-3xl font-bold gradient-text-stats">
               {stats.eventCount.toLocaleString()}+
             </div>
@@ -61,7 +61,7 @@ export default async function Home() {
               Upcoming Events
             </div>
           </div>
-          <div className="text-center p-4 rounded-lg border border-[var(--twilight)]" style={{ backgroundColor: "var(--card-bg)" }}>
+          <div className="text-center p-4 rounded-none border-l-2 border-l-[var(--neon-cyan)] border-y border-r border-[var(--twilight)]" style={{ backgroundColor: "var(--card-bg)" }}>
             <div className="font-mono text-2xl sm:text-3xl font-bold gradient-text-stats">
               {stats.venueCount.toLocaleString()}+
             </div>
@@ -69,7 +69,7 @@ export default async function Home() {
               Venues
             </div>
           </div>
-          <div className="text-center p-4 rounded-lg border border-[var(--twilight)]" style={{ backgroundColor: "var(--card-bg)" }}>
+          <div className="text-center p-4 rounded-none border-l-2 border-l-[var(--neon-amber)] border-y border-r border-[var(--twilight)]" style={{ backgroundColor: "var(--card-bg)" }}>
             <div className="font-mono text-2xl sm:text-3xl font-bold gradient-text-stats">
               {stats.sourceCount}+
             </div>
@@ -87,8 +87,8 @@ export default async function Home() {
             Why Lost City
           </h2>
           <div className="grid sm:grid-cols-3 gap-4">
-            <div className="p-5 rounded-lg border border-[var(--twilight)] card-interactive">
-              <div className="w-10 h-10 rounded-lg bg-[var(--neon-magenta)]/15 flex items-center justify-center mb-3">
+            <div className="group p-5 rounded-none border-t-2 border-t-[var(--neon-magenta)] border border-[var(--twilight)] hover:border-[var(--neon-magenta)]/50 transition-all hover:bg-[var(--neon-magenta)]/5">
+              <div className="w-10 h-10 rounded-none bg-[var(--neon-magenta)]/15 flex items-center justify-center mb-3 group-hover:bg-[var(--neon-magenta)]/25 transition-colors">
                 <svg className="w-5 h-5 text-[var(--neon-magenta)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
                 </svg>
@@ -101,8 +101,8 @@ export default async function Home() {
               </p>
             </div>
 
-            <div className="p-5 rounded-lg border border-[var(--twilight)] card-interactive">
-              <div className="w-10 h-10 rounded-lg bg-[var(--neon-cyan)]/15 flex items-center justify-center mb-3">
+            <div className="group p-5 rounded-none border-t-2 border-t-[var(--neon-cyan)] border border-[var(--twilight)] hover:border-[var(--neon-cyan)]/50 transition-all hover:bg-[var(--neon-cyan)]/5">
+              <div className="w-10 h-10 rounded-none bg-[var(--neon-cyan)]/15 flex items-center justify-center mb-3 group-hover:bg-[var(--neon-cyan)]/25 transition-colors">
                 <svg className="w-5 h-5 text-[var(--neon-cyan)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
                 </svg>
@@ -115,8 +115,8 @@ export default async function Home() {
               </p>
             </div>
 
-            <div className="p-5 rounded-lg border border-[var(--twilight)] card-interactive">
-              <div className="w-10 h-10 rounded-lg bg-[var(--neon-green)]/15 flex items-center justify-center mb-3">
+            <div className="group p-5 rounded-none border-t-2 border-t-[var(--neon-green)] border border-[var(--twilight)] hover:border-[var(--neon-green)]/50 transition-all hover:bg-[var(--neon-green)]/5">
+              <div className="w-10 h-10 rounded-none bg-[var(--neon-green)]/15 flex items-center justify-center mb-3 group-hover:bg-[var(--neon-green)]/25 transition-colors">
                 <svg className="w-5 h-5 text-[var(--neon-green)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                 </svg>
@@ -143,7 +143,7 @@ export default async function Home() {
               <Link
                 key={category.type}
                 href={`/${DEFAULT_PORTAL_SLUG}?category=${category.type}`}
-                className="flex flex-col items-center p-4 rounded-lg border border-[var(--twilight)] transition-all hover:border-[var(--coral)]/40 hover:-translate-y-0.5 group"
+                className="flex flex-col items-center p-4 rounded-none border border-[var(--twilight)] transition-all hover:border-[var(--soft)] group"
                 style={{ backgroundColor: "var(--card-bg)" }}
               >
                 <CategoryIcon
