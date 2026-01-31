@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextRequest } from "next/server";
 import { getDistanceMiles } from "@/lib/geo";
+import { getLocalDateString } from "@/lib/formats";
 
 // Destination category mappings for venues
 const DESTINATION_CATEGORIES: Record<string, string[]> = {
@@ -55,7 +56,7 @@ export async function GET(
   };
 
   // Get today's date for filtering upcoming events
-  const today = new Date().toISOString().split("T")[0];
+  const today = getLocalDateString();
 
   // Fetch upcoming events at this venue
   const { data: upcomingEvents } = await supabase

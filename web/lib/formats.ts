@@ -198,3 +198,28 @@ export function formatPriceDetailed(event: PriceableEvent): PriceFormatResult {
 
   return { text: "", isFree: false, isEstimate: false };
 }
+
+// ============================================================================
+// DATE UTILITIES
+// ============================================================================
+
+/**
+ * Get today's date as a string in local timezone (YYYY-MM-DD format).
+ * IMPORTANT: Do NOT use `new Date().toISOString().split("T")[0]` as that
+ * returns UTC date which is wrong after ~7pm EST (it becomes next day in UTC).
+ */
+export function getLocalDateString(date: Date = new Date()): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+/**
+ * Get a date string for N days from now in local timezone.
+ */
+export function getLocalDateStringOffset(days: number): string {
+  const date = new Date();
+  date.setDate(date.getDate() + days);
+  return getLocalDateString(date);
+}

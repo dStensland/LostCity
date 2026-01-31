@@ -1,5 +1,6 @@
 import { supabase } from "./supabase";
 import type { Event } from "./supabase";
+import { getLocalDateString } from "@/lib/formats";
 
 export const VENUE_TYPES_MAP = {
   // Entertainment venues
@@ -261,7 +262,7 @@ export async function getSpotsWithEventCounts(
   search?: string,
   category?: SpotCategory
 ): Promise<Spot[]> {
-  const today = new Date().toISOString().split("T")[0];
+  const today = getLocalDateString();
 
   // Get all venues
   let venueQuery = supabase.from("venues").select("*").order("name");
@@ -373,7 +374,7 @@ export async function getUpcomingEventsForSpot(
   venueId: number,
   limit = 10
 ): Promise<Event[]> {
-  const today = new Date().toISOString().split("T")[0];
+  const today = getLocalDateString();
 
   const { data, error } = await supabase
     .from("events")
