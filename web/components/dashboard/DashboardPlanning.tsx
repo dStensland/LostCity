@@ -90,6 +90,8 @@ export default function DashboardPlanning() {
       setLoading(true);
 
       // Load all data in parallel - with timeout protection
+      type QueryResult<T> = { data: T[] | null; error: unknown };
+
       const [savedRes, rsvpRes, invitesRes] = await Promise.all([
         withTimeout(
           supabase
@@ -118,7 +120,7 @@ export default function DashboardPlanning() {
             .eq("user_id", user.id)
             .not("event_id", "is", null)
             .order("created_at", { ascending: false })
-        ),
+        ) as Promise<QueryResult<SavedEvent>>,
 
         withTimeout(
           supabase
@@ -148,7 +150,7 @@ export default function DashboardPlanning() {
             .eq("user_id", user.id)
             .in("status", ["going", "interested"])
             .order("created_at", { ascending: false })
-        ),
+        ) as Promise<QueryResult<RSVP>>,
 
         withTimeout(
           supabase
@@ -184,19 +186,19 @@ export default function DashboardPlanning() {
             `)
             .eq("invitee_id", user.id)
             .order("created_at", { ascending: false })
-        ),
+        ) as Promise<QueryResult<EventInvite>>,
       ]);
 
       if (savedRes.data) {
-        setSavedItems(savedRes.data as SavedEvent[]);
+        setSavedItems(savedRes.data);
       }
 
       if (rsvpRes.data) {
-        setRsvps(rsvpRes.data as RSVP[]);
+        setRsvps(rsvpRes.data);
       }
 
       if (invitesRes.data) {
-        setInvites(invitesRes.data as EventInvite[]);
+        setInvites(invitesRes.data);
       }
     } catch (error) {
       console.error("Failed to load planning data:", error);

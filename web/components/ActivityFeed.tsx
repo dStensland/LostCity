@@ -78,17 +78,17 @@ export default function ActivityFeed({ limit = 20, className = "" }: ActivityFee
 
       try {
         // Get users we follow - with timeout protection
-        const { data: followsData } = await withTimeout(
+        const followsResult = await withTimeout(
           supabase
             .from("follows")
             .select("followed_user_id")
             .eq("follower_id", user.id)
             .not("followed_user_id", "is", null)
-        );
+        ) as { data: { followed_user_id: string | null }[] | null };
 
         if (!isMounted) return;
 
-        const follows = followsData as { followed_user_id: string | null }[] | null;
+        const follows = followsResult.data;
         if (!follows || follows.length === 0) {
           setLoading(false);
           return;
@@ -99,7 +99,18 @@ export default function ActivityFeed({ limit = 20, className = "" }: ActivityFee
           .filter(Boolean) as string[];
 
         // Get activities from followed users - with timeout protection
-        const { data: activityData } = await withTimeout(
+        type ActivityQueryResult = {
+          id: string;
+          activity_type: string;
+          created_at: string;
+          metadata: Record<string, unknown> | null;
+          user: ActivityItem["user"] | null;
+          event: ActivityItem["event"] | null;
+          venue: ActivityItem["venue"] | null;
+          target_user: ActivityItem["target_user"] | null;
+        };
+
+        const activityResult = await withTimeout(
           supabase
             .from("activities")
             .select(`
@@ -123,22 +134,11 @@ export default function ActivityFeed({ limit = 20, className = "" }: ActivityFee
             .in("visibility", ["public", "friends"])
             .order("created_at", { ascending: false })
             .limit(limit)
-        );
+        ) as { data: ActivityQueryResult[] | null };
 
         if (!isMounted) return;
 
-        type ActivityQueryResult = {
-          id: string;
-          activity_type: string;
-          created_at: string;
-          metadata: Record<string, unknown> | null;
-          user: ActivityItem["user"] | null;
-          event: ActivityItem["event"] | null;
-          venue: ActivityItem["venue"] | null;
-          target_user: ActivityItem["target_user"] | null;
-        };
-
-        const rawActivities = activityData as ActivityQueryResult[] | null;
+        const rawActivities = activityResult.data;
         if (!rawActivities) {
           setLoading(false);
           return;
