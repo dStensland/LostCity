@@ -363,7 +363,8 @@ export async function getFilteredEventsWithSearch(
   pageSize = 20
 ): Promise<{ events: EventWithLocation[]; total: number }> {
   const now = new Date();
-  const today = now.toISOString().split("T")[0];
+  // Use date-fns format to get local date (not UTC from toISOString)
+  const today = format(startOfDay(now), "yyyy-MM-dd");
   const currentTime = now.toTimeString().split(" ")[0]; // HH:MM:SS format
   const offset = (page - 1) * pageSize;
 
@@ -670,7 +671,8 @@ export async function getFilteredEventsWithCursor(
   pageSize = 20
 ): Promise<{ events: EventWithLocation[]; nextCursor: string | null; hasMore: boolean }> {
   const now = new Date();
-  const today = now.toISOString().split("T")[0];
+  // Use date-fns format to get local date (not UTC from toISOString)
+  const today = format(startOfDay(now), "yyyy-MM-dd");
   const currentTime = now.toTimeString().split(" ")[0]; // HH:MM:SS format
 
   // Decode cursor if provided
@@ -960,7 +962,8 @@ export async function getEventsForMap(
   filters: SearchFilters,
   limit = 500
 ): Promise<EventWithLocation[]> {
-  const today = new Date().toISOString().split("T")[0];
+  // Use date-fns format to get local date (not UTC from toISOString)
+  const today = format(startOfDay(new Date()), "yyyy-MM-dd");
 
   // PERFORMANCE OPTIMIZATION: Batch all venue ID lookups in parallel
   // instead of making 3 sequential queries
@@ -1108,7 +1111,8 @@ export async function getEventsForMap(
 
   // Compute is_live for each event based on current time
   const now = new Date();
-  const currentDate = now.toISOString().split("T")[0];
+  // Use date-fns format to get local date (not UTC from toISOString)
+  const currentDate = format(startOfDay(now), "yyyy-MM-dd");
   const currentMinutes = now.getHours() * 60 + now.getMinutes();
 
   const events = (data as EventWithLocation[]).map((event) => {
@@ -1326,7 +1330,8 @@ export interface VenueWithCount {
 
 // Get venues that have upcoming events
 export async function getVenuesWithEvents(): Promise<VenueWithCount[]> {
-  const today = new Date().toISOString().split("T")[0];
+  // Use date-fns format to get local date (not UTC from toISOString)
+  const today = format(startOfDay(new Date()), "yyyy-MM-dd");
 
   const { data: events, error } = await supabase
     .from("events")
@@ -1379,7 +1384,8 @@ export async function getSearchSuggestions(prefix: string): Promise<SearchSugges
   if (prefix.length < 2) return [];
 
   const searchTerm = `${prefix}%`;
-  const today = new Date().toISOString().split("T")[0];
+  // Use date-fns format to get local date (not UTC from toISOString)
+  const today = format(startOfDay(new Date()), "yyyy-MM-dd");
 
   const [venueResult, eventResult, neighborhoodResult, producerResult] = await Promise.all([
     supabase.from("venues").select("name").ilike("name", searchTerm).limit(3),
@@ -1563,7 +1569,8 @@ export async function getFilteredEventsWithRollups(
   page = 1,
   pageSize = 20
 ): Promise<{ items: EventOrGroup[]; total: number }> {
-  const today = new Date().toISOString().split("T")[0];
+  // Use date-fns format to get local date (not UTC from toISOString)
+  const today = format(startOfDay(new Date()), "yyyy-MM-dd");
 
   // Get date range for rollup calculation
   const dateRange = filters.date_filter
@@ -1858,8 +1865,10 @@ export async function getAvailableFilters(): Promise<AvailableFilters> {
 
 // Get popular events this week based on RSVPs and recommendations
 export async function getPopularEvents(limit = 6): Promise<EventWithLocation[]> {
-  const today = new Date().toISOString().split("T")[0];
-  const weekFromNow = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+  // Use date-fns format to get local date (not UTC from toISOString)
+  const now = new Date();
+  const today = format(startOfDay(now), "yyyy-MM-dd");
+  const weekFromNow = format(addDays(startOfDay(now), 7), "yyyy-MM-dd");
 
   // Get upcoming events this week (use imported supabase client)
   const { data: events } = await supabase
@@ -1910,8 +1919,9 @@ export async function getPopularEvents(limit = 6): Promise<EventWithLocation[]> 
 export async function getTrendingEvents(limit = 6): Promise<EventWithLocation[]> {
   const serviceClient = createServiceClient();
   const now = new Date();
-  const today = now.toISOString().split("T")[0];
-  const weekFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+  // Use date-fns format to get local date (not UTC from toISOString)
+  const today = format(startOfDay(now), "yyyy-MM-dd");
+  const weekFromNow = format(addDays(startOfDay(now), 7), "yyyy-MM-dd");
   const hours48Ago = new Date(now.getTime() - 48 * 60 * 60 * 1000).toISOString();
 
   // Get upcoming events this week

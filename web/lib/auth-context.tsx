@@ -118,7 +118,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  // Fetch profile - tracks current fetch to ignore stale responses
+  // Fetch profile via API - ensures profile exists and handles creation
   const fetchProfile = useCallback(async (userId: string): Promise<Profile | null> => {
     // Track this fetch ID to detect if a newer fetch has started
     const fetchId = Date.now();
@@ -126,23 +126,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setProfileLoading(true);
 
     try {
-      const { data, error: fetchError } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", userId)
-        .maybeSingle();
+      // Use API route to fetch/ensure profile exists
+      const response = await fetch("/api/auth/profile", {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+      });
 
       // Check if this fetch is still the current one
       if (profileFetchIdRef.current !== fetchId) {
-        // A newer fetch has started, ignore this result
         return null;
       }
 
-      if (fetchError) {
-        console.error("Error fetching profile:", fetchError);
+      if (!response.ok) {
+        console.error("Error fetching profile:", response.status);
         if (isMountedRef.current) setProfileLoading(false);
         return null;
       }
+
+      const { profile: data } = await response.json();
 
       if (isMountedRef.current) setProfileLoading(false);
       return data as Profile | null;
@@ -151,7 +152,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (isMountedRef.current) setProfileLoading(false);
       return null;
     }
-  }, [supabase]);
+  }, []);
 
   const refreshProfile = useCallback(async () => {
     const userId = currentUserIdRef.current;

@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/components/Toast";
 
@@ -22,8 +21,7 @@ export default function SaveButton({
   showLabel = false,
 }: SaveButtonProps) {
   const router = useRouter();
-  const { user } = useAuth();
-  const supabase = createClient();
+  const { user, loading: authLoading } = useAuth();
   const { showToast } = useToast();
 
   const [isSaved, setIsSaved] = useState(false);
@@ -31,32 +29,44 @@ export default function SaveButton({
   const [actionLoading, setActionLoading] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
 
-  // Load existing saved state
+  // Load existing saved state via API
   useEffect(() => {
     async function loadSavedState() {
+      if (authLoading) return;
+
       if (!user) {
         setLoading(false);
         return;
       }
 
-      let query = supabase
-        .from("saved_items")
-        .select("id")
-        .eq("user_id", user.id);
+      try {
+        const params = new URLSearchParams();
+        if (eventId) params.set("event_id", eventId.toString());
+        if (venueId) params.set("venue_id", venueId.toString());
 
-      if (eventId) {
-        query = query.eq("event_id", eventId);
-      } else if (venueId) {
-        query = query.eq("venue_id", venueId);
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+        const response = await fetch(`/api/saved?${params}`, {
+          signal: controller.signal,
+        });
+        clearTimeout(timeoutId);
+
+        if (response.ok) {
+          const { saved } = await response.json();
+          setIsSaved(saved);
+        }
+      } catch (err) {
+        if ((err as Error).name !== "AbortError") {
+          console.error("Failed to load saved state:", err);
+        }
+      } finally {
+        setLoading(false);
       }
-
-      const { data } = await query.maybeSingle();
-      setIsSaved(!!data);
-      setLoading(false);
     }
 
     loadSavedState();
-  }, [user, eventId, venueId, supabase]);
+  }, [user, authLoading, eventId, venueId]);
 
   const handleToggle = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -78,35 +88,39 @@ export default function SaveButton({
     setIsSaved(!isSaved);
 
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 8000);
+
+      let response: Response;
+
       if (previousState) {
         // Remove saved item
-        let query = supabase
-          .from("saved_items")
-          .delete()
-          .eq("user_id", user.id);
+        const params = new URLSearchParams();
+        if (eventId) params.set("event_id", eventId.toString());
+        if (venueId) params.set("venue_id", venueId.toString());
 
-        if (eventId) {
-          query = query.eq("event_id", eventId);
-        } else if (venueId) {
-          query = query.eq("venue_id", venueId);
-        }
-
-        const { error } = await query;
-        if (error) throw error;
+        response = await fetch(`/api/saved?${params}`, {
+          method: "DELETE",
+          signal: controller.signal,
+        });
       } else {
         // Add saved item
-        const insertData: { user_id: string; event_id?: number; venue_id?: number } = {
-          user_id: user.id,
-        };
+        response = await fetch("/api/saved", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            event_id: eventId,
+            venue_id: venueId,
+          }),
+          signal: controller.signal,
+        });
+      }
 
-        if (eventId) {
-          insertData.event_id = eventId;
-        } else if (venueId) {
-          insertData.venue_id = venueId;
-        }
+      clearTimeout(timeoutId);
 
-        const { error } = await supabase.from("saved_items").insert(insertData as never);
-        if (error) throw error;
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Failed to save");
       }
 
       // Show success toast
@@ -114,7 +128,17 @@ export default function SaveButton({
     } catch (error) {
       // Rollback on error
       setIsSaved(previousState);
-      showToast("Failed to save. Please try again.", "error");
+
+      let message = "Failed to save. Please try again.";
+      if (error instanceof Error) {
+        if (error.name === "AbortError") {
+          message = "Request timed out. Please try again.";
+        } else if (error.message) {
+          message = error.message;
+        }
+      }
+
+      showToast(message, "error");
       console.error("Failed to update saved state:", error);
     } finally {
       setActionLoading(false);

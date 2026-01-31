@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
+import { format, startOfDay, addDays } from "date-fns";
 
 /**
  * GET /api/activities/popular
@@ -19,8 +20,9 @@ export async function GET(request: NextRequest) {
     const dateFilter = searchParams.get("date_filter") || "week";
 
     // Get current date/time and calculate end date based on filter
+    // Use date-fns format to get local date (not UTC from toISOString)
     const now = new Date();
-    const today = now.toISOString().split("T")[0];
+    const today = format(startOfDay(now), "yyyy-MM-dd");
     const currentTime = now.toTimeString().split(" ")[0]; // HH:MM:SS format
     let endDate: string;
     let cacheSeconds: number;
@@ -31,16 +33,12 @@ export async function GET(request: NextRequest) {
         cacheSeconds = 60; // Shorter cache for today (changes frequently)
         break;
       case "month":
-        endDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
-          .toISOString()
-          .split("T")[0];
+        endDate = format(addDays(startOfDay(now), 30), "yyyy-MM-dd");
         cacheSeconds = 300;
         break;
       case "week":
       default:
-        endDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
-          .toISOString()
-          .split("T")[0];
+        endDate = format(addDays(startOfDay(now), 7), "yyyy-MM-dd");
         cacheSeconds = 300;
         break;
     }
