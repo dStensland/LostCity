@@ -137,13 +137,13 @@ export default function ShiftingNeighborhoodAmbient({ config }: ShiftingNeighbor
             transform: translateX(0);
           }
           25% {
-            transform: translateX(${20 * speedMultiplier}px);
+            transform: translateX(15px);
           }
           50% {
-            transform: translateX(${-10 * speedMultiplier}px);
+            transform: translateX(-8px);
           }
           75% {
-            transform: translateX(${15 * speedMultiplier}px);
+            transform: translateX(10px);
           }
         }
 

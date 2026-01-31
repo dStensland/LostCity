@@ -37,13 +37,16 @@ export const DesignTesterPanel = memo(function DesignTesterPanel() {
   const [isOpen, setIsOpen] = useState(false);
   const [overrides, setOverrides] = useState<DesignOverrides>({});
 
-  // Check if in development mode (computed directly, no effect needed)
-  const isDev = typeof window !== "undefined" &&
-    (process.env.NODE_ENV === "development" || window.location.hostname === "localhost");
+  // Check if design tester should be enabled
+  // Shows in: dev mode, localhost, or when ?design=1 query param is present
+  const isEnabled = typeof window !== "undefined" &&
+    (process.env.NODE_ENV === "development" ||
+     window.location.hostname === "localhost" ||
+     window.location.search.includes("design=1"));
 
   // Keyboard shortcut to toggle panel (Ctrl+. or Cmd+.)
   useEffect(() => {
-    if (!isDev) return;
+    if (!isEnabled) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === ".") {
@@ -54,7 +57,7 @@ export const DesignTesterPanel = memo(function DesignTesterPanel() {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isDev]);
+  }, [isEnabled]);
 
   // Apply CSS overrides when settings change
   useEffect(() => {
@@ -148,8 +151,8 @@ export const DesignTesterPanel = memo(function DesignTesterPanel() {
     root.style.removeProperty("--neon-cyan");
   }, []);
 
-  // Don't render if not in dev mode
-  if (!isDev) return null;
+  // Don't render if not enabled
+  if (!isEnabled) return null;
 
   const portal = portalContext?.portal;
   const currentAmbient = overrides.ambientEffect || portal?.branding?.ambient?.effect || "subtle_glow";
