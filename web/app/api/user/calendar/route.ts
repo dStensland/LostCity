@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClient, getUser } from "@/lib/supabase/server";
+import { getUser } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { format, startOfMonth, endOfMonth, addMonths } from "date-fns";
 

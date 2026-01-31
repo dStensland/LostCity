@@ -34,6 +34,13 @@
   --neon-green: #00D9A0;        /* Success/free indicator */
   --neon-red: #FF5A5A;          /* Live/error indicator */
 
+  /* Deep purple/blue palette for calendar depth */
+  --deep-violet: #2d1b4e;       /* Rich purple for backgrounds */
+  --midnight-blue: #1a1f3c;     /* Deep blue for cards */
+  --twilight-purple: #3d2663;   /* Mid-purple for hover states */
+  --cosmic-blue: #252d5a;       /* Blue accent for selected states */
+  --nebula: #4a3875;            /* Lighter purple for borders */
+
   /* HSL versions for opacity support */
   --neon-magenta-hsl: 320 80% 62%;
   --neon-cyan-hsl: 185 100% 46%;
@@ -127,6 +134,13 @@
   --neon-amber-hsl: 38 92% 43%;
   --neon-green-hsl: 160 84% 31%;
   --neon-red-hsl: 0 72% 51%;
+
+  /* Deep purple/blue for light mode - softer versions */
+  --deep-violet: #ebe7f4;
+  --midnight-blue: #e8eaf3;
+  --twilight-purple: #d8d0e8;
+  --cosmic-blue: #dde0f0;
+  --nebula: #c5bdd8;
 
   /* Brand colors - slightly adjusted for light mode */
   --rose: #E11D48;
@@ -1840,61 +1854,67 @@ textarea:focus-visible {
 .rain-overlay::after {
   content: '';
   position: absolute;
-  inset: -50%;
-  width: 200%;
-  height: 200%;
+  inset: -100%;
+  width: 300%;
+  height: 300%;
 }
 
 .rain-overlay::before {
-  opacity: 0.12;
+  opacity: 0.07;
   background:
-    repeating-linear-gradient(-65deg, transparent 0, transparent 8px, #E855A0 8px, #E855A0 9px),
-    repeating-linear-gradient(-72deg, transparent 0, transparent 15px, #E855A0 15px, #E855A0 16px),
-    repeating-linear-gradient(-58deg, transparent 0, transparent 22px, #E855A0 22px, #E855A0 23px),
-    repeating-linear-gradient(-80deg, transparent 0, transparent 12px, #E855A0 12px, #E855A0 13px),
-    repeating-linear-gradient(-68deg, transparent 0, transparent 18px, #E855A0 18px, #E855A0 19px);
-  filter: drop-shadow(0 0 3px #E855A0);
-  animation: rain-chaos-1 10s linear infinite;
+    /* Bright pink streaks */
+    repeating-linear-gradient(-65deg, transparent 0, transparent 8px, #E855A0 8px, #E855A0 11px),
+    repeating-linear-gradient(-72deg, transparent 0, transparent 15px, #E855A0 15px, #E855A0 17px),
+    /* Hot fuchsia */
+    repeating-linear-gradient(-82deg, transparent 0, transparent 20px, #D946A8 20px, #D946A8 23px),
+    /* Deep magenta */
+    repeating-linear-gradient(-58deg, transparent 0, transparent 22px, #9B2D6B 22px, #9B2D6B 25px),
+    /* Rich violet */
+    repeating-linear-gradient(-75deg, transparent 0, transparent 18px, #8B3DC9 18px, #8B3DC9 21px),
+    /* Deep raspberry */
+    repeating-linear-gradient(-80deg, transparent 0, transparent 12px, #A62865 12px, #A62865 15px),
+    /* Deep blue */
+    repeating-linear-gradient(-68deg, transparent 0, transparent 30px, #4A7DB8 30px, #4A7DB8 33px);
+  filter: blur(0.5px);
+  animation: rain-chaos-1 60s linear infinite;
 }
 
 .rain-overlay::after {
-  opacity: 0.09;
+  opacity: 0.05;
   background:
-    repeating-linear-gradient(-55deg, transparent 0, transparent 11px, #E855A0 11px, #E855A0 12px),
-    repeating-linear-gradient(-78deg, transparent 0, transparent 20px, #E855A0 20px, #E855A0 21px),
-    repeating-linear-gradient(-62deg, transparent 0, transparent 14px, #E855A0 14px, #E855A0 15px),
-    repeating-linear-gradient(-85deg, transparent 0, transparent 9px, #E855A0 9px, #E855A0 10px);
-  filter: drop-shadow(0 0 2px #E855A0);
-  animation: rain-chaos-2 13s linear infinite;
+    /* Mid-tone pink */
+    repeating-linear-gradient(-55deg, transparent 0, transparent 11px, #D64D8A 11px, #D64D8A 14px),
+    /* Electric purple */
+    repeating-linear-gradient(-70deg, transparent 0, transparent 16px, #9B4DCA 16px, #9B4DCA 19px),
+    /* Deep wine */
+    repeating-linear-gradient(-78deg, transparent 0, transparent 20px, #722F5A 20px, #722F5A 23px),
+    /* Plum */
+    repeating-linear-gradient(-62deg, transparent 0, transparent 14px, #8B4876 14px, #8B4876 17px),
+    /* Royal purple */
+    repeating-linear-gradient(-88deg, transparent 0, transparent 24px, #5D3A8E 24px, #5D3A8E 27px),
+    /* Steel blue */
+    repeating-linear-gradient(-85deg, transparent 0, transparent 25px, #3D6A99 25px, #3D6A99 28px);
+  filter: blur(1px);
+  animation: rain-chaos-2 75s linear infinite;
 }
 
+/* Rain animations use translate distances that are multiples of gradient repeat patterns
+   (360px is divisible by 9,12,15,18,20) for seamless looping with the repeating gradients */
 @keyframes rain-chaos-1 {
   0% {
-    transform: translate(0, 0) skewX(0deg);
-  }
-  25% {
-    transform: translate(-22px, 45px) skewX(1.5deg);
-  }
-  50% {
-    transform: translate(-45px, 90px) skewX(0deg);
-  }
-  75% {
-    transform: translate(-67px, 135px) skewX(-1.5deg);
+    transform: translate(0, 0);
   }
   100% {
-    transform: translate(-90px, 180px) skewX(0deg);
+    transform: translate(-360px, 720px);
   }
 }
 
 @keyframes rain-chaos-2 {
   0% {
-    transform: translate(0, 0) skewX(0deg);
-  }
-  50% {
-    transform: translate(-36px, 72px) skewX(1deg);
+    transform: translate(0, 0);
   }
   100% {
-    transform: translate(-72px, 144px) skewX(0deg);
+    transform: translate(-288px, 576px);
   }
 }
 

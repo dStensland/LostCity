@@ -19,6 +19,10 @@ import { useAuth } from "@/lib/auth-context";
 import CategoryIcon from "@/components/CategoryIcon";
 import { formatTimeSplit } from "@/lib/formats";
 import { useQuery } from "@tanstack/react-query";
+import CalendarViewToggle, { type CalendarView } from "@/components/calendar/CalendarViewToggle";
+import DayCell from "@/components/calendar/DayCell";
+import WeekView from "@/components/calendar/WeekView";
+import AgendaView from "@/components/calendar/AgendaView";
 
 // Type for RSVP'd calendar events
 interface CalendarEvent {
@@ -96,6 +100,7 @@ export default function CalendarPage() {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [currentView, setCurrentView] = useState<CalendarView>("month");
   const [syncMenuOpen, setSyncMenuOpen] = useState(false);
   const [friendsPanelOpen, setFriendsPanelOpen] = useState(false);
   const [selectedFriendIds, setSelectedFriendIds] = useState<Set<string>>(new Set());
@@ -263,6 +268,8 @@ export default function CalendarPage() {
 
   const weekDays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
   const friends: Friend[] = friendsList?.friends || [];
+  const allEvents: CalendarEvent[] = data?.events || [];
+  const allFriendEvents: FriendCalendarEvent[] = friendsData?.events || [];
 
   if (!user) {
     return null; // Layout handles redirect
@@ -279,14 +286,17 @@ export default function CalendarPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* View toggle */}
+          <CalendarViewToggle currentView={currentView} onViewChange={setCurrentView} />
+
           {/* Friends toggle */}
           <button
             onClick={() => setFriendsPanelOpen(!friendsPanelOpen)}
             className={`inline-flex items-center gap-2 px-4 py-2.5 border rounded-lg font-mono text-sm transition-colors ${
               selectedFriendIds.size > 0
-                ? "bg-[var(--coral)]/10 border-[var(--coral)] text-[var(--coral)]"
-                : "bg-[var(--dusk)] border-[var(--twilight)] text-[var(--cream)] hover:bg-[var(--twilight)]"
+                ? "bg-[var(--neon-magenta)]/10 border-[var(--neon-magenta)] text-[var(--neon-magenta)]"
+                : "bg-[var(--deep-violet)] border-[var(--nebula)] text-[var(--cream)] hover:bg-[var(--twilight-purple)]"
             }`}
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -294,7 +304,7 @@ export default function CalendarPage() {
             </svg>
             Friends
             {selectedFriendIds.size > 0 && (
-              <span className="px-1.5 py-0.5 rounded-full bg-[var(--coral)] text-[var(--void)] text-[0.6rem] font-bold">
+              <span className="px-1.5 py-0.5 rounded-full bg-[var(--neon-magenta)] text-[var(--void)] text-[0.6rem] font-bold">
                 {selectedFriendIds.size}
               </span>
             )}
@@ -304,7 +314,7 @@ export default function CalendarPage() {
           <div className="relative">
             <button
               onClick={() => setSyncMenuOpen(!syncMenuOpen)}
-              className="inline-flex items-center gap-2 px-4 py-2.5 bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg font-mono text-sm text-[var(--cream)] hover:bg-[var(--twilight)] transition-colors"
+              className="inline-flex items-center gap-2 px-4 py-2.5 bg-[var(--deep-violet)] border border-[var(--nebula)] rounded-lg font-mono text-sm text-[var(--cream)] hover:bg-[var(--twilight-purple)] transition-colors"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -313,8 +323,8 @@ export default function CalendarPage() {
             </button>
 
             {syncMenuOpen && feedUrls && (
-              <div className="absolute right-0 mt-2 w-64 bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg shadow-2xl shadow-black/50 z-50 overflow-hidden">
-                <div className="px-4 py-3 border-b border-[var(--twilight)]">
+              <div className="absolute right-0 mt-2 w-64 bg-[var(--midnight-blue)] border border-[var(--nebula)] rounded-lg shadow-2xl shadow-black/50 z-50 overflow-hidden">
+                <div className="px-4 py-3 border-b border-[var(--nebula)]">
                   <p className="font-mono text-xs text-[var(--muted)]">Subscribe to your calendar</p>
                 </div>
 
@@ -323,7 +333,7 @@ export default function CalendarPage() {
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={() => setSyncMenuOpen(false)}
-                  className="flex items-center gap-3 px-4 py-3 text-sm text-[var(--soft)] hover:bg-[var(--twilight)] hover:text-[var(--cream)] transition-colors"
+                  className="flex items-center gap-3 px-4 py-3 text-sm text-[var(--soft)] hover:bg-[var(--twilight-purple)] hover:text-[var(--cream)] transition-colors"
                 >
                   <svg className="w-5 h-5 text-[#4285F4]" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10zm-1-11v6h2v-6h-2zm0-4v2h2V7h-2z" />
@@ -336,7 +346,7 @@ export default function CalendarPage() {
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={() => setSyncMenuOpen(false)}
-                  className="flex items-center gap-3 px-4 py-3 text-sm text-[var(--soft)] hover:bg-[var(--twilight)] hover:text-[var(--cream)] transition-colors"
+                  className="flex items-center gap-3 px-4 py-3 text-sm text-[var(--soft)] hover:bg-[var(--twilight-purple)] hover:text-[var(--cream)] transition-colors"
                 >
                   <svg className="w-5 h-5 text-[#0078D4]" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M7.88 12.04q0 .45-.11.87-.1.41-.33.74-.22.33-.58.52-.37.2-.87.2t-.85-.2q-.35-.21-.57-.55-.22-.33-.33-.75-.1-.42-.1-.86t.1-.87q.1-.43.34-.76.22-.34.59-.54.36-.2.87-.2t.86.2q.35.21.57.55.22.34.31.77.1.43.1.88zM24 12v9.38q0 .46-.33.8-.33.32-.8.32H7.13q-.46 0-.8-.33-.32-.33-.32-.8V18H1q-.41 0-.7-.3-.3-.29-.3-.7V7q0-.41.3-.7Q.58 6 1 6h6.01V2.55q0-.44.3-.75.3-.3.75-.3h6.93q.44 0 .75.3.3.3.3.75V6h6.97q.3 0 .57.12.26.12.45.32.19.2.31.47.12.26.12.57z" />
@@ -349,7 +359,7 @@ export default function CalendarPage() {
                     copyFeedUrl();
                     setSyncMenuOpen(false);
                   }}
-                  className="w-full flex items-center gap-3 px-4 py-3 text-sm text-[var(--soft)] hover:bg-[var(--twilight)] hover:text-[var(--cream)] transition-colors text-left"
+                  className="w-full flex items-center gap-3 px-4 py-3 text-sm text-[var(--soft)] hover:bg-[var(--twilight-purple)] hover:text-[var(--cream)] transition-colors text-left"
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
@@ -364,13 +374,13 @@ export default function CalendarPage() {
 
       {/* Friends panel */}
       {friendsPanelOpen && (
-        <div className="mb-6 p-4 bg-[var(--night)] rounded-xl border border-[var(--twilight)]">
+        <div className="mb-6 p-4 bg-[var(--deep-violet)] rounded-xl border border-[var(--nebula)]">
           <div className="flex items-center justify-between mb-3">
             <h3 className="font-mono text-sm font-medium text-[var(--cream)]">Show friends&apos; events</h3>
             {selectedFriendIds.size > 0 && (
               <button
                 onClick={() => setSelectedFriendIds(new Set())}
-                className="font-mono text-xs text-[var(--muted)] hover:text-[var(--coral)] transition-colors"
+                className="font-mono text-xs text-[var(--muted)] hover:text-[var(--neon-magenta)] transition-colors"
               >
                 Clear all
               </button>
@@ -386,8 +396,8 @@ export default function CalendarPage() {
                     onClick={() => toggleFriend(friend.id)}
                     className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full font-mono text-xs transition-colors ${
                       isSelected
-                        ? "bg-[var(--coral)] text-[var(--void)]"
-                        : "bg-[var(--twilight)] text-[var(--soft)] hover:bg-[var(--twilight)]/80"
+                        ? "bg-[var(--neon-magenta)] text-[var(--void)]"
+                        : "bg-[var(--twilight-purple)] text-[var(--soft)] hover:bg-[var(--cosmic-blue)]"
                     }`}
                   >
                     {friend.avatar_url ? (
@@ -399,7 +409,7 @@ export default function CalendarPage() {
                         className="w-[18px] h-[18px] rounded-full object-cover"
                       />
                     ) : (
-                      <span className="w-[18px] h-[18px] rounded-full bg-[var(--dusk)] flex items-center justify-center text-[0.5rem]">
+                      <span className="w-[18px] h-[18px] rounded-full bg-[var(--cosmic-blue)] flex items-center justify-center text-[0.5rem]">
                         {(friend.display_name || friend.username)[0].toUpperCase()}
                       </span>
                     )}
@@ -417,7 +427,7 @@ export default function CalendarPage() {
       )}
 
       {/* Status filter tabs */}
-      <div className="flex items-center gap-1 mb-6 bg-[var(--night)] rounded-lg p-1 w-fit">
+      <div className="flex items-center gap-1 mb-6 bg-[var(--deep-violet)] rounded-lg p-1 w-fit">
         {(["all", "going", "interested"] as StatusFilter[]).map((status) => (
           <button
             key={status}
@@ -437,352 +447,298 @@ export default function CalendarPage() {
         ))}
       </div>
 
-      {/* Main content */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-6">
-        {/* Calendar Grid */}
-        <div className="bg-[var(--night)] rounded-xl p-6 border border-[var(--twilight)]">
-          {/* Month header */}
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-3">
-              <h2 className="font-mono text-2xl font-bold text-[var(--cream)]">
-                {format(currentMonth, "MMMM yyyy")}
-              </h2>
-              {(isLoading || isRefetching) && (
-                <span className="w-4 h-4 border-2 border-[var(--coral)]/30 border-t-[var(--coral)] rounded-full animate-spin" />
-              )}
-              {!isSameMonth(currentMonth, new Date()) && (
-                <button
-                  onClick={goToToday}
-                  className="px-3 py-1 rounded-full font-mono text-xs font-medium bg-[var(--coral)] text-[var(--void)] hover:bg-[var(--rose)] transition-colors"
-                >
-                  Today
-                </button>
-              )}
-            </div>
-
-            <div className="flex items-center gap-1">
-              <button
-                onClick={goToPrevMonth}
-                className="p-2 rounded-lg hover:bg-[var(--twilight)] text-[var(--muted)] hover:text-[var(--cream)] transition-colors"
-                aria-label="Previous month"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                </svg>
-              </button>
-              <button
-                onClick={goToNextMonth}
-                className="p-2 rounded-lg hover:bg-[var(--twilight)] text-[var(--muted)] hover:text-[var(--cream)] transition-colors"
-                aria-label="Next month"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-              </button>
-            </div>
-          </div>
-
-          {/* Week day headers */}
-          <div className="grid grid-cols-7 mb-2">
-            {weekDays.map((day) => (
-              <div
-                key={day}
-                className="py-2 text-center font-mono text-[0.65rem] text-[var(--muted)] uppercase tracking-wider"
-              >
-                {day}
-              </div>
-            ))}
-          </div>
-
-          {/* Calendar days */}
-          <div className="grid grid-cols-7 gap-1">
-            {calendarDays.map((day, idx) => {
-              const isSelected = selectedDate && isSameDay(day.date, selectedDate);
-              const hasEvents = day.events.length > 0;
-              const hasFriendEvents = day.friendEvents.length > 0;
-              const hasGoing = day.events.some(e => e.rsvp_status === "going");
-              const hasInterested = day.events.some(e => e.rsvp_status === "interested");
-
-              // Get unique friend avatars for this day
-              const friendAvatars = Array.from(
-                new Map(day.friendEvents.map(e => [e.friend.id, e.friend])).values()
-              ).slice(0, 3);
-
-              return (
-                <button
-                  key={idx}
-                  onClick={() => setSelectedDate(day.date)}
-                  disabled={!day.isCurrentMonth}
-                  className={`
-                    relative aspect-square p-1 rounded-lg border transition-all duration-200
-                    ${day.isCurrentMonth ? "hover:border-[var(--coral)]/50 hover:scale-[1.02]" : "opacity-30 cursor-default"}
-                    ${isSelected
-                      ? "border-[var(--coral)] bg-[var(--coral)]/15 shadow-[0_0_15px_rgba(232,145,45,0.2)]"
-                      : "border-[var(--twilight)]/50 hover:bg-[var(--twilight)]/30"
-                    }
-                    ${day.isToday ? "ring-2 ring-[var(--gold)] ring-offset-1 ring-offset-[var(--night)]" : ""}
-                  `}
-                >
-                  {/* Day number */}
-                  <span
-                    className={`
-                      absolute top-1 left-1.5 font-mono text-sm font-medium
-                      ${day.isToday ? "text-[var(--gold)]" : ""}
-                      ${isSelected ? "text-[var(--coral)]" : ""}
-                      ${!day.isToday && !isSelected ? (day.isPast ? "text-[var(--muted)]/60" : "text-[var(--cream)]") : ""}
-                    `}
+      {/* Main content - different based on view */}
+      {currentView === "week" ? (
+        <WeekView
+          currentDate={currentMonth}
+          onDateChange={setCurrentMonth}
+          eventsByDate={eventsByDate}
+          onDayClick={setSelectedDate}
+          selectedDate={selectedDate}
+        />
+      ) : currentView === "agenda" ? (
+        <AgendaView
+          events={allEvents}
+          friendEvents={allFriendEvents}
+          eventsByDate={eventsByDate}
+          friendEventsByDate={friendEventsByDate}
+        />
+      ) : (
+        /* Month View */
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-6">
+          {/* Calendar Grid */}
+          <div className="bg-gradient-to-br from-[var(--deep-violet)] to-[var(--midnight-blue)] rounded-xl p-6 border border-[var(--nebula)]">
+            {/* Month header */}
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <h2 className="font-mono text-2xl font-bold text-[var(--cream)]">
+                  {format(currentMonth, "MMMM yyyy")}
+                </h2>
+                {(isLoading || isRefetching) && (
+                  <span className="w-4 h-4 border-2 border-[var(--neon-cyan)]/30 border-t-[var(--neon-cyan)] rounded-full animate-spin" />
+                )}
+                {!isSameMonth(currentMonth, new Date()) && (
+                  <button
+                    onClick={goToToday}
+                    className="px-3 py-1 rounded-full font-mono text-xs font-medium bg-[var(--neon-cyan)] text-[var(--void)] hover:bg-[var(--neon-cyan)]/80 transition-colors"
                   >
-                    {format(day.date, "d")}
-                  </span>
+                    Today
+                  </button>
+                )}
+              </div>
 
-                  {/* Status indicators (going = coral, interested = gold) */}
-                  {hasEvents && day.isCurrentMonth && (
-                    <div className="absolute top-1 right-1.5 flex gap-0.5">
-                      {hasGoing && (
-                        <span className="w-2 h-2 rounded-full bg-[var(--coral)]" title="Going" />
-                      )}
-                      {hasInterested && !hasGoing && (
-                        <span className="w-2 h-2 rounded-full bg-[var(--gold)]" title="Interested" />
-                      )}
-                    </div>
-                  )}
-
-                  {/* Friend avatars at bottom */}
-                  {hasFriendEvents && day.isCurrentMonth && (
-                    <div className="absolute bottom-1 left-1/2 -translate-x-1/2 flex -space-x-1">
-                      {friendAvatars.map((friend) => (
-                        <div
-                          key={friend.id}
-                          className="w-4 h-4 rounded-full border border-[var(--night)] overflow-hidden bg-[var(--twilight)]"
-                          title={friend.display_name || friend.username}
-                        >
-                          {friend.avatar_url ? (
-                            <Image
-                              src={friend.avatar_url}
-                              alt=""
-                              width={16}
-                              height={16}
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
-                            <span className="w-full h-full flex items-center justify-center text-[0.4rem] text-[var(--muted)]">
-                              {(friend.display_name || friend.username)[0].toUpperCase()}
-                            </span>
-                          )}
-                        </div>
-                      ))}
-                      {day.friendEvents.length > 3 && (
-                        <span className="w-4 h-4 rounded-full border border-[var(--night)] bg-[var(--twilight)] flex items-center justify-center text-[0.4rem] text-[var(--muted)]">
-                          +{day.friendEvents.length - 3}
-                        </span>
-                      )}
-                    </div>
-                  )}
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={goToPrevMonth}
+                  className="p-2 rounded-lg hover:bg-[var(--twilight-purple)] text-[var(--muted)] hover:text-[var(--cream)] transition-colors"
+                  aria-label="Previous month"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                  </svg>
                 </button>
-              );
-            })}
-          </div>
+                <button
+                  onClick={goToNextMonth}
+                  className="p-2 rounded-lg hover:bg-[var(--twilight-purple)] text-[var(--muted)] hover:text-[var(--cream)] transition-colors"
+                  aria-label="Next month"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+              </div>
+            </div>
 
-          {/* Legend */}
-          <div className="mt-4 flex flex-wrap items-center gap-4 text-[0.65rem] text-[var(--muted)]">
-            <div className="flex items-center gap-1.5">
-              <span className="w-3 h-3 rounded border-2 border-[var(--gold)]" />
-              <span>Today</span>
+            {/* Week day headers */}
+            <div className="grid grid-cols-7 mb-2">
+              {weekDays.map((day) => (
+                <div
+                  key={day}
+                  className="py-2 text-center font-mono text-[0.65rem] text-[var(--muted)] uppercase tracking-wider"
+                >
+                  {day}
+                </div>
+              ))}
             </div>
-            <div className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-[var(--coral)]" />
-              <span>Going</span>
+
+            {/* Calendar days - using enhanced DayCell */}
+            <div className="grid grid-cols-7 gap-1">
+              {calendarDays.map((day, idx) => (
+                <DayCell
+                  key={idx}
+                  date={day.date}
+                  events={day.events}
+                  friendEvents={day.friendEvents}
+                  isCurrentMonth={day.isCurrentMonth}
+                  isToday={day.isToday}
+                  isPast={day.isPast}
+                  isSelected={selectedDate ? isSameDay(day.date, selectedDate) : false}
+                  onClick={() => setSelectedDate(day.date)}
+                />
+              ))}
             </div>
-            <div className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-[var(--gold)]" />
-              <span>Interested</span>
-            </div>
-            {selectedFriendIds.size > 0 && (
+
+            {/* Legend */}
+            <div className="mt-4 flex flex-wrap items-center gap-4 text-[0.65rem] text-[var(--muted)]">
               <div className="flex items-center gap-1.5">
-                <span className="w-4 h-4 rounded-full bg-[var(--twilight)]" />
-                <span>Friend going</span>
+                <span className="w-3 h-3 rounded border-2 border-[var(--neon-magenta)]" />
+                <span>Today</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-[var(--coral)]" />
+                <span>Going</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-[var(--gold)]" />
+                <span>Interested</span>
+              </div>
+              {selectedFriendIds.size > 0 && (
+                <div className="flex items-center gap-1.5">
+                  <span className="w-4 h-4 rounded-full bg-[var(--twilight-purple)]" />
+                  <span>Friend going</span>
+                </div>
+              )}
+            </div>
+
+            {/* Summary */}
+            {data?.summary && (
+              <div className="mt-4 pt-4 border-t border-[var(--nebula)]/50">
+                <div className="flex items-center gap-4 text-[var(--muted)] font-mono text-xs">
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-[var(--coral)]" />
+                    <span className="text-[var(--cream)] font-medium">{data.summary.going}</span> going
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-[var(--gold)]" />
+                    <span className="text-[var(--cream)] font-medium">{data.summary.interested}</span> interested
+                  </span>
+                </div>
               </div>
             )}
           </div>
 
-          {/* Summary */}
-          {data?.summary && (
-            <div className="mt-4 pt-4 border-t border-[var(--twilight)]/50">
-              <div className="flex items-center gap-4 text-[var(--muted)] font-mono text-xs">
-                <span className="flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-[var(--coral)]" />
-                  <span className="text-[var(--cream)] font-medium">{data.summary.going}</span> going
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-[var(--gold)]" />
-                  <span className="text-[var(--cream)] font-medium">{data.summary.interested}</span> interested
-                </span>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Selected Day Detail */}
-        <div className="bg-[var(--night)] rounded-xl p-6 border border-[var(--twilight)] h-fit lg:sticky lg:top-20">
-          {selectedDate ? (
-            <div>
-              {/* Date header */}
-              <div className="mb-4">
-                <div className="font-mono text-xs text-[var(--muted)] uppercase tracking-wider">
-                  {format(selectedDate, "EEEE")}
-                </div>
-                <div className="font-mono text-xl font-bold text-[var(--cream)]">
-                  {format(selectedDate, "MMMM d, yyyy")}
-                </div>
-                {isToday(selectedDate) && (
-                  <span className="inline-block mt-1 px-2 py-0.5 rounded-full bg-[var(--gold)] text-[var(--void)] font-mono text-[0.6rem] font-medium">
-                    TODAY
-                  </span>
-                )}
-              </div>
-
-              {/* Your events */}
-              {selectedDayEvents.length > 0 && (
+          {/* Selected Day Detail */}
+          <div className="bg-gradient-to-br from-[var(--deep-violet)] to-[var(--midnight-blue)] rounded-xl p-6 border border-[var(--nebula)] h-fit lg:sticky lg:top-20">
+            {selectedDate ? (
+              <div>
+                {/* Date header */}
                 <div className="mb-4">
-                  <h4 className="font-mono text-xs text-[var(--muted)] uppercase tracking-wider mb-2">Your Events</h4>
-                  <div className="space-y-2">
-                    {selectedDayEvents.map((event) => {
-                      const { time, period } = formatTimeSplit(event.start_time, event.is_all_day);
+                  <div className="font-mono text-xs text-[var(--muted)] uppercase tracking-wider">
+                    {format(selectedDate, "EEEE")}
+                  </div>
+                  <div className="font-mono text-xl font-bold text-[var(--cream)]">
+                    {format(selectedDate, "MMMM d, yyyy")}
+                  </div>
+                  {isToday(selectedDate) && (
+                    <span className="inline-block mt-1 px-2 py-0.5 rounded-full bg-[var(--neon-magenta)] text-[var(--void)] font-mono text-[0.6rem] font-medium">
+                      TODAY
+                    </span>
+                  )}
+                </div>
 
-                      return (
-                        <Link
-                          key={event.id}
-                          href={`/la?event=${event.id}`}
-                          scroll={false}
-                          className="block p-3 rounded-lg border border-[var(--twilight)] bg-[var(--dusk)] hover:border-[var(--coral)]/50 transition-colors group"
-                          style={{
-                            borderLeftWidth: "3px",
-                            borderLeftColor: event.rsvp_status === "going" ? "var(--coral)" : "var(--gold)",
-                          }}
-                        >
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="font-mono text-xs text-[var(--muted)]">
-                              {time}
-                              {period && <span className="text-[0.6rem] ml-0.5 opacity-60">{period}</span>}
-                            </span>
-                            <span className={`px-1.5 py-0.5 rounded-full font-mono text-[0.55rem] font-medium ${
-                              event.rsvp_status === "going"
-                                ? "bg-[var(--coral)]/20 text-[var(--coral)]"
-                                : "bg-[var(--gold)]/20 text-[var(--gold)]"
-                            }`}>
-                              {event.rsvp_status === "going" ? "GOING" : "INTERESTED"}
-                            </span>
-                          </div>
+                {/* Your events */}
+                {selectedDayEvents.length > 0 && (
+                  <div className="mb-4">
+                    <h4 className="font-mono text-xs text-[var(--muted)] uppercase tracking-wider mb-2">Your Events</h4>
+                    <div className="space-y-2">
+                      {selectedDayEvents.map((event) => {
+                        const { time, period } = formatTimeSplit(event.start_time, event.is_all_day);
 
-                          <div className="flex items-center gap-2">
-                            {event.category && (
-                              <CategoryIcon type={event.category} size={14} className="flex-shrink-0 opacity-60" />
+                        return (
+                          <Link
+                            key={event.id}
+                            href={`/la?event=${event.id}`}
+                            scroll={false}
+                            className="block p-3 rounded-lg border border-[var(--nebula)] bg-[var(--cosmic-blue)]/30 hover:border-[var(--neon-cyan)]/50 transition-colors group"
+                            style={{
+                              borderLeftWidth: "3px",
+                              borderLeftColor: event.rsvp_status === "going" ? "var(--coral)" : "var(--gold)",
+                            }}
+                          >
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="font-mono text-xs text-[var(--muted)]">
+                                {time}
+                                {period && <span className="text-[0.6rem] ml-0.5 opacity-60">{period}</span>}
+                              </span>
+                              <span className={`px-1.5 py-0.5 rounded-full font-mono text-[0.55rem] font-medium ${
+                                event.rsvp_status === "going"
+                                  ? "bg-[var(--coral)]/20 text-[var(--coral)]"
+                                  : "bg-[var(--gold)]/20 text-[var(--gold)]"
+                              }`}>
+                                {event.rsvp_status === "going" ? "GOING" : "INTERESTED"}
+                              </span>
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                              {event.category && (
+                                <CategoryIcon type={event.category} size={14} className="flex-shrink-0 opacity-60" />
+                              )}
+                              <span className="text-[var(--cream)] group-hover:text-[var(--neon-cyan)] transition-colors line-clamp-2">
+                                {event.title}
+                              </span>
+                            </div>
+
+                            {event.venue && (
+                              <div className="mt-1 text-xs text-[var(--muted)] truncate">
+                                {event.venue.name}
+                              </div>
                             )}
-                            <span className="text-[var(--cream)] group-hover:text-[var(--coral)] transition-colors line-clamp-2">
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Friends' events */}
+                {selectedDayFriendEvents.length > 0 && (
+                  <div className="mb-4">
+                    <h4 className="font-mono text-xs text-[var(--muted)] uppercase tracking-wider mb-2">Friends&apos; Events</h4>
+                    <div className="space-y-2">
+                      {selectedDayFriendEvents.map((event, idx) => {
+                        const { time, period } = formatTimeSplit(event.start_time, event.is_all_day);
+
+                        return (
+                          <Link
+                            key={`${event.id}-${event.friend.id}-${idx}`}
+                            href={`/la?event=${event.id}`}
+                            scroll={false}
+                            className="block p-3 rounded-lg border border-[var(--nebula)] bg-[var(--twilight-purple)]/30 hover:border-[var(--neon-cyan)]/50 transition-colors group"
+                          >
+                            <div className="flex items-center gap-2 mb-1">
+                              {event.friend.avatar_url ? (
+                                <Image
+                                  src={event.friend.avatar_url}
+                                  alt=""
+                                  width={18}
+                                  height={18}
+                                  className="w-[18px] h-[18px] rounded-full object-cover"
+                                />
+                              ) : (
+                                <span className="w-[18px] h-[18px] rounded-full bg-[var(--cosmic-blue)] flex items-center justify-center text-[0.5rem] text-[var(--muted)]">
+                                  {(event.friend.display_name || event.friend.username)[0].toUpperCase()}
+                                </span>
+                              )}
+                              <span className="font-mono text-xs text-[var(--soft)]">
+                                {event.friend.display_name || event.friend.username}
+                              </span>
+                              <span className={`ml-auto px-1.5 py-0.5 rounded-full font-mono text-[0.55rem] font-medium ${
+                                event.rsvp_status === "going"
+                                  ? "bg-[var(--coral)]/20 text-[var(--coral)]"
+                                  : "bg-[var(--gold)]/20 text-[var(--gold)]"
+                              }`}>
+                                {event.rsvp_status === "going" ? "GOING" : "INTERESTED"}
+                              </span>
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                              <span className="font-mono text-xs text-[var(--muted)]">
+                                {time}
+                                {period && <span className="text-[0.6rem] ml-0.5 opacity-60">{period}</span>}
+                              </span>
+                            </div>
+
+                            <span className="text-sm text-[var(--cream)] group-hover:text-[var(--neon-cyan)] transition-colors line-clamp-2">
                               {event.title}
                             </span>
-                          </div>
-
-                          {event.venue && (
-                            <div className="mt-1 text-xs text-[var(--muted)] truncate">
-                              {event.venue.name}
-                            </div>
-                          )}
-                        </Link>
-                      );
-                    })}
+                          </Link>
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
 
-              {/* Friends' events */}
-              {selectedDayFriendEvents.length > 0 && (
-                <div className="mb-4">
-                  <h4 className="font-mono text-xs text-[var(--muted)] uppercase tracking-wider mb-2">Friends&apos; Events</h4>
-                  <div className="space-y-2">
-                    {selectedDayFriendEvents.map((event, idx) => {
-                      const { time, period } = formatTimeSplit(event.start_time, event.is_all_day);
-
-                      return (
-                        <Link
-                          key={`${event.id}-${event.friend.id}-${idx}`}
-                          href={`/la?event=${event.id}`}
-                          scroll={false}
-                          className="block p-3 rounded-lg border border-[var(--twilight)] bg-[var(--dusk)]/50 hover:border-[var(--coral)]/50 transition-colors group"
-                        >
-                          <div className="flex items-center gap-2 mb-1">
-                            {event.friend.avatar_url ? (
-                              <Image
-                                src={event.friend.avatar_url}
-                                alt=""
-                                width={18}
-                                height={18}
-                                className="w-[18px] h-[18px] rounded-full object-cover"
-                              />
-                            ) : (
-                              <span className="w-[18px] h-[18px] rounded-full bg-[var(--twilight)] flex items-center justify-center text-[0.5rem] text-[var(--muted)]">
-                                {(event.friend.display_name || event.friend.username)[0].toUpperCase()}
-                              </span>
-                            )}
-                            <span className="font-mono text-xs text-[var(--soft)]">
-                              {event.friend.display_name || event.friend.username}
-                            </span>
-                            <span className={`ml-auto px-1.5 py-0.5 rounded-full font-mono text-[0.55rem] font-medium ${
-                              event.rsvp_status === "going"
-                                ? "bg-[var(--coral)]/20 text-[var(--coral)]"
-                                : "bg-[var(--gold)]/20 text-[var(--gold)]"
-                            }`}>
-                              {event.rsvp_status === "going" ? "GOING" : "INTERESTED"}
-                            </span>
-                          </div>
-
-                          <div className="flex items-center gap-2">
-                            <span className="font-mono text-xs text-[var(--muted)]">
-                              {time}
-                              {period && <span className="text-[0.6rem] ml-0.5 opacity-60">{period}</span>}
-                            </span>
-                          </div>
-
-                          <span className="text-sm text-[var(--cream)] group-hover:text-[var(--coral)] transition-colors line-clamp-2">
-                            {event.title}
-                          </span>
-                        </Link>
-                      );
-                    })}
+                {/* Empty state */}
+                {selectedDayEvents.length === 0 && selectedDayFriendEvents.length === 0 && (
+                  <div className="text-center py-8">
+                    <div className="w-14 h-14 mx-auto mb-4 rounded-full bg-[var(--twilight-purple)]/30 flex items-center justify-center">
+                      <svg className="w-7 h-7 text-[var(--muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                    </div>
+                    <p className="text-[var(--soft)] font-mono text-sm">No events</p>
+                    <p className="text-[var(--muted)]/60 text-xs mt-1">
+                      {isBefore(selectedDate, new Date()) && !isToday(selectedDate)
+                        ? "Nothing from this day"
+                        : "RSVP to events to see them here"}
+                    </p>
+                    <Link
+                      href="/la"
+                      className="inline-block mt-4 px-4 py-2 bg-[var(--neon-cyan)] text-[var(--void)] font-mono text-xs font-medium rounded-lg hover:bg-[var(--neon-cyan)]/80 transition-colors"
+                    >
+                      Explore Events
+                    </Link>
                   </div>
-                </div>
-              )}
-
-              {/* Empty state */}
-              {selectedDayEvents.length === 0 && selectedDayFriendEvents.length === 0 && (
-                <div className="text-center py-8">
-                  <div className="w-14 h-14 mx-auto mb-4 rounded-full bg-[var(--twilight)]/30 flex items-center justify-center">
-                    <svg className="w-7 h-7 text-[var(--muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                  </div>
-                  <p className="text-[var(--soft)] font-mono text-sm">No events</p>
-                  <p className="text-[var(--muted)]/60 text-xs mt-1">
-                    {isBefore(selectedDate, new Date()) && !isToday(selectedDate)
-                      ? "Nothing from this day"
-                      : "RSVP to events to see them here"}
-                  </p>
-                  <Link
-                    href="/la"
-                    className="inline-block mt-4 px-4 py-2 bg-[var(--coral)] text-[var(--void)] font-mono text-xs font-medium rounded-lg hover:bg-[var(--rose)] transition-colors"
-                  >
-                    Explore Events
-                  </Link>
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="text-center py-12 text-[var(--muted)]">
-              <p className="font-mono text-sm">Select a day to see events</p>
-            </div>
-          )}
+                )}
+              </div>
+            ) : (
+              <div className="text-center py-12 text-[var(--muted)]">
+                <p className="font-mono text-sm">Select a day to see events</p>
+              </div>
+            )}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
