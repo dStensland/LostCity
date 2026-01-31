@@ -133,6 +133,22 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         i += 1
                         continue
 
+                    # Skip UI elements and junk titles
+                    skip_titles = [
+                        "select date", "select time", "buy tickets", "learn more",
+                        "view all", "load more", "see more", "read more",
+                        "filter", "sort by", "calendar", "upcoming events"
+                    ]
+                    if any(skip in title.lower() for skip in skip_titles):
+                        i += 1
+                        continue
+
+                    # Skip events without times - they show as TBA which looks bad
+                    if not start_time:
+                        logger.debug(f"Skipping event without time: {title}")
+                        i += 1
+                        continue
+
                     # Parse date
                     try:
                         month_str = month[:3] if len(month) > 3 else month
