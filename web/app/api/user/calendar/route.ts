@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient, getUser } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 import { format, startOfMonth, endOfMonth, addMonths } from "date-fns";
 
 export type UserCalendarEvent = {
@@ -55,7 +56,8 @@ export async function GET(request: Request) {
       ? statusParam.split(",").filter(s => ["going", "interested", "went"].includes(s))
       : ["going", "interested"];
 
-    const supabase = await createClient();
+    // Use service client to bypass RLS - auth already verified above
+    const supabase = createServiceClient();
 
     // Type for RSVP query result
     type RsvpRow = {
