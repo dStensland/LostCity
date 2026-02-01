@@ -261,7 +261,7 @@ export default function ForYouView(props: ForYouViewProps) {
         <SimpleFilterBar variant="full" />
         {/* Layered filter rows */}
         <div className="sticky top-[156px] z-10 bg-[var(--night)] border-b border-[var(--twilight)]">
-          <div className="max-w-3xl mx-auto">
+          <div className="max-w-5xl mx-auto">
             {/* Quick Tags - always visible */}
             <QuickTagsRow />
             {/* Subcategories - appears when category selected */}

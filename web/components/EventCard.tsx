@@ -139,7 +139,9 @@ function getReflectionClass(category: string | null): string {
   return reflectionMap[category] || "";
 }
 
-function EventCard({ event, index = 0, skipAnimation = false, portalSlug, friendsGoing = [], reasons, showThumbnail = false, contextType, onHide }: Props) {
+function EventCard({ event, index = 0, skipAnimation = false, portalSlug, friendsGoing = [], reasons, showThumbnail, contextType, onHide }: Props) {
+  // Default showThumbnail to true when event has an image
+  const shouldShowThumbnail = showThumbnail ?? !!event.image_url;
   const [thumbnailError, setThumbnailError] = useState(false);
   const { time, period } = formatTimeSplit(event.start_time, event.is_all_day);
   const dateInfo = formatSmartDate(event.start_date);
@@ -150,7 +152,7 @@ function EventCard({ event, index = 0, skipAnimation = false, portalSlug, friend
   const categoryColor = event.category ? getCategoryColor(event.category) : null;
   const reflectionClass = getReflectionClass(event.category);
   // Show thumbnail on mobile if enabled and event has an image
-  const hasThumbnail = showThumbnail && event.image_url && !thumbnailError;
+  const hasThumbnail = shouldShowThumbnail && event.image_url && !thumbnailError;
 
   const price = formatPrice(
     event.is_free,
@@ -179,18 +181,18 @@ function EventCard({ event, index = 0, skipAnimation = false, portalSlug, friend
       } as React.CSSProperties}
     >
       <div className="flex gap-3">
-        {/* Time cell - improved readability */}
+        {/* Time cell - bolder typography for visual hierarchy */}
         <div className="flex-shrink-0 w-14 flex flex-col items-center justify-center py-1">
-          <span className={`font-mono text-[0.55rem] font-medium leading-none ${
+          <span className={`font-mono text-[0.6rem] font-semibold leading-none uppercase tracking-wide ${
             dateInfo.isHighlight ? "text-[var(--coral)]" : "text-[var(--muted)]"
           }`}>
             {dateInfo.label}
           </span>
-          <span className="font-mono text-sm font-medium text-[var(--soft)] leading-none tabular-nums mt-0.5">
+          <span className="font-mono text-base font-bold text-[var(--cream)] leading-none tabular-nums mt-1">
             {time}
           </span>
           {period && (
-            <span className="font-mono text-[0.55rem] text-[var(--muted)] mt-0.5">{period}</span>
+            <span className="font-mono text-[0.6rem] font-medium text-[var(--soft)] mt-0.5">{period}</span>
           )}
         </div>
 
@@ -207,7 +209,7 @@ function EventCard({ event, index = 0, skipAnimation = false, portalSlug, friend
           />
         )}
         {/* Mobile fallback thumbnail when image fails - category-aware gradient */}
-        {showThumbnail && event.image_url && thumbnailError && (
+        {shouldShowThumbnail && event.image_url && thumbnailError && (
           <div
             className="flex-shrink-0 w-16 h-16 rounded-sm overflow-hidden relative sm:hidden border border-[var(--twilight)] flex items-center justify-center"
             style={{
@@ -228,12 +230,12 @@ function EventCard({ event, index = 0, skipAnimation = false, portalSlug, friend
             <div className="flex items-center gap-2 mb-1">
               {event.category && (
                 <span
-                  className="inline-flex items-center justify-center w-5 h-5 rounded"
+                  className="inline-flex items-center justify-center w-6 h-6 rounded"
                   style={{
                     backgroundColor: categoryColor ? `${categoryColor}20` : undefined,
                   }}
                 >
-                  <CategoryIcon type={event.category} size={12} glow="subtle" />
+                  <CategoryIcon type={event.category} size={16} glow="subtle" />
                 </span>
               )}
               {isLive && (
@@ -257,12 +259,12 @@ function EventCard({ event, index = 0, skipAnimation = false, portalSlug, friend
           <div className="hidden sm:flex items-center gap-2">
             {event.category && (
               <span
-                className="flex-shrink-0 inline-flex items-center justify-center w-6 h-6 rounded"
+                className="flex-shrink-0 inline-flex items-center justify-center w-7 h-7 rounded"
                 style={{
                   backgroundColor: categoryColor ? `${categoryColor}20` : undefined,
                 }}
               >
-                <CategoryIcon type={event.category} size={14} glow="subtle" />
+                <CategoryIcon type={event.category} size={18} glow="subtle" />
               </span>
             )}
             <span
@@ -338,15 +340,19 @@ function EventCard({ event, index = 0, skipAnimation = false, portalSlug, friend
               <>
                 <span className="opacity-40">·</span>
                 {price.isFree ? (
-                  <span className={`inline-flex items-center px-1.5 py-0.5 rounded border font-mono text-[0.55rem] font-medium ${
+                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full font-mono text-[0.6rem] font-semibold ${
                     price.isEstimate
-                      ? "bg-[var(--neon-green)]/15 text-[var(--neon-green)] border-[var(--neon-green)]/25 opacity-90"
-                      : "bg-[var(--neon-green)]/20 text-[var(--neon-green)] border-[var(--neon-green)]/30"
+                      ? "bg-[var(--neon-green)]/15 text-[var(--neon-green)] border border-[var(--neon-green)]/25"
+                      : "bg-[var(--neon-green)]/25 text-[var(--neon-green)] border border-[var(--neon-green)]/40 shadow-[0_0_8px_var(--neon-green)/15]"
                   }`}>
                     {price.text}
                   </span>
                 ) : (
-                  <span className={`${price.isEstimate ? "opacity-60" : "text-[var(--soft)]"}`}>
+                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full font-mono text-[0.6rem] font-medium ${
+                    price.isEstimate
+                      ? "bg-[var(--twilight)]/50 text-[var(--muted)]"
+                      : "bg-[var(--twilight)] text-[var(--cream)]"
+                  }`}>
                     {price.text}
                   </span>
                 )}

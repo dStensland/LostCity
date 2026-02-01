@@ -1176,6 +1176,20 @@ body::after {
   animation: coral-pulse 1.5s ease-in-out infinite;
 }
 
+/* Happening Now CTA - subtle breathing pulse to draw attention */
+@keyframes happening-now-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 transparent, 0 0 0 0 rgba(var(--coral-rgb, 255, 99, 71), 0);
+  }
+  50% {
+    box-shadow: 0 0 12px 2px rgba(var(--coral-rgb, 255, 99, 71), 0.15), 0 0 20px 4px rgba(var(--coral-rgb, 255, 99, 71), 0.08);
+  }
+}
+
+.animate-happening-now-pulse {
+  animation: happening-now-pulse 3s ease-in-out infinite;
+}
+
 /* Animation delays */
 .delay-100 { animation-delay: 100ms; }
 .delay-200 { animation-delay: 200ms; }

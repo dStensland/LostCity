@@ -5,6 +5,7 @@ import SearchBarWrapper from "@/components/SearchBarWrapper";
 import FeedShell from "@/components/feed/FeedShell";
 import CuratedContent from "@/components/feed/CuratedContent";
 import FindView from "@/components/find/FindView";
+import { FamilyFeed } from "@/components/family";
 import CommunityView from "@/components/community/CommunityView";
 import DetailViewRouter from "@/components/views/DetailViewRouter";
 import { notFound } from "next/navigation";
@@ -125,8 +126,14 @@ export default async function PortalPage({ params, searchParams }: Props) {
 
       {/* Search bar for Find and Community views */}
       {viewMode !== "feed" && (
-        <div className="sticky top-[52px] z-[9999] border-b border-[var(--twilight)] bg-[var(--night)]">
-          <div className="max-w-3xl mx-auto px-4 pt-1 pb-2">
+        <div
+          className={`sticky z-[9999] border-b ${
+            slug === "atlanta-families"
+              ? "top-[64px] border-[#E8D5C4]/30 bg-[#FFF8F0]/97"
+              : "top-[52px] border-[var(--twilight)] bg-[var(--night)]"
+          }`}
+        >
+          <div className="max-w-5xl mx-auto px-4 pt-1 pb-2">
             <SearchBarWrapper
               viewMode={viewMode}
               findType={viewMode === "find" ? findType : null}
@@ -137,16 +144,24 @@ export default async function PortalPage({ params, searchParams }: Props) {
         </div>
       )}
 
-      <main className={findDisplay === "map" && viewMode === "find" ? "" : "max-w-3xl mx-auto px-4 pb-16"}>
+      <main className={findDisplay === "map" && viewMode === "find" ? "" : "max-w-5xl mx-auto px-4 pb-16"}>
         <Suspense fallback={<DetailViewSkeleton />}>
           <DetailViewRouter portalSlug={portal.slug}>
             {viewMode === "feed" && (
-              <FeedShell
-                portalId={portal.id}
-                portalSlug={portal.slug}
-                activeTab={feedTab}
-                curatedContent={<CuratedContent portalSlug={portal.slug} />}
-              />
+              portal.slug === "atlanta-families" ? (
+                <FamilyFeed
+                  portalId={portal.id}
+                  portalSlug={portal.slug}
+                  portalExclusive={portal.portal_type === "business"}
+                />
+              ) : (
+                <FeedShell
+                  portalId={portal.id}
+                  portalSlug={portal.slug}
+                  activeTab={feedTab}
+                  curatedContent={<CuratedContent portalSlug={portal.slug} />}
+                />
+              )
             )}
 
             {viewMode === "find" && (

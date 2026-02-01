@@ -89,14 +89,15 @@ export default function HappeningNowCTA({ portalSlug }: HappeningNowCTAProps) {
   return (
     <Link
       href={`/${portalSlug}/happening-now`}
-      className="block mb-6 p-4 rounded-xl border border-[var(--coral)]/30 bg-gradient-to-r from-[var(--coral)]/10 via-[var(--rose)]/5 to-transparent hover:border-[var(--coral)]/50 hover:shadow-[0_0_20px_var(--coral)/15] hover:scale-[1.01] active:scale-[0.99] transition-all duration-200 group"
+      className="block mb-6 p-4 rounded-xl border border-[var(--coral)]/30 bg-gradient-to-r from-[var(--coral)]/10 via-[var(--rose)]/5 to-transparent hover:border-[var(--coral)]/50 hover:shadow-[0_0_20px_var(--coral)/15] hover:scale-[1.01] active:scale-[0.99] transition-all duration-200 group animate-happening-now-pulse"
     >
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          {/* Live indicator - subtle pulse */}
-          <div className="relative flex items-center justify-center">
-            <span className="absolute w-3.5 h-3.5 bg-[var(--coral)]/40 rounded-full animate-pulse" />
-            <span className="relative w-2.5 h-2.5 bg-[var(--coral)] rounded-full shadow-[0_0_8px_var(--coral)]" />
+          {/* Live indicator - enhanced triple ring pulse effect */}
+          <div className="relative flex items-center justify-center w-6 h-6">
+            <span className="absolute w-6 h-6 bg-[var(--coral)]/20 rounded-full animate-ping" style={{ animationDuration: '2s' }} />
+            <span className="absolute w-4 h-4 bg-[var(--coral)]/30 rounded-full animate-pulse" />
+            <span className="relative w-2.5 h-2.5 bg-[var(--coral)] rounded-full shadow-[0_0_12px_var(--coral)]" />
           </div>
 
           <div>

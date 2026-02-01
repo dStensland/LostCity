@@ -259,6 +259,7 @@ function renderItem(
       portalSlug={portalSlug}
       friendsGoing={getFriendsForEvent?.(item.event.id)}
       reasons={item.event.reasons}
+      showThumbnail={!!item.event.image_url}
     />
   );
 }
