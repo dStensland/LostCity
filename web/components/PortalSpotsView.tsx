@@ -8,6 +8,10 @@ import LazyImage from "./LazyImage";
 import { OpenStatusBadge } from "./HoursSection";
 import { formatCloseTime, type HoursData } from "@/lib/hours";
 import { formatPriceLevel } from "@/lib/spots";
+import { ITP_NEIGHBORHOODS } from "@/config/neighborhoods";
+
+// ITP neighborhood names for quick filter
+const ITP_NEIGHBORHOOD_NAMES = ITP_NEIGHBORHOODS.map(n => n.name);
 
 type Spot = {
   id: number;
@@ -292,6 +296,31 @@ function FilterDeck({
               ({openCount})
             </span>
           )}
+        </button>
+
+        {/* ITP Toggle */}
+        <button
+          onClick={() => {
+            // Toggle ITP: if any ITP neighborhoods are selected, clear them; otherwise select all ITP
+            const hasITP = ITP_NEIGHBORHOOD_NAMES.some(n => filters.neighborhoods.includes(n));
+            if (hasITP) {
+              setFilters(f => ({ ...f, neighborhoods: f.neighborhoods.filter(n => !ITP_NEIGHBORHOOD_NAMES.includes(n)) }));
+            } else {
+              setFilters(f => ({ ...f, neighborhoods: [...new Set([...f.neighborhoods, ...ITP_NEIGHBORHOOD_NAMES])] }));
+            }
+          }}
+          className={`relative flex items-center gap-2 px-4 py-2 rounded-lg font-mono text-sm font-medium transition-all ${
+            ITP_NEIGHBORHOOD_NAMES.some(n => filters.neighborhoods.includes(n))
+              ? "bg-[var(--neon-cyan)]/20 text-[var(--neon-cyan)] border-2 border-[var(--neon-cyan)]/50 shadow-[0_0_20px_rgba(34,211,238,0.3)]"
+              : "bg-[var(--dusk)] text-[var(--muted)] border-2 border-[var(--twilight)] hover:border-[var(--neon-cyan)]/30 hover:text-[var(--soft)]"
+          }`}
+          title="Inside the Perimeter"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="9" strokeWidth={2} />
+            <circle cx="12" cy="12" r="3" strokeWidth={2} />
+          </svg>
+          <span>ITP</span>
         </button>
 
         {/* Search Input */}
