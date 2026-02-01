@@ -2,7 +2,7 @@
 
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
-import { getRecentSearches, addRecentSearch } from "@/lib/searchHistory";
+import { getRecentSearches, addRecentSearch, removeRecentSearch, clearRecentSearches } from "@/lib/searchHistory";
 import { useSearchContext } from "@/lib/search-context";
 import { useSearchPersonalization } from "@/lib/hooks/useSearchPersonalization";
 import {
@@ -288,6 +288,22 @@ export default function SearchBar() {
     []
   );
 
+  // Handle removing a recent search
+  const handleRemoveRecent = useCallback(
+    (term: string, e: React.MouseEvent) => {
+      e.stopPropagation();
+      removeRecentSearch(term);
+      setRecentSearches(getRecentSearches());
+    },
+    []
+  );
+
+  // Handle clearing all recent searches
+  const handleClearRecent = useCallback(() => {
+    clearRecentSearches();
+    setRecentSearches([]);
+  }, []);
+
   // Build flat list of all selectable items for keyboard navigation
   const showRecent = query.length < 2 && recentSearches.length > 0;
   const showSuggestions = query.length >= 2 && suggestions.length > 0;
@@ -441,31 +457,54 @@ export default function SearchBar() {
           {/* Recent Searches */}
           {showRecent && (
             <div className="p-2">
-              <div className="flex items-center gap-2 px-2 pb-2">
-                <svg className="h-3 w-3 text-[var(--muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <p className="text-[0.65rem] text-[var(--muted)] font-mono uppercase tracking-wider">Recent Searches</p>
-              </div>
-              {recentSearches.map((term, idx) => (
-                <button
-                  key={term}
-                  id={`suggestion-${idx}`}
-                  role="option"
-                  aria-selected={selectedIndex === idx}
-                  onMouseDown={() => selectRecentSearch(term)}
-                  onMouseEnter={() => setSelectedIndex(idx)}
-                  className={`flex items-center gap-2.5 w-full text-left px-3 py-2 text-sm rounded-lg transition-all ${
-                    selectedIndex === idx
-                      ? "bg-[var(--twilight)] text-[var(--cream)] translate-x-0.5"
-                      : "text-[var(--cream)] hover:bg-[var(--twilight)]/50"
-                  }`}
-                >
-                  <svg className="h-3.5 w-3.5 text-[var(--soft)] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="flex items-center justify-between px-2 pb-2">
+                <div className="flex items-center gap-2">
+                  <svg className="h-3 w-3 text-[var(--muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
-                  <span className="truncate">{term}</span>
+                  <p className="text-[0.65rem] text-[var(--muted)] font-mono uppercase tracking-wider">Recent Searches</p>
+                </div>
+                <button
+                  onMouseDown={handleClearRecent}
+                  className="text-[0.6rem] text-[var(--muted)] hover:text-[var(--coral)] transition-colors font-mono"
+                  title="Clear all"
+                >
+                  Clear
                 </button>
+              </div>
+              {recentSearches.map((term, idx) => (
+                <div
+                  key={term}
+                  className="group relative"
+                >
+                  <button
+                    id={`suggestion-${idx}`}
+                    role="option"
+                    aria-selected={selectedIndex === idx}
+                    onMouseDown={() => selectRecentSearch(term)}
+                    onMouseEnter={() => setSelectedIndex(idx)}
+                    className={`flex items-center gap-2.5 w-full text-left px-3 py-2 text-sm rounded-lg transition-all ${
+                      selectedIndex === idx
+                        ? "bg-[var(--twilight)] text-[var(--cream)] translate-x-0.5"
+                        : "text-[var(--cream)] hover:bg-[var(--twilight)]/50"
+                    }`}
+                  >
+                    <svg className="h-3.5 w-3.5 text-[var(--soft)] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span className="truncate flex-1">{term}</span>
+                    <button
+                      onMouseDown={(e) => handleRemoveRecent(term, e)}
+                      className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-[var(--dusk)] transition-all"
+                      title="Remove"
+                      aria-label={`Remove "${term}" from recent searches`}
+                    >
+                      <svg className="h-3 w-3 text-[var(--muted)] hover:text-[var(--coral)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </button>
+                </div>
               ))}
             </div>
           )}

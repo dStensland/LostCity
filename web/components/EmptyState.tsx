@@ -3,7 +3,7 @@
 import { ReactNode } from "react";
 
 // Pre-built variant configurations
-export type EmptyStateVariant = "no-events" | "no-results" | "no-saved" | "connect-friends" | "default";
+export type EmptyStateVariant = "no-events" | "no-results" | "no-saved" | "connect-friends" | "no-activity" | "no-friends" | "default";
 
 type EmptyStateProps = {
   variant?: EmptyStateVariant;
@@ -34,6 +34,10 @@ function getVariantColor(variant: EmptyStateVariant): string {
       return "var(--neon-magenta)";
     case "connect-friends":
       return "var(--neon-green)";
+    case "no-activity":
+      return "var(--coral)";
+    case "no-friends":
+      return "var(--lavender)";
     default:
       return "var(--neon-magenta)";
   }

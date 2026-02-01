@@ -88,14 +88,20 @@ export default function FriendsGoing({ eventId, fallbackCount = 0, className = "
   const interestedFriends = friends.filter((f) => f.status === "interested");
 
   return (
-    <div className={`flex items-center gap-2 ${className}`}>
-      {/* Avatars stack */}
-      <div className="flex -space-x-2">
-        {friends.slice(0, 3).map((friend) => (
+    <div className={`flex items-center gap-2 ${className} animate-fade-in`}>
+      {/* Avatars stack with staggered animation */}
+      <div className="relative flex -space-x-2">
+        {friends.length > 1 && (
+          <div className="absolute -inset-1 bg-[var(--coral)]/10 rounded-full blur-sm animate-pulse-slow" />
+        )}
+        {friends.slice(0, 3).map((friend, idx) => (
           <Link
             key={friend.user.id}
             href={`/profile/${friend.user.username}`}
-            className="relative block"
+            className="relative block animate-scale-in"
+            style={{
+              animationDelay: `${idx * 100}ms`,
+            }}
             title={friend.user.display_name || friend.user.username}
           >
             {friend.user.avatar_url ? (
@@ -104,10 +110,10 @@ export default function FriendsGoing({ eventId, fallbackCount = 0, className = "
                 alt={friend.user.display_name || friend.user.username}
                 width={24}
                 height={24}
-                className="w-6 h-6 rounded-full object-cover border-2 border-[var(--night)] hover:border-[var(--coral)] transition-colors"
+                className="w-6 h-6 rounded-full object-cover border-2 border-[var(--night)] hover:border-[var(--coral)] hover:scale-110 transition-all duration-200"
               />
             ) : (
-              <div className="w-6 h-6 rounded-full bg-[var(--coral)] flex items-center justify-center border-2 border-[var(--night)] hover:border-[var(--rose)] transition-colors">
+              <div className="w-6 h-6 rounded-full bg-[var(--coral)] flex items-center justify-center border-2 border-[var(--night)] hover:border-[var(--rose)] hover:scale-110 transition-all duration-200">
                 <span className="font-mono text-[0.5rem] font-bold text-[var(--void)]">
                   {friend.user.display_name
                     ? friend.user.display_name[0].toUpperCase()
@@ -118,7 +124,12 @@ export default function FriendsGoing({ eventId, fallbackCount = 0, className = "
           </Link>
         ))}
         {friends.length > 3 && (
-          <div className="w-6 h-6 rounded-full bg-[var(--twilight)] flex items-center justify-center border-2 border-[var(--night)]">
+          <div
+            className="w-6 h-6 rounded-full bg-[var(--twilight)] flex items-center justify-center border-2 border-[var(--night)] animate-scale-in"
+            style={{
+              animationDelay: "300ms",
+            }}
+          >
             <span className="font-mono text-[0.5rem] font-medium text-[var(--muted)]">
               +{friends.length - 3}
             </span>
@@ -126,18 +137,18 @@ export default function FriendsGoing({ eventId, fallbackCount = 0, className = "
         )}
       </div>
 
-      {/* Text */}
-      <span className="font-mono text-xs text-[var(--muted)]">
+      {/* Text with fade-in animation */}
+      <span className="font-mono text-xs text-[var(--muted)] animate-fade-in" style={{ animationDelay: "200ms" }}>
         {goingFriends.length > 0 && (
           <>
-            <span className="text-[var(--coral)]">{goingFriends.length}</span>
+            <span className="text-[var(--coral)] font-bold">{goingFriends.length}</span>
             {" "}friend{goingFriends.length !== 1 ? "s" : ""} going
           </>
         )}
         {goingFriends.length > 0 && interestedFriends.length > 0 && " · "}
         {interestedFriends.length > 0 && (
           <>
-            <span className="text-[var(--gold)]">{interestedFriends.length}</span>
+            <span className="text-[var(--gold)] font-bold">{interestedFriends.length}</span>
             {" "}interested
           </>
         )}

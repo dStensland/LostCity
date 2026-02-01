@@ -5,7 +5,7 @@ import { useEffect, useRef } from "react";
 import UserAvatar, { AvatarStack } from "@/components/UserAvatar";
 import CategoryIcon, { getCategoryColor } from "@/components/CategoryIcon";
 import FollowButton from "@/components/FollowButton";
-import { formatDistanceToNow, format, parseISO } from "date-fns";
+import { formatDistanceToNow, format, parseISO, isToday, isYesterday, isThisWeek } from "date-fns";
 import { useInfiniteActivities } from "@/lib/hooks/useInfiniteActivities";
 
 export type ActivityItem = {
@@ -87,6 +87,96 @@ export function FriendsActivity() {
     return <EmptyState />;
   }
 
+  // Group activities by time period
+  const groupedByTime = groupActivitiesByTime(activities);
+
+  return (
+    <div className="space-y-6">
+      {/* Today's Activities */}
+      {groupedByTime.today.length > 0 && (
+        <TimeSection
+          title="Today"
+          activities={groupedByTime.today}
+          accentColor="var(--neon-cyan)"
+        />
+      )}
+
+      {/* Yesterday's Activities */}
+      {groupedByTime.yesterday.length > 0 && (
+        <TimeSection
+          title="Yesterday"
+          activities={groupedByTime.yesterday}
+          accentColor="var(--neon-magenta)"
+        />
+      )}
+
+      {/* This Week's Activities */}
+      {groupedByTime.thisWeek.length > 0 && (
+        <TimeSection
+          title="This Week"
+          activities={groupedByTime.thisWeek}
+          accentColor="var(--gold)"
+        />
+      )}
+
+      {/* Older Activities */}
+      {groupedByTime.older.length > 0 && (
+        <TimeSection
+          title="Earlier"
+          activities={groupedByTime.older}
+          accentColor="var(--muted)"
+        />
+      )}
+
+      {/* Intersection observer trigger */}
+      {hasMore && (
+        <div ref={loadMoreRef} className="py-4">
+          {isFetchingNextPage && <LoadingSkeleton count={3} />}
+        </div>
+      )}
+
+      {/* End of list indicator */}
+      {!hasMore && activities.length > 0 && (
+        <div className="text-center py-4">
+          <p className="font-mono text-xs text-[var(--muted)]">
+            You&apos;ve reached the end of your feed
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function groupActivitiesByTime(activities: ActivityItem[]) {
+  const today: ActivityItem[] = [];
+  const yesterday: ActivityItem[] = [];
+  const thisWeek: ActivityItem[] = [];
+  const older: ActivityItem[] = [];
+
+  activities.forEach((activity) => {
+    const activityDate = new Date(activity.created_at);
+
+    if (isToday(activityDate)) {
+      today.push(activity);
+    } else if (isYesterday(activityDate)) {
+      yesterday.push(activity);
+    } else if (isThisWeek(activityDate, { weekStartsOn: 0 })) {
+      thisWeek.push(activity);
+    } else {
+      older.push(activity);
+    }
+  });
+
+  return { today, yesterday, thisWeek, older };
+}
+
+interface TimeSectionProps {
+  title: string;
+  activities: ActivityItem[];
+  accentColor: string;
+}
+
+function TimeSection({ title, activities, accentColor }: TimeSectionProps) {
   // Group RSVP activities by event for display
   const localGroupedActivities = activities.reduce<GroupedActivity[]>((acc, activity) => {
     if (activity.activity_type === "rsvp" && activity.event) {
@@ -113,72 +203,90 @@ export function FriendsActivity() {
   );
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
+      <div className="flex items-center gap-3">
+        <div
+          className="w-1 h-4 rounded-full"
+          style={{ backgroundColor: accentColor }}
+        />
+        <h3
+          className="font-mono text-xs font-bold uppercase tracking-wider"
+          style={{ color: accentColor }}
+        >
+          {title}
+        </h3>
+        <div className="flex-1 h-px bg-[var(--twilight)]" />
+      </div>
+
       {/* Grouped Event Activity */}
-      {localGroupedActivities.length > 0 && (
-        <div className="space-y-3">
-          <h3 className="font-mono text-xs text-[var(--muted)] uppercase tracking-wider">
-            Friends Are Going
-          </h3>
-          {localGroupedActivities.slice(0, 10).map((group) => (
-            <GroupedEventCard key={group.event!.id} group={group} />
-          ))}
-        </div>
-      )}
+      {localGroupedActivities.map((group) => (
+        <GroupedEventCard key={group.event!.id} group={group} />
+      ))}
 
       {/* Other Activity */}
-      {otherActivities.length > 0 && (
-        <div className="space-y-3">
-          <h3 className="font-mono text-xs text-[var(--muted)] uppercase tracking-wider">
-            What Friends Are Into
-          </h3>
-          {otherActivities.map((activity) => (
-            <ActivityCard key={activity.id} activity={activity} />
-          ))}
-        </div>
-      )}
-
-      {/* Intersection observer trigger */}
-      {hasMore && (
-        <div ref={loadMoreRef} className="py-4">
-          {isFetchingNextPage && <LoadingSkeleton count={3} />}
-        </div>
-      )}
-
-      {/* End of list indicator */}
-      {!hasMore && activities.length > 0 && (
-        <div className="text-center py-4">
-          <p className="font-mono text-xs text-[var(--muted)]">
-            You&apos;ve reached the end of your feed
-          </p>
-        </div>
-      )}
+      {otherActivities.map((activity) => (
+        <ActivityCard key={activity.id} activity={activity} />
+      ))}
     </div>
   );
 }
 
 function EmptyState() {
   return (
-    <div className="p-6 bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg text-center">
-      <svg
-        className="w-12 h-12 mx-auto mb-3 text-[var(--muted)]"
-        fill="none"
-        stroke="currentColor"
-        viewBox="0 0 24 24"
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={1.5}
-          d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
-        />
-      </svg>
-      <p className="text-[var(--soft)] font-mono text-sm">
-        Your friends are suspiciously quiet.
-      </p>
-      <p className="text-[var(--muted)] font-mono text-xs mt-1">
-        Follow more people to see their activity here
-      </p>
+    <div className="relative py-12 text-center">
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background: "radial-gradient(ellipse at center, color-mix(in srgb, var(--neon-cyan) 8%, transparent) 0%, transparent 60%)",
+        }}
+      />
+      <div className="relative z-10">
+        <div className="mb-4 flex justify-center animate-stagger-1">
+          <div
+            className="relative flex items-center justify-center w-16 h-16 rounded-full"
+            style={{
+              background: "linear-gradient(135deg, var(--twilight), var(--dusk))",
+              boxShadow: "0 0 20px color-mix(in srgb, var(--neon-cyan) 40%, transparent)",
+            }}
+          >
+            <svg
+              className="w-8 h-8 text-[var(--neon-cyan)] animate-empty-icon-pulse"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={1.5}
+                d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+              />
+            </svg>
+          </div>
+        </div>
+        <h3 className="text-xl font-semibold text-[var(--cream)] mb-2 animate-stagger-2">
+          Your friends are suspiciously quiet.
+        </h3>
+        <p className="font-mono text-sm text-[var(--muted)] max-w-sm mx-auto animate-stagger-2">
+          Follow more people to see their activity here
+        </p>
+        <div className="mt-6 animate-stagger-4">
+          <Link
+            href="/community"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg font-mono text-sm font-medium transition-all hover:scale-105"
+            style={{
+              backgroundColor: "var(--neon-cyan)",
+              color: "var(--void)",
+              boxShadow: "0 0 20px color-mix(in srgb, var(--neon-cyan) 40%, transparent)",
+            }}
+          >
+            Find Friends
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+            </svg>
+          </Link>
+        </div>
+      </div>
     </div>
   );
 }
@@ -261,22 +369,54 @@ function GroupedEventCard({ group }: { group: GroupedActivity }) {
             </h3>
           </div>
 
-          {/* Friend avatars */}
+          {/* Friend avatars with enhanced visual */}
           <div className="flex flex-wrap items-center gap-2 mb-1">
-            <AvatarStack
-              users={group.users.map((u) => ({
-                id: u.id,
-                name: u.display_name || u.username,
-                avatar_url: u.avatar_url,
-              }))}
-              max={4}
-              size="xs"
-            />
-            <span className="font-mono text-xs text-[var(--neon-cyan)]">
-              {group.users.length === 1
-                ? `${group.users[0].display_name || group.users[0].username} is going`
-                : `${group.users.length} friends going`}
-            </span>
+            <div className="relative">
+              <AvatarStack
+                users={group.users.map((u) => ({
+                  id: u.id,
+                  name: u.display_name || u.username,
+                  avatar_url: u.avatar_url,
+                }))}
+                max={4}
+                size="xs"
+              />
+              {group.users.length > 1 && (
+                <div className="absolute -inset-1 bg-[var(--neon-cyan)]/10 rounded-full blur-sm -z-10 animate-pulse-slow" />
+              )}
+            </div>
+            <div className="flex items-center gap-1.5">
+              {group.users.length === 1 ? (
+                <>
+                  <span className="font-medium text-[var(--neon-cyan)] text-xs truncate max-w-[120px]">
+                    {group.users[0].display_name || group.users[0].username}
+                  </span>
+                  <span className="font-mono text-xs text-[var(--muted)]">is going</span>
+                </>
+              ) : group.users.length <= 3 ? (
+                <>
+                  <span className="font-medium text-[var(--neon-cyan)] text-xs">
+                    {group.users.slice(0, 2).map((u) => u.display_name || u.username).join(", ")}
+                  </span>
+                  {group.users.length === 3 && (
+                    <>
+                      <span className="text-[var(--muted)] text-xs">and</span>
+                      <span className="font-medium text-[var(--neon-cyan)] text-xs">
+                        {group.users[2].display_name || group.users[2].username}
+                      </span>
+                    </>
+                  )}
+                  <span className="font-mono text-xs text-[var(--muted)]">are going</span>
+                </>
+              ) : (
+                <>
+                  <span className="font-bold text-[var(--neon-cyan)] text-sm">
+                    {group.users.length}
+                  </span>
+                  <span className="font-mono text-xs text-[var(--muted)]">friends going</span>
+                </>
+              )}
+            </div>
           </div>
 
           {/* Venue details */}

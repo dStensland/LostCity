@@ -39,71 +39,82 @@ export default function HeroSection({
   return (
     <section
       className={`relative w-full overflow-hidden ${className}`}
-      style={{ height: heightValue }}
+      style={{
+        height: heightValue,
+        contain: "layout style paint",
+      }}
     >
-      {/* Background Image */}
-      <Image
-        src={imageUrl}
-        alt={title || "Hero background"}
-        fill
-        priority
-        className="object-cover"
-        sizes="100vw"
-      />
+      {/* Background Image - optimized for performance */}
+      <div className="absolute inset-0">
+        <Image
+          src={imageUrl}
+          alt={title || "Hero background"}
+          fill
+          priority
+          quality={90}
+          className="object-cover transition-transform duration-700 hover:scale-105"
+          sizes="100vw"
+          style={{ willChange: "transform" }}
+        />
+      </div>
 
-      {/* Gradient Overlay */}
+      {/* Gradient Overlay - smoother gradient for better visual depth */}
       <div
-        className="absolute inset-0"
+        className="absolute inset-0 pointer-events-none"
         style={{
-          background: `linear-gradient(to bottom, rgba(0, 0, 0, ${overlayOpacity * 0.3}) 0%, rgba(0, 0, 0, ${overlayOpacity}) 50%, rgba(9, 9, 11, 1) 100%)`,
+          background: `linear-gradient(to bottom, rgba(0, 0, 0, ${overlayOpacity * 0.2}) 0%, rgba(0, 0, 0, ${overlayOpacity * 0.6}) 40%, rgba(0, 0, 0, ${overlayOpacity * 0.8}) 70%, rgba(9, 9, 11, 1) 100%)`,
         }}
       />
 
-      {/* Content */}
-      <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-4">
+      {/* Content - with improved typography and animations */}
+      <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-4 animate-content-reveal">
         {/* Centered Logo */}
         {logoUrl && (
-          <div className="mb-6">
+          <div className="mb-6 animate-fade-in stagger-1">
             <Image
               src={logoUrl}
               alt={title || "Logo"}
               width={200}
               height={80}
-              className="h-16 md:h-20 w-auto object-contain drop-shadow-lg"
+              className="h-16 md:h-20 lg:h-24 w-auto object-contain drop-shadow-2xl"
+              priority
             />
           </div>
         )}
 
         {/* Title */}
         {title && !logoUrl && (
-          <h1 className="text-4xl md:text-5xl lg:text-6xl font-display font-bold text-white drop-shadow-lg mb-4">
+          <h1 className="text-4xl md:text-5xl lg:text-7xl font-display font-bold text-white drop-shadow-2xl mb-4 animate-fade-in stagger-2 tracking-tight">
             {title}
           </h1>
         )}
 
         {/* Tagline */}
         {tagline && (
-          <p className="text-lg md:text-xl text-white/90 max-w-2xl drop-shadow-md">
+          <p className="text-lg md:text-xl lg:text-2xl text-white/90 max-w-2xl drop-shadow-lg font-medium animate-fade-in stagger-3">
             {tagline}
           </p>
         )}
 
-        {/* Scroll indicator */}
+        {/* Scroll indicator - subtle and elegant */}
         {height === "full" && (
-          <div className="absolute bottom-8 left-1/2 -translate-x-1/2 animate-bounce">
-            <svg
-              className="w-6 h-6 text-white/60"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M19 14l-7 7m0 0l-7-7m7 7V3"
-              />
-            </svg>
+          <div className="absolute bottom-8 left-1/2 -translate-x-1/2 animate-bounce opacity-60 hover:opacity-100 transition-opacity cursor-pointer">
+            <div className="flex flex-col items-center gap-2">
+              <svg
+                className="w-6 h-6 text-white"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M19 14l-7 7m0 0l-7-7m7 7V3"
+                />
+              </svg>
+              <span className="text-xs font-mono text-white/80 uppercase tracking-wider">Scroll</span>
+            </div>
           </div>
         )}
       </div>

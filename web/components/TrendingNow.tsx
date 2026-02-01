@@ -47,20 +47,25 @@ export default async function TrendingNow({ portalSlug }: { portalSlug?: string 
   }
 
   return (
-    <section className="py-4 border-b border-[var(--twilight)]">
+    <section className="py-6 border-b border-[var(--twilight)]/50">
       <div className="max-w-3xl mx-auto px-4">
-        <div className="flex items-center gap-2 mb-3">
-          <span className="text-base">📈</span>
-          <h2 className="font-mono text-xs font-medium text-[var(--muted)] uppercase tracking-wider">
-            Trending Now
-          </h2>
-          <span className="px-1.5 py-0.5 text-[0.55rem] font-mono bg-[var(--neon-magenta)]/20 text-[var(--neon-magenta)] rounded">
-            HOT
+        <div className="flex items-center gap-2.5 mb-4">
+          <div className="w-9 h-9 rounded-lg bg-[var(--neon-magenta)]/10 flex items-center justify-center">
+            <span className="text-lg">📈</span>
+          </div>
+          <div className="flex-1">
+            <h2 className="font-display text-lg font-semibold text-[var(--cream)]">
+              Trending Now
+            </h2>
+            <p className="font-mono text-[0.65rem] text-[var(--muted)]">Most popular this week</p>
+          </div>
+          <span className="px-2 py-1 text-[0.6rem] font-mono font-bold bg-[var(--neon-magenta)]/20 text-[var(--neon-magenta)] rounded-full uppercase tracking-wide">
+            Hot
           </span>
         </div>
 
         {/* Horizontal scroll container with scroll snap on mobile */}
-        <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide snap-x snap-mandatory md:snap-none">
+        <div className="flex gap-3 overflow-x-auto pb-3 -mx-4 px-4 scrollbar-hide snap-x snap-mandatory md:snap-none">
           {events.map((event) => (
             <TrendingEventCard key={event.id} event={event} portalSlug={portalSlug} />
           ))}
@@ -81,10 +86,11 @@ function TrendingEventCard({ event, portalSlug }: { event: EventWithLocation; po
     <Link
       href={portalSlug ? `/${portalSlug}?event=${event.id}` : `/events/${event.id}`}
       scroll={false}
-      className={`flex-shrink-0 w-72 p-3 bg-[var(--dusk)] rounded-lg transition-all group card-atmospheric card-trending snap-start ${reflectionClass}`}
+      className={`flex-shrink-0 w-72 p-3 bg-[var(--dusk)] rounded-xl border border-[var(--twilight)] transition-all duration-200 group card-atmospheric card-trending snap-start hover:border-[var(--twilight)]/80 hover:bg-[var(--dusk)]/80 ${reflectionClass}`}
       style={{
         "--glow-color": categoryColor || "var(--neon-magenta)",
         "--reflection-color": categoryColor ? `color-mix(in srgb, ${categoryColor} 15%, transparent)` : undefined,
+        willChange: "border-color, background-color",
       } as React.CSSProperties}
     >
       <div className="flex items-start gap-3">

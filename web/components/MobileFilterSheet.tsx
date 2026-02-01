@@ -3,6 +3,7 @@
 import { memo, useEffect, useState, useRef } from "react";
 import { CATEGORIES } from "@/lib/search";
 import CategoryIcon from "./CategoryIcon";
+import { triggerHaptic } from "@/lib/haptics";
 
 // Simple date filters
 const SIMPLE_DATE_FILTERS = [
@@ -64,8 +65,35 @@ export const MobileFilterSheet = memo(function MobileFilterSheet({
   // Close on backdrop click
   const handleBackdropClick = (e: React.MouseEvent) => {
     if (e.target === e.currentTarget) {
+      triggerHaptic("light");
       onClose();
     }
+  };
+
+  // Wrap filter actions with haptic feedback
+  const handleToggleCategory = (category: string) => {
+    triggerHaptic("selection");
+    onToggleCategory(category);
+  };
+
+  const handleSetDateFilter = (date: string) => {
+    triggerHaptic("selection");
+    onSetDateFilter(date);
+  };
+
+  const handleToggleFreeOnly = () => {
+    triggerHaptic("selection");
+    onToggleFreeOnly();
+  };
+
+  const handleClearAll = () => {
+    triggerHaptic("medium");
+    onClearAll();
+  };
+
+  const handleApply = () => {
+    triggerHaptic("success");
+    onClose();
   };
 
   // Close on escape key
@@ -132,7 +160,7 @@ export const MobileFilterSheet = memo(function MobileFilterSheet({
                   return (
                     <button
                       key={df.value}
-                      onClick={() => onSetDateFilter(df.value)}
+                      onClick={() => handleSetDateFilter(df.value)}
                       className={`min-h-[44px] px-4 py-2.5 rounded-lg font-mono text-sm font-medium transition-all ${
                         isActive
                           ? "bg-[var(--gold)] text-[var(--void)]"
@@ -155,7 +183,7 @@ export const MobileFilterSheet = memo(function MobileFilterSheet({
                   return (
                     <button
                       key={cat.value}
-                      onClick={() => onToggleCategory(cat.value)}
+                      onClick={() => handleToggleCategory(cat.value)}
                       className={`min-h-[44px] flex items-center gap-2 px-3 py-2.5 rounded-lg font-mono text-sm font-medium transition-all ${
                         isActive
                           ? "bg-[var(--coral)] text-[var(--void)]"
@@ -184,7 +212,7 @@ export const MobileFilterSheet = memo(function MobileFilterSheet({
             <div>
               <h3 className="font-mono text-sm font-semibold text-[var(--cream)] mb-3">Price</h3>
               <button
-                onClick={onToggleFreeOnly}
+                onClick={handleToggleFreeOnly}
                 className={`w-full min-h-[44px] flex items-center gap-3 px-4 py-3 rounded-lg font-mono text-sm font-medium transition-all ${
                   currentFreeOnly
                     ? "bg-[var(--neon-green)] text-[var(--void)]"
@@ -210,14 +238,14 @@ export const MobileFilterSheet = memo(function MobileFilterSheet({
         <div className="sticky bottom-0 border-t border-[var(--twilight)] bg-[var(--void)] px-4 py-3 flex gap-3">
           {hasFilters && (
             <button
-              onClick={onClearAll}
+              onClick={handleClearAll}
               className="flex-1 min-h-[44px] px-4 py-2.5 rounded-lg font-mono text-sm font-medium bg-[var(--twilight)] text-[var(--cream)] hover:bg-[var(--dusk)] transition-colors"
             >
               Clear all
             </button>
           )}
           <button
-            onClick={onClose}
+            onClick={handleApply}
             className="flex-1 min-h-[44px] px-4 py-2.5 rounded-lg font-mono text-sm font-medium bg-[var(--coral)] text-[var(--void)] hover:opacity-90 transition-opacity"
           >
             {resultCount !== undefined ? `Show ${resultCount} events` : "Apply"}

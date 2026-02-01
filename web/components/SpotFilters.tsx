@@ -4,6 +4,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback } from "react";
 import CategoryIcon, { CATEGORY_CONFIG, getCategoryLabel } from "./CategoryIcon";
 import { VIBE_GROUPS, VIBES } from "@/lib/spots";
+import { PREFERENCE_NEIGHBORHOOD_NAMES } from "@/config/neighborhoods";
+import { triggerHaptic } from "@/lib/haptics";
 
 const SPOT_TYPES = [
   "music_venue",
@@ -21,20 +23,6 @@ const SPOT_TYPES = [
   "arena",
 ] as const;
 
-const NEIGHBORHOODS = [
-  "Midtown",
-  "Downtown",
-  "Buckhead",
-  "East Atlanta",
-  "Inman Park",
-  "Virginia-Highland",
-  "Decatur",
-  "Little Five Points",
-  "Old Fourth Ward",
-  "West End",
-  "Westside",
-] as const;
-
 export default function SpotFilters() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -45,6 +33,7 @@ export default function SpotFilters() {
   const selectedVibes = selectedVibe.split(",").filter(Boolean);
 
   const navigate = useCallback((type: string, hood: string, vibe: string) => {
+    triggerHaptic("selection");
     const params = new URLSearchParams();
     if (type && type !== "all") params.set("type", type);
     if (hood && hood !== "all") params.set("hood", hood);
@@ -54,10 +43,16 @@ export default function SpotFilters() {
   }, [router]);
 
   const toggleVibe = (vibeValue: string) => {
+    triggerHaptic("selection");
     const newVibes = selectedVibes.includes(vibeValue)
       ? selectedVibes.filter(v => v !== vibeValue)
       : [...selectedVibes, vibeValue];
     navigate(selectedType, selectedHood, newVibes.join(","));
+  };
+
+  const clearAllFilters = () => {
+    triggerHaptic("medium");
+    navigate("all", "all", "");
   };
 
   const hasFilters = selectedType !== "all" || selectedHood !== "all" || selectedVibes.length > 0;
@@ -117,7 +112,7 @@ export default function SpotFilters() {
             >
               All
             </button>
-            {NEIGHBORHOODS.map((hood) => (
+            {PREFERENCE_NEIGHBORHOOD_NAMES.map((hood) => (
               <button
                 key={hood}
                 onClick={() => navigate(selectedType, hood, selectedVibe)}
@@ -212,7 +207,7 @@ export default function SpotFilters() {
                 </button>
               ))}
               <button
-                onClick={() => navigate("all", "all", "")}
+                onClick={clearAllFilters}
                 className="font-mono text-[0.6rem] text-[var(--coral)] hover:text-[var(--rose)] transition-colors ml-auto"
               >
                 Clear all

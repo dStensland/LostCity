@@ -305,12 +305,18 @@ export default function BrowseByActivity({ portalSlug }: BrowseByActivityProps) 
 
   return (
     <section className="py-6">
-      <h2 className="text-lg font-display font-medium text-[var(--cream)] mb-4">
-        What are you in the mood for?
-      </h2>
+      {/* Section header with improved visual hierarchy */}
+      <div className="mb-5">
+        <h2 className="text-xl font-display font-semibold text-[var(--cream)] mb-1 tracking-tight">
+          What are you in the mood for?
+        </h2>
+        <p className="font-mono text-xs text-[var(--muted)]">
+          Browse events by category and vibe
+        </p>
+      </div>
 
       {/* Date Filter Toggle */}
-      <div className="flex gap-2 mb-4">
+      <div className="flex gap-2 mb-5">
         {DATE_FILTER_OPTIONS.map((option) => (
           <button
             key={option.value}

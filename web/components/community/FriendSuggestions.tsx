@@ -13,13 +13,16 @@ export type Profile = {
   display_name: string | null;
   avatar_url: string | null;
   bio: string | null;
+  mutual_friends_count?: number;
+  suggestion_reason?: "mutual_friends" | "shared_interests" | "similar_activity" | "popular";
 };
 
 interface FriendSuggestionsProps {
   suggestions: Profile[];
+  isLoading?: boolean;
 }
 
-export function FriendSuggestions({ suggestions }: FriendSuggestionsProps) {
+export function FriendSuggestions({ suggestions, isLoading = false }: FriendSuggestionsProps) {
   const [hiddenCards, setHiddenCards] = useState<Set<string>>(new Set());
 
   const handleCardDismiss = useCallback((profileId: string) => {
@@ -29,6 +32,10 @@ export function FriendSuggestions({ suggestions }: FriendSuggestionsProps) {
   const visibleSuggestions = suggestions.filter(
     (profile) => !hiddenCards.has(profile.id)
   );
+
+  if (isLoading) {
+    return <LoadingSkeleton />;
+  }
 
   if (suggestions.length === 0) {
     return (
@@ -105,6 +112,7 @@ interface UserCardProps {
 
 function UserCard({ profile, onDismiss }: UserCardProps) {
   const [cardState, setCardState] = useState<"idle" | "actioned" | "hiding">("idle");
+  const [showTooltip, setShowTooltip] = useState(false);
 
   const handleRelationshipChange = useCallback(
     (newStatus: RelationshipStatus) => {
@@ -122,6 +130,8 @@ function UserCard({ profile, onDismiss }: UserCardProps) {
     },
     [cardState, onDismiss, profile.id]
   );
+
+  const suggestionReason = getSuggestionReasonText(profile);
 
   return (
     <div
@@ -149,20 +159,50 @@ function UserCard({ profile, onDismiss }: UserCardProps) {
       </Link>
 
       <div className="flex-1 min-w-0 w-full sm:w-auto">
-        <Link
-          href={`/profile/${profile.username}`}
-          className="font-medium text-[var(--cream)] hover:text-[var(--neon-cyan)] transition-colors block truncate"
-        >
-          {profile.display_name || `@${profile.username}`}
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link
+            href={`/profile/${profile.username}`}
+            className="font-medium text-[var(--cream)] hover:text-[var(--neon-cyan)] transition-colors truncate"
+          >
+            {profile.display_name || `@${profile.username}`}
+          </Link>
+          {suggestionReason && (
+            <div className="relative">
+              <button
+                onMouseEnter={() => setShowTooltip(true)}
+                onMouseLeave={() => setShowTooltip(false)}
+                className="flex-shrink-0 w-4 h-4 rounded-full bg-[var(--twilight)] hover:bg-[var(--neon-cyan)]/20 flex items-center justify-center transition-colors"
+                aria-label="Why suggested"
+              >
+                <svg className="w-2.5 h-2.5 text-[var(--muted)]" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+                </svg>
+              </button>
+              {showTooltip && (
+                <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 px-3 py-2 bg-[var(--void)] border border-[var(--twilight)] rounded-lg shadow-lg z-10 whitespace-nowrap animate-fade-in pointer-events-none">
+                  <p className="font-mono text-xs text-[var(--soft)]">{suggestionReason}</p>
+                  <div className="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 border-4 border-transparent border-t-[var(--twilight)]" />
+                </div>
+              )}
+            </div>
+          )}
+        </div>
         <p className="text-xs text-[var(--muted)] truncate">@{profile.username}</p>
+
+        {profile.mutual_friends_count && profile.mutual_friends_count > 0 && (
+          <p className="text-xs text-[var(--neon-cyan)] font-mono mt-0.5">
+            {profile.mutual_friends_count} mutual friend{profile.mutual_friends_count !== 1 ? "s" : ""}
+          </p>
+        )}
+
         {profile.bio && (
           <p className="text-xs text-[var(--soft)] mt-0.5 line-clamp-2 sm:line-clamp-1">
             {profile.bio}
           </p>
         )}
+
         {cardState === "actioned" && (
-          <p className="text-xs text-[var(--neon-green)] font-mono mt-1 flex items-center gap-1.5">
+          <p className="text-xs text-[var(--neon-green)] font-mono mt-1 flex items-center gap-1.5 animate-fade-in">
             <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
               <path
                 fillRule="evenodd"
@@ -184,6 +224,52 @@ function UserCard({ profile, onDismiss }: UserCardProps) {
         />
         <FollowButton targetUserId={profile.id} size="sm" />
       </div>
+    </div>
+  );
+}
+
+function getSuggestionReasonText(profile: Profile): string | null {
+  if (!profile.suggestion_reason) return null;
+
+  switch (profile.suggestion_reason) {
+    case "mutual_friends":
+      return profile.mutual_friends_count && profile.mutual_friends_count > 0
+        ? `${profile.mutual_friends_count} mutual friend${profile.mutual_friends_count !== 1 ? "s" : ""}`
+        : "Mutual connections";
+    case "shared_interests":
+      return "Similar event interests";
+    case "similar_activity":
+      return "Goes to similar events";
+    case "popular":
+      return "Popular in your area";
+    default:
+      return null;
+  }
+}
+
+function LoadingSkeleton() {
+  return (
+    <div className="space-y-3">
+      <h3 className="font-mono text-xs text-[var(--muted)] uppercase tracking-wider mb-3">
+        People You May Know
+      </h3>
+      {[1, 2, 3].map((i) => (
+        <div
+          key={i}
+          className="flex flex-col sm:flex-row items-start sm:items-center gap-3 p-3 rounded-lg bg-[var(--dusk)] border border-[var(--twilight)]"
+        >
+          <div className="w-9 h-9 skeleton-shimmer rounded-full flex-shrink-0" />
+          <div className="flex-1 space-y-2 w-full sm:w-auto">
+            <div className="h-4 skeleton-shimmer rounded w-32" />
+            <div className="h-3 skeleton-shimmer rounded w-24" />
+            <div className="h-3 skeleton-shimmer rounded w-40" />
+          </div>
+          <div className="flex gap-2 w-full sm:w-auto">
+            <div className="h-8 skeleton-shimmer rounded flex-1 sm:flex-none sm:w-20" />
+            <div className="h-8 skeleton-shimmer rounded flex-1 sm:flex-none sm:w-20" />
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

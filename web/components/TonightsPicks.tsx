@@ -86,45 +86,49 @@ export default async function TonightsPicks({ portalSlug }: { portalSlug?: strin
   const heroCategory = heroEvent.category ? getCategoryColor(heroEvent.category) : "var(--neon-magenta)";
 
   return (
-    <section className="py-6 -mx-4 px-4 mb-6 relative overflow-hidden">
+    <section className="py-8 -mx-4 px-4 mb-2 relative overflow-hidden">
       {/* Atmospheric background glow */}
       <div
-        className="absolute inset-0 opacity-30"
+        className="absolute inset-0 opacity-20 pointer-events-none"
         style={{
           background: `radial-gradient(ellipse at 50% 0%, ${heroCategory}22 0%, transparent 70%)`,
         }}
       />
 
       <div className="relative max-w-3xl mx-auto">
-        {/* Section header */}
-        <div className="flex items-center gap-3 mb-4">
-          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[var(--neon-magenta)] to-[var(--coral)] flex items-center justify-center">
-            <span className="text-lg">🌙</span>
+        {/* Section header with improved visual hierarchy */}
+        <div className="flex items-center gap-3 mb-5">
+          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[var(--neon-magenta)] to-[var(--coral)] flex items-center justify-center shadow-lg"
+            style={{ boxShadow: '0 0 20px rgba(232, 85, 160, 0.3)' }}
+          >
+            <span className="text-xl">🌙</span>
           </div>
-          <div>
-            <h2 className="font-serif text-xl text-[var(--cream)]">Tonight&apos;s Picks</h2>
-            <p className="font-mono text-xs text-[var(--muted)]">Hand-picked for your evening</p>
+          <div className="flex-1">
+            <h2 className="font-display text-2xl font-semibold text-[var(--cream)] tracking-tight">Tonight&apos;s Picks</h2>
+            <p className="font-mono text-xs text-[var(--muted)] mt-0.5">Hand-picked for your evening</p>
           </div>
         </div>
 
-        {/* Hero card */}
+        {/* Hero card with optimized image loading */}
         <Link
           href={portalSlug ? `/${portalSlug}?event=${heroEvent.id}` : `/events/${heroEvent.id}`}
           scroll={false}
-          className="block relative rounded-2xl overflow-hidden mb-4 group card-atmospheric card-hero"
+          className="block relative rounded-2xl overflow-hidden mb-4 group card-atmospheric card-hero transition-transform duration-300 hover:scale-[1.01]"
           style={{
             "--glow-color": heroCategory,
+            willChange: "transform",
           } as React.CSSProperties}
         >
-          {/* Background */}
+          {/* Background - optimized for performance */}
           {heroEvent.image_url ? (
             <>
               <div
-                className="absolute inset-0"
+                className="absolute inset-0 transition-transform duration-700 group-hover:scale-105"
                 style={{
                   backgroundImage: `url(${heroEvent.image_url})`,
                   backgroundSize: "cover",
                   backgroundPosition: "center",
+                  willChange: "transform",
                 }}
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/60 to-black/20" />

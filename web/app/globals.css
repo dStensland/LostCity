@@ -365,6 +365,21 @@ body {
   font-family: var(--font-sans), system-ui, sans-serif;
   min-height: 100vh;
   font-feature-settings: 'ss01' on, 'cv01' on;
+  /* Performance optimizations for smooth scrolling */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Smooth scrolling for better UX */
+html {
+  scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
 }
 
 /* Subtle grain texture overlay - can be disabled via --grain-opacity: 0 */
@@ -415,6 +430,27 @@ body::after {
   font-family: var(--font-outfit), system-ui, sans-serif;
   font-weight: 600;
   letter-spacing: -0.02em;
+}
+
+/* Image optimization utilities */
+.img-optimized {
+  content-visibility: auto;
+  contain-intrinsic-size: 0 400px;
+}
+
+/* Prevent layout shift for images */
+.aspect-container {
+  position: relative;
+  overflow: hidden;
+}
+
+.aspect-container img {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 /* Gradient text */
@@ -771,6 +807,38 @@ body::after {
 
 .animate-fade-in {
   animation: fadeIn 0.3s ease-out backwards;
+}
+
+/* Smooth enter animation for sections */
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-slide-up {
+  animation: slideUp 0.4s ease-out backwards;
+}
+
+/* Content reveal animation */
+@keyframes contentReveal {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.animate-content-reveal {
+  animation: contentReveal 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
 }
 
 /* Staggered animation delays */
@@ -1810,7 +1878,7 @@ textarea:focus-visible {
     var(--twilight) 75%
   );
   background-size: 400% 100%;
-  animation: skeleton-shimmer 2s ease-in-out infinite;
+  animation: skeleton-shimmer 3s ease-in-out infinite;
 }
 
 /* Light mode skeleton shimmer - for family/light theme portals */
@@ -1822,7 +1890,7 @@ textarea:focus-visible {
     rgba(0, 0, 0, 0.06) 75%
   );
   background-size: 400% 100%;
-  animation: skeleton-shimmer 2.5s ease-in-out infinite;
+  animation: skeleton-shimmer 3.5s ease-in-out infinite;
 }
 
 /* Skeleton base - for use with shimmer */
@@ -1839,7 +1907,7 @@ textarea:focus-visible {
     rgba(37, 37, 48, 0.3) 75%
   );
   background-size: 400% 100%;
-  animation: skeleton-shimmer 2s ease-in-out infinite;
+  animation: skeleton-shimmer 3s ease-in-out infinite;
 }
 
 /* ============================================
@@ -3078,6 +3146,20 @@ textarea:focus-visible {
 
 .animate-placeholder-icon-pulse {
   animation: placeholder-icon-pulse 2s ease-in-out infinite;
+}
+
+/* Slow pulse animation for subtle effects */
+@keyframes pulse-slow {
+  0%, 100% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.animate-pulse-slow {
+  animation: pulse-slow 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
 /* ============================================
