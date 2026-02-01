@@ -23,6 +23,7 @@ export type HeaderTemplate = "standard" | "minimal" | "branded" | "immersive";
 
 export type AmbientEffect =
   | "none"
+  | "rain"
   | "subtle_glow"
   | "gradient_wave"
   | "particle_field"
@@ -32,7 +33,8 @@ export type AmbientEffect =
   | "shifting_neighborhood"
   | "constellation"
   | "flowing_streets"
-  | "growing_garden";
+  | "growing_garden"
+  | "floating_leaves";
 
 export type BorderRadius = "none" | "sm" | "md" | "lg" | "full";
 export type ShadowLevel = "none" | "subtle" | "medium" | "elevated";
@@ -169,7 +171,7 @@ export const VISUAL_PRESETS: Record<VisualPresetId, VisualPreset> = {
       transparent_on_top: false,
     },
     ambient: {
-      effect: "subtle_glow",
+      effect: "rain",
       intensity: "medium",
     },
     component_style: {
@@ -357,11 +359,11 @@ export const VISUAL_PRESETS: Record<VisualPresetId, VisualPreset> = {
       transparent_on_top: false,
     },
     ambient: {
-      effect: "gradient_wave",
+      effect: "floating_leaves",
       intensity: "subtle",
       colors: {
-        primary: "#fde68a",
-        secondary: "#bbf7d0",
+        primary: "#7CB77C", // Soft green leaves
+        secondary: "#E8956A", // Peachy orange leaves
       },
       animation_speed: "slow",
     },
