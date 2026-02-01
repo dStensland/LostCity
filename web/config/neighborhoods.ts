@@ -95,7 +95,7 @@ export const ITP_NEIGHBORHOODS: Neighborhood[] = [
   // Tier 2: Active neighborhoods — refresh bi-weekly
   {
     id: "virginia-highland",
-    name: "Virginia Highland",
+    name: "Virginia-Highland",
     lat: 33.774,
     lng: -84.356,
     radius: 1200,
@@ -345,4 +345,87 @@ export function getNeighborhoodsByTier(tier: 1 | 2 | 3): Neighborhood[] {
 // Get neighborhood by ID
 export function getNeighborhoodById(id: string): Neighborhood | undefined {
   return ITP_NEIGHBORHOODS.find((n) => n.id === id);
+}
+
+// Get neighborhood by name (case-insensitive, handles common variations)
+export function getNeighborhoodByName(name: string): Neighborhood | undefined {
+  const normalized = name.toLowerCase().replace(/[-\s]+/g, "-");
+  return ITP_NEIGHBORHOODS.find(
+    (n) => n.id === normalized || n.name.toLowerCase().replace(/[-\s]+/g, "-") === normalized
+  );
+}
+
+// ============================================
+// DERIVED EXPORTS FOR DIFFERENT CONSUMERS
+// ============================================
+
+/**
+ * Simple string array of neighborhood names for dropdowns and filters.
+ * This is the canonical list - all other neighborhood arrays should import this.
+ * Sorted alphabetically for UI display.
+ */
+export const NEIGHBORHOOD_NAMES = ITP_NEIGHBORHOODS.map((n) => n.name).sort() as readonly string[];
+
+/**
+ * Neighborhood options for preferences/onboarding (subset of most active neighborhoods).
+ * Tier 1 and Tier 2 only - residential tier 3 neighborhoods excluded.
+ */
+export const PREFERENCE_NEIGHBORHOOD_NAMES = ITP_NEIGHBORHOODS
+  .filter((n) => n.tier <= 2)
+  .map((n) => n.name)
+  .sort() as readonly string[];
+
+/**
+ * Neighborhood options for venue submission with "Other" option.
+ * Most active neighborhoods for user-friendly selection.
+ */
+export const VENUE_SUBMISSION_NEIGHBORHOODS = [
+  ...ITP_NEIGHBORHOODS.filter((n) => n.tier <= 2).map((n) => n.name).sort(),
+  "Other",
+] as readonly string[];
+
+/**
+ * Map of neighborhood name variations to canonical names.
+ * Handles common spelling differences.
+ */
+export const NEIGHBORHOOD_ALIASES: Record<string, string> = {
+  // Hyphen/space variations - map non-hyphenated to hyphenated
+  "Virginia Highland": "Virginia-Highland",
+  "virginia highland": "Virginia-Highland",
+  "VaHi": "Virginia-Highland",
+  "vahi": "Virginia-Highland",
+  "Poncey Highland": "Poncey-Highland",
+  "poncey highland": "Poncey-Highland",
+  // Abbreviations
+  "O4W": "Old Fourth Ward",
+  "o4w": "Old Fourth Ward",
+  "EAV": "East Atlanta Village",
+  "eav": "East Atlanta Village",
+  "East Atlanta": "East Atlanta Village",
+  "L5P": "Little Five Points",
+  "l5p": "Little Five Points",
+  "PCM": "Ponce City Market Area",
+  "Ponce City Market": "Ponce City Market Area",
+  // Westside variations
+  "Westside": "West Midtown",
+  "West Side": "West Midtown",
+  "Westside Provisions": "West Midtown",
+};
+
+/**
+ * Normalize a neighborhood name to its canonical form.
+ * Useful for data import/geocoding consistency.
+ */
+export function normalizeNeighborhoodName(name: string): string {
+  // Check aliases first
+  if (NEIGHBORHOOD_ALIASES[name]) {
+    return NEIGHBORHOOD_ALIASES[name];
+  }
+  // Check if it matches an existing neighborhood
+  const match = getNeighborhoodByName(name);
+  if (match) {
+    return match.name;
+  }
+  // Return original if no match
+  return name;
 }
