@@ -335,25 +335,69 @@ export default function ListsView({ portalId, portalSlug }: ListsViewProps) {
 
       {/* All Lists */}
       {lists.length === 0 ? (
-        <div className="py-16 text-center">
-          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-[var(--twilight)]/50 flex items-center justify-center">
-            <svg className="w-8 h-8 text-[var(--muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="py-12 px-6 rounded-xl bg-gradient-to-br from-[var(--dusk)] to-[var(--night)] border border-[var(--twilight)] text-center">
+          <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-[var(--neon-cyan)]/20 to-[var(--neon-magenta)]/20 flex items-center justify-center">
+            <svg className="w-8 h-8 text-[var(--neon-cyan)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
             </svg>
           </div>
-          <h3 className="text-lg text-[var(--cream)] mb-2">No lists yet</h3>
-          <p className="text-sm text-[var(--muted)] mb-4">
+          <h3 className="font-serif text-xl text-[var(--cream)] mb-2">
+            {selectedCategory !== "all" ? "No Lists Yet" : "Start Curating Your Favorites"}
+          </h3>
+          <p className="text-sm text-[var(--soft)] mb-3 max-w-md mx-auto">
             {selectedCategory !== "all"
               ? "No lists in this category yet. Be the first to create one!"
-              : "Be the first to create a list of recommendations."}
+              : "Lists are curated collections of events and spots you recommend. Share your insider knowledge with the community."}
           </p>
-          {user && (
+
+          {/* Example categories for inspiration */}
+          {selectedCategory === "all" && (
+            <div className="mb-6 max-w-lg mx-auto">
+              <p className="text-xs font-mono text-[var(--muted)] uppercase tracking-wider mb-3">
+                Popular List Ideas
+              </p>
+              <div className="flex flex-wrap gap-2 justify-center">
+                {[
+                  { label: "Date Night Spots", icon: "💕", color: "#F472B6" },
+                  { label: "Hidden Gems", icon: "💎", color: "#A78BFA" },
+                  { label: "Best Coffee", icon: "☕", color: "#FBBF24" },
+                  { label: "Budget-Friendly", icon: "💰", color: "#4ADE80" },
+                  { label: "Late Night Eats", icon: "🌙", color: "#5EEAD4" },
+                  { label: "Family Fun", icon: "👨‍👩‍👧", color: "#6EE7B7" },
+                ].map((example) => (
+                  <span
+                    key={example.label}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border border-[var(--twilight)] bg-[var(--void)]/50"
+                    style={{ color: example.color }}
+                  >
+                    <span>{example.icon}</span>
+                    <span>{example.label}</span>
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {user ? (
             <button
               onClick={() => setShowCreateModal(true)}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-[var(--coral)] text-[var(--void)] rounded-lg font-mono text-sm font-medium hover:bg-[var(--rose)] transition-colors"
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-[var(--neon-cyan)] to-[var(--neon-magenta)] text-[var(--void)] rounded-lg font-mono text-sm font-medium hover:opacity-90 transition-opacity"
             >
-              Create First List
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              Create Your First List
             </button>
+          ) : (
+            <Link
+              href={`/auth/login?redirect=/${portalSlug}?view=community`}
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-[var(--coral)] text-[var(--void)] rounded-lg font-mono text-sm font-medium hover:bg-[var(--rose)] transition-colors"
+            >
+              Sign In to Create Lists
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+              </svg>
+            </Link>
           )}
         </div>
       ) : (

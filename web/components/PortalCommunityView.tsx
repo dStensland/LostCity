@@ -292,16 +292,27 @@ export default function PortalCommunityView({ portalId, portalSlug, portalName }
 
   if (organizations.length === 0) {
     return (
-      <div className="py-16 text-center">
-        <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-[var(--twilight)]/50 flex items-center justify-center">
-          <svg className="w-8 h-8 text-[var(--muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div className="py-12 px-6 rounded-xl bg-gradient-to-br from-[var(--dusk)] to-[var(--night)] border border-[var(--twilight)] text-center">
+        <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-[var(--neon-cyan)]/20 to-[var(--neon-magenta)]/20 flex items-center justify-center">
+          <svg className="w-8 h-8 text-[var(--neon-cyan)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
           </svg>
         </div>
-        <h2 className="text-lg text-[var(--cream)] mb-2">No organizers yet</h2>
-        <p className="text-[var(--muted)] text-sm">
-          Community organizers for {portalName} will appear here.
+        <h2 className="font-serif text-xl text-[var(--cream)] mb-2">
+          Community Coming Soon
+        </h2>
+        <p className="text-sm text-[var(--muted)] mb-6 max-w-sm mx-auto">
+          Organizations in {portalName} will appear here. We&apos;re working on bringing more community groups to the platform.
         </p>
+        <Link
+          href={`/${portalSlug}?view=find`}
+          className="inline-flex items-center gap-2 px-5 py-2.5 bg-[var(--coral)] text-[var(--void)] rounded-lg font-mono text-sm font-medium hover:bg-[var(--rose)] transition-colors"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+          Explore Events
+        </Link>
       </div>
     );
   }
@@ -356,6 +367,8 @@ export default function PortalCommunityView({ portalId, portalSlug, portalName }
                 <button
                   onClick={() => toggleCategory(type)}
                   className="w-full flex items-center gap-2 py-3 px-1 group/header"
+                  aria-expanded={isExpanded}
+                  aria-controls={`category-${type}`}
                 >
                   <div
                     className="w-2 h-2 rounded-full"
@@ -382,7 +395,7 @@ export default function PortalCommunityView({ portalId, portalSlug, portalName }
 
                 {/* Collapsible Content */}
                 {isExpanded && (
-                  <div className="space-y-3 pb-4">
+                  <div id={`category-${type}`} className="space-y-3 pb-4">
                     {groupOrganizations.map((organization) => (
                       <OrganizationCard
                         key={organization.id}

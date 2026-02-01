@@ -344,7 +344,7 @@ body[data-animations="none"] *::after {
   transition: none !important;
 }
 
-body[data-animations="subtle"] * {
+body[data-animations="subtle"] *:not(.ambient-layer):not(.ambient-layer *) {
   animation-duration: calc(var(--animation-duration-multiplier) * 0.5s) !important;
   transition-duration: 0.1s !important;
 }
@@ -1796,7 +1796,7 @@ textarea:focus-visible {
     var(--twilight) 75%
   );
   background-size: 400% 100%;
-  animation: skeleton-shimmer 2.5s ease-in-out infinite;
+  animation: skeleton-shimmer 2s ease-in-out infinite;
 }
 
 /* Skeleton base - for use with shimmer */
@@ -1813,7 +1813,7 @@ textarea:focus-visible {
     rgba(37, 37, 48, 0.3) 75%
   );
   background-size: 400% 100%;
-  animation: skeleton-shimmer 2.5s ease-in-out infinite;
+  animation: skeleton-shimmer 2s ease-in-out infinite;
 }
 
 /* ============================================
