@@ -637,6 +637,17 @@ function CollapsibleEvents({ section, portalSlug, hideImages }: { section: FeedS
   // Use themed color, style color, category color, or fallback to coral
   const accentColor = themedConfig?.color || sectionStyle?.accent_color || categoryColor || "var(--coral)";
 
+  // Preview config: Show max 4 events in preview, rest require "See all"
+  const previewLimit = 4;
+  const hasMore = section.events.length > previewLimit;
+  const previewEvents = section.events.slice(0, previewLimit);
+
+  // Build "See all" URL with tag filter
+  const tag = section.auto_filter?.tags?.[0];
+  const seeAllUrl = tag
+    ? `/${portalSlug}?tags=${tag}&view=find`
+    : getSeeAllUrl(section, portalSlug);
+
   return (
     <section className="mb-6">
       {/* Collapsible header */}
@@ -706,12 +717,35 @@ function CollapsibleEvents({ section, portalSlug, hideImages }: { section: FeedS
         </svg>
       </button>
 
-      {/* Expanded content */}
+      {/* Expanded preview content */}
       {isExpanded && (
-        <div className="mt-3 grid gap-3" style={{ gridTemplateColumns: `repeat(${Math.min(itemsPerRow, 2)}, minmax(0, 1fr))` }}>
-          {section.events.map((event) => (
-            <EventCard key={event.id} event={event} hideImages={hideImages} portalSlug={portalSlug} />
-          ))}
+        <div className="mt-3 space-y-3">
+          {/* Event preview grid - max 4 items */}
+          <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(${Math.min(itemsPerRow, 2)}, minmax(0, 1fr))` }}>
+            {previewEvents.map((event) => (
+              <EventCard key={event.id} event={event} hideImages={hideImages} portalSlug={portalSlug} />
+            ))}
+          </div>
+
+          {/* "See all" button - shown when there are more events */}
+          {hasMore && (
+            <Link
+              href={seeAllUrl}
+              className="flex items-center justify-center gap-2 px-4 py-3 rounded-lg border transition-all hover:scale-[1.02]"
+              style={{
+                backgroundColor: `${accentColor}10`,
+                borderColor: `${accentColor}30`,
+                color: accentColor,
+              }}
+            >
+              <span className="font-mono text-sm font-medium">
+                See all {section.events.length} events
+              </span>
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </Link>
+          )}
         </div>
       )}
     </section>
