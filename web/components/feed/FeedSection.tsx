@@ -183,6 +183,8 @@ export default function FeedSection({ section, isFirst }: Props) {
       case "event_cards":
       case "event_carousel":
         return <EventCards section={section} portalSlug={portal.slug} hideImages={hideImages} />;
+      case "collapsible_events":
+        return <CollapsibleEvents section={section} portalSlug={portal.slug} hideImages={hideImages} />;
       case "event_list":
       default:
         return <EventList section={section} portalSlug={portal.slug} />;
@@ -608,6 +610,97 @@ function EventCards({ section, portalSlug, hideImages }: { section: FeedSectionD
           </div>
         )}
       </div>
+    </section>
+  );
+}
+
+// ============================================
+// COLLAPSIBLE EVENTS - Expandable holiday/themed sections
+// ============================================
+
+function CollapsibleEvents({ section, portalSlug, hideImages }: { section: FeedSectionData; portalSlug: string; hideImages?: boolean }) {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const itemsPerRow = section.items_per_row || 2;
+
+  if (section.events.length === 0) {
+    return null;
+  }
+
+  // Check if this is a themed section
+  const themedConfig = THEMED_SECTION_ICONS[section.slug];
+  const sectionStyle = section.style as { accent_color?: string } | null;
+  const accentColor = themedConfig?.color || sectionStyle?.accent_color || "var(--coral)";
+
+  return (
+    <section className="mb-6">
+      {/* Collapsible header */}
+      <button
+        type="button"
+        onClick={() => setIsExpanded(!isExpanded)}
+        className="w-full flex items-center gap-3 px-4 py-3 rounded-xl border border-[var(--twilight)] hover:border-[var(--coral)]/30 transition-all group"
+        style={{
+          backgroundColor: "var(--card-bg)",
+          borderLeftWidth: "3px",
+          borderLeftColor: accentColor,
+        }}
+      >
+        {/* Icon */}
+        {themedConfig?.icon && (
+          <div
+            className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+            style={{ backgroundColor: `${accentColor}20` }}
+          >
+            <div className="w-5 h-5" style={{ color: accentColor }}>
+              {themedConfig.icon}
+            </div>
+          </div>
+        )}
+
+        {/* Title and description */}
+        <div className="flex-1 text-left min-w-0">
+          <h3
+            className="font-semibold text-[var(--cream)] group-hover:text-[var(--coral)] transition-colors truncate"
+            style={{ color: isExpanded ? accentColor : undefined }}
+          >
+            {section.title}
+          </h3>
+          {section.description && (
+            <p className="font-mono text-xs text-[var(--muted)] truncate">
+              {section.description}
+            </p>
+          )}
+        </div>
+
+        {/* Event count badge */}
+        <span
+          className="font-mono text-xs px-2 py-1 rounded-full flex-shrink-0"
+          style={{
+            backgroundColor: `${accentColor}20`,
+            color: accentColor,
+          }}
+        >
+          {section.events.length} event{section.events.length !== 1 ? "s" : ""}
+        </span>
+
+        {/* Expand/collapse chevron */}
+        <svg
+          className={`w-5 h-5 text-[var(--muted)] transition-transform flex-shrink-0 ${isExpanded ? "rotate-180" : ""}`}
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+
+      {/* Expanded content */}
+      {isExpanded && (
+        <div className="mt-3 grid gap-3" style={{ gridTemplateColumns: `repeat(${Math.min(itemsPerRow, 2)}, minmax(0, 1fr))` }}>
+          {section.events.map((event) => (
+            <EventCard key={event.id} event={event} hideImages={hideImages} portalSlug={portalSlug} />
+          ))}
+        </div>
+      )}
     </section>
   );
 }
