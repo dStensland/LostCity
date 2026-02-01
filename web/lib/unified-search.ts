@@ -483,21 +483,18 @@ async function searchEvents(
     portalId?: string;
   }
 ): Promise<SearchResult[]> {
-  // Request more results if we have client-side filters that may reduce count
-  const hasClientFilters = (options.subcategories && options.subcategories.length > 0) ||
-    (options.tags && options.tags.length > 0);
-  const fetchLimit = hasClientFilters ? options.limit * 3 : options.limit;
-
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data, error } = await (client.rpc as any)("search_events_ranked", {
     p_query: query,
-    p_limit: fetchLimit,
+    p_limit: options.limit,
     p_offset: options.offset,
     p_categories: options.categories || null,
     p_neighborhoods: options.neighborhoods || null,
     p_date_filter: mapDateFilter(options.dateFilter),
     p_is_free: options.isFree ?? null,
     p_portal_id: options.portalId || null,
+    p_subcategories: options.subcategories || null,
+    p_tags: options.tags || null,
   });
 
   if (error) {
@@ -505,37 +502,7 @@ async function searchEvents(
     return [];
   }
 
-  let rows = (data as EventSearchRow[]) || [];
-
-  // Apply client-side subcategory filter
-  // If event has a subcategory, it must match one of the selected subcategories
-  // If event has no subcategory, include it if its category matches the parent category
-  // (e.g., selecting "music.live" should also include events with category="music" and subcategory=null)
-  if (options.subcategories && options.subcategories.length > 0) {
-    // Extract parent categories from subcategory values (e.g., "music.live" -> "music")
-    const parentCategories = new Set(
-      options.subcategories.map((sub) => sub.split(".")[0])
-    );
-
-    rows = rows.filter((row) => {
-      // If event has a subcategory, it must match exactly
-      if (row.subcategory) {
-        return options.subcategories!.includes(row.subcategory);
-      }
-      // If event has no subcategory, include it if its category matches a parent category
-      return row.category && parentCategories.has(row.category);
-    });
-  }
-
-  // Apply client-side tags filter (match any tag)
-  if (options.tags && options.tags.length > 0) {
-    rows = rows.filter((row) =>
-      row.tags && row.tags.some((tag) => options.tags!.includes(tag))
-    );
-  }
-
-  // Respect the original limit
-  rows = rows.slice(0, options.limit);
+  const rows = (data as EventSearchRow[]) || [];
 
   return rows.map((row) => ({
     id: row.id,
@@ -936,21 +903,18 @@ export async function searchEventsOnly(
 ): Promise<EventSearchRow[]> {
   const client = createServiceClient();
 
-  // Request more results if we have client-side filters
-  const hasClientFilters = (options.subcategories && options.subcategories.length > 0) ||
-    (options.tags && options.tags.length > 0);
-  const fetchLimit = hasClientFilters ? (options.limit || 20) * 3 : (options.limit || 20);
-
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data, error } = await (client.rpc as any)("search_events_ranked", {
     p_query: query.trim(),
-    p_limit: fetchLimit,
+    p_limit: options.limit || 20,
     p_offset: options.offset || 0,
     p_categories: options.categories || null,
     p_neighborhoods: options.neighborhoods || null,
     p_date_filter: mapDateFilter(options.dateFilter),
     p_is_free: options.isFree ?? null,
     p_portal_id: options.portalId || null,
+    p_subcategories: options.subcategories || null,
+    p_tags: options.tags || null,
   });
 
   if (error) {
@@ -958,37 +922,7 @@ export async function searchEventsOnly(
     return [];
   }
 
-  let rows = (data as EventSearchRow[]) || [];
-
-  // Apply client-side subcategory filter
-  // If event has a subcategory, it must match one of the selected subcategories
-  // If event has no subcategory, include it if its category matches the parent category
-  // (e.g., selecting "music.live" should also include events with category="music" and subcategory=null)
-  if (options.subcategories && options.subcategories.length > 0) {
-    // Extract parent categories from subcategory values (e.g., "music.live" -> "music")
-    const parentCategories = new Set(
-      options.subcategories.map((sub) => sub.split(".")[0])
-    );
-
-    rows = rows.filter((row) => {
-      // If event has a subcategory, it must match exactly
-      if (row.subcategory) {
-        return options.subcategories!.includes(row.subcategory);
-      }
-      // If event has no subcategory, include it if its category matches a parent category
-      return row.category && parentCategories.has(row.category);
-    });
-  }
-
-  // Apply client-side tags filter (match any tag)
-  if (options.tags && options.tags.length > 0) {
-    rows = rows.filter((row) =>
-      row.tags && row.tags.some((tag) => options.tags!.includes(tag))
-    );
-  }
-
-  // Respect the original limit
-  return rows.slice(0, options.limit || 20);
+  return (data as EventSearchRow[]) || [];
 }
 
 /**
