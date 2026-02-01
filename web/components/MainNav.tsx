@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { usePortalOptional, DEFAULT_PORTAL_SLUG } from "@/lib/portal-context";
 import { useAuth } from "@/lib/auth-context";
+import { useRealtimeFriendRequests } from "@/lib/hooks/useRealtimeFriendRequests";
 
 interface Props {
   portalSlug?: string;
@@ -28,6 +29,7 @@ export default function MainNav({ portalSlug = DEFAULT_PORTAL_SLUG }: Props) {
   const portalContext = usePortalOptional();
   const { user } = useAuth();
   const navLabels = (portalContext?.portal?.settings?.nav_labels || {}) as Record<string, string | undefined>;
+  const { pendingCount } = useRealtimeFriendRequests();
 
   // Build tabs with custom labels, filtering out auth-required tabs when not logged in
   const TABS = DEFAULT_TABS
@@ -76,6 +78,7 @@ export default function MainNav({ portalSlug = DEFAULT_PORTAL_SLUG }: Props) {
         <div className="flex gap-1 py-3 overflow-x-auto scrollbar-hide">
           {TABS.map((tab) => {
             const active = isActive(tab);
+            const showBadge = tab.key === "community" && pendingCount > 0;
             return (
               <Link
                 key={tab.key}
@@ -87,6 +90,11 @@ export default function MainNav({ portalSlug = DEFAULT_PORTAL_SLUG }: Props) {
                 }`}
               >
                 {tab.label}
+                {showBadge && (
+                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-[var(--coral)] text-[var(--void)] text-[10px] font-bold rounded-full flex items-center justify-center animate-pulse">
+                    {pendingCount > 9 ? '9+' : pendingCount}
+                  </span>
+                )}
               </Link>
             );
           })}

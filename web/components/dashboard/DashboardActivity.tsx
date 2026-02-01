@@ -1,72 +1,35 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 import UserAvatar from "@/components/UserAvatar";
 import { FriendSearch } from "@/components/community/FriendSearch";
 import { PendingRequests } from "@/components/community/PendingRequests";
-import type { FriendRequest, Profile } from "@/components/community/PendingRequests";
 import { FriendsActivity } from "@/components/community/FriendsActivity";
-import type { ActivityItem } from "@/components/community/FriendsActivity";
 import { FriendSuggestions } from "@/components/community/FriendSuggestions";
+import { useFriends } from "@/lib/hooks/useFriends";
+import { useFriendRequests } from "@/lib/hooks/useFriendRequests";
 
 type TabType = "recommendations" | "activity";
 
 export default function DashboardActivity() {
   const { user } = useAuth();
 
-  const [activities, setActivities] = useState<ActivityItem[]>([]);
-  const [pendingRequests, setPendingRequests] = useState<FriendRequest[]>([]);
-  const [friends, setFriends] = useState<Profile[]>([]);
-  const [friendSuggestions, setFriendSuggestions] = useState<Profile[]>([]);
-  const [loading, setLoading] = useState(true);
   const [showFriendsList, setShowFriendsList] = useState(false);
   const [activeTab, setActiveTab] = useState<TabType>("activity");
 
-  const fetchData = useCallback(async () => {
-    if (!user) {
-      setLoading(false);
-      return;
-    }
+  // Fetch data using TanStack Query hooks
+  const { pendingRequests, isLoading: requestsLoading } = useFriendRequests({
+    type: "received",
+  });
+  const { friends, isLoading: friendsLoading } = useFriends();
 
-    try {
-      setLoading(true);
+  // Combined loading state
+  const loading = requestsLoading || friendsLoading;
 
-      // Fetch all data in parallel
-      const [activityRes, requestsRes, friendsRes] = await Promise.all([
-        fetch("/api/dashboard/activity?limit=30"),
-        fetch("/api/friend-requests?type=received"),
-        fetch("/api/friends"),
-      ]);
-
-      if (activityRes.ok) {
-        const data = await activityRes.json();
-        setActivities(data.activities || []);
-      }
-
-      if (requestsRes.ok) {
-        const data = await requestsRes.json();
-        setPendingRequests(
-          (data.requests || []).filter((r: FriendRequest) => r.status === "pending")
-        );
-      }
-
-      if (friendsRes.ok) {
-        const data = await friendsRes.json();
-        setFriends(data.friends || []);
-        setFriendSuggestions(data.suggestions || []);
-      }
-    } catch (error) {
-      console.error("Failed to fetch activity data:", error);
-    } finally {
-      setLoading(false);
-    }
-  }, [user]);
-
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+  // For now, friend suggestions are empty - this can be added as a separate API endpoint later
+  const friendSuggestions: never[] = [];
 
   if (loading) {
     return <LoadingSkeleton />;
@@ -109,17 +72,19 @@ export default function DashboardActivity() {
                   href={`/profile/${friend.username}`}
                   className="flex items-center gap-3 p-3 rounded-lg bg-[var(--dusk)] border border-[var(--twilight)] hover:border-[var(--neon-cyan)]/30 transition-all group"
                 >
-                  <UserAvatar
-                    src={friend.avatar_url}
-                    name={friend.display_name || friend.username}
-                    size="sm"
-                  />
+                  <div className="flex-shrink-0">
+                    <UserAvatar
+                      src={friend.avatar_url}
+                      name={friend.display_name || friend.username}
+                      size="sm"
+                    />
+                  </div>
                   <div className="flex-1 min-w-0">
                     <span className="block text-sm font-medium text-[var(--cream)] truncate group-hover:text-[var(--neon-cyan)] transition-colors">
                       {friend.display_name || `@${friend.username}`}
                     </span>
                     {friend.bio && (
-                      <p className="text-xs text-[var(--muted)] truncate">{friend.bio}</p>
+                      <p className="text-xs text-[var(--muted)] line-clamp-2 sm:line-clamp-1">{friend.bio}</p>
                     )}
                   </div>
                 </Link>
@@ -130,7 +95,7 @@ export default function DashboardActivity() {
       )}
 
       {/* 3. Pending Friend Requests */}
-      <PendingRequests requests={pendingRequests} onRequestHandled={fetchData} />
+      <PendingRequests requests={pendingRequests} />
 
       {/* 4. Tabs: Recommendations | Activity */}
       <section>
@@ -162,7 +127,7 @@ export default function DashboardActivity() {
         )}
 
         {activeTab === "activity" && (
-          <FriendsActivity activities={activities} />
+          <FriendsActivity />
         )}
       </section>
     </div>

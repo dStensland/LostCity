@@ -110,11 +110,18 @@ export async function GET(request: NextRequest) {
     displayLabel: formatEventLabel(event),
   }));
 
-  return NextResponse.json({
-    events: results,
-    query: query,
-    count: results.length,
-  });
+  return NextResponse.json(
+    {
+      events: results,
+      query: query,
+      count: results.length,
+    },
+    {
+      headers: {
+        "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120",
+      },
+    }
+  );
 }
 
 // Format event label for display in autocomplete

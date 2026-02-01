@@ -113,11 +113,18 @@ export async function GET(request: NextRequest) {
     displayLabel: formatVenueLabel(venue),
   }));
 
-  return NextResponse.json({
-    venues: results,
-    query: query,
-    count: results.length,
-  });
+  return NextResponse.json(
+    {
+      venues: results,
+      query: query,
+      count: results.length,
+    },
+    {
+      headers: {
+        "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120",
+      },
+    }
+  );
 }
 
 // Format venue label for display in autocomplete

@@ -78,9 +78,11 @@ type ActivityItem = {
 
 // GET /api/dashboard/activity - Get activity from friends
 // Queries actual source tables (follows, rsvps, saved_events) instead of activities table
+// Supports cursor-based pagination for infinite scroll
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const limit = Math.min(parseInt(searchParams.get("limit") || "30", 10), 100);
+  const cursor = searchParams.get("cursor");
 
   const user = await getUser();
   if (!user) {
@@ -104,10 +106,16 @@ export async function GET(request: Request) {
     return NextResponse.json({
       activities: [],
       groupedByEvent: [],
+      nextCursor: null,
+      hasMore: false,
     });
   }
 
+  // Parse cursor (format: timestamp)
+  const cursorDate = cursor ? new Date(cursor) : null;
+
   // Fetch activities from multiple sources in parallel
+  // Each query applies cursor filter if present
   const [rsvpsResult, userFollowsResult, venueFollowsResult, savedEventsResult] = await Promise.all([
     // 1. RSVPs - friends going to events
     supabase
@@ -125,6 +133,7 @@ export async function GET(request: Request) {
       .in("user_id", friendIds)
       .in("status", ["going", "interested"])
       .gte("created_at", new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()) // Last 30 days
+      .lt("created_at", cursorDate ? cursorDate.toISOString() : new Date(Date.now() + 1000).toISOString())
       .order("created_at", { ascending: false })
       .limit(limit),
 
@@ -140,6 +149,7 @@ export async function GET(request: Request) {
       .in("follower_id", friendIds)
       .not("followed_user_id", "is", null)
       .gte("created_at", new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString()) // Last 14 days
+      .lt("created_at", cursorDate ? cursorDate.toISOString() : new Date(Date.now() + 1000).toISOString())
       .order("created_at", { ascending: false })
       .limit(20),
 
@@ -155,6 +165,7 @@ export async function GET(request: Request) {
       .in("follower_id", friendIds)
       .not("followed_venue_id", "is", null)
       .gte("created_at", new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString()) // Last 14 days
+      .lt("created_at", cursorDate ? cursorDate.toISOString() : new Date(Date.now() + 1000).toISOString())
       .order("created_at", { ascending: false })
       .limit(20),
 
@@ -172,6 +183,7 @@ export async function GET(request: Request) {
       `)
       .in("user_id", friendIds)
       .gte("created_at", new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString()) // Last 14 days
+      .lt("created_at", cursorDate ? cursorDate.toISOString() : new Date(Date.now() + 1000).toISOString())
       .order("created_at", { ascending: false })
       .limit(20),
   ]);
@@ -245,6 +257,12 @@ export async function GET(request: Request) {
   // Limit total activities
   const limitedActivities = activities.slice(0, limit);
 
+  // Determine next cursor and hasMore
+  const hasMore = limitedActivities.length === limit && activities.length >= limit;
+  const nextCursor = hasMore && limitedActivities.length > 0
+    ? limitedActivities[limitedActivities.length - 1].created_at
+    : null;
+
   // Group RSVP activities by event for "Your Friends Are Going" section
   const eventGroups = new Map<
     number,
@@ -284,5 +302,7 @@ export async function GET(request: Request) {
   return NextResponse.json({
     activities: limitedActivities,
     groupedByEvent,
+    nextCursor,
+    hasMore,
   });
 }

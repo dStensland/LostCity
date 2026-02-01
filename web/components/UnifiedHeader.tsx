@@ -10,6 +10,7 @@ import HeaderSearchButton from "./HeaderSearchButton";
 import { usePortalOptional, DEFAULT_PORTAL, DEFAULT_PORTAL_SLUG, DEFAULT_PORTAL_NAME } from "@/lib/portal-context";
 import { useAuth } from "@/lib/auth-context";
 import { useLogoUrl } from "@/lib/hooks/useDesignOverrides";
+import { useRealtimeFriendRequests } from "@/lib/hooks/useRealtimeFriendRequests";
 
 interface PortalBranding {
   logo_url?: string;
@@ -90,6 +91,7 @@ function UnifiedHeaderInner({
   const portal = portalContext?.portal ?? DEFAULT_PORTAL;
   const { user } = useAuth();
   const logoUrl = useLogoUrl(branding?.logo_url as string | undefined);
+  const { pendingCount } = useRealtimeFriendRequests();
 
   // Get custom nav labels from portal settings
   const navLabels = (portal.settings?.nav_labels || {}) as Record<string, string | undefined>;
@@ -201,6 +203,7 @@ function UnifiedHeaderInner({
             <nav className="hidden sm:flex items-center flex-1 max-w-md mx-auto">
               {TABS.map((tab) => {
                 const active = isActive(tab);
+                const showBadge = tab.key === "community" && pendingCount > 0;
                 return (
                   <Link
                     key={tab.key}
@@ -212,6 +215,11 @@ function UnifiedHeaderInner({
                     }`}
                   >
                     {tab.label}
+                    {showBadge && (
+                      <span className="absolute -top-1 -right-1 w-4 h-4 bg-[var(--coral)] text-[var(--void)] text-[10px] font-bold rounded-full flex items-center justify-center animate-pulse">
+                        {pendingCount > 9 ? '9+' : pendingCount}
+                      </span>
+                    )}
                   </Link>
                 );
               })}
@@ -307,6 +315,7 @@ function UnifiedHeaderInner({
             <div className="flex py-2 px-4">
               {TABS.map((tab) => {
                 const active = isActive(tab);
+                const showBadge = tab.key === "community" && pendingCount > 0;
                 return (
                   <Link
                     key={tab.key}
@@ -318,6 +327,11 @@ function UnifiedHeaderInner({
                     }`}
                   >
                     {tab.label}
+                    {showBadge && (
+                      <span className="absolute -top-1 -right-1 w-4 h-4 bg-[var(--coral)] text-[var(--void)] text-[10px] font-bold rounded-full flex items-center justify-center animate-pulse">
+                        {pendingCount > 9 ? '9+' : pendingCount}
+                      </span>
+                    )}
                   </Link>
                 );
               })}

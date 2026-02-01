@@ -1,10 +1,12 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useRef } from "react";
 import UserAvatar, { AvatarStack } from "@/components/UserAvatar";
 import CategoryIcon, { getCategoryColor } from "@/components/CategoryIcon";
 import FollowButton from "@/components/FollowButton";
 import { formatDistanceToNow, format, parseISO } from "date-fns";
+import { useInfiniteActivities } from "@/lib/hooks/useInfiniteActivities";
 
 export type ActivityItem = {
   id: string;
@@ -48,13 +50,45 @@ export type GroupedActivity = {
   users: ActivityItem["user"][];
 };
 
-interface FriendsActivityProps {
-  activities: ActivityItem[];
-}
+export function FriendsActivity() {
+  const {
+    activities,
+    isLoading,
+    isFetchingNextPage,
+    hasMore,
+    loadMore
+  } = useInfiniteActivities({ limit: 30 });
 
-export function FriendsActivity({ activities }: FriendsActivityProps) {
-  // Group activities by event
-  const groupedActivities = activities.reduce<GroupedActivity[]>((acc, activity) => {
+  // Intersection observer for infinite scroll
+  const loadMoreRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!loadMoreRef.current || !hasMore || isFetchingNextPage) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          loadMore();
+        }
+      },
+      { threshold: 0.1, rootMargin: "100px" }
+    );
+
+    observer.observe(loadMoreRef.current);
+
+    return () => observer.disconnect();
+  }, [hasMore, isFetchingNextPage, loadMore]);
+
+  if (isLoading) {
+    return <LoadingSkeleton />;
+  }
+
+  if (activities.length === 0) {
+    return <EmptyState />;
+  }
+
+  // Group RSVP activities by event for display
+  const localGroupedActivities = activities.reduce<GroupedActivity[]>((acc, activity) => {
     if (activity.activity_type === "rsvp" && activity.event) {
       const existing = acc.find((g) => g.event?.id === activity.event?.id);
       if (existing) {
@@ -73,46 +107,20 @@ export function FriendsActivity({ activities }: FriendsActivityProps) {
     return acc;
   }, []);
 
-  // Non-event activities (follows, recommendations)
+  // Non-event activities (follows, saves)
   const otherActivities = activities.filter(
     (a) => a.activity_type !== "rsvp" || !a.event
   );
 
-  if (activities.length === 0) {
-    return (
-      <div className="p-6 bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg text-center">
-        <svg
-          className="w-12 h-12 mx-auto mb-3 text-[var(--muted)]"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={1.5}
-            d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
-          />
-        </svg>
-        <p className="text-[var(--soft)] font-mono text-sm">
-          Your friends are suspiciously quiet.
-        </p>
-        <p className="text-[var(--muted)] font-mono text-xs mt-1">
-          Follow more people to see their activity here
-        </p>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-4">
       {/* Grouped Event Activity */}
-      {groupedActivities.length > 0 && (
+      {localGroupedActivities.length > 0 && (
         <div className="space-y-3">
           <h3 className="font-mono text-xs text-[var(--muted)] uppercase tracking-wider">
             Friends Are Going
           </h3>
-          {groupedActivities.slice(0, 5).map((group) => (
+          {localGroupedActivities.slice(0, 10).map((group) => (
             <GroupedEventCard key={group.event!.id} group={group} />
           ))}
         </div>
@@ -129,6 +137,69 @@ export function FriendsActivity({ activities }: FriendsActivityProps) {
           ))}
         </div>
       )}
+
+      {/* Intersection observer trigger */}
+      {hasMore && (
+        <div ref={loadMoreRef} className="py-4">
+          {isFetchingNextPage && <LoadingSkeleton count={3} />}
+        </div>
+      )}
+
+      {/* End of list indicator */}
+      {!hasMore && activities.length > 0 && (
+        <div className="text-center py-4">
+          <p className="font-mono text-xs text-[var(--muted)]">
+            You&apos;ve reached the end of your feed
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function EmptyState() {
+  return (
+    <div className="p-6 bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg text-center">
+      <svg
+        className="w-12 h-12 mx-auto mb-3 text-[var(--muted)]"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={1.5}
+          d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+        />
+      </svg>
+      <p className="text-[var(--soft)] font-mono text-sm">
+        Your friends are suspiciously quiet.
+      </p>
+      <p className="text-[var(--muted)] font-mono text-xs mt-1">
+        Follow more people to see their activity here
+      </p>
+    </div>
+  );
+}
+
+function LoadingSkeleton({ count = 5 }: { count?: number }) {
+  return (
+    <div className="space-y-3">
+      {Array.from({ length: count }).map((_, i) => (
+        <div
+          key={i}
+          className="p-4 bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg"
+        >
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 skeleton-shimmer rounded-full" />
+            <div className="flex-1 space-y-2">
+              <div className="h-4 skeleton-shimmer rounded w-3/4" />
+              <div className="h-3 skeleton-shimmer rounded w-1/2" />
+            </div>
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
@@ -157,7 +228,7 @@ function GroupedEventCard({ group }: { group: GroupedActivity }) {
         borderLeftColor: categoryColor || undefined,
       }}
     >
-      <div className="flex gap-3">
+      <div className="flex flex-col sm:flex-row gap-3">
         {/* Time cell - like EventCard */}
         <div className="flex-shrink-0 w-14 flex flex-col items-center justify-center py-1">
           <span className="font-mono text-[0.55rem] font-medium leading-none text-[var(--muted)]">
@@ -185,13 +256,13 @@ function GroupedEventCard({ group }: { group: GroupedActivity }) {
                 <CategoryIcon type={event.category} size={12} glow="subtle" />
               </span>
             )}
-            <h3 className="text-[var(--cream)] font-medium leading-snug line-clamp-1 group-hover:text-[var(--neon-cyan)] transition-colors">
+            <h3 className="text-[var(--cream)] font-medium leading-snug line-clamp-2 sm:line-clamp-1 group-hover:text-[var(--neon-cyan)] transition-colors">
               {event.title}
             </h3>
           </div>
 
           {/* Friend avatars */}
-          <div className="flex items-center gap-2 mb-1">
+          <div className="flex flex-wrap items-center gap-2 mb-1">
             <AvatarStack
               users={group.users.map((u) => ({
                 id: u.id,
@@ -210,7 +281,7 @@ function GroupedEventCard({ group }: { group: GroupedActivity }) {
 
           {/* Venue details */}
           {event.venue && (
-            <p className="font-mono text-xs text-[var(--muted)]">
+            <p className="font-mono text-xs text-[var(--muted)] truncate">
               {event.venue.name}
             </p>
           )}
@@ -255,7 +326,7 @@ function ActivityCard({ activity }: { activity: ActivityItem }) {
           borderLeftColor: categoryColor || undefined,
         }}
       >
-        <div className="flex gap-3">
+        <div className="flex flex-col sm:flex-row gap-3">
           {/* Time cell - like EventCard */}
           <div className="flex-shrink-0 w-14 flex flex-col items-center justify-center py-1">
             <span className="font-mono text-[0.55rem] font-medium leading-none text-[var(--muted)]">
@@ -272,7 +343,7 @@ function ActivityCard({ activity }: { activity: ActivityItem }) {
           {/* Content */}
           <div className="flex-1 min-w-0">
             {/* User action header */}
-            <div className="flex items-center gap-2 mb-1">
+            <div className="flex flex-wrap items-center gap-2 mb-1">
               <UserAvatar
                 src={activity.user.avatar_url}
                 name={activity.user.display_name || activity.user.username}
@@ -301,14 +372,14 @@ function ActivityCard({ activity }: { activity: ActivityItem }) {
                   <CategoryIcon type={activity.event.category} size={12} glow="subtle" />
                 </span>
               )}
-              <h3 className="text-[var(--cream)] font-medium leading-snug line-clamp-1 group-hover:text-[var(--neon-magenta)] transition-colors">
+              <h3 className="text-[var(--cream)] font-medium leading-snug line-clamp-2 sm:line-clamp-1 group-hover:text-[var(--neon-magenta)] transition-colors">
                 {activity.event.title}
               </h3>
             </div>
 
             {/* Venue details */}
             {activity.event.venue && (
-              <p className="font-mono text-xs text-[var(--muted)]">
+              <p className="font-mono text-xs text-[var(--muted)] truncate">
                 {activity.event.venue.name}
               </p>
             )}
@@ -334,29 +405,29 @@ function ActivityCard({ activity }: { activity: ActivityItem }) {
         className="block p-3 rounded-lg bg-[var(--dusk)] border border-[var(--twilight)] hover:border-[var(--neon-cyan)]/30 transition-all group"
       >
         {/* Header */}
-        <div className="flex items-center gap-2 mb-2">
+        <div className="flex flex-wrap items-center gap-2 mb-2">
           <UserAvatar
             src={activity.user.avatar_url}
             name={activity.user.display_name || activity.user.username}
             size="xs"
           />
-          <span className="text-xs text-[var(--muted)]">
+          <span className="text-xs text-[var(--muted)] flex-1 min-w-0">
             <span className="text-[var(--soft)]">
               {activity.user.display_name || activity.user.username}
             </span>
             {" "}now follows
           </span>
-          <span className="ml-auto font-mono text-[0.55rem] text-[var(--muted)]">
+          <span className="font-mono text-[0.55rem] text-[var(--muted)] flex-shrink-0">
             {timeAgo}
           </span>
         </div>
 
         {/* Venue info */}
-        <h4 className="font-medium text-[var(--cream)] group-hover:text-[var(--neon-cyan)] transition-colors">
+        <h4 className="font-medium text-[var(--cream)] group-hover:text-[var(--neon-cyan)] transition-colors truncate">
           {activity.venue.name}
         </h4>
         {activity.venue.neighborhood && (
-          <p className="font-mono text-xs text-[var(--muted)] mt-0.5">
+          <p className="font-mono text-xs text-[var(--muted)] mt-0.5 truncate">
             {activity.venue.neighborhood}
           </p>
         )}
@@ -369,26 +440,26 @@ function ActivityCard({ activity }: { activity: ActivityItem }) {
     return (
       <div className="p-3 bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg">
         {/* Header */}
-        <div className="flex items-center gap-2 mb-3">
+        <div className="flex flex-wrap items-center gap-2 mb-3">
           <UserAvatar
             src={activity.user.avatar_url}
             name={activity.user.display_name || activity.user.username}
             size="xs"
           />
-          <span className="text-xs text-[var(--muted)]">
+          <span className="text-xs text-[var(--muted)] flex-1 min-w-0">
             <span className="text-[var(--soft)]">
               {activity.user.display_name || activity.user.username}
             </span>
             {" "}followed
           </span>
-          <span className="ml-auto font-mono text-[0.55rem] text-[var(--muted)]">
+          <span className="font-mono text-[0.55rem] text-[var(--muted)] flex-shrink-0">
             {timeAgo}
           </span>
         </div>
 
         {/* Target user card */}
-        <div className="flex items-center gap-3 p-2 -mx-2 rounded-lg hover:bg-[var(--twilight)]/20 transition-colors">
-          <Link href={`/profile/${activity.target_user.username}`}>
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 p-2 -mx-2 rounded-lg hover:bg-[var(--twilight)]/20 transition-colors">
+          <Link href={`/profile/${activity.target_user.username}`} className="flex-shrink-0">
             <UserAvatar
               src={null}
               name={activity.target_user.display_name || activity.target_user.username}
@@ -403,9 +474,11 @@ function ActivityCard({ activity }: { activity: ActivityItem }) {
             >
               {activity.target_user.display_name || `@${activity.target_user.username}`}
             </Link>
-            <p className="text-xs text-[var(--muted)]">@{activity.target_user.username}</p>
+            <p className="text-xs text-[var(--muted)] truncate">@{activity.target_user.username}</p>
           </div>
-          <FollowButton targetUserId={activity.target_user.id} size="sm" />
+          <div className="w-full sm:w-auto flex-shrink-0">
+            <FollowButton targetUserId={activity.target_user.id} size="sm" />
+          </div>
         </div>
       </div>
     );
@@ -414,5 +487,3 @@ function ActivityCard({ activity }: { activity: ActivityItem }) {
   // Fallback
   return null;
 }
-
-export type { FriendsActivityProps };
