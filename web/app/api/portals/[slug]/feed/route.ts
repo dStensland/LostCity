@@ -2,6 +2,7 @@ import { supabase } from "@/lib/supabase";
 import { NextRequest, NextResponse } from "next/server";
 import { addDays, startOfDay, nextFriday, nextSunday, isFriday, isSaturday, isSunday } from "date-fns";
 import { getLocalDateString } from "@/lib/formats";
+import { getPortalSourceAccess } from "@/lib/federation";
 
 // Cache feed for 5 minutes at CDN, allow stale for 1 hour while revalidating
 export const revalidate = 300;
@@ -72,6 +73,7 @@ type Event = {
   description: string | null;
   featured_blurb: string | null;
   going_count?: number;
+  source_id?: number | null;
   venue: {
     id: number;
     name: string;
@@ -195,6 +197,11 @@ export async function GET(request: NextRequest, { params }: Props) {
     items_per_section?: number;
     default_layout?: string;
   };
+
+  // Get federated source access for this portal
+  // This includes owned sources, global sources, and subscribed sources
+  const federationAccess = await getPortalSourceAccess(portal.id);
+  const hasSubscribedSources = federationAccess.sourceIds.length > 0;
 
   // Determine which sections to fetch
   let sectionsToFetch = sectionIds;
@@ -379,18 +386,31 @@ export async function GET(request: NextRequest, { params }: Props) {
         image_url,
         description,
         featured_blurb,
+        source_id,
         venue:venues(id, name, neighborhood, slug)
       `)
       .gte("start_date", today)
       .lte("start_date", maxEndDate)
       .is("canonical_event_id", null); // Only show canonical events, not duplicates
 
-    // Apply portal filter - business portals only show their own events
+    // Apply portal filter with federation support
     if (isBusinessPortal) {
-      poolQuery = poolQuery.eq("portal_id", portal.id);
+      if (hasSubscribedSources) {
+        // Business portal with subscriptions: show portal events + events from subscribed sources
+        const sourceIdList = federationAccess.sourceIds.join(",");
+        poolQuery = poolQuery.or(`portal_id.eq.${portal.id},source_id.in.(${sourceIdList})`);
+      } else {
+        // Business portal without subscriptions: only show portal-specific events
+        poolQuery = poolQuery.eq("portal_id", portal.id);
+      }
     } else {
-      // City portals show public events + portal-specific events
-      poolQuery = poolQuery.or(`portal_id.eq.${portal.id},portal_id.is.null`);
+      // City portals: show public events + portal-specific events + events from subscribed sources
+      if (hasSubscribedSources) {
+        const sourceIdList = federationAccess.sourceIds.join(",");
+        poolQuery = poolQuery.or(`portal_id.eq.${portal.id},portal_id.is.null,source_id.in.(${sourceIdList})`);
+      } else {
+        poolQuery = poolQuery.or(`portal_id.eq.${portal.id},portal_id.is.null`);
+      }
     }
 
     const { data: poolEvents } = await poolQuery
@@ -399,6 +419,16 @@ export async function GET(request: NextRequest, { params }: Props) {
       .limit(Math.min(maxEventsNeeded, 200)); // Cap at 200 for safety
 
     for (const event of (poolEvents || []) as Event[]) {
+      // Apply federation category constraints
+      // If event is from a subscribed source, check if its category is allowed
+      if (event.source_id && federationAccess.categoryConstraints.has(event.source_id)) {
+        const allowedCategories = federationAccess.categoryConstraints.get(event.source_id);
+        // null means all categories allowed, otherwise check if event category is in allowed list
+        // Note: allowedCategories could be undefined from Map.get(), but we checked .has() above
+        if (allowedCategories !== null && allowedCategories !== undefined && event.category && !allowedCategories.includes(event.category)) {
+          continue; // Skip events from sources where this category isn't allowed
+        }
+      }
       autoEventPool.set(event.id, event);
     }
   }
@@ -419,38 +449,11 @@ export async function GET(request: NextRequest, { params }: Props) {
     }
   }
 
-  // Step 5: Add programmatic featured events and holiday sections
+  // Step 5: Add programmatic holiday sections
   const holidaySections: Section[] = [];
   const currentDate = new Date();
   const currentMonth = currentDate.getMonth() + 1; // 1-12
   const currentDay = currentDate.getDate();
-
-  // Featured events carousel (always show if there are featured events)
-  holidaySections.push({
-    id: "featured-events",
-    title: "Featured Events",
-    slug: "featured-events",
-    description: "Handpicked by our editors",
-    section_type: "auto",
-    block_type: "featured_carousel",
-    layout: "carousel",
-    items_per_row: 3,
-    max_items: 10,
-    auto_filter: {
-      date_filter: "next_30_days",
-      sort_by: "date",
-    },
-    block_content: null,
-    display_order: -10,
-    is_visible: true,
-    schedule_start: null,
-    schedule_end: null,
-    show_on_days: null,
-    show_after_time: null,
-    show_before_time: null,
-    style: null,
-    portal_section_items: [],
-  });
 
   // Add holiday sections starting late January through early March
   const showHolidaySections =
@@ -467,10 +470,10 @@ export async function GET(request: NextRequest, { params }: Props) {
         slug: "valentines-day",
         description: "Be still thy beating heart",
         section_type: "auto",
-        block_type: "event_carousel",
-        layout: "carousel",
+        block_type: "event_cards",
+        layout: "grid",
         items_per_row: 2,
-        max_items: 8,
+        max_items: 6,
         auto_filter: {
           tags: ["valentines"],
           date_filter: "next_30_days",
@@ -500,10 +503,10 @@ export async function GET(request: NextRequest, { params }: Props) {
         slug: "lunar-new-year",
         description: "A whole year of fire horsin around",
         section_type: "auto",
-        block_type: "event_carousel",
-        layout: "carousel",
+        block_type: "event_cards",
+        layout: "grid",
         items_per_row: 2,
-        max_items: 8,
+        max_items: 6,
         auto_filter: {
           tags: ["lunar-new-year"],
           date_filter: "next_30_days",
@@ -533,10 +536,10 @@ export async function GET(request: NextRequest, { params }: Props) {
         slug: "super-bowl",
         description: "Watch parties and game day events",
         section_type: "auto",
-        block_type: "event_carousel",
-        layout: "carousel",
+        block_type: "event_cards",
+        layout: "grid",
         items_per_row: 2,
-        max_items: 8,
+        max_items: 6,
         auto_filter: {
           tags: ["super-bowl"],
           date_filter: "next_7_days",
@@ -565,10 +568,10 @@ export async function GET(request: NextRequest, { params }: Props) {
         slug: "black-history-month",
         description: "Celebrate and learn",
         section_type: "auto",
-        block_type: "event_carousel",
-        layout: "carousel",
+        block_type: "event_cards",
+        layout: "grid",
         items_per_row: 2,
-        max_items: 8,
+        max_items: 6,
         auto_filter: {
           tags: ["black-history-month"],
           date_filter: "next_30_days",
@@ -591,48 +594,10 @@ export async function GET(request: NextRequest, { params }: Props) {
     }
   }
 
-  // Fetch featured events for carousel
-  let featuredEvents: Event[] = [];
-  const { data: featuredEventsData } = await supabase
-    .from("events")
-    .select(`
-      id,
-      title,
-      start_date,
-      start_time,
-      end_time,
-      is_all_day,
-      is_free,
-      price_min,
-      price_max,
-      category,
-      subcategory,
-      image_url,
-      description,
-      featured_blurb,
-      venue:venues(id, name, neighborhood, slug)
-    `)
-    .eq("is_featured", true)
-    .gte("start_date", today)
-    .lte("start_date", getLocalDateString(addDays(new Date(), 30)))
-    .is("canonical_event_id", null)
-    .order("start_date", { ascending: true })
-    .limit(10);
-
-  if (featuredEventsData && featuredEventsData.length > 0) {
-    featuredEvents = featuredEventsData as Event[];
-    for (const event of featuredEvents) {
-      eventMap.set(event.id, event);
-    }
-  }
-
   // Fetch events for holiday sections and track them by tag
   const holidayEventsByTag = new Map<string, Event[]>();
   if (holidaySections.length > 0) {
     for (const holidaySection of holidaySections) {
-      // Skip featured events section (handled separately)
-      if (holidaySection.block_type === "featured_carousel") continue;
-
       const tag = holidaySection.auto_filter?.tags?.[0];
       if (tag) {
         const { data: holidayEvents } = await supabase
@@ -824,16 +789,9 @@ export async function GET(request: NextRequest, { params }: Props) {
 
   // Step 7: Build holiday sections using the same pattern
   const holidayFeedSections = holidaySections.map((section) => {
-    let events: Event[] = [];
-
-    // Featured carousel gets featured events
-    if (section.block_type === "featured_carousel") {
-      events = featuredEvents;
-    } else {
-      // Holiday sections get events by tag
-      const tag = section.auto_filter?.tags?.[0];
-      events = tag ? (holidayEventsByTag.get(tag) || []) : [];
-    }
+    // Holiday sections get events by tag
+    const tag = section.auto_filter?.tags?.[0];
+    const events = tag ? (holidayEventsByTag.get(tag) || []) : [];
 
     return {
       id: section.id,
