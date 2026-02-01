@@ -76,6 +76,7 @@ SOURCE_MODULES = {
     "little-shop-of-stories": "sources.little_shop_of_stories",
     "eagle-eye-books": "sources.eagle_eye_books",
     "foxtale-books": "sources.foxtale_books",
+    "barnes-noble-atlanta": "sources.barnes_noble_atlanta",
     # Libraries
     "fulton-library": "sources.fulton_library",
     "dekalb-library": "sources.dekalb_library",
@@ -91,12 +92,14 @@ SOURCE_MODULES = {
     "monday-night": "sources.monday_night",
     "atlanta-pride": "sources.atlanta_pride",
     "alliance-theatre": "sources.alliance_theatre",
+    "theatre-for-young-audiences": "sources.theatre_for_young_audiences",
     "creative-loafing": "sources.creative_loafing",
     "variety-playhouse": "sources.variety_playhouse",
     "tabernacle": "sources.tabernacle",
     # ===== NEW CRAWLERS - Major Arenas & Convention Centers =====
     "state-farm-arena": "sources.state_farm_arena",
     "mercedes-benz-stadium": "sources.mercedes_benz_stadium",
+    "gateway-center-arena": "sources.gateway_center_arena",
     "cobb-energy": "sources.cobb_energy",
     "gas-south": "sources.gas_south",
     "cobb-galleria": "sources.cobb_galleria",
@@ -128,9 +131,15 @@ SOURCE_MODULES = {
     "carlos-museum": "sources.carlos_museum",
     "breman-museum": "sources.breman_museum",
     "childrens-museum": "sources.childrens_museum",
+    "lego-discovery-center": "sources.lego_discovery_center",
     "civil-rights-center": "sources.civil_rights_center",
     "college-football-hof": "sources.college_football_hof",
+    "college-park-main-street": "sources.college_park_main_street",
     "world-of-coca-cola": "sources.world_of_coca_cola",
+    # ===== Family Entertainment & Trampoline Parks =====
+    "defy-atlanta": "sources.defy_atlanta",
+    "urban-air-atlanta": "sources.urban_air_atlanta",
+    "sky-zone-atlanta": "sources.sky_zone_atlanta",
     # ===== Historic Sites & Cultural Venues =====
     "oakland-cemetery": "sources.oakland_cemetery",
     "wrens-nest": "sources.wrens_nest",
@@ -193,10 +202,12 @@ SOURCE_MODULES = {
     "red-light-cafe": "sources.red_light_cafe",
     "apache-xlr": "sources.apache_xlr",
     # ===== Additional Breweries =====
+    "contrast-artisan-ales": "sources.contrast_artisan_ales",
     "scofflaw-brewing": "sources.scofflaw_brewing",
     "second-self-brewing": "sources.second_self_brewing",
     "bold-monk-brewing": "sources.bold_monk_brewing",
     "reformation-brewery": "sources.reformation_brewery",
+    "wild-heaven-beer-avondale": "sources.wild_heaven_beer",
     # ===== University Venues =====
     "ferst-center": "sources.ferst_center",
     "schwartz-center": "sources.schwartz_center",
@@ -314,6 +325,13 @@ SOURCE_MODULES = {
     "atlanta-outdoor-club": "sources.atlanta_outdoor_club",
     "blk-hiking-club": "sources.blk_hiking_club",
     "trees-atlanta": "sources.trees_atlanta",
+    # ===== NEW: Civic Engagement & Social Justice Nonprofits =====
+    "new-georgia-project": "sources.new_georgia_project",
+    "project-south": "sources.project_south",
+    "song": "sources.song",
+    "dogwood-alliance": "sources.dogwood_alliance",
+    "c4-atlanta": "sources.c4_atlanta",
+    "united-way-atlanta": "sources.united_way_atlanta",
     # ===== NEW: Dance Studios =====
     "pasofino-dance": "sources.pasofino_dance",
     "salsa-atlanta": "sources.salsa_atlanta",
@@ -385,7 +403,7 @@ SOURCE_MODULES = {
     "mason-fine-art": "sources.mason_fine_art",
     # ===== NEW BATCH: Theaters =====
     "onstage-atlanta": "sources.onstage_atlanta",
-    "pushpush-theater": "sources.pushpush_theater",
+    "pushpush-arts": "sources.pushpush_arts",
     "working-title-playwrights": "sources.working_title_playwrights",
     "pinch-n-ouch-theatre": "sources.pinch_n_ouch_theatre",
     # ===== Healthcare: Piedmont =====
@@ -418,6 +436,7 @@ SOURCE_MODULES = {
     "scad-atlanta": "sources.scad_atlanta",
     "agnes-scott": "sources.agnes_scott",
     "spivey-hall": "sources.spivey_hall",
+    "georgia-symphony": "sources.georgia_symphony",
     "oglethorpe-university": "sources.oglethorpe_university",
     # ===== Community Centers =====
     "ymca-atlanta": "sources.ymca_atlanta",
@@ -444,6 +463,8 @@ SOURCE_MODULES = {
     "fado-irish-pub": "sources.fado_irish_pub",
     "stats-downtown": "sources.stats_downtown",
     "meehans-pub": "sources.meehans_pub",
+    "brick-store-pub": "sources.brick_store_pub",
+    "brake-pad": "sources.brake_pad",
     "urban-grind": "sources.urban_grind",
     "kats-cafe": "sources.kats_cafe",
     "gypsy-kitchen": "sources.gypsy_kitchen",
@@ -472,7 +493,10 @@ SOURCE_MODULES = {
     "apex-museum": "sources.apex_museum",
     # ===== City & Park Events =====
     "decatur-city": "sources.decatur_city",
+    "visit-decatur": "sources.visit_decatur",
     "johns-creek": "sources.johns_creek",
+    "marietta-city": "sources.marietta_city",
+    "college-park-city": "sources.college_park_city",
     # ===== Recurring Social Events =====
     "atlanta-recurring-social": "sources.recurring_social_events",
     # ===== Activism Organizations =====
@@ -480,6 +504,11 @@ SOURCE_MODULES = {
     "glahr": "sources.glahr",
     "atlanta-liberation-center": "sources.atlanta_liberation_center",
     "indivisible-atl": "sources.indivisible_atl",
+    "cair-georgia": "sources.cair_georgia",
+    # ===== Historic Preservation =====
+    "atlanta-preservation-center": "sources.atlanta_preservation_center",
+    # ===== Community Radio =====
+    "wrfg-radio": "sources.wrfg_radio",
     # ===== ArtsATL =====
     "artsatl-calendar": "sources.artsatl",
     # ===== Mobilize.us Organizations =====
@@ -512,6 +541,90 @@ SOURCE_MODULES = {
     "moda": "sources.moda",
     # ===== Art Galleries =====
     "eyedrum": "sources.eyedrum",
+    # ===== NEW: Community Organizations & Nonprofits =====
+    "atlanta-beltline": "sources.atlanta_beltline",
+    "atlanta-freethought": "sources.atlanta_freethought",
+    "atlanta-mission": "sources.atlanta_mission",
+    "big-brothers-big-sisters-atl": "sources.big_brothers_big_sisters_atl",
+    "carter-center": "sources.carter_center",
+    "everybody-wins-atlanta": "sources.everybody_wins_atlanta",
+    "faith-alliance": "sources.faith_alliance",
+    "food-well-alliance": "sources.food_well_alliance",
+    "georgia-organics": "sources.georgia_organics",
+    "georgia-peace": "sources.georgia_peace",
+    "giving-kitchen": "sources.giving_kitchen",
+    "hosea-helps": "sources.hosea_helps",
+    "madlife-stage": "sources.madlife_stage",
+    "marietta-cobb-museum": "sources.marietta_cobb_museum",
+    "marietta-main-street": "sources.marietta_main_street",
+    "theatre-in-the-square": "sources.theatre_in_the_square",
+    "meals-on-wheels-atlanta": "sources.meals_on_wheels_atlanta",
+    "out-front-theatre": "sources.out_front_theatre",
+    "perfect-note-atlanta": "sources.perfect_note_atlanta",
+    "scad-fash": "sources.scad_fash",
+    "schoolhouse-brewing": "sources.schoolhouse_brewing",
+    "south-river-forest": "sources.south_river_forest",
+    "urban-league-atlanta": "sources.urban_league_atlanta",
+    "wonderroot": "sources.wonderroot",
+    # ===== ITP Neighborhoods: Eastside Core =====
+    "chomp-and-stomp": "sources.chomp_and_stomp",
+    "cabbagetown-neighborhood": "sources.cabbagetown_neighborhood",
+    "reynoldstown-rcil": "sources.reynoldstown_rcil",
+    "star-community-bar": "sources.star_community_bar",
+    # ===== ITP Neighborhoods: Eastside Extended =====
+    "pullman-yards": "sources.pullman_yards",
+    "lake-claire-land-trust": "sources.lake_claire_land_trust",
+    "kirkwood-spring-fling": "sources.kirkwood_spring_fling",
+    "our-bar-atl": "sources.our_bar_atl",
+    # ===== ITP Neighborhoods: Southside Core =====
+    "summerhill-neighborhood": "sources.summerhill_neighborhood",
+    "southern-feedstore": "sources.southern_feedstore",
+    "grant-park-conservancy": "sources.grant_park_conservancy",
+    # ===== ITP Neighborhoods: Southside Extended =====
+    "pittsburgh-yards": "sources.pittsburgh_yards",
+    "ormewood-park-neighborhood": "sources.ormewood_park_neighborhood",
+    "peoplestown-neighborhood": "sources.peoplestown_neighborhood",
+    "mechanicsville-neighborhood": "sources.mechanicsville_neighborhood",
+    # ===== ITP Neighborhoods: Northside =====
+    "virginia-highland-civic": "sources.virginia_highland_civic",
+    "morningside-civic": "sources.morningside_civic",
+    "ansley-park-civic": "sources.ansley_park_civic",
+    "piedmont-heights-civic": "sources.piedmont_heights_civic",
+    # ===== ITP Commercial Corridors =====
+    "atlantic-station": "sources.atlantic_station",
+    "lindbergh-city-center": "sources.lindbergh_city_center",
+    "cheshire-bridge-district": "sources.cheshire_bridge_district",
+    # ===== ITP Historic/Cultural Districts =====
+    "hammonds-house": "sources.hammonds_house",
+    "castleberry-art-stroll": "sources.castleberry_art_stroll",
+    "west-end-neighborhood": "sources.west_end_neighborhood",
+    # ===== ITP Gap Cleanup =====
+    "music-midtown": "sources.music_midtown",
+    "east-lake-neighborhood": "sources.east_lake_neighborhood",
+    "vine-city-neighborhood": "sources.vine_city_neighborhood",
+    # ===== OTP: North Fulton (Alpharetta, Roswell) =====
+    "alpharetta-city": "sources.alpharetta_city",
+    "roswell-city": "sources.roswell_city",
+    "canton-street-roswell": "sources.canton_street_roswell",
+    "variant-brewing": "sources.variant_brewing",
+    # ===== OTP: Gwinnett (Johns Creek, Duluth) =====
+    "duluth-city": "sources.duluth_city",
+    "hudgens-center": "sources.hudgens_center",
+    "downtown-duluth": "sources.downtown_duluth",
+    # ===== OTP: East Gwinnett (Lawrenceville, Snellville) =====
+    "lawrenceville-city": "sources.lawrenceville_city",
+    "snellville-city": "sources.snellville_city",
+    "snellville-farmers-market": "sources.snellville_farmers_market",
+    # ===== OTP: Cobb (Kennesaw, Acworth) =====
+    "kennesaw-city": "sources.kennesaw_city",
+    "acworth-city": "sources.acworth_city",
+    "caffeine-octane": "sources.caffeine_octane",
+    "southern-museum": "sources.southern_museum",
+    # ===== Additional Venues (Feb 2026) =====
+    "new-realm-brewing": "sources.new_realm_brewing",
+    "the-porter": "sources.the_porter",
+    "chastain-arts": "sources.chastain_arts",
+    "mint-gallery": "sources.mint_gallery",
 }
 
 
