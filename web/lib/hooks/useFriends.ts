@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth-context";
+import { fetchWithRetry } from "@/lib/fetchWithRetry";
 
 /**
  * Profile type for friend data
@@ -50,7 +51,10 @@ export function useFriends(options: UseFriendsOptions = {}) {
   const query = useQuery<FriendsResponse, Error>({
     queryKey: ["friends"],
     queryFn: async () => {
-      const res = await fetch("/api/friends");
+      const res = await fetchWithRetry("/api/friends", undefined, {
+        maxRetries: 3,
+        baseDelay: 1000,
+      });
 
       if (!res.ok) {
         throw new Error(`Failed to fetch friends: ${res.status}`);
@@ -61,7 +65,7 @@ export function useFriends(options: UseFriendsOptions = {}) {
     enabled: enabled && !!user,
     staleTime: 30 * 1000, // Consider fresh for 30s
     gcTime: 5 * 60 * 1000, // Keep in cache for 5 minutes
-    retry: 2,
+    retry: false, // Disable React Query retry since fetchWithRetry handles it
   });
 
   return {

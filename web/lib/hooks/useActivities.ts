@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth-context";
+import { fetchWithRetry } from "@/lib/fetchWithRetry";
 
 /**
  * Profile type for user data
@@ -110,7 +111,10 @@ export function useActivities(options: UseActivitiesOptions = {}) {
     queryKey: ["activities", limit],
     queryFn: async () => {
       const params = new URLSearchParams({ limit: limit.toString() });
-      const res = await fetch(`/api/dashboard/activity?${params}`);
+      const res = await fetchWithRetry(`/api/dashboard/activity?${params}`, undefined, {
+        maxRetries: 3,
+        baseDelay: 1000,
+      });
 
       if (!res.ok) {
         throw new Error(`Failed to fetch activities: ${res.status}`);
@@ -121,7 +125,7 @@ export function useActivities(options: UseActivitiesOptions = {}) {
     enabled: enabled && !!user,
     staleTime: 30 * 1000, // Consider fresh for 30s
     gcTime: 5 * 60 * 1000, // Keep in cache for 5 minutes
-    retry: 2,
+    retry: false, // Disable React Query retry since fetchWithRetry handles it
   });
 
   return {

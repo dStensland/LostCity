@@ -7,6 +7,22 @@ import CategoryIcon, { CATEGORY_CONFIG, type CategoryType } from "./CategoryIcon
 import { useAuth } from "@/lib/auth-context";
 import { MobileFilterSheet } from "./MobileFilterSheet";
 
+// Group categories into logical sections
+const CATEGORY_GROUPS = {
+  "Popular": ["music", "food_drink", "nightlife"],
+  "Arts & Culture": ["art", "theater", "comedy", "film", "dance", "words"],
+  "Activities": ["sports", "fitness", "gaming", "outdoors", "family", "tours"],
+  "Community": ["community", "meetup", "learning", "religious", "markets", "wellness"],
+} as const;
+
+// Get all categories that are in groups
+const GROUPED_CATEGORY_VALUES = Object.values(CATEGORY_GROUPS).flat() as readonly string[];
+
+// Get categories that aren't in any group (for "Other" section)
+const UNGROUPED_CATEGORIES = CATEGORIES.filter(
+  cat => !GROUPED_CATEGORY_VALUES.includes(cat.value)
+);
+
 type SimpleFilterBarProps = {
   variant?: "full" | "compact";
 };
@@ -225,33 +241,87 @@ export default function SimpleFilterBar({ variant = "full" }: SimpleFilterBarPro
               {categoryDropdownOpen && (
                 <div className="absolute top-full left-0 mt-1 w-56 max-h-80 overflow-y-auto rounded-lg border border-[var(--twilight)] shadow-xl z-50" style={{ backgroundColor: "var(--void)" }}>
                   <div className="p-2">
-                    {CATEGORIES.map((cat) => {
-                      const isActive = currentCategories.includes(cat.value);
-                      return (
-                        <button
-                          key={cat.value}
-                          onClick={() => toggleCategory(cat.value)}
-                          className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg font-mono text-xs font-medium transition-colors ${
-                            isActive
-                              ? "bg-[var(--coral)] text-[var(--void)]"
-                              : "text-[var(--cream)] hover:bg-[var(--twilight)]"
-                          }`}
-                        >
-                          <CategoryIcon
-                            type={cat.value}
-                            size={14}
-                            style={{ color: isActive ? "var(--void)" : CATEGORY_CONFIG[cat.value as CategoryType]?.color }}
-                            glow={isActive ? "none" : "subtle"}
-                          />
-                          {cat.label}
-                          {isActive && (
-                            <svg className="w-3 h-3 ml-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                            </svg>
-                          )}
-                        </button>
-                      );
-                    })}
+                    {Object.entries(CATEGORY_GROUPS).map(([groupName, categoryValues], groupIdx) => (
+                      <div key={groupName}>
+                        {/* Section Header */}
+                        <div className="px-3 py-1.5 text-[0.6rem] font-mono uppercase tracking-wider text-[var(--muted)]">
+                          {groupName}
+                        </div>
+
+                        {/* Categories in this group */}
+                        {categoryValues.map((catValue) => {
+                          const cat = CATEGORIES.find(c => c.value === catValue);
+                          if (!cat) return null;
+                          const isActive = currentCategories.includes(cat.value);
+                          return (
+                            <button
+                              key={cat.value}
+                              onClick={() => toggleCategory(cat.value)}
+                              className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg font-mono text-xs font-medium transition-colors ${
+                                isActive
+                                  ? "bg-[var(--coral)] text-[var(--void)]"
+                                  : "text-[var(--cream)] hover:bg-[var(--twilight)]"
+                              }`}
+                            >
+                              <CategoryIcon
+                                type={cat.value}
+                                size={14}
+                                style={{ color: isActive ? "var(--void)" : CATEGORY_CONFIG[cat.value as CategoryType]?.color }}
+                                glow={isActive ? "none" : "subtle"}
+                              />
+                              {cat.label}
+                              {isActive && (
+                                <svg className="w-3 h-3 ml-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                </svg>
+                              )}
+                            </button>
+                          );
+                        })}
+
+                        {/* Separator between groups (except after last group) */}
+                        {groupIdx < Object.keys(CATEGORY_GROUPS).length - 1 && (
+                          <div className="h-px bg-[var(--twilight)] my-1" />
+                        )}
+                      </div>
+                    ))}
+
+                    {/* Other section for ungrouped categories */}
+                    {UNGROUPED_CATEGORIES.length > 0 && (
+                      <div>
+                        <div className="h-px bg-[var(--twilight)] my-1" />
+                        <div className="px-3 py-1.5 text-[0.6rem] font-mono uppercase tracking-wider text-[var(--muted)]">
+                          Other
+                        </div>
+                        {UNGROUPED_CATEGORIES.map((cat) => {
+                          const isActive = currentCategories.includes(cat.value);
+                          return (
+                            <button
+                              key={cat.value}
+                              onClick={() => toggleCategory(cat.value)}
+                              className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg font-mono text-xs font-medium transition-colors ${
+                                isActive
+                                  ? "bg-[var(--coral)] text-[var(--void)]"
+                                  : "text-[var(--cream)] hover:bg-[var(--twilight)]"
+                              }`}
+                            >
+                              <CategoryIcon
+                                type={cat.value}
+                                size={14}
+                                style={{ color: isActive ? "var(--void)" : CATEGORY_CONFIG[cat.value as CategoryType]?.color }}
+                                glow={isActive ? "none" : "subtle"}
+                              />
+                              {cat.label}
+                              {isActive && (
+                                <svg className="w-3 h-3 ml-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                </svg>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -343,6 +413,84 @@ export default function SimpleFilterBar({ variant = "full" }: SimpleFilterBarPro
               </span>
               Free only
             </button>
+
+            {/* Active filter chips - desktop only */}
+            {hasFilters && (
+              <div className="flex items-center gap-1.5 ml-2">
+                {/* Category chips - show first 2 */}
+                {currentCategories.slice(0, 2).map((cat) => {
+                  const category = CATEGORIES.find((c) => c.value === cat);
+                  return (
+                    <span
+                      key={cat}
+                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[var(--coral)]/20 text-[var(--coral)] text-xs font-mono"
+                    >
+                      {category?.label || cat}
+                      <button
+                        onClick={() => toggleCategory(cat)}
+                        className="hover:bg-[var(--coral)]/30 rounded-full p-0.5 transition-colors"
+                        aria-label={`Remove ${category?.label || cat} filter`}
+                      >
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </span>
+                  );
+                })}
+                {/* "+N more" indicator if many category filters */}
+                {currentCategories.length > 2 && (
+                  <span className="text-xs text-[var(--muted)] font-mono">
+                    +{currentCategories.length - 2}
+                  </span>
+                )}
+                {/* Date chip */}
+                {currentDateFilter && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[var(--gold)]/20 text-[var(--gold)] text-xs font-mono">
+                    {dateFilterLabel}
+                    <button
+                      onClick={() => setDateFilter(currentDateFilter)}
+                      className="hover:bg-[var(--gold)]/30 rounded-full p-0.5 transition-colors"
+                      aria-label={`Remove ${dateFilterLabel} filter`}
+                    >
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </span>
+                )}
+                {/* Free only chip */}
+                {currentFreeOnly && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[var(--neon-green)]/20 text-[var(--neon-green)] text-xs font-mono">
+                    Free
+                    <button
+                      onClick={toggleFreeOnly}
+                      className="hover:bg-[var(--neon-green)]/30 rounded-full p-0.5 transition-colors"
+                      aria-label="Remove free only filter"
+                    >
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </span>
+                )}
+                {/* Following chip */}
+                {currentFeedMode === "following" && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[var(--neon-cyan)]/20 text-[var(--neon-cyan)] text-xs font-mono">
+                    Following
+                    <button
+                      onClick={() => toggleFeedMode("all")}
+                      className="hover:bg-[var(--neon-cyan)]/30 rounded-full p-0.5 transition-colors"
+                      aria-label="Remove following filter"
+                    >
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </span>
+                )}
+              </div>
+            )}
 
             {/* Spacer */}
             <div className="flex-1" />

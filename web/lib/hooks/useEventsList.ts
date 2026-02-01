@@ -4,6 +4,7 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import { useSearchParams } from "next/navigation";
 import { useMemo, useCallback } from "react";
 import type { EventWithLocation } from "@/lib/search";
+import { fetchWithRetry } from "@/lib/fetchWithRetry";
 
 /**
  * Response from /api/events with cursor pagination
@@ -94,7 +95,21 @@ export function useEventsList(options: UseEventsListOptions = {}) {
     queryKey: ["events", "list", filtersKey, portalId, portalExclusive],
     queryFn: async ({ pageParam, signal }) => {
       const params = buildApiParams(pageParam as string | null);
-      const res = await fetch(`/api/events?${params}`, { signal });
+      const res = await fetchWithRetry(
+        `/api/events?${params}`,
+        { signal },
+        {
+          maxRetries: 3,
+          baseDelay: 1000,
+          // Don't retry on abort errors (happens during view switching)
+          shouldRetry: (error, response) => {
+            if (error.name === "AbortError") return false;
+            if (!response) return true;
+            if (response.status >= 500) return true;
+            return false;
+          },
+        }
+      );
 
       if (!res.ok) {
         throw new Error(`Failed to fetch events: ${res.status}`);
@@ -107,9 +122,8 @@ export function useEventsList(options: UseEventsListOptions = {}) {
     enabled,
     // Don't refetch all pages on window focus
     refetchOnWindowFocus: false,
-    // Retry failed requests
-    retry: 3,
-    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    // Disable React Query retry since fetchWithRetry handles it
+    retry: false,
     // Treat abort as a non-error (happens during view switching)
     throwOnError: (error) => {
       if (error.name === "AbortError") return false;
