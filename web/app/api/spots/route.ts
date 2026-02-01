@@ -44,10 +44,10 @@ export async function GET(request: NextRequest) {
 
     // Fetch all active venues with enhanced data
     // Note: is_24_hours column may not exist in all environments
+    // TODO: Add portal-based geographic filtering when portals define their cities
     let query = supabase
       .from("venues")
       .select("id, name, slug, address, neighborhood, venue_type, city, image_url, price_level, hours, hours_display, vibes, short_description")
-      .eq("city", "Atlanta") // TODO: make this dynamic based on portal
       .neq("active", false); // Exclude deactivated venues
 
     // Apply venue type filter
