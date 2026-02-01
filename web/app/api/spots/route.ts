@@ -34,7 +34,6 @@ export async function GET(request: NextRequest) {
       price_level: number | null;
       hours: HoursData | null;
       hours_display: string | null;
-      is_24_hours: boolean | null;
       vibes: string[] | null;
       short_description: string | null;
     };
@@ -44,9 +43,10 @@ export async function GET(request: NextRequest) {
     };
 
     // Fetch all active venues with enhanced data
+    // Note: is_24_hours column may not exist in all environments
     let query = supabase
       .from("venues")
-      .select("id, name, slug, address, neighborhood, venue_type, city, image_url, price_level, hours, hours_display, is_24_hours, vibes, short_description")
+      .select("id, name, slug, address, neighborhood, venue_type, city, image_url, price_level, hours, hours_display, vibes, short_description")
       .eq("city", "Atlanta") // TODO: make this dynamic based on portal
       .neq("active", false); // Exclude deactivated venues
 
@@ -116,7 +116,7 @@ export async function GET(request: NextRequest) {
     // Combine venues with event counts and compute open status
     const now = new Date();
     let spots = (venues as VenueRow[]).map(venue => {
-      const openStatus = isOpenAt(venue.hours, now, venue.is_24_hours || false);
+      const openStatus = isOpenAt(venue.hours, now, false);
       return {
         id: venue.id,
         name: venue.name,
@@ -129,7 +129,7 @@ export async function GET(request: NextRequest) {
         price_level: venue.price_level,
         hours: venue.hours,
         hours_display: venue.hours_display,
-        is_24_hours: venue.is_24_hours,
+        is_24_hours: false,
         vibes: venue.vibes,
         short_description: venue.short_description,
         is_open: openStatus.isOpen,
