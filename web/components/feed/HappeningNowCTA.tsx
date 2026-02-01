@@ -89,43 +89,44 @@ export default function HappeningNowCTA({ portalSlug }: HappeningNowCTAProps) {
   return (
     <Link
       href={`/${portalSlug}/happening-now`}
-      className="block mb-6 p-4 rounded-xl border border-[var(--coral)]/30 bg-gradient-to-r from-[var(--coral)]/10 via-[var(--rose)]/5 to-transparent hover:border-[var(--coral)]/50 hover:shadow-[0_0_20px_var(--coral)/15] hover:scale-[1.01] active:scale-[0.99] transition-all duration-200 group animate-happening-now-pulse"
+      className="block mb-6 p-4 rounded-xl border-2 border-[var(--neon-red)]/40 bg-gradient-to-r from-[var(--neon-red)]/15 via-[var(--neon-red)]/8 to-transparent hover:border-[var(--neon-red)]/60 hover:shadow-[0_0_24px_var(--neon-red)/25] hover:scale-[1.01] active:scale-[0.99] transition-all duration-200 group animate-happening-now-pulse"
     >
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          {/* Live indicator - enhanced triple ring pulse effect */}
-          <div className="relative flex items-center justify-center w-6 h-6">
-            <span className="absolute w-6 h-6 bg-[var(--coral)]/20 rounded-full animate-ping" style={{ animationDuration: '2s' }} />
-            <span className="absolute w-4 h-4 bg-[var(--coral)]/30 rounded-full animate-pulse" />
-            <span className="relative w-2.5 h-2.5 bg-[var(--coral)] rounded-full shadow-[0_0_12px_var(--coral)]" />
+          {/* Live indicator - enhanced quadruple ring pulse effect with brighter accent */}
+          <div className="relative flex items-center justify-center w-7 h-7">
+            <span className="absolute w-7 h-7 bg-[var(--neon-red)]/25 rounded-full animate-ping" style={{ animationDuration: '1.5s' }} />
+            <span className="absolute w-5 h-5 bg-[var(--neon-red)]/35 rounded-full animate-pulse" style={{ animationDuration: '2s' }} />
+            <span className="absolute w-3 h-3 bg-[var(--neon-red)]/50 rounded-full animate-ping" style={{ animationDuration: '1s' }} />
+            <span className="relative w-2.5 h-2.5 bg-[var(--neon-red)] rounded-full shadow-[0_0_16px_var(--neon-red)]" />
           </div>
 
           <div>
             <div className="flex items-center gap-2">
-              <span className="font-mono text-xs font-medium text-[var(--coral)] uppercase tracking-wider">
-                Happening Now
+              <span className="font-mono text-sm font-bold text-[var(--neon-red)] uppercase tracking-wider">
+                LIVE NOW
               </span>
-              <span className="px-1.5 py-0.5 rounded bg-[var(--coral)] text-[var(--void)] font-mono text-[10px] font-bold">
+              <span className="px-2 py-0.5 rounded-full bg-[var(--neon-red)] text-[var(--void)] font-mono text-xs font-bold shadow-[0_0_8px_var(--neon-red)/40]">
                 {liveCount}
               </span>
             </div>
-            <p className="text-sm text-[var(--soft)] mt-0.5">
+            <p className="text-sm text-[var(--soft)] mt-0.5 font-medium">
               {liveCount === 1
-                ? "1 event is live right now in "
-                : `${liveCount} events are live right now in `}
+                ? "1 event happening right now in "
+                : `${liveCount} events happening right now in `}
               <span className="text-[var(--cream)]">{portal.name}</span>
             </p>
           </div>
         </div>
 
-        {/* Arrow */}
+        {/* Arrow with pulse */}
         <svg
-          className="w-5 h-5 text-[var(--coral)] group-hover:translate-x-1 transition-transform"
+          className="w-5 h-5 text-[var(--neon-red)] group-hover:translate-x-1 transition-transform animate-pulse"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
         >
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
         </svg>
       </div>
     </Link>

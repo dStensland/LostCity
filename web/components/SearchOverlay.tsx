@@ -425,11 +425,11 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
       {/* Search Container */}
       <div className="fixed top-0 left-0 right-0 z-[60] p-4 pt-20 animate-fade-up">
         <div className="max-w-2xl mx-auto">
-          {/* Search Input */}
-          <div className="rounded-2xl border border-[var(--twilight)] overflow-hidden shadow-2xl bg-[var(--night)]">
+          {/* Search Input - standardized design */}
+          <div className="rounded-xl border border-[var(--twilight)] overflow-hidden shadow-2xl" style={{ backgroundColor: "var(--card-bg)" }}>
             <div className="flex items-center px-4 py-3">
               <svg
-                className="w-5 h-5 text-[var(--muted)] mr-3"
+                className="w-5 h-5 text-[var(--soft)] mr-3"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -451,7 +451,7 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
                 autoCorrect="off"
                 autoCapitalize="off"
                 spellCheck={false}
-                className="flex-1 bg-transparent text-[var(--cream)] placeholder:text-[var(--muted)] outline-none text-lg font-display transition-all duration-300"
+                className="flex-1 bg-transparent text-[var(--cream)] placeholder:text-[var(--soft)] outline-none text-lg font-display transition-all duration-300"
                 role="combobox"
                 aria-expanded={hasResults}
                 aria-controls="search-results"

@@ -203,15 +203,16 @@ export default function PortalHappeningNow({ portalId, portalSlug, isExclusive =
 
   return (
     <div className="py-4">
-      {/* Header with live indicator and update timestamp */}
+      {/* Header with live indicator and update timestamp - enhanced urgency */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
-          <span className="relative flex h-3 w-3">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--neon-red)] opacity-30" />
-            <span className="relative inline-flex rounded-full h-3 w-3 bg-[var(--neon-red)] opacity-80" />
+          <span className="relative flex h-4 w-4">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--neon-red)] opacity-40" style={{ animationDuration: '1.5s' }} />
+            <span className="animate-pulse absolute inline-flex h-3 w-3 rounded-full bg-[var(--neon-red)] opacity-60" style={{ animationDuration: '2s' }} />
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-[var(--neon-red)] shadow-[0_0_8px_var(--neon-red)]" />
           </span>
-          <p className="font-mono text-sm font-medium text-[var(--cream)]">
-            {events.length} live now
+          <p className="font-mono text-base font-bold text-[var(--neon-red)]">
+            {events.length} LIVE NOW
           </p>
         </div>
         <span className="font-mono text-[0.6rem] text-[var(--muted)] opacity-60">

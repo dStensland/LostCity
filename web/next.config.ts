@@ -225,6 +225,23 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "**.woodruffcenter.org",
       },
+      // Georgia Tech domains
+      {
+        protocol: "https",
+        hostname: "ramblinwreck.com",
+      },
+      {
+        protocol: "https",
+        hostname: "**.ramblinwreck.com",
+      },
+      {
+        protocol: "https",
+        hostname: "**.gatech.edu",
+      },
+      {
+        protocol: "https",
+        hostname: "gatech.edu",
+      },
     ],
   },
 };

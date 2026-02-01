@@ -588,7 +588,7 @@ body::after {
   color: var(--cream);
 }
 
-/* Navigation tabs - streetlight in rain aesthetic */
+/* Navigation tabs - streetlight in rain aesthetic with improved contrast */
 .nav-tab {
   position: relative;
 }
@@ -600,20 +600,24 @@ body::after {
     hsl(var(--neon-amber-hsl) / 0.85) 100%
   );
   box-shadow:
-    0 0 8px hsl(var(--neon-amber-hsl) / 0.6),
-    0 0 16px hsl(var(--neon-amber-hsl) / 0.3),
-    inset 0 1px 0 hsl(0 0% 100% / 0.2);
+    0 0 12px hsl(var(--neon-amber-hsl) / 0.7),
+    0 0 20px hsl(var(--neon-amber-hsl) / 0.4),
+    0 3px 0 hsl(var(--neon-amber-hsl)),
+    inset 0 1px 0 hsl(0 0% 100% / 0.3);
   text-shadow: 0 1px 2px hsl(0 0% 0% / 0.3);
 }
 
 .nav-tab:not(.nav-tab-active):hover {
   background: hsl(var(--neon-amber-hsl) / 0.15);
+  border-bottom: 2px solid hsl(var(--neon-amber-hsl) / 0.4);
 }
 
-/* Reduced motion - disable glow */
+/* Reduced motion - disable glow but keep border for contrast */
 @media (prefers-reduced-motion: reduce) {
   .nav-tab-active {
-    box-shadow: inset 0 1px 0 hsl(0 0% 100% / 0.2);
+    box-shadow:
+      0 3px 0 hsl(var(--neon-amber-hsl)),
+      inset 0 1px 0 hsl(0 0% 100% / 0.2);
   }
 }
 

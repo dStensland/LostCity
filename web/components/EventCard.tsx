@@ -227,7 +227,7 @@ function EventCard({ event, index = 0, skipAnimation = false, portalSlug, friend
           {/* Mobile: Stacked layout for more title space */}
           <div className="sm:hidden">
             {/* Top row: category + live badge + menu */}
-            <div className="flex items-center gap-2 mb-1">
+            <div className="flex items-center gap-2 mb-1.5">
               {event.category && (
                 <span
                   className="inline-flex items-center justify-center w-6 h-6 rounded"
@@ -249,14 +249,14 @@ function EventCard({ event, index = 0, skipAnimation = false, portalSlug, friend
               )}
               <EventCardMenu eventId={event.id} onHide={onHide} className="ml-auto" />
             </div>
-            {/* Title row: full width */}
-            <h3 className="text-[var(--cream)] font-medium leading-snug line-clamp-2 group-hover:text-[var(--glow-color,var(--neon-magenta))] transition-colors">
+            {/* Title row: full width - larger and bolder */}
+            <h3 className="text-[var(--cream)] font-semibold text-lg leading-tight line-clamp-2 group-hover:text-[var(--glow-color,var(--neon-magenta))] transition-colors mb-1">
               {event.title}
             </h3>
           </div>
 
           {/* Desktop: Inline layout */}
-          <div className="hidden sm:flex items-center gap-2">
+          <div className="hidden sm:flex items-center gap-2 mb-0.5">
             {event.category && (
               <span
                 className="flex-shrink-0 inline-flex items-center justify-center w-7 h-7 rounded"
@@ -268,7 +268,7 @@ function EventCard({ event, index = 0, skipAnimation = false, portalSlug, friend
               </span>
             )}
             <span
-              className="text-[var(--cream)] transition-colors line-clamp-1 group-hover:text-[var(--glow-color,var(--neon-magenta))]"
+              className="text-[var(--cream)] font-semibold text-lg transition-colors line-clamp-1 group-hover:text-[var(--glow-color,var(--neon-magenta))]"
             >
               {event.title}
             </span>
@@ -314,10 +314,10 @@ function EventCard({ event, index = 0, skipAnimation = false, portalSlug, friend
             </div>
           )}
 
-          {/* Details row */}
-          <div className="flex items-center gap-1.5 text-xs text-[var(--muted)] mt-1">
+          {/* Details row - venue and metadata with better hierarchy */}
+          <div className="flex items-center gap-1.5 text-sm text-[var(--soft)] mt-1">
             {event.venue && (
-              <span className="truncate max-w-[40%]" title={event.venue.name}>{event.venue.name}</span>
+              <span className="truncate max-w-[40%] font-medium" title={event.venue.name}>{event.venue.name}</span>
             )}
             {/* Subcategory chip - shows activity type when useful */}
             {shouldShowSubcategory(event.subcategory, event.category) && (
