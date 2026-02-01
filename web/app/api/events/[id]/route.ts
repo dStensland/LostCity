@@ -3,6 +3,7 @@ import { NextRequest } from "next/server";
 import { getDistanceMiles } from "@/lib/geo";
 import { doTimeRangesOverlap, isSpotOpenDuringEvent, HoursData } from "@/lib/hours";
 import { getLocalDateString } from "@/lib/formats";
+import { logger } from "@/lib/logger";
 
 const NEARBY_RADIUS_MILES = 10;
 
@@ -30,7 +31,7 @@ export async function GET(
     .maybeSingle();
 
   if (error || !event) {
-    console.error("Event fetch error:", error);
+    logger.error("Event fetch error", error, { eventId, component: "events/[id]" });
     return Response.json({ error: "Event not found" }, { status: 404 });
   }
 

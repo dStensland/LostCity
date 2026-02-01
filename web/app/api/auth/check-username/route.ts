@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
+import { logger } from "@/lib/logger";
 
 // POST /api/auth/check-username
 // Check if a username is available and optionally reserve it
@@ -95,7 +96,7 @@ export async function POST(request: NextRequest) {
             error: "Username is not available",
           });
         }
-        console.error("Error reserving username:", reserveError);
+        logger.error("Error reserving username", reserveError, { username: normalizedUsername, component: "auth/check-username" });
         // Don't fail the check - just return available without reservation
         return NextResponse.json({ available: true, reservation_id: null });
       }
@@ -108,7 +109,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ available: true });
   } catch (error) {
-    console.error("Error checking username:", error);
+    logger.error("Error checking username", error, { component: "auth/check-username" });
     return NextResponse.json(
       { available: false, error: "Failed to check username" },
       { status: 500 }

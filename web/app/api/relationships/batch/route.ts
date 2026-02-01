@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { NextResponse } from "next/server";
+import { withAuth } from "@/lib/api-middleware";
 
 export type RelationshipStatus =
   | "none"
@@ -36,17 +36,9 @@ type FriendRequestRow = { inviter_id: string; invitee_id: string };
  * 5. "followed_by" - Target user follows current user
  * 6. "none" - No relationship exists
  */
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (request, { user, supabase }) => {
   try {
-    // 1. Verify authentication
-    const supabase = await createClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    // 2. Parse and validate request body
+    // 1. Parse and validate request body
     const body = await request.json();
     const { userIds } = body as { userIds?: unknown };
 
@@ -191,4 +183,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

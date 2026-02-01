@@ -1,6 +1,13 @@
 import type { NextConfig } from "next";
 import { withSentryConfig } from "@sentry/nextjs";
 
+// Bundle analyzer - use with: ANALYZE=true npm run build
+import bundleAnalyzer from "@next/bundle-analyzer";
+
+const withBundleAnalyzer = bundleAnalyzer({
+  enabled: process.env.ANALYZE === "true",
+});
+
 const securityHeaders = [
   {
     key: "X-Frame-Options",
@@ -222,17 +229,19 @@ const nextConfig: NextConfig = {
   },
 };
 
-// Wrap with Sentry (only adds overhead in production with DSN configured)
-export default withSentryConfig(nextConfig, {
-  // Suppress source map upload logs in CI
-  silent: true,
+// Wrap with bundle analyzer and Sentry
+export default withBundleAnalyzer(
+  withSentryConfig(nextConfig, {
+    // Suppress source map upload logs in CI
+    silent: true,
 
-  // Source maps configuration
-  sourcemaps: {
-    // Delete source maps after upload to keep bundle small
-    deleteSourcemapsAfterUpload: true,
-  },
+    // Source maps configuration
+    sourcemaps: {
+      // Delete source maps after upload to keep bundle small
+      deleteSourcemapsAfterUpload: true,
+    },
 
-  // Disable tunneling (not needed for basic setup)
-  tunnelRoute: undefined,
-});
+    // Disable tunneling (not needed for basic setup)
+    tunnelRoute: undefined,
+  })
+);

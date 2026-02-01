@@ -15,6 +15,7 @@ import type {
 } from "@/lib/types";
 import { autoApproveVenue } from "@/lib/venue-auto-approve";
 import crypto from "crypto";
+import { logger } from "@/lib/logger";
 
 // Rate limits for submissions (per day) - admins bypass these
 const SUBMISSION_LIMITS = {
@@ -250,7 +251,7 @@ export async function POST(request: NextRequest) {
     const venueData = data as VenueSubmissionData;
     const placeId = venueData.foursquare_id || venueData.google_place_id;
     if (placeId) {
-      console.log(`Attempting auto-approval for venue with Place ID: ${placeId}`);
+      logger.info("Attempting auto-approval for venue", { placeId, userId: user.id, component: "submissions" });
 
       const autoApproveResult = await autoApproveVenue(
         placeId,
@@ -260,7 +261,7 @@ export async function POST(request: NextRequest) {
 
       if (autoApproveResult.success && autoApproveResult.venue) {
         // Auto-approval succeeded, return success immediately
-        console.log(`Venue auto-approved: ${autoApproveResult.venue.name} (ID: ${autoApproveResult.venue.id})`);
+        logger.info("Venue auto-approved", { venueName: autoApproveResult.venue.name, venueId: autoApproveResult.venue.id, userId: user.id, component: "submissions" });
 
         // Fetch the submission that was created by autoApproveVenue
         const { data: approvedSubmission } = await supabase
@@ -287,7 +288,7 @@ export async function POST(request: NextRequest) {
         );
       } else {
         // Auto-approval failed, log the error and fall through to normal submission
-        console.warn(`Auto-approval failed: ${autoApproveResult.error}. Falling back to pending submission.`);
+        logger.warn("Auto-approval failed, falling back to pending submission", { error: autoApproveResult.error, placeId, userId: user.id, component: "submissions" });
       }
     }
   }
@@ -316,7 +317,7 @@ export async function POST(request: NextRequest) {
     .maybeSingle();
 
   if (error) {
-    console.error("Submission creation error:", error);
+    logger.error("Submission creation error", error, { userId: user.id, submissionType: submission_type, component: "submissions" });
     return errorResponse(error, "submission creation");
   }
 

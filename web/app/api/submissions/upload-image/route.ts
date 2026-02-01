@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, getUser } from "@/lib/supabase/server";
 import { applyRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
+import { logger } from "@/lib/logger";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
@@ -62,7 +63,7 @@ export async function POST(request: NextRequest) {
       });
 
     if (error) {
-      console.error("Image upload error:", error);
+      logger.error("Image upload error", error, { userId: user.id, filename, component: "submissions/upload-image" });
       return NextResponse.json(
         { error: "Failed to upload image" },
         { status: 500 }
@@ -80,7 +81,7 @@ export async function POST(request: NextRequest) {
       message: "Image uploaded successfully",
     });
   } catch (error) {
-    console.error("Upload processing error:", error);
+    logger.error("Upload processing error", error, { userId: user.id, component: "submissions/upload-image" });
     return NextResponse.json(
       { error: "Failed to process upload" },
       { status: 500 }

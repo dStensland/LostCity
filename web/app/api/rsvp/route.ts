@@ -1,8 +1,9 @@
-import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
-import { createServiceClient } from "@/lib/supabase/service";
+import { NextResponse } from "next/server";
 import { parseIntParam, validationError } from "@/lib/api-utils";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
+import { ensureUserProfile } from "@/lib/user-utils";
+import { withAuth } from "@/lib/api-middleware";
+import { logger } from "@/lib/logger";
 
 const VALID_STATUSES = ["going", "interested", "went"] as const;
 const VALID_VISIBILITIES = ["friends", "public", "private"] as const;
@@ -11,24 +12,12 @@ const VALID_VISIBILITIES = ["friends", "public", "private"] as const;
  * POST /api/rsvp
  * Create or update an RSVP
  */
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (request, { user, serviceClient }) => {
   // Apply rate limiting
   const rateLimitResult = applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
   if (rateLimitResult) return rateLimitResult;
 
   try {
-    const supabase = await createClient();
-
-    // Verify authentication
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
     const body = await request.json();
     const { event_id, status, visibility = "friends" } = body;
 
@@ -45,35 +34,8 @@ export async function POST(request: NextRequest) {
       return validationError("Invalid visibility. Must be: friends, public, or private");
     }
 
-    // Use service client to bypass RLS
-    const serviceClient = createServiceClient();
-
     // Ensure user has a profile (create if missing)
-    const { data: existingProfile } = await serviceClient
-      .from("profiles")
-      .select("id")
-      .eq("id", user.id)
-      .maybeSingle();
-
-    if (!existingProfile) {
-      // Create profile for user
-      const username =
-        user.user_metadata?.username ||
-        user.email?.split("@")[0]?.toLowerCase().replace(/[^a-z0-9_]/g, "") ||
-        `user_${user.id.substring(0, 8)}`;
-
-      await serviceClient.from("profiles").insert({
-        id: user.id,
-        username: username.substring(0, 30),
-        display_name: user.user_metadata?.full_name || null,
-        avatar_url: user.user_metadata?.avatar_url || null,
-      } as never);
-
-      // Also create user_preferences
-      await serviceClient.from("user_preferences").insert({
-        user_id: user.id,
-      } as never);
-    }
+    await ensureUserProfile(user, serviceClient);
 
     // Upsert the RSVP
     const { data, error } = await serviceClient
@@ -92,7 +54,7 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error) {
-      console.error("RSVP upsert error:", error);
+      logger.error("RSVP upsert error", error, { userId: user.id, eventId: event_id, component: "rsvp" });
       return NextResponse.json(
         { error: error.message },
         { status: 500 }
@@ -101,45 +63,30 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true, rsvp: data });
   } catch (error) {
-    console.error("RSVP API error:", error);
+    logger.error("RSVP API error", error, { userId: user.id, component: "rsvp" });
     return NextResponse.json(
       { error: "Failed to save RSVP" },
       { status: 500 }
     );
   }
-}
+});
 
 /**
  * DELETE /api/rsvp
  * Remove an RSVP
  */
-export async function DELETE(request: NextRequest) {
+export const DELETE = withAuth(async (request, { user, serviceClient }) => {
   // Apply rate limiting
   const rateLimitResult = applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
   if (rateLimitResult) return rateLimitResult;
 
   try {
-    const supabase = await createClient();
-
-    // Verify authentication
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
     const { searchParams } = new URL(request.url);
     const eventId = parseIntParam(searchParams.get("event_id"));
 
     if (eventId === null || eventId <= 0) {
       return validationError("Missing or invalid event_id");
     }
-
-    // Use service client to bypass RLS
-    const serviceClient = createServiceClient();
 
     const { error } = await serviceClient
       .from("event_rsvps")
@@ -148,7 +95,7 @@ export async function DELETE(request: NextRequest) {
       .eq("event_id", eventId);
 
     if (error) {
-      console.error("RSVP delete error:", error);
+      logger.error("RSVP delete error", error, { userId: user.id, eventId, component: "rsvp" });
       return NextResponse.json(
         { error: error.message },
         { status: 500 }
@@ -157,41 +104,26 @@ export async function DELETE(request: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("RSVP delete API error:", error);
+    logger.error("RSVP delete API error", error, { userId: user.id, component: "rsvp" });
     return NextResponse.json(
       { error: "Failed to remove RSVP" },
       { status: 500 }
     );
   }
-}
+});
 
 /**
  * GET /api/rsvp
  * Get user's RSVP for an event
  */
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async (request, { user, serviceClient }) => {
   try {
-    const supabase = await createClient();
-
-    // Verify authentication
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
     const { searchParams } = new URL(request.url);
     const eventId = parseIntParam(searchParams.get("event_id"));
 
     if (eventId === null || eventId <= 0) {
       return validationError("Missing or invalid event_id");
     }
-
-    // Use service client to bypass RLS
-    const serviceClient = createServiceClient();
 
     const { data, error } = await serviceClient
       .from("event_rsvps")
@@ -201,7 +133,7 @@ export async function GET(request: NextRequest) {
       .maybeSingle();
 
     if (error) {
-      console.error("RSVP fetch error:", error);
+      logger.error("RSVP fetch error", error, { userId: user.id, eventId, component: "rsvp" });
       return NextResponse.json(
         { error: error.message },
         { status: 500 }
@@ -210,10 +142,10 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ rsvp: data });
   } catch (error) {
-    console.error("RSVP get API error:", error);
+    logger.error("RSVP get API error", error, { userId: user.id, component: "rsvp" });
     return NextResponse.json(
       { error: "Failed to fetch RSVP" },
       { status: 500 }
     );
   }
-}
+});

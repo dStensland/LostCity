@@ -1,21 +1,13 @@
-import { NextRequest, NextResponse } from "next/server";
-import { createClient, getUser } from "@/lib/supabase/server";
-import { createServiceClient } from "@/lib/supabase/service";
+import { NextResponse } from "next/server";
 import { errorResponse } from "@/lib/api-utils";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
+import { withAuth } from "@/lib/api-middleware";
 
 // GET /api/invites - Get user's invites
-export async function GET(request: Request) {
+export const GET = withAuth(async (request, { user, supabase }) => {
   const { searchParams } = new URL(request.url);
   const type = searchParams.get("type") || "received"; // received, sent, all
   const status = searchParams.get("status"); // pending, accepted, declined, maybe
-
-  const user = await getUser();
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const supabase = await createClient();
 
   let query = supabase
     .from("event_invites")
@@ -69,18 +61,13 @@ export async function GET(request: Request) {
     invites: data || [],
     pendingCount: pendingCount || 0,
   });
-}
+});
 
 // POST /api/invites - Create a new invite
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (request, { user, supabase, serviceClient }) => {
   // Apply rate limiting
   const rateLimitResult = applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
   if (rateLimitResult) return rateLimitResult;
-
-  const user = await getUser();
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
 
   const body = await request.json();
   const { eventId, inviteeId, note } = body as {
@@ -103,10 +90,6 @@ export async function POST(request: NextRequest) {
       { status: 400 }
     );
   }
-
-  // Use regular client for reads, service client for mutations
-  const supabase = await createClient();
-  const serviceClient = createServiceClient();
 
   // Check if event exists
   const { data: event } = await supabase
@@ -163,4 +146,4 @@ export async function POST(request: NextRequest) {
   }
 
   return NextResponse.json({ invite }, { status: 201 });
-}
+});

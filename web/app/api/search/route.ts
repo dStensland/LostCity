@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { unifiedSearch, type SearchOptions } from "@/lib/unified-search";
 import { applyRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
+import { logger } from "@/lib/logger";
 
 // Helper to safely parse integers with validation
 function safeParseInt(
@@ -133,7 +134,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("Search API error:", error);
+    logger.error("Search API error", error, { component: "search" });
     return NextResponse.json(
       {
         results: [],

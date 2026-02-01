@@ -29,7 +29,7 @@ type AuthenticatedHandler = (
  * });
  */
 export function withAuth(handler: AuthenticatedHandler) {
-  return async (request: NextRequest): Promise<NextResponse> => {
+  return async (request: NextRequest): Promise<NextResponse | Response> => {
     const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
 
@@ -69,7 +69,7 @@ type AuthenticatedHandlerWithParams<T> = (
  * );
  */
 export function withAuthAndParams<T>(handler: AuthenticatedHandlerWithParams<T>) {
-  return async (request: NextRequest, { params }: { params: Promise<T> }): Promise<NextResponse> => {
+  return async (request: NextRequest, { params }: { params: Promise<T> }): Promise<NextResponse | Response> => {
     const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
 
@@ -109,7 +109,7 @@ export function withOptionalAuth(
     }
   ) => Promise<NextResponse | Response>
 ) {
-  return async (request: NextRequest): Promise<NextResponse> => {
+  return async (request: NextRequest): Promise<NextResponse | Response> => {
     const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
 

@@ -15,9 +15,9 @@ const PORTAL_CONFIG: Record<string, { name: string; color: string }> = {
 
 export default function Logo({ size = "md", href = "/", className = "", portal }: LogoProps) {
   const sizeConfig = {
-    sm: { fontSize: "1.5rem", lineHeight: 0.85, portalSize: "0.6rem", strokeWidth: "1px" },
-    md: { fontSize: "2rem", lineHeight: 0.85, portalSize: "0.75rem", strokeWidth: "1.5px" },
-    lg: { fontSize: "3.5rem", lineHeight: 0.85, portalSize: "1.25rem", strokeWidth: "2px" },
+    sm: { fontSize: "1.5rem", lineHeight: 0.85, portalSize: "0.6rem", strokeWidth: "1px", fontWeight: 700 },
+    md: { fontSize: "2rem", lineHeight: 0.85, portalSize: "0.75rem", strokeWidth: "1.5px", fontWeight: 700 },
+    lg: { fontSize: "3.5rem", lineHeight: 0.85, portalSize: "1.25rem", strokeWidth: "2px", fontWeight: 800 },
   };
 
   const config = sizeConfig[size];
@@ -29,35 +29,37 @@ export default function Logo({ size = "md", href = "/", className = "", portal }
       style={{ lineHeight: config.lineHeight }}
     >
       <span
-        className="font-[var(--font-bebas)] tracking-[0.02em]"
+        className="font-[var(--font-outfit)] tracking-[0.02em]"
         style={{
-          fontFamily: "var(--font-bebas), sans-serif",
+          fontFamily: "var(--font-outfit), sans-serif",
           fontSize: config.fontSize,
-          fontWeight: 400,
+          fontWeight: config.fontWeight,
           color: "#FF6B7A", // Brand coral - hardcoded to avoid portal theme overrides
+          letterSpacing: "0.05em",
         }}
       >
         LOST
       </span>
       <span
-        className="font-[var(--font-bebas)] tracking-[0.02em]"
+        className="font-[var(--font-outfit)] tracking-[0.02em]"
         style={{
-          fontFamily: "var(--font-bebas), sans-serif",
+          fontFamily: "var(--font-outfit), sans-serif",
           fontSize: config.fontSize,
-          fontWeight: 400,
+          fontWeight: config.fontWeight,
           color: "transparent",
           WebkitTextStroke: `${config.strokeWidth} #ffffff`,
+          letterSpacing: "0.05em",
         }}
       >
         CITY
       </span>
       {portalConfig && (
         <span
-          className="font-[var(--font-bebas)] tracking-[0.15em] mt-0.5"
+          className="font-[var(--font-outfit)] tracking-[0.15em] mt-0.5"
           style={{
-            fontFamily: "var(--font-bebas), sans-serif",
+            fontFamily: "var(--font-outfit), sans-serif",
             fontSize: config.portalSize,
-            fontWeight: 400,
+            fontWeight: 600,
             color: portalConfig.color,
             textShadow: portal === DEFAULT_PORTAL_SLUG ? "0 0 10px rgba(255, 215, 0, 0.4)" : "0 0 10px rgba(255, 107, 107, 0.4)",
           }}

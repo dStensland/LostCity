@@ -1,23 +1,17 @@
-import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
-import { createServiceClient } from "@/lib/supabase/service";
+import { NextResponse } from "next/server";
 import { parseIntParam, validationError } from "@/lib/api-utils";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
+import { ensureUserProfile } from "@/lib/user-utils";
+import { withOptionalAuth, withAuth } from "@/lib/api-middleware";
+import { logger } from "@/lib/logger";
 
 /**
  * GET /api/saved
  * Check if an item is saved
  */
-export async function GET(request: NextRequest) {
+export const GET = withOptionalAuth(async (request, { user, serviceClient }) => {
   try {
-    const supabase = await createClient();
-
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-
-    if (authError || !user) {
+    if (!user) {
       return NextResponse.json({ saved: false }, { status: 200 });
     }
 
@@ -28,8 +22,6 @@ export async function GET(request: NextRequest) {
     if (eventId === null && venueId === null) {
       return validationError("Missing or invalid event_id or venue_id");
     }
-
-    const serviceClient = createServiceClient();
 
     let query = serviceClient
       .from("saved_items")
@@ -46,32 +38,21 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ saved: !!data });
   } catch (error) {
-    console.error("Saved check API error:", error);
+    logger.error("Saved check API error", error, { userId: user?.id, component: "saved" });
     return NextResponse.json({ saved: false }, { status: 200 });
   }
-}
+});
 
 /**
  * POST /api/saved
  * Save an item
  */
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (request, { user, serviceClient }) => {
   // Apply rate limiting
   const rateLimitResult = applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
   if (rateLimitResult) return rateLimitResult;
 
   try {
-    const supabase = await createClient();
-
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
     const body = await request.json();
     const { event_id, venue_id } = body;
 
@@ -87,26 +68,8 @@ export async function POST(request: NextRequest) {
       return validationError("Missing event_id or venue_id");
     }
 
-    const serviceClient = createServiceClient();
-
     // Ensure profile exists
-    const { data: profile } = await serviceClient
-      .from("profiles")
-      .select("id")
-      .eq("id", user.id)
-      .maybeSingle();
-
-    if (!profile) {
-      // Create profile
-      const username =
-        user.email?.split("@")[0]?.toLowerCase().replace(/[^a-z0-9_]/g, "") ||
-        `user_${user.id.substring(0, 8)}`;
-
-      await serviceClient.from("profiles").insert({
-        id: user.id,
-        username: username.substring(0, 30),
-      } as never);
-    }
+    await ensureUserProfile(user, serviceClient);
 
     // Insert saved item
     const insertData: { user_id: string; event_id?: number; venue_id?: number } = {
@@ -125,38 +88,27 @@ export async function POST(request: NextRequest) {
       if (error.code === "23505") {
         return NextResponse.json({ success: true, alreadySaved: true });
       }
-      console.error("Save error:", error);
+      logger.error("Save error", error, { userId: user.id, eventId: event_id, venueId: venue_id, component: "saved" });
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Save API error:", error);
+    logger.error("Save API error", error, { userId: user.id, component: "saved" });
     return NextResponse.json({ error: "Failed to save" }, { status: 500 });
   }
-}
+});
 
 /**
  * DELETE /api/saved
  * Remove a saved item
  */
-export async function DELETE(request: NextRequest) {
+export const DELETE = withAuth(async (request, { user, serviceClient }) => {
   // Apply rate limiting
   const rateLimitResult = applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
   if (rateLimitResult) return rateLimitResult;
 
   try {
-    const supabase = await createClient();
-
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
     const { searchParams } = new URL(request.url);
     const eventId = parseIntParam(searchParams.get("event_id"));
     const venueId = parseIntParam(searchParams.get("venue_id"));
@@ -164,8 +116,6 @@ export async function DELETE(request: NextRequest) {
     if (eventId === null && venueId === null) {
       return validationError("Missing or invalid event_id or venue_id");
     }
-
-    const serviceClient = createServiceClient();
 
     let query = serviceClient
       .from("saved_items")
@@ -181,13 +131,13 @@ export async function DELETE(request: NextRequest) {
     const { error } = await query;
 
     if (error) {
-      console.error("Unsave error:", error);
+      logger.error("Unsave error", error, { userId: user.id, eventId, venueId, component: "saved" });
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Unsave API error:", error);
+    logger.error("Unsave API error", error, { userId: user.id, component: "saved" });
     return NextResponse.json({ error: "Failed to unsave" }, { status: 500 });
   }
-}
+});

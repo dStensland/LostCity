@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 
 /**
  * Cursor glow effect - a subtle radial gradient that follows the cursor
+ * Optimized to only animate when cursor moves and page is visible
  * Respects user preferences and reduced motion settings
  */
 export default function CursorGlow() {
@@ -13,7 +14,11 @@ export default function CursorGlow() {
   const [mounted, setMounted] = useState(false);
   const rafRef = useRef<number | null>(null);
   const targetRef = useRef({ x: 0, y: 0 });
+  const currentPosRef = useRef({ x: 0, y: 0 });
   const isVisibleRef = useRef(false);
+  const isAnimatingRef = useRef(false);
+  const lastMoveTimeRef = useRef(0);
+  const idleTimeoutRef = useRef<number | null>(null);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- SSR hydration pattern
@@ -57,22 +62,77 @@ export default function CursorGlow() {
   useEffect(() => {
     if (!mounted || !isEnabled) return;
 
-    // Smooth animation loop
+    const IDLE_TIMEOUT = 100; // Stop animating after 100ms of no movement
+    const THRESHOLD = 0.5; // Stop when within 0.5px of target
+
+    // Smooth animation loop - only runs when needed
     const animate = () => {
-      setPosition((prev) => ({
-        x: prev.x + (targetRef.current.x - prev.x) * 0.15,
-        y: prev.y + (targetRef.current.y - prev.y) * 0.15,
-      }));
+      // Stop if page is hidden
+      if (document.hidden) {
+        isAnimatingRef.current = false;
+        rafRef.current = null;
+        return;
+      }
+
+      const current = currentPosRef.current;
+      const target = targetRef.current;
+      const dx = target.x - current.x;
+      const dy = target.y - current.y;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+
+      // Stop animating if we're close enough to target
+      if (distance < THRESHOLD) {
+        current.x = target.x;
+        current.y = target.y;
+        setPosition({ x: target.x, y: target.y });
+        isAnimatingRef.current = false;
+        rafRef.current = null;
+        return;
+      }
+
+      // Smooth interpolation
+      current.x += dx * 0.15;
+      current.y += dy * 0.15;
+      setPosition({ x: current.x, y: current.y });
+
       rafRef.current = requestAnimationFrame(animate);
     };
 
+    const startAnimating = () => {
+      if (!isAnimatingRef.current && !document.hidden) {
+        isAnimatingRef.current = true;
+        rafRef.current = requestAnimationFrame(animate);
+      }
+    };
+
     const handleMouseMove = (e: MouseEvent) => {
+      const now = Date.now();
+      lastMoveTimeRef.current = now;
+
       targetRef.current = { x: e.clientX, y: e.clientY };
-      // Only update state if visibility actually changes
+
+      // Show cursor glow
       if (!isVisibleRef.current) {
         isVisibleRef.current = true;
         setIsVisible(true);
       }
+
+      // Start animation if not already running
+      startAnimating();
+
+      // Clear existing idle timeout
+      if (idleTimeoutRef.current !== null) {
+        clearTimeout(idleTimeoutRef.current);
+      }
+
+      // Set timeout to stop animating when idle
+      idleTimeoutRef.current = window.setTimeout(() => {
+        if (rafRef.current) {
+          cancelAnimationFrame(rafRef.current);
+          rafRef.current = null;
+          isAnimatingRef.current = false;
+        }
+      }, IDLE_TIMEOUT);
     };
 
     const handleMouseLeave = () => {
@@ -80,20 +140,48 @@ export default function CursorGlow() {
         isVisibleRef.current = false;
         setIsVisible(false);
       }
+
+      // Stop animation
+      if (rafRef.current) {
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = null;
+        isAnimatingRef.current = false;
+      }
+
+      if (idleTimeoutRef.current !== null) {
+        clearTimeout(idleTimeoutRef.current);
+        idleTimeoutRef.current = null;
+      }
     };
 
-    // Start animation loop
-    rafRef.current = requestAnimationFrame(animate);
+    // Pause animation when tab is hidden
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        if (rafRef.current) {
+          cancelAnimationFrame(rafRef.current);
+          rafRef.current = null;
+          isAnimatingRef.current = false;
+        }
+      } else if (isVisibleRef.current) {
+        // Resume animation when tab becomes visible and cursor is over page
+        startAnimating();
+      }
+    };
 
     document.addEventListener("mousemove", handleMouseMove);
     document.addEventListener("mouseleave", handleMouseLeave);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
 
     return () => {
       if (rafRef.current) {
         cancelAnimationFrame(rafRef.current);
       }
+      if (idleTimeoutRef.current !== null) {
+        clearTimeout(idleTimeoutRef.current);
+      }
       document.removeEventListener("mousemove", handleMouseMove);
       document.removeEventListener("mouseleave", handleMouseLeave);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, [mounted, isEnabled]);
 

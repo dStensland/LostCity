@@ -1,24 +1,16 @@
-import { NextRequest, NextResponse } from "next/server";
-import { createClient, getUser } from "@/lib/supabase/server";
-import { createServiceClient } from "@/lib/supabase/service";
+import { NextResponse } from "next/server";
 import { errorResponse, isValidUUID, isValidString, validationError } from "@/lib/api-utils";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
+import { withAuth } from "@/lib/api-middleware";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyQuery = any;
 
 // GET /api/friend-requests - Get user's friend requests
-export async function GET(request: Request) {
+export const GET = withAuth(async (request, { user, supabase }) => {
   try {
     const { searchParams } = new URL(request.url);
     const type = searchParams.get("type") || "all"; // received, sent, all
-
-    const user = await getUser();
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const supabase = await createClient();
 
     let query: AnyQuery = supabase
       .from("friend_requests" as never)
@@ -38,13 +30,13 @@ export async function GET(request: Request) {
       `)
       .order("created_at", { ascending: false });
 
-  if (type === "received") {
-    query = query.eq("invitee_id", user.id);
-  } else if (type === "sent") {
-    query = query.eq("inviter_id", user.id);
-  } else {
-    query = query.or(`inviter_id.eq.${user.id},invitee_id.eq.${user.id}`);
-  }
+    if (type === "received") {
+      query = query.eq("invitee_id", user.id);
+    } else if (type === "sent") {
+      query = query.eq("inviter_id", user.id);
+    } else {
+      query = query.or(`inviter_id.eq.${user.id},invitee_id.eq.${user.id}`);
+    }
 
     const { data, error } = await query;
 
@@ -70,19 +62,14 @@ export async function GET(request: Request) {
       { status: 500 }
     );
   }
-}
+});
 
 // POST /api/friend-requests - Create a friend request
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (request, { user, supabase, serviceClient }) => {
   try {
     // Apply rate limiting
     const rateLimitResult = applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
     if (rateLimitResult) return rateLimitResult;
-
-    const user = await getUser();
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
 
     const body = await request.json();
     const { inviter_id, inviter_username, auto_accept } = body as {
@@ -98,10 +85,6 @@ export async function POST(request: NextRequest) {
     if (inviter_username && !isValidString(inviter_username, 3, 30)) {
       return validationError("Invalid username format");
     }
-
-    // Use regular client for reads, service client for mutations
-    const supabase = await createClient();
-    const serviceClient = createServiceClient();
 
     // Resolve inviter_id from username if needed
     let resolvedInviterId = inviter_id;
@@ -266,4 +249,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

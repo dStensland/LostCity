@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { errorResponse } from "@/lib/api-utils";
+import { withAuth } from "@/lib/api-middleware";
 
 export const dynamic = "force-dynamic";
 
@@ -18,7 +19,7 @@ type CollectionRow = {
 };
 
 // GET /api/collections - List collections
-export async function GET(request: NextRequest) {
+export async function GET(request: Request) {
   const supabase = await createClient();
   const { searchParams } = new URL(request.url);
 
@@ -66,14 +67,7 @@ export async function GET(request: NextRequest) {
 }
 
 // POST /api/collections - Create a new collection
-export async function POST(request: NextRequest) {
-  const supabase = await createClient();
-
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
+export const POST = withAuth(async (request, { user, serviceClient }) => {
   const body = await request.json();
   const { title, description, visibility = "public" } = body;
 
@@ -92,7 +86,7 @@ export async function POST(request: NextRequest) {
   const slug = `${baseSlug}-${Math.random().toString(36).slice(2, 8)}`;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any)
+  const { data, error } = await (serviceClient as any)
     .from("collections")
     .insert({
       slug,
@@ -109,4 +103,4 @@ export async function POST(request: NextRequest) {
   }
 
   return NextResponse.json({ collection: data }, { status: 201 });
-}
+});

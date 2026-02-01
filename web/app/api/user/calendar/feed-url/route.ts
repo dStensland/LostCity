@@ -1,12 +1,6 @@
 import { NextResponse } from "next/server";
 import { getUser } from "@/lib/supabase/server";
-import { createHmac } from "crypto";
-
-// Generate a secure token for calendar feed URL
-function generateFeedToken(userId: string): string {
-  const secret = process.env.CALENDAR_FEED_SECRET || process.env.SUPABASE_SERVICE_ROLE_KEY || "calendar-feed-secret";
-  return createHmac("sha256", secret).update(userId).digest("hex").slice(0, 32);
-}
+import { generateFeedToken } from "@/lib/calendar-feed-utils";
 
 export async function GET() {
   const user = await getUser();

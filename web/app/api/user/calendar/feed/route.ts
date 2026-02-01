@@ -1,24 +1,7 @@
 import { createClient, getUser } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
-import { createHmac } from "crypto";
 import { format, addMonths } from "date-fns";
-
-// Generate a secure token for calendar feed URL
-// Token = HMAC-SHA256(userId, secret)
-// IMPORTANT: CALENDAR_FEED_SECRET must be set in environment for security
-function generateFeedToken(userId: string): string {
-  const secret = process.env.CALENDAR_FEED_SECRET;
-  if (!secret) {
-    // In development, use a fallback but log a warning
-    if (process.env.NODE_ENV === "development") {
-      console.warn("CALENDAR_FEED_SECRET not set - using development fallback. Set this in production!");
-      return createHmac("sha256", "dev-calendar-secret-do-not-use-in-prod").update(userId).digest("hex").slice(0, 32);
-    }
-    // In production, this should fail - calendar feeds won't work without proper secret
-    throw new Error("CALENDAR_FEED_SECRET environment variable is required");
-  }
-  return createHmac("sha256", secret).update(userId).digest("hex").slice(0, 32);
-}
+import { generateFeedToken } from "@/lib/calendar-feed-utils";
 
 // Verify token and extract userId
 function verifyFeedToken(token: string, userId: string): boolean {
@@ -211,5 +194,3 @@ END:VCALENDAR`;
   }
 }
 
-// Export token generation for use in calendar page
-export { generateFeedToken };

@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 import { isValidString, isValidUrl, validationError } from "@/lib/api-utils";
+import { logger } from "@/lib/logger";
 
 /**
  * GET /api/auth/profile
@@ -42,7 +43,7 @@ export async function GET(request: NextRequest) {
     let profile = existingProfile;
 
     if (fetchError) {
-      console.error("Error fetching profile:", fetchError);
+      logger.error("Error fetching profile", fetchError, { userId: user.id, component: "auth/profile" });
       return NextResponse.json(
         { error: "Failed to fetch profile", profile: null },
         { status: 500 }
@@ -51,7 +52,7 @@ export async function GET(request: NextRequest) {
 
     // If no profile exists, create one
     if (!profile) {
-      console.log(`Creating missing profile for user ${user.id}`);
+      logger.info("Creating missing profile", { userId: user.id, component: "auth/profile" });
 
       // Generate username from email or metadata
       let baseUsername =
@@ -96,7 +97,7 @@ export async function GET(request: NextRequest) {
         .single();
 
       if (createError) {
-        console.error("Error creating profile:", createError);
+        logger.error("Error creating profile", createError, { userId: user.id, username, component: "auth/profile" });
         // Try to fetch again in case of race condition
         const { data: retryProfile } = await serviceClient
           .from("profiles")
@@ -126,7 +127,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ profile });
   } catch (error) {
-    console.error("Profile API error:", error);
+    logger.error("Profile API error", error, { component: "auth/profile" });
     return NextResponse.json(
       { error: "Internal server error", profile: null },
       { status: 500 }
@@ -197,7 +198,7 @@ export async function PATCH(request: NextRequest) {
       .single();
 
     if (error) {
-      console.error("Error updating profile:", error);
+      logger.error("Error updating profile", error, { userId: user.id, component: "auth/profile" });
       return NextResponse.json(
         { error: "Failed to update profile" },
         { status: 500 }
@@ -206,7 +207,7 @@ export async function PATCH(request: NextRequest) {
 
     return NextResponse.json({ profile });
   } catch (error) {
-    console.error("Profile update API error:", error);
+    logger.error("Profile update API error", error, { component: "auth/profile" });
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

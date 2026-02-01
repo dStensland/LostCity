@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClient, getUser } from "@/lib/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 
 type ProfileData = {
   id: string;
@@ -23,6 +23,7 @@ type RelationshipStatus =
   | "request_received";
 
 // GET /api/users/[username] - Get public profile by username
+// Note: Uses manual optional auth (not withOptionalAuth) due to params handling
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ username: string }> }
@@ -34,7 +35,9 @@ export async function GET(
   }
 
   const supabase = await createClient();
-  const currentUser = await getUser();
+
+  // Optional auth - don't return 401 if not authenticated
+  const { data: { user: currentUser } } = await supabase.auth.getUser();
 
   // Fetch the profile
   const { data, error } = await supabase

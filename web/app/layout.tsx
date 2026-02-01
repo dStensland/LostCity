@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { Outfit, Instrument_Serif, JetBrains_Mono, Space_Grotesk, Bebas_Neue } from "next/font/google";
+import { Outfit, JetBrains_Mono, Nunito } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import { AuthProvider } from "@/lib/auth-context";
 import { ThemeProvider } from "@/lib/theme-context";
@@ -13,32 +13,26 @@ import NavigationProgress from "@/components/NavigationProgress";
 import SkipLink from "@/components/SkipLink";
 import "./globals.css";
 
+// Primary sans-serif font - used globally
 const outfit = Outfit({
   variable: "--font-outfit",
   subsets: ["latin"],
+  display: "swap",
 });
 
-const instrumentSerif = Instrument_Serif({
-  weight: "400",
-  style: "italic",
-  variable: "--font-instrument",
-  subsets: ["latin"],
-});
-
+// Monospace font - used for badges, code, and technical elements
 const jetbrainsMono = JetBrains_Mono({
   variable: "--font-mono",
   subsets: ["latin"],
+  display: "swap",
 });
 
-const spaceGrotesk = Space_Grotesk({
-  variable: "--font-display",
+// Rounded friendly font - used for family-friendly portals (ATLittle)
+const nunito = Nunito({
+  weight: ["400", "600", "700"],
+  variable: "--font-nunito",
   subsets: ["latin"],
-});
-
-const bebasNeue = Bebas_Neue({
-  weight: "400",
-  variable: "--font-bebas",
-  subsets: ["latin"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -67,7 +61,7 @@ export default function RootLayout({
         <link rel="preconnect" href="https://s1.ticketm.net" />
         <link rel="dns-prefetch" href="https://images.unsplash.com" />
       </head>
-      <body className={`${outfit.variable} ${instrumentSerif.variable} ${jetbrainsMono.variable} ${spaceGrotesk.variable} ${bebasNeue.variable} antialiased`}>
+      <body className={`${outfit.variable} ${jetbrainsMono.variable} ${nunito.variable} antialiased`}>
         <ThemeProvider>
           <QueryProvider>
             {/* Skip link for keyboard users */}

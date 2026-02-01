@@ -1,15 +1,10 @@
-import { createClient } from "@/lib/supabase/server";
-import { createServiceClient } from "@/lib/supabase/service";
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
+import { ensureUserProfile } from "@/lib/user-utils";
+import { withOptionalAuth, withAuth } from "@/lib/api-middleware";
+import { logger } from "@/lib/logger";
 
-export async function GET(request: NextRequest) {
-  const supabase = await createClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
+export const GET = withOptionalAuth(async (request, { user, serviceClient }) => {
   if (!user) {
     return NextResponse.json({ isFollowing: false });
   }
@@ -24,7 +19,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    let query = supabase
+    let query = serviceClient
       .from("follows")
       .select("id")
       .eq("follower_id", user.id);
@@ -40,32 +35,21 @@ export async function GET(request: NextRequest) {
     const { data, error } = await query.maybeSingle();
 
     if (error) {
-      console.error("Follow check error:", error);
+      logger.error("Follow check error", error, { userId: user.id, targetUserId, targetVenueId, targetOrganizationId, component: "follow" });
       return NextResponse.json({ isFollowing: false, error: error.message });
     }
 
     return NextResponse.json({ isFollowing: !!data });
   } catch (err) {
-    console.error("Follow check exception:", err);
+    logger.error("Follow check exception", err, { userId: user.id, component: "follow" });
     return NextResponse.json({ isFollowing: false, error: "Server error" });
   }
-}
+});
 
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (request, { user, serviceClient }) => {
   // Apply rate limiting
   const rateLimitResult = applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
   if (rateLimitResult) return rateLimitResult;
-
-  // Verify auth with server client
-  const supabase = await createClient();
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser();
-
-  if (authError || !user) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-  }
 
   const body = await request.json();
   const { targetUserId, targetVenueId, targetOrganizationId, action } = body;
@@ -78,8 +62,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid action" }, { status: 400 });
   }
 
-  // Use service client for mutations to avoid RLS issues
-  const serviceClient = createServiceClient();
+  // Ensure user has a profile (create if missing)
+  await ensureUserProfile(user, serviceClient);
 
   try {
     if (action === "unfollow") {
@@ -99,7 +83,7 @@ export async function POST(request: NextRequest) {
       const { error } = await query;
 
       if (error) {
-        console.error("Unfollow error:", error);
+        logger.error("Unfollow error", error, { userId: user.id, targetUserId, targetVenueId, targetOrganizationId, component: "follow" });
         return NextResponse.json({ error: "Unable to unfollow" }, { status: 500 });
       }
 
@@ -125,14 +109,14 @@ export async function POST(request: NextRequest) {
         if (error.code === "23505") {
           return NextResponse.json({ success: true, isFollowing: true });
         }
-        console.error("Follow error:", error);
+        logger.error("Follow error", error, { userId: user.id, targetUserId, targetVenueId, targetOrganizationId, component: "follow" });
         return NextResponse.json({ error: "Unable to follow" }, { status: 500 });
       }
 
       return NextResponse.json({ success: true, isFollowing: true });
     }
   } catch (err) {
-    console.error("Follow action exception:", err);
+    logger.error("Follow action exception", err, { userId: user.id, component: "follow" });
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
-}
+});
