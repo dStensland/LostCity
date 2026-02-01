@@ -188,7 +188,7 @@ export function AddItemsModal({ listId, existingItems, onClose, onItemsAdded }: 
           <h2 className="font-mono text-sm font-medium text-[var(--cream)]">Add Items to List</h2>
           <button
             onClick={onClose}
-            className="p-1 text-[var(--muted)] hover:text-[var(--cream)] transition-colors"
+            className="p-3 min-w-[48px] min-h-[48px] text-[var(--muted)] hover:text-[var(--cream)] hover:scale-110 transition-all active:scale-95"
             aria-label="Close modal"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

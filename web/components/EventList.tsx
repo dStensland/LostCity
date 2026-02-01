@@ -116,47 +116,47 @@ export default function EventList({
   if (events.length === 0 && !isLoading) {
     return (
       <div className="text-center py-16">
-        {/* Illustrated empty state */}
-        <div className="w-24 h-24 mx-auto mb-6 rounded-2xl bg-gradient-to-br from-[var(--twilight)] to-[var(--dusk)] flex items-center justify-center relative overflow-hidden">
-          <div className="absolute top-2 right-2 w-2 h-2 rounded-full bg-[var(--coral)]/30" />
-          <div className="absolute bottom-3 left-3 w-1.5 h-1.5 rounded-full bg-[var(--neon-cyan)]/30" />
+        {/* Illustrated empty state with gentle animation */}
+        <div className="w-24 h-24 mx-auto mb-6 rounded-2xl bg-gradient-to-br from-[var(--twilight)] to-[var(--dusk)] flex items-center justify-center relative overflow-hidden animate-float">
+          <div className="absolute top-2 right-2 w-2 h-2 rounded-full bg-[var(--coral)]/30 animate-ping-slow" />
+          <div className="absolute bottom-3 left-3 w-1.5 h-1.5 rounded-full bg-[var(--neon-cyan)]/30 animate-ping-slow" style={{ animationDelay: "1s" }} />
           <svg className="w-10 h-10 text-[var(--muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
           </svg>
         </div>
 
         <h3 className="text-[var(--cream)] text-xl font-medium mb-2">
-          {hasActiveFilters ? "No matches found" : "No upcoming events"}
+          {hasActiveFilters ? "Nothing matches that vibe" : "The calendar is empty"}
         </h3>
 
         <p className="text-[var(--muted)] text-sm mb-6 max-w-xs mx-auto">
           {hasActiveFilters
-            ? "Try adjusting your filters or exploring a different category"
-            : "We're still discovering events. Check back soon!"}
+            ? "Try broadening your search or exploring something new"
+            : "We're always adding fresh events. Check back soon or explore what's out there!"}
         </p>
 
         {hasActiveFilters ? (
           <div className="space-y-4">
             <Link
               href={pathname}
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-[var(--coral)] text-[var(--void)] hover:bg-[var(--rose)] transition-colors font-mono text-sm font-medium"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-[var(--coral)] text-[var(--void)] hover:bg-[var(--rose)] transition-all hover:scale-105 font-mono text-sm font-medium shadow-lg shadow-[var(--coral)]/20"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
-              Clear all filters
+              Clear filters
             </Link>
 
             <div className="pt-4 border-t border-[var(--twilight)]/30">
               <p className="text-[var(--muted)]/60 text-xs mb-3 uppercase tracking-wider font-mono">
-                Try exploring
+                Or try these
               </p>
               <div className="flex flex-wrap justify-center gap-2">
                 {suggestedCategories.map((cat) => (
                   <Link
                     key={cat.value}
                     href={`${pathname}?categories=${cat.value}`}
-                    className="px-3 py-1.5 rounded-full bg-[var(--twilight)]/40 text-[var(--muted)] hover:bg-[var(--twilight)] hover:text-[var(--cream)] transition-all text-sm border border-[var(--twilight)]"
+                    className="px-3 py-1.5 rounded-full bg-[var(--twilight)]/40 text-[var(--muted)] hover:bg-[var(--twilight)] hover:text-[var(--cream)] transition-all text-sm border border-[var(--twilight)] hover:border-[var(--coral)]/30 hover:shadow-sm"
                   >
                     {cat.label}
                   </Link>
@@ -166,15 +166,15 @@ export default function EventList({
           </div>
         ) : (
           <div className="space-y-4">
-            <p className="text-[var(--muted)]/60 text-sm">
-              Pick your poison
+            <p className="text-[var(--muted)]/60 text-sm font-medium">
+              What are you feeling?
             </p>
             <div className="flex flex-wrap justify-center gap-2">
               {suggestedCategories.map((cat) => (
                 <Link
                   key={cat.value}
                   href={`${pathname}?categories=${cat.value}`}
-                  className="px-4 py-2 rounded-lg bg-[var(--twilight)]/40 text-[var(--muted)] hover:bg-[var(--twilight)] hover:text-[var(--cream)] transition-all text-sm border border-[var(--twilight)] hover:border-[var(--coral)]/30"
+                  className="px-4 py-2 rounded-lg bg-[var(--twilight)]/40 text-[var(--muted)] hover:bg-[var(--twilight)] hover:text-[var(--cream)] transition-all text-sm border border-[var(--twilight)] hover:border-[var(--coral)]/30 hover:shadow-md hover:scale-105"
                 >
                   {cat.label}
                 </Link>

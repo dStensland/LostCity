@@ -281,7 +281,7 @@ function FilterDeck({
         {/* Open Now Toggle - Prominent "Power Switch" Style */}
         <button
           onClick={() => setFilters(f => ({ ...f, openNow: !f.openNow }))}
-          className={`relative flex items-center gap-2 px-4 py-2 rounded-lg font-mono text-sm font-medium transition-all ${
+          className={`relative flex items-center gap-2 px-4 py-2 rounded-xl font-mono text-sm font-medium transition-all active:scale-[0.98] ${
             filters.openNow
               ? "bg-[var(--neon-green)]/20 text-[var(--neon-green)] border-2 border-[var(--neon-green)]/50 shadow-[0_0_20px_rgba(34,197,94,0.3)]"
               : "bg-[var(--dusk)] text-[var(--muted)] border-2 border-[var(--twilight)] hover:border-[var(--neon-green)]/30 hover:text-[var(--soft)]"
@@ -309,7 +309,7 @@ function FilterDeck({
               setFilters(f => ({ ...f, neighborhoods: [...new Set([...f.neighborhoods, ...ITP_NEIGHBORHOOD_NAMES])] }));
             }
           }}
-          className={`relative flex items-center gap-2 px-4 py-2 rounded-lg font-mono text-sm font-medium transition-all ${
+          className={`relative flex items-center gap-2 px-4 py-2 rounded-xl font-mono text-sm font-medium transition-all active:scale-[0.98] ${
             ITP_NEIGHBORHOOD_NAMES.some(n => filters.neighborhoods.includes(n))
               ? "bg-[var(--neon-cyan)]/20 text-[var(--neon-cyan)] border-2 border-[var(--neon-cyan)]/50 shadow-[0_0_20px_rgba(34,211,238,0.3)]"
               : "bg-[var(--dusk)] text-[var(--muted)] border-2 border-[var(--twilight)] hover:border-[var(--neon-cyan)]/30 hover:text-[var(--soft)]"
@@ -330,7 +330,7 @@ function FilterDeck({
             placeholder="Search destinations..."
             value={filters.search}
             onChange={(e) => setFilters(f => ({ ...f, search: e.target.value }))}
-            className="w-full px-4 py-2 pl-10 bg-[var(--dusk)] border-2 border-[var(--twilight)] rounded-lg font-mono text-sm text-[var(--cream)] placeholder:text-[var(--muted)] focus:outline-none focus:border-[var(--coral)]/50 focus:shadow-[0_0_15px_rgba(255,107,107,0.15)] transition-all"
+            className="w-full px-4 py-2 pl-10 bg-[var(--dusk)] border-2 border-[var(--twilight)] rounded-xl font-mono text-sm text-[var(--cream)] placeholder:text-[var(--muted)] focus:outline-none focus:border-[var(--coral)]/50 focus:shadow-[0_0_15px_rgba(255,107,107,0.15)] transition-all"
           />
           <svg
             className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--muted)]"
@@ -351,7 +351,7 @@ function FilterDeck({
         </div>
 
         {/* Price Level Selector */}
-        <div className="flex items-center gap-1 bg-[var(--dusk)] border-2 border-[var(--twilight)] rounded-lg p-1">
+        <div className="flex items-center gap-1 bg-[var(--dusk)] border-2 border-[var(--twilight)] rounded-xl p-1">
           {[1, 2, 3, 4].map((level) => (
             <button
               key={level}
@@ -371,7 +371,7 @@ function FilterDeck({
         {/* Has Events Toggle */}
         <button
           onClick={() => setFilters(f => ({ ...f, withEvents: !f.withEvents }))}
-          className={`flex items-center gap-2 px-3 py-2 rounded-lg font-mono text-xs font-medium transition-all ${
+          className={`flex items-center gap-2 px-3 py-2 rounded-xl font-mono text-xs font-medium transition-all active:scale-[0.98] ${
             filters.withEvents
               ? "bg-[var(--coral)]/20 text-[var(--coral)] border border-[var(--coral)]/50"
               : "bg-[var(--dusk)] text-[var(--muted)] border border-[var(--twilight)] hover:border-[var(--coral)]/30"
@@ -386,7 +386,7 @@ function FilterDeck({
         {/* More Filters Toggle */}
         <button
           onClick={() => setShowMore(!showMore)}
-          className={`flex items-center gap-1.5 px-3 py-2 rounded-lg font-mono text-xs font-medium transition-all ${
+          className={`flex items-center gap-1.5 px-3 py-2 rounded-xl font-mono text-xs font-medium transition-all active:scale-[0.98] ${
             showMore || filters.venueTypes.length > 0 || filters.neighborhoods.length > 0
               ? "bg-[var(--rose)]/20 text-[var(--rose)] border border-[var(--rose)]/50"
               : "bg-[var(--dusk)] text-[var(--muted)] border border-[var(--twilight)] hover:text-[var(--cream)]"
@@ -501,7 +501,7 @@ function FilterDeck({
           ))}
           <button
             onClick={clearFilters}
-            className="font-mono text-[0.6rem] text-[var(--coral)] hover:text-[var(--rose)] transition-colors ml-auto"
+            className="font-mono text-[0.6rem] text-[var(--coral)] hover:text-[var(--rose)] transition-colors ml-auto active:scale-95"
           >
             Clear all
           </button>
@@ -712,7 +712,7 @@ export default function PortalSpotsView({ portalId, portalSlug, isExclusive = fa
           <p className="text-[var(--muted)] text-sm mb-4">Try adjusting your filters</p>
           <button
             onClick={() => setFilters({ openNow: false, priceLevel: [], venueTypes: [], neighborhoods: [], search: "", withEvents: false })}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[var(--coral)] text-[var(--void)] hover:bg-[var(--rose)] transition-colors font-mono text-sm"
+            className="btn-primary btn-md"
           >
             Clear filters
           </button>

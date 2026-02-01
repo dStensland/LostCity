@@ -119,7 +119,7 @@ function LoginForm() {
           <button
             onClick={handleGoogleLogin}
             disabled={loading}
-            className="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-lg bg-[var(--cream)] text-[var(--void)] font-mono text-sm font-medium hover:bg-[var(--soft)] transition-colors disabled:opacity-50"
+            className="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-xl bg-[var(--cream)] text-[var(--void)] font-mono text-sm font-medium hover:bg-[var(--soft)] transition-colors disabled:opacity-50 active:scale-[0.98] shadow-sm hover:shadow-md"
           >
             <svg className="w-5 h-5" viewBox="0 0 24 24">
               <path
@@ -224,7 +224,7 @@ function LoginForm() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full px-4 py-3 rounded-lg bg-[var(--coral)] text-[var(--void)] font-mono text-sm font-medium hover:bg-[var(--rose)] transition-colors disabled:opacity-50"
+              className="btn-primary btn-md w-full"
             >
               {loading ? "Signing in..." : "Sign in"}
             </button>

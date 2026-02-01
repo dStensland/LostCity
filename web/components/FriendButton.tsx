@@ -119,7 +119,7 @@ export default function FriendButton({
     return (
       <button
         onClick={handleSendRequest}
-        className={`font-mono font-medium rounded-full bg-[var(--neon-cyan)]/20 text-[var(--neon-cyan)] hover:bg-[var(--neon-cyan)]/30 transition-all ${sizeClasses[size]} ${className}`}
+        className={`btn-accent btn-pill active:scale-[0.98] ${sizeClasses[size]} ${className}`}
       >
         Add Friend
       </button>
@@ -133,7 +133,7 @@ export default function FriendButton({
         <button
           onClick={handleUnfriend}
           disabled={isActionLoading}
-          className={`font-mono font-medium rounded-full bg-[var(--neon-green)]/20 text-[var(--neon-green)] hover:bg-[var(--coral)]/20 hover:text-[var(--coral)] transition-all disabled:opacity-50 ${sizeClasses[size]} flex items-center gap-1.5 group`}
+          className={`btn-success btn-pill active:scale-[0.98] hover:bg-[var(--coral)]/20 hover:text-[var(--coral)] hover:border-[var(--coral)]/30 ${sizeClasses[size]} flex items-center gap-1.5 group`}
           title="Click to unfriend"
         >
           {isActionLoading ? (
@@ -165,7 +165,7 @@ export default function FriendButton({
       <button
         onClick={handleCancelRequest}
         disabled={isActionLoading}
-        className={`font-mono font-medium rounded-full bg-[var(--twilight)] text-[var(--muted)] hover:bg-[var(--coral)]/20 hover:text-[var(--coral)] transition-all disabled:opacity-50 ${sizeClasses[size]} ${className}`}
+        className={`btn-secondary btn-pill active:scale-[0.98] hover:bg-[var(--coral)]/20 hover:text-[var(--coral)] hover:border-[var(--coral)]/30 ${sizeClasses[size]} ${className}`}
       >
         {isActionLoading ? (
           <span className="inline-block w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
@@ -183,14 +183,14 @@ export default function FriendButton({
         <button
           onClick={handleAcceptRequest}
           disabled={isActionLoading}
-          className={`font-mono font-medium rounded-full bg-[var(--coral)] text-[var(--void)] hover:bg-[var(--rose)] transition-all disabled:opacity-50 ${sizeClasses[size]}`}
+          className={`btn-primary btn-pill active:scale-[0.98] ${sizeClasses[size]}`}
         >
           {isActionLoading ? "..." : "Accept"}
         </button>
         <button
           onClick={handleDeclineRequest}
           disabled={isActionLoading}
-          className={`font-mono font-medium rounded-full bg-transparent border border-[var(--muted)] text-[var(--muted)] hover:bg-[var(--muted)]/10 transition-all disabled:opacity-50 ${sizeClasses[size]}`}
+          className={`btn-secondary btn-pill active:scale-[0.98] ${sizeClasses[size]}`}
         >
           Decline
         </button>
@@ -203,7 +203,7 @@ export default function FriendButton({
     <button
       onClick={handleSendRequest}
       disabled={isActionLoading}
-      className={`font-mono font-medium rounded-full bg-[var(--neon-cyan)]/20 text-[var(--neon-cyan)] hover:bg-[var(--neon-cyan)]/30 transition-all disabled:opacity-50 ${sizeClasses[size]} ${className}`}
+      className={`btn-accent btn-pill active:scale-[0.98] ${sizeClasses[size]} ${className}`}
     >
       {isActionLoading ? (
         <span className="inline-block w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />

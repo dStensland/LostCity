@@ -117,12 +117,18 @@ END:VCALENDAR`;
         onClick={() => setIsOpen(!isOpen)}
         className={
           isIcon
-            ? "inline-flex items-center justify-center w-10 h-10 text-[var(--muted)] rounded-lg hover:bg-[var(--twilight)] hover:text-[var(--cream)] transition-colors"
+            ? "inline-flex items-center justify-center min-w-[48px] min-h-[48px] p-3 text-[var(--muted)] rounded-lg hover:bg-[var(--twilight)] hover:text-[var(--cream)] hover:scale-110 transition-all active:scale-95"
             : "inline-flex items-center justify-center gap-2 px-6 py-3 border border-[var(--twilight)] text-[var(--soft)] font-medium rounded-lg hover:bg-[var(--twilight)] hover:text-[var(--cream)] transition-colors w-full sm:w-auto"
         }
         aria-label="Add to calendar"
       >
-        <svg className={isIcon ? "w-5 h-5" : "w-4 h-4"} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg
+          className={isIcon ? "w-5 h-5" : "w-4 h-4"}
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+          style={isIcon ? { filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.3))' } : undefined}
+        >
           <path
             strokeLinecap="round"
             strokeLinejoin="round"

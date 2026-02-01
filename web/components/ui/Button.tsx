@@ -1,6 +1,6 @@
 import { forwardRef, ButtonHTMLAttributes, ReactNode } from "react";
 
-type ButtonVariant = "primary" | "secondary" | "ghost" | "danger";
+type ButtonVariant = "primary" | "secondary" | "ghost" | "danger" | "accent" | "success";
 type ButtonSize = "sm" | "md" | "lg";
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -12,22 +12,19 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   fullWidth?: boolean;
 }
 
-const variantStyles: Record<ButtonVariant, string> = {
-  primary:
-    "bg-[var(--coral)] text-[var(--void)] hover:bg-[var(--rose)] disabled:bg-[var(--coral)]/50",
-  secondary:
-    "bg-[var(--twilight)] text-[var(--cream)] hover:bg-[var(--dusk)] border border-[var(--twilight)] hover:border-[var(--muted)] disabled:bg-[var(--twilight)]/50",
-  ghost:
-    "bg-transparent text-[var(--muted)] hover:text-[var(--cream)] hover:bg-[var(--twilight)] disabled:text-[var(--muted)]/50",
-  danger:
-    "bg-[var(--neon-red)]/20 text-[var(--neon-red)] hover:bg-[var(--neon-red)]/30 border border-[var(--neon-red)]/30 disabled:opacity-50",
+const variantClasses: Record<ButtonVariant, string> = {
+  primary: "btn-primary",
+  secondary: "btn-secondary",
+  ghost: "btn-ghost",
+  danger: "btn-danger",
+  accent: "btn-accent",
+  success: "btn-success",
 };
 
-// Touch target minimum: 44px height on mobile, relaxed on desktop
-const sizeStyles: Record<ButtonSize, string> = {
-  sm: "px-3 py-2.5 text-xs gap-1.5 min-h-[44px] sm:min-h-[36px] sm:py-1.5",
-  md: "px-4 py-2.5 text-sm gap-2 min-h-[44px] sm:min-h-[40px] sm:py-2",
-  lg: "px-5 py-3 text-base gap-2.5 min-h-[48px] sm:min-h-[44px] sm:py-2.5",
+const sizeClasses: Record<ButtonSize, string> = {
+  sm: "btn-sm",
+  md: "btn-md",
+  lg: "btn-lg",
 };
 
 const iconSizes: Record<ButtonSize, string> = {
@@ -52,17 +49,13 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     },
     ref
   ) => {
-    const baseStyles =
-      "inline-flex items-center justify-center font-mono font-medium rounded-lg transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--coral)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--void)] disabled:cursor-not-allowed";
-
     return (
       <button
         ref={ref}
         disabled={disabled || isLoading}
         className={`
-          ${baseStyles}
-          ${variantStyles[variant]}
-          ${sizeStyles[size]}
+          ${variantClasses[variant]}
+          ${sizeClasses[size]}
           ${fullWidth ? "w-full" : ""}
           ${className}
         `}
@@ -126,9 +119,6 @@ export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(
     },
     ref
   ) => {
-    const baseStyles =
-      "inline-flex items-center justify-center rounded-lg transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--coral)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--void)] disabled:cursor-not-allowed";
-
     // Touch target minimum: 44px on mobile
     const iconButtonSizes: Record<ButtonSize, string> = {
       sm: "p-2.5 min-w-[44px] min-h-[44px] sm:p-1.5 sm:min-w-[32px] sm:min-h-[32px]",
@@ -142,8 +132,7 @@ export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(
         disabled={disabled || isLoading}
         aria-label={label}
         className={`
-          ${baseStyles}
-          ${variantStyles[variant]}
+          ${variantClasses[variant]}
           ${iconButtonSizes[size]}
           ${className}
         `}

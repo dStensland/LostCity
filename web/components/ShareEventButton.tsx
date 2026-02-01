@@ -80,11 +80,17 @@ export default function ShareEventButton({
       aria-label="Share event"
       className={
         isIcon
-          ? `inline-flex items-center justify-center w-10 h-10 text-[var(--muted)] rounded-lg hover:bg-[var(--twilight)] hover:text-[var(--cream)] transition-colors disabled:opacity-50 ${className}`
+          ? `inline-flex items-center justify-center min-w-[48px] min-h-[48px] p-3 text-[var(--muted)] rounded-lg hover:bg-[var(--twilight)] hover:text-[var(--cream)] hover:scale-110 transition-all disabled:opacity-50 active:scale-95 ${className}`
           : `inline-flex items-center justify-center gap-2 px-4 py-2.5 text-[var(--muted)] text-sm font-medium rounded-lg hover:bg-[var(--twilight)] hover:text-[var(--cream)] transition-colors disabled:opacity-50 ${className}`
       }
     >
-      <svg className={isIcon ? "w-5 h-5" : "w-4 h-4"} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg
+        className={isIcon ? "w-5 h-5" : "w-4 h-4"}
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+        style={isIcon ? { filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.3))' } : undefined}
+      >
         <path
           strokeLinecap="round"
           strokeLinejoin="round"

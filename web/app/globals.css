@@ -797,6 +797,82 @@ body::after {
   display: none;
 }
 
+/* ============================================
+   BUTTON SYSTEM - Consistent hierarchy
+   ============================================ */
+
+/* Primary button - main CTAs (RSVP, Sign In, Submit) */
+.btn-primary {
+  @apply inline-flex items-center justify-center font-mono font-medium rounded-xl transition-all duration-150;
+  @apply bg-[var(--coral)] text-[var(--void)] shadow-sm;
+  @apply hover:bg-[var(--rose)] hover:shadow-md active:scale-[0.98];
+  @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--coral)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--void)];
+  @apply disabled:cursor-not-allowed disabled:opacity-50;
+}
+
+/* Secondary button - important but not primary actions */
+.btn-secondary {
+  @apply inline-flex items-center justify-center font-mono font-medium rounded-xl transition-all duration-150;
+  @apply border border-[var(--twilight)] bg-[var(--dusk)] text-[var(--cream)];
+  @apply hover:border-[var(--muted)] hover:bg-[var(--twilight)] active:scale-[0.98];
+  @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--coral)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--void)];
+  @apply disabled:cursor-not-allowed disabled:opacity-50;
+}
+
+/* Ghost button - low priority actions */
+.btn-ghost {
+  @apply inline-flex items-center justify-center font-mono font-medium rounded-xl transition-all duration-150;
+  @apply bg-transparent text-[var(--muted)];
+  @apply hover:text-[var(--cream)] hover:bg-[var(--twilight)] active:scale-[0.98];
+  @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--coral)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--void)];
+  @apply disabled:cursor-not-allowed disabled:opacity-50;
+}
+
+/* Danger button - destructive actions */
+.btn-danger {
+  @apply inline-flex items-center justify-center font-mono font-medium rounded-xl transition-all duration-150;
+  @apply bg-[var(--neon-red)]/20 text-[var(--neon-red)] border border-[var(--neon-red)]/30;
+  @apply hover:bg-[var(--neon-red)]/30 active:scale-[0.98];
+  @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--coral)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--void)];
+  @apply disabled:cursor-not-allowed disabled:opacity-50;
+}
+
+/* Accent button - special actions (Friend request accept, etc.) */
+.btn-accent {
+  @apply inline-flex items-center justify-center font-mono font-medium rounded-xl transition-all duration-150;
+  @apply bg-[var(--neon-cyan)]/20 text-[var(--neon-cyan)] border border-[var(--neon-cyan)]/30;
+  @apply hover:bg-[var(--neon-cyan)]/30 active:scale-[0.98];
+  @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--coral)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--void)];
+  @apply disabled:cursor-not-allowed disabled:opacity-50;
+}
+
+/* Success button - positive actions */
+.btn-success {
+  @apply inline-flex items-center justify-center font-mono font-medium rounded-xl transition-all duration-150;
+  @apply bg-[var(--neon-green)]/20 text-[var(--neon-green)] border border-[var(--neon-green)]/30;
+  @apply hover:bg-[var(--neon-green)]/30 active:scale-[0.98];
+  @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--coral)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--void)];
+  @apply disabled:cursor-not-allowed disabled:opacity-50;
+}
+
+/* Size variants */
+.btn-sm {
+  @apply px-3 py-2 text-xs gap-1.5 min-h-[44px] sm:min-h-[36px] sm:py-1.5;
+}
+
+.btn-md {
+  @apply px-4 py-2.5 text-sm gap-2 min-h-[44px] sm:min-h-[40px] sm:py-2;
+}
+
+.btn-lg {
+  @apply px-5 py-3 text-base gap-2.5 min-h-[48px] sm:min-h-[44px] sm:py-2.5;
+}
+
+/* Pill variant - for filter chips */
+.btn-pill {
+  @apply rounded-full;
+}
+
 /* Event animations */
 @keyframes fadeIn {
   from {
@@ -3164,6 +3240,40 @@ textarea:focus-visible {
 
 .animate-pulse-slow {
   animation: pulse-slow 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Floating animation for gentle vertical bobbing */
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+/* Slow ping animation for subtle pulsing dots */
+@keyframes ping-slow {
+  0% {
+    transform: scale(1);
+    opacity: 0.3;
+  }
+  50% {
+    transform: scale(1.5);
+    opacity: 0.6;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 0.3;
+  }
+}
+
+.animate-ping-slow {
+  animation: ping-slow 2.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
 /* ============================================

@@ -73,7 +73,7 @@ export default function EmptyState({
         {icon && (
           <div className={`mb-4 flex justify-center ${atmospheric ? "animate-stagger-1" : ""}`}>
             <div
-              className={`relative flex items-center justify-center w-16 h-16 rounded-full ${atmospheric ? "empty-state-icon-glow" : ""}`}
+              className={`relative flex items-center justify-center w-16 h-16 rounded-full ${atmospheric ? "empty-state-icon-glow animate-float" : ""}`}
               style={{
                 background: `linear-gradient(135deg, var(--twilight), var(--dusk))`,
                 "--glow-color": accentColor,

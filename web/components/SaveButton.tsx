@@ -169,7 +169,7 @@ export default function SaveButton({
     <button
       onClick={handleToggle}
       disabled={actionLoading}
-      className={`${sizeClasses[size]} rounded-lg transition-all ${
+      className={`${sizeClasses[size]} rounded-xl transition-all active:scale-[0.98] ${
         isSaved
           ? "text-[var(--gold)] hover:text-[var(--coral)]"
           : "text-[var(--muted)] hover:text-[var(--cream)] hover:bg-[var(--twilight)]"

@@ -391,21 +391,24 @@ export default function BrowseByActivity({ portalSlug }: BrowseByActivityProps) 
           {secondaryActivities.length > 0 && (
             <button
               onClick={() => setShowMore(!showMore)}
-              className="w-full mt-2 py-2 px-4 rounded-xl bg-[var(--twilight)]/50 border border-[var(--twilight)]
-                text-[var(--muted)] hover:text-[var(--cream)] hover:bg-[var(--twilight)]
-                transition-all duration-200 flex items-center justify-center gap-2 text-sm font-medium"
+              className="w-full mt-3 py-3 px-5 rounded-xl bg-gradient-to-r from-[var(--twilight)]/60 to-[var(--twilight)]/40 border-2 border-[var(--twilight)]
+                text-[var(--cream)] hover:text-[var(--cream)] hover:bg-gradient-to-r hover:from-[var(--twilight)]/80 hover:to-[var(--twilight)]/60 hover:border-[var(--coral)]/40
+                transition-all duration-200 flex items-center justify-center gap-2.5 text-base font-semibold shadow-lg hover:shadow-[var(--coral)]/10 group"
             >
               {showMore ? (
                 <>
-                  Show fewer
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
                   </svg>
+                  Show fewer categories
                 </>
               ) : (
                 <>
+                  <svg className="w-5 h-5 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
                   Show {secondaryActivities.length} more categories
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5 group-hover:translate-y-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                   </svg>
                 </>

@@ -171,7 +171,7 @@ export default function WhyThisModal({
               </div>
               <button
                 onClick={handleClose}
-                className="flex-shrink-0 w-10 h-10 sm:w-8 sm:h-8 flex items-center justify-center rounded-full hover:bg-[var(--twilight)] text-[var(--muted)] hover:text-[var(--cream)] transition-colors"
+                className="flex-shrink-0 min-w-[48px] min-h-[48px] p-3 flex items-center justify-center rounded-full hover:bg-[var(--twilight)] text-[var(--muted)] hover:text-[var(--cream)] hover:scale-110 transition-all active:scale-95"
                 aria-label="Close"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

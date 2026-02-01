@@ -123,7 +123,7 @@ export default function DashboardActivity() {
         </div>
 
         {activeTab === "recommendations" && (
-          <FriendSuggestions suggestions={friendSuggestions} />
+          <FriendSuggestions suggestions={friendSuggestions} isLoading={false} />
         )}
 
         {activeTab === "activity" && (
@@ -174,20 +174,20 @@ function UnauthenticatedView() {
     <div className="space-y-6">
       {/* Hero section */}
       <div className="p-6 rounded-xl bg-gradient-to-br from-[var(--dusk)] to-[var(--night)] border border-[var(--twilight)] text-center">
-        <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-[var(--neon-cyan)]/20 to-[var(--neon-magenta)]/20 flex items-center justify-center">
+        <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-[var(--neon-cyan)]/20 to-[var(--neon-magenta)]/20 flex items-center justify-center animate-float">
           <svg className="w-8 h-8 text-[var(--neon-cyan)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
           </svg>
         </div>
         <h3 className="font-serif text-xl text-[var(--cream)] mb-2">
-          See What Your Friends Are Doing
+          Your people are out there
         </h3>
         <p className="text-sm text-[var(--muted)] mb-5 max-w-sm mx-auto">
-          Connect with friends, see where they&apos;re going, and discover events through the people you trust.
+          See what they&apos;re up to and never miss the vibes. Connect with friends and discover events through the people you trust.
         </p>
         <Link
           href="/auth/login?redirect=/atl?view=community"
-          className="inline-flex items-center gap-2 px-5 py-2.5 bg-[var(--coral)] text-[var(--void)] rounded-lg font-mono text-sm font-medium hover:bg-[var(--rose)] transition-colors"
+          className="inline-flex items-center gap-2 px-5 py-2.5 bg-[var(--coral)] text-[var(--void)] rounded-lg font-mono text-sm font-medium hover:bg-[var(--rose)] transition-all hover:scale-105 shadow-lg shadow-[var(--coral)]/20"
         >
           Sign In to Connect
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

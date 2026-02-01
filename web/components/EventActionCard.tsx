@@ -154,7 +154,7 @@ export default function EventActionCard({ event, isLive, className = "" }: Event
                 href={event.source_url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center justify-center w-10 h-10 text-[var(--muted)] rounded-lg hover:bg-[var(--twilight)] hover:text-[var(--cream)] transition-colors"
+                className="inline-flex items-center justify-center min-w-[48px] min-h-[48px] p-3 text-[var(--muted)] rounded-lg hover:bg-[var(--twilight)] hover:text-[var(--cream)] hover:scale-110 transition-all active:scale-95"
                 aria-label="View source"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

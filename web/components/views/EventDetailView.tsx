@@ -187,12 +187,15 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
     setExpandedSections(prev => ({ ...prev, [key]: !prev[key] }));
   };
 
-  // Reusable neon back button
+  // Reusable neon back button with 48x48px minimum touch target
   const NeonBackButton = () => (
     <button
       onClick={onClose}
-      className="group absolute top-3 left-3 flex items-center gap-2 px-3.5 py-2 rounded-full font-mono text-xs font-semibold tracking-wide uppercase transition-all duration-300 z-10 hover:scale-105"
+      aria-label="Back to event list"
+      className="group absolute top-3 left-3 flex items-center gap-2 px-4 py-3 rounded-full font-mono text-xs font-semibold tracking-wide uppercase transition-all duration-300 z-10 hover:scale-110 hover:brightness-110 active:scale-105"
       style={{
+        minWidth: '48px',
+        minHeight: '48px',
         background: 'linear-gradient(135deg, rgba(0,0,0,0.7) 0%, rgba(20,20,30,0.8) 100%)',
         backdropFilter: 'blur(8px)',
         border: '1px solid rgba(255,107,107,0.3)',

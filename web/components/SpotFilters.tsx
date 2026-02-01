@@ -208,7 +208,7 @@ export default function SpotFilters() {
               ))}
               <button
                 onClick={clearAllFilters}
-                className="font-mono text-[0.6rem] text-[var(--coral)] hover:text-[var(--rose)] transition-colors ml-auto"
+                className="font-mono text-[0.6rem] text-[var(--coral)] hover:text-[var(--rose)] transition-colors ml-auto active:scale-95"
               >
                 Clear all
               </button>

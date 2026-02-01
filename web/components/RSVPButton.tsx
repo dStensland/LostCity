@@ -266,12 +266,12 @@ export default function RSVPButton({
 
   // Variant-specific styles
   const getButtonClasses = () => {
-    const baseClasses = "font-mono font-medium rounded-lg transition-all duration-150 flex items-center gap-2";
+    const baseClasses = "font-mono font-medium rounded-xl transition-all duration-150 flex items-center gap-2 active:scale-[0.98]";
     const animationClass = isAnimating ? "scale-95" : "scale-100";
 
     if (variant === "compact") {
       // Icon-only button for sticky bar
-      return `${baseClasses} w-11 h-11 justify-center border ${
+      return `${baseClasses} w-11 h-11 justify-center border shadow-sm hover:shadow-md ${
         status
           ? `${currentConfig?.color} text-[var(--void)] border-transparent`
           : "bg-[var(--dusk)] text-[var(--muted)] hover:text-[var(--cream)] border-[var(--twilight)]"
@@ -280,7 +280,7 @@ export default function RSVPButton({
 
     if (variant === "primary") {
       // Full-width primary button for sticky bar
-      return `${baseClasses} px-6 py-3 ${
+      return `${baseClasses} px-6 py-3 shadow-sm hover:shadow-md ${
         status
           ? `${currentConfig?.color} text-[var(--void)]`
           : "bg-[var(--coral)] text-[var(--void)] hover:bg-[var(--rose)]"
@@ -290,7 +290,7 @@ export default function RSVPButton({
     // Default variant
     return `${baseClasses} ${sizeClasses[size]} ${
       status
-        ? `${currentConfig?.color} text-[var(--void)]`
+        ? `${currentConfig?.color} text-[var(--void)] shadow-sm`
         : "bg-[var(--dusk)] text-[var(--muted)] hover:text-[var(--cream)] border border-[var(--twilight)]"
     } ${animationClass}`;
   };
