@@ -5,7 +5,6 @@ import SearchBarWrapper from "@/components/SearchBarWrapper";
 import FeedShell from "@/components/feed/FeedShell";
 import CuratedContent from "@/components/feed/CuratedContent";
 import FindView from "@/components/find/FindView";
-import { FamilyFeed } from "@/components/family";
 import CommunityView from "@/components/community/CommunityView";
 import DetailViewRouter from "@/components/views/DetailViewRouter";
 import { notFound } from "next/navigation";
@@ -148,20 +147,12 @@ export default async function PortalPage({ params, searchParams }: Props) {
         <Suspense fallback={<DetailViewSkeleton />}>
           <DetailViewRouter portalSlug={portal.slug}>
             {viewMode === "feed" && (
-              portal.slug === "atlanta-families" ? (
-                <FamilyFeed
-                  portalId={portal.id}
-                  portalSlug={portal.slug}
-                  portalExclusive={portal.portal_type === "business"}
-                />
-              ) : (
-                <FeedShell
-                  portalId={portal.id}
-                  portalSlug={portal.slug}
-                  activeTab={feedTab}
-                  curatedContent={<CuratedContent portalSlug={portal.slug} />}
-                />
-              )
+              <FeedShell
+                portalId={portal.id}
+                portalSlug={portal.slug}
+                activeTab={feedTab}
+                curatedContent={<CuratedContent portalSlug={portal.slug} />}
+              />
             )}
 
             {viewMode === "find" && (
