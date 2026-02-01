@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
+import { isValidString, isValidUrl, validationError } from "@/lib/api-utils";
 
 /**
  * GET /api/auth/profile
@@ -158,6 +159,25 @@ export async function PATCH(request: NextRequest) {
 
     const body = await request.json();
     const { display_name, bio, location, website, is_public } = body;
+
+    // Validate input fields to prevent DoS and XSS
+    if (display_name !== undefined && !isValidString(display_name, 0, 100)) {
+      return validationError("Display name must be 100 characters or less");
+    }
+    if (bio !== undefined && !isValidString(bio, 0, 500)) {
+      return validationError("Bio must be 500 characters or less");
+    }
+    if (location !== undefined && !isValidString(location, 0, 100)) {
+      return validationError("Location must be 100 characters or less");
+    }
+    if (website !== undefined && website) {
+      if (!isValidString(website, 0, 200)) {
+        return validationError("Website URL must be 200 characters or less");
+      }
+      if (!isValidUrl(website)) {
+        return validationError("Invalid website URL");
+      }
+    }
 
     // Use service client for reliable database access
     const serviceClient = createServiceClient();

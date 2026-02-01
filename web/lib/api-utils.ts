@@ -75,6 +75,17 @@ export function isValidStringArray(
   );
 }
 
+// Validate URL format
+export function isValidUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+    // Only allow http and https protocols
+    return url.protocol === "http:" || url.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
 // Sanitize string input (basic XSS prevention)
 export function sanitizeString(value: string): string {
   return value
@@ -83,6 +94,15 @@ export function sanitizeString(value: string): string {
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#x27;")
     .trim();
+}
+
+// Escape special characters for SQL ILIKE pattern matching
+// Prevents SQL injection in Supabase .ilike() filters
+export function escapeSQLPattern(value: string): string {
+  return value
+    .replace(/\\/g, "\\\\")  // Escape backslash first
+    .replace(/%/g, "\\%")    // Escape wildcard %
+    .replace(/_/g, "\\_");   // Escape single-char wildcard _
 }
 
 // Validation result type

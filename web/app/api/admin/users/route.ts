@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient as createServerClient, getUser, isAdmin } from "@/lib/supabase/server";
+import { escapeSQLPattern } from "@/lib/api-utils";
 
 // Username validation: lowercase alphanumeric + underscore, 3-30 chars
 const USERNAME_REGEX = /^[a-z0-9_]{3,30}$/;
@@ -38,9 +39,23 @@ export async function PATCH(request: Request) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const sb = supabase as any;
 
+    // Whitelist allowed fields for admin updates
+    const allowedFields = ['username', 'display_name', 'bio', 'location', 'website', 'is_active', 'avatar_url'];
+    const safeUpdates: Record<string, unknown> = {};
+
+    for (const [key, value] of Object.entries(updates)) {
+      if (allowedFields.includes(key)) {
+        safeUpdates[key] = value;
+      }
+    }
+
+    if (Object.keys(safeUpdates).length === 0) {
+      return NextResponse.json({ error: "No valid fields to update" }, { status: 400 });
+    }
+
     // If username is being updated, validate it
-    if (updates.username !== undefined) {
-      const validation = validateUsername(updates.username);
+    if (safeUpdates.username !== undefined) {
+      const validation = validateUsername(safeUpdates.username as string);
       if (!validation.valid) {
         return NextResponse.json({ error: validation.error }, { status: 400 });
       }
@@ -49,7 +64,7 @@ export async function PATCH(request: Request) {
       const { data: existingUser } = await sb
         .from("profiles")
         .select("id")
-        .eq("username", updates.username)
+        .eq("username", safeUpdates.username)
         .neq("id", userId)
         .maybeSingle();
 
@@ -60,7 +75,7 @@ export async function PATCH(request: Request) {
 
     const { error } = await sb
       .from("profiles")
-      .update(updates)
+      .update(safeUpdates as never)
       .eq("id", userId);
 
     if (error) {
@@ -172,7 +187,9 @@ export async function GET(request: Request) {
       .limit(100);
 
     if (search) {
-      query = query.or(`username.ilike.%${search}%,display_name.ilike.%${search}%`);
+      // Sanitize search input to prevent SQL injection
+      const sanitizedSearch = escapeSQLPattern(search);
+      query = query.or(`username.ilike.%${sanitizedSearch}%,display_name.ilike.%${sanitizedSearch}%`);
     }
 
     const { data: profiles, error: profilesError } = await query;
