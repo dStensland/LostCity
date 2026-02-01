@@ -654,21 +654,39 @@ export default function PortalSpotsView({ portalId, portalSlug, isExclusive = fa
               </Link>
             </p>
           </div>
-          <div className="flex items-center gap-1">
-            <span className="font-mono text-[0.6rem] text-[var(--muted)] uppercase tracking-wider mr-2 hidden sm:inline">Sort:</span>
-            {(["category", "neighborhood", "alphabetical"] as const).map((option) => (
+          <div className="flex items-center gap-3">
+            {/* Expand/Collapse All Toggle */}
+            {sortBy !== "alphabetical" && groupedSpots && groupedSpots.length > 0 && (
               <button
-                key={option}
-                onClick={() => setSortBy(option)}
-                className={`px-2 py-1 rounded font-mono text-[0.65rem] transition-all ${
-                  sortBy === option
-                    ? "bg-[var(--coral)] text-[var(--void)]"
-                    : "bg-[var(--twilight)]/50 text-[var(--muted)] hover:text-[var(--cream)]"
-                }`}
+                onClick={() => {
+                  if (expandedCategories.size === groupedSpots.length) {
+                    setExpandedCategories(new Set()); // Collapse all
+                  } else {
+                    setExpandedCategories(new Set(groupedSpots.map(g => g.type))); // Expand all
+                  }
+                }}
+                className="px-2 py-1 rounded font-mono text-[0.65rem] text-[var(--coral)] hover:text-[var(--rose)] transition-colors bg-[var(--twilight)]/30 hover:bg-[var(--twilight)]/50"
               >
-                {option === "category" ? "Category" : option === "neighborhood" ? "Area" : "A-Z"}
+                {expandedCategories.size === groupedSpots.length ? "Collapse all" : "Expand all"}
               </button>
-            ))}
+            )}
+
+            <div className="flex items-center gap-1">
+              <span className="font-mono text-[0.6rem] text-[var(--muted)] uppercase tracking-wider mr-2 hidden sm:inline">Sort:</span>
+              {(["category", "neighborhood", "alphabetical"] as const).map((option) => (
+                <button
+                  key={option}
+                  onClick={() => setSortBy(option)}
+                  className={`px-2 py-1 rounded font-mono text-[0.65rem] transition-all ${
+                    sortBy === option
+                      ? "bg-[var(--coral)] text-[var(--void)]"
+                      : "bg-[var(--twilight)]/50 text-[var(--muted)] hover:text-[var(--cream)]"
+                  }`}
+                >
+                  {option === "category" ? "Category" : option === "neighborhood" ? "Area" : "A-Z"}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       </div>

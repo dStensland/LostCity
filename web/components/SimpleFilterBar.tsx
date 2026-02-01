@@ -34,6 +34,10 @@ export default function SimpleFilterBar({ variant = "full" }: SimpleFilterBarPro
   const dateDropdownRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
+  // Scroll fade indicators state
+  const [showLeftFade, setShowLeftFade] = useState(false);
+  const [showRightFade, setShowRightFade] = useState(false);
+
   // Optimistic view state for instant UI feedback
   const [optimisticView, setOptimisticView] = useState<string | null>(null);
 
@@ -71,6 +75,37 @@ export default function SimpleFilterBar({ variant = "full" }: SimpleFilterBarPro
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  // Update scroll fade indicators
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    function updateFadeIndicators() {
+      if (!container) return;
+
+      const { scrollLeft, scrollWidth, clientWidth } = container;
+      const isAtStart = scrollLeft <= 2; // Small threshold for floating point errors
+      const isAtEnd = scrollLeft + clientWidth >= scrollWidth - 2;
+
+      setShowLeftFade(!isAtStart);
+      setShowRightFade(!isAtEnd);
+    }
+
+    // Check on mount and when content changes
+    updateFadeIndicators();
+
+    // Update on scroll
+    container.addEventListener("scroll", updateFadeIndicators);
+
+    // Update on resize (viewport changes might affect scroll position)
+    window.addEventListener("resize", updateFadeIndicators);
+
+    return () => {
+      container.removeEventListener("scroll", updateFadeIndicators);
+      window.removeEventListener("resize", updateFadeIndicators);
+    };
+  }, [currentCategories, currentDateFilter, currentFreeOnly]); // Re-run when pills change
 
   const updateParams = useCallback(
     (updates: Record<string, string | null>) => {
@@ -374,40 +409,52 @@ export default function SimpleFilterBar({ variant = "full" }: SimpleFilterBarPro
       {/* Mobile view (< 640px) - Horizontal scrolling pills */}
       <div className="sm:hidden sticky top-[112px] z-10 bg-[var(--night)] border-b border-[var(--twilight)]">
         <div className={`${variant === "compact" ? "py-1.5" : "py-2"}`}>
-          {/* Horizontal scrolling filter pills */}
-          <div
-            ref={scrollContainerRef}
-            className="flex items-center gap-2 overflow-x-auto px-4 pb-1 scrollbar-hide"
-            style={{
-              scrollbarWidth: "none",
-              msOverflowStyle: "none",
-              WebkitOverflowScrolling: "touch",
-            }}
-          >
-            {/* Weekend pill */}
-            <button
-              onClick={() => setDateFilter("weekend")}
-              className={`flex-shrink-0 min-h-[44px] flex items-center gap-1.5 px-4 py-2.5 rounded-full font-mono text-xs font-medium transition-all ${
-                currentDateFilter === "weekend"
-                  ? "bg-[var(--gold)] text-[var(--void)]"
-                  : "bg-[var(--twilight)] text-[var(--cream)]"
+          {/* Horizontal scrolling filter pills with fade indicators */}
+          <div className="relative">
+            {/* Left fade indicator */}
+            <div
+              className={`absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-[var(--night)] to-transparent pointer-events-none z-10 transition-opacity duration-300 ${
+                showLeftFade ? "opacity-100" : "opacity-0"
               }`}
+            />
+
+            {/* Scrollable pills container */}
+            <div
+              ref={scrollContainerRef}
+              className="flex items-center gap-2 overflow-x-auto px-4 pb-1 scrollbar-hide scroll-smooth"
+              style={{
+                scrollbarWidth: "none",
+                msOverflowStyle: "none",
+                WebkitOverflowScrolling: "touch",
+                scrollSnapType: "x proximity",
+              }}
             >
+              {/* Weekend pill */}
+              <button
+                onClick={() => setDateFilter("weekend")}
+                className={`flex-shrink-0 min-h-[44px] flex items-center gap-1.5 px-4 py-2.5 rounded-full font-mono text-xs font-medium transition-all ${
+                  currentDateFilter === "weekend"
+                    ? "bg-[var(--gold)] text-[var(--void)]"
+                    : "bg-[var(--twilight)] text-[var(--cream)]"
+                }`}
+                style={{ scrollSnapAlign: "start" }}
+              >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
               This Weekend
             </button>
 
-            {/* Free only pill */}
-            <button
-              onClick={toggleFreeOnly}
-              className={`flex-shrink-0 min-h-[44px] flex items-center gap-2 px-4 py-2.5 rounded-full font-mono text-xs font-medium transition-all ${
-                currentFreeOnly
-                  ? "bg-[var(--neon-green)] text-[var(--void)]"
-                  : "bg-[var(--twilight)] text-[var(--cream)]"
-              }`}
-            >
+              {/* Free only pill */}
+              <button
+                onClick={toggleFreeOnly}
+                className={`flex-shrink-0 min-h-[44px] flex items-center gap-2 px-4 py-2.5 rounded-full font-mono text-xs font-medium transition-all ${
+                  currentFreeOnly
+                    ? "bg-[var(--neon-green)] text-[var(--void)]"
+                    : "bg-[var(--twilight)] text-[var(--cream)]"
+                }`}
+                style={{ scrollSnapAlign: "start" }}
+              >
               <span className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
                 currentFreeOnly
                   ? "border-[var(--void)] bg-[var(--void)]"
@@ -430,6 +477,7 @@ export default function SimpleFilterBar({ variant = "full" }: SimpleFilterBarPro
                     key={catValue}
                     onClick={() => toggleCategory(catValue)}
                     className="flex-shrink-0 min-h-[44px] flex items-center gap-2 px-4 py-2.5 rounded-full font-mono text-xs font-medium bg-[var(--coral)] text-[var(--void)] transition-all"
+                    style={{ scrollSnapAlign: "start" }}
                   >
                     <CategoryIcon
                       type={catValue}
@@ -449,6 +497,7 @@ export default function SimpleFilterBar({ variant = "full" }: SimpleFilterBarPro
                 <button
                   onClick={() => toggleCategory("music")}
                   className="flex-shrink-0 min-h-[44px] flex items-center gap-2 px-4 py-2.5 rounded-full font-mono text-xs font-medium bg-[var(--twilight)] text-[var(--cream)] transition-all"
+                  style={{ scrollSnapAlign: "start" }}
                 >
                   <CategoryIcon type="music" size={14} glow="none" />
                   Music
@@ -456,6 +505,7 @@ export default function SimpleFilterBar({ variant = "full" }: SimpleFilterBarPro
                 <button
                   onClick={() => toggleCategory("food_drink")}
                   className="flex-shrink-0 min-h-[44px] flex items-center gap-2 px-4 py-2.5 rounded-full font-mono text-xs font-medium bg-[var(--twilight)] text-[var(--cream)] transition-all"
+                  style={{ scrollSnapAlign: "start" }}
                 >
                   <CategoryIcon type="food_drink" size={14} glow="none" />
                   Food
@@ -463,24 +513,33 @@ export default function SimpleFilterBar({ variant = "full" }: SimpleFilterBarPro
               </>
             )}
 
-            {/* More button - opens bottom sheet */}
-            <button
-              onClick={() => setMobileSheetOpen(true)}
-              className="flex-shrink-0 min-h-[44px] flex items-center gap-1.5 px-4 py-2.5 rounded-full font-mono text-xs font-medium bg-[var(--twilight)] text-[var(--cream)] border border-[var(--twilight)] transition-all"
-            >
+              {/* More button - opens bottom sheet */}
+              <button
+                onClick={() => setMobileSheetOpen(true)}
+                className="flex-shrink-0 min-h-[44px] flex items-center gap-1.5 px-4 py-2.5 rounded-full font-mono text-xs font-medium bg-[var(--twilight)] text-[var(--cream)] border border-[var(--twilight)] transition-all"
+                style={{ scrollSnapAlign: "start" }}
+              >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
               </svg>
               More
               {hasFilters && (
-                <span className="ml-1 flex items-center justify-center w-5 h-5 rounded-full bg-[var(--coral)] text-[var(--void)] text-[0.6rem] font-bold">
+                <span className="ml-1.5 flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-[var(--coral)] text-[var(--void)] text-[0.6rem] font-bold animate-pulse">
                   {currentCategories.length + (currentDateFilter ? 1 : 0) + (currentFreeOnly ? 1 : 0)}
                 </span>
               )}
             </button>
 
-            {/* Spacer for scroll padding */}
-            <div className="flex-shrink-0 w-1" />
+              {/* Spacer for scroll padding */}
+              <div className="flex-shrink-0 w-1" />
+            </div>
+
+            {/* Right fade indicator */}
+            <div
+              className={`absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-[var(--night)] to-transparent pointer-events-none z-10 transition-opacity duration-300 ${
+                showRightFade ? "opacity-100" : "opacity-0"
+              }`}
+            />
           </div>
 
           {/* View toggle at the bottom on mobile */}

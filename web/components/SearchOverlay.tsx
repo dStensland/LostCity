@@ -17,6 +17,14 @@ interface SearchOverlayProps {
 
 const POPULAR_SEARCHES = ["Live Music", "Comedy", "Free", "Rooftop", "Late Night"];
 
+const SEARCH_PLACEHOLDERS = [
+  "Search events, venues, organizers...",
+  "Try 'live music tonight'",
+  "Try 'free events this weekend'",
+  "Try 'comedy shows'",
+  "Try 'rooftop bars'",
+];
+
 type TypeFilter = "event" | "venue" | "organizer" | "series" | "list" | null;
 
 // Custom hook for debounced value
@@ -31,9 +39,30 @@ function useDebounce<T>(value: T, delay: number): T {
   return debouncedValue;
 }
 
-// Simple in-memory cache for search results
+// LRU cache for search results with bounded size
 const searchCache = new Map<string, { data: SearchResult[]; facets: SearchFacet[]; timestamp: number }>();
-const CACHE_TTL = 30000; // 30 seconds (reduced from 60s for fresher results)
+const MAX_CACHE_SIZE = 100;
+const CACHE_TTL = 30 * 1000; // 30 seconds
+
+// Prune cache to remove expired entries and enforce size limit
+function pruneCache() {
+  const now = Date.now();
+
+  // First, remove expired entries
+  for (const [key, value] of searchCache.entries()) {
+    if (now - value.timestamp > CACHE_TTL) {
+      searchCache.delete(key);
+    }
+  }
+
+  // Then, if still over limit, remove oldest entries (LRU)
+  if (searchCache.size > MAX_CACHE_SIZE) {
+    const entries = [...searchCache.entries()]
+      .sort((a, b) => a[1].timestamp - b[1].timestamp);
+    const toRemove = entries.slice(0, searchCache.size - MAX_CACHE_SIZE);
+    toRemove.forEach(([key]) => searchCache.delete(key));
+  }
+}
 
 // Clear cache for a specific portal
 function clearCacheForPortal(portalId: string | undefined) {
@@ -53,16 +82,38 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
   const [facets, setFacets] = useState<SearchFacet[]>([]);
   const [didYouMean, setDidYouMean] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [showLoadingSpinner, setShowLoadingSpinner] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeTypeFilter, setActiveTypeFilter] = useState<TypeFilter>(null);
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
   const [selectedResultIndex, setSelectedResultIndex] = useState(-1);
+  const [placeholderIndex, setPlaceholderIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
   const previousPortalId = useRef<string | undefined>(portal?.id);
 
   // Debounce search query (150ms for fast autocomplete)
   const debouncedQuery = useDebounce(query, 150);
+
+  // Delay showing loading spinner to prevent flash on fast searches
+  useEffect(() => {
+    if (isLoading) {
+      const timer = setTimeout(() => setShowLoadingSpinner(true), 200);
+      return () => clearTimeout(timer);
+    } else {
+      setShowLoadingSpinner(false);
+    }
+  }, [isLoading]);
+
+  // Rotate placeholder text when search is empty
+  useEffect(() => {
+    if (!query && isOpen) {
+      const timer = setInterval(() => {
+        setPlaceholderIndex((i) => (i + 1) % SEARCH_PLACEHOLDERS.length);
+      }, 3000);
+      return () => clearInterval(timer);
+    }
+  }, [query, isOpen]);
 
   // Clear cache when portal changes
   useEffect(() => {
@@ -210,12 +261,13 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
       setResults(mappedResults);
       setFacets(data.facets || []);
 
-      // Cache the results
+      // Cache the results and prune if needed
       searchCache.set(cacheKey, {
         data: mappedResults,
         facets: data.facets || [],
         timestamp: Date.now(),
       });
+      pruneCache();
 
       // Set didYouMean from search response
       if (data.didYouMean && data.didYouMean.length > 0) {
@@ -394,12 +446,12 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
                 type="text"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search events, venues, organizers..."
+                placeholder={SEARCH_PLACEHOLDERS[placeholderIndex]}
                 autoComplete="off"
                 autoCorrect="off"
                 autoCapitalize="off"
                 spellCheck={false}
-                className="flex-1 bg-transparent text-[var(--cream)] placeholder:text-[var(--muted)] outline-none text-lg font-display"
+                className="flex-1 bg-transparent text-[var(--cream)] placeholder:text-[var(--muted)] outline-none text-lg font-display transition-all duration-300"
                 role="combobox"
                 aria-expanded={hasResults}
                 aria-controls="search-results"
@@ -512,7 +564,7 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
               role="listbox"
               className="border-t border-[var(--twilight)] max-h-[60vh] overflow-y-auto"
             >
-              {isLoading && (
+              {showLoadingSpinner && (
                 <div className="p-4 text-center">
                   <div className="animate-spin h-5 w-5 border-2 border-[var(--neon-magenta)] border-t-transparent rounded-full mx-auto" />
                   <p className="text-xs text-[var(--soft)] mt-2">Searching...</p>
