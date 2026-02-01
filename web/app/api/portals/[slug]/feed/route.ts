@@ -771,13 +771,19 @@ export async function GET(request: NextRequest, { params }: Props) {
       }
     }
 
+    // Convert event cards/carousel sections to collapsible for cleaner feed
+    const collapsibleBlockTypes = ["event_cards", "event_carousel"];
+    const finalBlockType = collapsibleBlockTypes.includes(section.block_type)
+      ? "collapsible_events"
+      : section.block_type;
+
     return {
       id: section.id,
       title: section.title,
       slug: section.slug,
       description: section.description,
       section_type: section.section_type,
-      block_type: section.block_type,
+      block_type: finalBlockType,
       layout: section.layout,
       items_per_row: section.items_per_row,
       style: section.style,

@@ -629,7 +629,13 @@ function CollapsibleEvents({ section, portalSlug, hideImages }: { section: FeedS
   // Check if this is a themed section
   const themedConfig = THEMED_SECTION_ICONS[section.slug];
   const sectionStyle = section.style as { accent_color?: string } | null;
-  const accentColor = themedConfig?.color || sectionStyle?.accent_color || "var(--coral)";
+
+  // Get category from auto_filter for category-based sections
+  const filterCategory = section.auto_filter?.categories?.[0];
+  const categoryColor = filterCategory ? getCategoryColor(filterCategory) : null;
+
+  // Use themed color, style color, category color, or fallback to coral
+  const accentColor = themedConfig?.color || sectionStyle?.accent_color || categoryColor || "var(--coral)";
 
   return (
     <section className="mb-6">
@@ -644,8 +650,8 @@ function CollapsibleEvents({ section, portalSlug, hideImages }: { section: FeedS
           borderLeftColor: accentColor,
         }}
       >
-        {/* Icon */}
-        {themedConfig?.icon && (
+        {/* Icon - themed icon or category icon */}
+        {themedConfig?.icon ? (
           <div
             className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
             style={{ backgroundColor: `${accentColor}20` }}
@@ -654,7 +660,14 @@ function CollapsibleEvents({ section, portalSlug, hideImages }: { section: FeedS
               {themedConfig.icon}
             </div>
           </div>
-        )}
+        ) : filterCategory ? (
+          <div
+            className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+            style={{ backgroundColor: `${accentColor}20` }}
+          >
+            <CategoryIcon type={filterCategory} size={20} style={{ color: accentColor }} />
+          </div>
+        ) : null}
 
         {/* Title and description */}
         <div className="flex-1 text-left min-w-0">
