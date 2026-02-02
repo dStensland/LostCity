@@ -182,7 +182,7 @@ export default function FeedSection({ section, isFirst }: Props) {
         return <ExternalLink section={section} />;
       case "event_cards":
       case "event_carousel":
-        return <EventCards section={section} portalSlug={portal.slug} hideImages={hideImages} />;
+        return <EventCards section={section} portalSlug={portal.slug} />;
       case "collapsible_events":
         return <CollapsibleEvents section={section} portalSlug={portal.slug} />;
       case "event_list":
@@ -473,7 +473,7 @@ function HeroBanner({ section, portalSlug, hideImages }: { section: FeedSectionD
 // EVENT CARDS - Grid or carousel layout
 // ============================================
 
-function EventCards({ section, portalSlug, hideImages }: { section: FeedSectionData; portalSlug: string; hideImages?: boolean }) {
+function EventCards({ section, portalSlug }: { section: FeedSectionData; portalSlug: string }) {
   const isCarousel = section.layout === "carousel";
   const itemsPerRow = section.items_per_row || 2;
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -578,7 +578,7 @@ function EventCards({ section, portalSlug, hideImages }: { section: FeedSectionD
           }
         >
           {section.events.map((event) => (
-            <EventCard key={event.id} event={event} isCarousel={isCarousel} hideImages={hideImages} portalSlug={portalSlug} />
+            <EventCard key={event.id} event={event} isCarousel={isCarousel} portalSlug={portalSlug} />
           ))}
         </div>
 
@@ -710,12 +710,9 @@ function CollapsibleEvents({ section, portalSlug }: { section: FeedSectionData; 
   );
 }
 
-function EventCard({ event, isCarousel, hideImages, portalSlug }: { event: FeedEvent; isCarousel?: boolean; hideImages?: boolean; portalSlug?: string }) {
+function EventCard({ event, isCarousel, portalSlug }: { event: FeedEvent; isCarousel?: boolean; portalSlug?: string }) {
   const categoryColor = event.category ? getCategoryColor(event.category) : null;
   const isPopular = (event.going_count || 0) >= 10;
-  const showImage = !hideImages && event.image_url;
-  const [imageLoaded, setImageLoaded] = useState(!showImage);
-  const [imageError, setImageError] = useState(false);
   const eventStatus = getEventStatus(event.start_date, event.start_time);
 
   return (
@@ -726,56 +723,9 @@ function EventCard({ event, isCarousel, hideImages, portalSlug }: { event: FeedE
       } ${isPopular ? "border-[var(--coral)]/20 coral-glow" : "border-[var(--twilight)]"}`}
       style={{ backgroundColor: "var(--card-bg)" }}
     >
-      {/* Image section */}
-      {showImage && !imageError ? (
-        <div className="h-36 bg-[var(--twilight)] relative overflow-hidden rounded-t-xl">
-          {/* Blur placeholder */}
-          {!imageLoaded && (
-            <div className="absolute inset-0 bg-[var(--twilight)] animate-pulse" />
-          )}
-          {/* Actual image */}
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={event.image_url!}
-            alt=""
-            className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${
-              imageLoaded ? "opacity-100" : "opacity-0"
-            }`}
-            onLoad={() => setImageLoaded(true)}
-            onError={() => {
-              setImageError(true);
-              setImageLoaded(true);
-            }}
-            loading="lazy"
-          />
-
-          {/* Popular indicator */}
-          {isPopular && (
-            <div className="absolute top-2 right-2">
-              <span className="flex items-center gap-1 px-2 py-1 rounded-full bg-[var(--coral)] text-[var(--void)] text-[0.6rem] font-mono font-medium shadow-lg">
-                <TrendingIcon className="w-2.5 h-2.5" /> Popular
-              </span>
-            </div>
-          )}
-        </div>
-      ) : isCarousel ? (
-        /* No-image fallback for carousel cards - category placeholder */
-        <div className="h-32 relative overflow-hidden rounded-t-xl">
-          <CategoryPlaceholder category={event.category} />
-          {/* Popular indicator */}
-          {isPopular && (
-            <div className="absolute top-2 right-2 z-10">
-              <span className="flex items-center gap-1 px-2 py-1 rounded-full bg-[var(--coral)] text-[var(--void)] text-[0.6rem] font-mono font-medium shadow-lg">
-                <TrendingIcon className="w-2.5 h-2.5" /> Popular
-              </span>
-            </div>
-          )}
-        </div>
-      ) : null}
-
       {/* Content */}
       <div className="flex-1 p-3">
-        {/* Category + Smart Date + Popular (when no image) */}
+        {/* Category + Smart Date + Popular */}
         <div className="flex items-center gap-2 mb-1.5">
           {event.category && (
             <CategoryIcon type={event.category} size={12} style={{ color: categoryColor || undefined }} />
@@ -784,8 +734,7 @@ function EventCard({ event, isCarousel, hideImages, portalSlug }: { event: FeedE
             {getSmartDate(event.start_date)}
             {event.start_time && ` · ${getSmartTime(event.start_date, event.start_time)}`}
           </span>
-          {/* Show popular badge inline when no image and not carousel (carousel has image area) */}
-          {isPopular && !isCarousel && (!showImage || imageError) && (
+          {isPopular && (
             <span className="ml-auto flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-[var(--coral)] text-[var(--void)] text-[0.55rem] font-mono font-medium">
               <TrendingIcon className="w-2.5 h-2.5" /> Popular
             </span>
