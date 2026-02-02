@@ -3,6 +3,9 @@ Database operations for Lost City crawlers.
 Handles all Supabase interactions for events, venues, sources, and logs.
 """
 
+import time
+import logging
+import functools
 from datetime import datetime
 from typing import Optional
 from supabase import create_client, Client
@@ -12,8 +15,48 @@ from series import get_or_create_series
 from posters import get_poster_for_film_event
 from artist_images import get_info_for_music_event
 
+logger = logging.getLogger(__name__)
 
 _client: Optional[Client] = None
+
+
+def retry_on_network_error(max_retries: int = 3, base_delay: float = 0.5):
+    """Decorator to retry database operations on transient network errors.
+
+    Handles:
+    - [Errno 35] Resource temporarily unavailable (macOS)
+    - [Errno 11] Resource temporarily unavailable (Linux)
+    - Connection reset errors
+    """
+    def decorator(func):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            last_error = None
+            for attempt in range(max_retries):
+                try:
+                    return func(*args, **kwargs)
+                except OSError as e:
+                    # Errno 35 (macOS) or 11 (Linux) = Resource temporarily unavailable
+                    if e.errno in (35, 11) or "Resource temporarily unavailable" in str(e):
+                        last_error = e
+                        delay = base_delay * (2 ** attempt)  # Exponential backoff
+                        logger.debug(f"Network error in {func.__name__}, retrying in {delay}s (attempt {attempt + 1}/{max_retries})")
+                        time.sleep(delay)
+                    else:
+                        raise
+                except Exception as e:
+                    error_str = str(e)
+                    if "Resource temporarily unavailable" in error_str or "Connection reset" in error_str:
+                        last_error = e
+                        delay = base_delay * (2 ** attempt)
+                        logger.debug(f"Network error in {func.__name__}, retrying in {delay}s (attempt {attempt + 1}/{max_retries})")
+                        time.sleep(delay)
+                    else:
+                        raise
+            # All retries exhausted
+            raise last_error
+        return wrapper
+    return decorator
 
 # Virtual venue for online events
 VIRTUAL_VENUE_SLUG = "online-virtual"
@@ -110,6 +153,7 @@ def get_producer_id_for_source(source_id: int) -> Optional[str]:
     return None
 
 
+@retry_on_network_error(max_retries=3, base_delay=0.5)
 def get_or_create_venue(venue_data: dict) -> int:
     """Get existing venue or create new one. Returns venue ID."""
     client = get_client()
@@ -133,6 +177,7 @@ def get_or_create_venue(venue_data: dict) -> int:
     return result.data[0]["id"]
 
 
+@retry_on_network_error(max_retries=3, base_delay=0.5)
 def get_venue_by_id(venue_id: int) -> Optional[dict]:
     """Fetch a venue by its ID."""
     client = get_client()
@@ -151,15 +196,14 @@ def get_venue_by_slug(slug: str) -> Optional[dict]:
     return None
 
 
+@retry_on_network_error(max_retries=3, base_delay=0.5)
 def insert_event(event_data: dict, series_hint: dict = None, genres: list = None) -> int:
     """Insert a new event with inferred tags, series linking, and genres. Returns event ID."""
     client = get_client()
 
-    # Auto-link producer_id from source if not already set
-    if not event_data.get("producer_id") and event_data.get("source_id"):
-        producer_id = get_producer_id_for_source(event_data["source_id"])
-        if producer_id:
-            event_data["producer_id"] = producer_id
+    # Remove producer_id if present (not a database column)
+    if "producer_id" in event_data:
+        event_data.pop("producer_id")
 
     # Get venue vibes for tag inheritance
     venue_vibes = []
@@ -215,6 +259,7 @@ def update_event(event_id: int, event_data: dict) -> None:
     client.table("events").update(event_data).eq("id", event_id).execute()
 
 
+@retry_on_network_error(max_retries=3, base_delay=0.5)
 def find_event_by_hash(content_hash: str) -> Optional[dict]:
     """Find event by content hash for deduplication."""
     client = get_client()

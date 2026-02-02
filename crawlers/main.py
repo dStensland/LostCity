@@ -12,7 +12,9 @@ Features:
 import argparse
 import logging
 import os
+import random
 import sys
+import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from importlib import import_module
 
@@ -20,11 +22,25 @@ from db import get_active_sources, get_source_by_slug, create_crawl_log, update_
 from utils import setup_logging
 from circuit_breaker import should_skip_source, get_all_circuit_states
 from fetch_logos import fetch_logos
+from crawler_health import (
+    record_crawl_start as health_record_start,
+    record_crawl_success as health_record_success,
+    record_crawl_failure as health_record_failure,
+    get_recommended_workers,
+    get_recommended_delay,
+    should_skip_crawl,
+    get_system_health_summary,
+    print_health_report,
+)
+from data_quality import print_quality_report, get_cinema_quality_report
+from post_crawl_report import save_report as save_html_report
+from event_cleanup import run_full_cleanup
+from analytics import record_daily_snapshot, print_analytics_report
 
 logger = logging.getLogger(__name__)
 
 # Parallel execution settings
-MAX_WORKERS = 5  # Number of concurrent crawlers
+MAX_WORKERS = 2  # Number of concurrent crawlers (reduced to avoid macOS socket limits)
 TIMEOUT_SECONDS = 300  # 5 minute timeout per source
 
 
@@ -625,6 +641,42 @@ SOURCE_MODULES = {
     "the-porter": "sources.the_porter",
     "chastain-arts": "sources.chastain_arts",
     "mint-gallery": "sources.mint_gallery",
+    # ===== NASHVILLE CRAWLERS =====
+    "ticketmaster-nashville": "sources.ticketmaster_nashville",
+    "eventbrite-nashville": "sources.eventbrite_nashville",
+    # Nashville Aggregators - P0
+    "nashville-scene": "sources.nashville_scene",
+    "do615": "sources.do615",
+    "visit-music-city": "sources.visit_music_city",
+    "nashville-com": "sources.nashville_com",
+    # Nashville Music Venues - Batch 1: P0 Iconic Venues
+    "ryman-auditorium": "sources.ryman_auditorium",
+    "grand-ole-opry": "sources.grand_ole_opry",
+    "bluebird-cafe": "sources.bluebird_cafe",
+    "bridgestone-arena": "sources.bridgestone_arena",
+    "station-inn": "sources.station_inn",
+    # Nashville Arts & Culture - P0 Venues
+    "tpac": "sources.tpac",
+    "schermerhorn": "sources.schermerhorn",
+    "belcourt-theatre": "sources.belcourt_theatre",
+    "frist-art-museum": "sources.frist_art_museum",
+    "country-music-hof": "sources.country_music_hof",
+    "franklin-theatre": "sources.franklin_theatre",
+    # Nashville Music Venues - Batch 2
+    "exit-in": "sources.exit_in",
+    "basement-east": "sources.basement_east",
+    "marathon-music-works": "sources.marathon_music_works",
+    "brooklyn-bowl-nashville": "sources.brooklyn_bowl_nashville",
+    "third-and-lindsley": "sources.third_and_lindsley",
+    # ===== NASHVILLE SUBURBS =====
+    # Franklin
+    "visit-franklin": "sources.visit_franklin",
+    "downtown-franklin": "sources.downtown_franklin",
+    "factory-franklin": "sources.factory_franklin",
+    # Murfreesboro
+    "murfreesboro-city": "sources.murfreesboro_city",
+    "main-street-murfreesboro": "sources.main_street_murfreesboro",
+    "mtsu-events": "sources.mtsu_events",
 }
 
 
@@ -667,6 +719,11 @@ def run_source(slug: str, skip_circuit_breaker: bool = False) -> bool:
     Returns:
         True if successful, False otherwise
     """
+    # Get recommended delay based on source health
+    delay = get_recommended_delay(slug)
+    # Add some randomness to spread out requests
+    time.sleep(delay + random.uniform(0.0, 0.5))
+
     source = get_source_by_slug(slug)
 
     if not source:
@@ -684,8 +741,17 @@ def run_source(slug: str, skip_circuit_breaker: bool = False) -> bool:
             logger.warning(f"Skipping {slug}: circuit breaker open ({reason})")
             return False
 
+    # Check health-based skip
+    health_skip, health_reason = should_skip_crawl(slug)
+    if health_skip and not skip_circuit_breaker:
+        logger.warning(f"Skipping {slug}: health check failed ({health_reason})")
+        return False
+
     logger.info(f"Starting crawl for: {source['name']}")
     log_id = create_crawl_log(source["id"])
+
+    # Record start in health tracker
+    health_run_id = health_record_start(slug)
 
     try:
         found, new, updated = run_crawler(source)
@@ -696,6 +762,8 @@ def run_source(slug: str, skip_circuit_breaker: bool = False) -> bool:
             events_new=new,
             events_updated=updated
         )
+        # Record success in health tracker
+        health_record_success(health_run_id, found, new, updated)
         logger.info(
             f"Completed {source['name']}: "
             f"{found} found, {new} new, {updated} updated"
@@ -704,23 +772,33 @@ def run_source(slug: str, skip_circuit_breaker: bool = False) -> bool:
 
     except Exception as e:
         update_crawl_log(log_id, status="error", error_message=str(e))
+        # Record failure in health tracker
+        health_record_failure(health_run_id, str(e))
         logger.error(f"Failed {source['name']}: {e}")
         return False
 
 
-def run_all_sources(parallel: bool = True, max_workers: int = MAX_WORKERS) -> dict[str, bool]:
+def run_all_sources(parallel: bool = True, max_workers: int = MAX_WORKERS, adaptive: bool = True) -> dict[str, bool]:
     """
     Run crawlers for all active sources.
 
     Args:
         parallel: If True, run crawlers in parallel (default: True)
         max_workers: Maximum number of parallel workers
+        adaptive: If True, adjust workers based on health (default: True)
 
     Returns:
         Dict mapping source slug to success status
     """
     sources = get_active_sources()
     results = {}
+
+    # Use adaptive worker count if enabled
+    if adaptive:
+        recommended = get_recommended_workers()
+        if recommended < max_workers:
+            logger.info(f"Adaptive: reducing workers from {max_workers} to {recommended} based on health")
+            max_workers = recommended
 
     # Pre-filter sources with open circuit breakers
     active_sources = []
@@ -794,6 +872,44 @@ def run_all_sources(parallel: bool = True, max_workers: int = MAX_WORKERS) -> di
         )
     except Exception as e:
         logger.warning(f"Logo fetch failed: {e}")
+
+    # Log health summary
+    try:
+        health = get_system_health_summary()
+        logger.info(
+            f"Health summary: {health['sources']['healthy']} healthy, "
+            f"{health['sources']['degraded']} degraded, "
+            f"{health['sources']['unhealthy']} unhealthy sources"
+        )
+    except Exception as e:
+        logger.debug(f"Could not get health summary: {e}")
+
+    # ===== POST-CRAWL TASKS =====
+
+    # 1. Clean up old events
+    logger.info("Running post-crawl cleanup...")
+    try:
+        cleanup_results = run_full_cleanup(days_to_keep=7, dry_run=False)
+        total_deleted = sum(r.get("deleted", 0) for r in cleanup_results.values())
+        logger.info(f"Cleanup complete: {total_deleted} events removed")
+    except Exception as e:
+        logger.warning(f"Cleanup failed: {e}")
+
+    # 2. Record daily analytics snapshot
+    logger.info("Recording analytics snapshot...")
+    try:
+        snapshot = record_daily_snapshot()
+        logger.info(f"Analytics: {snapshot.get('total_upcoming_events', 0)} upcoming events")
+    except Exception as e:
+        logger.warning(f"Analytics snapshot failed: {e}")
+
+    # 3. Generate HTML report
+    logger.info("Generating post-crawl report...")
+    try:
+        report_path = save_html_report()
+        logger.info(f"Report saved: {report_path}")
+    except Exception as e:
+        logger.warning(f"Report generation failed: {e}")
 
     return results
 
@@ -878,8 +994,81 @@ def main():
         action="store_true",
         help="Show circuit breaker status for all sources"
     )
+    parser.add_argument(
+        "--health",
+        action="store_true",
+        help="Show crawler health report and exit"
+    )
+    parser.add_argument(
+        "--no-adaptive",
+        action="store_true",
+        help="Disable adaptive worker count (use fixed workers)"
+    )
+    parser.add_argument(
+        "--quality",
+        action="store_true",
+        help="Show data quality report and exit"
+    )
+    parser.add_argument(
+        "--quality-all",
+        action="store_true",
+        help="Show data quality report for all sources"
+    )
+    parser.add_argument(
+        "--analytics",
+        action="store_true",
+        help="Show analytics report and exit"
+    )
+    parser.add_argument(
+        "--report",
+        action="store_true",
+        help="Generate HTML report and exit"
+    )
+    parser.add_argument(
+        "--cleanup",
+        action="store_true",
+        help="Run event cleanup and exit"
+    )
+    parser.add_argument(
+        "--cleanup-dry-run",
+        action="store_true",
+        help="Show what cleanup would delete without actually deleting"
+    )
 
     args = parser.parse_args()
+
+    # Health report
+    if args.health:
+        print_health_report()
+        return 0
+
+    # Data quality report
+    if args.quality or args.quality_all:
+        print_quality_report(days=30, show_all=args.quality_all)
+        return 0
+
+    # Analytics report
+    if args.analytics:
+        print_analytics_report()
+        return 0
+
+    # Generate HTML report
+    if args.report:
+        report_path = save_html_report()
+        print(f"Report generated: {report_path}")
+        return 0
+
+    # Event cleanup
+    if args.cleanup or args.cleanup_dry_run:
+        dry_run = args.cleanup_dry_run
+        results = run_full_cleanup(days_to_keep=7, dry_run=dry_run)
+        if dry_run:
+            total_would_delete = sum(r.get("would_delete", 0) for r in results.values())
+            print(f"\n[DRY RUN] Would delete {total_would_delete} events")
+        else:
+            total_deleted = sum(r.get("deleted", 0) for r in results.values())
+            print(f"\nDeleted {total_deleted} events")
+        return 0
 
     # Circuit breaker status
     if args.circuit_status:
@@ -924,7 +1113,8 @@ def main():
     # All sources
     results = run_all_sources(
         parallel=not args.sequential,
-        max_workers=args.workers
+        max_workers=args.workers,
+        adaptive=not args.no_adaptive
     )
     failed = sum(1 for v in results.values() if not v)
     return 1 if failed > 0 else 0

@@ -1,28 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/service";
-import { createClient } from "@/lib/supabase/server";
-
-// Check if user is admin (simplified - extend as needed)
-async function isAdmin(request: NextRequest): Promise<boolean> {
-  const supabase = await createClient();
-  void request; // Use request if needed for additional auth checks
-
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return false;
-
-  // Check if user is portal member with admin/owner role
-  // For now, any authenticated user can manage portals they have access to
-  return true;
-}
+import { canManagePortal } from "@/lib/supabase/server";
 
 // GET /api/admin/portals/[id]/sections - List sections for a portal
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  void request; // Auth handled by canManagePortal
   const { id: portalId } = await params;
 
-  if (!(await isAdmin(request))) {
+  if (!(await canManagePortal(portalId))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -58,7 +46,7 @@ export async function POST(
 ) {
   const { id: portalId } = await params;
 
-  if (!(await isAdmin(request))) {
+  if (!(await canManagePortal(portalId))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
