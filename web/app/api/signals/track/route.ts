@@ -31,7 +31,7 @@ const ACTION_WEIGHTS: Record<ActionType, number> = {
 };
 
 export async function POST(request: NextRequest) {
-  const rateLimitResult = applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
   if (rateLimitResult) return rateLimitResult;
 
   try {

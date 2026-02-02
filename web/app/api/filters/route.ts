@@ -6,7 +6,7 @@ export const revalidate = 600; // Cache for 10 minutes
 
 export async function GET(request: Request) {
   // Rate limit: read endpoint
-  const rateLimitResult = applyRateLimit(request, RATE_LIMITS.read);
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.read);
   if (rateLimitResult) return rateLimitResult;
 
   try {

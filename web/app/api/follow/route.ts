@@ -48,7 +48,7 @@ export const GET = withOptionalAuth(async (request, { user, serviceClient }) => 
 
 export const POST = withAuth(async (request, { user, serviceClient }) => {
   // Apply rate limiting
-  const rateLimitResult = applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
   if (rateLimitResult) return rateLimitResult;
 
   const body = await request.json();

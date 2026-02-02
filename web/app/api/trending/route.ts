@@ -7,7 +7,7 @@ export const revalidate = 300; // Cache for 5 minutes
 
 export async function GET(request: Request) {
   // Rate limit: expensive endpoint with RSVP aggregation
-  const rateLimitResult = applyRateLimit(request, RATE_LIMITS.expensive);
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.expensive);
   if (rateLimitResult) return rateLimitResult;
   const { searchParams } = new URL(request.url);
   const limit = Math.min(parseInt(searchParams.get("limit") || "6", 10), 20);

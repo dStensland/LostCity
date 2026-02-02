@@ -21,7 +21,7 @@ import { getPortalSourceAccess } from "@/lib/federation";
  */
 export async function GET(request: NextRequest) {
   // Rate limit: expensive endpoint with pagination
-  const rateLimitResult = applyRateLimit(request, RATE_LIMITS.expensive);
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.expensive);
   if (rateLimitResult) return rateLimitResult;
 
   const searchParams = request.nextUrl.searchParams;

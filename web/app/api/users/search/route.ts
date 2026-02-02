@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient, getUser } from "@/lib/supabase/server";
+import { escapeSQLPattern } from "@/lib/api-utils";
 
 type Profile = {
   id: string;
@@ -23,12 +24,15 @@ export async function GET(request: Request) {
   const supabase = await createClient();
   const currentUser = await getUser();
 
+  // Sanitize search input to prevent SQL injection
+  const sanitizedQuery = escapeSQLPattern(query);
+
   // Search for users - only public profiles
   const { data: profiles, error } = await supabase
     .from("profiles")
     .select("id, username, display_name, avatar_url, bio")
     .eq("is_public", true)
-    .or(`username.ilike.%${query}%,display_name.ilike.%${query}%`)
+    .or(`username.ilike.%${sanitizedQuery}%,display_name.ilike.%${sanitizedQuery}%`)
     .order("display_name")
     .limit(limit);
 

@@ -13,7 +13,7 @@ type RouteContext = {
 
 // POST /api/lists/[id]/vote - Vote on a list or item
 export async function POST(request: NextRequest, context: RouteContext) {
-  const rateLimitResult = applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
   if (rateLimitResult) return rateLimitResult;
   const supabase = await createClient() as AnySupabase;
   const { id: listId } = await context.params;

@@ -14,7 +14,9 @@ import SkipLink from "@/components/SkipLink";
 import "./globals.css";
 
 // Primary sans-serif font - used globally
+// Only load weights we actually use to reduce font file size
 const outfit = Outfit({
+  weight: ["400", "500", "600", "700"],
   variable: "--font-outfit",
   subsets: ["latin"],
   display: "swap",
@@ -22,6 +24,7 @@ const outfit = Outfit({
 
 // Monospace font - used for badges, code, and technical elements
 const jetbrainsMono = JetBrains_Mono({
+  weight: ["400", "500"],
   variable: "--font-mono",
   subsets: ["latin"],
   display: "swap",
@@ -54,6 +57,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
+        {/* Preconnect to Google Fonts for faster font loading */}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         {/* Preconnect to external domains for faster resource loading */}
         <link rel="preconnect" href="https://rtppvljfrkjtoxmaizea.supabase.co" />
         <link rel="preconnect" href="https://img.evbuc.com" />

@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 
 export async function POST(request: NextRequest) {
-  const rateLimitResult = applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
   if (rateLimitResult) return rateLimitResult;
   try {
     const body = await request.json();
@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
 
 // GET endpoint to check if an entity has been flagged (for showing indicator)
 export async function GET(request: NextRequest) {
-  const rateLimitResult = applyRateLimit(request, RATE_LIMITS.read, getClientIdentifier(request));
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.read, getClientIdentifier(request));
   if (rateLimitResult) return rateLimitResult;
   const { searchParams } = new URL(request.url);
   const entity_type = searchParams.get("entity_type");

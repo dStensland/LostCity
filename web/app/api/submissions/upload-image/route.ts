@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
 
   // Apply rate limit
   const identifier = user.id;
-  const rateLimitResult = applyRateLimit(request, RATE_LIMITS.write, identifier);
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write, identifier);
   if (rateLimitResult) return rateLimitResult;
 
   try {

@@ -14,7 +14,7 @@ type RouteContext = {
 
 // GET /api/lists/[id]/items - Get items for a list
 export async function GET(request: NextRequest, context: RouteContext) {
-  const rateLimitResult = applyRateLimit(request, RATE_LIMITS.read, getClientIdentifier(request));
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.read, getClientIdentifier(request));
   if (rateLimitResult) return rateLimitResult;
   const supabase = await createClient() as AnySupabase;
   const { id: listId } = await context.params;
@@ -45,7 +45,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
 
 // POST /api/lists/[id]/items - Add an item to a list
 export async function POST(request: NextRequest, context: RouteContext) {
-  const rateLimitResult = applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
   if (rateLimitResult) return rateLimitResult;
 
   const supabase = await createClient() as AnySupabase;

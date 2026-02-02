@@ -8,7 +8,7 @@ interface OnboardingCompleteRequest {
 }
 
 export async function POST(request: Request) {
-  const rateLimitResult = applyRateLimit(request, RATE_LIMITS.write);
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write);
   if (rateLimitResult) return rateLimitResult;
 
   try {

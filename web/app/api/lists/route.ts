@@ -10,7 +10,7 @@ type AnySupabase = SupabaseClient<any, any, any>;
 
 // GET /api/lists - List all public lists, optionally filtered
 export async function GET(request: NextRequest) {
-  const rateLimitResult = applyRateLimit(request, RATE_LIMITS.read, getClientIdentifier(request));
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.read, getClientIdentifier(request));
   if (rateLimitResult) return rateLimitResult;
   const supabase = await createClient() as AnySupabase;
   const searchParams = request.nextUrl.searchParams;
@@ -292,7 +292,7 @@ export async function GET(request: NextRequest) {
 
 // POST /api/lists - Create a new list
 export async function POST(request: NextRequest) {
-  const rateLimitResult = applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
   if (rateLimitResult) return rateLimitResult;
 
   const supabase = await createClient() as AnySupabase;

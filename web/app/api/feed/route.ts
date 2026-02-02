@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient, getUser } from "@/lib/supabase/server";
 import { applyRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import { getLocalDateString } from "@/lib/formats";
+import { escapeSQLPattern } from "@/lib/api-utils";
 
 type RecommendationReason = {
   type: "followed_venue" | "followed_organization" | "neighborhood" | "price" | "friends_going" | "trending";
@@ -32,7 +33,7 @@ function createCursor(score: number, id: number, date: string): string {
 
 export async function GET(request: Request) {
   // Rate limit: expensive endpoint (7+ queries per request)
-  const rateLimitResult = applyRateLimit(request, RATE_LIMITS.expensive);
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.expensive);
   if (rateLimitResult) return rateLimitResult;
 
   try {
@@ -299,7 +300,7 @@ export async function GET(request: Request) {
 
   // Apply search filter
   if (searchQuery) {
-    query = query.ilike("title", `%${searchQuery}%`);
+    query = query.ilike("title", `%${escapeSQLPattern(searchQuery)}%`);
   }
 
   // Set limit based on personalized mode

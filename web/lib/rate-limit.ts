@@ -1,14 +1,67 @@
 /**
- * Simple in-memory rate limiter for API routes.
+ * Distributed rate limiter using Upstash Redis for production.
+ * Falls back to in-memory for development or when Redis isn't configured.
  *
- * For production at scale, consider using:
- * - @upstash/ratelimit with Redis
- * - Vercel KV
- * - Cloudflare Rate Limiting
+ * Setup for production:
+ * 1. Create an Upstash Redis database at https://upstash.com
+ * 2. Add UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN to your environment
  *
- * This implementation is suitable for single-instance deployments
- * and provides basic protection against abuse.
+ * Without Redis configured, the in-memory fallback works but won't share state
+ * across serverless instances (each instance has its own rate limit counter).
  */
+
+import { Ratelimit } from "@upstash/ratelimit";
+import { Redis } from "@upstash/redis";
+
+// ============================================================================
+// UPSTASH REDIS RATE LIMITER (PRODUCTION)
+// ============================================================================
+
+let redis: Redis | null = null;
+let upstashRateLimiters: Map<string, Ratelimit> | null = null;
+
+// Initialize Redis connection if environment variables are set
+function getRedis(): Redis | null {
+  if (redis) return redis;
+
+  const url = process.env.UPSTASH_REDIS_REST_URL;
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+
+  if (url && token) {
+    redis = new Redis({ url, token });
+    return redis;
+  }
+
+  return null;
+}
+
+// Get or create an Upstash rate limiter for a specific config
+function getUpstashRateLimiter(configKey: string, config: RateLimitConfig): Ratelimit | null {
+  const redisClient = getRedis();
+  if (!redisClient) return null;
+
+  if (!upstashRateLimiters) {
+    upstashRateLimiters = new Map();
+  }
+
+  if (!upstashRateLimiters.has(configKey)) {
+    upstashRateLimiters.set(
+      configKey,
+      new Ratelimit({
+        redis: redisClient,
+        limiter: Ratelimit.slidingWindow(config.limit, `${config.windowSec} s`),
+        prefix: `ratelimit:${configKey}`,
+        analytics: true,
+      })
+    );
+  }
+
+  return upstashRateLimiters.get(configKey) || null;
+}
+
+// ============================================================================
+// IN-MEMORY RATE LIMITER (DEVELOPMENT/FALLBACK)
+// ============================================================================
 
 type RateLimitEntry = {
   count: number;
@@ -16,7 +69,6 @@ type RateLimitEntry = {
 };
 
 // In-memory store - resets on server restart
-// For multi-instance deployments, use Redis
 const rateLimitStore = new Map<string, RateLimitEntry>();
 
 // Clean up old entries periodically (every 5 minutes)
@@ -35,6 +87,10 @@ function cleanupExpiredEntries() {
   }
 }
 
+// ============================================================================
+// TYPES AND CONFIGURATION
+// ============================================================================
+
 export type RateLimitConfig = {
   /** Maximum requests allowed in the window */
   limit: number;
@@ -50,13 +106,72 @@ export type RateLimitResult = {
 };
 
 /**
+ * Standard rate limit configurations for different endpoint types.
+ */
+export const RATE_LIMITS = {
+  // General API endpoints - 100 requests per minute
+  standard: { limit: 100, windowSec: 60 } as RateLimitConfig,
+
+  // Read-heavy endpoints (events, search) - 200 requests per minute
+  read: { limit: 200, windowSec: 60 } as RateLimitConfig,
+
+  // Write endpoints (RSVP, follow) - 30 requests per minute
+  write: { limit: 30, windowSec: 60 } as RateLimitConfig,
+
+  // Auth-related endpoints - 10 requests per minute (prevent brute force)
+  auth: { limit: 10, windowSec: 60 } as RateLimitConfig,
+
+  // Expensive endpoints (feed, trending) - 30 requests per minute
+  expensive: { limit: 30, windowSec: 60 } as RateLimitConfig,
+
+  // Search endpoints - 60 requests per minute
+  search: { limit: 60, windowSec: 60 } as RateLimitConfig,
+} as const;
+
+// ============================================================================
+// CORE RATE LIMIT FUNCTIONS
+// ============================================================================
+
+/**
  * Check and update rate limit for a given identifier.
+ * Uses Upstash Redis in production, falls back to in-memory.
  *
  * @param identifier - Unique identifier (IP, user ID, or combination)
  * @param config - Rate limit configuration
+ * @param configKey - Key to identify which rate limit config (for Upstash caching)
  * @returns Rate limit result with success status and metadata
  */
-export function checkRateLimit(
+export async function checkRateLimit(
+  identifier: string,
+  config: RateLimitConfig,
+  configKey: string = "default"
+): Promise<RateLimitResult> {
+  // Try Upstash first
+  const upstashLimiter = getUpstashRateLimiter(configKey, config);
+
+  if (upstashLimiter) {
+    try {
+      const result = await upstashLimiter.limit(identifier);
+      return {
+        success: result.success,
+        limit: result.limit,
+        remaining: result.remaining,
+        resetTime: result.reset,
+      };
+    } catch (error) {
+      // Log error but don't fail - fall back to in-memory
+      console.warn("Upstash rate limit error, falling back to in-memory:", error);
+    }
+  }
+
+  // Fall back to in-memory
+  return checkRateLimitInMemory(identifier, config);
+}
+
+/**
+ * In-memory rate limit check (synchronous, for fallback)
+ */
+function checkRateLimitInMemory(
   identifier: string,
   config: RateLimitConfig
 ): RateLimitResult {
@@ -64,7 +179,7 @@ export function checkRateLimit(
 
   const now = Date.now();
   const windowMs = config.windowSec * 1000;
-  const key = `${identifier}`;
+  const key = identifier;
 
   const entry = rateLimitStore.get(key);
 
@@ -126,28 +241,9 @@ export function getClientIdentifier(request: Request): string {
   return "unknown";
 }
 
-/**
- * Standard rate limit configurations for different endpoint types.
- */
-export const RATE_LIMITS = {
-  // General API endpoints - 100 requests per minute
-  standard: { limit: 100, windowSec: 60 } as RateLimitConfig,
-
-  // Read-heavy endpoints (events, search) - 200 requests per minute
-  read: { limit: 200, windowSec: 60 } as RateLimitConfig,
-
-  // Write endpoints (RSVP, follow) - 30 requests per minute
-  write: { limit: 30, windowSec: 60 } as RateLimitConfig,
-
-  // Auth-related endpoints - 10 requests per minute (prevent brute force)
-  auth: { limit: 10, windowSec: 60 } as RateLimitConfig,
-
-  // Expensive endpoints (feed, trending) - 30 requests per minute
-  expensive: { limit: 30, windowSec: 60 } as RateLimitConfig,
-
-  // Search endpoints - 60 requests per minute
-  search: { limit: 60, windowSec: 60 } as RateLimitConfig,
-} as const;
+// ============================================================================
+// RESPONSE HELPERS
+// ============================================================================
 
 /**
  * Create rate limit error response with proper headers.
@@ -180,20 +276,24 @@ export function rateLimitResponse(result: RateLimitResult): Response {
  * @example
  * ```ts
  * export async function GET(request: Request) {
- *   const rateLimitResult = applyRateLimit(request, RATE_LIMITS.standard);
+ *   const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.standard);
  *   if (rateLimitResult) return rateLimitResult;
  *
  *   // ... rest of handler
  * }
  * ```
  */
-export function applyRateLimit(
+export async function applyRateLimit(
   request: Request,
   config: RateLimitConfig,
   identifier?: string
-): Response | null {
+): Promise<Response | null> {
   const id = identifier || getClientIdentifier(request);
-  const result = checkRateLimit(id, config);
+
+  // Derive config key from the config values
+  const configKey = `${config.limit}_${config.windowSec}`;
+
+  const result = await checkRateLimit(id, config, configKey);
 
   if (!result.success) {
     return rateLimitResponse(result);

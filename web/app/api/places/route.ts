@@ -12,7 +12,7 @@ function getSupabase() {
 
 export async function GET(req: NextRequest) {
   // Rate limit: read endpoint
-  const rateLimitResult = applyRateLimit(req, RATE_LIMITS.read);
+  const rateLimitResult = await applyRateLimit(req, RATE_LIMITS.read);
   if (rateLimitResult) return rateLimitResult;
 
   const supabase = getSupabase();

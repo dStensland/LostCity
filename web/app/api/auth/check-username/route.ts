@@ -7,7 +7,7 @@ import { logger } from "@/lib/logger";
 // Check if a username is available and optionally reserve it
 export async function POST(request: NextRequest) {
   // Apply stricter rate limiting to prevent username enumeration
-  const rateLimitResult = applyRateLimit(request, RATE_LIMITS.auth, getClientIdentifier(request));
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.auth, getClientIdentifier(request));
   if (rateLimitResult) return rateLimitResult;
 
   try {

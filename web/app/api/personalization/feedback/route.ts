@@ -6,7 +6,7 @@ import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-lim
 // POST /api/personalization/feedback - Record user feedback on events
 export async function POST(request: NextRequest) {
   // Apply rate limiting
-  const rateLimitResult = applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
   if (rateLimitResult) return rateLimitResult;
 
   const user = await getUser();

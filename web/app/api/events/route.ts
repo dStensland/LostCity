@@ -14,7 +14,7 @@ function safeParseInt(value: string | null, defaultValue: number, min = 1, max =
 
 export async function GET(request: Request) {
   // Rate limit: read endpoint
-  const rateLimitResult = applyRateLimit(request, RATE_LIMITS.read);
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.read);
   if (rateLimitResult) return rateLimitResult;
 
   try {

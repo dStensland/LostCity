@@ -68,7 +68,7 @@ export const GET = withAuth(async (request, { user, supabase }) => {
 export const POST = withAuth(async (request, { user, supabase, serviceClient }) => {
   try {
     // Apply rate limiting
-    const rateLimitResult = applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
+    const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
     if (rateLimitResult) return rateLimitResult;
 
     const body = await request.json();

@@ -14,7 +14,7 @@ import { logger } from "@/lib/logger";
  */
 export async function GET(request: NextRequest) {
   // Apply rate limiting to prevent abuse
-  const rateLimitResult = applyRateLimit(request, RATE_LIMITS.auth, getClientIdentifier(request));
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.auth, getClientIdentifier(request));
   if (rateLimitResult) return rateLimitResult;
 
   try {
@@ -142,7 +142,7 @@ export async function GET(request: NextRequest) {
  */
 export async function PATCH(request: NextRequest) {
   // Apply rate limiting to prevent abuse
-  const rateLimitResult = applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
   if (rateLimitResult) return rateLimitResult;
 
   try {

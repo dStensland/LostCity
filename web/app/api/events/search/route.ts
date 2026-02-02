@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { errorResponse, isValidString } from "@/lib/api-utils";
+import { errorResponse, isValidString, escapeSQLPattern } from "@/lib/api-utils";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 
 // GET /api/events/search?q= - Search events for autocomplete
 export async function GET(request: NextRequest) {
   // Apply rate limit (use search limit)
-  const rateLimitResult = applyRateLimit(
+  const rateLimitResult = await applyRateLimit(
     request,
     RATE_LIMITS.search,
     getClientIdentifier(request)
@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
       organization:organizations(id, name)
     `
     )
-    .ilike("title", `%${normalizedQuery}%`)
+    .ilike("title", `%${escapeSQLPattern(normalizedQuery)}%`)
     .order("start_date", { ascending: true })
     .limit(limit);
 

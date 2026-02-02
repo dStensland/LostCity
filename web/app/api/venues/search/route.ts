@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { errorResponse, isValidString } from "@/lib/api-utils";
+import { errorResponse, isValidString, escapeSQLPattern } from "@/lib/api-utils";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 
 // GET /api/venues/search?q= - Search venues for autocomplete
 export async function GET(request: NextRequest) {
   // Apply rate limit (use search limit)
-  const rateLimitResult = applyRateLimit(
+  const rateLimitResult = await applyRateLimit(
     request,
     RATE_LIMITS.search,
     getClientIdentifier(request)
@@ -24,8 +24,9 @@ export async function GET(request: NextRequest) {
 
   const supabase = await createClient();
 
-  // Normalize search query
+  // Normalize and sanitize search query
   const normalizedQuery = query.toLowerCase().trim();
+  const sanitizedQuery = escapeSQLPattern(normalizedQuery);
 
   // Search venues by name, aliases, and address
   // Use a combination of exact match, prefix match, and fuzzy matching
@@ -45,8 +46,8 @@ export async function GET(request: NextRequest) {
     `
     )
     .or(
-      `name.ilike.%${normalizedQuery}%,` +
-        `address.ilike.%${normalizedQuery}%,` +
+      `name.ilike.%${sanitizedQuery}%,` +
+        `address.ilike.%${sanitizedQuery}%,` +
         `aliases.cs.{${normalizedQuery}}`
     )
     .order("name")

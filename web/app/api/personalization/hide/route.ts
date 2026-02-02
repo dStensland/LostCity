@@ -7,7 +7,7 @@ import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-lim
 // POST /api/personalization/hide - Hide an event from recommendations
 export async function POST(request: NextRequest) {
   // Apply rate limiting
-  const rateLimitResult = applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
   if (rateLimitResult) return rateLimitResult;
 
   const user = await getUser();
@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
 // DELETE /api/personalization/hide - Unhide an event
 export async function DELETE(request: NextRequest) {
   // Apply rate limiting
-  const rateLimitResult = applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
   if (rateLimitResult) return rateLimitResult;
 
   const user = await getUser();

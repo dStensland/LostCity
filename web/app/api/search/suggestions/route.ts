@@ -36,7 +36,7 @@ function safeParseInt(
  */
 export async function GET(request: NextRequest) {
   // Rate limit: read endpoint (suggestions should be fast)
-  const rateLimitResult = applyRateLimit(request, RATE_LIMITS.read);
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.read);
   if (rateLimitResult) return rateLimitResult;
 
   try {

@@ -16,6 +16,7 @@ import type {
 import { autoApproveVenue } from "@/lib/venue-auto-approve";
 import crypto from "crypto";
 import { logger } from "@/lib/logger";
+import { escapeSQLPattern } from "@/lib/api-utils";
 
 // Rate limits for submissions (per day) - admins bypass these
 const SUBMISSION_LIMITS = {
@@ -122,7 +123,7 @@ export async function POST(request: NextRequest) {
 
   // Apply rate limit
   const identifier = user.id;
-  const rateLimitResult = applyRateLimit(request, RATE_LIMITS.write, identifier);
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write, identifier);
   if (rateLimitResult) return rateLimitResult;
 
   const body = await request.json();
@@ -424,7 +425,7 @@ async function findEventDuplicate(
       .select("id, title")
       .eq("start_date", data.start_date)
       .eq("venue_id", data.venue_id)
-      .ilike("title", `%${data.title?.substring(0, 20)}%`)
+      .ilike("title", `%${escapeSQLPattern(data.title?.substring(0, 20) || "")}%`)
       .limit(1)
       .maybeSingle();
 
@@ -446,7 +447,7 @@ async function findVenueDuplicate(
   const { data: nameMatchData } = await supabase
     .from("venues")
     .select("id, name")
-    .ilike("name", data.name)
+    .ilike("name", escapeSQLPattern(data.name))
     .limit(1)
     .maybeSingle();
 

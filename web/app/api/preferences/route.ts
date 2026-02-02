@@ -3,7 +3,7 @@ import { createClient, getUser } from "@/lib/supabase/server";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 
 export async function POST(request: NextRequest) {
-  const rateLimitResult = applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
   if (rateLimitResult) return rateLimitResult;
   try {
     const user = await getUser();
@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET(request: NextRequest) {
-  const rateLimitResult = applyRateLimit(request, RATE_LIMITS.read, getClientIdentifier(request));
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.read, getClientIdentifier(request));
   if (rateLimitResult) return rateLimitResult;
 
   try {

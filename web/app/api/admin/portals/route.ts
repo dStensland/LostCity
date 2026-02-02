@@ -1,5 +1,8 @@
 import { createClient, isAdmin } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 import { NextRequest, NextResponse } from "next/server";
+import { createSubscription, refreshPortalSourceAccess } from "@/lib/federation";
+import { hasFeature } from "@/lib/plan-features";
 
 export const dynamic = "force-dynamic";
 
@@ -14,6 +17,9 @@ type PortalRow = {
   filters: Record<string, unknown>;
   branding: Record<string, unknown>;
   settings: Record<string, unknown>;
+  plan?: string;
+  custom_domain?: string | null;
+  parent_portal_id?: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -28,7 +34,9 @@ export async function GET() {
   const supabase = await createClient();
 
   // Get all portals with member count
-  const { data: portalsData, error } = await supabase
+  // Use type assertion since we have new columns not in generated types
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: portalsData, error } = await (supabase as any)
     .from("portals")
     .select(`
       id,
@@ -41,6 +49,9 @@ export async function GET() {
       filters,
       branding,
       settings,
+      plan,
+      custom_domain,
+      parent_portal_id,
       created_at,
       updated_at
     `)
@@ -107,12 +118,25 @@ export async function POST(request: NextRequest) {
   }
 
   const supabase = await createClient();
+  const serviceClient = createServiceClient();
   const { data: { user } } = await supabase.auth.getUser();
   // user is guaranteed non-null since isAdmin() passed
   const userId = user!.id;
 
   const body = await request.json();
-  const { slug, name, tagline, portal_type, visibility = "public", filters = {}, branding = {}, settings = {} } = body;
+  const {
+    slug,
+    name,
+    tagline,
+    portal_type,
+    visibility = "public",
+    filters = {},
+    branding = {},
+    settings = {},
+    plan = "starter",
+    parent_portal_id,
+    auto_subscribe_parent = true, // Auto-subscribe to parent's shared sources
+  } = body;
 
   if (!slug || !name || !portal_type) {
     return NextResponse.json({ error: "slug, name, and portal_type are required" }, { status: 400 });
@@ -121,6 +145,29 @@ export async function POST(request: NextRequest) {
   // Validate portal_type
   if (!["city", "event", "business", "personal"].includes(portal_type)) {
     return NextResponse.json({ error: "Invalid portal_type" }, { status: 400 });
+  }
+
+  // Validate plan
+  if (!["starter", "professional", "enterprise"].includes(plan)) {
+    return NextResponse.json({ error: "Invalid plan. Must be: starter, professional, or enterprise" }, { status: 400 });
+  }
+
+  // Verify parent portal exists if provided
+  if (parent_portal_id) {
+    const { data: parentPortal } = await supabase
+      .from("portals")
+      .select("id, portal_type")
+      .eq("id", parent_portal_id)
+      .maybeSingle() as { data: { id: string; portal_type: string } | null };
+
+    if (!parentPortal) {
+      return NextResponse.json({ error: "Parent portal not found" }, { status: 400 });
+    }
+
+    // Parent should typically be a city portal
+    if (parentPortal.portal_type !== "city") {
+      console.warn(`Warning: Parent portal ${parent_portal_id} is not a city portal`);
+    }
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -136,6 +183,8 @@ export async function POST(request: NextRequest) {
       filters,
       branding,
       settings,
+      plan,
+      parent_portal_id: parent_portal_id || null,
       owner_type: "user",
       owner_id: userId,
     })
@@ -157,5 +206,82 @@ export async function POST(request: NextRequest) {
     role: "owner",
   });
 
-  return NextResponse.json({ portal: data }, { status: 201 });
+  // Auto-subscribe to parent portal's shared sources (for B2B portals)
+  let subscriptionResults: { sourceId: number; success: boolean; error?: string }[] = [];
+
+  // Only auto-subscribe if the plan allows source subscriptions
+  const canSubscribe = hasFeature(plan, "can_subscribe_sources");
+
+  if (portal_type === "business" && parent_portal_id && auto_subscribe_parent && canSubscribe) {
+    // Get sources shared by the parent portal
+    // Uses type assertions since these are new tables
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: sharedSources } = await (serviceClient as any)
+      .from("source_sharing_rules")
+      .select(`
+        source_id,
+        share_scope,
+        allowed_categories,
+        source:sources!source_sharing_rules_source_id_fkey(
+          id,
+          name,
+          is_active,
+          owner_portal_id
+        )
+      `)
+      .eq("owner_portal_id", parent_portal_id)
+      .neq("share_scope", "none");
+
+    if (sharedSources && sharedSources.length > 0) {
+      // Subscribe to each shared source
+      subscriptionResults = await Promise.all(
+        sharedSources
+          .filter((s: { source: { is_active: boolean } | null }) => s.source?.is_active)
+          .map(async (sharingRule: {
+            source_id: number;
+            share_scope: string;
+            allowed_categories: string[] | null;
+          }) => {
+            // If source is shared with 'all', subscribe to all
+            // If source is shared with 'selected', subscribe to only allowed categories
+            const scope = sharingRule.share_scope === "all" ? "all" : "selected";
+            const categories = sharingRule.share_scope === "selected"
+              ? sharingRule.allowed_categories
+              : null;
+
+            const result = await createSubscription(
+              data.id,
+              sharingRule.source_id,
+              scope as "all" | "selected",
+              categories
+            );
+
+            return {
+              sourceId: sharingRule.source_id,
+              success: result.success,
+              error: result.error,
+            };
+          })
+      );
+
+      // Refresh the materialized view so the portal can access subscribed sources
+      await refreshPortalSourceAccess();
+    }
+  }
+
+  // Build response
+  const response: Record<string, unknown> = {
+    portal: data,
+  };
+
+  // Include subscription results if any were created
+  if (subscriptionResults.length > 0) {
+    response.subscriptions = {
+      created: subscriptionResults.filter(r => r.success).length,
+      failed: subscriptionResults.filter(r => !r.success).length,
+      details: subscriptionResults,
+    };
+  }
+
+  return NextResponse.json(response, { status: 201 });
 }
