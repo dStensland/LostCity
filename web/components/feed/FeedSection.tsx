@@ -184,7 +184,7 @@ export default function FeedSection({ section, isFirst }: Props) {
       case "event_carousel":
         return <EventCards section={section} portalSlug={portal.slug} hideImages={hideImages} />;
       case "collapsible_events":
-        return <CollapsibleEvents section={section} portalSlug={portal.slug} hideImages={hideImages} />;
+        return <CollapsibleEvents section={section} portalSlug={portal.slug} />;
       case "event_list":
       default:
         return <EventList section={section} portalSlug={portal.slug} />;
@@ -618,10 +618,7 @@ function EventCards({ section, portalSlug, hideImages }: { section: FeedSectionD
 // COLLAPSIBLE EVENTS - Expandable holiday/themed sections
 // ============================================
 
-function CollapsibleEvents({ section, portalSlug, hideImages }: { section: FeedSectionData; portalSlug: string; hideImages?: boolean }) {
-  const [isExpanded, setIsExpanded] = useState(false);
-  const itemsPerRow = section.items_per_row || 2;
-
+function CollapsibleEvents({ section, portalSlug }: { section: FeedSectionData; portalSlug: string }) {
   if (section.events.length === 0) {
     return null;
   }
@@ -637,46 +634,40 @@ function CollapsibleEvents({ section, portalSlug, hideImages }: { section: FeedS
   // Use themed color, style color, category color, or fallback to coral
   const accentColor = themedConfig?.color || sectionStyle?.accent_color || categoryColor || "var(--coral)";
 
-  // Preview config: Show max 4 events in preview, rest require "See all"
-  const previewLimit = 4;
-  const hasMore = section.events.length > previewLimit;
-  const previewEvents = section.events.slice(0, previewLimit);
-
-  // Build "See all" URL with tag filter
+  // Build URL with tag filter - clicking the card navigates to filtered view
   const tag = section.auto_filter?.tags?.[0];
-  const seeAllUrl = tag
+  const filterUrl = tag
     ? `/${portalSlug}?tags=${tag}&view=find`
     : getSeeAllUrl(section, portalSlug);
 
   return (
     <section className="mb-6">
-      {/* Collapsible header */}
-      <button
-        type="button"
-        onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full flex items-center gap-3 px-4 py-3 rounded-xl border border-[var(--twilight)] hover:border-[var(--coral)]/30 transition-all group"
+      {/* Clickable card that navigates to filtered events */}
+      <Link
+        href={filterUrl}
+        className="w-full flex items-center gap-3 px-4 py-3 rounded-xl border border-[var(--twilight)] hover:border-[var(--coral)]/30 transition-all group hover:scale-[1.01]"
         style={{
           backgroundColor: "var(--card-bg)",
           borderLeftWidth: "3px",
           borderLeftColor: accentColor,
         }}
       >
-        {/* Icon - themed icon or category icon */}
+        {/* Icon - themed icon or category icon (larger size) */}
         {themedConfig?.icon ? (
           <div
-            className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+            className="w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0"
             style={{ backgroundColor: `${accentColor}20` }}
           >
-            <div className="w-5 h-5" style={{ color: accentColor }}>
+            <div className="w-7 h-7" style={{ color: accentColor }}>
               {themedConfig.icon}
             </div>
           </div>
         ) : filterCategory ? (
           <div
-            className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+            className="w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0"
             style={{ backgroundColor: `${accentColor}20` }}
           >
-            <CategoryIcon type={filterCategory} size={20} style={{ color: accentColor }} />
+            <CategoryIcon type={filterCategory} size={28} style={{ color: accentColor }} />
           </div>
         ) : null}
 
@@ -684,7 +675,6 @@ function CollapsibleEvents({ section, portalSlug, hideImages }: { section: FeedS
         <div className="flex-1 text-left min-w-0">
           <h3
             className="font-semibold text-[var(--cream)] group-hover:text-[var(--coral)] transition-colors truncate"
-            style={{ color: isExpanded ? accentColor : undefined }}
           >
             {section.title}
           </h3>
@@ -706,48 +696,16 @@ function CollapsibleEvents({ section, portalSlug, hideImages }: { section: FeedS
           {section.events.length} event{section.events.length !== 1 ? "s" : ""}
         </span>
 
-        {/* Expand/collapse chevron */}
+        {/* Arrow indicating navigation */}
         <svg
-          className={`w-5 h-5 text-[var(--muted)] transition-transform flex-shrink-0 ${isExpanded ? "rotate-180" : ""}`}
+          className="w-5 h-5 text-[var(--muted)] group-hover:text-[var(--coral)] transition-colors flex-shrink-0"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
         >
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
         </svg>
-      </button>
-
-      {/* Expanded preview content */}
-      {isExpanded && (
-        <div className="mt-3 space-y-3">
-          {/* Event preview grid - max 4 items */}
-          <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(${Math.min(itemsPerRow, 2)}, minmax(0, 1fr))` }}>
-            {previewEvents.map((event) => (
-              <EventCard key={event.id} event={event} hideImages={hideImages} portalSlug={portalSlug} />
-            ))}
-          </div>
-
-          {/* "See all" button - shown when there are more events */}
-          {hasMore && (
-            <Link
-              href={seeAllUrl}
-              className="flex items-center justify-center gap-2 px-4 py-3 rounded-lg border transition-all hover:scale-[1.02]"
-              style={{
-                backgroundColor: `${accentColor}10`,
-                borderColor: `${accentColor}30`,
-                color: accentColor,
-              }}
-            >
-              <span className="font-mono text-sm font-medium">
-                See all {section.events.length} events
-              </span>
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-            </Link>
-          )}
-        </div>
-      )}
+      </Link>
     </section>
   );
 }
