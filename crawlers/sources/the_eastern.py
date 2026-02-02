@@ -87,61 +87,69 @@ def crawl(source: dict) -> tuple[int, int, int]:
             body_text = page.inner_text("body")
             lines = [l.strip() for l in body_text.split("\n") if l.strip()]
 
-            # Parse events - look for date patterns
+            # The Eastern format: "FRI, FEB 6, 2026 7:30 PM" with artist name on previous lines
+            # Pattern: DAY, MON DD, YYYY H:MM PM
+            date_pattern = re.compile(
+                r"^(?:MON|TUE|WED|THU|FRI|SAT|SUN),?\s+"
+                r"(JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)\s+"
+                r"(\d{1,2}),?\s+"
+                r"(\d{4})\s+"
+                r"(\d{1,2}):(\d{2})\s*(AM|PM)",
+                re.IGNORECASE
+            )
+
             i = 0
             while i < len(lines):
                 line = lines[i]
 
-                # Skip navigation items
-                if len(line) < 3:
-                    i += 1
-                    continue
-
-                # Look for date patterns
-                date_match = re.match(
-                    r"(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)?,?\s*(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{1,2})(?:,?\s+(\d{4}))?",
-                    line,
-                    re.IGNORECASE
-                )
+                # Look for date pattern like "FRI, FEB 6, 2026 7:30 PM"
+                date_match = date_pattern.match(line)
 
                 if date_match:
-                    month = date_match.group(1)
+                    month_str = date_match.group(1)
                     day = date_match.group(2)
-                    year = date_match.group(3) if date_match.group(3) else str(datetime.now().year)
+                    year = date_match.group(3)
+                    hour = int(date_match.group(4))
+                    minute = date_match.group(5)
+                    period = date_match.group(6).upper()
 
-                    # Look for title in surrounding lines
-                    title = None
-                    start_time = None
-
-                    for offset in [-2, -1, 1, 2, 3]:
-                        idx = i + offset
-                        if 0 <= idx < len(lines):
-                            check_line = lines[idx]
-                            if re.match(r"(January|February|March)", check_line, re.IGNORECASE):
-                                continue
-                            if not start_time:
-                                time_result = parse_time(check_line)
-                                if time_result:
-                                    start_time = time_result
-                                    continue
-                            if not title and len(check_line) > 5:
-                                if not re.match(r"\d{1,2}[:/]", check_line):
-                                    if not re.match(r"(free|tickets|register|\$|more info)", check_line.lower()):
-                                        title = check_line
-                                        break
-
-                    if not title:
-                        i += 1
-                        continue
+                    # Convert to 24-hour time
+                    if period == "PM" and hour != 12:
+                        hour += 12
+                    elif period == "AM" and hour == 12:
+                        hour = 0
+                    start_time = f"{hour:02d}:{minute}"
 
                     # Parse date
                     try:
-                        month_str = month[:3] if len(month) > 3 else month
                         dt = datetime.strptime(f"{month_str} {day} {year}", "%b %d %Y")
-                        if dt.date() < datetime.now().date():
-                            dt = datetime.strptime(f"{month_str} {day} {int(year) + 1}", "%b %d %Y")
                         start_date = dt.strftime("%Y-%m-%d")
                     except ValueError:
+                        i += 1
+                        continue
+
+                    # Look for title in previous lines (artist name comes before date)
+                    title = None
+                    for offset in range(-1, -5, -1):
+                        idx = i + offset
+                        if 0 <= idx < len(lines):
+                            check_line = lines[idx]
+                            # Skip navigation, times, tickets, short lines
+                            if len(check_line) < 3:
+                                continue
+                            if date_pattern.match(check_line):
+                                continue
+                            skip_words = ["tickets", "calendar", "venue", "getting", "dining",
+                                         "rental", "upgrades", "doors", "show", "upcoming"]
+                            if any(w in check_line.lower() for w in skip_words):
+                                continue
+                            if re.match(r"^\d+:\d+\s*(am|pm)", check_line, re.IGNORECASE):
+                                continue
+                            # Found title
+                            title = check_line
+                            break
+
+                    if not title or len(title) < 3:
                         i += 1
                         continue
 
@@ -158,15 +166,15 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "source_id": source_id,
                         "venue_id": venue_id,
                         "title": title,
-                        "description": "Event at The Eastern",
+                        "description": f"Live at The Eastern",
                         "start_date": start_date,
                         "start_time": start_time,
                         "end_date": None,
                         "end_time": None,
-                        "is_all_day": start_time is None,
+                        "is_all_day": False,
                         "category": "music",
                         "subcategory": "concert",
-                        "tags": ["the-eastern", "live-music", "concert", "east-atlanta"],
+                        "tags": ["live-music", "concert", "grant-park"],
                         "price_min": None,
                         "price_max": None,
                         "price_note": None,
@@ -175,7 +183,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "ticket_url": EVENTS_URL,
                         "image_url": image_map.get(title),
                         "raw_text": f"{title} - {start_date}",
-                        "extraction_confidence": 0.80,
+                        "extraction_confidence": 0.85,
                         "is_recurring": False,
                         "recurrence_rule": None,
                         "content_hash": content_hash,

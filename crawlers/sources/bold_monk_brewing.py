@@ -1,5 +1,5 @@
 """
-Crawler for Bold Monk Brewing Co (boldmonkbrewing.com).
+Crawler for Bold Monk Brewing Co (boldmonkbrewingco.com).
 
 Site uses JavaScript rendering - must use Playwright.
 """
@@ -19,7 +19,7 @@ from utils import extract_images_from_page
 
 logger = logging.getLogger(__name__)
 
-BASE_URL = "https://www.boldmonkbrewing.com"
+BASE_URL = "https://boldmonkbrewingco.com"
 EVENTS_URL = f"{BASE_URL}/events"
 
 VENUE_DATA = {
