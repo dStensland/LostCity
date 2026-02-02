@@ -72,13 +72,14 @@ export interface SearchFilters {
   geo_center?: [number, number]; // Portal geo filter [lat, lng]
   geo_radius_km?: number;    // Portal geo radius in km
   mood?: MoodId;             // Mood-based filtering (expands to vibes/categories)
-  portal_id?: string;        // Portal-restricted events filter
-  portal_exclusive?: boolean; // If true, only show events for this portal (not public events)
-  // Federation filters
+  portal_id?: string;        // Portal ID filter - all events belong to a portal
+  // Source filters
   source_ids?: number[];     // Explicit list of source IDs to filter by
-  use_federation?: boolean;  // If true, fetch source access from federation system
   // Content filters (set automatically from user preferences / portal settings)
   exclude_adult?: boolean;   // If true, exclude adult entertainment venues/events (internal use)
+  // Deprecated - kept for backwards compatibility but no longer used
+  portal_exclusive?: boolean; // @deprecated - all events now belong to exactly one portal
+  use_federation?: boolean;  // @deprecated - portal filtering is direct via portal_id
 }
 
 // Rollup types for collapsed event groups
@@ -394,34 +395,16 @@ export async function getFilteredEventsWithSearch(
     .is("canonical_event_id", null); // Only show canonical events, not duplicates
 
   // Apply portal restriction filter
-  // If portal_exclusive is true, only show events for this portal (business portals)
-  // If portal_id is set but not exclusive, show events for that portal OR public events
-  // If portal_id is not set, only show public events (hide portal-restricted events)
+  // All events must belong to a portal (enforced by database trigger)
+  // Filter directly by portal_id for O(1) lookup
   if (filters.portal_id) {
-    if (filters.portal_exclusive) {
-      // Business portals: only show their own events
-      query = query.eq("portal_id", filters.portal_id);
-    } else {
-      // City portals: show portal events + public events
-      query = query.or(`portal_id.eq.${filters.portal_id},portal_id.is.null`);
-    }
-  } else {
-    query = query.is("portal_id", null);
+    query = query.eq("portal_id", filters.portal_id);
   }
+  // Note: If no portal_id provided, no portal filtering is applied (admin/global view)
 
-  // Apply federation source filtering
-  // If use_federation is true and portal_id is set, filter by accessible sources
-  // If source_ids is explicitly provided, use that instead
+  // Apply explicit source filtering if provided
   if (filters.source_ids && filters.source_ids.length > 0) {
     query = query.in("source_id", filters.source_ids);
-  } else if (filters.use_federation && filters.portal_id) {
-    const { sourceIds } = await getAccessibleSourceIds(filters.portal_id);
-    if (sourceIds.length > 0) {
-      query = query.in("source_id", sourceIds);
-    } else {
-      // No accessible sources - return empty results
-      return { events: [], total: 0 };
-    }
   }
 
   // Get mood data for potential vibes lookup
@@ -705,27 +688,14 @@ export async function getFilteredEventsWithCursor(
     .or(`start_date.gt.${today},end_time.gte.${currentTime},and(end_time.is.null,start_time.gte.${currentTime}),is_all_day.eq.true`)
     .is("canonical_event_id", null); // Only show canonical events, not duplicates
 
-  // Apply portal restriction filter
+  // Apply portal restriction filter - all events belong to a portal
   if (filters.portal_id) {
-    if (filters.portal_exclusive) {
-      query = query.eq("portal_id", filters.portal_id);
-    } else {
-      query = query.or(`portal_id.eq.${filters.portal_id},portal_id.is.null`);
-    }
-  } else {
-    query = query.is("portal_id", null);
+    query = query.eq("portal_id", filters.portal_id);
   }
 
-  // Apply federation source filtering
+  // Apply explicit source filtering if provided
   if (filters.source_ids && filters.source_ids.length > 0) {
     query = query.in("source_id", filters.source_ids);
-  } else if (filters.use_federation && filters.portal_id) {
-    const { sourceIds } = await getAccessibleSourceIds(filters.portal_id);
-    if (sourceIds.length > 0) {
-      query = query.in("source_id", sourceIds);
-    } else {
-      return { events: [], nextCursor: null, hasMore: false };
-    }
   }
 
   // Get mood data for potential vibes lookup
@@ -1012,27 +982,14 @@ export async function getEventsForMap(
     .not("venues.lng", "is", null)
     .is("canonical_event_id", null); // Only show canonical events, not duplicates
 
-  // Apply portal restriction filter
+  // Apply portal restriction filter - all events belong to a portal
   if (filters.portal_id) {
-    if (filters.portal_exclusive) {
-      query = query.eq("portal_id", filters.portal_id);
-    } else {
-      query = query.or(`portal_id.eq.${filters.portal_id},portal_id.is.null`);
-    }
-  } else {
-    query = query.is("portal_id", null);
+    query = query.eq("portal_id", filters.portal_id);
   }
 
-  // Apply federation source filtering
+  // Apply explicit source filtering if provided
   if (filters.source_ids && filters.source_ids.length > 0) {
     query = query.in("source_id", filters.source_ids);
-  } else if (filters.use_federation && filters.portal_id) {
-    const { sourceIds } = await getAccessibleSourceIds(filters.portal_id);
-    if (sourceIds.length > 0) {
-      query = query.in("source_id", sourceIds);
-    } else {
-      return [];
-    }
   }
 
   // Apply search filter (includes venue name search) - using batched venue IDs

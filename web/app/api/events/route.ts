@@ -46,9 +46,7 @@ export async function GET(request: Request) {
       venue_id: venueId || undefined,
       mood: (searchParams.get("mood") as MoodId) || undefined,
       portal_id: portalId,
-      portal_exclusive: searchParams.get("portal_exclusive") === "true" || undefined,
-      // Enable federation filtering when a portal is specified
-      use_federation: !!portalId,
+      // All events belong to a portal, filter directly by portal_id
     };
 
     const pageSize = 20;

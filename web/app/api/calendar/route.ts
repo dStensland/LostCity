@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { startOfMonth, endOfMonth, startOfWeek, endOfWeek, format } from "date-fns";
 import { applyRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
-import { getPortalSourceAccess } from "@/lib/federation";
 
 /**
  * Calendar API - Optimized endpoint for calendar view
@@ -16,8 +15,7 @@ import { getPortalSourceAccess } from "@/lib/federation";
  * - categories: Comma-separated category IDs
  * - neighborhoods: Comma-separated neighborhood names
  * - price: Price filter (free, budget, moderate, premium)
- * - portal_id: Portal ID for filtering
- * - portal_exclusive: If true, only show portal's own events
+ * - portal_id: Portal ID for filtering (required for portal views)
  */
 export async function GET(request: NextRequest) {
   // Rate limit: expensive endpoint with pagination
@@ -46,18 +44,6 @@ export async function GET(request: NextRequest) {
   const neighborhoods = searchParams.get("neighborhoods")?.split(",").filter(Boolean);
   const priceFilter = searchParams.get("price");
   const portalId = searchParams.get("portal_id");
-  const portalExclusive = searchParams.get("portal_exclusive") === "true";
-
-  // Get accessible source IDs for federation filtering
-  let accessibleSourceIds: number[] | null = null;
-  if (portalId) {
-    try {
-      const access = await getPortalSourceAccess(portalId);
-      accessibleSourceIds = access.sourceIds;
-    } catch (error) {
-      console.error("Error fetching portal source access:", error);
-    }
-  }
 
   // Type for calendar events (minimal fields)
   type CalendarEvent = {
@@ -119,20 +105,9 @@ export async function GET(request: NextRequest) {
       query = query.gte("price_min", 75);
     }
 
-    // Apply portal filter
-    if (portalExclusive && portalId) {
+    // Apply portal filter - all events belong to a portal, filter directly
+    if (portalId) {
       query = query.eq("portal_id", portalId);
-    } else if (portalId) {
-      // Escape portalId to prevent PostgREST injection
-      query = query.or(`portal_id.is.null,portal_id.eq."${portalId.replace(/"/g, "")}"`);
-    }
-
-    // Apply federation source filtering
-    if (accessibleSourceIds && accessibleSourceIds.length > 0) {
-      query = query.in("source_id", accessibleSourceIds);
-    } else if (portalId && accessibleSourceIds !== null && accessibleSourceIds.length === 0) {
-      // Portal has no accessible sources - return no results
-      query = query.eq("id", -1); // Impossible condition to return empty results
     }
 
     return query;
