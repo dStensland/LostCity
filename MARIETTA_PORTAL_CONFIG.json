@@ -1,0 +1,162 @@
+{
+  "portal": {
+    "slug": "marietta",
+    "name": "Discover Marietta",
+    "tagline": "Events & happenings in historic Marietta",
+    "portal_type": "city",
+    "status": "active",
+    "visibility": "public",
+    "plan": "starter"
+  },
+  "filters": {
+    "city": "Marietta",
+    "neighborhoods": [
+      "Marietta Square",
+      "Downtown Marietta",
+      "East Cobb",
+      "Polk",
+      "Whitlock",
+      "Fort Hill",
+      "North Landing",
+      "Eastern Marietta",
+      "Indian Hills",
+      "Chimney Springs",
+      "Windsor Oaks",
+      "Somerset",
+      "Brookstone",
+      "Powers Park"
+    ]
+  },
+  "branding": {
+    "visual_preset": "corporate_clean",
+    "theme_mode": "light",
+    "colors": {
+      "primary_color": "#2563eb",
+      "secondary_color": "#7c3aed",
+      "accent_color": "#dc2626",
+      "background_color": "#f8fafc",
+      "text_color": "#1e293b",
+      "muted_color": "#64748b",
+      "button_color": "#2563eb",
+      "button_text_color": "#ffffff",
+      "border_color": "#e2e8f0",
+      "card_color": "#ffffff"
+    },
+    "typography": {
+      "font_heading": "Inter",
+      "font_body": "Inter"
+    },
+    "header": {
+      "template": "standard",
+      "logo_position": "left",
+      "logo_size": "md",
+      "nav_style": "tabs",
+      "show_search_in_header": true,
+      "transparent_on_top": false
+    },
+    "ambient": {
+      "effect": "subtle_glow",
+      "intensity": "subtle",
+      "colors": {
+        "primary": "#dbeafe",
+        "secondary": "#ede9fe"
+      },
+      "animation_speed": "slow"
+    },
+    "component_style": {
+      "border_radius": "md",
+      "shadows": "medium",
+      "card_style": "elevated",
+      "button_style": "default",
+      "glow_enabled": false,
+      "glow_intensity": "subtle",
+      "animations": "subtle",
+      "glass_enabled": false
+    }
+  },
+  "settings": {
+    "show_map": true,
+    "default_view": "list",
+    "show_categories": true,
+    "icon_glow": false,
+    "exclude_adult": false,
+    "meta_description": "Discover events, activities, and entertainment in historic Marietta, GA. From the Marietta Square to East Cobb, find what's happening in your neighborhood.",
+    "nav_labels": {
+      "feed": "Feed",
+      "events": "Events",
+      "spots": "Places"
+    }
+  },
+  "feed_sections": [
+    {
+      "title": "This Week in Marietta",
+      "slug": "this-week",
+      "description": "What's happening this week in Marietta",
+      "section_type": "auto",
+      "auto_filter": {
+        "days_ahead": 7
+      },
+      "display_order": 1
+    },
+    {
+      "title": "Around the Square",
+      "slug": "marietta-square",
+      "description": "Events in historic Marietta Square",
+      "section_type": "auto",
+      "auto_filter": {
+        "neighborhoods": ["Marietta Square", "Downtown Marietta"]
+      },
+      "display_order": 2
+    },
+    {
+      "title": "Arts & Culture",
+      "slug": "arts-culture",
+      "description": "Art, theater, and cultural events",
+      "section_type": "auto",
+      "auto_filter": {
+        "categories": ["art", "theater", "music"]
+      },
+      "display_order": 3
+    },
+    {
+      "title": "Family Events",
+      "slug": "family",
+      "description": "Family-friendly activities",
+      "section_type": "auto",
+      "auto_filter": {
+        "categories": ["family", "community"]
+      },
+      "display_order": 4
+    },
+    {
+      "title": "Food & Drink",
+      "slug": "food-drink",
+      "description": "Dining and nightlife events",
+      "section_type": "auto",
+      "auto_filter": {
+        "categories": ["food_drink", "nightlife"]
+      },
+      "display_order": 5
+    }
+  ],
+  "atlanta_portal_update": {
+    "action": "add_neighborhoods",
+    "neighborhoods_added": [
+      "Marietta Square",
+      "Downtown Marietta",
+      "East Cobb",
+      "Polk",
+      "Whitlock",
+      "Fort Hill",
+      "North Landing",
+      "Eastern Marietta",
+      "Indian Hills",
+      "Chimney Springs",
+      "Windsor Oaks",
+      "Somerset",
+      "Brookstone",
+      "Powers Park"
+    ],
+    "reason": "Ensures Marietta events appear in both /marietta and /atlanta portals"
+  }
+}

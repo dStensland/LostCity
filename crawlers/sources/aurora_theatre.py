@@ -62,16 +62,32 @@ def is_valid_title(title: str) -> bool:
 def parse_date_range(date_text: str) -> tuple[Optional[str], Optional[str]]:
     """
     Parse date range from formats like:
+    - "Jan 22, 2026-Feb 15, 2026" (with comma before dash)
     - "Jan 22 - Feb 15, 2026"
     - "February 7, 2026" (single day)
-    - "Mar 26 - Apr 19, 2026"
+    - "Mar 26, 2026-Apr 19, 2026"
     """
     if not date_text:
         return None, None
 
     date_text = date_text.strip()
 
-    # Pattern: "Mon Day - Mon Day, Year"
+    # Pattern: "Mon Day, Year-Mon Day, Year" (e.g., "Jan 22, 2026-Feb 15, 2026")
+    full_range_match = re.search(
+        r"(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{1,2}),\s*(\d{4})\s*[-–—]\s*(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{1,2}),\s*(\d{4})",
+        date_text,
+        re.IGNORECASE
+    )
+    if full_range_match:
+        start_month, start_day, start_year, end_month, end_day, end_year = full_range_match.groups()
+        try:
+            start_dt = datetime.strptime(f"{start_month} {start_day} {start_year}", "%b %d %Y")
+            end_dt = datetime.strptime(f"{end_month} {end_day} {end_year}", "%b %d %Y")
+            return start_dt.strftime("%Y-%m-%d"), end_dt.strftime("%Y-%m-%d")
+        except ValueError:
+            pass
+
+    # Pattern: "Mon Day - Mon Day, Year" (different months, same year)
     range_match = re.search(
         r"(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2})\s*[-–—]\s*(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2}),?\s*(\d{4})",
         date_text,
@@ -157,6 +173,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
             for link in show_links:
                 href = link.get_attribute("href")
                 if href and "/view/" in href:
+                    # Skip archive pages
+                    if "archive" in href.lower():
+                        continue
                     full_url = href if href.startswith("http") else BASE_URL + href
                     show_urls.add(full_url)
 
@@ -168,15 +187,11 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     page.goto(show_url, wait_until="domcontentloaded", timeout=20000)
                     page.wait_for_timeout(3000)
 
-                    # Get title
+                    # Get title from H1
                     title = None
-                    for selector in ["h1", ".show-title", ".production-title", ".entry-title"]:
-                        el = page.query_selector(selector)
-                        if el:
-                            title = el.inner_text().strip()
-                            if is_valid_title(title):
-                                break
-                            title = None
+                    h1 = page.query_selector("h1")
+                    if h1:
+                        title = h1.inner_text().strip()
 
                     if not title:
                         # Extract from URL
@@ -185,11 +200,15 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             title = match.group(1).replace("-", " ").title()
 
                     if not title or not is_valid_title(title):
+                        logger.debug(f"Skipping invalid title: {title}")
                         continue
 
-                    # Get dates from page content
-                    body_text = page.inner_text("body")
-                    start_date, end_date = parse_date_range(body_text)
+                    # Get dates from H2 tag (dates are consistently in the first H2)
+                    start_date, end_date = None, None
+                    h2 = page.query_selector("h2")
+                    if h2:
+                        date_text = h2.inner_text().strip()
+                        start_date, end_date = parse_date_range(date_text)
 
                     if not start_date:
                         logger.debug(f"No dates found for {title}")
@@ -199,27 +218,41 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     check_date = end_date or start_date
                     try:
                         if datetime.strptime(check_date, "%Y-%m-%d").date() < datetime.now().date():
+                            logger.debug(f"Skipping past show: {title} ({check_date})")
                             continue
                     except ValueError:
                         pass
 
-                    # Get description
+                    # Get description - it's typically in the ABOUT section
                     description = None
-                    for selector in [".show-description", ".production-description", ".entry-content p", "article p"]:
-                        el = page.query_selector(selector)
-                        if el:
-                            desc = el.inner_text().strip()
-                            if desc and len(desc) > 30:
-                                description = desc[:500]
+                    body_text = page.inner_text("body")
+
+                    # Look for text after "ABOUT" section
+                    about_match = re.search(r'ABOUT\s+(.*?)(?:Buy Tickets|MEDIA|January|February|March|April|May|June|July|August|September|October|November|December|\n\n\n)', body_text, re.DOTALL)
+                    if about_match:
+                        desc = about_match.group(1).strip()
+                        # Remove program/runtime details
+                        desc = re.sub(r'(Metro Waterproofing Main Stage|Runtime:.*|Content Advisory:.*)', '', desc, flags=re.DOTALL)
+                        desc = desc.strip()
+                        if len(desc) > 30:
+                            description = desc[:800]
+
+                    # Get image - look for production images, not the program button
+                    image_url = None
+                    imgs = page.query_selector_all("img")
+                    for img in imgs:
+                        src = img.get_attribute("src") or img.get_attribute("data-src")
+                        if src and "logo" not in src.lower() and "Program_WebButton" not in src:
+                            # Prefer scaled.jpeg or large production images
+                            if "scaled" in src or any(word in src for word in ["/PTGW-", "/Flat", "/Heights", "/Initiative"]):
+                                image_url = src if src.startswith("http") else BASE_URL + src
                                 break
 
-                    # Get image
-                    image_url = None
-                    for selector in [".production-image img", ".show-image img", "article img", ".featured-image img"]:
-                        el = page.query_selector(selector)
-                        if el:
-                            src = el.get_attribute("src") or el.get_attribute("data-src")
-                            if src and "logo" not in src.lower():
+                    # Fallback: get any non-logo image
+                    if not image_url:
+                        for img in imgs:
+                            src = img.get_attribute("src") or img.get_attribute("data-src")
+                            if src and "logo" not in src.lower() and "Program_WebButton" not in src and "wp-content/uploads" in src:
                                 image_url = src if src.startswith("http") else BASE_URL + src
                                 break
 

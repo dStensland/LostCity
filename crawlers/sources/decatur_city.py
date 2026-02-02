@@ -108,6 +108,62 @@ def parse_time(time_text: str) -> Optional[str]:
     return None
 
 
+def parse_date_from_fullcalendar(datetime_text: str) -> Optional[str]:
+    """
+    Parse date from FullCalendar format.
+
+    Examples:
+    - "Mon, 05 Jan 2026 4pm"
+    - "Thu, 08 Jan 2026 All Day"
+    - "Tue, 06 Jan 2026 6:30pm"
+    """
+    # Match pattern like "Mon, 05 Jan 2026"
+    match = re.search(
+        r"(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun),\s+(\d{2})\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{4})",
+        datetime_text,
+        re.IGNORECASE
+    )
+
+    if match:
+        try:
+            day = match.group(1)
+            month = match.group(2)
+            year = match.group(3)
+            dt = datetime.strptime(f"{day} {month} {year}", "%d %b %Y")
+            return dt.strftime("%Y-%m-%d")
+        except ValueError:
+            pass
+
+    return None
+
+
+def parse_time_from_fullcalendar(datetime_text: str) -> Optional[str]:
+    """
+    Parse time from FullCalendar format.
+
+    Examples:
+    - "Mon, 05 Jan 2026 4pm" -> "16:00"
+    - "Tue, 06 Jan 2026 6:30pm" -> "18:30"
+    - "Fri, 09 Jan 2026 9am" -> "09:00"
+    """
+    # Match time at end like "4pm", "6:30pm", "9am"
+    match = re.search(r"(\d{1,2})(?::(\d{2}))?\s*(am|pm)", datetime_text, re.IGNORECASE)
+
+    if match:
+        hour = int(match.group(1))
+        minute = match.group(2) if match.group(2) else "00"
+        period = match.group(3).lower()
+
+        if period == "pm" and hour != 12:
+            hour += 12
+        elif period == "am" and hour == 12:
+            hour = 0
+
+        return f"{hour:02d}:{minute}"
+
+    return None
+
+
 def categorize_event(title: str, description: str) -> tuple[str, list[str]]:
     """Determine category and tags based on title and description."""
     text = (title + " " + description).lower()
@@ -191,60 +247,60 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 browser.close()
                 return 0, 0, 0
 
-            # CivicPlus calendar uses .calendar-list or similar
-            event_elements = page.query_selector_all(
-                ".calendar-list-item, .event-item, .calendar-event, "
-                "[class*='calendar-list'] li, [class*='event-list'] li"
-            )
+            # Decatur uses FullCalendar (fc-day-grid-event)
+            event_elements = page.query_selector_all("a.fc-day-grid-event")
 
             if not event_elements:
-                # Try finding event links directly
-                event_links = page.query_selector_all('a[href*="/calendar/"]')
-                logger.info(f"Found {len(event_links)} calendar links")
-
-            if not event_elements:
-                logger.warning("No event elements found, trying text extraction")
+                logger.warning("No FullCalendar event elements found, trying fallback text extraction")
                 # Fallback to text parsing
                 body_text = page.inner_text("body")
                 events_found, events_new, events_updated = parse_text_content(
                     body_text, source_id, venue_id, image_map
                 )
             else:
-                # Parse event elements
+                logger.info(f"Found {len(event_elements)} FullCalendar events")
+                # Parse FullCalendar event elements
                 for element in event_elements:
                     try:
-                        title_elem = element.query_selector("h2, h3, .title, .event-title, [class*='title']")
-                        date_elem = element.query_selector(".date, .event-date, [class*='date']")
-                        time_elem = element.query_selector(".time, .event-time, [class*='time']")
-                        desc_elem = element.query_selector(".description, .event-description, p")
-
+                        # Get title from .fc-title span
+                        title_elem = element.query_selector(".fc-title")
                         if not title_elem:
                             continue
 
-                        title = title_elem.inner_text().strip()
+                        # Title text is before the <time> element
+                        title_html = title_elem.inner_html()
+                        # Extract just the text before <time>
+                        title = title_html.split("<time")[0].strip()
                         if not title or len(title) < 3:
                             continue
 
-                        # Get date
-                        date_text = date_elem.inner_text().strip() if date_elem else ""
-                        start_date = parse_date(date_text)
+                        # Get date and time from the <time> element's datetime attribute or visually-hidden text
+                        time_elem = title_elem.query_selector("time")
+                        if not time_elem:
+                            continue
 
+                        # Parse the visually-hidden text like "Mon, 05 Jan 2026 4pm" or "Thu, 08 Jan 2026 All Day"
+                        datetime_text = time_elem.inner_text().strip()
+
+                        # Extract date from "Mon, 05 Jan 2026 4pm" format
+                        start_date = parse_date_from_fullcalendar(datetime_text)
                         if not start_date:
                             continue
 
                         events_found += 1
 
-                        # Get time if available
-                        time_text = time_elem.inner_text().strip() if time_elem else ""
-                        start_time = parse_time(time_text) if time_text else None
+                        # Extract time if present (not "All Day")
+                        start_time = None
+                        if "all day" not in datetime_text.lower():
+                            start_time = parse_time_from_fullcalendar(datetime_text)
 
-                        # Get description
-                        description = desc_elem.inner_text().strip() if desc_elem else ""
-                        if len(description) > 500:
-                            description = description[:497] + "..."
+                        # Get event URL
+                        event_url = element.get_attribute("href")
+                        if event_url and not event_url.startswith("http"):
+                            event_url = BASE_URL + event_url
 
                         # Categorize event
-                        category, tags = categorize_event(title, description)
+                        category, tags = categorize_event(title, "")
 
                         # Generate content hash
                         content_hash = generate_content_hash(title, "City of Decatur", start_date)
@@ -259,7 +315,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             "source_id": source_id,
                             "venue_id": venue_id,
                             "title": title,
-                            "description": description if description else "Event at City of Decatur",
+                            "description": f"Event at City of Decatur. Visit the event page for more details.",
                             "start_date": start_date,
                             "start_time": start_time,
                             "end_date": None,
@@ -272,11 +328,11 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             "price_max": None,
                             "price_note": None,
                             "is_free": True,  # Most city events are free
-                            "source_url": CALENDAR_URL,
-                            "ticket_url": CALENDAR_URL,
+                            "source_url": event_url if event_url else CALENDAR_URL,
+                            "ticket_url": event_url if event_url else CALENDAR_URL,
                             "image_url": image_map.get(title),
-                            "raw_text": f"{title} - {start_date}",
-                            "extraction_confidence": 0.85,
+                            "raw_text": f"{title} - {datetime_text}",
+                            "extraction_confidence": 0.90,
                             "is_recurring": False,
                             "recurrence_rule": None,
                             "content_hash": content_hash,

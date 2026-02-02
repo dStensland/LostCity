@@ -70,7 +70,7 @@
 | 39 | Ticonderoga Club | ticonderogaclub.com | venue | Medium | Cocktail bar + events |
 | 40 | Joystick Gamebar | joystickgamebar.com | venue | Low | Arcade + events |
 
-## Aggregators/Calendars (5)
+## Aggregators/Calendars (8)
 
 | # | Source | URL | Type | Priority | Notes |
 |---|--------|-----|------|----------|-------|
@@ -79,6 +79,9 @@
 | 43 | Atlanta Downtown | atlantadowntown.com/events | aggregator | Medium | Downtown focus |
 | 44 | Midtown Atlanta | midtownatl.com/events | aggregator | Medium | Midtown focus |
 | 45 | How Do You Atlanta | howdoyouatlanta.com | aggregator | Medium | Local calendar |
+| 46a | Creative Loafing Community | creativeloafing.com/community | aggregator | High | Grassroots, activism, community events |
+| 46b | Atlanta Press Collective | atlpresscollective.com/atlanta-community-events-calendar/ | aggregator | Low | Powered by Yodel - find original sources instead |
+| 46c | Yodel Events Atlanta | events-preprod.yodel.today/atlanta-ga/community | aggregator | Low | Community-submitted events - crawl orgs directly |
 
 ## Universities (3)
 
@@ -116,7 +119,7 @@
 | 61 | Southern Women's Show | southernwomensshow.com | event | Medium | Lifestyle expo |
 | 62 | Indie Craft Experience | ice-atlanta.com | event | Medium | Maker/craft shows |
 
-## Activism & Community Organizing (10)
+## Activism & Community Organizing (30)
 
 | # | Source | URL | Type | Priority | Notes |
 |---|--------|-----|------|----------|-------|
@@ -127,9 +130,28 @@
 | 67 | Indivisible Georgia | indivisiblega.org | org | Medium | Political organizing |
 | 68 | Atlanta DSA | atldsa.org | org | Medium | Democratic Socialists |
 | 69 | Georgia Sierra Club | sierraclub.org/georgia | org | Medium | Environmental activism |
-| 70 | Black Lives Matter Atlanta | - | org | Medium | Racial justice |
+| 70 | Black Lives Matter Atlanta | blacklivesmatteratl.org | org | Medium | Racial justice |
 | 71 | Planned Parenthood SE | plannedparenthood.org/southeast | org | Medium | Reproductive rights events |
 | 72 | Human Rights Campaign ATL | hrc.org | org | Medium | LGBTQ+ advocacy |
+| 72a | Asian American Advocacy Fund | asianamericanadvocacyfund.org | org | Medium | AAPI political engagement |
+| 72b | Housing Justice League | housingjusticeleague.org | org | Medium | Housing/tenant organizing |
+| 72c | GALEO | galeo.org | org | Medium | Latino civic engagement |
+| 72d | SURJ Atlanta | surjatlanta.org | org | Medium | Showing Up for Racial Justice |
+| 72e | Community Foundation Greater ATL | cfgreateratlanta.org/events | org | High | Major community funder, hosts events |
+| 72f | New Georgia Project | newgeorgiaproject.org | org | High | Voter registration/civic engagement |
+| 72g | Southerners on New Ground (SONG) | southernersonnewground.org | org | High | LGBTQ+ liberation, Southern focus |
+| 72h | Georgia Peace & Justice Coalition | georgiapeace.org | org | Medium | Peace/anti-war organizing |
+| 72i | Project South | projectsouth.org | org | High | Social justice institute, founded 1986 |
+| 72j | CAIR Georgia | cairgeorgia.com | org | Medium | Muslim civil rights |
+| 72k | Southern Christian Leadership Conference | nationalsclc.org | org | High | Historic civil rights org |
+| 72l | Faith Alliance of Metro Atlanta | faithallianceofmetroatlanta.org | org | Medium | Interfaith organizing |
+| 72m | Concerned Black Clergy | - | org | Medium | Clergy-led activism |
+| 72n | Urban League of Greater Atlanta | ulgatl.org | org | High | African American empowerment |
+| 72o | Center for Civic Innovation | civicatlanta.org | org | Medium | Civic resource hub |
+| 72p | C4 Atlanta | c4atlanta.org | org | Medium | Community organizing coalition |
+| 72q | Georgia Alliance for Social Justice | gafsj.org | org | Medium | Social justice coalition |
+| 72r | JVP Atlanta | - | org | Low | Jewish Voice for Peace chapter |
+| 72s | South Georgia Immigrant Support Network | - | org | Medium | Immigrant services |
 
 ## Art Galleries & Art Events (10)
 
@@ -146,7 +168,7 @@
 | 81 | Castleberry Hill Art Stroll | castleberryhill.org | event | Medium | Second Friday walks |
 | 82 | Atlanta Artists Center | atlantaartistscenter.org | venue | Medium | Artist community |
 
-## Volunteer Opportunities (8)
+## Volunteer Opportunities (18)
 
 | # | Source | URL | Type | Priority | Notes |
 |---|--------|-----|------|----------|-------|
@@ -157,7 +179,17 @@
 | 87 | Trees Atlanta | treesatlanta.org | org | Medium | Tree planting events |
 | 88 | Park Pride | parkpride.org | org | Medium | Park cleanups |
 | 89 | Paint Love | gopaintlove.org | org | Medium | Art with kids |
-| 90 | Open Hand Atlanta | openhandatlanta.org | org | Medium | Meal delivery
+| 90 | Open Hand Atlanta | openhandatlanta.org | org | Medium | Meal delivery |
+| 90a | United Way of Greater Atlanta | volunteer.unitedwayatlanta.org | aggregator | High | Volunteer calendar |
+| 90b | Hosea Helps | hoseahelps.org | org | High | Hunger/homelessness, founded 1971 |
+| 90c | Meals On Wheels Atlanta | mowama.org | org | Medium | Senior meal delivery |
+| 90d | Atlanta Mission | atlantamission.org | org | High | Largest homeless services |
+| 90e | Food Well Alliance | foodwellalliance.org | org | Medium | Local food systems |
+| 90f | Georgia Organics | georgiaorganics.org | org | Medium | Sustainable food/farms |
+| 90g | Piedmont Park Conservancy | piedmontpark.org | org | Medium | Park events/stewardship |
+| 90h | Atlanta BeltLine | beltline.org/support/volunteer | org | High | BeltLine volunteer program |
+| 90i | Big Brothers Big Sisters ATL | bbbsatl.org | org | Medium | Youth mentorship |
+| 90j | WonderRoot | wonderroot.org | org | Medium | Arts/community development
 
 ---
 
@@ -173,23 +205,23 @@
 | Museums | 6 |
 | Sports | 3 |
 | Breweries/Bars | 6 |
-| Aggregators | 5 |
+| Aggregators | 8 |
 | Universities | 3 |
 | Festivals | 2 |
 | **Conventions & Expos** | 12 |
-| **Activism** | 10 |
+| **Activism & Community** | 30 |
 | **Art Galleries** | 10 |
-| **Volunteer** | 8 |
-| **TOTAL** | **90** |
+| **Volunteer** | 18 |
+| **TOTAL** | **123** |
 
 ### By Priority
 
 | Priority | Count |
 |----------|-------|
 | Critical | 3 |
-| High | 32 |
-| Medium | 49 |
-| Low | 6 |
+| High | 41 |
+| Medium | 72 |
+| Low | 7 |
 
 ---
 
@@ -200,13 +232,14 @@
 2. **Hands On Atlanta** - Central volunteer hub
 3. **Discover Atlanta** - Official tourism, tons of events
 
-### Phase 2: High-Volume Aggregators (6)
+### Phase 2: High-Volume Aggregators (7)
 1. Access Atlanta (AJC) - major local coverage
 2. 10times Atlanta - trade show aggregator
 3. FanCons Georgia - fan conventions
 4. Atlanta Civic Circle - activism events
 5. Atlanta Art Week - gallery events
 6. Art on the BeltLine - public art
+7. Creative Loafing Community - grassroots/activism events
 
 ### Phase 3: Major Venues Not in Ticketmaster (10)
 1. Eddie's Attic
@@ -220,7 +253,7 @@
 9. Atlanta Contemporary
 10. Atlanta Liberation Center
 
-### Phase 4: Museums, Cultural & Orgs (15)
+### Phase 4: Museums, Cultural & Major Orgs (20)
 1. Fernbank Museum
 2. Atlanta History Center
 3. National Center for Civil Rights
@@ -231,7 +264,16 @@
 8. Trees Atlanta
 9. Habitat for Humanity
 10. Atlanta Community Food Bank
-... and more
+11. New Georgia Project
+12. Southerners on New Ground (SONG)
+13. Project South
+14. Urban League of Greater Atlanta
+15. United Way of Greater Atlanta
+16. Hosea Helps
+17. Atlanta Mission
+18. Atlanta BeltLine (volunteer)
+19. Southern Christian Leadership Conference
+20. ... and more
 
-### Phase 5: Everything Else (56)
+### Phase 5: Everything Else (71)
 Remaining venues in priority order

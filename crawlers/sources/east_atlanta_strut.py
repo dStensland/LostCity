@@ -26,7 +26,7 @@ VENUE_DATA = {
     "name": "East Atlanta Village",
     "slug": "east-atlanta-village",
     "address": "Flat Shoals Ave SE",
-    "neighborhood": "East Atlanta",
+    "neighborhood": "East Atlanta Village",
     "city": "Atlanta",
     "state": "GA",
     "zip": "30316",

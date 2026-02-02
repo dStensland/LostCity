@@ -1,11 +1,14 @@
 import { createServiceClient } from "@/lib/supabase/service";
 import { isValidString } from "@/lib/api-utils";
 
-const secret = process.env.FOURSQUARE_API_KEY;
-if (!secret && process.env.NODE_ENV === "production") {
-  throw new Error("FOURSQUARE_API_KEY environment variable is required in production");
+// Get API key lazily to avoid build-time errors during static page generation
+function getFoursquareApiKey(): string {
+  const key = process.env.FOURSQUARE_API_KEY;
+  if (!key && process.env.NODE_ENV === "production") {
+    console.error("FOURSQUARE_API_KEY environment variable is not set");
+  }
+  return key || "";
 }
-const FOURSQUARE_API_KEY = secret || "";
 
 export interface AutoApproveResult {
   success: boolean;
@@ -38,7 +41,8 @@ interface FoursquarePlaceDetails {
 async function fetchFoursquarePlaceDetails(
   fsqId: string
 ): Promise<FoursquarePlaceDetails | null> {
-  if (!FOURSQUARE_API_KEY) {
+  const apiKey = getFoursquareApiKey();
+  if (!apiKey) {
     console.error("FOURSQUARE_API_KEY is not set");
     return null;
   }
@@ -48,7 +52,7 @@ async function fetchFoursquarePlaceDetails(
     {
       method: "GET",
       headers: {
-        Authorization: FOURSQUARE_API_KEY,
+        Authorization: apiKey,
         Accept: "application/json",
       },
     }

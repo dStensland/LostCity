@@ -1,6 +1,9 @@
 """
 Crawler for Eddie's Attic (eddiesattic.com).
-Legendary acoustic music venue in Decatur - John Mayer started here.
+
+Eddie's Attic is an iconic acoustic music venue in Decatur, GA, known for
+showcasing singer-songwriters and emerging artists. Site uses JavaScript
+rendering - requires Playwright.
 """
 
 from __future__ import annotations
@@ -10,21 +13,22 @@ import logging
 from datetime import datetime
 from typing import Optional
 
-from playwright.sync_api import sync_playwright
+from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
 
 from db import get_or_create_venue, insert_event, find_event_by_hash
 from dedupe import generate_content_hash
-from utils import extract_images_from_page
+from utils import extract_images_from_page, normalize_time_format
 
 logger = logging.getLogger(__name__)
 
 BASE_URL = "https://eddiesattic.com"
+EVENTS_URL = f"{BASE_URL}/events"
 
 VENUE_DATA = {
     "name": "Eddie's Attic",
     "slug": "eddies-attic",
     "address": "515-B N McDonough St",
-    "neighborhood": "Decatur",
+    "neighborhood": "Downtown Decatur",
     "city": "Decatur",
     "state": "GA",
     "zip": "30030",
@@ -33,48 +37,98 @@ VENUE_DATA = {
 }
 
 
-def parse_date(date_text: str) -> tuple[Optional[str], Optional[str]]:
-    """Parse date from 'Mon, Jan 12' format."""
+def parse_date_text(date_text: str) -> Optional[str]:
+    """
+    Parse date text from Eddie's Attic format.
+    Examples: "Friday, Feb 7", "Saturday, February 15", "Sun, Mar 2"
+
+    Returns:
+        Date in YYYY-MM-DD format, or None if unparseable
+    """
     try:
-        date_text = date_text.strip()
         current_year = datetime.now().year
 
-        match = re.match(r"(\w+),?\s+(\w+)\s+(\d+)", date_text)
+        # Try "Day, Month DD" format - common on event listing sites
+        # Examples: "Friday, Feb 7", "Saturday, February 15"
+        match = re.search(
+            r'(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday|Mon|Tue|Wed|Thu|Fri|Sat|Sun),?\s+'
+            r'([A-Za-z]+)\s+(\d{1,2})',
+            date_text,
+            re.IGNORECASE
+        )
+
         if match:
-            _, month, day = match.groups()
-            for fmt in ["%b %d %Y", "%B %d %Y"]:
-                try:
-                    dt = datetime.strptime(f"{month} {day} {current_year}", fmt)
-                    if dt < datetime.now():
-                        dt = datetime.strptime(f"{month} {day} {current_year + 1}", fmt)
-                    return dt.strftime("%Y-%m-%d"), None
-                except ValueError:
-                    continue
-        return None, None
-    except Exception:
-        return None, None
+            month_name, day = match.groups()
+            try:
+                # Try full month name first
+                start_dt = datetime.strptime(f"{month_name} {day} {current_year}", "%B %d %Y")
+            except ValueError:
+                # Try abbreviated month name
+                start_dt = datetime.strptime(f"{month_name} {day} {current_year}", "%b %d %Y")
+
+            # If date is in the past, assume it's next year
+            if start_dt.date() < datetime.now().date():
+                start_dt = start_dt.replace(year=current_year + 1)
+
+            return start_dt.strftime("%Y-%m-%d")
+
+    except (ValueError, AttributeError) as e:
+        logger.debug(f"Could not parse date text '{date_text}': {e}")
+
+    return None
 
 
-def parse_time(time_text: str) -> Optional[str]:
-    """Parse time from '7:30pm' format."""
-    try:
-        match = re.search(r"(\d{1,2}):?(\d{2})?\s*(am|pm)", time_text, re.IGNORECASE)
-        if match:
-            hour, minute, period = match.groups()
-            hour = int(hour)
-            minute = minute or "00"
-            if period.lower() == "pm" and hour != 12:
-                hour += 12
-            elif period.lower() == "am" and hour == 12:
-                hour = 0
-            return f"{hour:02d}:{minute}"
+def parse_time_text(time_text: str) -> Optional[str]:
+    """
+    Parse time text from event listings.
+    Examples: "8:00 PM", "7:30pm", "Doors: 7:00 PM"
+
+    Returns:
+        Time in HH:MM format (24-hour), or None if unparseable
+    """
+    if not time_text:
         return None
-    except Exception:
-        return None
+
+    # Look for "Doors" or "Show" time
+    match = re.search(r'(?:Doors|Show):\s*(\d{1,2}:\d{2}\s*[ap]m)', time_text, re.IGNORECASE)
+    if match:
+        return normalize_time_format(match.group(1))
+
+    # Just look for any time
+    return normalize_time_format(time_text)
+
+
+def extract_price_info(text: str) -> tuple[Optional[float], Optional[float], Optional[str], bool]:
+    """
+    Extract price information from text.
+
+    Returns:
+        Tuple of (price_min, price_max, price_note, is_free)
+    """
+    text_lower = text.lower()
+
+    # Check for free
+    if "free" in text_lower or "no cover" in text_lower:
+        return 0, 0, "Free", True
+
+    # Find dollar amounts
+    amounts = re.findall(r'\$(\d+(?:\.\d{2})?)', text)
+
+    if not amounts:
+        return None, None, None, False
+
+    amounts = [float(a) for a in amounts]
+
+    return min(amounts), max(amounts), None, False
 
 
 def crawl(source: dict) -> tuple[int, int, int]:
-    """Crawl Eddie's Attic events."""
+    """
+    Crawl Eddie's Attic events using Playwright.
+
+    The site uses JavaScript rendering to load event listings,
+    so we must use Playwright to render the page.
+    """
     source_id = source["id"]
     events_found = 0
     events_new = 0
@@ -84,118 +138,196 @@ def crawl(source: dict) -> tuple[int, int, int]:
         with sync_playwright() as p:
             browser = p.chromium.launch(headless=True)
             context = browser.new_context(
-                user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+                user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
                 viewport={"width": 1920, "height": 1080},
             )
             page = context.new_page()
 
-            logger.info(f"Fetching Eddie's Attic: {BASE_URL}")
-            page.goto(BASE_URL, wait_until="domcontentloaded", timeout=30000)
-            page.wait_for_timeout(3000)
-
-            # Extract images from page
-            image_map = extract_images_from_page(page)
-
+            # Get venue ID
             venue_id = get_or_create_venue(VENUE_DATA)
 
-            # Find event blocks - they contain title, date, time
-            body_text = page.inner_text("body")
+            logger.info(f"Fetching Eddie's Attic events: {EVENTS_URL}")
 
-            # Pattern: ARTIST NAME\nDay, Mon DD Time\n
-            # Split by "More info" or "Buy tickets" to separate events
-            blocks = re.split(
-                r"(?:Buy tickets|More info|Sold out)", body_text, flags=re.IGNORECASE
-            )
+            try:
+                page.goto(EVENTS_URL, wait_until="domcontentloaded", timeout=30000)
+                page.wait_for_timeout(3000)
 
-            for block in blocks:
-                lines = [l.strip() for l in block.strip().split("\n") if l.strip()]
-                if len(lines) < 2:
-                    continue
+                # Scroll to load all events (lazy loading)
+                for _ in range(5):
+                    page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+                    page.wait_for_timeout(1000)
 
-                title = None
-                date_text = None
-                time_text = None
+                # Extract images from page
+                image_map = extract_images_from_page(page)
 
-                for line in lines:
-                    # Date pattern: Mon, Jan 12
-                    if re.match(r"\w{3},?\s+\w{3}\s+\d+", line):
-                        parts = line.split()
-                        # Could be "Mon, Jan 12 7:30pm"
-                        date_text = " ".join(parts[:3])
-                        if len(parts) > 3:
-                            time_text = parts[-1]
+                # Look for event elements - try multiple selectors
+                event_selectors = [
+                    '.blockLink',  # Main listing container used on this site
+                    '.listing',
+                    'article',
+                    '.event, .eo-event',
+                    '[class*="listing"]',
+                ]
+
+                event_elements = []
+                for selector in event_selectors:
+                    elements = page.query_selector_all(selector)
+                    if elements and len(elements) > 2:  # Need more than just header elements
+                        event_elements = elements
+                        logger.info(f"Found {len(elements)} events using selector: {selector}")
+                        break
+
+                if not event_elements:
+                    logger.warning(f"No event elements found on {EVENTS_URL}")
+                    browser.close()
+                    return 0, 0, 0
+
+                for element in event_elements:
+                    try:
+                        # Get all text from element
+                        element_text = element.inner_text()
+
+                        # Skip very short elements (likely headers/nav)
+                        if len(element_text) < 20:
+                            continue
+
+                        # Extract title - try multiple selectors
+                        title_elem = element.query_selector('h1, h2, h3, h4, .listing__title, .event-title, [class*="title"]')
+                        if not title_elem:
+                            # Try getting first substantial line
+                            lines = [l.strip() for l in element_text.split("\n") if l.strip() and len(l.strip()) > 3]
+                            if not lines:
+                                continue
+                            title = lines[0]
+                        else:
+                            title = title_elem.inner_text().strip()
+
+                        if not title or len(title) < 3:
+                            continue
+
+                        # Skip navigation/header elements
+                        if title.lower() in ["events", "upcoming shows", "what's on", "calendar", "upcoming events"]:
+                            continue
+
+                        # Parse date
+                        start_date = parse_date_text(element_text)
+                        if not start_date:
+                            logger.debug(f"Could not parse date for: {title}")
+                            continue
+
+                        # Skip past events
+                        try:
+                            if datetime.strptime(start_date, "%Y-%m-%d").date() < datetime.now().date():
+                                continue
+                        except ValueError:
+                            continue
+
+                        # Try to parse time
+                        start_time = parse_time_text(element_text)
+
+                        # Extract price info
+                        price_min, price_max, price_note, is_free = extract_price_info(element_text)
+
+                        # Extract description if available
+                        desc_elem = element.query_selector('p, .description, .event-description, .listing__description')
+                        description = desc_elem.inner_text().strip() if desc_elem else None
+
+                        # If no description, create one from title
+                        if not description or len(description) < 10:
+                            description = f"Live music at Eddie's Attic featuring {title}"
+
+                        # Get event URL if available
+                        link_elem = element.query_selector('a')
+                        event_url = link_elem.get_attribute('href') if link_elem else EVENTS_URL
+                        if event_url and not event_url.startswith('http'):
+                            event_url = BASE_URL + event_url
+
+                        # Get ticket URL (might be different)
+                        ticket_elem = element.query_selector('a[href*="ticket"], a.listing__button, a.plotButton')
+                        ticket_url = ticket_elem.get_attribute('href') if ticket_elem else event_url
+                        if ticket_url and not ticket_url.startswith('http'):
+                            ticket_url = BASE_URL + ticket_url
+
+                        events_found += 1
+
+                        # Generate content hash
+                        content_hash = generate_content_hash(
+                            title, "Eddie's Attic", start_date
+                        )
+
+                        if find_event_by_hash(content_hash):
+                            events_updated += 1
+                            continue
+
+                        # Get image
+                        img_elem = element.query_selector('img')
+                        image_url = None
+                        if img_elem:
+                            image_url = img_elem.get_attribute('src') or img_elem.get_attribute('data-src') or img_elem.get_attribute('srcset')
+                            if image_url:
+                                # Handle srcset - take first image
+                                if ',' in image_url:
+                                    image_url = image_url.split(',')[0].strip().split(' ')[0]
+                                # Make absolute URL
+                                if not image_url.startswith('http'):
+                                    if image_url.startswith('//'):
+                                        image_url = 'https:' + image_url
+                                    else:
+                                        image_url = BASE_URL + image_url
+
+                        # Fallback to image map
+                        if not image_url and title in image_map:
+                            image_url = image_map[title]
+
+                        event_record = {
+                            "source_id": source_id,
+                            "venue_id": venue_id,
+                            "title": title,
+                            "description": description,
+                            "start_date": start_date,
+                            "start_time": start_time,
+                            "end_date": None,
+                            "end_time": None,
+                            "is_all_day": start_time is None,
+                            "category": "music",
+                            "subcategory": "concert",
+                            "tags": ["acoustic", "singer-songwriter", "live-music", "decatur"],
+                            "price_min": price_min,
+                            "price_max": price_max,
+                            "price_note": price_note,
+                            "is_free": is_free,
+                            "source_url": event_url,
+                            "ticket_url": ticket_url,
+                            "image_url": image_url,
+                            "raw_text": f"{title} | {element_text[:300]}"[:500],
+                            "extraction_confidence": 0.80,
+                            "is_recurring": False,
+                            "recurrence_rule": None,
+                            "content_hash": content_hash,
+                        }
+
+                        try:
+                            insert_event(event_record)
+                            events_new += 1
+                            logger.info(f"Added: {title} on {start_date}")
+                        except Exception as e:
+                            logger.error(f"Failed to insert: {title}: {e}")
+
+                    except Exception as e:
+                        logger.debug(f"Error processing event element: {e}")
                         continue
 
-                    # Time only
-                    if re.match(r"\d{1,2}:?\d{0,2}\s*(am|pm)$", line, re.IGNORECASE):
-                        time_text = line
-                        continue
-
-                    # Title - all caps or substantial text
-                    if (
-                        not title
-                        and len(line) > 3
-                        and line
-                        not in ["UPCOMING SHOWS", "ATLANTA'S LEGENDARY LISTENING ROOM"]
-                    ):
-                        title = line
-
-                if not title or not date_text:
-                    continue
-
-                start_date, _ = parse_date(date_text)
-                if not start_date:
-                    continue
-
-                start_time = parse_time(time_text or "")
-
-                events_found += 1
-
-                content_hash = generate_content_hash(title, "Eddie's Attic", start_date)
-
-                existing = find_event_by_hash(content_hash)
-                if existing:
-                    events_updated += 1
-                    continue
-
-                event_record = {
-                    "source_id": source_id,
-                    "venue_id": venue_id,
-                    "title": title,
-                    "description": None,
-                    "start_date": start_date,
-                    "start_time": start_time,
-                    "end_date": None,
-                    "end_time": None,
-                    "is_all_day": False,
-                    "category": "music",
-                    "subcategory": "acoustic",
-                    "tags": ["live-music", "acoustic", "singer-songwriter"],
-                    "price_min": None,
-                    "price_max": None,
-                    "price_note": None,
-                    "is_free": False,
-                    "source_url": BASE_URL,
-                    "ticket_url": None,
-                    "image_url": image_map.get(title),
-                    "raw_text": None,
-                    "extraction_confidence": 0.85,
-                    "is_recurring": False,
-                    "recurrence_rule": None,
-                    "content_hash": content_hash,
-                }
-
-                try:
-                    insert_event(event_record)
-                    events_new += 1
-                    logger.info(f"Added: {title} on {start_date}")
-                except Exception as e:
-                    logger.error(f"Failed to insert: {title}: {e}")
+            except PlaywrightTimeout as e:
+                logger.error(f"Timeout fetching Eddie's Attic events: {e}")
+                raise
+            except Exception as e:
+                logger.error(f"Error fetching Eddie's Attic events: {e}")
+                raise
 
             browser.close()
 
         logger.info(
-            f"Eddie's Attic crawl complete: {events_found} found, {events_new} new"
+            f"Eddie's Attic crawl complete: {events_found} found, {events_new} new, {events_updated} updated"
         )
 
     except Exception as e:

@@ -1,8 +1,10 @@
 """
 Crawler for Atlanta Contemporary (atlantacontemporary.org).
-Free contemporary art center in West Midtown with rotating exhibitions.
+Free contemporary art center in West Midtown with rotating exhibitions,
+artist talks, workshops, openings, and programs.
 
 Site uses JavaScript rendering - must use Playwright.
+Events are listed on /programs/schedule page.
 """
 
 from __future__ import annotations
@@ -12,16 +14,15 @@ import logging
 from datetime import datetime
 from typing import Optional
 
-from playwright.sync_api import sync_playwright
+from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
 
 from db import get_or_create_venue, insert_event, find_event_by_hash
 from dedupe import generate_content_hash
-from utils import extract_images_from_page
 
 logger = logging.getLogger(__name__)
 
-BASE_URL = "https://atlantacontemporary.org"  # No www - redirects otherwise
-EVENTS_URL = f"{BASE_URL}/programs"
+BASE_URL = "https://atlantacontemporary.org"
+EVENTS_URL = f"{BASE_URL}/programs/schedule"
 
 VENUE_DATA = {
     "name": "Atlanta Contemporary",
@@ -39,41 +40,129 @@ VENUE_DATA = {
 }
 
 
-def parse_time(time_text: str) -> Optional[str]:
-    """Parse time from '7:00 PM' format."""
-    match = re.search(r"(\d{1,2}):(\d{2})\s*(am|pm)", time_text, re.IGNORECASE)
-    if match:
-        hour, minute, period = match.groups()
-        hour = int(hour)
-        if period.lower() == "pm" and hour != 12:
-            hour += 12
-        elif period.lower() == "am" and hour == 12:
-            hour = 0
-        return f"{hour:02d}:{minute}"
-    return None
+def parse_date_time(date_time_str: str) -> tuple[Optional[str], Optional[str]]:
+    """
+    Parse date and time from format like 'February 1 / 12:00pm' or 'February 5 / 6:00pm'.
+    Returns (date, time) as (YYYY-MM-DD, HH:MM).
+    """
+    try:
+        date_time_str = date_time_str.strip()
+
+        # Pattern: "Month Day / Hour:MMam/pm"
+        match = re.match(
+            r'([A-Za-z]+)\s+(\d{1,2})\s*/\s*(\d{1,2}):(\d{2})\s*(am|pm)',
+            date_time_str,
+            re.IGNORECASE
+        )
+
+        if match:
+            month, day, hour, minute, period = match.groups()
+
+            # Parse date
+            current_year = datetime.now().year
+            try:
+                dt = datetime.strptime(f"{month} {day} {current_year}", "%B %d %Y")
+            except ValueError:
+                dt = datetime.strptime(f"{month} {day} {current_year}", "%b %d %Y")
+
+            # If date is in the past, assume next year
+            if dt.date() < datetime.now().date():
+                dt = dt.replace(year=current_year + 1)
+
+            date_str = dt.strftime("%Y-%m-%d")
+
+            # Parse time
+            hour = int(hour)
+            period = period.lower()
+
+            if period == "pm" and hour != 12:
+                hour += 12
+            elif period == "am" and hour == 12:
+                hour = 0
+
+            time_str = f"{hour:02d}:{minute}"
+
+            return date_str, time_str
+
+        # Try just date without time: "February 1"
+        match = re.match(r'([A-Za-z]+)\s+(\d{1,2})', date_time_str, re.IGNORECASE)
+        if match:
+            month, day = match.groups()
+            current_year = datetime.now().year
+            try:
+                dt = datetime.strptime(f"{month} {day} {current_year}", "%B %d %Y")
+            except ValueError:
+                dt = datetime.strptime(f"{month} {day} {current_year}", "%b %d %Y")
+
+            if dt.date() < datetime.now().date():
+                dt = dt.replace(year=current_year + 1)
+
+            return dt.strftime("%Y-%m-%d"), None
+
+    except (ValueError, AttributeError) as e:
+        logger.debug(f"Could not parse date/time '{date_time_str}': {e}")
+
+    return None, None
 
 
-def determine_category(title: str) -> tuple[str, Optional[str], list[str]]:
-    """Determine category based on event title."""
+def determine_category(event_type: str, title: str, description: str = "") -> tuple[str, Optional[str], list[str]]:
+    """Determine category based on event type, title, and description."""
+    event_type_lower = event_type.lower()
     title_lower = title.lower()
-    tags = ["atlanta-contemporary", "museum", "contemporary", "west-midtown", "free"]
-    if any(w in title_lower for w in ["exhibition", "exhibit", "gallery", "show"]):
-        return "art", "exhibition", tags + ["exhibition"]
-    if any(w in title_lower for w in ["opening", "reception"]):
-        return "art", "opening", tags + ["opening"]
-    if any(w in title_lower for w in ["talk", "lecture", "artist", "conversation"]):
-        return "art", "talk", tags + ["talk"]
-    if any(w in title_lower for w in ["workshop", "class"]):
-        return "art", "workshop", tags + ["workshop"]
-    if any(w in title_lower for w in ["film", "screening", "movie"]):
+    description_lower = description.lower() if description else ""
+    combined = f"{event_type_lower} {title_lower} {description_lower}"
+
+    tags = ["atlanta-contemporary", "museum", "contemporary-art", "west-midtown", "free"]
+
+    # Contemporary Talks
+    if "contemporary talks" in event_type_lower or "artist talk" in title_lower:
+        return "art", "talk", tags + ["talk", "artist-talk"]
+
+    # Contemporary Kids
+    if "contemporary kids" in event_type_lower or "kids" in event_type_lower:
+        return "family", "kids", tags + ["family-friendly", "kids"]
+
+    # Special Events - openings, receptions
+    if "special event" in event_type_lower or "opening" in combined:
+        if "opening" in combined or "reception" in combined:
+            return "art", "opening", tags + ["opening", "reception"]
+        return "art", "event", tags + ["special-event"]
+
+    # Open Studios
+    if "open studios" in event_type_lower or "open studio" in title_lower:
+        return "art", "studio", tags + ["open-studios", "studio-visit"]
+
+    # Workshops
+    if "workshop" in combined or "class" in combined:
+        return "art", "workshop", tags + ["workshop", "class"]
+
+    # Member Programs
+    if "member" in event_type_lower:
+        return "art", "member", tags + ["member-exclusive"]
+
+    # Film screenings
+    if any(w in combined for w in ["film", "screening", "movie"]):
         return "film", None, tags + ["film"]
-    if any(w in title_lower for w in ["music", "performance", "concert"]):
-        return "music", "performance", tags + ["performance"]
+
+    # Music performances
+    if any(w in combined for w in ["music", "performance", "concert"]):
+        return "music", "performance", tags + ["music", "performance"]
+
+    # Exhibitions
+    if any(w in combined for w in ["exhibition", "exhibit", "gallery", "show"]):
+        return "art", "exhibition", tags + ["exhibition"]
+
+    # Default to art
     return "art", None, tags
 
 
 def crawl(source: dict) -> tuple[int, int, int]:
-    """Crawl Atlanta Contemporary events using Playwright."""
+    """
+    Crawl Atlanta Contemporary events using Playwright.
+
+    The site has a schedule page at /programs/schedule with well-structured
+    event articles containing date, type, title, and description.
+    """
     source_id = source["id"]
     events_found = 0
     events_new = 0
@@ -83,101 +172,92 @@ def crawl(source: dict) -> tuple[int, int, int]:
         with sync_playwright() as p:
             browser = p.chromium.launch(headless=True)
             context = browser.new_context(
-                user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+                user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
                 viewport={"width": 1920, "height": 1080},
             )
             page = context.new_page()
 
+            # Get venue ID
             venue_id = get_or_create_venue(VENUE_DATA)
 
-            logger.info(f"Fetching Atlanta Contemporary: {EVENTS_URL}")
+            logger.info(f"Fetching Atlanta Contemporary events: {EVENTS_URL}")
             page.goto(EVENTS_URL, wait_until="domcontentloaded", timeout=30000)
             page.wait_for_timeout(3000)
 
-            # Extract images from page
-            image_map = extract_images_from_page(page)
-
             # Scroll to load all content
-            for _ in range(5):
+            for _ in range(3):
                 page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
                 page.wait_for_timeout(1000)
 
-            # Get page text and parse line by line
-            body_text = page.inner_text("body")
-            lines = [l.strip() for l in body_text.split("\n") if l.strip()]
+            # Find all event articles
+            event_articles = page.query_selector_all("article")
+            logger.info(f"Found {len(event_articles)} event articles")
 
-            # Parse events - look for date patterns
-            i = 0
-            while i < len(lines):
-                line = lines[i]
-
-                # Skip navigation/header items
-                skip_items = [
-                    "menu", "visit", "exhibitions", "events", "support", "about",
-                    "contact", "search", "hours", "admission", "shop", "donate",
-                    "membership", "calendar", "free admission"
-                ]
-                if line.lower() in skip_items or len(line) < 3:
-                    i += 1
-                    continue
-
-                # Look for date patterns
-                # "January 18, 2026" or "Jan 18" or "Saturday, January 18"
-                date_match = re.match(
-                    r"(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)?,?\s*(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{1,2})(?:,?\s+(\d{4}))?",
-                    line,
-                    re.IGNORECASE
-                )
-
-                if date_match:
-                    month = date_match.group(1)
-                    day = date_match.group(2)
-                    year = date_match.group(3) if date_match.group(3) else str(datetime.now().year)
-
-                    # Look for title in surrounding lines
-                    title = None
-                    start_time = None
-
-                    # Check lines before and after for title and time
-                    for offset in [-2, -1, 1, 2, 3]:
-                        idx = i + offset
-                        if 0 <= idx < len(lines):
-                            check_line = lines[idx]
-
-                            # Skip if it's another date or skip item
-                            if check_line.lower() in skip_items:
-                                continue
-                            if re.match(r"(January|February|March|April|May|June|July|August|September|October|November|December)", check_line, re.IGNORECASE):
-                                continue
-
-                            # Check for time
-                            if not start_time:
-                                time_result = parse_time(check_line)
-                                if time_result:
-                                    start_time = time_result
-                                    continue
-
-                            # Look for title
-                            if not title and len(check_line) > 5:
-                                if not re.match(r"\d{1,2}[:/]", check_line):
-                                    if not re.match(r"(free|tickets|register|learn more|\$|more info|rsvp)", check_line.lower()):
-                                        title = check_line
-                                        break
-
-                    if not title:
-                        i += 1
+            for article in event_articles:
+                try:
+                    # Extract date and time
+                    date_elem = article.query_selector(".event__date")
+                    if not date_elem:
                         continue
 
-                    # Parse date
-                    try:
-                        month_str = month[:3] if len(month) > 3 else month
-                        dt = datetime.strptime(f"{month_str} {day} {year}", "%b %d %Y")
-                        if dt.date() < datetime.now().date():
-                            dt = datetime.strptime(f"{month_str} {day} {int(year) + 1}", "%b %d %Y")
-                        start_date = dt.strftime("%Y-%m-%d")
-                    except ValueError:
-                        i += 1
+                    date_time_str = date_elem.inner_text().strip()
+                    start_date, start_time = parse_date_time(date_time_str)
+
+                    if not start_date:
+                        logger.debug(f"Could not parse date from: {date_time_str}")
                         continue
+
+                    # Extract event type (Contemporary Talks, Special Event, etc.)
+                    event_type = ""
+                    type_elem = article.query_selector(".event__type")
+                    if type_elem:
+                        event_type = type_elem.inner_text().strip()
+
+                    # Extract title
+                    title_elem = article.query_selector("h3")
+                    if not title_elem:
+                        continue
+
+                    title = title_elem.inner_text().strip()
+                    if not title or len(title) < 3:
+                        continue
+
+                    # Extract description
+                    description = ""
+                    desc_elem = article.query_selector(".event__info p")
+                    if desc_elem:
+                        description = desc_elem.inner_text().strip()
+
+                    # Check if free (should always be free for Atlanta Contemporary)
+                    is_free = True
+                    label_elem = article.query_selector(".event__label")
+                    if label_elem and "free" in label_elem.inner_text().lower():
+                        is_free = True
+
+                    # Extract image
+                    image_url = None
+                    img_elem = article.query_selector("img")
+                    if img_elem:
+                        src = img_elem.get_attribute("src")
+                        if src:
+                            # Make absolute URL
+                            if src.startswith("http"):
+                                image_url = src
+                            elif src.startswith("//"):
+                                image_url = "https:" + src
+                            elif src.startswith("/"):
+                                image_url = BASE_URL + src
+
+                    # Extract event URL
+                    event_url = EVENTS_URL
+                    link_elem = article.query_selector("a[href]")
+                    if link_elem:
+                        href = link_elem.get_attribute("href")
+                        if href:
+                            if href.startswith("http"):
+                                event_url = href
+                            elif href.startswith("/"):
+                                event_url = BASE_URL + href
 
                     events_found += 1
 
@@ -186,37 +266,38 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         title, "Atlanta Contemporary", start_date
                     )
 
-                    # Check for existing
-                    existing = find_event_by_hash(content_hash)
-                    if existing:
+                    # Check for existing event
+                    if find_event_by_hash(content_hash):
                         events_updated += 1
-                        i += 1
                         continue
 
-                    category, subcategory, tags = determine_category(title)
+                    # Determine category and tags
+                    category, subcategory, tags = determine_category(
+                        event_type, title, description
+                    )
 
                     event_record = {
                         "source_id": source_id,
                         "venue_id": venue_id,
                         "title": title,
-                        "description": "Event at Atlanta Contemporary - free admission",
+                        "description": description if description else None,
                         "start_date": start_date,
-                        "start_time": start_time if start_time else "12:00",
+                        "start_time": start_time,
                         "end_date": None,
-                        "end_time": "17:00" if not start_time else None,
-                        "is_all_day": False,
+                        "end_time": None,
+                        "is_all_day": start_time is None,
                         "category": category,
                         "subcategory": subcategory,
                         "tags": tags,
                         "price_min": None,
                         "price_max": None,
                         "price_note": "Free admission",
-                        "is_free": True,
-                        "source_url": EVENTS_URL,
-                        "ticket_url": EVENTS_URL,
-                        "image_url": image_map.get(title),
-                        "raw_text": f"{title} - {start_date}",
-                        "extraction_confidence": 0.80,
+                        "is_free": is_free,
+                        "source_url": event_url,
+                        "ticket_url": event_url,
+                        "image_url": image_url,
+                        "raw_text": f"{event_type}: {title} - {description[:200] if description else ''}",
+                        "extraction_confidence": 0.90,
                         "is_recurring": False,
                         "recurrence_rule": None,
                         "content_hash": content_hash,
@@ -225,11 +306,13 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     try:
                         insert_event(event_record)
                         events_new += 1
-                        logger.info(f"Added: {title} on {start_date}")
+                        logger.info(f"Added: {title} on {start_date} at {start_time or 'TBD'}")
                     except Exception as e:
                         logger.error(f"Failed to insert: {title}: {e}")
 
-                i += 1
+                except Exception as e:
+                    logger.warning(f"Error parsing event article: {e}")
+                    continue
 
             browser.close()
 
@@ -237,6 +320,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
             f"Atlanta Contemporary crawl complete: {events_found} found, {events_new} new, {events_updated} updated"
         )
 
+    except PlaywrightTimeout as e:
+        logger.error(f"Timeout fetching Atlanta Contemporary: {e}")
+        raise
     except Exception as e:
         logger.error(f"Failed to crawl Atlanta Contemporary: {e}")
         raise

@@ -1,6 +1,9 @@
 """
-Crawler for Freeside Atlanta events from their Meetup group.
-https://www.meetup.com/freeside-atlanta/
+Crawler for Freeside Atlanta (freesideatl.org).
+
+Freeside Atlanta is a hackerspace and makerspace offering workshops, classes,
+and community events focused on technology, DIY, and making. Site uses JavaScript
+rendering - must use Playwright.
 """
 
 from __future__ import annotations
@@ -10,203 +13,312 @@ import logging
 from datetime import datetime
 from typing import Optional
 
-from playwright.sync_api import sync_playwright
+from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
 
 from db import get_or_create_venue, insert_event, find_event_by_hash
 from dedupe import generate_content_hash
+from utils import extract_images_from_page
 
 logger = logging.getLogger(__name__)
 
-MEETUP_GROUP_URL = "https://www.meetup.com/freeside-atlanta/events/"
-VENUE_NAME = "Freeside Atlanta"
-VENUE_ADDRESS = "675 Metropolitan Pkwy SW"
-VENUE_CITY = "Atlanta"
-VENUE_STATE = "GA"
+BASE_URL = "https://www.freesideatl.org"
+EVENTS_URL = f"{BASE_URL}/events"
+
+# Freeside Atlanta venue
+FREESIDE_VENUE = {
+    "name": "Freeside Atlanta",
+    "slug": "freeside-atlanta",
+    "address": "675 Metropolitan Pkwy SW",
+    "neighborhood": "West End",
+    "city": "Atlanta",
+    "state": "GA",
+    "zip": "30310",
+    "venue_type": "community",
+    "website": BASE_URL,
+}
 
 
-def parse_meetup_datetime(datetime_str: str) -> tuple[Optional[str], Optional[str]]:
-    """Parse Meetup datetime format. Returns (date, time) tuple."""
-    try:
-        if "T" in datetime_str:
-            dt = datetime.fromisoformat(datetime_str.replace("Z", "+00:00"))
-            return dt.strftime("%Y-%m-%d"), dt.strftime("%H:%M")
-        return None, None
-    except Exception as e:
-        logger.debug(f"Failed to parse datetime {datetime_str}: {e}")
-        return None, None
+def parse_date_from_text(date_text: str) -> Optional[tuple[str, Optional[str]]]:
+    """
+    Parse date from various formats.
+    Returns (start_date, start_time) tuple or None.
+
+    Examples:
+    - "January 31, 2026"
+    - "Jan 31 at 7:00pm"
+    - "2026-01-31"
+    """
+    if not date_text:
+        return None
+
+    date_text = date_text.strip()
+    start_time = None
+
+    # Extract time if present
+    time_match = re.search(r'(\d{1,2}):(\d{2})\s*(am|pm)', date_text, re.IGNORECASE)
+    if time_match:
+        hour, minute, period = time_match.groups()
+        hour = int(hour)
+        if period.lower() == "pm" and hour != 12:
+            hour += 12
+        elif period.lower() == "am" and hour == 12:
+            hour = 0
+        start_time = f"{hour:02d}:{minute}"
+        # Remove time from date text
+        date_text = re.sub(r'\s*at\s*\d{1,2}:\d{2}\s*(?:am|pm)', '', date_text, flags=re.IGNORECASE)
+
+    # Try ISO format first
+    if re.match(r'\d{4}-\d{2}-\d{2}', date_text):
+        return date_text[:10], start_time
+
+    # Try "Month DD, YYYY" format
+    month_match = re.search(
+        r'(january|february|march|april|may|june|july|august|september|october|november|december)\s+(\d{1,2}),?\s+(\d{4})',
+        date_text,
+        re.IGNORECASE
+    )
+    if month_match:
+        month, day, year = month_match.groups()
+        try:
+            dt = datetime.strptime(f"{month} {day} {year}", "%B %d %Y")
+            return dt.strftime("%Y-%m-%d"), start_time
+        except ValueError:
+            pass
+
+    # Try "Mon DD" format (assume current or next year)
+    month_match = re.search(
+        r'(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+(\d{1,2})',
+        date_text,
+        re.IGNORECASE
+    )
+    if month_match:
+        month_abbr, day = month_match.groups()
+        current_year = datetime.now().year
+        try:
+            dt = datetime.strptime(f"{month_abbr} {day} {current_year}", "%b %d %Y")
+            # If date is in the past, assume next year
+            if dt.date() < datetime.now().date():
+                dt = datetime.strptime(f"{month_abbr} {day} {current_year + 1}", "%b %d %Y")
+            return dt.strftime("%Y-%m-%d"), start_time
+        except ValueError:
+            pass
+
+    return None
+
+
+def determine_category(title: str, description: str = "") -> str:
+    """Determine event category based on title and description."""
+    text = f"{title} {description}".lower()
+
+    if any(word in text for word in ["workshop", "class", "training", "learn", "tutorial"]):
+        return "education"
+    if any(word in text for word in ["meeting", "open house", "social", "meetup"]):
+        return "community"
+    if any(word in text for word in ["hack", "hackathon", "build"]):
+        return "education"
+
+    return "community"
+
+
+def extract_tags(title: str, description: str = "") -> list[str]:
+    """Extract relevant tags from event content."""
+    text = f"{title} {description}".lower()
+    tags = ["makerspace", "hackerspace"]
+
+    if any(word in text for word in ["workshop", "class", "training"]):
+        tags.append("education")
+    if any(word in text for word in ["electronics", "circuit", "arduino", "raspberry pi"]):
+        tags.append("electronics")
+    if any(word in text for word in ["3d print", "laser cut", "cnc"]):
+        tags.append("fabrication")
+    if any(word in text for word in ["wood", "woodwork", "carpentry"]):
+        tags.append("woodworking")
+    if any(word in text for word in ["sewing", "textile", "fabric"]):
+        tags.append("textiles")
+    if any(word in text for word in ["programming", "code", "coding", "software"]):
+        tags.append("tech")
+    if any(word in text for word in ["diy", "maker", "craft"]):
+        tags.append("diy")
+    if any(word in text for word in ["beginner", "intro", "basics"]):
+        tags.append("beginner-friendly")
+    if any(word in text for word in ["open house", "open to public"]):
+        tags.append("open-house")
+
+    return list(set(tags))
+
+
+def is_free_event(title: str, description: str = "") -> bool:
+    """Determine if event is free based on content."""
+    text = f"{title} {description}".lower()
+
+    if any(word in text for word in ["free", "no cost", "no charge"]):
+        return True
+    if any(word in text for word in ["$", "ticket", "registration fee", "cost:", "price:"]):
+        return False
+
+    # Default to True for open house/meeting events
+    if any(word in text for word in ["open house", "meeting", "meetup"]):
+        return True
+
+    return False
 
 
 def crawl(source: dict) -> tuple[int, int, int]:
-    """Crawl Freeside Atlanta Meetup group for events."""
-    if not source.get("is_active"):
-        logger.info("Freeside Atlanta source is not active, skipping")
-        return 0, 0, 0
+    """
+    Crawl Freeside Atlanta events using Playwright.
 
+    The site structure may vary - this crawler looks for common patterns
+    in event listings and calendar pages.
+    """
     source_id = source["id"]
     events_found = 0
     events_new = 0
     events_updated = 0
 
-    # Get or create the Freeside venue
-    venue_data = {
-        "name": VENUE_NAME,
-        "slug": "freeside-atlanta",
-        "address": VENUE_ADDRESS,
-        "city": VENUE_CITY,
-        "state": VENUE_STATE,
-        "spot_type": "community_center",
-        "vibes": ["artsy", "chill"],
-    }
-
-    try:
-        venue_id = get_or_create_venue(venue_data)
-    except Exception as e:
-        logger.error(f"Failed to create venue: {e}")
-        venue_id = None
-
     try:
         with sync_playwright() as p:
             browser = p.chromium.launch(headless=True)
             context = browser.new_context(
-                user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+                user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
                 viewport={"width": 1920, "height": 1080},
             )
             page = context.new_page()
 
-            logger.info(f"Fetching Freeside Atlanta events: {MEETUP_GROUP_URL}")
-            page.goto(MEETUP_GROUP_URL, wait_until="domcontentloaded", timeout=60000)
-            page.wait_for_timeout(3000)
+            # Get venue ID for Freeside Atlanta
+            venue_id = get_or_create_venue(FREESIDE_VENUE)
 
-            # Scroll to load more events
-            for i in range(3):
-                page.keyboard.press("End")
-                page.wait_for_timeout(1500)
+            logger.info(f"Fetching Freeside Atlanta events: {EVENTS_URL}")
 
-            # Find event links on the group page
-            event_links = page.query_selector_all('a[href*="/events/"]')
-
-            seen_urls = set()
-            event_urls = []
-
-            for link in event_links:
+            # Try /events first, then /calendar if needed
+            for url in [EVENTS_URL, f"{BASE_URL}/calendar"]:
                 try:
-                    href = link.get_attribute("href")
-                    if not href or "/events/" not in href:
-                        continue
-
-                    # Build full URL
-                    if href.startswith("/"):
-                        href = f"https://www.meetup.com{href}"
-
-                    # Skip if already seen or not a specific event
-                    if href in seen_urls or href.endswith("/events/"):
-                        continue
-
-                    # Must be a Freeside event
-                    if "freeside-atlanta" not in href.lower():
-                        continue
-
-                    seen_urls.add(href)
-                    event_urls.append(href)
-                except Exception:
+                    page.goto(url, wait_until="domcontentloaded", timeout=30000)
+                    page.wait_for_timeout(3000)
+                    break
+                except PlaywrightTimeout:
+                    if url == f"{BASE_URL}/calendar":
+                        raise
+                    logger.warning(f"Failed to load {url}, trying /calendar")
                     continue
 
-            logger.info(f"Found {len(event_urls)} Freeside events to process")
+            # Extract images from page
+            image_map = extract_images_from_page(page)
 
-            # Visit each event page for details
-            for event_url in event_urls[:20]:  # Limit per run
-                try:
-                    page.goto(event_url, wait_until="domcontentloaded", timeout=30000)
-                    page.wait_for_timeout(1000)
+            # Scroll to load all content
+            for _ in range(5):
+                page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+                page.wait_for_timeout(1000)
 
-                    # Get title
-                    title_el = page.query_selector("h1")
-                    if not title_el:
-                        continue
-                    title = title_el.inner_text().strip()
-                    if not title or len(title) < 3:
-                        continue
+            # Get page HTML for parsing
+            html_content = page.content()
+            body_text = page.inner_text("body")
 
-                    # Get datetime
-                    time_el = page.query_selector("time[datetime]")
-                    start_date = None
-                    start_time = None
+            # Look for event elements (common patterns)
+            # Try to find events by looking for date patterns in text
+            lines = [l.strip() for l in body_text.split("\n") if l.strip()]
 
-                    if time_el:
-                        datetime_attr = time_el.get_attribute("datetime")
-                        if datetime_attr:
-                            start_date, start_time = parse_meetup_datetime(datetime_attr)
+            i = 0
+            while i < len(lines):
+                line = lines[i]
 
-                    if not start_date:
-                        logger.debug(f"Skipping event without date: {title}")
-                        continue
-
-                    events_found += 1
-
-                    # Get description
-                    description = None
-                    desc_el = page.query_selector('[data-testid="event-description"], .event-description, .break-words')
-                    if desc_el:
-                        description = desc_el.inner_text().strip()[:2000]
-
-                    # Get image
-                    image_url = None
-                    img_el = page.query_selector('img[src*="meetupstatic"], img[src*="secure.meetup"]')
-                    if img_el:
-                        image_url = img_el.get_attribute("src")
-
-                    # Generate content hash
-                    content_hash = generate_content_hash(title, VENUE_NAME, start_date)
-
-                    # Check for existing
-                    existing = find_event_by_hash(content_hash)
-                    if existing:
-                        events_updated += 1
-                        continue
-
-                    # Build event record
-                    event_record = {
-                        "source_id": source_id,
-                        "venue_id": venue_id,
-                        "title": title,
-                        "description": description,
-                        "start_date": start_date,
-                        "start_time": start_time,
-                        "end_date": None,
-                        "end_time": None,
-                        "is_all_day": False,
-                        "category": "community",
-                        "subcategory": "meetup.tech",
-                        "tags": ["hackerspace", "makerspace", "tech", "diy"],
-                        "price_min": None,
-                        "price_max": None,
-                        "price_note": "See Meetup for details",
-                        "is_free": True,
-                        "source_url": event_url,
-                        "ticket_url": event_url,
-                        "image_url": image_url,
-                        "raw_text": None,
-                        "extraction_confidence": 0.9,
-                        "is_recurring": False,
-                        "recurrence_rule": None,
-                        "content_hash": content_hash,
-                    }
-
-                    try:
-                        insert_event(event_record)
-                        events_new += 1
-                        logger.info(f"Added: {title} on {start_date}")
-                    except Exception as e:
-                        logger.error(f"Failed to insert: {title}: {e}")
-
-                except Exception as e:
-                    logger.debug(f"Error processing event {event_url}: {e}")
+                # Skip short lines and common navigation text
+                if len(line) < 5 or line.lower() in ["events", "calendar", "home", "about", "contact"]:
+                    i += 1
                     continue
+
+                # Try to parse as date
+                date_info = parse_date_from_text(line)
+
+                if date_info:
+                    start_date, start_time = date_info
+
+                    # Look for title nearby (before or after)
+                    title = None
+                    description = ""
+
+                    # Check previous line for title
+                    if i > 0:
+                        potential_title = lines[i - 1]
+                        if len(potential_title) > 3 and not parse_date_from_text(potential_title):
+                            title = potential_title
+
+                    # Check next line for title if we didn't find one
+                    if not title and i + 1 < len(lines):
+                        potential_title = lines[i + 1]
+                        if len(potential_title) > 3 and not parse_date_from_text(potential_title):
+                            title = potential_title
+                            # Next line might be description
+                            if i + 2 < len(lines):
+                                description = lines[i + 2]
+
+                    # Check following lines for description
+                    if title and i + 1 < len(lines):
+                        for j in range(i + 1, min(i + 4, len(lines))):
+                            if lines[j] != title and len(lines[j]) > 20:
+                                description = lines[j]
+                                break
+
+                    if title and len(title) > 3:
+                        events_found += 1
+
+                        category = determine_category(title, description)
+                        tags = extract_tags(title, description)
+                        is_free = is_free_event(title, description)
+
+                        content_hash = generate_content_hash(
+                            title, "Freeside Atlanta", start_date
+                        )
+
+                        if find_event_by_hash(content_hash):
+                            events_updated += 1
+                            i += 1
+                            continue
+
+                        event_record = {
+                            "source_id": source_id,
+                            "venue_id": venue_id,
+                            "title": title,
+                            "description": description if description else None,
+                            "start_date": start_date,
+                            "start_time": start_time,
+                            "end_date": None,
+                            "end_time": None,
+                            "is_all_day": start_time is None,
+                            "category": category,
+                            "subcategory": None,
+                            "tags": tags,
+                            "price_min": None,
+                            "price_max": None,
+                            "price_note": None,
+                            "is_free": is_free,
+                            "source_url": page.url,
+                            "ticket_url": None,
+                            "image_url": image_map.get(title),
+                            "raw_text": f"{title} | {line} | {description[:200]}"[:500],
+                            "extraction_confidence": 0.80,
+                            "is_recurring": False,
+                            "recurrence_rule": None,
+                            "content_hash": content_hash,
+                        }
+
+                        try:
+                            insert_event(event_record)
+                            events_new += 1
+                            logger.info(f"Added: {title} on {start_date}")
+                        except Exception as e:
+                            logger.error(f"Failed to insert: {title}: {e}")
+
+                i += 1
 
             browser.close()
 
-        logger.info(f"Freeside Atlanta crawl complete: {events_found} found, {events_new} new, {events_updated} existing")
+        logger.info(
+            f"Freeside Atlanta crawl complete: {events_found} found, {events_new} new, {events_updated} updated"
+        )
 
+    except PlaywrightTimeout as e:
+        logger.error(f"Timeout fetching Freeside Atlanta: {e}")
+        raise
     except Exception as e:
         logger.error(f"Failed to crawl Freeside Atlanta: {e}")
         raise
