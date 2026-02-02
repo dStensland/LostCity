@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server";
+import { checkBodySize } from "@/lib/api-utils";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 
 export async function POST(request: Request) {
+  // Check body size (10KB limit)
+  const sizeCheck = checkBodySize(request);
+  if (sizeCheck) return sizeCheck;
+
   // Rate limit to prevent abuse
   const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.auth, getClientIdentifier(request));
   if (rateLimitResult) return rateLimitResult;

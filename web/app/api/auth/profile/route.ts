@@ -1,8 +1,8 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
-import { isValidString, isValidUrl, validationError } from "@/lib/api-utils";
+import { isValidString, isValidUrl, validationError, checkBodySize, apiResponse, errorApiResponse, successResponse } from "@/lib/api-utils";
 import { logger } from "@/lib/logger";
 
 /**
@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
     } = await supabase.auth.getUser();
 
     if (authError || !user) {
-      return NextResponse.json({ error: "Unauthorized", profile: null }, { status: 401 });
+      return errorApiResponse("Unauthorized", 401);
     }
 
     // Use service client for reliable database access
@@ -44,10 +44,7 @@ export async function GET(request: NextRequest) {
 
     if (fetchError) {
       logger.error("Error fetching profile", fetchError, { userId: user.id, component: "auth/profile" });
-      return NextResponse.json(
-        { error: "Failed to fetch profile", profile: null },
-        { status: 500 }
-      );
+      return errorApiResponse("Failed to fetch profile", 500);
     }
 
     // If no profile exists, create one
@@ -108,10 +105,7 @@ export async function GET(request: NextRequest) {
         if (retryProfile) {
           profile = retryProfile;
         } else {
-          return NextResponse.json(
-            { error: "Failed to create profile", profile: null },
-            { status: 500 }
-          );
+          return errorApiResponse("Failed to create profile", 500);
         }
       } else {
         profile = newProfile;
@@ -125,13 +119,10 @@ export async function GET(request: NextRequest) {
         .maybeSingle();
     }
 
-    return NextResponse.json({ profile });
+    return successResponse({ profile });
   } catch (error) {
     logger.error("Profile API error", error, { component: "auth/profile" });
-    return NextResponse.json(
-      { error: "Internal server error", profile: null },
-      { status: 500 }
-    );
+    return errorApiResponse("Internal server error", 500);
   }
 }
 
@@ -141,6 +132,10 @@ export async function GET(request: NextRequest) {
  * Updates the current user's profile.
  */
 export async function PATCH(request: NextRequest) {
+  // Check body size (50KB limit for profile updates with preferences)
+  const sizeCheck = checkBodySize(request, 50 * 1024);
+  if (sizeCheck) return sizeCheck;
+
   // Apply rate limiting to prevent abuse
   const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
   if (rateLimitResult) return rateLimitResult;
@@ -155,7 +150,7 @@ export async function PATCH(request: NextRequest) {
     } = await supabase.auth.getUser();
 
     if (authError || !user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return errorApiResponse("Unauthorized", 401);
     }
 
     const body = await request.json();
@@ -199,18 +194,12 @@ export async function PATCH(request: NextRequest) {
 
     if (error) {
       logger.error("Error updating profile", error, { userId: user.id, component: "auth/profile" });
-      return NextResponse.json(
-        { error: "Failed to update profile" },
-        { status: 500 }
-      );
+      return errorApiResponse("Failed to update profile", 500);
     }
 
-    return NextResponse.json({ profile });
+    return successResponse({ profile });
   } catch (error) {
     logger.error("Profile update API error", error, { component: "auth/profile" });
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return errorApiResponse("Internal server error", 500);
   }
 }

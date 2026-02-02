@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { parseIntParam, validationError } from "@/lib/api-utils";
+import { parseIntParam, validationError, checkBodySize } from "@/lib/api-utils";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 import { ensureUserProfile } from "@/lib/user-utils";
 import { withAuth } from "@/lib/api-middleware";
@@ -13,6 +13,10 @@ const VALID_VISIBILITIES = ["friends", "public", "private"] as const;
  * Create or update an RSVP
  */
 export const POST = withAuth(async (request, { user, serviceClient }) => {
+  // Check body size (10KB limit)
+  const sizeCheck = checkBodySize(request);
+  if (sizeCheck) return sizeCheck;
+
   // Apply rate limiting
   const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
   if (rateLimitResult) return rateLimitResult;

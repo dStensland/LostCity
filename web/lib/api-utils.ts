@@ -110,16 +110,12 @@ export type ValidationResult =
   | { valid: true }
   | { valid: false; error: string };
 
-// Create a validation error response
-export function validationError(message: string): NextResponse {
-  return NextResponse.json({ error: message }, { status: 400 });
-}
-
 // ============================================================================
 // ERROR RESPONSE HELPERS
 // ============================================================================
 
 // Safe error response that logs details server-side but returns generic message to clients
+// Note: This is a legacy function. Consider using errorApiResponse() instead for new code.
 export function errorResponse(
   error: unknown,
   context: string,
@@ -158,4 +154,118 @@ export function adminErrorResponse(
     : "An error occurred";
 
   return NextResponse.json({ error: errorMessage }, { status: statusCode });
+}
+
+// ============================================================================
+// REQUEST BODY SIZE VALIDATION
+// ============================================================================
+
+/**
+ * Check request body size to prevent DoS attacks via large payloads.
+ * Should be called at the start of all POST/PATCH handlers.
+ *
+ * @param request - The incoming request
+ * @param maxBytes - Maximum allowed body size in bytes (default: 10KB)
+ * @returns NextResponse with 413 status if too large, null if OK
+ */
+export function checkBodySize(request: Request, maxBytes = 10240): NextResponse | null {
+  const contentLength = request.headers.get("content-length");
+  if (contentLength && parseInt(contentLength, 10) > maxBytes) {
+    // Note: Uses raw NextResponse since this is a pre-check before apiResponse is used
+    // The actual API handler will add versioning headers to their response
+    return NextResponse.json(
+      { error: "Request body too large" },
+      { status: 413 }
+    );
+  }
+  return null;
+}
+
+// ============================================================================
+// API VERSIONING & RESPONSE HELPERS
+// ============================================================================
+
+/**
+ * Current API version
+ * Increment when making breaking changes to API contracts
+ */
+export const API_VERSION = "1.0";
+
+/**
+ * Create a JSON response with API versioning headers
+ *
+ * @param data - Response data to send
+ * @param init - Optional ResponseInit (status, headers, etc.)
+ * @returns NextResponse with versioning headers
+ *
+ * @example
+ * return apiResponse({ events: [] });
+ * return apiResponse({ error: "Not found" }, { status: 404 });
+ */
+export function apiResponse<T = unknown>(
+  data: T,
+  init?: ResponseInit
+): NextResponse<T> {
+  const response = NextResponse.json(data, init);
+
+  // Add API version header
+  response.headers.set("X-API-Version", API_VERSION);
+
+  // Add standard security headers for API responses
+  response.headers.set("X-Content-Type-Options", "nosniff");
+
+  return response;
+}
+
+/**
+ * Create a successful API response with data
+ *
+ * @example
+ * return successResponse({ events: [] });
+ */
+export function successResponse<T = unknown>(
+  data: T,
+  init?: Omit<ResponseInit, "status">
+): NextResponse<T> {
+  return apiResponse(data, { ...init, status: 200 });
+}
+
+/**
+ * Create a created (201) API response
+ *
+ * @example
+ * return createdResponse({ id: "123", name: "New Event" });
+ */
+export function createdResponse<T = unknown>(
+  data: T,
+  init?: Omit<ResponseInit, "status">
+): NextResponse<T> {
+  return apiResponse(data, { ...init, status: 201 });
+}
+
+/**
+ * Create an error API response with versioning headers
+ *
+ * @example
+ * return errorApiResponse("Not found", 404);
+ * return errorApiResponse("Validation failed", 400);
+ */
+export function errorApiResponse(
+  message: string,
+  status: number = 500
+): NextResponse<{ error: string }> {
+  return apiResponse({ error: message }, { status });
+}
+
+/**
+ * Create a validation error response (400 Bad Request)
+ * This is a convenience wrapper around errorApiResponse for validation errors
+ *
+ * @example
+ * if (!isValidEmail(email)) {
+ *   return validationError("Invalid email address");
+ * }
+ */
+export function validationError(message: string): NextResponse<{ error: string }> {
+  return errorApiResponse(message, 400);
 }

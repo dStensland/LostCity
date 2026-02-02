@@ -1,7 +1,7 @@
-import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { applyRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import { getLocalDateString } from "@/lib/formats";
+import { apiResponse, errorApiResponse } from "@/lib/api-utils";
 
 export const revalidate = 300; // Cache for 5 minutes
 
@@ -79,7 +79,7 @@ export async function GET(request: Request) {
 
     if (error) {
       console.error("Error fetching trending events:", error);
-      return NextResponse.json({ error: "Failed to fetch trending events" }, { status: 500 });
+      return errorApiResponse("Failed to fetch trending events", 500);
     }
 
     // Get event IDs for RSVP lookup (batch query instead of fetching ALL RSVPs)
@@ -128,7 +128,7 @@ export async function GET(request: Request) {
       .sort((a, b) => b.rsvp_count - a.rsvp_count)
       .slice(0, limit);
 
-    return NextResponse.json({
+    return apiResponse({
       events: eventsWithRsvps,
     }, {
       headers: {
@@ -137,6 +137,6 @@ export async function GET(request: Request) {
     });
   } catch (err) {
     console.error("Error in trending API:", err);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return errorApiResponse("Internal server error", 500);
   }
 }

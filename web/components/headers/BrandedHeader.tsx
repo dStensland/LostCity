@@ -1,14 +1,14 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import { usePathname, useSearchParams } from "next/navigation";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { usePathname, useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import Logo from "../Logo";
 import UserMenu from "../UserMenu";
 import HeaderSearchButton from "../HeaderSearchButton";
 import ATLittleLogo from "../logos/ATLittleLogo";
-import { usePortalOptional, DEFAULT_PORTAL, DEFAULT_PORTAL_SLUG } from "@/lib/portal-context";
+import { usePortalOptional, DEFAULT_PORTAL } from "@/lib/portal-context";
 import { useAuth } from "@/lib/auth-context";
 import type { HeaderConfig } from "@/lib/visual-presets";
 import type { PortalBranding } from "@/lib/portal-context";
@@ -56,6 +56,7 @@ export default function BrandedHeader({
   const mobileMenuRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const router = useRouter();
   const portalContext = usePortalOptional();
   const portal = portalContext?.portal ?? DEFAULT_PORTAL;
   const { user } = useAuth();
@@ -94,10 +95,10 @@ export default function BrandedHeader({
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  const getHref = (tab: typeof TABS[0]) => {
+  const getHref = useCallback((tab: typeof TABS[0]) => {
     if (tab.key === "feed") return `/${portalSlug}`;
     return `/${portalSlug}?view=${tab.key}`;
-  };
+  }, [portalSlug]);
 
   const isActive = (tab: typeof TABS[0]) => {
     const isPortalPage = pathname === `/${portalSlug}`;
@@ -129,6 +130,37 @@ export default function BrandedHeader({
         return "gap-1";
     }
   };
+
+  // Keyboard navigation for tabs
+  const handleKeyDown = useCallback((event: React.KeyboardEvent, currentIndex: number) => {
+    let targetIndex: number | null = null;
+
+    switch (event.key) {
+      case "ArrowLeft":
+        event.preventDefault();
+        targetIndex = currentIndex > 0 ? currentIndex - 1 : TABS.length - 1;
+        break;
+      case "ArrowRight":
+        event.preventDefault();
+        targetIndex = currentIndex < TABS.length - 1 ? currentIndex + 1 : 0;
+        break;
+      case "Home":
+        event.preventDefault();
+        targetIndex = 0;
+        break;
+      case "End":
+        event.preventDefault();
+        targetIndex = TABS.length - 1;
+        break;
+      default:
+        return;
+    }
+
+    if (targetIndex !== null) {
+      const targetTab = TABS[targetIndex];
+      router.push(getHref(targetTab));
+    }
+  }, [TABS, router, getHref]);
 
   return (
     <header
@@ -269,8 +301,12 @@ export default function BrandedHeader({
 
       {/* Bottom row: Navigation tabs (desktop) */}
       {!hideNav && (
-        <nav className={`hidden sm:flex items-center justify-center pb-3 px-4 ${getNavStyleClass()}`}>
-          {TABS.map((tab) => {
+        <nav
+          className={`hidden sm:flex items-center justify-center pb-3 px-4 ${getNavStyleClass()}`}
+          role="tablist"
+          aria-label="Main navigation"
+        >
+          {TABS.map((tab, index) => {
             const active = isActive(tab);
             return (
               <Link
@@ -281,6 +317,11 @@ export default function BrandedHeader({
                     ? "nav-tab-active bg-[var(--coral)] text-[var(--void)] font-medium"
                     : "text-[var(--muted)] hover:text-[var(--cream)] hover:bg-[var(--twilight)]/50"
                 }`}
+                role="tab"
+                aria-selected={active}
+                aria-controls={`${tab.key}-panel`}
+                tabIndex={active ? 0 : -1}
+                onKeyDown={(e) => handleKeyDown(e, index)}
               >
                 {tab.label}
               </Link>
@@ -291,11 +332,15 @@ export default function BrandedHeader({
 
       {/* Mobile navigation bar */}
       {!hideNav && (
-        <nav className={`sm:hidden border-t border-[var(--twilight)]/30 ${
-          isLightTheme ? "bg-white/80" : "bg-[var(--night)]/95"
-        } ${getNavStyleClass()}`}>
+        <nav
+          className={`sm:hidden border-t border-[var(--twilight)]/30 ${
+            isLightTheme ? "bg-white/80" : "bg-[var(--night)]/95"
+          } ${getNavStyleClass()}`}
+          role="tablist"
+          aria-label="Main navigation"
+        >
           <div className="flex py-2 px-4 justify-center gap-2">
-            {TABS.map((tab) => {
+            {TABS.map((tab, index) => {
               const active = isActive(tab);
               return (
                 <Link
@@ -306,6 +351,11 @@ export default function BrandedHeader({
                       ? "nav-tab-active bg-[var(--coral)] text-[var(--void)] font-medium"
                       : "text-[var(--muted)] hover:text-[var(--cream)]"
                   }`}
+                  role="tab"
+                  aria-selected={active}
+                  aria-controls={`${tab.key}-panel`}
+                  tabIndex={active ? 0 : -1}
+                  onKeyDown={(e) => handleKeyDown(e, index)}
                 >
                   {tab.label}
                 </Link>

@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import { usePathname, useSearchParams } from "next/navigation";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { usePathname, useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import UserMenu from "../UserMenu";
 import HeaderSearchButton from "../HeaderSearchButton";
@@ -40,6 +40,7 @@ export default function ATLittleHeader() {
   const mobileMenuRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const router = useRouter();
   useAuth();
 
   const currentView = searchParams?.get("view") || "feed";
@@ -81,6 +82,37 @@ export default function ATLittleHeader() {
     return false;
   };
 
+  // Keyboard navigation for tabs
+  const handleKeyDown = useCallback((event: React.KeyboardEvent, currentIndex: number) => {
+    let targetIndex: number | null = null;
+
+    switch (event.key) {
+      case "ArrowLeft":
+        event.preventDefault();
+        targetIndex = currentIndex > 0 ? currentIndex - 1 : TABS.length - 1;
+        break;
+      case "ArrowRight":
+        event.preventDefault();
+        targetIndex = currentIndex < TABS.length - 1 ? currentIndex + 1 : 0;
+        break;
+      case "Home":
+        event.preventDefault();
+        targetIndex = 0;
+        break;
+      case "End":
+        event.preventDefault();
+        targetIndex = TABS.length - 1;
+        break;
+      default:
+        return;
+    }
+
+    if (targetIndex !== null) {
+      const targetTab = TABS[targetIndex];
+      router.push(`/${portalSlug}${targetTab.href}`);
+    }
+  }, [router]);
+
   return (
     <header
       className="sticky top-0 z-[100]"
@@ -118,12 +150,12 @@ export default function ATLittleHeader() {
         </Link>
 
         {/* Desktop Nav - Pill style */}
-        <nav className="hidden sm:flex items-center">
+        <nav className="hidden sm:flex items-center" role="tablist" aria-label="Main navigation">
           <div
             className="flex items-center gap-1 p-1 rounded-full"
             style={{ backgroundColor: C.paper, border: `2px solid ${C.ink}` }}
           >
-            {TABS.map((tab) => {
+            {TABS.map((tab, index) => {
               const active = isActive(tab);
               return (
                 <Link
@@ -135,6 +167,11 @@ export default function ATLittleHeader() {
                     color: active ? "white" : C.ink,
                     fontFamily: "var(--font-nunito), system-ui",
                   }}
+                  role="tab"
+                  aria-selected={active}
+                  aria-controls={`${tab.key}-panel`}
+                  tabIndex={active ? 0 : -1}
+                  onKeyDown={(e) => handleKeyDown(e, index)}
                 >
                   <span>{tab.emoji}</span>
                   <span>{tab.label}</span>

@@ -3,6 +3,7 @@ import type { MoodId } from "@/lib/moods";
 import { applyRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import { generateNextCursor } from "@/lib/cursor";
 import { logger } from "@/lib/logger";
+import { apiResponse } from "@/lib/api-utils";
 
 // Helper to safely parse integers with validation
 function safeParseInt(value: string | null, defaultValue: number, min = 1, max = 1000): number {
@@ -65,7 +66,7 @@ export async function GET(request: Request) {
       // Enrich with social proof counts
       const events = await enrichEventsWithSocialProof(rawEvents);
 
-      return Response.json(
+      return apiResponse(
         {
           events,
           cursor: nextCursor,
@@ -88,7 +89,7 @@ export async function GET(request: Request) {
       // Also generate a cursor from the last event for gradual migration
       const nextCursor = events.length > 0 ? generateNextCursor(events) : null;
 
-      return Response.json(
+      return apiResponse(
         {
           events,
           hasMore: page * pageSize < total,
@@ -104,7 +105,7 @@ export async function GET(request: Request) {
     }
   } catch (error) {
     logger.error("Events API error", error, { component: "events" });
-    return Response.json(
+    return apiResponse(
       { error: "Failed to fetch events", events: [], hasMore: false, total: 0 },
       { status: 500 }
     );

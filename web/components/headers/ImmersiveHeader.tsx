@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import { usePathname, useSearchParams } from "next/navigation";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { usePathname, useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import Logo from "../Logo";
@@ -56,6 +56,7 @@ export default function ImmersiveHeader({
   const mobileMenuRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const router = useRouter();
   const portalContext = usePortalOptional();
   const portal = portalContext?.portal ?? DEFAULT_PORTAL;
   const { user } = useAuth();
@@ -103,10 +104,10 @@ export default function ImmersiveHeader({
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  const getHref = (tab: typeof TABS[0]) => {
+  const getHref = useCallback((tab: typeof TABS[0]) => {
     if (tab.key === "feed") return `/${portalSlug}`;
     return `/${portalSlug}?view=${tab.key}`;
-  };
+  }, [portalSlug]);
 
   const isActive = (tab: typeof TABS[0]) => {
     const isPortalPage = pathname === `/${portalSlug}`;
@@ -132,6 +133,37 @@ export default function ImmersiveHeader({
   const headerBorder = scrollProgress > 0.5
     ? "rgba(37, 37, 48, 0.5)"
     : "transparent";
+
+  // Keyboard navigation for tabs
+  const handleKeyDown = useCallback((event: React.KeyboardEvent, currentIndex: number) => {
+    let targetIndex: number | null = null;
+
+    switch (event.key) {
+      case "ArrowLeft":
+        event.preventDefault();
+        targetIndex = currentIndex > 0 ? currentIndex - 1 : TABS.length - 1;
+        break;
+      case "ArrowRight":
+        event.preventDefault();
+        targetIndex = currentIndex < TABS.length - 1 ? currentIndex + 1 : 0;
+        break;
+      case "Home":
+        event.preventDefault();
+        targetIndex = 0;
+        break;
+      case "End":
+        event.preventDefault();
+        targetIndex = TABS.length - 1;
+        break;
+      default:
+        return;
+    }
+
+    if (targetIndex !== null) {
+      const targetTab = TABS[targetIndex];
+      router.push(getHref(targetTab));
+    }
+  }, [TABS, router, getHref]);
 
   return (
     <>
@@ -201,8 +233,12 @@ export default function ImmersiveHeader({
 
           {/* Center: Navigation (desktop, when header becomes solid) */}
           {!hideNav && scrollProgress > 0.5 && (
-            <nav className="hidden sm:flex items-center gap-1 flex-1 max-w-md mx-auto justify-center">
-              {TABS.map((tab) => {
+            <nav
+              className="hidden sm:flex items-center gap-1 flex-1 max-w-md mx-auto justify-center"
+              role="tablist"
+              aria-label="Main navigation"
+            >
+              {TABS.map((tab, index) => {
                 const active = isActive(tab);
                 return (
                   <Link
@@ -213,6 +249,11 @@ export default function ImmersiveHeader({
                         ? "nav-tab-active bg-white/20 text-white font-medium"
                         : "text-white/70 hover:text-white hover:bg-white/10"
                     }`}
+                    role="tab"
+                    aria-selected={active}
+                    aria-controls={`${tab.key}-panel`}
+                    tabIndex={active ? 0 : -1}
+                    onKeyDown={(e) => handleKeyDown(e, index)}
                   >
                     {tab.label}
                   </Link>
@@ -277,9 +318,13 @@ export default function ImmersiveHeader({
 
       {/* Fixed mobile nav at bottom when scrolled past hero */}
       {!hideNav && scrollProgress > 0.8 && (
-        <nav className="sm:hidden fixed bottom-0 left-0 right-0 z-[90] border-t border-[var(--twilight)]/50 bg-[var(--void)]/95 backdrop-blur-md">
+        <nav
+          className="sm:hidden fixed bottom-0 left-0 right-0 z-[90] border-t border-[var(--twilight)]/50 bg-[var(--void)]/95 backdrop-blur-md"
+          role="tablist"
+          aria-label="Main navigation"
+        >
           <div className="flex py-2 px-4 justify-around">
-            {TABS.map((tab) => {
+            {TABS.map((tab, index) => {
               const active = isActive(tab);
               return (
                 <Link
@@ -290,6 +335,11 @@ export default function ImmersiveHeader({
                       ? "text-[var(--coral)]"
                       : "text-[var(--muted)] hover:text-[var(--cream)]"
                   }`}
+                  role="tab"
+                  aria-selected={active}
+                  aria-controls={`${tab.key}-panel`}
+                  tabIndex={active ? 0 : -1}
+                  onKeyDown={(e) => handleKeyDown(e, index)}
                 >
                   {tab.label}
                 </Link>
