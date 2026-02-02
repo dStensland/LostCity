@@ -1,10 +1,13 @@
 // Google Places API Integration
 
-const secret = process.env.GOOGLE_PLACES_API_KEY;
-if (!secret && process.env.NODE_ENV === "production") {
-  throw new Error("GOOGLE_PLACES_API_KEY environment variable is required in production");
+// Get API key lazily to avoid build-time errors during static page generation
+function getGoogleApiKey(): string {
+  const key = process.env.GOOGLE_PLACES_API_KEY;
+  if (!key && process.env.NODE_ENV === "production") {
+    console.error("GOOGLE_PLACES_API_KEY environment variable is not set");
+  }
+  return key || "";
 }
-const GOOGLE_API_KEY = secret || "";
 
 // Field mask for Nearby Search API
 const FIELD_MASK = [
@@ -126,7 +129,8 @@ export async function searchNearbyPlaces({
   radius,
   types,
 }: NearbySearchParams): Promise<GooglePlace[]> {
-  if (!GOOGLE_API_KEY) {
+  const apiKey = getGoogleApiKey();
+  if (!apiKey) {
     console.error("GOOGLE_PLACES_API_KEY is not set");
     return [];
   }
@@ -137,7 +141,7 @@ export async function searchNearbyPlaces({
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "X-Goog-Api-Key": GOOGLE_API_KEY,
+        "X-Goog-Api-Key": apiKey,
         "X-Goog-FieldMask": FIELD_MASK,
       },
       body: JSON.stringify({
