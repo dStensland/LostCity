@@ -1,7 +1,11 @@
 import { createServiceClient } from "@/lib/supabase/service";
 import { isValidString } from "@/lib/api-utils";
 
-const FOURSQUARE_API_KEY = process.env.FOURSQUARE_API_KEY || "";
+const secret = process.env.FOURSQUARE_API_KEY;
+if (!secret && process.env.NODE_ENV === "production") {
+  throw new Error("FOURSQUARE_API_KEY environment variable is required in production");
+}
+const FOURSQUARE_API_KEY = secret || "";
 
 export interface AutoApproveResult {
   success: boolean;

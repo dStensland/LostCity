@@ -195,6 +195,14 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: "https",
+        hostname: "childrensmuseumatlanta.org",
+      },
+      {
+        protocol: "https",
+        hostname: "**.childrensmuseumatlanta.org",
+      },
+      {
+        protocol: "https",
         hostname: "**.eyedrum.org",
       },
       {

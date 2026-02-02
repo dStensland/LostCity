@@ -1,6 +1,10 @@
 // Google Places API Integration
 
-const GOOGLE_API_KEY = process.env.GOOGLE_PLACES_API_KEY || "";
+const secret = process.env.GOOGLE_PLACES_API_KEY;
+if (!secret && process.env.NODE_ENV === "production") {
+  throw new Error("GOOGLE_PLACES_API_KEY environment variable is required in production");
+}
+const GOOGLE_API_KEY = secret || "";
 
 // Field mask for Nearby Search API
 const FIELD_MASK = [
