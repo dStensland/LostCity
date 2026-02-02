@@ -95,7 +95,7 @@ export default async function TonightsPicks({ portalSlug }: { portalSlug?: strin
         }}
       />
 
-      <div className="relative max-w-3xl mx-auto">
+      <div className="relative">
         {/* Section header with improved visual hierarchy */}
         <div className="flex items-center gap-3 mb-5">
           <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[var(--neon-magenta)] to-[var(--coral)] flex items-center justify-center shadow-lg"
