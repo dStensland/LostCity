@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 
 const secret = process.env.FOURSQUARE_API_KEY;
 if (!secret && process.env.NODE_ENV === "production") {
@@ -65,6 +66,10 @@ interface FoursquarePlace {
  * }
  */
 export async function POST(request: NextRequest) {
+  // Rate limit - this calls external API so protect it
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.search, getClientIdentifier(request));
+  if (rateLimitResult) return rateLimitResult;
+
   try {
     // Check API key
     if (!FOURSQUARE_API_KEY) {
@@ -126,6 +131,10 @@ export async function POST(request: NextRequest) {
       limit: "10",
     });
 
+    // Add timeout to prevent hanging requests
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+
     const response = await fetch(
       `https://api.foursquare.com/v3/places/search?${params}`,
       {
@@ -134,8 +143,10 @@ export async function POST(request: NextRequest) {
           Authorization: FOURSQUARE_API_KEY,
           Accept: "application/json",
         },
+        signal: controller.signal,
       }
     );
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
       const errorText = await response.text();

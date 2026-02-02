@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { format, startOfDay, addDays } from "date-fns";
+import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 
 /**
  * GET /api/activities/popular
@@ -12,6 +13,10 @@ import { format, startOfDay, addDays } from "date-fns";
  *   - date_filter: "today" | "week" | "month" (default: "week")
  */
 export async function GET(request: NextRequest) {
+  // Rate limit
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.read, getClientIdentifier(request));
+  if (rateLimitResult) return rateLimitResult;
+
   try {
     // Use the same supabase client as search to ensure counts match what users see
     // (respects RLS policies)

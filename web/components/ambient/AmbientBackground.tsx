@@ -1,21 +1,26 @@
 "use client";
 
-import { Suspense, useState, useEffect } from "react";
+import { Suspense, useState, useEffect, lazy, ComponentType } from "react";
+import dynamic from "next/dynamic";
 import { usePortalOptional, DEFAULT_PORTAL } from "@/lib/portal-context";
 import { applyPreset } from "@/lib/apply-preset";
 import type { AmbientEffect, IntensityLevel, SpeedLevel } from "@/lib/visual-presets";
+
+// Only load SubtleGlow eagerly since it's the default and most common
 import SubtleGlowAmbient from "./SubtleGlowAmbient";
-import GradientWaveAmbient from "./GradientWaveAmbient";
-import ParticleFieldAmbient from "./ParticleFieldAmbient";
-import AuroraAmbient from "./AuroraAmbient";
-import MeshGradientAmbient from "./MeshGradientAmbient";
-import NoiseTextureAmbient from "./NoiseTextureAmbient";
-import ShiftingNeighborhoodAmbient from "./ShiftingNeighborhoodAmbient";
-import ConstellationAmbient from "./ConstellationAmbient";
-import FlowingStreetsAmbient from "./FlowingStreetsAmbient";
-import GrowingGardenAmbient from "./GrowingGardenAmbient";
-import RainAmbient from "./RainAmbient";
-import FloatingLeavesAmbient from "./FloatingLeavesAmbient";
+
+// Dynamic imports for all other effects - loaded only when needed
+const GradientWaveAmbient = dynamic(() => import("./GradientWaveAmbient"), { ssr: false });
+const ParticleFieldAmbient = dynamic(() => import("./ParticleFieldAmbient"), { ssr: false });
+const AuroraAmbient = dynamic(() => import("./AuroraAmbient"), { ssr: false });
+const MeshGradientAmbient = dynamic(() => import("./MeshGradientAmbient"), { ssr: false });
+const NoiseTextureAmbient = dynamic(() => import("./NoiseTextureAmbient"), { ssr: false });
+const ShiftingNeighborhoodAmbient = dynamic(() => import("./ShiftingNeighborhoodAmbient"), { ssr: false });
+const ConstellationAmbient = dynamic(() => import("./ConstellationAmbient"), { ssr: false });
+const FlowingStreetsAmbient = dynamic(() => import("./FlowingStreetsAmbient"), { ssr: false });
+const GrowingGardenAmbient = dynamic(() => import("./GrowingGardenAmbient"), { ssr: false });
+const RainAmbient = dynamic(() => import("./RainAmbient"), { ssr: false });
+const FloatingLeavesAmbient = dynamic(() => import("./FloatingLeavesAmbient"), { ssr: false });
 
 interface DesignOverrides {
   ambientEffect?: AmbientEffect;

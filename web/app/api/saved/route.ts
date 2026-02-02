@@ -89,7 +89,7 @@ export const POST = withAuth(async (request, { user, serviceClient }) => {
         return NextResponse.json({ success: true, alreadySaved: true });
       }
       logger.error("Save error", error, { userId: user.id, eventId: event_id, venueId: venue_id, component: "saved" });
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json({ error: "Operation failed" }, { status: 500 });
     }
 
     return NextResponse.json({ success: true });
@@ -132,7 +132,7 @@ export const DELETE = withAuth(async (request, { user, serviceClient }) => {
 
     if (error) {
       logger.error("Unsave error", error, { userId: user.id, eventId, venueId, component: "saved" });
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json({ error: "Operation failed" }, { status: 500 });
     }
 
     return NextResponse.json({ success: true });

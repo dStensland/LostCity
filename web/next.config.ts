@@ -233,6 +233,20 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "**.woodruffcenter.org",
       },
+      // Stone Mountain Park
+      {
+        protocol: "https",
+        hostname: "stonemountainpark.com",
+      },
+      {
+        protocol: "https",
+        hostname: "**.stonemountainpark.com",
+      },
+      // Allow WordPress uploads from various domains
+      {
+        protocol: "https",
+        hostname: "**.wp.com",
+      },
       // Georgia Tech domains
       {
         protocol: "https",

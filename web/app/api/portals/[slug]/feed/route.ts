@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { addDays, startOfDay, nextFriday, nextSunday, isFriday, isSaturday, isSunday } from "date-fns";
 import { getLocalDateString } from "@/lib/formats";
 import { getPortalSourceAccess } from "@/lib/federation";
+import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 
 // Cache feed for 5 minutes at CDN, allow stale for 1 hour while revalidating
 export const revalidate = 300;
@@ -172,6 +173,10 @@ function getDateRange(filter: string): { start: string; end: string } {
 
 // GET /api/portals/[slug]/feed - Get feed content for a portal
 export async function GET(request: NextRequest, { params }: Props) {
+  // Rate limit - this is an expensive endpoint
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.expensive, getClientIdentifier(request));
+  if (rateLimitResult) return rateLimitResult;
+
   const { slug } = await params;
   const { searchParams } = new URL(request.url);
   const sectionIds = searchParams.get("sections")?.split(",").filter(Boolean);

@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
 
     if (error) {
       console.error("Recommendation check error:", error);
-      return NextResponse.json({ isRecommended: false, error: error.message });
+      return NextResponse.json({ isRecommended: false, error: "Failed to check recommendation" });
     }
 
     const rec = data as { note?: string | null; visibility?: string | null } | null;

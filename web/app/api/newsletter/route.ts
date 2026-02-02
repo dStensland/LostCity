@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
+import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 
 export async function POST(request: Request) {
+  // Rate limit to prevent abuse
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.auth, getClientIdentifier(request));
+  if (rateLimitResult) return rateLimitResult;
   try {
     const { email } = await request.json();
 

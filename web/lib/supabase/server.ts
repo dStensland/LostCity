@@ -161,5 +161,5 @@ export async function canManagePortal(portalId: string): Promise<boolean> {
     .maybeSingle();
 
   const member = data as { role: string } | null;
-  return member?.role === "owner";
+  return member?.role === "owner" || member?.role === "admin";
 }
