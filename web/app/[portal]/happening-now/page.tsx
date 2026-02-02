@@ -2,64 +2,33 @@
 
 import dynamic from "next/dynamic";
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { useLiveEvents } from "@/lib/hooks/useLiveEvents";
 import { usePortal } from "@/lib/portal-context";
 import Link from "next/link";
-import { formatTime } from "@/lib/formats";
-import CategoryIcon, { getCategoryColor } from "@/components/CategoryIcon";
-import { NEIGHBORHOODS, type Spot } from "@/lib/spots";
+import { NEIGHBORHOOD_NAMES } from "@/config/neighborhoods";
 import UnifiedHeader from "@/components/UnifiedHeader";
-import CollapsibleSection, { CategoryIcons } from "@/components/CollapsibleSection";
-import { formatCloseTime } from "@/lib/hours";
+import CategoryFilterChips, { type FilterCategory } from "@/components/CategoryFilterChips";
+import AroundMeCard from "@/components/AroundMeCard";
+import type { AroundMeItem, AroundMeSpot, AroundMeEvent } from "@/app/api/around-me/route";
 
-// Dynamically import components
+// Dynamically import map component
 const MapViewWrapper = dynamic(() => import("@/components/MapViewWrapper"), { ssr: false });
-const NeighborhoodGrid = dynamic(() => import("@/components/NeighborhoodGrid"), { ssr: false });
-
-// Spot categories matching detail page taxonomy
-const SPOT_CATEGORIES = [
-  { id: "food", label: "Restaurants", spotTypes: ["restaurant", "food_hall", "cooking_school"] },
-  { id: "drinks", label: "Bars", spotTypes: ["bar", "brewery", "distillery", "winery", "rooftop", "sports_bar"] },
-  { id: "nightlife", label: "Clubs", spotTypes: ["club"] },
-  { id: "caffeine", label: "Coffee", spotTypes: ["coffee_shop"] },
-  { id: "fun", label: "Fun", spotTypes: ["games", "eatertainment", "arcade", "karaoke", "attraction"] },
-] as const;
 
 // Distance filter for GPS mode (miles)
 const NEARBY_RADIUS_MILES = 5;
 
-// Spot type labels for display
-const SPOT_TYPE_LABELS: Record<string, string> = {
-  restaurant: "Restaurant",
-  food_hall: "Food Hall",
-  cooking_school: "Cooking School",
-  bar: "Bar",
-  brewery: "Brewery",
-  distillery: "Distillery",
-  winery: "Winery",
-  rooftop: "Rooftop",
-  sports_bar: "Sports Bar",
-  club: "Club",
-  coffee_shop: "Coffee",
-  games: "Games",
-  eatertainment: "Eatertainment",
-  arcade: "Arcade",
-  karaoke: "Karaoke",
-  attraction: "Attraction",
-};
-
 type UserLocation = { lat: number; lng: number } | null;
 
-export default function PortalHappeningNowPage() {
+export default function WhatsOpenPage() {
   const { portal } = usePortal();
-  const { events, loading: eventsLoading } = useLiveEvents();
   const [userLocation, setUserLocation] = useState<UserLocation>(null);
   const [locationLoading, setLocationLoading] = useState(false);
   const [, setLocationDenied] = useState(false);
   const [showLocationPrompt, setShowLocationPrompt] = useState(true);
   const [selectedNeighborhood, setSelectedNeighborhood] = useState<string | null>(null);
-  const [openSpots, setOpenSpots] = useState<Spot[]>([]);
-  const [spotsLoading, setSpotsLoading] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<FilterCategory>("all");
+  const [items, setItems] = useState<AroundMeItem[]>([]);
+  const [counts, setCounts] = useState<{ spots: number; events: number; total: number }>({ spots: 0, events: 0, total: 0 });
+  const [loading, setLoading] = useState(false);
 
   // Check if location was previously granted
   useEffect(() => {
@@ -75,12 +44,12 @@ export default function PortalHappeningNowPage() {
     }
   }, []);
 
-  // Fetch open spots when location or neighborhood changes
+  // Fetch around-me data when location, neighborhood, or category changes
   useEffect(() => {
     const abortController = new AbortController();
 
-    async function fetchOpenSpots() {
-      setSpotsLoading(true);
+    async function fetchAroundMe() {
+      setLoading(true);
       try {
         const params = new URLSearchParams();
         if (userLocation) {
@@ -90,33 +59,42 @@ export default function PortalHappeningNowPage() {
         if (selectedNeighborhood) {
           params.set("neighborhood", selectedNeighborhood);
         }
-        params.set("limit", "50");
+        if (selectedCategory !== "all") {
+          params.set("category", selectedCategory);
+        }
+        params.set("radius", NEARBY_RADIUS_MILES.toString());
+        params.set("limit", "100");
 
-        const res = await fetch(`/api/spots/open?${params}`, {
+        const res = await fetch(`/api/around-me?${params}`, {
           signal: abortController.signal,
         });
         const data = await res.json();
-        setOpenSpots(data.spots || []);
+        setItems(data.items || []);
+        setCounts(data.counts || { spots: 0, events: 0, total: 0 });
       } catch (error) {
         if (error instanceof Error && error.name === "AbortError") {
           return;
         }
-        console.error("Error fetching open spots:", error);
-        setOpenSpots([]);
+        console.error("Error fetching around-me data:", error);
+        setItems([]);
+        setCounts({ spots: 0, events: 0, total: 0 });
       } finally {
-        setSpotsLoading(false);
+        setLoading(false);
       }
     }
 
-    fetchOpenSpots();
+    // Don't fetch if still showing prompt (no location chosen)
+    if (!showLocationPrompt || userLocation || selectedNeighborhood) {
+      fetchAroundMe();
+    }
 
     return () => {
       abortController.abort();
     };
-  }, [userLocation, selectedNeighborhood]);
+  }, [userLocation, selectedNeighborhood, selectedCategory, showLocationPrompt]);
 
   // Request user location
-  const requestLocation = () => {
+  const requestLocation = useCallback(() => {
     if (!navigator.geolocation) {
       setLocationDenied(true);
       setShowLocationPrompt(false);
@@ -141,106 +119,105 @@ export default function PortalHappeningNowPage() {
         setShowLocationPrompt(false);
       }
     );
-  };
+  }, []);
 
   const skipLocation = () => {
     setShowLocationPrompt(false);
   };
 
-  // Calculate distance
-  const getDistance = useCallback((lat: number, lng: number): number | null => {
-    if (!userLocation) return null;
-    const R = 3959; // Earth's radius in miles
-    const dLat = ((lat - userLocation.lat) * Math.PI) / 180;
-    const dLng = ((lng - userLocation.lng) * Math.PI) / 180;
-    const a =
-      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos((userLocation.lat * Math.PI) / 180) *
-        Math.cos((lat * Math.PI) / 180) *
-        Math.sin(dLng / 2) *
-        Math.sin(dLng / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return R * c;
-  }, [userLocation]);
+  // Convert items to map format
+  // Note: We create partial objects that contain only the fields MapView actually uses
+  const { mapEvents, mapSpots } = useMemo(() => {
+    type MapEvent = import("@/lib/search").EventWithLocation;
+    type MapSpot = import("@/lib/spots").Spot;
+    const events: MapEvent[] = [];
+    const spots: MapSpot[] = [];
 
-  // Filter spots by distance when GPS is active (no neighborhood selected)
-  const filteredSpots = useMemo(() => {
-    if (!userLocation || selectedNeighborhood) {
-      // Neighborhood mode: return all spots in neighborhood
-      return openSpots;
-    }
-    // GPS mode: filter by distance (include spots without coords at the end)
-    return openSpots.filter(spot => {
-      if (!spot.lat || !spot.lng) return true; // Include spots without coords
-      const distance = getDistance(spot.lat, spot.lng);
-      return distance !== null && distance <= NEARBY_RADIUS_MILES;
-    });
-  }, [openSpots, userLocation, selectedNeighborhood, getDistance]);
-
-  // Filter events by distance when GPS is active
-  const filteredEvents = useMemo(() => {
-    if (!userLocation || selectedNeighborhood) {
-      return events;
-    }
-    return events.filter(event => {
-      const venue = event.venue as { lat?: number; lng?: number } | null;
-      if (!venue?.lat || !venue?.lng) return true; // Include events without coords
-      const distance = getDistance(venue.lat, venue.lng);
-      return distance !== null && distance <= NEARBY_RADIUS_MILES;
-    });
-  }, [events, userLocation, selectedNeighborhood, getDistance]);
-
-  // Group spots by category
-  const groupedSpots = useMemo(() => {
-    return SPOT_CATEGORIES.map((cat) => {
-      const spotCats = cat.spotTypes as readonly string[];
-      const categorySpots = filteredSpots.filter((s) =>
-        spotCats.includes(s.venue_type || "")
-      );
-
-      // Sort by distance if location available
-      if (userLocation && !selectedNeighborhood) {
-        categorySpots.sort((a, b) => {
-          const distA = a.lat && a.lng ? getDistance(a.lat, a.lng) || 999 : 999;
-          const distB = b.lat && b.lng ? getDistance(b.lat, b.lng) || 999 : 999;
-          return distA - distB;
-        });
+    for (const item of items) {
+      if (item.type === "event") {
+        const eventData = item.data as AroundMeEvent;
+        // MapView only uses: id, title, category, venue (name, lat, lng, neighborhood, venue_type),
+        // is_live, is_free, price_min, price_max, start_time
+        events.push({
+          id: eventData.id,
+          title: eventData.title,
+          description: null,
+          slug: eventData.slug,
+          start_time: eventData.start_time,
+          end_time: eventData.end_time,
+          start_date: eventData.start_time?.split("T")[0] || "",
+          end_date: null,
+          is_all_day: eventData.is_all_day,
+          category: eventData.category,
+          subcategory: eventData.subcategory,
+          category_id: null,
+          subcategory_id: null,
+          tags: null,
+          genres: null,
+          is_free: eventData.is_free,
+          price_min: eventData.price_min,
+          price_max: eventData.price_max,
+          price_note: null,
+          ticket_url: eventData.ticket_url,
+          image_url: null,
+          source_url: "",
+          is_live: true,
+          venue: eventData.venue ? {
+            id: eventData.venue.id,
+            name: eventData.venue.name,
+            slug: eventData.venue.slug,
+            address: null,
+            neighborhood: eventData.venue.neighborhood,
+            city: "",
+            state: "",
+            lat: eventData.lat,
+            lng: eventData.lng,
+            typical_price_min: null,
+            typical_price_max: null,
+          } : null,
+          category_data: null,
+        } as MapEvent);
       } else {
-        // Neighborhood mode: sort alphabetically
-        categorySpots.sort((a, b) => a.name.localeCompare(b.name));
+        const spotData = item.data as AroundMeSpot;
+        spots.push({
+          id: spotData.id,
+          name: spotData.name,
+          slug: spotData.slug,
+          address: spotData.address,
+          neighborhood: spotData.neighborhood,
+          city: "",
+          state: "",
+          lat: spotData.lat,
+          lng: spotData.lng,
+          venue_type: spotData.venue_type,
+          venue_types: spotData.venue_types,
+          description: null,
+          short_description: null,
+          price_level: spotData.price_level,
+          website: null,
+          instagram: null,
+          hours_display: null,
+          vibes: spotData.vibes,
+          image_url: spotData.image_url,
+          featured: false,
+          active: true,
+        });
       }
+    }
 
-      return {
-        ...cat,
-        spots: categorySpots,
-      };
-    }).filter((cat) => cat.spots.length > 0);
-  }, [filteredSpots, userLocation, selectedNeighborhood, getDistance]);
+    return { mapEvents: events, mapSpots: spots };
+  }, [items]);
 
-  // Map events for display
-  const mapEvents = useMemo(() => {
-    return filteredEvents.map((e) => {
-      const venue = e.venue as Record<string, unknown> | null;
-      return {
-        ...e,
-        venue: venue ? {
-          id: venue.id as number,
-          name: venue.name as string,
-          slug: venue.slug as string,
-          address: venue.address as string | null,
-          neighborhood: venue.neighborhood as string | null,
-          city: venue.city as string | null,
-          state: venue.state as string | null,
-          lat: (venue.lat as number) ?? null,
-          lng: (venue.lng as number) ?? null,
-          typical_price_min: null,
-          typical_price_max: null,
-          spot_type: venue.spot_type as string | null,
-        } : null,
-        category_data: null,
-      };
-    });
-  }, [filteredEvents]) as import("@/lib/search").EventWithLocation[];
+  // Mode label for status bar
+  const modeLabel = useMemo(() => {
+    if (selectedNeighborhood) {
+      return selectedNeighborhood;
+    }
+    if (userLocation) {
+      return `within ${NEARBY_RADIUS_MILES}mi`;
+    }
+    return "All of Atlanta";
+  }, [selectedNeighborhood, userLocation]);
 
   return (
     <div className="min-h-screen bg-[var(--void)]">
@@ -254,21 +231,21 @@ export default function PortalHappeningNowPage() {
       {showLocationPrompt && (
         <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
           <div className="bg-[var(--night)] rounded-xl border border-[var(--twilight)] max-w-sm w-full p-6 text-center">
-            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-[var(--neon-magenta)]/20 flex items-center justify-center">
-              <svg className="w-8 h-8 text-[var(--neon-magenta)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-[var(--neon-green)]/20 flex items-center justify-center">
+              <svg className="w-8 h-8 text-[var(--neon-green)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
               </svg>
             </div>
-            <h2 className="text-lg font-medium text-[var(--cream)] mb-2">Where are you?</h2>
+            <h2 className="text-lg font-medium text-[var(--cream)] mb-2">What&apos;s Open?</h2>
             <p className="text-sm text-[var(--muted)] mb-6">
-              Share your location or pick a neighborhood to see what&apos;s open nearby
+              Share your location to find what&apos;s open and happening nearby
             </p>
             <div className="space-y-3">
               <button
                 onClick={requestLocation}
                 disabled={locationLoading}
-                className="w-full px-4 py-3 rounded-lg bg-[var(--neon-magenta)] text-[var(--void)] font-mono text-sm font-medium hover:bg-[var(--coral)] transition-colors disabled:opacity-50"
+                className="w-full px-4 py-3 rounded-lg bg-[var(--neon-green)] text-[var(--void)] font-mono text-sm font-medium hover:bg-[var(--neon-green)]/80 transition-colors disabled:opacity-50"
               >
                 {locationLoading ? (
                   <span className="flex items-center justify-center gap-2">
@@ -279,7 +256,10 @@ export default function PortalHappeningNowPage() {
                     Finding you...
                   </span>
                 ) : (
-                  "Use My Location"
+                  <>
+                    <span className="mr-2">📍</span>
+                    Use My Location
+                  </>
                 )}
               </button>
 
@@ -302,7 +282,7 @@ export default function PortalHappeningNowPage() {
                 style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236b7280'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`, backgroundRepeat: "no-repeat", backgroundPosition: "right 0.75rem center", backgroundSize: "1.25rem" }}
               >
                 <option value="">Select neighborhood...</option>
-                {NEIGHBORHOODS.map((hood) => (
+                {NEIGHBORHOOD_NAMES.map((hood) => (
                   <option key={hood} value={hood}>{hood}</option>
                 ))}
               </select>
@@ -318,33 +298,39 @@ export default function PortalHappeningNowPage() {
         </div>
       )}
 
-      {/* Live indicator bar */}
+      {/* Status Bar - sticky below header */}
       <div className="sticky top-[52px] z-20 bg-[var(--night)]/95 backdrop-blur-sm border-b border-[var(--twilight)]/50">
         <div className="max-w-3xl mx-auto px-4 py-2">
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <span
-                className="w-2 h-2 rounded-full bg-[var(--neon-red)] animate-pulse flex-shrink-0"
-                style={{ boxShadow: "0 0 6px var(--neon-red)" }}
-              />
-              <span className="font-mono text-xs text-[var(--muted)]">
-                {filteredEvents.length} live · {filteredSpots.length} open
-                {userLocation && !selectedNeighborhood && (
-                  <span className="text-[var(--neon-cyan)]"> (within 5mi)</span>
-                )}
-              </span>
+          <div className="flex items-center justify-between gap-3">
+            {/* Counts */}
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-[var(--neon-green)]" style={{ boxShadow: "0 0 4px var(--neon-green)" }} />
+                <span className="font-mono text-xs text-[var(--cream)]">{counts.spots} spots</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-[var(--neon-red)] animate-pulse" style={{ boxShadow: "0 0 4px var(--neon-red)" }} />
+                <span className="font-mono text-xs text-[var(--cream)]">{counts.events} live</span>
+              </div>
             </div>
 
-            {/* Neighborhood selector */}
+            {/* Location selector */}
             <div className="flex items-center gap-2">
               <select
                 value={selectedNeighborhood || ""}
-                onChange={(e) => setSelectedNeighborhood(e.target.value || null)}
-                className="px-2 py-1 rounded-md bg-[var(--dusk)] border border-[var(--twilight)] text-[var(--cream)] font-mono text-[0.65rem] focus:outline-none focus:border-[var(--neon-amber)] transition-colors appearance-none cursor-pointer"
+                onChange={(e) => {
+                  setSelectedNeighborhood(e.target.value || null);
+                  if (e.target.value) {
+                    // Clear GPS when selecting neighborhood
+                    setUserLocation(null);
+                    localStorage.removeItem("userLocation");
+                  }
+                }}
+                className="px-2 py-1 rounded-md bg-[var(--dusk)] border border-[var(--twilight)] text-[var(--cream)] font-mono text-[0.65rem] focus:outline-none focus:border-[var(--neon-amber)] transition-colors appearance-none cursor-pointer max-w-[120px]"
                 style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236b7280'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`, backgroundRepeat: "no-repeat", backgroundPosition: "right 0.25rem center", backgroundSize: "0.875rem", paddingRight: "1.25rem" }}
               >
-                <option value="">Nearby</option>
-                {NEIGHBORHOODS.map((hood) => (
+                <option value="">{userLocation ? "📍 Nearby" : "All"}</option>
+                {NEIGHBORHOOD_NAMES.map((hood) => (
                   <option key={hood} value={hood}>{hood}</option>
                 ))}
               </select>
@@ -356,7 +342,7 @@ export default function PortalHappeningNowPage() {
                   </svg>
                   GPS
                 </span>
-              ) : (
+              ) : !selectedNeighborhood ? (
                 <button
                   onClick={requestLocation}
                   className="flex items-center gap-1 px-1.5 py-0.5 rounded font-mono text-[0.6rem] text-[var(--muted)] hover:text-[var(--cream)] hover:bg-[var(--twilight)]/50 transition-colors"
@@ -366,23 +352,23 @@ export default function PortalHappeningNowPage() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                   </svg>
                 </button>
-              )}
+              ) : null}
             </div>
           </div>
         </div>
       </div>
 
-      {/* Map - at top */}
-      <div className="max-w-3xl mx-auto px-4 pt-4">
-        <div className="h-[310px] rounded-xl overflow-hidden border border-[var(--twilight)]">
-          {eventsLoading ? (
+      {/* Map - 60% viewport height on mobile, fixed on desktop */}
+      <div className="max-w-3xl mx-auto px-4 pt-3">
+        <div className="h-[55vh] sm:h-[400px] rounded-xl overflow-hidden border border-[var(--twilight)]">
+          {loading && items.length === 0 ? (
             <div className="h-full bg-[var(--dusk)] animate-pulse flex items-center justify-center">
               <span className="text-[var(--muted)] font-mono text-sm">Loading map...</span>
             </div>
           ) : (
             <MapViewWrapper
               events={mapEvents}
-              spots={filteredSpots}
+              spots={mapSpots}
               userLocation={userLocation}
               viewRadius={userLocation && !selectedNeighborhood ? NEARBY_RADIUS_MILES : undefined}
             />
@@ -390,31 +376,35 @@ export default function PortalHappeningNowPage() {
         </div>
       </div>
 
-      {/* Content by category */}
-      <main className="max-w-3xl mx-auto px-4 py-6">
-        {eventsLoading || spotsLoading ? (
-          <div className="space-y-4">
-            {[1, 2, 3].map((i) => (
+      {/* Category Filter Chips */}
+      <div className="max-w-3xl mx-auto px-4 pt-4">
+        <CategoryFilterChips
+          selected={selectedCategory}
+          onChange={setSelectedCategory}
+        />
+      </div>
+
+      {/* Mixed List */}
+      <main className="max-w-3xl mx-auto px-4 py-4">
+        {loading ? (
+          <div className="space-y-3">
+            {[1, 2, 3, 4, 5].map((i) => (
               <div key={i} className="animate-pulse">
-                <div className="h-6 w-32 bg-[var(--dusk)] rounded mb-3" />
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="h-20 bg-[var(--dusk)] rounded-lg" />
-                  <div className="h-20 bg-[var(--dusk)] rounded-lg" />
-                </div>
+                <div className="h-24 bg-[var(--dusk)] rounded-lg" />
               </div>
             ))}
           </div>
-        ) : filteredEvents.length === 0 && groupedSpots.length === 0 ? (
+        ) : items.length === 0 ? (
           <div className="text-center py-16">
             <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-[var(--twilight)]/30 flex items-center justify-center">
               <svg className="w-8 h-8 text-[var(--muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
-            <h2 className="text-lg text-[var(--cream)] mb-2">Nothing happening right now</h2>
+            <h2 className="text-lg text-[var(--cream)] mb-2">Nothing open right now</h2>
             <p className="text-[var(--muted)] text-sm max-w-xs mx-auto mb-4">
-              {userLocation && !selectedNeighborhood
-                ? "No spots open within 5 miles. Try selecting a neighborhood instead."
+              {modeLabel !== "All of Atlanta"
+                ? `No spots or events found ${modeLabel}. Try expanding your search.`
                 : "Check back later or browse upcoming events"}
             </p>
             <Link
@@ -425,203 +415,26 @@ export default function PortalHappeningNowPage() {
             </Link>
           </div>
         ) : (
-          <div>
-            {/* Neon Sign Header - Blade Runner aesthetic */}
-            <div className="relative mb-8 py-4">
-              {/* Background glow wash */}
-              <div
-                className="absolute inset-0 blur-2xl opacity-20"
-                style={{
-                  background: 'radial-gradient(ellipse at center, var(--coral) 0%, transparent 70%)',
-                }}
+          <div className="space-y-3">
+            {/* Section header */}
+            <div className="flex items-center justify-between">
+              <h2 className="font-mono text-xs text-[var(--muted)] uppercase tracking-wider">
+                Sorted by distance
+              </h2>
+              <span className="font-mono text-xs text-[var(--muted)]">
+                {items.length} {items.length === 1 ? "result" : "results"}
+              </span>
+            </div>
+
+            {/* Items list */}
+            {items.map((item, index) => (
+              <AroundMeCard
+                key={`${item.type}-${item.id}`}
+                item={item}
+                index={index}
+                portalSlug={portal.slug}
               />
-
-              {/* Neon tube lines */}
-              <div className="absolute left-0 right-0 top-0 h-px opacity-30" style={{ background: 'var(--coral)' }} />
-              <div className="absolute left-0 right-0 bottom-0 h-px opacity-30" style={{ background: 'var(--coral)' }} />
-
-              {/* Title container */}
-              <div className="relative flex justify-center">
-                <div className="relative">
-                  {/* Outer glow layer */}
-                  <h2
-                    className="absolute inset-0 font-bold text-lg sm:text-xl tracking-[0.2em] uppercase blur-md opacity-60"
-                    style={{ color: 'var(--coral)' }}
-                    aria-hidden="true"
-                  >
-                    Happening Now
-                  </h2>
-                  {/* Mid glow layer */}
-                  <h2
-                    className="absolute inset-0 font-bold text-lg sm:text-xl tracking-[0.2em] uppercase blur-sm opacity-80"
-                    style={{ color: 'var(--coral)' }}
-                    aria-hidden="true"
-                  >
-                    Happening Now
-                  </h2>
-                  {/* Main text */}
-                  <h2
-                    className="relative font-bold text-lg sm:text-xl tracking-[0.2em] uppercase"
-                    style={{
-                      color: '#FFE4E1',
-                      textShadow: `
-                        0 0 5px var(--coral),
-                        0 0 10px var(--coral),
-                        0 0 20px var(--coral),
-                        0 0 40px rgba(255,107,107,0.5)
-                      `,
-                    }}
-                  >
-                    Happening Now
-                  </h2>
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              {/* Live Events Section */}
-              {filteredEvents.length > 0 && (
-                <CollapsibleSection
-                  title="Nearby"
-                  count={filteredEvents.length}
-                  defaultOpen={false}
-                  category="events"
-                  icon={CategoryIcons.events}
-                  maxItems={5}
-                  totalItems={filteredEvents.length}
-                >
-                  <div className="space-y-2">
-                    {filteredEvents.map((event) => {
-                      const eventVenue = event.venue as { lat?: number; lng?: number; name?: string } | null;
-                      const distance = eventVenue?.lat && eventVenue?.lng
-                        ? getDistance(eventVenue.lat, eventVenue.lng)
-                        : null;
-                      const categoryColor = event.category ? getCategoryColor(event.category) : null;
-                      const showDistance = userLocation && !selectedNeighborhood;
-
-                      return (
-                        <Link
-                          key={event.id}
-                          href={portal?.slug ? `/${portal.slug}?event=${event.id}` : `/events/${event.id}`}
-                          scroll={false}
-                          className="block w-full p-3 border border-[var(--twilight)] rounded-lg transition-colors group hover:border-[var(--coral)]/50 bg-[var(--void)] text-left"
-                          style={{
-                            borderLeftWidth: categoryColor ? "3px" : undefined,
-                            borderLeftColor: categoryColor || undefined,
-                          }}
-                        >
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2">
-                                <span
-                                  className="w-2 h-2 rounded-full bg-[var(--neon-red)] animate-pulse flex-shrink-0"
-                                  style={{ boxShadow: "0 0 4px var(--neon-red)" }}
-                                />
-                                <h3 className="text-[var(--cream)] text-sm font-medium truncate group-hover:text-[var(--coral)] transition-colors">
-                                  {event.title}
-                                </h3>
-                              </div>
-                              <p className="text-xs text-[var(--muted)] mt-0.5 ml-4">
-                                {eventVenue?.name || "Venue TBA"}
-                                {event.start_time && ` · ${formatTime(event.start_time)}`}
-                                {showDistance && distance !== null && (
-                                  <span className="text-[var(--neon-cyan)]">
-                                    {" "}· {distance < 0.1 ? "< 0.1" : distance.toFixed(1)} mi
-                                  </span>
-                                )}
-                              </p>
-                            </div>
-                            <div className="flex items-center gap-2 flex-shrink-0">
-                              {event.is_free && (
-                                <span className="px-1.5 py-0.5 text-[0.5rem] font-mono font-medium bg-[var(--neon-green)]/20 text-[var(--neon-green)] rounded">
-                                  FREE
-                                </span>
-                              )}
-                              <svg className="w-4 h-4 text-[var(--muted)] group-hover:text-[var(--coral)] transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                              </svg>
-                            </div>
-                          </div>
-                        </Link>
-                      );
-                    })}
-                  </div>
-                </CollapsibleSection>
-              )}
-
-              {/* Spot Category Sections */}
-              {groupedSpots.map((category) => (
-                <CollapsibleSection
-                  key={category.id}
-                  title="Nearby"
-                  count={category.spots.length}
-                  defaultOpen={false}
-                  category={category.id as "food" | "drinks" | "nightlife" | "caffeine" | "fun"}
-                  icon={CategoryIcons[category.id as keyof typeof CategoryIcons]}
-                  maxItems={5}
-                  totalItems={category.spots.length}
-                >
-                  <div className="grid grid-cols-2 gap-2">
-                    {category.spots.map((spot) => {
-                      const distance = spot.lat && spot.lng
-                        ? getDistance(spot.lat, spot.lng)
-                        : null;
-                      const showDistance = userLocation && !selectedNeighborhood;
-                      const spotWithHours = spot as Spot & { closesAt?: string };
-
-                      return (
-                        <Link
-                          key={spot.id}
-                          href={portal?.slug ? `/${portal.slug}?venue=${spot.slug}` : `/spots/${spot.slug}`}
-                          scroll={false}
-                          className="group p-3 border border-[var(--twilight)] rounded-lg transition-colors hover:border-[var(--coral)]/50 bg-[var(--void)] text-left"
-                        >
-                          <div className="flex items-start gap-2">
-                            <CategoryIcon
-                              type={spot.venue_type || "restaurant"}
-                              size={16}
-                              className="mt-0.5 flex-shrink-0"
-                            />
-                            <div className="min-w-0 flex-1">
-                              <h3 className="text-[var(--cream)] text-sm font-medium truncate group-hover:text-[var(--coral)] transition-colors">
-                                {spot.name}
-                              </h3>
-                              <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                                <p className="text-[0.65rem] text-[var(--muted)] font-mono uppercase tracking-wider">
-                                  {SPOT_TYPE_LABELS[spot.venue_type || ""] || spot.venue_type}
-                                </p>
-                                {spotWithHours.closesAt && (
-                                  <span className="text-[0.6rem] text-[var(--neon-amber)] font-mono">
-                                    til {formatCloseTime(spotWithHours.closesAt)}
-                                  </span>
-                                )}
-                                {showDistance && distance !== null && (
-                                  <span className="text-[0.6rem] text-[var(--neon-cyan)] font-mono">
-                                    {distance < 0.1 ? "< 0.1" : distance.toFixed(1)} mi
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        </Link>
-                      );
-                    })}
-                  </div>
-                </CollapsibleSection>
-              ))}
-            </div>
-
-            {/* Neighborhood Grid - at bottom */}
-            <div className="mt-8 pt-6 border-t border-[var(--twilight)]/30">
-              <h3 className="font-mono text-xs text-[var(--muted)] uppercase tracking-wider mb-3">Browse by Neighborhood</h3>
-              <NeighborhoodGrid
-                neighborhoods={NEIGHBORHOODS}
-                events={events}
-                spots={openSpots}
-                selectedNeighborhood={selectedNeighborhood}
-                onSelectNeighborhood={setSelectedNeighborhood}
-              />
-            </div>
+            ))}
           </div>
         )}
       </main>

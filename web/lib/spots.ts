@@ -395,7 +395,93 @@ export function getVenueTypeLabels(types: string[] | null): string {
 }
 
 // Check if a spot is currently open based on hours data
-type HoursData = Record<string, { open: string; close: string } | null>;
+export type HoursData = Record<string, { open: string; close: string } | null>;
+
+// Inferred closing times by venue type when hours data is missing
+export const INFERRED_CLOSING_TIMES: Record<string, string> = {
+  // Bars and nightlife - late night
+  bar: "02:00",
+  club: "03:00",
+  sports_bar: "02:00",
+  rooftop: "00:00",
+  lgbtq: "02:00",
+  karaoke: "02:00",
+  // Breweries and distilleries - medium late
+  brewery: "22:00",
+  distillery: "22:00",
+  winery: "21:00",
+  // Restaurants - varies
+  restaurant: "22:00",
+  food_hall: "21:00",
+  // Coffee - early close
+  coffee_shop: "18:00",
+  // Entertainment
+  games: "23:00",
+  arcade: "23:00",
+  eatertainment: "23:00",
+  // Music venues - late
+  music_venue: "02:00",
+  comedy_club: "00:00",
+  theater: "23:00",
+};
+
+// Get inferred closing time based on venue type
+export function getInferredClosingTime(venueType: string | null): string | null {
+  if (!venueType) return null;
+  return INFERRED_CLOSING_TIMES[venueType] || null;
+}
+
+// Format closing time for display (e.g., "02:00" -> "2am")
+export function formatClosingTime(time: string): string {
+  const [hours, minutes] = time.split(":").map(Number);
+  const period = hours >= 12 ? "pm" : "am";
+  const displayHours = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours;
+  return minutes === 0 ? `${displayHours}${period}` : `${displayHours}:${minutes.toString().padStart(2, "0")}${period}`;
+}
+
+// Get open status with optional inferred closing time
+export type OpenStatus = {
+  isOpen: boolean;
+  closesAt: string | null;
+  closingTimeInferred: boolean;
+  is24Hours: boolean;
+};
+
+export function getSpotOpenStatus(
+  hours: HoursData | null,
+  is24Hours: boolean,
+  venueType: string | null
+): OpenStatus {
+  if (is24Hours) {
+    return { isOpen: true, closesAt: null, closingTimeInferred: false, is24Hours: true };
+  }
+
+  const { isOpen, closesAt } = isSpotOpen(hours, false);
+
+  if (closesAt) {
+    return {
+      isOpen,
+      closesAt: formatClosingTime(closesAt),
+      closingTimeInferred: false,
+      is24Hours: false,
+    };
+  }
+
+  // If no hours data, try to infer closing time
+  if (!hours || !isOpen) {
+    const inferredClose = getInferredClosingTime(venueType);
+    if (inferredClose) {
+      return {
+        isOpen: true, // Assume open if no hours data
+        closesAt: formatClosingTime(inferredClose),
+        closingTimeInferred: true,
+        is24Hours: false,
+      };
+    }
+  }
+
+  return { isOpen, closesAt: null, closingTimeInferred: false, is24Hours: false };
+}
 
 export function isSpotOpen(hours: HoursData | null, is24Hours?: boolean): { isOpen: boolean; closesAt?: string } {
   if (is24Hours) return { isOpen: true };
