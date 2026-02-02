@@ -79,7 +79,7 @@ export default async function Image({ params }: { params: { id: string } }) {
         {/* Background image with overlay */}
         {hasImage && (
           <>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
+            { }
             <img
               src={event.image_url || ""}
               alt=""

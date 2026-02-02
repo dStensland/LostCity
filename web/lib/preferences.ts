@@ -1,5 +1,7 @@
 // Shared preference options for user onboarding and settings
 
+import { PREFERENCE_NEIGHBORHOOD_NAMES } from "@/config/neighborhoods";
+
 export const PREFERENCE_CATEGORIES = [
   { value: "music", label: "Music", icon: "music", emoji: "🎵" },
   { value: "comedy", label: "Comedy", icon: "comedy", emoji: "😂" },
@@ -75,24 +77,11 @@ export const PREFERENCE_SUBCATEGORIES: Record<string, { value: string; label: st
 // Categories that have subcategories available
 export const CATEGORIES_WITH_SUBCATEGORIES = Object.keys(PREFERENCE_SUBCATEGORIES);
 
-export const PREFERENCE_NEIGHBORHOODS = [
-  "Midtown",
-  "Downtown",
-  "Buckhead",
-  "East Atlanta",
-  "East Atlanta Village",
-  "Inman Park",
-  "Virginia-Highland",
-  "Decatur",
-  "Little Five Points",
-  "Old Fourth Ward",
-  "West End",
-  "Westside",
-  "Poncey-Highland",
-  "Grant Park",
-  "Edgewood",
-  "Kirkwood",
-] as const;
+/**
+ * @deprecated Import PREFERENCE_NEIGHBORHOOD_NAMES from @/config/neighborhoods instead
+ * Kept for backwards compatibility - this is now derived from the canonical config.
+ */
+export const PREFERENCE_NEIGHBORHOODS = PREFERENCE_NEIGHBORHOOD_NAMES;
 
 export const PREFERENCE_VIBES = [
   { value: "late-night", label: "Late Night", group: "Atmosphere" },

@@ -6,14 +6,44 @@ import { useState, useEffect } from "react";
  * Rain overlay effect that creates an atmospheric rainy night feel.
  * Reads from localStorage for enabled state.
  * CSS handles reduced-motion preferences.
+ *
+ * NOTE: This is the GLOBAL rain effect in the root layout.
+ * When the design tester is active, this hides itself and lets
+ * the AmbientBackground system handle all effects (including rain).
  */
 export default function RainEffect() {
   const [isEnabled, setIsEnabled] = useState(true);
   const [mounted, setMounted] = useState(false);
+  const [designTesterActive, setDesignTesterActive] = useState(false);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- SSR hydration pattern
     setMounted(true);
+
+    // Check if design tester has overrides
+    const checkDesignTester = () => {
+      const stored = sessionStorage.getItem("designTesterOverrides");
+      if (stored) {
+        try {
+          const overrides = JSON.parse(stored);
+          // If design tester has any ambient effect set, hide global rain
+          setDesignTesterActive(!!overrides.ambientEffect);
+        } catch {
+          setDesignTesterActive(false);
+        }
+      } else {
+        setDesignTesterActive(false);
+      }
+    };
+
+    checkDesignTester();
+
+    // Listen for design tester changes
+    const handleDesignChange = () => {
+      checkDesignTester();
+    };
+    window.addEventListener("designOverridesChanged", handleDesignChange);
+
     // Check localStorage for setting
     const stored = localStorage.getItem("lostcity-visual-settings");
     if (stored) {
@@ -42,12 +72,20 @@ export default function RainEffect() {
     };
 
     window.addEventListener("storage", handleStorageChange);
-    return () => window.removeEventListener("storage", handleStorageChange);
+    return () => {
+      window.removeEventListener("storage", handleStorageChange);
+      window.removeEventListener("designOverridesChanged", handleDesignChange);
+    };
   }, []);
 
   // Don't render until mounted to avoid hydration mismatch
   if (!mounted) {
     return <div className="rain-overlay" aria-hidden="true" />;
+  }
+
+  // Hide if design tester is controlling ambient effects
+  if (designTesterActive) {
+    return null;
   }
 
   if (!isEnabled) {

@@ -14,6 +14,8 @@ import ShiftingNeighborhoodAmbient from "./ShiftingNeighborhoodAmbient";
 import ConstellationAmbient from "./ConstellationAmbient";
 import FlowingStreetsAmbient from "./FlowingStreetsAmbient";
 import GrowingGardenAmbient from "./GrowingGardenAmbient";
+import RainAmbient from "./RainAmbient";
+import FloatingLeavesAmbient from "./FloatingLeavesAmbient";
 
 interface DesignOverrides {
   ambientEffect?: AmbientEffect;
@@ -31,8 +33,9 @@ function AmbientBackgroundInner() {
   const portalContext = usePortalOptional();
   const portal = portalContext?.portal ?? DEFAULT_PORTAL;
 
-  // State for design tester overrides
+  // State for design tester overrides - use a counter to force re-renders
   const [overrides, setOverrides] = useState<DesignOverrides>({});
+  const [updateKey, setUpdateKey] = useState(0);
 
   // Listen for design override changes from DesignTesterPanel
   useEffect(() => {
@@ -43,9 +46,13 @@ function AmbientBackgroundInner() {
         try {
           const parsed = JSON.parse(stored);
           setOverrides(parsed);
+          setUpdateKey(k => k + 1); // Force re-render
         } catch {
           // Ignore parse errors
         }
+      } else {
+        setOverrides({});
+        setUpdateKey(k => k + 1);
       }
     };
 
@@ -91,31 +98,38 @@ function AmbientBackgroundInner() {
   // Determine which ambient effect to render
   const effect: AmbientEffect = ambientConfig.effect || "subtle_glow";
 
+  // Use key to force remount when effect changes via design tester
+  const componentKey = `${effect}-${updateKey}`;
+
   switch (effect) {
     case "none":
       return null;
+    case "rain":
+      return <RainAmbient key={componentKey} config={ambientConfig} />;
     case "subtle_glow":
-      return <SubtleGlowAmbient config={ambientConfig} categoryColors={branding.category_colors} />;
+      return <SubtleGlowAmbient key={componentKey} config={ambientConfig} categoryColors={branding.category_colors} />;
     case "gradient_wave":
-      return <GradientWaveAmbient config={ambientConfig} />;
+      return <GradientWaveAmbient key={componentKey} config={ambientConfig} />;
     case "particle_field":
-      return <ParticleFieldAmbient config={ambientConfig} />;
+      return <ParticleFieldAmbient key={componentKey} config={ambientConfig} />;
     case "aurora":
-      return <AuroraAmbient config={ambientConfig} />;
+      return <AuroraAmbient key={componentKey} config={ambientConfig} />;
     case "mesh_gradient":
-      return <MeshGradientAmbient config={ambientConfig} />;
+      return <MeshGradientAmbient key={componentKey} config={ambientConfig} />;
     case "noise_texture":
-      return <NoiseTextureAmbient config={ambientConfig} />;
+      return <NoiseTextureAmbient key={componentKey} config={ambientConfig} />;
     case "shifting_neighborhood":
-      return <ShiftingNeighborhoodAmbient config={ambientConfig} />;
+      return <ShiftingNeighborhoodAmbient key={componentKey} config={ambientConfig} />;
     case "constellation":
-      return <ConstellationAmbient config={ambientConfig} />;
+      return <ConstellationAmbient key={componentKey} config={ambientConfig} />;
     case "flowing_streets":
-      return <FlowingStreetsAmbient config={ambientConfig} />;
+      return <FlowingStreetsAmbient key={componentKey} config={ambientConfig} />;
     case "growing_garden":
-      return <GrowingGardenAmbient config={ambientConfig} />;
+      return <GrowingGardenAmbient key={componentKey} config={ambientConfig} />;
+    case "floating_leaves":
+      return <FloatingLeavesAmbient key={componentKey} config={ambientConfig} />;
     default:
-      return <SubtleGlowAmbient config={ambientConfig} categoryColors={branding.category_colors} />;
+      return <SubtleGlowAmbient key={componentKey} config={ambientConfig} categoryColors={branding.category_colors} />;
   }
 }
 

@@ -61,9 +61,16 @@ async function resolveCustomDomainInMiddleware(
     const apiUrl = new URL('/api/internal/resolve-domain', request.url);
     apiUrl.searchParams.set('domain', normalizedDomain);
 
+    const internalSecret = process.env.INTERNAL_API_SECRET;
+    if (!internalSecret) {
+      // If secret not configured, fail safely
+      setCachedDomain(normalizedDomain, null);
+      return null;
+    }
+
     const response = await fetch(apiUrl.toString(), {
       headers: {
-        'x-internal-request': 'true',
+        'x-internal-secret': internalSecret,
       },
     });
 

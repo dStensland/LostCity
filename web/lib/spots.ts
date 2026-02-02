@@ -1,6 +1,7 @@
 import { supabase } from "./supabase";
 import type { Event } from "./supabase";
 import { getLocalDateString } from "@/lib/formats";
+import { NEIGHBORHOOD_NAMES } from "@/config/neighborhoods";
 
 export const VENUE_TYPES_MAP = {
   // Entertainment venues
@@ -178,35 +179,13 @@ export const VIBES = [
 
 export type Vibe = (typeof VIBES)[number]["value"];
 
-export const NEIGHBORHOODS = [
-  "Midtown",
-  "Downtown",
-  "Buckhead",
-  "East Atlanta",
-  "East Atlanta Village",
-  "Inman Park",
-  "Virginia-Highland",
-  "Decatur",
-  "Little Five Points",
-  "Old Fourth Ward",
-  "West End",
-  "Westside",
-  "Poncey-Highland",
-  "Grant Park",
-  "Edgewood",
-  "Kirkwood",
-  "Druid Hills",
-  "Sweet Auburn",
-  "Castleberry Hill",
-  "Peachtree Hills",
-  "Candler Park",
-  "Chastain Park",
-  "Cascade Heights",
-  "Dunwoody",
-  "West Midtown",
-] as const;
+/**
+ * @deprecated Import NEIGHBORHOOD_NAMES from @/config/neighborhoods instead
+ * Kept for backwards compatibility - this is now derived from the canonical config.
+ */
+export const NEIGHBORHOODS = NEIGHBORHOOD_NAMES;
 
-export type Neighborhood = (typeof NEIGHBORHOODS)[number];
+export type Neighborhood = string;
 
 export type VenueType = keyof typeof VENUE_TYPES_MAP;
 

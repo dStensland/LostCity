@@ -20,6 +20,11 @@ type PortalBranding = {
   font_heading?: string;
   font_body?: string;
   theme_mode?: "dark" | "light";
+  // Enterprise white-label options
+  hide_attribution?: boolean;
+  footer_text?: string;
+  footer_links?: { label: string; url: string }[];
+  sharing_brand_name?: string;
 };
 
 type FeedSettings = {
@@ -98,6 +103,12 @@ type Portal = {
   filters: PortalFilters;
   branding: PortalBranding;
   settings: Record<string, unknown> & { feed?: FeedSettings };
+  // B2B fields
+  plan?: "starter" | "professional" | "enterprise";
+  custom_domain?: string | null;
+  custom_domain_verified?: boolean;
+  custom_domain_verification_token?: string | null;
+  parent_portal_id?: string | null;
   members: Array<{
     id: string;
     role: string;
@@ -135,11 +146,23 @@ export default function EditPortalPage({ params }: { params: Promise<{ id: strin
   const [navLabels, setNavLabels] = useState<NavLabels>({});
   const [sections, setSections] = useState<PortalSection[]>([]);
 
+  // B2B form state
+  const [plan, setPlan] = useState<"starter" | "professional" | "enterprise">("starter");
+  const [customDomain, setCustomDomain] = useState("");
+  const [parentPortalId, setParentPortalId] = useState<string | null>(null);
+  const [allPortals, setAllPortals] = useState<{ id: string; name: string; slug: string; portal_type: string }[]>([]);
+  const [domainVerification, setDomainVerification] = useState<{
+    verified: boolean;
+    token: string | null;
+  } | null>(null);
+  const [verifyingDomain, setVerifyingDomain] = useState(false);
+
   const loadPortal = useCallback(async () => {
     try {
-      const [portalRes, sectionsRes] = await Promise.all([
+      const [portalRes, sectionsRes, portalsListRes] = await Promise.all([
         fetch(`/api/admin/portals/${id}`),
         fetch(`/api/admin/portals/${id}/sections`),
+        fetch(`/api/admin/portals`), // For parent portal dropdown
       ]);
 
       if (!portalRes.ok) throw new Error("Portal not found");
@@ -158,9 +181,33 @@ export default function EditPortalPage({ params }: { params: Promise<{ id: strin
       });
       setNavLabels(data.portal.settings?.nav_labels || {});
 
+      // Load B2B fields
+      setPlan(data.portal.plan || "starter");
+      setCustomDomain(data.portal.custom_domain || "");
+      setParentPortalId(data.portal.parent_portal_id || null);
+      setDomainVerification(data.portal.custom_domain ? {
+        verified: data.portal.custom_domain_verified || false,
+        token: data.portal.custom_domain_verification_token || null,
+      } : null);
+
       if (sectionsRes.ok) {
         const sectionsData = await sectionsRes.json();
         setSections(sectionsData.sections || []);
+      }
+
+      // Load all portals for parent selection (exclude current portal)
+      if (portalsListRes.ok) {
+        const portalsData = await portalsListRes.json();
+        setAllPortals(
+          (portalsData.portals || [])
+            .filter((p: { id: string }) => p.id !== id)
+            .map((p: { id: string; name: string; slug: string; portal_type: string }) => ({
+              id: p.id,
+              name: p.name,
+              slug: p.slug,
+              portal_type: p.portal_type,
+            }))
+        );
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load");
@@ -172,6 +219,35 @@ export default function EditPortalPage({ params }: { params: Promise<{ id: strin
   useEffect(() => {
     loadPortal();
   }, [loadPortal]);
+
+  async function handleVerifyDomain() {
+    if (!portal) return;
+
+    setVerifyingDomain(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const res = await fetch(`/api/admin/portals/${id}/verify-domain`, {
+        method: "POST",
+      });
+
+      const data = await res.json();
+
+      if (data.verified) {
+        setDomainVerification({ verified: true, token: domainVerification?.token || null });
+        setSuccess("Domain verified successfully! Your custom domain is now active.");
+      } else if (data.error) {
+        setError(data.error);
+      } else {
+        setError(data.message || "Domain verification failed. Please ensure the DNS record is set correctly and try again.");
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to verify domain");
+    } finally {
+      setVerifyingDomain(false);
+    }
+  }
 
   async function handleSave() {
     setSaving(true);
@@ -194,12 +270,25 @@ export default function EditPortalPage({ params }: { params: Promise<{ id: strin
             feed: feedSettings,
             nav_labels: navLabels,
           },
+          // B2B fields
+          plan,
+          custom_domain: customDomain || null,
+          parent_portal_id: parentPortalId,
         }),
       });
 
+      const data = await res.json();
+
       if (!res.ok) {
-        const data = await res.json();
         throw new Error(data.error || "Failed to save");
+      }
+
+      // If domain verification info is returned, update state
+      if (data.domainVerification) {
+        setDomainVerification({
+          verified: false,
+          token: data.domainVerification.txtValue,
+        });
       }
 
       setSuccess("Portal updated successfully");
@@ -354,6 +443,265 @@ export default function EditPortalPage({ params }: { params: Promise<{ id: strin
                 </div>
               </div>
             </div>
+          </section>
+
+          {/* B2B Settings */}
+          <section className="bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg p-6">
+            <h2 className="font-mono text-xs text-[var(--muted)] uppercase tracking-wider mb-4">B2B Settings</h2>
+            <p className="font-mono text-xs text-[var(--soft)] mb-4">
+              Configure plan tier, custom domains, and white-label options for B2B portals.
+            </p>
+
+            {/* Plan Tier */}
+            <div className="mb-6">
+              <label className="block font-mono text-xs text-[var(--muted)] uppercase mb-2">Plan Tier</label>
+              <div className="grid grid-cols-3 gap-3">
+                {[
+                  { value: "starter", label: "Starter", price: "Free", features: "Subdomain, basic branding" },
+                  { value: "professional", label: "Professional", price: "$299/mo", features: "Custom domain, full branding" },
+                  { value: "enterprise", label: "Enterprise", price: "$999/mo", features: "Full white-label, API access" },
+                ].map((tier) => (
+                  <label
+                    key={tier.value}
+                    className={`relative p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                      plan === tier.value
+                        ? "border-[var(--coral)] bg-[var(--coral)]/10"
+                        : "border-[var(--twilight)] hover:border-[var(--muted)]"
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="plan"
+                      value={tier.value}
+                      checked={plan === tier.value}
+                      onChange={(e) => setPlan(e.target.value as typeof plan)}
+                      className="sr-only"
+                    />
+                    <div className="font-mono text-sm text-[var(--cream)] font-medium">{tier.label}</div>
+                    <div className="font-mono text-xs text-[var(--coral)] mt-0.5">{tier.price}</div>
+                    <div className="font-mono text-[0.6rem] text-[var(--muted)] mt-2">{tier.features}</div>
+                    {plan === tier.value && (
+                      <div className="absolute top-2 right-2">
+                        <svg className="w-4 h-4 text-[var(--coral)]" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                    )}
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {/* Parent Portal (for business portals) */}
+            {portal?.portal_type === "business" && (
+              <div className="mb-6">
+                <label className="block font-mono text-xs text-[var(--muted)] uppercase mb-1">Parent City Portal</label>
+                <p className="font-mono text-[0.65rem] text-[var(--soft)] mb-2">
+                  Link to a city portal to inherit its shared event sources via federation.
+                </p>
+                <select
+                  value={parentPortalId || ""}
+                  onChange={(e) => setParentPortalId(e.target.value || null)}
+                  className="w-full px-3 py-2 bg-[var(--night)] border border-[var(--twilight)] rounded font-mono text-sm text-[var(--cream)] focus:outline-none focus:border-[var(--coral)]"
+                >
+                  <option value="">No parent (standalone)</option>
+                  {allPortals
+                    .filter((p) => p.portal_type === "city")
+                    .map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name} (/{p.slug})
+                      </option>
+                    ))}
+                </select>
+              </div>
+            )}
+
+            {/* Custom Domain */}
+            <div className="mb-6">
+              <label className="block font-mono text-xs text-[var(--muted)] uppercase mb-1">Custom Domain</label>
+              {plan === "starter" ? (
+                <div className="p-3 bg-[var(--night)] border border-[var(--twilight)] rounded text-center">
+                  <p className="font-mono text-xs text-[var(--muted)]">
+                    Upgrade to Professional or Enterprise to use a custom domain
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <p className="font-mono text-[0.65rem] text-[var(--soft)] mb-2">
+                    Use your own domain (e.g., events.yourcompany.com) instead of {portal?.slug}.lostcity.ai
+                  </p>
+                  <input
+                    type="text"
+                    value={customDomain}
+                    onChange={(e) => setCustomDomain(e.target.value.toLowerCase().replace(/^www\./, ""))}
+                    placeholder="events.yourcompany.com"
+                    className="w-full px-3 py-2 bg-[var(--night)] border border-[var(--twilight)] rounded font-mono text-sm text-[var(--cream)] focus:outline-none focus:border-[var(--coral)]"
+                  />
+
+                  {/* Domain verification status */}
+                  {customDomain && domainVerification && (
+                    <div className={`mt-3 p-3 rounded border ${
+                      domainVerification.verified
+                        ? "bg-green-400/10 border-green-400/30"
+                        : "bg-yellow-400/10 border-yellow-400/30"
+                    }`}>
+                      {domainVerification.verified ? (
+                        <div className="flex items-center gap-2">
+                          <svg className="w-4 h-4 text-green-400" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                          </svg>
+                          <span className="font-mono text-xs text-green-400">Domain verified</span>
+                        </div>
+                      ) : (
+                        <div>
+                          <div className="flex items-center gap-2 mb-2">
+                            <svg className="w-4 h-4 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                            </svg>
+                            <span className="font-mono text-xs text-yellow-400">Domain pending verification</span>
+                          </div>
+                          <p className="font-mono text-[0.65rem] text-[var(--soft)] mb-2">
+                            Add this TXT record to your DNS to verify ownership:
+                          </p>
+                          <div className="bg-[var(--void)] p-2 rounded font-mono text-[0.6rem] space-y-1">
+                            <div><span className="text-[var(--muted)]">Host:</span> <span className="text-[var(--cream)]">_lostcity-verify.{customDomain}</span></div>
+                            <div><span className="text-[var(--muted)]">Type:</span> <span className="text-[var(--cream)]">TXT</span></div>
+                            <div><span className="text-[var(--muted)]">Value:</span> <span className="text-[var(--cream)]">{domainVerification.token}</span></div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={handleVerifyDomain}
+                            disabled={verifyingDomain}
+                            className="mt-3 px-4 py-2 bg-[var(--coral)] text-[var(--void)] font-mono text-xs rounded hover:opacity-90 disabled:opacity-50 w-full"
+                          >
+                            {verifyingDomain ? "Checking DNS..." : "Verify Domain Now"}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+
+            {/* Enterprise White-Label Options */}
+            {plan === "enterprise" && (
+              <div className="pt-4 border-t border-[var(--twilight)]">
+                <h3 className="font-mono text-xs text-[var(--soft)] mb-3">White-Label Options</h3>
+
+                <div className="space-y-4">
+                  {/* Hide Attribution */}
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={branding.hide_attribution || false}
+                      onChange={(e) => setBranding({ ...branding, hide_attribution: e.target.checked })}
+                      className="w-4 h-4 rounded border-[var(--twilight)] bg-[var(--night)] text-[var(--coral)] focus:ring-[var(--coral)]"
+                    />
+                    <div>
+                      <span className="font-mono text-sm text-[var(--cream)]">Hide &quot;Powered by Lost City&quot;</span>
+                      <p className="font-mono text-[0.6rem] text-[var(--muted)]">Remove all LostCity branding from headers</p>
+                    </div>
+                  </label>
+
+                  {/* Custom Footer Text */}
+                  <div>
+                    <label className="block font-mono text-xs text-[var(--muted)] uppercase mb-1">Custom Footer Text</label>
+                    <input
+                      type="text"
+                      value={branding.footer_text || ""}
+                      onChange={(e) => setBranding({ ...branding, footer_text: e.target.value || undefined })}
+                      placeholder="© 2026 Your Company. All rights reserved."
+                      className="w-full px-3 py-2 bg-[var(--night)] border border-[var(--twilight)] rounded font-mono text-sm text-[var(--cream)] focus:outline-none focus:border-[var(--coral)]"
+                    />
+                  </div>
+
+                  {/* Sharing Brand Name */}
+                  <div>
+                    <label className="block font-mono text-xs text-[var(--muted)] uppercase mb-1">Sharing Brand Name</label>
+                    <p className="font-mono text-[0.65rem] text-[var(--soft)] mb-1">
+                      Used in share messages: &quot;Discovered on [Brand Name]&quot;
+                    </p>
+                    <input
+                      type="text"
+                      value={branding.sharing_brand_name || ""}
+                      onChange={(e) => setBranding({ ...branding, sharing_brand_name: e.target.value || undefined })}
+                      placeholder="Your Brand"
+                      className="w-full px-3 py-2 bg-[var(--night)] border border-[var(--twilight)] rounded font-mono text-sm text-[var(--cream)] focus:outline-none focus:border-[var(--coral)]"
+                    />
+                  </div>
+
+                  {/* Footer Links */}
+                  <div>
+                    <label className="block font-mono text-xs text-[var(--muted)] uppercase mb-1">Footer Links</label>
+                    <p className="font-mono text-[0.65rem] text-[var(--soft)] mb-2">
+                      Add custom links to display in the footer (e.g., Privacy Policy, Terms of Service)
+                    </p>
+
+                    {/* Existing links */}
+                    <div className="space-y-2 mb-3">
+                      {(branding.footer_links || []).map((link, index) => (
+                        <div key={index} className="flex gap-2 items-center">
+                          <input
+                            type="text"
+                            value={link.label}
+                            onChange={(e) => {
+                              const updated = [...(branding.footer_links || [])];
+                              updated[index] = { ...updated[index], label: e.target.value };
+                              setBranding({ ...branding, footer_links: updated });
+                            }}
+                            placeholder="Label"
+                            className="flex-1 px-3 py-2 bg-[var(--night)] border border-[var(--twilight)] rounded font-mono text-sm text-[var(--cream)] focus:outline-none focus:border-[var(--coral)]"
+                          />
+                          <input
+                            type="text"
+                            value={link.url}
+                            onChange={(e) => {
+                              const updated = [...(branding.footer_links || [])];
+                              updated[index] = { ...updated[index], url: e.target.value };
+                              setBranding({ ...branding, footer_links: updated });
+                            }}
+                            placeholder="https://..."
+                            className="flex-[2] px-3 py-2 bg-[var(--night)] border border-[var(--twilight)] rounded font-mono text-sm text-[var(--cream)] focus:outline-none focus:border-[var(--coral)]"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const updated = (branding.footer_links || []).filter((_, i) => i !== index);
+                              setBranding({ ...branding, footer_links: updated.length > 0 ? updated : undefined });
+                            }}
+                            className="p-2 text-red-400 hover:text-red-300 hover:bg-red-400/10 rounded"
+                            title="Remove link"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Add new link button */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const current = branding.footer_links || [];
+                        setBranding({
+                          ...branding,
+                          footer_links: [...current, { label: "", url: "" }],
+                        });
+                      }}
+                      className="flex items-center gap-2 px-3 py-2 text-[var(--coral)] font-mono text-xs hover:bg-[var(--coral)]/10 rounded border border-dashed border-[var(--twilight)] hover:border-[var(--coral)] w-full justify-center"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                      </svg>
+                      Add Footer Link
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </section>
 
           {/* Navigation Labels */}

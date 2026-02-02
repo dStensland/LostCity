@@ -12,10 +12,13 @@ import {
 import { getMoodById, type MoodId } from "./moods";
 import { decodeCursor, generateNextCursor, type CursorData } from "./cursor";
 import { getPortalSourceAccess, type PortalSourceAccess } from "./federation";
+import { createLogger } from "./logger";
 
 // Cache for portal source access (refreshed on each request but cached within a request)
 const sourceAccessCache: Map<string, { data: PortalSourceAccess; timestamp: number }> = new Map();
 const CACHE_TTL_MS = 60000; // 1 minute cache
+
+const logger = createLogger("search");
 
 /**
  * Get accessible source IDs for a portal using the federation system.
@@ -43,7 +46,7 @@ async function getAccessibleSourceIds(portalId: string): Promise<{
       categoryConstraints: access.categoryConstraints,
     };
   } catch (error) {
-    console.error("Error fetching portal source access:", error);
+    logger.error("Failed to fetch portal source access", error, { portalId });
     // Return empty on error - this will effectively hide all events
     return { sourceIds: [], categoryConstraints: new Map() };
   }
@@ -167,7 +170,9 @@ function escapePostgrestValue(value: string): string {
     .replace(/\(/g, "\\(")   // Escape opening parenthesis
     .replace(/\)/g, "\\)")   // Escape closing parenthesis
     .replace(/,/g, "\\,")    // Escape commas
-    .replace(/\./g, "\\.");  // Escape periods
+    .replace(/\./g, "\\.")   // Escape periods
+    .replace(/%/g, "\\%")    // Escape LIKE wildcard %
+    .replace(/_/g, "\\_");   // Escape LIKE single-char wildcard _
 }
 
 function getDateRange(filter: "now" | "today" | "tomorrow" | "weekend" | "week" | "month"): {
@@ -603,7 +608,7 @@ export async function getFilteredEventsWithSearch(
   const { data, error, count } = await query;
 
   if (error) {
-    console.error("Error fetching filtered events:", error);
+    logger.error("Failed to fetch filtered events", error, { filters, page, pageSize });
     return { events: [], total: 0 };
   }
 
@@ -681,7 +686,7 @@ export async function getFilteredEventsWithCursor(
     cursorData = decodeCursor(cursor);
     if (!cursorData) {
       // Invalid cursor - start from beginning
-      console.warn("Invalid cursor provided, starting from beginning");
+      logger.warn("Invalid cursor provided, starting from beginning", { cursor });
     }
   }
 
@@ -904,7 +909,7 @@ export async function getFilteredEventsWithCursor(
   const { data, error } = await query;
 
   if (error) {
-    console.error("Error fetching filtered events with cursor:", error);
+    logger.error("Failed to fetch filtered events with cursor", error, { filters, cursor, pageSize });
     return { events: [], nextCursor: null, hasMore: false };
   }
 
@@ -1105,7 +1110,7 @@ export async function getEventsForMap(
   const { data, error } = await query;
 
   if (error) {
-    console.error("Error fetching events for map:", error);
+    logger.error("Failed to fetch events for map", error, { filters, limit });
     return [];
   }
 
@@ -1148,7 +1153,7 @@ export async function getCategories(): Promise<Category[]> {
     .order("display_order", { ascending: true });
 
   if (error) {
-    console.error("Error fetching categories:", error);
+    logger.error("Failed to fetch categories", error);
     return [];
   }
 
@@ -1169,7 +1174,7 @@ export async function getSubcategories(categoryId?: string): Promise<Subcategory
   const { data, error } = await query;
 
   if (error) {
-    console.error("Error fetching subcategories:", error);
+    logger.error("Failed to fetch subcategories", error, { categoryId });
     return [];
   }
 
@@ -1340,7 +1345,7 @@ export async function getVenuesWithEvents(): Promise<VenueWithCount[]> {
     .not("venue_id", "is", null);
 
   if (error || !events) {
-    console.error("Error fetching venues with events:", error);
+    logger.error("Failed to fetch venues with events", error);
     return [];
   }
 
@@ -1805,7 +1810,7 @@ export async function getAvailableFilters(): Promise<AvailableFilters> {
     .order("event_count", { ascending: false });
 
   if (error || !data) {
-    console.error("Error fetching available filters:", error);
+    logger.error("Failed to fetch available filters", error);
     // Fall back to static filters
     return {
       categories: CATEGORIES.map((c) => ({ ...c, count: 0 })),

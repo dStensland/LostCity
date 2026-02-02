@@ -36,13 +36,22 @@ export const DesignTesterPanel = memo(function DesignTesterPanel() {
   const portalContext = usePortalOptional();
   const [isOpen, setIsOpen] = useState(false);
   const [overrides, setOverrides] = useState<DesignOverrides>({});
+  const [mounted, setMounted] = useState(false);
 
-  // Check if design tester should be enabled
-  // Shows in: dev mode, localhost, or when ?design=1 query param is present
-  const isEnabled = typeof window !== "undefined" &&
-    (process.env.NODE_ENV === "development" ||
-     window.location.hostname === "localhost" ||
-     window.location.search.includes("design=1"));
+  // Track mounted state for SSR
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- SSR hydration pattern
+    setMounted(true);
+  }, []);
+
+  // Check if design tester should be enabled (only check after mount)
+  const isEnabled = mounted && (
+    typeof window !== "undefined" && (
+      window.location.hostname === "localhost" ||
+      window.location.hostname === "127.0.0.1" ||
+      window.location.search.includes("design=1")
+    )
+  );
 
   // Keyboard shortcut to toggle panel (Ctrl+. or Cmd+.)
   useEffect(() => {
@@ -163,13 +172,13 @@ export const DesignTesterPanel = memo(function DesignTesterPanel() {
   const currentSecondaryColor = overrides.secondaryColor || (portal?.branding?.secondary_color as string) || "#00D4E8";
 
   return (
-    <div className="fixed bottom-4 right-4 z-[9999]">
+    <div className="fixed top-4 left-4 z-[9999]">
       {/* Toggle Button */}
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
-          className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-neon-magenta/90 to-neon-cyan/90 text-white shadow-lg backdrop-blur-sm transition-transform hover:scale-110 hover:shadow-xl"
-          title="Design Tester (Ctrl+Shift+D)"
+          className="flex h-12 w-12 items-center justify-center rounded-full bg-yellow-400 text-black shadow-lg ring-2 ring-yellow-300 transition-transform hover:scale-110 hover:shadow-xl"
+          title="Design Tester"
         >
           <svg
             className="h-6 w-6"
@@ -189,7 +198,7 @@ export const DesignTesterPanel = memo(function DesignTesterPanel() {
 
       {/* Panel */}
       {isOpen && (
-        <div className="w-80 rounded-lg border border-twilight/50 bg-gradient-to-br from-dusk/95 to-night/95 p-4 shadow-2xl backdrop-blur-md">
+        <div className="w-80 rounded-lg border-2 border-yellow-400 bg-gradient-to-br from-dusk/95 to-night/95 p-4 shadow-2xl backdrop-blur-md">
           {/* Header */}
           <div className="mb-4 flex items-center justify-between border-b border-twilight/30 pb-3">
             <h3 className="text-sm font-semibold text-cream">
@@ -238,6 +247,7 @@ export const DesignTesterPanel = memo(function DesignTesterPanel() {
                 className="w-full rounded bg-twilight/50 px-3 py-2 text-sm text-cream border border-twilight/50 focus:border-neon-magenta/50 focus:outline-none focus:ring-1 focus:ring-neon-magenta/50"
               >
                 <option value="none">None</option>
+                <option value="rain">Rain (Neon Streaks)</option>
                 <option value="subtle_glow">Subtle Glow</option>
                 <option value="gradient_wave">Gradient Wave</option>
                 <option value="particle_field">Particle Field</option>
@@ -248,6 +258,7 @@ export const DesignTesterPanel = memo(function DesignTesterPanel() {
                 <option value="constellation">Constellation</option>
                 <option value="flowing_streets">Flowing Streets</option>
                 <option value="growing_garden">Growing Garden</option>
+                <option value="floating_leaves">Floating Leaves</option>
               </select>
             </div>
 

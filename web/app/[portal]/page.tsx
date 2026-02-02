@@ -4,6 +4,7 @@ import { AmbientBackground } from "@/components/ambient";
 import SearchBarWrapper from "@/components/SearchBarWrapper";
 import FeedShell from "@/components/feed/FeedShell";
 import CuratedContent from "@/components/feed/CuratedContent";
+import { FamilyFeed } from "@/components/family";
 import FindView from "@/components/find/FindView";
 import CommunityView from "@/components/community/CommunityView";
 import DetailViewRouter from "@/components/views/DetailViewRouter";
@@ -123,13 +124,13 @@ export default async function PortalPage({ params, searchParams }: Props) {
         portalName={portal.name}
       />
 
-      {/* Search bar for Find and Community views */}
+      {/* Search bar for Find and Community views - with smooth transition */}
       {viewMode !== "feed" && (
         <div
-          className={`sticky z-[9999] border-b ${
+          className={`sticky z-[9999] border-b transition-colors duration-200 ${
             slug === "atlanta-families"
-              ? "top-[64px] border-[#E8D5C4]/30 bg-[#FFF8F0]/97"
-              : "top-[52px] border-[var(--twilight)] bg-[var(--night)]"
+              ? "top-[64px] border-[#E8D5C4]/30 bg-[#FFF8F0]/97 backdrop-blur-sm"
+              : "top-[52px] border-[var(--twilight)]/50 bg-[var(--night)]/95 backdrop-blur-sm"
           }`}
         >
           <div className="max-w-5xl mx-auto px-4 pt-1 pb-2">
@@ -143,41 +144,60 @@ export default async function PortalPage({ params, searchParams }: Props) {
         </div>
       )}
 
-      <main className={findDisplay === "map" && viewMode === "find" ? "" : "max-w-5xl mx-auto px-4 pb-16"}>
+      <main className={findDisplay === "map" && viewMode === "find" ? "" : "max-w-5xl mx-auto px-4 pb-20"}>
         <Suspense fallback={<DetailViewSkeleton />}>
           <DetailViewRouter portalSlug={portal.slug}>
-            {viewMode === "feed" && (
-              <FeedShell
-                portalId={portal.id}
-                portalSlug={portal.slug}
-                activeTab={feedTab}
-                curatedContent={<CuratedContent portalSlug={portal.slug} />}
-              />
-            )}
+            {/* Business portals with a parent_portal_id are white-label portals that show
+                filtered public events, not exclusive events. Only standalone business portals
+                (no parent) should be exclusive. */}
+            {(() => {
+              const isExclusive = portal.portal_type === "business" && !portal.parent_portal_id;
 
-            {viewMode === "find" && (
-              <Suspense fallback={<FindViewSkeleton />}>
-                <FindView
-                  portalId={portal.id}
-                  portalSlug={portal.slug}
-                  portalExclusive={portal.portal_type === "business"}
-                  findType={findType}
-                  displayMode={findDisplay}
-                  hasActiveFilters={hasActiveFilters}
-                />
-              </Suspense>
-            )}
+              return (
+                <>
+                  {viewMode === "feed" && (
+                    portal.slug === "atlanta-families" ? (
+                      <FamilyFeed
+                        portalId={portal.id}
+                        portalSlug={portal.slug}
+                        portalExclusive={isExclusive}
+                      />
+                    ) : (
+                      <FeedShell
+                        portalId={portal.id}
+                        portalSlug={portal.slug}
+                        activeTab={feedTab}
+                        curatedContent={<CuratedContent portalSlug={portal.slug} />}
+                      />
+                    )
+                  )}
 
-            {viewMode === "community" && (
-              <Suspense fallback={<CommunityViewSkeleton />}>
-                <CommunityView
-                  portalId={portal.id}
-                  portalSlug={portal.slug}
-                  portalName={portal.name}
-                  activeTab={communityTab}
-                />
-              </Suspense>
-            )}
+                  {viewMode === "find" && (
+                    <Suspense fallback={<FindViewSkeleton />}>
+                      <FindView
+                        portalId={portal.id}
+                        portalSlug={portal.slug}
+                        portalExclusive={isExclusive}
+                        findType={findType}
+                        displayMode={findDisplay}
+                        hasActiveFilters={hasActiveFilters}
+                      />
+                    </Suspense>
+                  )}
+
+                  {viewMode === "community" && (
+                    <Suspense fallback={<CommunityViewSkeleton />}>
+                      <CommunityView
+                        portalId={portal.id}
+                        portalSlug={portal.slug}
+                        portalName={portal.name}
+                        activeTab={communityTab}
+                      />
+                    </Suspense>
+                  )}
+                </>
+              );
+            })()}
           </DetailViewRouter>
         </Suspense>
       </main>
@@ -185,10 +205,10 @@ export default async function PortalPage({ params, searchParams }: Props) {
   );
 }
 
-// Loading skeletons
+// Loading skeletons - optimized to prevent layout shift
 function DetailViewSkeleton() {
   return (
-    <div className="py-6 space-y-4">
+    <div className="py-6 space-y-4 animate-pulse">
       <div className="h-6 w-16 skeleton-shimmer rounded" />
       <div className="aspect-[2/1] skeleton-shimmer rounded-xl" />
       <div className="h-24 skeleton-shimmer rounded-xl" />
@@ -201,13 +221,13 @@ function FindViewSkeleton() {
   return (
     <div className="py-6 space-y-4">
       {/* Type selector skeleton */}
-      <div className="flex p-1 bg-[var(--night)] rounded-lg max-w-md">
+      <div className="flex gap-1 p-1 bg-[var(--night)] rounded-xl border border-[var(--twilight)]/30 max-w-md">
         {[1, 2, 3].map((i) => (
-          <div key={i} className="flex-1 h-9 skeleton-shimmer rounded-md" />
+          <div key={i} className="flex-1 h-10 skeleton-shimmer rounded-lg" />
         ))}
       </div>
       {/* Content skeleton */}
-      <div className="space-y-3">
+      <div className="space-y-3 mt-6">
         {[1, 2, 3, 4, 5].map((i) => (
           <div key={i} className="h-24 skeleton-shimmer rounded-xl" />
         ))}
@@ -220,13 +240,13 @@ function CommunityViewSkeleton() {
   return (
     <div className="py-6 space-y-4">
       {/* Tab skeleton */}
-      <div className="flex p-1 bg-[var(--night)] rounded-lg">
+      <div className="flex gap-1 p-1 bg-[var(--night)] rounded-xl border border-[var(--twilight)]/30">
         {[1, 2, 3].map((i) => (
-          <div key={i} className="flex-1 h-9 skeleton-shimmer rounded-md" />
+          <div key={i} className="flex-1 h-10 skeleton-shimmer rounded-lg" />
         ))}
       </div>
       {/* Content skeleton */}
-      <div className="space-y-3">
+      <div className="space-y-3 mt-6">
         {[1, 2, 3, 4].map((i) => (
           <div key={i} className="h-32 skeleton-shimmer rounded-xl" />
         ))}

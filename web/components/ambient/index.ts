@@ -1,4 +1,5 @@
 export { default as AmbientBackground } from "./AmbientBackground";
+export { default as RainAmbient } from "./RainAmbient";
 export { default as SubtleGlowAmbient } from "./SubtleGlowAmbient";
 export { default as GradientWaveAmbient } from "./GradientWaveAmbient";
 export { default as ParticleFieldAmbient } from "./ParticleFieldAmbient";

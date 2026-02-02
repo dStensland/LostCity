@@ -135,7 +135,7 @@ export default function SubtleGlowAmbient({
 
   return (
     <div
-      className="fixed inset-0 pointer-events-none z-0 transition-opacity duration-500"
+      className="ambient-layer fixed inset-0 pointer-events-none z-0 transition-opacity duration-500"
       aria-hidden="true"
     >
       {/* Top gradient */}

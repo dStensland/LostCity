@@ -100,7 +100,7 @@ export default function GrowingGardenAmbient({ config }: GrowingGardenAmbientPro
 
   return (
     <div
-      className="fixed inset-0 pointer-events-none z-0 overflow-hidden"
+      className="ambient-layer fixed inset-0 pointer-events-none z-0 overflow-hidden"
       aria-hidden="true"
     >
       <svg

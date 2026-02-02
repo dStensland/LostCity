@@ -45,11 +45,11 @@ export default function ParticleFieldAmbient({ config }: ParticleFieldAmbientPro
   const { opacity, sizeMultiplier } = useMemo(() => {
     switch (config.intensity) {
       case "subtle":
-        return { opacity: 0.4, sizeMultiplier: 0.7 };
+        return { opacity: 0.25, sizeMultiplier: 1.5 }; // More subtle but larger
       case "bold":
-        return { opacity: 0.9, sizeMultiplier: 1.5 };
+        return { opacity: 0.7, sizeMultiplier: 2.5 };
       default:
-        return { opacity: 0.6, sizeMultiplier: 1 };
+        return { opacity: 0.4, sizeMultiplier: 2 };
     }
   }, [config.intensity]);
 
@@ -62,16 +62,16 @@ export default function ParticleFieldAmbient({ config }: ParticleFieldAmbientPro
       id: i,
       left: `${random() * 100}%`,
       top: `${random() * 100}%`,
-      size: (2 + random() * 4) * sizeMultiplier,
-      duration: (15 + random() * 20) * speedMultiplier,
-      delay: random() * -20,
+      size: (8 + random() * 16) * sizeMultiplier, // Larger base size (8-24px)
+      duration: (20 + random() * 30) * speedMultiplier, // Slower, more gentle
+      delay: random() * -25,
       color: random() > 0.5 ? primaryColor : secondaryColor,
     }));
   }, [particleCount, primaryColor, secondaryColor, speedMultiplier, sizeMultiplier]);
 
   return (
     <div
-      className="fixed inset-0 pointer-events-none z-0 overflow-hidden"
+      className="ambient-layer fixed inset-0 pointer-events-none z-0 overflow-hidden"
       aria-hidden="true"
     >
       {particles.map((particle) => (
@@ -85,7 +85,7 @@ export default function ParticleFieldAmbient({ config }: ParticleFieldAmbientPro
             height: particle.size,
             backgroundColor: particle.color,
             opacity: opacity,
-            boxShadow: `0 0 ${particle.size * 2}px ${particle.color}`,
+            boxShadow: `0 0 ${particle.size * 0.5}px ${particle.color}40`, // Softer glow
             animation: `particle-float ${particle.duration}s ease-in-out infinite`,
             animationDelay: `${particle.delay}s`,
           }}

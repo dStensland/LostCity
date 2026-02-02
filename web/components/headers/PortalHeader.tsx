@@ -8,6 +8,7 @@ import StandardHeader from "./StandardHeader";
 import MinimalHeader from "./MinimalHeader";
 import BrandedHeader from "./BrandedHeader";
 import ImmersiveHeader from "./ImmersiveHeader";
+import ATLittleHeader from "./ATLittleHeader";
 
 export interface PortalHeaderProps {
   /** Override the portal slug (for use outside portal context) */
@@ -42,10 +43,16 @@ function PortalHeaderInner({
 
   // Determine which header template to render
   const template: HeaderTemplate = headerConfig.template || "standard";
+  const resolvedSlug = portalSlug || portal.slug;
+
+  // Special case: ATLittle portal has its own custom header
+  if (resolvedSlug === "atlanta-families") {
+    return <ATLittleHeader />;
+  }
 
   // Common props for all header types
   const commonProps = {
-    portalSlug: portalSlug || portal.slug,
+    portalSlug: resolvedSlug,
     portalName: portalName || portal.name,
     branding: portal.branding,
     backLink,

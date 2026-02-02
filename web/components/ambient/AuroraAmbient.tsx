@@ -42,7 +42,7 @@ export default function AuroraAmbient({ config }: AuroraAmbientProps) {
 
   return (
     <div
-      className="fixed inset-0 pointer-events-none z-0 overflow-hidden"
+      className="ambient-layer fixed inset-0 pointer-events-none z-0 overflow-hidden"
       aria-hidden="true"
     >
       {/* Aurora layer 1 */}

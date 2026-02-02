@@ -7,6 +7,7 @@ import UnifiedHeader from "@/components/UnifiedHeader";
 import { GooglePlaceAutocomplete } from "@/components/GooglePlaceAutocomplete";
 import { useAuth } from "@/lib/auth-context";
 import type { VenueSubmissionData } from "@/lib/types";
+import { VENUE_SUBMISSION_NEIGHBORHOODS } from "@/config/neighborhoods";
 
 const VENUE_TYPES = [
   { id: "bar", label: "Bar" },
@@ -21,26 +22,6 @@ const VENUE_TYPES = [
   { id: "brewery", label: "Brewery / Taproom" },
   { id: "coffee_shop", label: "Coffee Shop" },
   { id: "other", label: "Other" },
-];
-
-const NEIGHBORHOODS = [
-  "Downtown",
-  "Midtown",
-  "Buckhead",
-  "East Atlanta",
-  "Little Five Points",
-  "Inman Park",
-  "Old Fourth Ward",
-  "Virginia Highland",
-  "Decatur",
-  "West End",
-  "Grant Park",
-  "Cabbagetown",
-  "Kirkwood",
-  "Reynoldstown",
-  "Edgewood",
-  "Poncey-Highland",
-  "Other",
 ];
 
 export default function SubmitVenuePage() {
@@ -290,7 +271,7 @@ export default function SubmitVenuePage() {
                       className="w-full px-4 py-3 rounded-lg bg-[var(--dusk)] border border-[var(--twilight)] text-[var(--cream)] font-mono text-sm focus:outline-none focus:border-[var(--coral)] transition-colors"
                     >
                       <option value="">Select neighborhood</option>
-                      {NEIGHBORHOODS.map((n) => (
+                      {VENUE_SUBMISSION_NEIGHBORHOODS.map((n) => (
                         <option key={n} value={n}>{n}</option>
                       ))}
                     </select>

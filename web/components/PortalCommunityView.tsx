@@ -198,6 +198,7 @@ export default function PortalCommunityView({ portalId, portalSlug, portalName }
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<"category" | "alphabetical">("category");
+  const [orgSearch, setOrgSearch] = useState("");
   // Track which categories are expanded (collapsed by default)
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
 
@@ -213,9 +214,19 @@ export default function PortalCommunityView({ portalId, portalSlug, portalName }
     });
   };
 
+  // Filter organizations based on search query
+  const filteredOrganizations = useMemo(() => {
+    if (!orgSearch.trim()) return organizations;
+    const searchLower = orgSearch.toLowerCase();
+    return organizations.filter(org =>
+      org.name.toLowerCase().includes(searchLower) ||
+      org.description?.toLowerCase().includes(searchLower)
+    );
+  }, [organizations, orgSearch]);
+
   // Sort organizations based on selected sort option
   const sortedOrganizations = useMemo(() => {
-    const sorted = [...organizations];
+    const sorted = [...filteredOrganizations];
     if (sortBy === "alphabetical") {
       sorted.sort((a, b) => a.name.localeCompare(b.name));
     } else {
@@ -230,7 +241,7 @@ export default function PortalCommunityView({ portalId, portalSlug, portalName }
       });
     }
     return sorted;
-  }, [organizations, sortBy]);
+  }, [filteredOrganizations, sortBy]);
 
   // Group organizations by category for collapsible view
   const groupedOrganizations = useMemo(() => {
@@ -324,7 +335,13 @@ export default function PortalCommunityView({ portalId, portalSlug, portalName }
           <div>
             <h2 className="text-xl font-semibold text-[var(--cream)]">Community</h2>
             <p className="text-sm text-[var(--muted)] mt-1">
-              <span className="text-[var(--soft)]">{organizations.length}</span> organizations creating events in {portalName}
+              <span className="text-[var(--soft)]">
+                {orgSearch ? filteredOrganizations.length : organizations.length}
+              </span>{" "}
+              {orgSearch && filteredOrganizations.length !== organizations.length && (
+                <>of {organizations.length} </>
+              )}
+              organizations creating events in {portalName}
             </p>
           </div>
           <div className="flex items-center gap-1">
@@ -353,9 +370,69 @@ export default function PortalCommunityView({ portalId, portalSlug, portalName }
             </button>
           </div>
         </div>
+
+        {/* Search Box */}
+        <div className="relative mt-4">
+          <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none">
+            <svg
+              className="w-4 h-4 text-[var(--muted)]"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+              />
+            </svg>
+          </div>
+          <input
+            type="text"
+            placeholder="Search organizations..."
+            value={orgSearch}
+            onChange={(e) => setOrgSearch(e.target.value)}
+            className="w-full pl-11 pr-10 py-2.5 bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg text-[var(--cream)] placeholder:text-[var(--muted)] focus:outline-none focus:border-[var(--coral)] transition-colors"
+          />
+          {orgSearch && (
+            <button
+              onClick={() => setOrgSearch("")}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--muted)] hover:text-[var(--cream)] transition-colors"
+              aria-label="Clear search"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          )}
+        </div>
       </div>
 
-      {sortBy === "category" && groupedOrganizations ? (
+      {/* No search results */}
+      {orgSearch && filteredOrganizations.length === 0 && (
+        <div className="py-12 px-6 rounded-xl bg-gradient-to-br from-[var(--dusk)] to-[var(--night)] border border-[var(--twilight)] text-center">
+          <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-[var(--neon-cyan)]/20 to-[var(--neon-magenta)]/20 flex items-center justify-center">
+            <svg className="w-8 h-8 text-[var(--neon-cyan)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+          </div>
+          <h2 className="font-serif text-xl text-[var(--cream)] mb-2">
+            No organizations found
+          </h2>
+          <p className="text-sm text-[var(--muted)] mb-6 max-w-sm mx-auto">
+            No organizations match &quot;{orgSearch}&quot;. Try a different search term.
+          </p>
+          <button
+            onClick={() => setOrgSearch("")}
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-[var(--coral)] text-[var(--void)] rounded-lg font-mono text-sm font-medium hover:bg-[var(--rose)] transition-colors"
+          >
+            Clear search
+          </button>
+        </div>
+      )}
+
+      {sortBy === "category" && groupedOrganizations && filteredOrganizations.length > 0 ? (
         <div className="space-y-2">
           {groupedOrganizations.map(({ type, organizations: groupOrganizations }) => {
             const orgConfig = ORG_TYPE_CONFIG[type];
@@ -410,7 +487,7 @@ export default function PortalCommunityView({ portalId, portalSlug, portalName }
             );
           })}
         </div>
-      ) : (
+      ) : filteredOrganizations.length > 0 ? (
         <div className="space-y-4">
           {sortedOrganizations.map((organization) => {
             const orgConfig = ORG_TYPE_CONFIG[organization.org_type];
@@ -424,7 +501,7 @@ export default function PortalCommunityView({ portalId, portalSlug, portalName }
             );
           })}
         </div>
-      )}
+      ) : null}
     </div>
   );
 }

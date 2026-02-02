@@ -122,9 +122,9 @@ function FeedShellInner({ portalId, portalSlug, activeTab, curatedContent }: Fee
 
   return (
     <div className="py-6">
-      {/* Sub-navigation tabs */}
+      {/* Sub-navigation tabs with improved styling */}
       <div className="mb-6">
-        <div className="flex gap-1 p-1 bg-[var(--night)] rounded-lg">
+        <div className="flex gap-1 p-1 bg-[var(--night)] rounded-xl border border-[var(--twilight)]/30">
           {TABS.map((tab) => {
             const isActive = activeTab === tab.key;
             const isLocked = tab.authRequired && !user && !authLoading;
@@ -133,9 +133,9 @@ function FeedShellInner({ portalId, portalSlug, activeTab, curatedContent }: Fee
               <button
                 key={tab.key}
                 onClick={() => handleTabChange(tab.key)}
-                className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-md font-mono text-xs transition-all duration-200 ${
+                className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg font-mono text-xs font-medium transition-all duration-200 ${
                   isActive
-                    ? "bg-[var(--coral)] text-[var(--void)] font-medium shadow-[0_0_12px_var(--coral)/20]"
+                    ? "bg-[var(--coral)] text-[var(--void)] shadow-[0_0_16px_var(--coral)/25]"
                     : "text-[var(--muted)] hover:text-[var(--cream)] hover:bg-[var(--twilight)]/50"
                 }`}
               >
