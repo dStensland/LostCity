@@ -1,6 +1,7 @@
 """
-Crawler for The Eastern (easternatlanta.com).
+Crawler for The Eastern (easternatl.com).
 
+Major 2,500-capacity music venue in Grant Park. Opened 2021.
 Site uses JavaScript rendering - must use Playwright.
 """
 
@@ -19,14 +20,14 @@ from utils import extract_images_from_page
 
 logger = logging.getLogger(__name__)
 
-BASE_URL = "https://www.easternatlanta.com"
-EVENTS_URL = f"{BASE_URL}/events"
+BASE_URL = "https://easternatl.com"
+EVENTS_URL = BASE_URL
 
 VENUE_DATA = {
     "name": "The Eastern",
     "slug": "the-eastern",
     "address": "777 Memorial Dr SE",
-    "neighborhood": "East Atlanta",
+    "neighborhood": "Grant Park",
     "city": "Atlanta",
     "state": "GA",
     "zip": "30316",
