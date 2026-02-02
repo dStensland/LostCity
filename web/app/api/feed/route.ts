@@ -729,12 +729,16 @@ export async function GET(request: Request) {
     personalized,
   });
 
-  // Sort by score descending, then by date
+  // Sort by date and time (chronological order)
   events.sort((a, b) => {
-    if ((b.score || 0) !== (a.score || 0)) {
-      return (b.score || 0) - (a.score || 0);
-    }
-    return new Date(a.start_date).getTime() - new Date(b.start_date).getTime();
+    // First compare by date
+    const dateCompare = a.start_date.localeCompare(b.start_date);
+    if (dateCompare !== 0) return dateCompare;
+
+    // Then by time (null times sort to end of day)
+    const timeA = a.start_time || "23:59:59";
+    const timeB = b.start_time || "23:59:59";
+    return timeA.localeCompare(timeB);
   });
 
   // Handle cursor-based pagination
