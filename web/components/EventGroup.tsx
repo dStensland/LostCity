@@ -144,7 +144,7 @@ export default function EventGroup({
 
   return (
     <div
-      className={`rounded-lg border border-[var(--twilight)] mb-4 overflow-hidden card-atmospheric ${reflectionClass} ${skipAnimation ? "" : "animate-fade-in"}`}
+      className={`rounded-sm border border-[var(--twilight)] mb-4 overflow-hidden card-atmospheric ${reflectionClass} ${skipAnimation ? "" : "animate-fade-in"}`}
       style={{
         borderLeftWidth: categoryColor ? "3px" : undefined,
         borderLeftColor: categoryColor || undefined,
@@ -163,23 +163,25 @@ export default function EventGroup({
         {(() => {
           const { time, period } = formatTimeSplit(events[0]?.start_time);
           return (
-            <div className="flex-shrink-0 w-12 flex flex-col items-center justify-center">
-              <span className="font-mono text-sm text-[var(--muted)] leading-none">
+            <div className="flex-shrink-0 w-14 flex flex-col items-center justify-center py-1">
+              <span className="font-mono text-base font-bold text-[var(--cream)] leading-none tabular-nums">
                 {time}
               </span>
               {period && (
-                <span className="font-mono text-[0.5rem] text-[var(--muted)] opacity-60">{period}</span>
+                <span className="font-mono text-[0.6rem] font-medium text-[var(--soft)] mt-0.5">{period}</span>
               )}
             </div>
           );
         })()}
-        {dominantCategory ? (
-          <CategoryIcon type={dominantCategory} size={16} className="flex-shrink-0 opacity-70" />
-        ) : (
-          <svg className="w-4 h-4 text-[var(--muted)] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-          </svg>
+        {dominantCategory && (
+          <span
+            className="flex-shrink-0 inline-flex items-center justify-center w-7 h-7 rounded"
+            style={{
+              backgroundColor: categoryColor ? `${categoryColor}20` : undefined,
+            }}
+          >
+            <CategoryIcon type={dominantCategory} size={18} glow="subtle" />
+          </span>
         )}
         <div className="flex-1 min-w-0 text-left">
           {venueSlug ? (
@@ -187,20 +189,27 @@ export default function EventGroup({
               href={portalSlug ? `/${portalSlug}?spot=${venueSlug}` : `/spots/${venueSlug}`}
               scroll={false}
               onClick={(e) => e.stopPropagation()}
-              className="font-medium text-sm text-[var(--cream)] hover:text-[var(--coral)] truncate block transition-colors"
+              className="font-semibold text-lg text-[var(--cream)] hover:text-[var(--coral)] truncate block transition-colors leading-tight"
             >
               {title}
             </Link>
           ) : (
-            <span className="font-medium text-sm text-[var(--cream)] group-hover:text-[var(--glow-color,var(--neon-magenta))] truncate block transition-colors">{title}</span>
+            <span className="font-semibold text-lg text-[var(--cream)] group-hover:text-[var(--glow-color,var(--neon-magenta))] truncate block transition-colors leading-tight">{title}</span>
           )}
-          {subtitle && <span className="text-xs text-[var(--muted)]">{subtitle}</span>}
+          {subtitle && <span className="text-sm text-[var(--soft)] mt-0.5 block">{subtitle}</span>}
         </div>
-        <span className="font-mono text-[0.6rem] text-[var(--muted)] bg-[var(--twilight)]/50 px-1.5 py-0.5 rounded flex-shrink-0 whitespace-nowrap">
-          {events.length} {events.length === 1 ? "thing" : "things"}
+        {/* Event count badge - prominent styling */}
+        <span
+          className="font-mono text-xs px-2 py-1 rounded-full flex-shrink-0 whitespace-nowrap font-medium"
+          style={{
+            backgroundColor: categoryColor ? `${categoryColor}20` : "var(--twilight)",
+            color: categoryColor || "var(--cream)",
+          }}
+        >
+          {events.length} {events.length === 1 ? "event" : "events"}
         </span>
         <svg
-          className={`w-4 h-4 text-[var(--muted)] transition-transform flex-shrink-0 ${isExpanded ? "rotate-180" : ""}`}
+          className={`w-5 h-5 text-[var(--muted)] transition-transform flex-shrink-0 ${isExpanded ? "rotate-180" : ""}`}
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
