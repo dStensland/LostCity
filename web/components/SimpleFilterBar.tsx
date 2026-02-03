@@ -215,7 +215,7 @@ export default function SimpleFilterBar({ variant = "full" }: SimpleFilterBarPro
   return (
     <>
       {/* Desktop view (>= 640px) */}
-      <div className="hidden sm:block sticky top-[112px] z-10 bg-[var(--night)] border-b border-[var(--twilight)]">
+      <div className="hidden sm:block sticky top-[112px] z-30 bg-[var(--night)] border-b border-[var(--twilight)]">
         <div className={`max-w-5xl mx-auto px-4 ${variant === "compact" ? "py-1.5" : "py-2"}`}>
           <div className="flex items-center gap-2">
             {/* Category dropdown */}
@@ -382,7 +382,7 @@ export default function SimpleFilterBar({ variant = "full" }: SimpleFilterBarPro
                 onClick={() => toggleFeedMode(currentFeedMode === "following" ? "all" : "following")}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full font-mono text-xs font-medium transition-all ${
                   currentFeedMode === "following"
-                    ? "bg-[var(--neon-cyan)] text-[var(--void)]"
+                    ? "bg-[var(--coral)] text-[var(--void)]"
                     : "bg-[var(--twilight)] text-[var(--muted)] hover:text-[var(--cream)]"
                 }`}
               >
@@ -476,11 +476,11 @@ export default function SimpleFilterBar({ variant = "full" }: SimpleFilterBarPro
                 )}
                 {/* Following chip */}
                 {currentFeedMode === "following" && (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[var(--neon-cyan)]/20 text-[var(--neon-cyan)] text-xs font-mono">
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[var(--coral)]/20 text-[var(--coral)] text-xs font-mono">
                     Following
                     <button
                       onClick={() => toggleFeedMode("all")}
-                      className="hover:bg-[var(--neon-cyan)]/30 rounded-full p-0.5 transition-colors"
+                      className="hover:bg-[var(--coral)]/30 rounded-full p-0.5 transition-colors"
                       aria-label="Remove following filter"
                     >
                       <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -555,7 +555,7 @@ export default function SimpleFilterBar({ variant = "full" }: SimpleFilterBarPro
       </div>
 
       {/* Mobile view (< 640px) - Horizontal scrolling pills */}
-      <div className="sm:hidden sticky top-[112px] z-10 bg-[var(--night)] border-b border-[var(--twilight)]">
+      <div className="sm:hidden sticky top-[112px] z-30 bg-[var(--night)] border-b border-[var(--twilight)]">
         <div className={`${variant === "compact" ? "py-1.5" : "py-2"}`}>
           {/* Horizontal scrolling filter pills with fade indicators */}
           <div className="relative">
