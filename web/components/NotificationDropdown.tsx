@@ -164,7 +164,7 @@ export default function NotificationDropdown() {
   if (authLoading || !user) return null;
 
   return (
-    <div className="relative" ref={dropdownRef}>
+    <div className="relative z-[1000]" ref={dropdownRef}>
       {/* Bell button */}
       <button
         onClick={() => setIsOpen(!isOpen)}

@@ -76,7 +76,7 @@ export default function UserMenu() {
       <CalendarButton />
 
       {/* Avatar and dropdown */}
-      <div className="relative flex items-center z-[60]" ref={menuRef}>
+      <div className="relative flex items-center z-[1000]" ref={menuRef}>
         {/* Avatar - clicks through to profile (or settings if no profile) */}
         <Link
           href={profile?.username ? `/profile/${profile.username}` : "/settings"}
