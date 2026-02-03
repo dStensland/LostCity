@@ -30,6 +30,7 @@ import {
   ForkKnife,
   Coffee,
   BeerBottle,
+  Cheers,
   Wine,
   Flask,
   Storefront,
@@ -193,7 +194,7 @@ const ICON_MAP: Record<string, ComponentType<IconProps>> = {
   // Food & Drink - craft cocktail culture
   food_drink: Martini,
   restaurant: ForkKnife,
-  bar: Martini,
+  bar: Cheers,
   coffee_shop: Coffee,
   brewery: BeerBottle,
   winery: Wine,
@@ -282,34 +283,14 @@ interface Props {
   weight?: "thin" | "light" | "regular" | "bold";
 }
 
-// Map glow intensity to CSS filter
-const getGlowStyle = (color: string, intensity: GlowIntensity): CSSProperties => {
-  switch (intensity) {
-    case "none":
-      return {};
-    case "subtle":
-      return {
-        filter: `drop-shadow(0 0 2px ${color}40)`,
-      };
-    case "default":
-      return {
-        filter: `drop-shadow(0 0 3px ${color}60) drop-shadow(0 0 6px ${color}30)`,
-      };
-    case "intense":
-      return {
-        filter: `drop-shadow(0 0 4px ${color}) drop-shadow(0 0 8px ${color}80) drop-shadow(0 0 12px ${color}40)`,
-      };
-    case "pulse":
-      return {
-        filter: `drop-shadow(0 0 4px ${color}) drop-shadow(0 0 8px ${color}80)`,
-        animation: "neon-pulse 2s ease-in-out infinite",
-      };
-    case "flicker":
-      return {
-        filter: `drop-shadow(0 0 4px ${color}) drop-shadow(0 0 8px ${color}80)`,
-        animation: "neon-flicker 3s ease-in-out infinite",
-      };
-  }
+// Map glow intensity to CSS class (same as original CategoryIcon)
+const GLOW_CLASSES: Record<GlowIntensity, string> = {
+  none: "",
+  subtle: "icon-neon-subtle",
+  default: "icon-neon",
+  intense: "icon-neon-intense",
+  pulse: "icon-neon icon-neon-pulse",
+  flicker: "icon-neon icon-neon-flicker",
 };
 
 export default function CategoryIconPhosphor({
@@ -326,7 +307,7 @@ export default function CategoryIconPhosphor({
   const label = config?.label || type;
 
   const IconComponent = ICON_MAP[type] || ICON_MAP.other || CirclesFour;
-  const glowStyle = getGlowStyle(color, glow);
+  const glowClass = GLOW_CLASSES[glow];
 
   return (
     <span
@@ -336,8 +317,7 @@ export default function CategoryIconPhosphor({
       <IconComponent
         size={size}
         weight={weight}
-        style={glowStyle}
-        className="flex-shrink-0"
+        className={`flex-shrink-0 ${glowClass}`}
       />
       {showLabel && (
         <span className="font-mono text-xs font-medium uppercase tracking-wide">

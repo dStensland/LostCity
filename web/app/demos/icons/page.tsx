@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import CategoryIcon, { CATEGORY_CONFIG } from "@/components/CategoryIcon";
-import CategoryIconPhosphor from "@/components/CategoryIconPhosphor";
+import CategoryIconCustom from "@/components/CategoryIconCustom";
 
 type GlowIntensity = "none" | "subtle" | "default" | "intense" | "pulse";
 
@@ -72,13 +72,13 @@ export default function IconDemoPage() {
             <div className="flex items-center gap-4 mb-2">
               {/* Original Custom SVG */}
               <div className="flex flex-col items-center gap-1">
-                <CategoryIcon type={type} size={size} glow={glow} />
+                <CategoryIconCustom type={type} size={size} glow={glow} />
                 <span className="text-[0.6rem] text-[var(--muted)] font-mono">Custom</span>
               </div>
 
-              {/* Phosphor */}
+              {/* Phosphor (now default) */}
               <div className="flex flex-col items-center gap-1">
-                <CategoryIconPhosphor type={type} size={size} glow={glow} weight={weight} />
+                <CategoryIcon type={type} size={size} glow={glow} weight={weight} />
                 <span className="text-[0.6rem] text-[var(--muted)] font-mono">Phosphor</span>
               </div>
             </div>
@@ -98,8 +98,8 @@ export default function IconDemoPage() {
           {["music", "restaurant", "bar", "coffee_shop", "nightlife", "art", "comedy"].map((type) => (
             <div key={type} className="flex flex-col items-center gap-4">
               <div className="flex gap-6">
-                <CategoryIcon type={type} size={48} glow="intense" />
-                <CategoryIconPhosphor type={type} size={48} glow="intense" weight="thin" />
+                <CategoryIconCustom type={type} size={48} glow="intense" />
+                <CategoryIcon type={type} size={48} glow="intense" weight="thin" />
               </div>
               <span className="text-xs text-[var(--muted)] font-mono">{type}</span>
             </div>
