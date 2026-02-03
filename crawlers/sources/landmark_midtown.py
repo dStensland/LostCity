@@ -121,11 +121,13 @@ def extract_movies_for_date(
             # Clean up title - remove trailing whitespace and any leftover metadata
             title = re.sub(r'\s+$', '', title).strip()
 
-            # Skip if title looks like UI text
+            # Skip if title looks like UI text or crawler artifacts
             skip_titles = [
                 "Showtimes", "Now Playing", "Coming Soon", "Landmark",
                 "Another Date", "See Details", "Film Series", "Special",
-                "At:", "Fri", "Sat", "Sun", "Mon", "Tue", "Wed", "Thu"
+                "At:", "Fri", "Sat", "Sun", "Mon", "Tue", "Wed", "Thu",
+                "See Trailer", "Late Shows", "Two Shows Only",
+                "A Film By", "Trailer",
             ]
             if any(skip.lower() == title.lower() for skip in skip_titles):
                 continue
