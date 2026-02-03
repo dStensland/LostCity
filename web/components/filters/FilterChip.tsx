@@ -47,14 +47,14 @@ const VARIANT_STYLES: Record<FilterChipVariant, { active: string; inactive: stri
     glowClass: "chip-glow-gold",
   },
   vibe: {
-    inactive: "border-[var(--twilight)] text-[var(--muted)] hover:text-[#C4B5FD] hover:border-[#C4B5FD]/50",
-    active: "bg-[#C4B5FD] text-[var(--void)] border-[#C4B5FD]",
+    inactive: "border-[var(--twilight)] text-[var(--muted)] hover:text-[#A78BFA] hover:border-[#A78BFA]/50",
+    active: "bg-[#7C3AED] text-[var(--cream)] border-[#7C3AED]",
     glowClass: "chip-glow-vibe",
   },
   access: {
-    inactive: "border-[var(--twilight)] text-[var(--muted)] hover:text-[var(--neon-cyan)] hover:border-[var(--neon-cyan)]/50",
-    active: "bg-[var(--neon-cyan)] text-[var(--void)] border-[var(--neon-cyan)]",
-    glowClass: "chip-glow-cyan",
+    inactive: "border-[var(--twilight)] text-[var(--muted)] hover:text-[var(--coral)] hover:border-[var(--coral)]/50",
+    active: "bg-[var(--coral)] text-[var(--void)] border-[var(--coral)]",
+    glowClass: "chip-glow-coral",
   },
   special: {
     inactive: "border-[var(--twilight)] text-[var(--muted)] hover:text-[var(--gold)] hover:border-[var(--gold)]/50",
