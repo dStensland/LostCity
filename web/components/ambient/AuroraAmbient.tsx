@@ -42,16 +42,21 @@ export default function AuroraAmbient({ config }: AuroraAmbientProps) {
 
   return (
     <div
-      className="ambient-layer fixed inset-0 pointer-events-none z-0 overflow-hidden"
+      className="ambient-layer fixed inset-0 pointer-events-none z-0"
       aria-hidden="true"
+      style={{
+        // Extend beyond viewport to prevent visible edges during transforms
+        margin: "-20%",
+        padding: "20%",
+      }}
     >
       {/* Aurora layer 1 */}
       <div
         className="absolute inset-0"
         style={{
           background: `
-            radial-gradient(ellipse 100% 40% at 20% 0%, ${primaryColor}${Math.round(opacity * 255).toString(16).padStart(2, "0")}, transparent 50%),
-            radial-gradient(ellipse 80% 50% at 80% 10%, ${secondaryColor}${Math.round(opacity * 0.8 * 255).toString(16).padStart(2, "0")}, transparent 50%)
+            radial-gradient(ellipse 120% 50% at 20% -10%, ${primaryColor}${Math.round(opacity * 255).toString(16).padStart(2, "0")}, transparent 60%),
+            radial-gradient(ellipse 100% 60% at 80% 0%, ${secondaryColor}${Math.round(opacity * 0.8 * 255).toString(16).padStart(2, "0")}, transparent 60%)
           `,
           animation: `aurora-shift-1 ${animationDuration} ease-in-out infinite`,
         }}
@@ -62,8 +67,8 @@ export default function AuroraAmbient({ config }: AuroraAmbientProps) {
         className="absolute inset-0"
         style={{
           background: `
-            radial-gradient(ellipse 120% 30% at 60% 5%, ${secondaryColor}${Math.round(opacity * 0.6 * 255).toString(16).padStart(2, "0")}, transparent 50%),
-            radial-gradient(ellipse 60% 40% at 30% 15%, ${primaryColor}${Math.round(opacity * 0.7 * 255).toString(16).padStart(2, "0")}, transparent 50%)
+            radial-gradient(ellipse 140% 40% at 60% -5%, ${secondaryColor}${Math.round(opacity * 0.6 * 255).toString(16).padStart(2, "0")}, transparent 60%),
+            radial-gradient(ellipse 80% 50% at 30% 5%, ${primaryColor}${Math.round(opacity * 0.7 * 255).toString(16).padStart(2, "0")}, transparent 60%)
           `,
           animation: `aurora-shift-2 ${animationDuration} ease-in-out infinite`,
           animationDelay: "-10s",
@@ -75,7 +80,7 @@ export default function AuroraAmbient({ config }: AuroraAmbientProps) {
         className="absolute inset-0"
         style={{
           background: `
-            radial-gradient(ellipse 90% 25% at 50% 0%, ${primaryColor}${Math.round(opacity * 0.4 * 255).toString(16).padStart(2, "0")}, transparent 60%)
+            radial-gradient(ellipse 110% 35% at 50% -10%, ${primaryColor}${Math.round(opacity * 0.4 * 255).toString(16).padStart(2, "0")}, transparent 70%)
           `,
           animation: `aurora-wave ${animationDuration} ease-in-out infinite`,
           animationDelay: "-5s",
