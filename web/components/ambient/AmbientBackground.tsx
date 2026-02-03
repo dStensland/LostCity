@@ -21,6 +21,7 @@ const FlowingStreetsAmbient = dynamic(() => import("./FlowingStreetsAmbient"), {
 const GrowingGardenAmbient = dynamic(() => import("./GrowingGardenAmbient"), { ssr: false });
 const RainAmbient = dynamic(() => import("./RainAmbient"), { ssr: false });
 const FloatingLeavesAmbient = dynamic(() => import("./FloatingLeavesAmbient"), { ssr: false });
+const NeonBroadwayAmbient = dynamic(() => import("./NeonBroadwayAmbient"), { ssr: false });
 
 interface DesignOverrides {
   ambientEffect?: AmbientEffect;
@@ -133,6 +134,8 @@ function AmbientBackgroundInner() {
       return <GrowingGardenAmbient key={componentKey} config={ambientConfig} />;
     case "floating_leaves":
       return <FloatingLeavesAmbient key={componentKey} config={ambientConfig} />;
+    case "neon_broadway":
+      return <NeonBroadwayAmbient key={componentKey} config={ambientConfig} />;
     default:
       return <SubtleGlowAmbient key={componentKey} config={ambientConfig} categoryColors={branding.category_colors} />;
   }

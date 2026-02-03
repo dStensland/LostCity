@@ -36,7 +36,8 @@ export type AmbientEffect =
   | "constellation"
   | "flowing_streets"
   | "growing_garden"
-  | "floating_leaves";
+  | "floating_leaves"
+  | "neon_broadway";
 
 export type BorderRadius = "none" | "sm" | "md" | "lg" | "full";
 export type ShadowLevel = "none" | "subtle" | "medium" | "elevated";
@@ -518,7 +519,7 @@ export const VISUAL_PRESETS: Record<VisualPresetId, VisualPreset> = {
       transparent_on_top: true,
     },
     ambient: {
-      effect: "aurora",
+      effect: "neon_broadway",
       intensity: "bold",
       colors: {
         primary: "#FF1B8D",
