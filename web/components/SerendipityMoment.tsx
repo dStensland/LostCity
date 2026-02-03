@@ -33,8 +33,8 @@ const SerendipityIcon = ({ type, className = "" }: { type: SerendipityType; clas
     try_something_new: {
       // Dice/sparkle - combined dice dots pattern
       path: "M4 4h16v16H4V4zm2 2v12h12V6H6zm3 2a1.5 1.5 0 110 3 1.5 1.5 0 010-3zm6 0a1.5 1.5 0 110 3 1.5 1.5 0 010-3zm-3 3a1.5 1.5 0 110 3 1.5 1.5 0 010-3zm-3 3a1.5 1.5 0 110 3 1.5 1.5 0 010-3zm6 0a1.5 1.5 0 110 3 1.5 1.5 0 010-3z",
-      // Use portal secondary color (falls back to muted slate)
-      color: "var(--portal-secondary, #6B7A8C)",
+      // Use muted text color - always readable on dark backgrounds
+      color: "var(--soft, #9CA3AF)",
     },
     neighborhood_spotlight: {
       // Map pin with spotlight rays
@@ -77,8 +77,8 @@ const SERENDIPITY_CONFIGS: Record<SerendipityType, {
   try_something_new: {
     title: "Try Something New",
     subtitle: "Step outside your comfort zone",
-    // Uses portal secondary color via CSS variable
-    gradient: "from-[var(--portal-secondary,#6B7A8C)]/20 to-transparent",
+    // Subtle neutral gradient - doesn't compete with theme
+    gradient: "from-slate-500/15 to-transparent",
   },
   neighborhood_spotlight: {
     title: "Neighborhood Spotlight",

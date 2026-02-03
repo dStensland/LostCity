@@ -26,8 +26,8 @@ const ATLANTA_BRANDING = {
   theme_mode: "dark",
   // Warm peach/coral as primary - reflects Georgia peach heritage
   primary_color: "#FF6B7A",
-  // Very muted rose - subtle, doesn't compete with primary
-  secondary_color: "#B8908A",
+  // Dark muted rose - for subtle ambient tints only
+  secondary_color: "#3D2A2A",
   // Gold accent for highlights only
   accent_color: "#FFD93D",
   // Deep cosmic backgrounds
@@ -53,7 +53,7 @@ const ATLANTA_BRANDING = {
     intensity: "subtle",
     colors: {
       primary: "#FF6B7A",
-      secondary: "#B8908A",
+      secondary: "#3D2A2A",
     },
     animation_speed: "slow",
   },
@@ -101,8 +101,8 @@ const NASHVILLE_BRANDING = {
   theme_mode: "dark",
   // Hot pink neon - like Tootsie's Orchid Lounge signs
   primary_color: "#FF1B8D",
-  // Muted slate blue - subtle, doesn't compete with primary
-  secondary_color: "#6B7A8C",
+  // Dark slate - for subtle ambient tints only
+  secondary_color: "#1E2A3A",
   // Whiskey amber - warm stage lights, bourbon
   accent_color: "#FF9500",
   // Deep midnight navy - night sky over Broadway
@@ -130,7 +130,7 @@ const NASHVILLE_BRANDING = {
     intensity: "subtle",
     colors: {
       primary: "#FF1B8D",
-      secondary: "#6B7A8C",
+      secondary: "#1E2A3A",
     },
     animation_speed: "slow",
   },
@@ -149,7 +149,7 @@ const NASHVILLE_BRANDING = {
     film: "#A855F7",
     comedy: "#FF9500",
     theater: "#EC4899",
-    art: "#6B7A8C",
+    art: "#60A5FA",
     community: "#10B981",
     food_drink: "#FF9500",
     sports: "#EF4444",
