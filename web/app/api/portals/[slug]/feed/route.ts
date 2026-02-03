@@ -478,7 +478,6 @@ export async function GET(request: NextRequest, { params }: Props) {
         block_type: "collapsible_events",
         layout: "grid",
         items_per_row: 2,
-        max_items: 30,
         auto_filter: {
           tags: ["valentines"],
           date_filter: "next_30_days",
@@ -511,7 +510,6 @@ export async function GET(request: NextRequest, { params }: Props) {
         block_type: "collapsible_events",
         layout: "grid",
         items_per_row: 2,
-        max_items: 30,
         auto_filter: {
           tags: ["lunar-new-year"],
           date_filter: "next_30_days",
@@ -544,7 +542,6 @@ export async function GET(request: NextRequest, { params }: Props) {
         block_type: "collapsible_events",
         layout: "grid",
         items_per_row: 2,
-        max_items: 30,
         auto_filter: {
           tags: ["super-bowl"],
           date_filter: "next_7_days",
@@ -576,7 +573,6 @@ export async function GET(request: NextRequest, { params }: Props) {
         block_type: "collapsible_events",
         layout: "grid",
         items_per_row: 2,
-        max_items: 30,
         auto_filter: {
           tags: ["black-history-month"],
           date_filter: "next_30_days",
@@ -628,8 +624,7 @@ export async function GET(request: NextRequest, { params }: Props) {
           .gte("start_date", today)
           .lte("start_date", getLocalDateString(addDays(new Date(), 30)))
           .is("canonical_event_id", null)
-          .order("start_date", { ascending: true })
-          .limit(holidaySection.max_items);
+          .order("start_date", { ascending: true });
 
         // Store by tag for section building
         if (holidayEvents && holidayEvents.length > 0) {
