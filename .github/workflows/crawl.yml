@@ -2,8 +2,8 @@ name: Daily Event Crawl
 
 on:
   schedule:
-    # Run daily at 6 AM EST (11:00 UTC)
-    - cron: '0 11 * * *'
+    # Run daily at midnight EST (05:00 UTC)
+    - cron: '0 5 * * *'
   workflow_dispatch:
     # Allow manual trigger from GitHub UI
     inputs:
