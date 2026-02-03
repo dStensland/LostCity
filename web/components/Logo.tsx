@@ -9,8 +9,9 @@ interface LogoProps {
 }
 
 // Portal-specific configurations
-const PORTAL_CONFIG: Record<string, { name: string; color: string }> = {
-  [DEFAULT_PORTAL_SLUG]: { name: "ATLANTA", color: "var(--gold)" }, // Golden for Atlanta
+const PORTAL_CONFIG: Record<string, { name: string; color: string; glow: string }> = {
+  [DEFAULT_PORTAL_SLUG]: { name: "ATLANTA", color: "var(--gold)", glow: "rgba(255, 215, 0, 0.4)" },
+  nashville: { name: "NASHVILLE", color: "var(--neon-cyan)", glow: "rgba(0, 229, 255, 0.4)" },
 };
 
 export default function Logo({ size = "md", href = "/", className = "", portal }: LogoProps) {
@@ -61,7 +62,7 @@ export default function Logo({ size = "md", href = "/", className = "", portal }
             fontSize: config.portalSize,
             fontWeight: 600,
             color: portalConfig.color,
-            textShadow: portal === DEFAULT_PORTAL_SLUG ? "0 0 10px rgba(255, 215, 0, 0.4)" : "0 0 10px rgba(255, 107, 107, 0.4)",
+            textShadow: `0 0 10px ${portalConfig.glow}`,
           }}
         >
           {portalConfig.name}

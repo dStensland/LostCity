@@ -2,20 +2,21 @@
 
 import { memo } from "react";
 
-// Rainbow palette for skeleton categories - warm/neutral colors to work across portals
+// Muted palette for skeleton categories - subtle colors that don't distract
+// Uses low opacity versions of warm colors to work across dark portals
 const SKELETON_COLORS = [
-  "#F472B6", // Music venues - pink
-  "#F87171", // Theaters - red
-  "#FBBF24", // Comedy/Breweries - amber
-  "#C4B5FD", // Arts - violet
-  "#A5B4FC", // Film - indigo
-  "#6EE7B7", // Community - emerald
-  "#FB923C", // Food - orange
-  "#C084FC", // Bars - purple
-  "#F9A8D4", // Sports - rose (was sky blue)
-  "#A78BFA", // Fitness - violet (was cyan)
-  "#E879F9", // Nightlife - magenta
-  "#FDBA74", // Events - peach (was purple)
+  "rgba(244, 114, 182, 0.4)", // Music - muted pink
+  "rgba(248, 113, 113, 0.4)", // Theaters - muted red
+  "rgba(251, 191, 36, 0.4)",  // Comedy - muted amber
+  "rgba(196, 181, 253, 0.4)", // Arts - muted violet
+  "rgba(165, 180, 252, 0.4)", // Film - muted indigo
+  "rgba(110, 231, 183, 0.4)", // Community - muted emerald
+  "rgba(251, 146, 60, 0.4)",  // Food - muted orange
+  "rgba(192, 132, 252, 0.4)", // Bars - muted purple
+  "rgba(249, 168, 212, 0.4)", // Sports - muted rose
+  "rgba(167, 139, 250, 0.4)", // Fitness - muted violet
+  "rgba(232, 121, 249, 0.4)", // Nightlife - muted magenta
+  "rgba(253, 186, 116, 0.4)", // Events - muted peach
 ];
 
 interface CategorySkeletonProps {
@@ -106,23 +107,23 @@ const CategoryRowSkeleton = memo(function CategoryRowSkeleton({
       className="flex items-center gap-2 py-3 px-1"
       style={{ animationDelay: `${delay}s` }}
     >
-      {/* Colored dot - actual color, not skeleton */}
+      {/* Colored dot - subtle glow */}
       <div
         className="w-2 h-2 rounded-full flex-shrink-0 animate-pulse"
         style={{
           backgroundColor: color,
-          boxShadow: `0 0 8px ${color}60`,
+          boxShadow: `0 0 6px ${color}`,
           animationDelay: `${delay}s`,
           animationDuration: "2s",
         }}
       />
 
-      {/* Category label skeleton - tinted with the category color */}
+      {/* Category label skeleton - subtle tint */}
       <div
         className="h-3 rounded flex-1"
         style={{
           maxWidth: `${widthPercent}%`,
-          background: `linear-gradient(90deg, ${color}30 0%, ${color}15 50%, ${color}30 100%)`,
+          background: `linear-gradient(90deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.03) 50%, rgba(255,255,255,0.06) 100%)`,
           backgroundSize: "200% 100%",
           animation: `skeleton-shimmer 1.5s ease-in-out infinite`,
           animationDelay: `${delay}s`,

@@ -264,6 +264,15 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "gatech.edu",
       },
+      // Uploadcare CDN (venue/event images)
+      {
+        protocol: "https",
+        hostname: "ucarecdn.com",
+      },
+      {
+        protocol: "https",
+        hostname: "**.ucarecdn.com",
+      },
     ],
   },
 };

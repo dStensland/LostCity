@@ -17,6 +17,8 @@ export type VisualPresetId =
   | "nightlife"
   | "family_friendly"
   | "minimal_modern"
+  | "cosmic_dark"
+  | "neon_honkytonk"
   | "custom";
 
 export type HeaderTemplate = "standard" | "minimal" | "branded" | "immersive";
@@ -426,6 +428,126 @@ export const VISUAL_PRESETS: Record<VisualPresetId, VisualPreset> = {
       glow_intensity: "subtle",
       animations: "none",
       glass_enabled: false,
+    },
+  },
+
+  cosmic_dark: {
+    id: "cosmic_dark",
+    name: "Cosmic Dark",
+    description: "Warm cosmic aesthetic with peach and violet tones",
+    bestFor: "City portals with warm, modern vibe",
+    colors: {
+      primary_color: "#FF6B7A",
+      secondary_color: "#A855F7",
+      accent_color: "#FFD93D",
+      background_color: "#0A0A12",
+      text_color: "#FFF5F0",
+      muted_color: "#8B8B9A",
+      button_color: "#FF6B7A",
+      button_text_color: "#0A0A12",
+      border_color: "#2A2A3A",
+      card_color: "#14141E",
+    },
+    theme_mode: "dark",
+    header: {
+      template: "standard",
+      logo_position: "left",
+      logo_size: "md",
+      nav_style: "underline",
+      show_search_in_header: true,
+      transparent_on_top: true,
+    },
+    ambient: {
+      effect: "aurora",
+      intensity: "medium",
+      colors: {
+        primary: "#FF6B7A",
+        secondary: "#A855F7",
+      },
+      animation_speed: "slow",
+    },
+    component_style: {
+      border_radius: "md",
+      shadows: "subtle",
+      card_style: "glass",
+      button_style: "default",
+      glow_enabled: true,
+      glow_intensity: "medium",
+      animations: "full",
+      glass_enabled: true,
+    },
+    category_colors: {
+      music: "#FF6B7A",
+      film: "#A855F7",
+      comedy: "#FFD93D",
+      theater: "#EC4899",
+      art: "#F472B6",
+      community: "#10B981",
+      food_drink: "#F97316",
+      sports: "#EF4444",
+      fitness: "#22C55E",
+      nightlife: "#8B5CF6",
+      family: "#38BDF8",
+    },
+  },
+
+  neon_honkytonk: {
+    id: "neon_honkytonk",
+    name: "Neon Honky-Tonk",
+    description: "Music City neon aesthetic - Broadway at night",
+    bestFor: "Nashville and music-focused city portals",
+    colors: {
+      primary_color: "#FF1B8D",
+      secondary_color: "#00E5FF",
+      accent_color: "#FF9500",
+      background_color: "#0A0E1A",
+      text_color: "#FFF8E7",
+      muted_color: "#9CA3AF",
+      button_color: "#FF1B8D",
+      button_text_color: "#0A0E1A",
+      border_color: "#1E293B",
+      card_color: "#0F172A",
+    },
+    theme_mode: "dark",
+    header: {
+      template: "standard",
+      logo_position: "center",
+      logo_size: "lg",
+      nav_style: "pills",
+      show_search_in_header: true,
+      transparent_on_top: true,
+    },
+    ambient: {
+      effect: "aurora",
+      intensity: "bold",
+      colors: {
+        primary: "#FF1B8D",
+        secondary: "#00E5FF",
+      },
+      animation_speed: "medium",
+    },
+    component_style: {
+      border_radius: "lg",
+      shadows: "subtle",
+      card_style: "glass",
+      button_style: "pill",
+      glow_enabled: true,
+      glow_intensity: "intense",
+      animations: "full",
+      glass_enabled: true,
+    },
+    category_colors: {
+      music: "#FF1B8D",
+      film: "#A855F7",
+      comedy: "#FF9500",
+      theater: "#EC4899",
+      art: "#00E5FF",
+      community: "#10B981",
+      food_drink: "#FF9500",
+      sports: "#EF4444",
+      fitness: "#22C55E",
+      nightlife: "#8B5CF6",
+      family: "#06B6D4",
     },
   },
 
