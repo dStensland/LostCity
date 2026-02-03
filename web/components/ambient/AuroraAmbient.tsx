@@ -42,13 +42,8 @@ export default function AuroraAmbient({ config }: AuroraAmbientProps) {
 
   return (
     <div
-      className="ambient-layer fixed inset-0 pointer-events-none z-0"
+      className="ambient-layer fixed inset-0 pointer-events-none z-0 overflow-hidden"
       aria-hidden="true"
-      style={{
-        // Extend beyond viewport to prevent visible edges during transforms
-        margin: "-20%",
-        padding: "20%",
-      }}
     >
       {/* Aurora layer 1 */}
       <div
@@ -87,45 +82,21 @@ export default function AuroraAmbient({ config }: AuroraAmbientProps) {
         }}
       />
 
-      {/* Keyframes */}
+      {/* Keyframes - opacity only for subtle breathing effect */}
       <style>{`
         @keyframes aurora-shift-1 {
-          0%, 100% {
-            transform: translateX(0) scaleY(1);
-            opacity: 1;
-          }
-          33% {
-            transform: translateX(10%) scaleY(1.2);
-            opacity: 0.8;
-          }
-          66% {
-            transform: translateX(-5%) scaleY(0.9);
-            opacity: 1.1;
-          }
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.7; }
         }
 
         @keyframes aurora-shift-2 {
-          0%, 100% {
-            transform: translateX(0) scaleY(1) rotate(0deg);
-            opacity: 1;
-          }
-          33% {
-            transform: translateX(-15%) scaleY(1.3) rotate(-2deg);
-            opacity: 0.7;
-          }
-          66% {
-            transform: translateX(10%) scaleY(0.8) rotate(2deg);
-            opacity: 1.2;
-          }
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.6; }
         }
 
         @keyframes aurora-wave {
-          0%, 100% {
-            transform: translateY(0) scaleX(1);
-          }
-          50% {
-            transform: translateY(5%) scaleX(1.1);
-          }
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.8; }
         }
       `}</style>
     </div>
