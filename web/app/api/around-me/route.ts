@@ -109,7 +109,6 @@ type SpotRow = {
   website: string | null;
   hours_display: string | null;
   hours: HoursData | null;
-  is_24_hours: boolean | null;
   vibes: string[] | null;
   image_url: string | null;
 };
@@ -117,7 +116,6 @@ type SpotRow = {
 type LiveEventRow = {
   id: number;
   title: string;
-  slug: string;
   start_time: string;
   end_time: string | null;
   is_all_day: boolean;
@@ -253,7 +251,6 @@ export async function GET(request: NextRequest) {
         website,
         hours_display,
         hours,
-        is_24_hours,
         vibes,
         image_url
       `)
@@ -282,7 +279,6 @@ export async function GET(request: NextRequest) {
       .select(`
         id,
         title,
-        slug,
         start_time,
         end_time,
         is_all_day,
@@ -304,7 +300,8 @@ export async function GET(request: NextRequest) {
         )
       `)
       .eq("is_live", true)
-      .is("canonical_event_id", null);
+      .is("canonical_event_id", null)
+      .gte("start_date", new Date().toISOString().split("T")[0]);
 
     // Filter events by category if specified
     if (categoryFilter && categoryFilter.eventCategories.length > 0) {
@@ -338,12 +335,12 @@ export async function GET(request: NextRequest) {
       const distance = calculateDistance(centerLat, centerLng, spot.lat, spot.lng);
       if (distance > radiusMiles) continue;
 
-      // Check if open (permissive - show spots even without hours data)
+      // Check if open - filter out spots confirmed closed
       let isOpen = true;
       let closesAt: string | undefined;
 
       try {
-        const result = isSpotOpen(spot.hours, spot.is_24_hours || false);
+        const result = isSpotOpen(spot.hours, false);
         isOpen = result.isOpen;
         closesAt = result.closesAt;
       } catch {
@@ -351,17 +348,15 @@ export async function GET(request: NextRequest) {
         isOpen = true;
       }
 
-      // Don't filter by open status for now - show everything
-      // Users want to see what's around them regardless of hours
-      void isOpen; // Silence unused variable warning
+      // Skip spots that have hours data and are confirmed closed
+      // Spots without hours data (isSpotOpen returns true by default) still pass through
+      if (!isOpen) continue;
 
       // Determine closing time display
       let closingTimeDisplay: string | null = null;
       let closingTimeInferred = false;
 
-      if (spot.is_24_hours) {
-        closingTimeDisplay = null; // 24 hours
-      } else if (closesAt) {
+      if (closesAt) {
         closingTimeDisplay = formatClosingTime(closesAt);
       } else {
         // No hours data - try to infer
@@ -396,7 +391,7 @@ export async function GET(request: NextRequest) {
           price_level: spot.price_level,
           vibes: spot.vibes,
           image_url: spot.image_url,
-          isOpen: true, // Already filtered to open
+          isOpen: true,
           closesAt: closingTimeDisplay,
           closingTimeInferred,
         },
@@ -420,7 +415,7 @@ export async function GET(request: NextRequest) {
         data: {
           id: event.id,
           title: event.title,
-          slug: event.slug,
+          slug: String(event.id),
           start_time: event.start_time,
           end_time: event.end_time,
           is_all_day: event.is_all_day,

@@ -16,7 +16,6 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const query = searchParams.get("q");
   const limit = Math.min(parseInt(searchParams.get("limit") || "10"), 20);
-  const upcoming = searchParams.get("upcoming") === "true";
 
   if (!query || !isValidString(query, 1, 100)) {
     return NextResponse.json({ error: "Query parameter 'q' is required" }, { status: 400 });
@@ -43,14 +42,9 @@ export async function GET(request: NextRequest) {
     `
     )
     .ilike("title", `%${escapeSQLPattern(normalizedQuery)}%`)
+    .gte("start_date", new Date().toISOString().split("T")[0])
     .order("start_date", { ascending: true })
     .limit(limit);
-
-  // Filter to upcoming events if requested
-  if (upcoming) {
-    const now = new Date().toISOString();
-    searchQuery = searchQuery.gte("start_date", now);
-  }
 
   const { data: eventsData, error } = await searchQuery;
 

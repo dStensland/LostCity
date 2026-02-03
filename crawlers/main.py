@@ -889,7 +889,7 @@ def run_all_sources(parallel: bool = True, max_workers: int = MAX_WORKERS, adapt
     # 1. Clean up old events
     logger.info("Running post-crawl cleanup...")
     try:
-        cleanup_results = run_full_cleanup(days_to_keep=7, dry_run=False)
+        cleanup_results = run_full_cleanup(days_to_keep=0, dry_run=False)
         total_deleted = sum(r.get("deleted", 0) for r in cleanup_results.values())
         logger.info(f"Cleanup complete: {total_deleted} events removed")
     except Exception as e:
@@ -1061,7 +1061,7 @@ def main():
     # Event cleanup
     if args.cleanup or args.cleanup_dry_run:
         dry_run = args.cleanup_dry_run
-        results = run_full_cleanup(days_to_keep=7, dry_run=dry_run)
+        results = run_full_cleanup(days_to_keep=0, dry_run=dry_run)
         if dry_run:
             total_would_delete = sum(r.get("would_delete", 0) for r in results.values())
             print(f"\n[DRY RUN] Would delete {total_would_delete} events")
