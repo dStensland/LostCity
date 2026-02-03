@@ -221,7 +221,8 @@ async function updatePortal(
   console.log(`  🎨 Primary: ${branding.primary_color}`);
   console.log(`  🌊 Secondary: ${branding.secondary_color}`);
   console.log(`  ⚡ Accent: ${branding.accent_color}`);
-  console.log(`  📐 Layout: ${settings.feed_config?.layout || "default"}`);
+  const feedConfig = settings.feed_config as { layout?: string } | undefined;
+  console.log(`  📐 Layout: ${feedConfig?.layout || "default"}`);
   return true;
 }
 
