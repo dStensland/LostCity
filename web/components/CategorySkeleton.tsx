@@ -2,20 +2,20 @@
 
 import { memo } from "react";
 
-// Rainbow palette for skeleton categories - matches actual category colors
+// Rainbow palette for skeleton categories - warm/neutral colors to work across portals
 const SKELETON_COLORS = [
   "#F472B6", // Music venues - pink
   "#F87171", // Theaters - red
   "#FBBF24", // Comedy/Breweries - amber
   "#C4B5FD", // Arts - violet
   "#A5B4FC", // Film - indigo
-  "#6EE7B7", // Community - teal
+  "#6EE7B7", // Community - emerald
   "#FB923C", // Food - orange
   "#C084FC", // Bars - purple
-  "#7DD3FC", // Sports - sky
-  "#5EEAD4", // Fitness - cyan
+  "#F9A8D4", // Sports - rose (was sky blue)
+  "#A78BFA", // Fitness - violet (was cyan)
   "#E879F9", // Nightlife - magenta
-  "#A78BFA", // Events - purple
+  "#FDBA74", // Events - peach (was purple)
 ];
 
 interface CategorySkeletonProps {

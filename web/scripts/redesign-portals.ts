@@ -26,8 +26,8 @@ const ATLANTA_BRANDING = {
   theme_mode: "dark",
   // Warm peach/coral as primary - reflects Georgia peach heritage
   primary_color: "#FF6B7A",
-  // Electric teal as secondary - modern, tech-forward ATL
-  secondary_color: "#00D4E8",
+  // Warm violet as secondary - complements peach, keeps warmth
+  secondary_color: "#A855F7",
   // Gold accent - prosperity, southern warmth
   accent_color: "#FFD93D",
   // Deep cosmic backgrounds
@@ -53,7 +53,7 @@ const ATLANTA_BRANDING = {
     intensity: "medium",
     colors: {
       primary: "#FF6B7A",
-      secondary: "#00D4E8",
+      secondary: "#A855F7",
     },
     animation_speed: "slow",
   },
@@ -72,13 +72,13 @@ const ATLANTA_BRANDING = {
     film: "#A855F7",
     comedy: "#FFD93D",
     theater: "#EC4899",
-    art: "#00D4E8",
+    art: "#F472B6",
     community: "#10B981",
     food_drink: "#F97316",
     sports: "#EF4444",
     fitness: "#22C55E",
     nightlife: "#8B5CF6",
-    family: "#06B6D4",
+    family: "#38BDF8",
   },
 };
 
