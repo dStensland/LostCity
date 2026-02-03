@@ -533,13 +533,13 @@ export async function GET(request: NextRequest, { params }: Props) {
       });
     }
 
-    // Super Bowl section (Feb 7-9)
-    if (currentMonth === 2 && currentDay >= 5 && currentDay <= 10) {
+    // Super Bowl section (show the full week leading up + game day)
+    if (currentMonth === 2 && currentDay >= 2 && currentDay <= 9) {
       holidaySections.push({
         id: "super-bowl-2026",
-        title: "Super Bowl Sunday",
+        title: "Super Bowl LX",
         slug: "super-bowl",
-        description: "Watch parties and game day events",
+        description: "Patriots vs Seahawks - Watch parties & game day events",
         section_type: "auto",
         block_type: "collapsible_events",
         layout: "grid",
@@ -560,6 +560,7 @@ export async function GET(request: NextRequest, { params }: Props) {
         show_before_time: null,
         style: {
           accent_color: "var(--neon-green)",
+          icon: "football",
         },
         portal_section_items: [],
       });
@@ -775,11 +776,13 @@ export async function GET(request: NextRequest, { params }: Props) {
       }
     }
 
-    // Convert event cards/carousel sections to collapsible for cleaner feed
+    // Only convert to collapsible if section has many events (8+)
+    // Sections with fewer events render as event_list for direct visibility
     const collapsibleBlockTypes = ["event_cards", "event_carousel"];
-    const finalBlockType = collapsibleBlockTypes.includes(section.block_type)
-      ? "collapsible_events"
-      : section.block_type;
+    let finalBlockType = section.block_type;
+    if (collapsibleBlockTypes.includes(section.block_type)) {
+      finalBlockType = events.length >= 8 ? "collapsible_events" : "event_list";
+    }
 
     return {
       id: section.id,
@@ -795,6 +798,12 @@ export async function GET(request: NextRequest, { params }: Props) {
       auto_filter: section.auto_filter,
       events,
     };
+  })
+  // Filter out event sections with fewer than 2 events (not worth a section header)
+  .filter(section => {
+    const nonEventTypes = ["category_grid", "announcement", "external_link", "countdown", "venue_list"];
+    if (nonEventTypes.includes(section.block_type)) return true;
+    return section.events.length >= 2;
   });
 
   // Step 7: Build holiday sections using the same pattern

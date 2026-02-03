@@ -232,8 +232,9 @@ const THEMED_SECTION_ICONS: Record<string, { icon: React.ReactNode; color: strin
     color: "var(--neon-green)",
     icon: (
       <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-        <ellipse cx="12" cy="12" rx="10" ry="6" />
-        <path d="M2 12c0 3.31 4.48 6 10 6s10-2.69 10-6M7 12c0-1.1.9-2 2-2h6c1.1 0 2 .9 2 2M12 6v12" stroke="var(--void)" strokeWidth="1.5" fill="none" />
+        <ellipse cx="12" cy="12" rx="10" ry="7" />
+        <path d="M6 12h12M12 5v14" stroke="var(--void)" strokeWidth="1.5" fill="none" />
+        <path d="M8.5 8.5l7 7M15.5 8.5l-7 7" stroke="var(--void)" strokeWidth="0.8" fill="none" />
       </svg>
     ),
   },
@@ -253,6 +254,123 @@ const THEMED_SECTION_ICONS: Record<string, { icon: React.ReactNode; color: strin
     ),
   },
 };
+
+// Export themed slugs for holiday grouping
+export const THEMED_SLUGS = Object.keys(THEMED_SECTION_ICONS);
+
+// Holiday dropdown - groups multiple holiday sections into a single expandable row
+export function HolidayDropdown({ sections, portalSlug }: { sections: FeedSectionData[]; portalSlug: string }) {
+  const [isOpen, setIsOpen] = useState(false);
+
+  if (sections.length === 0) return null;
+
+  const totalEvents = sections.reduce((sum, s) => sum + s.events.length, 0);
+
+  return (
+    <section className="mb-4">
+      {/* Toggle button */}
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full flex items-center gap-3 px-4 py-3 rounded-xl border border-[var(--twilight)] hover:border-[var(--coral)]/30 transition-all group"
+        style={{ backgroundColor: "var(--card-bg)" }}
+      >
+        {/* Icon stack - show first 2-3 holiday icons overlapping */}
+        <div className="flex -space-x-2 flex-shrink-0">
+          {sections.slice(0, 3).map((s) => {
+            const themed = THEMED_SECTION_ICONS[s.slug];
+            if (!themed) return null;
+            return (
+              <div
+                key={s.slug}
+                className="w-10 h-10 rounded-lg flex items-center justify-center border-2 border-[var(--dusk)]"
+                style={{ backgroundColor: `${themed.color}20` }}
+              >
+                <div className="w-7 h-7" style={{ color: themed.color }}>
+                  {themed.icon}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Title */}
+        <div className="flex-1 text-left min-w-0">
+          <h3 className="font-semibold text-[var(--cream)] group-hover:text-[var(--coral)] transition-colors">
+            Upcoming Holidays
+          </h3>
+          <p className="font-mono text-xs text-[var(--muted)]">
+            {sections.length} holiday{sections.length !== 1 ? "s" : ""} with {totalEvents} event{totalEvents !== 1 ? "s" : ""}
+          </p>
+        </div>
+
+        {/* Chevron */}
+        <svg
+          className={`w-5 h-5 text-[var(--muted)] group-hover:text-[var(--coral)] transition-all flex-shrink-0 ${isOpen ? "rotate-180" : ""}`}
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+
+      {/* Expanded holiday list */}
+      {isOpen && (
+        <div className="mt-2 space-y-2 pl-2">
+          {sections.map((section) => {
+            const themed = THEMED_SECTION_ICONS[section.slug];
+            const accentColor = themed?.color || "var(--coral)";
+            const tag = section.auto_filter?.tags?.[0];
+            const filterUrl = tag
+              ? `/${portalSlug}?tags=${tag}&view=find`
+              : getSeeAllUrl(section, portalSlug);
+
+            return (
+              <Link
+                key={section.id}
+                href={filterUrl}
+                className="flex items-center gap-3 px-3 py-2.5 rounded-lg border border-[var(--twilight)]/50 hover:border-[var(--coral)]/30 transition-all group hover:scale-[1.01]"
+                style={{
+                  backgroundColor: "var(--card-bg)",
+                  borderLeftWidth: "3px",
+                  borderLeftColor: accentColor,
+                }}
+              >
+                {themed?.icon && (
+                  <div
+                    className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
+                    style={{ backgroundColor: `${accentColor}20` }}
+                  >
+                    <div className="w-7 h-7" style={{ color: accentColor }}>
+                      {themed.icon}
+                    </div>
+                  </div>
+                )}
+                <div className="flex-1 text-left min-w-0">
+                  <h4 className="font-medium text-sm text-[var(--cream)] group-hover:text-[var(--coral)] transition-colors truncate">
+                    {section.title}
+                  </h4>
+                  {section.description && (
+                    <p className="font-mono text-xs text-[var(--muted)] truncate">{section.description}</p>
+                  )}
+                </div>
+                <span
+                  className="font-mono text-xs px-2 py-0.5 rounded-full flex-shrink-0"
+                  style={{ backgroundColor: `${accentColor}20`, color: accentColor }}
+                >
+                  {section.events.length}
+                </span>
+                <svg className="w-4 h-4 text-[var(--muted)] group-hover:text-[var(--coral)] transition-colors flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </Link>
+            );
+          })}
+        </div>
+      )}
+    </section>
+  );
+}
 
 // Determine priority based on section type/slug
 function getSectionPriority(section: FeedSectionData): SectionPriority {
@@ -372,7 +490,7 @@ function HeroBanner({ section, portalSlug, hideImages }: { section: FeedSectionD
   const categoryColor = event.category ? getCategoryColor(event.category) : "var(--coral)";
 
   return (
-    <section className="mb-10">
+    <section className="mb-6">
       <Link
         href={`/${portalSlug}?event=${event.id}`}
         className="block relative rounded-2xl overflow-hidden group hero-featured coral-glow-hover"
@@ -529,7 +647,7 @@ function EventCards({ section, portalSlug }: { section: FeedSectionData; portalS
   }
 
   return (
-    <section className="mb-10">
+    <section className="mb-6">
       <SectionHeader section={section} portalSlug={portalSlug} />
 
       {/* Cards container with carousel enhancements */}
@@ -641,7 +759,7 @@ function CollapsibleEvents({ section, portalSlug }: { section: FeedSectionData; 
     : getSeeAllUrl(section, portalSlug);
 
   return (
-    <section className="mb-6">
+    <section className="mb-3">
       {/* Clickable card that navigates to filtered events */}
       <Link
         href={filterUrl}
@@ -655,10 +773,10 @@ function CollapsibleEvents({ section, portalSlug }: { section: FeedSectionData; 
         {/* Icon - themed icon or category icon (larger size) */}
         {themedConfig?.icon ? (
           <div
-            className="w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0"
+            className="w-14 h-14 rounded-xl flex items-center justify-center flex-shrink-0"
             style={{ backgroundColor: `${accentColor}20` }}
           >
-            <div className="w-7 h-7" style={{ color: accentColor }}>
+            <div className="w-10 h-10" style={{ color: accentColor }}>
               {themedConfig.icon}
             </div>
           </div>
@@ -796,7 +914,7 @@ function EventList({ section, portalSlug }: { section: FeedSectionData; portalSl
   const showDateHeaders = sortedDates.length > 1;
 
   return (
-    <section className="mb-10">
+    <section className="mb-6">
       <SectionHeader section={section} portalSlug={portalSlug} />
 
       {/* List grouped by date */}
@@ -1086,7 +1204,7 @@ function VenueList({ section, portalSlug }: { section: FeedSectionData; portalSl
   const categoryColor = CATEGORY_CONFIG.film?.color || null;
 
   return (
-    <section className="mb-10">
+    <section className="mb-6">
       {/* Header */}
       {section.title && (
         <div className="mb-4">
@@ -1221,7 +1339,7 @@ function Announcement({ section }: { section: FeedSectionData }) {
   const accentColor = style?.accent_color || "var(--coral)";
 
   return (
-    <section className="mb-10">
+    <section className="mb-6">
       <div
         className="p-5 rounded-xl border-l-4 border"
         style={{
@@ -1301,7 +1419,7 @@ function ExternalLink({ section }: { section: FeedSectionData }) {
   }
 
   return (
-    <section className="mb-10">
+    <section className="mb-6">
       <a
         href={content.url}
         target="_blank"
