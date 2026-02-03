@@ -338,21 +338,22 @@ export async function GET(request: NextRequest) {
       const distance = calculateDistance(centerLat, centerLng, spot.lat, spot.lng);
       if (distance > radiusMiles) continue;
 
-      // Check if open - be permissive, only skip if we're SURE it's closed
-      const hasValidHours = spot.hours && Object.keys(spot.hours).length > 0;
-      const { isOpen, closesAt } = isSpotOpen(spot.hours, spot.is_24_hours || false);
+      // Check if open (permissive - show spots even without hours data)
+      let isOpen = true;
+      let closesAt: string | undefined;
 
-      // Only skip if we have valid hours data AND it says closed
-      // Otherwise assume open (missing/incomplete hours = show it)
-      if (!isOpen && hasValidHours) {
-        // Double-check: only skip if today specifically says closed
-        const dayNames = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
-        const today = dayNames[new Date().getDay()];
-        const todayHours = spot.hours?.[today];
-        // Only skip if we explicitly have hours for today and they say we're outside them
-        if (todayHours) continue;
-        // If no hours for today, show the spot anyway
+      try {
+        const result = isSpotOpen(spot.hours, spot.is_24_hours || false);
+        isOpen = result.isOpen;
+        closesAt = result.closesAt;
+      } catch {
+        // If hours parsing fails, assume open
+        isOpen = true;
       }
+
+      // Don't filter by open status for now - show everything
+      // Users want to see what's around them regardless of hours
+      void isOpen; // Silence unused variable warning
 
       // Determine closing time display
       let closingTimeDisplay: string | null = null;
