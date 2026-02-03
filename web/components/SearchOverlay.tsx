@@ -451,7 +451,7 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
                 autoCorrect="off"
                 autoCapitalize="off"
                 spellCheck={false}
-                className="flex-1 bg-transparent text-[var(--cream)] placeholder:text-[var(--soft)] outline-none text-lg font-display transition-all duration-300"
+                className="flex-1 bg-transparent text-[var(--cream)] placeholder:text-[var(--soft)] outline-none text-lg font-display transition-all duration-300 pl-1 py-2"
                 role="combobox"
                 aria-expanded={hasResults}
                 aria-controls="search-results"
