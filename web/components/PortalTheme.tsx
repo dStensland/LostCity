@@ -58,6 +58,7 @@ export function PortalTheme({ portal }: PortalThemeProps) {
   if (primaryColor) {
     cssVars.push(`--portal-primary: ${primaryColor};`);
     cssVars.push(`--neon-magenta: ${primaryColor};`);
+    cssVars.push(`--neon-magenta-hsl: ${hexToHsl(primaryColor)};`);
     cssVars.push(`--portal-primary-rgb: ${hexToRgb(primaryColor)};`);
     cssVars.push(`--coral: ${primaryColor};`);
   }
@@ -82,6 +83,7 @@ export function PortalTheme({ portal }: PortalThemeProps) {
   if (accentColor) {
     cssVars.push(`--portal-accent: ${accentColor};`);
     cssVars.push(`--neon-cyan: ${accentColor};`);
+    cssVars.push(`--neon-cyan-hsl: ${hexToHsl(accentColor)};`);
   }
 
   if (backgroundColor) {
@@ -371,6 +373,37 @@ function hexToRgb(hex: string): string {
   const b = parseInt(result[3], 16);
 
   return `${r}, ${g}, ${b}`;
+}
+
+/**
+ * Convert hex color to HSL values for use in hsl() functions
+ * Returns format: "H S% L%" (e.g., "320 80% 62%")
+ */
+function hexToHsl(hex: string): string {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  if (!result) return "320 80% 62%"; // Default magenta
+
+  let r = parseInt(result[1], 16) / 255;
+  let g = parseInt(result[2], 16) / 255;
+  let b = parseInt(result[3], 16) / 255;
+
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  let h = 0;
+  let s = 0;
+  const l = (max + min) / 2;
+
+  if (max !== min) {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    switch (max) {
+      case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
+      case g: h = ((b - r) / d + 2) / 6; break;
+      case b: h = ((r - g) / d + 4) / 6; break;
+    }
+  }
+
+  return `${Math.round(h * 360)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%`;
 }
 
 /**
