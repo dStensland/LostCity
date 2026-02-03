@@ -12,8 +12,12 @@ export async function GET() {
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://lostcity.ai";
   const feedUrl = `${baseUrl}/api/user/calendar/feed?uid=${user.id}&token=${token}`;
 
+  // Google Calendar requires webcal:// protocol for subscriptions
+  const webcalUrl = feedUrl.replace(/^https?:\/\//, "webcal://");
+
   // Generate URLs for different calendar services
-  const googleCalendarUrl = `https://calendar.google.com/calendar/r?cid=${encodeURIComponent(feedUrl)}`;
+  // Google Calendar uses webcal:// protocol
+  const googleCalendarUrl = `https://calendar.google.com/calendar/r?cid=${encodeURIComponent(webcalUrl)}`;
   const outlookUrl = `https://outlook.live.com/calendar/0/addfromweb?url=${encodeURIComponent(feedUrl)}&name=Lost%20City%20Events`;
 
   return NextResponse.json({
