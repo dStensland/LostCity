@@ -152,7 +152,7 @@ function getTypeLabel(type: SearchResult["type"]): string {
 function getTypeColor(type: SearchResult["type"]): string {
   const colors: Record<SearchResult["type"], string> = {
     event: "text-[var(--neon-magenta)]",
-    venue: "text-[var(--neon-cyan)]",
+    venue: "text-[var(--coral)]",
     organizer: "text-[var(--coral)]",
     series: "text-[var(--gold)]",
     list: "text-[var(--neon-green)]",
@@ -165,7 +165,7 @@ function getTypeColor(type: SearchResult["type"]): string {
 function getTypeAccent(type: SearchResult["type"]): string {
   const colors: Record<SearchResult["type"], string> = {
     event: "var(--neon-magenta)",
-    venue: "var(--neon-cyan)",
+    venue: "var(--coral)",
     organizer: "var(--coral)",
     series: "var(--gold)",
     list: "var(--neon-green)",

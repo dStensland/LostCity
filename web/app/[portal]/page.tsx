@@ -2,12 +2,12 @@ import { getPortalBySlug } from "@/lib/portal";
 import { PortalHeader } from "@/components/headers";
 import { AmbientBackground } from "@/components/ambient";
 import SearchBarWrapper from "@/components/SearchBarWrapper";
-import FeedShell from "@/components/feed/FeedShell";
-import CuratedContent from "@/components/feed/CuratedContent";
-import { FamilyFeed } from "@/components/family";
 import FindView from "@/components/find/FindView";
 import CommunityView from "@/components/community/CommunityView";
 import DetailViewRouter from "@/components/views/DetailViewRouter";
+import { DefaultTemplate } from "./_templates/default";
+import { GalleryTemplate } from "./_templates/gallery";
+import { TimelineTemplate } from "./_templates/timeline";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 
@@ -156,20 +156,17 @@ export default async function PortalPage({ params, searchParams }: Props) {
               return (
                 <>
                   {viewMode === "feed" && (
-                    portal.slug === "atlanta-families" ? (
-                      <FamilyFeed
-                        portalId={portal.id}
-                        portalSlug={portal.slug}
-                        portalExclusive={isExclusive}
-                      />
-                    ) : (
-                      <FeedShell
-                        portalId={portal.id}
-                        portalSlug={portal.slug}
-                        activeTab={feedTab}
-                        curatedContent={<CuratedContent portalSlug={portal.slug} />}
-                      />
-                    )
+                    <>
+                      {/* Template system - select based on portal.page_template */}
+                      {portal.page_template === "gallery" ? (
+                        <GalleryTemplate portal={portal} />
+                      ) : portal.page_template === "timeline" ? (
+                        <TimelineTemplate portal={portal} />
+                      ) : (
+                        /* Default template for backwards compatibility */
+                        <DefaultTemplate portal={portal} feedTab={feedTab} />
+                      )}
+                    </>
                   )}
 
                   {viewMode === "find" && (

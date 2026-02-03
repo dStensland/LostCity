@@ -86,11 +86,11 @@ export default function DayCell({
       className={`
         relative min-h-[90px] p-1.5 rounded-lg border transition-all duration-200 text-left
         ${isCurrentMonth
-          ? "hover:border-[var(--neon-cyan)]/50 hover:scale-[1.01]"
+          ? "hover:border-[var(--coral)]/50 hover:scale-[1.01]"
           : "opacity-30 cursor-default"
         }
         ${isSelected
-          ? "border-[var(--neon-cyan)] bg-[var(--cosmic-blue)] shadow-[0_0_15px_rgba(0,212,232,0.2)]"
+          ? "border-[var(--coral)] bg-[var(--cosmic-blue)] shadow-[0_0_15px_rgba(255,107,107,0.2)]"
           : "border-[var(--nebula)]/30 bg-[var(--midnight-blue)] hover:bg-[var(--twilight-purple)]/30"
         }
         ${isToday && !isSelected
@@ -106,7 +106,7 @@ export default function DayCell({
           className={`
             font-mono text-sm font-semibold
             ${isToday ? "text-[var(--neon-magenta)]" : ""}
-            ${isSelected ? "text-[var(--neon-cyan)]" : ""}
+            ${isSelected ? "text-[var(--coral)]" : ""}
             ${!isToday && !isSelected ? (isPast ? "text-[var(--muted)]" : "text-[var(--cream)]") : ""}
           `}
         >

@@ -83,7 +83,7 @@ export default function SwipeableEventCard({
           </svg>
         ),
         label: "Share",
-        color: "var(--neon-cyan)",
+        color: "var(--coral)",
         onAction: handleShare,
       },
       rightAction: {
@@ -117,7 +117,7 @@ export default function SwipeableEventCard({
       <div
         className="absolute inset-y-0 right-0 flex items-center justify-center px-6 transition-opacity"
         style={{
-          backgroundColor: "var(--neon-cyan)",
+          backgroundColor: "var(--coral)",
           opacity: isSwipingLeft ? leftProgress : 0,
           width: Math.abs(swipeOffset) + 20,
         }}

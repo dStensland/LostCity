@@ -56,11 +56,18 @@ export function PortalTheme({ portal }: PortalThemeProps) {
   }
 
   if (primaryColor) {
+    // Layer 1: Primitives
+    cssVars.push(`--primitive-primary-500: ${primaryColor};`);
+    cssVars.push(`--primitive-primary-rgb: ${hexToRgb(primaryColor)};`);
+
+    // Backwards compatibility
     cssVars.push(`--portal-primary: ${primaryColor};`);
     cssVars.push(`--neon-magenta: ${primaryColor};`);
     cssVars.push(`--neon-magenta-hsl: ${hexToHsl(primaryColor)};`);
     cssVars.push(`--portal-primary-rgb: ${hexToRgb(primaryColor)};`);
     cssVars.push(`--coral: ${primaryColor};`);
+    cssVars.push(`--coral-hsl: ${hexToHsl(primaryColor)};`);
+    cssVars.push(`--rose: ${primaryColor};`);
   }
 
   if (primaryLight) {
@@ -69,7 +76,24 @@ export function PortalTheme({ portal }: PortalThemeProps) {
   }
 
   if (secondaryColor) {
+    // Layer 1: Primitives
+    cssVars.push(`--primitive-secondary-500: ${secondaryColor};`);
+    cssVars.push(`--primitive-secondary-rgb: ${hexToRgb(secondaryColor)};`);
+
+    // Backwards compatibility
     cssVars.push(`--portal-secondary: ${secondaryColor};`);
+    // Secondary color maps to --neon-cyan (the highlight/focus color)
+    cssVars.push(`--neon-cyan: ${secondaryColor};`);
+    cssVars.push(`--neon-cyan-hsl: ${hexToHsl(secondaryColor)};`);
+    cssVars.push(`--focus-ring: ${secondaryColor};`);
+    // Calendar/deep purple palette - derive from secondary color
+    const secondaryDark = adjustBrightness(secondaryColor, -70);
+    const secondaryMid = adjustBrightness(secondaryColor, -50);
+    cssVars.push(`--cosmic-blue: ${secondaryDark};`);
+    cssVars.push(`--deep-violet: ${adjustBrightness(secondaryDark, -10)};`);
+    cssVars.push(`--midnight-blue: ${adjustBrightness(secondaryDark, 5)};`);
+    cssVars.push(`--twilight-purple: ${secondaryMid};`);
+    cssVars.push(`--nebula: ${adjustBrightness(secondaryMid, 15)};`);
     if (isLight) {
       // For light themes, twilight should be a light border color
       cssVars.push(`--twilight: ${secondaryColor};`);
@@ -81,9 +105,15 @@ export function PortalTheme({ portal }: PortalThemeProps) {
   }
 
   if (accentColor) {
+    // Layer 1: Primitives
+    cssVars.push(`--primitive-accent-500: ${accentColor};`);
+    cssVars.push(`--primitive-accent-rgb: ${hexToRgb(accentColor)};`);
+
+    // Backwards compatibility
     cssVars.push(`--portal-accent: ${accentColor};`);
-    cssVars.push(`--neon-cyan: ${accentColor};`);
-    cssVars.push(`--neon-cyan-hsl: ${hexToHsl(accentColor)};`);
+    cssVars.push(`--neon-amber: ${accentColor};`);
+    cssVars.push(`--neon-amber-hsl: ${hexToHsl(accentColor)};`);
+    cssVars.push(`--gold: ${accentColor};`);
   }
 
   if (backgroundColor) {
@@ -383,9 +413,9 @@ function hexToHsl(hex: string): string {
   const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
   if (!result) return "320 80% 62%"; // Default magenta
 
-  let r = parseInt(result[1], 16) / 255;
-  let g = parseInt(result[2], 16) / 255;
-  let b = parseInt(result[3], 16) / 255;
+  const r = parseInt(result[1], 16) / 255;
+  const g = parseInt(result[2], 16) / 255;
+  const b = parseInt(result[3], 16) / 255;
 
   const max = Math.max(r, g, b);
   const min = Math.min(r, g, b);

@@ -590,7 +590,7 @@ export default function VenueDetailView({ slug, portalSlug, onClose }: VenueDeta
               {spot.vibes.map((vibe) => (
                 <span
                   key={vibe}
-                  className="px-3 py-1.5 bg-[var(--neon-cyan)]/10 text-[var(--neon-cyan)] rounded-full border border-[var(--neon-cyan)]/20 text-sm font-mono"
+                  className="px-3 py-1.5 bg-[var(--coral)]/10 text-[var(--coral)] rounded-full border border-[var(--coral)]/20 text-sm font-mono"
                 >
                   {vibe.replace(/-/g, " ")}
                 </span>
@@ -732,7 +732,7 @@ export default function VenueDetailView({ slug, portalSlug, onClose }: VenueDeta
                                     </span>
                                   )}
                                   {dest.vibes && dest.vibes.length > 0 && (
-                                    <span className="text-[0.65rem] text-[var(--neon-cyan)]/70">
+                                    <span className="text-[0.65rem] text-[var(--soft)]">
                                       {dest.vibes.slice(0, 2).map(v => v.replace(/-/g, " ")).join(" · ")}
                                     </span>
                                   )}

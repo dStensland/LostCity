@@ -135,7 +135,7 @@ export default function AgendaView({
         </p>
         <Link
           href={`/${portalSlug}`}
-          className="inline-block mt-4 px-4 py-2 bg-[var(--neon-cyan)] text-[var(--void)] font-mono text-xs font-medium rounded-lg hover:bg-[var(--neon-cyan)]/80 transition-colors"
+          className="inline-block mt-4 px-4 py-2 bg-[var(--coral)] text-[var(--void)] font-mono text-xs font-medium rounded-lg hover:bg-[var(--coral)]/80 transition-colors"
         >
           Explore Events
         </Link>
@@ -240,7 +240,7 @@ export default function AgendaView({
                     <div className="flex-1 min-w-0">
                       {/* Time and category */}
                       <div className="flex items-center gap-2 mb-1">
-                        <span className="font-mono text-xs text-[var(--neon-cyan)]">
+                        <span className="font-mono text-xs text-[var(--coral)]">
                           {time}
                           {period && <span className="text-[0.6rem] ml-0.5 opacity-60">{period}</span>}
                         </span>
@@ -255,7 +255,7 @@ export default function AgendaView({
                       </div>
 
                       {/* Title */}
-                      <h3 className="text-[var(--cream)] font-medium group-hover:text-[var(--neon-cyan)] transition-colors line-clamp-2">
+                      <h3 className="text-[var(--cream)] font-medium group-hover:text-[var(--coral)] transition-colors line-clamp-2">
                         {event.title}
                       </h3>
 
@@ -323,7 +323,7 @@ export default function AgendaView({
                     {/* Arrow */}
                     <div className="flex-shrink-0 self-center opacity-0 group-hover:opacity-100 transition-opacity">
                       <svg
-                        className="w-5 h-5 text-[var(--neon-cyan)]"
+                        className="w-5 h-5 text-[var(--coral)]"
                         fill="none"
                         stroke="currentColor"
                         viewBox="0 0 24 24"

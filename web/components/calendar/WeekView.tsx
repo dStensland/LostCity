@@ -140,7 +140,7 @@ export default function WeekView({
           </h2>
           <button
             onClick={goToToday}
-            className="px-3 py-1 rounded-full font-mono text-xs font-medium bg-[var(--neon-cyan)]/20 text-[var(--neon-cyan)] hover:bg-[var(--neon-cyan)]/30 transition-colors"
+            className="px-3 py-1 rounded-full font-mono text-xs font-medium bg-[var(--coral)]/20 text-[var(--coral)] hover:bg-[var(--coral)]/30 transition-colors"
           >
             Today
           </button>
@@ -188,7 +188,7 @@ export default function WeekView({
               className={`
                 font-mono text-lg font-bold mt-0.5
                 ${day.isToday ? "text-[var(--neon-magenta)]" : ""}
-                ${day.isSelected && !day.isToday ? "text-[var(--neon-cyan)]" : ""}
+                ${day.isSelected && !day.isToday ? "text-[var(--coral)]" : ""}
                 ${!day.isToday && !day.isSelected ? (day.isPast ? "text-[var(--muted)]" : "text-[var(--cream)]") : ""}
               `}
             >

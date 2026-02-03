@@ -47,6 +47,7 @@
   --neon-amber-hsl: 38 91% 55%;
   --neon-green-hsl: 160 100% 43%;
   --neon-red-hsl: 0 100% 67%;
+  --coral-hsl: 355 100% 71%;
 
   /* Category accents - bright on dark */
   --cat-music: #F9A8D4;
@@ -100,6 +101,82 @@
 
   /* Focus ring */
   --focus-ring: var(--coral);
+
+  /* ============================================
+     THREE-LAYER DESIGN TOKEN SYSTEM
+     ============================================ */
+
+  /* LAYER 1: PRIMITIVES (generated from portal config) */
+  /* These are set by PortalTheme.tsx based on portal.branding */
+  --primitive-primary-500: var(--coral);
+  --primitive-primary-rgb: 255, 107, 122;
+  --primitive-secondary-500: var(--neon-cyan);
+  --primitive-secondary-rgb: 0, 212, 232;
+  --primitive-accent-500: var(--gold);
+  --primitive-accent-rgb: 255, 217, 61;
+
+  /* LAYER 2: SEMANTIC TOKENS (intent-based) */
+  /* Brand */
+  --brand-primary: var(--primitive-primary-500);
+  --brand-secondary: var(--primitive-secondary-500);
+  --brand-accent: var(--primitive-accent-500);
+
+  /* Actions */
+  --action-primary: var(--brand-primary);
+  --action-primary-hover: var(--coral-light);
+  --action-secondary: var(--brand-secondary);
+  --action-secondary-hover: hsl(var(--neon-cyan-hsl) / 0.8);
+
+  /* States */
+  --state-selected: var(--brand-secondary);
+  --state-selected-bg: hsl(var(--neon-cyan-hsl) / 0.1);
+  --focus-ring-color: var(--brand-secondary);
+
+  /* Surfaces */
+  --surface-base: var(--void);
+  --surface-raised: var(--night);
+  --surface-elevated: var(--dusk);
+
+  /* Text */
+  --text-primary: var(--cream);
+  --text-secondary: var(--soft);
+  --text-muted: var(--muted);
+  --text-inverse: var(--void);
+  --text-link: var(--brand-secondary);
+  --text-link-hover: var(--action-secondary-hover);
+
+  /* LAYER 3: COMPONENT TOKENS */
+  /* Buttons */
+  --btn-primary-bg: var(--action-primary);
+  --btn-primary-text: var(--void);
+  --btn-primary-hover: var(--action-primary-hover);
+  --btn-secondary-bg: transparent;
+  --btn-secondary-border: var(--action-secondary);
+  --btn-secondary-text: var(--action-secondary);
+
+  /* Navigation */
+  --nav-tab-text: var(--text-secondary);
+  --nav-tab-active: var(--brand-primary);
+  --nav-indicator: var(--brand-primary);
+
+  /* Cards */
+  --card-bg: var(--surface-raised);
+  --card-border: var(--twilight);
+  --card-border-hover: var(--brand-secondary);
+
+  /* Badges */
+  --badge-bg: var(--surface-elevated);
+  --badge-text: var(--text-secondary);
+  --badge-accent-bg: var(--brand-accent);
+  --badge-accent-text: var(--void);
+
+  /* ============================================
+     BACKWARDS COMPATIBILITY ALIASES
+     ============================================ */
+  /* Existing components can continue using these */
+  /* --coral → already maps to --brand-primary */
+  /* --neon-cyan → already maps to --brand-secondary */
+  /* --gold → already maps to --brand-accent */
 }
 
 /* Light theme */
@@ -192,6 +269,15 @@
   --series-festival: #C026D3;
   --series-seasonal: #059669;
   --series-default: #57534E;
+
+  /* Light mode semantic tokens */
+  --action-primary-hover: var(--coral-light);
+  --action-secondary-hover: hsl(var(--neon-cyan-hsl) / 0.7);
+  --state-selected-bg: hsl(var(--neon-cyan-hsl) / 0.15);
+  --text-inverse: var(--cream);
+  --surface-base: var(--void);
+  --surface-raised: var(--night);
+  --surface-elevated: var(--dusk);
 }
 
 /* ============================================

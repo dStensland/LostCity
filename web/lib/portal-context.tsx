@@ -113,6 +113,25 @@ export interface PortalComponentStyle {
 }
 
 // ============================================================================
+// Feed Layout Configuration Type
+// ============================================================================
+
+export interface PortalFeedConfig {
+  /** Feed layout type */
+  layout: "vertical" | "horizontal" | "grid" | "masonry" | "timeline";
+  /** Card variant to use */
+  card_variant: "compact" | "standard" | "hero" | "poster" | "minimal";
+  /** Feed sections to display (in order) */
+  sections: Array<"featured" | "for_you" | "trending" | "by_category" | "friends_activity">;
+  /** Hero section style at the top of the feed */
+  hero_style: "carousel" | "single" | "none";
+  /** Show filter UI */
+  show_filters: boolean;
+  /** Group events by this field */
+  group_by: "none" | "date" | "category" | "neighborhood";
+}
+
+// ============================================================================
 // Portal Branding Type (Extended)
 // ============================================================================
 
@@ -185,6 +204,13 @@ export type Portal = {
   custom_domain?: string | null;
   /** Parent city portal ID for B2B portals */
   parent_portal_id?: string | null;
+  /** Page template override */
+  page_template?: "default" | "gallery" | "timeline" | "custom";
+  /** Custom component overrides (paths to components) */
+  custom_components?: {
+    feed?: string;
+    header?: string;
+  };
   filters: {
     city?: string;
     geo_center?: [number, number];
@@ -212,6 +238,8 @@ export type Portal = {
       items_per_section?: number;
       default_layout?: string;
     };
+    /** Feed layout configuration */
+    feed_config?: Partial<PortalFeedConfig>;
     meta_description?: string;
     show_map?: boolean;
     default_view?: string;

@@ -187,7 +187,7 @@ export default function HoverPreviewCard({
         {/* Time */}
         <div className="flex items-center gap-2 text-sm">
           <svg
-            className="w-4 h-4 text-[var(--neon-cyan)]"
+            className="w-4 h-4 text-[var(--coral)]"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -292,7 +292,7 @@ export default function HoverPreviewCard({
         <Link
           href={`/${portalSlug}?event=${event.id}`}
           scroll={false}
-          className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[var(--neon-cyan)]/20 text-[var(--neon-cyan)] font-mono text-xs font-medium hover:bg-[var(--neon-cyan)]/30 transition-colors"
+          className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[var(--coral)]/20 text-[var(--coral)] font-mono text-xs font-medium hover:bg-[var(--coral)]/30 transition-colors"
         >
           Details
           <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">

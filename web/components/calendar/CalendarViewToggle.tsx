@@ -25,14 +25,14 @@ export default function CalendarViewToggle({ currentView, onViewChange }: Calend
             className={`
               relative px-4 py-2 rounded-md font-mono text-xs font-medium transition-all duration-200
               ${isActive
-                ? "bg-[var(--cosmic-blue)] text-[var(--neon-cyan)] shadow-[0_0_10px_rgba(0,212,232,0.3)]"
+                ? "bg-[var(--cosmic-blue)] text-[var(--coral)] shadow-[0_0_10px_rgba(255,107,107,0.3)]"
                 : "text-[var(--muted)] hover:text-[var(--cream)] hover:bg-[var(--twilight-purple)]/50"
               }
             `}
           >
             {view.label}
             {isActive && (
-              <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-[var(--neon-cyan)]" />
+              <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-[var(--coral)]" />
             )}
           </button>
         );
