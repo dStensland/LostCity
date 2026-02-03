@@ -205,12 +205,14 @@ def insert_event(event_data: dict, series_hint: dict = None, genres: list = None
     if "producer_id" in event_data:
         event_data.pop("producer_id")
 
-    # Get venue vibes for tag inheritance
+    # Get venue info for tag inheritance
     venue_vibes = []
+    venue_type = None
     if event_data.get("venue_id"):
         venue = get_venue_by_id(event_data["venue_id"])
         if venue:
             venue_vibes = venue.get("vibes") or []
+            venue_type = venue.get("venue_type")
 
     # Auto-fetch movie poster for film events without images
     if event_data.get("category") == "film" and not event_data.get("image_url"):
@@ -235,7 +237,7 @@ def insert_event(event_data: dict, series_hint: dict = None, genres: list = None
             genres = music_info.genres
 
     # Infer and merge tags
-    event_data["tags"] = infer_tags(event_data, venue_vibes)
+    event_data["tags"] = infer_tags(event_data, venue_vibes, venue_type=venue_type)
 
     # Process series association if hint provided
     if series_hint:

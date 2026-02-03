@@ -895,7 +895,16 @@ def run_all_sources(parallel: bool = True, max_workers: int = MAX_WORKERS, adapt
     except Exception as e:
         logger.warning(f"Cleanup failed: {e}")
 
-    # 2. Record daily analytics snapshot
+    # 2. Backfill tags for any events missing venue-type-based tags
+    logger.info("Running tag backfill...")
+    try:
+        from backfill_tags import backfill_tags
+        tag_stats = backfill_tags(dry_run=False, batch_size=200)
+        logger.info(f"Tag backfill: {tag_stats.get('updated', 0)} events updated")
+    except Exception as e:
+        logger.warning(f"Tag backfill failed: {e}")
+
+    # 3. Record daily analytics snapshot
     logger.info("Recording analytics snapshot...")
     try:
         snapshot = record_daily_snapshot()
@@ -903,7 +912,7 @@ def run_all_sources(parallel: bool = True, max_workers: int = MAX_WORKERS, adapt
     except Exception as e:
         logger.warning(f"Analytics snapshot failed: {e}")
 
-    # 3. Generate HTML report
+    # 4. Generate HTML report
     logger.info("Generating post-crawl report...")
     try:
         report_path = save_html_report()

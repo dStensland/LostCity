@@ -50,11 +50,17 @@ def backfill_tags(dry_run: bool = False, batch_size: int = 100) -> dict:
                 if venue_id:
                     if venue_id not in venue_cache:
                         venue = get_venue_by_id(venue_id)
-                        venue_cache[venue_id] = venue.get("vibes", []) if venue else []
-                    venue_vibes = venue_cache[venue_id]
+                        venue_cache[venue_id] = {
+                            "vibes": venue.get("vibes", []) if venue else [],
+                            "venue_type": venue.get("venue_type") if venue else None,
+                        }
+                    venue_vibes = venue_cache[venue_id]["vibes"]
+                    venue_type = venue_cache[venue_id]["venue_type"]
+                else:
+                    venue_type = None
 
                 # Infer new tags
-                new_tags = infer_tags(event, venue_vibes, preserve_existing=True)
+                new_tags = infer_tags(event, venue_vibes, preserve_existing=True, venue_type=venue_type)
                 old_tags = event.get("tags") or []
 
                 # Check if tags changed

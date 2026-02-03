@@ -47,6 +47,12 @@ CONTENT_TAGS = {
     "play",            # Games/playful activities
     "hands-on",        # Interactive/participatory
     "volunteer",       # Volunteer opportunity
+    "community",       # Community gathering/meetup
+    "super-bowl",      # Super Bowl related
+    "valentines",      # Valentine's Day related
+    "black-history-month",  # Black History Month
+    "lunar-new-year",  # Lunar New Year
+    "mardi-gras",      # Mardi Gras
     "gwinnett",        # Gwinnett County location
     "fulton",          # Fulton County location
     "dekalb",          # DeKalb County location

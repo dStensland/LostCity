@@ -12,15 +12,17 @@ from tags import INHERITABLE_VIBES, VIBE_TO_TAG, ALL_TAGS
 def infer_tags(
     event: dict,
     venue_vibes: Optional[list[str]] = None,
-    preserve_existing: bool = True
+    preserve_existing: bool = True,
+    venue_type: Optional[str] = None,
 ) -> list[str]:
     """
-    Infer tags from event data and venue vibes.
+    Infer tags from event data, venue vibes, and venue type.
 
     Args:
         event: Event dict with title, description, is_free, price_min, etc.
         venue_vibes: List of vibes from the event's venue
         preserve_existing: If True, keep existing tags and add inferred ones
+        venue_type: The venue's type (bar, library, park, etc.)
 
     Returns:
         List of tags for the event
@@ -35,6 +37,7 @@ def infer_tags(
     title = (event.get("title") or "").lower()
     desc = (event.get("description") or "").lower()
     text = f"{title} {desc}"
+    category = (event.get("category") or "").lower()
 
     # --- Inherit relevant vibes from venue ---
     if venue_vibes:
@@ -42,6 +45,59 @@ def infer_tags(
             if vibe in INHERITABLE_VIBES:
                 tag = VIBE_TO_TAG.get(vibe, vibe)
                 tags.add(tag)
+
+    # --- Infer from venue type ---
+    if venue_type:
+        # 21+ venues
+        if venue_type in ("bar", "nightclub", "brewery", "distillery", "wine_bar",
+                          "cocktail_bar", "lounge"):
+            tags.add("21+")
+
+        # Outdoor venues
+        if venue_type in ("park", "amphitheater", "farmers_market", "plaza",
+                          "garden", "outdoor_venue", "trail"):
+            tags.add("outdoor")
+
+        # Family-friendly venues (unless it's a 21+ category event)
+        if venue_type in ("library", "museum", "park", "community_center",
+                          "bookstore", "recreation", "zoo", "aquarium"):
+            if category not in ("nightlife",):
+                tags.add("family-friendly")
+                tags.add("all-ages")
+
+        # Educational venues
+        if venue_type in ("museum", "library"):
+            tags.add("educational")
+
+        # Intimate venues
+        if venue_type in ("gallery", "bookstore", "wine_bar", "coffee_shop"):
+            tags.add("intimate")
+
+        # High-energy venues
+        if venue_type in ("stadium", "arena", "nightclub"):
+            tags.add("high-energy")
+
+        # Date-night venues
+        if venue_type in ("wine_bar", "cocktail_bar"):
+            tags.add("date-night")
+
+    # --- Infer from category ---
+    if category == "comedy":
+        tags.add("date-night")
+    if category == "theater":
+        tags.add("date-night")
+    if category == "film":
+        tags.add("date-night")
+    if category in ("sports", "fitness"):
+        tags.add("high-energy")
+    if category == "nightlife":
+        tags.add("21+")
+    if category == "family":
+        tags.add("family-friendly")
+    if category == "outdoors":
+        tags.add("outdoor")
+    if category == "learning":
+        tags.add("educational")
 
     # --- Infer from structured fields ---
 
@@ -171,6 +227,34 @@ def infer_tags(
     ]
     if any(term in text for term in chill_terms):
         tags.add("chill")
+
+    # Intimate indicators
+    intimate_terms = [
+        "acoustic", "unplugged", "intimate", "solo", "reading",
+        "poetry", "spoken word", "open mic", "songwriter",
+        "candlelight"
+    ]
+    if any(term in text for term in intimate_terms):
+        tags.add("intimate")
+
+    # Date night indicators
+    date_night_terms = [
+        "jazz", "wine", "tasting", "cocktail", "acoustic",
+        "candlelight", "couples", "date night", "romantic",
+        "duo", "quartet", "piano", "soul", "r&b", "bossa",
+        "blues", "prix fixe", "dinner", "supper club"
+    ]
+    if any(term in text for term in date_night_terms):
+        tags.add("date-night")
+
+    # Educational indicators
+    educational_terms = [
+        "workshop", "class", "lecture", "seminar", "talk",
+        "panel", "author", "book signing", "masterclass",
+        "tutorial", "exhibit"
+    ]
+    if any(term in text for term in educational_terms):
+        tags.add("educational")
 
     # Filter to only valid tags
     valid_tags = [t for t in tags if t in ALL_TAGS]
