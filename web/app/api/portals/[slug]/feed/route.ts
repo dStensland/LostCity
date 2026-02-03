@@ -478,7 +478,7 @@ export async function GET(request: NextRequest, { params }: Props) {
         block_type: "collapsible_events",
         layout: "grid",
         items_per_row: 2,
-        max_items: 6,
+        max_items: 30,
         auto_filter: {
           tags: ["valentines"],
           date_filter: "next_30_days",
@@ -511,7 +511,7 @@ export async function GET(request: NextRequest, { params }: Props) {
         block_type: "collapsible_events",
         layout: "grid",
         items_per_row: 2,
-        max_items: 6,
+        max_items: 30,
         auto_filter: {
           tags: ["lunar-new-year"],
           date_filter: "next_30_days",
@@ -544,7 +544,7 @@ export async function GET(request: NextRequest, { params }: Props) {
         block_type: "collapsible_events",
         layout: "grid",
         items_per_row: 2,
-        max_items: 6,
+        max_items: 30,
         auto_filter: {
           tags: ["super-bowl"],
           date_filter: "next_7_days",
@@ -576,7 +576,7 @@ export async function GET(request: NextRequest, { params }: Props) {
         block_type: "collapsible_events",
         layout: "grid",
         items_per_row: 2,
-        max_items: 6,
+        max_items: 30,
         auto_filter: {
           tags: ["black-history-month"],
           date_filter: "next_30_days",
