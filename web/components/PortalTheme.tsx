@@ -310,6 +310,31 @@ export function PortalTheme({ portal }: PortalThemeProps) {
     .filter(Boolean)
     .join("\n");
 
+  // Validate color contrast in development
+  useEffect(() => {
+    if (process.env.NODE_ENV === "development") {
+      const checks = [
+        { fg: buttonTextColor, bg: buttonColor, name: "Button text on button" },
+        { fg: textColor, bg: backgroundColor, name: "Text on background" },
+        { fg: textColor, bg: cardColor, name: "Text on card" },
+      ];
+
+      for (const check of checks) {
+        if (check.fg && check.bg) {
+          const ratio = getContrastRatio(check.fg, check.bg);
+          if (ratio < 4.5) {
+            console.warn(
+              `⚠️ WCAG Contrast Warning: ${check.name} has ratio ${ratio.toFixed(2)}:1 (needs 4.5:1 for AA).`,
+              `\n  Foreground: ${check.fg}`,
+              `\n  Background: ${check.bg}`,
+              `\n  Portal: ${portal.slug}`
+            );
+          }
+        }
+      }
+    }
+  }, [buttonTextColor, buttonColor, textColor, backgroundColor, cardColor, portal.slug]);
+
   // Set data attributes on body element for component style targeting
   useEffect(() => {
     const body = document.body;
@@ -453,4 +478,56 @@ function adjustBrightness(hex: string, percent: number): string {
   b = Math.min(255, Math.max(0, Math.round(b + (255 * percent) / 100)));
 
   return `#${r.toString(16).padStart(2, "0")}${g.toString(16).padStart(2, "0")}${b.toString(16).padStart(2, "0")}`;
+}
+
+/**
+ * Calculate relative luminance of a hex color per WCAG 2.1
+ * https://www.w3.org/TR/WCAG21/#dfn-relative-luminance
+ */
+function getRelativeLuminance(hex: string): number {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  if (!result) return 0;
+
+  const [r, g, b] = [
+    parseInt(result[1], 16) / 255,
+    parseInt(result[2], 16) / 255,
+    parseInt(result[3], 16) / 255,
+  ].map((c) => (c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4)));
+
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+/**
+ * Calculate WCAG contrast ratio between two colors
+ * Returns a value between 1 (no contrast) and 21 (maximum contrast)
+ * WCAG AA requires 4.5:1 for normal text, 3:1 for large text
+ * WCAG AAA requires 7:1 for normal text, 4.5:1 for large text
+ */
+export function getContrastRatio(color1: string, color2: string): number {
+  const l1 = getRelativeLuminance(color1);
+  const l2 = getRelativeLuminance(color2);
+  const lighter = Math.max(l1, l2);
+  const darker = Math.min(l1, l2);
+  return (lighter + 0.05) / (darker + 0.05);
+}
+
+/**
+ * Check if a color combination meets WCAG AA standards
+ * @param foreground - Text color
+ * @param background - Background color
+ * @param largeText - Whether the text is large (18pt+ or 14pt bold)
+ */
+export function meetsWcagAA(foreground: string, background: string, largeText = false): boolean {
+  const ratio = getContrastRatio(foreground, background);
+  return largeText ? ratio >= 3 : ratio >= 4.5;
+}
+
+/**
+ * Get a readable text color (black or white) for a given background
+ * Returns the color with better contrast
+ */
+export function getReadableTextColor(background: string): "#000000" | "#FFFFFF" {
+  const blackContrast = getContrastRatio("#000000", background);
+  const whiteContrast = getContrastRatio("#FFFFFF", background);
+  return blackContrast > whiteContrast ? "#000000" : "#FFFFFF";
 }

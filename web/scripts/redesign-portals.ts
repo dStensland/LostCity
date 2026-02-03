@@ -26,9 +26,9 @@ const ATLANTA_BRANDING = {
   theme_mode: "dark",
   // Warm peach/coral as primary - reflects Georgia peach heritage
   primary_color: "#FF6B7A",
-  // Warm gold as secondary - keeps entire palette warm, no cool tones
-  secondary_color: "#F5A623",
-  // Brighter gold accent - prosperity, southern warmth
+  // Very muted rose - subtle, doesn't compete with primary
+  secondary_color: "#B8908A",
+  // Gold accent for highlights only
   accent_color: "#FFD93D",
   // Deep cosmic backgrounds
   background_color: "#0A0A12",
@@ -50,10 +50,10 @@ const ATLANTA_BRANDING = {
   },
   ambient: {
     effect: "aurora",
-    intensity: "medium",
+    intensity: "subtle",
     colors: {
       primary: "#FF6B7A",
-      secondary: "#F5A623",
+      secondary: "#B8908A",
     },
     animation_speed: "slow",
   },
@@ -101,8 +101,8 @@ const NASHVILLE_BRANDING = {
   theme_mode: "dark",
   // Hot pink neon - like Tootsie's Orchid Lounge signs
   primary_color: "#FF1B8D",
-  // Electric blue - Broadway neon tubes
-  secondary_color: "#00E5FF",
+  // Muted slate blue - subtle, doesn't compete with primary
+  secondary_color: "#6B7A8C",
   // Whiskey amber - warm stage lights, bourbon
   accent_color: "#FF9500",
   // Deep midnight navy - night sky over Broadway
@@ -127,12 +127,12 @@ const NASHVILLE_BRANDING = {
   },
   ambient: {
     effect: "aurora",
-    intensity: "high",
+    intensity: "subtle",
     colors: {
       primary: "#FF1B8D",
-      secondary: "#00E5FF",
+      secondary: "#6B7A8C",
     },
-    animation_speed: "medium",
+    animation_speed: "slow",
   },
   component_style: {
     border_radius: "lg",
@@ -140,7 +140,7 @@ const NASHVILLE_BRANDING = {
     card_style: "glass",
     button_style: "pill",
     glow_enabled: true,
-    glow_intensity: "high",
+    glow_intensity: "medium",
     animations: "smooth",
     glass_enabled: true,
   },
@@ -149,7 +149,7 @@ const NASHVILLE_BRANDING = {
     film: "#A855F7",
     comedy: "#FF9500",
     theater: "#EC4899",
-    art: "#00E5FF",
+    art: "#6B7A8C",
     community: "#10B981",
     food_drink: "#FF9500",
     sports: "#EF4444",
