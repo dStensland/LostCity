@@ -427,9 +427,9 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
         <div className="max-w-2xl mx-auto">
           {/* Search Input - standardized design */}
           <div className="rounded-xl border border-[var(--twilight)] overflow-hidden shadow-2xl" style={{ backgroundColor: "var(--card-bg)" }}>
-            <div className="flex items-center px-5 py-4">
+            <div className="flex items-center pl-6 pr-5 py-4">
               <svg
-                className="w-5 h-5 text-[var(--soft)] mr-4"
+                className="w-5 h-5 text-[var(--soft)] mr-5"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
