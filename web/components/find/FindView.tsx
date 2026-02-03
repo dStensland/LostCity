@@ -6,6 +6,7 @@ import SimpleFilterBar from "@/components/SimpleFilterBar";
 import EventList from "@/components/EventList";
 import MapViewWrapper from "@/components/MapViewWrapper";
 import CalendarView from "@/components/CalendarView";
+import MobileCalendarView from "@/components/calendar/MobileCalendarView";
 import PortalSpotsView from "@/components/PortalSpotsView";
 import PortalCommunityView from "@/components/PortalCommunityView";
 import { QuickTagsRow, SubcategoryRow, ActiveFiltersRow } from "@/components/filters";
@@ -101,7 +102,7 @@ function FindViewInner({
         <Suspense fallback={<div className="h-10 bg-[var(--night)]" />}>
           <SimpleFilterBar variant={displayMode === "map" ? "compact" : "full"} />
           {/* Layered filter rows */}
-          <div className="sticky top-[156px] z-20 bg-[var(--night)] border-b border-[var(--twilight)]">
+          <div className="sticky top-[156px] z-10 bg-[var(--night)] border-b border-[var(--twilight)]">
             <div className="max-w-5xl mx-auto">
               {/* Quick Tags - always visible */}
               <QuickTagsRow />
@@ -128,11 +129,22 @@ function FindViewInner({
 
       {findType === "events" && displayMode === "calendar" && (
         <Suspense fallback={<div className="py-16 text-center text-[var(--muted)]">Loading calendar...</div>}>
-          <CalendarView
-            portalId={portalId}
-            portalSlug={portalSlug}
-            portalExclusive={portalExclusive}
-          />
+          {/* Mobile: Hybrid week strip + agenda view */}
+          <div className="lg:hidden">
+            <MobileCalendarView
+              portalId={portalId}
+              portalSlug={portalSlug}
+              portalExclusive={portalExclusive}
+            />
+          </div>
+          {/* Desktop: Full month grid with side panel */}
+          <div className="hidden lg:block">
+            <CalendarView
+              portalId={portalId}
+              portalSlug={portalSlug}
+              portalExclusive={portalExclusive}
+            />
+          </div>
         </Suspense>
       )}
 
