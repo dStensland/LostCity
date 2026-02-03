@@ -427,9 +427,9 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
         <div className="max-w-2xl mx-auto">
           {/* Search Input - standardized design */}
           <div className="rounded-xl border border-[var(--twilight)] overflow-hidden shadow-2xl" style={{ backgroundColor: "var(--card-bg)" }}>
-            <div className="flex items-center px-4 py-3">
+            <div className="flex items-center px-5 py-4">
               <svg
-                className="w-5 h-5 text-[var(--soft)] mr-3"
+                className="w-5 h-5 text-[var(--soft)] mr-4"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -460,7 +460,7 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
               {query && (
                 <button
                   onClick={() => setQuery("")}
-                  className="p-2.5 -m-1 hover:bg-[var(--twilight)] rounded-full transition-colors"
+                  className="p-2.5 hover:bg-[var(--twilight)] rounded-full transition-colors"
                   aria-label="Clear search"
                 >
                   <svg
@@ -478,6 +478,26 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
                   </svg>
                 </button>
               )}
+              {/* Close button */}
+              <button
+                onClick={onClose}
+                className="ml-2 p-2.5 hover:bg-[var(--twilight)] rounded-full transition-colors"
+                aria-label="Close search"
+              >
+                <svg
+                  className="w-5 h-5 text-[var(--muted)] hover:text-[var(--cream)]"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
             </div>
 
             {/* Type Filter Pills with scroll indicators */}
@@ -598,7 +618,7 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
                       <span key={suggestion}>
                         <button
                           onClick={() => handleDidYouMeanClick(suggestion)}
-                          className="text-[var(--neon-cyan)] hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--neon-cyan)] rounded"
+                          className="text-[var(--coral)] hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--coral)] rounded"
                         >
                           {suggestion}
                         </button>
@@ -714,7 +734,12 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
                 <div className="divide-y divide-[var(--twilight)]">
                   {/* Events Section */}
                   {groupedResults.event.length > 0 && (
-                    <SearchResultSection type="event" count={getFacetCount("event")}>
+                    <SearchResultSection
+                      type="event"
+                      count={getFacetCount("event")}
+                      shownCount={groupedResults.event.length}
+                      onSeeMore={() => handleTypeFilterClick("event")}
+                    >
                       {groupedResults.event.map((result, idx) => {
                         const resultIndex = getResultIndex("event", idx);
                         return (
@@ -739,7 +764,12 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
 
                   {/* Venues Section */}
                   {groupedResults.venue.length > 0 && (
-                    <SearchResultSection type="venue" count={getFacetCount("venue")}>
+                    <SearchResultSection
+                      type="venue"
+                      count={getFacetCount("venue")}
+                      shownCount={groupedResults.venue.length}
+                      onSeeMore={() => handleTypeFilterClick("venue")}
+                    >
                       {groupedResults.venue.map((result, idx) => {
                         const resultIndex = getResultIndex("venue", idx);
                         return (
@@ -749,7 +779,7 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
                             id={`result-${resultIndex}`}
                             role="option"
                             aria-selected={selectedResultIndex === resultIndex}
-                            className={selectedResultIndex === resultIndex ? "ring-2 ring-[var(--neon-cyan)] ring-inset rounded-lg" : ""}
+                            className={selectedResultIndex === resultIndex ? "ring-2 ring-[var(--coral)] ring-inset rounded-lg" : ""}
                           >
                             <SearchResultItem
                               result={result}
@@ -764,7 +794,12 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
 
                   {/* Organizers Section */}
                   {groupedResults.organizer.length > 0 && (
-                    <SearchResultSection type="organizer" count={getFacetCount("organizer")}>
+                    <SearchResultSection
+                      type="organizer"
+                      count={getFacetCount("organizer")}
+                      shownCount={groupedResults.organizer.length}
+                      onSeeMore={() => handleTypeFilterClick("organizer")}
+                    >
                       {groupedResults.organizer.map((result, idx) => {
                         const resultIndex = getResultIndex("organizer", idx);
                         return (
@@ -789,7 +824,12 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
 
                   {/* Series Section */}
                   {groupedResults.series.length > 0 && (
-                    <SearchResultSection type="series" count={getFacetCount("series")}>
+                    <SearchResultSection
+                      type="series"
+                      count={getFacetCount("series")}
+                      shownCount={groupedResults.series.length}
+                      onSeeMore={() => handleTypeFilterClick("series")}
+                    >
                       {groupedResults.series.map((result, idx) => {
                         const resultIndex = getResultIndex("series", idx);
                         return (
@@ -814,7 +854,12 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
 
                   {/* Lists Section */}
                   {groupedResults.list.length > 0 && (
-                    <SearchResultSection type="list" count={getFacetCount("list")}>
+                    <SearchResultSection
+                      type="list"
+                      count={getFacetCount("list")}
+                      shownCount={groupedResults.list.length}
+                      onSeeMore={() => handleTypeFilterClick("list")}
+                    >
                       {groupedResults.list.map((result, idx) => {
                         const resultIndex = getResultIndex("list", idx);
                         return (
@@ -916,7 +961,7 @@ function FilterPill({
       ? "bg-[var(--neon-magenta)]/20 text-[var(--neon-magenta)]"
       : "bg-[var(--twilight)] text-[var(--muted)] hover:text-[var(--cream)]",
     cyan: active
-      ? "bg-[var(--neon-cyan)]/20 text-[var(--neon-cyan)]"
+      ? "bg-[var(--coral)]/20 text-[var(--coral)]"
       : "bg-[var(--twilight)] text-[var(--muted)] hover:text-[var(--cream)]",
     coral: active
       ? "bg-[var(--coral)]/20 text-[var(--coral)]"

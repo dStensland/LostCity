@@ -183,9 +183,9 @@ function getTypeConfig(type: SearchResult["type"]): TypeConfig {
       };
     case "venue":
       return {
-        bgClass: "bg-[var(--neon-cyan)]/10",
-        iconClass: "text-[var(--neon-cyan)]",
-        hoverClass: "text-[var(--neon-cyan)]",
+        bgClass: "bg-[var(--coral)]/10",
+        iconClass: "text-[var(--coral)]",
+        hoverClass: "text-[var(--coral)]",
       };
     case "organizer":
       return {
@@ -373,10 +373,14 @@ function getPortalAwareHref(result: SearchResult, portalSlug?: string): string {
 export function SearchResultSection({
   type,
   count,
+  shownCount,
+  onSeeMore,
   children,
 }: {
   type: SearchResult["type"];
   count?: number;
+  shownCount?: number;
+  onSeeMore?: () => void;
   children: React.ReactNode;
 }) {
   const labels: Record<string, string> = {
@@ -390,6 +394,7 @@ export function SearchResultSection({
   };
 
   const config = getTypeConfig(type);
+  const hasMore = count !== undefined && shownCount !== undefined && count > shownCount;
 
   return (
     <div className="p-3">
@@ -399,6 +404,14 @@ export function SearchResultSection({
         {count !== undefined && <span className="text-[var(--muted)]/60">({count})</span>}
       </h3>
       <div className="space-y-0.5">{children}</div>
+      {hasMore && onSeeMore && (
+        <button
+          onClick={onSeeMore}
+          className={`w-full mt-2 px-3 py-2 text-xs font-mono rounded-lg transition-colors hover:bg-[var(--twilight)] ${config.iconClass}`}
+        >
+          See {count - shownCount} more {labels[type]?.toLowerCase() || type}
+        </button>
+      )}
     </div>
   );
 }
