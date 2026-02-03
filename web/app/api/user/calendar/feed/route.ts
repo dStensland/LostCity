@@ -158,27 +158,36 @@ export async function GET(request: Request) {
         .filter(Boolean)
         .join("\\n\\n");
 
-      return `BEGIN:VEVENT
-UID:lostcity-event-${event.id}@lostcity.ai
-DTSTAMP:${format(new Date(), "yyyyMMdd'T'HHmmss'Z'")}
-DTSTART;VALUE=${dtType}:${startDt}
-DTEND;VALUE=${dtType}:${endDt}
-SUMMARY:${escapeICalText(event.title)}
-${location ? `LOCATION:${escapeICalText(location)}` : ""}
-DESCRIPTION:${escapeICalText(description)}
-STATUS:CONFIRMED
-END:VEVENT`;
+      // Build VEVENT lines, filtering out empty optional fields
+      const veventLines = [
+        "BEGIN:VEVENT",
+        `UID:lostcity-event-${event.id}@lostcity.ai`,
+        `DTSTAMP:${format(new Date(), "yyyyMMdd'T'HHmmss'Z'")}`,
+        `DTSTART;VALUE=${dtType}:${startDt}`,
+        `DTEND;VALUE=${dtType}:${endDt}`,
+        `SUMMARY:${escapeICalText(event.title)}`,
+        location ? `LOCATION:${escapeICalText(location)}` : null,
+        `DESCRIPTION:${escapeICalText(description)}`,
+        "STATUS:CONFIRMED",
+        "END:VEVENT",
+      ].filter(Boolean);
+
+      return veventLines.join("\r\n");
     });
 
-    const icsContent = `BEGIN:VCALENDAR
-VERSION:2.0
-PRODID:-//Lost City//Event Calendar//EN
-CALSCALE:GREGORIAN
-METHOD:PUBLISH
-X-WR-CALNAME:My Lost City Events
-X-WR-CALDESC:Events you're attending from Lost City
-${events.join("\n")}
-END:VCALENDAR`;
+    // Build iCal content with proper CRLF line endings (RFC 5545)
+    const calendarLines = [
+      "BEGIN:VCALENDAR",
+      "VERSION:2.0",
+      "PRODID:-//Lost City//Event Calendar//EN",
+      "CALSCALE:GREGORIAN",
+      "METHOD:PUBLISH",
+      "X-WR-CALNAME:My Lost City Events",
+      "X-WR-CALDESC:Events you're attending from Lost City",
+      ...events,
+      "END:VCALENDAR",
+    ];
+    const icsContent = calendarLines.join("\r\n");
 
     return new Response(icsContent, {
       status: 200,
