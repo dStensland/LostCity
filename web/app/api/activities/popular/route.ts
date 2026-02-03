@@ -55,14 +55,12 @@ export async function GET(request: NextRequest) {
     // Query subcategory counts with same filters as search:
     // - Time filter (hide past events)
     // - Dedup filter (canonical_event_id is null)
-    // - Portal filter (portal_id is null for public events)
     const { data: subcategoryCounts, error: subError } = await client
       .from("events")
       .select("subcategory")
       .gte("start_date", today)
       .lte("start_date", endDate)
       .is("canonical_event_id", null)
-      .is("portal_id", null)
       .or(timeFilter)
       .not("subcategory", "is", null);
 
@@ -77,7 +75,6 @@ export async function GET(request: NextRequest) {
       .gte("start_date", today)
       .lte("start_date", endDate)
       .is("canonical_event_id", null)
-      .is("portal_id", null)
       .or(timeFilter)
       .not("category", "is", null);
 
