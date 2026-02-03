@@ -272,12 +272,14 @@ def crawl(source: dict) -> tuple[int, int, int]:
             if "error" in body_text.lower()[:1000] or len(body_text) < 500:
                 logger.warning("Page may not have loaded correctly")
 
-            # Try to find event elements using CivicPlus selectors
-            event_elements = page.query_selector_all(
-                ".calendar-list-item, .event-item, .calendar-event, "
-                "[class*='calendar-list'] li, [class*='event-list'] li, "
-                ".moduleContentNew .event, .calendarEvent"
-            )
+            # Find event list items (CivicPlus calendar uses li elements with h3 and .date)
+            all_li_elements = page.query_selector_all("li")
+            event_elements = []
+            for li in all_li_elements:
+                h3 = li.query_selector("h3")
+                date_elem = li.query_selector(".date")
+                if h3 and date_elem:
+                    event_elements.append(li)
 
             if not event_elements:
                 logger.info("No event elements found with standard selectors, trying fallback text parsing")
@@ -290,28 +292,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 logger.info(f"Found {len(event_elements)} event elements")
                 for element in event_elements:
                     try:
-                        # Try various selectors for title
-                        title_elem = element.query_selector(
-                            "h2, h3, h4, .title, .event-title, .eventTitle, "
-                            "[class*='title'], [class*='Title']"
-                        )
-
-                        # Try various selectors for date
-                        date_elem = element.query_selector(
-                            ".date, .event-date, .eventDate, [class*='date'], [class*='Date']"
-                        )
-
-                        # Try various selectors for time
-                        time_elem = element.query_selector(
-                            ".time, .event-time, .eventTime, [class*='time'], [class*='Time']"
-                        )
-
-                        # Try various selectors for description
-                        desc_elem = element.query_selector(
-                            ".description, .event-description, .eventDescription, "
-                            "p, [class*='description'], [class*='Description']"
-                        )
-
+                        # Get title from h3
+                        title_elem = element.query_selector("h3")
                         if not title_elem:
                             continue
 
@@ -319,20 +301,45 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         if not title or len(title) < 3:
                             continue
 
-                        # Get date
-                        date_text = date_elem.inner_text().strip() if date_elem else ""
-                        start_date = parse_date(date_text)
-
-                        if not start_date:
+                        # Guard against descriptions being captured as titles
+                        if len(title) > 150:
+                            logger.warning(f"Title too long ({len(title)} chars), skipping: {title[:80]}...")
                             continue
+
+                        # Get date - CivicPlus uses structured data which is more reliable
+                        structured_date = element.query_selector('[itemprop="startDate"]')
+                        if structured_date:
+                            # Use ISO format from structured data (e.g., "2026-02-11T18:30:00")
+                            iso_date = structured_date.inner_text().strip()
+                            try:
+                                dt = datetime.fromisoformat(iso_date)
+                                start_date = dt.strftime("%Y-%m-%d")
+                                start_time = dt.strftime("%H:%M")
+                            except ValueError as e:
+                                logger.warning(f"Failed to parse structured date '{iso_date}': {e}")
+                                continue
+                        else:
+                            # Fallback to text parsing with normalization
+                            date_elem = element.query_selector(".date")
+                            if not date_elem:
+                                continue
+
+                            date_text = date_elem.inner_text().strip()
+                            # Normalize non-breaking spaces and thin spaces to regular spaces
+                            date_text = date_text.replace('\xa0', ' ').replace('\u2009', ' ')
+                            start_date = parse_date(date_text)
+
+                            if not start_date:
+                                logger.warning(f"Could not parse date: {repr(date_text)}")
+                                continue
+
+                            # Parse time from date text
+                            start_time = parse_time(date_text)
 
                         events_found += 1
 
-                        # Get time if available
-                        time_text = time_elem.inner_text().strip() if time_elem else ""
-                        start_time = parse_time(time_text) if time_text else None
-
-                        # Get description
+                        # Get description from .icalDescription or .eventLocation
+                        desc_elem = element.query_selector(".icalDescription, .eventLocation")
                         description = desc_elem.inner_text().strip() if desc_elem else ""
                         if len(description) > 500:
                             description = description[:497] + "..."
@@ -478,6 +485,27 @@ def parse_text_content(
                                 description = check_line[:500]
 
             if title:
+                # Validate title length (reject descriptions captured as titles)
+                if len(title) > 150:
+                    logger.warning(f"Title too long ({len(title)} chars) in text parser, skipping: {title[:80]}...")
+                    i += 1
+                    continue
+
+                # Reject common description patterns that got captured as titles
+                description_patterns = [
+                    r"^Community is strongest",
+                    r"^Join us for",
+                    r"^Come join",
+                    r"^Please join",
+                    r"^We invite you",
+                    r"^Celebrate with us",
+                    r"^Bring your family",
+                ]
+                if any(re.match(pattern, title, re.IGNORECASE) for pattern in description_patterns):
+                    logger.warning(f"Title matches description pattern, skipping: {title[:80]}...")
+                    i += 1
+                    continue
+
                 # Check for duplicates
                 event_key = f"{title}|{start_date}"
                 if event_key in seen_events:

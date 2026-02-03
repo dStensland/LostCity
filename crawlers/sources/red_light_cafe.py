@@ -1,7 +1,7 @@
 """
 Crawler for Red Light Cafe (redlightcafe.com).
 
-Site uses JavaScript rendering - must use Playwright.
+Site uses Squarespace summary blocks with JavaScript rendering - requires Playwright.
 """
 
 from __future__ import annotations
@@ -15,7 +15,6 @@ from playwright.sync_api import sync_playwright
 
 from db import get_or_create_venue, insert_event, find_event_by_hash
 from dedupe import generate_content_hash
-from utils import extract_images_from_page
 
 logger = logging.getLogger(__name__)
 
@@ -30,23 +29,49 @@ VENUE_DATA = {
     "city": "Atlanta",
     "state": "GA",
     "zip": "30306",
-    "venue_type": "bar",
+    "lat": 33.7789,
+    "lng": -84.3734,
+    "venue_type": "music_venue",
+    "spot_type": "music_venue",
     "website": BASE_URL,
+    "vibes": ["live-music", "intimate", "acoustic", "singer-songwriter"],
 }
 
 
-def parse_time(time_text: str) -> Optional[str]:
-    """Parse time from '7:00 PM' format."""
-    match = re.search(r"(\d{1,2}):(\d{2})\s*(am|pm)", time_text, re.IGNORECASE)
+def parse_time(text: str) -> Optional[str]:
+    """Parse time from excerpt text like 'WED • FEB 4 • 9 PM' or '9:00 PM'."""
+    # Look for patterns like "9 PM", "9:00 PM", "10:30 PM"
+    match = re.search(r"(\d{1,2})(?::(\d{2}))?\s*(AM|PM)", text, re.IGNORECASE)
     if match:
-        hour, minute, period = match.groups()
-        hour = int(hour)
-        if period.lower() == "pm" and hour != 12:
+        hour = int(match.group(1))
+        minute = match.group(2) if match.group(2) else "00"
+        period = match.group(3).upper()
+
+        if period == "PM" and hour != 12:
             hour += 12
-        elif period.lower() == "am" and hour == 12:
+        elif period == "AM" and hour == 12:
             hour = 0
+
         return f"{hour:02d}:{minute}"
     return None
+
+
+def parse_price(text: str) -> tuple[Optional[float], Optional[float], Optional[str]]:
+    """Parse price from excerpt text."""
+    # Look for patterns like "$15", "$20-$25", "FREE"
+    if re.search(r"\bFREE\b", text, re.IGNORECASE):
+        return None, None, "Free"
+
+    # Look for dollar amounts
+    prices = re.findall(r"\$(\d+(?:\.\d{2})?)", text)
+    if prices:
+        prices = [float(p) for p in prices]
+        if len(prices) == 1:
+            return prices[0], prices[0], f"${prices[0]:.0f}"
+        elif len(prices) > 1:
+            return min(prices), max(prices), f"${min(prices):.0f}-${max(prices):.0f}"
+
+    return None, None, None
 
 
 def crawl(source: dict) -> tuple[int, int, int]:
@@ -69,122 +94,130 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             logger.info(f"Fetching Red Light Cafe: {EVENTS_URL}")
             page.goto(EVENTS_URL, wait_until="domcontentloaded", timeout=30000)
-            page.wait_for_timeout(3000)
 
-            # Extract images from page
-            image_map = extract_images_from_page(page)
+            # Wait for summary blocks to load
+            page.wait_for_selector(".summary-item-record-type-event", timeout=10000)
+            page.wait_for_timeout(2000)
 
-            # Scroll to load all content
-            for _ in range(5):
+            # Scroll to load all events
+            for _ in range(3):
                 page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
                 page.wait_for_timeout(1000)
 
-            # Get page text and parse line by line
-            body_text = page.inner_text("body")
-            lines = [l.strip() for l in body_text.split("\n") if l.strip()]
+            # Get all event cards
+            event_cards = page.query_selector_all(".summary-item-record-type-event")
+            logger.info(f"Found {len(event_cards)} event cards")
 
-            # Parse events - look for date patterns
-            i = 0
-            while i < len(lines):
-                line = lines[i]
+            for card in event_cards:
+                try:
+                    # Extract title and URL
+                    title_link = card.query_selector("a.summary-title-link")
+                    if not title_link:
+                        continue
 
-                # Skip navigation items
-                if len(line) < 3:
-                    i += 1
-                    continue
+                    title = title_link.inner_text().strip()
+                    event_url = title_link.get_attribute("href")
+                    if event_url and not event_url.startswith("http"):
+                        event_url = f"{BASE_URL}{event_url}"
 
-                # Look for date patterns
-                date_match = re.match(
-                    r"(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)?,?\s*(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{1,2})(?:,?\s+(\d{4}))?",
-                    line,
-                    re.IGNORECASE
-                )
+                    # Extract date from time element
+                    date_elem = card.query_selector("time.summary-metadata-item--date")
+                    if not date_elem:
+                        continue
 
-                if date_match:
-                    month = date_match.group(1)
-                    day = date_match.group(2)
-                    year = date_match.group(3) if date_match.group(3) else str(datetime.now().year)
+                    # Try datetime attribute first (ISO format), then text content
+                    date_str = date_elem.get_attribute("datetime")
+                    dt = None
+                    if date_str:
+                        try:
+                            dt = datetime.fromisoformat(date_str.split("T")[0])
+                        except ValueError:
+                            pass
 
-                    # Look for title in surrounding lines
-                    title = None
-                    start_time = None
-
-                    for offset in [-2, -1, 1, 2, 3]:
-                        idx = i + offset
-                        if 0 <= idx < len(lines):
-                            check_line = lines[idx]
-                            if re.match(r"(January|February|March)", check_line, re.IGNORECASE):
+                    if not dt:
+                        # Parse from text content (e.g., "Feb 4, 2026")
+                        date_text = date_elem.inner_text().strip()
+                        for fmt in ("%b %d, %Y", "%B %d, %Y", "%b %d %Y", "%B %d %Y"):
+                            try:
+                                dt = datetime.strptime(date_text, fmt)
+                                break
+                            except ValueError:
                                 continue
-                            if not start_time:
-                                time_result = parse_time(check_line)
-                                if time_result:
-                                    start_time = time_result
-                                    continue
-                            if not title and len(check_line) > 5:
-                                if not re.match(r"\d{1,2}[:/]", check_line):
-                                    if not re.match(r"(free|tickets|register|\$|more info)", check_line.lower()):
-                                        title = check_line
-                                        break
 
-                    if not title:
-                        i += 1
+                    if not dt:
                         continue
 
-                    # Parse date
-                    try:
-                        month_str = month[:3] if len(month) > 3 else month
-                        dt = datetime.strptime(f"{month_str} {day} {year}", "%b %d %Y")
-                        if dt.date() < datetime.now().date():
-                            dt = datetime.strptime(f"{month_str} {day} {int(year) + 1}", "%b %d %Y")
-                        start_date = dt.strftime("%Y-%m-%d")
-                    except ValueError:
-                        i += 1
+                    start_date = dt.strftime("%Y-%m-%d")
+
+                    # Skip past events
+                    if dt.date() < datetime.now().date():
                         continue
+
+                    # Extract excerpt (contains time, price, description)
+                    excerpt = ""
+                    excerpt_elem = card.query_selector(".summary-excerpt")
+                    if excerpt_elem:
+                        excerpt = excerpt_elem.inner_text().strip()
+
+                    # Parse time from excerpt
+                    start_time = parse_time(excerpt)
+
+                    # Parse price from excerpt
+                    price_min, price_max, price_note = parse_price(excerpt)
+                    is_free = price_note == "Free"
+
+                    # Extract image
+                    image_url = None
+                    img_elem = card.query_selector("img.summary-thumbnail-image")
+                    if img_elem:
+                        image_url = img_elem.get_attribute("src")
+                        if image_url and not image_url.startswith("http"):
+                            image_url = f"https:{image_url}" if image_url.startswith("//") else f"{BASE_URL}{image_url}"
 
                     events_found += 1
 
+                    # Generate content hash for deduplication
                     content_hash = generate_content_hash(title, "Red Light Cafe", start_date)
 
                     if find_event_by_hash(content_hash):
                         events_updated += 1
-                        i += 1
                         continue
 
+                    # Build event record
                     event_record = {
                         "source_id": source_id,
                         "venue_id": venue_id,
                         "title": title,
-                        "description": "Event at Red Light Cafe",
+                        "description": excerpt if excerpt else None,
                         "start_date": start_date,
                         "start_time": start_time,
                         "end_date": None,
                         "end_time": None,
                         "is_all_day": start_time is None,
-                        "category": "community",
-                        "subcategory": None,
-                        "tags": ["event"],
-                        "price_min": None,
-                        "price_max": None,
-                        "price_note": None,
-                        "is_free": False,
-                        "source_url": EVENTS_URL,
-                        "ticket_url": EVENTS_URL,
-                        "image_url": image_map.get(title),
-                        "raw_text": f"{title} - {start_date}",
-                        "extraction_confidence": 0.80,
+                        "category": "music",
+                        "subcategory": "live",
+                        "tags": ["red-light-cafe", "midtown", "live-music", "acoustic"],
+                        "price_min": price_min,
+                        "price_max": price_max,
+                        "price_note": price_note,
+                        "is_free": is_free,
+                        "source_url": event_url or EVENTS_URL,
+                        "ticket_url": event_url or EVENTS_URL,
+                        "image_url": image_url,
+                        "raw_text": f"{title}\n{excerpt}",
+                        "extraction_confidence": 0.95,
                         "is_recurring": False,
                         "recurrence_rule": None,
                         "content_hash": content_hash,
                     }
 
-                    try:
-                        insert_event(event_record)
-                        events_new += 1
-                        logger.info(f"Added: {title} on {start_date}")
-                    except Exception as e:
-                        logger.error(f"Failed to insert: {title}: {e}")
+                    insert_event(event_record)
+                    events_new += 1
+                    logger.info(f"Added: {title} on {start_date} at {start_time or 'TBD'}")
 
-                i += 1
+                except Exception as e:
+                    logger.error(f"Failed to parse event card: {e}")
+                    continue
 
             browser.close()
 

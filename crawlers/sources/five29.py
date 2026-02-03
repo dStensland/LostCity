@@ -2,6 +2,7 @@
 Crawler for 529 (529atlanta.com).
 
 Site uses JavaScript rendering - must use Playwright.
+Events are displayed in .event-card or .event-card-condensed elements.
 """
 
 from __future__ import annotations
@@ -35,8 +36,45 @@ VENUE_DATA = {
 }
 
 
+def parse_date(date_text: str) -> Optional[str]:
+    """
+    Parse date from format like 'Thursday Feb 05, 2026'.
+
+    Returns YYYY-MM-DD string or None.
+    """
+    # Match patterns like "Thursday Feb 05, 2026" or "Feb 05, 2026"
+    date_match = re.search(
+        r"(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)?,?\s+"
+        r"(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+"
+        r"(\d{1,2})(?:,?\s+(\d{4}))?",
+        date_text,
+        re.IGNORECASE
+    )
+
+    if not date_match:
+        return None
+
+    month = date_match.group(1)
+    day = date_match.group(2)
+    year = date_match.group(3) if date_match.group(3) else str(datetime.now().year)
+
+    try:
+        # Normalize month to 3-letter abbreviation
+        month_str = month[:3].capitalize()
+        dt = datetime.strptime(f"{month_str} {day} {year}", "%b %d %Y")
+
+        # If date is in the past, assume next year
+        if dt.date() < datetime.now().date():
+            dt = datetime.strptime(f"{month_str} {day} {int(year) + 1}", "%b %d %Y")
+
+        return dt.strftime("%Y-%m-%d")
+    except ValueError as e:
+        logger.warning(f"Failed to parse date '{date_text}': {e}")
+        return None
+
+
 def parse_time(time_text: str) -> Optional[str]:
-    """Parse time from '7:00 PM' format."""
+    """Parse time from '7:00 PM' format to 24-hour HH:MM."""
     match = re.search(r"(\d{1,2}):(\d{2})\s*(am|pm)", time_text, re.IGNORECASE)
     if match:
         hour, minute, period = match.groups()
@@ -50,7 +88,7 @@ def parse_time(time_text: str) -> Optional[str]:
 
 
 def crawl(source: dict) -> tuple[int, int, int]:
-    """Crawl 529 events using Playwright."""
+    """Crawl 529 events using Playwright with DOM selectors."""
     source_id = source["id"]
     events_found = 0
     events_new = 0
@@ -80,71 +118,44 @@ def crawl(source: dict) -> tuple[int, int, int]:
             image_map = extract_images_from_page(page)
             logger.info(f"Found {len(image_map)} images on page")
 
-            # Get page text and parse line by line
-            body_text = page.inner_text("body")
-            lines = [l.strip() for l in body_text.split("\n") if l.strip()]
+            # Query for event cards using proper selectors
+            event_cards = page.query_selector_all(".event-card, .event-card-condensed")
+            logger.info(f"Found {len(event_cards)} event cards")
 
-            # Parse events - look for date patterns
-            i = 0
-            while i < len(lines):
-                line = lines[i]
+            for card in event_cards:
+                try:
+                    # Extract title from h3 inside the card
+                    title_element = card.query_selector("h3")
+                    if not title_element:
+                        logger.debug("Skipping card with no h3 title")
+                        continue
 
-                # Skip navigation items
-                if len(line) < 3:
-                    i += 1
-                    continue
-
-                # Look for date patterns
-                date_match = re.match(
-                    r"(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)?,?\s*(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{1,2})(?:,?\s+(\d{4}))?",
-                    line,
-                    re.IGNORECASE
-                )
-
-                if date_match:
-                    month = date_match.group(1)
-                    day = date_match.group(2)
-                    year = date_match.group(3) if date_match.group(3) else str(datetime.now().year)
-
-                    # Look for title in surrounding lines
-                    title = None
-                    start_time = None
-
-                    for offset in [-2, -1, 1, 2, 3]:
-                        idx = i + offset
-                        if 0 <= idx < len(lines):
-                            check_line = lines[idx]
-                            # Skip month names
-                            if re.match(r"(January|February|March|April|May|June|July|August|September|October|November|December)", check_line, re.IGNORECASE):
-                                continue
-                            # Skip day-of-week names
-                            if re.match(r"^(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)$", check_line, re.IGNORECASE):
-                                continue
-                            if not start_time:
-                                time_result = parse_time(check_line)
-                                if time_result:
-                                    start_time = time_result
-                                    continue
-                            if not title and len(check_line) > 5:
-                                if not re.match(r"\d{1,2}[:/]", check_line):
-                                    if not re.match(r"(free|tickets|register|\$|more info)", check_line.lower()):
-                                        title = check_line
-                                        break
-
+                    title = title_element.inner_text().strip()
                     if not title:
-                        i += 1
+                        logger.debug("Skipping card with empty title")
                         continue
 
-                    # Parse date
-                    try:
-                        month_str = month[:3] if len(month) > 3 else month
-                        dt = datetime.strptime(f"{month_str} {day} {year}", "%b %d %Y")
-                        if dt.date() < datetime.now().date():
-                            dt = datetime.strptime(f"{month_str} {day} {int(year) + 1}", "%b %d %Y")
-                        start_date = dt.strftime("%Y-%m-%d")
-                    except ValueError:
-                        i += 1
+                    # Get all text content from the card
+                    card_text = card.inner_text()
+
+                    # Parse date from card text
+                    start_date = parse_date(card_text)
+                    if not start_date:
+                        logger.debug(f"Skipping '{title}' - no valid date found in: {card_text[:100]}")
                         continue
+
+                    # Parse time if available
+                    start_time = parse_time(card_text)
+
+                    # Look for ticket/info links
+                    ticket_url = None
+                    links = card.query_selector_all("a")
+                    for link in links:
+                        link_text = link.inner_text().lower()
+                        href = link.get_attribute("href")
+                        if href and ("ticket" in link_text or "info" in link_text or "big" in href):
+                            ticket_url = href if href.startswith("http") else BASE_URL + href
+                            break
 
                     events_found += 1
 
@@ -152,7 +163,6 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     if find_event_by_hash(content_hash):
                         events_updated += 1
-                        i += 1
                         continue
 
                     # Find image for this event
@@ -167,7 +177,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "source_id": source_id,
                         "venue_id": venue_id,
                         "title": title,
-                        "description": "Event at 529",
+                        "description": f"Event at 529",
                         "start_date": start_date,
                         "start_time": start_time,
                         "end_date": None,
@@ -181,10 +191,10 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "price_note": None,
                         "is_free": False,
                         "source_url": EVENTS_URL,
-                        "ticket_url": EVENTS_URL,
+                        "ticket_url": ticket_url or EVENTS_URL,
                         "image_url": event_image,
-                        "raw_text": f"{title} - {start_date}",
-                        "extraction_confidence": 0.80,
+                        "raw_text": card_text[:500],  # Store first 500 chars for debugging
+                        "extraction_confidence": 0.85,
                         "is_recurring": False,
                         "recurrence_rule": None,
                         "content_hash": content_hash,
@@ -195,9 +205,11 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         events_new += 1
                         logger.info(f"Added: {title} on {start_date}")
                     except Exception as e:
-                        logger.error(f"Failed to insert: {title}: {e}")
+                        logger.error(f"Failed to insert '{title}': {e}")
 
-                i += 1
+                except Exception as e:
+                    logger.error(f"Error processing event card: {e}")
+                    continue
 
             browser.close()
 

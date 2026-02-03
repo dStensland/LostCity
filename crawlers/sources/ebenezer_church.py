@@ -17,6 +17,7 @@ from playwright.sync_api import sync_playwright
 
 from db import get_or_create_venue, insert_event, find_event_by_hash
 from dedupe import generate_content_hash
+from utils import extract_images_from_page
 
 logger = logging.getLogger(__name__)
 
@@ -67,6 +68,55 @@ def parse_time(time_text: str) -> Optional[str]:
             hour = 0
 
         return f"{hour:02d}:{minute}"
+    return None
+
+
+def parse_date_string(date_str: str) -> Optional[str]:
+    """
+    Parse date from various formats.
+    Returns YYYY-MM-DD format string or None.
+    """
+    if not date_str:
+        return None
+
+    current_year = datetime.now().year
+
+    # Try full month name formats (e.g., "February 7", "February 13-15")
+    date_match = re.search(
+        r"(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2})(?:-\d{1,2})?(?:,?\s+(\d{4}))?",
+        date_str,
+        re.IGNORECASE
+    )
+    if date_match:
+        month = date_match.group(1)
+        day = int(date_match.group(2))
+        year = int(date_match.group(3)) if date_match.group(3) else current_year
+        try:
+            dt = datetime.strptime(f"{month} {day} {year}", "%B %d %Y")
+            if dt.date() < datetime.now().date() and not date_match.group(3):
+                dt = datetime.strptime(f"{month} {day} {year + 1}", "%B %d %Y")
+            return dt.strftime("%Y-%m-%d")
+        except ValueError:
+            pass
+
+    # Try short month name formats (e.g., "Feb 15", "Feb 15, 2026")
+    date_match = re.search(
+        r"(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{1,2})(?:,?\s+(\d{4}))?",
+        date_str,
+        re.IGNORECASE
+    )
+    if date_match:
+        month = date_match.group(1)
+        day = int(date_match.group(2))
+        year = int(date_match.group(3)) if date_match.group(3) else current_year
+        try:
+            dt = datetime.strptime(f"{month} {day} {year}", "%b %d %Y")
+            if dt.date() < datetime.now().date() and not date_match.group(3):
+                dt = datetime.strptime(f"{month} {day} {year + 1}", "%b %d %Y")
+            return dt.strftime("%Y-%m-%d")
+        except ValueError:
+            pass
+
     return None
 
 
@@ -165,179 +215,150 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
                 page.wait_for_timeout(1000)
 
-            # Get page text
-            body_text = page.inner_text("body")
-            lines = [l.strip() for l in body_text.split("\n") if l.strip()]
+            # Extract images from page
+            image_map = extract_images_from_page(page)
 
-            browser.close()
+            # This site uses Divi/Elegant Themes builder with .et_pb_text blocks for events
+            # Each event is in its own .et_pb_text div
+            event_elements = page.query_selector_all(".et_pb_text")
+            logger.info(f"Found {len(event_elements)} .et_pb_text blocks on page")
 
-            # Parse events from text content
-            # Structure appears to be: Title, Description, Time info
-            i = 0
             seen_events = set()
 
-            while i < len(lines):
-                line = lines[i]
+            if event_elements:
+                logger.info(f"Processing {len(event_elements)} event containers via DOM selectors")
 
-                # Skip short lines and navigation
-                if len(line) < 10:
-                    i += 1
-                    continue
+                for elem in event_elements:
+                    try:
+                        # Extract full text from container
+                        elem_text = elem.inner_text().strip()
 
-                # Look for event titles (bold/emphasized text that contains event keywords)
-                is_event_title = False
-                title_lower = line.lower()
-
-                # Check for event-like titles
-                if any(kw in title_lower for kw in [
-                    "bible study", "prayer", "worship", "ministry", "fellowship",
-                    "young adult", "women's", "men's", "navigating our world",
-                    "tuesday bible", "concert", "lecture", "mlk", "celebration"
-                ]):
-                    is_event_title = True
-
-                if not is_event_title:
-                    i += 1
-                    continue
-
-                title = line
-
-                # Gather description from next few lines
-                description_parts = []
-                start_time = None
-                recurrence_pattern = None
-                j = i + 1
-
-                for offset in range(1, 10):
-                    if i + offset >= len(lines):
-                        break
-
-                    next_line = lines[i + offset]
-
-                    # Stop if we hit another event title
-                    if any(kw in next_line.lower() for kw in [
-                        "bible study", "prayer meeting", "women's", "men's"
-                    ]) and offset > 3:
-                        break
-
-                    # Look for time info
-                    if not start_time:
-                        time_result = parse_time(next_line)
-                        if time_result:
-                            start_time = time_result
-
-                    # Look for recurrence patterns
-                    if re.search(r"(monday|tuesday|wednesday|thursday|friday|saturday|sunday)", next_line, re.IGNORECASE):
-                        if "after the first sunday" in next_line.lower():
-                            recurrence_pattern = "first Monday of month"
-                        elif re.search(r"(\d+)(?:st|nd|rd|th)\s+(?:and|&)\s+(\d+)(?:st|nd|rd|th)", next_line, re.IGNORECASE):
-                            recurrence_pattern = next_line
-                        elif "each" in next_line.lower() or "every" in next_line.lower():
-                            recurrence_pattern = next_line
-
-                    description_parts.append(next_line)
-
-                description = " ".join(description_parts[:3])  # First 3 lines
-
-                # Check if public
-                if not is_public_event(title, description):
-                    logger.debug(f"Skipping member-only event: {title}")
-                    i += 1
-                    continue
-
-                # For recurring events, create a sample date (next occurrence)
-                # For now, use a placeholder - in production you'd calculate next occurrence
-                if recurrence_pattern:
-                    # Use first day of next month as placeholder
-                    now = datetime.now()
-                    if now.month == 12:
-                        start_date = f"{now.year + 1}-01-15"
-                    else:
-                        start_date = f"{now.year}-{now.month + 1:02d}-15"
-                else:
-                    # Look for specific date in description
-                    date_match = re.search(
-                        r"(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2})",
-                        description,
-                        re.IGNORECASE
-                    )
-                    if date_match:
-                        month = date_match.group(1)
-                        day = int(date_match.group(2))
-                        try:
-                            dt = datetime.strptime(f"{month} {day} {datetime.now().year}", "%B %d %Y")
-                            if dt.date() < datetime.now().date():
-                                dt = datetime.strptime(f"{month} {day} {datetime.now().year + 1}", "%B %d %Y")
-                            start_date = dt.strftime("%Y-%m-%d")
-                        except ValueError:
-                            # Skip if can't parse date
-                            i += 1
+                        # Skip if too short to be an event
+                        if len(elem_text) < 30:
                             continue
-                    else:
-                        # Skip events without clear dates
-                        i += 1
+
+                        lines = [l.strip() for l in elem_text.split("\n") if l.strip()]
+
+                        if not lines:
+                            continue
+
+                        # First line is typically the title
+                        title = lines[0]
+
+                        # Skip if title is too short or too long
+                        if len(title) < 10 or len(title) > 200:
+                            continue
+
+                        # Look for date in the text (could be in title or body)
+                        start_date = None
+                        for line in lines:
+                            parsed_date = parse_date_string(line)
+                            if parsed_date:
+                                start_date = parsed_date
+                                break
+
+                        if not start_date:
+                            # Skip events without dates
+                            logger.debug(f"No date found for: {title[:50]}")
+                            continue
+
+                        # Look for time
+                        start_time = None
+                        for line in lines:
+                            parsed_time = parse_time(line)
+                            if parsed_time:
+                                start_time = parsed_time
+                                break
+
+                        # Extract description (first substantial paragraph that's not the title)
+                        description_parts = []
+                        for line in lines:
+                            if line == title:
+                                continue
+                            if len(line) > 30 and not parse_date_string(line) and not parse_time(line):
+                                description_parts.append(line)
+                                if len(description_parts) >= 3:
+                                    break
+
+                        description = " ".join(description_parts[:3])
+
+                        # Check if public
+                        if not is_public_event(title, description):
+                            logger.debug(f"Skipping member-only event: {title}")
+                            continue
+
+                        # Dedupe
+                        event_key = f"{title}|{start_date}"
+                        if event_key in seen_events:
+                            continue
+                        seen_events.add(event_key)
+
+                        events_found += 1
+
+                        # Generate content hash
+                        content_hash = generate_content_hash(
+                            title, "Ebenezer Baptist Church", start_date
+                        )
+
+                        # Check for existing
+                        existing = find_event_by_hash(content_hash)
+                        if existing:
+                            events_updated += 1
+                            continue
+
+                        # Determine category and tags
+                        category, subcategory, tags = determine_category_and_tags(title, description)
+
+                        # Look for recurrence patterns
+                        recurrence_pattern = None
+                        elem_text_lower = elem_text.lower()
+                        if any(kw in elem_text_lower for kw in ["every", "each", "weekly", "monthly"]):
+                            for line in lines:
+                                if re.search(r"(monday|tuesday|wednesday|thursday|friday|saturday|sunday)", line, re.IGNORECASE):
+                                    recurrence_pattern = line
+                                    break
+
+                        # Build event record
+                        event_record = {
+                            "source_id": source_id,
+                            "venue_id": venue_id,
+                            "title": title[:200],
+                            "description": description[:1000] if description else None,
+                            "start_date": start_date,
+                            "start_time": start_time,
+                            "end_date": None,
+                            "end_time": None,
+                            "is_all_day": False,
+                            "category": category,
+                            "subcategory": subcategory,
+                            "tags": tags,
+                            "price_min": None,
+                            "price_max": None,
+                            "price_note": "Free - donations welcome",
+                            "is_free": True,
+                            "source_url": EVENTS_URL,
+                            "ticket_url": EVENTS_URL,
+                            "image_url": image_map.get(title),
+                            "raw_text": f"{title} {description}"[:500],
+                            "extraction_confidence": 0.85,
+                            "is_recurring": bool(recurrence_pattern),
+                            "recurrence_rule": recurrence_pattern,
+                            "content_hash": content_hash,
+                        }
+
+                        try:
+                            insert_event(event_record)
+                            events_new += 1
+                            logger.info(f"Added: {title[:50]}... on {start_date}")
+                        except Exception as e:
+                            logger.error(f"Failed to insert: {title}: {e}")
+
+                    except Exception as e:
+                        logger.error(f"Error processing event element: {e}")
                         continue
 
-                # Dedupe
-                event_key = f"{title}|{start_date}"
-                if event_key in seen_events:
-                    i += 1
-                    continue
-                seen_events.add(event_key)
 
-                events_found += 1
-
-                # Generate content hash
-                content_hash = generate_content_hash(
-                    title, "Ebenezer Baptist Church", start_date
-                )
-
-                # Check for existing
-                existing = find_event_by_hash(content_hash)
-                if existing:
-                    events_updated += 1
-                    i += 1
-                    continue
-
-                # Determine category and tags
-                category, subcategory, tags = determine_category_and_tags(title, description)
-
-                # Build event record
-                event_record = {
-                    "source_id": source_id,
-                    "venue_id": venue_id,
-                    "title": title[:200],
-                    "description": description[:1000] if description else None,
-                    "start_date": start_date,
-                    "start_time": start_time,
-                    "end_date": None,
-                    "end_time": None,
-                    "is_all_day": False,
-                    "category": category,
-                    "subcategory": subcategory,
-                    "tags": tags,
-                    "price_min": None,
-                    "price_max": None,
-                    "price_note": "Free - donations welcome",
-                    "is_free": True,
-                    "source_url": EVENTS_URL,
-                    "ticket_url": EVENTS_URL,
-                    "image_url": None,
-                    "raw_text": f"{title} {description}"[:500],
-                    "extraction_confidence": 0.80,
-                    "is_recurring": bool(recurrence_pattern),
-                    "recurrence_rule": recurrence_pattern,
-                    "content_hash": content_hash,
-                }
-
-                try:
-                    insert_event(event_record)
-                    events_new += 1
-                    logger.info(f"Added: {title[:50]}... on {start_date}")
-                except Exception as e:
-                    logger.error(f"Failed to insert: {title}: {e}")
-
-                i += 1
+            browser.close()
 
         logger.info(
             f"Ebenezer Baptist Church crawl complete: {events_found} found, {events_new} new, {events_updated} updated"

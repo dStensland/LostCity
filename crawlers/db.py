@@ -3,6 +3,7 @@ Database operations for Lost City crawlers.
 Handles all Supabase interactions for events, venues, sources, and logs.
 """
 
+import re
 import time
 import logging
 import functools
@@ -197,9 +198,73 @@ def get_venue_by_slug(slug: str) -> Optional[dict]:
 
 
 @retry_on_network_error(max_retries=3, base_delay=0.5)
+def validate_event_title(title: str) -> bool:
+    """Reject obviously bad event titles (nav elements, descriptions, junk).
+    Returns True if valid, False if title should be rejected."""
+    if not title or not title.strip():
+        return False
+
+    title = title.strip()
+
+    # Too short or too long
+    if len(title) < 3 or len(title) > 200:
+        return False
+
+    # Exact-match junk (nav/UI elements scraped as titles)
+    junk_exact = {
+        "learn more", "host an event", "upcoming events", "see details",
+        "buy tickets", "click here", "read more", "view all", "sign up",
+        "subscribe", "follow us", "contact us", "more info", "register",
+        "rsvp", "get tickets", "see more", "shows", "about us",
+        "skip to content", "google calendar", "event calendar",
+        "events list view", "upcoming shows", "all dates", "all events",
+        "all locations", "event type", "event location", "this month",
+        "select date.", "sold out", "our calendar of shows and events",
+        "corporate partnerships", "big futures", "match resources",
+    }
+    if title.lower().strip() in junk_exact:
+        return False
+
+    # Day-of-week only titles
+    if re.match(r"^(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)$", title, re.IGNORECASE):
+        return False
+
+    # Date-only titles ("Thursday, February 5")
+    if re.match(r"^(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday),?\s+"
+                r"(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2}$",
+                title, re.IGNORECASE):
+        return False
+
+    # Month-label titles ("January Activities", "January 2026")
+    if re.match(r"^(January|February|March|April|May|June|July|August|September|October|November|December)\s+"
+                r"(Activities|Events|Calendar|Schedule|Programs|Classes|\d{4})$", title, re.IGNORECASE):
+        return False
+
+    # Titles starting with description-like patterns
+    desc_starts = [
+        "every monday", "every tuesday", "every wednesday", "every thursday",
+        "every friday", "every saturday", "every sunday",
+        "join us for \"navigating", "registration for this free event",
+        "keep your pet happy", "come join the tipsy",
+        "viewing 1-", "click here to download",
+    ]
+    title_lower = title.lower()
+    for pattern in desc_starts:
+        if title_lower.startswith(pattern):
+            return False
+
+    return True
+
+
 def insert_event(event_data: dict, series_hint: dict = None, genres: list = None) -> int:
     """Insert a new event with inferred tags, series linking, and genres. Returns event ID."""
     client = get_client()
+
+    # Validate title before inserting
+    title = event_data.get("title", "")
+    if not validate_event_title(title):
+        logger.warning(f"Rejected bad title: \"{title[:80]}\"")
+        raise ValueError(f"Invalid event title: \"{title[:50]}\"")
 
     # Remove producer_id if present (not a database column)
     if "producer_id" in event_data:
@@ -269,6 +334,58 @@ def find_event_by_hash(content_hash: str) -> Optional[dict]:
     if result.data and len(result.data) > 0:
         return result.data[0]
     return None
+
+
+@retry_on_network_error()
+def remove_stale_source_events(source_id: int, current_hashes: set[str]) -> int:
+    """Remove future events from a source that weren't seen in the current crawl.
+
+    Used by cinema crawlers where the full schedule is available each crawl run.
+    Showtimes that have been removed from the theater's site are deleted from our DB.
+
+    Args:
+        source_id: The source to clean up
+        current_hashes: Set of content_hashes seen in this crawl run
+
+    Returns:
+        Number of stale events deleted
+    """
+    client = get_client()
+    today = datetime.now().strftime("%Y-%m-%d")
+
+    # Get all future events from this source
+    result = client.table("events").select("id,content_hash").eq(
+        "source_id", source_id
+    ).gte("start_date", today).execute()
+
+    if not result.data:
+        return 0
+
+    # Find events whose hash wasn't seen in this crawl
+    stale_ids = [
+        e["id"] for e in result.data
+        if e["content_hash"] not in current_hashes
+    ]
+
+    if not stale_ids:
+        return 0
+
+    # Clear canonical references pointing to stale events
+    for stale_id in stale_ids:
+        client.table("events").update(
+            {"canonical_event_id": None}
+        ).eq("canonical_event_id", stale_id).execute()
+
+    # Delete in batches
+    deleted = 0
+    batch_size = 50
+    for i in range(0, len(stale_ids), batch_size):
+        batch = stale_ids[i:i + batch_size]
+        client.table("events").delete().in_("id", batch).execute()
+        deleted += len(batch)
+
+    logger.info(f"Removed {deleted} stale events from source {source_id}")
+    return deleted
 
 
 def find_events_by_date_and_venue(date: str, venue_id: int) -> list[dict]:

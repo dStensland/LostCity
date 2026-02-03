@@ -12,7 +12,7 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright, Page
 
-from db import get_or_create_venue, insert_event, find_event_by_hash
+from db import get_or_create_venue, insert_event, find_event_by_hash, remove_stale_source_events
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -89,15 +89,20 @@ def extract_movies_for_date(
     source_id: int,
     venue_id: int,
     image_map: Optional[dict[str, str]] = None,
+    seen_hashes: Optional[set] = None,
 ) -> tuple[int, int, int]:
     """Extract movies and showtimes for a specific date.
 
-    New Tara Theatre format (pipe-delimited):
-    - Format: "Title (optional year) | Time, Time, Time"
-    - Examples:
-      "Hamnet (2025) | 12:45PM, 5:15PM"
-      "Marty Supreme (2025) | 1:15PM, 8:00PM"
-      "Cutting Through Rocks | 6:00PM"
+    New Tara Theatre format (2026):
+    - Movies appear as cards with title, duration, description, then showtimes
+    - Structure:
+      "Sound of Falling (2026)"
+      "2 hr 35 min·Drama·"
+      "Description..."
+      "4:30 PM"
+      "THEATRE 3 (THE KENNY)"
+      "7:00 PM"
+      "THEATRE 2 (THE JACK)"
     """
     events_found = 0
     events_new = 0
@@ -107,75 +112,89 @@ def extract_movies_for_date(
     date_str = target_date.strftime("%Y-%m-%d")
 
     body_text = page.inner_text("body")
+    lines = [l.strip() for l in body_text.split("\n") if l.strip()]
 
     seen_movies = set()
+    matches = []  # List of (title, [times])
 
-    # The page returns movies in a format like:
-    # "NOW PLAYING Hamnet (2025) | 12:45PM, 5:15PM Marty Supreme (2025) | 1:15PM, 8:00PM ..."
-    # Structure: Title1 | Times1 Title2 | Times2 Title3 | Times3
-    # Split by pipe, then parse: first part = Title1, subsequent parts = "Times Title"
+    # Find movie titles by looking for duration pattern on next line
+    # Title patterns: "Movie Name (2026)" or "Movie Name"
+    # Duration pattern: "X hr Y min" or "X hr" followed by genre
+    duration_pattern = re.compile(r'^(\d+)\s*hr(?:\s*(\d+)\s*min)?', re.IGNORECASE)
+    time_pattern = re.compile(r'^(\d{1,2}:\d{2})\s*(AM|PM)$', re.IGNORECASE)
 
-    matches = []
-    time_pattern = re.compile(r'^((?:\d{1,2}:\d{2}\s*[AP]M,?\s*)+)', re.IGNORECASE)
+    current_movie = None
+    current_times = []
 
-    for line in body_text.split("\n"):
-        if "|" not in line or not re.search(r'\d{1,2}:\d{2}\s*[AP]M', line, re.IGNORECASE):
+    skip_titles = [
+        "NOW PLAYING", "COMING SOON", "THE TARA", "Plaza Theatre",
+        "Today", "Other", "Date", "STORE", "ABOUT", "DONATE", "RENTALS",
+        "accessible", "theater_comedy", "Digital", "THEATRE", "Theatre",
+        "Wed", "Thu", "Fri", "Sat", "Sun", "Mon", "Tue", "Feb", "Jan",
+        "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+    ]
+
+    i = 0
+    while i < len(lines):
+        line = lines[i]
+
+        # Check if this line is a time
+        time_match = time_pattern.match(line)
+        if time_match and current_movie:
+            hour = int(time_match.group(1).split(':')[0])
+            minute = time_match.group(1).split(':')[1]
+            period = time_match.group(2).upper()
+            if period == "PM" and hour != 12:
+                hour += 12
+            elif period == "AM" and hour == 12:
+                hour = 0
+            formatted_time = f"{hour:02d}:{minute}"
+            if formatted_time not in current_times:
+                current_times.append(formatted_time)
+            i += 1
             continue
 
-        parts = line.split("|")
-        if len(parts) < 2:
-            continue
+        # Check if next line is a duration (indicates current line is a movie title)
+        if i + 1 < len(lines):
+            next_line = lines[i + 1]
+            if duration_pattern.match(next_line):
+                # Save previous movie if we have one with times
+                if current_movie and current_times:
+                    matches.append((current_movie, current_times))
 
-        # Build list of (title, times) by processing parts in order
-        titles = []
-        times_list = []
+                # Check if this looks like a valid movie title
+                if (len(line) >= 3 and
+                    not any(skip.lower() == line.lower() for skip in skip_titles) and
+                    not line.startswith("·") and
+                    not re.match(r'^\d+$', line)):
+                    current_movie = line
+                    current_times = []
+                else:
+                    current_movie = None
+                    current_times = []
 
-        # First part is the first movie title
-        first_title = parts[0].strip()
-        for prefix in ["NOW PLAYING ", "COMING SOON "]:
-            if first_title.startswith(prefix):
-                first_title = first_title[len(prefix):].strip()
-        titles.append(first_title)
+                i += 1
+                continue
 
-        # Each subsequent part starts with times, followed by next title
-        for part in parts[1:]:
-            part = part.strip()
-            time_match = time_pattern.match(part)
-            if time_match:
-                times_str = time_match.group(1).strip().rstrip(',')
-                times_list.append(times_str)
+        i += 1
 
-                # Text after times is the next movie title
-                next_title = part[time_match.end():].strip()
-                if next_title and len(next_title) > 2:
-                    titles.append(next_title)
+    # Don't forget the last movie
+    if current_movie and current_times:
+        matches.append((current_movie, current_times))
 
-        # Pair titles with their times
-        for i, title in enumerate(titles):
-            if i < len(times_list):
-                matches.append((title, times_list[i]))
-
-        break  # Only process first matching line
-
-    logger.info(f"Found {len(matches)} movie showtimes for {date_str}")
+    logger.info(f"Found {len(matches)} movies with showtimes for {date_str}")
 
     # Debug: show what was found
     for m in matches[:3]:
-        logger.debug(f"  Extracted: '{m[0][:40]}' | '{m[1]}'")
+        logger.debug(f"  Extracted: '{m[0][:40]}' | {m[1]}")
 
-    for title_part, times_part in matches:
+    for title_part, times_list in matches:
         title_part = title_part.strip()
-        times_part = times_part.strip()
 
         # Clean up title - remove common prefixes
         for prefix in ["NOW PLAYING ", "COMING SOON ", "News Carousel "]:
             if title_part.startswith(prefix):
                 title_part = title_part[len(prefix):].strip()
-
-        # Skip if title contains multiple movie indicators (bad match)
-        if "NOW PLAYING" in title_part or " - " in title_part and len(title_part) > 40:
-            logger.debug(f"Skipping bad match: '{title_part[:50]}...'")
-            continue
 
         # Skip if title is empty or too short
         if len(title_part) < 3:
@@ -201,35 +220,14 @@ def extract_movies_for_date(
         if re.match(r'^(TBA|TBD|TBC|To Be Announced|To Be Determined)(\s*\([^)]+\))?$', title_part, re.IGNORECASE):
             continue
 
-        # Skip if times section contains TBA without actual times
-        has_tba = re.search(r'\bTBA\b', times_part, re.IGNORECASE)
-        has_real_time = re.search(r'\d{1,2}:\d{2}\s*[AP]M', times_part, re.IGNORECASE)
-        if has_tba and not has_real_time:
-            logger.debug(f"Skipping '{title_part}' - only TBA times found")
-            continue
-
-        # Parse comma-separated times
-        # Handle formats like "12:45PM", "1:00PM", "8:00PM"
-        time_strings = [t.strip() for t in times_part.split(",")]
-
-        valid_showtimes = []
-        for time_str in time_strings:
-            # Clean up the time string (remove extra spaces)
-            time_str = re.sub(r'\s+', '', time_str)
-
-            # Parse time - handle formats like "12:45PM" or "1:00PM"
-            start_time = parse_time(time_str)
-            if start_time:
-                valid_showtimes.append((time_str, start_time))
-
         # Skip movies with no valid showtimes
-        if not valid_showtimes:
-            logger.debug(f"Skipping '{title_part}' - no valid showtimes extracted from '{times_part}'")
+        if not times_list:
+            logger.debug(f"Skipping '{title_part}' - no valid showtimes")
             continue
 
         # Create events for each valid showtime
-        for time_str, start_time in valid_showtimes:
-            movie_key = f"{title_part}|{date_str}|{start_time}"
+        for showtime in times_list:
+            movie_key = f"{title_part}|{date_str}|{showtime}"
             if movie_key in seen_movies:
                 continue
             seen_movies.add(movie_key)
@@ -237,22 +235,29 @@ def extract_movies_for_date(
             events_found += 1
 
             content_hash = generate_content_hash(
-                title_part, "Tara Theatre", f"{date_str}|{start_time}"
+                title_part, "Tara Theatre", f"{date_str}|{showtime}"
             )
+            if seen_hashes is not None:
+                seen_hashes.add(content_hash)
 
             existing = find_event_by_hash(content_hash)
             if existing:
                 events_updated += 1
             else:
+                # Try to find image with title normalization
+                clean_title = re.sub(r'\s*\(\d{4}\)\s*$', '', title_part)  # Remove year
+                clean_title = re.sub(r'\s*\(Digital\)\s*$', '', clean_title, flags=re.IGNORECASE)
                 movie_image = find_image_for_movie(title_part, image_map)
+                if not movie_image:
+                    movie_image = find_image_for_movie(clean_title, image_map)
 
                 event_record = {
                     "source_id": source_id,
                     "venue_id": venue_id,
                     "title": title_part,
-                    "description": None,  # No duration info in new format
+                    "description": None,
                     "start_date": date_str,
-                    "start_time": start_time,
+                    "start_time": showtime,
                     "end_date": None,
                     "end_time": None,
                     "is_all_day": False,
@@ -277,12 +282,10 @@ def extract_movies_for_date(
                     insert_event(event_record)
                     events_new += 1
                     logger.info(
-                        f"Added: {title_part} on {date_str} at {start_time}"
+                        f"Added: {title_part} on {date_str} at {showtime}"
                     )
                 except Exception as e:
                     logger.error(f"Failed to insert: {title_part}: {e}")
-
-    logger.info(f"Found {events_found} movie showtimes for {date_str}")
     return events_found, events_new, events_updated
 
 
@@ -474,6 +477,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     total_found = 0
     total_new = 0
     total_updated = 0
+    seen_hashes = set()  # Track all hashes from this crawl for stale cleanup
 
     try:
         with sync_playwright() as p:
@@ -498,7 +502,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             # First, get today's showtimes (default view)
             logger.info(f"Scraping Today ({today.strftime('%Y-%m-%d')})")
             found, new, updated = extract_movies_for_date(
-                page, datetime.combine(today, datetime.min.time()), source_id, venue_id, image_map
+                page, datetime.combine(today, datetime.min.time()), source_id, venue_id, image_map, seen_hashes
             )
             total_found += found
             total_new += new
@@ -558,6 +562,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     source_id,
                     venue_id,
                     image_map,
+                    seen_hashes,
                 )
                 total_found += found
                 total_new += new
@@ -576,6 +581,12 @@ def crawl(source: dict) -> tuple[int, int, int]:
             logger.info("Skipping Coming Soon page (no actual showtimes)")
 
             browser.close()
+
+        # Remove stale showtimes that are no longer on the theater's schedule
+        if seen_hashes:
+            stale_removed = remove_stale_source_events(source_id, seen_hashes)
+            if stale_removed:
+                logger.info(f"Removed {stale_removed} stale showtimes no longer on schedule")
 
         logger.info(
             f"Tara Theatre crawl complete: {total_found} found, {total_new} new, {total_updated} updated"
