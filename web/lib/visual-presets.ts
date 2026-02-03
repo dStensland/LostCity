@@ -434,11 +434,11 @@ export const VISUAL_PRESETS: Record<VisualPresetId, VisualPreset> = {
   cosmic_dark: {
     id: "cosmic_dark",
     name: "Cosmic Dark",
-    description: "Warm cosmic aesthetic with peach and violet tones",
+    description: "Warm cosmic aesthetic with peach and gold tones",
     bestFor: "City portals with warm, modern vibe",
     colors: {
       primary_color: "#FF6B7A",
-      secondary_color: "#A855F7",
+      secondary_color: "#F5A623",
       accent_color: "#FFD93D",
       background_color: "#0A0A12",
       text_color: "#FFF5F0",
