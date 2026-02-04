@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { format, startOfDay, addDays } from "date-fns";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
+import { isValidUUID } from "@/lib/api-utils";
+import { logger } from "@/lib/logger";
 
 /**
  * GET /api/activities/popular
@@ -22,7 +24,10 @@ export async function GET(request: NextRequest) {
     const client = await createClient();
     const { searchParams } = new URL(request.url);
     const dateFilter = searchParams.get("date_filter") || "week";
-    const portalId = searchParams.get("portal_id");
+    const portalIdParam = searchParams.get("portal_id");
+
+    // Validate portal_id to prevent PostgREST filter injection
+    const portalId = portalIdParam && isValidUUID(portalIdParam) ? portalIdParam : null;
 
     // Get current date/time and calculate end date based on filter
     // Use date-fns format to get local date (not UTC from toISOString)
@@ -73,7 +78,7 @@ export async function GET(request: NextRequest) {
     const { data: subcategoryCounts, error: subError } = await subQuery;
 
     if (subError) {
-      console.error("Error fetching subcategory counts:", subError);
+      logger.error("Error fetching subcategory counts:", subError);
     }
 
     // Query category counts with same filters
@@ -95,7 +100,7 @@ export async function GET(request: NextRequest) {
     const { data: categoryCounts, error: catError } = await catQuery;
 
     if (catError) {
-      console.error("Error fetching category counts:", catError);
+      logger.error("Error fetching category counts:", catError);
     }
 
     // Aggregate counts by category
@@ -132,7 +137,7 @@ export async function GET(request: NextRequest) {
       }
     );
   } catch (error) {
-    console.error("Error in popular activities API:", error);
+    logger.error("Error in popular activities API:", error);
     return NextResponse.json(
       { counts: {}, error: "Failed to fetch activity counts" },
       { status: 500 }

@@ -3,36 +3,8 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import Link from "next/link";
 import EventCard, { type FriendGoing } from "@/components/EventCard";
-import type { RecommendationReason } from "@/components/ReasonBadge";
 import { getLocalDateString } from "@/lib/formats";
-
-// Event type matching API response - compatible with EventCard
-type FeedEvent = {
-  id: number;
-  title: string;
-  start_date: string;
-  start_time: string | null;
-  is_all_day: boolean;
-  is_free: boolean;
-  price_min: number | null;
-  price_max: number | null;
-  category: string | null;
-  image_url: string | null;
-  ticket_url: string | null;
-  venue: {
-    id: number;
-    name: string;
-    neighborhood: string | null;
-    slug?: string | null;
-  } | null;
-  score?: number;
-  reasons?: RecommendationReason[];
-  friends_going?: Array<{
-    user_id: string;
-    username: string;
-    display_name: string | null;
-  }>;
-};
+import type { FeedEvent } from "@/lib/hooks/useForYouEvents";
 
 type UserPreferences = {
   favorite_categories: string[];
@@ -211,7 +183,7 @@ function FriendsGoingHighlight({
         {events.slice(0, 3).map((event, idx) => (
           <EventCard
             key={event.id}
-            event={event as never}
+            event={event}
             index={idx}
             portalSlug={portalSlug}
             friendsGoing={convertFriendsGoing(event.friends_going)}
@@ -282,7 +254,7 @@ function ExpandableSection({
         {visibleEvents.map((event, idx) => (
           <EventCard
             key={event.id}
-            event={event as never}
+            event={event}
             index={idx}
             portalSlug={portalSlug}
             reasons={event.reasons}
@@ -333,8 +305,6 @@ function convertFriendsGoing(
 }
 
 export default function ForYouFeed({ portalSlug }: ForYouFeedProps) {
-  console.log("[ForYouFeed] Component mounting, portalSlug:", portalSlug);
-
   const [events, setEvents] = useState<FeedEvent[]>([]);
   const [trendingEvents, setTrendingEvents] = useState<TrendingEvent[]>([]);
   const [preferences, setPreferences] = useState<UserPreferences | null>(null);
@@ -345,7 +315,6 @@ export default function ForYouFeed({ portalSlug }: ForYouFeedProps) {
   const mountedRef = useRef(true);
 
   const loadFeed = useCallback(async () => {
-    console.log("[ForYouFeed] loadFeed called");
     try {
       setError(null);
       setLoading(true);
@@ -368,33 +337,6 @@ export default function ForYouFeed({ portalSlug }: ForYouFeedProps) {
       const prefsData = prefsRes.ok ? await prefsRes.json() : null;
 
       if (mountedRef.current) {
-        // Debug logging - visible in browser console
-        console.log("[ForYouFeed] API response:", {
-          totalEvents: feedData.events?.length || 0,
-          hasPreferences: feedData.hasPreferences,
-          eventsWithVenueReason: feedData.events?.filter((e: FeedEvent) =>
-            e.reasons?.some((r) => r.type === "followed_venue")
-          ).length || 0,
-          eventsWithOrganizationReason: feedData.events?.filter((e: FeedEvent) =>
-            e.reasons?.some((r) => r.type === "followed_organization")
-          ).length || 0,
-          preferences: prefsData,
-          // Show debug info from API
-          _debug: feedData._debug,
-        });
-
-        // Log first few events with their reasons for debugging
-        if (feedData.events?.length > 0) {
-          console.log("[ForYouFeed] Sample events with reasons:",
-            feedData.events.slice(0, 5).map((e: FeedEvent) => ({
-              id: e.id,
-              title: e.title.substring(0, 30),
-              reasons: e.reasons,
-              venueId: e.venue?.id,
-            }))
-          );
-        }
-
         setEvents(feedData.events || []);
         setHasPreferences(feedData.hasPreferences);
         setTrendingEvents(trendingData.events || []);

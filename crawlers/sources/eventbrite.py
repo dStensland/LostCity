@@ -279,7 +279,7 @@ def process_event(event_data: dict, source_id: int, producer_id: Optional[int]) 
             "start_time": start_time,
             "end_date": end_date or start_date,
             "end_time": end_time,
-            "is_all_day": start_time is None,
+            "is_all_day": False,
             "category": category,
             "subcategory": subcategory,
             "tags": tags,

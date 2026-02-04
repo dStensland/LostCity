@@ -1,13 +1,13 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextRequest } from "next/server";
 import { getLocalDateString } from "@/lib/formats";
-import { applyRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
+import { applyRateLimit, RATE_LIMITS, getClientIdentifier} from "@/lib/rate-limit";
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ slug: string }> }
 ) {
-  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.read);
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.read, getClientIdentifier(request));
   if (rateLimitResult) return rateLimitResult;
 
   const { slug } = await params;

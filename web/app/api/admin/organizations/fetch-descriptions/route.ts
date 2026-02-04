@@ -1,5 +1,43 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
+import { isAdmin } from "@/lib/supabase/server";
+import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
+import { logger } from "@/lib/logger";
+
+// Validate URL is safe for external fetching (prevents SSRF)
+function isValidExternalUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    // Only allow HTTPS
+    if (parsed.protocol !== "https:") return false;
+    // Reject localhost and common internal hostnames
+    const hostname = parsed.hostname.toLowerCase();
+    if (
+      hostname === "localhost" ||
+      hostname === "127.0.0.1" ||
+      hostname === "0.0.0.0" ||
+      hostname === "::1" ||
+      hostname.endsWith(".local") ||
+      hostname.endsWith(".internal") ||
+      hostname === "metadata.google.internal" ||
+      hostname === "169.254.169.254"
+    ) return false;
+    // Reject private IP ranges
+    const parts = hostname.split(".");
+    if (parts.length === 4 && parts.every(p => /^\d+$/.test(p))) {
+      const first = parseInt(parts[0]);
+      const second = parseInt(parts[1]);
+      if (first === 10) return false; // 10.0.0.0/8
+      if (first === 172 && second >= 16 && second <= 31) return false; // 172.16.0.0/12
+      if (first === 192 && second === 168) return false; // 192.168.0.0/16
+      if (first === 169 && second === 254) return false; // 169.254.0.0/16
+      if (first === 127) return false; // 127.0.0.0/8
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 // Lazy initialization to avoid build errors when env vars not present
 let _supabaseAdmin: SupabaseClient | null = null;
@@ -110,12 +148,21 @@ async function fetchDescriptionFromWebsite(websiteUrl: string): Promise<string |
 
     return null;
   } catch (error) {
-    console.error(`Error fetching website ${websiteUrl}:`, error);
+    logger.error(`Error fetching website ${websiteUrl}:`, error);
     return null;
   }
 }
 
 export async function POST(request: NextRequest) {
+  // Apply rate limiting (standard tier - admin endpoint)
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.standard, getClientIdentifier(request));
+  if (rateLimitResult) return rateLimitResult;
+
+  // Verify admin
+  if (!(await isAdmin())) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   try {
     const body = await request.json();
     const { organizationIds, overwrite = false } = body as {
@@ -142,7 +189,7 @@ export async function POST(request: NextRequest) {
     const { data: organizations, error } = await query;
 
     if (error) {
-      console.error("Error fetching organizations:", error);
+      logger.error("Error fetching organizations:", error);
       return NextResponse.json({ error: "Failed to fetch organizations" }, { status: 500 });
     }
 
@@ -165,6 +212,17 @@ export async function POST(request: NextRequest) {
           id: organization.id,
           name: organization.name,
           status: "skipped",
+        });
+        continue;
+      }
+
+      // Validate URL is safe before fetching
+      if (!isValidExternalUrl(organization.website)) {
+        results.push({
+          id: organization.id,
+          name: organization.name,
+          status: "failed",
+          error: "Invalid or unsafe website URL",
         });
         continue;
       }
@@ -213,13 +271,22 @@ export async function POST(request: NextRequest) {
       summary: { success: successCount, failed: failedCount, skipped: skippedCount },
     });
   } catch (err) {
-    console.error("Error in fetch-descriptions API:", err);
+    logger.error("Error in fetch-descriptions API:", err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
 
 // GET endpoint to check organizations without descriptions
-export async function GET() {
+export async function GET(request: NextRequest) {
+  // Apply rate limiting (standard tier - admin endpoint)
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.standard, getClientIdentifier(request));
+  if (rateLimitResult) return rateLimitResult;
+
+  // Verify admin
+  if (!(await isAdmin())) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   try {
     const supabase = getSupabaseAdmin();
 
@@ -243,7 +310,7 @@ export async function GET() {
       organizations: organizations || [],
     });
   } catch (err) {
-    console.error("Error checking organizations:", err);
+    logger.error("Error checking organizations:", err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

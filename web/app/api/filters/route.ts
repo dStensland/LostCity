@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
 import { getAvailableFilters } from "@/lib/search";
-import { applyRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
+import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
+import { logger } from "@/lib/logger";
 
 export const revalidate = 600; // Cache for 10 minutes
 
 export async function GET(request: Request) {
   // Rate limit: read endpoint
-  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.read);
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.read, getClientIdentifier(request));
   if (rateLimitResult) return rateLimitResult;
 
   try {
@@ -18,7 +19,7 @@ export async function GET(request: Request) {
       },
     });
   } catch (error) {
-    console.error("Error fetching available filters:", error);
+    logger.error("Error fetching available filters", error);
     return NextResponse.json(
       { error: "Failed to fetch filters" },
       { status: 500 }

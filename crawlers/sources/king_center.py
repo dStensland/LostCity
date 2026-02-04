@@ -261,7 +261,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         continue
 
                     # Check if all-day
-                    is_all_day = event_data.get("all_day", False) or start_time is None
+                    is_all_day = event_data.get("all_day", False)
 
                     event_record = {
                         "source_id": source_id,

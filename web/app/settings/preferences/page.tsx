@@ -1,7 +1,13 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import type { Database } from "@/lib/types";
 import PreferencesClient from "./PreferencesClient";
+
+export const metadata: Metadata = {
+  title: "Preferences | Lost City",
+  description: "Set your favorite categories, neighborhoods, vibes, and price preferences on Lost City.",
+};
 
 type UserPreferences = Database["public"]["Tables"]["user_preferences"]["Row"];
 

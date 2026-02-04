@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getPortalSourceAccess } from "@/lib/federation";
 import { createClient } from "@/lib/supabase/server";
+import { applyRateLimit, RATE_LIMITS, getClientIdentifier} from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -10,6 +11,9 @@ type Props = {
 
 // GET /api/portals/[slug]/sources - Get accessible sources for a portal
 export async function GET(request: NextRequest, { params }: Props) {
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.read, getClientIdentifier(request));
+  if (rateLimitResult) return rateLimitResult;
+
   const supabase = await createClient();
   const { slug } = await params;
 

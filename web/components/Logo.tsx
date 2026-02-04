@@ -1,5 +1,3 @@
-"use client";
-
 import Link from "next/link";
 import { DEFAULT_PORTAL_SLUG } from "@/lib/portal-context";
 

@@ -2,7 +2,9 @@ import { NextResponse } from "next/server";
 import { getUser } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { format, startOfMonth, endOfMonth, addMonths } from "date-fns";
-import { applyRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
+import { applyRateLimit, RATE_LIMITS, getClientIdentifier} from "@/lib/rate-limit";
+import { errorResponse } from "@/lib/api-utils";
+import { logger } from "@/lib/logger";
 
 export type UserCalendarEvent = {
   id: number;
@@ -35,7 +37,7 @@ export type UserCalendarEvent = {
 };
 
 export async function GET(request: Request) {
-  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.read);
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.read, getClientIdentifier(request));
   if (rateLimitResult) return rateLimitResult;
 
   try {
@@ -137,7 +139,7 @@ export async function GET(request: Request) {
       .order("event(start_date)", { ascending: true }) as { data: RsvpRow[] | null; error: Error | null };
 
     if (error) {
-      console.error("Error fetching user calendar events:", error);
+      logger.error("Error fetching user calendar events:", error);
       return NextResponse.json(
         { error: "Failed to fetch calendar events" },
         { status: 500 }
@@ -185,8 +187,6 @@ export async function GET(request: Request) {
       },
     });
   } catch (err) {
-    console.error("User calendar API error:", err);
-    const message = err instanceof Error ? err.message : String(err);
-    return NextResponse.json({ error: message }, { status: 500 });
+    return errorResponse(err, "GET /api/user/calendar");
   }
 }

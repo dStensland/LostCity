@@ -172,6 +172,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "is_recurring": False,
                         "recurrence_rule": None,
                         "content_hash": content_hash,
+                        "is_class": True,
+                        "class_category": "pottery",
                     }
 
                     try:

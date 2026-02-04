@@ -76,6 +76,11 @@ export type Event = {
   recurrence_rule?: string | null;
   is_live?: boolean;
   attendee_count?: number | null;
+  is_class?: boolean;
+  class_category?: string | null;
+  skill_level?: string | null;
+  instructor?: string | null;
+  capacity?: number | null;
 };
 
 export type Venue = {
@@ -89,59 +94,6 @@ export type Venue = {
   vibes?: string[] | null;
   description?: string | null;
 };
-
-export async function getUpcomingEvents(limit = 50): Promise<Event[]> {
-  const today = getLocalDateString();
-
-  const { data, error } = await supabase
-    .from("events")
-    .select(
-      `
-      *,
-      venue:venues(id, name, slug, address, neighborhood, city, state)
-    `
-    )
-    .gte("start_date", today)
-    .order("start_date", { ascending: true })
-    .order("start_time", { ascending: true })
-    .limit(limit);
-
-  if (error) {
-    console.error("Error fetching events:", error);
-    return [];
-  }
-
-  return data as Event[];
-}
-
-export async function getUpcomingEventsPaginated(
-  page = 1,
-  pageSize = 20
-): Promise<{ events: Event[]; total: number }> {
-  const today = getLocalDateString();
-  const offset = (page - 1) * pageSize;
-
-  const { data, error, count } = await supabase
-    .from("events")
-    .select(
-      `
-      *,
-      venue:venues(id, name, slug, address, neighborhood, city, state)
-    `,
-      { count: "exact" }
-    )
-    .gte("start_date", today)
-    .order("start_date", { ascending: true })
-    .order("start_time", { ascending: true })
-    .range(offset, offset + pageSize - 1);
-
-  if (error) {
-    console.error("Error fetching events:", error);
-    return { events: [], total: 0 };
-  }
-
-  return { events: data as Event[], total: count ?? 0 };
-}
 
 export type Producer = {
   id: string;
@@ -182,33 +134,6 @@ export async function getEventById(id: number): Promise<EventWithProducer | null
   return data as EventWithProducer;
 }
 
-export async function getEventsByCategory(
-  categoryId: string,
-  limit = 50
-): Promise<Event[]> {
-  const today = getLocalDateString();
-
-  const { data, error } = await supabase
-    .from("events")
-    .select(
-      `
-      *,
-      venue:venues(id, name, slug, address, neighborhood, city, state)
-    `
-    )
-    .eq("category_id", categoryId)
-    .gte("start_date", today)
-    .order("start_date", { ascending: true })
-    .limit(limit);
-
-  if (error) {
-    console.error("Error fetching events:", error);
-    return [];
-  }
-
-  return data as Event[];
-}
-
 export async function getRelatedEvents(
   event: Event,
   limit = 4
@@ -216,10 +141,26 @@ export async function getRelatedEvents(
   const today = getLocalDateString();
   const venueId = event.venue?.id;
 
-  // Get other events at the same venue
-  let venueEvents: Event[] = [];
-  if (venueId) {
-    const { data } = await supabase
+  // Parallelize independent queries
+  const [venueEventsResult, sameDateEventsResult] = await Promise.all([
+    // Get other events at the same venue
+    venueId
+      ? supabase
+          .from("events")
+          .select(
+            `
+            *,
+            venue:venues(id, name, slug, address, neighborhood, city, state)
+          `
+          )
+          .eq("venue_id", venueId)
+          .neq("id", event.id)
+          .gte("start_date", today)
+          .order("start_date", { ascending: true })
+          .limit(limit)
+      : Promise.resolve({ data: null }),
+    // Get other events on the same date
+    supabase
       .from("events")
       .select(
         `
@@ -227,69 +168,16 @@ export async function getRelatedEvents(
         venue:venues(id, name, slug, address, neighborhood, city, state)
       `
       )
-      .eq("venue_id", venueId)
+      .eq("start_date", event.start_date)
       .neq("id", event.id)
-      .gte("start_date", today)
-      .order("start_date", { ascending: true })
-      .limit(limit);
+      .order("start_time", { ascending: true })
+      .limit(limit),
+  ]);
 
-    venueEvents = (data as Event[]) || [];
-  }
-
-  // Get other events on the same date
-  const { data: sameDateData } = await supabase
-    .from("events")
-    .select(
-      `
-      *,
-      venue:venues(id, name, slug, address, neighborhood, city, state)
-    `
-    )
-    .eq("start_date", event.start_date)
-    .neq("id", event.id)
-    .order("start_time", { ascending: true })
-    .limit(limit);
-
-  const sameDateEvents = (sameDateData as Event[]) || [];
+  const venueEvents = (venueEventsResult.data as Event[]) || [];
+  const sameDateEvents = (sameDateEventsResult.data as Event[]) || [];
 
   return { venueEvents, sameDateEvents };
-}
-
-// Get similar events based on category
-export async function getSimilarEvents(
-  event: Event,
-  limit = 4
-): Promise<Event[]> {
-  if (!event.category) {
-    return [];
-  }
-
-  const today = getLocalDateString();
-
-  // Get events in the same category, excluding same venue and same date
-  const { data } = await supabase
-    .from("events")
-    .select(
-      `
-      *,
-      venue:venues(id, name, slug, address, neighborhood, city, state)
-    `
-    )
-    .eq("category", event.category)
-    .neq("id", event.id)
-    .neq("start_date", event.start_date) // Exclude same date (covered by "That same night")
-    .gte("start_date", today)
-    .order("start_date", { ascending: true })
-    .limit(limit * 2); // Fetch extra to filter out same venue
-
-  let similarEvents = (data as Event[]) || [];
-
-  // Filter out events at the same venue (covered by "More at this venue")
-  if (event.venue?.id) {
-    similarEvents = similarEvents.filter((e) => e.venue?.id !== event.venue?.id);
-  }
-
-  return similarEvents.slice(0, limit);
 }
 
 // Get platform stats for landing page

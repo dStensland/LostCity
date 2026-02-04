@@ -7,6 +7,7 @@ Chain with 7 Atlanta-area studios. Each location has server-rendered HTML calend
 from __future__ import annotations
 
 import re
+import time
 import logging
 from datetime import datetime
 from typing import Optional
@@ -15,6 +16,7 @@ from bs4 import BeautifulSoup
 
 from db import get_or_create_venue, insert_event, find_event_by_hash
 from dedupe import generate_content_hash
+from description_fetcher import fetch_description_from_url
 
 logger = logging.getLogger(__name__)
 
@@ -239,6 +241,7 @@ def crawl_location(
     events_found = 0
     events_new = 0
     events_updated = 0
+    detail_fetches = 0
 
     # Find all event cards
     # Structure: <time class="event-datetime"> ... <strong class="event-price"> ... <div class="event-title"><a>
@@ -294,6 +297,17 @@ def crawl_location(
                 events_updated += 1
                 continue
 
+            # Fetch description from detail page (cap at 50 per location)
+            description = None
+            if event_url and detail_fetches < 50:
+                description = fetch_description_from_url(event_url, session=client)
+                detail_fetches += 1
+                time.sleep(0.5)  # Rate limit
+
+            # Fallback synthetic description
+            if not description:
+                description = f"Paint and sip class at {venue_name}. BYOB welcome."
+
             # Build tags
             tags = [
                 "paint-and-sip",
@@ -308,7 +322,7 @@ def crawl_location(
                 "source_id": source_id,
                 "venue_id": venue_id,
                 "title": title,
-                "description": None,
+                "description": description,
                 "start_date": start_date,
                 "start_time": start_time,
                 "end_date": None,
@@ -329,6 +343,7 @@ def crawl_location(
                 "is_recurring": False,
                 "recurrence_rule": None,
                 "content_hash": content_hash,
+                "is_class": True,
             }
 
             try:

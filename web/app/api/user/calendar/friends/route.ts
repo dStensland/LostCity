@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { createClient, getUser } from "@/lib/supabase/server";
 import { format, startOfMonth, endOfMonth, addMonths } from "date-fns";
-import { applyRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
+import { applyRateLimit, RATE_LIMITS, getClientIdentifier} from "@/lib/rate-limit";
+import { errorResponse } from "@/lib/api-utils";
+import { logger } from "@/lib/logger";
 
 type GetFriendIdsResult = { friend_id: string }[];
 
@@ -23,7 +25,7 @@ export type FriendCalendarEvent = {
 
 // GET /api/user/calendar/friends?start=YYYY-MM-DD&end=YYYY-MM-DD&friend_ids=id1,id2
 export async function GET(request: Request) {
-  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.read);
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.read, getClientIdentifier(request));
   if (rateLimitResult) return rateLimitResult;
 
   try {
@@ -55,7 +57,7 @@ export async function GET(request: Request) {
     ) as { data: GetFriendIdsResult | null; error: Error | null };
 
     if (friendIdsError) {
-      console.error("Error fetching friend IDs:", friendIdsError);
+      logger.error("Error fetching friend IDs:", friendIdsError);
       return NextResponse.json({ error: "Failed to fetch friends" }, { status: 500 });
     }
 
@@ -129,7 +131,7 @@ export async function GET(request: Request) {
       .lte("event.start_date", endDate) as { data: FriendRsvpRow[] | null; error: Error | null };
 
     if (error) {
-      console.error("Error fetching friend calendar events:", error);
+      logger.error("Error fetching friend calendar events:", error);
       return NextResponse.json(
         { error: "Failed to fetch friend events" },
         { status: 500 }
@@ -166,8 +168,6 @@ export async function GET(request: Request) {
       friends: friendProfiles || [],
     });
   } catch (err) {
-    console.error("Friend calendar API error:", err);
-    const message = err instanceof Error ? err.message : String(err);
-    return NextResponse.json({ error: message }, { status: 500 });
+    return errorResponse(err, "GET /api/user/calendar/friends");
   }
 }

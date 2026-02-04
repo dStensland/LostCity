@@ -103,10 +103,26 @@ def crawl(source: dict) -> tuple[int, int, int]:
             # Process special programs (these are the main events)
             special_programs = calendar_data.get('preload', {}).get('special_programs', [])
 
+            # Skip generic museum themes/exhibits that repeat daily -- not real events
+            skip_titles = {
+                "play at the museum",
+                "black history month",
+                "women's history month",
+                "hispanic heritage month",
+                "asian american pacific islander heritage month",
+                "pride month",
+                "museum open",
+                "general admission",
+            }
+
             for program in special_programs:
                 try:
                     title = program.get('post_title', '').strip()
                     if not title:
+                        continue
+
+                    # Skip generic exhibit/theme titles
+                    if title.lower() in skip_titles:
                         continue
 
                     start_date_str = program.get('start_date')
@@ -150,6 +166,11 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     # If event spans multiple days, create separate events for each day
                     current_date = start_date
                     while current_date <= end_date:
+                        # Skip Wednesdays (museum closed)
+                        if current_date.weekday() == 2:
+                            current_date += timedelta(days=1)
+                            continue
+
                         # Skip if this date is in exclusions
                         exclusions = program.get('exclusions', [])
                         if current_date.strftime("%Y-%m-%d") in exclusions:
@@ -193,7 +214,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             "start_time": start_time,
                             "end_date": current_date.strftime("%Y-%m-%d"),
                             "end_time": end_time,
-                            "is_all_day": start_time is None,
+                            "is_all_day": False,
                             "category": category,
                             "subcategory": subcategory,
                             "tags": [
@@ -228,98 +249,6 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                 except Exception as e:
                     logger.error(f"Error processing program: {e}")
-                    continue
-
-            # Also extract daily programs (on-stage and drop-in activities)
-            # These are recurring daily activities
-            on_stage = calendar_data.get('preload', {}).get('on_stage_programs', [])
-            drop_in = calendar_data.get('preload', {}).get('drop_in_activities', [])
-
-            daily_programs = []
-            if on_stage:
-                daily_programs.extend(on_stage)
-            if drop_in:
-                daily_programs.extend(drop_in)
-
-            # Process daily programs as recurring events for the next 30 days
-            for program in daily_programs:
-                try:
-                    name = program.get('name', '').strip()
-                    description = program.get('description', '').strip()
-
-                    if not name or program.get('hide_on_program_page'):
-                        continue
-
-                    # Get session times
-                    sessions = program.get('sessions', {}).get('a', {})
-                    start_time_str = sessions.get('start', '')
-                    end_time_str = sessions.get('end', '')
-
-                    start_time = parse_time(start_time_str)
-                    end_time = parse_time(end_time_str)
-
-                    # Create events for next 30 days (daily programs)
-                    for i in range(30):
-                        event_date = (datetime.now() + timedelta(days=i)).date()
-
-                        # Skip Mondays (museum closed)
-                        if event_date.weekday() == 0:
-                            continue
-
-                        events_found += 1
-
-                        content_hash = generate_content_hash(
-                            name, "Children's Museum of Atlanta", event_date.strftime("%Y-%m-%d")
-                        )
-
-                        existing = find_event_by_hash(content_hash)
-                        if existing:
-                            events_updated += 1
-                            continue
-
-                        event_record = {
-                            "source_id": source_id,
-                            "venue_id": venue_id,
-                            "title": name,
-                            "description": description or f"{name} - Daily program at Children's Museum",
-                            "start_date": event_date.strftime("%Y-%m-%d"),
-                            "start_time": start_time,
-                            "end_date": event_date.strftime("%Y-%m-%d"),
-                            "end_time": end_time,
-                            "is_all_day": False,
-                            "category": "family",
-                            "subcategory": "kids",
-                            "tags": [
-                                "childrens-museum",
-                                "family",
-                                "kids",
-                                "downtown",
-                                "daily-program",
-                            ],
-                            "price_min": None,
-                            "price_max": None,
-                            "price_note": "Included with museum admission",
-                            "is_free": False,
-                            "source_url": EVENTS_URL,
-                            "ticket_url": EVENTS_URL,
-                            "image_url": None,
-                            "raw_text": f"{name} - {description[:100] if description else ''}",
-                            "extraction_confidence": 0.85,
-                            "is_recurring": True,
-                            "recurrence_rule": "FREQ=DAILY",
-                            "content_hash": content_hash,
-                        }
-
-                        try:
-                            insert_event(event_record)
-                            events_new += 1
-                            if i == 0:  # Only log first occurrence
-                                logger.info(f"Added daily program: {name}")
-                        except Exception as e:
-                            logger.error(f"Failed to insert daily program {name}: {e}")
-
-                except Exception as e:
-                    logger.error(f"Error processing daily program: {e}")
                     continue
 
             browser.close()

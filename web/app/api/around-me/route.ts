@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { applyRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
+import { applyRateLimit, RATE_LIMITS, getClientIdentifier} from "@/lib/rate-limit";
 import { getNeighborhoodByName } from "@/config/neighborhoods";
 import { isSpotOpen, VENUE_TYPES_MAP, type VenueType, DESTINATION_CATEGORIES } from "@/lib/spots";
 import { getPortalBySlug } from "@/lib/portal";
+import { isValidUUID } from "@/lib/api-utils";
+import { logger } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
 
@@ -190,7 +192,7 @@ export type AroundMeEvent = {
 
 export async function GET(request: NextRequest) {
   // Rate limit
-  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.read);
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.read, getClientIdentifier(request));
   if (rateLimitResult) return rateLimitResult;
 
   const searchParams = request.nextUrl.searchParams;
@@ -206,7 +208,10 @@ export async function GET(request: NextRequest) {
   let portalId: string | null = null;
   if (portalSlug) {
     const portal = await getPortalBySlug(portalSlug);
-    portalId = portal?.id || null;
+    // Validate the portal ID from the database is a UUID (defensive check)
+    if (portal?.id && isValidUUID(portal.id)) {
+      portalId = portal.id;
+    }
   }
 
   // Determine center point
@@ -331,12 +336,12 @@ export async function GET(request: NextRequest) {
     ]);
 
     if (spotsResult.error) {
-      console.error("Error fetching spots:", spotsResult.error);
+      logger.error("Error fetching spots:", spotsResult.error);
       throw spotsResult.error;
     }
 
     if (eventsResult.error) {
-      console.error("Error fetching events:", eventsResult.error);
+      logger.error("Error fetching events:", eventsResult.error);
       throw eventsResult.error;
     }
 
@@ -484,7 +489,7 @@ export async function GET(request: NextRequest) {
       }
     );
   } catch (error) {
-    console.error("Around me API error:", error);
+    logger.error("Around me API error:", error);
     return NextResponse.json(
       { error: "Failed to fetch nearby items", items: [], counts: { spots: 0, events: 0, total: 0 } },
       { status: 500 }

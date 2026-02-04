@@ -163,7 +163,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 location_text = extract_location_from_description(description)
 
                 # Determine if it's all-day
-                is_all_day = (start_time is None)
+                is_all_day = False
 
                 # Determine category based on title
                 title_lower = title.lower()

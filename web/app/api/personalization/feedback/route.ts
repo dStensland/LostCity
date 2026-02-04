@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getUser } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
+import { logger } from "@/lib/logger";
 
 // POST /api/personalization/feedback - Record user feedback on events
 export async function POST(request: NextRequest) {
@@ -71,7 +72,7 @@ export async function POST(request: NextRequest) {
   }
 
   // Record the feedback event for analytics (ignore type errors - table exists)
-  await supabase.from("activities").insert({
+  const { error: activityError } = await supabase.from("activities").insert({
     user_id: user.id,
     activity_type: signal === "positive" ? "like" : "dislike",
     event_id: eventId,
@@ -84,6 +85,10 @@ export async function POST(request: NextRequest) {
       neighborhood,
     },
   } as never);
+
+  if (activityError) {
+    logger.error("Failed to log activity", activityError);
+  }
 
   return NextResponse.json({ success: true });
 }
@@ -98,7 +103,7 @@ async function upsertInferredPreference(
   type InferredPref = { id: string; score: number; interaction_count: number };
 
   // Try to update existing preference
-  const { data: existing } = await supabase
+  const { data: existing, error: selectError } = await supabase
     .from("inferred_preferences")
     .select("id, score, interaction_count")
     .eq("user_id", userId)
@@ -106,12 +111,17 @@ async function upsertInferredPreference(
     .eq("signal_value", signalValue)
     .maybeSingle();
 
+  if (selectError) {
+    logger.error("Failed to fetch inferred preference", selectError);
+    return;
+  }
+
   const existingPref = existing as InferredPref | null;
 
   if (existingPref) {
     // Update existing preference
     const newScore = Math.max(-5, Math.min(10, existingPref.score + scoreChange));
-    await supabase
+    const { error: updateError } = await supabase
       .from("inferred_preferences")
       .update({
         score: newScore,
@@ -119,14 +129,22 @@ async function upsertInferredPreference(
         last_interaction_at: new Date().toISOString(),
       } as never)
       .eq("id", existingPref.id);
+
+    if (updateError) {
+      logger.error("Failed to update inferred preference", updateError);
+    }
   } else {
     // Create new preference
-    await supabase.from("inferred_preferences").insert({
+    const { error: insertError } = await supabase.from("inferred_preferences").insert({
       user_id: userId,
       signal_type: signalType,
       signal_value: signalValue,
       score: scoreChange > 0 ? 1 : 0,
       interaction_count: 1,
     } as never);
+
+    if (insertError) {
+      logger.error("Failed to insert inferred preference", insertError);
+    }
   }
 }

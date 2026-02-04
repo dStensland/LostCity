@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
-import { applyRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
+import { applyRateLimit, RATE_LIMITS, getClientIdentifier} from "@/lib/rate-limit";
+import { logger } from "@/lib/logger";
 
 interface OnboardingCompleteRequest {
   selectedCategories: string[];
@@ -8,7 +9,7 @@ interface OnboardingCompleteRequest {
 }
 
 export async function POST(request: Request) {
-  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write);
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
   if (rateLimitResult) return rateLimitResult;
 
   try {
@@ -46,67 +47,46 @@ export async function POST(request: Request) {
       .upsert(prefsData as never, { onConflict: "user_id" });
 
     if (prefsError) {
-      console.error("Preferences update error:", prefsError);
+      logger.error("Preferences update error:", prefsError);
       // Don't fail the whole request - continue
     }
 
-    // Track category signals for future recommendations
-    if (selectedCategories.length > 0) {
-      for (const category of selectedCategories) {
-        try {
-          await supabase.from("inferred_preferences").upsert(
-            {
-              user_id: user.id,
-              signal_type: "category",
-              signal_value: category,
-              score: 8, // Strong signal from explicit selection
-              interaction_count: 1,
-            } as never,
-            { onConflict: "user_id,signal_type,signal_value" }
-          );
-        } catch (err) {
-          console.error("Category signal tracking error:", err);
-        }
-      }
-    }
+    // Batch all preference signals into a single upsert
+    const preferenceRows = [
+      ...selectedCategories.map((category) => ({
+        user_id: user.id,
+        signal_type: "category",
+        signal_value: category,
+        score: 8, // Strong signal from explicit selection
+        interaction_count: 1,
+      })),
+      ...selectedSubcategories.map((subcategory) => ({
+        user_id: user.id,
+        signal_type: "subcategory",
+        signal_value: subcategory,
+        score: 9, // Even stronger signal from specific selection
+        interaction_count: 1,
+      })),
+      ...selectedNeighborhoods.map((neighborhood) => ({
+        user_id: user.id,
+        signal_type: "neighborhood",
+        signal_value: neighborhood,
+        score: 8, // Strong signal from explicit selection
+        interaction_count: 1,
+      })),
+    ];
 
-    // Track subcategory signals
-    if (selectedSubcategories.length > 0) {
-      for (const subcategory of selectedSubcategories) {
-        try {
-          await supabase.from("inferred_preferences").upsert(
-            {
-              user_id: user.id,
-              signal_type: "subcategory",
-              signal_value: subcategory,
-              score: 9, // Even stronger signal from specific selection
-              interaction_count: 1,
-            } as never,
-            { onConflict: "user_id,signal_type,signal_value" }
-          );
-        } catch (err) {
-          console.error("Subcategory signal tracking error:", err);
-        }
-      }
-    }
+    // Single batched upsert for all preferences
+    if (preferenceRows.length > 0) {
+      const { error: preferenceError } = await supabase
+        .from("inferred_preferences")
+        .upsert(preferenceRows as never, {
+          onConflict: "user_id,signal_type,signal_value",
+        });
 
-    // Track neighborhood signals
-    if (selectedNeighborhoods.length > 0) {
-      for (const neighborhood of selectedNeighborhoods) {
-        try {
-          await supabase.from("inferred_preferences").upsert(
-            {
-              user_id: user.id,
-              signal_type: "neighborhood",
-              signal_value: neighborhood,
-              score: 8, // Strong signal from explicit selection
-              interaction_count: 1,
-            } as never,
-            { onConflict: "user_id,signal_type,signal_value" }
-          );
-        } catch (err) {
-          console.error("Neighborhood signal tracking error:", err);
-        }
+      if (preferenceError) {
+        logger.error("Preference signal tracking error:", preferenceError);
+        // Don't fail the whole request - continue
       }
     }
 
@@ -117,7 +97,7 @@ export async function POST(request: Request) {
       neighborhoodCount: selectedNeighborhoods.length,
     });
   } catch (error) {
-    console.error("Onboarding complete API error:", error);
+    logger.error("Onboarding complete API error:", error);
     return Response.json(
       { error: "Failed to complete onboarding" },
       { status: 500 }

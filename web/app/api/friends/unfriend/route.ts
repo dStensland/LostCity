@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient, getUser } from "@/lib/supabase/server";
 import { isValidUUID, validationError } from "@/lib/api-utils";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
+import { logger } from "@/lib/logger";
 
 // POST /api/friends/unfriend - Remove a friendship
 export async function POST(request: Request) {
@@ -45,7 +46,7 @@ export async function POST(request: Request) {
     ) as { data: boolean | null; error: Error | null };
 
     if (error) {
-      console.error("Unfriend error:", error);
+      logger.error("Unfriend error:", error);
       return NextResponse.json(
         { error: "Failed to remove friendship" },
         { status: 500 }
@@ -58,7 +59,7 @@ export async function POST(request: Request) {
       deleted: data === true,
     });
   } catch (err) {
-    console.error("Unfriend unexpected error:", err);
+    logger.error("Unfriend unexpected error:", err);
     return NextResponse.json(
       { error: "An internal error occurred" },
       { status: 500 }

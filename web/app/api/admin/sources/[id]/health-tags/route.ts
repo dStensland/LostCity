@@ -1,6 +1,8 @@
 import { isAdmin, canManagePortal } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/service";
+import { applyRateLimit, RATE_LIMITS, getClientIdentifier} from "@/lib/rate-limit";
+import { logger } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
 
@@ -31,6 +33,9 @@ const VALID_HEALTH_TAGS = [
 
 // GET /api/admin/sources/[id]/health-tags - Get health tags for a source
 export async function GET(request: NextRequest, { params }: Props) {
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.standard, getClientIdentifier(request));
+  if (rateLimitResult) return rateLimitResult;
+
   const { id } = await params;
   const sourceId = parseInt(id, 10);
 
@@ -68,6 +73,9 @@ export async function GET(request: NextRequest, { params }: Props) {
 
 // PATCH /api/admin/sources/[id]/health-tags - Update health tags for a source
 export async function PATCH(request: NextRequest, { params }: Props) {
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.standard, getClientIdentifier(request));
+  if (rateLimitResult) return rateLimitResult;
+
   const { id } = await params;
   const sourceId = parseInt(id, 10);
 
@@ -168,7 +176,7 @@ export async function PATCH(request: NextRequest, { params }: Props) {
     .eq("id", sourceId);
 
   if (updateError) {
-    console.error("Error updating source health tags:", updateError);
+    logger.error("Error updating source health tags:", updateError);
     return NextResponse.json(
       { error: "Failed to update health tags" },
       { status: 500 }

@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient, getUser } from "@/lib/supabase/server";
+import { errorResponse } from "@/lib/api-utils";
+import { logger } from "@/lib/logger";
 
 type PreferenceType = "category" | "neighborhood" | "vibe";
 
@@ -51,7 +53,7 @@ export async function POST(request: Request) {
 
     if (fetchError && fetchError.code !== "PGRST116") {
       // PGRST116 = no rows found, which is fine
-      console.error("Error fetching preferences:", fetchError);
+      logger.error("Error fetching preferences", fetchError);
       return NextResponse.json(
         { error: "Failed to fetch preferences" },
         { status: 500 }
@@ -83,7 +85,7 @@ export async function POST(request: Request) {
         .eq("user_id", user.id);
 
       if (updateError) {
-        console.error("Error updating preferences:", updateError);
+        logger.error("Error updating preferences", updateError);
         return NextResponse.json(
           { error: "Failed to update preferences" },
           { status: 500 }
@@ -100,7 +102,7 @@ export async function POST(request: Request) {
         .insert(insertData as never);
 
       if (insertError) {
-        console.error("Error inserting preferences:", insertError);
+        logger.error("Error inserting preferences", insertError);
         return NextResponse.json(
           { error: "Failed to create preferences" },
           { status: 500 }
@@ -114,8 +116,6 @@ export async function POST(request: Request) {
       preferences: updatedValues,
     });
   } catch (err) {
-    console.error("Preferences API error:", err);
-    const message = err instanceof Error ? err.message : String(err);
-    return NextResponse.json({ error: message }, { status: 500 });
+    return errorResponse(err, "POST /api/preferences/add");
   }
 }

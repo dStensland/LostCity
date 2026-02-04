@@ -16,6 +16,26 @@ A systematic approach to building comprehensive event coverage for any city.
 
 ## Source Tier System
 
+### Source Rule: Original Sources Over Curators
+
+**Always prefer crawling the original venue/organization over a curator or editorial aggregator.**
+
+Curators (ArtsATL, Nashville Scene, Discover Atlanta, Visit Music City, etc.) duplicate events that should come from the original source. This causes:
+- Duplicate events in the database
+- Lower data quality (curators often strip times, prices, descriptions)
+- Fragile dependencies on editorial sites that change format frequently
+
+**Allowed aggregators** (fill gaps we can't get from direct sources):
+- Ticketmaster / AXS -- structured ticketing APIs, cover venues without their own calendars
+- Eventbrite -- community events from small orgs that don't have websites
+
+**Do not use** as sources:
+- Editorial calendars (ArtsATL, Creative Loafing, Nashville Scene, AccessATlanta)
+- Tourism boards (Discover Atlanta, Visit Music City, Visit Franklin)
+- City guides (Do615, Nashville.com)
+
+If an event appears in a curator but not in our database, add a crawler for the original venue instead.
+
 ### Tier 1: High-Volume Aggregators (Priority: First)
 **Goal:** Establish baseline coverage quickly
 
@@ -23,7 +43,6 @@ A systematic approach to building comprehensive event coverage for any city.
 |-------------|---------|-----------------|------------|-------|
 | Ticketing APIs | Ticketmaster, AXS | 500-1000+ | 0.95 | Best structured data, covers major venues |
 | Event Aggregators | Eventbrite | 100-500 | 0.85 | Community events, varied quality |
-| Local Calendars | Creative Loafing, Do512 | 50-200 | 0.75 | City-specific aggregators |
 | Meetup API | Meetup.com | 50-100 | 0.80 | Community/tech/hobby events |
 
 **Why First:** These provide immediate broad coverage while you build venue-specific crawlers.

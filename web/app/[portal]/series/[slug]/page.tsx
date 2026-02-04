@@ -1,10 +1,11 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import type { ReactElement } from "react";
+import { cache } from "react";
 import UnifiedHeader from "@/components/UnifiedHeader";
 import PortalFooter from "@/components/PortalFooter";
 import { PortalTheme } from "@/components/PortalTheme";
-import { getPortalBySlug } from "@/lib/portal";
+import { getCachedPortalBySlug } from "@/lib/portal";
 import {
   getSeriesBySlug,
   getSeriesEvents,
@@ -23,6 +24,7 @@ import {
   RelatedCard,
   DetailStickyBar,
 } from "@/components/detail";
+import { safeJsonLd } from "@/lib/formats";
 import type { Metadata } from "next";
 
 export const revalidate = 300; // 5 minutes
@@ -31,10 +33,13 @@ type Props = {
   params: Promise<{ portal: string; slug: string }>;
 };
 
+// Deduplicate series fetches across generateMetadata and page
+const getCachedSeriesBySlug = cache(getSeriesBySlug);
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug, portal: portalSlug } = await params;
-  const series = await getSeriesBySlug(slug);
-  const portal = await getPortalBySlug(portalSlug);
+  const series = await getCachedSeriesBySlug(slug);
+  const portal = await getCachedPortalBySlug(portalSlug);
 
   if (!series) {
     return { title: "Series Not Found" };
@@ -263,8 +268,8 @@ function groupEventsByDate(
 
 export default async function PortalSeriesPage({ params }: Props) {
   const { slug, portal: portalSlug } = await params;
-  const series = await getSeriesBySlug(slug);
-  const portal = await getPortalBySlug(portalSlug);
+  const series = await getCachedSeriesBySlug(slug);
+  const portal = await getCachedPortalBySlug(portalSlug);
 
   if (!series) {
     notFound();
@@ -290,7 +295,7 @@ export default async function PortalSeriesPage({ params }: Props) {
       {/* Schema.org JSON-LD */}
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(seriesSchema) }}
+        dangerouslySetInnerHTML={{ __html: safeJsonLd(seriesSchema) }}
       />
 
       {/* Portal-specific theming */}

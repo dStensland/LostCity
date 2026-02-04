@@ -201,7 +201,6 @@ export default function OrgDetailView({ slug, portalSlug, onClose }: OrgDetailVi
                   className={`object-contain transition-opacity duration-300 ${imageLoaded ? "opacity-100" : "opacity-0"}`}
                   onLoad={() => setImageLoaded(true)}
                   onError={() => setImageError(true)}
-                  unoptimized
                 />
               </div>
             ) : (

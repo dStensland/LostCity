@@ -101,7 +101,7 @@ export const DELETE = withAuth(async (request, { user, serviceClient }) => {
     if (error) {
       logger.error("RSVP delete error", error, { userId: user.id, eventId, component: "rsvp" });
       return NextResponse.json(
-        { error: "Failed to save RSVP" },
+        { error: "Failed to delete RSVP" },
         { status: 500 }
       );
     }
@@ -139,7 +139,7 @@ export const GET = withAuth(async (request, { user, serviceClient }) => {
     if (error) {
       logger.error("RSVP fetch error", error, { userId: user.id, eventId, component: "rsvp" });
       return NextResponse.json(
-        { error: "Failed to save RSVP" },
+        { error: "Failed to fetch RSVP" },
         { status: 500 }
       );
     }

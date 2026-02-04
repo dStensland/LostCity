@@ -1,9 +1,10 @@
 import { getSpotBySlug, getUpcomingEventsForSpot, getNearbySpots, formatPriceLevel, getSpotTypeLabel, getSpotTypeLabels, SPOT_TYPES, type SpotType } from "@/lib/spots";
-import { getPortalBySlug } from "@/lib/portal";
+import { getCachedPortalBySlug } from "@/lib/portal";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
+import { cache } from "react";
 import { format, parseISO } from "date-fns";
-import { formatTimeSplit } from "@/lib/formats";
+import { formatTimeSplit, safeJsonLd } from "@/lib/formats";
 import UnifiedHeader from "@/components/UnifiedHeader";
 import PortalFooter from "@/components/PortalFooter";
 import { PortalTheme } from "@/components/PortalTheme";
@@ -29,9 +30,12 @@ type Props = {
   params: Promise<{ portal: string; slug: string }>;
 };
 
+// Deduplicate spot fetches across generateMetadata and page
+const getCachedSpotBySlug = cache(getSpotBySlug);
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
-  const spot = await getSpotBySlug(slug);
+  const spot = await getCachedSpotBySlug(slug);
 
   if (!spot) {
     return {
@@ -95,8 +99,12 @@ function formatHours(hours: string | null): string | null {
 
 export default async function PortalSpotPage({ params }: Props) {
   const { portal: portalSlug, slug } = await params;
-  const spot = await getSpotBySlug(slug);
-  const portal = await getPortalBySlug(portalSlug);
+
+  // Stage 1: Fetch spot and portal in parallel
+  const [spot, portal] = await Promise.all([
+    getCachedSpotBySlug(slug),
+    getCachedPortalBySlug(portalSlug),
+  ]);
 
   if (!spot) {
     notFound();
@@ -106,8 +114,11 @@ export default async function PortalSpotPage({ params }: Props) {
   const activePortalSlug = portal?.slug || portalSlug;
   const activePortalName = portal?.name || portalSlug.charAt(0).toUpperCase() + portalSlug.slice(1);
 
-  const upcomingEvents = await getUpcomingEventsForSpot(spot.id, 20);
-  const nearbySpots = spot.id ? await getNearbySpots(spot.id) : [];
+  // Stage 2: Fetch events and nearby spots in parallel (depends on spot.id)
+  const [upcomingEvents, nearbySpots] = await Promise.all([
+    getUpcomingEventsForSpot(spot.id, 20),
+    spot.id ? getNearbySpots(spot.id) : Promise.resolve([]),
+  ]);
   const primaryType = spot.venue_type as SpotType | null;
   const typeInfo = primaryType ? SPOT_TYPES[primaryType] : null;
   const spotTypeColor = getSpotTypeColor(spot.venue_type);
@@ -135,7 +146,7 @@ export default async function PortalSpotPage({ params }: Props) {
       {/* Schema.org JSON-LD */}
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+        dangerouslySetInnerHTML={{ __html: safeJsonLd(schema) }}
       />
 
       {/* Portal-specific theming */}

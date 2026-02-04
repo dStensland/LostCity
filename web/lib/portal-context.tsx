@@ -43,6 +43,33 @@ export type {
 };
 
 // ============================================================================
+// Portal Filters Type
+// ============================================================================
+
+/**
+ * Filters that can be applied to portal event queries.
+ * Used by the filters module and portal admin pages.
+ */
+export interface PortalFilters {
+  // Location filters
+  city?: string;
+  geo_center?: [number, number];
+  geo_radius_km?: number;
+
+  // Time filters
+  date_range?: [string, string];
+
+  // Category filters
+  categories?: string[];
+  exclude_categories?: string[];
+
+  // Other filters
+  price_max?: number;
+  venue_ids?: number[];
+  tags?: string[];
+}
+
+// ============================================================================
 // Header Configuration Type
 // ============================================================================
 

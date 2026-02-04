@@ -1,6 +1,6 @@
 import { getFilteredEventsWithSearch, getFilteredEventsWithCursor, enrichEventsWithSocialProof, PRICE_FILTERS, type SearchFilters } from "@/lib/search";
 import type { MoodId } from "@/lib/moods";
-import { applyRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
+import { applyRateLimit, RATE_LIMITS, getClientIdentifier} from "@/lib/rate-limit";
 import { generateNextCursor } from "@/lib/cursor";
 import { logger } from "@/lib/logger";
 import { apiResponse } from "@/lib/api-utils";
@@ -15,7 +15,7 @@ function safeParseInt(value: string | null, defaultValue: number, min = 1, max =
 
 export async function GET(request: Request) {
   // Rate limit: read endpoint
-  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.read);
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.read, getClientIdentifier(request));
   if (rateLimitResult) return rateLimitResult;
 
   try {

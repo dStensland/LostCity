@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient, getUser } from "@/lib/supabase/server";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
+import { logger } from "@/lib/logger";
 
 type GetFriendIdsResult = { friend_id: string }[];
 
@@ -32,7 +33,7 @@ export async function GET(request: Request) {
   ) as { data: GetFriendIdsResult | null; error: Error | null };
 
   if (friendIdsError) {
-    console.error("Error fetching friend IDs:", friendIdsError);
+    logger.error("Error fetching friend IDs:", friendIdsError);
     return NextResponse.json({ error: "Failed to fetch friends" }, { status: 500 });
   }
 
@@ -50,7 +51,7 @@ export async function GET(request: Request) {
     .order("display_name");
 
   if (error) {
-    console.error("Error fetching friend profiles:", error);
+    logger.error("Error fetching friend profiles:", error);
     return NextResponse.json({ error: "Failed to fetch friends" }, { status: 500 });
   }
 

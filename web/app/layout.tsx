@@ -7,10 +7,9 @@ import { ThemeProvider } from "@/lib/theme-context";
 import { ToastProvider } from "@/components/Toast";
 import { QueryProvider } from "@/lib/providers/QueryProvider";
 import DarkHoursTheme from "@/components/DarkHoursTheme";
-import RainEffect from "@/components/RainEffect";
-import CursorGlow from "@/components/CursorGlow";
 import NavigationProgress from "@/components/NavigationProgress";
 import SkipLink from "@/components/SkipLink";
+import ClientEffects from "@/components/ClientEffects";
 import "./globals.css";
 
 // Primary sans-serif font - used globally
@@ -57,9 +56,6 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        {/* Preconnect to Google Fonts for faster font loading */}
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         {/* Preconnect to external domains for faster resource loading */}
         <link rel="preconnect" href="https://rtppvljfrkjtoxmaizea.supabase.co" />
         <link rel="preconnect" href="https://img.evbuc.com" />
@@ -78,10 +74,8 @@ export default function RootLayout({
             </Suspense>
             {/* Ambient glow effect */}
             <div className="ambient-glow" aria-hidden="true" />
-            {/* Rain overlay effect */}
-            <RainEffect />
-            {/* Cursor glow effect */}
-            <CursorGlow />
+            {/* Visual effects (rain, cursor glow) */}
+            <ClientEffects />
             <AuthProvider>
               <DarkHoursTheme />
               <ToastProvider>{children}</ToastProvider>

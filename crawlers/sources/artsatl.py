@@ -260,7 +260,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             'start_time': start_time,
                             'end_date': end_date,
                             'end_time': end_time,
-                            'is_all_day': start_time is None or start_time == '00:00:00',
+                            'is_all_day': start_time == '00:00:00',
                             'category': category,
                             'subcategory': subcategory,
                             'tags': ['arts', 'artsatl', category],

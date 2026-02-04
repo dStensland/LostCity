@@ -1,40 +1,54 @@
-import { createClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
-import { checkBodySize, errorResponse } from "@/lib/api-utils";
+import { checkBodySize, errorResponse, parseIntParam } from "@/lib/api-utils";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
+import { withOptionalAuth, withAuth } from "@/lib/api-middleware";
+import { logger } from "@/lib/logger";
 
-export async function GET(request: NextRequest) {
+export const GET = withOptionalAuth(async (request, { user, serviceClient }) => {
   const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.read, getClientIdentifier(request));
   if (rateLimitResult) return rateLimitResult;
-  const supabase = await createClient();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
+  if (!user || !serviceClient) {
     return NextResponse.json({ isRecommended: false });
   }
 
   const { searchParams } = new URL(request.url);
-  const eventId = searchParams.get("eventId");
-  const venueId = searchParams.get("venueId");
+  const eventIdStr = searchParams.get("eventId");
+  const venueIdStr = searchParams.get("venueId");
   const organizationId = searchParams.get("organizationId");
 
-  if (!eventId && !venueId && !organizationId) {
+  if (!eventIdStr && !venueIdStr && !organizationId) {
     return NextResponse.json({ error: "Missing target" }, { status: 400 });
   }
 
+  // Validate integer IDs
+  let eventId: number | null = null;
+  let venueId: number | null = null;
+
+  if (eventIdStr) {
+    eventId = parseIntParam(eventIdStr);
+    if (eventId === null) {
+      return NextResponse.json({ error: "Invalid eventId" }, { status: 400 });
+    }
+  }
+
+  if (venueIdStr) {
+    venueId = parseIntParam(venueIdStr);
+    if (venueId === null) {
+      return NextResponse.json({ error: "Invalid venueId" }, { status: 400 });
+    }
+  }
+
   try {
-    let query = supabase
+    let query = serviceClient
       .from("recommendations")
       .select("*")
       .eq("user_id", user.id);
 
     if (eventId) {
-      query = query.eq("event_id", parseInt(eventId));
+      query = query.eq("event_id", eventId);
     } else if (venueId) {
-      query = query.eq("venue_id", parseInt(venueId));
+      query = query.eq("venue_id", venueId);
     } else if (organizationId) {
       query = query.eq("organization_id", organizationId);
     }
@@ -42,7 +56,7 @@ export async function GET(request: NextRequest) {
     const { data, error } = await query.maybeSingle();
 
     if (error) {
-      console.error("Recommendation check error:", error);
+      logger.error("Recommendation check error", error);
       return NextResponse.json({ isRecommended: false, error: "Failed to check recommendation" });
     }
 
@@ -54,28 +68,18 @@ export async function GET(request: NextRequest) {
       visibility: rec?.visibility || "public",
     });
   } catch (err) {
-    console.error("Recommendation check exception:", err);
+    logger.error("Recommendation check exception", err);
     return NextResponse.json({ isRecommended: false, error: "Server error" });
   }
-}
+});
 
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (request, { user, serviceClient }) => {
   // Check body size (10KB limit)
   const sizeCheck = checkBodySize(request);
   if (sizeCheck) return sizeCheck;
 
   const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
   if (rateLimitResult) return rateLimitResult;
-
-  const supabase = await createClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-  }
 
   const body = await request.json();
   const { eventId, venueId, organizationId, action, note, visibility } = body;
@@ -86,7 +90,7 @@ export async function POST(request: NextRequest) {
 
   try {
     if (action === "remove") {
-      let query = supabase
+      let query = serviceClient
         .from("recommendations")
         .delete()
         .eq("user_id", user.id);
@@ -102,14 +106,14 @@ export async function POST(request: NextRequest) {
       const { error } = await query;
 
       if (error) {
-        console.error("Remove recommendation error:", error);
+        logger.error("Remove recommendation error", error);
         return errorResponse(error, "POST /api/recommend");
       }
 
       return NextResponse.json({ success: true, isRecommended: false });
     } else {
       // Check if already exists
-      let checkQuery = supabase
+      let checkQuery = serviceClient
         .from("recommendations")
         .select("id")
         .eq("user_id", user.id);
@@ -126,7 +130,7 @@ export async function POST(request: NextRequest) {
 
       if (existing) {
         // Update existing
-        let updateQuery = supabase
+        let updateQuery = serviceClient
           .from("recommendations")
           .update({ note: note || null, visibility: visibility || "public" } as never)
           .eq("user_id", user.id);
@@ -142,7 +146,7 @@ export async function POST(request: NextRequest) {
         const { error } = await updateQuery;
 
         if (error) {
-          console.error("Update recommendation error:", error);
+          logger.error("Update recommendation error", error);
           return errorResponse(error, "POST /api/recommend");
         }
       } else {
@@ -161,10 +165,10 @@ export async function POST(request: NextRequest) {
           recData.organization_id = organizationId;
         }
 
-        const { error } = await supabase.from("recommendations").insert(recData as never);
+        const { error } = await serviceClient.from("recommendations").insert(recData as never);
 
         if (error) {
-          console.error("Create recommendation error:", error);
+          logger.error("Create recommendation error", error);
           return errorResponse(error, "POST /api/recommend");
         }
       }
@@ -172,7 +176,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: true, isRecommended: true });
     }
   } catch (err) {
-    console.error("Recommendation action exception:", err);
+    logger.error("Recommendation action exception", err);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
-}
+});

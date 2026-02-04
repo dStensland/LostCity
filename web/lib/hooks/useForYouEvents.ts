@@ -4,30 +4,13 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import { useSearchParams } from "next/navigation";
 import { useMemo, useCallback } from "react";
 import type { RecommendationReason } from "@/components/ReasonBadge";
+import type { Event } from "@/lib/supabase";
 
 /**
  * Feed event type from API response
+ * Extends Event to be compatible with EventCard's EventCardEvent type
  */
-export interface FeedEvent {
-  id: number;
-  title: string;
-  start_date: string;
-  start_time: string | null;
-  is_all_day: boolean;
-  is_free: boolean;
-  price_min: number | null;
-  price_max: number | null;
-  category: string | null;
-  subcategory: string | null;
-  tags: string[] | null;
-  image_url: string | null;
-  ticket_url: string | null;
-  venue: {
-    id: number;
-    name: string;
-    neighborhood: string | null;
-    slug: string | null;
-  } | null;
+export interface FeedEvent extends Event {
   score?: number;
   reasons?: RecommendationReason[];
   friends_going?: Array<{
@@ -35,6 +18,12 @@ export interface FeedEvent {
     username: string;
     display_name: string | null;
   }>;
+  // EventCard optional extensions
+  is_live?: boolean;
+  category_data?: {
+    typical_price_min: number | null;
+    typical_price_max: number | null;
+  } | null;
 }
 
 /**

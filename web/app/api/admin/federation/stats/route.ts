@@ -1,12 +1,16 @@
 import { isAdmin } from "@/lib/supabase/server";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getFederationStats, getSourcesWithOwnership } from "@/lib/federation";
 import { adminErrorResponse } from "@/lib/api-utils";
+import { applyRateLimit, RATE_LIMITS, getClientIdentifier} from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
 // GET /api/admin/federation/stats - Get federation statistics
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.standard, getClientIdentifier(request));
+  if (rateLimitResult) return rateLimitResult;
+
   try {
     // Verify admin
     if (!(await isAdmin())) {

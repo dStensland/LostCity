@@ -1,6 +1,8 @@
 import { isAdmin, canManagePortal } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/service";
+import { applyRateLimit, RATE_LIMITS, getClientIdentifier} from "@/lib/rate-limit";
+import { logger } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
 
@@ -24,6 +26,9 @@ type CrawlLogRow = {
 
 // POST /api/admin/sources/[id]/crawl - Trigger a manual crawl for a source
 export async function POST(request: NextRequest, { params }: Props) {
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.standard, getClientIdentifier(request));
+  if (rateLimitResult) return rateLimitResult;
+
   const { id } = await params;
   const sourceId = parseInt(id, 10);
 
@@ -112,7 +117,7 @@ export async function POST(request: NextRequest, { params }: Props) {
     .maybeSingle();
 
   if (insertError || !crawlLogData) {
-    console.error("Error creating crawl log:", insertError);
+    logger.error("Error creating crawl log:", insertError);
     return NextResponse.json(
       { error: "Failed to queue crawl" },
       { status: 500 }
@@ -130,6 +135,9 @@ export async function POST(request: NextRequest, { params }: Props) {
 
 // GET /api/admin/sources/[id]/crawl - Get recent crawl logs for a source
 export async function GET(request: NextRequest, { params }: Props) {
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.standard, getClientIdentifier(request));
+  if (rateLimitResult) return rateLimitResult;
+
   const { id } = await params;
   const sourceId = parseInt(id, 10);
 
@@ -153,7 +161,7 @@ export async function GET(request: NextRequest, { params }: Props) {
     .limit(20);
 
   if (error) {
-    console.error("Error fetching crawl logs:", error);
+    logger.error("Error fetching crawl logs:", error);
     return NextResponse.json({ error: "Failed to fetch crawl logs" }, { status: 500 });
   }
 

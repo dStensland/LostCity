@@ -128,6 +128,30 @@ def crawl(source: dict) -> tuple[int, int, int]:
                                     i += 1
                                     continue
 
+                                # Look for time in nearby lines
+                                start_time = None
+                                for offset in range(3, min(7, len(lines) - i)):
+                                    nearby = lines[i + offset]
+                                    time_match = re.search(
+                                        r'(\d{1,2}(?::\d{2})?\s*(?:am|pm|AM|PM))',
+                                        nearby
+                                    )
+                                    if time_match:
+                                        raw = time_match.group(1).strip().lower()
+                                        t = re.match(r'(\d{1,2})(?::(\d{2}))?\s*(am|pm)', raw)
+                                        if t:
+                                            h = int(t.group(1))
+                                            m = int(t.group(2)) if t.group(2) else 0
+                                            if t.group(3) == 'pm' and h != 12:
+                                                h += 12
+                                            elif t.group(3) == 'am' and h == 12:
+                                                h = 0
+                                            start_time = f"{h:02d}:{m:02d}"
+                                        break
+                                    # Stop if we hit another month abbreviation
+                                    if re.match(r'^(JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)$', nearby.upper()):
+                                        break
+
                                 events_found += 1
 
                                 content_hash = generate_content_hash(
@@ -144,7 +168,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                                         "title": title,
                                         "description": "Out on Film LGBTQ film festival screening",
                                         "start_date": start_date,
-                                        "start_time": None,
+                                        "start_time": start_time,
                                         "end_date": None,
                                         "end_time": None,
                                         "is_all_day": False,

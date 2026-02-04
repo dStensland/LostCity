@@ -3,7 +3,7 @@ import { isAdmin } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 import { getLocalDateString } from "@/lib/formats";
 import { adminErrorResponse } from "@/lib/api-utils";
-import { applyRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
+import { applyRateLimit, RATE_LIMITS, getClientIdentifier} from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -41,7 +41,7 @@ type PortalSummary = {
 };
 
 export async function GET(request: NextRequest) {
-  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write);
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
   if (rateLimitResult) return rateLimitResult;
 
   const supabase = await createClient();
@@ -56,7 +56,7 @@ export async function GET(request: NextRequest) {
   const daysParam = searchParams.get("days");
   const portalId = searchParams.get("portal_id");
 
-  const days = daysParam ? parseInt(daysParam, 10) : 30;
+  const days = Math.min(Math.max(parseInt(daysParam || "30", 10) || 30, 1), 365);
   const startDate = new Date();
   startDate.setDate(startDate.getDate() - days);
   const startDateStr = getLocalDateString(startDate);

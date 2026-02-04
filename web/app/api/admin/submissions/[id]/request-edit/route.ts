@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, isAdmin, getUser } from "@/lib/supabase/server";
 import { isValidUUID, isValidString, adminErrorResponse } from "@/lib/api-utils";
-import { applyRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
+import { applyRateLimit, RATE_LIMITS, getClientIdentifier} from "@/lib/rate-limit";
 
 type Props = {
   params: Promise<{ id: string }>;
@@ -9,7 +9,7 @@ type Props = {
 
 // POST /api/admin/submissions/[id]/request-edit - Request edits on a submission
 export async function POST(request: NextRequest, { params }: Props) {
-  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write);
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
   if (rateLimitResult) return rateLimitResult;
 
   const { id } = await params;

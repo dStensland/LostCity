@@ -1,7 +1,9 @@
 import { createClient } from "@/lib/supabase/server";
-import { applyRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
+import { applyRateLimit, RATE_LIMITS, getClientIdentifier} from "@/lib/rate-limit";
 import { getPortalBySlug } from "@/lib/portal";
 import { getChainVenueIds } from "@/lib/chain-venues";
+import { isValidUUID } from "@/lib/api-utils";
+import { logger } from "@/lib/logger";
 
 type LiveEventRow = {
   id: number;
@@ -28,7 +30,7 @@ type LiveEventRow = {
 
 export async function GET(request: Request) {
   // Rate limit: read endpoint
-  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.read);
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.read, getClientIdentifier(request));
   if (rateLimitResult) return rateLimitResult;
 
   try {
@@ -36,9 +38,11 @@ export async function GET(request: Request) {
     const portalSlug = searchParams.get("portal");
     const portalIdParam = searchParams.get("portal_id");
 
-    // Resolve portal ID from slug or direct ID
-    let portalId: string | null = portalIdParam;
-    if (!portalId && portalSlug) {
+    // Resolve portal ID from slug or direct ID (validate to prevent injection)
+    let portalId: string | null = null;
+    if (portalIdParam && isValidUUID(portalIdParam)) {
+      portalId = portalIdParam;
+    } else if (portalSlug) {
       const portal = await getPortalBySlug(portalSlug);
       portalId = portal?.id || null;
     }
@@ -134,7 +138,7 @@ export async function GET(request: Request) {
       }
     );
   } catch (error) {
-    console.error("Live events API error:", error);
+    logger.error("Live events API error:", error);
     return Response.json(
       { error: "Failed to fetch live events", events: [], count: 0 },
       { status: 500 }

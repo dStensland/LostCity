@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { applyRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
+import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 import { getLocalDateString } from "@/lib/formats";
+import { logger } from "@/lib/logger";
 
 type Organization = {
   id: string;
@@ -21,7 +22,7 @@ export async function GET(request: NextRequest) {
   const supabase = await createClient();
 
   // Rate limit: read endpoint
-  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.read);
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.read, getClientIdentifier(request));
   if (rateLimitResult) return rateLimitResult;
 
   try {
@@ -37,7 +38,7 @@ export async function GET(request: NextRequest) {
       .order("name");
 
     if (error) {
-      console.error("Error fetching organizations:", error);
+      logger.error("Error fetching organizations", error);
       return NextResponse.json({ error: "Failed to fetch organizations" }, { status: 500 });
     }
 
@@ -69,7 +70,7 @@ export async function GET(request: NextRequest) {
       }
     );
   } catch (err) {
-    console.error("Error in organizations API:", err);
+    logger.error("Error in organizations API", err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

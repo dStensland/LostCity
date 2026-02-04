@@ -26,7 +26,9 @@ export async function GET(request: NextRequest) {
   const submittedBy = searchParams.get("submitted_by");
   const limit = Math.min(parseInt(searchParams.get("limit") || "50"), 100);
   const offset = parseInt(searchParams.get("offset") || "0");
-  const sortBy = searchParams.get("sort_by") || "created_at";
+  const allowedSortFields = ["created_at", "updated_at", "status", "submission_type"];
+  const sortByParam = searchParams.get("sort_by") || "created_at";
+  const sortBy = allowedSortFields.includes(sortByParam) ? sortByParam : "created_at";
   const sortOrder = searchParams.get("sort_order") === "asc" ? true : false;
 
   const supabase = await createClient();

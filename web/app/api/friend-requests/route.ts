@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { errorResponse, isValidUUID, isValidString, validationError } from "@/lib/api-utils";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 import { withAuth } from "@/lib/api-middleware";
+import { logger } from "@/lib/logger";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyQuery = any;
@@ -56,7 +57,7 @@ export const GET = withAuth(async (request, { user, supabase }) => {
       pendingCount: pendingCount || 0,
     });
   } catch (err) {
-    console.error("friend-requests:GET unexpected error:", err);
+    logger.error("friend-requests:GET unexpected error:", err);
     return NextResponse.json(
       { error: "An internal error occurred" },
       { status: 500 }
@@ -122,7 +123,7 @@ export const POST = withAuth(async (request, { user, supabase, serviceClient }) 
     ) as { data: boolean | null; error: Error | null };
 
     if (friendCheckError) {
-      console.error("Error checking friendship:", friendCheckError);
+      logger.error("Error checking friendship:", friendCheckError);
       return NextResponse.json(
         { error: "Failed to check friendship status" },
         { status: 500 }
@@ -212,7 +213,7 @@ export const POST = withAuth(async (request, { user, supabase, serviceClient }) 
       request: newRequest,
     });
   } catch (err) {
-    console.error("friend-requests:POST unexpected error:", err);
+    logger.error("friend-requests:POST unexpected error:", err);
     return NextResponse.json(
       { error: "An internal error occurred" },
       { status: 500 }

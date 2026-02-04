@@ -161,7 +161,7 @@ export default function CalendarPage() {
       fetch("/api/user/calendar/feed-url")
         .then((res) => res.json())
         .then((urls) => setFeedUrls(urls))
-        .catch(console.error);
+        .catch((err) => console.error("Failed to fetch feed URLs:", err));
     }
   }, [user, feedUrls]);
 

@@ -1,12 +1,12 @@
 import { createClient } from "@supabase/supabase-js";
 import { NextRequest, NextResponse } from "next/server";
-import { errorResponse } from "@/lib/api-utils";
+import { errorResponse, parseIntParam } from "@/lib/api-utils";
 import { applyRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 
 function getSupabase() {
   return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
 }
 
@@ -20,12 +20,12 @@ export async function GET(req: NextRequest) {
 
   const category = params.get("category");
   const neighborhood = params.get("neighborhood");
-  const minScore = parseInt(params.get("minScore") || "0");
+  const minScore = parseIntParam(params.get("minScore"), 0) ?? 0;
   const is24Hours = params.get("24hr") === "true";
   const editorPicks = params.get("editorPicks") === "true";
   const search = params.get("search");
-  const limit = Math.min(50, parseInt(params.get("limit") || "20"));
-  const offset = parseInt(params.get("offset") || "0");
+  const limit = Math.min(50, parseIntParam(params.get("limit"), 20) ?? 20);
+  const offset = parseIntParam(params.get("offset"), 0) ?? 0;
 
   let query = supabase
     .from("places")

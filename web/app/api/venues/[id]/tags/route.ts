@@ -7,7 +7,7 @@ import {
   suggestTag,
 } from "@/lib/venue-tags";
 import type { VenueTagGroup, TagGroup } from "@/lib/types";
-import { applyRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
+import { applyRateLimit, RATE_LIMITS, getClientIdentifier} from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -17,7 +17,7 @@ type Props = {
 
 // GET /api/venues/[id]/tags - Get all tags for a venue
 export async function GET(request: NextRequest, { params }: Props) {
-  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.read);
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.read, getClientIdentifier(request));
   if (rateLimitResult) return rateLimitResult;
 
   const { id } = await params;
@@ -40,7 +40,7 @@ export async function GET(request: NextRequest, { params }: Props) {
 
 // POST /api/venues/[id]/tags - Add a tag to a venue or suggest a new tag
 export async function POST(request: NextRequest, { params }: Props) {
-  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write);
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
   if (rateLimitResult) return rateLimitResult;
 
   const { id } = await params;

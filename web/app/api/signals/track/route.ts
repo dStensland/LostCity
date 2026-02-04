@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, getUser } from "@/lib/supabase/server";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
+import { errorResponse } from "@/lib/api-utils";
+import { logger } from "@/lib/logger";
 
 type ActionType = "view" | "save" | "share" | "rsvp_going" | "rsvp_interested" | "went";
 
@@ -110,16 +112,21 @@ export async function POST(request: NextRequest) {
         const errorCode = (error as Error & { code?: string }).code;
         if (errorCode === "42883") {
           // Function doesn't exist, do manual upsert
-          const { data: existing } = await supabase
+          const { data: existing, error: selectError } = await supabase
             .from("inferred_preferences")
             .select("id, score, interaction_count")
             .eq("user_id", user.id)
             .eq("signal_type", signal.type)
             .eq("signal_value", signal.value)
-            .maybeSingle() as { data: InferredPref | null };
+            .maybeSingle() as { data: InferredPref | null; error: Error | null };
+
+          if (selectError) {
+            logger.error("Failed to fetch preference for signal:", selectError.message);
+            return;
+          }
 
           if (existing) {
-            await supabase
+            const { error: updateError } = await supabase
               .from("inferred_preferences")
               .update({
                 score: (existing.score || 0) + weight,
@@ -127,17 +134,25 @@ export async function POST(request: NextRequest) {
                 last_interaction_at: new Date().toISOString(),
               } as never)
               .eq("id", existing.id);
+
+            if (updateError) {
+              logger.error("Failed to update preference for signal:", updateError.message);
+            }
           } else {
-            await supabase.from("inferred_preferences").insert({
+            const { error: insertError } = await supabase.from("inferred_preferences").insert({
               user_id: user.id,
               signal_type: signal.type,
               signal_value: signal.value,
               score: weight,
               interaction_count: 1,
             } as never);
+
+            if (insertError) {
+              logger.error("Failed to insert preference for signal:", insertError.message);
+            }
           }
         } else {
-          console.error("Error upserting signal:", error);
+          logger.error("Error upserting signal:", error);
         }
       }
     });
@@ -151,8 +166,6 @@ export async function POST(request: NextRequest) {
       weight,
     });
   } catch (err) {
-    console.error("Signals API error:", err);
-    const message = err instanceof Error ? err.message : String(err);
-    return NextResponse.json({ error: message }, { status: 500 });
+    return errorResponse(err, "POST /api/signals/track");
   }
 }

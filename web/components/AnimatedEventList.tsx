@@ -17,7 +17,7 @@ import {
   type TimePeriod,
 } from "@/lib/event-grouping";
 import type { EventWithLocation } from "@/lib/search";
-import type { FriendGoing } from "@/lib/use-friends-going";
+import type { FriendGoing } from "@/lib/hooks/use-friends-going";
 
 // Time period icons
 const TIME_PERIOD_ICONS: Record<TimePeriod, React.ReactNode> = {

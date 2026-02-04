@@ -1,11 +1,12 @@
 import { createClient } from "@supabase/supabase-js";
 import { NextRequest, NextResponse } from "next/server";
 import { errorResponse } from "@/lib/api-utils";
+import { applyRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 
 function getSupabase() {
   return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
 }
 
@@ -13,6 +14,8 @@ export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ slug: string }> }
 ) {
+  const rateLimitResult = await applyRateLimit(req, RATE_LIMITS.read);
+  if (rateLimitResult) return rateLimitResult;
   const supabase = getSupabase();
   const { slug } = await params;
   const searchParams = req.nextUrl.searchParams;

@@ -408,7 +408,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "start_time": start_time,
                         "end_date": None,
                         "end_time": end_time,
-                        "is_all_day": start_time is None,
+                        "is_all_day": False,
                         "category": category,
                         "subcategory": subcategory,
                         "tags": tags,

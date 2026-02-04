@@ -2,12 +2,27 @@ import { createClient, getUser } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { format, addMonths } from "date-fns";
 import { generateFeedToken } from "@/lib/calendar-feed-utils";
-import { applyRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
+import { applyRateLimit, RATE_LIMITS, getClientIdentifier} from "@/lib/rate-limit";
+import { timingSafeEqual } from "crypto";
+import { logger } from "@/lib/logger";
 
 // Verify token and extract userId
 function verifyFeedToken(token: string, userId: string): boolean {
   const expectedToken = generateFeedToken(userId);
-  return token === expectedToken;
+
+  // Use timing-safe comparison to prevent timing attacks
+  if (token.length !== expectedToken.length) {
+    return false;
+  }
+
+  try {
+    return timingSafeEqual(
+      Buffer.from(token),
+      Buffer.from(expectedToken)
+    );
+  } catch {
+    return false;
+  }
 }
 
 // Format date for iCal (YYYYMMDDTHHMMSSZ)
@@ -32,7 +47,7 @@ function escapeICalText(text: string): string {
 }
 
 export async function GET(request: Request) {
-  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.read);
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.read, getClientIdentifier(request));
   if (rateLimitResult) return rateLimitResult;
 
   const { searchParams } = new URL(request.url);
@@ -119,7 +134,7 @@ export async function GET(request: Request) {
       .lte("event.start_date", endDate) as { data: FeedRsvpRow[] | null; error: Error | null };
 
     if (error) {
-      console.error("Error fetching calendar feed events:", error);
+      logger.error("Error fetching calendar feed events:", error);
       return new Response("Failed to fetch events", { status: 500 });
     }
 
@@ -202,7 +217,7 @@ export async function GET(request: Request) {
       },
     });
   } catch (err) {
-    console.error("Calendar feed error:", err);
+    logger.error("Calendar feed error:", err);
     return new Response("Internal server error", { status: 500 });
   }
 }

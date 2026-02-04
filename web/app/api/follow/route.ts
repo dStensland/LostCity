@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { checkBodySize } from "@/lib/api-utils";
+import { checkBodySize, parseIntParam } from "@/lib/api-utils";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 import { ensureUserProfile } from "@/lib/user-utils";
 import { withOptionalAuth, withAuth } from "@/lib/api-middleware";
@@ -12,11 +12,20 @@ export const GET = withOptionalAuth(async (request, { user, serviceClient }) => 
 
   const { searchParams } = new URL(request.url);
   const targetUserId = searchParams.get("userId");
-  const targetVenueId = searchParams.get("venueId");
+  const targetVenueIdStr = searchParams.get("venueId");
   const targetOrganizationId = searchParams.get("organizationId");
 
-  if (!targetUserId && !targetVenueId && !targetOrganizationId) {
+  if (!targetUserId && !targetVenueIdStr && !targetOrganizationId) {
     return NextResponse.json({ error: "Missing target" }, { status: 400 });
+  }
+
+  // Validate venueId if provided
+  let targetVenueId: number | null = null;
+  if (targetVenueIdStr) {
+    targetVenueId = parseIntParam(targetVenueIdStr);
+    if (targetVenueId === null) {
+      return NextResponse.json({ error: "Invalid venueId" }, { status: 400 });
+    }
   }
 
   try {
@@ -28,7 +37,7 @@ export const GET = withOptionalAuth(async (request, { user, serviceClient }) => 
     if (targetUserId) {
       query = query.eq("followed_user_id", targetUserId);
     } else if (targetVenueId) {
-      query = query.eq("followed_venue_id", parseInt(targetVenueId));
+      query = query.eq("followed_venue_id", targetVenueId);
     } else if (targetOrganizationId) {
       query = query.eq("followed_organization_id", targetOrganizationId);
     }
@@ -36,7 +45,7 @@ export const GET = withOptionalAuth(async (request, { user, serviceClient }) => 
     const { data, error } = await query.maybeSingle();
 
     if (error) {
-      logger.error("Follow check error", error, { userId: user.id, targetUserId, targetVenueId, targetOrganizationId, component: "follow" });
+      logger.error("Follow check error", error, { userId: user.id, targetUserId, targetVenueId: targetVenueIdStr, targetOrganizationId, component: "follow" });
       return NextResponse.json({ isFollowing: false, error: "Failed to check follow status" });
     }
 
@@ -57,14 +66,29 @@ export const POST = withAuth(async (request, { user, serviceClient }) => {
   if (rateLimitResult) return rateLimitResult;
 
   const body = await request.json();
-  const { targetUserId, targetVenueId, targetOrganizationId, action } = body;
+  const { targetUserId, targetVenueId: targetVenueIdRaw, targetOrganizationId, action } = body;
 
-  if (!targetUserId && !targetVenueId && !targetOrganizationId) {
+  if (!targetUserId && !targetVenueIdRaw && !targetOrganizationId) {
     return NextResponse.json({ error: "Missing target" }, { status: 400 });
   }
 
   if (action !== "follow" && action !== "unfollow") {
     return NextResponse.json({ error: "Invalid action" }, { status: 400 });
+  }
+
+  // Prevent self-follow
+  if (targetUserId && targetUserId === user.id) {
+    return NextResponse.json({ error: "Cannot follow yourself" }, { status: 400 });
+  }
+
+  // Validate venueId if provided
+  let targetVenueId: number | null = null;
+  if (targetVenueIdRaw) {
+    // Check if it's already a number or needs parsing
+    targetVenueId = typeof targetVenueIdRaw === 'number' ? targetVenueIdRaw : parseIntParam(String(targetVenueIdRaw));
+    if (targetVenueId === null) {
+      return NextResponse.json({ error: "Invalid venueId" }, { status: 400 });
+    }
   }
 
   // Ensure user has a profile (create if missing)
@@ -80,7 +104,7 @@ export const POST = withAuth(async (request, { user, serviceClient }) => {
       if (targetUserId) {
         query = query.eq("followed_user_id", targetUserId);
       } else if (targetVenueId) {
-        query = query.eq("followed_venue_id", parseInt(targetVenueId));
+        query = query.eq("followed_venue_id", targetVenueId);
       } else if (targetOrganizationId) {
         query = query.eq("followed_organization_id", targetOrganizationId);
       }

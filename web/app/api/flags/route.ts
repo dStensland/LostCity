@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
+import { logger } from "@/lib/logger";
 
 export async function POST(request: NextRequest) {
   const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
@@ -43,7 +44,7 @@ export async function POST(request: NextRequest) {
       .maybeSingle();
 
     if (error) {
-      console.error("Flag creation error:", error);
+      logger.error("Flag creation error", error);
       return NextResponse.json(
         { error: "Failed to create flag" },
         { status: 500 }
@@ -52,7 +53,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true, flag: data });
   } catch (error) {
-    console.error("Flag API error:", error);
+    logger.error("Flag API error", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
@@ -86,7 +87,7 @@ export async function GET(request: NextRequest) {
     .eq("status", "pending");
 
   if (error) {
-    console.error("Flag lookup error:", error);
+    logger.error("Flag lookup error", error);
     return NextResponse.json({ flagged: false, count: 0 });
   }
 

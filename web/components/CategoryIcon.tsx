@@ -1,5 +1,3 @@
-"use client";
-
 import { CSSProperties, type ComponentType } from "react";
 import type { IconProps } from "@phosphor-icons/react";
 

@@ -272,6 +272,88 @@ def infer_tags(
     return sorted(valid_tags)
 
 
+# Known class sources — events from these sources are always classes
+CLASS_SOURCES = {
+    "painting-with-a-twist", "sur-la-table", "williams-sonoma",
+    "arthur-murray-atlanta", "atlanta-dance-ballroom",
+    "atlanta-clay-works", "mudfire", "spruill-center",
+    "irwin-street-cooking", "publix-aprons", "cooks-warehouse",
+    # Dance studios
+    "academy-ballroom", "ballroom-impact", "dancing4fun",
+    "salsa-atlanta", "pasofino-dance",
+    # Yoga studios
+    "highland-yoga", "dancing-dogs-yoga", "evolation-yoga",
+    "vista-yoga", "yonder-yoga",
+    # Makerspaces
+    "decatur-makers", "maker-station", "janke-studios",
+    "freeside-atlanta",
+    # Arts centers
+    "chastain-arts-center", "chastain-arts",
+    # Healthcare classes
+    "piedmont-classes",
+    # New class venues
+    "candlelit-atl", "rockler-woodworking", "halls-floral",
+    "rei-atlanta", "all-fired-up-art", "stone-summit",
+}
+
+# Class studio venue types
+CLASS_VENUE_TYPES = {"studio", "cooking_school", "dance_studio"}
+
+# Title/description patterns that indicate a class
+CLASS_TITLE_PATTERNS = [
+    "cooking class", "pottery class", "painting class", "dance class",
+    "dance lesson", "yoga class", "art workshop", "craft workshop",
+    "woodworking class", "candle making", "flower arranging",
+    "floral design", "photography class", "sewing class",
+    "ceramics class", "wheel throwing", "glass blowing",
+    "paint and sip", "paint & sip", "paint-and-sip",
+    "hands-on class", "hands on class", "masterclass",
+    "beginner class", "intermediate class", "advanced class",
+]
+
+
+def infer_is_class(
+    event: dict,
+    source_slug: str | None = None,
+    venue_type: str | None = None,
+) -> bool:
+    """
+    Infer whether an event is a class based on source, venue type, and content.
+
+    Returns True if the event should be marked as a class.
+    """
+    # Already explicitly set
+    if event.get("is_class"):
+        return True
+
+    # Known class source
+    if source_slug and source_slug in CLASS_SOURCES:
+        return True
+
+    # Class venue type (studio, cooking_school, dance_studio)
+    if venue_type and venue_type in CLASS_VENUE_TYPES:
+        return True
+
+    # Subcategory match
+    subcategory = event.get("subcategory") or ""
+    class_subcategories = {
+        "learning.workshop", "learning.class", "art.workshop",
+        "arts.workshop", "art.class", "food_drink.class",
+        "fitness.yoga", "fitness.class", "fitness.dance",
+    }
+    if subcategory in class_subcategories:
+        return True
+
+    # Title/description pattern matching
+    title = (event.get("title") or "").lower()
+    desc = (event.get("description") or "").lower()
+    text = f"{title} {desc}"
+    if any(pattern in text for pattern in CLASS_TITLE_PATTERNS):
+        return True
+
+    return False
+
+
 def merge_tags(existing: list[str], new: list[str]) -> list[str]:
     """Merge two tag lists, removing duplicates."""
     combined = set(existing or []) | set(new or [])

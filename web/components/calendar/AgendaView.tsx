@@ -5,7 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { format, isToday, isTomorrow, isThisWeek, isBefore, parseISO } from "date-fns";
 import CategoryIcon from "@/components/CategoryIcon";
-import { formatTimeSplit } from "@/lib/formats";
+import { formatTimeSplit, formatPriceDetailed, type PriceableEvent } from "@/lib/formats";
 
 interface CalendarEvent {
   id: number;
@@ -65,15 +65,6 @@ function getSmartDateLabel(dateStr: string): string {
   }
 
   return format(date, "EEEE, MMMM d");
-}
-
-function formatPrice(event: CalendarEvent): string | null {
-  if (event.is_free) return "Free";
-  if (event.price_min === null) return null;
-  if (event.price_max === null || event.price_min === event.price_max) {
-    return `$${event.price_min}`;
-  }
-  return `$${event.price_min}-${event.price_max}`;
 }
 
 export default function AgendaView({
@@ -182,7 +173,8 @@ export default function AgendaView({
             <div className="divide-y divide-[var(--nebula)]/30">
               {dayEvents.map((event) => {
                 const { time, period } = formatTimeSplit(event.start_time, event.is_all_day);
-                const price = formatPrice(event);
+                const priceResult = formatPriceDetailed(event as PriceableEvent);
+                const price = priceResult.text || null;
                 const friendsGoing = friendsByEvent.get(event.id) || [];
 
                 return (
@@ -275,7 +267,7 @@ export default function AgendaView({
                           <span
                             className={`
                               px-2 py-0.5 rounded-full font-mono text-[0.6rem] font-medium
-                              ${event.is_free
+                              ${priceResult.isFree
                                 ? "bg-[var(--neon-green)]/20 text-[var(--neon-green)]"
                                 : "bg-[var(--twilight-purple)] text-[var(--cream)]"
                               }

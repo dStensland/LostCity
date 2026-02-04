@@ -3,7 +3,8 @@ import UnifiedHeader from "@/components/UnifiedHeader";
 import PortalFooter from "@/components/PortalFooter";
 import ListDetailView from "@/components/community/ListDetailView";
 
-export const dynamic = "force-dynamic";
+// Revalidate every minute - community lists change infrequently
+export const revalidate = 60;
 
 type Props = {
   params: Promise<{ portal: string; slug: string }>;

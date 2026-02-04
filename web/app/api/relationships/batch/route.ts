@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { withAuth } from "@/lib/api-middleware";
+import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
+import { logger } from "@/lib/logger";
 
 export type RelationshipStatus =
   | "none"
@@ -37,6 +39,9 @@ type FriendRequestRow = { inviter_id: string; invitee_id: string };
  * 6. "none" - No relationship exists
  */
 export const POST = withAuth(async (request, { user, supabase }) => {
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
+  if (rateLimitResult) return rateLimitResult;
+
   try {
     // 1. Parse and validate request body
     const body = await request.json();
@@ -177,7 +182,7 @@ export const POST = withAuth(async (request, { user, supabase }) => {
     return NextResponse.json({ relationships });
 
   } catch (err) {
-    console.error("relationships/batch:POST unexpected error:", err);
+    logger.error("relationships/batch:POST unexpected error:", err);
     return NextResponse.json(
       { error: "An internal error occurred" },
       { status: 500 }

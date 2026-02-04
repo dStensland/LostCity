@@ -1,5 +1,6 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { createClient, getUser } from "@/lib/supabase/server";
+import { applyRateLimit, RATE_LIMITS, getClientIdentifier} from "@/lib/rate-limit";
 
 // In-memory cache for activity data (simple TTL cache)
 const activityCache = new Map<string, { data: unknown; expiry: number }>();
@@ -92,7 +93,10 @@ type ActivityItem = {
 // GET /api/dashboard/activity - Get activity from friends
 // Optimized: Combined follows query, in-memory caching
 // Supports cursor-based pagination for infinite scroll
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.read, getClientIdentifier(request));
+  if (rateLimitResult) return rateLimitResult;
+
   const { searchParams } = new URL(request.url);
   const limit = Math.min(parseInt(searchParams.get("limit") || "30", 10), 100);
   const cursor = searchParams.get("cursor");

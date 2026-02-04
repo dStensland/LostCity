@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { errorResponse, isValidString, escapeSQLPattern } from "@/lib/api-utils";
+import { errorResponse, isValidString, escapeSQLPattern, isValidUUID } from "@/lib/api-utils";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 
 // GET /api/events/search?q= - Search events for autocomplete
@@ -16,7 +16,12 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const query = searchParams.get("q");
   const limit = Math.min(parseInt(searchParams.get("limit") || "10"), 20);
-  const portalId = searchParams.get("portal_id");
+  const portalIdParam = searchParams.get("portal_id");
+  const excludeClasses = searchParams.get("exclude_classes") === "true";
+  const classesOnly = searchParams.get("classes_only") === "true";
+
+  // Validate portal_id to prevent PostgREST filter injection
+  const portalId = portalIdParam && isValidUUID(portalIdParam) ? portalIdParam : null;
 
   if (!query || !isValidString(query, 1, 100)) {
     return NextResponse.json({ error: "Query parameter 'q' is required" }, { status: 400 });
@@ -46,6 +51,13 @@ export async function GET(request: NextRequest) {
     .gte("start_date", new Date().toISOString().split("T")[0])
     .order("start_date", { ascending: true })
     .limit(limit);
+
+  // Filter by class status
+  if (excludeClasses) {
+    searchQuery = searchQuery.or("is_class.eq.false,is_class.is.null");
+  } else if (classesOnly) {
+    searchQuery = searchQuery.eq("is_class", true);
+  }
 
   // Filter by portal to prevent cross-portal leakage
   if (portalId) {

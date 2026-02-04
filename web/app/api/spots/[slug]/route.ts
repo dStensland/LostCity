@@ -2,7 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { NextRequest } from "next/server";
 import { getDistanceMiles } from "@/lib/geo";
 import { getLocalDateString } from "@/lib/formats";
-import { applyRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
+import { applyRateLimit, RATE_LIMITS, getClientIdentifier} from "@/lib/rate-limit";
 
 // Destination category mappings for venues
 const DESTINATION_CATEGORIES: Record<string, string[]> = {
@@ -35,7 +35,7 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ slug: string }> }
 ) {
-  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.read);
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.read, getClientIdentifier(request));
   if (rateLimitResult) return rateLimitResult;
 
   const { slug } = await params;
@@ -141,7 +141,8 @@ export async function GET(
       .select("id, name, slug, venue_type, neighborhood, lat, lng, image_url, short_description, hours, hours_display, is_24_hours, vibes")
       .in("venue_type", allDestinationTypes)
       .eq("active", true)
-      .neq("id", spot.id);
+      .neq("id", spot.id)
+      .limit(50);
 
     if (spots) {
       for (const s of spots) {

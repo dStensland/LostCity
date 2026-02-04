@@ -3,8 +3,6 @@ import Link from "next/link";
 import UnifiedHeader from "@/components/UnifiedHeader";
 import PageFooter from "@/components/PageFooter";
 
-export const dynamic = "force-dynamic";
-
 export const metadata: Metadata = {
   title: "Terms of Service | Lost City",
   description: "Terms of Service for Lost City - the rules and guidelines for using our platform.",

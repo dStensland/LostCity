@@ -2,8 +2,6 @@ import type { Metadata } from "next";
 import UnifiedHeader from "@/components/UnifiedHeader";
 import PageFooter from "@/components/PageFooter";
 
-export const dynamic = "force-dynamic";
-
 export const metadata: Metadata = {
   title: "Privacy Policy | Lost City",
   description: "Privacy Policy for Lost City - how we collect, use, and protect your information.",

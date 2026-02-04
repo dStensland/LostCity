@@ -159,8 +159,21 @@ def parse_event(event_data: dict) -> Optional[dict]:
         # URLs
         source_url = event_data.get("url", "")
 
-        # Description/info
-        description = event_data.get("info") or event_data.get("pleaseNote")
+        # Description/info - check multiple fields
+        description = event_data.get("info") or event_data.get("pleaseNote") or event_data.get("description")
+
+        # Check _embedded.attractions for artist/performer descriptions
+        if not description:
+            attractions = event_data.get("_embedded", {}).get("attractions", [])
+            if attractions:
+                attr = attractions[0]
+                description = attr.get("description") or attr.get("additionalInfo")
+
+        # Synthetic fallback from genre + venue
+        if not description and genre and venue_data:
+            description = f"{genre} event at {venue_data['name']}."
+        elif not description and venue_data:
+            description = f"Event at {venue_data['name']}."
 
         return {
             "title": title,

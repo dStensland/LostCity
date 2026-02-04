@@ -1,6 +1,8 @@
+import { cache } from "react";
 import { supabase } from "@/lib/supabase";
 import type { Portal } from "@/lib/portal-context";
 import { getCachedDomain, setCachedDomain } from "@/lib/domain-cache";
+import crypto from "crypto";
 
 // Base columns that always exist in the portals table
 const BASE_PORTAL_COLUMNS = `
@@ -205,10 +207,11 @@ export async function isCustomDomainAvailable(
  * The token should be added as a TXT record at _lostcity-verify.{domain}
  */
 export function generateDomainVerificationToken(): string {
-  const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
-  let token = '';
-  for (let i = 0; i < 32; i++) {
-    token += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return token;
+  return crypto.randomBytes(16).toString("hex");
 }
+
+/**
+ * Cached version of getPortalBySlug for use in pages/layouts.
+ * Deduplicates calls within the same request using React cache().
+ */
+export const getCachedPortalBySlug = cache(getPortalBySlug);

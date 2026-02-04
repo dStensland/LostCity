@@ -1,6 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { NextRequest, NextResponse } from "next/server";
 import { errorResponse, parseFloatParam, parseIntParam, validationError } from "@/lib/api-utils";
+import { applyRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 
 function getSupabase() {
   // Use anon key for public read-only endpoint (never service key for public routes)
@@ -11,6 +12,8 @@ function getSupabase() {
 }
 
 export async function GET(req: NextRequest) {
+  const rateLimitResult = await applyRateLimit(req, RATE_LIMITS.read);
+  if (rateLimitResult) return rateLimitResult;
   const supabase = getSupabase();
   const params = req.nextUrl.searchParams;
 

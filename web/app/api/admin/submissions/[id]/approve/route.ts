@@ -4,6 +4,7 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { isValidUUID, adminErrorResponse } from "@/lib/api-utils";
 import type { EventSubmissionData, VenueSubmissionData, ProducerSubmissionData, Submission } from "@/lib/types";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
+import { logger } from "@/lib/logger";
 
 type Props = {
   params: Promise<{ id: string }>;
@@ -101,7 +102,7 @@ export async function POST(request: NextRequest, { params }: Props) {
       );
     }
   } catch (error) {
-    console.error("Failed to create entity:", error);
+    logger.error("Failed to create entity:", error);
     return adminErrorResponse(error, "entity creation");
   }
 

@@ -6,12 +6,13 @@ import { useState, useEffect, useRef } from "react";
  * Cursor glow effect - a subtle radial gradient that follows the cursor
  * Optimized to only animate when cursor moves and page is visible
  * Respects user preferences and reduced motion settings
+ * Uses direct DOM manipulation to avoid React re-renders on every animation frame
  */
 export default function CursorGlow() {
-  const [position, setPosition] = useState({ x: 0, y: 0 });
   const [isVisible, setIsVisible] = useState(false);
   const [isEnabled, setIsEnabled] = useState(true);
   const [mounted, setMounted] = useState(false);
+  const glowRef = useRef<HTMLDivElement>(null);
   const rafRef = useRef<number | null>(null);
   const targetRef = useRef({ x: 0, y: 0 });
   const currentPosRef = useRef({ x: 0, y: 0 });
@@ -84,7 +85,11 @@ export default function CursorGlow() {
       if (distance < THRESHOLD) {
         current.x = target.x;
         current.y = target.y;
-        setPosition({ x: target.x, y: target.y });
+        // Direct DOM update - bypasses React render cycle
+        if (glowRef.current) {
+          glowRef.current.style.left = `${target.x - 200}px`;
+          glowRef.current.style.top = `${target.y - 200}px`;
+        }
         isAnimatingRef.current = false;
         rafRef.current = null;
         return;
@@ -93,7 +98,11 @@ export default function CursorGlow() {
       // Smooth interpolation
       current.x += dx * 0.15;
       current.y += dy * 0.15;
-      setPosition({ x: current.x, y: current.y });
+      // Direct DOM update - bypasses React render cycle
+      if (glowRef.current) {
+        glowRef.current.style.left = `${current.x - 200}px`;
+        glowRef.current.style.top = `${current.y - 200}px`;
+      }
 
       rafRef.current = requestAnimationFrame(animate);
     };
@@ -196,10 +205,11 @@ export default function CursorGlow() {
       aria-hidden="true"
     >
       <div
+        ref={glowRef}
         className="absolute w-[400px] h-[400px] rounded-full transition-opacity duration-300"
         style={{
-          left: position.x - 200,
-          top: position.y - 200,
+          left: 0,
+          top: 0,
           background: `radial-gradient(circle, rgba(255, 107, 122, 0.06) 0%, rgba(255, 107, 122, 0.02) 40%, transparent 70%)`,
           opacity: isVisible ? 1 : 0,
           filter: "blur(40px)",

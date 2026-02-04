@@ -1,9 +1,15 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { QRCodeSVG } from "qrcode.react";
+import dynamic from "next/dynamic";
 import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/components/Toast";
+
+// Dynamic import QRCodeSVG to reduce initial bundle size
+const QRCodeSVG = dynamic(
+  () => import("qrcode.react").then((m) => ({ default: m.QRCodeSVG })),
+  { ssr: false }
+);
 
 export default function InviteFriendsPage() {
   const { profile } = useAuth();

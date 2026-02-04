@@ -237,6 +237,10 @@ async function handleSubdomainRouting(
     const skipParts = ["www", "lostcity", "localhost", "vercel"];
     if (!skipParts.includes(firstPart) && parts.length > 1) {
       portalSlug = firstPart;
+      // Validate slug format to prevent URL-encoded or special character attacks
+      if (!/^[a-z0-9][a-z0-9-]*$/.test(portalSlug)) {
+        portalSlug = null;
+      }
     }
   }
 

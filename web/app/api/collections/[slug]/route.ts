@@ -3,7 +3,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { errorResponse } from "@/lib/api-utils";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 
-export const dynamic = "force-dynamic";
+// Revalidate every 60 seconds - collections change infrequently
+export const revalidate = 60;
 
 type Props = {
   params: Promise<{ slug: string }>;
@@ -94,6 +95,10 @@ export async function GET(request: NextRequest, { params }: Props) {
       item_count: validItems.length,
     },
     items: validItems,
+  }, {
+    headers: {
+      "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120"
+    }
   });
 }
 

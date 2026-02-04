@@ -1,8 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 import { getLocalDateString } from "@/lib/formats";
-import { errorResponse } from "@/lib/api-utils";
-import { applyRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
+import { errorResponse, isValidUUID } from "@/lib/api-utils";
+import { applyRateLimit, RATE_LIMITS, getClientIdentifier} from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -11,14 +11,17 @@ type Props = {
 };
 
 export async function GET(request: NextRequest, { params }: Props) {
-  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.read);
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.read, getClientIdentifier(request));
   if (rateLimitResult) return rateLimitResult;
 
   const supabase = await createClient();
   const { id } = await params;
   const { searchParams } = new URL(request.url);
   const limit = parseInt(searchParams.get("limit") || "10");
-  const portalId = searchParams.get("portal_id");
+  const portalIdParam = searchParams.get("portal_id");
+
+  // Validate portal_id to prevent PostgREST filter injection
+  const portalId = portalIdParam && isValidUUID(portalIdParam) ? portalIdParam : null;
 
   const venueId = parseInt(id);
   if (isNaN(venueId)) {

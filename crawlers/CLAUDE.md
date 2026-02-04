@@ -14,6 +14,12 @@ This means:
 
 When building a new crawler or importing data, always ask: "Would someone visiting this city want to know about this place?" If yes, it belongs in our database as a venue/spot even if it has zero upcoming events.
 
+**Always crawl original sources, never curators.** If an event exists at Alliance Theatre, crawl alliancetheatre.org -- not ArtsATL or Creative Loafing. Editorial aggregators (ArtsATL, Nashville Scene, Discover Atlanta, AccessAtlanta, tourism boards) duplicate data with lower quality. The only allowed aggregators are ticketing platforms (Ticketmaster, Eventbrite) that cover venues without their own calendars.
+
+**Never create events for permanent attractions or daily operations.** "Play at the Museum", "Summit Skyride", "Mini Golf" are not events -- they mean the place is open. Only crawl actual programmed events (workshops, performances, festivals, special exhibitions with dates).
+
+**`is_all_day` should only be `True` when the event is genuinely all-day** (festivals, multi-day conventions, outdoor markets). Never infer it from a missing start_time -- a missing time just means we couldn't parse it.
+
 ## Project Structure
 
 ```

@@ -4,12 +4,11 @@ import { memo } from "react";
 import Link from "next/link";
 import type { Event } from "@/lib/supabase";
 import { AvatarStack } from "./UserAvatar";
-import { formatTimeSplit, formatSmartDate } from "@/lib/formats";
+import { formatTimeSplit, formatSmartDate, formatPriceDetailed } from "@/lib/formats";
 import CategoryIcon, { getCategoryColor } from "./CategoryIcon";
 
 import SeriesBadge from "./SeriesBadge";
 import ReasonBadge, { getTopReasons, type RecommendationReason } from "./ReasonBadge";
-import EventCardMenu from "./EventCardMenu";
 import { SubcategoryChip, getSubcategoryLabel, shouldShowSubcategory } from "./ActivityChip";
 import type { Frequency, DayOfWeek } from "@/lib/recurrence";
 
@@ -30,6 +29,10 @@ type EventCardEvent = Event & {
     frequency?: Frequency;
     day_of_week?: DayOfWeek;
   } | null;
+  is_class?: boolean;
+  class_category?: string | null;
+  skill_level?: string | null;
+  instructor?: string | null;
 };
 
 export type FriendGoing = {
@@ -55,66 +58,6 @@ interface Props {
   contextType?: "interests" | "venue" | "producer" | "neighborhood";
   /** Callback when user hides the event */
   onHide?: () => void;
-}
-
-interface PriceDisplay {
-  text: string;
-  isEstimate: boolean;
-  isFree: boolean;
-}
-
-function formatPrice(
-  isFree: boolean,
-  min: number | null,
-  max: number | null,
-  venueMin: number | null | undefined,
-  venueMax: number | null | undefined,
-  catMin: number | null | undefined,
-  catMax: number | null | undefined
-): PriceDisplay | null {
-  // Check explicit free flag or $0 pricing
-  if (isFree || (min === 0 && (max === 0 || max === null))) {
-    return { text: "Free", isEstimate: false, isFree: true };
-  }
-
-  // Use explicit event pricing if available
-  if (min !== null || max !== null) {
-    let text: string;
-    if (min !== null && max !== null && min === max) {
-      text = `$${min}`;
-    } else if (min !== null && max !== null) {
-      text = `$${min}-${max}`;
-    } else if (min !== null) {
-      text = `$${min}+`;
-    } else {
-      text = `Up to $${max}`;
-    }
-    return { text, isEstimate: false, isFree: false };
-  }
-
-  // Fall back to venue typical pricing
-  if (venueMin !== null && venueMin !== undefined) {
-    if (venueMin === 0) {
-      return { text: "Free", isEstimate: true, isFree: true };
-    }
-    const text = venueMax && venueMax !== venueMin
-      ? `~$${venueMin}-${venueMax}`
-      : `~$${venueMin}`;
-    return { text, isEstimate: true, isFree: false };
-  }
-
-  // Fall back to category typical pricing
-  if (catMin !== null && catMin !== undefined) {
-    if (catMin === 0) {
-      return { text: "Usually Free", isEstimate: true, isFree: true };
-    }
-    const text = catMax && catMax !== catMin
-      ? `~$${catMin}-${catMax}`
-      : `~$${catMin}`;
-    return { text, isEstimate: true, isFree: false };
-  }
-
-  return null;
 }
 
 // Get reflection color class based on category
@@ -146,15 +89,7 @@ function EventCard({ event, index = 0, skipAnimation = false, portalSlug, friend
   const animationClass = skipAnimation ? "" : "animate-card-emerge";
   const categoryColor = event.category ? getCategoryColor(event.category) : null;
   const reflectionClass = getReflectionClass(event.category);
-  const price = formatPrice(
-    event.is_free,
-    event.price_min,
-    event.price_max,
-    event.venue?.typical_price_min,
-    event.venue?.typical_price_max,
-    event.category_data?.typical_price_min,
-    event.category_data?.typical_price_max
-  );
+  const price = formatPriceDetailed(event);
 
   // Use query param navigation for in-app detail views (preserves auth state)
   const eventHref = portalSlug ? `/${portalSlug}?event=${event.id}` : `/events/${event.id}`;
@@ -221,7 +156,6 @@ function EventCard({ event, index = 0, skipAnimation = false, portalSlug, friend
                   <span className="font-mono text-[0.55rem] font-medium text-[var(--neon-red)] uppercase tracking-wide">Live</span>
                 </span>
               )}
-              <EventCardMenu eventId={event.id} onHide={onHide} className="ml-auto" />
             </div>
             {/* Title row: full width - larger and bolder */}
             <h3 className="text-[var(--cream)] font-bold text-lg leading-tight line-clamp-2 group-hover:text-[var(--glow-color,var(--neon-magenta))] transition-colors mb-1">
@@ -255,7 +189,6 @@ function EventCard({ event, index = 0, skipAnimation = false, portalSlug, friend
                 <span className="font-mono text-[0.55rem] font-medium text-[var(--neon-red)] uppercase tracking-wide">Live</span>
               </span>
             )}
-            <EventCardMenu eventId={event.id} onHide={onHide} className="ml-auto" />
           </div>
 
           {/* Friends going row - elevated above details for social proof */}
@@ -342,6 +275,33 @@ function EventCard({ event, index = 0, skipAnimation = false, portalSlug, friend
                   dayOfWeek={event.series.day_of_week}
                   compact
                 />
+              </>
+            )}
+            {/* Class badge */}
+            {event.is_class && (
+              <>
+                <span className="opacity-40">·</span>
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full font-mono text-[0.6rem] font-semibold bg-[var(--neon-blue,#60a5fa)]/15 text-[var(--neon-blue,#60a5fa)] border border-[var(--neon-blue,#60a5fa)]/25">
+                  Class
+                </span>
+              </>
+            )}
+            {/* Instructor */}
+            {event.instructor && (
+              <>
+                <span className="opacity-40">·</span>
+                <span className="truncate text-[var(--muted)] text-xs" title={event.instructor}>
+                  w/ {event.instructor}
+                </span>
+              </>
+            )}
+            {/* Skill level */}
+            {event.skill_level && (
+              <>
+                <span className="opacity-40">·</span>
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded font-mono text-[0.55rem] text-[var(--muted)] bg-[var(--twilight)]/40 capitalize">
+                  {event.skill_level}
+                </span>
               </>
             )}
           </div>

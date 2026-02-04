@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient, getUser } from "@/lib/supabase/server";
 import { escapeSQLPattern } from "@/lib/api-utils";
+import { logger } from "@/lib/logger";
 
 type Profile = {
   id: string;
@@ -37,7 +38,7 @@ export async function GET(request: Request) {
     .limit(limit);
 
   if (error) {
-    console.error("Error searching users:", error);
+    logger.error("Error searching users:", error);
     return NextResponse.json({ error: "Failed to search users" }, { status: 500 });
   }
 

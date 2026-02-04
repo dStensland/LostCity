@@ -44,8 +44,9 @@ export async function POST(request: NextRequest) {
 
     const supabase = await createClient();
 
-    // Generate unique filename
-    const ext = file.name.split(".").pop() || "jpg";
+    // Generate unique filename - derive extension from validated MIME type
+    const extMap: Record<string, string> = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" };
+    const ext = extMap[file.type] || "jpg";
     const timestamp = Date.now();
     const random = Math.random().toString(36).substring(2, 8);
     const filename = `${user.id}/${timestamp}-${random}.${ext}`;

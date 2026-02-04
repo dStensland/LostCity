@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient, getUser } from "@/lib/supabase/server";
+import { errorResponse } from "@/lib/api-utils";
+import { logger } from "@/lib/logger";
 
 type UserPreferences = {
   favorite_categories: string[] | null;
@@ -121,9 +123,7 @@ export async function GET() {
       },
     });
   } catch (err) {
-    console.error("Preferences profile API error:", err);
-    const message = err instanceof Error ? err.message : String(err);
-    return NextResponse.json({ error: message }, { status: 500 });
+    return errorResponse(err, "GET /api/preferences/profile");
   }
 }
 
@@ -144,7 +144,7 @@ export async function DELETE() {
       .eq("user_id", user.id);
 
     if (error) {
-      console.error("Error resetting preferences:", error);
+      logger.error("Error resetting preferences", error);
       return NextResponse.json(
         { error: "Failed to reset preferences" },
         { status: 500 }
@@ -156,8 +156,6 @@ export async function DELETE() {
       message: "Learned preferences have been reset",
     });
   } catch (err) {
-    console.error("Preferences reset API error:", err);
-    const message = err instanceof Error ? err.message : String(err);
-    return NextResponse.json({ error: message }, { status: 500 });
+    return errorResponse(err, "DELETE /api/preferences/profile");
   }
 }

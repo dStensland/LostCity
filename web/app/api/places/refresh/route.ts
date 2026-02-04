@@ -7,6 +7,9 @@ import {
   mapGooglePlaceToDb,
   calculateGoogleScore,
 } from "@/lib/google-places";
+import { applyRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
+import { timingSafeEqual } from "crypto";
+import { logger } from "@/lib/logger";
 
 function getSupabase() {
   return createClient(
@@ -17,13 +20,38 @@ function getSupabase() {
 
 // This endpoint requires PLACES_REFRESH_API_KEY to be set
 export async function POST(req: NextRequest) {
+  // Apply rate limiting
+  const rateLimitResult = await applyRateLimit(req, RATE_LIMITS.standard);
+  if (rateLimitResult) return rateLimitResult;
+
   const supabase = getSupabase();
   // Check for API key - must be configured and must match
   const authHeader = req.headers.get("authorization");
   const expectedKey = process.env.PLACES_REFRESH_API_KEY;
 
-  // SECURITY: Fail if key not configured OR doesn't match
-  if (!expectedKey || authHeader !== `Bearer ${expectedKey}`) {
+  // SECURITY: Fail if key not configured
+  if (!expectedKey) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  // Extract token from Bearer header
+  const token = authHeader?.startsWith("Bearer ") ? authHeader.substring(7) : "";
+
+  // Use timing-safe comparison
+  if (!token || token.length !== expectedKey.length) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  try {
+    const isValid = timingSafeEqual(
+      Buffer.from(token),
+      Buffer.from(expectedKey)
+    );
+
+    if (!isValid) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+  } catch {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -87,7 +115,7 @@ export async function POST(req: NextRequest) {
             });
 
             if (error) {
-              console.error(`Error upserting ${dbPlace.name}:`, error);
+              logger.error(`Error upserting ${dbPlace.name}:`, error);
               errors++;
             } else {
               processed++;
@@ -108,7 +136,7 @@ export async function POST(req: NextRequest) {
         // Rate limit: max 1 request per second to avoid hitting Google API limits
         await new Promise((r) => setTimeout(r, 1000));
       } catch (err) {
-        console.error(`Error fetching ${cat.id} in ${hood.name}:`, err);
+        logger.error(`Error fetching ${cat.id} in ${hood.name}:`, err);
         errors++;
         results.push({
           neighborhood: hood.name,

@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense } from "react";
+import { Suspense, useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 import { usePortalOptional, DEFAULT_PORTAL } from "@/lib/portal-context";
 import { applyPreset } from "@/lib/apply-preset";
@@ -30,13 +30,27 @@ const NeonBroadwayAmbient = dynamic(() => import("./NeonBroadwayAmbient"), { ssr
 function AmbientBackgroundInner() {
   const portalContext = usePortalOptional();
   const portal = portalContext?.portal ?? DEFAULT_PORTAL;
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
 
   // Get the resolved branding with preset defaults applied
   const branding = applyPreset(portal.branding);
   const ambientConfig = branding.ambient;
 
+  // Check for reduced motion preference in useEffect to avoid hydration mismatch
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.matchMedia) {
+      const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+      setPrefersReducedMotion(mediaQuery.matches);
+
+      // Listen for changes
+      const handler = (e: MediaQueryListEvent) => setPrefersReducedMotion(e.matches);
+      mediaQuery.addEventListener("change", handler);
+      return () => mediaQuery.removeEventListener("change", handler);
+    }
+  }, []);
+
   // Check for reduced motion preference
-  if (typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches) {
+  if (prefersReducedMotion) {
     // Return a static subtle background for reduced motion
     if (ambientConfig.effect !== "none") {
       return <SubtleGlowAmbient config={{ ...ambientConfig, effect: "subtle_glow" }} categoryColors={branding.category_colors} static />;

@@ -2,11 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
-import type { SupabaseClient } from "@supabase/supabase-js";
-
-// Type helper for tables not yet in generated types
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type AnySupabase = SupabaseClient<any, any, any>;
+import type { AnySupabase } from "@/lib/api-utils";
+import { logger } from "@/lib/logger";
 
 type RouteContext = {
   params: Promise<{ id: string }>;
@@ -20,6 +17,25 @@ export async function GET(request: NextRequest, context: RouteContext) {
   const { id: listId } = await context.params;
 
   try {
+    // First, check list visibility and ownership
+    const { data: list, error: listError } = await supabase
+      .from("lists")
+      .select("visibility, creator_id")
+      .eq("id", listId)
+      .maybeSingle();
+
+    if (listError || !list) {
+      return NextResponse.json({ error: "List not found" }, { status: 404 });
+    }
+
+    // If list is not public, verify the requesting user is the owner
+    if (list.visibility !== "public") {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user || user.id !== list.creator_id) {
+        return NextResponse.json({ error: "List not found" }, { status: 404 });
+      }
+    }
+
     const { data: items, error } = await supabase
       .from("list_items")
       .select(`
@@ -32,13 +48,13 @@ export async function GET(request: NextRequest, context: RouteContext) {
       .order("position", { ascending: true });
 
     if (error) {
-      console.error("Error fetching list items:", error);
+      logger.error("Error fetching list items", error);
       return NextResponse.json({ error: "Failed to fetch items" }, { status: 500 });
     }
 
     return NextResponse.json({ items: items || [] });
   } catch (error) {
-    console.error("Error in list items GET:", error);
+    logger.error("Error in list items GET", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
@@ -125,7 +141,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
       .maybeSingle();
 
     if (error) {
-      console.error("Error adding list item:", error);
+      logger.error("Error adding list item", error);
       return NextResponse.json({ error: "Failed to add item" }, { status: 500 });
     }
 
@@ -137,7 +153,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
       },
     });
   } catch (error) {
-    console.error("Error in list items POST:", error);
+    logger.error("Error in list items POST", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

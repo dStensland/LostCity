@@ -1,7 +1,7 @@
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import { createClient, canManagePortal } from "@/lib/supabase/server";
-import { getPortalBySlug } from "@/lib/portal";
+import { getCachedPortalBySlug } from "@/lib/portal";
 
 export const dynamic = "force-dynamic";
 
@@ -22,7 +22,7 @@ export default async function PortalAdminLayout({ children, params }: Props) {
   }
 
   // Get portal from database
-  const portal = await getPortalBySlug(slug);
+  const portal = await getCachedPortalBySlug(slug);
 
   if (!portal) {
     notFound();

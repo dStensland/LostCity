@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { unifiedSearch, type SearchOptions } from "@/lib/unified-search";
-import { applyRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
+import { applyRateLimit, RATE_LIMITS, getClientIdentifier} from "@/lib/rate-limit";
 import { logger } from "@/lib/logger";
 
 // Helper to safely parse integers with validation
@@ -44,7 +44,7 @@ function safeParseInt(
  */
 export async function GET(request: NextRequest) {
   // Rate limit: read endpoint
-  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.read);
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.read, getClientIdentifier(request));
   if (rateLimitResult) return rateLimitResult;
 
   try {

@@ -4,6 +4,7 @@ import { addDays, startOfDay, nextFriday, nextSunday, isFriday, isSaturday, isSu
 import { getLocalDateString } from "@/lib/formats";
 import { getPortalSourceAccess } from "@/lib/federation";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
+import { errorResponse, isValidUUID } from "@/lib/api-utils";
 import { getChainVenueIds } from "@/lib/chain-venues";
 
 // Cache feed for 5 minutes at CDN, allow stale for 1 hour while revalidating
@@ -198,6 +199,12 @@ export async function GET(request: NextRequest, { params }: Props) {
   }
 
   const portal = portalData as { id: string; slug: string; name: string; portal_type: string; settings: Record<string, unknown> };
+
+  // Validate portal ID to prevent injection
+  if (!isValidUUID(portal.id)) {
+    return NextResponse.json({ error: "Invalid portal" }, { status: 400 });
+  }
+
   const isBusinessPortal = portal.portal_type === "business";
   const feedSettings = (portal.settings?.feed || {}) as {
     feed_type?: string;
@@ -253,7 +260,7 @@ export async function GET(request: NextRequest, { params }: Props) {
   const { data: sectionsData, error: sectionsError } = await sectionsQuery;
 
   if (sectionsError) {
-    return NextResponse.json({ error: sectionsError.message }, { status: 500 });
+    return errorResponse(sectionsError, "portal feed sections");
   }
 
   const allSections = (sectionsData || []) as Section[];

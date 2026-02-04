@@ -14,8 +14,17 @@ export function formatTime(time: string | null, isAllDay?: boolean): string {
   if (isAllDay) return "All Day";
   if (!time) return "TBA";
 
-  const [hours, minutes] = time.split(":");
+  const parts = time.split(":");
+  if (parts.length < 2) return "TBA";
+
+  const hours = parts[0];
+  const minutes = parts[1];
   const hour = parseInt(hours, 10);
+
+  if (isNaN(hour) || hour < 0 || hour > 23) {
+    return "TBA";
+  }
+
   const period = hour >= 12 ? "pm" : "am";
   const hour12 = hour % 12 || 12;
   return `${hour12}:${minutes}${period}`;
@@ -29,8 +38,17 @@ export function formatTimeSplit(time: string | null, isAllDay?: boolean): { time
   if (isAllDay) return { time: "All Day", period: "" };
   if (!time) return { time: "TBA", period: "" };
 
-  const [hours, minutes] = time.split(":");
+  const parts = time.split(":");
+  if (parts.length < 2) return { time: "TBA", period: "" };
+
+  const hours = parts[0];
+  const minutes = parts[1];
   const hour = parseInt(hours, 10);
+
+  if (isNaN(hour) || hour < 0 || hour > 23) {
+    return { time: "TBA", period: "" };
+  }
+
   const period = hour >= 12 ? "pm" : "am";
   const hour12 = hour % 12 || 12;
   return { time: `${hour12}:${minutes}`, period };
@@ -64,8 +82,15 @@ export function formatDuration(
 ): string | null {
   if (!startTime || !endTime) return null;
 
-  const [startH, startM] = startTime.split(":").map(Number);
-  const [endH, endM] = endTime.split(":").map(Number);
+  const startParts = startTime.split(":");
+  const endParts = endTime.split(":");
+
+  if (startParts.length < 2 || endParts.length < 2) return null;
+
+  const [startH, startM] = startParts.map(Number);
+  const [endH, endM] = endParts.map(Number);
+
+  if (isNaN(startH) || isNaN(startM) || isNaN(endH) || isNaN(endM)) return null;
 
   const startMinutes = startH * 60 + startM;
   let endMinutes = endH * 60 + endM;
@@ -222,4 +247,16 @@ export function getLocalDateStringOffset(days: number): string {
   const date = new Date();
   date.setDate(date.getDate() + days);
   return getLocalDateString(date);
+}
+
+// ============================================================================
+// SECURITY UTILITIES
+// ============================================================================
+
+/**
+ * Safely encode JSON-LD schema for use in <script type="application/ld+json">.
+ * Escapes </script> sequences to prevent XSS if database values contain that string.
+ */
+export function safeJsonLd(schema: object): string {
+  return JSON.stringify(schema).replace(/<\/script>/gi, "<\\/script>");
 }

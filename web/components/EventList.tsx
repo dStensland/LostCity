@@ -8,7 +8,7 @@ import { EventCardSkeletonList } from "./EventCardSkeleton";
 import PullToRefresh from "./PullToRefresh";
 import { useEventsList } from "@/lib/hooks/useEventsList";
 import { useEventFilters } from "@/lib/hooks/useEventFilters";
-import { useFriendsGoing } from "@/lib/use-friends-going";
+import { useFriendsGoing } from "@/lib/hooks/use-friends-going";
 import type { EventWithLocation } from "@/lib/search";
 
 // Max events to display (prevent memory issues)

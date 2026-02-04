@@ -1,6 +1,6 @@
 "use client";
 
-import { usePullToRefresh } from "@/hooks/usePullToRefresh";
+import { usePullToRefresh } from "@/lib/hooks/usePullToRefresh";
 
 interface PullToRefreshProps {
   onRefresh: () => Promise<void>;

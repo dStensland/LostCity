@@ -2,12 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
-import { errorResponse } from "@/lib/api-utils";
-import type { SupabaseClient } from "@supabase/supabase-js";
-
-// Type helper for tables not yet in generated types
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type AnySupabase = SupabaseClient<any, any, any>;
+import { errorResponse, type AnySupabase } from "@/lib/api-utils";
+import { logger } from "@/lib/logger";
 
 // GET /api/lists - List all public lists, optionally filtered
 export async function GET(request: NextRequest) {
@@ -65,7 +61,7 @@ export async function GET(request: NextRequest) {
       const { data: list, error } = await query.maybeSingle();
 
       if (error) {
-        console.error("Error fetching list by slug:", error);
+        logger.error("Error fetching list by slug", error);
         return NextResponse.json({ error: "Failed to fetch list" }, { status: 500 });
       }
 
@@ -285,7 +281,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ lists });
   } catch (error) {
-    console.error("Error in lists GET:", error);
+    logger.error("Error in lists GET", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
@@ -352,7 +348,7 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("Error in lists POST:", error);
+    logger.error("Error in lists POST", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

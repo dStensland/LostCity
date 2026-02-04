@@ -3,7 +3,8 @@ import {
   getSearchSuggestions,
   getSuggestionsWithCorrections,
 } from "@/lib/search-suggestions";
-import { applyRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
+import { applyRateLimit, RATE_LIMITS, getClientIdentifier} from "@/lib/rate-limit";
+import { logger } from "@/lib/logger";
 
 // Helper to safely parse integers with validation
 function safeParseInt(
@@ -36,7 +37,7 @@ function safeParseInt(
  */
 export async function GET(request: NextRequest) {
   // Rate limit: read endpoint (suggestions should be fast)
-  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.read);
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.read, getClientIdentifier(request));
   if (rateLimitResult) return rateLimitResult;
 
   try {
@@ -79,7 +80,7 @@ export async function GET(request: NextRequest) {
       );
     }
   } catch (error) {
-    console.error("Suggestions API error:", error);
+    logger.error("Suggestions API error:", error);
     return NextResponse.json(
       {
         suggestions: [],

@@ -11,47 +11,11 @@ import {
 } from "date-fns";
 import { getMoodById, type MoodId } from "./moods";
 import { decodeCursor, generateNextCursor, type CursorData } from "./cursor";
-import { getPortalSourceAccess, type PortalSourceAccess } from "./federation";
 import { createLogger } from "./logger";
 import type { Frequency, DayOfWeek } from "./recurrence";
 
-// Cache for portal source access (refreshed on each request but cached within a request)
-const sourceAccessCache: Map<string, { data: PortalSourceAccess; timestamp: number }> = new Map();
-const CACHE_TTL_MS = 60000; // 1 minute cache
-
 const logger = createLogger("search");
 
-/**
- * Get accessible source IDs for a portal using the federation system.
- * Uses a short-lived cache to avoid repeated database queries within a request.
- */
-async function getAccessibleSourceIds(portalId: string): Promise<{
-  sourceIds: number[];
-  categoryConstraints: Map<number, string[] | null>;
-}> {
-  const now = Date.now();
-  const cached = sourceAccessCache.get(portalId);
-
-  if (cached && now - cached.timestamp < CACHE_TTL_MS) {
-    return {
-      sourceIds: cached.data.sourceIds,
-      categoryConstraints: cached.data.categoryConstraints,
-    };
-  }
-
-  try {
-    const access = await getPortalSourceAccess(portalId);
-    sourceAccessCache.set(portalId, { data: access, timestamp: now });
-    return {
-      sourceIds: access.sourceIds,
-      categoryConstraints: access.categoryConstraints,
-    };
-  } catch (error) {
-    logger.error("Failed to fetch portal source access", error, { portalId });
-    // Return empty on error - this will effectively hide all events
-    return { sourceIds: [], categoryConstraints: new Map() };
-  }
-}
 
 export interface SearchFilters {
   search?: string;
@@ -78,9 +42,6 @@ export interface SearchFilters {
   source_ids?: number[];     // Explicit list of source IDs to filter by
   // Content filters (set automatically from user preferences / portal settings)
   exclude_adult?: boolean;   // If true, exclude adult entertainment venues/events (internal use)
-  // Deprecated - kept for backwards compatibility but no longer used
-  portal_exclusive?: boolean; // @deprecated - all events now belong to exactly one portal
-  use_federation?: boolean;  // @deprecated - portal filtering is direct via portal_id
 }
 
 // Rollup types for collapsed event groups
@@ -366,6 +327,245 @@ function scoreEvent(event: EventWithLocation, searchTerm: string): number {
   return score;
 }
 
+/**
+ * Compute whether an event is currently live based on current time.
+ * Uses a 180-minute (3 hour) default duration if end_time is not specified.
+ *
+ * @param event - Event with start_date, start_time, end_time, is_all_day, and is_live fields
+ * @param now - Current date/time
+ * @param today - Today's date in yyyy-MM-dd format
+ * @returns true if the event is currently live
+ */
+function computeIsLive(
+  event: {
+    start_date: string;
+    start_time: string | null;
+    end_time: string | null;
+    is_all_day?: boolean | null;
+    is_live?: boolean;
+  },
+  now: Date,
+  today: string
+): boolean {
+  // Skip if already marked live by database
+  if (event.is_live) return true;
+
+  // Only today's events can be live
+  if (event.start_date !== today) return false;
+
+  // All-day events are live all day
+  if (event.is_all_day) return true;
+
+  // Need start_time to determine if live
+  if (!event.start_time) return false;
+
+  // Parse start time (HH:MM:SS format)
+  const [startH, startM] = event.start_time.split(":").map(Number);
+  const startMinutes = startH * 60 + startM;
+
+  // Parse end time or default to 3 hours after start
+  let endMinutes: number;
+  if (event.end_time) {
+    const [endH, endM] = event.end_time.split(":").map(Number);
+    endMinutes = endH * 60 + endM;
+    // Handle events that go past midnight
+    if (endMinutes < startMinutes) endMinutes += 24 * 60;
+  } else {
+    endMinutes = startMinutes + 180; // Default 3 hours
+  }
+
+  // Check if current time is within event window
+  const currentMinutes = now.getHours() * 60 + now.getMinutes();
+  return currentMinutes >= startMinutes && currentMinutes <= endMinutes;
+}
+
+
+/**
+ * Apply all search filters to a Supabase query.
+ * This function centralizes the filter application logic that was previously duplicated
+ * across multiple query functions.
+ *
+ * IMPORTANT: The Supabase query builder is immutable, so you must reassign the result:
+ * `query = applySearchFilters(query, filters)`
+ *
+ * @param query - The Supabase query builder object
+ * @param filters - The search filters to apply
+ * @param options - Additional options (mood data, venue IDs, etc.)
+ * @returns The modified query with all filters applied
+ */
+async function applySearchFilters(
+  query: any, // eslint-disable-line @typescript-eslint/no-explicit-any
+  filters: SearchFilters,
+  options: {
+    mood: ReturnType<typeof getMoodById> | null;
+    searchVenueIds: number[];
+    moodVenueIds: number[];
+    vibesVenueIds: number[];
+    neighborhoodVenueIds: number[];
+    cityVenueIds: number[];
+  }
+): Promise<{ query: any; shouldReturnEmpty: boolean }> { // eslint-disable-line @typescript-eslint/no-explicit-any
+  const { mood, searchVenueIds, moodVenueIds, vibesVenueIds, neighborhoodVenueIds, cityVenueIds } = options;
+
+  // Apply search filter (includes venue name search)
+  if (filters.search && filters.search.trim()) {
+    const escapedSearch = escapePostgrestValue(filters.search.trim());
+    const searchTerm = `%${escapedSearch}%`;
+
+    if (searchVenueIds.length > 0) {
+      query = query.or(
+        `title.ilike.${searchTerm},description.ilike.${searchTerm},venue_id.in.(${searchVenueIds.join(",")})`
+      );
+    } else {
+      query = query.or(`title.ilike.${searchTerm},description.ilike.${searchTerm}`);
+    }
+  }
+
+  // Apply mood filter (expands to vibes and categories)
+  if (mood) {
+    const conditions: string[] = [];
+
+    if (mood.categories.length > 0) {
+      conditions.push(`category_id.in.(${mood.categories.join(",")})`);
+    }
+
+    if (moodVenueIds.length > 0) {
+      conditions.push(`venue_id.in.(${moodVenueIds.join(",")})`);
+    }
+
+    if (conditions.length > 0) {
+      query = query.or(conditions.join(","));
+    } else {
+      return { query, shouldReturnEmpty: true };
+    }
+  }
+
+  // Apply category filter (using category_id)
+  if (filters.categories && filters.categories.length > 0) {
+    query = query.in("category_id", filters.categories);
+  }
+
+  // Apply subcategory filter
+  // If event has a subcategory, it must match one of the selected subcategories
+  // If event has no subcategory, include it if its category matches the parent category
+  if (filters.subcategories && filters.subcategories.length > 0) {
+    // Extract parent categories from subcategory values (e.g., "music.live" -> "music")
+    const parentCategories = [...new Set(filters.subcategories.map((sub) => sub.split(".")[0]))];
+
+    // Build OR condition: exact subcategory match OR (parent category match AND subcategory is null)
+    const subcatFilter = `subcategory.in.(${filters.subcategories.join(",")})`;
+    const parentFilter = `and(category_id.in.(${parentCategories.join(",")}),subcategory.is.null)`;
+    query = query.or(`${subcatFilter},${parentFilter}`);
+  }
+
+  // Apply tag filter (events with ANY of the selected tags)
+  if (filters.tags && filters.tags.length > 0) {
+    query = query.overlaps("tags", filters.tags);
+  }
+
+  // Apply vibes filter (venue attribute) - uses pre-fetched IDs
+  if (filters.vibes && filters.vibes.length > 0) {
+    if (vibesVenueIds.length > 0) {
+      query = query.in("venue_id", vibesVenueIds);
+    } else {
+      return { query, shouldReturnEmpty: true };
+    }
+  }
+
+  // Apply neighborhoods filter - uses pre-fetched IDs
+  if (filters.neighborhoods && filters.neighborhoods.length > 0) {
+    if (neighborhoodVenueIds.length > 0) {
+      query = query.in("venue_id", neighborhoodVenueIds);
+    } else {
+      return { query, shouldReturnEmpty: true };
+    }
+  }
+
+  // Apply city filter - uses pre-fetched IDs
+  if (filters.city && cityVenueIds.length > 0) {
+    query = query.in("venue_id", cityVenueIds);
+  }
+
+  // Apply price filters
+  if (filters.is_free) {
+    query = query.eq("is_free", true);
+  } else if (filters.price_max) {
+    // Include free events and events with price_min under the threshold
+    query = query.or(`is_free.eq.true,price_min.lte.${filters.price_max}`);
+  }
+
+  // Apply date filter
+  if (filters.date_filter) {
+    const { start, end } = getDateRange(filters.date_filter);
+    query = query.gte("start_date", start).lte("start_date", end);
+
+    // For "now" filter, also require is_live to be true
+    if (filters.date_filter === "now") {
+      query = query.eq("is_live", true);
+    }
+  }
+
+  // Apply venue filter
+  if (filters.venue_id) {
+    query = query.eq("venue_id", filters.venue_id);
+  }
+
+  // Apply multiple venues filter (portal filter)
+  if (filters.venue_ids && filters.venue_ids.length > 0) {
+    query = query.in("venue_id", filters.venue_ids);
+  }
+
+  // Apply exclude categories filter (portal filter)
+  if (filters.exclude_categories && filters.exclude_categories.length > 0) {
+    for (const cat of filters.exclude_categories) {
+      query = query.neq("category_id", cat);
+    }
+  }
+
+  // Apply adult content filter - exclude adult entertainment venues/events
+  if (filters.exclude_adult) {
+    query = query.or("is_adult.eq.false,is_adult.is.null");
+  }
+
+  // Apply date range filter (portal filter) - overrides date_filter if set
+  if (filters.date_range_start) {
+    query = query.gte("start_date", filters.date_range_start);
+  }
+  if (filters.date_range_end) {
+    query = query.lte("start_date", filters.date_range_end);
+  }
+
+  // Apply geo filter (portal filter) - find venues within radius of center point
+  if (filters.geo_center && filters.geo_radius_km) {
+    const [lat, lng] = filters.geo_center;
+    const radiusKm = filters.geo_radius_km;
+
+    // Use Haversine formula approximation for filtering
+    // 1 degree of latitude ≈ 111 km
+    // 1 degree of longitude ≈ 111 * cos(lat) km
+    const latDelta = radiusKm / 111;
+    const lngDelta = radiusKm / (111 * Math.cos(lat * Math.PI / 180));
+
+    const { data: nearbyVenues } = await supabase
+      .from("venues")
+      .select("id")
+      .gte("lat", lat - latDelta)
+      .lte("lat", lat + latDelta)
+      .gte("lng", lng - lngDelta)
+      .lte("lng", lng + lngDelta);
+
+    const venueIds = (nearbyVenues as { id: number }[] | null)?.map((v) => v.id) || [];
+    if (venueIds.length > 0) {
+      query = query.in("venue_id", venueIds);
+    } else {
+      // No venues in range, return empty results
+      return { query, shouldReturnEmpty: true };
+    }
+  }
+
+  return { query, shouldReturnEmpty: false };
+}
+
 export async function getFilteredEventsWithSearch(
   filters: SearchFilters,
   page = 1,
@@ -428,162 +628,22 @@ export async function getFilteredEventsWithSearch(
     city: filters.city,
   });
 
-  // Apply search filter (includes venue name search)
-  if (filters.search && filters.search.trim()) {
-    const escapedSearch = escapePostgrestValue(filters.search.trim());
-    const searchTerm = `%${escapedSearch}%`;
+  // Apply all search filters using the centralized helper
+  const { query: filteredQuery, shouldReturnEmpty } = await applySearchFilters(query, filters, {
+    mood,
+    searchVenueIds,
+    moodVenueIds,
+    vibesVenueIds,
+    neighborhoodVenueIds,
+    cityVenueIds,
+  });
 
-    if (searchVenueIds.length > 0) {
-      query = query.or(
-        `title.ilike.${searchTerm},description.ilike.${searchTerm},venue_id.in.(${searchVenueIds.join(",")})`
-      );
-    } else {
-      query = query.or(`title.ilike.${searchTerm},description.ilike.${searchTerm}`);
-    }
+  // Early return if filters result in no matches
+  if (shouldReturnEmpty) {
+    return { events: [], total: 0 };
   }
 
-  // Apply mood filter (expands to vibes and categories)
-  if (mood) {
-    const conditions: string[] = [];
-
-    if (mood.categories.length > 0) {
-      conditions.push(`category_id.in.(${mood.categories.join(",")})`);
-    }
-
-    if (moodVenueIds.length > 0) {
-      conditions.push(`venue_id.in.(${moodVenueIds.join(",")})`);
-    }
-
-    if (conditions.length > 0) {
-      query = query.or(conditions.join(","));
-    } else {
-      return { events: [], total: 0 };
-    }
-  }
-
-  // Apply category filter (using category_id)
-  if (filters.categories && filters.categories.length > 0) {
-    query = query.in("category_id", filters.categories);
-  }
-
-  // Apply subcategory filter
-  // If event has a subcategory, it must match one of the selected subcategories
-  // If event has no subcategory, include it if its category matches the parent category
-  if (filters.subcategories && filters.subcategories.length > 0) {
-    // Extract parent categories from subcategory values (e.g., "music.live" -> "music")
-    const parentCategories = [...new Set(filters.subcategories.map((sub) => sub.split(".")[0]))];
-
-    // Build OR condition: exact subcategory match OR (parent category match AND subcategory is null)
-    const subcatFilter = `subcategory.in.(${filters.subcategories.join(",")})`;
-    const parentFilter = `and(category_id.in.(${parentCategories.join(",")}),subcategory.is.null)`;
-    query = query.or(`${subcatFilter},${parentFilter}`);
-  }
-
-  // Apply tag filter (events with ANY of the selected tags)
-  if (filters.tags && filters.tags.length > 0) {
-    query = query.overlaps("tags", filters.tags);
-  }
-
-  // Apply vibes filter (venue attribute) - uses pre-fetched IDs
-  if (filters.vibes && filters.vibes.length > 0) {
-    if (vibesVenueIds.length > 0) {
-      query = query.in("venue_id", vibesVenueIds);
-    } else {
-      return { events: [], total: 0 };
-    }
-  }
-
-  // Apply neighborhoods filter - uses pre-fetched IDs
-  if (filters.neighborhoods && filters.neighborhoods.length > 0) {
-    if (neighborhoodVenueIds.length > 0) {
-      query = query.in("venue_id", neighborhoodVenueIds);
-    } else {
-      return { events: [], total: 0 };
-    }
-  }
-
-  // Apply city filter - uses pre-fetched IDs
-  if (filters.city && cityVenueIds.length > 0) {
-    query = query.in("venue_id", cityVenueIds);
-  }
-
-  // Apply price filters
-  if (filters.is_free) {
-    query = query.eq("is_free", true);
-  } else if (filters.price_max) {
-    // Include free events and events with price_min under the threshold
-    query = query.or(`is_free.eq.true,price_min.lte.${filters.price_max}`);
-  }
-
-  // Apply date filter
-  if (filters.date_filter) {
-    const { start, end } = getDateRange(filters.date_filter);
-    query = query.gte("start_date", start).lte("start_date", end);
-
-    // For "now" filter, also require is_live to be true
-    if (filters.date_filter === "now") {
-      query = query.eq("is_live", true);
-    }
-  }
-
-  // Apply venue filter
-  if (filters.venue_id) {
-    query = query.eq("venue_id", filters.venue_id);
-  }
-
-  // Apply multiple venues filter (portal filter)
-  if (filters.venue_ids && filters.venue_ids.length > 0) {
-    query = query.in("venue_id", filters.venue_ids);
-  }
-
-  // Apply exclude categories filter (portal filter)
-  if (filters.exclude_categories && filters.exclude_categories.length > 0) {
-    // Supabase doesn't have a direct "not in" for text, so we use not.in
-    for (const cat of filters.exclude_categories) {
-      query = query.neq("category_id", cat);
-    }
-  }
-
-  // Apply adult content filter - exclude adult entertainment venues/events
-  if (filters.exclude_adult) {
-    query = query.or("is_adult.eq.false,is_adult.is.null");
-  }
-
-  // Apply date range filter (portal filter) - overrides date_filter if set
-  if (filters.date_range_start) {
-    query = query.gte("start_date", filters.date_range_start);
-  }
-  if (filters.date_range_end) {
-    query = query.lte("start_date", filters.date_range_end);
-  }
-
-  // Apply geo filter (portal filter) - find venues within radius of center point
-  if (filters.geo_center && filters.geo_radius_km) {
-    const [lat, lng] = filters.geo_center;
-    const radiusKm = filters.geo_radius_km;
-
-    // Use Haversine formula approximation for filtering
-    // 1 degree of latitude ≈ 111 km
-    // 1 degree of longitude ≈ 111 * cos(lat) km
-    const latDelta = radiusKm / 111;
-    const lngDelta = radiusKm / (111 * Math.cos(lat * Math.PI / 180));
-
-    const { data: nearbyVenues } = await supabase
-      .from("venues")
-      .select("id")
-      .gte("lat", lat - latDelta)
-      .lte("lat", lat + latDelta)
-      .gte("lng", lng - lngDelta)
-      .lte("lng", lng + lngDelta);
-
-    const venueIds = (nearbyVenues as { id: number }[] | null)?.map((v) => v.id) || [];
-    if (venueIds.length > 0) {
-      query = query.in("venue_id", venueIds);
-    } else {
-      // No venues in range, return empty results
-      return { events: [], total: 0 };
-    }
-  }
+  query = filteredQuery;
 
   // Order and paginate
   query = query
@@ -601,41 +661,8 @@ export async function getFilteredEventsWithSearch(
   let events = data as EventWithLocation[];
 
   // Compute is_live for each event based on current time
-  const currentMinutes = now.getHours() * 60 + now.getMinutes();
-
   events = events.map((event) => {
-    // Skip if already marked live by database
-    if (event.is_live) return event;
-
-    // Only today's events can be live
-    if (event.start_date !== today) return event;
-
-    // All-day events are live all day
-    if (event.is_all_day) {
-      return { ...event, is_live: true };
-    }
-
-    // Need start_time to determine if live
-    if (!event.start_time) return event;
-
-    // Parse start time (HH:MM:SS format)
-    const [startH, startM] = event.start_time.split(":").map(Number);
-    const startMinutes = startH * 60 + startM;
-
-    // Parse end time or default to 3 hours after start
-    let endMinutes: number;
-    if (event.end_time) {
-      const [endH, endM] = event.end_time.split(":").map(Number);
-      endMinutes = endH * 60 + endM;
-      // Handle events that go past midnight
-      if (endMinutes < startMinutes) endMinutes += 24 * 60;
-    } else {
-      endMinutes = startMinutes + 180; // Default 3 hours
-    }
-
-    // Check if current time is within event window
-    const isLive = currentMinutes >= startMinutes && currentMinutes <= endMinutes;
-
+    const isLive = computeIsLive(event, now, today);
     return isLive ? { ...event, is_live: true } : event;
   });
 
@@ -719,146 +746,22 @@ export async function getFilteredEventsWithCursor(
     city: filters.city,
   });
 
-  // Apply search filter
-  if (filters.search && filters.search.trim()) {
-    const escapedSearch = escapePostgrestValue(filters.search.trim());
-    const searchTerm = `%${escapedSearch}%`;
+  // Apply all search filters using the centralized helper
+  const { query: filteredQuery, shouldReturnEmpty } = await applySearchFilters(query, filters, {
+    mood,
+    searchVenueIds,
+    moodVenueIds,
+    vibesVenueIds,
+    neighborhoodVenueIds,
+    cityVenueIds,
+  });
 
-    if (searchVenueIds.length > 0) {
-      query = query.or(
-        `title.ilike.${searchTerm},description.ilike.${searchTerm},venue_id.in.(${searchVenueIds.join(",")})`
-      );
-    } else {
-      query = query.or(`title.ilike.${searchTerm},description.ilike.${searchTerm}`);
-    }
+  // Early return if filters result in no matches
+  if (shouldReturnEmpty) {
+    return { events: [], nextCursor: null, hasMore: false };
   }
 
-  // Apply mood filter
-  if (mood) {
-    const conditions: string[] = [];
-    if (mood.categories.length > 0) {
-      conditions.push(`category_id.in.(${mood.categories.join(",")})`);
-    }
-    if (moodVenueIds.length > 0) {
-      conditions.push(`venue_id.in.(${moodVenueIds.join(",")})`);
-    }
-    if (conditions.length > 0) {
-      query = query.or(conditions.join(","));
-    } else {
-      return { events: [], nextCursor: null, hasMore: false };
-    }
-  }
-
-  // Apply category filter
-  if (filters.categories && filters.categories.length > 0) {
-    query = query.in("category_id", filters.categories);
-  }
-
-  // Apply subcategory filter
-  // If event has a subcategory, it must match one of the selected subcategories
-  // If event has no subcategory, include it if its category matches the parent category
-  if (filters.subcategories && filters.subcategories.length > 0) {
-    // Extract parent categories from subcategory values (e.g., "music.live" -> "music")
-    const parentCategories = [...new Set(filters.subcategories.map((sub) => sub.split(".")[0]))];
-
-    // Build OR condition: exact subcategory match OR (parent category match AND subcategory is null)
-    const subcatFilter = `subcategory.in.(${filters.subcategories.join(",")})`;
-    const parentFilter = `and(category_id.in.(${parentCategories.join(",")}),subcategory.is.null)`;
-    query = query.or(`${subcatFilter},${parentFilter}`);
-  }
-
-  // Apply tag filter
-  if (filters.tags && filters.tags.length > 0) {
-    query = query.overlaps("tags", filters.tags);
-  }
-
-  // Apply vibes filter
-  if (filters.vibes && filters.vibes.length > 0) {
-    if (vibesVenueIds.length > 0) {
-      query = query.in("venue_id", vibesVenueIds);
-    } else {
-      return { events: [], nextCursor: null, hasMore: false };
-    }
-  }
-
-  // Apply neighborhoods filter
-  if (filters.neighborhoods && filters.neighborhoods.length > 0) {
-    if (neighborhoodVenueIds.length > 0) {
-      query = query.in("venue_id", neighborhoodVenueIds);
-    } else {
-      return { events: [], nextCursor: null, hasMore: false };
-    }
-  }
-
-  // Apply city filter
-  if (filters.city && cityVenueIds.length > 0) {
-    query = query.in("venue_id", cityVenueIds);
-  }
-
-  // Apply price filters
-  if (filters.is_free) {
-    query = query.eq("is_free", true);
-  } else if (filters.price_max) {
-    query = query.or(`is_free.eq.true,price_min.lte.${filters.price_max}`);
-  }
-
-  // Apply date filter
-  if (filters.date_filter) {
-    const { start, end } = getDateRange(filters.date_filter);
-    query = query.gte("start_date", start).lte("start_date", end);
-
-    if (filters.date_filter === "now") {
-      query = query.eq("is_live", true);
-    }
-  }
-
-  // Apply venue filter
-  if (filters.venue_id) {
-    query = query.eq("venue_id", filters.venue_id);
-  }
-
-  // Apply multiple venues filter (portal filter)
-  if (filters.venue_ids && filters.venue_ids.length > 0) {
-    query = query.in("venue_id", filters.venue_ids);
-  }
-
-  // Apply exclude categories filter
-  if (filters.exclude_categories && filters.exclude_categories.length > 0) {
-    for (const cat of filters.exclude_categories) {
-      query = query.neq("category_id", cat);
-    }
-  }
-
-  // Apply date range filter
-  if (filters.date_range_start) {
-    query = query.gte("start_date", filters.date_range_start);
-  }
-  if (filters.date_range_end) {
-    query = query.lte("start_date", filters.date_range_end);
-  }
-
-  // Apply geo filter
-  if (filters.geo_center && filters.geo_radius_km) {
-    const [lat, lng] = filters.geo_center;
-    const radiusKm = filters.geo_radius_km;
-    const latDelta = radiusKm / 111;
-    const lngDelta = radiusKm / (111 * Math.cos(lat * Math.PI / 180));
-
-    const { data: nearbyVenues } = await supabase
-      .from("venues")
-      .select("id")
-      .gte("lat", lat - latDelta)
-      .lte("lat", lat + latDelta)
-      .gte("lng", lng - lngDelta)
-      .lte("lng", lng + lngDelta);
-
-    const venueIds = (nearbyVenues as { id: number }[] | null)?.map((v) => v.id) || [];
-    if (venueIds.length > 0) {
-      query = query.in("venue_id", venueIds);
-    } else {
-      return { events: [], nextCursor: null, hasMore: false };
-    }
-  }
+  query = filteredQuery;
 
   // CURSOR-BASED PAGINATION (keyset pagination)
   // Order: start_date ASC, start_time ASC (nulls first), id ASC
@@ -895,27 +798,8 @@ export async function getFilteredEventsWithCursor(
   }
 
   // Compute is_live for each event
-  const currentMinutes = now.getHours() * 60 + now.getMinutes();
-
   events = events.map((event) => {
-    if (event.is_live) return event;
-    if (event.start_date !== today) return event;
-    if (event.is_all_day) return { ...event, is_live: true };
-    if (!event.start_time) return event;
-
-    const [startH, startM] = event.start_time.split(":").map(Number);
-    const startMinutes = startH * 60 + startM;
-
-    let endMinutes: number;
-    if (event.end_time) {
-      const [endH, endM] = event.end_time.split(":").map(Number);
-      endMinutes = endH * 60 + endM;
-      if (endMinutes < startMinutes) endMinutes += 24 * 60;
-    } else {
-      endMinutes = startMinutes + 180;
-    }
-
-    const isLive = currentMinutes >= startMinutes && currentMinutes <= endMinutes;
+    const isLive = computeIsLive(event, now, today);
     return isLive ? { ...event, is_live: true } : event;
   });
 
@@ -943,16 +827,23 @@ export async function getEventsForMap(
   // Use date-fns format to get local date (not UTC from toISOString)
   const today = format(startOfDay(new Date()), "yyyy-MM-dd");
 
+  // Get mood data for potential vibes lookup (needed for consistency with other functions)
+  const mood = filters.mood ? getMoodById(filters.mood) : null;
+
   // PERFORMANCE OPTIMIZATION: Batch all venue ID lookups in parallel
-  // instead of making 3 sequential queries
+  // instead of making sequential queries
   const {
     searchVenueIds,
+    moodVenueIds,
     vibesVenueIds,
     neighborhoodVenueIds,
+    cityVenueIds,
   } = await batchFetchVenueIds({
     searchTerm: filters.search?.trim() || undefined,
+    moodVibes: mood?.vibes,
     vibes: filters.vibes,
     neighborhoods: filters.neighborhoods,
+    city: filters.city,
   });
 
   // Early return if vibes filter specified but no matching venues found
@@ -973,6 +864,8 @@ export async function getEventsForMap(
       title,
       start_date,
       start_time,
+      end_time,
+      is_all_day,
       category,
       category_id,
       is_free,
@@ -995,75 +888,34 @@ export async function getEventsForMap(
     query = query.in("source_id", filters.source_ids);
   }
 
-  // Apply search filter (includes venue name search) - using batched venue IDs
-  if (filters.search && filters.search.trim()) {
-    const escapedSearch = escapePostgrestValue(filters.search.trim());
-    const searchTerm = `%${escapedSearch}%`;
+  // Apply all search filters using the centralized helper
+  // Note: For map view, we skip some filters that don't make sense (e.g., venue_ids)
+  // so we pass a subset of filters
+  const mapFilters: SearchFilters = {
+    ...filters,
+    // Map view doesn't use these portal-specific filters
+    venue_ids: undefined,
+    date_range_start: undefined,
+    date_range_end: undefined,
+    geo_center: undefined,
+    geo_radius_km: undefined,
+  };
 
-    if (searchVenueIds.length > 0) {
-      query = query.or(
-        `title.ilike.${searchTerm},description.ilike.${searchTerm},venue_id.in.(${searchVenueIds.join(",")})`
-      );
-    } else {
-      query = query.or(`title.ilike.${searchTerm},description.ilike.${searchTerm}`);
-    }
+  const { query: filteredQuery, shouldReturnEmpty } = await applySearchFilters(query, mapFilters, {
+    mood,
+    searchVenueIds,
+    moodVenueIds,
+    vibesVenueIds,
+    neighborhoodVenueIds,
+    cityVenueIds,
+  });
+
+  // Early return if filters result in no matches
+  if (shouldReturnEmpty) {
+    return [];
   }
 
-  if (filters.categories && filters.categories.length > 0) {
-    query = query.in("category_id", filters.categories);
-  }
-
-  // Apply subcategory filter
-  // If event has a subcategory, it must match one of the selected subcategories
-  // If event has no subcategory, include it if its category matches the parent category
-  if (filters.subcategories && filters.subcategories.length > 0) {
-    // Extract parent categories from subcategory values (e.g., "music.live" -> "music")
-    const parentCategories = [...new Set(filters.subcategories.map((sub) => sub.split(".")[0]))];
-
-    // Build OR condition: exact subcategory match OR (parent category match AND subcategory is null)
-    const subcatFilter = `subcategory.in.(${filters.subcategories.join(",")})`;
-    const parentFilter = `and(category_id.in.(${parentCategories.join(",")}),subcategory.is.null)`;
-    query = query.or(`${subcatFilter},${parentFilter}`);
-  }
-
-  if (filters.tags && filters.tags.length > 0) {
-    query = query.overlaps("tags", filters.tags);
-  }
-
-  // Apply vibes filter - using batched venue IDs
-  if (filters.vibes && filters.vibes.length > 0 && vibesVenueIds.length > 0) {
-    query = query.in("venue_id", vibesVenueIds);
-  }
-
-  // Apply neighborhoods filter - using batched venue IDs
-  if (filters.neighborhoods && filters.neighborhoods.length > 0 && neighborhoodVenueIds.length > 0) {
-    query = query.in("venue_id", neighborhoodVenueIds);
-  }
-
-  if (filters.is_free) {
-    query = query.eq("is_free", true);
-  } else if (filters.price_max) {
-    query = query.or(`is_free.eq.true,price_min.lte.${filters.price_max}`);
-  }
-
-  if (filters.date_filter) {
-    const { start, end } = getDateRange(filters.date_filter);
-    query = query.gte("start_date", start).lte("start_date", end);
-
-    // For "now" filter, also require is_live to be true
-    if (filters.date_filter === "now") {
-      query = query.eq("is_live", true);
-    }
-  }
-
-  if (filters.venue_id) {
-    query = query.eq("venue_id", filters.venue_id);
-  }
-
-  // Apply adult content filter
-  if (filters.exclude_adult) {
-    query = query.or("is_adult.eq.false,is_adult.is.null");
-  }
+  query = filteredQuery;
 
   query = query.order("start_date", { ascending: true }).limit(limit);
 
@@ -1078,27 +930,9 @@ export async function getEventsForMap(
   const now = new Date();
   // Use date-fns format to get local date (not UTC from toISOString)
   const currentDate = format(startOfDay(now), "yyyy-MM-dd");
-  const currentMinutes = now.getHours() * 60 + now.getMinutes();
 
   const events = (data as EventWithLocation[]).map((event) => {
-    if (event.is_live) return event;
-    if (event.start_date !== currentDate) return event;
-    if (event.is_all_day) return { ...event, is_live: true };
-    if (!event.start_time) return event;
-
-    const [startH, startM] = event.start_time.split(":").map(Number);
-    const startMinutes = startH * 60 + startM;
-
-    let endMinutes: number;
-    if (event.end_time) {
-      const [endH, endM] = event.end_time.split(":").map(Number);
-      endMinutes = endH * 60 + endM;
-      if (endMinutes < startMinutes) endMinutes += 24 * 60;
-    } else {
-      endMinutes = startMinutes + 180;
-    }
-
-    const isLive = currentMinutes >= startMinutes && currentMinutes <= endMinutes;
+    const isLive = computeIsLive(event, now, currentDate);
     return isLive ? { ...event, is_live: true } : event;
   });
 
@@ -1423,11 +1257,6 @@ interface RollupStats {
     venueSlug: string;
     count: number;
   }[];
-  sourceRollups: {
-    sourceId: number;
-    sourceName: string;
-    count: number;
-  }[];
 }
 
 // Get rollup statistics for a date range
@@ -1466,19 +1295,13 @@ async function getRollupStats(
   const { data, error } = await query;
 
   if (error || !data) {
-    return { venueRollups: [], sourceRollups: [] };
+    return { venueRollups: [] };
   }
 
   // Count events by venue for 'venue' rollup behavior
   const venueCounts = new Map<
     number,
     { venueId: number; venueName: string; venueSlug: string; count: number }
-  >();
-
-  // Count events by source for 'collapse' rollup behavior
-  const sourceCounts = new Map<
-    number,
-    { sourceId: number; sourceName: string; count: number }
   >();
 
   type EventWithJoins = {
@@ -1506,26 +1329,12 @@ async function getRollupStats(
         });
       }
     }
-
-    if (rollupBehavior === "collapse" && source) {
-      const existing = sourceCounts.get(source.id);
-      if (existing) {
-        existing.count++;
-      } else {
-        sourceCounts.set(source.id, {
-          sourceId: source.id,
-          sourceName: source.name,
-          count: 1,
-        });
-      }
-    }
   }
 
   // Filter to only those exceeding thresholds
   const venueRollups = Array.from(venueCounts.values()).filter((v) => v.count > 3);
-  const sourceRollups = Array.from(sourceCounts.values()).filter((s) => s.count > 5);
 
-  return { venueRollups, sourceRollups };
+  return { venueRollups };
 }
 
 // Get events with rollup support
@@ -1551,8 +1360,6 @@ export async function getFilteredEventsWithRollups(
   );
 
   const venueIdsToExclude = rollupStats.venueRollups.map((v) => v.venueId);
-  // Note: sourceIdsToExclude would be used for source-based rollups if implemented
-  void rollupStats.sourceRollups; // Acknowledge unused for now
 
   // Get regular events (excluding those that will be rolled up)
   const { events, total } = await getFilteredEventsWithSearch(
@@ -1603,34 +1410,6 @@ export async function getFilteredEventsWithRollups(
       previewEvents: (previewData || []) as EventWithLocation[],
       totalCount: vr.count,
       expandUrl: `/spots/${vr.venueSlug}`,
-    });
-  }
-
-  for (const sr of rollupStats.sourceRollups) {
-    // Get preview events for this source
-    const { data: previewData } = await supabase
-      .from("events")
-      .select(
-        `
-        *,
-        venue:venues(id, name, slug, address, neighborhood, city, state, lat, lng, typical_price_min, typical_price_max, venue_type)
-      `
-      )
-      .eq("source_id", sr.sourceId)
-      .gte("start_date", dateRange.start)
-      .lte("start_date", dateRange.end)
-      .order("start_date")
-      .order("start_time")
-      .limit(3);
-
-    groups.push({
-      type: "source",
-      id: `source-${sr.sourceId}`,
-      title: sr.sourceName,
-      subtitle: `${sr.count} opportunities`,
-      previewEvents: (previewData || []) as EventWithLocation[],
-      totalCount: sr.count,
-      expandUrl: `/events?source=${sr.sourceId}`,
     });
   }
 

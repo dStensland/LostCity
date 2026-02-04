@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import Link from "next/link";
 import CategoryIcon from "@/components/CategoryIcon";
-import { formatTimeSplit } from "@/lib/formats";
+import { formatTimeSplit, formatPriceDetailed, type PriceableEvent } from "@/lib/formats";
 
 interface CalendarEvent {
   id: number;
@@ -140,16 +140,8 @@ export default function HoverPreviewCard({
 
   const { time, period } = formatTimeSplit(event.start_time, event.is_all_day);
 
-  const formatPrice = (): string | null => {
-    if (event.is_free) return "Free";
-    if (event.price_min === null) return null;
-    if (event.price_max === null || event.price_min === event.price_max) {
-      return `$${event.price_min}`;
-    }
-    return `$${event.price_min}-${event.price_max}`;
-  };
-
-  const price = formatPrice();
+  const priceResult = formatPriceDetailed(event as PriceableEvent);
+  const price = priceResult.text || null;
 
   return (
     <div
@@ -246,7 +238,7 @@ export default function HoverPreviewCard({
             <span
               className={`
                 px-2 py-0.5 rounded-full font-mono text-[0.6rem] font-medium
-                ${event.is_free
+                ${priceResult.isFree
                   ? "bg-[var(--neon-green)]/20 text-[var(--neon-green)]"
                   : "bg-[var(--twilight-purple)] text-[var(--cream)]"
                 }

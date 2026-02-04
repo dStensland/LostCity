@@ -469,6 +469,7 @@ export default function VenueDetailView({ slug, portalSlug, onClose }: VenueDeta
             src={spot.image_url!}
             alt={spot.name}
             fill
+            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
             className={`${isLowRes ? "object-contain" : "object-cover"} transition-opacity duration-300 ${imageLoaded ? "opacity-100" : "opacity-0"}`}
             onLoad={(e) => {
               setImageLoaded(true);
@@ -721,7 +722,6 @@ export default function VenueDetailView({ slug, portalSlug, onClose }: VenueDeta
                                     width={56}
                                     height={56}
                                     className="w-full h-full object-cover"
-                                    unoptimized
                                   />
                                 </div>
                               )}

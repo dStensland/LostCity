@@ -15,6 +15,7 @@ from playwright.sync_api import sync_playwright
 
 from db import get_or_create_venue, insert_event, find_event_by_hash
 from dedupe import generate_content_hash
+from description_fetcher import fetch_description_playwright
 from utils import extract_images_from_page
 
 logger = logging.getLogger(__name__)
@@ -87,6 +88,21 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
                 page.wait_for_timeout(1000)
 
+            # Extract event detail links from page
+            detail_links = page.evaluate("""
+                () => {
+                    const links = {};
+                    document.querySelectorAll('a[href*="/shows/"], a[href*="/events/"]').forEach(a => {
+                        const text = a.textContent.trim();
+                        const href = a.href;
+                        if (text && text.length > 3 && href) {
+                            links[text] = href;
+                        }
+                    });
+                    return links;
+                }
+            """)
+
             # Get page text
             body_text = page.inner_text("body")
             lines = [line.strip() for line in body_text.split("\n") if line.strip()]
@@ -112,6 +128,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             i = 0
             seen_events = set()
             current_year = datetime.now().year
+            new_events = []
 
             while i < len(lines):
                 line = lines[i].upper()
@@ -226,18 +243,38 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             "content_hash": content_hash,
                         }
 
-                        try:
-                            insert_event(event_record)
-                            events_new += 1
-                            logger.info(f"Added: {title} on {start_date}")
-                        except Exception as e:
-                            logger.error(f"Failed to insert: {title}: {e}")
+                        new_events.append(event_record)
 
                         i += 4
                         continue
 
                 i += 1
 
+            # Fetch descriptions from detail pages for new events
+            detail_page = context.new_page()
+            detail_fetches = 0
+            for evt in new_events:
+                title = evt["title"]
+                detail_url = detail_links.get(title)
+                if detail_url and detail_fetches < 20:
+                    desc = fetch_description_playwright(detail_page, detail_url)
+                    if desc:
+                        evt["description"] = desc
+                    detail_fetches += 1
+                    page.wait_for_timeout(1000)
+
+                # Synthetic fallback
+                if not evt["description"]:
+                    evt["description"] = f"Live event at Coca-Cola Roxy."
+
+                try:
+                    insert_event(evt)
+                    events_new += 1
+                    logger.info(f"Added: {title} on {evt['start_date']}")
+                except Exception as e:
+                    logger.error(f"Failed to insert: {title}: {e}")
+
+            detail_page.close()
             browser.close()
 
         logger.info(

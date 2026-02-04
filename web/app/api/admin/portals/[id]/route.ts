@@ -5,7 +5,7 @@ import { isCustomDomainAvailable, generateDomainVerificationToken } from "@/lib/
 import { invalidateDomainCache } from "@/lib/domain-cache";
 import { filterBrandingForPlan, canUseCustomDomain } from "@/lib/plan-features";
 import { errorResponse } from "@/lib/api-utils";
-import { applyRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
+import { applyRateLimit, RATE_LIMITS, getClientIdentifier} from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -32,7 +32,7 @@ type PortalData = {
 
 // GET /api/admin/portals/[id] - Get portal details
 export async function GET(request: NextRequest, { params }: Props) {
-  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write);
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
   if (rateLimitResult) return rateLimitResult;
 
   const { id } = await params;
@@ -120,7 +120,7 @@ export async function GET(request: NextRequest, { params }: Props) {
 
 // PATCH /api/admin/portals/[id] - Update portal
 export async function PATCH(request: NextRequest, { params }: Props) {
-  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write);
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
   if (rateLimitResult) return rateLimitResult;
 
   const { id } = await params;
@@ -264,7 +264,7 @@ export async function PATCH(request: NextRequest, { params }: Props) {
 
 // DELETE /api/admin/portals/[id] - Delete portal
 export async function DELETE(request: NextRequest, { params }: Props) {
-  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write);
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
   if (rateLimitResult) return rateLimitResult;
 
   const { id } = await params;

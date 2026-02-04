@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { Suspense } from "react";
 import { unstable_cache } from "next/cache";
 import { supabase } from "@/lib/supabase";
@@ -6,6 +7,11 @@ import MainNav from "@/components/MainNav";
 import PageFooter from "@/components/PageFooter";
 import CommunityContent from "./CommunityContent";
 import { getLocalDateString } from "@/lib/formats";
+
+export const metadata: Metadata = {
+  title: "Community | Lost City",
+  description: "Discover event organizers, arts nonprofits, and community groups in Atlanta.",
+};
 
 export const revalidate = 300; // 5 minutes for the page
 

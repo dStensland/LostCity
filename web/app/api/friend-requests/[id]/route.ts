@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient, getUser } from "@/lib/supabase/server";
 import { errorResponse, isValidUUID, validationError } from "@/lib/api-utils";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
+import { logger } from "@/lib/logger";
 
 type FriendRequest = {
   id: string;
@@ -53,7 +54,7 @@ export async function GET(
       .maybeSingle();
 
     if (error) {
-      console.error("friend-requests:GET[id] error:", error);
+      logger.error("friend-requests:GET[id] error:", error);
       return errorResponse(error, "friend-requests:GET[id]");
     }
 
@@ -75,7 +76,7 @@ export async function GET(
 
     return NextResponse.json({ request: friendRequest });
   } catch (err) {
-    console.error("friend-requests:GET[id] unexpected error:", err);
+    logger.error("friend-requests:GET[id] unexpected error:", err);
     return NextResponse.json({ error: "An internal error occurred" }, { status: 500 });
   }
 }
@@ -124,7 +125,7 @@ export async function PATCH(
     const friendRequest = data as FriendRequest | null;
 
     if (fetchError || !friendRequest) {
-      console.error("friend-requests:PATCH fetch error:", fetchError);
+      logger.error("friend-requests:PATCH fetch error:", fetchError);
       return NextResponse.json(
         { error: "Friend request not found" },
         { status: 404 }
@@ -166,7 +167,7 @@ export async function PATCH(
       ) as { error: Error | null };
 
       if (friendshipError) {
-        console.error("Error creating friendship:", friendshipError);
+        logger.error("Error creating friendship:", friendshipError);
         // Don't fail the request - the status was already updated
         // The friendship can be created later if needed
       }
@@ -178,7 +179,7 @@ export async function PATCH(
       message: action === "accept" ? "Friend request accepted" : "Friend request declined",
     });
   } catch (err) {
-    console.error("friend-requests:PATCH unexpected error:", err);
+    logger.error("friend-requests:PATCH unexpected error:", err);
     return NextResponse.json(
       { error: "An internal error occurred" },
       { status: 500 }
@@ -220,7 +221,7 @@ export async function DELETE(
     const friendRequest = data2 as FriendRequest | null;
 
     if (fetchError || !friendRequest) {
-      console.error("friend-requests:DELETE fetch error:", fetchError);
+      logger.error("friend-requests:DELETE fetch error:", fetchError);
       return NextResponse.json(
         { error: "Friend request not found" },
         { status: 404 }
@@ -247,7 +248,7 @@ export async function DELETE(
 
     return NextResponse.json({ success: true });
   } catch (err) {
-    console.error("friend-requests:DELETE unexpected error:", err);
+    logger.error("friend-requests:DELETE unexpected error:", err);
     return NextResponse.json(
       { error: "An internal error occurred" },
       { status: 500 }

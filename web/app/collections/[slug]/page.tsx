@@ -8,7 +8,7 @@ import { formatTimeSplit } from "@/lib/formats";
 import { format, parseISO } from "date-fns";
 import type { Metadata } from "next";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 300;
 
 type Props = {
   params: Promise<{ slug: string }>;

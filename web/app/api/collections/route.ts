@@ -51,7 +51,13 @@ export async function GET(request: Request) {
   if (featured) {
     query = query.eq("is_featured", true).order("featured_order", { ascending: true });
   } else if (userId) {
-    query = query.eq("user_id", userId);
+    // Only show public collections for other users
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user?.id === userId) {
+      query = query.eq("user_id", userId); // Owner sees all their own
+    } else {
+      query = query.eq("user_id", userId).eq("visibility", "public"); // Others see only public
+    }
   } else {
     query = query.eq("visibility", "public");
   }

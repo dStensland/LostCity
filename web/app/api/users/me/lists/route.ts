@@ -1,15 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import type { SupabaseClient } from "@supabase/supabase-js";
-import { applyRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
-
-// Type helper for tables not yet in generated types
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type AnySupabase = SupabaseClient<any, any, any>;
+import { applyRateLimit, RATE_LIMITS, getClientIdentifier} from "@/lib/rate-limit";
+import type { AnySupabase } from "@/lib/api-utils";
+import { logger } from "@/lib/logger";
 
 // GET /api/users/me/lists - Get current user's lists with item membership info
 export async function GET(request: NextRequest) {
-  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.read);
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.read, getClientIdentifier(request));
   if (rateLimitResult) return rateLimitResult;
 
   const supabase = await createClient() as AnySupabase;
@@ -34,7 +31,7 @@ export async function GET(request: NextRequest) {
       .order("updated_at", { ascending: false });
 
     if (error) {
-      console.error("Error fetching user lists:", error);
+      logger.error("Error fetching user lists:", error);
       return NextResponse.json({ error: "Failed to fetch lists" }, { status: 500 });
     }
 
@@ -81,7 +78,7 @@ export async function GET(request: NextRequest) {
       lists: lists || [],
     });
   } catch (error) {
-    console.error("Error in user lists GET:", error);
+    logger.error("Error in user lists GET:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

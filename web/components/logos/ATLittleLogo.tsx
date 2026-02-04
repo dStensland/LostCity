@@ -1,5 +1,3 @@
-"use client";
-
 interface ATLittleLogoProps {
   className?: string;
   variant?: "full" | "compact" | "icon" | "header";

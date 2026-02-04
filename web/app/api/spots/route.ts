@@ -2,15 +2,24 @@ import { createClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 import { getLocalDateString } from "@/lib/formats";
 import { isOpenAt, type HoursData } from "@/lib/hours";
+import { applyRateLimit, RATE_LIMITS, getClientIdentifier} from "@/lib/rate-limit";
+import { errorResponse, isValidUUID } from "@/lib/api-utils";
+import { logger } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.read, getClientIdentifier(request));
+  if (rateLimitResult) return rateLimitResult;
+
   const supabase = await createClient();
   const { searchParams } = new URL(request.url);
-  const portalId = searchParams.get("portal_id");
+  const portalIdParam = searchParams.get("portal_id");
   const isExclusive = searchParams.get("exclusive") === "true";
   const withEventsOnly = searchParams.get("with_events") === "true";
+
+  // Validate portal_id to prevent PostgREST filter injection
+  const portalId = portalIdParam && isValidUUID(portalIdParam) ? portalIdParam : null;
 
   // New filters
   const openNow = searchParams.get("open_now") === "true";
@@ -79,8 +88,7 @@ export async function GET(request: NextRequest) {
     const { data: venues, error: venuesError } = await query;
 
     if (venuesError) {
-      console.error("Venues query error:", venuesError);
-      return NextResponse.json({ spots: [], error: venuesError.message }, { status: 500 });
+      return errorResponse(venuesError, "GET /api/spots", 500);
     }
 
     if (!venues || venues.length === 0) {
@@ -185,7 +193,7 @@ export async function GET(request: NextRequest) {
       }
     );
   } catch (error) {
-    console.error("Spots API error:", error);
+    logger.error("Spots API error:", error);
     return NextResponse.json({ spots: [], error: "Failed to fetch spots" }, { status: 500 });
   }
 }

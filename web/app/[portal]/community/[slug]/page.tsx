@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { unstable_cache } from "next/cache";
 import { supabase } from "@/lib/supabase";
-import { getPortalBySlug } from "@/lib/portal";
+import { getCachedPortalBySlug } from "@/lib/portal";
 import UnifiedHeader from "@/components/UnifiedHeader";
 import PortalFooter from "@/components/PortalFooter";
 import { PortalTheme } from "@/components/PortalTheme";
@@ -21,7 +21,7 @@ import {
   RelatedCard,
   DetailStickyBar,
 } from "@/components/detail";
-import { getLocalDateString } from "@/lib/formats";
+import { getLocalDateString, safeJsonLd } from "@/lib/formats";
 
 export const revalidate = 300;
 
@@ -106,7 +106,7 @@ const getOrganizationEvents = unstable_cache(
 // Cache similar organizations
 const getSimilarOrganizations = unstable_cache(
   async (organizationId: string, orgType: string, categories: string[] | null): Promise<Organization[]> => {
-    const query = supabase
+    let query = supabase
       .from("organizations")
       .select("*")
       .eq("hidden", false)
@@ -115,7 +115,7 @@ const getSimilarOrganizations = unstable_cache(
 
     // Try to match by org type first
     if (orgType) {
-      query.eq("org_type", orgType);
+      query = query.eq("org_type", orgType);
     }
 
     const { data, error } = await query;
@@ -189,7 +189,7 @@ type Props = {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug, portal: portalSlug } = await params;
   const organization = await getOrganization(slug);
-  const portal = await getPortalBySlug(portalSlug);
+  const portal = await getCachedPortalBySlug(portalSlug);
 
   if (!organization) {
     return { title: "Organization Not Found | Lost City" };
@@ -264,7 +264,7 @@ function generateOrganizationSchema(organization: Organization) {
 export default async function PortalOrganizerPage({ params }: Props) {
   const { portal: portalSlug, slug } = await params;
   const organization = await getOrganization(slug);
-  const portal = await getPortalBySlug(portalSlug);
+  const portal = await getCachedPortalBySlug(portalSlug);
 
   if (!organization) {
     notFound();
@@ -293,7 +293,7 @@ export default async function PortalOrganizerPage({ params }: Props) {
       {/* Schema.org JSON-LD */}
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema) }}
+        dangerouslySetInnerHTML={{ __html: safeJsonLd(organizationSchema) }}
       />
 
       {/* Portal-specific theming */}

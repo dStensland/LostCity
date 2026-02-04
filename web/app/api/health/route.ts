@@ -1,10 +1,15 @@
 import { createClient } from "@/lib/supabase/server";
-import { NextResponse } from "next/server";
+import { NextResponse, NextRequest } from "next/server";
+import { applyRateLimit, RATE_LIMITS, getClientIdentifier} from "@/lib/rate-limit";
+import { logger } from "@/lib/logger";
 
 // Version from package.json
 const VERSION = "0.1.0";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.read, getClientIdentifier(request));
+  if (rateLimitResult) return rateLimitResult;
+
   const timestamp = new Date().toISOString();
   const checks: Record<string, string> = {};
 
@@ -28,14 +33,14 @@ export async function GET() {
 
     if (error) {
       checks.database = "error";
-      console.error("Health check DB error:", error.message);
+      logger.error("Health check DB error:", error.message);
     } else {
       checks.database = "ok";
     }
   } catch (error) {
     // Timeout or connection error - don't fail the health check
     checks.database = "timeout";
-    console.error("Health check DB timeout:", error);
+    logger.error("Health check DB timeout:", error);
   }
 
   // Always return 200 OK - uptime monitors need a consistent success response

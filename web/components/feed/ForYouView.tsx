@@ -215,7 +215,7 @@ function ForYouViewInner({ portalSlug, portalId }: ForYouViewProps) {
         {events.map((event, idx) => (
           <EventCard
             key={event.id}
-            event={event as never}
+            event={event}
             index={idx}
             portalSlug={portalSlug}
             friendsGoing={convertFriendsGoing(event.friends_going)}

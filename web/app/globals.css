@@ -474,7 +474,6 @@ body {
   /* Performance optimizations for smooth scrolling */
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  text-rendering: optimizeLegibility;
 }
 
 /* Smooth scrolling for better UX */
@@ -1344,25 +1343,6 @@ body::after {
   animation: glitch-flicker 3s ease-in-out infinite;
 }
 
-/* Neon sign flicker - for dramatic reveals */
-@keyframes neon-flicker {
-  0%, 19%, 21%, 23%, 25%, 54%, 56%, 100% {
-    opacity: 1;
-    text-shadow:
-      0 0 4px currentColor,
-      0 0 11px currentColor,
-      0 0 19px currentColor;
-  }
-  20%, 24%, 55% {
-    opacity: 0.6;
-    text-shadow: none;
-  }
-}
-
-.animate-neon-flicker {
-  animation: neon-flicker 2s linear infinite;
-}
-
 @keyframes shimmer {
   0% {
     background-position: -200% 0;
@@ -1767,18 +1747,6 @@ textarea:focus-visible {
 /* Remove default focus for mouse users but keep for keyboard */
 :focus:not(:focus-visible) {
   outline: none;
-}
-
-/* Reduced motion preference */
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
-  }
 }
 
 /* High contrast mode support */
@@ -2751,29 +2719,6 @@ textarea:focus-visible {
    NEON BLEED / GLOW DIFFUSION
    ============================================ */
 
-/* Text with neon bleed effect - light bleeding through rain */
-.neon-bleed {
-  filter: blur(0.5px);
-  text-shadow:
-    0 0 10px currentColor,
-    0 0 20px currentColor,
-    0 0 40px currentColor;
-}
-
-/* Card neon bleed effect */
-.card-neon-bleed {
-  box-shadow:
-    0 0 20px -5px var(--glow-color, var(--neon-magenta)),
-    0 0 40px -10px var(--glow-color, var(--neon-magenta));
-}
-
-/* Subtle neon bleed for text */
-.text-neon-bleed {
-  text-shadow:
-    0 0 8px currentColor,
-    0 0 16px currentColor;
-}
-
 /* Text glow using --glow-color variable (for category-tinted title glow) */
 .text-glow {
   color: var(--glow-color, var(--coral));
@@ -2806,36 +2751,6 @@ textarea:focus-visible {
     0 8px 32px rgba(0, 0, 0, 0.4),
     inset 0 1px 0 rgba(255, 255, 255, 0.06),
     inset 0 -1px 0 rgba(0, 0, 0, 0.2);
-}
-
-/* Glass wet with subtle highlights mimicking water streaks */
-.glass-wet-streaks {
-  background: linear-gradient(
-    135deg,
-    rgba(15, 15, 20, 0.85),
-    rgba(20, 20, 30, 0.75)
-  );
-  backdrop-filter: blur(16px) saturate(1.2);
-  -webkit-backdrop-filter: blur(16px) saturate(1.2);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow:
-    0 8px 32px rgba(0, 0, 0, 0.4),
-    inset 0 1px 0 rgba(255, 255, 255, 0.06),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.2);
-  position: relative;
-}
-
-.glass-wet-streaks::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(
-    180deg,
-    transparent 0%,
-    rgba(255, 255, 255, 0.015) 50%,
-    transparent 100%
-  );
-  pointer-events: none;
 }
 
 /* ============================================
@@ -3077,17 +2992,6 @@ textarea:focus-visible {
 /* ============================================
    ONBOARDING ANIMATIONS
    ============================================ */
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
 
 @keyframes fadeInScale {
   from {

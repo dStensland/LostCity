@@ -17,6 +17,7 @@ from bs4 import BeautifulSoup
 
 from db import get_or_create_venue, insert_event, find_event_by_hash
 from dedupe import generate_content_hash
+from description_fetcher import fetch_description_playwright
 
 logger = logging.getLogger(__name__)
 
@@ -98,6 +99,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             logger.info(f"Found {len(event_containers)} event containers")
 
+            new_events = []
+
             for container in event_containers:
                 try:
                     # Extract title from .tw-name div
@@ -176,41 +179,74 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         events_updated += 1
                         continue
 
-                    event_record = {
-                        "source_id": source_id,
-                        "venue_id": venue_id,
+                    # Collect new event for batch processing
+                    new_events.append({
                         "title": title,
                         "description": description,
                         "start_date": start_date,
                         "start_time": start_time,
-                        "end_date": None,
-                        "end_time": None,
-                        "is_all_day": start_time is None,
-                        "category": "music",
-                        "subcategory": "concert",
-                        "tags": ["3rd-and-lindsley", "nashville", "live-music", "sobro"],
                         "price_min": price_min,
                         "price_max": price_max,
                         "price_note": price_note,
-                        "is_free": False,
-                        "source_url": CALENDAR_URL,
-                        "ticket_url": event_url,
+                        "event_url": event_url,
                         "image_url": image_url,
-                        "raw_text": f"{title} - {start_date}",
-                        "extraction_confidence": 0.90,
-                        "is_recurring": False,
-                        "recurrence_rule": None,
                         "content_hash": content_hash,
-                    }
-
-                    insert_event(event_record)
-                    events_new += 1
-                    logger.info(f"Added: {title} on {start_date}")
+                    })
 
                 except Exception as e:
                     logger.error(f"Failed to parse event: {e}")
                     continue
 
+            # Fetch descriptions from detail pages for new events (cap at 30)
+            detail_page = context.new_page()
+            detail_fetches = 0
+            for evt in new_events:
+                if not evt["description"] and evt["event_url"] != CALENDAR_URL and detail_fetches < 30:
+                    desc = fetch_description_playwright(detail_page, evt["event_url"])
+                    if desc:
+                        evt["description"] = desc
+                    detail_fetches += 1
+                    page.wait_for_timeout(1000)  # Rate limit
+
+                # Synthetic fallback
+                if not evt["description"]:
+                    evt["description"] = f"Live music at 3rd & Lindsley."
+
+                event_record = {
+                    "source_id": source_id,
+                    "venue_id": venue_id,
+                    "title": evt["title"],
+                    "description": evt["description"],
+                    "start_date": evt["start_date"],
+                    "start_time": evt["start_time"],
+                    "end_date": None,
+                    "end_time": None,
+                    "is_all_day": False,
+                    "category": "music",
+                    "subcategory": "concert",
+                    "tags": ["3rd-and-lindsley", "nashville", "live-music", "sobro"],
+                    "price_min": evt["price_min"],
+                    "price_max": evt["price_max"],
+                    "price_note": evt["price_note"],
+                    "is_free": False,
+                    "source_url": CALENDAR_URL,
+                    "ticket_url": evt["event_url"],
+                    "image_url": evt["image_url"],
+                    "raw_text": f"{evt['title']} - {evt['start_date']}",
+                    "extraction_confidence": 0.90,
+                    "is_recurring": False,
+                    "recurrence_rule": None,
+                    "content_hash": evt["content_hash"],
+                }
+
+                try:
+                    insert_event(event_record)
+                    events_new += 1
+                    logger.info(f"Added: {evt['title']} on {evt['start_date']}")
+                except Exception as e:
+                    logger.error(f"Failed to insert: {evt['title']}: {e}")
+
+            detail_page.close()
             browser.close()
 
         logger.info(

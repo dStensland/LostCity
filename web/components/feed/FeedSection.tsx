@@ -2,13 +2,14 @@
 
 import { useRef, useState, useEffect, useCallback } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { format, parseISO, isToday, isTomorrow } from "date-fns";
 import CategoryIcon, { getCategoryColor, CATEGORY_CONFIG, type CategoryType } from "../CategoryIcon";
 import CategoryPlaceholder from "../CategoryPlaceholder";
 import { LiveBadge, SoonBadge, FreeBadge } from "../Badge";
 import { formatTime } from "@/lib/formats";
 import { usePortal } from "@/lib/portal-context";
-import { useScrollReveal } from "@/hooks/useScrollReveal";
+import { useScrollReveal } from "@/lib/hooks/useScrollReveal";
 import { FeaturedCarousel } from "./FeaturedCarousel";
 import LinkifyText from "../LinkifyText";
 import FeedSectionHeader, { type SectionPriority } from "./FeedSectionHeader";
@@ -92,23 +93,6 @@ function getEventStatus(date: string, time: string | null): "live" | "soon" | nu
   return null;
 }
 
-// Helper: Get smart time display (always shows actual time)
-function getSmartTime(date: string, time: string | null): string {
-  if (!time) return "All day";
-
-  const eventDate = parseISO(date);
-  const formattedTime = formatTime(time);
-
-  if (isToday(eventDate)) {
-    return formattedTime;
-  }
-
-  if (isTomorrow(eventDate)) {
-    return formattedTime;
-  }
-
-  return formattedTime;
-}
 
 // Helper: Get smart date display
 function getSmartDate(date: string): string {
@@ -217,29 +201,25 @@ const THEMED_SECTION_ICONS: Record<string, { icon: React.ReactNode; color: strin
   "valentines-day": {
     color: "#FF69B4", // Hot pink / neon pink
     icon: (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img src="/icons/valentines-heart.png" alt="" className="w-full h-full object-cover" />
+      <Image src="/icons/valentines-heart.png" alt="" width={32} height={32} className="w-full h-full object-cover" />
     ),
   },
   "lunar-new-year": {
     color: "#DC143C", // Crimson red
     icon: (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img src="/icons/fire-horse.png" alt="" className="w-full h-full object-cover" />
+      <Image src="/icons/fire-horse.png" alt="" width={32} height={32} className="w-full h-full object-cover" />
     ),
   },
   "super-bowl": {
     color: "var(--neon-green)",
     icon: (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img src="/icons/super-bowl-football.png" alt="" className="w-full h-full object-cover" />
+      <Image src="/icons/super-bowl-football.png" alt="" width={32} height={32} className="w-full h-full object-cover" />
     ),
   },
   "black-history-month": {
     color: "#9B59B6", // Purple
     icon: (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img src="/icons/raised-fist.png" alt="" className="w-full h-full object-cover" />
+      <Image src="/icons/raised-fist.png" alt="" width={32} height={32} className="w-full h-full object-cover" />
     ),
   },
   "mardi-gras": {
@@ -503,7 +483,7 @@ function HeroBanner({ section, portalSlug, hideImages }: { section: FeedSectionD
             {event.start_time && (
               <>
                 <span className="opacity-40">·</span>
-                <span>{getSmartTime(event.start_date, event.start_time)}</span>
+                <span>{formatTime(event.start_time)}</span>
               </>
             )}
             {event.venue && (
@@ -805,7 +785,7 @@ function EventCard({ event, isCarousel, portalSlug }: { event: FeedEvent; isCaro
           )}
           <span className="font-mono text-[0.65rem] text-[var(--muted)]">
             {getSmartDate(event.start_date)}
-            {event.start_time && ` · ${getSmartTime(event.start_date, event.start_time)}`}
+            {event.start_time && ` · ${formatTime(event.start_time)}`}
           </span>
           {isPopular && (
             <span className="ml-auto flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-[var(--coral)] text-[var(--void)] text-[0.55rem] font-mono font-medium">
@@ -961,7 +941,7 @@ function EventListItem({ event, isAlternate, showDate = true, portalSlug }: { ev
     >
       {/* Smart Time */}
       <div className="flex-shrink-0 w-16 font-mono text-sm text-[var(--soft)] text-center">
-        <div className="font-medium">{getSmartTime(event.start_date, event.start_time)}</div>
+        <div className="font-medium">{event.start_time ? formatTime(event.start_time) : "All day"}</div>
       </div>
 
       {/* Category icon */}

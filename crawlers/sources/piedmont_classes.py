@@ -312,7 +312,7 @@ def crawl_category(page: Page, category: str, source_id: int, portal_id: str) ->
                 "start_time": start_time,
                 "end_date": None,
                 "end_time": None,
-                "is_all_day": start_time is None,
+                "is_all_day": False,
                 "category": event_category,
                 "category_id": event_category,
                 "subcategory": subcategory,
@@ -329,6 +329,8 @@ def crawl_category(page: Page, category: str, source_id: int, portal_id: str) ->
                 "is_recurring": False,
                 "recurrence_rule": None,
                 "content_hash": content_hash,
+                "is_class": True,
+                "class_category": "fitness",
             }
 
             try:

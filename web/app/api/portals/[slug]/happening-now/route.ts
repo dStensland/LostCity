@@ -3,6 +3,9 @@ import { createClient } from "@/lib/supabase/server";
 import { getPortalBySlug } from "@/lib/portal";
 import { getLocalDateString } from "@/lib/formats";
 import { getChainVenueIds } from "@/lib/chain-venues";
+import { applyRateLimit, RATE_LIMITS, getClientIdentifier} from "@/lib/rate-limit";
+import { isValidUUID } from "@/lib/api-utils";
+import { logger } from "@/lib/logger";
 
 type RouteContext = {
   params: Promise<{ slug: string }>;
@@ -10,6 +13,9 @@ type RouteContext = {
 
 // GET /api/portals/[slug]/happening-now - Get events happening right now
 export async function GET(request: NextRequest, context: RouteContext) {
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.read, getClientIdentifier(request));
+  if (rateLimitResult) return rateLimitResult;
+
   const { slug } = await context.params;
   const supabase = await createClient();
   const searchParams = request.nextUrl.searchParams;
@@ -20,7 +26,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
   try {
     // Get portal
     const portal = await getPortalBySlug(slug);
-    if (!portal) {
+    if (!portal || !isValidUUID(portal.id)) {
       return NextResponse.json({ error: "Portal not found" }, { status: 404 });
     }
 
@@ -72,7 +78,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
     const { data, count, error } = await query;
 
     if (error) {
-      console.error("Error fetching happening now events:", error);
+      logger.error("Error fetching happening now events:", error);
       return NextResponse.json({ error: "Failed to fetch events" }, { status: 500 });
     }
 
@@ -126,7 +132,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
       }
     );
   } catch (error) {
-    console.error("Error in happening-now GET:", error);
+    logger.error("Error in happening-now GET:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

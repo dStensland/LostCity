@@ -283,7 +283,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             "start_time": start_time,
                             "end_date": None,
                             "end_time": None,
-                            "is_all_day": start_time is None,
+                            "is_all_day": False,
                             "category": category,
                             "subcategory": None,
                             "tags": tags,
@@ -299,6 +299,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             "is_recurring": False,
                             "recurrence_rule": None,
                             "content_hash": content_hash,
+                            "is_class": True,
+                            "class_category": "mixed",
                         }
 
                         try:

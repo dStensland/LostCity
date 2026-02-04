@@ -1,11 +1,17 @@
+import type { Metadata } from "next";
 import { supabase } from "@/lib/supabase";
 import { CATEGORIES, SUBCATEGORIES } from "@/lib/search";
 import { SPOT_TYPES, VIBES, NEIGHBORHOODS } from "@/lib/spots";
 import { ITP_NEIGHBORHOODS } from "@/config/neighborhoods";
 import { PLACE_CATEGORIES } from "@/config/categories";
 
-// Prevent static generation - page fetches from database
-export const dynamic = "force-dynamic";
+export const metadata: Metadata = {
+  title: "Data | Lost City",
+  description: "Internal reference data for Lost City categories, sources, venues, and configuration.",
+};
+
+// Revalidate hourly - infrequently changing reference data
+export const revalidate = 3600;
 
 type Source = {
   name: string;

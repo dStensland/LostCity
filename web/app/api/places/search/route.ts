@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
+import { logger } from "@/lib/logger";
 
 // Foursquare Places API base URL (migrated from api.foursquare.com/v3)
 const FOURSQUARE_BASE_URL = "https://places-api.foursquare.com";
@@ -8,7 +9,7 @@ const FOURSQUARE_BASE_URL = "https://places-api.foursquare.com";
 function getFoursquareApiKey(): string {
   const key = process.env.FOURSQUARE_API_KEY;
   if (!key && process.env.NODE_ENV === "production") {
-    console.error("FOURSQUARE_API_KEY environment variable is not set");
+    logger.error("FOURSQUARE_API_KEY environment variable is not set", new Error("Missing API key"));
   }
   return key || "";
 }
@@ -76,7 +77,7 @@ export async function POST(request: NextRequest) {
     // Check API key
     const apiKey = getFoursquareApiKey();
     if (!apiKey) {
-      console.error("FOURSQUARE_API_KEY is not set");
+      logger.error("FOURSQUARE_API_KEY is not set", new Error("Missing API key"));
       return NextResponse.json(
         { error: "Places API is not configured" },
         { status: 500 }
@@ -154,9 +155,8 @@ export async function POST(request: NextRequest) {
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error(
-        `Foursquare API error: ${response.status}`,
-        errorText
+      logger.error(
+        `Foursquare API error: ${response.status}`, errorText
       );
       return NextResponse.json(
         { error: "Failed to search places" },
@@ -196,7 +196,7 @@ export async function POST(request: NextRequest) {
       }
     );
   } catch (error) {
-    console.error("Places search API error:", error);
+    logger.error("Places search API error:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { startOfMonth, endOfMonth, startOfWeek, endOfWeek, format } from "date-fns";
-import { applyRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
+import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
+import { logger } from "@/lib/logger";
+import { parseIntParam } from "@/lib/api-utils";
 
 /**
  * Calendar API - Optimized endpoint for calendar view
@@ -21,15 +23,26 @@ export async function GET(request: NextRequest) {
   const supabase = await createClient();
 
   // Rate limit: expensive endpoint with pagination
-  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.expensive);
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.expensive, getClientIdentifier(request));
   if (rateLimitResult) return rateLimitResult;
 
   const searchParams = request.nextUrl.searchParams;
 
   // Parse month/year - default to current
   const now = new Date();
-  const month = parseInt(searchParams.get("month") || String(now.getMonth() + 1));
-  const year = parseInt(searchParams.get("year") || String(now.getFullYear()));
+  const month = parseIntParam(searchParams.get("month"), now.getMonth() + 1);
+  const year = parseIntParam(searchParams.get("year"), now.getFullYear());
+
+  // Validate month and year ranges
+  if (month === null || month < 1 || month > 12) {
+    logger.error("Invalid month parameter", { month: searchParams.get("month") }, { component: "calendar" });
+    return NextResponse.json({ error: "Invalid month parameter" }, { status: 400 });
+  }
+
+  if (year === null || year < 1900 || year > 2100) {
+    logger.error("Invalid year parameter", { year: searchParams.get("year") }, { component: "calendar" });
+    return NextResponse.json({ error: "Invalid year parameter" }, { status: 400 });
+  }
 
   // Calculate date range (include buffer for week view)
   const targetDate = new Date(year, month - 1, 1);
@@ -129,7 +142,7 @@ export async function GET(request: NextRequest) {
     const { data, error: pageError } = await buildQuery().range(from, to);
 
     if (pageError) {
-      console.error("Calendar query error:", pageError);
+      logger.error("Calendar query error", pageError);
       return NextResponse.json({ error: pageError.message }, { status: 500 });
     }
 

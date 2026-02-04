@@ -1,4 +1,4 @@
-import { getPortalBySlug } from "@/lib/portal";
+import { getCachedPortalBySlug } from "@/lib/portal";
 import { PortalHeader } from "@/components/headers";
 import { AmbientBackground } from "@/components/ambient";
 import FindView from "@/components/find/FindView";
@@ -14,7 +14,7 @@ export const revalidate = 60;
 
 type ViewMode = "feed" | "find" | "community";
 type FeedTab = "curated" | "foryou";
-type FindType = "events" | "destinations" | "orgs";
+type FindType = "events" | "classes" | "destinations" | "orgs";
 type FindDisplay = "list" | "map" | "calendar";
 
 type Props = {
@@ -47,7 +47,7 @@ export default async function PortalPage({ params, searchParams }: Props) {
   const searchParamsData = await searchParams;
 
   // Get portal data - all portals must exist in database
-  const portal = await getPortalBySlug(slug);
+  const portal = await getCachedPortalBySlug(slug);
 
   if (!portal) {
     notFound();

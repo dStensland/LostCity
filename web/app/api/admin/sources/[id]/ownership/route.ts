@@ -2,6 +2,7 @@ import { isAdmin } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 import { updateSourceOwnership, refreshPortalSourceAccess } from "@/lib/federation";
 import { createServiceClient } from "@/lib/supabase/service";
+import { applyRateLimit, RATE_LIMITS, getClientIdentifier} from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -11,6 +12,9 @@ type Props = {
 
 // GET /api/admin/sources/[id]/ownership - Get source ownership info
 export async function GET(request: NextRequest, { params }: Props) {
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.standard, getClientIdentifier(request));
+  if (rateLimitResult) return rateLimitResult;
+
   const { id } = await params;
   const sourceId = parseInt(id, 10);
 
@@ -46,6 +50,9 @@ export async function GET(request: NextRequest, { params }: Props) {
 
 // PATCH /api/admin/sources/[id]/ownership - Change source ownership
 export async function PATCH(request: NextRequest, { params }: Props) {
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.standard, getClientIdentifier(request));
+  if (rateLimitResult) return rateLimitResult;
+
   const { id } = await params;
   const sourceId = parseInt(id, 10);
 

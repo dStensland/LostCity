@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import re
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Optional
 
 from playwright.sync_api import sync_playwright
@@ -279,10 +279,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         date_text = date_elem.inner_text().strip() if date_elem else ""
                         date = parse_date(date_text)
 
-                        # If no date found, skip or use default
+                        # If no date found, skip this card
                         if not date:
-                            # For ongoing attractions, create events for next 7 days
-                            date = datetime.now().strftime("%Y-%m-%d")
+                            continue
 
                         # Extract time
                         time_elem = card.query_selector('.time, .event-time, [class*="time"]')
@@ -332,7 +331,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             "start_time": start_time,
                             "end_date": date,
                             "end_time": None,
-                            "is_all_day": start_time is None,
+                            "is_all_day": False,
                             "category": category,
                             "subcategory": subcategory,
                             "tags": tags,
@@ -361,62 +360,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         logger.error(f"Error processing event card: {e}")
                         continue
 
-            # If no events found at all, create a general admission event for next 7 days
             if events_found == 0:
-                logger.info("No specific events found, creating general admission events")
-                for i in range(7):
-                    event_date = (datetime.now() + timedelta(days=i)).date()
-
-                    # Skip if it's a past date
-                    if event_date < datetime.now().date():
-                        continue
-
-                    events_found += 1
-
-                    title = "LEGO Discovery Center Atlanta - Daily Admission"
-                    content_hash = generate_content_hash(
-                        title, "LEGO Discovery Center Atlanta", event_date.strftime("%Y-%m-%d")
-                    )
-
-                    existing = find_event_by_hash(content_hash)
-                    if existing:
-                        events_updated += 1
-                        continue
-
-                    event_record = {
-                        "source_id": source_id,
-                        "venue_id": venue_id,
-                        "title": title,
-                        "description": "Experience the ultimate indoor LEGO playground! Build, play, and explore at LEGO Discovery Center Atlanta with rides, LEGO building zones, MINILAND Atlanta, and more.",
-                        "start_date": event_date.strftime("%Y-%m-%d"),
-                        "start_time": "10:00",
-                        "end_date": event_date.strftime("%Y-%m-%d"),
-                        "end_time": "18:00",
-                        "is_all_day": False,
-                        "category": "family",
-                        "subcategory": "kids",
-                        "tags": ["lego", "family", "kids", "indoor", "buckhead", "phipps-plaza", "attraction"],
-                        "price_min": 25,
-                        "price_max": 35,
-                        "price_note": "Tickets required, prices vary by date and time",
-                        "is_free": False,
-                        "source_url": EVENTS_URL,
-                        "ticket_url": f"{BASE_URL}/plan-your-visit/tickets/",
-                        "image_url": None,
-                        "raw_text": "Daily admission to LEGO Discovery Center Atlanta",
-                        "extraction_confidence": 0.80,
-                        "is_recurring": True,
-                        "recurrence_rule": "FREQ=DAILY",
-                        "content_hash": content_hash,
-                    }
-
-                    try:
-                        insert_event(event_record)
-                        events_new += 1
-                        if i == 0:  # Only log first occurrence
-                            logger.info(f"Added daily admission event")
-                    except Exception as e:
-                        logger.error(f"Failed to insert daily admission: {e}")
+                logger.info("No specific events found — skipping (daily admission is not an event)")
 
             browser.close()
 
@@ -471,7 +416,7 @@ def process_event(
         "start_time": event_data.get("time"),
         "end_date": date,
         "end_time": None,
-        "is_all_day": event_data.get("time") is None,
+        "is_all_day": False,
         "category": category,
         "subcategory": subcategory,
         "tags": tags,

@@ -6,7 +6,7 @@ import {
   isValidString,
   isValidUUID,
 } from "@/lib/api-utils";
-import { applyRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
+import { applyRateLimit, RATE_LIMITS, getClientIdentifier} from "@/lib/rate-limit";
 import type {
   SubmissionType,
   EventSubmissionData,
@@ -27,7 +27,7 @@ const SUBMISSION_LIMITS = {
 
 // GET /api/submissions - Get user's submission history
 export async function GET(request: NextRequest) {
-  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.read);
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.read, getClientIdentifier(request));
   if (rateLimitResult) return rateLimitResult;
 
   const user = await getUser();

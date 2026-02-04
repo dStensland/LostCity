@@ -150,6 +150,13 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         i += 1
                         continue
 
+                    # Detect if this is a class/workshop based on title
+                    title_lower = title.lower()
+                    event_is_class = any(kw in title_lower for kw in [
+                        "class", "workshop", "lesson", "tutorial", "course",
+                        "hands-on", "learn to", "how to", "introduction to",
+                    ])
+
                     event_record = {
                         "source_id": source_id,
                         "venue_id": venue_id,
@@ -159,7 +166,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "start_time": start_time,
                         "end_date": None,
                         "end_time": None,
-                        "is_all_day": start_time is None,
+                        "is_all_day": False,
                         "category": "community",
                         "subcategory": None,
                         "tags": ["garden", "nature", "outdoor"],
@@ -175,6 +182,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "is_recurring": False,
                         "recurrence_rule": None,
                         "content_hash": content_hash,
+                        "is_class": event_is_class,
+                        "class_category": "mixed" if event_is_class else None,
                     }
 
                     try:

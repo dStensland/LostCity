@@ -198,6 +198,7 @@ SOURCE_MODULES = {
     "spruill-center": "sources.spruill_center",
     "atlanta-clay-works": "sources.atlanta_clay_works",
     "painting-with-a-twist": "sources.painting_with_a_twist",
+    "ellis-station-candle-co": "sources.ellis_station",
     "atlanta-tech-week": "sources.atlanta_tech_week",
     "ypa-atlanta": "sources.ypa_atlanta",
     # ===== Festivals & Conventions =====
@@ -315,6 +316,7 @@ SOURCE_MODULES = {
     "sur-la-table": "sources.sur_la_table",
     "publix-aprons": "sources.publix_aprons",
     "irwin-street-cooking": "sources.irwin_street_cooking",
+    "cooks-warehouse": "sources.cooks_warehouse",
     # ===== Additional Eatertainment =====
     "painted-duck": "sources.painted_duck",
     "punch-bowl-social": "sources.punch_bowl_social",
@@ -655,6 +657,13 @@ SOURCE_MODULES = {
     "chastain-park-amphitheatre": "sources.chastain_park_amphitheatre",
     "aso": "sources.aso",
     "mint-gallery": "sources.mint_gallery",
+    # ===== NEW: Class Venues =====
+    "candlelit-atl": "sources.candlelit_atl",
+    "rockler-woodworking": "sources.rockler_woodworking",
+    "halls-floral": "sources.halls_floral",
+    "rei-atlanta": "sources.rei_atlanta",
+    "all-fired-up-art": "sources.all_fired_up",
+    "stone-summit": "sources.stone_summit",
     # ===== Minor League Sports =====
     "atlanta-gladiators": "sources.atlanta_gladiators",
     "gwinnett-stripers": "sources.gwinnett_stripers",

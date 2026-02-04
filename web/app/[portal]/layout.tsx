@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { getPortalBySlug } from "@/lib/portal";
+import { getCachedPortalBySlug } from "@/lib/portal";
 import { PortalProvider } from "@/lib/portal-context";
 import { PortalTheme } from "@/components/PortalTheme";
 
@@ -12,7 +12,7 @@ type Props = {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { portal: slug } = await params;
-  const portal = await getPortalBySlug(slug);
+  const portal = await getCachedPortalBySlug(slug);
 
   if (!portal) {
     return { title: "Not Found | Lost City" };
@@ -42,7 +42,7 @@ export default async function PortalLayout({ children, params }: Props) {
   }
 
   // All portals must exist in the database - no hardcoded fallback
-  const portal = await getPortalBySlug(slug);
+  const portal = await getCachedPortalBySlug(slug);
 
   if (!portal) {
     notFound();

@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { createClient, getUser } from "@/lib/supabase/server";
-import { applyRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
+import { applyRateLimit, RATE_LIMITS, getClientIdentifier} from "@/lib/rate-limit";
 import { getLocalDateString } from "@/lib/formats";
-import { escapeSQLPattern, errorResponse } from "@/lib/api-utils";
+import { escapeSQLPattern, errorResponse, isValidUUID } from "@/lib/api-utils";
 import { getChainVenueIds } from "@/lib/chain-venues";
 
 type RecommendationReason = {
@@ -34,7 +34,7 @@ function createCursor(score: number, id: number, date: string): string {
 
 export async function GET(request: Request) {
   // Rate limit: expensive endpoint (7+ queries per request)
-  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.expensive);
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.expensive, getClientIdentifier(request));
   if (rateLimitResult) return rateLimitResult;
 
   try {
@@ -59,31 +59,33 @@ export async function GET(request: Request) {
 
     const supabase = await createClient();
 
-    // Get portal data if specified
+    // Get portal data and user preferences in parallel (independent queries)
+  const [portalResult, prefsResult] = await Promise.all([
+    portalSlug
+      ? supabase
+          .from("portals")
+          .select("id, filters")
+          .eq("slug", portalSlug)
+          .eq("status", "active")
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
+    supabase
+      .from("user_preferences")
+      .select("*")
+      .eq("user_id", user.id)
+      .maybeSingle(),
+  ]);
+
   let portalId: string | null = null;
   let portalFilters: { categories?: string[]; neighborhoods?: string[] } = {};
 
-  if (portalSlug) {
-    const { data: portal } = await supabase
-      .from("portals")
-      .select("id, filters")
-      .eq("slug", portalSlug)
-      .eq("status", "active")
-      .maybeSingle();
-
-    const portalData = portal as { id: string; filters: typeof portalFilters } | null;
-    if (portalData) {
-      portalId = portalData.id;
-      portalFilters = portalData.filters || {};
-    }
+  const portalData = portalResult.data as { id: string; filters: typeof portalFilters } | null;
+  if (portalData && isValidUUID(portalData.id)) {
+    portalId = portalData.id;
+    portalFilters = portalData.filters || {};
   }
 
-  // Get user preferences
-  const { data: prefsData } = await supabase
-    .from("user_preferences")
-    .select("*")
-    .eq("user_id", user.id)
-    .maybeSingle();
+  const prefsData = prefsResult.data;
 
   type UserPrefs = {
     favorite_categories: string[] | null;
@@ -298,189 +300,116 @@ export async function GET(request: Request) {
   // When not personalized, use standard limit
   query = query.limit(personalized ? limit * 3 : limit + 1);
 
-  const { data: eventsData, error } = await query;
+  // Parallelize all independent event queries
+  const eventSelect = `
+    id,
+    title,
+    start_date,
+    start_time,
+    is_all_day,
+    is_free,
+    price_min,
+    price_max,
+    category,
+    subcategory,
+    tags,
+    image_url,
+    ticket_url,
+    organization_id,
+    source_id,
+    portal_id,
+    venue:venues(id, name, neighborhood, slug)
+  `;
 
-  // Separately fetch events from followed venues/organizations to ensure they're included
-  // (the main query might miss them due to the limit)
-  let followedEventsData: typeof eventsData = [];
+  const favoriteNeighborhoods = prefs?.favorite_neighborhoods || [];
+  const favoriteCategories = prefs?.favorite_categories || [];
 
-  if (followedVenueIds.length > 0 || followedOrganizationIds.length > 0 || producerSourceIds.length > 0) {
-    const eventSelect = `
-      id,
-      title,
-      start_date,
-      start_time,
-      is_all_day,
-      is_free,
-      price_min,
-      price_max,
-      category,
-      subcategory,
-      tags,
-      image_url,
-      ticket_url,
-      organization_id,
-      source_id,
-      portal_id,
-      venue:venues(id, name, neighborhood, slug)
-    `;
+  // Build all queries, tracking which ones we're running
+  const queries = [];
+  const queryTypes: string[] = [];
 
-    // Fetch all three types of followed events in parallel
-    const queries = [];
+  queries.push(query);
+  queryTypes.push("main");
 
-    // Query 1: Events from followed organizations (by organization_id)
-    if (followedOrganizationIds.length > 0) {
-      let producerQuery = supabase
-        .from("events")
-        .select(eventSelect)
-        .in("organization_id", followedOrganizationIds)
-        .gte("start_date", today)
-        .is("canonical_event_id", null)
-        .order("start_date", { ascending: true })
-        .limit(50);
+  // Followed venues query
+  if (followedVenueIds.length > 0) {
+    let venueQuery = supabase
+      .from("events")
+      .select(eventSelect)
+      .in("venue_id", followedVenueIds)
+      .gte("start_date", today)
+      .is("canonical_event_id", null)
+      .order("start_date", { ascending: true })
+      .limit(50);
 
-      if (portalId) {
-        producerQuery = producerQuery.or(`portal_id.eq.${portalId},portal_id.is.null`);
-      } else {
-        producerQuery = producerQuery.is("portal_id", null);
-      }
-
-      queries.push(producerQuery);
+    if (portalId) {
+      venueQuery = venueQuery.or(`portal_id.eq.${portalId},portal_id.is.null`);
+    } else {
+      venueQuery = venueQuery.is("portal_id", null);
     }
 
-    // Query 2: Events from followed organizations (by source_id)
-    if (producerSourceIds.length > 0) {
-      let sourceQuery = supabase
-        .from("events")
-        .select(eventSelect)
-        .in("source_id", producerSourceIds)
-        .gte("start_date", today)
-        .is("canonical_event_id", null)
-        .order("start_date", { ascending: true })
-        .limit(50);
-
-      if (portalId) {
-        sourceQuery = sourceQuery.or(`portal_id.eq.${portalId},portal_id.is.null`);
-      } else {
-        sourceQuery = sourceQuery.is("portal_id", null);
-      }
-
-      queries.push(sourceQuery);
-    }
-
-    // Query 3: Events from followed venues
-    if (followedVenueIds.length > 0) {
-      let venueQuery = supabase
-        .from("events")
-        .select(eventSelect)
-        .in("venue_id", followedVenueIds)
-        .gte("start_date", today)
-        .is("canonical_event_id", null)
-        .order("start_date", { ascending: true })
-        .limit(50);
-
-      if (portalId) {
-        venueQuery = venueQuery.or(`portal_id.eq.${portalId},portal_id.is.null`);
-      } else {
-        venueQuery = venueQuery.is("portal_id", null);
-      }
-
-      queries.push(venueQuery);
-    }
-
-    // Execute all queries in parallel
-    const results = await Promise.all(queries);
-
-    // Merge all results
-    for (const { data } of results) {
-      if (data) {
-        followedEventsData = [...followedEventsData, ...data];
-      }
-    }
+    queries.push(venueQuery);
+    queryTypes.push("venue");
   }
 
-  // Fetch events from favorite neighborhoods (separate from followed venues/organizations)
-  let neighborhoodEventsData: typeof eventsData = [];
-  const favoriteNeighborhoods = prefs?.favorite_neighborhoods || [];
+  // Followed organizations by organization_id query
+  if (followedOrganizationIds.length > 0) {
+    let producerQuery = supabase
+      .from("events")
+      .select(eventSelect)
+      .in("organization_id", followedOrganizationIds)
+      .gte("start_date", today)
+      .is("canonical_event_id", null)
+      .order("start_date", { ascending: true })
+      .limit(50);
 
+    if (portalId) {
+      producerQuery = producerQuery.or(`portal_id.eq.${portalId},portal_id.is.null`);
+    } else {
+      producerQuery = producerQuery.is("portal_id", null);
+    }
+
+    queries.push(producerQuery);
+    queryTypes.push("org");
+  }
+
+  // Followed organizations by source_id query
+  if (producerSourceIds.length > 0) {
+    let sourceQuery = supabase
+      .from("events")
+      .select(eventSelect)
+      .in("source_id", producerSourceIds)
+      .gte("start_date", today)
+      .is("canonical_event_id", null)
+      .order("start_date", { ascending: true })
+      .limit(50);
+
+    if (portalId) {
+      sourceQuery = sourceQuery.or(`portal_id.eq.${portalId},portal_id.is.null`);
+    } else {
+      sourceQuery = sourceQuery.is("portal_id", null);
+    }
+
+    queries.push(sourceQuery);
+    queryTypes.push("source");
+  }
+
+  // Neighborhood venues lookup query (add to Promise.all batch)
+  let neighborhoodVenuesQuery = null;
   if (favoriteNeighborhoods.length > 0) {
-    // First get venue IDs in favorite neighborhoods
-    const { data: neighborhoodVenues } = await supabase
+    neighborhoodVenuesQuery = supabase
       .from("venues")
       .select("id")
       .in("neighborhood", favoriteNeighborhoods);
-
-    const neighborhoodVenueIds = (neighborhoodVenues || []).map((v: { id: number }) => v.id);
-
-    if (neighborhoodVenueIds.length > 0) {
-      const eventSelect = `
-        id,
-        title,
-        start_date,
-        start_time,
-        is_all_day,
-        is_free,
-        price_min,
-        price_max,
-        category,
-        subcategory,
-        tags,
-        image_url,
-        ticket_url,
-        organization_id,
-        source_id,
-        portal_id,
-        venue:venues(id, name, neighborhood, slug)
-      `;
-
-      let neighborhoodQuery = supabase
-        .from("events")
-        .select(eventSelect)
-        .in("venue_id", neighborhoodVenueIds)
-        .gte("start_date", today)
-        .is("canonical_event_id", null)
-        .order("start_date", { ascending: true })
-        .limit(50);
-
-      if (portalId) {
-        neighborhoodQuery = neighborhoodQuery.or(`portal_id.eq.${portalId},portal_id.is.null`);
-      } else {
-        neighborhoodQuery = neighborhoodQuery.is("portal_id", null);
-      }
-
-      const { data: neighborhoodEvents } = await neighborhoodQuery;
-
-      if (neighborhoodEvents) {
-        neighborhoodEventsData = neighborhoodEvents;
-      }
-    }
+    queries.push(neighborhoodVenuesQuery);
+    queryTypes.push("neighborhood_venues");
   }
 
-  // Fetch events matching user's favorite categories (interests)
-  let categoryEventsData: typeof eventsData = [];
-  const favoriteCategories = prefs?.favorite_categories || [];
+  // Start getChainVenueIds in parallel with event queries (optimization)
+  const chainVenueIdsPromise = getChainVenueIds(supabase);
 
+  // Category events query
   if (favoriteCategories.length > 0) {
-    const eventSelect = `
-      id,
-      title,
-      start_date,
-      start_time,
-      is_all_day,
-      is_free,
-      price_min,
-      price_max,
-      category,
-      subcategory,
-      tags,
-      image_url,
-      ticket_url,
-      organization_id,
-      source_id,
-      portal_id,
-      venue:venues(id, name, neighborhood, slug)
-    `;
-
     let categoryQuery = supabase
       .from("events")
       .select(eventSelect)
@@ -496,15 +425,64 @@ export async function GET(request: Request) {
       categoryQuery = categoryQuery.is("portal_id", null);
     }
 
-    const { data: categoryEvents } = await categoryQuery;
-
-    if (categoryEvents) {
-      categoryEventsData = categoryEvents;
-    }
+    queries.push(categoryQuery);
+    queryTypes.push("category");
   }
+
+  // Execute all queries in parallel
+  const results = await Promise.all(queries);
+
+  // Extract main result
+  const mainResult = results[0];
+  const { data: eventsData, error } = mainResult;
 
   if (error) {
     return errorResponse(error, "GET /api/feed");
+  }
+
+  // Merge additional results into followedEventsData, neighborhoodEventsData, categoryEventsData
+  let followedEventsData: typeof eventsData = [];
+  let neighborhoodEventsData: typeof eventsData = [];
+  let categoryEventsData: typeof eventsData = [];
+  let neighborhoodVenueIds: number[] = [];
+
+  // Parse additional results based on query types
+  for (let i = 1; i < results.length; i++) {
+    const result = results[i];
+    const queryType = queryTypes[i];
+    const { data } = result;
+
+    if (data) {
+      if (queryType === "venue" || queryType === "org" || queryType === "source") {
+        followedEventsData = [...followedEventsData, ...(data as typeof eventsData)];
+      } else if (queryType === "neighborhood_venues") {
+        // Extract venue IDs for follow-up neighborhood events query
+        neighborhoodVenueIds = (data as { id: number }[]).map((v) => v.id);
+      } else if (queryType === "category") {
+        categoryEventsData = data as typeof eventsData;
+      }
+    }
+  }
+
+  // Follow-up query for neighborhood events (runs after we have venue IDs)
+  if (neighborhoodVenueIds.length > 0) {
+    let neighborhoodQuery = supabase
+      .from("events")
+      .select(eventSelect)
+      .in("venue_id", neighborhoodVenueIds)
+      .gte("start_date", today)
+      .is("canonical_event_id", null)
+      .order("start_date", { ascending: true })
+      .limit(50);
+
+    if (portalId) {
+      neighborhoodQuery = neighborhoodQuery.or(`portal_id.eq.${portalId},portal_id.is.null`);
+    } else {
+      neighborhoodQuery = neighborhoodQuery.is("portal_id", null);
+    }
+
+    const { data: neighborhoodData } = await neighborhoodQuery;
+    neighborhoodEventsData = neighborhoodData as typeof eventsData;
   }
 
   // Merge followed events, neighborhood events, and category events with main results
@@ -676,7 +654,8 @@ export async function GET(request: Request) {
 
   // Filter out chain venue events from the feed
   // Chain cinemas are searchable and on maps but excluded from curated feed
-  const chainVenueIds = await getChainVenueIds(supabase);
+  // Use the promise we started earlier in parallel with event queries
+  const chainVenueIds = await chainVenueIdsPromise;
   if (chainVenueIds.length > 0) {
     events = events.filter((event) => !event.venue?.id || !chainVenueIds.includes(event.venue.id));
   }

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { instantSearch } from "@/lib/unified-search";
-import { applyRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
+import { applyRateLimit, RATE_LIMITS, getClientIdentifier} from "@/lib/rate-limit";
 import {
   type SearchContext,
   rankResults,
@@ -9,6 +9,7 @@ import {
   getGroupDisplayOrder,
 } from "@/lib/search-ranking";
 import type { ViewMode, FindType } from "@/lib/search-context";
+import { logger } from "@/lib/logger";
 
 // Helper to safely parse integers with validation
 function safeParseInt(
@@ -54,7 +55,7 @@ function safeParseInt(
  */
 export async function GET(request: NextRequest) {
   // Rate limit: read endpoint
-  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.read);
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.read, getClientIdentifier(request));
   if (rateLimitResult) return rateLimitResult;
 
   try {
@@ -129,7 +130,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("Instant search API error:", error);
+    logger.error("Instant search API error:", error);
     return NextResponse.json(
       {
         suggestions: [],

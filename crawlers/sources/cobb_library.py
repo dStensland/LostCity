@@ -229,9 +229,12 @@ def parse_event_date(date_str: str) -> Optional[tuple[str, Optional[str]]]:
 
             return date, time
 
-        # Try ISO format
-        if re.match(r'\d{4}-\d{2}-\d{2}', date_str):
-            return date_str[:10], None
+        # Try ISO datetime format (2026-01-25T10:00:00)
+        iso_match = re.match(r'(\d{4}-\d{2}-\d{2})(?:T(\d{2}:\d{2}))?', date_str)
+        if iso_match:
+            iso_date = iso_match.group(1)
+            iso_time = iso_match.group(2) if iso_match.group(2) else None
+            return iso_date, iso_time
 
     except Exception as e:
         logger.warning(f"Failed to parse date '{date_str}': {e}")
@@ -536,7 +539,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     "start_time": start_time,
                     "end_date": None,
                     "end_time": end_time,
-                    "is_all_day": start_time is None,
+                    "is_all_day": False,
                     "category": category,
                     "subcategory": None,
                     "tags": tags,

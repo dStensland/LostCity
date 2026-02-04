@@ -11,7 +11,8 @@ from datetime import datetime
 from typing import Optional
 from supabase import create_client, Client
 from config import get_config
-from tag_inference import infer_tags
+from tag_inference import infer_tags, infer_is_class
+from description_fetcher import generate_synthetic_description
 from series import get_or_create_series, update_series_metadata
 from posters import get_metadata_for_film_event
 from artist_images import get_info_for_music_event
@@ -227,8 +228,24 @@ def validate_event_title(title: str) -> bool:
         "show tba", "show tbd", "artist tba", "performer tba",
         "special event", "special event tba", "private event",
         "closed", "closed for private event", "n/a", "none",
+        "book now", "buy now", "get tickets now", "reserve now",
+        # Concession/promo items scraped as events
+        "view fullsize", "more details", "gnashcash",
+        "value pack hot dog & soda", "value pack hot dog and soda",
     }
     if title.lower().strip() in junk_exact:
+        return False
+
+    # URLs as titles
+    if re.match(r"^https?://", title, re.IGNORECASE):
+        return False
+
+    # Titles that are just scraping artifacts (ticket policy text, nav cruft)
+    if re.match(r"^(advance ticket sales|current production)", title, re.IGNORECASE):
+        return False
+
+    # Day/date + random word patterns ("FRI, FEB 6, 2026 headphones")
+    if re.match(r"^(MON|TUE|WED|THU|FRI|SAT|SUN),\s+\w+\s+\d", title):
         return False
 
     # Titles that are just "TBA" with minor decoration ("** TBA **", "- TBA -")
@@ -281,6 +298,9 @@ def insert_event(event_data: dict, series_hint: dict = None, genres: list = None
     if "producer_id" in event_data:
         event_data.pop("producer_id")
 
+    # Remove is_class if present (not a database column - used only for tag inference)
+    is_class_flag = event_data.pop("is_class", None)
+
     # Get venue info for tag inheritance
     venue_vibes = []
     venue_type = None
@@ -312,6 +332,19 @@ def insert_event(event_data: dict, series_hint: dict = None, genres: list = None
         # Use fetched genres if none provided
         if music_info.genres and not genres:
             genres = music_info.genres
+
+    # Auto-infer is_class if not explicitly set
+    if not is_class_flag:
+        source_slug = None
+        if event_data.get("source_id"):
+            try:
+                src = client.table("sources").select("slug").eq("id", event_data["source_id"]).execute()
+                if src.data and src.data[0].get("slug"):
+                    source_slug = src.data[0]["slug"]
+            except Exception:
+                pass
+        if infer_is_class(event_data, source_slug=source_slug, venue_type=venue_type):
+            is_class_flag = True
 
     # Infer and merge tags
     event_data["tags"] = infer_tags(event_data, venue_vibes, venue_type=venue_type)
@@ -355,6 +388,23 @@ def insert_event(event_data: dict, series_hint: dict = None, genres: list = None
     # Add genres for standalone events (events without a series)
     if genres and not event_data.get("series_id"):
         event_data["genres"] = genres
+
+    # Backfill description from film metadata (covers Tara, Aurora, Plaza, etc.)
+    if not event_data.get("description") and film_metadata and film_metadata.plot:
+        event_data["description"] = film_metadata.plot[:500]
+
+    # Last-resort: generate synthetic description so no event is inserted with NULL
+    if not event_data.get("description"):
+        venue_name = None
+        if event_data.get("venue_id"):
+            v = get_venue_by_id(event_data["venue_id"])
+            if v:
+                venue_name = v.get("name")
+        event_data["description"] = generate_synthetic_description(
+            event_data.get("title", ""),
+            venue_name=venue_name,
+            category=event_data.get("category"),
+        )
 
     # Inherit portal_id from source if not explicitly set
     if not event_data.get("portal_id") and event_data.get("source_id"):

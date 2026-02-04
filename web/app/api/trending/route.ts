@@ -1,7 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
-import { applyRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
+import { applyRateLimit, RATE_LIMITS, getClientIdentifier} from "@/lib/rate-limit";
 import { getLocalDateString } from "@/lib/formats";
-import { apiResponse, errorApiResponse } from "@/lib/api-utils";
+import { apiResponse, errorApiResponse, isValidUUID } from "@/lib/api-utils";
+import { logger } from "@/lib/logger";
 
 export const revalidate = 300; // Cache for 5 minutes
 
@@ -9,7 +10,7 @@ export async function GET(request: Request) {
   const supabase = await createClient();
 
   // Rate limit: expensive endpoint with RSVP aggregation
-  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.expensive);
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.expensive, getClientIdentifier(request));
   if (rateLimitResult) return rateLimitResult;
   const { searchParams } = new URL(request.url);
   const limit = Math.min(parseInt(searchParams.get("limit") || "6", 10), 20);
@@ -33,7 +34,7 @@ export async function GET(request: Request) {
       .maybeSingle();
 
     const portalData = portal as { id: string; filters: typeof portalFilters } | null;
-    if (portalData) {
+    if (portalData && isValidUUID(portalData.id)) {
       portalId = portalData.id;
       portalFilters = portalData.filters || {};
     }
@@ -65,8 +66,7 @@ export async function GET(request: Request) {
     // Apply portal filter if specified
     if (portalId) {
       // Show portal-specific events + public events
-      // Escape portalId to prevent PostgREST injection
-      query = query.or(`portal_id.eq."${portalId.replace(/"/g, "")}",portal_id.is.null`);
+      query = query.or(`portal_id.eq.${portalId},portal_id.is.null`);
 
       // Apply portal category filters
       if (portalFilters.categories?.length) {
@@ -80,7 +80,7 @@ export async function GET(request: Request) {
     const { data: events, error } = await query;
 
     if (error) {
-      console.error("Error fetching trending events:", error);
+      logger.error("Error fetching trending events:", error);
       return errorApiResponse("Failed to fetch trending events", 500);
     }
 
@@ -138,7 +138,7 @@ export async function GET(request: Request) {
       },
     });
   } catch (err) {
-    console.error("Error in trending API:", err);
+    logger.error("Error in trending API:", err);
     return errorApiResponse("Internal server error", 500);
   }
 }

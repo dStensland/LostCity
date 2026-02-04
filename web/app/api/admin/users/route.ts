@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient as createServerClient, getUser, isAdmin } from "@/lib/supabase/server";
 import { escapeSQLPattern, adminErrorResponse } from "@/lib/api-utils";
-import { applyRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
+import { applyRateLimit, RATE_LIMITS, getClientIdentifier} from "@/lib/rate-limit";
 
 // Username validation: lowercase alphanumeric + underscore, 3-30 chars
 const USERNAME_REGEX = /^[a-z0-9_]{3,30}$/;
@@ -24,7 +24,7 @@ function validateUsername(username: string): { valid: boolean; error?: string } 
 
 // PATCH /api/admin/users - Update a user's profile
 export async function PATCH(request: Request) {
-  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write);
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
   if (rateLimitResult) return rateLimitResult;
 
   try {
@@ -94,7 +94,7 @@ export async function PATCH(request: Request) {
 
 // DELETE /api/admin/users - Delete a user (soft delete by deactivating)
 export async function DELETE(request: Request) {
-  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write);
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
   if (rateLimitResult) return rateLimitResult;
 
   try {
@@ -139,7 +139,7 @@ export async function DELETE(request: Request) {
 
 // GET /api/admin/users - Get users with profile info
 export async function GET(request: Request) {
-  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write);
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
   if (rateLimitResult) return rateLimitResult;
 
   try {

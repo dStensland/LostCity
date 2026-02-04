@@ -4,9 +4,8 @@ import CategoryIcon from "@/components/CategoryIcon";
 import { getPlatformStats } from "@/lib/supabase";
 import { DEFAULT_PORTAL_SLUG, DEFAULT_PORTAL_NAME } from "@/lib/constants";
 
-// Disable caching for this page
-export const dynamic = "force-dynamic";
-export const revalidate = 0;
+// Revalidate every 5 minutes — stats change infrequently
+export const revalidate = 300;
 
 // Top categories to showcase
 const FEATURED_CATEGORIES = [

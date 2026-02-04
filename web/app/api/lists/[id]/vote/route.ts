@@ -1,11 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
-import type { SupabaseClient } from "@supabase/supabase-js";
-
-// Type helper for tables not yet in generated types
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type AnySupabase = SupabaseClient<any, any, any>;
+import type { AnySupabase } from "@/lib/api-utils";
+import { logger } from "@/lib/logger";
 
 type RouteContext = {
   params: Promise<{ id: string }>;
@@ -106,14 +103,14 @@ export async function POST(request: NextRequest, context: RouteContext) {
         .maybeSingle();
 
       if (error) {
-        console.error("Error creating vote:", error);
+        logger.error("Error creating vote", error);
         return NextResponse.json({ error: "Failed to vote" }, { status: 500 });
       }
 
       return NextResponse.json({ vote, action: "created" });
     }
   } catch (error) {
-    console.error("Error in vote POST:", error);
+    logger.error("Error in vote POST", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

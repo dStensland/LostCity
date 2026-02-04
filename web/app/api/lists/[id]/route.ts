@@ -1,12 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
-import type { SupabaseClient } from "@supabase/supabase-js";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
-
-// Type helper for tables not yet in generated types
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type AnySupabase = SupabaseClient<any, any, any>;
+import type { AnySupabase } from "@/lib/api-utils";
+import { logger } from "@/lib/logger";
 
 type RouteContext = {
   params: Promise<{ id: string }>;
@@ -53,7 +50,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
       .order("position", { ascending: true });
 
     if (itemsError) {
-      console.error("Error fetching list items:", itemsError);
+      logger.error("Error fetching list items", itemsError);
     }
 
     // Get vote counts for items
@@ -116,7 +113,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
       items: itemsWithVotes,
     });
   } catch (error) {
-    console.error("Error in list GET:", error);
+    logger.error("Error in list GET", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
@@ -158,7 +155,14 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     if (body.description !== undefined) updates.description = body.description?.trim() || null;
     if (body.category !== undefined) updates.category = body.category;
     if (body.is_public !== undefined) updates.is_public = body.is_public;
-    if (body.status !== undefined) updates.status = body.status;
+    if (body.status !== undefined) {
+      // Validate status against allowlist
+      const VALID_STATUSES = ["active", "archived", "deleted"];
+      if (!VALID_STATUSES.includes(body.status)) {
+        return NextResponse.json({ error: "Invalid status value" }, { status: 400 });
+      }
+      updates.status = body.status;
+    }
 
     // Use service client to bypass RLS - auth already validated above
     let serviceClient: AnySupabase;
@@ -176,13 +180,13 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       .maybeSingle();
 
     if (error) {
-      console.error("Error updating list:", error);
+      logger.error("Error updating list", error);
       return NextResponse.json({ error: "Failed to update list" }, { status: 500 });
     }
 
     return NextResponse.json({ list });
   } catch (error) {
-    console.error("Error in list PATCH:", error);
+    logger.error("Error in list PATCH", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
@@ -232,13 +236,13 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
       .eq("id", id);
 
     if (error) {
-      console.error("Error deleting list:", error);
+      logger.error("Error deleting list", error);
       return NextResponse.json({ error: "Failed to delete list" }, { status: 500 });
     }
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Error in list DELETE:", error);
+    logger.error("Error in list DELETE", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

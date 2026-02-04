@@ -3,6 +3,7 @@ import { isAdmin, getUser } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 import { createHash, randomBytes } from "crypto";
 import { adminErrorResponse } from "@/lib/api-utils";
+import { applyRateLimit, RATE_LIMITS, getClientIdentifier} from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -22,7 +23,10 @@ type ApiKeyRecord = {
 };
 
 // GET: List all API keys
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.standard, getClientIdentifier(request));
+  if (rateLimitResult) return rateLimitResult;
+
   const supabase = await createClient();
 
   // Verify admin
@@ -95,6 +99,9 @@ export async function GET() {
 
 // POST: Create new API key
 export async function POST(request: NextRequest) {
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.standard, getClientIdentifier(request));
+  if (rateLimitResult) return rateLimitResult;
+
   const supabase = await createClient();
 
   // Verify admin
@@ -168,6 +175,9 @@ export async function POST(request: NextRequest) {
 
 // DELETE: Revoke an API key
 export async function DELETE(request: NextRequest) {
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.standard, getClientIdentifier(request));
+  if (rateLimitResult) return rateLimitResult;
+
   const supabase = await createClient();
 
   // Verify admin
@@ -198,6 +208,9 @@ export async function DELETE(request: NextRequest) {
 
 // PATCH: Update an API key (name, scopes, expiry)
 export async function PATCH(request: NextRequest) {
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.standard, getClientIdentifier(request));
+  if (rateLimitResult) return rateLimitResult;
+
   const supabase = await createClient();
 
   // Verify admin

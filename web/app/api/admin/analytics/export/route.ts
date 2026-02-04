@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { isAdmin } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 import { getLocalDateString } from "@/lib/formats";
+import { applyRateLimit, RATE_LIMITS, getClientIdentifier} from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -28,6 +29,9 @@ type Portal = {
 };
 
 export async function GET(request: NextRequest) {
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.standard, getClientIdentifier(request));
+  if (rateLimitResult) return rateLimitResult;
+
   const supabase = await createClient();
 
   // Verify admin

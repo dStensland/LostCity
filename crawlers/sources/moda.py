@@ -154,16 +154,35 @@ def crawl(source: dict) -> tuple[int, int, int]:
                                 i += 1
                                 continue
 
-                            # Gather location and description from subsequent lines
+                            # Gather location, time, and description from subsequent lines
                             location_info = ""
                             description = ""
+                            start_time = None
 
-                            j = i + 4
-                            while j < len(lines) and j < i + 7:
+                            j = i + 3
+                            while j < len(lines) and j < i + 8:
                                 next_line = lines[j]
                                 # Stop if we hit another month abbreviation
                                 if next_line.upper() in MONTHS:
                                     break
+                                # Try to extract time
+                                if not start_time:
+                                    time_match = re.search(
+                                        r'(\d{1,2}(?::\d{2})?\s*(?:am|pm|AM|PM))',
+                                        next_line
+                                    )
+                                    if time_match:
+                                        raw = time_match.group(1).strip().lower()
+                                        # Parse to HH:MM
+                                        t = re.match(r'(\d{1,2})(?::(\d{2}))?\s*(am|pm)', raw)
+                                        if t:
+                                            h = int(t.group(1))
+                                            m = int(t.group(2)) if t.group(2) else 0
+                                            if t.group(3) == 'pm' and h != 12:
+                                                h += 12
+                                            elif t.group(3) == 'am' and h == 12:
+                                                h = 0
+                                            start_time = f"{h:02d}:{m:02d}"
                                 if "In-person" in next_line or "Virtual" in next_line or "Ages" in next_line:
                                     location_info = next_line
                                 elif len(next_line) > 30 and not description:
@@ -204,10 +223,10 @@ def crawl(source: dict) -> tuple[int, int, int]:
                                 "title": title,
                                 "description": description if description else location_info,
                                 "start_date": start_date,
-                                "start_time": None,
+                                "start_time": start_time,
                                 "end_date": None,
                                 "end_time": None,
-                                "is_all_day": True,
+                                "is_all_day": False,
                                 "category": category,
                                 "subcategory": subcategory,
                                 "tags": tags,

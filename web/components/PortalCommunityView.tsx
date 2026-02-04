@@ -101,7 +101,6 @@ function OrganizationCard({
                 height={72}
                 className="object-contain"
                 style={{ width: 72, height: 72 }}
-                unoptimized
               />
             </div>
           ) : (

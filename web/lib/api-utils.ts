@@ -1,4 +1,16 @@
 import { NextResponse } from "next/server";
+import type { SupabaseClient } from "@supabase/supabase-js";
+
+// ============================================================================
+// TYPE HELPERS
+// ============================================================================
+
+/**
+ * Type helper for Supabase tables not yet in generated types.
+ * Use this when working with tables that aren't in the TypeScript schema yet.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type AnySupabase = SupabaseClient<any, any, any>;
 
 // ============================================================================
 // INPUT VALIDATION HELPERS

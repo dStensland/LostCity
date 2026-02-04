@@ -14,6 +14,38 @@ interface PortalThemeProps {
 }
 
 /**
+ * Sanitize a CSS color value to prevent injection attacks.
+ * Only allows valid hex colors, named colors, and rgb/hsl functions.
+ */
+function sanitizeCssColor(value: string): string | null {
+  if (!value || typeof value !== "string") return null;
+
+  // Allow hex colors: #RGB, #RRGGBB, #RRGGBBAA
+  if (/^#[0-9a-fA-F]{3,8}$/.test(value)) return value;
+
+  // Allow named CSS colors (common ones, alphanumeric only)
+  if (/^[a-zA-Z]{3,20}$/.test(value)) return value;
+
+  // Allow rgb/rgba/hsl/hsla functions with numbers, commas, spaces, dots, percentages
+  if (/^(rgb|hsl)a?\(\s*[0-9.,\s%]+\s*\)$/.test(value)) return value;
+
+  return null;
+}
+
+/**
+ * Sanitize a CSS font family value to prevent injection attacks.
+ * Only allows alphanumeric characters, spaces, commas, quotes, underscores, and hyphens.
+ */
+function sanitizeFontFamily(value: string): string | null {
+  if (!value || typeof value !== "string") return null;
+
+  // Allow alphanumeric, spaces, commas, quotes (single/double), underscores, hyphens
+  if (/^[a-zA-Z0-9\s,'"_-]+$/.test(value)) return value;
+
+  return null;
+}
+
+/**
  * Injects portal-specific CSS variables and loads custom fonts.
  * Renders a <style> tag with CSS custom properties that override defaults.
  * Now supports deep white-labeling with visual presets and component styles.
@@ -56,112 +88,145 @@ export function PortalTheme({ portal }: PortalThemeProps) {
   }
 
   if (primaryColor) {
-    // Layer 1: Primitives
-    cssVars.push(`--primitive-primary-500: ${primaryColor};`);
-    cssVars.push(`--primitive-primary-rgb: ${hexToRgb(primaryColor)};`);
+    const safePrimary = sanitizeCssColor(primaryColor);
+    if (safePrimary) {
+      // Layer 1: Primitives
+      cssVars.push(`--primitive-primary-500: ${safePrimary};`);
+      cssVars.push(`--primitive-primary-rgb: ${hexToRgb(safePrimary)};`);
 
-    // Backwards compatibility
-    cssVars.push(`--portal-primary: ${primaryColor};`);
-    cssVars.push(`--neon-magenta: ${primaryColor};`);
-    cssVars.push(`--neon-magenta-hsl: ${hexToHsl(primaryColor)};`);
-    cssVars.push(`--portal-primary-rgb: ${hexToRgb(primaryColor)};`);
-    cssVars.push(`--coral: ${primaryColor};`);
-    cssVars.push(`--coral-hsl: ${hexToHsl(primaryColor)};`);
-    cssVars.push(`--rose: ${primaryColor};`);
+      // Backwards compatibility
+      cssVars.push(`--portal-primary: ${safePrimary};`);
+      cssVars.push(`--neon-magenta: ${safePrimary};`);
+      cssVars.push(`--neon-magenta-hsl: ${hexToHsl(safePrimary)};`);
+      cssVars.push(`--portal-primary-rgb: ${hexToRgb(safePrimary)};`);
+      cssVars.push(`--coral: ${safePrimary};`);
+      cssVars.push(`--coral-hsl: ${hexToHsl(safePrimary)};`);
+      cssVars.push(`--rose: ${safePrimary};`);
+    }
   }
 
   if (primaryLight) {
-    cssVars.push(`--coral-light: ${primaryLight};`);
-    cssVars.push(`--portal-primary-light: ${primaryLight};`);
+    const safePrimaryLight = sanitizeCssColor(primaryLight);
+    if (safePrimaryLight) {
+      cssVars.push(`--coral-light: ${safePrimaryLight};`);
+      cssVars.push(`--portal-primary-light: ${safePrimaryLight};`);
+    }
   }
 
   if (secondaryColor) {
-    // Layer 1: Primitives
-    cssVars.push(`--primitive-secondary-500: ${secondaryColor};`);
-    cssVars.push(`--primitive-secondary-rgb: ${hexToRgb(secondaryColor)};`);
+    const safeSecondary = sanitizeCssColor(secondaryColor);
+    if (safeSecondary) {
+      // Layer 1: Primitives
+      cssVars.push(`--primitive-secondary-500: ${safeSecondary};`);
+      cssVars.push(`--primitive-secondary-rgb: ${hexToRgb(safeSecondary)};`);
 
-    // Backwards compatibility
-    cssVars.push(`--portal-secondary: ${secondaryColor};`);
-    // Secondary color maps to --neon-cyan (the highlight/focus color)
-    cssVars.push(`--neon-cyan: ${secondaryColor};`);
-    cssVars.push(`--neon-cyan-hsl: ${hexToHsl(secondaryColor)};`);
-    cssVars.push(`--focus-ring: ${secondaryColor};`);
-    // Calendar/deep purple palette - derive from secondary color
-    const secondaryDark = adjustBrightness(secondaryColor, -70);
-    const secondaryMid = adjustBrightness(secondaryColor, -50);
-    cssVars.push(`--cosmic-blue: ${secondaryDark};`);
-    cssVars.push(`--deep-violet: ${adjustBrightness(secondaryDark, -10)};`);
-    cssVars.push(`--midnight-blue: ${adjustBrightness(secondaryDark, 5)};`);
-    cssVars.push(`--twilight-purple: ${secondaryMid};`);
-    cssVars.push(`--nebula: ${adjustBrightness(secondaryMid, 15)};`);
-    if (isLight) {
-      // For light themes, twilight should be a light border color
-      cssVars.push(`--twilight: ${secondaryColor};`);
-      cssVars.push(`--dusk: ${adjustBrightness(secondaryColor, -3)};`);
-    } else {
-      cssVars.push(`--twilight: ${secondaryColor};`);
-      cssVars.push(`--dusk: ${adjustBrightness(secondaryColor, 15)};`);
+      // Backwards compatibility
+      cssVars.push(`--portal-secondary: ${safeSecondary};`);
+      // Secondary color maps to --neon-cyan (the highlight/focus color)
+      cssVars.push(`--neon-cyan: ${safeSecondary};`);
+      cssVars.push(`--neon-cyan-hsl: ${hexToHsl(safeSecondary)};`);
+      cssVars.push(`--focus-ring: ${safeSecondary};`);
+      // Calendar/deep purple palette - derive from secondary color
+      const secondaryDark = adjustBrightness(safeSecondary, -70);
+      const secondaryMid = adjustBrightness(safeSecondary, -50);
+      cssVars.push(`--cosmic-blue: ${secondaryDark};`);
+      cssVars.push(`--deep-violet: ${adjustBrightness(secondaryDark, -10)};`);
+      cssVars.push(`--midnight-blue: ${adjustBrightness(secondaryDark, 5)};`);
+      cssVars.push(`--twilight-purple: ${secondaryMid};`);
+      cssVars.push(`--nebula: ${adjustBrightness(secondaryMid, 15)};`);
+      if (isLight) {
+        // For light themes, twilight should be a light border color
+        cssVars.push(`--twilight: ${safeSecondary};`);
+        cssVars.push(`--dusk: ${adjustBrightness(safeSecondary, -3)};`);
+      } else {
+        cssVars.push(`--twilight: ${safeSecondary};`);
+        cssVars.push(`--dusk: ${adjustBrightness(safeSecondary, 15)};`);
+      }
     }
   }
 
   if (accentColor) {
-    // Layer 1: Primitives
-    cssVars.push(`--primitive-accent-500: ${accentColor};`);
-    cssVars.push(`--primitive-accent-rgb: ${hexToRgb(accentColor)};`);
+    const safeAccent = sanitizeCssColor(accentColor);
+    if (safeAccent) {
+      // Layer 1: Primitives
+      cssVars.push(`--primitive-accent-500: ${safeAccent};`);
+      cssVars.push(`--primitive-accent-rgb: ${hexToRgb(safeAccent)};`);
 
-    // Backwards compatibility
-    cssVars.push(`--portal-accent: ${accentColor};`);
-    cssVars.push(`--neon-amber: ${accentColor};`);
-    cssVars.push(`--neon-amber-hsl: ${hexToHsl(accentColor)};`);
-    cssVars.push(`--gold: ${accentColor};`);
+      // Backwards compatibility
+      cssVars.push(`--portal-accent: ${safeAccent};`);
+      cssVars.push(`--neon-amber: ${safeAccent};`);
+      cssVars.push(`--neon-amber-hsl: ${hexToHsl(safeAccent)};`);
+      cssVars.push(`--gold: ${safeAccent};`);
+    }
   }
 
   if (backgroundColor) {
-    cssVars.push(`--portal-bg: ${backgroundColor};`);
-    cssVars.push(`--void: ${backgroundColor};`);
-    cssVars.push(`--background: ${backgroundColor};`);
-    if (isLight) {
-      // For light themes, night should be slightly darker than background
-      cssVars.push(`--night: ${adjustBrightness(backgroundColor, -3)};`);
-    } else {
-      cssVars.push(`--night: ${adjustBrightness(backgroundColor, 8)};`);
+    const safeBg = sanitizeCssColor(backgroundColor);
+    if (safeBg) {
+      cssVars.push(`--portal-bg: ${safeBg};`);
+      cssVars.push(`--void: ${safeBg};`);
+      cssVars.push(`--background: ${safeBg};`);
+      if (isLight) {
+        // For light themes, night should be slightly darker than background
+        cssVars.push(`--night: ${adjustBrightness(safeBg, -3)};`);
+      } else {
+        cssVars.push(`--night: ${adjustBrightness(safeBg, 8)};`);
+      }
     }
   }
 
   if (textColor) {
-    cssVars.push(`--portal-text: ${textColor};`);
-    cssVars.push(`--cream: ${textColor};`);
-    cssVars.push(`--foreground: ${textColor};`);
+    const safeText = sanitizeCssColor(textColor);
+    if (safeText) {
+      cssVars.push(`--portal-text: ${safeText};`);
+      cssVars.push(`--cream: ${safeText};`);
+      cssVars.push(`--foreground: ${safeText};`);
+    }
   }
 
   if (mutedColor) {
-    cssVars.push(`--portal-muted: ${mutedColor};`);
-    cssVars.push(`--muted: ${mutedColor};`);
-    cssVars.push(`--soft: ${mutedColor};`);
+    const safeMuted = sanitizeCssColor(mutedColor);
+    if (safeMuted) {
+      cssVars.push(`--portal-muted: ${safeMuted};`);
+      cssVars.push(`--muted: ${safeMuted};`);
+      cssVars.push(`--soft: ${safeMuted};`);
+    }
   }
 
   if (buttonColor) {
-    cssVars.push(`--coral: ${buttonColor};`);
-    cssVars.push(`--portal-button: ${buttonColor};`);
+    const safeButton = sanitizeCssColor(buttonColor);
+    if (safeButton) {
+      cssVars.push(`--coral: ${safeButton};`);
+      cssVars.push(`--portal-button: ${safeButton};`);
+    }
   }
 
   if (buttonTextColor) {
-    cssVars.push(`--portal-button-text: ${buttonTextColor};`);
+    const safeButtonText = sanitizeCssColor(buttonTextColor);
+    if (safeButtonText) {
+      cssVars.push(`--portal-button-text: ${safeButtonText};`);
+    }
   }
 
   if (borderColor) {
-    cssVars.push(`--portal-border: ${borderColor};`);
-    // Also set twilight if not already set from secondaryColor
-    if (!secondaryColor) {
-      cssVars.push(`--twilight: ${borderColor};`);
+    const safeBorder = sanitizeCssColor(borderColor);
+    if (safeBorder) {
+      cssVars.push(`--portal-border: ${safeBorder};`);
+      // Also set twilight if not already set from secondaryColor
+      if (!secondaryColor) {
+        cssVars.push(`--twilight: ${safeBorder};`);
+      }
     }
   }
 
   if (cardColor) {
-    cssVars.push(`--portal-card: ${cardColor};`);
-    // Also set dusk for card backgrounds if not already set
-    if (!secondaryColor) {
-      cssVars.push(`--dusk: ${cardColor};`);
+    const safeCard = sanitizeCssColor(cardColor);
+    if (safeCard) {
+      cssVars.push(`--portal-card: ${safeCard};`);
+      // Also set dusk for card backgrounds if not already set
+      if (!secondaryColor) {
+        cssVars.push(`--dusk: ${safeCard};`);
+      }
     }
   }
 
@@ -179,7 +244,8 @@ export function PortalTheme({ portal }: PortalThemeProps) {
     }
     // Adjust neon colors for better light theme visibility
     // Use portal's primary color if set, otherwise use neutral defaults
-    const lightPrimary = primaryColor || "#1f2937"; // Dark gray fallback
+    const safeLightPrimary = primaryColor ? sanitizeCssColor(primaryColor) : null;
+    const lightPrimary = safeLightPrimary || "#1f2937"; // Dark gray fallback
     if (!primaryColor) {
       cssVars.push(`--neon-magenta: ${lightPrimary};`);
     }
@@ -188,7 +254,7 @@ export function PortalTheme({ portal }: PortalThemeProps) {
     cssVars.push(`--neon-cyan: #0891B2;`); // Darker cyan for light bg
     cssVars.push(`--neon-amber: #D97706;`); // Darker amber for light bg
     // Rose/coral uses portal primary for light themes
-    cssVars.push(`--rose: ${primaryColor || lightPrimary};`);
+    cssVars.push(`--rose: ${lightPrimary};`);
     if (!buttonColor && !primaryColor) {
       cssVars.push(`--coral: ${lightPrimary};`);
     }
@@ -200,16 +266,24 @@ export function PortalTheme({ portal }: PortalThemeProps) {
     cssVars.push(`--glass-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);`);
     cssVars.push(`--glass-shadow-compact: 0 6px 16px rgba(0, 0, 0, 0.06);`);
     // Card background for light themes - solid light color
-    cssVars.push(`--card-bg: ${cardColor || "#F9FAFB"};`);
-    cssVars.push(`--card-bg-hover: ${cardColor ? adjustBrightness(cardColor, -5) : "#F3F4F6"};`);
+    const safeLightCard = cardColor ? sanitizeCssColor(cardColor) : null;
+    const lightCardBg = safeLightCard || "#F9FAFB";
+    cssVars.push(`--card-bg: ${lightCardBg};`);
+    cssVars.push(`--card-bg-hover: ${safeLightCard ? adjustBrightness(safeLightCard, -5) : "#F3F4F6"};`);
   }
 
   if (fontHeading) {
-    cssVars.push(`--portal-font-heading: '${fontHeading}', serif;`);
+    const safeFontHeading = sanitizeFontFamily(fontHeading);
+    if (safeFontHeading) {
+      cssVars.push(`--portal-font-heading: '${safeFontHeading}', serif;`);
+    }
   }
 
   if (fontBody) {
-    cssVars.push(`--portal-font-body: '${fontBody}', sans-serif;`);
+    const safeFontBody = sanitizeFontFamily(fontBody);
+    if (safeFontBody) {
+      cssVars.push(`--portal-font-body: '${safeFontBody}', sans-serif;`);
+    }
   }
 
   // =========================================================================
@@ -263,14 +337,19 @@ export function PortalTheme({ portal }: PortalThemeProps) {
   // =========================================================================
   if (resolvedBranding.category_colors) {
     for (const [category, color] of Object.entries(resolvedBranding.category_colors)) {
-      cssVars.push(`--cat-${category}: ${color};`);
+      const safeCategoryColor = sanitizeCssColor(color as string);
+      if (safeCategoryColor) {
+        cssVars.push(`--cat-${category}: ${safeCategoryColor};`);
+      }
     }
   }
 
   // Build Google Fonts URL if custom fonts are specified
   const fontsToLoad: string[] = [];
-  if (fontHeading) fontsToLoad.push(fontHeading.replace(/ /g, "+"));
-  if (fontBody && fontBody !== fontHeading) fontsToLoad.push(fontBody.replace(/ /g, "+"));
+  const safeFontHeadingForUrl = fontHeading ? sanitizeFontFamily(fontHeading) : null;
+  const safeFontBodyForUrl = fontBody ? sanitizeFontFamily(fontBody) : null;
+  if (safeFontHeadingForUrl) fontsToLoad.push(safeFontHeadingForUrl.replace(/ /g, "+"));
+  if (safeFontBodyForUrl && safeFontBodyForUrl !== safeFontHeadingForUrl) fontsToLoad.push(safeFontBodyForUrl.replace(/ /g, "+"));
 
   const googleFontsUrl = fontsToLoad.length > 0
     ? `https://fonts.googleapis.com/css2?${fontsToLoad.map(f => `family=${f}:wght@400;500;600;700`).join("&")}&display=swap`
@@ -301,9 +380,11 @@ export function PortalTheme({ portal }: PortalThemeProps) {
 
   // Generate the full style block
   const rootCss = cssVars.length > 0 ? `:root {\n  ${cssVars.join("\n  ")}\n}` : "";
+  const safeFontHeadingForCss = fontHeading ? sanitizeFontFamily(fontHeading) : null;
+  const safeFontBodyForCss = fontBody ? sanitizeFontFamily(fontBody) : null;
   const fontCss = [
-    fontHeading ? `.font-serif, .font-display, h1, h2, h3, h4, h5, h6 { font-family: var(--portal-font-heading); }` : "",
-    fontBody ? `body, .font-sans { font-family: var(--portal-font-body); }` : "",
+    safeFontHeadingForCss ? `.font-serif, .font-display, h1, h2, h3, h4, h5, h6 { font-family: var(--portal-font-heading); }` : "",
+    safeFontBodyForCss ? `body, .font-sans { font-family: var(--portal-font-body); }` : "",
   ].filter(Boolean).join("\n");
 
   const styleContent = [rootCss, fontCss, iconGlowOverride, reducedMotionCss]

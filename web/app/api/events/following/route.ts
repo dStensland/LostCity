@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { createClient, getUser } from "@/lib/supabase/server";
 import { format, startOfDay } from "date-fns";
-import { applyRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
+import { applyRateLimit, RATE_LIMITS, getClientIdentifier} from "@/lib/rate-limit";
+import { errorResponse } from "@/lib/api-utils";
+import { logger } from "@/lib/logger";
 
 type FollowingEvent = {
   id: number;
@@ -39,7 +41,7 @@ type FollowingEvent = {
 };
 
 export async function GET(request: Request) {
-  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.read);
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.read, getClientIdentifier(request));
   if (rateLimitResult) return rateLimitResult;
 
   try {
@@ -142,7 +144,7 @@ export async function GET(request: Request) {
     const { data: events, error } = await query as { data: FollowingEvent[] | null; error: Error | null };
 
     if (error) {
-      console.error("Error fetching following events:", error);
+      logger.error("Error fetching following events:", error);
       return NextResponse.json(
         { error: "Failed to fetch events" },
         { status: 500 }
@@ -186,8 +188,6 @@ export async function GET(request: Request) {
       followingOrganizations: organizationIds.length,
     });
   } catch (err) {
-    console.error("Following events API error:", err);
-    const message = err instanceof Error ? err.message : String(err);
-    return NextResponse.json({ error: message }, { status: 500 });
+    return errorResponse(err, "GET /api/events/following");
   }
 }

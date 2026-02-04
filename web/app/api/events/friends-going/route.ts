@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient, getUser } from "@/lib/supabase/server";
-import { applyRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
+import { applyRateLimit, RATE_LIMITS, getClientIdentifier} from "@/lib/rate-limit";
+import { logger } from "@/lib/logger";
 
 type GetFriendIdsResult = { friend_id: string }[];
 
@@ -19,7 +20,7 @@ type FriendRsvp = {
 // GET /api/events/friends-going?event_ids=1,2,3
 // Returns friends going/interested for the given events
 export async function GET(request: Request) {
-  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.read);
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.read, getClientIdentifier(request));
   if (rateLimitResult) return rateLimitResult;
 
   const user = await getUser();
@@ -52,7 +53,7 @@ export async function GET(request: Request) {
   ) as { data: GetFriendIdsResult | null; error: Error | null };
 
   if (friendIdsError) {
-    console.error("Error fetching friend IDs:", friendIdsError);
+    logger.error("Error fetching friend IDs:", friendIdsError);
     return NextResponse.json({ error: "Failed to fetch friends" }, { status: 500 });
   }
 
@@ -82,7 +83,7 @@ export async function GET(request: Request) {
     .in("visibility", ["public", "friends"]);
 
   if (error) {
-    console.error("Error fetching friend RSVPs:", error);
+    logger.error("Error fetching friend RSVPs:", error);
     return NextResponse.json({ error: "Failed to fetch friend activity" }, { status: 500 });
   }
 

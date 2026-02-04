@@ -1,28 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/service";
-import { createClient } from "@/lib/supabase/server";
+import { canManagePortal } from "@/lib/supabase/server";
 import { adminErrorResponse } from "@/lib/api-utils";
-import { applyRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
-
-async function isAdmin(request: NextRequest): Promise<boolean> {
-  const supabase = await createClient();
-  void request;
-
-  const { data: { user } } = await supabase.auth.getUser();
-  return !!user;
-}
+import { applyRateLimit, RATE_LIMITS, getClientIdentifier} from "@/lib/rate-limit";
 
 // POST /api/admin/portals/[id]/sections/[sectionId]/items - Add item to section
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string; sectionId: string }> }
 ) {
-  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write);
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
   if (rateLimitResult) return rateLimitResult;
 
-  const { sectionId } = await params;
+  const { id: portalId, sectionId } = await params;
 
-  if (!(await isAdmin(request))) {
+  if (!(await canManagePortal(portalId))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -75,13 +67,13 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string; sectionId: string }> }
 ) {
-  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write);
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
   if (rateLimitResult) return rateLimitResult;
 
-  const { sectionId } = await params;
+  const { id: portalId, sectionId } = await params;
   void sectionId; // Section ID validated by path
 
-  if (!(await isAdmin(request))) {
+  if (!(await canManagePortal(portalId))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -112,13 +104,13 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string; sectionId: string }> }
 ) {
-  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write);
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
   if (rateLimitResult) return rateLimitResult;
 
-  const { sectionId } = await params;
+  const { id: portalId, sectionId } = await params;
   void sectionId;
 
-  if (!(await isAdmin(request))) {
+  if (!(await canManagePortal(portalId))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

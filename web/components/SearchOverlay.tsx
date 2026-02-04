@@ -91,6 +91,12 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
   const previousPortalId = useRef<string | undefined>(portal?.id);
+  const activeTypeFilterRef = useRef<TypeFilter>(activeTypeFilter);
+
+  // Keep ref in sync with state
+  useEffect(() => {
+    activeTypeFilterRef.current = activeTypeFilter;
+  }, [activeTypeFilter]);
 
   // Debounce search query (150ms for fast autocomplete)
   const debouncedQuery = useDebounce(query, 150);
@@ -150,6 +156,15 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
     }
   }, [isOpen]);
 
+  // Handler for clicking on a result (add to recent searches and close)
+  const handleResultClick = useCallback(() => {
+    // Add to recent searches
+    if (query.trim()) {
+      addRecentSearch(query.trim());
+    }
+    onClose();
+  }, [query, onClose]);
+
   // Handle keyboard navigation
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -190,7 +205,7 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
       document.removeEventListener("keydown", handleKeyDown);
       document.body.style.overflow = "";
     };
-  }, [isOpen, onClose, results, selectedResultIndex, portal?.slug]);
+  }, [isOpen, onClose, results, selectedResultIndex, portal?.slug, handleResultClick]);
 
   // Reset selected index when results change
   useEffect(() => {
@@ -208,7 +223,7 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
   }, [selectedResultIndex]);
 
   // Main search function with caching
-  const search = useCallback(async (searchQuery: string) => {
+  const search = useCallback(async (searchQuery: string, clearCache = false) => {
     if (searchQuery.length < 2) {
       setResults([]);
       setFacets([]);
@@ -216,8 +231,17 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
       return;
     }
 
+    // Use ref to get latest filter value without recreating callback
+    const currentTypeFilter = activeTypeFilterRef.current;
+
     // Check cache first
-    const cacheKey = `${searchQuery}:${portal?.id || ""}:${activeTypeFilter || "all"}`;
+    const cacheKey = `${searchQuery}:${portal?.id || ""}:${currentTypeFilter || "all"}`;
+
+    // Clear cache if requested (e.g., when filter changes)
+    if (clearCache) {
+      searchCache.delete(cacheKey);
+    }
+
     const cached = searchCache.get(cacheKey);
     if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
       setResults(cached.data);
@@ -236,8 +260,8 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
       });
 
       // Apply type filter if active
-      if (activeTypeFilter) {
-        params.set("types", activeTypeFilter);
+      if (currentTypeFilter) {
+        params.set("types", currentTypeFilter);
       }
 
       // Scope to portal if available
@@ -283,7 +307,7 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
     } finally {
       setIsLoading(false);
     }
-  }, [portal?.id, portal?.slug, activeTypeFilter]);
+  }, [portal?.id, portal?.slug]);
 
   // Map result href to portal-aware path
   function mapToPortalPath(result: SearchResult, portalSlug?: string): string {
@@ -310,15 +334,13 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
     search(debouncedQuery);
   }, [debouncedQuery, search]);
 
-  // Re-search when filter changes (with loading state)
+  // Re-search when filter changes (clearing cache for fresh results)
   useEffect(() => {
     if (debouncedQuery.length >= 2) {
-      // Clear cache for this query to force fresh results with new filter
-      const cacheKey = `${debouncedQuery}:${portal?.id || ""}:${activeTypeFilter || "all"}`;
-      searchCache.delete(cacheKey);
-      search(debouncedQuery);
+      search(debouncedQuery, true);
     }
-  }, [activeTypeFilter, debouncedQuery, search, portal?.id]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTypeFilter]);
 
   const handlePopularSearch = (term: string) => {
     setQuery(term);
@@ -331,14 +353,6 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
   const handleDidYouMeanClick = (suggestion: string) => {
     setQuery(suggestion);
     setDidYouMean([]);
-  };
-
-  const handleResultClick = () => {
-    // Add to recent searches
-    if (query.trim()) {
-      addRecentSearch(query.trim());
-    }
-    onClose();
   };
 
   const handleTypeFilterClick = (type: TypeFilter) => {

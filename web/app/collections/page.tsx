@@ -1,10 +1,16 @@
+import type { Metadata } from "next";
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 import Image from "next/image";
 import UnifiedHeader from "@/components/UnifiedHeader";
 import CreateCollectionButton from "@/components/CreateCollectionButton";
 
-export const dynamic = "force-dynamic";
+export const metadata: Metadata = {
+  title: "Collections | Lost City",
+  description: "Browse curated collections of events and experiences in Atlanta, created by the community.",
+};
+
+export const revalidate = 300;
 
 type Collection = {
   id: number;

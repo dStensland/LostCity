@@ -22,7 +22,6 @@ export default function NewsletterSignup() {
     setErrorMessage("");
 
     try {
-      // TODO: Replace with actual API endpoint
       const response = await fetch("/api/newsletter", {
         method: "POST",
         headers: { "Content-Type": "application/json" },

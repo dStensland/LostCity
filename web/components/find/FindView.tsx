@@ -9,9 +9,10 @@ import CalendarView from "@/components/CalendarView";
 import MobileCalendarView from "@/components/calendar/MobileCalendarView";
 import PortalSpotsView from "@/components/PortalSpotsView";
 import PortalCommunityView from "@/components/PortalCommunityView";
+import ClassesView from "@/components/find/ClassesView";
 import { ActiveFiltersRow } from "@/components/filters";
 
-type FindType = "events" | "destinations" | "orgs";
+type FindType = "events" | "classes" | "destinations" | "orgs";
 type DisplayMode = "list" | "map" | "calendar";
 
 interface FindViewProps {
@@ -30,6 +31,15 @@ const TYPE_OPTIONS: { key: FindType; label: string; icon: React.ReactNode }[] = 
     icon: (
       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+      </svg>
+    ),
+  },
+  {
+    key: "classes",
+    label: "Classes",
+    icon: (
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
       </svg>
     ),
   },
@@ -188,12 +198,21 @@ function FindViewInner({
       )}
 
       {findType === "events" && displayMode === "map" && (
-        <div className="h-[calc(100vh-180px)] -mx-4">
+        <div className="relative z-0 h-[calc(100vh-180px)] -mx-4">
           <MapViewWrapper
             portalId={portalId}
             portalExclusive={portalExclusive}
           />
         </div>
+      )}
+
+      {findType === "classes" && (
+        <Suspense fallback={<div className="py-16 text-center text-[var(--muted)]">Loading classes...</div>}>
+          <ClassesView
+            portalId={portalId}
+            portalSlug={portalSlug}
+          />
+        </Suspense>
       )}
 
       {findType === "destinations" && displayMode === "list" && (
@@ -207,7 +226,7 @@ function FindViewInner({
       )}
 
       {findType === "destinations" && displayMode === "map" && (
-        <div className="h-[calc(100vh-180px)] -mx-4">
+        <div className="relative z-0 h-[calc(100vh-180px)] -mx-4">
           {/* TODO: Add showVenuesOnly support to MapViewWrapper */}
           <MapViewWrapper
             portalId={portalId}
@@ -235,7 +254,7 @@ export default function FindView(props: FindViewProps) {
       fallback={
         <div className="py-4 space-y-4">
           <div className="flex gap-2">
-            {[1, 2, 3].map((i) => (
+            {[1, 2, 3, 4].map((i) => (
               <div key={i} className="h-8 w-20 skeleton-shimmer rounded-full" />
             ))}
           </div>

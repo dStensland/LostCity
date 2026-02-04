@@ -11,7 +11,30 @@ export const size = {
 export const contentType = "image/png";
 
 export default async function Image({ params }: { params: { id: string } }) {
-  const event = await getEventById(parseInt(params.id, 10));
+  const eventId = parseInt(params.id, 10);
+  if (isNaN(eventId)) {
+    return new ImageResponse(
+      (
+        <div
+          style={{
+            display: "flex",
+            width: "100%",
+            height: "100%",
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: "#0D0D10",
+            color: "#F5F5DC",
+            fontFamily: "system-ui",
+          }}
+        >
+          <span style={{ fontSize: 48 }}>Invalid Event ID</span>
+        </div>
+      ),
+      size
+    );
+  }
+
+  const event = await getEventById(eventId);
 
   if (!event) {
     return new ImageResponse(

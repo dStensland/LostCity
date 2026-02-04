@@ -1,17 +1,21 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextRequest } from "next/server";
 import { getLocalDateString } from "@/lib/formats";
-import { applyRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
+import { applyRateLimit, RATE_LIMITS, getClientIdentifier} from "@/lib/rate-limit";
+import { isValidUUID } from "@/lib/api-utils";
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ slug: string }> }
 ) {
-  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.read);
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.read, getClientIdentifier(request));
   if (rateLimitResult) return rateLimitResult;
 
   const { slug } = await params;
-  const portalId = request.nextUrl.searchParams.get("portal_id");
+  const portalIdParam = request.nextUrl.searchParams.get("portal_id");
+
+  // Validate portal_id to prevent PostgREST filter injection
+  const portalId = portalIdParam && isValidUUID(portalIdParam) ? portalIdParam : null;
 
   if (!slug) {
     return Response.json({ error: "Invalid slug" }, { status: 400 });
@@ -103,5 +107,9 @@ export async function GET(
     series: seriesData,
     events: events,
     venueShowtimes,
+  }, {
+    headers: {
+      "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600"
+    }
   });
 }

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import Logo from "@/components/Logo";
 
 interface FooterLink {
@@ -43,8 +44,7 @@ export default function PageFooter({
           {showLostCityLogo ? (
             <Logo size="md" href={undefined} />
           ) : logoUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={logoUrl} alt="" className="h-8 mx-auto object-contain" />
+            <Image src={logoUrl} alt="" width={120} height={32} className="h-8 mx-auto object-contain" />
           ) : null}
           <p className="font-serif text-[var(--muted)] mt-1">
             {tagline || `Find your people in ${cityName}`}

@@ -1,11 +1,13 @@
 import { NextResponse } from "next/server";
 import { createClient, getUser } from "@/lib/supabase/server";
-import { applyRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
+import { applyRateLimit, RATE_LIMITS, getClientIdentifier} from "@/lib/rate-limit";
+import { errorResponse } from "@/lib/api-utils";
+import { logger } from "@/lib/logger";
 
 type HideReason = "not_interested" | "seen_enough" | "wrong_category" | null;
 
 export async function POST(request: Request) {
-  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write);
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
   if (rateLimitResult) return rateLimitResult;
 
   try {
@@ -39,7 +41,7 @@ export async function POST(request: Request) {
     );
 
     if (error) {
-      console.error("Error hiding event:", error);
+      logger.error("Error hiding event:", error);
       return NextResponse.json(
         { error: "Failed to hide event" },
         { status: 500 }
@@ -52,14 +54,12 @@ export async function POST(request: Request) {
       event_id,
     });
   } catch (err) {
-    console.error("Hide event API error:", err);
-    const message = err instanceof Error ? err.message : String(err);
-    return NextResponse.json({ error: message }, { status: 500 });
+    return errorResponse(err, "POST /api/events/hide");
   }
 }
 
 export async function DELETE(request: Request) {
-  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write);
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
   if (rateLimitResult) return rateLimitResult;
 
   try {
@@ -87,7 +87,7 @@ export async function DELETE(request: Request) {
       .eq("event_id", parseInt(eventId, 10));
 
     if (error) {
-      console.error("Error unhiding event:", error);
+      logger.error("Error unhiding event:", error);
       return NextResponse.json(
         { error: "Failed to unhide event" },
         { status: 500 }
@@ -100,8 +100,6 @@ export async function DELETE(request: Request) {
       event_id: parseInt(eventId, 10),
     });
   } catch (err) {
-    console.error("Unhide event API error:", err);
-    const message = err instanceof Error ? err.message : String(err);
-    return NextResponse.json({ error: message }, { status: 500 });
+    return errorResponse(err, "DELETE /api/events/hide");
   }
 }

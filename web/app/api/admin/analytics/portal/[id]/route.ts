@@ -39,7 +39,7 @@ export async function GET(request: NextRequest, { params }: Props) {
   // Parse query params
   const searchParams = request.nextUrl.searchParams;
   const daysParam = searchParams.get("days");
-  const days = daysParam ? parseInt(daysParam, 10) : 30;
+  const days = Math.min(Math.max(parseInt(daysParam || "30", 10) || 30, 1), 365);
 
   const startDate = new Date();
   startDate.setDate(startDate.getDate() - days);

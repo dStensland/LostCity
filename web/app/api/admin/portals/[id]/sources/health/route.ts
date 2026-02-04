@@ -1,6 +1,7 @@
 import { isAdmin, canManagePortal } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/service";
+import { logger } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
 
@@ -94,7 +95,7 @@ export async function GET(request: NextRequest, { params }: Props) {
     .order("name");
 
   if (ownedError) {
-    console.error("Error fetching owned sources:", ownedError);
+    logger.error("Error fetching owned sources:", ownedError);
     return NextResponse.json({ error: "Failed to fetch owned sources" }, { status: 500 });
   }
 
@@ -114,7 +115,7 @@ export async function GET(request: NextRequest, { params }: Props) {
     .eq("is_active", true);
 
   if (subsError) {
-    console.error("Error fetching subscriptions:", subsError);
+    logger.error("Error fetching subscriptions:", subsError);
     return NextResponse.json({ error: "Failed to fetch subscriptions" }, { status: 500 });
   }
 

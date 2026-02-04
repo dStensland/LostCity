@@ -229,7 +229,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "start_time": start_time,
                         "end_date": end_date,
                         "end_time": None,
-                        "is_all_day": start_time is None,
+                        "is_all_day": False,
                         "category": "theater",
                         "subcategory": None,
                         "tags": ["theater", "lgbtq", "performing-arts"],

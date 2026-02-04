@@ -1,6 +1,6 @@
 import { getEventById, getRelatedEvents } from "@/lib/supabase";
 import { getNearbySpots, getSpotTypeLabel } from "@/lib/spots";
-import { getPortalBySlug } from "@/lib/portal";
+import { getCachedPortalBySlug } from "@/lib/portal";
 import { getSeriesTypeLabel, getSeriesTypeColor } from "@/lib/series";
 import Image from "next/image";
 import CategoryIcon, { getCategoryColor } from "@/components/CategoryIcon";
@@ -17,7 +17,7 @@ import type { Metadata } from "next";
 import DirectionsDropdown from "@/components/DirectionsDropdown";
 import VenueVibes from "@/components/VenueVibes";
 import LinkifyText from "@/components/LinkifyText";
-import { formatTimeSplit, formatPriceDetailed } from "@/lib/formats";
+import { formatTimeSplit, formatPriceDetailed, safeJsonLd } from "@/lib/formats";
 import VenueTagList from "@/components/VenueTagList";
 import FlagButton from "@/components/FlagButton";
 import LiveIndicator from "@/components/LiveIndicator";
@@ -45,7 +45,7 @@ type Props = {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id, portal: portalSlug } = await params;
   const event = await getEventById(parseInt(id, 10));
-  const portal = await getPortalBySlug(portalSlug);
+  const portal = await getCachedPortalBySlug(portalSlug);
 
   if (!event) {
     return {
@@ -218,7 +218,7 @@ function parseRecurrenceRule(rule: string | null | undefined): string | null {
 export default async function PortalEventPage({ params }: Props) {
   const { id, portal: portalSlug } = await params;
   const event = await getEventById(parseInt(id, 10));
-  const portal = await getPortalBySlug(portalSlug);
+  const portal = await getCachedPortalBySlug(portalSlug);
 
   if (!event) {
     notFound();
@@ -256,7 +256,7 @@ export default async function PortalEventPage({ params }: Props) {
       {/* Schema.org JSON-LD */}
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(eventSchema) }}
+        dangerouslySetInnerHTML={{ __html: safeJsonLd(eventSchema) }}
       />
 
       {/* Portal-specific theming */}

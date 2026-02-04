@@ -1,12 +1,16 @@
 import { NextResponse } from "next/server";
 import { createClient, getUser } from "@/lib/supabase/server";
 import { errorResponse } from "@/lib/api-utils";
+import { applyRateLimit, RATE_LIMITS, getClientIdentifier} from "@/lib/rate-limit";
 
 // GET /api/invites/[id] - Get a single invite
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.read, getClientIdentifier(request));
+  if (rateLimitResult) return rateLimitResult;
+
   const { id } = await params;
 
   const user = await getUser();
@@ -24,6 +28,8 @@ export async function GET(
       status,
       created_at,
       responded_at,
+      inviter_id,
+      invitee_id,
       inviter:profiles!event_invites_inviter_id_fkey (
         id, username, display_name, avatar_url
       ),
@@ -46,6 +52,13 @@ export async function GET(
     return NextResponse.json({ error: "Invite not found" }, { status: 404 });
   }
 
+  const inviteData = invite as { inviter_id: string; invitee_id: string; [key: string]: unknown };
+
+  // Verify ownership - user must be either inviter or invitee
+  if (inviteData.inviter_id !== user.id && inviteData.invitee_id !== user.id) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
   return NextResponse.json({ invite });
 }
 
@@ -54,6 +67,9 @@ export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
+  if (rateLimitResult) return rateLimitResult;
+
   const { id } = await params;
 
   const user = await getUser();
@@ -116,6 +132,9 @@ export async function DELETE(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
+  if (rateLimitResult) return rateLimitResult;
+
   const { id } = await params;
 
   const user = await getUser();

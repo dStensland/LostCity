@@ -1,7 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { applyRateLimit, RATE_LIMITS, getClientIdentifier} from "@/lib/rate-limit";
+import { logger } from "@/lib/logger";
 
 export const runtime = "edge";
+
+/**
+ * Timing-safe string comparison to prevent timing attacks.
+ * Edge-compatible implementation using constant-time comparison.
+ */
+function timingSafeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) {
+    return false;
+  }
+  let result = 0;
+  for (let i = 0; i < a.length; i++) {
+    result |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  }
+  return result === 0;
+}
 
 /**
  * Internal API for resolving custom domains to portal slugs.
@@ -11,13 +28,17 @@ export const runtime = "edge";
  * (checked via x-internal-secret header).
  */
 export async function GET(request: NextRequest) {
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.standard, getClientIdentifier(request));
+  if (rateLimitResult) return rateLimitResult;
+
   const supabase = await createClient();
 
   // Verify this is an internal request using shared secret
   const internalSecret = request.headers.get("x-internal-secret");
   const expectedSecret = process.env.INTERNAL_API_SECRET;
 
-  if (!expectedSecret || internalSecret !== expectedSecret) {
+  // Use timing-safe comparison to prevent timing attacks
+  if (!expectedSecret || !internalSecret || !timingSafeEqual(internalSecret, expectedSecret)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -40,7 +61,7 @@ export async function GET(request: NextRequest) {
     .maybeSingle();
 
   if (error) {
-    console.error("Error resolving custom domain:", error);
+    logger.error("Error resolving custom domain:", error);
     return NextResponse.json({ slug: null });
   }
 

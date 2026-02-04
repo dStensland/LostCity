@@ -4,7 +4,8 @@ import { getDistanceMiles } from "@/lib/geo";
 import { doTimeRangesOverlap, isSpotOpenDuringEvent, HoursData } from "@/lib/hours";
 import { getLocalDateString } from "@/lib/formats";
 import { logger } from "@/lib/logger";
-import { applyRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
+import { applyRateLimit, RATE_LIMITS, getClientIdentifier} from "@/lib/rate-limit";
+import { DESTINATION_CATEGORIES } from "@/lib/spots";
 
 const NEARBY_RADIUS_MILES = 10;
 
@@ -12,7 +13,7 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.read);
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.read, getClientIdentifier(request));
   if (rateLimitResult) return rateLimitResult;
 
   const { id } = await params;
@@ -91,7 +92,8 @@ export async function GET(
       `)
       .eq("start_date", eventData.start_date)
       .neq("id", eventId)
-      .order("start_time", { ascending: true });
+      .order("start_time", { ascending: true })
+      .limit(20);
 
     if (sameDateEvents) {
       // Filter by distance and time overlap
@@ -138,15 +140,6 @@ export async function GET(
 
     nearbyEvents = sameDateEvents || [];
   }
-
-  // Destination category mappings for venues
-  const DESTINATION_CATEGORIES: Record<string, string[]> = {
-    food: ["restaurant", "food_hall", "cooking_school"],
-    drinks: ["bar", "brewery", "distillery", "winery", "rooftop", "sports_bar"],
-    nightlife: ["club"],
-    caffeine: ["coffee_shop"],
-    fun: ["games", "eatertainment", "arcade", "karaoke"],
-  };
 
   type NearbyDestination = {
     id: number;
@@ -213,7 +206,7 @@ export async function GET(
         let category: string | null = null;
 
         for (const [cat, types] of Object.entries(DESTINATION_CATEGORIES)) {
-          if (types.includes(venueType)) {
+          if ((types as readonly string[]).includes(venueType)) {
             category = cat;
             break;
           }
@@ -243,7 +236,8 @@ export async function GET(
       .select("id, name, slug, venue_type, neighborhood, lat, lng, hours")
       .in("venue_type", allDestinationTypes)
       .eq("active", true)
-      .neq("id", eventData.venue?.id || 0);
+      .neq("id", eventData.venue?.id || 0)
+      .limit(50);
 
     if (spots) {
       for (const spot of spots) {
@@ -277,7 +271,7 @@ export async function GET(
         let category: string | null = null;
 
         for (const [cat, types] of Object.entries(DESTINATION_CATEGORIES)) {
-          if (types.includes(venueType)) {
+          if ((types as readonly string[]).includes(venueType)) {
             category = cat;
             break;
           }

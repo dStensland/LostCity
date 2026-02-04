@@ -1,5 +1,5 @@
 import { supabase, Event } from "./supabase";
-import { PortalFilters } from "./portals";
+import type { PortalFilters } from "./portal-context";
 import { getLocalDateString } from "@/lib/formats";
 
 export interface PaginatedResult {

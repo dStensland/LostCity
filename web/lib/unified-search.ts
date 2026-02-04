@@ -9,6 +9,7 @@
 import { createServiceClient } from "./supabase/service";
 import { analyzeQueryIntent, applyIntentBoost, type QueryIntentResult, type SearchType } from "./query-intent";
 import { getLocalDateString } from "@/lib/formats";
+import { escapeSQLPattern } from "@/lib/api-utils";
 
 // ============================================
 // Types
@@ -625,6 +626,8 @@ async function searchSeries(
 ): Promise<SearchResult[]> {
   try {
     // Build query with trigram similarity
+    // Escape the query to prevent SQL injection in ILIKE pattern
+    const escapedQuery = escapeSQLPattern(query);
     let supabaseQuery = client
       .from("series")
       .select(`
@@ -638,7 +641,7 @@ async function searchSeries(
         is_active
       `)
       .eq("is_active", true)
-      .ilike("title", `%${query}%`)
+      .ilike("title", `%${escapedQuery}%`)
       .limit(options.limit)
       .range(options.offset, options.offset + options.limit - 1);
 
@@ -731,6 +734,8 @@ async function searchLists(
 ): Promise<SearchResult[]> {
   try {
     // Build query
+    // Escape the query to prevent SQL injection in ILIKE pattern
+    const escapedQuery = escapeSQLPattern(query);
     let supabaseQuery = client
       .from("lists")
       .select(`
@@ -745,7 +750,7 @@ async function searchLists(
       `)
       .eq("is_public", true)
       .eq("status", "active")
-      .ilike("title", `%${query}%`)
+      .ilike("title", `%${escapedQuery}%`)
       .limit(options.limit)
       .range(options.offset, options.offset + options.limit - 1);
 

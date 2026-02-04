@@ -1,7 +1,9 @@
 import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 import { NextRequest, NextResponse } from "next/server";
-import { createHash } from "crypto";
+import { createHash, timingSafeEqual } from "crypto";
 import { getLocalDateString } from "@/lib/formats";
+import { applyRateLimit, RATE_LIMITS, getClientIdentifier} from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -34,7 +36,7 @@ type DailyMetric = {
 
 // Validate API key from Authorization header
 async function validateApiKey(request: NextRequest): Promise<{ valid: boolean; portalId: string | null; error?: string }> {
-  const supabase = await createClient();
+  const serviceClient = createServiceClient();
   const authHeader = request.headers.get("Authorization");
 
   if (!authHeader) {
@@ -54,8 +56,8 @@ async function validateApiKey(request: NextRequest): Promise<{ valid: boolean; p
   // Hash the key to compare with stored hash
   const keyHash = createHash("sha256").update(apiKey).digest("hex");
 
-  // Look up the key
-  const { data: keyRecord, error } = await supabase
+  // Look up the key using service client
+  const { data: keyRecord, error } = await serviceClient
     .from("api_keys")
     .select("id, key_hash, portal_id, scopes, is_active, expires_at")
     .eq("key_hash", keyHash)
@@ -79,9 +81,22 @@ async function validateApiKey(request: NextRequest): Promise<{ valid: boolean; p
     return { valid: false, portalId: null, error: "API key lacks analytics:read scope" };
   }
 
+  // Use timing-safe comparison
+  const computedHash = keyHash;
+  const storedHash = key.key_hash;
+
+  const isValid = timingSafeEqual(
+    Buffer.from(computedHash),
+    Buffer.from(storedHash)
+  );
+
+  if (!isValid) {
+    return { valid: false, portalId: null, error: "Invalid API key" };
+  }
+
   // Update last_used_at
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await (supabase as any)
+  await (serviceClient as any)
     .from("api_keys")
     .update({ last_used_at: new Date().toISOString() })
     .eq("id", key.id);
@@ -90,6 +105,10 @@ async function validateApiKey(request: NextRequest): Promise<{ valid: boolean; p
 }
 
 export async function GET(request: NextRequest) {
+  // Apply rate limiting
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.standard, getClientIdentifier(request));
+  if (rateLimitResult) return rateLimitResult;
+
   const supabase = await createClient();
 
   // Validate API key

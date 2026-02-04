@@ -1,6 +1,8 @@
 import { createClient, canManagePortal } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 import { invalidateDomainCache } from "@/lib/domain-cache";
+import { applyRateLimit, RATE_LIMITS, getClientIdentifier} from "@/lib/rate-limit";
+import { logger } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
 
@@ -15,6 +17,9 @@ type Props = {
  * The expected TXT record is: _lostcity-verify.{domain} TXT "portal-id={verification_token}"
  */
 export async function POST(request: NextRequest, { params }: Props) {
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.standard, getClientIdentifier(request));
+  if (rateLimitResult) return rateLimitResult;
+
   const { id } = await params;
 
   // Verify admin or portal owner
@@ -135,7 +140,7 @@ export async function POST(request: NextRequest, { params }: Props) {
       });
     }
   } catch (error) {
-    console.error("DNS verification error:", error);
+    logger.error("DNS verification error:", error);
     return NextResponse.json({
       verified: false,
       error: "DNS lookup failed",

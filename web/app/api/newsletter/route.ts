@@ -1,6 +1,8 @@
-import { NextResponse } from "next/server";
-import { checkBodySize } from "@/lib/api-utils";
+import { checkBodySize, errorResponse, isValidString } from "@/lib/api-utils";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
+import { createServiceClient } from "@/lib/supabase/service";
+import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
 
 export async function POST(request: Request) {
   // Check body size (10KB limit)
@@ -10,31 +12,52 @@ export async function POST(request: Request) {
   // Rate limit to prevent abuse
   const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.auth, getClientIdentifier(request));
   if (rateLimitResult) return rateLimitResult;
-  try {
-    const { email } = await request.json();
 
-    if (!email || typeof email !== "string" || !email.includes("@")) {
+  try {
+    const { email, portal_id, source } = await request.json();
+
+    // Validate email
+    if (!isValidString(email, 3, 255) || !email.includes("@")) {
       return NextResponse.json(
         { error: "Valid email is required" },
         { status: 400 }
       );
     }
 
-    // TODO: Implement actual newsletter subscription
-    // This could integrate with:
-    // - A newsletter_subscribers table in Supabase
-    // - An email service like Mailchimp, ConvertKit, etc.
-    // - A simple email collection system
+    // Normalize email (lowercase, trim)
+    const normalizedEmail = email.toLowerCase().trim();
 
-    // For now, log the subscription attempt and return success
-    console.log(`Newsletter subscription: ${email.toLowerCase().trim()}`);
+    // Basic email format validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(normalizedEmail)) {
+      return NextResponse.json(
+        { error: "Invalid email format" },
+        { status: 400 }
+      );
+    }
+
+    // Store in Supabase using service client (bypasses RLS)
+    const serviceClient = createServiceClient();
+
+    const { error: dbError } = await serviceClient
+      .from("newsletter_subscribers")
+      .upsert({
+        email: normalizedEmail,
+        portal_id: portal_id || null,
+        source: source || "website",
+        subscribed_at: new Date().toISOString(),
+        unsubscribed_at: null, // Re-subscribe if previously unsubscribed
+      } as never, {
+        onConflict: "email",
+      });
+
+    if (dbError) {
+      logger.error("Newsletter subscription DB error:", dbError);
+      return errorResponse(dbError, "POST /api/newsletter");
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Newsletter subscription error:", error);
-    return NextResponse.json(
-      { error: "Failed to subscribe" },
-      { status: 500 }
-    );
+    return errorResponse(error, "POST /api/newsletter");
   }
 }
