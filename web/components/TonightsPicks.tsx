@@ -1,10 +1,12 @@
+"use client";
+
+import { useState, useEffect } from "react";
 import Link from "next/link";
-import { supabase } from "@/lib/supabase";
 import { formatTimeSplit } from "@/lib/formats";
-import { format, startOfDay } from "date-fns";
 import { getCategoryColor } from "@/lib/category-config";
 import CategoryIcon from "./CategoryIcon";
 import CategoryPlaceholder from "./CategoryPlaceholder";
+import FeedSectionHeader from "./feed/FeedSectionHeader";
 
 type TonightEvent = {
   id: number;
@@ -21,84 +23,54 @@ type TonightEvent = {
   } | null;
 };
 
-async function getTonightEvents(): Promise<TonightEvent[]> {
-  try {
-    // Use date-fns format to get local date (not UTC from toISOString)
-    const today = format(startOfDay(new Date()), "yyyy-MM-dd");
-    const now = new Date();
-    const currentHour = now.getHours();
+// Dynamic badge text based on event timing
+function getTimeBadge(startTime: string | null, isAllDay: boolean): { text: string; isNow: boolean } {
+  if (isAllDay || !startTime) return { text: "TODAY", isNow: false };
 
-    // After 4pm, show tonight's events; before 4pm, don't show this section
-    if (currentHour < 16) {
-      return [];
-    }
+  const now = new Date();
+  const [hours, minutes] = startTime.split(":").map(Number);
+  const eventMinutes = hours * 60 + minutes;
+  const nowMinutes = now.getHours() * 60 + now.getMinutes();
+  const diffMinutes = eventMinutes - nowMinutes;
 
-    // Calculate time filter - show events that haven't ended yet
-    // Events are "tonight" if they haven't started yet or started within last 2 hours
-    const currentTime = format(now, "HH:mm:ss");
-    const twoHoursAgo = format(new Date(now.getTime() - 2 * 60 * 60 * 1000), "HH:mm:ss");
-
-    const { data: events, error } = await supabase
-      .from("events")
-      .select(`
-        id,
-        title,
-        start_date,
-        start_time,
-        is_all_day,
-        is_free,
-        category,
-        image_url,
-        venue:venues(name, neighborhood)
-      `)
-      .eq("start_date", today)
-      .is("canonical_event_id", null) // Only show canonical events
-      .is("portal_id", null) // Only show public events
-      // Time filter: show events starting in future or started within last 2 hours, or all-day events
-      .or(`start_time.gte.${twoHoursAgo},is_all_day.eq.true`)
-      .order("start_time", { ascending: true })
-      .limit(30); // Fetch more to allow for category diversity filtering
-
-    if (error || !events) {
-      console.error("Failed to fetch tonight events:", error);
-      return [];
-    }
-
-    // Cast to expected type
-    const typedEvents = events as unknown as TonightEvent[];
-
-    // Diversify by category: pick at most 2 events per category
-    // so the section shows a good mix of music, comedy, film, food, etc.
-    const categoryCount: Record<string, number> = {};
-    const diverse: TonightEvent[] = [];
-    const overflow: TonightEvent[] = [];
-
-    for (const event of typedEvents) {
-      const cat = event.category || "other";
-      const count = categoryCount[cat] || 0;
-      if (count < 2) {
-        diverse.push(event);
-        categoryCount[cat] = count + 1;
-      } else {
-        overflow.push(event);
-      }
-      if (diverse.length >= 6) break;
-    }
-
-    // If we need more, fill from overflow
-    while (diverse.length < 6 && overflow.length > 0) {
-      diverse.push(overflow.shift()!);
-    }
-
-    return diverse;
-  } catch (error) {
-    console.error("Error in getTonightEvents:", error);
-    return [];
+  // Within 2 hours before or 1 hour after start = "NOW"
+  if (diffMinutes <= 120 && diffMinutes >= -60) {
+    return { text: "NOW", isNow: true };
   }
+  // Evening events (6pm+) = "TONIGHT"
+  if (hours >= 18) {
+    return { text: "TONIGHT", isNow: false };
+  }
+  return { text: "TODAY", isNow: false };
 }
 
-export default async function TonightsPicks({ portalSlug }: { portalSlug?: string } = {}) {
-  const events = await getTonightEvents();
+export default function TonightsPicks({ portalSlug }: { portalSlug?: string } = {}) {
+  const [events, setEvents] = useState<TonightEvent[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchEvents() {
+      try {
+        const response = await fetch("/api/tonight");
+        if (!response.ok) {
+          setEvents([]);
+          return;
+        }
+        const data = await response.json();
+        setEvents(data.events || []);
+      } catch (error) {
+        console.error("Failed to fetch tonight events:", error);
+        setEvents([]);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchEvents();
+  }, []);
+
+  if (loading) {
+    return null; // Parent Suspense will show skeleton
+  }
 
   if (events.length === 0) {
     return null;
@@ -119,27 +91,28 @@ export default async function TonightsPicks({ portalSlug }: { portalSlug?: strin
       />
 
       <div className="relative">
-        {/* Section header with improved visual hierarchy */}
-        <div className="flex items-center gap-3 mb-5">
-          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[var(--neon-magenta)] to-[var(--coral)] flex items-center justify-center shadow-lg"
-            style={{ boxShadow: '0 0 20px rgba(232, 85, 160, 0.3)' }}
-          >
-            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              {/* Crescent moon */}
-              <path d="M14.5 3C9.25 3 5 7.25 5 12.5C5 17.75 9.25 22 14.5 22C16.8 22 18.9 21.1 20.5 19.7C15.3 19.2 11.2 14.9 11.2 9.6C11.2 7 12.3 4.6 14.1 3.1C14.2 3 14.4 3 14.5 3Z" fill="white" fillOpacity="0.95"/>
-              {/* Star spark — top right */}
-              <path d="M19 2L19.5 4L21 4.5L19.5 5L19 7L18.5 5L17 4.5L18.5 4L19 2Z" fill="white" fillOpacity="0.9"/>
-              {/* Small diamond spark */}
-              <path d="M22 8L22.3 9.2L23.5 9.5L22.3 9.8L22 11L21.7 9.8L20.5 9.5L21.7 9.2L22 8Z" fill="white" fillOpacity="0.7"/>
-              {/* Tiny dot spark */}
-              <circle cx="16.5" cy="1.5" r="0.8" fill="white" fillOpacity="0.5"/>
+        <FeedSectionHeader
+          title="Today's Highlights"
+          subtitle="Hand-picked for right now"
+          priority="primary"
+          accentColor="var(--neon-amber)"
+          icon={
+            <svg viewBox="0 0 24 24" fill="none" className="w-6 h-6">
+              <path
+                d="M12 2C12 2 6 8 6 14C6 18 8.5 21 12 21C15.5 21 18 18 18 14C18 8 12 2 12 2Z"
+                fill="currentColor"
+                style={{ filter: "drop-shadow(0 0 4px currentColor)" }}
+              />
+              <path
+                d="M12 6C12 6 9 10 9 14C9 16 10 17.5 12 17.5C14 17.5 15 16 15 14C15 10 12 6 12 6Z"
+                fill="var(--void)"
+                opacity="0.3"
+              />
             </svg>
-          </div>
-          <div className="flex-1">
-            <h2 className="font-display text-2xl font-semibold text-[var(--cream)] tracking-tight">Tonight&apos;s Picks</h2>
-            <p className="font-mono text-xs text-[var(--muted)] mt-0.5">Hand-picked for your evening</p>
-          </div>
-        </div>
+          }
+          seeAllHref={portalSlug ? `/${portalSlug}?view=events&date=today` : `/?view=events&date=today`}
+          seeAllLabel="View all"
+        />
 
         {/* Hero card with optimized image loading */}
         <Link
@@ -172,9 +145,18 @@ export default async function TonightsPicks({ portalSlug }: { portalSlug?: strin
           {/* Content */}
           <div className="relative p-5 pt-32">
             <div className="flex items-center gap-2 mb-2">
-              <span className="px-2 py-0.5 rounded-full bg-[var(--neon-magenta)]/30 text-[var(--neon-magenta)] text-[0.65rem] font-mono font-medium backdrop-blur-sm">
-                TONIGHT
-              </span>
+              {(() => {
+                const badge = getTimeBadge(heroEvent.start_time, heroEvent.is_all_day);
+                return (
+                  <span className={`px-2 py-0.5 rounded-full text-[0.65rem] font-mono font-medium backdrop-blur-sm ${
+                    badge.isNow
+                      ? "bg-[var(--neon-red)]/30 text-[var(--neon-red)]"
+                      : "bg-[var(--neon-magenta)]/30 text-[var(--neon-magenta)]"
+                  }`}>
+                    {badge.text}
+                  </span>
+                );
+              })()}
               {heroEvent.category && (
                 <span
                   className="px-2 py-0.5 rounded-full text-[0.65rem] font-mono font-medium"
@@ -238,7 +220,7 @@ export default async function TonightsPicks({ portalSlug }: { portalSlug?: strin
                   } as React.CSSProperties}
                 >
                   <div className="font-mono text-[0.6rem] text-[var(--muted)] mb-1">
-                    {event.start_time ? formatTimeSplit(event.start_time, event.is_all_day).time : "Tonight"}
+                    {event.start_time ? formatTimeSplit(event.start_time, event.is_all_day).time : "Today"}
                   </div>
                   <h4 className="text-sm text-[var(--cream)] font-medium line-clamp-2 group-hover:text-[var(--neon-magenta)] transition-colors mb-1">
                     {event.title}
@@ -254,15 +236,6 @@ export default async function TonightsPicks({ portalSlug }: { portalSlug?: strin
           </div>
         )}
 
-        {/* View all tonight link */}
-        {events.length > 4 && (
-          <Link
-            href={portalSlug ? `/${portalSlug}?view=events&date=today` : `/?view=events&date=today`}
-            className="block mt-4 text-center py-2 rounded-lg border border-[var(--twilight)] text-[var(--muted)] hover:text-[var(--neon-magenta)] hover:border-[var(--neon-magenta)]/30 transition-colors font-mono text-xs"
-          >
-            View all tonight&apos;s events →
-          </Link>
-        )}
       </div>
     </section>
   );

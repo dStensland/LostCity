@@ -3463,6 +3463,35 @@ textarea:focus-visible {
   animation: ping-slow 2.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
+/* Neon flame flicker animations */
+@keyframes flicker {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.95; }
+}
+
+@keyframes flicker-fast {
+  0%, 100% { opacity: 0.8; }
+  25% { opacity: 1; }
+  50% { opacity: 0.9; }
+  75% { opacity: 1; }
+}
+
+.animate-flicker {
+  animation: flicker 3s ease-in-out infinite;
+}
+
+.animate-flicker-fast {
+  animation: flicker-fast 2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-flicker,
+  .animate-flicker-fast,
+  .animate-pulse-slow {
+    animation: none;
+  }
+}
+
 /* ============================================
    SECTION HEADER HIERARCHY
    ============================================ */
