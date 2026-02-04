@@ -1,5 +1,5 @@
-import { describe, it, expect } from '@jest/globals';
-import { apiResponse, successResponse, createdResponse, errorApiResponse, API_VERSION } from './api-utils';
+import { describe, it, expect } from "vitest";
+import { apiResponse, successResponse, createdResponse, errorApiResponse, API_VERSION } from "./api-utils";
 
 describe('API Versioning', () => {
   describe('apiResponse', () => {

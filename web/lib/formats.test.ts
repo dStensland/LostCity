@@ -9,6 +9,7 @@ import {
   formatSmartDate,
   getLocalDateString,
   getLocalDateStringOffset,
+  safeJsonLd,
 } from "./formats";
 
 describe("formats", () => {
@@ -44,7 +45,7 @@ describe("formats", () => {
     });
 
     it("handles all-day events", () => {
-      expect(formatTimeSplit("09:00", true)).toEqual({ time: "ALL", period: "DAY" });
+      expect(formatTimeSplit("09:00", true)).toEqual({ time: "All Day", period: "" });
     });
 
     it("handles missing time", () => {
@@ -243,6 +244,79 @@ describe("formats", () => {
     it("handles negative offset", () => {
       expect(getLocalDateStringOffset(-1)).toBe("2024-01-14");
       expect(getLocalDateStringOffset(-15)).toBe("2023-12-31");
+    });
+  });
+
+  describe("safeJsonLd", () => {
+    it("stringifies object to JSON", () => {
+      const schema = { "@type": "Event", name: "Concert" };
+      const result = safeJsonLd(schema);
+      expect(result).toBe('{"@type":"Event","name":"Concert"}');
+    });
+
+    it("escapes closing script tags to prevent XSS", () => {
+      const schema = {
+        "@type": "Event",
+        description: "Show ends with </script><script>alert('xss')</script>",
+      };
+      const result = safeJsonLd(schema);
+      expect(result).toContain("<\\/script>");
+      expect(result).not.toContain("</script>");
+    });
+
+    it("escapes multiple closing script tags", () => {
+      const schema = {
+        text: "</script></script></SCRIPT>",
+      };
+      const result = safeJsonLd(schema);
+      const scriptTags = result.match(/<\/script>/gi);
+      expect(scriptTags).toBe(null); // No unescaped closing tags
+      expect(result).toContain("<\\/script>");
+    });
+
+    it("handles case-insensitive script tag matching", () => {
+      const schema = {
+        text: "</SCRIPT></Script></script>",
+      };
+      const result = safeJsonLd(schema);
+      expect(result).not.toMatch(/<\/script>/i);
+      expect(result).toContain("<\\/");
+    });
+
+    it("preserves other HTML tags", () => {
+      const schema = {
+        description: "Event with <b>bold</b> and <i>italic</i> text",
+      };
+      const result = safeJsonLd(schema);
+      expect(result).toContain("<b>");
+      expect(result).toContain("<i>");
+    });
+
+    it("handles nested objects", () => {
+      const schema = {
+        "@type": "Event",
+        location: {
+          "@type": "Place",
+          name: "Venue with </script> in name",
+        },
+      };
+      const result = safeJsonLd(schema);
+      expect(result).not.toContain("</script>");
+      expect(result).toContain("<\\/script>");
+    });
+
+    it("handles empty objects", () => {
+      const result = safeJsonLd({});
+      expect(result).toBe("{}");
+    });
+
+    it("handles arrays", () => {
+      const schema = {
+        events: ["Event 1 </script>", "Event 2"],
+      };
+      const result = safeJsonLd(schema);
+      expect(result).not.toContain("</script>");
+      expect(result).toContain("<\\/script>");
     });
   });
 });

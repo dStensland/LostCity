@@ -18,7 +18,15 @@ import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from importlib import import_module
 
-from db import get_active_sources, get_source_by_slug, create_crawl_log, update_crawl_log, refresh_available_filters
+from db import (
+    get_active_sources,
+    get_source_by_slug,
+    create_crawl_log,
+    update_crawl_log,
+    refresh_available_filters,
+    reset_validation_stats,
+    get_validation_stats,
+)
 from utils import setup_logging
 from circuit_breaker import should_skip_source, get_all_circuit_states
 from fetch_logos import fetch_logos
@@ -776,24 +784,43 @@ def run_source(slug: str, skip_circuit_breaker: bool = False) -> bool:
     logger.info(f"Starting crawl for: {source['name']}")
     log_id = create_crawl_log(source["id"])
 
+    # Reset validation stats for this source
+    reset_validation_stats()
+
     # Record start in health tracker
     health_run_id = health_record_start(slug)
 
     try:
         found, new, updated = run_crawler(source)
+
+        # Get validation statistics
+        stats = get_validation_stats()
+        rejected = stats.rejected
+
         update_crawl_log(
             log_id,
             status="success",
             events_found=found,
             events_new=new,
-            events_updated=updated
+            events_updated=updated,
+            events_rejected=rejected
         )
         # Record success in health tracker
         health_record_success(health_run_id, found, new, updated)
-        logger.info(
-            f"Completed {source['name']}: "
-            f"{found} found, {new} new, {updated} updated"
-        )
+
+        # Log summary with validation stats
+        summary_parts = [f"{found} found, {new} new, {updated} updated"]
+        if rejected > 0:
+            summary_parts.append(f"{rejected} rejected")
+        if stats.warnings > 0:
+            summary_parts.append(f"{stats.warnings} warnings")
+
+        logger.info(f"Completed {source['name']}: {', '.join(summary_parts)}")
+
+        # Log detailed validation stats if there were issues
+        if rejected > 0 or stats.warnings > 0:
+            logger.info(f"Validation details for {source['name']}:\n{stats.get_summary()}")
+
         return True
 
     except Exception as e:
@@ -877,9 +904,10 @@ def run_all_sources(parallel: bool = True, max_workers: int = MAX_WORKERS, adapt
     success = sum(1 for v in results.values() if v)
     failed = len(results) - success
     logger.info(
-        f"Crawl complete: {success} succeeded, {failed} failed, "
+        f"Crawl complete: {success} sources succeeded, {failed} failed, "
         f"{len(skipped_sources)} circuit-breaker skipped"
     )
+    logger.info("Note: Per-source validation statistics are logged above for each crawler.")
 
     # Refresh available filters for UI
     logger.info("Refreshing available filters...")

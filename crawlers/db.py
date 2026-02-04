@@ -7,8 +7,8 @@ import re
 import time
 import logging
 import functools
-from datetime import datetime
-from typing import Optional
+from datetime import datetime, timedelta
+from typing import Optional, Tuple
 from supabase import create_client, Client
 from config import get_config
 from tag_inference import infer_tags, infer_is_class
@@ -18,6 +18,59 @@ from posters import get_metadata_for_film_event
 from artist_images import get_info_for_music_event
 
 logger = logging.getLogger(__name__)
+
+
+# ===== VALIDATION STATISTICS TRACKING =====
+class ValidationStats:
+    """Track validation statistics during a crawl run."""
+    def __init__(self):
+        self.total_validated = 0
+        self.passed = 0
+        self.rejected = 0
+        self.warnings = 0
+        self.rejection_reasons = {}
+        self.warning_types = {}
+
+    def record_rejection(self, reason: str):
+        self.rejected += 1
+        self.rejection_reasons[reason] = self.rejection_reasons.get(reason, 0) + 1
+
+    def record_warning(self, warning_type: str):
+        self.warnings += 1
+        self.warning_types[warning_type] = self.warning_types.get(warning_type, 0) + 1
+
+    def record_pass(self):
+        self.passed += 1
+
+    def get_summary(self) -> str:
+        """Get a human-readable summary of validation stats."""
+        lines = [
+            f"Validation: {self.passed} passed, {self.rejected} rejected, {self.warnings} warnings"
+        ]
+        if self.rejection_reasons:
+            lines.append("Rejections:")
+            for reason, count in sorted(self.rejection_reasons.items(), key=lambda x: -x[1]):
+                lines.append(f"  - {reason}: {count}")
+        if self.warning_types:
+            lines.append("Warnings:")
+            for wtype, count in sorted(self.warning_types.items(), key=lambda x: -x[1]):
+                lines.append(f"  - {wtype}: {count}")
+        return "\n".join(lines)
+
+
+# Global validation stats (reset at start of each crawl run)
+_validation_stats = ValidationStats()
+
+
+def reset_validation_stats():
+    """Reset validation statistics for a new crawl run."""
+    global _validation_stats
+    _validation_stats = ValidationStats()
+
+
+def get_validation_stats() -> ValidationStats:
+    """Get current validation statistics."""
+    return _validation_stats
 
 _client: Optional[Client] = None
 
@@ -198,6 +251,175 @@ def get_venue_by_slug(slug: str) -> Optional[dict]:
     return None
 
 
+# ===== DATA VALIDATION FUNCTIONS =====
+
+def sanitize_text(text: str) -> str:
+    """
+    Sanitize text field by:
+    - Stripping whitespace
+    - Removing HTML tags
+    - Normalizing whitespace (collapse multiple spaces/newlines)
+    """
+    if not text:
+        return text
+
+    # Strip leading/trailing whitespace
+    text = text.strip()
+
+    # Remove HTML tags
+    text = re.sub(r'<[^>]+>', '', text)
+
+    # Normalize whitespace - collapse multiple spaces
+    text = re.sub(r'\s+', ' ', text)
+
+    # Collapse multiple newlines (preserve intentional line breaks)
+    text = re.sub(r'\n\s*\n\s*\n+', '\n\n', text)
+
+    return text.strip()
+
+
+def validate_event(event_data: dict) -> Tuple[bool, Optional[str], list[str]]:
+    """
+    Validate event data before insertion into database.
+
+    Returns:
+        Tuple of (is_valid, rejection_reason, warnings)
+        - is_valid: True if event should be inserted, False if rejected
+        - rejection_reason: If rejected, the reason why (for logging)
+        - warnings: List of non-fatal issues found (event can still be inserted)
+
+    Required fields (reject if missing or invalid):
+    - title: non-empty string, max 500 chars
+    - start_date: valid date string (YYYY-MM-DD)
+    - source_id: must be present
+
+    Data quality checks (log warning but still insert):
+    - start_date should not be more than 1 year in future
+    - start_date should not be more than 1 day in past
+    - title should not be all-caps (fix it)
+    - description should be under 5000 chars (truncate)
+    - price_min/price_max should be reasonable (0-10000)
+    """
+    global _validation_stats
+    _validation_stats.total_validated += 1
+
+    warnings = []
+
+    # ===== REQUIRED FIELD CHECKS =====
+
+    # Check title
+    title = event_data.get("title", "")
+    if not title or not title.strip():
+        _validation_stats.record_rejection("missing_title")
+        return False, "Missing or empty title", warnings
+
+    title = title.strip()
+
+    if len(title) > 500:
+        _validation_stats.record_rejection("title_too_long")
+        return False, f"Title exceeds 500 characters ({len(title)} chars)", warnings
+
+    # Check start_date
+    start_date = event_data.get("start_date")
+    if not start_date:
+        _validation_stats.record_rejection("missing_start_date")
+        return False, "Missing start_date", warnings
+
+    # Validate date format
+    try:
+        date_obj = datetime.strptime(start_date, "%Y-%m-%d")
+    except (ValueError, TypeError):
+        _validation_stats.record_rejection("invalid_date_format")
+        return False, f"Invalid date format: {start_date} (expected YYYY-MM-DD)", warnings
+
+    # Check source_id
+    if not event_data.get("source_id"):
+        _validation_stats.record_rejection("missing_source_id")
+        return False, "Missing source_id", warnings
+
+    # ===== DATA QUALITY CHECKS (warnings only) =====
+
+    today = datetime.now().date()
+    event_date = date_obj.date()
+
+    # Check if date is too far in future (more than 1 year)
+    if event_date > today + timedelta(days=365):
+        warnings.append(f"Date is more than 1 year in future: {start_date}")
+        _validation_stats.record_warning("future_date")
+
+    # Check if date is in the past (more than 1 day ago)
+    if event_date < today - timedelta(days=1):
+        warnings.append(f"Date is in the past: {start_date}")
+        _validation_stats.record_warning("past_date")
+
+    # Check for all-caps title (likely extraction artifact)
+    if title.isupper() and len(title) > 5:
+        # Title-case it
+        event_data["title"] = title.title()
+        warnings.append(f"All-caps title converted to title case")
+        _validation_stats.record_warning("all_caps_title")
+
+    # Check description length
+    description = event_data.get("description")
+    if description and len(description) > 5000:
+        event_data["description"] = description[:4997] + "..."
+        warnings.append(f"Description truncated from {len(description)} to 5000 chars")
+        _validation_stats.record_warning("description_truncated")
+
+    # Check price ranges
+    price_min = event_data.get("price_min")
+    price_max = event_data.get("price_max")
+
+    if price_min is not None:
+        try:
+            price_min_val = float(price_min)
+            if price_min_val < 0 or price_min_val > 10000:
+                warnings.append(f"price_min out of range: {price_min_val}")
+                _validation_stats.record_warning("invalid_price_min")
+                event_data["price_min"] = None
+        except (ValueError, TypeError):
+            warnings.append(f"Invalid price_min: {price_min}")
+            _validation_stats.record_warning("invalid_price_min")
+            event_data["price_min"] = None
+
+    if price_max is not None:
+        try:
+            price_max_val = float(price_max)
+            if price_max_val < 0 or price_max_val > 10000:
+                warnings.append(f"price_max out of range: {price_max_val}")
+                _validation_stats.record_warning("invalid_price_max")
+                event_data["price_max"] = None
+        except (ValueError, TypeError):
+            warnings.append(f"Invalid price_max: {price_max}")
+            _validation_stats.record_warning("invalid_price_max")
+            event_data["price_max"] = None
+
+    # ===== SANITIZATION (fix and insert) =====
+
+    # Sanitize title
+    sanitized_title = sanitize_text(title)
+    if sanitized_title != title:
+        event_data["title"] = sanitized_title
+        _validation_stats.record_warning("title_sanitized")
+
+    # Sanitize description
+    if description:
+        sanitized_desc = sanitize_text(description)
+        if sanitized_desc != description:
+            event_data["description"] = sanitized_desc
+            _validation_stats.record_warning("description_sanitized")
+
+    # Sanitize venue name if present
+    if "venue_name" in event_data and event_data["venue_name"]:
+        sanitized_venue = sanitize_text(event_data["venue_name"])
+        if sanitized_venue != event_data["venue_name"]:
+            event_data["venue_name"] = sanitized_venue
+            _validation_stats.record_warning("venue_name_sanitized")
+
+    _validation_stats.record_pass()
+    return True, None, warnings
+
+
 @retry_on_network_error(max_retries=3, base_delay=0.5)
 def validate_event_title(title: str) -> bool:
     """Reject obviously bad event titles (nav elements, descriptions, junk).
@@ -288,7 +510,21 @@ def insert_event(event_data: dict, series_hint: dict = None, genres: list = None
     """Insert a new event with inferred tags, series linking, and genres. Returns event ID."""
     client = get_client()
 
-    # Validate title before inserting
+    # ===== VALIDATION LAYER =====
+    # Validate event data before processing
+    is_valid, rejection_reason, warnings = validate_event(event_data)
+
+    if not is_valid:
+        # Log rejection and skip insertion
+        logger.warning(f"Event rejected: {rejection_reason} - Title: \"{event_data.get('title', 'N/A')[:80]}\"")
+        raise ValueError(f"Event validation failed: {rejection_reason}")
+
+    # Log warnings if any
+    if warnings:
+        for warning in warnings:
+            logger.debug(f"Event validation warning: {warning} - Title: \"{event_data.get('title', 'N/A')[:50]}\"")
+
+    # Additional title quality check (existing validation)
     title = event_data.get("title", "")
     if not validate_event_title(title):
         logger.warning(f"Rejected bad title: \"{title[:80]}\"")
@@ -590,18 +826,29 @@ def update_crawl_log(
     events_found: int = 0,
     events_new: int = 0,
     events_updated: int = 0,
+    events_rejected: int = 0,
     error_message: Optional[str] = None
 ) -> None:
     """Update crawl log with results."""
     client = get_client()
-    client.table("crawl_logs").update({
+
+    # Build update data
+    update_data = {
         "completed_at": datetime.utcnow().isoformat(),
         "status": status,
         "events_found": events_found,
         "events_new": events_new,
         "events_updated": events_updated,
-        "error_message": error_message
-    }).eq("id", log_id).execute()
+    }
+
+    # Add events_rejected if provided (column may not exist in older schemas)
+    if events_rejected > 0:
+        update_data["events_rejected"] = events_rejected
+
+    if error_message:
+        update_data["error_message"] = error_message
+
+    client.table("crawl_logs").update(update_data).eq("id", log_id).execute()
 
 
 def refresh_available_filters() -> bool:
