@@ -124,7 +124,10 @@ export default async function PortalPage({ params, searchParams }: Props) {
       />
 
       <main className={findDisplay === "map" && viewMode === "find" ? "" : "max-w-5xl mx-auto px-4 pb-20"}>
-        <Suspense fallback={<DetailViewSkeleton />}>
+        {/* DetailViewRouter handles showing detail views (event, venue, series, org) as overlays.
+            It uses useSearchParams which requires Suspense, but we use a minimal fallback since
+            each content view below has its own appropriate skeleton. */}
+        <Suspense fallback={null}>
           <DetailViewRouter portalSlug={portal.slug}>
             {/* Business portals with a parent_portal_id are white-label portals that show
                 filtered public events, not exclusive events. Only standalone business portals
@@ -135,7 +138,7 @@ export default async function PortalPage({ params, searchParams }: Props) {
               return (
                 <>
                   {viewMode === "feed" && (
-                    <>
+                    <Suspense fallback={<FeedSkeleton />}>
                       {/* Template system - select based on portal.page_template */}
                       {portal.page_template === "gallery" ? (
                         <GalleryTemplate portal={portal} />
@@ -145,7 +148,7 @@ export default async function PortalPage({ params, searchParams }: Props) {
                         /* Default template for backwards compatibility */
                         <DefaultTemplate portal={portal} feedTab={feedTab} />
                       )}
-                    </>
+                    </Suspense>
                   )}
 
                   {viewMode === "find" && (
@@ -182,17 +185,6 @@ export default async function PortalPage({ params, searchParams }: Props) {
 }
 
 // Loading skeletons - optimized to prevent layout shift
-function DetailViewSkeleton() {
-  return (
-    <div className="py-6 space-y-4 animate-pulse">
-      <div className="h-6 w-16 skeleton-shimmer rounded" />
-      <div className="aspect-[2/1] skeleton-shimmer rounded-xl" />
-      <div className="h-24 skeleton-shimmer rounded-xl" />
-      <div className="h-48 skeleton-shimmer rounded-xl" />
-    </div>
-  );
-}
-
 function FindViewSkeleton() {
   return (
     <div className="py-6 space-y-4">
@@ -225,6 +217,37 @@ function CommunityViewSkeleton() {
       <div className="space-y-3 mt-6">
         {[1, 2, 3, 4].map((i) => (
           <div key={i} className="h-32 skeleton-shimmer rounded-xl" />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function FeedSkeleton() {
+  return (
+    <div className="py-6 space-y-6">
+      {/* Feed tabs skeleton */}
+      <div className="flex gap-1 p-1 bg-[var(--night)] rounded-xl border border-[var(--twilight)]/30 max-w-xs">
+        <div className="flex-1 h-10 skeleton-shimmer rounded-lg" />
+        <div className="flex-1 h-10 skeleton-shimmer rounded-lg" />
+      </div>
+      {/* Live now banner skeleton */}
+      <div className="h-16 skeleton-shimmer rounded-xl" />
+      {/* Tonight's picks skeleton */}
+      <div className="space-y-3">
+        <div className="flex items-center gap-3">
+          <div className="w-12 h-12 skeleton-shimmer rounded-full" />
+          <div className="space-y-2">
+            <div className="h-6 w-40 skeleton-shimmer rounded" />
+            <div className="h-3 w-32 skeleton-shimmer rounded" />
+          </div>
+        </div>
+        <div className="h-48 skeleton-shimmer rounded-xl" />
+      </div>
+      {/* Event cards skeleton */}
+      <div className="space-y-3">
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="h-24 skeleton-shimmer rounded-xl" />
         ))}
       </div>
     </div>
