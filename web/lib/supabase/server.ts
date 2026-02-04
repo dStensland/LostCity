@@ -132,8 +132,10 @@ export async function isAdmin(): Promise<boolean> {
   const user = await getUser();
   if (!user) return false;
 
-  const supabase = await createClient();
-  const { data } = await supabase
+  // Use service client to prevent privilege escalation via RLS
+  const { createServiceClient } = await import("./service");
+  const serviceClient = createServiceClient();
+  const { data } = await serviceClient
     .from("profiles")
     .select("is_admin")
     .eq("id", user.id)

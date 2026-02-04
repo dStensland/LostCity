@@ -1,12 +1,17 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextRequest } from "next/server";
 import { getLocalDateString } from "@/lib/formats";
+import { applyRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ slug: string }> }
 ) {
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.read);
+  if (rateLimitResult) return rateLimitResult;
+
   const { slug } = await params;
+  const portalId = request.nextUrl.searchParams.get("portal_id");
 
   if (!slug) {
     return Response.json({ error: "Invalid slug" }, { status: 400 });
@@ -16,7 +21,7 @@ export async function GET(
 
   // Fetch series data
   const { data: seriesData, error } = await supabase
-    .from("event_series")
+    .from("series")
     .select("*")
     .eq("slug", slug)
     .maybeSingle();
@@ -32,7 +37,7 @@ export async function GET(
   const today = getLocalDateString();
 
   // Fetch upcoming events for this series with venue info
-  const { data: eventsData } = await supabase
+  let eventsQuery = supabase
     .from("events")
     .select(`
       id, title, start_date, start_time, ticket_url,
@@ -43,6 +48,13 @@ export async function GET(
     .order("start_date", { ascending: true })
     .order("start_time", { ascending: true })
     .limit(50);
+
+  // Filter by portal to prevent cross-portal leakage
+  if (portalId) {
+    eventsQuery = eventsQuery.or(`portal_id.eq.${portalId},portal_id.is.null`);
+  }
+
+  const { data: eventsData } = await eventsQuery;
 
   // Group events by venue
   type EventWithVenue = {

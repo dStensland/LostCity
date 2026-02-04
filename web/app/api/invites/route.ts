@@ -5,6 +5,10 @@ import { withAuth } from "@/lib/api-middleware";
 
 // GET /api/invites - Get user's invites
 export const GET = withAuth(async (request, { user, supabase }) => {
+  // Apply rate limiting (read tier - auth-protected read endpoint)
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.read, getClientIdentifier(request));
+  if (rateLimitResult) return rateLimitResult;
+
   const { searchParams } = new URL(request.url);
   const type = searchParams.get("type") || "received"; // received, sent, all
   const status = searchParams.get("status"); // pending, accepted, declined, maybe

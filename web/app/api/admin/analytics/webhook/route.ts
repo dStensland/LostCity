@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 import { createHash } from "crypto";
 import { getLocalDateString } from "@/lib/formats";
@@ -34,6 +34,7 @@ type DailyMetric = {
 
 // Validate API key from Authorization header
 async function validateApiKey(request: NextRequest): Promise<{ valid: boolean; portalId: string | null; error?: string }> {
+  const supabase = await createClient();
   const authHeader = request.headers.get("Authorization");
 
   if (!authHeader) {
@@ -89,6 +90,8 @@ async function validateApiKey(request: NextRequest): Promise<{ valid: boolean; p
 }
 
 export async function GET(request: NextRequest) {
+  const supabase = await createClient();
+
   // Validate API key
   const auth = await validateApiKey(request);
 
@@ -126,7 +129,7 @@ export async function GET(request: NextRequest) {
   // Build query
   let query = supabase
     .from("analytics_daily_portal")
-    .select("*")
+    .select("date, portal_id, event_views, event_rsvps, event_saves, event_shares, new_signups, active_users, events_total, events_created, sources_active, crawl_runs, crawl_success_rate")
     .gte("date", startDate)
     .lte("date", endDate)
     .order("date", { ascending: true });

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient, getUser } from "@/lib/supabase/server";
+import { applyRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 
 type GetFriendIdsResult = { friend_id: string }[];
 
@@ -18,6 +19,9 @@ type FriendRsvp = {
 // GET /api/events/friends-going?event_ids=1,2,3
 // Returns friends going/interested for the given events
 export async function GET(request: Request) {
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.read);
+  if (rateLimitResult) return rateLimitResult;
+
   const user = await getUser();
   if (!user) {
     return NextResponse.json({ friends: {} });

@@ -1,7 +1,9 @@
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/server";
 import { isAdmin } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 import { getLocalDateString } from "@/lib/formats";
+import { adminErrorResponse } from "@/lib/api-utils";
+import { applyRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -39,6 +41,11 @@ type PortalSummary = {
 };
 
 export async function GET(request: NextRequest) {
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write);
+  if (rateLimitResult) return rateLimitResult;
+
+  const supabase = await createClient();
+
   // Verify admin
   if (!(await isAdmin())) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
@@ -62,13 +69,13 @@ export async function GET(request: NextRequest) {
     .order("name");
 
   if (portalsError) {
-    return NextResponse.json({ error: portalsError.message }, { status: 500 });
+    return adminErrorResponse(portalsError, "GET /api/admin/analytics - portals query");
   }
 
   // Build analytics query
   let analyticsQuery = supabase
     .from("analytics_daily_portal")
-    .select("*")
+    .select("date, portal_id, event_views, event_rsvps, event_saves, event_shares, new_signups, active_users, events_total, events_created, sources_active, crawl_runs, crawl_success_rate")
     .gte("date", startDateStr)
     .order("date", { ascending: true });
 
@@ -202,6 +209,7 @@ async function computeMetricsFromSources(
   portalId: string | null,
   portals: Portal[]
 ): Promise<DailyMetric[]> {
+  const supabase = await createClient();
   const metrics: DailyMetric[] = [];
 
   // Get RSVPs by date

@@ -1,6 +1,23 @@
 import { NextResponse } from "next/server";
 import { createClient, getUser } from "@/lib/supabase/server";
 
+// In-memory cache for activity data (simple TTL cache)
+const activityCache = new Map<string, { data: unknown; expiry: number }>();
+const CACHE_TTL_MS = 30_000; // 30 seconds
+
+function getCachedData<T>(key: string): T | null {
+  const cached = activityCache.get(key);
+  if (cached && cached.expiry > Date.now()) {
+    return cached.data as T;
+  }
+  activityCache.delete(key);
+  return null;
+}
+
+function setCachedData(key: string, data: unknown): void {
+  activityCache.set(key, { data, expiry: Date.now() + CACHE_TTL_MS });
+}
+
 // Profile type for user data
 type ProfileData = {
   id: string;
@@ -25,11 +42,11 @@ type VenueData = {
   neighborhood: string | null;
 };
 
-// Target user (simplified profile)
-type TargetUserData = {
-  id: string;
-  username: string;
-  display_name: string | null;
+// Organization type for organization data
+type OrganizationData = {
+  id: number;
+  name: string;
+  slug: string | null;
 };
 
 // Query result types
@@ -41,18 +58,14 @@ type RsvpRow = {
   event: EventData | null;
 };
 
-type UserFollowRow = {
+type FollowRow = {
   id: number;
   created_at: string;
-  user: ProfileData | null;
-  target_user: TargetUserData | null;
-};
-
-type VenueFollowRow = {
-  id: number;
-  created_at: string;
+  followed_venue_id: number | null;
+  followed_organization_id: number | null;
   user: ProfileData | null;
   venue: VenueData | null;
+  organization: OrganizationData | null;
 };
 
 type SavedEventRow = {
@@ -70,14 +83,14 @@ type ActivityItem = {
   user: ProfileData;
   event?: EventData | null;
   venue?: VenueData | null;
-  target_user?: TargetUserData | null;
+  organization?: OrganizationData | null;
   metadata?: {
     status?: string;
   };
 };
 
 // GET /api/dashboard/activity - Get activity from friends
-// Queries actual source tables (follows, rsvps, saved_events) instead of activities table
+// Optimized: Combined follows query, in-memory caching
 // Supports cursor-based pagination for infinite scroll
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -87,6 +100,20 @@ export async function GET(request: Request) {
   const user = await getUser();
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  // Check cache for non-cursor requests (first page)
+  const cacheKey = cursor ? null : `activity:${user.id}:${limit}`;
+  if (cacheKey) {
+    const cached = getCachedData<{
+      activities: ActivityItem[];
+      groupedByEvent: unknown[];
+      nextCursor: string | null;
+      hasMore: boolean;
+    }>(cacheKey);
+    if (cached) {
+      return NextResponse.json(cached);
+    }
   }
 
   const supabase = await createClient();
@@ -103,21 +130,26 @@ export async function GET(request: Request) {
     .filter(Boolean) as string[];
 
   if (friendIds.length === 0) {
-    return NextResponse.json({
+    const emptyResult = {
       activities: [],
       groupedByEvent: [],
       nextCursor: null,
       hasMore: false,
-    });
+    };
+    if (cacheKey) setCachedData(cacheKey, emptyResult);
+    return NextResponse.json(emptyResult);
   }
 
   // Parse cursor (format: timestamp)
   const cursorDate = cursor ? new Date(cursor) : null;
+  const now = new Date(Date.now() + 1000).toISOString();
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+  const fourteenDaysAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString();
 
   // Fetch activities from multiple sources in parallel
-  // Each query applies cursor filter if present
-  const [rsvpsResult, userFollowsResult, venueFollowsResult, savedEventsResult] = await Promise.all([
-    // 1. RSVPs - friends going to events
+  // Optimized: Combined user and venue follows into single query
+  const [rsvpsResult, followsResult, savedEventsResult] = await Promise.all([
+    // 1. RSVPs - friends going to events (main activity source)
     supabase
       .from("event_rsvps")
       .select(`
@@ -125,65 +157,46 @@ export async function GET(request: Request) {
         status,
         created_at,
         user:profiles!event_rsvps_user_id_fkey(id, username, display_name, avatar_url),
-        event:events!event_rsvps_event_id_fkey(
-          id, title, start_date,
-          venue:venues(name)
-        )
+        event:events!event_rsvps_event_id_fkey(id, title, start_date, venue:venues(name))
       `)
       .in("user_id", friendIds)
       .in("status", ["going", "interested"])
-      .gte("created_at", new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()) // Last 30 days
-      .lt("created_at", cursorDate ? cursorDate.toISOString() : new Date(Date.now() + 1000).toISOString())
+      .gte("created_at", thirtyDaysAgo)
+      .lt("created_at", cursorDate ? cursorDate.toISOString() : now)
       .order("created_at", { ascending: false })
       .limit(limit),
 
-    // 2. User follows - friends following other users
+    // 2. Follows - friends following venues OR organizations (exclude user-to-user follows)
     supabase
       .from("follows")
       .select(`
         id,
         created_at,
+        followed_venue_id,
+        followed_organization_id,
         user:profiles!follows_follower_id_fkey(id, username, display_name, avatar_url),
-        target_user:profiles!follows_followed_user_id_fkey(id, username, display_name)
+        venue:venues!follows_followed_venue_id_fkey(id, name, slug, neighborhood),
+        organization:organizations!follows_followed_organization_id_fkey(id, name, slug)
       `)
       .in("follower_id", friendIds)
-      .not("followed_user_id", "is", null)
-      .gte("created_at", new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString()) // Last 14 days
-      .lt("created_at", cursorDate ? cursorDate.toISOString() : new Date(Date.now() + 1000).toISOString())
+      .is("followed_user_id", null) // Exclude user-to-user follows
+      .gte("created_at", fourteenDaysAgo)
+      .lt("created_at", cursorDate ? cursorDate.toISOString() : now)
       .order("created_at", { ascending: false })
-      .limit(20),
+      .limit(30),
 
-    // 3. Venue follows - friends following venues
-    supabase
-      .from("follows")
-      .select(`
-        id,
-        created_at,
-        user:profiles!follows_follower_id_fkey(id, username, display_name, avatar_url),
-        venue:venues!follows_followed_venue_id_fkey(id, name, slug, neighborhood)
-      `)
-      .in("follower_id", friendIds)
-      .not("followed_venue_id", "is", null)
-      .gte("created_at", new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString()) // Last 14 days
-      .lt("created_at", cursorDate ? cursorDate.toISOString() : new Date(Date.now() + 1000).toISOString())
-      .order("created_at", { ascending: false })
-      .limit(20),
-
-    // 4. Saved events - friends saving events
+    // 3. Saved events - friends saving events
     supabase
       .from("saved_events")
       .select(`
         id,
         created_at,
         user:profiles!saved_events_user_id_fkey(id, username, display_name, avatar_url),
-        event:events!saved_events_event_id_fkey(
-          id, title, start_date,
-          venue:venues(name)
-        )
+        event:events!saved_events_event_id_fkey(id, title, start_date, venue:venues(name))
       `)
       .in("user_id", friendIds)
-      .gte("created_at", new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString()) // Last 14 days
-      .lt("created_at", cursorDate ? cursorDate.toISOString() : new Date(Date.now() + 1000).toISOString())
+      .gte("created_at", fourteenDaysAgo)
+      .lt("created_at", cursorDate ? cursorDate.toISOString() : now)
       .order("created_at", { ascending: false })
       .limit(20),
   ]);
@@ -206,33 +219,32 @@ export async function GET(request: Request) {
     }
   }
 
-  // Process user follows
-  if (userFollowsResult.data) {
-    for (const row of userFollowsResult.data) {
-      const follow = row as unknown as UserFollowRow;
-      if (!follow.user || !follow.target_user) continue;
-      activities.push({
-        id: `follow-user-${follow.id}`,
-        activity_type: "follow",
-        created_at: follow.created_at,
-        user: follow.user,
-        target_user: follow.target_user,
-      });
-    }
-  }
+  // Process follows (venue and organization follows only - no user-to-user follows)
+  if (followsResult.data) {
+    for (const row of followsResult.data) {
+      const follow = row as unknown as FollowRow;
+      if (!follow.user) continue;
 
-  // Process venue follows
-  if (venueFollowsResult.data) {
-    for (const row of venueFollowsResult.data) {
-      const follow = row as unknown as VenueFollowRow;
-      if (!follow.user || !follow.venue) continue;
-      activities.push({
-        id: `follow-venue-${follow.id}`,
-        activity_type: "follow",
-        created_at: follow.created_at,
-        user: follow.user,
-        venue: follow.venue,
-      });
+      // Venue follow (destination)
+      if (follow.followed_venue_id && follow.venue) {
+        activities.push({
+          id: `follow-venue-${follow.id}`,
+          activity_type: "follow",
+          created_at: follow.created_at,
+          user: follow.user,
+          venue: follow.venue,
+        });
+      }
+      // Organization follow
+      else if (follow.followed_organization_id && follow.organization) {
+        activities.push({
+          id: `follow-org-${follow.id}`,
+          activity_type: "follow",
+          created_at: follow.created_at,
+          user: follow.user,
+          organization: follow.organization,
+        });
+      }
     }
   }
 
@@ -299,10 +311,17 @@ export async function GET(request: Request) {
     .sort((a, b) => b.latestActivity.localeCompare(a.latestActivity))
     .slice(0, 10);
 
-  return NextResponse.json({
+  const result = {
     activities: limitedActivities,
     groupedByEvent,
     nextCursor,
     hasMore,
-  });
+  };
+
+  // Cache first page results
+  if (cacheKey) {
+    setCachedData(cacheKey, result);
+  }
+
+  return NextResponse.json(result);
 }

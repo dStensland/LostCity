@@ -4,6 +4,7 @@ import { getDistanceMiles } from "@/lib/geo";
 import { doTimeRangesOverlap, isSpotOpenDuringEvent, HoursData } from "@/lib/hours";
 import { getLocalDateString } from "@/lib/formats";
 import { logger } from "@/lib/logger";
+import { applyRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 
 const NEARBY_RADIUS_MILES = 10;
 
@@ -11,6 +12,9 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.read);
+  if (rateLimitResult) return rateLimitResult;
+
   const { id } = await params;
   const eventId = parseInt(id, 10);
 

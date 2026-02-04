@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/server";
 import { startOfMonth, endOfMonth, startOfWeek, endOfWeek, format } from "date-fns";
 import { applyRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 
@@ -18,6 +18,8 @@ import { applyRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
  * - portal_id: Portal ID for filtering (required for portal views)
  */
 export async function GET(request: NextRequest) {
+  const supabase = await createClient();
+
   // Rate limit: expensive endpoint with pagination
   const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.expensive);
   if (rateLimitResult) return rateLimitResult;

@@ -109,13 +109,15 @@ export async function GET(request: NextRequest) {
     // Get display order based on context
     const groupOrder = getGroupDisplayOrder(context);
 
-    // Build response
+    // Build response with facet counts
+    const facets = result.facets ?? [];
     const response = {
       suggestions: rankedResults.slice(0, limit),
       topResults: rankedResults.slice(limit, limit * 2),
       quickActions,
       groupedResults,
       groupOrder,
+      facets,
       intent: result.intent,
     };
 

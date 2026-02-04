@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/server";
 import { applyRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import { getLocalDateString } from "@/lib/formats";
 
@@ -18,6 +18,8 @@ type Organization = {
 };
 
 export async function GET(request: NextRequest) {
+  const supabase = await createClient();
+
   // Rate limit: read endpoint
   const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.read);
   if (rateLimitResult) return rateLimitResult;

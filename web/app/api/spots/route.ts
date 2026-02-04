@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 import { getLocalDateString } from "@/lib/formats";
 import { isOpenAt, type HoursData } from "@/lib/hours";
@@ -6,6 +6,7 @@ import { isOpenAt, type HoursData } from "@/lib/hours";
 export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
+  const supabase = await createClient();
   const { searchParams } = new URL(request.url);
   const portalId = searchParams.get("portal_id");
   const isExclusive = searchParams.get("exclusive") === "true";

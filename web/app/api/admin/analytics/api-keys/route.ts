@@ -1,7 +1,8 @@
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/server";
 import { isAdmin, getUser } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 import { createHash, randomBytes } from "crypto";
+import { adminErrorResponse } from "@/lib/api-utils";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +23,8 @@ type ApiKeyRecord = {
 
 // GET: List all API keys
 export async function GET() {
+  const supabase = await createClient();
+
   // Verify admin
   if (!(await isAdmin())) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
@@ -41,7 +44,7 @@ export async function GET() {
     if (error.code === "42P01") {
       return NextResponse.json({ keys: [], message: "API keys table not yet created. Run migration 038." });
     }
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return adminErrorResponse(error, "GET /api/admin/analytics/api-keys");
   }
 
   // Get portal and creator names
@@ -92,6 +95,8 @@ export async function GET() {
 
 // POST: Create new API key
 export async function POST(request: NextRequest) {
+  const supabase = await createClient();
+
   // Verify admin
   if (!(await isAdmin())) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
@@ -150,7 +155,7 @@ export async function POST(request: NextRequest) {
     if (error.code === "42P01") {
       return NextResponse.json({ error: "API keys table not yet created. Run migration 038." }, { status: 500 });
     }
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return adminErrorResponse(error, "GET /api/admin/analytics/api-keys");
   }
 
   // Return the key record AND the actual key (shown only once)
@@ -163,6 +168,8 @@ export async function POST(request: NextRequest) {
 
 // DELETE: Revoke an API key
 export async function DELETE(request: NextRequest) {
+  const supabase = await createClient();
+
   // Verify admin
   if (!(await isAdmin())) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
@@ -183,7 +190,7 @@ export async function DELETE(request: NextRequest) {
     .eq("id", keyId);
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return adminErrorResponse(error, "GET /api/admin/analytics/api-keys");
   }
 
   return NextResponse.json({ message: "API key revoked successfully" });
@@ -191,6 +198,8 @@ export async function DELETE(request: NextRequest) {
 
 // PATCH: Update an API key (name, scopes, expiry)
 export async function PATCH(request: NextRequest) {
+  const supabase = await createClient();
+
   // Verify admin
   if (!(await isAdmin())) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
@@ -228,7 +237,7 @@ export async function PATCH(request: NextRequest) {
     .maybeSingle();
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return adminErrorResponse(error, "GET /api/admin/analytics/api-keys");
   }
 
   return NextResponse.json({ key: updatedKey });

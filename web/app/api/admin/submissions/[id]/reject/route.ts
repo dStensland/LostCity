@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, isAdmin, getUser } from "@/lib/supabase/server";
 import { isValidUUID, isValidString, adminErrorResponse } from "@/lib/api-utils";
+import { applyRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 
 type Props = {
   params: Promise<{ id: string }>;
@@ -8,6 +9,9 @@ type Props = {
 
 // POST /api/admin/submissions/[id]/reject - Reject a submission
 export async function POST(request: NextRequest, { params }: Props) {
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write);
+  if (rateLimitResult) return rateLimitResult;
+
   const { id } = await params;
 
   if (!isValidUUID(id)) {

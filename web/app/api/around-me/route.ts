@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { applyRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import { getNeighborhoodByName } from "@/config/neighborhoods";
 import { isSpotOpen, VENUE_TYPES_MAP, type VenueType, DESTINATION_CATEGORIES } from "@/lib/spots";
+import { getPortalBySlug } from "@/lib/portal";
 
 export const dynamic = "force-dynamic";
 
@@ -199,6 +200,14 @@ export async function GET(request: NextRequest) {
   const radiusMiles = parseFloat(searchParams.get("radius") || "5");
   const category = searchParams.get("category"); // food, drinks, coffee, music, arts, fun
   const limit = parseInt(searchParams.get("limit") || "50", 10);
+  const portalSlug = searchParams.get("portal");
+
+  // Resolve portal ID for filtering
+  let portalId: string | null = null;
+  if (portalSlug) {
+    const portal = await getPortalBySlug(portalSlug);
+    portalId = portal?.id || null;
+  }
 
   // Determine center point
   let centerLat: number;
@@ -302,6 +311,13 @@ export async function GET(request: NextRequest) {
       .eq("is_live", true)
       .is("canonical_event_id", null)
       .gte("start_date", new Date().toISOString().split("T")[0]);
+
+    // Filter by portal to prevent cross-portal leakage
+    if (portalId) {
+      eventsQuery = eventsQuery.or(`portal_id.eq.${portalId},portal_id.is.null`);
+    } else {
+      eventsQuery = eventsQuery.is("portal_id", null);
+    }
 
     // Filter events by category if specified
     if (categoryFilter && categoryFilter.eventCategories.length > 0) {

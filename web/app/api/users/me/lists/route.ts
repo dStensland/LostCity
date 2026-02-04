@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { applyRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 
 // Type helper for tables not yet in generated types
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -8,6 +9,9 @@ type AnySupabase = SupabaseClient<any, any, any>;
 
 // GET /api/users/me/lists - Get current user's lists with item membership info
 export async function GET(request: NextRequest) {
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.read);
+  if (rateLimitResult) return rateLimitResult;
+
   const supabase = await createClient() as AnySupabase;
 
   // Check auth

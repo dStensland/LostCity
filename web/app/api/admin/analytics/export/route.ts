@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/server";
 import { isAdmin } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 import { getLocalDateString } from "@/lib/formats";
@@ -28,6 +28,8 @@ type Portal = {
 };
 
 export async function GET(request: NextRequest) {
+  const supabase = await createClient();
+
   // Verify admin
   if (!(await isAdmin())) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
@@ -61,7 +63,7 @@ export async function GET(request: NextRequest) {
   // Build query
   let query = supabase
     .from("analytics_daily_portal")
-    .select("*")
+    .select("date, portal_id, event_views, event_rsvps, event_saves, event_shares, new_signups, active_users, events_total, events_created, sources_active, crawl_runs, crawl_success_rate")
     .gte("date", startDate)
     .lte("date", endDate)
     .order("date", { ascending: true })
@@ -204,6 +206,7 @@ async function computeExportMetrics(
   portalId: string | null,
   portals: Portal[]
 ): Promise<DailyMetric[]> {
+  const supabase = await createClient();
   const metrics: DailyMetric[] = [];
 
   // Get RSVPs by date

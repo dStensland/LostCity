@@ -66,7 +66,7 @@ export async function GET(request: NextRequest, { params }: Props) {
     // Try to get sharing rules
     const { data: sharingData } = await supabase
       .from("source_sharing_rules")
-      .select("*")
+      .select("source_id, owner_portal_id, share_scope, allowed_categories, allowed_portal_ids, created_at, updated_at")
       .eq("source_id", sourceId)
       .maybeSingle();
     sharingRule = sharingData || null;
@@ -74,7 +74,7 @@ export async function GET(request: NextRequest, { params }: Props) {
     // Try to get subscriber count
     const { count } = await supabase
       .from("source_subscriptions")
-      .select("*", { count: "exact", head: true })
+      .select("id", { count: "exact", head: true })
       .eq("source_id", sourceId)
       .eq("is_active", true);
     subscriberCount = count || 0;

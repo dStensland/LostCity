@@ -1,9 +1,13 @@
 import { NextResponse } from "next/server";
 import { createClient, getUser } from "@/lib/supabase/server";
+import { applyRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 
 type HideReason = "not_interested" | "seen_enough" | "wrong_category" | null;
 
 export async function POST(request: Request) {
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write);
+  if (rateLimitResult) return rateLimitResult;
+
   try {
     const user = await getUser();
     if (!user) {
@@ -55,6 +59,9 @@ export async function POST(request: Request) {
 }
 
 export async function DELETE(request: Request) {
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write);
+  if (rateLimitResult) return rateLimitResult;
+
   try {
     const user = await getUser();
     if (!user) {

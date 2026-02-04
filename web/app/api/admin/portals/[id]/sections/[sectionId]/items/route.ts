@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { createClient } from "@/lib/supabase/server";
+import { adminErrorResponse } from "@/lib/api-utils";
+import { applyRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 
 async function isAdmin(request: NextRequest): Promise<boolean> {
   const supabase = await createClient();
@@ -15,6 +17,9 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string; sectionId: string }> }
 ) {
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write);
+  if (rateLimitResult) return rateLimitResult;
+
   const { sectionId } = await params;
 
   if (!(await isAdmin(request))) {
@@ -59,7 +64,7 @@ export async function POST(
     .maybeSingle();
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return adminErrorResponse(error, "POST /api/admin/portals/[id]/sections/[sectionId]/items");
   }
 
   return NextResponse.json({ item }, { status: 201 });
@@ -70,6 +75,9 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string; sectionId: string }> }
 ) {
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write);
+  if (rateLimitResult) return rateLimitResult;
+
   const { sectionId } = await params;
   void sectionId; // Section ID validated by path
 
@@ -93,7 +101,7 @@ export async function DELETE(
     .eq("id", itemId);
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return adminErrorResponse(error, "POST /api/admin/portals/[id]/sections/[sectionId]/items");
   }
 
   return NextResponse.json({ success: true });
@@ -104,6 +112,9 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string; sectionId: string }> }
 ) {
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write);
+  if (rateLimitResult) return rateLimitResult;
+
   const { sectionId } = await params;
   void sectionId;
 

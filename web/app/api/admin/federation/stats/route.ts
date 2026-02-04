@@ -1,6 +1,7 @@
 import { isAdmin } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 import { getFederationStats, getSourcesWithOwnership } from "@/lib/federation";
+import { adminErrorResponse } from "@/lib/api-utils";
 
 export const dynamic = "force-dynamic";
 
@@ -58,10 +59,6 @@ export async function GET() {
       sources: sources.slice(0, 50), // Limit to first 50 for dashboard
     });
   } catch (error) {
-    console.error("Federation stats error:", error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to fetch federation stats" },
-      { status: 500 }
-    );
+    return adminErrorResponse(error, "GET /api/admin/federation/stats");
   }
 }

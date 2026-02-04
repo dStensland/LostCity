@@ -18,10 +18,11 @@ type UseLiveEventsResult = {
 };
 
 /**
- * Hook to subscribe to all live events with real-time updates.
+ * Hook to subscribe to live events with real-time updates.
+ * Accepts optional portalSlug to filter events by portal (prevents cross-portal leakage).
  * Automatically refetches when events go live or end.
  */
-export function useLiveEvents(): UseLiveEventsResult {
+export function useLiveEvents(portalSlug?: string): UseLiveEventsResult {
   const [events, setEvents] = useState<LiveEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
@@ -31,7 +32,8 @@ export function useLiveEvents(): UseLiveEventsResult {
 
   const fetchLiveEvents = useCallback(async (signal?: AbortSignal) => {
     try {
-      const response = await fetch("/api/events/live", { signal });
+      const params = portalSlug ? `?portal=${portalSlug}` : "";
+      const response = await fetch(`/api/events/live${params}`, { signal });
       if (!response.ok) throw new Error("Failed to fetch live events");
 
       const data = await response.json();
@@ -52,7 +54,7 @@ export function useLiveEvents(): UseLiveEventsResult {
         setLoading(false);
       }
     }
-  }, []);
+  }, [portalSlug]);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -74,6 +76,7 @@ export function useLiveEvents(): UseLiveEventsResult {
           event: "UPDATE",
           schema: "public",
           table: "events",
+          filter: "is_live=eq.true",
         },
         (payload) => {
           const newData = payload.new as { id: number; is_live?: boolean; title?: string };
@@ -158,6 +161,7 @@ export function useLiveEventCount(): number {
           event: "UPDATE",
           schema: "public",
           table: "events",
+          filter: "is_live=eq.true",
         },
         () => {
           fetchCount();

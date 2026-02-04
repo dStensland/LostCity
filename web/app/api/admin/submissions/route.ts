@@ -1,11 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, isAdmin, getUser } from "@/lib/supabase/server";
 import { isValidEnum, adminErrorResponse } from "@/lib/api-utils";
+import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
 // GET /api/admin/submissions - List all submissions with filtering
 export async function GET(request: NextRequest) {
+  // Apply rate limiting (write tier - admin endpoint)
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
+  if (rateLimitResult) return rateLimitResult;
+
   // Verify admin or get portal admin permissions
   const user = await getUser();
   if (!user) {

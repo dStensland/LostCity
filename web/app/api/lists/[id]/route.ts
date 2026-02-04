@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 
 // Type helper for tables not yet in generated types
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -13,6 +14,10 @@ type RouteContext = {
 
 // GET /api/lists/[id] - Get a single list with items
 export async function GET(request: NextRequest, context: RouteContext) {
+  // Apply rate limiting (read tier - public read endpoint)
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.read, getClientIdentifier(request));
+  if (rateLimitResult) return rateLimitResult;
+
   const supabase = await createClient() as AnySupabase;
   const { id } = await context.params;
 
@@ -118,6 +123,10 @@ export async function GET(request: NextRequest, context: RouteContext) {
 
 // PATCH /api/lists/[id] - Update a list
 export async function PATCH(request: NextRequest, context: RouteContext) {
+  // Apply rate limiting (write tier - updates data)
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
+  if (rateLimitResult) return rateLimitResult;
+
   const supabase = await createClient() as AnySupabase;
   const { id } = await context.params;
 
@@ -180,6 +189,10 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
 
 // DELETE /api/lists/[id] - Delete a list (soft delete)
 export async function DELETE(request: NextRequest, context: RouteContext) {
+  // Apply rate limiting (write tier - deletes data)
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
+  if (rateLimitResult) return rateLimitResult;
+
   const supabase = await createClient() as AnySupabase;
   const { id } = await context.params;
 

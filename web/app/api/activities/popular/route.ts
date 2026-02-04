@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/server";
 import { format, startOfDay, addDays } from "date-fns";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 
@@ -18,11 +18,11 @@ export async function GET(request: NextRequest) {
   if (rateLimitResult) return rateLimitResult;
 
   try {
-    // Use the same supabase client as search to ensure counts match what users see
-    // (respects RLS policies)
-    const client = supabase;
+    // Use per-request client to respect RLS policies
+    const client = await createClient();
     const { searchParams } = new URL(request.url);
     const dateFilter = searchParams.get("date_filter") || "week";
+    const portalId = searchParams.get("portal_id");
 
     // Get current date/time and calculate end date based on filter
     // Use date-fns format to get local date (not UTC from toISOString)
@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
     // Query subcategory counts with same filters as search:
     // - Time filter (hide past events)
     // - Dedup filter (canonical_event_id is null)
-    const { data: subcategoryCounts, error: subError } = await client
+    let subQuery = client
       .from("events")
       .select("subcategory")
       .gte("start_date", today)
@@ -64,12 +64,20 @@ export async function GET(request: NextRequest) {
       .or(timeFilter)
       .not("subcategory", "is", null);
 
+    if (portalId) {
+      subQuery = subQuery.or(`portal_id.eq.${portalId},portal_id.is.null`);
+    } else {
+      subQuery = subQuery.is("portal_id", null);
+    }
+
+    const { data: subcategoryCounts, error: subError } = await subQuery;
+
     if (subError) {
       console.error("Error fetching subcategory counts:", subError);
     }
 
     // Query category counts with same filters
-    const { data: categoryCounts, error: catError } = await client
+    let catQuery = client
       .from("events")
       .select("category, subcategory")
       .gte("start_date", today)
@@ -77,6 +85,14 @@ export async function GET(request: NextRequest) {
       .is("canonical_event_id", null)
       .or(timeFilter)
       .not("category", "is", null);
+
+    if (portalId) {
+      catQuery = catQuery.or(`portal_id.eq.${portalId},portal_id.is.null`);
+    } else {
+      catQuery = catQuery.is("portal_id", null);
+    }
+
+    const { data: categoryCounts, error: catError } = await catQuery;
 
     if (catError) {
       console.error("Error fetching category counts:", catError);

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getPortalBySlug } from "@/lib/portal";
 import { getLocalDateString } from "@/lib/formats";
+import { getChainVenueIds } from "@/lib/chain-venues";
 
 type RouteContext = {
   params: Promise<{ slug: string }>;
@@ -54,9 +55,13 @@ export async function GET(request: NextRequest, context: RouteContext) {
       .not("start_time", "is", null)
       .lte("start_time", currentTimeStr);
 
-    // Filter by portal if not the default portal
+    // Filter by portal to prevent cross-portal leakage
+    // Business portals: show only their events
+    // City portals: show portal events + public (null portal_id) events
     if (portal.portal_type === "business") {
       query = query.eq("portal_id", portal.id);
+    } else {
+      query = query.or(`portal_id.eq.${portal.id},portal_id.is.null`);
     }
 
     // Order by start time
@@ -101,10 +106,25 @@ export async function GET(request: NextRequest, context: RouteContext) {
       return currentMinutes < assumedEndMinutes;
     });
 
-    return NextResponse.json({
-      events: liveEvents,
-      count: liveEvents.length,
-    });
+    // Filter out chain venue events from happening now
+    const chainVenueIds = await getChainVenueIds(supabase);
+    const filteredEvents = chainVenueIds.length > 0
+      ? liveEvents.filter((event: EventRow & { venue?: { id: number } | null }) =>
+          !event.venue || !("id" in event.venue) || !chainVenueIds.includes(event.venue.id)
+        )
+      : liveEvents;
+
+    return NextResponse.json(
+      {
+        events: filteredEvents,
+        count: filteredEvents.length,
+      },
+      {
+        headers: {
+          "Cache-Control": "public, s-maxage=30, stale-while-revalidate=60",
+        },
+      }
+    );
   } catch (error) {
     console.error("Error in happening-now GET:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

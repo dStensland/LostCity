@@ -1,5 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { applyRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
+import { getPortalBySlug } from "@/lib/portal";
+import { getChainVenueIds } from "@/lib/chain-venues";
 
 type LiveEventRow = {
   id: number;
@@ -30,10 +32,21 @@ export async function GET(request: Request) {
   if (rateLimitResult) return rateLimitResult;
 
   try {
+    const { searchParams } = new URL(request.url);
+    const portalSlug = searchParams.get("portal");
+    const portalIdParam = searchParams.get("portal_id");
+
+    // Resolve portal ID from slug or direct ID
+    let portalId: string | null = portalIdParam;
+    if (!portalId && portalSlug) {
+      const portal = await getPortalBySlug(portalSlug);
+      portalId = portal?.id || null;
+    }
+
     const supabase = await createClient();
 
     // Get all currently live events with venue info
-    const { data, error } = await supabase
+    let query = supabase
       .from("events")
       .select(`
         id,
@@ -61,6 +74,15 @@ export async function GET(request: Request) {
       .is("canonical_event_id", null) // Only show canonical events, not duplicates
       .order("start_time", { ascending: true });
 
+    // Filter by portal to prevent cross-portal leakage
+    if (portalId) {
+      query = query.or(`portal_id.eq.${portalId},portal_id.is.null`);
+    } else {
+      query = query.is("portal_id", null);
+    }
+
+    const { data, error } = await query;
+
     if (error) {
       throw error;
     }
@@ -87,8 +109,14 @@ export async function GET(request: Request) {
       }
     }
 
+    // Filter out chain venue events from live events
+    const chainVenueIds = await getChainVenueIds(supabase);
+    const nonChainEvents = chainVenueIds.length > 0
+      ? (events || []).filter((event) => !event.venue?.id || !chainVenueIds.includes(event.venue.id))
+      : (events || []);
+
     // Enrich events with counts
-    const enrichedEvents = (events || []).map((event) => ({
+    const enrichedEvents = nonChainEvents.map((event) => ({
       ...event,
       going_count: goingCounts[event.id] || 0,
     }));

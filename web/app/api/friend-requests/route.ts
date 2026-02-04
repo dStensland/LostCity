@@ -72,10 +72,9 @@ export const POST = withAuth(async (request, { user, supabase, serviceClient }) 
     if (rateLimitResult) return rateLimitResult;
 
     const body = await request.json();
-    const { inviter_id, inviter_username, auto_accept } = body as {
+    const { inviter_id, inviter_username } = body as {
       inviter_id?: string;
       inviter_username?: string;
-      auto_accept?: boolean;
     };
 
     // Validate input
@@ -189,36 +188,6 @@ export const POST = withAuth(async (request, { user, supabase, serviceClient }) 
         { error: "Friend request already pending" },
         { status: 400 }
       );
-    }
-
-    // If auto_accept is true, create friendship directly (skip the pending request)
-    if (auto_accept) {
-      // Create friendship directly using RPC via service client
-      const { error: friendshipError } = await serviceClient.rpc(
-        "create_friendship" as never,
-        { user_a: resolvedInviterId, user_b: user.id } as never
-      );
-
-      if (friendshipError) {
-        console.error("Error creating auto-friendship:", friendshipError);
-        return errorResponse(friendshipError, "friend-requests:POST:auto-accept");
-      }
-
-      // Also create an "accepted" friend request record for history
-      await serviceClient
-        .from("friend_requests" as never)
-        .insert({
-          inviter_id: resolvedInviterId,
-          invitee_id: user.id,
-          status: "accepted",
-          responded_at: new Date().toISOString(),
-        } as never);
-
-      return NextResponse.json({
-        success: true,
-        message: "You are now friends!",
-        accepted: true,
-      });
     }
 
     // Create the friend request using service client

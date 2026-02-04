@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { NextRequest } from "next/server";
 import { getDistanceMiles } from "@/lib/geo";
 import { getLocalDateString } from "@/lib/formats";
+import { applyRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 
 // Destination category mappings for venues
 const DESTINATION_CATEGORIES: Record<string, string[]> = {
@@ -34,6 +35,9 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ slug: string }> }
 ) {
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.read);
+  if (rateLimitResult) return rateLimitResult;
+
   const { slug } = await params;
 
   if (!slug) {

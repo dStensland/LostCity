@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient, getUser } from "@/lib/supabase/server";
 import { format, startOfMonth, endOfMonth, addMonths } from "date-fns";
+import { applyRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 
 type GetFriendIdsResult = { friend_id: string }[];
 
@@ -22,6 +23,9 @@ export type FriendCalendarEvent = {
 
 // GET /api/user/calendar/friends?start=YYYY-MM-DD&end=YYYY-MM-DD&friend_ids=id1,id2
 export async function GET(request: Request) {
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.read);
+  if (rateLimitResult) return rateLimitResult;
+
   try {
     const user = await getUser();
     if (!user) {

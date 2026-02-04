@@ -2,6 +2,7 @@ import { createClient, getUser } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { format, addMonths } from "date-fns";
 import { generateFeedToken } from "@/lib/calendar-feed-utils";
+import { applyRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 
 // Verify token and extract userId
 function verifyFeedToken(token: string, userId: string): boolean {
@@ -31,6 +32,9 @@ function escapeICalText(text: string): string {
 }
 
 export async function GET(request: Request) {
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.read);
+  if (rateLimitResult) return rateLimitResult;
+
   const { searchParams } = new URL(request.url);
   const token = searchParams.get("token");
   const userId = searchParams.get("uid");

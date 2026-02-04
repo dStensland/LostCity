@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 
+// Foursquare Places API base URL (migrated from api.foursquare.com/v3)
+const FOURSQUARE_BASE_URL = "https://places-api.foursquare.com";
+
 // Get API key lazily to avoid build-time errors during static page generation
 function getFoursquareApiKey(): string {
   const key = process.env.FOURSQUARE_API_KEY;
@@ -35,20 +38,16 @@ interface PlaceResult {
 }
 
 interface FoursquarePlace {
-  fsq_id: string;
+  fsq_place_id: string;
   name: string;
+  latitude?: number;
+  longitude?: number;
   location: {
     formatted_address?: string;
     address?: string;
     locality?: string;
     region?: string;
     postcode?: string;
-  };
-  geocodes?: {
-    main?: {
-      latitude: number;
-      longitude: number;
-    };
   };
 }
 
@@ -140,12 +139,13 @@ export async function POST(request: NextRequest) {
     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
 
     const response = await fetch(
-      `https://api.foursquare.com/v3/places/search?${params}`,
+      `${FOURSQUARE_BASE_URL}/places/search?${params}`,
       {
         method: "GET",
         headers: {
-          Authorization: apiKey,
+          Authorization: `Bearer ${apiKey}`,
           Accept: "application/json",
+          "X-Places-Api-Version": "2025-06-17",
         },
         signal: controller.signal,
       }
@@ -167,22 +167,22 @@ export async function POST(request: NextRequest) {
     const data = await response.json();
     const places: FoursquarePlace[] = data.results || [];
 
-    // Map to simplified format
+    // Map to simplified format (using new API field names)
     const results: PlaceResult[] = places.map((place) => {
       // Build formatted address
-      const loc = place.location;
+      const loc = place.location || {};
       const address = loc.formatted_address ||
         [loc.address, loc.locality, loc.region, loc.postcode]
           .filter(Boolean)
           .join(", ");
 
       return {
-        id: place.fsq_id,
+        id: place.fsq_place_id,
         name: place.name,
         address: address || "",
         location: {
-          lat: place.geocodes?.main?.latitude || 0,
-          lng: place.geocodes?.main?.longitude || 0,
+          lat: place.latitude || 0,
+          lng: place.longitude || 0,
         },
       };
     });

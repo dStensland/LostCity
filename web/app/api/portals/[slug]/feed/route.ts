@@ -1,9 +1,10 @@
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 import { addDays, startOfDay, nextFriday, nextSunday, isFriday, isSaturday, isSunday } from "date-fns";
 import { getLocalDateString } from "@/lib/formats";
 import { getPortalSourceAccess } from "@/lib/federation";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
+import { getChainVenueIds } from "@/lib/chain-venues";
 
 // Cache feed for 5 minutes at CDN, allow stale for 1 hour while revalidating
 export const revalidate = 300;
@@ -173,6 +174,8 @@ function getDateRange(filter: string): { start: string; end: string } {
 
 // GET /api/portals/[slug]/feed - Get feed content for a portal
 export async function GET(request: NextRequest, { params }: Props) {
+  const supabase = await createClient();
+
   // Rate limit - this is an expensive endpoint
   const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.expensive, getClientIdentifier(request));
   if (rateLimitResult) return rateLimitResult;
@@ -436,6 +439,17 @@ export async function GET(request: NextRequest, { params }: Props) {
       }
       autoEventPool.set(event.id, event);
     }
+
+    // Filter chain venues from the auto event pool
+    // Chain cinemas are searchable and on maps but excluded from curated feed
+    const chainVenueIds = await getChainVenueIds(supabase);
+    if (chainVenueIds.length > 0) {
+      for (const [eventId, event] of autoEventPool) {
+        if (event.venue?.id && chainVenueIds.includes(event.venue.id)) {
+          autoEventPool.delete(eventId);
+        }
+      }
+    }
   }
 
   // Step 4: Check if any section needs popularity sorting - batch fetch RSVP counts
@@ -457,6 +471,7 @@ export async function GET(request: NextRequest, { params }: Props) {
   // Step 5: Add programmatic holiday sections
   const holidaySections: Section[] = [];
   const currentDate = new Date();
+  const currentYear = currentDate.getFullYear();
   const currentMonth = currentDate.getMonth() + 1; // 1-12
   const currentDay = currentDate.getDate();
 
@@ -470,7 +485,7 @@ export async function GET(request: NextRequest, { params }: Props) {
     // Valentine's Day section (Jan 20 - Feb 16)
     if ((currentMonth === 1 && currentDay >= 20) || (currentMonth === 2 && currentDay <= 16)) {
       holidaySections.push({
-        id: "valentines-2025",
+        id: `valentines-${currentYear}`,
         title: "Valentine's Day",
         slug: "valentines-day",
         description: "Be still thy beating heart",
@@ -503,7 +518,7 @@ export async function GET(request: NextRequest, { params }: Props) {
     // Lunar New Year section (Jan 20 - Feb 28)
     if ((currentMonth === 1 && currentDay >= 20) || currentMonth === 2) {
       holidaySections.push({
-        id: "lunar-new-year-2025",
+        id: `lunar-new-year-${currentYear}`,
         title: "Lunar New Year",
         slug: "lunar-new-year",
         description: "A whole year of fire horsin around",
@@ -536,7 +551,7 @@ export async function GET(request: NextRequest, { params }: Props) {
     // Super Bowl section (show the full week leading up + game day)
     if (currentMonth === 2 && currentDay >= 2 && currentDay <= 9) {
       holidaySections.push({
-        id: "super-bowl-2026",
+        id: `super-bowl-${currentYear}`,
         title: "Super Bowl LX",
         slug: "super-bowl",
         description: "Patriots vs Seahawks - Watch parties & game day events",
@@ -551,7 +566,7 @@ export async function GET(request: NextRequest, { params }: Props) {
           sort_by: "date",
         },
         block_content: null,
-        display_order: -3,
+        display_order: -7,
         is_visible: true,
         schedule_start: null,
         schedule_end: null,
@@ -569,7 +584,7 @@ export async function GET(request: NextRequest, { params }: Props) {
     // Black History Month section (Jan 20 - Feb 28)
     if ((currentMonth === 1 && currentDay >= 20) || currentMonth === 2) {
       holidaySections.push({
-        id: "black-history-month-2026",
+        id: `black-history-month-${currentYear}`,
         title: "Black History Month",
         slug: "black-history-month",
         description: "Celebrate and learn",
@@ -603,40 +618,55 @@ export async function GET(request: NextRequest, { params }: Props) {
   // Fetch events for holiday sections and track them by tag
   const holidayEventsByTag = new Map<string, Event[]>();
   if (holidaySections.length > 0) {
-    for (const holidaySection of holidaySections) {
-      const tag = holidaySection.auto_filter?.tags?.[0];
-      if (tag) {
-        const { data: holidayEvents } = await supabase
-          .from("events")
-          .select(`
-            id,
-            title,
-            start_date,
-            start_time,
-            end_time,
-            is_all_day,
-            is_free,
-            price_min,
-            price_max,
-            category,
-            subcategory,
-            image_url,
-            description,
-            featured_blurb,
-            venue:venues(id, name, neighborhood, slug)
-          `)
-          .contains("tags", [tag])
-          .gte("start_date", today)
-          .lte("start_date", getLocalDateString(addDays(new Date(), 30)))
-          .is("canonical_event_id", null)
-          .order("start_date", { ascending: true });
+    // Collect all unique tags from holiday sections
+    const holidayTags = holidaySections
+      .map(section => section.auto_filter?.tags?.[0])
+      .filter((tag): tag is string => tag !== undefined);
 
-        // Store by tag for section building
-        if (holidayEvents && holidayEvents.length > 0) {
-          holidayEventsByTag.set(tag, holidayEvents as Event[]);
-          // Also store in eventMap
-          for (const event of holidayEvents as Event[]) {
-            eventMap.set(event.id, event);
+    if (holidayTags.length > 0) {
+      // Fetch all holiday events in a single query using OR conditions
+      const tagConditions = holidayTags.map(tag => `tags.cs.{${tag}}`).join(",");
+
+      const { data: allHolidayEvents } = await supabase
+        .from("events")
+        .select(`
+          id,
+          title,
+          start_date,
+          start_time,
+          end_time,
+          is_all_day,
+          is_free,
+          price_min,
+          price_max,
+          category,
+          subcategory,
+          image_url,
+          description,
+          featured_blurb,
+          tags,
+          venue:venues(id, name, neighborhood, slug)
+        `)
+        .or(tagConditions)
+        .gte("start_date", today)
+        .lte("start_date", getLocalDateString(addDays(new Date(), 30)))
+        .is("canonical_event_id", null)
+        .order("start_date", { ascending: true });
+
+      // Group events by tag
+      if (allHolidayEvents) {
+        for (const event of allHolidayEvents as (Event & { tags?: string[] })[]) {
+          // Store in eventMap
+          eventMap.set(event.id, event);
+
+          // Assign to appropriate tag buckets
+          for (const tag of holidayTags) {
+            if (event.tags?.includes(tag)) {
+              if (!holidayEventsByTag.has(tag)) {
+                holidayEventsByTag.set(tag, []);
+              }
+              holidayEventsByTag.get(tag)!.push(event);
+            }
           }
         }
       }

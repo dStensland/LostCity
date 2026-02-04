@@ -1,13 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { canManagePortal } from "@/lib/supabase/server";
+import { adminErrorResponse } from "@/lib/api-utils";
+import { applyRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 
 // GET /api/admin/portals/[id]/sections - List sections for a portal
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  void request; // Auth handled by canManagePortal
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write);
+  if (rateLimitResult) return rateLimitResult;
+
   const { id: portalId } = await params;
 
   if (!(await canManagePortal(portalId))) {
@@ -33,7 +37,7 @@ export async function GET(
     .order("display_order", { ascending: true });
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return adminErrorResponse(error, "GET /api/admin/portals/[id]/sections");
   }
 
   return NextResponse.json({ sections });
@@ -44,6 +48,9 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write);
+  if (rateLimitResult) return rateLimitResult;
+
   const { id: portalId } = await params;
 
   if (!(await canManagePortal(portalId))) {
@@ -91,7 +98,7 @@ export async function POST(
     .maybeSingle();
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return adminErrorResponse(error, "GET /api/admin/portals/[id]/sections");
   }
 
   return NextResponse.json({ section }, { status: 201 });

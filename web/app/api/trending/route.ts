@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/server";
 import { applyRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import { getLocalDateString } from "@/lib/formats";
 import { apiResponse, errorApiResponse } from "@/lib/api-utils";
@@ -6,6 +6,8 @@ import { apiResponse, errorApiResponse } from "@/lib/api-utils";
 export const revalidate = 300; // Cache for 5 minutes
 
 export async function GET(request: Request) {
+  const supabase = await createClient();
+
   // Rate limit: expensive endpoint with RSVP aggregation
   const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.expensive);
   if (rateLimitResult) return rateLimitResult;

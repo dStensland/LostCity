@@ -3,6 +3,8 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { NextRequest, NextResponse } from "next/server";
 import { createSubscription, refreshPortalSourceAccess } from "@/lib/federation";
 import { hasFeature } from "@/lib/plan-features";
+import { errorResponse } from "@/lib/api-utils";
+import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -25,7 +27,11 @@ type PortalRow = {
 };
 
 // GET /api/admin/portals - List all portals with stats
-export async function GET() {
+export async function GET(request: NextRequest) {
+  // Apply rate limiting (write tier - admin endpoint)
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
+  if (rateLimitResult) return rateLimitResult;
+
   // Verify admin
   if (!(await isAdmin())) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
@@ -61,7 +67,7 @@ export async function GET() {
   const portals = (portalsData || []) as PortalRow[];
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return errorResponse(error, "POST /api/admin/portals");
   }
 
   // Get member counts per portal
@@ -112,6 +118,10 @@ export async function GET() {
 
 // POST /api/admin/portals - Create a new portal
 export async function POST(request: NextRequest) {
+  // Apply rate limiting (write tier - admin endpoint)
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
+  if (rateLimitResult) return rateLimitResult;
+
   // Verify admin
   if (!(await isAdmin())) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
@@ -195,7 +205,7 @@ export async function POST(request: NextRequest) {
     if (error.code === "23505") {
       return NextResponse.json({ error: "Portal slug already exists" }, { status: 409 });
     }
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return errorResponse(error, "POST /api/admin/portals");
   }
 
   // Add creator as owner member

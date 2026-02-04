@@ -1,9 +1,14 @@
 import { NextResponse } from "next/server";
 import { createClient, getUser } from "@/lib/supabase/server";
 import { isValidUUID, validationError } from "@/lib/api-utils";
+import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 
 // POST /api/friends/unfriend - Remove a friendship
 export async function POST(request: Request) {
+  // Apply rate limiting (auth tier - friend-related endpoint)
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.auth, getClientIdentifier(request));
+  if (rateLimitResult) return rateLimitResult;
+
   try {
     const user = await getUser();
     if (!user) {

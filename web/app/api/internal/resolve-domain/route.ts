@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/server";
 
 export const runtime = "edge";
 
@@ -11,6 +11,8 @@ export const runtime = "edge";
  * (checked via x-internal-secret header).
  */
 export async function GET(request: NextRequest) {
+  const supabase = await createClient();
+
   // Verify this is an internal request using shared secret
   const internalSecret = request.headers.get("x-internal-secret");
   const expectedSecret = process.env.INTERNAL_API_SECRET;

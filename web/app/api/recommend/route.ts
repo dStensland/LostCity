@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
-import { checkBodySize } from "@/lib/api-utils";
+import { checkBodySize, errorResponse } from "@/lib/api-utils";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 
 export async function GET(request: NextRequest) {
@@ -103,7 +103,7 @@ export async function POST(request: NextRequest) {
 
       if (error) {
         console.error("Remove recommendation error:", error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        return errorResponse(error, "POST /api/recommend");
       }
 
       return NextResponse.json({ success: true, isRecommended: false });
@@ -143,7 +143,7 @@ export async function POST(request: NextRequest) {
 
         if (error) {
           console.error("Update recommendation error:", error);
-          return NextResponse.json({ error: error.message }, { status: 500 });
+          return errorResponse(error, "POST /api/recommend");
         }
       } else {
         // Create new
@@ -165,7 +165,7 @@ export async function POST(request: NextRequest) {
 
         if (error) {
           console.error("Create recommendation error:", error);
-          return NextResponse.json({ error: error.message }, { status: 500 });
+          return errorResponse(error, "POST /api/recommend");
         }
       }
 

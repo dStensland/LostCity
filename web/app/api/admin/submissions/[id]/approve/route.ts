@@ -3,6 +3,7 @@ import { createClient, isAdmin, getUser } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { isValidUUID, adminErrorResponse } from "@/lib/api-utils";
 import type { EventSubmissionData, VenueSubmissionData, ProducerSubmissionData, Submission } from "@/lib/types";
+import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 
 type Props = {
   params: Promise<{ id: string }>;
@@ -10,6 +11,10 @@ type Props = {
 
 // POST /api/admin/submissions/[id]/approve - Approve a submission
 export async function POST(request: NextRequest, { params }: Props) {
+  // Apply rate limiting (write tier - admin endpoint)
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
+  if (rateLimitResult) return rateLimitResult;
+
   const { id } = await params;
 
   if (!isValidUUID(id)) {
@@ -27,7 +32,7 @@ export async function POST(request: NextRequest, { params }: Props) {
   // Get submission
   const { data: submissionData, error: fetchError } = await supabase
     .from("submissions")
-    .select("*")
+    .select("id, portal_id, submission_type, status, data, submitted_by, created_at")
     .eq("id", id)
     .maybeSingle();
 

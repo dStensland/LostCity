@@ -1,5 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
+import { errorResponse } from "@/lib/api-utils";
+import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -23,6 +25,10 @@ type CollectionData = {
 
 // GET /api/collections/[slug] - Get collection with items
 export async function GET(request: NextRequest, { params }: Props) {
+  // Apply rate limiting (read tier - public read endpoint)
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.read, getClientIdentifier(request));
+  if (rateLimitResult) return rateLimitResult;
+
   const { slug } = await params;
   const supabase = await createClient();
 
@@ -93,6 +99,10 @@ export async function GET(request: NextRequest, { params }: Props) {
 
 // DELETE /api/collections/[slug] - Delete collection
 export async function DELETE(request: NextRequest, { params }: Props) {
+  // Apply rate limiting (write tier - deletes data)
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
+  if (rateLimitResult) return rateLimitResult;
+
   const { slug } = await params;
   const supabase = await createClient();
 
@@ -126,7 +136,7 @@ export async function DELETE(request: NextRequest, { params }: Props) {
     .eq("id", collection.id);
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return errorResponse(error, "DELETE /api/collections/[slug]");
   }
 
   return NextResponse.json({ success: true });

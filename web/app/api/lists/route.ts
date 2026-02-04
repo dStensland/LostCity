@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
+import { errorResponse } from "@/lib/api-utils";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 // Type helper for tables not yet in generated types
@@ -198,8 +199,7 @@ export async function GET(request: NextRequest) {
     const { data, error } = await query;
 
     if (error) {
-      console.error("Error fetching lists:", error);
-      return NextResponse.json({ error: "Failed to fetch lists", details: error.message }, { status: 500 });
+      return errorResponse(error, "GET /api/lists");
     }
 
     // Fetch creator profiles for all lists
@@ -333,8 +333,7 @@ export async function POST(request: NextRequest) {
       .maybeSingle();
 
     if (error) {
-      console.error("Error creating list:", error);
-      return NextResponse.json({ error: "Failed to create list", details: error.message }, { status: 500 });
+      return errorResponse(error, "POST /api/lists");
     }
 
     // Fetch creator profile separately (creator_id FK is to auth.users, not profiles)

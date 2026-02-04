@@ -1,9 +1,14 @@
 import { NextResponse } from "next/server";
 import { createClient, getUser } from "@/lib/supabase/server";
 import { errorResponse } from "@/lib/api-utils";
+import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 
 // GET /api/notifications - Get user's notifications
 export async function GET(request: Request) {
+  // Apply rate limiting (read tier - auth-protected read endpoint)
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.read, getClientIdentifier(request));
+  if (rateLimitResult) return rateLimitResult;
+
   const { searchParams } = new URL(request.url);
   const limit = Math.min(parseInt(searchParams.get("limit") || "20", 10), 50);
   const unreadOnly = searchParams.get("unread") === "true";
@@ -58,6 +63,10 @@ export async function GET(request: Request) {
 
 // POST /api/notifications - Mark notifications as read
 export async function POST(request: Request) {
+  // Apply rate limiting (write tier - updates data)
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
+  if (rateLimitResult) return rateLimitResult;
+
   const user = await getUser();
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

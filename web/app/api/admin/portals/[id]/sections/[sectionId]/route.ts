@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { createClient } from "@/lib/supabase/server";
+import { adminErrorResponse } from "@/lib/api-utils";
+import { applyRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 
 async function isAdmin(request: NextRequest): Promise<boolean> {
   const supabase = await createClient();
@@ -15,6 +17,9 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string; sectionId: string }> }
 ) {
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write);
+  if (rateLimitResult) return rateLimitResult;
+
   const { sectionId } = await params;
 
   if (!(await isAdmin(request))) {
@@ -40,7 +45,7 @@ export async function GET(
     .maybeSingle();
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return adminErrorResponse(error, "GET /api/admin/portals/[id]/sections/[sectionId]");
   }
 
   return NextResponse.json({ section });
@@ -51,6 +56,9 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string; sectionId: string }> }
 ) {
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write);
+  if (rateLimitResult) return rateLimitResult;
+
   const { sectionId } = await params;
 
   if (!(await isAdmin(request))) {
@@ -79,7 +87,7 @@ export async function PATCH(
     .maybeSingle();
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return adminErrorResponse(error, "GET /api/admin/portals/[id]/sections/[sectionId]");
   }
 
   return NextResponse.json({ section });
@@ -90,6 +98,9 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string; sectionId: string }> }
 ) {
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write);
+  if (rateLimitResult) return rateLimitResult;
+
   const { sectionId } = await params;
 
   if (!(await isAdmin(request))) {
@@ -105,7 +116,7 @@ export async function DELETE(
     .eq("id", sectionId);
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return adminErrorResponse(error, "GET /api/admin/portals/[id]/sections/[sectionId]");
   }
 
   return NextResponse.json({ success: true });

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, getUser } from "@/lib/supabase/server";
 import { errorResponse, isValidUUID } from "@/lib/api-utils";
+import { applyRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 
 type Props = {
   params: Promise<{ id: string }>;
@@ -8,6 +9,9 @@ type Props = {
 
 // GET /api/submissions/[id] - Get submission detail
 export async function GET(request: NextRequest, { params }: Props) {
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.read);
+  if (rateLimitResult) return rateLimitResult;
+
   const { id } = await params;
 
   if (!isValidUUID(id)) {
@@ -163,6 +167,9 @@ export async function GET(request: NextRequest, { params }: Props) {
 
 // PUT /api/submissions/[id] - Update a pending submission
 export async function PUT(request: NextRequest, { params }: Props) {
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write);
+  if (rateLimitResult) return rateLimitResult;
+
   const { id } = await params;
 
   if (!isValidUUID(id)) {
@@ -237,6 +244,9 @@ export async function PUT(request: NextRequest, { params }: Props) {
 
 // DELETE /api/submissions/[id] - Cancel/delete a pending submission
 export async function DELETE(request: NextRequest, { params }: Props) {
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write);
+  if (rateLimitResult) return rateLimitResult;
+
   const { id } = await params;
 
   if (!isValidUUID(id)) {

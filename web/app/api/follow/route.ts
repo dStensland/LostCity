@@ -6,7 +6,7 @@ import { withOptionalAuth, withAuth } from "@/lib/api-middleware";
 import { logger } from "@/lib/logger";
 
 export const GET = withOptionalAuth(async (request, { user, serviceClient }) => {
-  if (!user) {
+  if (!user || !serviceClient) {
     return NextResponse.json({ isFollowing: false });
   }
 

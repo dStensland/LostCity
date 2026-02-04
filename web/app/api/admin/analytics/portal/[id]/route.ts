@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/server";
 import { isAdmin, canManagePortal } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 import { getLocalDateString } from "@/lib/formats";
@@ -25,6 +25,7 @@ type DailyMetric = {
 };
 
 export async function GET(request: NextRequest, { params }: Props) {
+  const supabase = await createClient();
   const { id: portalId } = await params;
 
   // Verify admin or portal manager
@@ -58,7 +59,7 @@ export async function GET(request: NextRequest, { params }: Props) {
   // Get analytics data
   const { data: analyticsData, error: analyticsError } = await supabase
     .from("analytics_daily_portal")
-    .select("*")
+    .select("date, event_views, event_rsvps, event_saves, event_shares, new_signups, active_users, events_total, events_created, sources_active, crawl_runs, crawl_success_rate")
     .eq("portal_id", portalId)
     .gte("date", startDateStr)
     .order("date", { ascending: true });
@@ -167,6 +168,7 @@ export async function GET(request: NextRequest, { params }: Props) {
 
 // Compute metrics from source tables for a specific portal
 async function computePortalMetrics(portalId: string, startDate: string): Promise<DailyMetric[]> {
+  const supabase = await createClient();
   const metrics: DailyMetric[] = [];
 
   // Get RSVPs by date (portal-agnostic for now)

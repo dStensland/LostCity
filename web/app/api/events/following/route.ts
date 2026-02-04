@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient, getUser } from "@/lib/supabase/server";
 import { format, startOfDay } from "date-fns";
+import { applyRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 
 type FollowingEvent = {
   id: number;
@@ -38,6 +39,9 @@ type FollowingEvent = {
 };
 
 export async function GET(request: Request) {
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.read);
+  if (rateLimitResult) return rateLimitResult;
+
   try {
     const user = await getUser();
     if (!user) {

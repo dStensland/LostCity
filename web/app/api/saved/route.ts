@@ -11,7 +11,7 @@ import { logger } from "@/lib/logger";
  */
 export const GET = withOptionalAuth(async (request, { user, serviceClient }) => {
   try {
-    if (!user) {
+    if (!user || !serviceClient) {
       return NextResponse.json({ saved: false }, { status: 200 });
     }
 

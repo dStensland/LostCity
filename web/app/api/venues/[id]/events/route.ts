@@ -1,6 +1,8 @@
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 import { getLocalDateString } from "@/lib/formats";
+import { errorResponse } from "@/lib/api-utils";
+import { applyRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -9,9 +11,14 @@ type Props = {
 };
 
 export async function GET(request: NextRequest, { params }: Props) {
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.read);
+  if (rateLimitResult) return rateLimitResult;
+
+  const supabase = await createClient();
   const { id } = await params;
   const { searchParams } = new URL(request.url);
   const limit = parseInt(searchParams.get("limit") || "10");
+  const portalId = searchParams.get("portal_id");
 
   const venueId = parseInt(id);
   if (isNaN(venueId)) {
@@ -20,7 +27,7 @@ export async function GET(request: NextRequest, { params }: Props) {
 
   const today = getLocalDateString();
 
-  const { data: events, error } = await supabase
+  let query = supabase
     .from("events")
     .select(`
       id,
@@ -29,7 +36,8 @@ export async function GET(request: NextRequest, { params }: Props) {
       start_time,
       end_time,
       is_all_day,
-      category
+      category,
+      series:series_id(slug)
     `)
     .eq("venue_id", venueId)
     .gte("start_date", today)
@@ -38,9 +46,26 @@ export async function GET(request: NextRequest, { params }: Props) {
     .order("start_time", { ascending: true })
     .limit(limit);
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  // Filter by portal to prevent cross-portal leakage
+  if (portalId) {
+    query = query.or(`portal_id.eq.${portalId},portal_id.is.null`);
   }
 
-  return NextResponse.json({ events: events || [] });
+  const { data: events, error } = await query;
+
+  if (error) {
+    return errorResponse(error, "GET /api/venues/[id]/events");
+  }
+
+  // Flatten series join into series_slug for the client
+  const flatEvents = (events || []).map((e: Record<string, unknown>) => {
+    const series = e.series as { slug: string } | null;
+    return {
+      ...e,
+      series_slug: series?.slug || null,
+      series: undefined,
+    };
+  });
+
+  return NextResponse.json({ events: flatEvents });
 }

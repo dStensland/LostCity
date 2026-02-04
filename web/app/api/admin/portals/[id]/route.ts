@@ -4,6 +4,8 @@ import { DEFAULT_PORTAL_SLUG } from "@/lib/constants";
 import { isCustomDomainAvailable, generateDomainVerificationToken } from "@/lib/portal";
 import { invalidateDomainCache } from "@/lib/domain-cache";
 import { filterBrandingForPlan, canUseCustomDomain } from "@/lib/plan-features";
+import { errorResponse } from "@/lib/api-utils";
+import { applyRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -30,6 +32,9 @@ type PortalData = {
 
 // GET /api/admin/portals/[id] - Get portal details
 export async function GET(request: NextRequest, { params }: Props) {
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write);
+  if (rateLimitResult) return rateLimitResult;
+
   const { id } = await params;
 
   // Verify admin or portal owner
@@ -115,6 +120,9 @@ export async function GET(request: NextRequest, { params }: Props) {
 
 // PATCH /api/admin/portals/[id] - Update portal
 export async function PATCH(request: NextRequest, { params }: Props) {
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write);
+  if (rateLimitResult) return rateLimitResult;
+
   const { id } = await params;
 
   // Verify admin or portal owner
@@ -237,7 +245,7 @@ export async function PATCH(request: NextRequest, { params }: Props) {
     .maybeSingle();
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return errorResponse(error, "PATCH /api/admin/portals/[id]");
   }
 
   // Return verification instructions if custom domain was set
@@ -256,6 +264,9 @@ export async function PATCH(request: NextRequest, { params }: Props) {
 
 // DELETE /api/admin/portals/[id] - Delete portal
 export async function DELETE(request: NextRequest, { params }: Props) {
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write);
+  if (rateLimitResult) return rateLimitResult;
+
   const { id } = await params;
 
   // Verify admin or portal owner
@@ -290,7 +301,7 @@ export async function DELETE(request: NextRequest, { params }: Props) {
     .eq("id", id);
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return errorResponse(error, "PATCH /api/admin/portals/[id]");
   }
 
   return NextResponse.json({ success: true });

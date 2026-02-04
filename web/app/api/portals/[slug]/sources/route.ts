@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getPortalSourceAccess } from "@/lib/federation";
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
@@ -10,6 +10,7 @@ type Props = {
 
 // GET /api/portals/[slug]/sources - Get accessible sources for a portal
 export async function GET(request: NextRequest, { params }: Props) {
+  const supabase = await createClient();
   const { slug } = await params;
 
   // Get portal by slug

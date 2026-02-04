@@ -1,8 +1,12 @@
 import { NextResponse } from "next/server";
 import { getUser } from "@/lib/supabase/server";
 import { generateFeedToken } from "@/lib/calendar-feed-utils";
+import { applyRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 
-export async function GET() {
+export async function GET(request: Request) {
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.auth);
+  if (rateLimitResult) return rateLimitResult;
+
   const user = await getUser();
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

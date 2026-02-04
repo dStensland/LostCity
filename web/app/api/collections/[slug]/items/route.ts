@@ -1,5 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
+import { errorResponse } from "@/lib/api-utils";
+import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -11,6 +13,10 @@ type CollectionRow = { id: number; user_id: string | null };
 
 // POST /api/collections/[slug]/items - Add event to collection
 export async function POST(request: NextRequest, { params }: Props) {
+  // Apply rate limiting (write tier - adds data)
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
+  if (rateLimitResult) return rateLimitResult;
+
   const { slug } = await params;
   const supabase = await createClient();
 
@@ -72,7 +78,7 @@ export async function POST(request: NextRequest, { params }: Props) {
     if (error.code === "23505") {
       return NextResponse.json({ error: "Event already in collection" }, { status: 409 });
     }
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return errorResponse(error, "POST /api/collections/[slug]/items");
   }
 
   return NextResponse.json({ item: data }, { status: 201 });
@@ -80,6 +86,10 @@ export async function POST(request: NextRequest, { params }: Props) {
 
 // DELETE /api/collections/[slug]/items?event_id=123 - Remove event from collection
 export async function DELETE(request: NextRequest, { params }: Props) {
+  // Apply rate limiting (write tier - deletes data)
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
+  if (rateLimitResult) return rateLimitResult;
+
   const { slug } = await params;
   const supabase = await createClient();
   const { searchParams } = new URL(request.url);
@@ -120,7 +130,7 @@ export async function DELETE(request: NextRequest, { params }: Props) {
     .eq("event_id", parseInt(eventId, 10));
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return errorResponse(error, "POST /api/collections/[slug]/items");
   }
 
   return NextResponse.json({ success: true });

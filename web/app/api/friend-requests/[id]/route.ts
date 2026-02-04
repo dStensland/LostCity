@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient, getUser } from "@/lib/supabase/server";
 import { errorResponse, isValidUUID, validationError } from "@/lib/api-utils";
+import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 
 type FriendRequest = {
   id: string;
@@ -14,6 +15,10 @@ export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  // Apply rate limiting (auth tier - friend-related endpoint)
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.auth, getClientIdentifier(request));
+  if (rateLimitResult) return rateLimitResult;
+
   try {
     const { id } = await params;
 
@@ -80,6 +85,10 @@ export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  // Apply rate limiting (auth tier - friend-related endpoint)
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.auth, getClientIdentifier(request));
+  if (rateLimitResult) return rateLimitResult;
+
   try {
     const { id } = await params;
 
@@ -182,6 +191,10 @@ export async function DELETE(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  // Apply rate limiting (auth tier - friend-related endpoint)
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.auth, getClientIdentifier(request));
+  if (rateLimitResult) return rateLimitResult;
+
   try {
     const { id } = await params;
 

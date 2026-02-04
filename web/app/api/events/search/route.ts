@@ -16,6 +16,7 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const query = searchParams.get("q");
   const limit = Math.min(parseInt(searchParams.get("limit") || "10"), 20);
+  const portalId = searchParams.get("portal_id");
 
   if (!query || !isValidString(query, 1, 100)) {
     return NextResponse.json({ error: "Query parameter 'q' is required" }, { status: 400 });
@@ -45,6 +46,13 @@ export async function GET(request: NextRequest) {
     .gte("start_date", new Date().toISOString().split("T")[0])
     .order("start_date", { ascending: true })
     .limit(limit);
+
+  // Filter by portal to prevent cross-portal leakage
+  if (portalId) {
+    searchQuery = searchQuery.or(`portal_id.eq.${portalId},portal_id.is.null`);
+  } else {
+    searchQuery = searchQuery.is("portal_id", null);
+  }
 
   const { data: eventsData, error } = await searchQuery;
 

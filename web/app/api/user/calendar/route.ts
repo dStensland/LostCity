@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getUser } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { format, startOfMonth, endOfMonth, addMonths } from "date-fns";
+import { applyRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 
 export type UserCalendarEvent = {
   id: number;
@@ -34,6 +35,9 @@ export type UserCalendarEvent = {
 };
 
 export async function GET(request: Request) {
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.read);
+  if (rateLimitResult) return rateLimitResult;
+
   try {
     const user = await getUser();
     if (!user) {

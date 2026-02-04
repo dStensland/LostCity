@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient as createServerClient, getUser, isAdmin } from "@/lib/supabase/server";
-import { escapeSQLPattern } from "@/lib/api-utils";
+import { escapeSQLPattern, adminErrorResponse } from "@/lib/api-utils";
+import { applyRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 
 // Username validation: lowercase alphanumeric + underscore, 3-30 chars
 const USERNAME_REGEX = /^[a-z0-9_]{3,30}$/;
@@ -23,6 +24,9 @@ function validateUsername(username: string): { valid: boolean; error?: string } 
 
 // PATCH /api/admin/users - Update a user's profile
 export async function PATCH(request: Request) {
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write);
+  if (rateLimitResult) return rateLimitResult;
+
   try {
     // Verify admin
     if (!(await isAdmin())) {
@@ -79,21 +83,20 @@ export async function PATCH(request: Request) {
       .eq("id", userId);
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return adminErrorResponse(error, "PATCH /api/admin/users");
     }
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Admin users PATCH error:", error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to update user" },
-      { status: 500 }
-    );
+    return adminErrorResponse(error, "PATCH /api/admin/users");
   }
 }
 
 // DELETE /api/admin/users - Delete a user (soft delete by deactivating)
 export async function DELETE(request: Request) {
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write);
+  if (rateLimitResult) return rateLimitResult;
+
   try {
     // Verify admin
     if (!(await isAdmin())) {
@@ -125,21 +128,20 @@ export async function DELETE(request: Request) {
       .eq("id", userId);
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return adminErrorResponse(error, "DELETE /api/admin/users");
     }
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Admin users DELETE error:", error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to delete user" },
-      { status: 500 }
-    );
+    return adminErrorResponse(error, "DELETE /api/admin/users");
   }
 }
 
 // GET /api/admin/users - Get users with profile info
 export async function GET(request: Request) {
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write);
+  if (rateLimitResult) return rateLimitResult;
+
   try {
     // Verify admin
     if (!(await isAdmin())) {
@@ -157,14 +159,14 @@ export async function GET(request: Request) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const sb = supabase as any;
       const [profileResult, followerCount, followingCount, rsvpCount] = await Promise.all([
-        sb.from("profiles").select("*").eq("id", userId).maybeSingle(),
-        sb.from("follows").select("*", { count: "exact", head: true }).eq("followed_user_id", userId),
-        sb.from("follows").select("*", { count: "exact", head: true }).eq("follower_id", userId),
-        sb.from("event_rsvps").select("*", { count: "exact", head: true }).eq("user_id", userId),
+        sb.from("profiles").select("id, username, display_name, bio, location, website, avatar_url, is_active, created_at, updated_at").eq("id", userId).maybeSingle(),
+        sb.from("follows").select("id", { count: "exact", head: true }).eq("followed_user_id", userId),
+        sb.from("follows").select("id", { count: "exact", head: true }).eq("follower_id", userId),
+        sb.from("event_rsvps").select("id", { count: "exact", head: true }).eq("user_id", userId),
       ]);
 
       if (profileResult.error) {
-        return NextResponse.json({ error: profileResult.error.message }, { status: 500 });
+        return adminErrorResponse(profileResult.error, "GET /api/admin/users (single user)");
       }
 
       return NextResponse.json({
@@ -182,7 +184,7 @@ export async function GET(request: Request) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let query = (supabase as any)
       .from("profiles")
-      .select("*")
+      .select("id, username, display_name, bio, location, website, avatar_url, is_active, created_at, updated_at")
       .order("created_at", { ascending: false })
       .limit(100);
 
@@ -195,15 +197,11 @@ export async function GET(request: Request) {
     const { data: profiles, error: profilesError } = await query;
 
     if (profilesError) {
-      return NextResponse.json({ error: profilesError.message }, { status: 500 });
+      return adminErrorResponse(profilesError, "GET /api/admin/users (list)");
     }
 
     return NextResponse.json({ users: profiles || [] });
   } catch (error) {
-    console.error("Admin users API error:", error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to fetch users" },
-      { status: 500 }
-    );
+    return adminErrorResponse(error, "GET /api/admin/users");
   }
 }

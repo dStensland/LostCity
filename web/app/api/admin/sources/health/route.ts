@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/server";
 import { isAdmin } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 
@@ -34,6 +34,8 @@ type SourceRow = {
 };
 
 export async function GET() {
+  const supabase = await createClient();
+
   // Verify admin
   if (!(await isAdmin())) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 403 });

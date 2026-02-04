@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 import { errorResponse } from "@/lib/api-utils";
 import { withAuth } from "@/lib/api-middleware";
+import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -20,6 +21,10 @@ type CollectionRow = {
 
 // GET /api/collections - List collections
 export async function GET(request: Request) {
+  // Apply rate limiting (read tier - public read endpoint)
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.read, getClientIdentifier(request));
+  if (rateLimitResult) return rateLimitResult;
+
   const supabase = await createClient();
   const { searchParams } = new URL(request.url);
 
@@ -68,6 +73,10 @@ export async function GET(request: Request) {
 
 // POST /api/collections - Create a new collection
 export const POST = withAuth(async (request, { user, serviceClient }) => {
+  // Apply rate limiting (write tier - creates data)
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
+  if (rateLimitResult) return rateLimitResult;
+
   const body = await request.json();
   const { title, description, visibility = "public" } = body;
 

@@ -104,7 +104,7 @@ export function withOptionalAuth(
     request: NextRequest,
     context: {
       user: User | null;
-      serviceClient: AnySupabaseClient;
+      serviceClient: AnySupabaseClient | null;
       supabase: AnySupabaseClient;
     }
   ) => Promise<NextResponse | Response>
@@ -113,7 +113,8 @@ export function withOptionalAuth(
     const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
 
-    const serviceClient = createServiceClient();
+    // Only create serviceClient when user is authenticated
+    const serviceClient = !authError && user ? createServiceClient() : null;
 
     return handler(request, {
       user: authError || !user ? null : user,

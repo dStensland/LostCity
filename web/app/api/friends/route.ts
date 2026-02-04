@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient, getUser } from "@/lib/supabase/server";
+import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 
 type GetFriendIdsResult = { friend_id: string }[];
 
@@ -12,7 +13,11 @@ type Profile = {
 };
 
 // GET /api/friends - Get current user's friends from friendships table
-export async function GET() {
+export async function GET(request: Request) {
+  // Apply rate limiting (auth tier - friend-related endpoint)
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.auth, getClientIdentifier(request));
+  if (rateLimitResult) return rateLimitResult;
+
   const user = await getUser();
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

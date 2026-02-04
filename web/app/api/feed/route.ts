@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { createClient, getUser } from "@/lib/supabase/server";
 import { applyRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import { getLocalDateString } from "@/lib/formats";
-import { escapeSQLPattern } from "@/lib/api-utils";
+import { escapeSQLPattern, errorResponse } from "@/lib/api-utils";
+import { getChainVenueIds } from "@/lib/chain-venues";
 
 type RecommendationReason = {
   type: "followed_venue" | "followed_organization" | "neighborhood" | "price" | "friends_going" | "trending";
@@ -93,31 +94,25 @@ export async function GET(request: Request) {
 
   const prefs = prefsData as UserPrefs | null;
 
-  // Get followed venues
-  const { data: followedVenuesData } = await supabase
-    .from("follows")
-    .select("followed_venue_id")
-    .eq("follower_id", user.id)
-    .not("followed_venue_id", "is", null);
+  // Get followed venues and organizations in parallel
+  const [{ data: followedVenuesData }, { data: followedOrganizationsData }] = await Promise.all([
+    supabase
+      .from("follows")
+      .select("followed_venue_id")
+      .eq("follower_id", user.id)
+      .not("followed_venue_id", "is", null),
+    supabase
+      .from("follows")
+      .select("followed_organization_id")
+      .eq("follower_id", user.id)
+      .not("followed_organization_id", "is", null),
+  ]);
 
   const followedVenues = followedVenuesData as { followed_venue_id: number | null }[] | null;
   const followedVenueIds = followedVenues?.map((f) => f.followed_venue_id).filter(Boolean) as number[] || [];
 
-  // Get followed organizations
-  const { data: followedOrganizationsData } = await supabase
-    .from("follows")
-    .select("followed_organization_id")
-    .eq("follower_id", user.id)
-    .not("followed_organization_id", "is", null);
-
   const followedOrganizations = followedOrganizationsData as { followed_organization_id: string | null }[] | null;
   const followedOrganizationIds = followedOrganizations?.map((f) => f.followed_organization_id).filter(Boolean) as string[] || [];
-
-  // Debug logging
-  console.log("[Feed API] User follows:", {
-    venueIds: followedVenueIds,
-    producerIds: followedOrganizationIds,
-  });
 
   // Get sources that map to followed organizations (for querying events via source relationship)
   // This is more reliable than querying events.organization_id directly, since that field
@@ -137,11 +132,6 @@ export async function GET(request: Request) {
         sourceOrganizationMap[source.id] = source.organization_id;
       }
     }
-
-    console.log("[Feed API] Organization sources found:", {
-      producerSourceIds,
-      sourceOrganizationMap,
-    });
   }
 
   // Get friends using the friendships table
@@ -308,20 +298,6 @@ export async function GET(request: Request) {
   // When not personalized, use standard limit
   query = query.limit(personalized ? limit * 3 : limit + 1);
 
-  console.log("[Feed API] Filters:", {
-    portalId,
-    portalFilters,
-    categories,
-    tags,
-    neighborhoods,
-    dateFilter,
-    searchQuery,
-    freeOnly,
-    personalized,
-    startDateFilter,
-    endDateFilter,
-  });
-
   const { data: eventsData, error } = await query;
 
   // Separately fetch events from followed venues/organizations to ensure they're included
@@ -349,45 +325,52 @@ export async function GET(request: Request) {
       venue:venues(id, name, neighborhood, slug)
     `;
 
-    // Fetch events from followed organizations - query by both organization_id and source_id
-    // This catches events even if organization_id isn't directly set on the event
-    if (followedOrganizationIds.length > 0 || producerSourceIds.length > 0) {
-      // First try direct organization_id match
-      if (followedOrganizationIds.length > 0) {
-        const { data: producerEvents } = await supabase
-          .from("events")
-          .select(eventSelect)
-          .in("organization_id", followedOrganizationIds)
-          .gte("start_date", today)
-          .is("canonical_event_id", null)
-          .order("start_date", { ascending: true })
-          .limit(50);
+    // Fetch all three types of followed events in parallel
+    const queries = [];
 
-        if (producerEvents) {
-          followedEventsData = [...followedEventsData, ...producerEvents];
-        }
+    // Query 1: Events from followed organizations (by organization_id)
+    if (followedOrganizationIds.length > 0) {
+      let producerQuery = supabase
+        .from("events")
+        .select(eventSelect)
+        .in("organization_id", followedOrganizationIds)
+        .gte("start_date", today)
+        .is("canonical_event_id", null)
+        .order("start_date", { ascending: true })
+        .limit(50);
+
+      if (portalId) {
+        producerQuery = producerQuery.or(`portal_id.eq.${portalId},portal_id.is.null`);
+      } else {
+        producerQuery = producerQuery.is("portal_id", null);
       }
 
-      // Also fetch by source_id (events may not have organization_id set but source does)
-      if (producerSourceIds.length > 0) {
-        const { data: sourceEvents } = await supabase
-          .from("events")
-          .select(eventSelect)
-          .in("source_id", producerSourceIds)
-          .gte("start_date", today)
-          .is("canonical_event_id", null)
-          .order("start_date", { ascending: true })
-          .limit(50);
-
-        if (sourceEvents) {
-          followedEventsData = [...followedEventsData, ...sourceEvents];
-        }
-      }
+      queries.push(producerQuery);
     }
 
-    // Fetch events from followed venues
+    // Query 2: Events from followed organizations (by source_id)
+    if (producerSourceIds.length > 0) {
+      let sourceQuery = supabase
+        .from("events")
+        .select(eventSelect)
+        .in("source_id", producerSourceIds)
+        .gte("start_date", today)
+        .is("canonical_event_id", null)
+        .order("start_date", { ascending: true })
+        .limit(50);
+
+      if (portalId) {
+        sourceQuery = sourceQuery.or(`portal_id.eq.${portalId},portal_id.is.null`);
+      } else {
+        sourceQuery = sourceQuery.is("portal_id", null);
+      }
+
+      queries.push(sourceQuery);
+    }
+
+    // Query 3: Events from followed venues
     if (followedVenueIds.length > 0) {
-      const { data: venueEvents } = await supabase
+      let venueQuery = supabase
         .from("events")
         .select(eventSelect)
         .in("venue_id", followedVenueIds)
@@ -396,15 +379,24 @@ export async function GET(request: Request) {
         .order("start_date", { ascending: true })
         .limit(50);
 
-      if (venueEvents) {
-        followedEventsData = [...followedEventsData, ...venueEvents];
+      if (portalId) {
+        venueQuery = venueQuery.or(`portal_id.eq.${portalId},portal_id.is.null`);
+      } else {
+        venueQuery = venueQuery.is("portal_id", null);
       }
+
+      queries.push(venueQuery);
     }
 
-    console.log("[Feed API] Followed events fetched:", {
-      totalCount: followedEventsData.length,
-      producerSourceIds: producerSourceIds,
-    });
+    // Execute all queries in parallel
+    const results = await Promise.all(queries);
+
+    // Merge all results
+    for (const { data } of results) {
+      if (data) {
+        followedEventsData = [...followedEventsData, ...data];
+      }
+    }
   }
 
   // Fetch events from favorite neighborhoods (separate from followed venues/organizations)
@@ -441,7 +433,7 @@ export async function GET(request: Request) {
         venue:venues(id, name, neighborhood, slug)
       `;
 
-      const { data: neighborhoodEvents } = await supabase
+      let neighborhoodQuery = supabase
         .from("events")
         .select(eventSelect)
         .in("venue_id", neighborhoodVenueIds)
@@ -450,15 +442,17 @@ export async function GET(request: Request) {
         .order("start_date", { ascending: true })
         .limit(50);
 
+      if (portalId) {
+        neighborhoodQuery = neighborhoodQuery.or(`portal_id.eq.${portalId},portal_id.is.null`);
+      } else {
+        neighborhoodQuery = neighborhoodQuery.is("portal_id", null);
+      }
+
+      const { data: neighborhoodEvents } = await neighborhoodQuery;
+
       if (neighborhoodEvents) {
         neighborhoodEventsData = neighborhoodEvents;
       }
-
-      console.log("[Feed API] Neighborhood events fetched:", {
-        favoriteNeighborhoods,
-        venueCount: neighborhoodVenueIds.length,
-        eventCount: neighborhoodEventsData.length,
-      });
     }
   }
 
@@ -487,7 +481,7 @@ export async function GET(request: Request) {
       venue:venues(id, name, neighborhood, slug)
     `;
 
-    const { data: categoryEvents } = await supabase
+    let categoryQuery = supabase
       .from("events")
       .select(eventSelect)
       .in("category", favoriteCategories)
@@ -496,22 +490,21 @@ export async function GET(request: Request) {
       .order("start_date", { ascending: true })
       .limit(50);
 
+    if (portalId) {
+      categoryQuery = categoryQuery.or(`portal_id.eq.${portalId},portal_id.is.null`);
+    } else {
+      categoryQuery = categoryQuery.is("portal_id", null);
+    }
+
+    const { data: categoryEvents } = await categoryQuery;
+
     if (categoryEvents) {
       categoryEventsData = categoryEvents;
     }
-
-    console.log("[Feed API] Category events fetched:", {
-      favoriteCategories,
-      eventCount: categoryEventsData.length,
-    });
   }
 
   if (error) {
-    console.error("Feed API query error:", error);
-    return NextResponse.json(
-      { error: error.message, code: error.code, details: error.details },
-      { status: 500 }
-    );
+    return errorResponse(error, "GET /api/feed");
   }
 
   // Merge followed events, neighborhood events, and category events with main results
@@ -570,25 +563,6 @@ export async function GET(request: Request) {
   };
 
   let events = (mergedEventsData || []) as EventResult[];
-
-  // Debug: log events with matching venue/producer
-  const eventsWithMatchingVenue = events.filter(e => e.venue?.id && followedVenueIds.includes(e.venue.id));
-  // Check both direct organization_id and via source mapping
-  const eventsWithMatchingOrganization = events.filter(e => {
-    const producerId = e.organization_id || (e.source_id ? sourceOrganizationMap[e.source_id] : null);
-    return producerId && followedOrganizationIds.includes(producerId);
-  });
-  console.log("[Feed API] Events from query:", {
-    total: events.length,
-    eventsFromFollowedVenues: eventsWithMatchingVenue.map(e => ({ id: e.id, title: e.title, venueId: e.venue?.id })),
-    eventsFromFollowedOrganizations: eventsWithMatchingOrganization.map(e => ({
-      id: e.id,
-      title: e.title,
-      producerId: e.organization_id,
-      sourceId: e.source_id,
-      sourceOrganizationId: e.source_id ? sourceOrganizationMap[e.source_id] : null,
-    })),
-  });
 
   // Score and sort events by relevance
   events = events.map((event) => {
@@ -700,6 +674,13 @@ export async function GET(request: Request) {
     });
   }
 
+  // Filter out chain venue events from the feed
+  // Chain cinemas are searchable and on maps but excluded from curated feed
+  const chainVenueIds = await getChainVenueIds(supabase);
+  if (chainVenueIds.length > 0) {
+    events = events.filter((event) => !event.venue?.id || !chainVenueIds.includes(event.venue.id));
+  }
+
   // When personalized mode is ON, filter to only events from followed entities
   // or matching user preferences (unless user has explicitly applied other filters)
   if (personalized && !categories?.length && !searchQuery && !tags?.length && !neighborhoods?.length) {
@@ -718,16 +699,6 @@ export async function GET(request: Request) {
       return false;
     });
   }
-
-  // Debug: count events by reason
-  const venueMatches = events.filter(e => e.reasons?.some(r => r.type === "followed_venue")).length;
-  const producerMatches = events.filter(e => e.reasons?.some(r => r.type === "followed_organization")).length;
-  console.log("[Feed API] Matched events:", {
-    total: events.length,
-    fromFollowedVenues: venueMatches,
-    fromFollowedOrganizations: producerMatches,
-    personalized,
-  });
 
   // Sort by date and time (chronological order)
   events.sort((a, b) => {
@@ -787,17 +758,6 @@ export async function GET(request: Request) {
         prefs?.favorite_vibes?.length
       ),
       personalization,
-      // Debug info - check browser network tab to see this
-      _debug: {
-        followedVenueIds,
-        followedOrganizationIds,
-        totalEventsFromQuery: events.length,
-        matchedVenueEvents: eventsWithMatchingVenue.length,
-        matchedOrganizationEvents: eventsWithMatchingOrganization.length,
-        portalId,
-        portalFilters,
-        filters: { categories, tags, neighborhoods, dateFilter, searchQuery, freeOnly, personalized },
-      },
     },
     {
       headers: {
@@ -807,8 +767,6 @@ export async function GET(request: Request) {
     }
   );
   } catch (err) {
-    console.error("Feed API error:", err);
-    const message = err instanceof Error ? err.message : String(err);
-    return NextResponse.json({ error: message }, { status: 500 });
+    return errorResponse(err, "GET /api/feed");
   }
 }

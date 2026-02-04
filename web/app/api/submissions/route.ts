@@ -27,6 +27,9 @@ const SUBMISSION_LIMITS = {
 
 // GET /api/submissions - Get user's submission history
 export async function GET(request: NextRequest) {
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.read);
+  if (rateLimitResult) return rateLimitResult;
+
   const user = await getUser();
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
