@@ -1,0 +1,21 @@
+#!/bin/bash
+# Pre-commit hook for LostCity monorepo
+# Runs tests before allowing commit to proceed
+# Skip with: git commit --no-verify
+
+set -e
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+
+echo "Running pre-commit checks..."
+echo ""
+
+echo "→ Running frontend tests (vitest)..."
+cd "$REPO_ROOT/web" && npx vitest run
+echo ""
+
+echo "→ Running crawler validation tests (pytest)..."
+cd "$REPO_ROOT/crawlers" && ./venv/bin/python3 -m pytest test_validation.py -v
+echo ""
+
+echo "All pre-commit checks passed!"

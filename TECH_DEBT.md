@@ -20,3 +20,11 @@ There's no record of which SQL migrations have been applied to the database. The
 - Adopt a proper migration tool (Prisma, Drizzle, or just the Supabase CLI)
 
 **Risk:** Medium. Will cause confusion and potential outages when someone forgets to run a migration or runs one twice (most are idempotent with IF NOT EXISTS, but not all).
+
+## 3. No CI pipeline (GitHub Actions)
+
+There are no automated checks on push or PR. Tests, build verification, and lint all run locally only. The pre-commit hook catches issues before commit, but CI would catch issues from contributors and provide a safety net.
+
+**Fix:** Add a GitHub Actions workflow running `npm run build`, `vitest run`, and `pytest` on PRs to `main`.
+
+**Risk:** Low while solo, medium once others contribute.
