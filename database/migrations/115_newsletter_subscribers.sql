@@ -3,7 +3,7 @@
 
 CREATE TABLE IF NOT EXISTS newsletter_subscribers (
   email TEXT PRIMARY KEY,
-  portal_id TEXT REFERENCES portals(id) ON DELETE SET NULL,
+  portal_id UUID REFERENCES portals(id) ON DELETE SET NULL,
   source TEXT DEFAULT 'website',
   subscribed_at TIMESTAMPTZ DEFAULT NOW(),
   unsubscribed_at TIMESTAMPTZ,
