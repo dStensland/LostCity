@@ -1,5 +1,6 @@
 "use client";
 
+import * as Sentry from "@sentry/nextjs";
 import { useEffect } from "react";
 import { ErrorFallback } from "@/components/ErrorBoundary";
 
@@ -11,6 +12,7 @@ export default function PortalError({
   reset: () => void;
 }) {
   useEffect(() => {
+    Sentry.captureException(error);
     console.error("Portal page error:", error);
   }, [error]);
 

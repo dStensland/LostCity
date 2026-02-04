@@ -94,13 +94,13 @@ export default withBundleAnalyzer(
     // Suppress source map upload logs in CI
     silent: true,
 
+    // Don't widen source maps (smaller bundles)
+    widenClientFileUpload: false,
+
     // Source maps configuration
     sourcemaps: {
-      // Delete source maps after upload to keep bundle small
-      deleteSourcemapsAfterUpload: true,
+      // Hide source maps from client (delete after upload)
+      disable: false,
     },
-
-    // Disable tunneling (not needed for basic setup)
-    tunnelRoute: undefined,
   })
 );
