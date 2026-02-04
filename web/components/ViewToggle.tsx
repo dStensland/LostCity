@@ -116,8 +116,8 @@ export default function ViewToggle({ className = "" }: Props) {
           onClick={() => setView(view.value)}
           className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md font-mono text-xs font-medium transition-all ${
             currentView === view.value
-              ? "bg-[var(--neon-cyan)] text-[var(--void)] shadow-[0_0_10px_hsl(var(--neon-cyan-hsl)/0.4)]"
-              : "text-[var(--muted)] hover:text-[var(--cream)] hover:bg-[var(--twilight)]"
+              ? "bg-[var(--twilight)] text-[var(--coral)] border border-[var(--coral)]/20"
+              : "text-[var(--muted)] hover:text-[var(--cream)] hover:bg-[var(--twilight)] border border-transparent"
           }`}
         >
           {view.icon}

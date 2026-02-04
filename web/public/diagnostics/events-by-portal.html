@@ -1,0 +1,1502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Events by Portal - LostCity Diagnostic Report</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            padding: 2rem;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 2rem;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            font-weight: 700;
+        }
+        
+        .header .timestamp {
+            opacity: 0.9;
+            font-size: 0.95rem;
+        }
+        
+        .content {
+            padding: 2rem;
+        }
+        
+        .section {
+            margin-bottom: 3rem;
+        }
+        
+        .section h2 {
+            font-size: 1.8rem;
+            margin-bottom: 1rem;
+            color: #667eea;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 0.5rem;
+        }
+        
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-top: 1.5rem;
+        }
+        
+        .summary-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+        
+        .summary-card.unassigned {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+        
+        .summary-card h3 {
+            font-size: 1rem;
+            margin-bottom: 0.5rem;
+            opacity: 0.9;
+        }
+        
+        .summary-card .count {
+            font-size: 2.5rem;
+            font-weight: 700;
+        }
+        
+        .chart-container {
+            background: #f8f9fa;
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin-top: 1.5rem;
+            overflow-x: auto;
+        }
+        
+        .daily-chart {
+            min-width: 800px;
+        }
+        
+        .day-bar {
+            display: flex;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+        
+        .day-label {
+            width: 100px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #555;
+        }
+        
+        .bar-stack {
+            flex: 1;
+            display: flex;
+            height: 24px;
+            background: #e9ecef;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        
+        .bar-segment {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: white;
+            transition: opacity 0.2s;
+        }
+        
+        .bar-segment:hover {
+            opacity: 0.8;
+        }
+        
+        .bar-segment.atlanta {
+            background: #667eea;
+        }
+        
+        .bar-segment.nashville {
+            background: #f093fb;
+        }
+        
+        .bar-segment.piedmont {
+            background: #4bc0c8;
+        }
+        
+        .bar-segment.unassigned {
+            background: #f5576c;
+        }
+        
+        .count-label {
+            width: 60px;
+            text-align: right;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #666;
+            padding-left: 0.5rem;
+        }
+        
+        .category-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-top: 1.5rem;
+        }
+        
+        .category-card {
+            background: #f8f9fa;
+            padding: 1.5rem;
+            border-radius: 8px;
+        }
+        
+        .category-card h3 {
+            font-size: 1.3rem;
+            margin-bottom: 1rem;
+            color: #667eea;
+        }
+        
+        .category-bar {
+            display: flex;
+            align-items: center;
+            margin-bottom: 0.75rem;
+        }
+        
+        .category-name {
+            width: 120px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: #555;
+        }
+        
+        .category-bar-fill {
+            flex: 1;
+            height: 20px;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            border-radius: 4px;
+            position: relative;
+        }
+        
+        .category-count {
+            width: 50px;
+            text-align: right;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #666;
+            padding-left: 0.5rem;
+        }
+        
+        .source-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1.5rem;
+            background: white;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        .source-table th {
+            background: #667eea;
+            color: white;
+            padding: 1rem;
+            text-align: left;
+            font-weight: 600;
+        }
+        
+        .source-table td {
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid #e9ecef;
+        }
+        
+        .source-table tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .source-table tr:hover {
+            background: #f8f9fa;
+        }
+        
+        .legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1.5rem;
+            margin-top: 1rem;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+        }
+        
+        .legend-label {
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 1rem;
+            }
+            
+            .header h1 {
+                font-size: 1.8rem;
+            }
+            
+            .summary-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .category-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Events by Portal</h1>
+            <p class="timestamp">Generated: February 04, 2026 at 12:14 AM </p>
+        </div>
+        
+        <div class="content">
+            <!-- Summary Section -->
+            <div class="section">
+                <h2>Portal Summary</h2>
+                <div class="summary-grid">
+
+                    <div class="summary-card ">
+                        <h3>Atlanta</h3>
+                        <div class="count">677</div>
+                    </div>
+
+                    <div class="summary-card ">
+                        <h3>LostCity Nashville</h3>
+                        <div class="count">208</div>
+                    </div>
+
+                    <div class="summary-card unassigned">
+                        <h3>Unassigned</h3>
+                        <div class="count">114</div>
+                    </div>
+
+                    <div class="summary-card ">
+                        <h3>Piedmont Healthcare</h3>
+                        <div class="count">1</div>
+                    </div>
+
+                </div>
+                
+                <div class="legend">
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #667eea;"></div>
+                        <span class="legend-label">Atlanta</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #f093fb;"></div>
+                        <span class="legend-label">Nashville</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #4bc0c8;"></div>
+                        <span class="legend-label">Piedmont</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #f5576c;"></div>
+                        <span class="legend-label">Unassigned</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Daily Breakdown Section -->
+            <div class="section">
+                <h2>Daily Event Counts (Next 60 Days)</h2>
+                <div class="chart-container">
+                    <div class="daily-chart">
+
+                        <div class="day-bar">
+                            <div class="day-label">Feb 04</div>
+                            <div class="bar-stack">
+
+                                <div class="bar-segment atlanta" style="width: 78.57142857142857%;" title="Atlanta: 22">
+                                    22
+                                </div>
+
+                            </div>
+                            <div class="count-label">28</div>
+                        </div>
+
+                        <div class="day-bar">
+                            <div class="day-label">Feb 05</div>
+                            <div class="bar-stack">
+
+                                <div class="bar-segment atlanta" style="width: 84.0909090909091%;" title="Atlanta: 37">
+                                    37
+                                </div>
+
+                                <div class="bar-segment unassigned" style="width: 6.8181818181818175%;" title="Unassigned: 3">
+                                    
+                                </div>
+
+                            </div>
+                            <div class="count-label">44</div>
+                        </div>
+
+                        <div class="day-bar">
+                            <div class="day-label">Feb 06</div>
+                            <div class="bar-stack">
+
+                                <div class="bar-segment atlanta" style="width: 74.46808510638297%;" title="Atlanta: 35">
+                                    35
+                                </div>
+
+                                <div class="bar-segment unassigned" style="width: 10.638297872340425%;" title="Unassigned: 5">
+                                    
+                                </div>
+
+                            </div>
+                            <div class="count-label">47</div>
+                        </div>
+
+                        <div class="day-bar">
+                            <div class="day-label">Feb 07</div>
+                            <div class="bar-stack">
+
+                                <div class="bar-segment atlanta" style="width: 80.85106382978722%;" title="Atlanta: 38">
+                                    38
+                                </div>
+
+                                <div class="bar-segment unassigned" style="width: 8.51063829787234%;" title="Unassigned: 4">
+                                    
+                                </div>
+
+                            </div>
+                            <div class="count-label">47</div>
+                        </div>
+
+                        <div class="day-bar">
+                            <div class="day-label">Feb 08</div>
+                            <div class="bar-stack">
+
+                                <div class="bar-segment atlanta" style="width: 72.22222222222221%;" title="Atlanta: 13">
+                                    13
+                                </div>
+
+                                <div class="bar-segment unassigned" style="width: 5.555555555555555%;" title="Unassigned: 1">
+                                    
+                                </div>
+
+                            </div>
+                            <div class="count-label">18</div>
+                        </div>
+
+                        <div class="day-bar">
+                            <div class="day-label">Feb 09</div>
+                            <div class="bar-stack">
+
+                                <div class="bar-segment atlanta" style="width: 69.23076923076923%;" title="Atlanta: 9">
+                                    9
+                                </div>
+
+                                <div class="bar-segment unassigned" style="width: 7.6923076923076925%;" title="Unassigned: 1">
+                                    
+                                </div>
+
+                            </div>
+                            <div class="count-label">13</div>
+                        </div>
+
+                        <div class="day-bar">
+                            <div class="day-label">Feb 10</div>
+                            <div class="bar-stack">
+
+                                <div class="bar-segment atlanta" style="width: 66.66666666666666%;" title="Atlanta: 8">
+                                    8
+                                </div>
+
+                            </div>
+                            <div class="count-label">12</div>
+                        </div>
+
+                        <div class="day-bar">
+                            <div class="day-label">Feb 11</div>
+                            <div class="bar-stack">
+
+                                <div class="bar-segment atlanta" style="width: 75.0%;" title="Atlanta: 15">
+                                    15
+                                </div>
+
+                                <div class="bar-segment unassigned" style="width: 5.0%;" title="Unassigned: 1">
+                                    
+                                </div>
+
+                            </div>
+                            <div class="count-label">20</div>
+                        </div>
+
+                        <div class="day-bar">
+                            <div class="day-label">Feb 12</div>
+                            <div class="bar-stack">
+
+                                <div class="bar-segment atlanta" style="width: 78.94736842105263%;" title="Atlanta: 30">
+                                    30
+                                </div>
+
+                                <div class="bar-segment unassigned" style="width: 15.789473684210526%;" title="Unassigned: 6">
+                                    6
+                                </div>
+
+                            </div>
+                            <div class="count-label">38</div>
+                        </div>
+
+                        <div class="day-bar">
+                            <div class="day-label">Feb 13</div>
+                            <div class="bar-stack">
+
+                                <div class="bar-segment atlanta" style="width: 74.28571428571429%;" title="Atlanta: 26">
+                                    26
+                                </div>
+
+                                <div class="bar-segment unassigned" style="width: 11.428571428571429%;" title="Unassigned: 4">
+                                    
+                                </div>
+
+                            </div>
+                            <div class="count-label">35</div>
+                        </div>
+
+                        <div class="day-bar">
+                            <div class="day-label">Feb 14</div>
+                            <div class="bar-stack">
+
+                                <div class="bar-segment atlanta" style="width: 76.19047619047619%;" title="Atlanta: 32">
+                                    32
+                                </div>
+
+                                <div class="bar-segment unassigned" style="width: 9.523809523809524%;" title="Unassigned: 4">
+                                    
+                                </div>
+
+                            </div>
+                            <div class="count-label">42</div>
+                        </div>
+
+                        <div class="day-bar">
+                            <div class="day-label">Feb 15</div>
+                            <div class="bar-stack">
+
+                                <div class="bar-segment atlanta" style="width: 64.0%;" title="Atlanta: 16">
+                                    16
+                                </div>
+
+                                <div class="bar-segment unassigned" style="width: 8.0%;" title="Unassigned: 2">
+                                    
+                                </div>
+
+                            </div>
+                            <div class="count-label">25</div>
+                        </div>
+
+                        <div class="day-bar">
+                            <div class="day-label">Feb 16</div>
+                            <div class="bar-stack">
+
+                                <div class="bar-segment atlanta" style="width: 54.54545454545454%;" title="Atlanta: 6">
+                                    6
+                                </div>
+
+                            </div>
+                            <div class="count-label">11</div>
+                        </div>
+
+                        <div class="day-bar">
+                            <div class="day-label">Feb 17</div>
+                            <div class="bar-stack">
+
+                                <div class="bar-segment atlanta" style="width: 77.77777777777779%;" title="Atlanta: 14">
+                                    14
+                                </div>
+
+                                <div class="bar-segment unassigned" style="width: 11.11111111111111%;" title="Unassigned: 2">
+                                    
+                                </div>
+
+                            </div>
+                            <div class="count-label">18</div>
+                        </div>
+
+                        <div class="day-bar">
+                            <div class="day-label">Feb 18</div>
+                            <div class="bar-stack">
+
+                                <div class="bar-segment atlanta" style="width: 83.33333333333334%;" title="Atlanta: 20">
+                                    20
+                                </div>
+
+                                <div class="bar-segment unassigned" style="width: 8.333333333333332%;" title="Unassigned: 2">
+                                    
+                                </div>
+
+                            </div>
+                            <div class="count-label">24</div>
+                        </div>
+
+                        <div class="day-bar">
+                            <div class="day-label">Feb 19</div>
+                            <div class="bar-stack">
+
+                                <div class="bar-segment atlanta" style="width: 79.41176470588235%;" title="Atlanta: 27">
+                                    27
+                                </div>
+
+                                <div class="bar-segment unassigned" style="width: 8.823529411764707%;" title="Unassigned: 3">
+                                    
+                                </div>
+
+                            </div>
+                            <div class="count-label">34</div>
+                        </div>
+
+                        <div class="day-bar">
+                            <div class="day-label">Feb 20</div>
+                            <div class="bar-stack">
+
+                                <div class="bar-segment atlanta" style="width: 70.58823529411765%;" title="Atlanta: 24">
+                                    24
+                                </div>
+
+                                <div class="bar-segment unassigned" style="width: 11.76470588235294%;" title="Unassigned: 4">
+                                    
+                                </div>
+
+                            </div>
+                            <div class="count-label">34</div>
+                        </div>
+
+                        <div class="day-bar">
+                            <div class="day-label">Feb 21</div>
+                            <div class="bar-stack">
+
+                                <div class="bar-segment atlanta" style="width: 77.5%;" title="Atlanta: 31">
+                                    31
+                                </div>
+
+                                <div class="bar-segment unassigned" style="width: 2.5%;" title="Unassigned: 1">
+                                    
+                                </div>
+
+                            </div>
+                            <div class="count-label">40</div>
+                        </div>
+
+                        <div class="day-bar">
+                            <div class="day-label">Feb 22</div>
+                            <div class="bar-stack">
+
+                                <div class="bar-segment atlanta" style="width: 90.9090909090909%;" title="Atlanta: 20">
+                                    20
+                                </div>
+
+                            </div>
+                            <div class="count-label">22</div>
+                        </div>
+
+                        <div class="day-bar">
+                            <div class="day-label">Feb 23</div>
+                            <div class="bar-stack">
+
+                                <div class="bar-segment atlanta" style="width: 45.45454545454545%;" title="Atlanta: 5">
+                                    
+                                </div>
+
+                                <div class="bar-segment unassigned" style="width: 36.36363636363637%;" title="Unassigned: 4">
+                                    
+                                </div>
+
+                            </div>
+                            <div class="count-label">11</div>
+                        </div>
+
+                        <div class="day-bar">
+                            <div class="day-label">Feb 24</div>
+                            <div class="bar-stack">
+
+                                <div class="bar-segment atlanta" style="width: 83.33333333333334%;" title="Atlanta: 10">
+                                    10
+                                </div>
+
+                            </div>
+                            <div class="count-label">12</div>
+                        </div>
+
+                        <div class="day-bar">
+                            <div class="day-label">Feb 25</div>
+                            <div class="bar-stack">
+
+                                <div class="bar-segment atlanta" style="width: 90.0%;" title="Atlanta: 18">
+                                    18
+                                </div>
+
+                            </div>
+                            <div class="count-label">20</div>
+                        </div>
+
+                        <div class="day-bar">
+                            <div class="day-label">Feb 26</div>
+                            <div class="bar-stack">
+
+                                <div class="bar-segment atlanta" style="width: 82.75862068965517%;" title="Atlanta: 24">
+                                    24
+                                </div>
+
+                                <div class="bar-segment unassigned" style="width: 3.4482758620689653%;" title="Unassigned: 1">
+                                    
+                                </div>
+
+                            </div>
+                            <div class="count-label">29</div>
+                        </div>
+
+                        <div class="day-bar">
+                            <div class="day-label">Feb 27</div>
+                            <div class="bar-stack">
+
+                                <div class="bar-segment atlanta" style="width: 76.19047619047619%;" title="Atlanta: 16">
+                                    16
+                                </div>
+
+                                <div class="bar-segment unassigned" style="width: 4.761904761904762%;" title="Unassigned: 1">
+                                    
+                                </div>
+
+                            </div>
+                            <div class="count-label">21</div>
+                        </div>
+
+                        <div class="day-bar">
+                            <div class="day-label">Feb 28</div>
+                            <div class="bar-stack">
+
+                                <div class="bar-segment atlanta" style="width: 75.86206896551724%;" title="Atlanta: 22">
+                                    22
+                                </div>
+
+                                <div class="bar-segment unassigned" style="width: 10.344827586206897%;" title="Unassigned: 3">
+                                    
+                                </div>
+
+                            </div>
+                            <div class="count-label">29</div>
+                        </div>
+
+                        <div class="day-bar">
+                            <div class="day-label">Mar 01</div>
+                            <div class="bar-stack">
+
+                                <div class="bar-segment atlanta" style="width: 69.23076923076923%;" title="Atlanta: 9">
+                                    9
+                                </div>
+
+                            </div>
+                            <div class="count-label">13</div>
+                        </div>
+
+                        <div class="day-bar">
+                            <div class="day-label">Mar 02</div>
+                            <div class="bar-stack">
+
+                                <div class="bar-segment atlanta" style="width: 100.0%;" title="Atlanta: 2">
+                                    
+                                </div>
+
+                            </div>
+                            <div class="count-label">2</div>
+                        </div>
+
+                        <div class="day-bar">
+                            <div class="day-label">Mar 03</div>
+                            <div class="bar-stack">
+
+                                <div class="bar-segment atlanta" style="width: 88.88888888888889%;" title="Atlanta: 8">
+                                    8
+                                </div>
+
+                            </div>
+                            <div class="count-label">9</div>
+                        </div>
+
+                        <div class="day-bar">
+                            <div class="day-label">Mar 04</div>
+                            <div class="bar-stack">
+
+                                <div class="bar-segment atlanta" style="width: 83.33333333333334%;" title="Atlanta: 15">
+                                    15
+                                </div>
+
+                                <div class="bar-segment unassigned" style="width: 11.11111111111111%;" title="Unassigned: 2">
+                                    
+                                </div>
+
+                            </div>
+                            <div class="count-label">18</div>
+                        </div>
+
+                        <div class="day-bar">
+                            <div class="day-label">Mar 05</div>
+                            <div class="bar-stack">
+
+                                <div class="bar-segment atlanta" style="width: 100.0%;" title="Atlanta: 18">
+                                    18
+                                </div>
+
+                            </div>
+                            <div class="count-label">18</div>
+                        </div>
+
+                        <div class="day-bar">
+                            <div class="day-label">Mar 06</div>
+                            <div class="bar-stack">
+
+                                <div class="bar-segment atlanta" style="width: 84.21052631578947%;" title="Atlanta: 16">
+                                    16
+                                </div>
+
+                                <div class="bar-segment unassigned" style="width: 5.263157894736842%;" title="Unassigned: 1">
+                                    
+                                </div>
+
+                            </div>
+                            <div class="count-label">19</div>
+                        </div>
+
+                        <div class="day-bar">
+                            <div class="day-label">Mar 07</div>
+                            <div class="bar-stack">
+
+                                <div class="bar-segment atlanta" style="width: 85.71428571428571%;" title="Atlanta: 24">
+                                    24
+                                </div>
+
+                            </div>
+                            <div class="count-label">28</div>
+                        </div>
+
+                        <div class="day-bar">
+                            <div class="day-label">Mar 08</div>
+                            <div class="bar-stack">
+
+                                <div class="bar-segment atlanta" style="width: 84.61538461538461%;" title="Atlanta: 11">
+                                    11
+                                </div>
+
+                            </div>
+                            <div class="count-label">13</div>
+                        </div>
+
+                        <div class="day-bar">
+                            <div class="day-label">Mar 09</div>
+                            <div class="bar-stack">
+
+                                <div class="bar-segment atlanta" style="width: 66.66666666666666%;" title="Atlanta: 2">
+                                    
+                                </div>
+
+                            </div>
+                            <div class="count-label">3</div>
+                        </div>
+
+                        <div class="day-bar">
+                            <div class="day-label">Mar 10</div>
+                            <div class="bar-stack">
+
+                                <div class="bar-segment atlanta" style="width: 72.72727272727273%;" title="Atlanta: 8">
+                                    8
+                                </div>
+
+                                <div class="bar-segment unassigned" style="width: 9.090909090909092%;" title="Unassigned: 1">
+                                    
+                                </div>
+
+                            </div>
+                            <div class="count-label">11</div>
+                        </div>
+
+                        <div class="day-bar">
+                            <div class="day-label">Mar 11</div>
+                            <div class="bar-stack">
+
+                                <div class="bar-segment atlanta" style="width: 83.33333333333334%;" title="Atlanta: 10">
+                                    10
+                                </div>
+
+                            </div>
+                            <div class="count-label">12</div>
+                        </div>
+
+                        <div class="day-bar">
+                            <div class="day-label">Mar 12</div>
+                            <div class="bar-stack">
+
+                                <div class="bar-segment atlanta" style="width: 83.33333333333334%;" title="Atlanta: 10">
+                                    10
+                                </div>
+
+                                <div class="bar-segment unassigned" style="width: 8.333333333333332%;" title="Unassigned: 1">
+                                    
+                                </div>
+
+                            </div>
+                            <div class="count-label">12</div>
+                        </div>
+
+                        <div class="day-bar">
+                            <div class="day-label">Mar 13</div>
+                            <div class="bar-stack">
+
+                                <div class="bar-segment atlanta" style="width: 72.22222222222221%;" title="Atlanta: 13">
+                                    13
+                                </div>
+
+                                <div class="bar-segment unassigned" style="width: 5.555555555555555%;" title="Unassigned: 1">
+                                    
+                                </div>
+
+                            </div>
+                            <div class="count-label">18</div>
+                        </div>
+
+                        <div class="day-bar">
+                            <div class="day-label">Mar 14</div>
+                            <div class="bar-stack">
+
+                                <div class="bar-segment atlanta" style="width: 60.0%;" title="Atlanta: 9">
+                                    9
+                                </div>
+
+                            </div>
+                            <div class="count-label">15</div>
+                        </div>
+
+                        <div class="day-bar">
+                            <div class="day-label">Mar 15</div>
+                            <div class="bar-stack">
+
+                                <div class="bar-segment atlanta" style="width: 41.17647058823529%;" title="Atlanta: 7">
+                                    7
+                                </div>
+
+                                <div class="bar-segment unassigned" style="width: 58.82352941176471%;" title="Unassigned: 10">
+                                    10
+                                </div>
+
+                            </div>
+                            <div class="count-label">17</div>
+                        </div>
+
+                        <div class="day-bar">
+                            <div class="day-label">Mar 16</div>
+                            <div class="bar-stack">
+
+                                <div class="bar-segment atlanta" style="width: 33.33333333333333%;" title="Atlanta: 1">
+                                    
+                                </div>
+
+                                <div class="bar-segment unassigned" style="width: 33.33333333333333%;" title="Unassigned: 1">
+                                    
+                                </div>
+
+                            </div>
+                            <div class="count-label">3</div>
+                        </div>
+
+                        <div class="day-bar">
+                            <div class="day-label">Mar 17</div>
+                            <div class="bar-stack">
+
+                                <div class="bar-segment atlanta" style="width: 77.77777777777779%;" title="Atlanta: 7">
+                                    7
+                                </div>
+
+                            </div>
+                            <div class="count-label">9</div>
+                        </div>
+
+                        <div class="day-bar">
+                            <div class="day-label">Mar 18</div>
+                            <div class="bar-stack">
+
+                                <div class="bar-segment atlanta" style="width: 100.0%;" title="Atlanta: 14">
+                                    14
+                                </div>
+
+                            </div>
+                            <div class="count-label">14</div>
+                        </div>
+
+                        <div class="day-bar">
+                            <div class="day-label">Mar 19</div>
+                            <div class="bar-stack">
+
+                                <div class="bar-segment atlanta" style="width: 87.5%;" title="Atlanta: 7">
+                                    7
+                                </div>
+
+                            </div>
+                            <div class="count-label">8</div>
+                        </div>
+
+                        <div class="day-bar">
+                            <div class="day-label">Mar 20</div>
+                            <div class="bar-stack">
+
+                                <div class="bar-segment atlanta" style="width: 81.81818181818183%;" title="Atlanta: 9">
+                                    9
+                                </div>
+
+                            </div>
+                            <div class="count-label">11</div>
+                        </div>
+
+                        <div class="day-bar">
+                            <div class="day-label">Mar 21</div>
+                            <div class="bar-stack">
+
+                                <div class="bar-segment atlanta" style="width: 58.333333333333336%;" title="Atlanta: 7">
+                                    7
+                                </div>
+
+                                <div class="bar-segment unassigned" style="width: 16.666666666666664%;" title="Unassigned: 2">
+                                    
+                                </div>
+
+                            </div>
+                            <div class="count-label">12</div>
+                        </div>
+
+                        <div class="day-bar">
+                            <div class="day-label">Mar 22</div>
+                            <div class="bar-stack">
+
+                                <div class="bar-segment atlanta" style="width: 100.0%;" title="Atlanta: 2">
+                                    
+                                </div>
+
+                            </div>
+                            <div class="count-label">2</div>
+                        </div>
+
+                        <div class="day-bar">
+                            <div class="day-label">Mar 23</div>
+                            <div class="bar-stack">
+
+                            </div>
+                            <div class="count-label">1</div>
+                        </div>
+
+                        <div class="day-bar">
+                            <div class="day-label">Mar 24</div>
+                            <div class="bar-stack">
+
+                                <div class="bar-segment atlanta" style="width: 100.0%;" title="Atlanta: 4">
+                                    
+                                </div>
+
+                            </div>
+                            <div class="count-label">4</div>
+                        </div>
+
+                        <div class="day-bar">
+                            <div class="day-label">Mar 25</div>
+                            <div class="bar-stack">
+
+                                <div class="bar-segment atlanta" style="width: 100.0%;" title="Atlanta: 4">
+                                    
+                                </div>
+
+                            </div>
+                            <div class="count-label">4</div>
+                        </div>
+
+                        <div class="day-bar">
+                            <div class="day-label">Mar 26</div>
+                            <div class="bar-stack">
+
+                                <div class="bar-segment atlanta" style="width: 88.88888888888889%;" title="Atlanta: 8">
+                                    8
+                                </div>
+
+                            </div>
+                            <div class="count-label">9</div>
+                        </div>
+
+                        <div class="day-bar">
+                            <div class="day-label">Mar 27</div>
+                            <div class="bar-stack">
+
+                                <div class="bar-segment atlanta" style="width: 100.0%;" title="Atlanta: 6">
+                                    6
+                                </div>
+
+                            </div>
+                            <div class="count-label">6</div>
+                        </div>
+
+                        <div class="day-bar">
+                            <div class="day-label">Mar 28</div>
+                            <div class="bar-stack">
+
+                                <div class="bar-segment atlanta" style="width: 28.57142857142857%;" title="Atlanta: 2">
+                                    
+                                </div>
+
+                                <div class="bar-segment unassigned" style="width: 28.57142857142857%;" title="Unassigned: 2">
+                                    
+                                </div>
+
+                            </div>
+                            <div class="count-label">7</div>
+                        </div>
+
+                        <div class="day-bar">
+                            <div class="day-label">Mar 29</div>
+                            <div class="bar-stack">
+
+                                <div class="bar-segment atlanta" style="width: 100.0%;" title="Atlanta: 2">
+                                    
+                                </div>
+
+                            </div>
+                            <div class="count-label">2</div>
+                        </div>
+
+                        <div class="day-bar">
+                            <div class="day-label">Mar 30</div>
+                            <div class="bar-stack">
+
+                            </div>
+                            <div class="count-label">1</div>
+                        </div>
+
+                        <div class="day-bar">
+                            <div class="day-label">Mar 31</div>
+                            <div class="bar-stack">
+
+                                <div class="bar-segment atlanta" style="width: 100.0%;" title="Atlanta: 1">
+                                    
+                                </div>
+
+                            </div>
+                            <div class="count-label">1</div>
+                        </div>
+
+                        <div class="day-bar">
+                            <div class="day-label">Apr 01</div>
+                            <div class="bar-stack">
+
+                                <div class="bar-segment atlanta" style="width: 66.66666666666666%;" title="Atlanta: 4">
+                                    
+                                </div>
+
+                            </div>
+                            <div class="count-label">6</div>
+                        </div>
+
+                        <div class="day-bar">
+                            <div class="day-label">Apr 03</div>
+                            <div class="bar-stack">
+
+                                <div class="bar-segment atlanta" style="width: 50.0%;" title="Atlanta: 4">
+                                    
+                                </div>
+
+                            </div>
+                            <div class="count-label">8</div>
+                        </div>
+
+                        <div class="day-bar">
+                            <div class="day-label">Apr 04</div>
+                            <div class="bar-stack">
+
+                                <div class="bar-segment atlanta" style="width: 42.857142857142854%;" title="Atlanta: 3">
+                                    
+                                </div>
+
+                                <div class="bar-segment unassigned" style="width: 14.285714285714285%;" title="Unassigned: 1">
+                                    
+                                </div>
+
+                            </div>
+                            <div class="count-label">7</div>
+                        </div>
+
+                        <div class="day-bar">
+                            <div class="day-label">Apr 05</div>
+                            <div class="bar-stack">
+
+                                <div class="bar-segment atlanta" style="width: 100.0%;" title="Atlanta: 3">
+                                    
+                                </div>
+
+                            </div>
+                            <div class="count-label">3</div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Category Breakdown Section -->
+            <div class="section">
+                <h2>Category Breakdown by Portal</h2>
+                <div class="category-grid">
+
+                    <div class="category-card">
+                        <h3>Atlanta</h3>
+
+                        <div class="category-bar">
+                            <div class="category-name">comedy</div>
+                            <div class="category-bar-fill" style="width: 100.0%;"></div>
+                            <div class="category-count">154</div>
+                        </div>
+
+                        <div class="category-bar">
+                            <div class="category-name">theater</div>
+                            <div class="category-bar-fill" style="width: 82.46753246753246%;"></div>
+                            <div class="category-count">127</div>
+                        </div>
+
+                        <div class="category-bar">
+                            <div class="category-name">music</div>
+                            <div class="category-bar-fill" style="width: 68.83116883116884%;"></div>
+                            <div class="category-count">106</div>
+                        </div>
+
+                        <div class="category-bar">
+                            <div class="category-name">community</div>
+                            <div class="category-bar-fill" style="width: 57.14285714285714%;"></div>
+                            <div class="category-count">88</div>
+                        </div>
+
+                        <div class="category-bar">
+                            <div class="category-name">art</div>
+                            <div class="category-bar-fill" style="width: 35.714285714285715%;"></div>
+                            <div class="category-count">55</div>
+                        </div>
+
+                        <div class="category-bar">
+                            <div class="category-name">sports</div>
+                            <div class="category-bar-fill" style="width: 31.16883116883117%;"></div>
+                            <div class="category-count">48</div>
+                        </div>
+
+                        <div class="category-bar">
+                            <div class="category-name">film</div>
+                            <div class="category-bar-fill" style="width: 12.987012987012985%;"></div>
+                            <div class="category-count">20</div>
+                        </div>
+
+                        <div class="category-bar">
+                            <div class="category-name">words</div>
+                            <div class="category-bar-fill" style="width: 12.337662337662337%;"></div>
+                            <div class="category-count">19</div>
+                        </div>
+
+                        <div class="category-bar">
+                            <div class="category-name">nightlife</div>
+                            <div class="category-bar-fill" style="width: 11.688311688311687%;"></div>
+                            <div class="category-count">18</div>
+                        </div>
+
+                        <div class="category-bar">
+                            <div class="category-name">family</div>
+                            <div class="category-bar-fill" style="width: 11.03896103896104%;"></div>
+                            <div class="category-count">17</div>
+                        </div>
+
+                    </div>
+
+                    <div class="category-card">
+                        <h3>LostCity Nashville</h3>
+
+                        <div class="category-bar">
+                            <div class="category-name">music</div>
+                            <div class="category-bar-fill" style="width: 100.0%;"></div>
+                            <div class="category-count">155</div>
+                        </div>
+
+                        <div class="category-bar">
+                            <div class="category-name">community</div>
+                            <div class="category-bar-fill" style="width: 14.838709677419354%;"></div>
+                            <div class="category-count">23</div>
+                        </div>
+
+                        <div class="category-bar">
+                            <div class="category-name">other</div>
+                            <div class="category-bar-fill" style="width: 13.548387096774196%;"></div>
+                            <div class="category-count">21</div>
+                        </div>
+
+                        <div class="category-bar">
+                            <div class="category-name">theater</div>
+                            <div class="category-bar-fill" style="width: 3.225806451612903%;"></div>
+                            <div class="category-count">5</div>
+                        </div>
+
+                        <div class="category-bar">
+                            <div class="category-name">sports</div>
+                            <div class="category-bar-fill" style="width: 1.935483870967742%;"></div>
+                            <div class="category-count">3</div>
+                        </div>
+
+                        <div class="category-bar">
+                            <div class="category-name">comedy</div>
+                            <div class="category-bar-fill" style="width: 0.6451612903225806%;"></div>
+                            <div class="category-count">1</div>
+                        </div>
+
+                    </div>
+
+                    <div class="category-card">
+                        <h3>Piedmont Healthcare</h3>
+
+                        <div class="category-bar">
+                            <div class="category-name">family</div>
+                            <div class="category-bar-fill" style="width: 100.0%;"></div>
+                            <div class="category-count">1</div>
+                        </div>
+
+                    </div>
+
+                    <div class="category-card">
+                        <h3>Unassigned</h3>
+
+                        <div class="category-bar">
+                            <div class="category-name">community</div>
+                            <div class="category-bar-fill" style="width: 100.0%;"></div>
+                            <div class="category-count">65</div>
+                        </div>
+
+                        <div class="category-bar">
+                            <div class="category-name">family</div>
+                            <div class="category-bar-fill" style="width: 20.0%;"></div>
+                            <div class="category-count">13</div>
+                        </div>
+
+                        <div class="category-bar">
+                            <div class="category-name">food_drink</div>
+                            <div class="category-bar-fill" style="width: 20.0%;"></div>
+                            <div class="category-count">13</div>
+                        </div>
+
+                        <div class="category-bar">
+                            <div class="category-name">nightlife</div>
+                            <div class="category-bar-fill" style="width: 12.307692307692308%;"></div>
+                            <div class="category-count">8</div>
+                        </div>
+
+                        <div class="category-bar">
+                            <div class="category-name">fitness</div>
+                            <div class="category-bar-fill" style="width: 10.76923076923077%;"></div>
+                            <div class="category-count">7</div>
+                        </div>
+
+                        <div class="category-bar">
+                            <div class="category-name">music</div>
+                            <div class="category-bar-fill" style="width: 7.6923076923076925%;"></div>
+                            <div class="category-count">5</div>
+                        </div>
+
+                        <div class="category-bar">
+                            <div class="category-name">sports</div>
+                            <div class="category-bar-fill" style="width: 3.076923076923077%;"></div>
+                            <div class="category-count">2</div>
+                        </div>
+
+                        <div class="category-bar">
+                            <div class="category-name">film</div>
+                            <div class="category-bar-fill" style="width: 1.5384615384615385%;"></div>
+                            <div class="category-count">1</div>
+                        </div>
+
+                    </div>
+
+                </div>
+            </div>
+            
+            <!-- Unassigned Sources Section -->
+            <div class="section">
+                <h2>Unassigned Events - Source Breakdown</h2>
+                <table class="source-table">
+                    <thead>
+                        <tr>
+                            <th>Source Name</th>
+                            <th style="text-align: right;">Event Count</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+
+                        <tr>
+                            <td>Ferst Center for the Arts</td>
+                            <td style="text-align: right; font-weight: 600;">16</td>
+                        </tr>
+
+                        <tr>
+                            <td>Zoo Atlanta</td>
+                            <td style="text-align: right; font-weight: 600;">14</td>
+                        </tr>
+
+                        <tr>
+                            <td>City of College Park</td>
+                            <td style="text-align: right; font-weight: 600;">10</td>
+                        </tr>
+
+                        <tr>
+                            <td>Ebenezer Baptist Church</td>
+                            <td style="text-align: right; font-weight: 600;">10</td>
+                        </tr>
+
+                        <tr>
+                            <td>Fernbank Museum of Natural History</td>
+                            <td style="text-align: right; font-weight: 600;">9</td>
+                        </tr>
+
+                        <tr>
+                            <td>Atlanta Tech Village</td>
+                            <td style="text-align: right; font-weight: 600;">7</td>
+                        </tr>
+
+                        <tr>
+                            <td>Gas South Arena</td>
+                            <td style="text-align: right; font-weight: 600;">6</td>
+                        </tr>
+
+                        <tr>
+                            <td>Big Peach Running Co</td>
+                            <td style="text-align: right; font-weight: 600;">5</td>
+                        </tr>
+
+                        <tr>
+                            <td>Atlantic Station</td>
+                            <td style="text-align: right; font-weight: 600;">4</td>
+                        </tr>
+
+                        <tr>
+                            <td>Decatur Farmers Market</td>
+                            <td style="text-align: right; font-weight: 600;">4</td>
+                        </tr>
+
+                        <tr>
+                            <td>Freedom Farmers Market</td>
+                            <td style="text-align: right; font-weight: 600;">4</td>
+                        </tr>
+
+                        <tr>
+                            <td>Atlanta Eagle</td>
+                            <td style="text-align: right; font-weight: 600;">3</td>
+                        </tr>
+
+                        <tr>
+                            <td>Believe Music Hall</td>
+                            <td style="text-align: right; font-weight: 600;">3</td>
+                        </tr>
+
+                        <tr>
+                            <td>Atlanta Botanical Garden</td>
+                            <td style="text-align: right; font-weight: 600;">3</td>
+                        </tr>
+
+                        <tr>
+                            <td>City Springs</td>
+                            <td style="text-align: right; font-weight: 600;">3</td>
+                        </tr>
+
+                        <tr>
+                            <td>Atlanta History Center</td>
+                            <td style="text-align: right; font-weight: 600;">2</td>
+                        </tr>
+
+                        <tr>
+                            <td>Blake's on the Park</td>
+                            <td style="text-align: right; font-weight: 600;">2</td>
+                        </tr>
+
+                        <tr>
+                            <td>Center Stage</td>
+                            <td style="text-align: right; font-weight: 600;">2</td>
+                        </tr>
+
+                        <tr>
+                            <td>Farmers Markets</td>
+                            <td style="text-align: right; font-weight: 600;">2</td>
+                        </tr>
+
+                        <tr>
+                            <td>Grant Park Farmers Market</td>
+                            <td style="text-align: right; font-weight: 600;">2</td>
+                        </tr>
+
+                        <tr>
+                            <td>Atlanta Motor Speedway</td>
+                            <td style="text-align: right; font-weight: 600;">1</td>
+                        </tr>
+
+                        <tr>
+                            <td>National Center for Civil and Human Rights</td>
+                            <td style="text-align: right; font-weight: 600;">1</td>
+                        </tr>
+
+                        <tr>
+                            <td>Eventbrite</td>
+                            <td style="text-align: right; font-weight: 600;">1</td>
+                        </tr>
+
+                    </tbody>
+                </table>
+                <p style="margin-top: 1rem; color: #666; font-style: italic;">
+                    Total unassigned events: 114
+                </p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

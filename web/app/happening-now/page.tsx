@@ -52,7 +52,7 @@ const SPOT_TYPE_LABELS: Record<string, string> = {
 type UserLocation = { lat: number; lng: number } | null;
 
 export default function HappeningNowPage() {
-  const { events, loading: eventsLoading } = useLiveEvents();
+  const { events, loading: eventsLoading } = useLiveEvents(DEFAULT_PORTAL_SLUG);
   const [userLocation, setUserLocation] = useState<UserLocation>(null);
   const [locationLoading, setLocationLoading] = useState(false);
   const [, setLocationDenied] = useState(false);

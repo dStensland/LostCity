@@ -27,6 +27,7 @@ interface InstantSearchResponse {
   quickActions: QuickAction[];
   groupedResults: Record<string, SearchResult[]>;
   groupOrder: string[];
+  facets?: { type: string; count: number }[];
   intent?: {
     type: string;
     confidence: number;
@@ -53,6 +54,7 @@ export default function SearchBar() {
   const [showDropdown, setShowDropdown] = useState(false);
   const [suggestions, setSuggestions] = useState<(SearchResult & { personalizationReason?: string })[]>([]);
   const [quickActions, setQuickActions] = useState<QuickAction[]>([]);
+  const [facets, setFacets] = useState<{ type: string; count: number }[]>([]);
   const [recentSearches, setRecentSearches] = useState<string[]>(() => {
     if (typeof window !== "undefined") {
       return getRecentSearches();
@@ -92,6 +94,7 @@ export default function SearchBar() {
     if (query.length < 2) {
       setSuggestions([]);
       setQuickActions([]);
+      setFacets([]);
       return;
     }
 
@@ -130,11 +133,13 @@ export default function SearchBar() {
 
         setSuggestions(rankedResults);
         setQuickActions(data.quickActions || detectQuickActions(query, portalSlug));
+        setFacets(data.facets || []);
         setSelectedIndex(-1);
       } catch (err) {
         console.error("Search error:", err);
         setSuggestions([]);
         setQuickActions([]);
+        setFacets([]);
       } finally {
         if (fetchId === fetchIdRef.current) {
           setIsLoading(false);
@@ -534,6 +539,10 @@ export default function SearchBar() {
                 const startIdx = currentIndex;
                 currentIndex += Math.min(results.length, 3);
 
+                const facetCount = facets.find(f => f.type === type)?.count;
+                const totalCount = facetCount ?? results.length;
+                const hasMore = totalCount > 3;
+
                 return (
                   <SuggestionGroup
                     key={type}
@@ -545,6 +554,13 @@ export default function SearchBar() {
                     onSelect={selectSuggestion}
                     onHover={setSelectedIndex}
                     maxItems={3}
+                    totalCount={facetCount}
+                    onViewAll={hasMore ? () => {
+                      const findType = type === "venue" ? "destinations" : type === "organizer" ? "orgs" : "events";
+                      setShowDropdown(false);
+                      setSelectedIndex(-1);
+                      router.push(`/${portalSlug}?view=find&type=${findType}&search=${encodeURIComponent(query)}`, { scroll: false });
+                    } : undefined}
                   />
                 );
               })}

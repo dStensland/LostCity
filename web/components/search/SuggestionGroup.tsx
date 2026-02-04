@@ -24,6 +24,10 @@ export interface SuggestionGroupProps {
   onHover: (index: number) => void;
   /** Maximum items to show (default: 3) */
   maxItems?: number;
+  /** Total count from facets (if available) */
+  totalCount?: number;
+  /** Called when "view all" is clicked */
+  onViewAll?: () => void;
 }
 
 // ============================================
@@ -39,12 +43,16 @@ export default function SuggestionGroup({
   onSelect,
   onHover,
   maxItems = 3,
+  totalCount,
+  onViewAll,
 }: SuggestionGroupProps) {
   if (results.length === 0) return null;
 
   const displayResults = results.slice(0, maxItems);
   const typeLabel = getTypeLabel(type);
   const typeColor = getTypeColor(type);
+  const displayCount = totalCount ?? results.length;
+  const hasMore = displayCount > maxItems;
 
   return (
     <div className="py-1">
@@ -57,10 +65,18 @@ export default function SuggestionGroup({
         >
           {typeLabel}
         </span>
-        {results.length > maxItems && (
+        {displayCount > 0 && (
           <span className="text-[0.55rem] text-[var(--muted)]">
-            +{results.length - maxItems} more
+            ({displayCount})
           </span>
+        )}
+        {hasMore && onViewAll && (
+          <button
+            onMouseDown={onViewAll}
+            className="text-[0.55rem] text-[var(--coral)] hover:text-[var(--rose)] transition-colors ml-auto font-mono"
+          >
+            view all
+          </button>
         )}
       </div>
 

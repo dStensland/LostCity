@@ -88,7 +88,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   // Fetch event series
   const { data: seriesData } = await supabase
-    .from("event_series")
+    .from("series")
     .select("slug, updated_at")
     .limit(200);
 

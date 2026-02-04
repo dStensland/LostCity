@@ -28,29 +28,42 @@ export default function SearchResultItem({
       href={href}
       scroll={false}
       onClick={onClick}
-      className={`flex items-center gap-3 rounded-lg hover:bg-[var(--twilight)] transition-colors group focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--coral)] focus-visible:ring-inset ${
-        compact ? "p-2" : "p-2.5"
+      className={`flex items-center gap-3 rounded-lg hover:bg-[var(--twilight)]/50 transition-all group focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--coral)] focus-visible:ring-inset border-l-2 border-transparent hover:border-l-2 ${
+        compact ? "p-2" : "px-3 py-2.5"
       }`}
+      style={{
+        ["--hover-accent" as string]: config.iconClass.includes("magenta") ? "var(--neon-magenta)"
+          : config.iconClass.includes("coral") ? "var(--coral)"
+          : config.iconClass.includes("gold") ? "var(--gold)"
+          : config.iconClass.includes("green") ? "var(--neon-green)"
+          : "var(--soft)",
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.borderLeftColor = `var(--hover-accent)`;
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.borderLeftColor = "transparent";
+      }}
     >
       {/* Type Icon */}
       <div
         className={`flex items-center justify-center flex-shrink-0 rounded-lg ${config.bgClass} ${
-          compact ? "w-8 h-8" : "w-10 h-10"
+          compact ? "w-8 h-8" : "w-9 h-9"
         }`}
       >
-        <TypeIcon type={result.type} className={`${compact ? "w-4 h-4" : "w-5 h-5"} ${config.iconClass}`} />
+        <TypeIcon type={result.type} className={`${compact ? "w-4 h-4" : "w-[18px] h-[18px]"} ${config.iconClass}`} />
       </div>
 
       {/* Content */}
       <div className="flex-1 min-w-0">
         <p
           className={`font-medium text-[var(--cream)] truncate group-hover:${config.hoverClass} transition-colors ${
-            compact ? "text-sm" : ""
+            compact ? "text-sm" : "text-[0.9375rem]"
           }`}
         >
           {result.title}
         </p>
-        <p className={`text-[var(--soft)] truncate ${compact ? "text-xs" : "text-xs"}`}>
+        <p className={`text-[var(--soft)] truncate ${compact ? "text-xs" : "text-[0.8125rem]"}`}>
           {getSubtitle(result)}
         </p>
       </div>

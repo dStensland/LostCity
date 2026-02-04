@@ -3,6 +3,15 @@ Crawler for Brooklyn Bowl Nashville (brooklynbowl.com/nashville/shows/all).
 
 Music venue and bowling alley in Germantown, part of Brooklyn Bowl chain.
 Uses JavaScript rendering for event listings.
+
+DOM structure:
+- .eventItem containers
+- .m-date__month / .m-date__day for date (e.g., "02" / "04")
+- .m-date__weekday for day of week (e.g., "Wed")
+- .doors for time text (e.g., "Doors: 9:00 PM / Show: 9:30 PM")
+- .title h3 a for event title and link
+- .tagline for supporting acts
+- img for event image
 """
 
 from __future__ import annotations
@@ -13,10 +22,11 @@ from datetime import datetime
 from typing import Optional
 
 from playwright.sync_api import sync_playwright
-from bs4 import BeautifulSoup
 
-from db import get_or_create_venue, insert_event, find_event_by_hash
+from db import get_or_create_venue, insert_event, find_event_by_hash, get_portal_id_by_slug, remove_stale_source_events
 from dedupe import generate_content_hash
+
+PORTAL_SLUG = "nashville"
 
 logger = logging.getLogger(__name__)
 
@@ -38,36 +48,32 @@ VENUE_DATA = {
 }
 
 
-def parse_time(time_text: str) -> Optional[str]:
-    """Parse time from '7:00 PM' or '7:00PM' format to 24-hour time."""
-    match = re.search(r"(\d{1,2}):(\d{2})\s*(am|pm)", time_text, re.IGNORECASE)
+def _parse_time(time_text: str) -> Optional[str]:
+    """Parse time text to HH:MM 24-hour format."""
+    if not time_text:
+        return None
+    match = re.search(r"(\d{1,2})(?::(\d{2}))?\s*(am|pm)", time_text, re.IGNORECASE)
     if match:
-        hour, minute, period = match.groups()
-        hour = int(hour)
-        if period.lower() == "pm" and hour != 12:
+        hour = int(match.group(1))
+        minute = int(match.group(2) or 0)
+        period = match.group(3).lower()
+        if period == "pm" and hour != 12:
             hour += 12
-        elif period.lower() == "am" and hour == 12:
+        elif period == "am" and hour == 12:
             hour = 0
-        return f"{hour:02d}:{minute}"
+        return f"{hour:02d}:{minute:02d}"
     return None
 
 
-def parse_price(price_text: str) -> tuple[Optional[float], Optional[float], Optional[str]]:
-    """Parse price from text. Returns (min, max, note)."""
-    # Try to find price pattern like $25.00 or $25
-    match = re.search(r"\$(\d+(?:\.\d{2})?)", price_text)
-    if match:
-        price = float(match.group(1))
-        return price, price, None
-    return None, None, None
-
-
 def crawl(source: dict) -> tuple[int, int, int]:
-    """Crawl Brooklyn Bowl Nashville events using Playwright."""
+    """Crawl Brooklyn Bowl Nashville events using Playwright DOM extraction."""
     source_id = source["id"]
     events_found = 0
     events_new = 0
     events_updated = 0
+    seen_hashes: set[str] = set()
+
+    portal_id = get_portal_id_by_slug(PORTAL_SLUG)
 
     try:
         with sync_playwright() as p:
@@ -89,123 +95,150 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
                 page.wait_for_timeout(1000)
 
-            # Get page HTML and parse with BeautifulSoup
-            html = page.content()
-            soup = BeautifulSoup(html, "html.parser")
+            # Extract events from rendered DOM
+            raw_events = page.evaluate("""() => {
+                const containers = document.querySelectorAll('.eventItem');
+                const results = [];
 
-            # Find all event containers - Brooklyn Bowl uses eventItem entry class
-            event_containers = soup.find_all("div", class_=re.compile(r"eventItem entry"))
+                containers.forEach(c => {
+                    // Extract title from h3
+                    const titleEl = c.querySelector('h3 a, h3');
+                    const title = titleEl ? titleEl.textContent.trim() : '';
+                    if (!title) return;
 
-            logger.info(f"Found {len(event_containers)} event containers")
+                    // Skip CLOSED and TBA events
+                    if (/^closed/i.test(title)) return;
+                    if (/^(tba|tbd|tbc)$/i.test(title.replace(/[^a-zA-Z]/g, ''))) return;
 
-            for container in event_containers:
+                    // Extract event URL from the thumb link or title link
+                    const linkEl = c.querySelector('a[href*="/events/detail/"]') || c.querySelector('h3 a');
+                    let eventUrl = linkEl ? linkEl.href : '';
+
+                    // Extract date from aria-label on .date.outside div
+                    // Format: "February  7 2026"
+                    const dateOutside = c.querySelector('.date.outside');
+                    const ariaLabel = dateOutside ? dateOutside.getAttribute('aria-label') || '' : '';
+
+                    // Extract time from .time element (contains both doors and show)
+                    // Format: "Doors: 4:30 PM / Show: 5:30 PM"
+                    const timeEl = c.querySelector('.time');
+                    const timeText = timeEl ? timeEl.textContent.trim() : '';
+
+                    // Extract tagline (supporting acts)
+                    const taglineEl = c.querySelector('.tagline');
+                    const tagline = taglineEl ? taglineEl.textContent.trim() : '';
+
+                    // Extract image from thumb
+                    const imgEl = c.querySelector('.thumb img');
+                    const image = imgEl ? (imgEl.src || imgEl.getAttribute('data-src') || '') : '';
+
+                    results.push({
+                        title: title,
+                        ariaDate: ariaLabel,
+                        timeText: timeText,
+                        tagline: tagline,
+                        image: image,
+                        eventUrl: eventUrl,
+                    });
+                });
+
+                return results;
+            }""")
+
+            logger.info(f"Found {len(raw_events)} events in DOM")
+
+            now = datetime.now()
+
+            for event_data in raw_events:
                 try:
-                    # Extract title from heading
-                    title_elem = container.find(["h2", "h3", "h4"])
-                    if not title_elem:
+                    title = event_data.get("title", "").strip()
+                    if not title or len(title) < 2:
                         continue
 
-                    title_link = title_elem.find("a")
-                    title = title_link.get_text(strip=True) if title_link else title_elem.get_text(strip=True)
-
-                    # Extract event URL
-                    event_url = CALENDAR_URL
-                    link_elem = container.find("a", href=re.compile(r"/nashville/events/detail/"))
-                    if not link_elem:
-                        link_elem = container.find("a")
-                    if link_elem and link_elem.get("href"):
-                        event_url = link_elem["href"]
-                        if not event_url.startswith("http"):
-                            event_url = BASE_URL + event_url
-
-                    # Extract date from .m-date structure
-                    # Look for aria-label with full date
-                    date_div = container.find("div", {"aria-label": re.compile(r"[A-Z][a-z]+ +\d+ \d{4}")})
-                    if not date_div:
+                    # Parse date from aria-label: "February  7 2026"
+                    aria_date = event_data.get("ariaDate", "")
+                    if not aria_date:
                         continue
 
-                    start_date = None
+                    date_match = re.search(r"([A-Za-z]+)\s+(\d+)\s+(\d{4})", aria_date)
+                    if not date_match:
+                        logger.debug(f"Could not parse date from '{aria_date}' for '{title}'")
+                        continue
+
+                    month_name, day, year = date_match.groups()
+                    try:
+                        event_dt = datetime.strptime(f"{month_name} {day} {year}", "%B %d %Y")
+                        date_str = event_dt.strftime("%Y-%m-%d")
+                    except ValueError:
+                        logger.debug(f"Invalid date '{month_name} {day} {year}' for '{title}'")
+                        continue
+
+                    # Parse time from time text
+                    # Format: "Doors: 9:00 PM / Show: 9:30 PM"
                     start_time = None
+                    combined_time = event_data.get("timeText", "")
 
-                    # Parse aria-label date (format: "February  2 2026")
-                    aria_label = date_div.get("aria-label", "")
-                    date_match = re.search(r"([A-Za-z]+)\s+(\d+)\s+(\d{4})", aria_label)
-                    if date_match:
-                        month, day, year = date_match.groups()
-                        try:
-                            dt = datetime.strptime(f"{month} {day} {year}", "%B %d %Y")
-                            start_date = dt.strftime("%Y-%m-%d")
-                        except:
-                            logger.warning(f"Could not parse date: {month} {day} {year}")
-                            continue
+                    # Prefer "Show:" time over "Doors:" time
+                    show_match = re.search(r"Show:?\s*(\d{1,2}(?::\d{2})?\s*[AP]M)", combined_time, re.IGNORECASE)
+                    doors_match = re.search(r"Doors:?\s*(\d{1,2}(?::\d{2})?\s*[AP]M)", combined_time, re.IGNORECASE)
+
+                    if show_match:
+                        start_time = _parse_time(show_match.group(1))
+                    elif doors_match:
+                        start_time = _parse_time(doors_match.group(1))
                     else:
-                        continue
+                        # Fallback: any time pattern
+                        any_time = re.search(r"(\d{1,2}(?::\d{2})?\s*[AP]M)", combined_time, re.IGNORECASE)
+                        if any_time:
+                            start_time = _parse_time(any_time.group(1))
 
-                    # Extract time from showings
-                    time_elem = container.find("div", class_="showings")
-                    if time_elem:
-                        time_text = time_elem.get_text(strip=True)
-                        time_match = re.search(r"(\d{1,2}:\d{2}\s*[AP]M)", time_text, re.IGNORECASE)
-                        if time_match:
-                            start_time = parse_time(time_match.group(1))
-
-                    # Extract description
-                    description = None
-                    desc_elem = container.find(["p", "div"], class_=re.compile(r"description|excerpt|content|support"))
-                    if desc_elem:
-                        description = desc_elem.get_text(strip=True)[:500]
-
-                    # Extract price
-                    price_min = None
-                    price_max = None
-                    price_note = None
-                    price_elem = container.find(["span", "div"], class_=re.compile(r"price|cost|ticket"))
-                    if price_elem:
-                        price_text = price_elem.get_text(strip=True)
-                        price_min, price_max, price_note = parse_price(price_text)
-
-                    # Extract image URL
-                    image_url = None
-                    img_elem = container.find("img")
-                    if img_elem:
-                        if img_elem.get("src"):
-                            image_url = img_elem["src"]
-                        elif img_elem.get("data-src"):
-                            image_url = img_elem["data-src"]
-
-                        if image_url and not image_url.startswith("http"):
-                            image_url = BASE_URL + image_url
+                    # Default to 20:00 for music venue if no time found
+                    if not start_time:
+                        start_time = "20:00"
 
                     events_found += 1
-
-                    content_hash = generate_content_hash(title, "Brooklyn Bowl Nashville", start_date)
+                    content_hash = generate_content_hash(title, "Brooklyn Bowl Nashville", date_str)
+                    seen_hashes.add(content_hash)
 
                     if find_event_by_hash(content_hash):
                         events_updated += 1
                         continue
 
+                    # Build description from tagline
+                    tagline = event_data.get("tagline", "")
+                    description = tagline if tagline else None
+
+                    image_url = event_data.get("image") or None
+                    if image_url and not image_url.startswith("http"):
+                        image_url = BASE_URL + image_url
+
+                    event_url = event_data.get("eventUrl") or CALENDAR_URL
+                    if event_url and not event_url.startswith("http"):
+                        event_url = BASE_URL + event_url
+
                     event_record = {
                         "source_id": source_id,
                         "venue_id": venue_id,
+                        "portal_id": portal_id,
                         "title": title,
                         "description": description,
-                        "start_date": start_date,
+                        "start_date": date_str,
                         "start_time": start_time,
                         "end_date": None,
                         "end_time": None,
-                        "is_all_day": start_time is None,
+                        "is_all_day": False,
                         "category": "music",
                         "subcategory": "concert",
                         "tags": ["brooklyn-bowl", "nashville", "live-music", "germantown"],
-                        "price_min": price_min,
-                        "price_max": price_max,
-                        "price_note": price_note,
+                        "price_min": None,
+                        "price_max": None,
+                        "price_note": None,
                         "is_free": False,
                         "source_url": CALENDAR_URL,
                         "ticket_url": event_url,
                         "image_url": image_url,
-                        "raw_text": f"{title} - {start_date}",
-                        "extraction_confidence": 0.85,
+                        "raw_text": f"{title} - {date_str} - {combined_time}",
+                        "extraction_confidence": 0.90,
                         "is_recurring": False,
                         "recurrence_rule": None,
                         "content_hash": content_hash,
@@ -213,13 +246,18 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     insert_event(event_record)
                     events_new += 1
-                    logger.info(f"Added: {title} on {start_date}")
+                    logger.info(f"Added: {title} on {date_str} at {start_time}")
 
                 except Exception as e:
                     logger.error(f"Failed to parse event: {e}")
                     continue
 
             browser.close()
+
+        if seen_hashes:
+            stale_removed = remove_stale_source_events(source_id, seen_hashes)
+            if stale_removed:
+                logger.info(f"Removed {stale_removed} stale events")
 
         logger.info(
             f"Brooklyn Bowl Nashville crawl complete: {events_found} found, {events_new} new, {events_updated} updated"

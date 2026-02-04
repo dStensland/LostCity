@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120">
+  <defs>
+    <filter id="neon-glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="3" result="blur"/>
+      <feColorMatrix in="blur" type="matrix" values="0 0 0 0 0.2 0 0 0 0 1 0 0 0 0 0.4 0 0 0 1 0" result="glow"/>
+      <feMerge>
+        <feMergeNode in="glow"/>
+        <feMergeNode in="glow"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <filter id="outer-glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="6" result="blur"/>
+      <feColorMatrix in="blur" type="matrix" values="0 0 0 0 0.2 0 0 0 0 1 0 0 0 0 0.4 0 0 0 0.5 0"/>
+    </filter>
+    <linearGradient id="football-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00FF88"/>
+      <stop offset="50%" stop-color="#33FF66"/>
+      <stop offset="100%" stop-color="#00DD66"/>
+    </linearGradient>
+    <linearGradient id="highlight" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="rgba(255,255,255,0.3)"/>
+      <stop offset="100%" stop-color="rgba(255,255,255,0)"/>
+    </linearGradient>
+  </defs>
+  <!-- Outer glow -->
+  <ellipse cx="60" cy="60" rx="38" ry="26" fill="#33FF66" filter="url(#outer-glow)" opacity="0.6"/>
+  <!-- Football body -->
+  <g filter="url(#neon-glow)">
+    <ellipse cx="60" cy="60" rx="36" ry="24" fill="url(#football-grad)" stroke="#00FF88" stroke-width="1.5"/>
+    <!-- Highlight -->
+    <ellipse cx="60" cy="52" rx="28" ry="12" fill="url(#highlight)" opacity="0.4"/>
+    <!-- Center seam -->
+    <line x1="32" y1="60" x2="88" y2="60" stroke="#003322" stroke-width="2" stroke-linecap="round"/>
+    <!-- Laces -->
+    <line x1="48" y1="52" x2="48" y2="68" stroke="#003322" stroke-width="2" stroke-linecap="round"/>
+    <line x1="54" y1="50" x2="54" y2="70" stroke="#003322" stroke-width="2" stroke-linecap="round"/>
+    <line x1="60" y1="49" x2="60" y2="71" stroke="#003322" stroke-width="2" stroke-linecap="round"/>
+    <line x1="66" y1="50" x2="66" y2="70" stroke="#003322" stroke-width="2" stroke-linecap="round"/>
+    <line x1="72" y1="52" x2="72" y2="68" stroke="#003322" stroke-width="2" stroke-linecap="round"/>
+  </g>
+  <!-- Sparkle effects -->
+  <g fill="#00FF88" opacity="0.8">
+    <circle cx="28" cy="38" r="1.5"/>
+    <circle cx="92" cy="42" r="1"/>
+    <circle cx="22" cy="65" r="1"/>
+    <circle cx="96" cy="72" r="1.5"/>
+    <circle cx="40" cy="30" r="0.8"/>
+    <circle cx="80" cy="85" r="0.8"/>
+  </g>
+  <!-- Star sparkles -->
+  <g fill="#AAFFCC" opacity="0.6">
+    <path d="M95 35l1 3 3 1-3 1-1 3-1-3-3-1 3-1z" transform="scale(0.8)"/>
+    <path d="M30 90l1 3 3 1-3 1-1 3-1-3-3-1 3-1z" transform="scale(0.7)"/>
+  </g>
+</svg>

@@ -1,0 +1,236 @@
+================================================================================
+PORTAL DISTRIBUTION DIAGNOSTICS - QUICK START GUIDE
+================================================================================
+
+GENERATED: February 4, 2026
+FILES CREATED: 3 analysis documents + 2 diagnostic scripts
+
+================================================================================
+KEY FINDINGS
+================================================================================
+
+TOTAL FUTURE EVENTS: 8,160
+├─ Atlanta portal:        5,647 events (69.2%)
+├─ Nashville portal:      1,349 events (16.5%)
+├─ Piedmont portal:         112 events (1.4%)
+└─ UNASSIGNED (NULL):     1,052 events (11.4%) *** CRITICAL ISSUE ***
+
+30-DAY DISTRIBUTION:
+├─ Atlanta:  2,523 events (76.2%)
+├─ Nashville:  742 events (22.4%)
+└─ Piedmont:   43 events (1.3%)
+
+ATLANTA NEXT 30 DAYS BY CATEGORY:
+├─ Music:        167 (16.7%)
+├─ Community:    155 (15.5%)
+├─ Nightlife:    148 (14.8%)
+├─ Theater:      137 (13.7%)
+├─ Sports:       112 (11.2%)
+├─ Comedy:       111 (11.1%)
+├─ Film:          50 (5.0%)
+└─ (Others):      73 (7.3%)
+
+================================================================================
+CRITICAL ISSUE: UNASSIGNED EVENTS (1,052)
+================================================================================
+
+TOP OFFENDERS:
+1. Springs Cinema           - 211 events (20.1%)
+2. Ticketmaster            - 126 events (12.0%)
+3. Tara Theatre            - 117 events (11.1%)
+4. Plaza Theatre           - 55 events (5.2%)
+5. Starlight Drive-In      - 36 events (3.4%)
+   [Cinema crawlers total: 458 events = 43.6%]
+
+ROOT CAUSE:
+Crawlers are not setting portal_id when inserting events, leaving it NULL.
+
+IMPACT:
+- Events invisible in portal-scoped queries
+- Cannot filter by portal
+- API queries may return wrong results
+
+================================================================================
+TOP VENUES (Atlanta, next 30 days)
+================================================================================
+
+1. Dad's Garage Theatre         - 52 events (theater)
+2. Fox Theatre - Atlanta        - 28 events (theater)
+3. Gas South Arena              - 27 events (stadium)
+4. Tara Theatre                 - 27 events (cinema)
+5. State Farm Arena             - 27 events (stadium)
+6. Alliance Theatre             - 26 events (theater)
+7. Laughing Skull Lounge        - 25 events (comedy)
+8. 7 Stages                     - 23 events (theater)
+9. TEN ATL                      - 22 events (bar)
+10. Lore Atlanta               - 22 events (bar)
+
+================================================================================
+FILES TO REVIEW
+================================================================================
+
+1. MAIN REPORT:
+   /Users/coach/Projects/LostCity/PORTAL_DISTRIBUTION_DIAGNOSTIC.md
+   - Full analysis with all tables and data quality issues
+   - Recommended action plan (4 phases)
+   - SQL validation queries
+   - 9.8 KB, 300+ lines
+
+2. TOOLS GUIDE:
+   /Users/coach/Projects/LostCity/DIAGNOSTIC_TOOLS_README.md
+   - How to run diagnostics
+   - Connection details
+   - Monitoring metrics
+   - Environment setup
+
+3. THIS QUICK REFERENCE:
+   /Users/coach/Projects/LostCity/PORTAL_DIAGNOSTICS_QUICK_START.txt
+
+================================================================================
+DIAGNOSTIC SCRIPTS (EXECUTABLE)
+================================================================================
+
+Script 1: portal_distribution_diagnostics.py
+Location: /Users/coach/Projects/LostCity/crawlers/portal_distribution_diagnostics.py
+Command:  /usr/bin/python3 /Users/coach/Projects/LostCity/crawlers/portal_distribution_diagnostics.py
+Runs: 4 core diagnostic queries
+Output: ~200 lines
+
+Script 2: additional_portal_diagnostics.py
+Location: /Users/coach/Projects/LostCity/crawlers/additional_portal_diagnostics.py
+Command:  /usr/bin/python3 /Users/coach/Projects/LostCity/crawlers/additional_portal_diagnostics.py
+Runs: 4 extended diagnostic queries
+Output: ~150 lines
+
+================================================================================
+DATA QUALITY ISSUES (PRIORITIZED)
+================================================================================
+
+CRITICAL - Portal Assignment Gap
+├─ Issue:     1,052 events have NULL portal_id
+├─ Severity:  Events invisible in portal-scoped queries
+├─ Fix:       Update crawlers to set portal_id
+└─ Timeline:  Day 1
+
+WARNING - Event Concentration
+├─ Issue:     69.2% of events in Atlanta portal
+├─ Severity:  Unbalanced user experience (Nashville 1/4 of Atlanta)
+├─ Fix:       Activate more Nashville/Piedmont sources
+└─ Timeline:  Week 1
+
+LOW - Inactive Portals
+├─ Issue:     3 portals have 0 events
+├─ Severity:  Schema clutter, development confusion
+├─ Fix:       Archive unused test portals
+└─ Timeline:  Week 1
+
+================================================================================
+RECOMMENDED ACTION PLAN
+================================================================================
+
+DAY 1 (IMMEDIATE):
+[ ] Update cinema crawlers to set portal_id = Atlanta UUID
+    - /Users/coach/Projects/LostCity/crawlers/sources/springs_cinema.py
+    - /Users/coach/Projects/LostCity/crawlers/sources/tara_theatre.py
+    - /Users/coach/Projects/LostCity/crawlers/sources/plaza_theatre.py
+    - /Users/coach/Projects/LostCity/crawlers/sources/starlight_drive_in.py
+    - /Users/coach/Projects/LostCity/crawlers/sources/landmark_midtown.py
+
+[ ] Update Ticketmaster crawler for portal assignment
+    - /Users/coach/Projects/LostCity/crawlers/sources/ticketmaster.py
+
+[ ] Backfill NULL portal_id for existing events
+    - Use geo-matching with venue coordinates
+
+[ ] Document portal assignment in crawler guidelines
+    - /Users/coach/Projects/LostCity/crawlers/CLAUDE.md
+
+DAYS 2-3 (DATA INTEGRITY):
+[ ] Add NOT NULL constraint to events.portal_id column
+[ ] Add foreign key validation
+[ ] Audit all active sources for correct portal assignment
+[ ] Create validation test suite
+
+WEEK 1 (FEATURE PARITY):
+[ ] Activate Nashville source collection
+[ ] Activate Piedmont source collection
+[ ] Archive unused test portals (coach, atlanta-families, sample-conference)
+[ ] Document portal provisioning workflow
+
+ONGOING (MONITORING):
+[ ] Add dashboard metric: % events with valid portal_id
+[ ] Add crawl log warning for NULL portal_id events
+[ ] Weekly audit of unassigned events by source
+[ ] Monitor portal concentration ratio
+
+================================================================================
+VALIDATION QUERIES
+================================================================================
+
+Find all unassigned events:
+  SELECT COUNT(*) FROM events WHERE portal_id IS NULL AND start_date >= CURRENT_DATE;
+  Current: 1,052 events
+
+Find portal coverage:
+  SELECT portal_id, COUNT(*) FROM events WHERE start_date >= CURRENT_DATE GROUP BY portal_id;
+
+Check cinema source backfill:
+  SELECT source_id, COUNT(*), COUNT(DISTINCT portal_id) FROM events
+  WHERE source_id IN (548, 28, 27, 547, 29) AND start_date >= CURRENT_DATE
+  GROUP BY source_id;
+
+================================================================================
+DATABASE CONNECTION DETAILS
+================================================================================
+
+Supabase PostgreSQL
+
+Configuration:
+  Config file: /Users/coach/Projects/LostCity/crawlers/config.py
+  DB module:   /Users/coach/Projects/LostCity/crawlers/db.py
+
+Environment Variables:
+  SUPABASE_URL           - Database URL
+  SUPABASE_SERVICE_KEY   - Authentication key
+  ANTHROPIC_API_KEY      - LLM extraction
+
+Tables Queried:
+  events       - 8,160 future records
+  portals      - 6 configured portals
+  sources      - 500+ crawlers
+  venues       - ~3,000 locations
+
+================================================================================
+NEXT STEPS
+================================================================================
+
+1. READ: /Users/coach/Projects/LostCity/PORTAL_DISTRIBUTION_DIAGNOSTIC.md
+   Get full context on all data quality issues
+
+2. RUN: /usr/bin/python3 /Users/coach/Projects/LostCity/crawlers/portal_distribution_diagnostics.py
+   Verify the data is current
+
+3. FIX: Implement Phase 1 (cinema/Ticketmaster crawler updates)
+
+4. VERIFY: Run validation queries from main diagnostic report
+
+5. MONITOR: Add dashboard metrics for ongoing tracking
+
+================================================================================
+CONTACTS & SUPPORT
+================================================================================
+
+For crawler development questions:
+  /Users/coach/Projects/LostCity/crawlers/CLAUDE.md
+
+For schema questions:
+  /Users/coach/Projects/LostCity/database/CLAUDE.md
+
+For platform architecture:
+  /Users/coach/Projects/LostCity/web/QUICK_START_GUIDE.md (if available)
+
+================================================================================
+END OF QUICK START
+Generated: February 4, 2026
+Updated diagnostics available at request
+================================================================================

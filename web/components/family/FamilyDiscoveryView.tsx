@@ -510,7 +510,6 @@ export function FamilyDiscoveryView({ portalId, portalSlug, portalExclusive }: F
                           event={event}
                           index={idx}
                           portalSlug={portalSlug}
-                          showThumbnail
                         />
                       </div>
                     ))}

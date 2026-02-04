@@ -3,6 +3,7 @@
 import React, { useEffect, useState, useMemo, useCallback } from "react";
 import Link from "next/link";
 import CategoryIcon, { getCategoryLabel, getCategoryColor } from "./CategoryIcon";
+import SubmitVenueModal from "./SubmitVenueModal";
 import CategorySkeleton from "./CategorySkeleton";
 import LazyImage from "./LazyImage";
 import { OpenStatusBadge } from "./HoursSection";
@@ -311,8 +312,8 @@ function FilterDeck({
           }}
           className={`relative flex items-center gap-2 px-4 py-2 rounded-xl font-mono text-sm font-medium transition-all active:scale-[0.98] ${
             ITP_NEIGHBORHOOD_NAMES.some(n => filters.neighborhoods.includes(n))
-              ? "bg-[var(--neon-cyan)]/20 text-[var(--neon-cyan)] border-2 border-[var(--neon-cyan)]/50 shadow-[0_0_20px_rgba(34,211,238,0.3)]"
-              : "bg-[var(--dusk)] text-[var(--muted)] border-2 border-[var(--twilight)] hover:border-[var(--neon-cyan)]/30 hover:text-[var(--soft)]"
+              ? "bg-[var(--coral)]/20 text-[var(--coral)] border-2 border-[var(--coral)]/50 shadow-[0_0_20px_hsl(var(--coral-hsl)/0.3)]"
+              : "bg-[var(--dusk)] text-[var(--muted)] border-2 border-[var(--twilight)] hover:border-[var(--coral)]/30 hover:text-[var(--soft)]"
           }`}
           title="Inside the Perimeter"
         >
@@ -517,6 +518,7 @@ export default function PortalSpotsView({ portalId, portalSlug, isExclusive = fa
   const [sortBy, setSortBy] = useState<SortOption>("category");
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set(["music_venue", "bar", "restaurant"]));
   const [meta, setMeta] = useState<{ openCount: number; neighborhoods: string[] }>({ openCount: 0, neighborhoods: [] });
+  const [showSubmitModal, setShowSubmitModal] = useState(false);
 
   const [filters, setFilters] = useState<FilterState>({
     openNow: false,
@@ -649,9 +651,9 @@ export default function PortalSpotsView({ portalId, portalSlug, isExclusive = fa
             <p className="text-sm text-[var(--muted)] mt-1">
               <span className="text-[var(--soft)]">{spots.length}</span> places to explore
               <span className="mx-2 opacity-40">·</span>
-              <Link href="/submit/venue" className="text-[var(--coral)] hover:text-[var(--rose)] transition-colors">
+              <button onClick={() => setShowSubmitModal(true)} className="text-[var(--coral)] hover:text-[var(--rose)] transition-colors">
                 Add a venue
-              </Link>
+              </button>
             </p>
           </div>
           <div className="flex items-center gap-3">
@@ -750,6 +752,12 @@ export default function PortalSpotsView({ portalId, portalSlug, isExclusive = fa
           {sortedSpots.map((spot) => <SpotCard key={spot.id} spot={spot} portalSlug={portalSlug} />)}
         </div>
       )}
+
+      <SubmitVenueModal
+        isOpen={showSubmitModal}
+        onClose={() => setShowSubmitModal(false)}
+        portalSlug={portalSlug}
+      />
     </div>
   );
 }

@@ -77,7 +77,6 @@ export default function StandardHeader({
   hideNav = false,
   headerConfig,
 }: StandardHeaderProps) {
-  const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
@@ -127,13 +126,7 @@ export default function StandardHeader({
     }
   }, [mobileMenuOpen]);
 
-  // Track scroll for glass effect
-  useEffect(() => {
-    const handleScroll = () => setIsScrolled(window.scrollY > 10);
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    handleScroll();
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
+
 
   const getHref = useCallback((tab: typeof TABS[0]) => {
     if (tab.key === "feed") {
@@ -195,13 +188,11 @@ export default function StandardHeader({
     <>
       {/* Main Header Bar */}
       <header
-        className={`sticky top-0 z-[100] border-b transition-all duration-300 ${
-          isScrolled
-            ? "glass border-[var(--twilight)]/50"
-            : "bg-[var(--void)]/95 backdrop-blur-sm border-[var(--twilight)]/30"
-        }`}
+        className="sticky top-0 z-[100] border-b border-[var(--twilight)]/30 bg-[var(--void)]/95 backdrop-blur-sm relative"
       >
-        <div className="px-4 py-3 flex items-center gap-4">
+        {/* Content layer */}
+        <div className="relative z-10 flex flex-col">
+        <div className="px-4 py-3 flex items-center gap-4 relative">
           {/* Left: Back button (optional) + Logo */}
           <div className="flex items-center gap-2 flex-shrink-0">
             {backLink && (
@@ -259,8 +250,11 @@ export default function StandardHeader({
                     className={`nav-tab relative flex-1 text-center px-3 py-1.5 rounded-md font-mono text-xs whitespace-nowrap transition-all duration-300 ${
                       active
                         ? "nav-tab-active text-[var(--void)] font-medium"
-                        : "text-[var(--muted)] hover:text-[var(--neon-amber)] border border-transparent"
+                        : "text-[var(--cream)] hover:text-[var(--neon-amber)] border border-transparent font-semibold"
                     }`}
+                    style={!active ? {
+                      textShadow: "0 1px 3px rgba(0,0,0,0.9), 0 0 12px rgba(0,0,0,0.5)",
+                    } : undefined}
                     role="tab"
                     aria-selected={active}
                     aria-controls={`${tab.key}-panel`}
@@ -283,7 +277,8 @@ export default function StandardHeader({
             <div className="relative sm:hidden" ref={mobileMenuRef}>
               <button
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className="p-2 text-[var(--muted)] hover:text-[var(--cream)] hover:bg-[var(--twilight)]/50 rounded-lg transition-colors active:scale-95"
+                className="p-2 text-[var(--cream)] hover:text-[var(--neon-amber)] hover:bg-[var(--twilight)]/70 rounded-lg transition-colors active:scale-95"
+                style={{ filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.8))" }}
                 aria-expanded={mobileMenuOpen}
                 aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
               >
@@ -374,7 +369,7 @@ export default function StandardHeader({
                     className={`nav-tab relative flex-1 text-center py-1.5 rounded-md font-mono text-xs whitespace-nowrap transition-all duration-300 ${
                       active
                         ? "nav-tab-active text-[var(--void)] font-medium"
-                        : "text-[var(--muted)] hover:text-[var(--neon-amber)] border border-transparent"
+                        : "text-[var(--cream)] hover:text-[var(--neon-amber)] border border-transparent font-semibold"
                     }`}
                     role="tab"
                     aria-selected={active}
@@ -389,6 +384,7 @@ export default function StandardHeader({
             </div>
           </nav>
         )}
+        </div>{/* end content layer */}
       </header>
     </>
   );

@@ -29,7 +29,7 @@ function getVariantColor(variant: EmptyStateVariant): string {
     case "no-events":
       return "var(--neon-amber)";
     case "no-results":
-      return "var(--neon-cyan)";
+      return "var(--coral)";
     case "no-saved":
       return "var(--neon-magenta)";
     case "connect-friends":

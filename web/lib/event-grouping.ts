@@ -10,17 +10,6 @@ const ROLLUP_CATEGORIES = ["community"];
 // Series types that should be collapsed into a summary card instead of expanded showtimes
 const COLLAPSED_SERIES_TYPES = ["festival_program"];
 
-// Theater venues that should roll up by venue instead of by series
-// These show multiple films, so grouping by venue makes more sense than by film
-const THEATER_VENUE_SLUGS = [
-  "plaza-theatre",
-  "tara-theatre",
-  "landmark-midtown-art-cinema",
-  "regal-atlantic-station",
-  "amc-phipps-plaza",
-  "silverspot-cinema",
-];
-
 /**
  * Summary info for festival/convention collapsed display
  */
@@ -119,22 +108,10 @@ export function groupEventsForDisplay(events: EventWithLocation[]): DisplayItem[
 
   // FIRST PASS: Group series events by series_id
   // Series grouping takes highest priority - shows all showtimes for a series by venue
-  // EXCEPTION: Film series at theater venues skip this - they use venue rollup instead
   const seriesGroups = new Map<string, EventWithLocation[]>();
-  const theaterVenueEvents: EventWithLocation[] = []; // Events at theaters, excluded from series grouping
 
   for (const event of events) {
     if (event.series_id && event.series) {
-      // Check if this is a film at a theater venue - if so, skip series grouping
-      const isTheaterVenue = event.venue?.slug && THEATER_VENUE_SLUGS.includes(event.venue.slug);
-      const isFilmSeries = event.series.series_type === "film";
-
-      if (isTheaterVenue && isFilmSeries) {
-        // Skip series grouping for films at theaters - they'll use venue rollup
-        theaterVenueEvents.push(event);
-        continue;
-      }
-
       const existing = seriesGroups.get(event.series_id) || [];
       existing.push(event);
       seriesGroups.set(event.series_id, existing);
@@ -162,6 +139,8 @@ export function groupEventsForDisplay(events: EventWithLocation[]): DisplayItem[
           title: series.title,
           series_type: series.series_type,
           image_url: series.image_url,
+          frequency: series.frequency,
+          day_of_week: series.day_of_week,
         },
         summary,
       });
@@ -218,6 +197,8 @@ export function groupEventsForDisplay(events: EventWithLocation[]): DisplayItem[
         title: series.title,
         series_type: series.series_type,
         image_url: series.image_url,
+        frequency: series.frequency,
+        day_of_week: series.day_of_week,
       },
       venueGroups,
     });
@@ -227,22 +208,10 @@ export function groupEventsForDisplay(events: EventWithLocation[]): DisplayItem[
   }
 
   // SECOND PASS: Find venue clusters (excluding series events)
-  // Include theater venue events that were excluded from series grouping
   const venueGroups = new Map<number, EventWithLocation[]>();
 
-  // First add the theater venue events we skipped from series grouping
-  for (const event of theaterVenueEvents) {
-    if (event.venue?.id) {
-      const existing = venueGroups.get(event.venue.id) || [];
-      existing.push(event);
-      venueGroups.set(event.venue.id, existing);
-    }
-  }
-
-  // Then add other non-series events
   for (const event of events) {
     if (usedEventIds.has(event.id)) continue;
-    if (theaterVenueEvents.includes(event)) continue; // Already added
     if (event.venue?.id) {
       const existing = venueGroups.get(event.venue.id) || [];
       existing.push(event);
@@ -251,13 +220,10 @@ export function groupEventsForDisplay(events: EventWithLocation[]): DisplayItem[
   }
 
   // Create venue groups for venues with enough events
-  // Theater venues always roll up (threshold = 1), others need 4+
   for (const [venueId, venueEvents] of venueGroups) {
     const venue = venueEvents[0].venue!;
-    const isTheaterVenue = venue.slug && THEATER_VENUE_SLUGS.includes(venue.slug);
-    const threshold = isTheaterVenue ? 1 : VENUE_ROLLUP_THRESHOLD;
 
-    if (venueEvents.length >= threshold) {
+    if (venueEvents.length >= VENUE_ROLLUP_THRESHOLD) {
       items.push({
         type: "venue-group",
         venueId,

@@ -342,7 +342,7 @@ export function quickTest() {
  * ```
  */
 if (typeof window !== 'undefined') {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   const win = window as unknown as Record<string, unknown>;
   win.testBatchRelationships = testBatchRelationshipsAPI;
   win.quickTest = quickTest;

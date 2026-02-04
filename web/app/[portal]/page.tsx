@@ -1,7 +1,6 @@
 import { getPortalBySlug } from "@/lib/portal";
 import { PortalHeader } from "@/components/headers";
 import { AmbientBackground } from "@/components/ambient";
-import SearchBarWrapper from "@/components/SearchBarWrapper";
 import FindView from "@/components/find/FindView";
 import CommunityView from "@/components/community/CommunityView";
 import DetailViewRouter from "@/components/views/DetailViewRouter";
@@ -123,26 +122,6 @@ export default async function PortalPage({ params, searchParams }: Props) {
         portalSlug={portal.slug}
         portalName={portal.name}
       />
-
-      {/* Search bar for Find and Community views - with smooth transition */}
-      {viewMode !== "feed" && (
-        <div
-          className={`sticky z-[9999] border-b transition-colors duration-200 ${
-            slug === "atlanta-families"
-              ? "top-[64px] border-[#E8D5C4]/30 bg-[#FFF8F0]/97 backdrop-blur-sm"
-              : "top-[52px] border-[var(--twilight)]/50 bg-[var(--night)]/95 backdrop-blur-sm"
-          }`}
-        >
-          <div className="max-w-5xl mx-auto px-4 pt-1 pb-2">
-            <SearchBarWrapper
-              viewMode={viewMode}
-              findType={viewMode === "find" ? findType : null}
-              portalSlug={portal.slug}
-              portalId={portal.id}
-            />
-          </div>
-        </div>
-      )}
 
       <main className={findDisplay === "map" && viewMode === "find" ? "" : "max-w-5xl mx-auto px-4 pb-20"}>
         <Suspense fallback={<DetailViewSkeleton />}>

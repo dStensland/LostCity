@@ -3,8 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import CategoryIcon from "@/components/CategoryIcon";
-import CategoryPlaceholder from "@/components/CategoryPlaceholder";
+import CategoryIcon, { getCategoryColor } from "@/components/CategoryIcon";
 import FollowButton from "@/components/FollowButton";
 import FriendsGoing from "@/components/FriendsGoing";
 import WhosGoing from "@/components/WhosGoing";
@@ -137,6 +136,7 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
   const [error, setError] = useState<string | null>(null);
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
+  const [isLowRes, setIsLowRes] = useState(false);
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
@@ -230,7 +230,7 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
 
   if (loading) {
     return (
-      <div className="animate-fadeIn pt-6">
+      <div className="pt-6">
         {/* Loading skeleton with back button integrated */}
         <div className="relative aspect-[2/1] skeleton-shimmer rounded-xl mb-4">
           <NeonBackButton />
@@ -243,7 +243,7 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
 
   if (error || !event) {
     return (
-      <div className="animate-fadeIn pt-6">
+      <div className="pt-6">
         <div className="relative aspect-[2/1] bg-[var(--dusk)] rounded-xl mb-4 flex items-center justify-center">
           <NeonBackButton />
           <p className="text-[var(--muted)]">{error || "Event not found"}</p>
@@ -267,7 +267,7 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
   const hasRelatedContent = hasVenueEvents || hasNearbyEvents || hasFood || hasDrinks || hasNightlife || hasCaffeine || hasFun;
 
   return (
-    <div className="animate-fadeIn pt-6 pb-8">
+    <div className="pt-6 pb-8">
       {/* Hero Image with integrated back button */}
       <div
         className={`relative aspect-[2/1] bg-[var(--night)] rounded-xl overflow-hidden mb-4 ${
@@ -283,16 +283,64 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
             <img
               src={event.image_url!}
               alt={event.title}
-              className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${
+              className={`absolute inset-0 w-full h-full ${isLowRes ? "object-contain" : "object-cover"} transition-opacity duration-300 ${
                 imageLoaded ? "opacity-100" : "opacity-0"
               }`}
-              onLoad={() => setImageLoaded(true)}
+              onLoad={(e) => {
+                setImageLoaded(true);
+                if (e.currentTarget.naturalWidth < 600) setIsLowRes(true);
+              }}
               onError={() => setImageError(true)}
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
           </>
         ) : (
-          <CategoryPlaceholder category={event.category || "other"} size="lg" />
+          <>
+            {/* Branded gradient hero fallback — animated neon aesthetic */}
+            <div className="absolute inset-0 bg-[var(--void)]" />
+            <div
+              className="absolute inset-0"
+              style={{
+                background: `
+                  radial-gradient(ellipse 120% 80% at 50% -20%, ${getCategoryColor(event.category || "other")}40 0%, transparent 50%),
+                  radial-gradient(ellipse 80% 60% at 100% 100%, ${getCategoryColor(event.category || "other")}25 0%, transparent 45%),
+                  radial-gradient(ellipse 60% 60% at 0% 80%, ${getCategoryColor(event.category || "other")}18 0%, transparent 40%)
+                `,
+              }}
+            />
+            {/* Neon top line */}
+            <div
+              className="absolute top-0 left-0 right-0 h-[2px]"
+              style={{
+                background: `linear-gradient(90deg, transparent 0%, ${getCategoryColor(event.category || "other")} 20%, ${getCategoryColor(event.category || "other")} 80%, transparent 100%)`,
+                boxShadow: `0 0 20px ${getCategoryColor(event.category || "other")}60, 0 0 40px ${getCategoryColor(event.category || "other")}30`,
+                opacity: 0.8,
+              }}
+            />
+            {/* Center icon */}
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div
+                className="flex items-center justify-center w-20 h-20 rounded-2xl"
+                style={{
+                  background: `linear-gradient(135deg, ${getCategoryColor(event.category || "other")}12 0%, transparent 50%), rgba(0,0,0,0.3)`,
+                  border: `1px solid ${getCategoryColor(event.category || "other")}30`,
+                  boxShadow: `0 0 40px ${getCategoryColor(event.category || "other")}25, inset 0 1px 0 ${getCategoryColor(event.category || "other")}15`,
+                  backdropFilter: "blur(8px)",
+                }}
+              >
+                <CategoryIcon type={event.category || "other"} size={40} glow="intense" />
+              </div>
+            </div>
+            {/* Scanline effect */}
+            <div
+              className="absolute inset-0 pointer-events-none opacity-[0.03]"
+              style={{
+                backgroundImage: `repeating-linear-gradient(0deg, transparent, transparent 2px, ${getCategoryColor(event.category || "other")} 2px, ${getCategoryColor(event.category || "other")} 3px)`,
+              }}
+            />
+            {/* Bottom gradient for title overlay */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
+          </>
         )}
 
         {/* Back button - neon styled */}

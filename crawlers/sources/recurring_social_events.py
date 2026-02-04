@@ -369,6 +369,83 @@ VENUES = {
         "venue_type": "bar",
         "website": "https://bluemartinilounge.com",
     },
+    # Jazz & Blues venues
+    "cafe-circa": {
+        "name": "Cafe Circa",
+        "slug": "cafe-circa",
+        "address": "464 Edgewood Ave SE",
+        "neighborhood": "Old Fourth Ward",
+        "city": "Atlanta",
+        "state": "GA",
+        "zip": "30312",
+        "venue_type": "restaurant",
+    },
+    "churchill-grounds": {
+        "name": "Churchill Grounds",
+        "slug": "churchill-grounds",
+        "address": "660 Peachtree St NE",
+        "neighborhood": "Midtown",
+        "city": "Atlanta",
+        "state": "GA",
+        "zip": "30308",
+        "venue_type": "cafe",
+        "website": "https://churchillgrounds.com",
+    },
+    "elliott-street-pub": {
+        "name": "Elliott Street Deli & Pub",
+        "slug": "elliott-street-pub",
+        "address": "51 Elliott St SW",
+        "neighborhood": "Castleberry Hill",
+        "city": "Atlanta",
+        "state": "GA",
+        "zip": "30313",
+        "venue_type": "bar",
+    },
+    # Additional trivia venues
+    "brick-store-pub": {
+        "name": "Brick Store Pub",
+        "slug": "brick-store-pub",
+        "address": "125 E Court Square",
+        "neighborhood": "Decatur",
+        "city": "Decatur",
+        "state": "GA",
+        "zip": "30030",
+        "venue_type": "bar",
+        "website": "https://brickstorepub.com",
+    },
+    "the-porter": {
+        "name": "The Porter Beer Bar",
+        "slug": "the-porter-beer-bar",
+        "address": "1156 Euclid Ave NE",
+        "neighborhood": "Little Five Points",
+        "city": "Atlanta",
+        "state": "GA",
+        "zip": "30307",
+        "venue_type": "bar",
+        "website": "https://theporterbeerbar.com",
+    },
+    "wrecking-bar": {
+        "name": "Wrecking Bar Brewpub",
+        "slug": "wrecking-bar-brewpub",
+        "address": "292 Moreland Ave NE",
+        "neighborhood": "Little Five Points",
+        "city": "Atlanta",
+        "state": "GA",
+        "zip": "30307",
+        "venue_type": "brewery",
+        "website": "https://wreckingbarbrewpub.com",
+    },
+    # Additional karaoke venues
+    "sister-louisas": {
+        "name": "Sister Louisa's Church of the Living Room & Ping Pong Emporium",
+        "slug": "sister-louisas-church",
+        "address": "466 Edgewood Ave SE",
+        "neighborhood": "Old Fourth Ward",
+        "city": "Atlanta",
+        "state": "GA",
+        "zip": "30312",
+        "venue_type": "bar",
+    },
 }
 
 # ============================================
@@ -795,6 +872,102 @@ WEEKLY_EVENTS = [
         "category": "nightlife",
         "subcategory": None,
         "tags": ["bingo", "games", "weekly", "brunch"],
+    },
+
+    # ========== JAZZ & BLUES NIGHTS ==========
+    {
+        "venue_key": "cafe-circa",
+        "day": 4,  # Friday
+        "title": "Live Jazz Friday",
+        "description": "Friday night live jazz at Cafe Circa on Edgewood Ave. Full bar and late-night menu.",
+        "start_time": "21:00",
+        "category": "music",
+        "subcategory": "music.jazz",
+        "tags": ["jazz", "live-music", "nightlife", "weekly", "date-night"],
+    },
+    {
+        "venue_key": "cafe-circa",
+        "day": 5,  # Saturday
+        "title": "Saturday Jazz & Soul",
+        "description": "Saturday night jazz and soul music at Cafe Circa on Edgewood Ave.",
+        "start_time": "21:00",
+        "category": "music",
+        "subcategory": "music.jazz",
+        "tags": ["jazz", "soul", "live-music", "nightlife", "weekly", "date-night"],
+    },
+    {
+        "venue_key": "churchill-grounds",
+        "day": 3,  # Thursday
+        "title": "Jazz Night",
+        "description": "Weekly jazz night at Churchill Grounds, Midtown's intimate jazz cafe. Live performances in a cozy setting.",
+        "start_time": "20:00",
+        "category": "music",
+        "subcategory": "music.jazz",
+        "tags": ["jazz", "live-music", "weekly", "intimate", "date-night"],
+    },
+    {
+        "venue_key": "churchill-grounds",
+        "day": 5,  # Saturday
+        "title": "Saturday Jazz Sessions",
+        "description": "Saturday jazz sessions at Churchill Grounds in Midtown. Atlanta's longest-running jazz venue.",
+        "start_time": "20:00",
+        "category": "music",
+        "subcategory": "music.jazz",
+        "tags": ["jazz", "live-music", "weekly", "date-night"],
+    },
+    {
+        "venue_key": "elliott-street-pub",
+        "day": 4,  # Friday
+        "title": "Blues Night",
+        "description": "Friday blues night at Elliott Street Deli & Pub in Castleberry Hill.",
+        "start_time": "21:00",
+        "category": "music",
+        "subcategory": "music.blues",
+        "tags": ["blues", "live-music", "nightlife", "weekly"],
+    },
+
+    # ========== ADDITIONAL KARAOKE ==========
+    {
+        "venue_key": "sister-louisas",
+        "day": 2,  # Wednesday
+        "title": "Karaoke Night",
+        "description": "Wednesday karaoke at Sister Louisa's Church on Edgewood Ave. Sing surrounded by outsider art.",
+        "start_time": "21:00",
+        "category": "nightlife",
+        "subcategory": "nightlife.karaoke",
+        "tags": ["karaoke", "nightlife", "weekly", "lgbtq-friendly"],
+    },
+
+    # ========== ADDITIONAL TRIVIA ==========
+    {
+        "venue_key": "brick-store-pub",
+        "day": 1,  # Tuesday
+        "title": "Trivia Night",
+        "description": "Tuesday trivia at Brick Store Pub in downtown Decatur. Award-winning beer selection and pub trivia.",
+        "start_time": "20:00",
+        "category": "community",
+        "subcategory": None,
+        "tags": ["trivia", "games", "weekly", "craft-beer"],
+    },
+    {
+        "venue_key": "the-porter",
+        "day": 2,  # Wednesday
+        "title": "Trivia Night",
+        "description": "Wednesday trivia at The Porter Beer Bar in Little Five Points.",
+        "start_time": "20:00",
+        "category": "community",
+        "subcategory": None,
+        "tags": ["trivia", "games", "weekly", "craft-beer"],
+    },
+    {
+        "venue_key": "wrecking-bar",
+        "day": 2,  # Wednesday
+        "title": "Trivia Night",
+        "description": "Wednesday trivia at Wrecking Bar Brewpub in Little Five Points. House-brewed beers and pub trivia.",
+        "start_time": "19:30",
+        "category": "community",
+        "subcategory": None,
+        "tags": ["trivia", "games", "weekly", "brewery"],
     },
 ]
 

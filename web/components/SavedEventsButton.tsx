@@ -92,7 +92,7 @@ export default function SavedEventsButton() {
 
       {/* Count badge */}
       {savedCount > 0 && (
-        <span className="absolute top-0.5 right-0.5 min-w-[16px] h-4 px-1 bg-[var(--neon-cyan)] text-[var(--void)] text-[0.6rem] font-bold rounded-full flex items-center justify-center">
+        <span className="absolute top-0.5 right-0.5 min-w-[16px] h-4 px-1 bg-[var(--coral)] text-[var(--void)] text-[0.6rem] font-bold rounded-full flex items-center justify-center">
           {savedCount > 99 ? "99+" : savedCount}
         </span>
       )}

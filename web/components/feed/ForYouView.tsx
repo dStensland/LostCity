@@ -130,20 +130,20 @@ function ForYouViewInner({ portalSlug, portalId }: ForYouViewProps) {
     return (
       <div className="space-y-6">
         <div className="p-6 rounded-xl bg-gradient-to-br from-[var(--dusk)] to-[var(--night)] border border-[var(--twilight)] text-center">
-          <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-[var(--neon-cyan)]/20 via-[var(--neon-magenta)]/20 to-[var(--coral)]/20 flex items-center justify-center relative group cursor-default">
+          <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-[var(--coral)]/20 via-[var(--neon-magenta)]/20 to-[var(--gold)]/20 flex items-center justify-center relative group cursor-default">
             <svg
               width="32"
               height="32"
               viewBox="0 0 24 24"
               fill="none"
               xmlns="http://www.w3.org/2000/svg"
-              className="text-[var(--neon-cyan)] icon-neon-pulse"
+              className="text-[var(--coral)] icon-neon-pulse"
             >
               <path d="M12 2v4M12 18v4M2 12h4M18 12h4" strokeWidth={1.5} strokeLinecap="round" stroke="currentColor" />
               <path d="M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M5.6 18.4l2.8-2.8M15.6 8.4l2.8-2.8" strokeWidth={1.5} strokeLinecap="round" stroke="currentColor" opacity={0.6} />
               <circle cx="12" cy="12" r="3" fill="currentColor" />
             </svg>
-            <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-[var(--neon-cyan)]/10 to-[var(--coral)]/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+            <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-[var(--coral)]/10 to-[var(--gold)]/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
           </div>
           <h3 className="font-serif text-lg text-[var(--cream)] mb-2">
             Tell us what you&apos;re into
@@ -220,7 +220,6 @@ function ForYouViewInner({ portalSlug, portalId }: ForYouViewProps) {
             portalSlug={portalSlug}
             friendsGoing={convertFriendsGoing(event.friends_going)}
             reasons={event.reasons}
-            showThumbnail={idx < 3 && !!event.image_url}
             contextType={getContextType(event)}
             skipAnimation
           />

@@ -3,8 +3,8 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { usePortal } from "@/lib/portal-context";
-import FeedSection, { type FeedSectionData } from "./feed/FeedSection";
-import SerendipityFeed from "./SerendipityFeed";
+import FeedSection, { type FeedSectionData, THEMED_SLUGS, HolidayGrid } from "./feed/FeedSection";
+
 
 // Reserved for future use
 // type _FeedSettings = {
@@ -155,16 +155,19 @@ export default function FeedView() {
     );
   }
 
-  // Render sections with serendipity moments interspersed
+  // Separate holiday sections from regular sections
+  const holidaySections = sections.filter(s => THEMED_SLUGS.includes(s.slug));
+  const regularSections = sections.filter(s => !THEMED_SLUGS.includes(s.slug));
+
   return (
-    <div className="py-6">
-      {sections.map((section, index) => (
+    <div className="py-4">
+      {/* Holiday cards - 2-column grid */}
+      <HolidayGrid sections={holidaySections} portalSlug={portal.slug} />
+
+      {/* Regular feed sections */}
+      {regularSections.map((section, index) => (
         <div key={section.id}>
           <FeedSection section={section} isFirst={index === 0} />
-          {/* Insert serendipity moment after every 2nd section */}
-          {index > 0 && index % 2 === 1 && index < sections.length - 1 && (
-            <SerendipityFeed portalSlug={portal.slug} position={index} />
-          )}
         </div>
       ))}
     </div>

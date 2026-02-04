@@ -1,7 +1,7 @@
 """
 Crawler for Helium Comedy Club (atlanta.heliumcomedy.com).
 
-Site uses JavaScript rendering - must use Playwright.
+Extracts event data from DOM structure after expanding event cards.
 """
 
 from __future__ import annotations
@@ -10,12 +10,12 @@ import re
 import logging
 from datetime import datetime
 from typing import Optional
+from zoneinfo import ZoneInfo
 
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_venue, insert_event, find_event_by_hash
+from db import get_or_create_venue, insert_event, find_event_by_hash, remove_stale_source_events
 from dedupe import generate_content_hash
-from utils import extract_images_from_page
 
 logger = logging.getLogger(__name__)
 
@@ -38,26 +38,46 @@ VENUE_DATA = {
 }
 
 
-def parse_time(time_text: str) -> Optional[str]:
-    """Parse time from '7:00 PM' format."""
-    match = re.search(r"(\d{1,2}):(\d{2})\s*(am|pm)", time_text, re.IGNORECASE)
-    if match:
-        hour, minute, period = match.groups()
-        hour = int(hour)
-        if period.lower() == "pm" and hour != 12:
-            hour += 12
-        elif period.lower() == "am" and hour == 12:
-            hour = 0
-        return f"{hour:02d}:{minute}"
-    return None
+def parse_showtime(text: str) -> Optional[tuple[str, str]]:
+    """
+    Parse showtime like 'Sat Feb 7 2026, 4:00 PM' to (date, time).
+    Returns (YYYY-MM-DD, HH:MM) or None.
+    """
+    # Match: Day Month DD YYYY, HH:MM AM/PM
+    pattern = r"(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun)\s+([A-Za-z]+)\s+(\d{1,2})\s+(\d{4}),\s+(\d{1,2}):(\d{2})\s*(AM|PM)"
+    match = re.search(pattern, text, re.IGNORECASE)
+
+    if not match:
+        return None
+
+    month_str, day, year, hour, minute, period = match.groups()
+
+    # Convert month name to number
+    try:
+        month_num = datetime.strptime(month_str[:3], "%b").month
+        date_str = f"{year}-{month_num:02d}-{int(day):02d}"
+
+        # Convert to 24-hour format
+        hour_int = int(hour)
+        if period.upper() == "PM" and hour_int != 12:
+            hour_int += 12
+        elif period.upper() == "AM" and hour_int == 12:
+            hour_int = 0
+
+        time_str = f"{hour_int:02d}:{minute}"
+
+        return (date_str, time_str)
+    except ValueError:
+        return None
 
 
 def crawl(source: dict) -> tuple[int, int, int]:
-    """Crawl Helium Comedy Club Atlanta events using Playwright."""
+    """Crawl Helium Comedy Club Atlanta events by expanding event cards."""
     source_id = source["id"]
     events_found = 0
     events_new = 0
     events_updated = 0
+    current_hashes = set()
 
     try:
         with sync_playwright() as p:
@@ -74,97 +94,114 @@ def crawl(source: dict) -> tuple[int, int, int]:
             page.goto(EVENTS_URL, wait_until="domcontentloaded", timeout=30000)
             page.wait_for_timeout(3000)
 
-            # Extract images from page
-            image_map = extract_images_from_page(page)
-
             # Scroll to load all content
             for _ in range(5):
                 page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
                 page.wait_for_timeout(1000)
 
-            # Get page text and parse line by line
-            body_text = page.inner_text("body")
-            lines = [l.strip() for l in body_text.split("\n") if l.strip()]
+            # Get all event list items
+            event_elements = page.query_selector_all(".event-list-item")
+            logger.info(f"Found {len(event_elements)} event elements")
 
-            # Parse events - look for date patterns
-            i = 0
-            while i < len(lines):
-                line = lines[i]
+            for idx, event_el in enumerate(event_elements):
+                try:
+                    # Try to expand the event to reveal showtimes
+                    more_btn = event_el.query_selector('a[href="#"]')
+                    if more_btn:
+                        try:
+                            more_btn.click()
+                            page.wait_for_timeout(500)
+                        except Exception:
+                            pass  # Already expanded or not expandable
 
-                # Skip navigation items
-                if len(line) < 3:
-                    i += 1
-                    continue
+                    # Extract event text
+                    event_text = event_el.inner_text()
+                    lines = [l.strip() for l in event_text.split("\n") if l.strip()]
 
-                # Look for date patterns
-                date_match = re.match(
-                    r"(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)?,?\s*(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{1,2})(?:,?\s+(\d{4}))?",
-                    line,
-                    re.IGNORECASE
-                )
+                    if len(lines) < 2:
+                        continue
 
-                if date_match:
-                    month = date_match.group(1)
-                    day = date_match.group(2)
-                    year = date_match.group(3) if date_match.group(3) else str(datetime.now().year)
-
-                    # Look for title in surrounding lines
+                    # First line is usually the date range, second is title
                     title = None
-                    start_time = None
+                    description = ""
+                    image_url = None
+                    showtime_data = None
 
-                    for offset in [-2, -1, 1, 2, 3]:
-                        idx = i + offset
-                        if 0 <= idx < len(lines):
-                            check_line = lines[idx]
-                            if re.match(r"(January|February|March)", check_line, re.IGNORECASE):
-                                continue
-                            if not start_time:
-                                time_result = parse_time(check_line)
-                                if time_result:
-                                    start_time = time_result
-                                    continue
-                            if not title and len(check_line) > 5:
-                                if not re.match(r"\d{1,2}[:/]", check_line):
-                                    # Skip UI elements and CTAs
-                                    skip_patterns = r"(free|tickets|register|\$|more info|buy tickets|buy now|sold out|on sale|get tickets|club gallery|view|learn more|upcoming events)"
-                                    if not re.match(skip_patterns, check_line.lower()):
-                                        title = check_line
-                                        break
+                    # Look for title (usually line with "SPECIAL EVENT:" or all caps)
+                    for i, line in enumerate(lines[:5]):
+                        if "SPECIAL EVENT:" in line or "IN THE OTHER ROOM:" in line:
+                            title = line.replace("SPECIAL EVENT:", "").replace("IN THE OTHER ROOM:", "").strip()
+                            break
+                        elif line.isupper() and len(line) > 5 and "BUY TICKETS" not in line and "MORE" not in line:
+                            # Skip date lines
+                            if not re.match(r"(January|February|March|April|May|June|July|August|September|October|November|December)", line):
+                                title = line
+                                break
 
                     if not title:
-                        i += 1
                         continue
 
-                    # Parse date
-                    try:
-                        month_str = month[:3] if len(month) > 3 else month
-                        dt = datetime.strptime(f"{month_str} {day} {year}", "%b %d %Y")
-                        if dt.date() < datetime.now().date():
-                            dt = datetime.strptime(f"{month_str} {day} {int(year) + 1}", "%b %d %Y")
-                        start_date = dt.strftime("%Y-%m-%d")
-                    except ValueError:
-                        i += 1
+                    # Look for showtime (format: "Sat Feb 7 2026, 4:00 PM")
+                    for line in lines:
+                        result = parse_showtime(line)
+                        if result:
+                            showtime_data = result
+                            break
+
+                    if not showtime_data:
+                        # Skip events without specific showtimes
+                        logger.debug(f"No showtime found for: {title}")
                         continue
+
+                    start_date, start_time = showtime_data
+
+                    # Skip past events
+                    eastern = ZoneInfo("America/New_York")
+                    event_dt = datetime.strptime(f"{start_date} {start_time}", "%Y-%m-%d %H:%M")
+                    event_dt = event_dt.replace(tzinfo=eastern)
+                    if event_dt < datetime.now(eastern):
+                        continue
+
+                    # Extract description (usually after title, before "THERE IS A TWO-ITEM" or "more")
+                    desc_lines = []
+                    capturing = False
+                    for line in lines:
+                        if line == title:
+                            capturing = True
+                            continue
+                        if capturing:
+                            if "THERE IS A TWO-ITEM" in line or "BUY TICKETS" in line or line == "more":
+                                break
+                            if len(line) > 20:  # Skip short UI elements
+                                desc_lines.append(line)
+
+                    if desc_lines:
+                        description = " ".join(desc_lines[:3])  # First 3 sentences
+
+                    # Extract image
+                    img_el = event_el.query_selector("img")
+                    if img_el:
+                        image_url = img_el.get_attribute("src")
 
                     events_found += 1
 
                     content_hash = generate_content_hash(title, "Helium Comedy Club Atlanta", start_date)
+                    current_hashes.add(content_hash)
 
                     if find_event_by_hash(content_hash):
                         events_updated += 1
-                        i += 1
                         continue
 
                     event_record = {
                         "source_id": source_id,
                         "venue_id": venue_id,
                         "title": title,
-                        "description": "Event at Helium Comedy Club Atlanta",
+                        "description": description if description else "Comedy show at Helium Comedy Club Atlanta",
                         "start_date": start_date,
                         "start_time": start_time,
                         "end_date": None,
                         "end_time": None,
-                        "is_all_day": start_time is None,
+                        "is_all_day": False,
                         "category": "comedy",
                         "subcategory": "standup",
                         "tags": ["helium", "comedy", "stand-up"],
@@ -174,9 +211,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "is_free": False,
                         "source_url": EVENTS_URL,
                         "ticket_url": EVENTS_URL,
-                        "image_url": image_map.get(title),
-                        "raw_text": f"{title} - {start_date}",
-                        "extraction_confidence": 0.80,
+                        "image_url": image_url if image_url else None,
+                        "raw_text": event_text[:500],
+                        "extraction_confidence": 0.90,
                         "is_recurring": False,
                         "recurrence_rule": None,
                         "content_hash": content_hash,
@@ -185,13 +222,18 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     try:
                         insert_event(event_record)
                         events_new += 1
-                        logger.info(f"Added: {title} on {start_date}")
+                        logger.info(f"Added: {title} on {start_date} at {start_time}")
                     except Exception as e:
                         logger.error(f"Failed to insert: {title}: {e}")
 
-                i += 1
+                except Exception as e:
+                    logger.warning(f"Failed to process event {idx}: {e}")
+                    continue
 
             browser.close()
+
+            # Remove stale events
+            remove_stale_source_events(source_id, current_hashes)
 
         logger.info(
             f"Helium Comedy Club Atlanta crawl complete: {events_found} found, {events_new} new, {events_updated} updated"

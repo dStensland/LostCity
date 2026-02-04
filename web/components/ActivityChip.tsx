@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import CategoryIcon, { getCategoryColor } from "./CategoryIcon";
 
 export interface ActivityChipProps {
@@ -140,7 +140,7 @@ export default function ActivityChip({
   );
 }
 
-// Compact version for inline use (e.g., on EventCard)
+// Compact version for inline use (e.g., on EventCard — uses button to avoid nested <a> inside card links)
 export function SubcategoryChip({
   label,
   value,
@@ -150,18 +150,22 @@ export function SubcategoryChip({
   value: string;
   portalSlug?: string;
 }) {
+  const router = useRouter();
   const href = buildActivityUrl("subcategory", value, portalSlug);
 
   return (
-    <Link
-      href={href}
+    <button
       className="inline-flex items-center px-1.5 py-0.5 rounded text-[0.65rem] font-mono
         bg-[var(--twilight)] text-[var(--muted)] hover:text-[var(--cream)] hover:bg-[var(--dusk)]
         transition-colors border border-[var(--twilight)]"
-      onClick={(e) => e.stopPropagation()}
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        router.push(href);
+      }}
     >
       {label}
-    </Link>
+    </button>
   );
 }
 

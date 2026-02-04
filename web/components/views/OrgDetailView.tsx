@@ -148,7 +148,7 @@ export default function OrgDetailView({ slug, portalSlug, onClose }: OrgDetailVi
 
   if (loading) {
     return (
-      <div className="animate-fadeIn pt-6">
+      <div className="pt-6">
         <NeonBackButton onClose={onClose} />
         <div className="space-y-4">
           <div className="flex gap-4">
@@ -166,7 +166,7 @@ export default function OrgDetailView({ slug, portalSlug, onClose }: OrgDetailVi
 
   if (error || !producer) {
     return (
-      <div className="animate-fadeIn pt-6">
+      <div className="pt-6">
         <NeonBackButton onClose={onClose} />
         <div className="text-center py-12">
           <p className="text-[var(--muted)]">{error || "Organizer not found"}</p>
@@ -179,7 +179,7 @@ export default function OrgDetailView({ slug, portalSlug, onClose }: OrgDetailVi
   const showLogo = producer.logo_url && !imageError;
 
   return (
-    <div className="animate-fadeIn pt-6 pb-8">
+    <div className="pt-6 pb-8">
       {/* Back button */}
       <NeonBackButton onClose={onClose} />
 

@@ -82,6 +82,17 @@ SOURCE_MODULES = {
     "atlanta-film-society": "sources.atlanta_film_society",
     "atlanta-film-series": "sources.atlanta_film_series",
     "buried-alive": "sources.buried_alive",
+    # Independent Cinemas
+    "starlight-drive-in": "sources.starlight_drive_in",
+    "springs-cinema": "sources.springs_cinema",
+    "aurora-cineplex": "sources.aurora_cineplex",
+    # Chain Cinemas (excluded from feed, searchable + on maps)
+    "amc-atlanta": "sources.amc_atlanta",
+    "regal-atlanta": "sources.regal_atlanta",
+    "cinemark-atlanta": "sources.cinemark_atlanta",
+    "studio-movie-grill-atlanta": "sources.studio_movie_grill_atlanta",
+    "silverspot-cinema-atlanta": "sources.silverspot_atlanta",
+    "ncg-cinemas-atlanta": "sources.ncg_atlanta",
     # Phase 4 - Additional Music Venues
     "529": "sources.five29",
     # Meetups
@@ -186,6 +197,7 @@ SOURCE_MODULES = {
     "mudfire": "sources.mudfire",
     "spruill-center": "sources.spruill_center",
     "atlanta-clay-works": "sources.atlanta_clay_works",
+    "painting-with-a-twist": "sources.painting_with_a_twist",
     "atlanta-tech-week": "sources.atlanta_tech_week",
     "ypa-atlanta": "sources.ypa_atlanta",
     # ===== Festivals & Conventions =====
@@ -640,7 +652,12 @@ SOURCE_MODULES = {
     "new-realm-brewing": "sources.new_realm_brewing",
     "the-porter": "sources.the_porter",
     "chastain-arts": "sources.chastain_arts",
+    "chastain-park-amphitheatre": "sources.chastain_park_amphitheatre",
+    "aso": "sources.aso",
     "mint-gallery": "sources.mint_gallery",
+    # ===== Minor League Sports =====
+    "atlanta-gladiators": "sources.atlanta_gladiators",
+    "gwinnett-stripers": "sources.gwinnett_stripers",
     # ===== NASHVILLE CRAWLERS =====
     "ticketmaster-nashville": "sources.ticketmaster_nashville",
     "eventbrite-nashville": "sources.eventbrite_nashville",

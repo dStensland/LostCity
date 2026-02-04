@@ -91,9 +91,33 @@ export function FriendSuggestions({ suggestions, isLoading = false }: FriendSugg
 
   return (
     <div className="space-y-3">
-      <h3 className="font-mono text-xs text-[var(--muted)] uppercase tracking-wider mb-3">
-        People You May Know
-      </h3>
+      {/* Section header with cyan accent and gradient divider */}
+      <div className="flex items-center gap-3">
+        <h3
+          className="font-mono text-xs font-bold uppercase tracking-wider"
+          style={{
+            color: "var(--neon-cyan)",
+            textShadow: "0 0 20px var(--neon-cyan)40",
+          }}
+        >
+          People You May Know
+        </h3>
+        <div
+          className="flex-1 h-px"
+          style={{
+            background: "linear-gradient(to right, var(--neon-cyan)40, transparent)",
+          }}
+        />
+        <span
+          className="font-mono text-xs px-2 py-0.5 rounded-full"
+          style={{
+            backgroundColor: "var(--neon-cyan)15",
+            color: "var(--neon-cyan)",
+          }}
+        >
+          {visibleSuggestions.length}
+        </span>
+      </div>
       {visibleSuggestions.map((profile) => (
         <UserCard
           key={profile.id}
@@ -135,9 +159,9 @@ function UserCard({ profile, onDismiss }: UserCardProps) {
 
   return (
     <div
-      className={`flex flex-col sm:flex-row items-start sm:items-center gap-3 p-3 rounded-lg bg-[var(--dusk)] border border-[var(--twilight)] transition-all duration-500 group ${
+      className={`relative flex flex-col sm:flex-row items-start sm:items-center gap-3 p-3 rounded-lg glass border border-[var(--twilight)]/50 transition-all duration-500 group ${
         cardState === "idle"
-          ? "hover:border-[var(--neon-cyan)]/30 opacity-100 scale-100"
+          ? "hover:border-[var(--coral)]/30 opacity-100 scale-100"
           : ""
       } ${
         cardState === "actioned"
@@ -149,7 +173,14 @@ function UserCard({ profile, onDismiss }: UserCardProps) {
           : ""
       }`}
     >
-      <Link href={`/profile/${profile.username}`} className="flex-shrink-0">
+      {/* Hover glow effect */}
+      <div
+        className="absolute inset-0 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none blur-xl"
+        style={{
+          background: "radial-gradient(circle at center, var(--coral) 0%, var(--neon-cyan) 50%, transparent 70%)",
+        }}
+      />
+      <Link href={`/profile/${profile.username}`} className="flex-shrink-0 relative z-10">
         <UserAvatar
           src={profile.avatar_url}
           name={profile.display_name || profile.username}
@@ -158,11 +189,11 @@ function UserCard({ profile, onDismiss }: UserCardProps) {
         />
       </Link>
 
-      <div className="flex-1 min-w-0 w-full sm:w-auto">
+      <div className="flex-1 min-w-0 w-full sm:w-auto relative z-10">
         <div className="flex items-center gap-2">
           <Link
             href={`/profile/${profile.username}`}
-            className="font-medium text-[var(--cream)] hover:text-[var(--neon-cyan)] transition-colors truncate"
+            className="font-medium text-[var(--cream)] hover:text-[var(--coral)] transition-colors truncate"
           >
             {profile.display_name || `@${profile.username}`}
           </Link>
@@ -171,7 +202,7 @@ function UserCard({ profile, onDismiss }: UserCardProps) {
               <button
                 onMouseEnter={() => setShowTooltip(true)}
                 onMouseLeave={() => setShowTooltip(false)}
-                className="flex-shrink-0 w-4 h-4 rounded-full bg-[var(--twilight)] hover:bg-[var(--neon-cyan)]/20 flex items-center justify-center transition-colors"
+                className="flex-shrink-0 w-4 h-4 rounded-full bg-[var(--twilight)] hover:bg-[var(--coral)]/20 flex items-center justify-center transition-colors"
                 aria-label="Why suggested"
               >
                 <svg className="w-2.5 h-2.5 text-[var(--muted)]" fill="currentColor" viewBox="0 0 20 20">
@@ -190,7 +221,7 @@ function UserCard({ profile, onDismiss }: UserCardProps) {
         <p className="text-xs text-[var(--muted)] truncate">@{profile.username}</p>
 
         {profile.mutual_friends_count && profile.mutual_friends_count > 0 && (
-          <p className="text-xs text-[var(--neon-cyan)] font-mono mt-0.5">
+          <p className="text-xs text-[var(--coral)] font-mono mt-0.5">
             {profile.mutual_friends_count} mutual friend{profile.mutual_friends_count !== 1 ? "s" : ""}
           </p>
         )}
@@ -215,7 +246,7 @@ function UserCard({ profile, onDismiss }: UserCardProps) {
         )}
       </div>
 
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto flex-shrink-0">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto flex-shrink-0 relative z-10">
         <FriendButton
           targetUserId={profile.id}
           targetUsername={profile.username}

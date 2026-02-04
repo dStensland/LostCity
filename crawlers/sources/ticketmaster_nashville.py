@@ -15,8 +15,10 @@ from typing import Optional
 import requests
 
 from utils import slugify
-from db import get_or_create_venue, insert_event, find_event_by_hash
+from db import get_or_create_venue, insert_event, find_event_by_hash, get_portal_id_by_slug
 from dedupe import generate_content_hash
+
+PORTAL_SLUG = "nashville"
 
 logger = logging.getLogger(__name__)
 
@@ -190,6 +192,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_updated = 0
     seen_ids = set()
 
+    portal_id = get_portal_id_by_slug(PORTAL_SLUG)
+
     if not API_KEY:
         logger.error("TICKETMASTER_API_KEY not set - skipping Ticketmaster crawl")
         return 0, 0, 0
@@ -262,6 +266,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 event_record = {
                     "source_id": source_id,
                     "venue_id": venue_id,
+                    "portal_id": portal_id,
                     "title": parsed["title"],
                     "description": parsed.get("description"),
                     "start_date": parsed["start_date"],

@@ -116,14 +116,9 @@ def get_or_create_series(client: Client, series_hint: dict, category: str = None
 
     # Add film-specific fields
     if series_type == "film":
-        if series_hint.get("director"):
-            series_data["director"] = series_hint["director"]
-        if series_hint.get("runtime_minutes"):
-            series_data["runtime_minutes"] = series_hint["runtime_minutes"]
-        if series_hint.get("year"):
-            series_data["year"] = series_hint["year"]
-        if series_hint.get("rating"):
-            series_data["rating"] = series_hint["rating"]
+        for field in ("director", "runtime_minutes", "year", "rating", "description", "image_url"):
+            if series_hint.get(field):
+                series_data[field] = series_hint[field]
         if imdb_id:
             series_data["imdb_id"] = imdb_id
 
@@ -137,6 +132,44 @@ def get_or_create_series(client: Client, series_hint: dict, category: str = None
 
     new_series = create_series(client, series_data)
     return new_series["id"]
+
+
+def update_series_metadata(client: Client, series_id: str, updates: dict) -> bool:
+    """
+    Update a series record, only setting fields that are currently NULL.
+    Used to backfill OMDB metadata on existing series without overwriting
+    curator-provided values.
+
+    Args:
+        client: Supabase client
+        series_id: Series UUID
+        updates: Dict of field -> value to set (only if currently NULL)
+
+    Returns:
+        True if any fields were updated
+    """
+    if not updates:
+        return False
+
+    # Fetch existing series
+    result = client.table("series").select("*").eq("id", series_id).execute()
+    if not result.data:
+        return False
+
+    existing = result.data[0]
+
+    # Only update fields that are currently NULL
+    fields_to_set = {}
+    for key, value in updates.items():
+        if value is not None and existing.get(key) is None:
+            fields_to_set[key] = value
+
+    if not fields_to_set:
+        return False
+
+    client.table("series").update(fields_to_set).eq("id", series_id).execute()
+    logger.info(f"Backfilled series {existing.get('title', series_id)}: {list(fields_to_set.keys())}")
+    return True
 
 
 def link_event_to_series(client: Client, event_id: int, series_id: str) -> None:

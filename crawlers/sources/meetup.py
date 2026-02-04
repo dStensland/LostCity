@@ -21,6 +21,17 @@ logger = logging.getLogger(__name__)
 BASE_URL = "https://www.meetup.com"
 EVENTS_URL = f"{BASE_URL}/find/?location=us--ga--Atlanta&source=EVENTS"
 
+# Additional keyword-specific URLs to surface underrepresented activities
+BROWSE_URLS = [
+    EVENTS_URL,
+    f"{EVENTS_URL}&keywords=hiking",
+    f"{EVENTS_URL}&keywords=kayaking",
+    f"{EVENTS_URL}&keywords=pottery+class",
+    f"{EVENTS_URL}&keywords=running+club",
+    f"{EVENTS_URL}&keywords=book+club",
+    f"{EVENTS_URL}&keywords=photography",
+]
+
 # Map Meetup topics to our subcategories
 TOPIC_MAP = {
     # Tech & Science
@@ -160,72 +171,67 @@ def crawl(source: dict) -> tuple[int, int, int]:
             )
             page = context.new_page()
 
-            logger.info(f"Fetching Meetup Atlanta: {EVENTS_URL}")
-            page.goto(EVENTS_URL, wait_until="domcontentloaded", timeout=60000)
-
-            # Wait for content to load
-            page.wait_for_timeout(3000)
-
-            # Extract images from page
-            image_map = extract_images_from_page(page)
-
-            # Scroll to load more events (infinite scroll)
-            for i in range(5):
-                page.keyboard.press("End")
-                page.wait_for_timeout(2000)
-                logger.debug(f"Scroll iteration {i + 1}/5")
-
-            # Find event cards - Meetup uses various selectors
-            # Try multiple selector patterns
-            event_links = page.query_selector_all('a[href*="/events/"]')
-
             seen_urls = set()
             event_data = []
+            image_map = {}
 
-            for link in event_links:
+            # Browse multiple keyword URLs to capture underrepresented activities
+            for browse_url in BROWSE_URLS:
+                logger.info(f"Fetching Meetup: {browse_url}")
                 try:
-                    href = link.get_attribute("href")
-                    if not href or "/events/" not in href:
-                        continue
-
-                    # Skip duplicate URLs
-                    if href in seen_urls:
-                        continue
-                    seen_urls.add(href)
-
-                    # Get the event card container
-                    card = link
-
-                    # Extract event URL
-                    event_url = href if href.startswith("http") else f"{BASE_URL}{href}"
-
-                    # Try to extract title from the link or nearby elements
-                    title = card.inner_text().strip()
-
-                    # Skip if title is too short or looks like navigation
-                    if not title or len(title) < 5 or len(title) > 300:
-                        continue
-
-                    # Skip navigation elements
-                    skip_words = ["Sign up", "Log in", "Create", "Search", "See all"]
-                    if any(sw.lower() in title.lower() for sw in skip_words):
-                        continue
-
-                    event_data.append(
-                        {
-                            "title": title.split("\n")[
-                                0
-                            ].strip(),  # Take first line as title
-                            "url": event_url,
-                        }
-                    )
-
+                    page.goto(browse_url, wait_until="domcontentloaded", timeout=60000)
+                    page.wait_for_timeout(3000)
                 except Exception as e:
-                    logger.debug(f"Error extracting event link: {e}")
+                    logger.warning(f"Failed to load {browse_url}: {e}")
                     continue
 
+                # Extract images from page
+                page_images = extract_images_from_page(page)
+                image_map.update(page_images)
+
+                # Scroll to load more events (infinite scroll)
+                for i in range(5):
+                    page.keyboard.press("End")
+                    page.wait_for_timeout(2000)
+
+                event_links = page.query_selector_all('a[href*="/events/"]')
+
+                for link in event_links:
+                    try:
+                        href = link.get_attribute("href")
+                        if not href or "/events/" not in href:
+                            continue
+
+                        if href in seen_urls:
+                            continue
+                        seen_urls.add(href)
+
+                        card = link
+                        event_url = href if href.startswith("http") else f"{BASE_URL}{href}"
+                        title = card.inner_text().strip()
+
+                        if not title or len(title) < 5 or len(title) > 300:
+                            continue
+
+                        skip_words = ["Sign up", "Log in", "Create", "Search", "See all"]
+                        if any(sw.lower() in title.lower() for sw in skip_words):
+                            continue
+
+                        event_data.append(
+                            {
+                                "title": title.split("\n")[0].strip(),
+                                "url": event_url,
+                            }
+                        )
+
+                    except Exception as e:
+                        logger.debug(f"Error extracting event link: {e}")
+                        continue
+
+                logger.info(f"After {browse_url}: {len(event_data)} total unique events")
+
             logger.info(
-                f"Found {len(event_data)} potential events, fetching details..."
+                f"Found {len(event_data)} potential events across {len(BROWSE_URLS)} keyword pages, fetching details..."
             )
 
             # Now visit each event page to get full details

@@ -95,9 +95,12 @@ export function DetailStickyBar({
             primaryAction.href ? (
               <a
                 href={primaryAction.href}
-                target="_blank"
-                rel="noopener noreferrer"
+                {...(primaryAction.href.startsWith("#") ? {} : { target: "_blank", rel: "noopener noreferrer" })}
                 className="flex-1 inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-[var(--coral)] text-[var(--void)] font-semibold rounded-lg hover:bg-[var(--rose)] transition-all shadow-[0_0_20px_rgba(255,107,122,0.4)] hover:shadow-[0_0_30px_rgba(255,107,122,0.6)]"
+                onClick={primaryAction.href.startsWith("#") ? (e) => {
+                  e.preventDefault();
+                  document.getElementById(primaryAction.href!.slice(1))?.scrollIntoView({ behavior: "smooth" });
+                } : undefined}
               >
                 {primaryAction.icon}
                 {primaryAction.label}

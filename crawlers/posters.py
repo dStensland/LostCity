@@ -1,6 +1,6 @@
 """
-Movie poster fetching utility for film events.
-Automatically fetches posters from OMDB for any film event missing an image.
+Movie poster and metadata fetching utility for film events.
+Automatically fetches posters and metadata from OMDB for film events.
 """
 
 from __future__ import annotations
@@ -9,11 +9,31 @@ import re
 import logging
 import requests
 from typing import Optional
+from dataclasses import dataclass
+
+from config import get_config
 
 logger = logging.getLogger(__name__)
 
 # Cache to avoid duplicate API calls in the same session
 _poster_cache: dict[str, Optional[str]] = {}
+
+
+@dataclass
+class FilmMetadata:
+    """Film metadata from OMDB."""
+    title: str
+    poster_url: str | None = None
+    director: str | None = None
+    runtime_minutes: int | None = None
+    year: int | None = None
+    rating: str | None = None          # "PG-13", "R"
+    imdb_id: str | None = None
+    genres: list[str] | None = None    # ["drama", "thriller"]
+    plot: str | None = None            # -> series.description
+
+
+_metadata_cache: dict[str, Optional[FilmMetadata]] = {}
 
 
 def extract_film_info(title: str) -> tuple[Optional[str], Optional[str]]:
@@ -73,9 +93,94 @@ def extract_film_info(title: str) -> tuple[Optional[str], Optional[str]]:
     return film_title, year
 
 
+def _parse_runtime(runtime_str: str | None) -> int | None:
+    """Parse OMDB runtime string like '148 min' to integer minutes."""
+    if not runtime_str or runtime_str == "N/A":
+        return None
+    match = re.match(r'(\d+)', runtime_str)
+    return int(match.group(1)) if match else None
+
+
+def _parse_genres(genre_str: str | None) -> list[str] | None:
+    """Parse OMDB genre string like 'Drama, Sci-Fi' to lowercase list."""
+    if not genre_str or genre_str == "N/A":
+        return None
+    return [g.strip().lower() for g in genre_str.split(",") if g.strip()]
+
+
+def _clean_na(value: str | None) -> str | None:
+    """Return None if OMDB value is 'N/A'."""
+    if not value or value == "N/A":
+        return None
+    return value
+
+
+def fetch_film_metadata(title: str, year: Optional[str] = None) -> Optional[FilmMetadata]:
+    """
+    Fetch full film metadata from OMDB (Open Movie Database).
+
+    Args:
+        title: Movie title
+        year: Optional release year to improve search accuracy
+
+    Returns:
+        FilmMetadata or None if not found
+    """
+    cache_key = f"{title}|{year or ''}"
+    if cache_key in _metadata_cache:
+        return _metadata_cache[cache_key]
+
+    metadata = None
+
+    try:
+        api_key = get_config().api.omdb_api_key
+        search_query = title.replace(" ", "+")
+        if year:
+            omdb_url = f"https://www.omdbapi.com/?t={search_query}&y={year}&apikey={api_key}"
+        else:
+            omdb_url = f"https://www.omdbapi.com/?t={search_query}&apikey={api_key}"
+
+        response = requests.get(omdb_url, timeout=10)
+
+        if response.status_code == 200:
+            data = response.json()
+            if data.get("Response") == "True":
+                poster_url = _clean_na(data.get("Poster"))
+                year_val = None
+                if _clean_na(data.get("Year")):
+                    # Year can be "2024" or "2024–2025" for series
+                    year_match = re.match(r'(\d{4})', data["Year"])
+                    if year_match:
+                        year_val = int(year_match.group(1))
+
+                metadata = FilmMetadata(
+                    title=data.get("Title", title),
+                    poster_url=poster_url,
+                    director=_clean_na(data.get("Director")),
+                    runtime_minutes=_parse_runtime(data.get("Runtime")),
+                    year=year_val,
+                    rating=_clean_na(data.get("Rated")),
+                    imdb_id=_clean_na(data.get("imdbID")),
+                    genres=_parse_genres(data.get("Genre")),
+                    plot=_clean_na(data.get("Plot")),
+                )
+                logger.debug(f"Found OMDB metadata for '{title}': director={metadata.director}, year={metadata.year}")
+
+                # Also populate poster cache for backward compat
+                _poster_cache[cache_key] = poster_url
+
+    except Exception as e:
+        logger.debug(f"Error fetching metadata for '{title}': {e}")
+
+    # Cache the result (even if None)
+    _metadata_cache[cache_key] = metadata
+    return metadata
+
+
 def fetch_movie_poster(title: str, year: Optional[str] = None) -> Optional[str]:
     """
     Fetch movie poster URL from OMDB (Open Movie Database).
+    Delegates to fetch_film_metadata() and returns just the poster URL.
 
     Args:
         title: Movie title
@@ -84,43 +189,49 @@ def fetch_movie_poster(title: str, year: Optional[str] = None) -> Optional[str]:
     Returns:
         Poster URL or None if not found
     """
-    # Check cache first
+    # Check poster cache first (may have been populated by fetch_film_metadata)
     cache_key = f"{title}|{year or ''}"
     if cache_key in _poster_cache:
         return _poster_cache[cache_key]
 
-    poster_url = None
+    metadata = fetch_film_metadata(title, year)
+    if metadata:
+        return metadata.poster_url
 
-    try:
-        # OMDB API with free "trilogy" API key
-        search_query = title.replace(" ", "+")
-        if year:
-            omdb_url = f"https://www.omdbapi.com/?t={search_query}&y={year}&apikey=trilogy"
-        else:
-            omdb_url = f"https://www.omdbapi.com/?t={search_query}&apikey=trilogy"
+    # Cache None in poster cache too
+    _poster_cache[cache_key] = None
+    return None
 
-        response = requests.get(omdb_url, timeout=10)
 
-        if response.status_code == 200:
-            data = response.json()
-            if data.get("Response") == "True":
-                poster = data.get("Poster")
-                if poster and poster != "N/A":
-                    poster_url = poster
-                    logger.debug(f"Found poster for '{title}': {poster_url}")
+def get_metadata_for_film_event(title: str, existing_image: Optional[str] = None) -> Optional[FilmMetadata]:
+    """
+    Get full metadata for a film event.
 
-    except Exception as e:
-        logger.debug(f"Error fetching poster for '{title}': {e}")
+    Args:
+        title: The event title (will be parsed to extract film info)
+        existing_image: Existing image URL, if any
 
-    # Cache the result (even if None, to avoid repeated failed lookups)
-    _poster_cache[cache_key] = poster_url
+    Returns:
+        FilmMetadata with poster preserved from existing_image if provided, or None
+    """
+    film_title, year = extract_film_info(title)
 
-    return poster_url
+    if not film_title:
+        return None
+
+    metadata = fetch_film_metadata(film_title, year)
+
+    if metadata and existing_image:
+        # Preserve existing image — don't overwrite with OMDB poster
+        metadata.poster_url = existing_image
+
+    return metadata
 
 
 def get_poster_for_film_event(title: str, existing_image: Optional[str] = None) -> Optional[str]:
     """
     Get a poster for a film event if one isn't already provided.
+    Legacy wrapper — callers that only need poster URL.
 
     Args:
         title: The event title (will be parsed to extract film info)
@@ -129,11 +240,9 @@ def get_poster_for_film_event(title: str, existing_image: Optional[str] = None) 
     Returns:
         Poster URL (existing or fetched) or None
     """
-    # If already has an image, use it
     if existing_image:
         return existing_image
 
-    # Try to extract film info and fetch poster
     film_title, year = extract_film_info(title)
 
     if film_title:
@@ -143,6 +252,7 @@ def get_poster_for_film_event(title: str, existing_image: Optional[str] = None) 
 
 
 def clear_cache():
-    """Clear the poster cache (useful for testing)."""
-    global _poster_cache
+    """Clear all caches (useful for testing)."""
+    global _poster_cache, _metadata_cache
     _poster_cache = {}
+    _metadata_cache = {}

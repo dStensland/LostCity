@@ -119,7 +119,7 @@ export default function EventList({
         {/* Illustrated empty state with gentle animation */}
         <div className="w-24 h-24 mx-auto mb-6 rounded-2xl bg-gradient-to-br from-[var(--twilight)] to-[var(--dusk)] flex items-center justify-center relative overflow-hidden animate-float">
           <div className="absolute top-2 right-2 w-2 h-2 rounded-full bg-[var(--coral)]/30 animate-ping-slow" />
-          <div className="absolute bottom-3 left-3 w-1.5 h-1.5 rounded-full bg-[var(--neon-cyan)]/30 animate-ping-slow" style={{ animationDelay: "1s" }} />
+          <div className="absolute bottom-3 left-3 w-1.5 h-1.5 rounded-full bg-[var(--coral)]/30 animate-ping-slow" style={{ animationDelay: "1s" }} />
           <svg className="w-10 h-10 text-[var(--muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
           </svg>

@@ -4,6 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { getSeriesTypeLabel, getSeriesTypeColor } from "@/lib/series-utils";
 import { formatTime } from "@/lib/formats";
+import { formatRecurrence, type Frequency, type DayOfWeek } from "@/lib/recurrence";
 
 export interface SeriesVenueGroup {
   venue: {
@@ -21,6 +22,8 @@ export interface SeriesInfo {
   title: string;
   series_type: string;
   image_url: string | null;
+  frequency?: string | null;
+  day_of_week?: string | null;
 }
 
 interface Props {
@@ -47,6 +50,13 @@ export default function SeriesCard({
   const firstShowtime = venueGroups[0]?.showtimes[0];
   const firstVenue = venueGroups[0]?.venue;
 
+  // Recurrence pattern for recurring shows
+  const recurrenceText = formatRecurrence(
+    (series.frequency as Frequency) || null,
+    (series.day_of_week as DayOfWeek) || null
+  );
+  const isRecurring = series.series_type === "recurring_show" && recurrenceText;
+
   return (
     <Link
       href={seriesUrl}
@@ -64,7 +74,7 @@ export default function SeriesCard({
         {/* Time cell - matches EventCard */}
         <div className="flex-shrink-0 w-14 flex flex-col items-center justify-center py-1">
           <span className="font-mono text-[0.55rem] font-medium text-[var(--muted)] leading-none">
-            {totalShowtimes} times
+            {totalShowtimes} {totalShowtimes === 1 ? "time" : "times"}
           </span>
           {firstShowtime?.time && (
             <>
@@ -143,24 +153,60 @@ export default function SeriesCard({
             )}
           </div>
 
-          {/* Showtimes pills */}
-          <div className="flex flex-wrap gap-1.5 mt-2">
-            {venueGroups.slice(0, 2).flatMap((vg) =>
-              vg.showtimes.slice(0, 3).map((st) => (
-                <span
-                  key={st.id}
-                  className="font-mono text-[0.6rem] px-1.5 py-0.5 rounded bg-[var(--twilight)]/40 text-[var(--soft)]"
-                >
-                  {formatTime(st.time)}
-                </span>
-              ))
-            )}
-            {totalShowtimes > 6 && (
-              <span className="font-mono text-[0.6rem] px-1.5 py-0.5 text-[var(--muted)]">
-                +{totalShowtimes - 6} more
+          {/* Recurrence pattern for recurring shows, showtime pills for others */}
+          {isRecurring ? (
+            <div className="flex items-center gap-2 mt-2">
+              <span
+                className="inline-flex items-center gap-1 font-mono text-[0.6rem] px-1.5 py-0.5 rounded font-medium"
+                style={{
+                  backgroundColor: `${typeColor}20`,
+                  color: typeColor,
+                }}
+              >
+                <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                {recurrenceText}
               </span>
-            )}
-          </div>
+              {firstShowtime?.time && (
+                <span className="font-mono text-[0.6rem] text-[var(--muted)]">
+                  at {formatTime(firstShowtime.time)}
+                </span>
+              )}
+            </div>
+          ) : (
+            <div className="flex flex-wrap gap-1.5 mt-2">
+              {(() => {
+                // Deduplicate showtimes by formatted time to avoid showing "3:25pm 3:25pm"
+                const seen = new Set<string>();
+                const uniqueShowtimes: { id: number; time: string | null; formatted: string }[] = [];
+                for (const vg of venueGroups.slice(0, 2)) {
+                  for (const st of vg.showtimes) {
+                    const formatted = formatTime(st.time);
+                    if (!seen.has(formatted)) {
+                      seen.add(formatted);
+                      uniqueShowtimes.push({ ...st, formatted });
+                    }
+                    if (uniqueShowtimes.length >= 6) break;
+                  }
+                  if (uniqueShowtimes.length >= 6) break;
+                }
+                return uniqueShowtimes.map((st) => (
+                  <span
+                    key={st.id}
+                    className="font-mono text-[0.6rem] px-1.5 py-0.5 rounded bg-[var(--twilight)]/40 text-[var(--soft)]"
+                  >
+                    {st.formatted}
+                  </span>
+                ));
+              })()}
+              {totalShowtimes > 6 && (
+                <span className="font-mono text-[0.6rem] px-1.5 py-0.5 text-[var(--muted)]">
+                  +{totalShowtimes - 6} more
+                </span>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Desktop thumbnail (right side) */}

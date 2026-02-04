@@ -5,6 +5,7 @@ import { useEffect, useState, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import CategoryIcon, { getCategoryColor, CATEGORY_CONFIG } from "./CategoryIcon";
 import { CATEGORIES } from "@/lib/search";
+import { usePortal } from "@/lib/portal-context";
 
 type DateFilter = "today" | "week" | "month";
 
@@ -131,6 +132,7 @@ const DATE_FILTER_OPTIONS: { value: DateFilter; label: string }[] = [
 
 export default function BrowseByActivity({ portalSlug }: BrowseByActivityProps) {
   const router = useRouter();
+  const { portal } = usePortal();
   const [activities, setActivities] = useState<ActivityWithCount[]>([]);
   const [subcategoryCounts, setSubcategoryCounts] = useState<Record<string, number>>({});
   const [isLoading, setIsLoading] = useState(true);
@@ -169,7 +171,9 @@ export default function BrowseByActivity({ portalSlug }: BrowseByActivityProps) 
 
   const fetchActivityCounts = useCallback(async (filter: DateFilter) => {
     try {
-      const response = await fetch(`/api/activities/popular?date_filter=${filter}`);
+      const params = new URLSearchParams({ date_filter: filter });
+      if (portal.id) params.set("portal_id", portal.id);
+      const response = await fetch(`/api/activities/popular?${params}`);
       if (response.ok) {
         const data = await response.json();
         // Merge counts with our config and add colors
@@ -199,7 +203,7 @@ export default function BrowseByActivity({ portalSlug }: BrowseByActivityProps) 
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [portal.id]);
 
   useEffect(() => {
     fetchActivityCounts(dateFilter);

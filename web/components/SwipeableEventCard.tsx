@@ -23,7 +23,6 @@ interface SwipeableEventCardProps {
   skipAnimation?: boolean;
   portalSlug?: string;
   friendsGoing?: FriendGoing[];
-  showThumbnail?: boolean;
   onSave?: (eventId: number) => void;
   onShare?: (eventId: number) => void;
   isSaved?: boolean;
@@ -35,7 +34,6 @@ export default function SwipeableEventCard({
   skipAnimation = false,
   portalSlug,
   friendsGoing = [],
-  showThumbnail = false,
   onSave,
   onShare,
   isSaved = false,
@@ -161,7 +159,6 @@ export default function SwipeableEventCard({
           skipAnimation={skipAnimation}
           portalSlug={portalSlug}
           friendsGoing={friendsGoing}
-          showThumbnail={showThumbnail}
         />
       </div>
     </div>

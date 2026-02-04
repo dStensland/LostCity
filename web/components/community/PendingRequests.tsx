@@ -168,9 +168,25 @@ export function PendingRequests({ requests }: PendingRequestsProps) {
 
   return (
     <section>
-      <h2 className="font-mono text-sm font-medium text-[var(--cream)] uppercase tracking-wider mb-4">
-        Friend Requests ({requests.length})
-      </h2>
+      {/* Section header with urgency indicator */}
+      <div className="flex items-center gap-3 mb-4">
+        <div className="w-1 h-4 rounded-full bg-[var(--coral)] animate-pulse-slow" />
+        <h2
+          className="font-mono text-sm font-medium uppercase tracking-wider"
+          style={{
+            color: "var(--coral)",
+            textShadow: "0 0 20px var(--coral)40",
+          }}
+        >
+          Friend Requests ({requests.length})
+        </h2>
+        <div
+          className="flex-1 h-px"
+          style={{
+            background: "linear-gradient(to right, var(--coral)40, transparent)",
+          }}
+        />
+      </div>
       <div className="space-y-3">
         {requests.map((request) => {
           const otherUser = request.inviter;
@@ -179,9 +195,16 @@ export function PendingRequests({ requests }: PendingRequestsProps) {
           return (
             <div
               key={request.id}
-              className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 p-4 bg-[var(--dusk)] border border-[var(--coral)]/30 rounded-lg"
+              className="relative flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 p-4 glass border border-[var(--coral)]/30 rounded-lg"
             >
-              <Link href={`/profile/${otherUser.username}`} className="flex-shrink-0">
+              {/* Subtle pulsing glow with coral/red accent */}
+              <div
+                className="absolute inset-0 rounded-lg opacity-20 animate-pulse-slow pointer-events-none blur-xl"
+                style={{
+                  background: "radial-gradient(circle at center, var(--coral) 0%, var(--neon-red) 50%, transparent 70%)",
+                }}
+              />
+              <Link href={`/profile/${otherUser.username}`} className="flex-shrink-0 relative z-10">
                 <UserAvatar
                   src={otherUser.avatar_url}
                   name={otherUser.display_name || otherUser.username}
@@ -190,7 +213,7 @@ export function PendingRequests({ requests }: PendingRequestsProps) {
                 />
               </Link>
 
-              <div className="flex-1 min-w-0 w-full sm:w-auto">
+              <div className="flex-1 min-w-0 w-full sm:w-auto relative z-10">
                 <Link
                   href={`/profile/${otherUser.username}`}
                   className="font-medium text-[var(--cream)] hover:text-[var(--coral)] transition-colors block truncate"
@@ -202,16 +225,16 @@ export function PendingRequests({ requests }: PendingRequestsProps) {
                 </p>
               </div>
 
-              <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+              <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto relative z-10">
                 <button
                   onClick={() => handleAcceptRequest(request.id)}
-                  className="px-3 py-1.5 bg-[var(--coral)] text-[var(--void)] rounded-lg text-xs font-mono font-medium hover:bg-[var(--rose)] transition-colors min-h-[36px] w-full sm:w-auto"
+                  className="px-3 py-1.5 bg-[var(--neon-green)] text-[var(--void)] rounded-lg text-xs font-mono font-medium hover:brightness-110 transition-all min-h-[36px] w-full sm:w-auto shadow-lg shadow-[var(--neon-green)]/20"
                 >
                   Accept
                 </button>
                 <button
                   onClick={() => handleDeclineRequest(request.id)}
-                  className="px-3 py-1.5 bg-transparent border border-[var(--muted)] text-[var(--muted)] rounded-lg text-xs font-mono font-medium hover:bg-[var(--muted)]/10 transition-colors min-h-[36px] w-full sm:w-auto"
+                  className="px-3 py-1.5 glass border border-[var(--twilight)] text-[var(--muted)] rounded-lg text-xs font-mono font-medium hover:border-[var(--neon-red)] hover:text-[var(--neon-red)] transition-all min-h-[36px] w-full sm:w-auto"
                 >
                   Decline
                 </button>

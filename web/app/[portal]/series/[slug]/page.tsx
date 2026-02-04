@@ -414,6 +414,41 @@ export default async function PortalSeriesPage({ params }: Props) {
             )}
           </InfoCard>
 
+          {/* Recurring show callout */}
+          {series.series_type === "recurring_show" && series.frequency && (
+            <div
+              className="rounded-lg border p-5"
+              style={{
+                borderColor: `${typeColor}40`,
+                background: `linear-gradient(135deg, ${typeColor}08, ${typeColor}04)`,
+              }}
+            >
+              <div className="flex items-start gap-3">
+                <svg className="w-5 h-5 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: typeColor }}>
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                <div>
+                  <p className="font-medium text-[var(--cream)] text-lg">
+                    {formatRecurrence(series)}
+                    {venueShowtimes[0]?.events[0]?.time && ` at ${formatTime(venueShowtimes[0].events[0].time)}`}
+                  </p>
+                  {venueShowtimes.length === 1 && venueShowtimes[0].venue && (
+                    <p className="text-sm text-[var(--muted)] mt-1">
+                      at{" "}
+                      <Link
+                        href={`/${activePortalSlug}/spots/${venueShowtimes[0].venue.slug}`}
+                        className="text-[var(--soft)] hover:text-[var(--coral)] transition-colors"
+                      >
+                        {venueShowtimes[0].venue.name}
+                      </Link>
+                      {venueShowtimes[0].venue.neighborhood && ` (${venueShowtimes[0].venue.neighborhood})`}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Showtimes Section - Venue First Layout */}
           <div id="showtimes">
             <SectionHeader
@@ -429,96 +464,165 @@ export default async function PortalSeriesPage({ params }: Props) {
 
             {venueShowtimes.length > 0 ? (
               <div className="space-y-6">
-                {venueShowtimes.map((vs) => {
-                  const eventsByDate = groupEventsByDate(vs.events);
-
-                  return (
-                    <div
-                      key={vs.venue.id}
-                      className="rounded-lg border border-[var(--twilight)] overflow-hidden"
-                      style={{ backgroundColor: "var(--card-bg)" }}
-                    >
-                      {/* Venue header */}
-                      <div className="p-4 border-b border-[var(--twilight)]/50">
-                        <Link
-                          href={`/${activePortalSlug}/spots/${vs.venue.slug}`}
-                          className="group flex items-center gap-2"
-                        >
-                          <svg
-                            className="w-5 h-5 text-[var(--muted)] group-hover:text-[var(--coral)] transition-colors flex-shrink-0"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
-                            />
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
-                            />
-                          </svg>
-                          <span className="font-semibold text-[var(--cream)] group-hover:text-[var(--coral)] transition-colors">
-                            {vs.venue.name}
+                {/* Compact single-venue layout for recurring shows */}
+                {series.series_type === "recurring_show" && venueShowtimes.length === 1 ? (
+                  <div
+                    className="rounded-lg border border-[var(--twilight)] overflow-hidden"
+                    style={{ backgroundColor: "var(--card-bg)" }}
+                  >
+                    {/* Venue header */}
+                    <div className="p-4 border-b border-[var(--twilight)]/50">
+                      <Link
+                        href={`/${activePortalSlug}/spots/${venueShowtimes[0].venue.slug}`}
+                        className="group flex items-center gap-2"
+                      >
+                        <svg className="w-5 h-5 text-[var(--muted)] group-hover:text-[var(--coral)] transition-colors flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                        <span className="font-semibold text-[var(--cream)] group-hover:text-[var(--coral)] transition-colors">
+                          {venueShowtimes[0].venue.name}
+                        </span>
+                        {venueShowtimes[0].venue.neighborhood && (
+                          <span className="text-sm text-[var(--muted)] font-mono">
+                            ({venueShowtimes[0].venue.neighborhood})
                           </span>
-                          {vs.venue.neighborhood && (
-                            <span className="text-sm text-[var(--muted)] font-mono">
-                              ({vs.venue.neighborhood})
-                            </span>
-                          )}
-                          <svg
-                            className="w-4 h-4 text-[var(--muted)] group-hover:text-[var(--coral)] transition-colors ml-auto"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
+                        )}
+                        <svg className="w-4 h-4 text-[var(--muted)] group-hover:text-[var(--coral)] transition-colors ml-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                      </Link>
+                    </div>
+
+                    {/* Compact date list */}
+                    <div className="p-4">
+                      {venueShowtimes[0].events.length > 0 && (
+                        <div className="space-y-2">
+                          {/* Next date highlighted */}
+                          <Link
+                            href={`/${activePortalSlug}/events/${venueShowtimes[0].events[0].id}`}
+                            className="flex items-center gap-3 px-3 py-2 rounded-lg bg-[var(--twilight)]/30 hover:bg-[var(--coral)] hover:text-[var(--void)] transition-colors group/next"
                           >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M9 5l7 7-7 7"
-                            />
-                          </svg>
-                        </Link>
-                      </div>
+                            <span className="text-xs font-medium" style={{ color: typeColor }}>Next</span>
+                            <span className="text-sm font-medium text-[var(--cream)] group-hover/next:text-inherit">
+                              {formatDate(venueShowtimes[0].events[0].date)}
+                            </span>
+                            {venueShowtimes[0].events[0].time && (
+                              <span className="font-mono text-sm text-[var(--muted)] group-hover/next:text-inherit">
+                                {formatTime(venueShowtimes[0].events[0].time)}
+                              </span>
+                            )}
+                          </Link>
+                          {/* Future dates */}
+                          {venueShowtimes[0].events.slice(1).map((event) => (
+                            <Link
+                              key={event.id}
+                              href={`/${activePortalSlug}/events/${event.id}`}
+                              className="flex items-center gap-3 px-3 py-1.5 rounded hover:bg-[var(--twilight)]/30 transition-colors"
+                            >
+                              <span className="text-sm text-[var(--soft)]">{formatDate(event.date)}</span>
+                              {event.time && (
+                                <span className="font-mono text-sm text-[var(--muted)]">{formatTime(event.time)}</span>
+                              )}
+                            </Link>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  /* Standard multi-venue layout */
+                  venueShowtimes.map((vs) => {
+                    const eventsByDate = groupEventsByDate(vs.events);
 
-                      {/* Dates and times for this venue */}
-                      <div className="divide-y divide-[var(--twilight)]/30">
-                        {Array.from(eventsByDate.entries()).map(([date, dateEvents]) => (
-                          <div key={date} className="px-4 py-3">
-                            <div className="flex items-center gap-3">
-                              {/* Date */}
-                              <div className="flex-shrink-0 w-28">
-                                <span className="text-sm font-medium text-[var(--soft)]">
-                                  {formatDate(date)}
-                                </span>
-                              </div>
+                    return (
+                      <div
+                        key={vs.venue.id}
+                        className="rounded-lg border border-[var(--twilight)] overflow-hidden"
+                        style={{ backgroundColor: "var(--card-bg)" }}
+                      >
+                        {/* Venue header */}
+                        <div className="p-4 border-b border-[var(--twilight)]/50">
+                          <Link
+                            href={`/${activePortalSlug}/spots/${vs.venue.slug}`}
+                            className="group flex items-center gap-2"
+                          >
+                            <svg
+                              className="w-5 h-5 text-[var(--muted)] group-hover:text-[var(--coral)] transition-colors flex-shrink-0"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                              />
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                              />
+                            </svg>
+                            <span className="font-semibold text-[var(--cream)] group-hover:text-[var(--coral)] transition-colors">
+                              {vs.venue.name}
+                            </span>
+                            {vs.venue.neighborhood && (
+                              <span className="text-sm text-[var(--muted)] font-mono">
+                                ({vs.venue.neighborhood})
+                              </span>
+                            )}
+                            <svg
+                              className="w-4 h-4 text-[var(--muted)] group-hover:text-[var(--coral)] transition-colors ml-auto"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M9 5l7 7-7 7"
+                              />
+                            </svg>
+                          </Link>
+                        </div>
 
-                              {/* Times */}
-                              <div className="flex flex-wrap items-center gap-2">
-                                {dateEvents.map((event) => (
-                                  <div key={event.id} className="flex items-center gap-1">
-                                    <Link
-                                      href={`/${activePortalSlug}/events/${event.id}`}
-                                      className="font-mono text-sm px-2 py-1 rounded bg-[var(--twilight)]/50 text-[var(--cream)] hover:bg-[var(--coral)] hover:text-[var(--void)] transition-colors"
-                                    >
-                                      {formatTime(event.time)}
-                                    </Link>
-                                  </div>
-                                ))}
+                        {/* Dates and times for this venue */}
+                        <div className="divide-y divide-[var(--twilight)]/30">
+                          {Array.from(eventsByDate.entries()).map(([date, dateEvents]) => (
+                            <div key={date} className="px-4 py-3">
+                              <div className="flex items-center gap-3">
+                                {/* Date */}
+                                <div className="flex-shrink-0 w-28">
+                                  <span className="text-sm font-medium text-[var(--soft)]">
+                                    {formatDate(date)}
+                                  </span>
+                                </div>
+
+                                {/* Times */}
+                                <div className="flex flex-wrap items-center gap-2">
+                                  {dateEvents.map((event) => (
+                                    <div key={event.id} className="flex items-center gap-1">
+                                      <Link
+                                        href={`/${activePortalSlug}/events/${event.id}`}
+                                        className="font-mono text-sm px-2 py-1 rounded bg-[var(--twilight)]/50 text-[var(--cream)] hover:bg-[var(--coral)] hover:text-[var(--void)] transition-colors"
+                                      >
+                                        {formatTime(event.time)}
+                                      </Link>
+                                    </div>
+                                  ))}
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        ))}
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })
+                )}
               </div>
             ) : (
               <div className="py-12 text-center">
@@ -599,9 +703,7 @@ export default async function PortalSeriesPage({ params }: Props) {
           events.length > 0
             ? {
                 label: "See Showtimes",
-                onClick: () => {
-                  document.getElementById('showtimes')?.scrollIntoView({ behavior: 'smooth' });
-                },
+                href: "#showtimes",
               }
             : undefined
         }

@@ -1,7 +1,8 @@
 """
 Crawler for Little Five Points Community Center (l5pcc.org).
 
-Site uses JavaScript rendering - must use Playwright.
+Site uses WordPress with Elementor page builder - must use Playwright.
+Events are structured as article elements with proper heading and footer metadata.
 """
 
 from __future__ import annotations
@@ -38,18 +39,63 @@ VENUE_DATA = {
 }
 
 
-def parse_time(time_text: str) -> Optional[str]:
-    """Parse time from '7:00 PM' format."""
-    match = re.search(r"(\d{1,2}):(\d{2})\s*(am|pm)", time_text, re.IGNORECASE)
-    if match:
-        hour, minute, period = match.groups()
-        hour = int(hour)
-        if period.lower() == "pm" and hour != 12:
+def parse_date_from_text(text: str) -> Optional[tuple[str, str]]:
+    """
+    Parse date and time from event text.
+    Returns (date_string, time_string) or None.
+    """
+    # Look for full date: "Thursday, October 23, 2025"
+    date_match = re.search(
+        r"(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday),?\s+"
+        r"(January|February|March|April|May|June|July|August|September|October|November|December)\s+"
+        r"(\d{1,2}),?\s+(\d{4})",
+        text,
+        re.IGNORECASE
+    )
+
+    if not date_match:
+        # Try without day of week: "October 23, 2025"
+        date_match = re.search(
+            r"(January|February|March|April|May|June|July|August|September|October|November|December)\s+"
+            r"(\d{1,2}),?\s+(\d{4})",
+            text,
+            re.IGNORECASE
+        )
+        if date_match:
+            month = date_match.group(1)
+            day = date_match.group(2)
+            year = date_match.group(3)
+        else:
+            return None
+    else:
+        month = date_match.group(2)
+        day = date_match.group(3)
+        year = date_match.group(4)
+
+    # Parse date
+    try:
+        dt = datetime.strptime(f"{month} {day} {year}", "%B %d %Y")
+        date_str = dt.strftime("%Y-%m-%d")
+    except ValueError:
+        return None
+
+    # Look for time: "3pm", "10:00am", "5:30 PM"
+    time_match = re.search(r"(\d{1,2}):?(\d{2})?\s*(am|pm)", text, re.IGNORECASE)
+    time_str = None
+
+    if time_match:
+        hour = int(time_match.group(1))
+        minute = time_match.group(2) if time_match.group(2) else "00"
+        period = time_match.group(3).lower()
+
+        if period == "pm" and hour != 12:
             hour += 12
-        elif period.lower() == "am" and hour == 12:
+        elif period == "am" and hour == 12:
             hour = 0
-        return f"{hour:02d}:{minute}"
-    return None
+
+        time_str = f"{hour:02d}:{minute}"
+
+    return (date_str, time_str)
 
 
 def crawl(source: dict) -> tuple[int, int, int]:
@@ -78,86 +124,72 @@ def crawl(source: dict) -> tuple[int, int, int]:
             image_map = extract_images_from_page(page)
 
             # Scroll to load all content
-            for _ in range(5):
+            for _ in range(3):
                 page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
                 page.wait_for_timeout(1000)
 
-            # Get page text and parse line by line
-            body_text = page.inner_text("body")
-            lines = [l.strip() for l in body_text.split("\n") if l.strip()]
+            # Query all article elements (WordPress post structure)
+            articles = page.query_selector_all("article")
+            logger.info(f"Found {len(articles)} article elements")
 
-            # Parse events - look for date patterns
-            i = 0
-            while i < len(lines):
-                line = lines[i]
-
-                # Skip navigation items
-                if len(line) < 3:
-                    i += 1
-                    continue
-
-                # Look for date patterns
-                date_match = re.match(
-                    r"(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)?,?\s*(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{1,2})(?:,?\s+(\d{4}))?",
-                    line,
-                    re.IGNORECASE
-                )
-
-                if date_match:
-                    month = date_match.group(1)
-                    day = date_match.group(2)
-                    year = date_match.group(3) if date_match.group(3) else str(datetime.now().year)
-
-                    # Look for title in surrounding lines
-                    title = None
-                    start_time = None
-
-                    for offset in [-2, -1, 1, 2, 3]:
-                        idx = i + offset
-                        if 0 <= idx < len(lines):
-                            check_line = lines[idx]
-                            if re.match(r"(January|February|March)", check_line, re.IGNORECASE):
-                                continue
-                            if not start_time:
-                                time_result = parse_time(check_line)
-                                if time_result:
-                                    start_time = time_result
-                                    continue
-                            if not title and len(check_line) > 5:
-                                if not re.match(r"\d{1,2}[:/]", check_line):
-                                    if not re.match(r"(free|tickets|register|\$|more info)", check_line.lower()):
-                                        title = check_line
-                                        break
-
-                    if not title:
-                        i += 1
+            for article in articles:
+                try:
+                    # Extract title from h2 or h3 link
+                    title_elem = article.query_selector("h3 a, h2 a, .entry-title a")
+                    if not title_elem:
                         continue
 
-                    # Parse date
-                    try:
-                        month_str = month[:3] if len(month) > 3 else month
-                        dt = datetime.strptime(f"{month_str} {day} {year}", "%b %d %Y")
-                        if dt.date() < datetime.now().date():
-                            dt = datetime.strptime(f"{month_str} {day} {int(year) + 1}", "%b %d %Y")
-                        start_date = dt.strftime("%Y-%m-%d")
-                    except ValueError:
-                        i += 1
+                    title = title_elem.inner_text().strip()
+                    event_url = title_elem.get_attribute("href") or EVENTS_URL
+
+                    if not title or len(title) < 3:
+                        continue
+
+                    # Extract description from entry content
+                    desc_elem = article.query_selector(".entry-content p, .entry-summary p")
+                    description = desc_elem.inner_text().strip() if desc_elem else f"Event at Little Five Points Community Center"
+
+                    # Limit description length
+                    if len(description) > 500:
+                        description = description[:497] + "..."
+
+                    # Get full article text for date/time parsing
+                    article_text = article.inner_text()
+
+                    # Parse date and time
+                    parsed = parse_date_from_text(article_text)
+                    if not parsed:
+                        logger.warning(f"Could not parse date for: {title}")
+                        continue
+
+                    start_date, start_time = parsed
+
+                    # Skip past events
+                    event_date = datetime.strptime(start_date, "%Y-%m-%d")
+                    if event_date.date() < datetime.now().date():
                         continue
 
                     events_found += 1
 
+                    # Generate content hash for deduplication
                     content_hash = generate_content_hash(title, "Little Five Points Community Center", start_date)
 
                     if find_event_by_hash(content_hash):
                         events_updated += 1
-                        i += 1
                         continue
+
+                    # Try to find matching image
+                    image_url = None
+                    for key in image_map:
+                        if title.lower() in key.lower() or key.lower() in title.lower():
+                            image_url = image_map[key]
+                            break
 
                     event_record = {
                         "source_id": source_id,
                         "venue_id": venue_id,
                         "title": title,
-                        "description": "Event at Little Five Points Community Center",
+                        "description": description,
                         "start_date": start_date,
                         "start_time": start_time,
                         "end_date": None,
@@ -166,21 +198,19 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "category": "community",
                         "subcategory": None,
                         "tags": [
-                        "l5p",
-                        "community-center",
-                        "arts",
-                        "classes",
-                        "little-five-points",
-                    ],
+                            "l5p",
+                            "community-center",
+                            "little-five-points",
+                        ],
                         "price_min": None,
                         "price_max": None,
                         "price_note": None,
                         "is_free": False,
-                        "source_url": EVENTS_URL,
-                        "ticket_url": EVENTS_URL,
-                        "image_url": image_map.get(title),
-                        "raw_text": f"{title} - {start_date}",
-                        "extraction_confidence": 0.80,
+                        "source_url": event_url,
+                        "ticket_url": event_url,
+                        "image_url": image_url,
+                        "raw_text": article_text[:1000],
+                        "extraction_confidence": 0.85,
                         "is_recurring": False,
                         "recurrence_rule": None,
                         "content_hash": content_hash,
@@ -193,7 +223,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     except Exception as e:
                         logger.error(f"Failed to insert: {title}: {e}")
 
-                i += 1
+                except Exception as e:
+                    logger.error(f"Error processing article: {e}")
+                    continue
 
             browser.close()
 

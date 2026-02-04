@@ -999,6 +999,7 @@ export type { EventSearchRow, VenueSearchRow, OrganizationSearchRow };
 export interface InstantSearchResponse {
   suggestions: SearchResult[];
   topResults: SearchResult[];
+  facets: SearchFacet[];
   intent?: {
     type: string;
     confidence: number;
@@ -1021,7 +1022,7 @@ export async function instantSearch(
   const trimmedQuery = query.trim();
 
   if (!trimmedQuery || trimmedQuery.length < 2) {
-    return { suggestions: [], topResults: [] };
+    return { suggestions: [], topResults: [], facets: [] };
   }
 
   // Analyze intent
@@ -1044,6 +1045,7 @@ export async function instantSearch(
   return {
     suggestions,
     topResults,
+    facets: searchResult.facets,
     intent: {
       type: intent.intent,
       confidence: intent.confidence,

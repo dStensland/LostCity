@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, memo } from "react";
+import { memo } from "react";
 import Link from "next/link";
 import type { Event } from "@/lib/supabase";
 import { AvatarStack } from "./UserAvatar";
 import { formatTimeSplit, formatSmartDate } from "@/lib/formats";
 import CategoryIcon, { getCategoryColor } from "./CategoryIcon";
-import LazyImage from "./LazyImage";
+
 import SeriesBadge from "./SeriesBadge";
 import ReasonBadge, { getTopReasons, type RecommendationReason } from "./ReasonBadge";
 import EventCardMenu from "./EventCardMenu";
@@ -51,8 +51,6 @@ interface Props {
   friendsGoing?: FriendGoing[];
   /** Recommendation reasons for personalization */
   reasons?: RecommendationReason[];
-  /** Show thumbnail image on mobile when event has an image */
-  showThumbnail?: boolean;
   /** Context type for filtering redundant reason badges */
   contextType?: "interests" | "venue" | "producer" | "neighborhood";
   /** Callback when user hides the event */
@@ -139,10 +137,7 @@ function getReflectionClass(category: string | null): string {
   return reflectionMap[category] || "";
 }
 
-function EventCard({ event, index = 0, skipAnimation = false, portalSlug, friendsGoing = [], reasons, showThumbnail, contextType, onHide }: Props) {
-  // Default showThumbnail to true when event has an image
-  const shouldShowThumbnail = showThumbnail ?? !!event.image_url;
-  const [thumbnailError, setThumbnailError] = useState(false);
+function EventCard({ event, index = 0, skipAnimation = false, portalSlug, friendsGoing = [], reasons, contextType, onHide }: Props) {
   const { time, period } = formatTimeSplit(event.start_time, event.is_all_day);
   const dateInfo = formatSmartDate(event.start_date);
   const isLive = event.is_live || false;
@@ -151,9 +146,6 @@ function EventCard({ event, index = 0, skipAnimation = false, portalSlug, friend
   const animationClass = skipAnimation ? "" : "animate-card-emerge";
   const categoryColor = event.category ? getCategoryColor(event.category) : null;
   const reflectionClass = getReflectionClass(event.category);
-  // Show thumbnail on mobile if enabled and event has an image
-  const hasThumbnail = shouldShowThumbnail && event.image_url && !thumbnailError;
-
   const price = formatPrice(
     event.is_free,
     event.price_min,
@@ -183,44 +175,26 @@ function EventCard({ event, index = 0, skipAnimation = false, portalSlug, friend
       <div className="flex gap-3">
         {/* Time cell - bolder typography for visual hierarchy */}
         <div className="flex-shrink-0 w-14 flex flex-col items-center justify-center py-1">
-          <span className={`font-mono text-[0.6rem] font-semibold leading-none uppercase tracking-wide ${
+          <span className={`font-mono text-[0.65rem] font-semibold leading-none uppercase tracking-wide ${
             dateInfo.isHighlight ? "text-[var(--coral)]" : "text-[var(--muted)]"
           }`}>
             {dateInfo.label}
           </span>
-          <span className="font-mono text-base font-bold text-[var(--cream)] leading-none tabular-nums mt-1">
-            {time}
-          </span>
-          {period && (
-            <span className="font-mono text-[0.6rem] font-medium text-[var(--soft)] mt-0.5">{period}</span>
+          {event.is_all_day ? (
+            <span className="font-mono text-[0.65rem] font-semibold text-[var(--soft)] leading-none mt-1 uppercase tracking-wide">
+              All Day
+            </span>
+          ) : (
+            <>
+              <span className="font-mono text-base font-bold text-[var(--cream)] leading-none tabular-nums mt-1">
+                {time}
+              </span>
+              {period && (
+                <span className="font-mono text-[0.6rem] font-medium text-[var(--soft)] mt-0.5">{period}</span>
+              )}
+            </>
           )}
         </div>
-
-        {/* Mobile thumbnail (left side) */}
-        {hasThumbnail && (
-          <LazyImage
-            src={event.image_url!}
-            alt=""
-            fill
-            sizes="64px"
-            className="flex-shrink-0 w-16 h-16 rounded-sm sm:hidden border border-[var(--twilight)]"
-            placeholderColor={categoryColor ? `${categoryColor}15` : "var(--night)"}
-            onError={() => setThumbnailError(true)}
-          />
-        )}
-        {/* Mobile fallback thumbnail when image fails - category-aware gradient */}
-        {shouldShowThumbnail && event.image_url && thumbnailError && (
-          <div
-            className="flex-shrink-0 w-16 h-16 rounded-sm overflow-hidden relative sm:hidden border border-[var(--twilight)] flex items-center justify-center"
-            style={{
-              background: categoryColor
-                ? `linear-gradient(135deg, ${categoryColor}25, ${categoryColor}08)`
-                : "linear-gradient(135deg, var(--twilight), var(--night))"
-            }}
-          >
-            <CategoryIcon type={event.category || "community"} size={28} glow="intense" />
-          </div>
-        )}
 
         {/* Content */}
         <div className="flex-1 min-w-0">
@@ -230,12 +204,12 @@ function EventCard({ event, index = 0, skipAnimation = false, portalSlug, friend
             <div className="flex items-center gap-2 mb-1.5">
               {event.category && (
                 <span
-                  className="inline-flex items-center justify-center w-6 h-6 rounded"
+                  className="inline-flex items-center justify-center w-7 h-7 rounded"
                   style={{
                     backgroundColor: categoryColor ? `${categoryColor}20` : undefined,
                   }}
                 >
-                  <CategoryIcon type={event.category} size={16} glow="subtle" />
+                  <CategoryIcon type={event.category} size={18} glow="subtle" />
                 </span>
               )}
               {isLive && (
@@ -244,13 +218,13 @@ function EventCard({ event, index = 0, skipAnimation = false, portalSlug, friend
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--neon-red)] opacity-40" />
                     <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-[var(--neon-red)]" />
                   </span>
-                  <span className="font-mono text-[0.5rem] font-medium text-[var(--neon-red)] uppercase tracking-wide">Live</span>
+                  <span className="font-mono text-[0.55rem] font-medium text-[var(--neon-red)] uppercase tracking-wide">Live</span>
                 </span>
               )}
               <EventCardMenu eventId={event.id} onHide={onHide} className="ml-auto" />
             </div>
             {/* Title row: full width - larger and bolder */}
-            <h3 className="text-[var(--cream)] font-semibold text-lg leading-tight line-clamp-2 group-hover:text-[var(--glow-color,var(--neon-magenta))] transition-colors mb-1">
+            <h3 className="text-[var(--cream)] font-bold text-lg leading-tight line-clamp-2 group-hover:text-[var(--glow-color,var(--neon-magenta))] transition-colors mb-1">
               {event.title}
             </h3>
           </div>
@@ -259,16 +233,16 @@ function EventCard({ event, index = 0, skipAnimation = false, portalSlug, friend
           <div className="hidden sm:flex items-center gap-2 mb-0.5">
             {event.category && (
               <span
-                className="flex-shrink-0 inline-flex items-center justify-center w-7 h-7 rounded"
+                className="flex-shrink-0 inline-flex items-center justify-center w-8 h-8 rounded"
                 style={{
                   backgroundColor: categoryColor ? `${categoryColor}20` : undefined,
                 }}
               >
-                <CategoryIcon type={event.category} size={18} glow="subtle" />
+                <CategoryIcon type={event.category} size={20} glow="subtle" />
               </span>
             )}
             <span
-              className="text-[var(--cream)] font-semibold text-lg transition-colors line-clamp-1 group-hover:text-[var(--glow-color,var(--neon-magenta))]"
+              className="text-[var(--cream)] font-bold text-lg transition-colors line-clamp-1 group-hover:text-[var(--glow-color,var(--neon-magenta))]"
             >
               {event.title}
             </span>
@@ -298,7 +272,7 @@ function EventCard({ event, index = 0, skipAnimation = false, portalSlug, friend
                 size="xs"
                 showCount={friendsGoing.length > 3}
               />
-              <span className="text-xs text-[var(--neon-cyan)] font-medium">
+              <span className="text-xs text-[var(--coral)] font-medium">
                 {friendsGoing.length === 1 ? (
                   <>
                     {friendsGoing[0].user.display_name || friendsGoing[0].user.username}
@@ -340,7 +314,7 @@ function EventCard({ event, index = 0, skipAnimation = false, portalSlug, friend
               <>
                 <span className="opacity-40">·</span>
                 {price.isFree ? (
-                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full font-mono text-[0.6rem] font-semibold ${
+                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full font-mono text-[0.65rem] font-semibold ${
                     price.isEstimate
                       ? "bg-[var(--neon-green)]/15 text-[var(--neon-green)] border border-[var(--neon-green)]/25"
                       : "bg-[var(--neon-green)]/25 text-[var(--neon-green)] border border-[var(--neon-green)]/40 shadow-[0_0_8px_var(--neon-green)/15]"
@@ -348,10 +322,10 @@ function EventCard({ event, index = 0, skipAnimation = false, portalSlug, friend
                     {price.text}
                   </span>
                 ) : (
-                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full font-mono text-[0.6rem] font-medium ${
+                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full font-mono text-[0.65rem] font-medium ${
                     price.isEstimate
                       ? "bg-[var(--twilight)]/50 text-[var(--muted)]"
-                      : "bg-[var(--twilight)] text-[var(--cream)]"
+                      : "bg-[var(--twilight)] text-[var(--cream)] border border-[var(--twilight)]"
                   }`}>
                     {price.text}
                   </span>
@@ -392,18 +366,6 @@ function EventCard({ event, index = 0, skipAnimation = false, portalSlug, friend
           )}
         </div>
 
-        {/* Desktop thumbnail (right side) */}
-        {hasThumbnail && (
-          <LazyImage
-            src={event.image_url!}
-            alt=""
-            fill
-            sizes="80px"
-            className="hidden sm:block flex-shrink-0 w-20 h-14 rounded-sm border border-[var(--twilight)] ml-auto"
-            placeholderColor={categoryColor ? `${categoryColor}15` : "var(--night)"}
-            onError={() => setThumbnailError(true)}
-          />
-        )}
       </div>
     </Link>
   );

@@ -215,7 +215,7 @@ export default function SimpleFilterBar({ variant = "full" }: SimpleFilterBarPro
   return (
     <>
       {/* Desktop view (>= 640px) */}
-      <div className="hidden sm:block sticky top-[112px] z-30 bg-[var(--night)] border-b border-[var(--twilight)]">
+      <div className="hidden sm:block sticky top-[112px] z-40 bg-[var(--night)] border-b border-[var(--twilight)]">
         <div className={`max-w-5xl mx-auto px-4 ${variant === "compact" ? "py-1.5" : "py-2"}`}>
           <div className="flex items-center gap-2">
             {/* Category dropdown */}
@@ -239,7 +239,7 @@ export default function SimpleFilterBar({ variant = "full" }: SimpleFilterBarPro
 
               {/* Category dropdown menu */}
               {categoryDropdownOpen && (
-                <div className="absolute top-full left-0 mt-1 w-56 max-h-80 overflow-y-auto rounded-lg border border-[var(--twilight)] shadow-xl z-50" style={{ backgroundColor: "var(--void)" }}>
+                <div className="absolute top-full left-0 mt-1 w-56 max-h-80 overflow-y-auto rounded-lg border border-[var(--twilight)] shadow-xl z-[100]" style={{ backgroundColor: "var(--void)" }}>
                   <div className="p-2">
                     {Object.entries(CATEGORY_GROUPS).map(([groupName, categoryValues], groupIdx) => (
                       <div key={groupName}>
@@ -348,7 +348,7 @@ export default function SimpleFilterBar({ variant = "full" }: SimpleFilterBarPro
 
               {/* Date dropdown menu */}
               {dateDropdownOpen && (
-                <div className="absolute top-full left-0 mt-1 w-40 rounded-lg border border-[var(--twilight)] shadow-xl z-50" style={{ backgroundColor: "var(--void)" }}>
+                <div className="absolute top-full left-0 mt-1 w-40 rounded-lg border border-[var(--twilight)] shadow-xl z-[100]" style={{ backgroundColor: "var(--void)" }}>
                   <div className="p-2">
                     {SIMPLE_DATE_FILTERS.map((df) => {
                       const isActive = currentDateFilter === df.value;

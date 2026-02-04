@@ -217,7 +217,7 @@ export default function WhosGoing({ eventId, className = "" }: WhosGoingProps) {
                   className="w-full h-full object-cover"
                 />
               ) : (
-                <div className="w-full h-full bg-gradient-to-br from-[var(--neon-magenta)] to-[var(--neon-cyan)] flex items-center justify-center">
+                <div className="w-full h-full bg-gradient-to-br from-[var(--neon-magenta)] to-[var(--coral)] flex items-center justify-center">
                   <span className="font-mono text-sm font-bold text-white">
                     {(attendee.user.display_name || attendee.user.username)[0].toUpperCase()}
                   </span>

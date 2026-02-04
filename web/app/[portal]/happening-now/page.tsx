@@ -4,17 +4,19 @@ import dynamic from "next/dynamic";
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { usePortal } from "@/lib/portal-context";
 import Link from "next/link";
-import { NEIGHBORHOOD_NAMES } from "@/config/neighborhoods";
+import { NEIGHBORHOOD_NAMES, getNeighborhoodByName } from "@/config/neighborhoods";
 import UnifiedHeader from "@/components/UnifiedHeader";
 import CategoryFilterChips, { type FilterCategory } from "@/components/CategoryFilterChips";
-import AroundMeCard from "@/components/AroundMeCard";
+import EventCard from "@/components/EventCard";
+import SpotCard from "@/components/SpotCard";
 import type { AroundMeItem, AroundMeSpot, AroundMeEvent } from "@/app/api/around-me/route";
 
 // Dynamically import map component
 const MapViewWrapper = dynamic(() => import("@/components/MapViewWrapper"), { ssr: false });
 
-// Distance filter for GPS mode (miles)
-const NEARBY_RADIUS_MILES = 5;
+// Distance filter (miles)
+const NEARBY_RADIUS_MILES = 2;
+const DEFAULT_RADIUS_MILES = 5;
 
 type UserLocation = { lat: number; lng: number } | null;
 
@@ -62,7 +64,18 @@ export default function WhatsOpenPage() {
         if (selectedCategory !== "all") {
           params.set("category", selectedCategory);
         }
-        params.set("radius", NEARBY_RADIUS_MILES.toString());
+        if (userLocation && !selectedNeighborhood) {
+          // GPS nearby mode: tight radius
+          params.set("radius", NEARBY_RADIUS_MILES.toString());
+        } else if (selectedNeighborhood) {
+          // Neighborhood mode: use neighborhood's actual radius (meters -> miles, with padding)
+          const hood = getNeighborhoodByName(selectedNeighborhood);
+          const radiusMiles = hood ? Math.max((hood.radius / 1609.34) * 1.5, 1) : DEFAULT_RADIUS_MILES;
+          params.set("radius", radiusMiles.toFixed(1));
+        } else {
+          // All of Atlanta: wide radius to capture everything
+          params.set("radius", "25");
+        }
         params.set("limit", "100");
 
         const res = await fetch(`/api/around-me?${params}`, {
@@ -208,6 +221,14 @@ export default function WhatsOpenPage() {
     return { mapEvents: events, mapSpots: spots };
   }, [items]);
 
+  // Neighborhood center point and radius for map
+  const neighborhoodCenter = useMemo(() => {
+    if (!selectedNeighborhood) return null;
+    const hood = getNeighborhoodByName(selectedNeighborhood);
+    if (!hood) return null;
+    return { lat: hood.lat, lng: hood.lng, radius: hood.radius };
+  }, [selectedNeighborhood]);
+
   // Mode label for status bar
   const modeLabel = useMemo(() => {
     if (selectedNeighborhood) {
@@ -229,7 +250,7 @@ export default function WhatsOpenPage() {
 
       {/* Location Prompt Overlay */}
       {showLocationPrompt && (
-        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[1000] bg-black/80 flex items-center justify-center p-4">
           <div className="bg-[var(--night)] rounded-xl border border-[var(--twilight)] max-w-sm w-full p-6 text-center">
             <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-[var(--neon-green)]/20 flex items-center justify-center">
               <svg className="w-8 h-8 text-[var(--neon-green)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -300,59 +321,75 @@ export default function WhatsOpenPage() {
 
       {/* Status Bar - sticky below header */}
       <div className="sticky top-[52px] z-20 bg-[var(--night)]/95 backdrop-blur-sm border-b border-[var(--twilight)]/50">
-        <div className="max-w-3xl mx-auto px-4 py-2">
+        <div className="max-w-3xl mx-auto px-4 py-2.5">
           <div className="flex items-center justify-between gap-3">
-            {/* Counts */}
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-[var(--neon-green)]" style={{ boxShadow: "0 0 4px var(--neon-green)" }} />
-                <span className="font-mono text-xs text-[var(--cream)]">{counts.spots} spots</span>
+            {/* Counts as pill badges */}
+            <div className="flex items-center gap-2">
+              <div
+                className="flex items-center gap-1.5 px-3 py-1 rounded-full border border-[var(--neon-green)]/30 bg-[var(--neon-green)]/10"
+                style={{ boxShadow: counts.spots > 0 ? "0 0 8px var(--neon-green)/15" : "none" }}
+              >
+                <span className="w-2 h-2 rounded-full bg-[var(--neon-green)]" style={{ boxShadow: "0 0 6px var(--neon-green)" }} />
+                <span className="font-mono text-xs font-medium text-[var(--neon-green)]">{counts.spots}</span>
+                <span className="font-mono text-xs text-[var(--cream)]/70">open</span>
               </div>
-              <div className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-[var(--neon-red)] animate-pulse" style={{ boxShadow: "0 0 4px var(--neon-red)" }} />
-                <span className="font-mono text-xs text-[var(--cream)]">{counts.events} live</span>
+              <div
+                className={`flex items-center gap-1.5 px-3 py-1 rounded-full border ${counts.events > 0 ? "border-[var(--neon-red)]/30 bg-[var(--neon-red)]/10" : "border-[var(--twilight)] bg-[var(--twilight)]/20"}`}
+                style={{ boxShadow: counts.events > 0 ? "0 0 8px var(--neon-red)/15" : "none" }}
+              >
+                {counts.events > 0 ? (
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--neon-red)] opacity-40" />
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-[var(--neon-red)]" />
+                  </span>
+                ) : (
+                  <span className="w-2 h-2 rounded-full bg-[var(--muted)]/50" />
+                )}
+                <span className={`font-mono text-xs font-medium ${counts.events > 0 ? "text-[var(--neon-red)]" : "text-[var(--muted)]"}`}>{counts.events}</span>
+                <span className={`font-mono text-xs ${counts.events > 0 ? "text-[var(--cream)]/70" : "text-[var(--muted)]/70"}`}>live</span>
               </div>
             </div>
 
             {/* Location selector */}
             <div className="flex items-center gap-2">
               <select
-                value={selectedNeighborhood || ""}
+                value={selectedNeighborhood || (userLocation ? "__nearby__" : "")}
                 onChange={(e) => {
-                  setSelectedNeighborhood(e.target.value || null);
-                  if (e.target.value) {
-                    // Clear GPS when selecting neighborhood
+                  const val = e.target.value;
+                  if (val === "__nearby__") {
+                    // Switch to GPS mode
+                    setSelectedNeighborhood(null);
+                    requestLocation();
+                  } else if (val === "") {
+                    // All of Atlanta
+                    setSelectedNeighborhood(null);
+                    setUserLocation(null);
+                    localStorage.removeItem("userLocation");
+                  } else {
+                    // Neighborhood selected
+                    setSelectedNeighborhood(val);
                     setUserLocation(null);
                     localStorage.removeItem("userLocation");
                   }
                 }}
-                className="px-2 py-1 rounded-md bg-[var(--dusk)] border border-[var(--twilight)] text-[var(--cream)] font-mono text-[0.65rem] focus:outline-none focus:border-[var(--neon-amber)] transition-colors appearance-none cursor-pointer max-w-[120px]"
-                style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236b7280'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`, backgroundRepeat: "no-repeat", backgroundPosition: "right 0.25rem center", backgroundSize: "0.875rem", paddingRight: "1.25rem" }}
+                className="px-2.5 py-1 rounded-full bg-[var(--dusk)] border border-[var(--twilight)] text-[var(--cream)] font-mono text-xs focus:outline-none focus:border-[var(--coral)] transition-colors appearance-none cursor-pointer max-w-[160px]"
+                style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236b7280'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`, backgroundRepeat: "no-repeat", backgroundPosition: "right 0.5rem center", backgroundSize: "0.875rem", paddingRight: "1.5rem" }}
               >
-                <option value="">{userLocation ? "📍 Nearby" : "All"}</option>
+                <option value="__nearby__">Nearby</option>
+                <option value="">All of Atlanta</option>
                 {NEIGHBORHOOD_NAMES.map((hood) => (
                   <option key={hood} value={hood}>{hood}</option>
                 ))}
               </select>
 
-              {userLocation ? (
-                <span className="flex items-center gap-1 font-mono text-[0.6rem] text-[var(--neon-cyan)]">
+              {userLocation && (
+                <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-[var(--neon-cyan)]/10 border border-[var(--neon-cyan)]/30 font-mono text-[0.65rem] text-[var(--neon-cyan)]">
                   <svg className="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 24 24">
                     <circle cx="12" cy="12" r="4" />
                   </svg>
                   GPS
                 </span>
-              ) : !selectedNeighborhood ? (
-                <button
-                  onClick={requestLocation}
-                  className="flex items-center gap-1 px-1.5 py-0.5 rounded font-mono text-[0.6rem] text-[var(--muted)] hover:text-[var(--cream)] hover:bg-[var(--twilight)]/50 transition-colors"
-                  title="Use GPS location"
-                >
-                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                  </svg>
-                </button>
-              ) : null}
+              )}
             </div>
           </div>
         </div>
@@ -371,6 +408,8 @@ export default function WhatsOpenPage() {
               spots={mapSpots}
               userLocation={userLocation}
               viewRadius={userLocation && !selectedNeighborhood ? NEARBY_RADIUS_MILES : undefined}
+              centerPoint={neighborhoodCenter}
+              fitAllMarkers={!userLocation && !selectedNeighborhood}
             />
           )}
         </div>
@@ -415,9 +454,9 @@ export default function WhatsOpenPage() {
             </Link>
           </div>
         ) : (
-          <div className="space-y-3">
+          <div>
             {/* Section header */}
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between mb-2">
               <h2 className="font-mono text-xs text-[var(--muted)] uppercase tracking-wider">
                 Sorted by distance
               </h2>
@@ -427,14 +466,84 @@ export default function WhatsOpenPage() {
             </div>
 
             {/* Items list */}
-            {items.map((item, index) => (
-              <AroundMeCard
-                key={`${item.type}-${item.id}`}
-                item={item}
-                index={index}
-                portalSlug={portal.slug}
-              />
-            ))}
+            {items.map((item, index) => {
+              if (item.type === "event") {
+                const e = item.data as AroundMeEvent;
+                return (
+                  <EventCard
+                    key={`event-${item.id}`}
+                    index={index}
+                    portalSlug={portal.slug}
+                    event={{
+                      id: e.id,
+                      title: e.title,
+                      description: null,
+                      start_date: e.start_time?.split("T")[0] || "",
+                      start_time: e.start_time,
+                      end_date: null,
+                      end_time: e.end_time,
+                      is_all_day: e.is_all_day,
+                      category: e.category,
+                      subcategory: e.subcategory,
+                      category_id: null,
+                      subcategory_id: null,
+                      tags: null,
+                      genres: null,
+                      is_free: e.is_free,
+                      price_min: e.price_min,
+                      price_max: e.price_max,
+                      price_note: null,
+                      source_url: "",
+                      ticket_url: e.ticket_url,
+                      image_url: null,
+                      is_live: true,
+                      venue: e.venue ? {
+                        id: e.venue.id,
+                        name: e.venue.name,
+                        slug: e.venue.slug,
+                        address: null,
+                        neighborhood: e.venue.neighborhood,
+                        city: "",
+                        state: "",
+                      } : null,
+                    }}
+                  />
+                );
+              } else {
+                const s = item.data as AroundMeSpot;
+                return (
+                  <SpotCard
+                    key={`spot-${item.id}`}
+                    index={index}
+                    portalSlug={portal.slug}
+                    showDistance={userLocation || undefined}
+                    spot={{
+                      id: s.id,
+                      name: s.name,
+                      slug: s.slug,
+                      address: s.address,
+                      neighborhood: s.neighborhood,
+                      city: "",
+                      state: "",
+                      lat: s.lat,
+                      lng: s.lng,
+                      venue_type: s.venue_type,
+                      venue_types: s.venue_types,
+                      description: null,
+                      short_description: null,
+                      price_level: s.price_level,
+                      website: null,
+                      instagram: null,
+                      hours_display: null,
+                      vibes: s.vibes,
+                      image_url: s.image_url,
+                      featured: false,
+                      active: true,
+                    }}
+                  />
+                );
+              }
+            })}
           </div>
         )}
       </main>

@@ -14,13 +14,22 @@ from typing import Optional
 from playwright.sync_api import sync_playwright
 
 from config import get_config
-from db import get_or_create_venue, insert_event, find_event_by_hash
+from db import get_or_create_venue, insert_event, find_event_by_hash, get_portal_id_by_slug
 from dedupe import generate_content_hash
+
+PORTAL_SLUG = "nashville"
 
 logger = logging.getLogger(__name__)
 
 API_BASE = "https://www.eventbriteapi.com/v3/"
-BROWSE_URL = "https://www.eventbrite.com/d/tn--nashville/events/"
+
+# Browse multiple category-filtered URLs to surface events the generic page buries
+BROWSE_URLS = [
+    "https://www.eventbrite.com/d/tn--nashville/events/",
+    "https://www.eventbrite.com/d/tn--nashville/food-and-drink/",
+    "https://www.eventbrite.com/d/tn--nashville/classes/",
+    "https://www.eventbrite.com/d/tn--nashville/hobbies/",
+]
 
 # Category mapping from Eventbrite to Lost City
 CATEGORY_MAP = {
@@ -61,7 +70,7 @@ def get_api_headers() -> dict:
 
 
 def discover_event_ids(max_events: int = 500) -> list[str]:
-    """Discover event IDs by browsing Eventbrite website."""
+    """Discover event IDs by browsing multiple Eventbrite Nashville category pages."""
     event_ids = set()
 
     with sync_playwright() as p:
@@ -72,59 +81,61 @@ def discover_event_ids(max_events: int = 500) -> list[str]:
         )
         page = context.new_page()
 
-        logger.info(f"Browsing Eventbrite Nashville events...")
-        page.goto(BROWSE_URL, wait_until="domcontentloaded", timeout=30000)
-        page.wait_for_timeout(3000)
+        for browse_url in BROWSE_URLS:
+            if len(event_ids) >= max_events:
+                break
 
-        # Scroll and collect event IDs
-        scroll_count = 0
-        max_scrolls = 50
-        last_count = 0
-        no_new_count = 0
+            logger.info(f"Browsing {browse_url} ...")
+            try:
+                page.goto(browse_url, wait_until="domcontentloaded", timeout=30000)
+                page.wait_for_timeout(3000)
+            except Exception as e:
+                logger.warning(f"Failed to load {browse_url}: {e}")
+                continue
 
-        while scroll_count < max_scrolls and len(event_ids) < max_events:
-            # Find all event links on page
-            links = page.query_selector_all('a[href*="/e/"]')
+            scroll_count = 0
+            max_scrolls = 30
+            last_count = len(event_ids)
+            no_new_count = 0
 
-            for link in links:
-                href = link.get_attribute("href")
-                if href:
-                    # Extract event ID from URL like /e/event-name-123456789
-                    match = re.search(r'/e/[^/]+-(\d+)', href)
-                    if match:
-                        event_ids.add(match.group(1))
+            while scroll_count < max_scrolls and len(event_ids) < max_events:
+                links = page.query_selector_all('a[href*="/e/"]')
 
-            # Check if we're finding new events
-            if len(event_ids) == last_count:
-                no_new_count += 1
-                # Try clicking "See more" or "Load more" button
-                try:
-                    load_more = page.query_selector('button:has-text("See more"), button:has-text("Load more"), [data-testid="load-more-button"]')
-                    if load_more and load_more.is_visible():
-                        load_more.click()
-                        page.wait_for_timeout(2000)
-                        no_new_count = 0  # Reset counter after clicking
-                        continue
-                except Exception:
-                    pass
+                for link in links:
+                    href = link.get_attribute("href")
+                    if href:
+                        match = re.search(r'/e/[^/]+-(\d+)', href)
+                        if match:
+                            event_ids.add(match.group(1))
 
-                if no_new_count >= 5:
-                    logger.info("No new events found after 5 attempts, stopping")
-                    break
-            else:
-                no_new_count = 0
-                last_count = len(event_ids)
+                if len(event_ids) == last_count:
+                    no_new_count += 1
+                    try:
+                        load_more = page.query_selector('button:has-text("See more"), button:has-text("Load more"), [data-testid="load-more-button"]')
+                        if load_more and load_more.is_visible():
+                            load_more.click()
+                            page.wait_for_timeout(2000)
+                            no_new_count = 0
+                            continue
+                    except Exception:
+                        pass
 
-            logger.info(f"Scroll {scroll_count + 1}: Found {len(event_ids)} unique events so far")
+                    if no_new_count >= 5:
+                        break
+                else:
+                    no_new_count = 0
+                    last_count = len(event_ids)
 
-            # Scroll down
-            page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
-            page.wait_for_timeout(2000)
-            scroll_count += 1
+                logger.info(f"Scroll {scroll_count + 1}: Found {len(event_ids)} unique events so far")
+                page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+                page.wait_for_timeout(2000)
+                scroll_count += 1
+
+            logger.info(f"After {browse_url}: {len(event_ids)} total unique events")
 
         browser.close()
 
-    logger.info(f"Discovered {len(event_ids)} unique event IDs")
+    logger.info(f"Discovered {len(event_ids)} unique event IDs across {len(BROWSE_URLS)} category pages")
     return list(event_ids)[:max_events]
 
 
@@ -170,7 +181,7 @@ def get_category(eventbrite_category: Optional[str]) -> tuple[str, str]:
     return CATEGORY_MAP.get(eventbrite_category, ("community", "other"))
 
 
-def process_event(event_data: dict, source_id: int, producer_id: Optional[int]) -> Optional[dict]:
+def process_event(event_data: dict, source_id: int, producer_id: Optional[int], portal_id: Optional[str] = None) -> Optional[dict]:
     """Process API event data into our format."""
     try:
         # Extract basic info
@@ -261,6 +272,7 @@ def process_event(event_data: dict, source_id: int, producer_id: Optional[int]) 
         return {
             "source_id": source_id,
             "venue_id": venue_id,
+            "portal_id": portal_id,
             "producer_id": producer_id,
             "title": title[:500],
             "description": description,
@@ -299,6 +311,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_new = 0
     events_updated = 0
 
+    portal_id = get_portal_id_by_slug(PORTAL_SLUG)
+
     try:
         # Step 1: Discover event IDs from website
         logger.info("Step 1: Discovering events from Eventbrite Nashville website...")
@@ -323,7 +337,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             events_found += 1
 
             # Process into our format
-            result = process_event(event_data, source_id, producer_id)
+            result = process_event(event_data, source_id, producer_id, portal_id)
             if not result:
                 continue
 

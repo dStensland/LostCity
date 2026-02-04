@@ -177,10 +177,20 @@ def infer_tags(
     ]):
         tags.add("outdoor")
 
-    # RSVP required
-    if any(phrase in text for phrase in [
-        "rsvp", "registration required", "must register",
-        "sign up required", "reserve your spot"
+    # RSVP required — check for negations first
+    rsvp_negations = [
+        "no rsvp", "rsvp not required", "rsvp not needed",
+        "no registration", "no sign up", "no signup",
+        "walk-in", "walk in welcome", "drop-in", "drop in",
+        "just show up", "no reservation",
+    ]
+    has_rsvp_negation = any(phrase in text for phrase in rsvp_negations)
+
+    if not has_rsvp_negation and any(phrase in text for phrase in [
+        "rsvp required", "rsvp to", "rsvp at", "rsvp here",
+        "registration required", "must register", "must rsvp",
+        "sign up required", "reserve your spot", "register now",
+        "register to attend", "registration is required",
     ]):
         tags.add("rsvp-required")
 

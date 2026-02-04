@@ -31,9 +31,11 @@ export function DetailHero({
 }: DetailHeroProps) {
   const [imgError, setImgError] = useState(false);
   const [imgLoaded, setImgLoaded] = useState(false);
+  const [isLowRes, setIsLowRes] = useState(false);
 
-  const handleImageLoad = useCallback(() => {
+  const handleImageLoad = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
     setImgLoaded(true);
+    if (e.currentTarget.naturalWidth < 600) setIsLowRes(true);
   }, []);
 
   // Determine effective mode (fallback if image error)
@@ -81,7 +83,7 @@ export function DetailHero({
                 src={imageUrl}
                 alt={title}
                 fill
-                className={`object-cover transition-opacity duration-300 ${imgLoaded ? "opacity-100" : "opacity-0"}`}
+                className={`${isLowRes ? "object-contain" : "object-cover"} transition-opacity duration-300 ${imgLoaded ? "opacity-100" : "opacity-0"}`}
                 onError={() => setImgError(true)}
                 onLoad={handleImageLoad}
               />

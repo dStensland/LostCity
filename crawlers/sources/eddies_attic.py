@@ -79,23 +79,55 @@ def parse_date_text(date_text: str) -> Optional[str]:
 
 
 def parse_time_text(time_text: str) -> Optional[str]:
-    """
-    Parse time text from event listings.
-    Examples: "8:00 PM", "7:30pm", "Doors: 7:00 PM"
-
-    Returns:
-        Time in HH:MM format (24-hour), or None if unparseable
-    """
+    """Parse time from event text. Prefers show time over doors time."""
     if not time_text:
         return None
 
-    # Look for "Doors" or "Show" time
-    match = re.search(r'(?:Doors|Show):\s*(\d{1,2}:\d{2}\s*[ap]m)', time_text, re.IGNORECASE)
-    if match:
-        return normalize_time_format(match.group(1))
+    def _parse_single_time(t: str) -> Optional[str]:
+        """Convert a time string like '7pm', '7:00 PM', '8:30pm' to HH:MM."""
+        t = t.strip()
+        # Match "7:00 PM", "7:00PM", "7:00 pm"
+        m = re.match(r'(\d{1,2}):(\d{2})\s*(am|pm)', t, re.IGNORECASE)
+        if m:
+            hour, minute, period = int(m.group(1)), m.group(2), m.group(3)
+            if period.lower() == 'pm' and hour != 12:
+                hour += 12
+            elif period.lower() == 'am' and hour == 12:
+                hour = 0
+            return f"{hour:02d}:{minute}"
+        # Match "7pm", "8PM", "10am" (no minutes)
+        m = re.match(r'(\d{1,2})\s*(am|pm)', t, re.IGNORECASE)
+        if m:
+            hour, period = int(m.group(1)), m.group(2)
+            if period.lower() == 'pm' and hour != 12:
+                hour += 12
+            elif period.lower() == 'am' and hour == 12:
+                hour = 0
+            return f"{hour:02d}:00"
+        return None
 
-    # Just look for any time
-    return normalize_time_format(time_text)
+    # 1. Prefer "Show" time
+    show_match = re.search(r'(?:Show|Music|Starts?)(?:\s+at)?[:\s]+(\d{1,2}(?::\d{2})?\s*[ap]m)', time_text, re.IGNORECASE)
+    if show_match:
+        result = _parse_single_time(show_match.group(1))
+        if result:
+            return result
+
+    # 2. Try "Doors" time as fallback
+    doors_match = re.search(r'(?:Doors?)(?:\s+at)?[:\s]+(\d{1,2}(?::\d{2})?\s*[ap]m)', time_text, re.IGNORECASE)
+    if doors_match:
+        result = _parse_single_time(doors_match.group(1))
+        if result:
+            return result
+
+    # 3. Find any time in the text
+    any_time = re.search(r'(\d{1,2}(?::\d{2})?\s*[ap]m)', time_text, re.IGNORECASE)
+    if any_time:
+        result = _parse_single_time(any_time.group(1))
+        if result:
+            return result
+
+    return None
 
 
 def extract_price_info(text: str) -> tuple[Optional[float], Optional[float], Optional[str], bool]:

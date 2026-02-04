@@ -2,7 +2,14 @@
 Crawler for Exit/In (exitin.com/calendar).
 
 Historic Nashville music venue since 1971, located in Midtown.
-Uses Event Discovery WordPress plugin with JavaScript rendering.
+Uses TicketWeb "Event Discovery" WordPress plugin.
+The calendar listing page shows event names, dates, and images but NOT times.
+Times (doors/starts) are only on individual event detail pages.
+
+Strategy:
+1. Load /calendar/ with Playwright, wait for TicketWeb widget (#tw-responsive)
+2. Extract event list from .tw-section elements (title, date, image, detail URL)
+3. Visit each detail page to get doors/starts time
 """
 
 from __future__ import annotations
@@ -13,9 +20,8 @@ from datetime import datetime
 from typing import Optional
 
 from playwright.sync_api import sync_playwright
-from bs4 import BeautifulSoup
 
-from db import get_or_create_venue, insert_event, find_event_by_hash
+from db import get_or_create_venue, insert_event, find_event_by_hash, remove_stale_source_events
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -38,36 +44,51 @@ VENUE_DATA = {
 }
 
 
-def parse_time(time_text: str) -> Optional[str]:
-    """Parse time from '7:00 PM' or '7:00PM' format to 24-hour time."""
-    match = re.search(r"(\d{1,2}):(\d{2})\s*(am|pm)", time_text, re.IGNORECASE)
+def _parse_time(time_text: str) -> Optional[str]:
+    """Parse time text to HH:MM 24-hour format."""
+    if not time_text:
+        return None
+    match = re.search(r"(\d{1,2})(?::(\d{2}))?\s*(am|pm)", time_text, re.IGNORECASE)
     if match:
-        hour, minute, period = match.groups()
-        hour = int(hour)
-        if period.lower() == "pm" and hour != 12:
+        hour = int(match.group(1))
+        minute = int(match.group(2) or 0)
+        period = match.group(3).lower()
+        if period == "pm" and hour != 12:
             hour += 12
-        elif period.lower() == "am" and hour == 12:
+        elif period == "am" and hour == 12:
             hour = 0
-        return f"{hour:02d}:{minute}"
+        return f"{hour:02d}:{minute:02d}"
     return None
 
 
-def parse_price(price_text: str) -> tuple[Optional[float], Optional[float], Optional[str]]:
-    """Parse price from text. Returns (min, max, note)."""
-    # Try to find price pattern like $25.00 or $25
-    match = re.search(r"\$(\d+(?:\.\d{2})?)", price_text)
-    if match:
-        price = float(match.group(1))
-        return price, price, None
-    return None, None, None
+def _parse_listing_date(date_text: str) -> Optional[str]:
+    """Parse date from listing like 'Feb 5' or 'Saturday February 07' to YYYY-MM-DD."""
+    if not date_text:
+        return None
+    date_text = date_text.strip()
+    # Remove day-of-week prefix if present
+    date_text = re.sub(r"^(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun)\w*\s+", "", date_text, flags=re.IGNORECASE)
+    for fmt in ("%b %d", "%B %d", "%b %d, %Y", "%B %d, %Y"):
+        try:
+            dt = datetime.strptime(date_text.strip(), fmt)
+            if "%Y" not in fmt:
+                now = datetime.now()
+                dt = dt.replace(year=now.year)
+                if dt.date() < now.date():
+                    dt = dt.replace(year=now.year + 1)
+            return dt.strftime("%Y-%m-%d")
+        except ValueError:
+            continue
+    return None
 
 
 def crawl(source: dict) -> tuple[int, int, int]:
-    """Crawl Exit/In events using Playwright."""
+    """Crawl Exit/In events from TicketWeb widget + detail pages."""
     source_id = source["id"]
     events_found = 0
     events_new = 0
     events_updated = 0
+    seen_hashes: set[str] = set()
 
     try:
         with sync_playwright() as p:
@@ -80,122 +101,127 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             venue_id = get_or_create_venue(VENUE_DATA)
 
+            # Step 1: Load calendar listing
             logger.info(f"Fetching Exit/In: {CALENDAR_URL}")
             page.goto(CALENDAR_URL, wait_until="domcontentloaded", timeout=30000)
+            try:
+                page.wait_for_selector("#tw-responsive .tw-section", timeout=15000)
+            except Exception:
+                logger.warning("TicketWeb widget did not render")
+                browser.close()
+                return 0, 0, 0
             page.wait_for_timeout(3000)
 
-            # Scroll to load all content
-            for _ in range(5):
-                page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
-                page.wait_for_timeout(1000)
+            # Step 2: Extract event list from .tw-section elements
+            listing_events = page.evaluate("""() => {
+                const sections = document.querySelectorAll("#tw-responsive .tw-section");
+                const results = [];
+                sections.forEach(section => {
+                    const nameEl = section.querySelector(".tw-name a, .tw-name");
+                    const dateEl = section.querySelector(".tw-date-time");
+                    const imgEl = section.querySelector("img.event-img, .tw-image img, img");
+                    const detailLink = section.querySelector(".tw-name a, a.tw-more-info-btn");
+                    const ticketLink = section.querySelector("a.tw-buy-tix-btn, a[href*='ticketweb']");
 
-            # Get page HTML and parse with BeautifulSoup
-            html = page.content()
-            soup = BeautifulSoup(html, "html.parser")
+                    results.push({
+                        title: nameEl ? nameEl.textContent.trim() : "",
+                        date: dateEl ? dateEl.textContent.trim() : "",
+                        image: imgEl ? imgEl.src : null,
+                        detailUrl: detailLink ? detailLink.href : null,
+                        ticketUrl: ticketLink ? ticketLink.href : null,
+                    });
+                });
+                return results;
+            }""")
 
-            # Find all event containers - Event Discovery plugin uses .tw-section
-            event_containers = soup.find_all("div", class_="tw-section")
+            logger.info(f"Found {len(listing_events)} events in listing")
 
-            logger.info(f"Found {len(event_containers)} event containers")
-
-            for container in event_containers:
+            # Step 3: Visit each detail page to get times
+            for event_data in listing_events:
                 try:
-                    # Extract title from .tw-name div
-                    title_elem = container.find("div", class_="tw-name")
-                    if not title_elem:
+                    title = event_data.get("title", "").strip()
+                    # Clean up title - remove SOLD OUT prefix
+                    title = re.sub(r"^\*?\s*SOLD\s+OUT\s*\*?\s*", "", title, flags=re.IGNORECASE).strip()
+                    if not title or len(title) < 2:
                         continue
 
-                    title_link = title_elem.find("a")
-                    title = title_link.get_text(strip=True) if title_link else title_elem.get_text(strip=True)
-
-                    # Extract event URL
-                    event_url = CALENDAR_URL
-                    if title_link and title_link.get("href"):
-                        event_url = title_link["href"]
-                        if not event_url.startswith("http"):
-                            event_url = BASE_URL + event_url
-
-                    # Extract date from .tw-event-date span
-                    date_elem = container.find("span", class_="tw-event-date")
-                    if not date_elem:
+                    start_date = _parse_listing_date(event_data.get("date", ""))
+                    if not start_date:
+                        logger.debug(f"Could not parse date '{event_data.get('date')}' for '{title}'")
                         continue
-
-                    start_date = None
-                    start_time = None
-
-                    # Date is in format "Feb 5"
-                    date_text = date_elem.get_text(strip=True)
-                    # Add current year and parse
-                    current_year = datetime.now().year
-                    try:
-                        dt = datetime.strptime(f"{date_text} {current_year}", "%b %d %Y")
-                        # If date is in the past, assume next year
-                        if dt.date() < datetime.now().date():
-                            dt = datetime.strptime(f"{date_text} {current_year + 1}", "%b %d %Y")
-                        start_date = dt.strftime("%Y-%m-%d")
-                    except:
-                        logger.warning(f"Could not parse date: {date_text}")
-                        continue
-
-                    # Extract time from .tw-date-time div if present
-                    time_elem = container.find("div", class_="tw-date-time")
-                    if time_elem:
-                        time_text = time_elem.get_text(strip=True)
-                        time_match = re.search(r"(\d{1,2}:\d{2}\s*[AP]M)", time_text, re.IGNORECASE)
-                        if time_match:
-                            start_time = parse_time(time_match.group(1))
-
-                    # Extract description
-                    description = None
-                    desc_elem = container.find(["div", "p"], class_=re.compile(r"description|excerpt|content"))
-                    if desc_elem:
-                        description = desc_elem.get_text(strip=True)[:500]
-
-                    # Extract price
-                    price_min = None
-                    price_max = None
-                    price_note = None
-                    price_elem = container.find(["span", "div"], class_=re.compile(r"price|cost"))
-                    if price_elem:
-                        price_text = price_elem.get_text(strip=True)
-                        price_min, price_max, price_note = parse_price(price_text)
-
-                    # Extract image URL
-                    image_url = None
-                    img_elem = container.find("img")
-                    if img_elem and img_elem.get("src"):
-                        image_url = img_elem["src"]
-                        if not image_url.startswith("http"):
-                            image_url = BASE_URL + image_url
 
                     events_found += 1
-
                     content_hash = generate_content_hash(title, "Exit/In", start_date)
+                    seen_hashes.add(content_hash)
 
                     if find_event_by_hash(content_hash):
                         events_updated += 1
                         continue
 
+                    # Visit detail page for times
+                    start_time = None
+                    detail_url = event_data.get("detailUrl")
+                    if detail_url:
+                        try:
+                            page.goto(detail_url, wait_until="domcontentloaded", timeout=15000)
+                            try:
+                                page.wait_for_selector("#tw-responsive", timeout=8000)
+                            except Exception:
+                                pass
+                            page.wait_for_timeout(2000)
+
+                            detail_text = page.evaluate("""() => {
+                                const tw = document.querySelector("#tw-responsive");
+                                return tw ? tw.textContent : document.body.textContent;
+                            }""")
+
+                            # Look for "STARTS X:XX pm" first (show time), then "DOORS X:XX pm"
+                            starts_match = re.search(
+                                r"STARTS?\s+(\d{1,2}(?::\d{2})?\s*[ap]m)", detail_text, re.IGNORECASE
+                            )
+                            doors_match = re.search(
+                                r"DOORS?\s+(\d{1,2}(?::\d{2})?\s*[ap]m)", detail_text, re.IGNORECASE
+                            )
+
+                            if starts_match:
+                                start_time = _parse_time(starts_match.group(1))
+                            elif doors_match:
+                                start_time = _parse_time(doors_match.group(1))
+                            else:
+                                # Fallback: any time on the page
+                                any_time = re.search(
+                                    r"(\d{1,2}(?::\d{2})?\s*[ap]m)", detail_text, re.IGNORECASE
+                                )
+                                if any_time:
+                                    start_time = _parse_time(any_time.group(1))
+
+                        except Exception as e:
+                            logger.debug(f"Could not load detail page for '{title}': {e}")
+
+                    # Default to 20:00 for a music venue if no time found
+                    if not start_time:
+                        start_time = "20:00"
+
                     event_record = {
                         "source_id": source_id,
                         "venue_id": venue_id,
                         "title": title,
-                        "description": description,
+                        "description": None,
                         "start_date": start_date,
                         "start_time": start_time,
                         "end_date": None,
                         "end_time": None,
-                        "is_all_day": start_time is None,
+                        "is_all_day": False,
                         "category": "music",
                         "subcategory": "concert",
                         "tags": ["exit-in", "nashville", "live-music", "midtown"],
-                        "price_min": price_min,
-                        "price_max": price_max,
-                        "price_note": price_note,
+                        "price_min": None,
+                        "price_max": None,
+                        "price_note": None,
                         "is_free": False,
                         "source_url": CALENDAR_URL,
-                        "ticket_url": event_url,
-                        "image_url": image_url,
+                        "ticket_url": event_data.get("ticketUrl") or detail_url,
+                        "image_url": event_data.get("image"),
                         "raw_text": f"{title} - {start_date}",
                         "extraction_confidence": 0.90,
                         "is_recurring": False,
@@ -205,13 +231,18 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     insert_event(event_record)
                     events_new += 1
-                    logger.info(f"Added: {title} on {start_date}")
+                    logger.info(f"Added: {title} on {start_date} at {start_time}")
 
                 except Exception as e:
                     logger.error(f"Failed to parse event: {e}")
                     continue
 
             browser.close()
+
+        if seen_hashes:
+            stale_removed = remove_stale_source_events(source_id, seen_hashes)
+            if stale_removed:
+                logger.info(f"Removed {stale_removed} stale events")
 
         logger.info(
             f"Exit/In crawl complete: {events_found} found, {events_new} new, {events_updated} updated"

@@ -23,10 +23,10 @@ export function formatTime(time: string | null, isAllDay?: boolean): string {
 
 /**
  * Format time with separate time and period for styling flexibility.
- * Returns { time: "7:30", period: "pm" } or { time: "ALL", period: "DAY" } for all-day events
+ * Returns { time: "7:30", period: "pm" } or { time: "All Day", period: "" } for all-day events
  */
 export function formatTimeSplit(time: string | null, isAllDay?: boolean): { time: string; period: string } {
-  if (isAllDay) return { time: "ALL", period: "DAY" };
+  if (isAllDay) return { time: "All Day", period: "" };
   if (!time) return { time: "TBA", period: "" };
 
   const [hours, minutes] = time.split(":");

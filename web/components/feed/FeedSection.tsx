@@ -231,11 +231,8 @@ const THEMED_SECTION_ICONS: Record<string, { icon: React.ReactNode; color: strin
   "super-bowl": {
     color: "var(--neon-green)",
     icon: (
-      <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-        <ellipse cx="12" cy="12" rx="10" ry="7" />
-        <path d="M6 12h12M12 5v14" stroke="var(--void)" strokeWidth="1.5" fill="none" />
-        <path d="M8.5 8.5l7 7M15.5 8.5l-7 7" stroke="var(--void)" strokeWidth="0.8" fill="none" />
-      </svg>
+      // eslint-disable-next-line @next/next/no-img-element
+      <img src="/icons/super-bowl-football.png" alt="" className="w-full h-full object-cover" />
     ),
   },
   "black-history-month": {
@@ -258,116 +255,74 @@ const THEMED_SECTION_ICONS: Record<string, { icon: React.ReactNode; color: strin
 // Export themed slugs for holiday grouping
 export const THEMED_SLUGS = Object.keys(THEMED_SECTION_ICONS);
 
-// Holiday dropdown - groups multiple holiday sections into a single expandable row
-export function HolidayDropdown({ sections, portalSlug }: { sections: FeedSectionData[]; portalSlug: string }) {
-  const [isOpen, setIsOpen] = useState(false);
-
+// Holiday grid - renders holiday sections as horizontal cards
+export function HolidayGrid({ sections, portalSlug }: { sections: FeedSectionData[]; portalSlug: string }) {
   if (sections.length === 0) return null;
 
-  const totalEvents = sections.reduce((sum, s) => sum + s.events.length, 0);
-
   return (
-    <section className="mb-4">
-      {/* Toggle button */}
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center gap-3 px-4 py-3 rounded-xl border border-[var(--twilight)] hover:border-[var(--coral)]/30 transition-all group"
-        style={{ backgroundColor: "var(--card-bg)" }}
-      >
-        {/* Icon stack - show first 2-3 holiday icons overlapping */}
-        <div className="flex -space-x-2 flex-shrink-0">
-          {sections.slice(0, 3).map((s) => {
-            const themed = THEMED_SECTION_ICONS[s.slug];
-            if (!themed) return null;
-            return (
+    <section className="mb-6 space-y-2">
+      {sections.map((section) => {
+        const themed = THEMED_SECTION_ICONS[section.slug];
+        const accentColor = themed?.color || "var(--coral)";
+        const tag = section.auto_filter?.tags?.[0];
+        const filterUrl = tag
+          ? `/${portalSlug}?tags=${tag}&view=find`
+          : getSeeAllUrl(section, portalSlug);
+        const eventCount = section.events.length;
+
+        return (
+          <Link
+            key={section.id}
+            href={filterUrl}
+            className="flex items-center gap-4 px-4 py-3 rounded-xl border border-[var(--twilight)] hover:border-opacity-60 transition-all group"
+            style={{
+              backgroundColor: "var(--card-bg)",
+              borderLeftWidth: "3px",
+              borderLeftColor: accentColor,
+            }}
+          >
+            {/* Large icon on left */}
+            {themed?.icon && (
               <div
-                key={s.slug}
-                className="w-10 h-10 rounded-lg flex items-center justify-center border-2 border-[var(--dusk)]"
-                style={{ backgroundColor: `${themed.color}20` }}
+                className="w-16 h-16 flex-shrink-0 rounded-xl flex items-center justify-center"
+                style={{ backgroundColor: `${accentColor}15` }}
               >
-                <div className="w-7 h-7" style={{ color: themed.color }}>
+                <div className="w-12 h-12" style={{ color: accentColor }}>
                   {themed.icon}
                 </div>
               </div>
-            );
-          })}
-        </div>
+            )}
 
-        {/* Title */}
-        <div className="flex-1 text-left min-w-0">
-          <h3 className="font-semibold text-[var(--cream)] group-hover:text-[var(--coral)] transition-colors">
-            Upcoming Holidays
-          </h3>
-          <p className="font-mono text-xs text-[var(--muted)]">
-            {sections.length} holiday{sections.length !== 1 ? "s" : ""} with {totalEvents} event{totalEvents !== 1 ? "s" : ""}
-          </p>
-        </div>
+            {/* Title */}
+            <div className="flex-1 min-w-0">
+              <h4 className="font-semibold text-base text-[var(--cream)] group-hover:text-[var(--coral)] transition-colors truncate">
+                {section.title}
+              </h4>
+              {section.description && (
+                <p className="text-xs text-[var(--muted)] mt-0.5 truncate">{section.description}</p>
+              )}
+            </div>
 
-        {/* Chevron */}
-        <svg
-          className={`w-5 h-5 text-[var(--muted)] group-hover:text-[var(--coral)] transition-all flex-shrink-0 ${isOpen ? "rotate-180" : ""}`}
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-        </svg>
-      </button>
-
-      {/* Expanded holiday list */}
-      {isOpen && (
-        <div className="mt-2 space-y-2 pl-2">
-          {sections.map((section) => {
-            const themed = THEMED_SECTION_ICONS[section.slug];
-            const accentColor = themed?.color || "var(--coral)";
-            const tag = section.auto_filter?.tags?.[0];
-            const filterUrl = tag
-              ? `/${portalSlug}?tags=${tag}&view=find`
-              : getSeeAllUrl(section, portalSlug);
-
-            return (
-              <Link
-                key={section.id}
-                href={filterUrl}
-                className="flex items-center gap-3 px-3 py-2.5 rounded-lg border border-[var(--twilight)]/50 hover:border-[var(--coral)]/30 transition-all group hover:scale-[1.01]"
-                style={{
-                  backgroundColor: "var(--card-bg)",
-                  borderLeftWidth: "3px",
-                  borderLeftColor: accentColor,
-                }}
+            {/* Event count + arrow CTA */}
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <span
+                className="font-mono text-sm font-medium px-2 py-0.5 rounded-full"
+                style={{ color: accentColor, backgroundColor: `${accentColor}15` }}
               >
-                {themed?.icon && (
-                  <div
-                    className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
-                    style={{ backgroundColor: `${accentColor}20` }}
-                  >
-                    <div className="w-7 h-7" style={{ color: accentColor }}>
-                      {themed.icon}
-                    </div>
-                  </div>
-                )}
-                <div className="flex-1 text-left min-w-0">
-                  <h4 className="font-medium text-sm text-[var(--cream)] group-hover:text-[var(--coral)] transition-colors truncate">
-                    {section.title}
-                  </h4>
-                  {section.description && (
-                    <p className="font-mono text-xs text-[var(--muted)] truncate">{section.description}</p>
-                  )}
-                </div>
-                <span
-                  className="font-mono text-xs px-2 py-0.5 rounded-full flex-shrink-0"
-                  style={{ backgroundColor: `${accentColor}20`, color: accentColor }}
-                >
-                  {section.events.length}
-                </span>
-                <svg className="w-4 h-4 text-[var(--muted)] group-hover:text-[var(--coral)] transition-colors flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-              </Link>
-            );
-          })}
-        </div>
-      )}
+                {eventCount}
+              </span>
+              <svg
+                className="w-5 h-5 text-[var(--muted)] group-hover:text-[var(--coral)] transition-colors"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </div>
+          </Link>
+        );
+      })}
     </section>
   );
 }
@@ -1130,29 +1085,60 @@ type VenueShowtime = {
   start_date: string;
   start_time: string | null;
   category: string | null;
+  series_slug: string | null;
 };
 
 // Group events by title to combine showtimes
-function groupEventsByTitle(events: VenueShowtime[]): { title: string; category: string | null; events: VenueShowtime[] }[] {
-  const groups = new Map<string, { title: string; category: string | null; events: VenueShowtime[] }>();
+function groupEventsByTitle(events: VenueShowtime[]): { title: string; category: string | null; series_slug: string | null; events: VenueShowtime[] }[] {
+  const groups = new Map<string, { title: string; category: string | null; series_slug: string | null; events: VenueShowtime[] }>();
 
   for (const event of events) {
     const key = event.title.toLowerCase().trim();
     if (!groups.has(key)) {
-      groups.set(key, { title: event.title, category: event.category, events: [] });
+      groups.set(key, { title: event.title, category: event.category, series_slug: event.series_slug, events: [] });
     }
     groups.get(key)!.events.push(event);
   }
 
-  // Sort each group's events by time
+  // Sort each group's events by date then time
   for (const group of groups.values()) {
-    group.events.sort((a, b) => (a.start_time || "").localeCompare(b.start_time || ""));
+    group.events.sort((a, b) => {
+      const dateCmp = a.start_date.localeCompare(b.start_date);
+      if (dateCmp !== 0) return dateCmp;
+      return (a.start_time || "").localeCompare(b.start_time || "");
+    });
   }
 
   // Return groups sorted by earliest showtime
   return Array.from(groups.values()).sort((a, b) =>
     (a.events[0]?.start_time || "").localeCompare(b.events[0]?.start_time || "")
   );
+}
+
+// Sub-group a film's events by date, deduplicating same-time events on the same date
+function groupEventsByDate(events: VenueShowtime[]): { dateLabel: string; date: string; events: VenueShowtime[] }[] {
+  const dateMap = new Map<string, VenueShowtime[]>();
+
+  for (const event of events) {
+    const date = event.start_date;
+    if (!dateMap.has(date)) {
+      dateMap.set(date, []);
+    }
+    // Deduplicate: skip if same time already exists for this date
+    const existing = dateMap.get(date)!;
+    if (!existing.some(e => e.start_time === event.start_time)) {
+      existing.push(event);
+    }
+  }
+
+  // Sort dates chronologically, times within each date
+  const sorted = Array.from(dateMap.entries()).sort(([a], [b]) => a.localeCompare(b));
+
+  return sorted.map(([date, evts]) => ({
+    dateLabel: getSmartDate(date),
+    date,
+    events: evts.sort((a, b) => (a.start_time || "").localeCompare(b.start_time || "")),
+  }));
 }
 
 function VenueList({ section, portalSlug }: { section: FeedSectionData; portalSlug: string }) {
@@ -1282,21 +1268,47 @@ function VenueList({ section, portalSlug }: { section: FeedSectionData; portalSl
                           {/* Film title row */}
                           <div className="flex items-center gap-2 mb-1">
                             <CategoryIcon type="film" size={12} className="flex-shrink-0 opacity-50" />
-                            <span className="text-sm text-[var(--cream)] truncate">{group.title}</span>
+                            {group.series_slug ? (
+                              <Link
+                                href={`/${portalSlug}/series/${group.series_slug}`}
+                                className="text-sm text-[var(--cream)] truncate hover:underline"
+                              >
+                                {group.title}
+                              </Link>
+                            ) : (
+                              <span className="text-sm text-[var(--cream)] truncate">{group.title}</span>
+                            )}
                           </div>
 
-                          {/* Showtimes row */}
-                          <div className="flex flex-wrap gap-1.5 ml-5">
-                            {group.events.map((event) => (
-                              <Link
-                                key={event.id}
-                                href={`/${portalSlug}?event=${event.id}`}
-                                className="font-mono text-xs px-2 py-0.5 rounded bg-[var(--twilight)]/40 text-[var(--muted)] hover:bg-[var(--twilight)] hover:text-[var(--cream)] transition-colors"
-                              >
-                                {formatTime(event.start_time)}
-                              </Link>
-                            ))}
-                          </div>
+                          {/* Showtimes by date */}
+                          {(() => {
+                            const dateGroups = groupEventsByDate(group.events);
+                            const multiDate = dateGroups.length > 1;
+                            return (
+                              <div className={`ml-5 ${multiDate ? "space-y-1" : ""}`}>
+                                {dateGroups.map((dg) => (
+                                  <div key={dg.date} className="flex items-baseline gap-2">
+                                    {multiDate && (
+                                      <span className="font-mono text-[0.6rem] text-[var(--muted)] w-16 flex-shrink-0 truncate">
+                                        {dg.dateLabel}
+                                      </span>
+                                    )}
+                                    <div className="flex flex-wrap gap-1.5">
+                                      {dg.events.map((event) => (
+                                        <Link
+                                          key={event.id}
+                                          href={`/${portalSlug}?event=${event.id}`}
+                                          className="font-mono text-xs px-2 py-0.5 rounded bg-[var(--twilight)]/40 text-[var(--muted)] hover:bg-[var(--twilight)] hover:text-[var(--cream)] transition-colors"
+                                        >
+                                          {formatTime(event.start_time)}
+                                        </Link>
+                                      ))}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            );
+                          })()}
                         </div>
                       ))}
                     </>

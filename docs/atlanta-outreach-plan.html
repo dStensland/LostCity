@@ -1,0 +1,1257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Atlanta Go-to-Market Plan | LostCity</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --void: #09090B;
+      --night: #0F0F14;
+      --dusk: #18181F;
+      --twilight: #252530;
+      --muted: #8B8B94;
+      --soft: #A1A1AA;
+      --cream: #FAFAF9;
+      --coral: #FF6B7A;
+      --coral-light: #FF8F6B;
+      --gold: #FFD93D;
+      --neon-magenta: #E855A0;
+      --neon-cyan: #00D4E8;
+      --neon-green: #00D9A0;
+      --neon-amber: #F5A623;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--void);
+      color: var(--cream);
+      line-height: 1.6;
+    }
+
+    /* Navigation */
+    .nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      background: rgba(9, 9, 11, 0.9);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--twilight);
+      z-index: 100;
+      padding: 1rem 2rem;
+    }
+
+    .nav-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .logo {
+      display: flex;
+      flex-direction: column;
+      line-height: 1;
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.5rem;
+      letter-spacing: 0.02em;
+    }
+
+    .logo-lost {
+      color: var(--coral);
+    }
+
+    .logo-city {
+      color: transparent;
+      -webkit-text-stroke: 1px var(--cream);
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 2rem;
+      list-style: none;
+    }
+
+    .nav-links a {
+      color: var(--soft);
+      text-decoration: none;
+      font-size: 0.875rem;
+      font-weight: 500;
+      transition: color 0.2s;
+    }
+
+    .nav-links a:hover {
+      color: var(--coral);
+    }
+
+    /* Hero */
+    .hero {
+      padding: 8rem 2rem 4rem;
+      text-align: center;
+      background: linear-gradient(180deg, var(--night) 0%, var(--void) 100%);
+      border-bottom: 1px solid var(--twilight);
+    }
+
+    .hero-badge {
+      display: inline-block;
+      padding: 0.5rem 1rem;
+      background: rgba(255, 107, 122, 0.1);
+      border: 1px solid rgba(255, 107, 122, 0.3);
+      border-radius: 9999px;
+      color: var(--coral);
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 1.5rem;
+    }
+
+    .hero h1 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(2.5rem, 6vw, 4rem);
+      letter-spacing: 0.02em;
+      margin-bottom: 1rem;
+      background: linear-gradient(135deg, var(--cream) 0%, var(--coral) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .hero p {
+      color: var(--soft);
+      font-size: 1.125rem;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    /* Main content */
+    .main {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 4rem 2rem;
+    }
+
+    /* Section styling */
+    .section {
+      margin-bottom: 4rem;
+      scroll-margin-top: 5rem;
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+
+    .section-number {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 2.5rem;
+      height: 2.5rem;
+      background: linear-gradient(135deg, var(--coral) 0%, var(--neon-magenta) 100%);
+      border-radius: 0.5rem;
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.25rem;
+      color: var(--void);
+    }
+
+    .section h2 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 2rem;
+      letter-spacing: 0.02em;
+    }
+
+    .section h3 {
+      font-size: 1.25rem;
+      font-weight: 600;
+      margin: 2rem 0 1rem;
+      color: var(--cream);
+    }
+
+    .section h4 {
+      font-size: 1rem;
+      font-weight: 600;
+      margin: 1.5rem 0 0.75rem;
+      color: var(--coral);
+    }
+
+    /* Cards */
+    .card {
+      background: var(--night);
+      border: 1px solid var(--twilight);
+      border-radius: 1rem;
+      padding: 1.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1rem;
+    }
+
+    .card h4 {
+      margin: 0;
+      color: var(--cream);
+    }
+
+    .card p {
+      color: var(--soft);
+      font-size: 0.9375rem;
+    }
+
+    /* Status badges */
+    .badge {
+      display: inline-block;
+      padding: 0.25rem 0.75rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .badge-ready {
+      background: rgba(0, 217, 160, 0.15);
+      color: var(--neon-green);
+      border: 1px solid rgba(0, 217, 160, 0.3);
+    }
+
+    .badge-priority {
+      background: rgba(255, 107, 122, 0.15);
+      color: var(--coral);
+      border: 1px solid rgba(255, 107, 122, 0.3);
+    }
+
+    .badge-gold {
+      background: rgba(255, 217, 61, 0.15);
+      color: var(--gold);
+      border: 1px solid rgba(255, 217, 61, 0.3);
+    }
+
+    .badge-cyan {
+      background: rgba(0, 212, 232, 0.15);
+      color: var(--neon-cyan);
+      border: 1px solid rgba(0, 212, 232, 0.3);
+    }
+
+    /* Tables */
+    .table-wrapper {
+      overflow-x: auto;
+      margin: 1rem 0;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9375rem;
+    }
+
+    th {
+      text-align: left;
+      padding: 1rem;
+      background: var(--night);
+      border-bottom: 2px solid var(--twilight);
+      font-weight: 600;
+      color: var(--cream);
+      white-space: nowrap;
+    }
+
+    td {
+      padding: 1rem;
+      border-bottom: 1px solid var(--twilight);
+      color: var(--soft);
+      vertical-align: top;
+    }
+
+    tr:hover td {
+      background: rgba(255, 107, 122, 0.03);
+    }
+
+    /* Pricing tiers */
+    .pricing-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.5rem;
+      margin: 2rem 0;
+    }
+
+    .pricing-card {
+      background: var(--night);
+      border: 1px solid var(--twilight);
+      border-radius: 1rem;
+      padding: 2rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .pricing-card.featured {
+      border-color: var(--coral);
+      box-shadow: 0 0 40px rgba(255, 107, 122, 0.1);
+    }
+
+    .pricing-card.featured::before {
+      content: 'MOST POPULAR';
+      position: absolute;
+      top: 1rem;
+      right: -2rem;
+      background: var(--coral);
+      color: var(--void);
+      font-size: 0.625rem;
+      font-weight: 700;
+      padding: 0.25rem 2rem;
+      transform: rotate(45deg);
+    }
+
+    .pricing-card h4 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.5rem;
+      margin: 0 0 0.5rem;
+      color: var(--cream);
+    }
+
+    .pricing-card .price {
+      font-size: 2.5rem;
+      font-weight: 700;
+      color: var(--cream);
+    }
+
+    .pricing-card .price span {
+      font-size: 1rem;
+      font-weight: 400;
+      color: var(--muted);
+    }
+
+    .pricing-card ul {
+      list-style: none;
+      margin: 1.5rem 0;
+    }
+
+    .pricing-card li {
+      padding: 0.5rem 0;
+      color: var(--soft);
+      font-size: 0.875rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .pricing-card li::before {
+      content: '✓';
+      color: var(--neon-green);
+      font-weight: bold;
+    }
+
+    /* Target cards */
+    .target-grid {
+      display: grid;
+      gap: 1rem;
+    }
+
+    .target-card {
+      background: var(--night);
+      border: 1px solid var(--twilight);
+      border-radius: 1rem;
+      padding: 1.5rem;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 1rem;
+      transition: border-color 0.2s, transform 0.2s;
+    }
+
+    .target-card:hover {
+      border-color: var(--coral);
+      transform: translateX(4px);
+    }
+
+    .target-card h5 {
+      font-size: 1.125rem;
+      font-weight: 600;
+      color: var(--cream);
+      margin-bottom: 0.5rem;
+    }
+
+    .target-card h5 a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    .target-card h5 a:hover {
+      color: var(--coral);
+    }
+
+    .target-meta {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 0.75rem;
+      flex-wrap: wrap;
+    }
+
+    .target-meta span {
+      font-size: 0.75rem;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+    }
+
+    .target-card p {
+      font-size: 0.875rem;
+      color: var(--soft);
+      margin-bottom: 0.75rem;
+    }
+
+    .target-pain {
+      font-size: 0.8125rem;
+      color: var(--neon-amber);
+      font-style: italic;
+    }
+
+    .target-approach {
+      font-size: 0.8125rem;
+      color: var(--neon-cyan);
+    }
+
+    /* Timeline */
+    .timeline {
+      position: relative;
+      padding-left: 2rem;
+    }
+
+    .timeline::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      background: linear-gradient(180deg, var(--coral) 0%, var(--neon-magenta) 100%);
+    }
+
+    .timeline-item {
+      position: relative;
+      padding-bottom: 2rem;
+    }
+
+    .timeline-item::before {
+      content: '';
+      position: absolute;
+      left: -2rem;
+      top: 0.25rem;
+      width: 0.75rem;
+      height: 0.75rem;
+      background: var(--coral);
+      border-radius: 50%;
+      transform: translateX(-50%);
+    }
+
+    .timeline-item h4 {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--coral);
+      margin-bottom: 0.5rem;
+    }
+
+    .timeline-item p {
+      font-size: 0.875rem;
+      color: var(--soft);
+    }
+
+    /* Checklist */
+    .checklist {
+      list-style: none;
+    }
+
+    .checklist li {
+      padding: 0.75rem 0;
+      border-bottom: 1px solid var(--twilight);
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      color: var(--soft);
+    }
+
+    .checklist li::before {
+      content: '';
+      width: 1.25rem;
+      height: 1.25rem;
+      border: 2px solid var(--neon-green);
+      border-radius: 0.25rem;
+      flex-shrink: 0;
+    }
+
+    .checklist li.done::before {
+      background: var(--neon-green);
+      content: '✓';
+      color: var(--void);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      font-weight: bold;
+    }
+
+    /* Quote callout */
+    .callout {
+      background: linear-gradient(135deg, rgba(255, 107, 122, 0.1) 0%, rgba(232, 85, 160, 0.1) 100%);
+      border-left: 4px solid var(--coral);
+      border-radius: 0 1rem 1rem 0;
+      padding: 1.5rem 2rem;
+      margin: 2rem 0;
+    }
+
+    .callout p {
+      font-size: 1.125rem;
+      color: var(--cream);
+      font-style: italic;
+    }
+
+    /* Stats */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 1rem;
+      margin: 1.5rem 0;
+    }
+
+    .stat {
+      background: var(--night);
+      border: 1px solid var(--twilight);
+      border-radius: 0.75rem;
+      padding: 1.25rem;
+      text-align: center;
+    }
+
+    .stat-value {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 2rem;
+      color: var(--coral);
+    }
+
+    .stat-label {
+      font-size: 0.75rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    /* Footer */
+    .footer {
+      border-top: 1px solid var(--twilight);
+      padding: 3rem 2rem;
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.875rem;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .nav-links {
+        display: none;
+      }
+
+      .target-card {
+        grid-template-columns: 1fr;
+      }
+
+      .hero {
+        padding: 7rem 1rem 3rem;
+      }
+
+      .main {
+        padding: 2rem 1rem;
+      }
+    }
+
+    /* Animations */
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .section {
+      animation: fadeIn 0.6s ease-out;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Navigation -->
+  <nav class="nav">
+    <div class="nav-inner">
+      <div class="logo">
+        <span class="logo-lost">LOST</span>
+        <span class="logo-city">CITY</span>
+      </div>
+      <ul class="nav-links">
+        <li><a href="#mvp">MVP Assessment</a></li>
+        <li><a href="#targets">Outreach Targets</a></li>
+        <li><a href="#healthcare">Healthcare</a></li>
+        <li><a href="#plan">Action Plan</a></li>
+        <li><a href="#next">Next Steps</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- Hero -->
+  <header class="hero">
+    <span class="hero-badge">Q1 2026 Strategy</span>
+    <h1>Atlanta Go-to-Market Plan</h1>
+    <p>MVP readiness assessment and prioritized B2B outreach strategy for launching LostCity's white-label portal business.</p>
+  </header>
+
+  <!-- Main Content -->
+  <main class="main">
+
+    <!-- MVP Assessment Section -->
+    <section id="mvp" class="section">
+      <div class="section-header">
+        <span class="section-number">1</span>
+        <h2>MVP Readiness Assessment</h2>
+      </div>
+
+      <p style="color: var(--soft); margin-bottom: 2rem;">Based on comprehensive codebase review, <strong style="color: var(--neon-green);">your MVP is production-ready for B2B sales</strong>. Here's what you can demo and sell today.</p>
+
+      <h3>Core Capabilities</h3>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Capability</th>
+              <th>Status</th>
+              <th>Notes</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Portal creation & branding</td>
+              <td><span class="badge badge-ready">Ready</span></td>
+              <td>Full color, font, logo, theme customization</td>
+            </tr>
+            <tr>
+              <td>4 header templates</td>
+              <td><span class="badge badge-ready">Ready</span></td>
+              <td>Standard, Minimal, Branded, Immersive</td>
+            </tr>
+            <tr>
+              <td>Custom domains</td>
+              <td><span class="badge badge-ready">Ready</span></td>
+              <td>With DNS verification workflow</td>
+            </tr>
+            <tr>
+              <td>Content filtering</td>
+              <td><span class="badge badge-ready">Ready</span></td>
+              <td>Location, categories, dates, price ranges</td>
+            </tr>
+            <tr>
+              <td>Section curation</td>
+              <td><span class="badge badge-ready">Ready</span></td>
+              <td>Create custom content sections</td>
+            </tr>
+            <tr>
+              <td>Team management</td>
+              <td><span class="badge badge-ready">Ready</span></td>
+              <td>Role-based access (owner/admin/editor/viewer)</td>
+            </tr>
+            <tr>
+              <td>Federation system</td>
+              <td><span class="badge badge-ready">Ready</span></td>
+              <td>Parent portals share sources to child portals</td>
+            </tr>
+            <tr>
+              <td>Plan tier enforcement</td>
+              <td><span class="badge badge-ready">Ready</span></td>
+              <td>Features gated by Starter/Professional/Enterprise</td>
+            </tr>
+            <tr>
+              <td>Event discovery, search, RSVP</td>
+              <td><span class="badge badge-ready">Ready</span></td>
+              <td>Full user-facing functionality</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Pricing Tiers (Already Built)</h3>
+
+      <div class="pricing-grid">
+        <div class="pricing-card">
+          <h4>Starter</h4>
+          <div class="price">Free</div>
+          <ul>
+            <li>Subdomain (*.lostcity.ai)</li>
+            <li>Basic branding (3 colors)</li>
+            <li>1 team member</li>
+            <li>5 sections max</li>
+            <li>LostCity branding required</li>
+          </ul>
+        </div>
+        <div class="pricing-card featured">
+          <h4>Professional</h4>
+          <div class="price">$299<span>/mo</span></div>
+          <ul>
+            <li>Custom domain support</li>
+            <li>Full branding customization</li>
+            <li>5 team members</li>
+            <li>20 sections max</li>
+            <li>Federation (source subscriptions)</li>
+            <li>"Powered by LostCity" footer</li>
+          </ul>
+        </div>
+        <div class="pricing-card">
+          <h4>Enterprise</h4>
+          <div class="price">$999<span>/mo</span></div>
+          <ul>
+            <li>Full white-label (hide attribution)</li>
+            <li>Custom footer & links</li>
+            <li>API access</li>
+            <li>25 team members</li>
+            <li>100 sections max</li>
+            <li>Source sharing to other portals</li>
+          </ul>
+        </div>
+      </div>
+
+      <h3>Minimum Viable Pitch</h3>
+
+      <div class="callout">
+        <p>"We give you a fully-branded event discovery portal for your guests/employees/members. Thousands of local events, always current, zero maintenance. Launch in 2 weeks. Your brand, not ours."</p>
+      </div>
+
+      <h3>Be Upfront About</h3>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Gap</th>
+              <th>Workaround</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Analytics dashboard for portal clients</td>
+              <td>Manual reporting initially; show you're tracking engagement</td>
+            </tr>
+            <tr>
+              <td>API documentation</td>
+              <td>Enterprise feature - document as you onboard first API customer</td>
+            </tr>
+            <tr>
+              <td>Mobile app</td>
+              <td>Responsive web works well; native apps are roadmap</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Outreach Targets Section -->
+    <section id="targets" class="section">
+      <div class="section-header">
+        <span class="section-number">2</span>
+        <h2>Atlanta Outreach Targets</h2>
+      </div>
+
+      <!-- Hotels -->
+      <h3>Category A: Hotels & Hospitality <span class="badge badge-priority">Highest Priority</span></h3>
+      <p style="color: var(--soft); margin-bottom: 1.5rem;">These boutique hotels emphasize local experiences - exactly our value prop. Clear pain point, clear buyer, clear ROI.</p>
+
+      <div class="target-grid">
+        <div class="target-card">
+          <div>
+            <h5><a href="https://www.hotelclermont.com/" target="_blank">Hotel Clermont</a></h5>
+            <div class="target-meta">
+              <span>📍 Poncey-Highland</span>
+              <span>🏨 Independent boutique</span>
+              <span>🛏️ 94 rooms</span>
+            </div>
+            <p>"A place for locals and travelers alike" - positioned around local culture and community.</p>
+            <p class="target-pain">Pain: Concierge team manually curates; guests end up on Yelp anyway</p>
+            <p class="target-approach">Approach: Pitch as tech-forward enhancement to their indie cred</p>
+          </div>
+          <span class="badge badge-priority">Top Pick</span>
+        </div>
+
+        <div class="target-card">
+          <div>
+            <h5><a href="https://www.shanehotelatlanta.com/" target="_blank">Kimpton Shane Hotel</a></h5>
+            <div class="target-meta">
+              <span>📍 Midtown</span>
+              <span>🏨 Kimpton/IHG</span>
+              <span>🆕 Brand new</span>
+            </div>
+            <p>"Connects you to the neighborhood like a local" - brand new boutique in Midtown Union.</p>
+            <p class="target-pain">Pain: IHG corporate tools are generic; they want local differentiation</p>
+            <p class="target-approach">Approach: Frame as "neighborhood connection" tool; Kimpton GMs have autonomy</p>
+          </div>
+          <span class="badge badge-gold">High Fit</span>
+        </div>
+
+        <div class="target-card">
+          <div>
+            <h5><a href="https://hotelsmag.com/news/peregrine-hospitality-opens-the-tess-in-atlantas-buckhead/" target="_blank">The Tess (Peregrine Hospitality)</a></h5>
+            <div class="target-meta">
+              <span>📍 Buckhead</span>
+              <span>🏨 Autograph Collection</span>
+              <span>🛏️ 201 rooms</span>
+            </div>
+            <p>Just opened with "Experience Curator" concierge program - Southern hospitality with modern twist.</p>
+            <p class="target-pain">Pain: Building their Experience Curator program from scratch</p>
+            <p class="target-approach">Approach: Offer to power their Experience Curator digitally</p>
+          </div>
+          <span class="badge badge-gold">High Fit</span>
+        </div>
+
+        <div class="target-card">
+          <div>
+            <h5><a href="https://travelnoire.com/best-boutique-hotels-atlanta" target="_blank">The Darwin</a></h5>
+            <div class="target-meta">
+              <span>📍 Midtown</span>
+              <span>🏨 Boutique</span>
+              <span>🎨 Local art focus</span>
+            </div>
+            <p>Cool vibe decorated with local art and fun furnishings - emphasizes local culture.</p>
+            <p class="target-pain">Pain: Emphasizes local culture but no events integration</p>
+            <p class="target-approach">Approach: Local events = natural extension of local art focus</p>
+          </div>
+          <span class="badge badge-cyan">Good Fit</span>
+        </div>
+
+        <div class="target-card">
+          <div>
+            <h5><a href="https://boutiquehotelss.com/" target="_blank">Stonehurst Place</a></h5>
+            <div class="target-meta">
+              <span>📍 Piedmont Ave</span>
+              <span>🏨 B&B</span>
+              <span>🍳 Locally sourced</span>
+            </div>
+            <p>Personalized breakfast with locally sourced ingredients - local positioning.</p>
+            <p class="target-pain">Pain: Small team, can't maintain event recommendations</p>
+            <p class="target-approach">Approach: Free tier to start, upgrade if they love it</p>
+          </div>
+          <span class="badge badge-cyan">Good Fit</span>
+        </div>
+      </div>
+
+      <!-- Media -->
+      <h3>Category B: Media Companies <span class="badge badge-gold">Strong Fit</span></h3>
+      <p style="color: var(--soft); margin-bottom: 1.5rem;">Event listings are content they need but hate maintaining. We remove the editorial burden.</p>
+
+      <div class="target-grid">
+        <div class="target-card">
+          <div>
+            <h5><a href="https://creativeloafing.com/" target="_blank">Creative Loafing</a></h5>
+            <div class="target-meta">
+              <span>📰 Alt-weekly since 1972</span>
+              <span>🎭 Events, culture, nightlife</span>
+            </div>
+            <p>Atlanta's source for events, culture & news. Covers art, music, comedy, nightlife extensively.</p>
+            <p class="target-pain">Pain: Editorial overhead on event listings; content goes stale</p>
+            <p class="target-approach">Approach: Automated events feed they can customize and brand</p>
+          </div>
+          <span class="badge badge-priority">Top Pick</span>
+        </div>
+
+        <div class="target-card">
+          <div>
+            <h5><a href="https://www.atlantamagazine.com/" target="_blank">Atlanta Magazine</a></h5>
+            <div class="target-meta">
+              <span>📰 Premier city magazine since 1961</span>
+              <span>✨ Lifestyle coverage</span>
+            </div>
+            <p>City's premier general interest publication - lifestyle, service journalism, events.</p>
+            <p class="target-pain">Pain: Events coverage requires manual research</p>
+            <p class="target-approach">Approach: White-label "Atlanta Magazine Events" section</p>
+          </div>
+          <span class="badge badge-gold">High Fit</span>
+        </div>
+
+        <div class="target-card">
+          <div>
+            <h5><a href="https://simplybuckhead.com/" target="_blank">Simply Buckhead</a></h5>
+            <div class="target-meta">
+              <span>📰 Hyperlocal magazine</span>
+              <span>💎 Upscale lifestyle</span>
+            </div>
+            <p>Upscale lifestyle magazine for Buckhead, Brookhaven, Sandy Springs, Dunwoody.</p>
+            <p class="target-pain">Pain: Limited to one affluent area - perfect portal scope</p>
+            <p class="target-approach">Approach: Buckhead-only event portal for their audience</p>
+          </div>
+          <span class="badge badge-gold">High Fit</span>
+        </div>
+
+        <div class="target-card">
+          <div>
+            <h5><a href="https://www.atlantaonthecheap.com/" target="_blank">Atlanta on the Cheap</a></h5>
+            <div class="target-meta">
+              <span>🌐 High-traffic blog</span>
+              <span>💰 Free/cheap events</span>
+            </div>
+            <p>Free things to do in Atlanta, deals, cheap events - high engagement, manual curation.</p>
+            <p class="target-pain">Pain: Manually curating free events is labor-intensive</p>
+            <p class="target-approach">Approach: Pre-filtered "free events only" portal</p>
+          </div>
+          <span class="badge badge-gold">High Fit</span>
+        </div>
+      </div>
+
+      <!-- Civic -->
+      <h3>Category C: Civic & Neighborhood Organizations <span class="badge badge-cyan">Strategic</span></h3>
+      <p style="color: var(--soft); margin-bottom: 1.5rem;">These orgs exist to drive engagement and foot traffic - events are core to their mission. Win one CID and get referrals to others.</p>
+
+      <div class="target-grid">
+        <div class="target-card">
+          <div>
+            <h5><a href="https://www.midtownatl.com/" target="_blank">Midtown Alliance / MID</a></h5>
+            <div class="target-meta">
+              <span>🏛️ CID since 2000</span>
+              <span>💰 $71M raised</span>
+              <span>🌿 Eco-district focus</span>
+            </div>
+            <p>Community Improvement District making Midtown a "vibrant inclusive community."</p>
+            <p class="target-pain">Pain: Want to drive foot traffic; no unified events platform</p>
+            <p class="target-approach">Approach: "Midtown Events" portal for residents & workers</p>
+          </div>
+          <span class="badge badge-priority">Top Pick</span>
+        </div>
+
+        <div class="target-card">
+          <div>
+            <h5><a href="https://www.buckheadcid.com/" target="_blank">Buckhead CID</a></h5>
+            <div class="target-meta">
+              <span>🏛️ CID since 1999</span>
+              <span>💎 Wealthy commercial district</span>
+            </div>
+            <p>20+ years operating in central Buckhead business area around Lenox Square.</p>
+            <p class="target-pain">Pain: Competing with suburbs; need lifestyle amenities story</p>
+            <p class="target-approach">Approach: Position as amenity for Buckhead businesses to promote</p>
+          </div>
+          <span class="badge badge-gold">High Fit</span>
+        </div>
+
+        <div class="target-card">
+          <div>
+            <h5><a href="https://discoveratlanta.com/" target="_blank">Discover Atlanta (ACVB)</a></h5>
+            <div class="target-meta">
+              <span>🏛️ Official tourism org since 1913</span>
+              <span>💰 $16B hospitality industry</span>
+            </div>
+            <p>Atlanta Convention & Visitors Bureau - official destination marketing for the city.</p>
+            <p class="target-pain">Pain: DiscoverAtlanta.com has events but limited functionality</p>
+            <p class="target-approach">Approach: Enhanced events for their member hotels to embed</p>
+          </div>
+          <span class="badge badge-cyan">Complex Sale</span>
+        </div>
+
+        <div class="target-card">
+          <div>
+            <h5><a href="https://www.buckhead.com/upper-westside-improvement-district-completes-master-plan-weighs-in-on-beltline-and-buckhead-cityhood/" target="_blank">Upper Westside CID</a></h5>
+            <div class="target-meta">
+              <span>🏛️ CID since 2016</span>
+              <span>📈 Growing area</span>
+            </div>
+            <p>Newer CID establishing identity - encompasses 6+ neighborhoods near West Midtown.</p>
+            <p class="target-pain">Pain: Establishing identity; events help define neighborhood</p>
+            <p class="target-approach">Approach: "Put Upper Westside on the map" positioning</p>
+          </div>
+          <span class="badge badge-cyan">Good Fit</span>
+        </div>
+      </div>
+
+      <!-- Corporate -->
+      <h3>Category D: Corporate / HR Tech <span class="badge badge-cyan">Longer Cycle</span></h3>
+      <p style="color: var(--soft); margin-bottom: 1.5rem;">Big opportunity but harder to close quickly. NCR is interesting as a potential integration partner.</p>
+
+      <div class="target-grid">
+        <div class="target-card">
+          <div>
+            <h5><a href="https://mailchimp.com/" target="_blank">Mailchimp (Intuit)</a></h5>
+            <div class="target-meta">
+              <span>🏢 Atlanta-founded</span>
+              <span>👥 ~1,200 local employees</span>
+              <span>🎨 Creative culture</span>
+            </div>
+            <p>Atlanta-founded, known for creative culture and Atlanta HQ pride.</p>
+            <p class="target-pain">Pain: Return-to-office engagement; Atlanta HQ pride</p>
+            <p class="target-approach">Approach: "Things to do near the office" portal for employees</p>
+          </div>
+          <span class="badge badge-gold">High Fit</span>
+        </div>
+
+        <div class="target-card">
+          <div>
+            <h5><a href="https://www.ncr.com/" target="_blank">NCR Corporation</a></h5>
+            <div class="target-meta">
+              <span>🏢 HQ moved to Atlanta 2018</span>
+              <span>🏨 Hospitality tech focus</span>
+            </div>
+            <p>Omni-channel tech for finance, retail, and hospitality. They sell to hotels.</p>
+            <p class="target-pain">Pain: They sell to hotels - could integrate our data</p>
+            <p class="target-approach">Approach: B2B2B - We power their hotel clients' guest experience</p>
+          </div>
+          <span class="badge badge-priority">Strategic Partner</span>
+        </div>
+
+        <div class="target-card">
+          <div>
+            <h5>Alpharetta Tech Hub</h5>
+            <div class="target-meta">
+              <span>🏙️ "Technology City of the South"</span>
+              <span>🏢 900 tech firms</span>
+            </div>
+            <p>Major tech hub with fintech, medtech, cybersecurity. Needs to attract/retain talent.</p>
+            <p class="target-pain">Pain: Attract/retain talent; lifestyle matters</p>
+            <p class="target-approach">Approach: City-wide tech employee portal via economic dev</p>
+          </div>
+          <span class="badge badge-cyan">Good Fit</span>
+        </div>
+      </div>
+
+      <!-- Healthcare -->
+      <h3 id="healthcare">Category E: Healthcare <span class="badge badge-neon-magenta" style="background: rgba(232, 85, 160, 0.15); color: #E855A0; border: 1px solid rgba(232, 85, 160, 0.3);">Your Network Advantage</span></h3>
+      <p style="color: var(--soft); margin-bottom: 1rem;">Leveraging your Gozio background. Two angles: <strong style="color: var(--neon-cyan);">Employee Engagement</strong> (HR budget, faster) and <strong style="color: var(--neon-amber);">Patient/Family Experience</strong> (differentiation, novel).</p>
+
+      <div class="card" style="margin-bottom: 1.5rem; border-color: var(--neon-magenta);">
+        <p style="color: var(--cream); margin-bottom: 0.5rem;"><strong>Why Healthcare Works for You:</strong></p>
+        <ul style="color: var(--soft); margin-left: 1.25rem; font-size: 0.9375rem;">
+          <li><strong style="color: var(--neon-green);">Warm relationships</strong> from Gozio Chief of Staff role</li>
+          <li><strong style="color: var(--neon-green);">Domain credibility</strong> - you speak their language (HCAHPS, retention, patient experience)</li>
+          <li><strong style="color: var(--neon-green);">Known clients</strong> - Emory, Piedmont, and CHOA are Gozio customers</li>
+          <li><strong style="color: var(--neon-amber);">Real pain point</strong> - healthcare burnout is crisis-level; losing one nurse costs $40-60K</li>
+        </ul>
+      </div>
+
+      <div class="target-grid">
+        <div class="target-card">
+          <div>
+            <h5><a href="https://www.emoryhealthcare.org/" target="_blank">Emory Healthcare</a></h5>
+            <div class="target-meta">
+              <span>🏥 731 beds (flagship)</span>
+              <span>🎓 Academic medical center</span>
+              <span style="color: var(--neon-green);">✓ Gozio Client</span>
+            </div>
+            <p>Georgia's largest academic health system. Emory University Hospital is nationally ranked in 5 specialties.</p>
+            <p class="target-pain">Pain: Large workforce, academic culture values employee wellbeing</p>
+            <p class="target-approach">Approach: Warm intro via Gozio contacts → HR/Employee Experience leader</p>
+          </div>
+          <span class="badge badge-priority">Warm Lead</span>
+        </div>
+
+        <div class="target-card">
+          <div>
+            <h5><a href="https://www.piedmont.org/" target="_blank">Piedmont Healthcare</a></h5>
+            <div class="target-meta">
+              <span>🏥 11 hospitals</span>
+              <span>👥 13,000+ employees</span>
+              <span style="color: var(--neon-green);">✓ Gozio Client</span>
+            </div>
+            <p>Not-for-profit community health system. Over a century in Atlanta, strong community focus.</p>
+            <p class="target-pain">Pain: Distributed workforce across 11 hospitals; retention challenge</p>
+            <p class="target-approach">Approach: Warm intro → Chief People Officer or Employee Experience</p>
+          </div>
+          <span class="badge badge-priority">Warm Lead</span>
+        </div>
+
+        <div class="target-card">
+          <div>
+            <h5><a href="https://www.choa.org/" target="_blank">Children's Healthcare of Atlanta</a></h5>
+            <div class="target-meta">
+              <span>🏥 Pediatric system</span>
+              <span>👨‍👩‍👧 Family-centric</span>
+              <span style="color: var(--neon-green);">✓ Gozio Client</span>
+            </div>
+            <p>One of the largest pediatric healthcare systems in the US. Strong focus on family experience.</p>
+            <p class="target-pain">Pain: Families staying for extended periods need things to do nearby</p>
+            <p class="target-approach">Approach: Dual pitch - Employee portal AND "Things for CHOA Families" portal</p>
+          </div>
+          <span class="badge badge-priority">Warm Lead</span>
+        </div>
+
+        <div class="target-card">
+          <div>
+            <h5><a href="https://www.wellstar.org/" target="_blank">WellStar Health System</a></h5>
+            <div class="target-meta">
+              <span>🏥 11 hospitals</span>
+              <span>🏆 Mayo Clinic Care Network</span>
+            </div>
+            <p>State-of-the-art facilities, 11 hospitals including 633-bed Kennestone. Mayo Clinic partnership.</p>
+            <p class="target-pain">Pain: Large distributed workforce; competes for talent with Emory/Piedmont</p>
+            <p class="target-approach">Approach: Position as employee wellness/retention differentiator</p>
+          </div>
+          <span class="badge badge-gold">High Fit</span>
+        </div>
+
+        <div class="target-card">
+          <div>
+            <h5><a href="https://www.northside.com/" target="_blank">Northside Hospital</a></h5>
+            <div class="target-meta">
+              <span>🏥 5 hospitals</span>
+              <span>👶 #1 in US for deliveries</span>
+              <span>💰 $6.7B revenue</span>
+            </div>
+            <p>Delivers more babies than any single hospital in the US. 621 beds at flagship Atlanta campus.</p>
+            <p class="target-pain">Pain: New parents looking for family activities; staff wellness</p>
+            <p class="target-approach">Approach: "New Parent Events" portal concept - unique angle</p>
+          </div>
+          <span class="badge badge-gold">High Fit</span>
+        </div>
+
+        <div class="target-card">
+          <div>
+            <h5><a href="https://www.gradyhealth.org/" target="_blank">Grady Health System</a></h5>
+            <div class="target-meta">
+              <span>🏥 Public hospital</span>
+              <span>🎓 Emory + Morehouse teaching</span>
+              <span>🚨 Level I Trauma</span>
+            </div>
+            <p>One of the largest public hospitals in the Southeast. Serves underserved communities.</p>
+            <p class="target-pain">Pain: High-stress environment; staff burnout is extreme</p>
+            <p class="target-approach">Approach: Staff wellness focus; free/low-cost events emphasis</p>
+          </div>
+          <span class="badge badge-cyan">Good Fit</span>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top: 1.5rem; background: linear-gradient(135deg, rgba(0, 212, 232, 0.1) 0%, rgba(232, 85, 160, 0.1) 100%); border-color: var(--neon-cyan);">
+        <h4 style="color: var(--neon-cyan); margin: 0 0 0.75rem;">Two Pitch Angles for Healthcare</h4>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem;">
+          <div>
+            <p style="color: var(--cream); font-weight: 600; margin-bottom: 0.25rem;">1. Employee Engagement Portal</p>
+            <p style="color: var(--soft); font-size: 0.875rem; margin: 0;">"Help your staff have a life outside work" - wellness, retention, culture. Budget owner: HR/CPO. Faster sale.</p>
+          </div>
+          <div>
+            <p style="color: var(--cream); font-weight: 600; margin-bottom: 0.25rem;">2. Patient/Family Experience Portal</p>
+            <p style="color: var(--soft); font-size: 0.875rem; margin: 0;">"Things to do near [Hospital] for families" - NICU parents, long-stay families. Budget owner: CXO. Differentiator.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Action Plan Section -->
+    <section id="plan" class="section">
+      <div class="section-header">
+        <span class="section-number">3</span>
+        <h2>4-Week Action Plan</h2>
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat">
+          <div class="stat-value">5</div>
+          <div class="stat-label">Hotels</div>
+        </div>
+        <div class="stat">
+          <div class="stat-value">4</div>
+          <div class="stat-label">Media</div>
+        </div>
+        <div class="stat">
+          <div class="stat-value">4</div>
+          <div class="stat-label">Civic Orgs</div>
+        </div>
+        <div class="stat">
+          <div class="stat-value">6</div>
+          <div class="stat-label">Healthcare</div>
+        </div>
+        <div class="stat">
+          <div class="stat-value">3</div>
+          <div class="stat-label">Corporate</div>
+        </div>
+      </div>
+
+      <div class="timeline">
+        <div class="timeline-item">
+          <h4>Week 1: Hotels (Highest Priority)</h4>
+          <p><strong>Mon:</strong> Research + draft emails for Hotel Clermont and Kimpton Shane</p>
+          <p><strong>Tue:</strong> Research The Tess / Peregrine Hospitality; send all 3 emails</p>
+          <p><strong>Wed:</strong> LinkedIn connection requests to GMs of all 3</p>
+          <p><strong>Thu:</strong> Research + draft emails for The Darwin and Stonehurst Place</p>
+          <p><strong>Fri:</strong> Follow up on any opens/clicks; track engagement</p>
+        </div>
+
+        <div class="timeline-item">
+          <h4>Week 2: Media Companies</h4>
+          <p><strong>Mon:</strong> Research Creative Loafing - find right contact (Editor/Digital Director)</p>
+          <p><strong>Tue:</strong> Draft + send Creative Loafing email</p>
+          <p><strong>Wed:</strong> Atlanta Magazine + Simply Buckhead research + outreach</p>
+          <p><strong>Thu:</strong> Atlanta on the Cheap - perfect fit, research founder</p>
+          <p><strong>Fri:</strong> Follow-ups on all hotels + media outreach</p>
+        </div>
+
+        <div class="timeline-item">
+          <h4>Week 3: Civic Organizations</h4>
+          <p><strong>Mon:</strong> Midtown Alliance research - find ED or marketing lead</p>
+          <p><strong>Tue:</strong> Draft + send Midtown Alliance email</p>
+          <p><strong>Wed:</strong> Buckhead CID + Upper Westside CID research + outreach</p>
+          <p><strong>Thu:</strong> ACVB / Discover Atlanta - more complex, research approach</p>
+          <p><strong>Fri:</strong> All follow-ups; review pipeline and results</p>
+        </div>
+
+        <div class="timeline-item">
+          <h4>Week 4: Healthcare (Warm Outreach)</h4>
+          <p><strong>Mon:</strong> Draft exploratory emails for Gozio contacts at Emory, Piedmont, CHOA</p>
+          <p><strong>Tue:</strong> Send warm outreach - framed as market research + intro</p>
+          <p><strong>Wed:</strong> Research WellStar and Northside contacts (HR/Employee Experience leaders)</p>
+          <p><strong>Thu:</strong> Draft cold outreach for WellStar + Northside; send if contacts found</p>
+          <p><strong>Fri:</strong> Full pipeline review; schedule demos for any interested parties</p>
+        </div>
+      </div>
+
+      <div class="callout" style="border-left-color: var(--neon-magenta);">
+        <p style="color: var(--cream);"><strong style="color: var(--neon-magenta);">Parallel Track Option:</strong> Since you have warm healthcare relationships, consider starting Week 4 activities in Week 1. Your Gozio network outreach can run parallel to cold hotel/media outreach - different contacts, different conversations.</p>
+      </div>
+    </section>
+
+    <!-- Next Steps Section -->
+    <section id="next" class="section">
+      <div class="section-header">
+        <span class="section-number">4</span>
+        <h2>Immediate Next Steps</h2>
+      </div>
+
+      <ul class="checklist">
+        <li>Pick your first target (recommend: Hotel Clermont - independent = fast decisions)</li>
+        <li>Draft personalized cold email using sales-enablement framework</li>
+        <li>Create "Atlanta Demo" portal with polished branding to show prospects</li>
+        <li>Set up simple tracking spreadsheet: Target, Contact, Date, Response, Next Step</li>
+        <li>Research Hotel Clermont GM on LinkedIn before reaching out</li>
+        <li>Prepare 2-minute demo script showing portal creation flow</li>
+        <li class="done" style="border-top: 2px solid var(--neon-magenta); margin-top: 1rem; padding-top: 1rem;"><strong style="color: var(--neon-magenta);">Healthcare Track:</strong> List your Gozio contacts at Emory, Piedmont, CHOA</li>
+        <li>Draft warm exploratory email: "Is employee engagement something your HR team cares about?"</li>
+        <li>Identify which contacts could intro you to HR/Employee Experience leaders</li>
+      </ul>
+
+      <div class="callout" style="margin-top: 3rem;">
+        <p><strong>Why hotels first:</strong> Clear pain point (concierge overhead), clear buyer (GM), clear ROI (guest satisfaction, differentiation), and they're used to paying for tech. Win one, get case study, unlock the rest.</p>
+      </div>
+
+      <div class="callout" style="margin-top: 1rem; border-left-color: var(--neon-magenta);">
+        <p><strong style="color: var(--neon-magenta);">Why healthcare in parallel:</strong> Your Gozio relationships are a moat most founders don't have. A warm intro to a health system HR leader is worth 10 cold emails to hotel GMs. Don't leave this advantage on the table.</p>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="logo" style="display: inline-flex; margin-bottom: 1rem;">
+      <span class="logo-lost">LOST</span>
+      <span class="logo-city">CITY</span>
+    </div>
+    <p>Atlanta Go-to-Market Plan • Generated February 2026</p>
+  </footer>
+
+</body>
+</html>

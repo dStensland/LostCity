@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense } from "react";
+import { Suspense, useState, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import SimpleFilterBar from "@/components/SimpleFilterBar";
 import EventList from "@/components/EventList";
@@ -9,7 +9,7 @@ import CalendarView from "@/components/CalendarView";
 import MobileCalendarView from "@/components/calendar/MobileCalendarView";
 import PortalSpotsView from "@/components/PortalSpotsView";
 import PortalCommunityView from "@/components/PortalCommunityView";
-import { QuickTagsRow, SubcategoryRow, ActiveFiltersRow } from "@/components/filters";
+import { ActiveFiltersRow } from "@/components/filters";
 
 type FindType = "events" | "destinations" | "orgs";
 type DisplayMode = "list" | "map" | "calendar";
@@ -64,6 +64,28 @@ function FindViewInner({
 }: FindViewProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const [eventSearch, setEventSearch] = useState(searchParams?.get("search") || "");
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const pathname = `/${portalSlug}`;
+
+  // Sync local state when URL search param changes externally
+  useEffect(() => {
+    setEventSearch(searchParams?.get("search") || "");
+  }, [searchParams]);
+
+  const updateSearchParam = (value: string) => {
+    setEventSearch(value);
+    clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      const params = new URLSearchParams(searchParams?.toString() || "");
+      if (value) {
+        params.set("search", value);
+      } else {
+        params.delete("search");
+      }
+      router.push(`${pathname}?${params.toString()}`, { scroll: false });
+    }, 300);
+  };
 
   const handleTypeChange = (type: FindType) => {
     const params = new URLSearchParams(searchParams?.toString() || "");
@@ -100,19 +122,36 @@ function FindViewInner({
       {/* Filter bar for events */}
       {findType === "events" && (
         <Suspense fallback={<div className="h-10 bg-[var(--night)]" />}>
-          <SimpleFilterBar variant={displayMode === "map" ? "compact" : "full"} />
-          {/* Layered filter rows */}
-          <div className="sticky top-[156px] z-10 bg-[var(--night)] border-b border-[var(--twilight)]">
-            <div className="max-w-5xl mx-auto">
-              {/* Quick Tags - always visible */}
-              <QuickTagsRow />
-              {/* Subcategories - appears when category selected */}
-              <SubcategoryRow />
-              {/* Active Filters - appears when filters active */}
-              <div className="px-4 pb-2">
-                <ActiveFiltersRow />
-              </div>
+          {/* Search input */}
+          <div className="relative mb-3">
+            <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none">
+              <svg className="w-4 h-4 text-[var(--muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
             </div>
+            <input
+              type="text"
+              placeholder="Search events..."
+              value={eventSearch}
+              onChange={(e) => updateSearchParam(e.target.value)}
+              className="w-full pl-10 pr-10 py-2.5 bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg font-mono text-sm text-[var(--cream)] placeholder:text-[var(--muted)] focus:outline-none focus:border-[var(--coral)]/50 transition-colors"
+            />
+            {eventSearch && (
+              <button
+                onClick={() => updateSearchParam("")}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--muted)] hover:text-[var(--cream)] transition-colors"
+                aria-label="Clear search"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            )}
+          </div>
+          <SimpleFilterBar variant={displayMode === "map" ? "compact" : "full"} />
+          {/* Active Filters */}
+          <div className="px-4 pb-2">
+            <ActiveFiltersRow />
           </div>
         </Suspense>
       )}

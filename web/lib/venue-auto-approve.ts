@@ -1,6 +1,9 @@
 import { createServiceClient } from "@/lib/supabase/service";
 import { isValidString } from "@/lib/api-utils";
 
+// Foursquare Places API base URL (migrated from api.foursquare.com/v3)
+const FOURSQUARE_BASE_URL = "https://places-api.foursquare.com";
+
 // Get API key lazily to avoid build-time errors during static page generation
 function getFoursquareApiKey(): string {
   const key = process.env.FOURSQUARE_API_KEY;
@@ -17,8 +20,10 @@ export interface AutoApproveResult {
 }
 
 interface FoursquarePlaceDetails {
-  fsq_id: string;
+  fsq_place_id: string;
   name: string;
+  latitude?: number;
+  longitude?: number;
   location: {
     formatted_address?: string;
     address?: string;
@@ -26,12 +31,6 @@ interface FoursquarePlaceDetails {
     region?: string;
     postcode?: string;
     neighborhood?: string[];
-  };
-  geocodes?: {
-    main?: {
-      latitude: number;
-      longitude: number;
-    };
   };
 }
 
@@ -48,12 +47,13 @@ async function fetchFoursquarePlaceDetails(
   }
 
   const response = await fetch(
-    `https://api.foursquare.com/v3/places/${fsqId}`,
+    `${FOURSQUARE_BASE_URL}/places/${fsqId}`,
     {
       method: "GET",
       headers: {
-        Authorization: apiKey,
+        Authorization: `Bearer ${apiKey}`,
         Accept: "application/json",
+        "X-Places-Api-Version": "2025-06-17",
       },
     }
   );
@@ -201,8 +201,8 @@ export async function autoApproveVenue(
         city: addressData.city,
         state: addressData.state,
         zip: addressData.zip,
-        lat: placeDetails.geocodes?.main?.latitude ?? null,
-        lng: placeDetails.geocodes?.main?.longitude ?? null,
+        lat: placeDetails.latitude ?? null,
+        lng: placeDetails.longitude ?? null,
         foursquare_id: placeId,
         submitted_by: submittedBy,
         active: true,

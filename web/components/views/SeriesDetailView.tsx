@@ -176,7 +176,7 @@ export default function SeriesDetailView({ slug, portalSlug, onClose }: SeriesDe
 
   if (loading) {
     return (
-      <div className="animate-fadeIn pt-6">
+      <div className="pt-6">
         {/* Hero skeleton with floating back button */}
         <div className="relative rounded-xl overflow-hidden mb-6 bg-[var(--dusk)]">
           <NeonFloatingBackButton onClose={onClose} />
@@ -196,7 +196,7 @@ export default function SeriesDetailView({ slug, portalSlug, onClose }: SeriesDe
 
   if (error || !series) {
     return (
-      <div className="animate-fadeIn pt-6">
+      <div className="pt-6">
         <div className="relative rounded-xl overflow-hidden mb-6 bg-[var(--dusk)] border border-[var(--twilight)]">
           <NeonFloatingBackButton onClose={onClose} />
           <div className="text-center py-16">
@@ -218,7 +218,7 @@ export default function SeriesDetailView({ slug, portalSlug, onClose }: SeriesDe
   const totalEvents = venueShowtimes.reduce((sum, vs) => sum + vs.events.length, 0);
 
   return (
-    <div className="animate-fadeIn pt-6 pb-8">
+    <div className="pt-6 pb-8">
       {/* Hero with poster and info */}
       <div
         className="relative rounded-xl overflow-hidden mb-6 border border-[var(--twilight)]"
@@ -356,6 +356,41 @@ export default function SeriesDetailView({ slug, portalSlug, onClose }: SeriesDe
         </a>
       )}
 
+      {/* Recurring show callout */}
+      {series.series_type === "recurring_show" && series.frequency && (
+        <div
+          className="rounded-xl border p-4 mb-6"
+          style={{
+            borderColor: `${typeColor}40`,
+            background: `linear-gradient(135deg, ${typeColor}08, ${typeColor}04)`,
+          }}
+        >
+          <div className="flex items-start gap-3">
+            <svg className="w-5 h-5 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: typeColor }}>
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            <div>
+              <p className="font-medium text-[var(--cream)]">
+                {series.frequency === "weekly" && series.day_of_week
+                  ? `Every ${series.day_of_week.charAt(0).toUpperCase() + series.day_of_week.slice(1)}`
+                  : series.frequency === "biweekly" && series.day_of_week
+                    ? `Every other ${series.day_of_week.charAt(0).toUpperCase() + series.day_of_week.slice(1)}`
+                    : series.frequency === "monthly" && series.day_of_week
+                      ? `Monthly on ${series.day_of_week.charAt(0).toUpperCase() + series.day_of_week.slice(1)}s`
+                      : series.frequency.charAt(0).toUpperCase() + series.frequency.slice(1)}
+                {venueShowtimes[0]?.events[0]?.time && ` at ${formatTime(venueShowtimes[0].events[0].time)}`}
+              </p>
+              {venueShowtimes.length === 1 && venueShowtimes[0].venue && (
+                <p className="text-sm text-[var(--muted)] mt-0.5">
+                  at {venueShowtimes[0].venue.name}
+                  {venueShowtimes[0].venue.neighborhood && ` (${venueShowtimes[0].venue.neighborhood})`}
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Showtimes by venue */}
       <div>
         <h2 className="font-mono text-[0.65rem] font-medium text-[var(--muted)] uppercase tracking-widest mb-4">
@@ -371,77 +406,141 @@ export default function SeriesDetailView({ slug, portalSlug, onClose }: SeriesDe
 
         {venueShowtimes.length > 0 ? (
           <div className="space-y-4">
-            {venueShowtimes.map((vs) => {
-              const eventsByDate = groupEventsByDate(vs.events);
-
-              return (
-                <div
-                  key={vs.venue.id}
-                  className="rounded-xl border border-[var(--twilight)] overflow-hidden bg-[var(--dusk)]"
+            {/* Compact single-venue layout for recurring shows */}
+            {series.series_type === "recurring_show" && venueShowtimes.length === 1 ? (
+              <div className="rounded-xl border border-[var(--twilight)] overflow-hidden bg-[var(--dusk)]">
+                {/* Venue header */}
+                <button
+                  onClick={() => handleVenueClick(venueShowtimes[0].venue.slug)}
+                  className="w-full p-3 border-b border-[var(--twilight)]/50 flex items-center gap-2 hover:bg-[var(--twilight)]/20 transition-colors group"
                 >
-                  {/* Venue header */}
-                  <button
-                    onClick={() => handleVenueClick(vs.venue.slug)}
-                    className="w-full p-3 border-b border-[var(--twilight)]/50 flex items-center gap-2 hover:bg-[var(--twilight)]/20 transition-colors group"
-                  >
-                    <svg
-                      className="w-4 h-4 text-[var(--muted)] group-hover:text-[var(--coral)] transition-colors flex-shrink-0"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                    </svg>
-                    <span className="font-medium text-[var(--cream)] group-hover:text-[var(--coral)] transition-colors">
-                      {vs.venue.name}
+                  <svg className="w-4 h-4 text-[var(--muted)] group-hover:text-[var(--coral)] transition-colors flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                  <span className="font-medium text-[var(--cream)] group-hover:text-[var(--coral)] transition-colors">
+                    {venueShowtimes[0].venue.name}
+                  </span>
+                  {venueShowtimes[0].venue.neighborhood && (
+                    <span className="text-xs text-[var(--muted)] font-mono">
+                      ({venueShowtimes[0].venue.neighborhood})
                     </span>
-                    {vs.venue.neighborhood && (
-                      <span className="text-xs text-[var(--muted)] font-mono">
-                        ({vs.venue.neighborhood})
-                      </span>
-                    )}
-                    <svg
-                      className="w-4 h-4 text-[var(--muted)] group-hover:text-[var(--coral)] transition-colors ml-auto"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
+                  )}
+                  <svg className="w-4 h-4 text-[var(--muted)] group-hover:text-[var(--coral)] transition-colors ml-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+
+                {/* Compact date list */}
+                <div className="p-3">
+                  {venueShowtimes[0].events.length > 0 && (
+                    <div className="space-y-1.5">
+                      {/* Next date highlighted */}
+                      <button
+                        onClick={() => handleEventClick(venueShowtimes[0].events[0].id)}
+                        className="w-full flex items-center gap-3 px-2 py-1.5 rounded-lg bg-[var(--twilight)]/30 hover:bg-[var(--coral)] hover:text-[var(--void)] transition-colors group/next"
+                      >
+                        <span className="text-xs font-medium" style={{ color: typeColor }}>Next</span>
+                        <span className="text-sm font-medium text-[var(--cream)] group-hover/next:text-inherit">
+                          {formatDate(venueShowtimes[0].events[0].date)}
+                        </span>
+                        {venueShowtimes[0].events[0].time && (
+                          <span className="font-mono text-xs text-[var(--muted)] group-hover/next:text-inherit">
+                            {formatTime(venueShowtimes[0].events[0].time)}
+                          </span>
+                        )}
+                      </button>
+                      {/* Future dates */}
+                      {venueShowtimes[0].events.slice(1).map((event) => (
+                        <button
+                          key={event.id}
+                          onClick={() => handleEventClick(event.id)}
+                          className="w-full flex items-center gap-3 px-2 py-1 rounded hover:bg-[var(--twilight)]/30 transition-colors text-left"
+                        >
+                          <span className="text-sm text-[var(--soft)]">{formatDate(event.date)}</span>
+                          {event.time && (
+                            <span className="font-mono text-xs text-[var(--muted)]">{formatTime(event.time)}</span>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : (
+              /* Standard multi-venue layout */
+              venueShowtimes.map((vs) => {
+                const eventsByDate = groupEventsByDate(vs.events);
+
+                return (
+                  <div
+                    key={vs.venue.id}
+                    className="rounded-xl border border-[var(--twilight)] overflow-hidden bg-[var(--dusk)]"
+                  >
+                    {/* Venue header */}
+                    <button
+                      onClick={() => handleVenueClick(vs.venue.slug)}
+                      className="w-full p-3 border-b border-[var(--twilight)]/50 flex items-center gap-2 hover:bg-[var(--twilight)]/20 transition-colors group"
                     >
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
-                  </button>
+                      <svg
+                        className="w-4 h-4 text-[var(--muted)] group-hover:text-[var(--coral)] transition-colors flex-shrink-0"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                      <span className="font-medium text-[var(--cream)] group-hover:text-[var(--coral)] transition-colors">
+                        {vs.venue.name}
+                      </span>
+                      {vs.venue.neighborhood && (
+                        <span className="text-xs text-[var(--muted)] font-mono">
+                          ({vs.venue.neighborhood})
+                        </span>
+                      )}
+                      <svg
+                        className="w-4 h-4 text-[var(--muted)] group-hover:text-[var(--coral)] transition-colors ml-auto"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </button>
 
-                  {/* Dates and times */}
-                  <div className="divide-y divide-[var(--twilight)]/30">
-                    {Array.from(eventsByDate.entries()).map(([date, dateEvents]) => (
-                      <div key={date} className="px-3 py-2.5">
-                        <div className="flex items-center gap-3">
-                          {/* Date */}
-                          <div className="flex-shrink-0 w-24">
-                            <span className="text-sm font-medium text-[var(--soft)]">
-                              {formatDate(date)}
-                            </span>
-                          </div>
+                    {/* Dates and times */}
+                    <div className="divide-y divide-[var(--twilight)]/30">
+                      {Array.from(eventsByDate.entries()).map(([date, dateEvents]) => (
+                        <div key={date} className="px-3 py-2.5">
+                          <div className="flex items-center gap-3">
+                            {/* Date */}
+                            <div className="flex-shrink-0 w-24">
+                              <span className="text-sm font-medium text-[var(--soft)]">
+                                {formatDate(date)}
+                              </span>
+                            </div>
 
-                          {/* Times */}
-                          <div className="flex flex-wrap items-center gap-1.5">
-                            {dateEvents.map((event) => (
-                              <button
-                                key={event.id}
-                                onClick={() => handleEventClick(event.id)}
-                                className="font-mono text-xs px-2 py-1 rounded bg-[var(--twilight)]/50 text-[var(--cream)] hover:bg-[var(--coral)] hover:text-[var(--void)] transition-colors"
-                              >
-                                {formatTime(event.time) || "Time TBA"}
-                              </button>
-                            ))}
+                            {/* Times */}
+                            <div className="flex flex-wrap items-center gap-1.5">
+                              {dateEvents.map((event) => (
+                                <button
+                                  key={event.id}
+                                  onClick={() => handleEventClick(event.id)}
+                                  className="font-mono text-xs px-2 py-1 rounded bg-[var(--twilight)]/50 text-[var(--cream)] hover:bg-[var(--coral)] hover:text-[var(--void)] transition-colors"
+                                >
+                                  {formatTime(event.time) || "Time TBA"}
+                                </button>
+                              ))}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })
+            )}
           </div>
         ) : (
           <div className="py-8 text-center border border-[var(--twilight)] rounded-xl bg-[var(--dusk)]">

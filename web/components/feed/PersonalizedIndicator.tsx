@@ -54,9 +54,9 @@ export default function PersonalizedIndicator({
         {isPersonalized ? (
           <>
             {/* Personalized icon */}
-            <div className="flex-shrink-0 w-5 h-5 rounded-full bg-[var(--neon-cyan)]/20 flex items-center justify-center">
+            <div className="flex-shrink-0 w-5 h-5 rounded-full bg-[var(--coral)]/20 flex items-center justify-center">
               <svg
-                className="w-3 h-3 text-[var(--neon-cyan)]"
+                className="w-3 h-3 text-[var(--coral)]"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -105,7 +105,7 @@ export default function PersonalizedIndicator({
         onClick={onToggle}
         className={`flex-shrink-0 px-2.5 py-1 rounded-full font-mono text-[0.65rem] font-medium transition-all ${
           isPersonalized
-            ? "bg-[var(--neon-cyan)]/20 text-[var(--neon-cyan)] hover:bg-[var(--neon-cyan)]/30"
+            ? "bg-[var(--coral)]/20 text-[var(--coral)] hover:bg-[var(--coral)]/30"
             : "bg-[var(--twilight)] text-[var(--muted)] hover:text-[var(--cream)] hover:bg-[var(--dusk)]"
         }`}
       >

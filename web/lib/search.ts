@@ -13,6 +13,7 @@ import { getMoodById, type MoodId } from "./moods";
 import { decodeCursor, generateNextCursor, type CursorData } from "./cursor";
 import { getPortalSourceAccess, type PortalSourceAccess } from "./federation";
 import { createLogger } from "./logger";
+import type { Frequency, DayOfWeek } from "./recurrence";
 
 // Cache for portal source access (refreshed on each request but cached within a request)
 const sourceAccessCache: Map<string, { data: PortalSourceAccess; timestamp: number }> = new Map();
@@ -128,6 +129,8 @@ export type EventWithLocation = Event & {
     title: string;
     series_type: string;
     image_url: string | null;
+    frequency: Frequency;
+    day_of_week: DayOfWeek;
   } | null;
   // Social proof counts (optional, added when requested)
   going_count?: number;
@@ -381,7 +384,7 @@ export async function getFilteredEventsWithSearch(
       *,
       venue:venues(id, name, slug, address, neighborhood, city, state, lat, lng, typical_price_min, typical_price_max, venue_type),
       category_data:categories(typical_price_min, typical_price_max),
-      series:series(id, slug, title, series_type, image_url)
+      series:series(id, slug, title, series_type, image_url, frequency, day_of_week)
     `,
       { count: "exact" }
     )
@@ -680,7 +683,7 @@ export async function getFilteredEventsWithCursor(
       *,
       venue:venues(id, name, slug, address, neighborhood, city, state, lat, lng, typical_price_min, typical_price_max, venue_type),
       category_data:categories(typical_price_min, typical_price_max),
-      series:series(id, slug, title, series_type, image_url)
+      series:series(id, slug, title, series_type, image_url, frequency, day_of_week)
     `
     )
     .gte("start_date", today)

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import Image from "next/image";
 
 interface LazyImageProps {
@@ -16,6 +16,39 @@ interface LazyImageProps {
   placeholderColor?: string;
   /** How to fit the image: 'cover' fills container (crops), 'contain' fits inside (letterbox) */
   objectFit?: "cover" | "contain";
+}
+
+// Check if a src string is a usable image URL
+function isValidImageSrc(src: string): boolean {
+  if (!src) return false;
+  if (src.startsWith("/") || src.startsWith("data:")) return true;
+  try {
+    new URL(src);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// Check if URL is external (not from our domain or configured remotePatterns)
+function isExternalUrl(src: string): boolean {
+  if (!src) return false;
+  // Relative URLs are internal
+  if (src.startsWith("/")) return false;
+  // Data URLs are internal
+  if (src.startsWith("data:")) return false;
+
+  try {
+    const url = new URL(src);
+    // Supabase storage is configured in next.config.js
+    if (url.hostname.endsWith(".supabase.co")) return false;
+    // Our own domain
+    if (url.hostname === "lostcity.ai" || url.hostname.endsWith(".lostcity.ai")) return false;
+    // Everything else is external
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -36,6 +69,20 @@ export default function LazyImage({
   objectFit = "cover",
 }: LazyImageProps) {
   const [isLoaded, setIsLoaded] = useState(false);
+
+  // Use unoptimized for external URLs to avoid hostname configuration errors
+  const unoptimized = useMemo(() => isExternalUrl(src), [src]);
+  const validSrc = useMemo(() => isValidImageSrc(src), [src]);
+
+  // If src is not a valid URL, render placeholder only
+  if (!validSrc) {
+    return (
+      <div
+        className={`relative overflow-hidden ${className}`}
+        style={{ backgroundColor: placeholderColor }}
+      />
+    );
+  }
 
   return (
     <div
@@ -68,6 +115,7 @@ export default function LazyImage({
           onError?.();
         }}
         priority={priority}
+        unoptimized={unoptimized}
       />
     </div>
   );

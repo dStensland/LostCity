@@ -12,8 +12,8 @@ from typing import Optional
 from supabase import create_client, Client
 from config import get_config
 from tag_inference import infer_tags
-from series import get_or_create_series
-from posters import get_poster_for_film_event
+from series import get_or_create_series, update_series_metadata
+from posters import get_metadata_for_film_event
 from artist_images import get_info_for_music_event
 
 logger = logging.getLogger(__name__)
@@ -221,8 +221,19 @@ def validate_event_title(title: str) -> bool:
         "all locations", "event type", "event location", "this month",
         "select date.", "sold out", "our calendar of shows and events",
         "corporate partnerships", "big futures", "match resources",
+        # Placeholder/TBA titles
+        "tba", "tbd", "tbc", "t.b.a.", "t.b.d.", "to be announced",
+        "to be determined", "to be confirmed", "event tba", "event tbd",
+        "show tba", "show tbd", "artist tba", "performer tba",
+        "special event", "special event tba", "private event",
+        "closed", "closed for private event", "n/a", "none",
     }
     if title.lower().strip() in junk_exact:
+        return False
+
+    # Titles that are just "TBA" with minor decoration ("** TBA **", "- TBA -")
+    stripped = re.sub(r"[^a-zA-Z0-9\s]", "", title).strip()
+    if stripped.upper() in {"TBA", "TBD", "TBC"}:
         return False
 
     # Day-of-week only titles
@@ -279,14 +290,15 @@ def insert_event(event_data: dict, series_hint: dict = None, genres: list = None
             venue_vibes = venue.get("vibes") or []
             venue_type = venue.get("venue_type")
 
-    # Auto-fetch movie poster for film events without images
-    if event_data.get("category") == "film" and not event_data.get("image_url"):
-        poster_url = get_poster_for_film_event(
+    # Auto-fetch movie metadata (poster, director, runtime, etc.) for film events
+    film_metadata = None
+    if event_data.get("category") == "film":
+        film_metadata = get_metadata_for_film_event(
             event_data.get("title", ""),
             event_data.get("image_url")
         )
-        if poster_url:
-            event_data["image_url"] = poster_url
+        if film_metadata and not event_data.get("image_url"):
+            event_data["image_url"] = film_metadata.poster_url
 
     # Auto-fetch artist image and genres for music events
     if event_data.get("category") == "music":
@@ -304,6 +316,22 @@ def insert_event(event_data: dict, series_hint: dict = None, genres: list = None
     # Infer and merge tags
     event_data["tags"] = infer_tags(event_data, venue_vibes, venue_type=venue_type)
 
+    # Enrich series_hint with OMDB metadata for film events
+    if film_metadata and series_hint and series_hint.get("series_type") == "film":
+        omdb_fields = {
+            "director": film_metadata.director,
+            "runtime_minutes": film_metadata.runtime_minutes,
+            "year": film_metadata.year,
+            "rating": film_metadata.rating,
+            "imdb_id": film_metadata.imdb_id,
+            "genres": film_metadata.genres,
+            "description": film_metadata.plot,
+            "image_url": film_metadata.poster_url,
+        }
+        for key, value in omdb_fields.items():
+            if value is not None and not series_hint.get(key):
+                series_hint[key] = value
+
     # Process series association if hint provided
     if series_hint:
         series_id = get_or_create_series(client, series_hint, event_data.get("category"))
@@ -311,10 +339,28 @@ def insert_event(event_data: dict, series_hint: dict = None, genres: list = None
             event_data["series_id"] = series_id
             # Don't store genres on event if it has a series (genres live on series)
             genres = None
+            # Backfill NULL fields on existing series with OMDB metadata
+            if film_metadata and series_hint.get("series_type") == "film":
+                update_series_metadata(client, series_id, {
+                    "director": film_metadata.director,
+                    "runtime_minutes": film_metadata.runtime_minutes,
+                    "year": film_metadata.year,
+                    "rating": film_metadata.rating,
+                    "imdb_id": film_metadata.imdb_id,
+                    "genres": film_metadata.genres,
+                    "description": film_metadata.plot,
+                    "image_url": film_metadata.poster_url,
+                })
 
     # Add genres for standalone events (events without a series)
     if genres and not event_data.get("series_id"):
         event_data["genres"] = genres
+
+    # Inherit portal_id from source if not explicitly set
+    if not event_data.get("portal_id") and event_data.get("source_id"):
+        source = client.table("sources").select("owner_portal_id").eq("id", event_data["source_id"]).execute()
+        if source.data and source.data[0].get("owner_portal_id"):
+            event_data["portal_id"] = source.data[0]["owner_portal_id"]
 
     result = client.table("events").insert(event_data).execute()
     return result.data[0]["id"]

@@ -82,7 +82,7 @@ function SavedFiltersMenu({ variant = "compact" }: SavedFiltersMenuProps) {
         onClick={() => setIsOpen(!isOpen)}
         className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-full font-mono text-xs font-medium transition-all ${
           savedFilters.length > 0
-            ? "bg-[var(--neon-cyan)]/20 text-[var(--neon-cyan)] hover:bg-[var(--neon-cyan)]/30"
+            ? "bg-[var(--coral)]/20 text-[var(--coral)] hover:bg-[var(--coral)]/30"
             : "bg-[var(--twilight)] text-[var(--muted)] hover:text-[var(--cream)]"
         }`}
         title="Saved Filters"
@@ -92,7 +92,7 @@ function SavedFiltersMenu({ variant = "compact" }: SavedFiltersMenuProps) {
         </svg>
         {variant === "full" && "Saved"}
         {savedFilters.length > 0 && (
-          <span className="px-1 py-0.5 rounded-full bg-[var(--neon-cyan)]/30 text-[0.55rem]">
+          <span className="px-1 py-0.5 rounded-full bg-[var(--coral)]/30 text-[0.55rem]">
             {savedFilters.length}
           </span>
         )}
@@ -111,7 +111,7 @@ function SavedFiltersMenu({ variant = "compact" }: SavedFiltersMenuProps) {
                     value={filterName}
                     onChange={(e) => setFilterName(e.target.value)}
                     placeholder={generateFilterName(currentFilter)}
-                    className="w-full px-3 py-2 rounded-md bg-[var(--dusk)] border border-[var(--twilight)] text-[var(--cream)] font-mono text-xs placeholder:text-[var(--muted)] focus:outline-none focus:border-[var(--neon-cyan)]"
+                    className="w-full px-3 py-2 rounded-md bg-[var(--dusk)] border border-[var(--twilight)] text-[var(--cream)] font-mono text-xs placeholder:text-[var(--muted)] focus:outline-none focus:border-[var(--coral)]"
                     autoFocus
                     onKeyDown={(e) => {
                       if (e.key === "Enter") handleSaveFilter();
@@ -121,7 +121,7 @@ function SavedFiltersMenu({ variant = "compact" }: SavedFiltersMenuProps) {
                   <div className="flex gap-2">
                     <button
                       onClick={handleSaveFilter}
-                      className="flex-1 px-3 py-1.5 rounded-md bg-[var(--neon-cyan)] text-[var(--void)] font-mono text-xs font-medium hover:bg-[var(--neon-cyan)]/80"
+                      className="flex-1 px-3 py-1.5 rounded-md bg-[var(--coral)] text-[var(--void)] font-mono text-xs font-medium hover:bg-[var(--coral)]/80"
                     >
                       Save
                     </button>
@@ -136,7 +136,7 @@ function SavedFiltersMenu({ variant = "compact" }: SavedFiltersMenuProps) {
               ) : (
                 <button
                   onClick={() => setShowSaveDialog(true)}
-                  className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-md bg-[var(--neon-cyan)]/20 text-[var(--neon-cyan)] font-mono text-xs font-medium hover:bg-[var(--neon-cyan)]/30 transition-colors"
+                  className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-md bg-[var(--coral)]/20 text-[var(--coral)] font-mono text-xs font-medium hover:bg-[var(--coral)]/30 transition-colors"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />

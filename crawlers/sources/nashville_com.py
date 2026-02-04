@@ -14,8 +14,10 @@ from typing import Optional
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
 
 from utils import slugify
-from db import get_or_create_venue, insert_event, find_event_by_hash
+from db import get_or_create_venue, insert_event, find_event_by_hash, get_portal_id_by_slug
 from dedupe import generate_content_hash
+
+PORTAL_SLUG = "nashville"
 
 logger = logging.getLogger(__name__)
 
@@ -186,6 +188,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_updated = 0
     venue_cache = {}
 
+    portal_id = get_portal_id_by_slug(PORTAL_SLUG)
+
     try:
         with sync_playwright() as p:
             browser = p.chromium.launch(headless=True)
@@ -331,6 +335,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     event_record = {
                         "source_id": source_id,
                         "venue_id": venue_id,
+                        "portal_id": portal_id,
                         "title": title,
                         "description": None,
                         "start_date": start_date,

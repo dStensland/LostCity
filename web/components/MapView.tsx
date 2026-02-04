@@ -130,7 +130,7 @@ const getMapStyles = (isLight: boolean) => `
     overflow: hidden;
   }
   .leaflet-popup-content {
-    min-width: 240px;
+    min-width: 260px;
   }
   .leaflet-popup-close-button {
     width: 24px !important;
@@ -161,8 +161,8 @@ const getMapStyles = (isLight: boolean) => `
     height: 40px !important;
     border-radius: 50%;
     background: linear-gradient(135deg, var(--coral) 0%, var(--neon-magenta) 100%);
-    border: 3px solid rgba(255, 255, 255, 0.9);
-    box-shadow: 0 0 15px rgba(232, 145, 45, 0.4), 0 2px 8px rgba(0,0,0,0.3);
+    border: 2px solid rgba(255, 255, 255, 0.9);
+    box-shadow: 0 0 12px rgba(255, 107, 122, 0.35), 0 2px 8px rgba(0,0,0,0.3);
     font-family: var(--font-mono);
     font-size: 14px;
     font-weight: bold;
@@ -201,8 +201,8 @@ const createNeonIcon = (color: string, iconType: string | null, isLive: boolean 
     html: `<div style="
       --marker-color: ${color};
       background-color: ${color};
-      width: 28px;
-      height: 28px;
+      width: 32px;
+      height: 32px;
       border-radius: 50%;
       border: 2px solid rgba(255, 255, 255, 0.9);
       box-shadow: 0 0 6px ${color}80;
@@ -210,13 +210,13 @@ const createNeonIcon = (color: string, iconType: string | null, isLive: boolean 
       align-items: center;
       justify-content: center;
     ">
-      <svg viewBox="0 0 24 24" style="width: 14px; height: 14px; fill: none; stroke: rgba(0,0,0,0.8); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;">
+      <svg viewBox="0 0 24 24" style="width: 16px; height: 16px; fill: none; stroke: rgba(0,0,0,0.8); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;">
         <path d="${iconPath}"/>
       </svg>
     </div>`,
-    iconSize: [28, 28],
-    iconAnchor: [14, 14],
-    popupAnchor: [0, -14],
+    iconSize: [32, 32],
+    iconAnchor: [16, 16],
+    popupAnchor: [0, -16],
   });
 
   // Cache for reuse
@@ -267,12 +267,94 @@ function MapResizer() {
   return null;
 }
 
+// Helper: create bounds from a center point and radius in meters
+function boundsFromCenterRadius(center: { lat: number; lng: number }, radiusMeters: number): L.LatLngBounds {
+  const earthRadius = 6371000; // meters
+  const latDelta = (radiusMeters / earthRadius) * (180 / Math.PI);
+  const lngDelta = (radiusMeters / (earthRadius * Math.cos((center.lat * Math.PI) / 180))) * (180 / Math.PI);
+  return L.latLngBounds(
+    [center.lat - latDelta, center.lng - lngDelta],
+    [center.lat + latDelta, center.lng + lngDelta]
+  );
+}
+
+// Dynamic map view updater - reacts to center/bounds changes after initial mount
+function MapViewUpdater({ userLocation, centerPoint, viewRadius, fitAllMarkers, spots, events }: {
+  userLocation?: { lat: number; lng: number } | null;
+  centerPoint?: { lat: number; lng: number; radius?: number } | null;
+  viewRadius?: number;
+  fitAllMarkers?: boolean;
+  spots: { lat: number | null; lng: number | null }[];
+  events: { venue?: { lat?: number | null; lng?: number | null } | null }[];
+}) {
+  const map = useMap();
+
+  useEffect(() => {
+    // GPS mode: fly to user location at radius zoom
+    if (userLocation && viewRadius) {
+      const zoom = viewRadius <= 1 ? 14 : viewRadius <= 2 ? 13 : viewRadius <= 5 ? 12 : viewRadius <= 10 ? 11 : 10;
+      map.flyTo([userLocation.lat, userLocation.lng], zoom, { duration: 0.8 });
+      return;
+    }
+
+    // Fit all markers mode (e.g., "All of Atlanta")
+    if (fitAllMarkers) {
+      const coords: [number, number][] = [
+        ...events
+          .filter(e => e.venue?.lat && e.venue?.lng)
+          .map(e => [e.venue!.lat!, e.venue!.lng!] as [number, number]),
+        ...spots
+          .filter(s => s.lat && s.lng)
+          .map(s => [s.lat!, s.lng!] as [number, number]),
+      ];
+      if (coords.length > 0) {
+        const bounds = L.latLngBounds(coords);
+        map.flyToBounds(bounds, { padding: [50, 50], duration: 0.8, maxZoom: 14 });
+      }
+      return;
+    }
+
+    // Neighborhood mode: zoom to neighborhood bounds, contain all markers within
+    if (centerPoint) {
+      // Start with the neighborhood's geographic bounds
+      const neighborhoodRadius = centerPoint.radius || 1500; // default 1.5km
+      const neighborhoodBounds = boundsFromCenterRadius(centerPoint, neighborhoodRadius);
+
+      // Collect marker coords that fall within the neighborhood
+      const markerCoords: [number, number][] = [
+        ...events
+          .filter(e => e.venue?.lat && e.venue?.lng)
+          .map(e => [e.venue!.lat!, e.venue!.lng!] as [number, number]),
+        ...spots
+          .filter(s => s.lat && s.lng)
+          .map(s => [s.lat!, s.lng!] as [number, number]),
+      ];
+
+      // Extend neighborhood bounds to include any markers that are nearby
+      const bounds = neighborhoodBounds;
+      for (const coord of markerCoords) {
+        bounds.extend(coord);
+      }
+
+      map.flyToBounds(bounds, { padding: [40, 40], duration: 0.8, maxZoom: 16 });
+      return;
+    }
+  }, [map, userLocation, centerPoint, viewRadius, fitAllMarkers, spots, events]);
+
+  return null;
+}
+
 interface Props {
   events: EventWithLocation[];
   spots?: Spot[];
   userLocation?: { lat: number; lng: number } | null;
   // View radius in miles for GPS mode - will constrain map to this radius around user
   viewRadius?: number;
+  // Optional center point (e.g., neighborhood center) without showing a user marker
+  // radius is in meters, used to calculate zoom bounds for the neighborhood
+  centerPoint?: { lat: number; lng: number; radius?: number } | null;
+  // When true, fit bounds to all markers instead of using center/radius
+  fitAllMarkers?: boolean;
 }
 
 // Memoized single event marker to prevent re-renders
@@ -293,7 +375,7 @@ const EventMarker = memo(function EventMarker({ event, portalSlug }: EventMarker
     >
       <Popup className="dark-popup">
         <div
-          className="min-w-[240px] p-4 rounded-lg"
+          className="min-w-[260px] p-4 rounded-lg"
           style={{
             borderLeft: `4px solid ${color}`,
             background: `linear-gradient(135deg, ${color}08 0%, transparent 50%)`,
@@ -303,7 +385,7 @@ const EventMarker = memo(function EventMarker({ event, portalSlug }: EventMarker
           <div className="flex items-center justify-between mb-2">
             {event.category && (
               <span
-                className="inline-flex items-center gap-1.5 px-2 py-0.5 text-[0.55rem] font-mono font-medium uppercase tracking-wide rounded"
+                className="inline-flex items-center gap-1.5 px-2 py-0.5 text-[0.6rem] font-mono font-medium uppercase tracking-wide rounded"
                 style={{
                   backgroundColor: `${color}20`,
                   color: color,
@@ -313,7 +395,7 @@ const EventMarker = memo(function EventMarker({ event, portalSlug }: EventMarker
               </span>
             )}
             {isLive && (
-              <span className="flex-shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 text-[0.55rem] font-mono font-medium bg-[var(--neon-red)]/20 text-[var(--neon-red)] rounded">
+              <span className="flex-shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 text-[0.6rem] font-mono font-medium bg-[var(--neon-red)]/20 text-[var(--neon-red)] rounded">
                 <span className="w-1.5 h-1.5 rounded-full bg-[var(--neon-red)] animate-pulse" />
                 LIVE
               </span>
@@ -324,7 +406,7 @@ const EventMarker = memo(function EventMarker({ event, portalSlug }: EventMarker
           <Link
             href={`/${portalSlug}?event=${event.id}`}
             scroll={false}
-            className="block font-medium text-sm text-[var(--cream)] hover:text-[var(--coral)] transition-colors line-clamp-2 mb-2"
+            className="block text-base font-medium text-[var(--cream)] hover:text-[var(--coral)] transition-colors line-clamp-2 mb-2"
           >
             {event.title}
           </Link>
@@ -356,18 +438,18 @@ const EventMarker = memo(function EventMarker({ event, portalSlug }: EventMarker
           {/* Price badge */}
           <div className="mt-3 flex items-center gap-2">
             {event.is_free ? (
-              <span className="inline-block px-2 py-0.5 text-[0.6rem] font-mono font-medium bg-[var(--neon-green)]/20 text-[var(--neon-green)] rounded">
+              <span className="inline-block px-2 py-0.5 text-[0.65rem] font-mono font-medium bg-[var(--neon-green)]/20 text-[var(--neon-green)] rounded">
                 FREE
               </span>
             ) : event.price_min !== null && (
-              <span className="inline-block px-2 py-0.5 text-[0.6rem] font-mono font-medium bg-[var(--gold)]/20 text-[var(--gold)] rounded">
+              <span className="inline-block px-2 py-0.5 text-[0.65rem] font-mono font-medium bg-[var(--gold)]/20 text-[var(--gold)] rounded">
                 ${event.price_min}{event.price_max && event.price_max !== event.price_min ? `–$${event.price_max}` : "+"}
               </span>
             )}
             <Link
               href={`/${portalSlug}?event=${event.id}`}
               scroll={false}
-              className="ml-auto text-[0.6rem] font-mono text-[var(--coral)] hover:underline"
+              className="ml-auto text-[0.65rem] font-mono text-[var(--coral)] hover:underline"
             >
               View details →
             </Link>
@@ -431,7 +513,7 @@ const SpotMarker = memo(function SpotMarker({ spot, portalSlug }: SpotMarkerProp
     >
       <Popup className="dark-popup">
         <div
-          className="min-w-[200px] p-4 rounded-lg"
+          className="min-w-[240px] p-4 rounded-lg"
           style={{
             borderLeft: `4px solid ${color}`,
             background: `linear-gradient(135deg, ${color}08 0%, transparent 50%)`,
@@ -441,7 +523,7 @@ const SpotMarker = memo(function SpotMarker({ spot, portalSlug }: SpotMarkerProp
           <div className="flex items-center justify-between mb-2">
             {spot.venue_type && (
               <span
-                className="inline-flex items-center gap-1.5 px-2 py-0.5 text-[0.55rem] font-mono font-medium uppercase tracking-wide rounded"
+                className="inline-flex items-center gap-1.5 px-2 py-0.5 text-[0.6rem] font-mono font-medium uppercase tracking-wide rounded"
                 style={{
                   backgroundColor: `${color}20`,
                   color: color,
@@ -450,7 +532,7 @@ const SpotMarker = memo(function SpotMarker({ spot, portalSlug }: SpotMarkerProp
                 {spot.venue_type.replace(/_/g, " ")}
               </span>
             )}
-            <span className="flex-shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 text-[0.55rem] font-mono font-medium bg-[var(--neon-green)]/20 text-[var(--neon-green)] rounded">
+            <span className="flex-shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 text-[0.6rem] font-mono font-medium bg-[var(--neon-green)]/20 text-[var(--neon-green)] rounded">
               OPEN
             </span>
           </div>
@@ -458,7 +540,7 @@ const SpotMarker = memo(function SpotMarker({ spot, portalSlug }: SpotMarkerProp
           {/* Name */}
           <Link
             href={`/${portalSlug}/spots/${spot.slug}`}
-            className="block font-medium text-sm text-[var(--cream)] hover:text-[var(--coral)] transition-colors line-clamp-2 mb-2"
+            className="block text-base font-medium text-[var(--cream)] hover:text-[var(--coral)] transition-colors line-clamp-2 mb-2"
           >
             {spot.name}
           </Link>
@@ -484,7 +566,7 @@ const SpotMarker = memo(function SpotMarker({ spot, portalSlug }: SpotMarkerProp
           <div className="mt-3">
             <Link
               href={`/${portalSlug}/spots/${spot.slug}`}
-              className="text-[0.6rem] font-mono text-[var(--coral)] hover:underline"
+              className="text-[0.65rem] font-mono text-[var(--coral)] hover:underline"
             >
               View details →
             </Link>
@@ -530,7 +612,7 @@ const SpotMarkers = memo(function SpotMarkers({ spots, portalSlug }: SpotMarkers
   return true;
 });
 
-export default function MapView({ events, spots = [], userLocation, viewRadius }: Props) {
+export default function MapView({ events, spots = [], userLocation, viewRadius, centerPoint, fitAllMarkers }: Props) {
   const { portal } = usePortal();
   const isLightTheme = (portal.branding?.theme_mode as string) === "light";
   const mapTiles = getMapTiles(isLightTheme);
@@ -639,8 +721,21 @@ export default function MapView({ events, spots = [], userLocation, viewRadius }
   // Early return AFTER all hooks
   if (!mounted) {
     return (
-      <div className="w-full h-full bg-[var(--night)] rounded-lg flex items-center justify-center border border-[var(--twilight)]">
-        <p className="text-[var(--muted)] font-mono text-sm">Loading map...</p>
+      <div className="w-full h-full bg-[var(--night)] rounded-lg border border-[var(--twilight)] relative overflow-hidden">
+        {/* Skeleton map grid lines */}
+        <div className="absolute inset-0 opacity-[0.04]" style={{
+          backgroundImage: `linear-gradient(var(--soft) 1px, transparent 1px), linear-gradient(90deg, var(--soft) 1px, transparent 1px)`,
+          backgroundSize: '60px 60px',
+        }} />
+        {/* Shimmer overlay */}
+        <div className="absolute inset-0 skeleton-shimmer" />
+        {/* Centered loading indicator */}
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="flex items-center gap-3 px-4 py-2.5 rounded-lg bg-[var(--dusk)]/80 backdrop-blur-sm border border-[var(--twilight)]">
+            <div className="w-4 h-4 rounded-full border-2 border-[var(--coral)] border-t-transparent animate-spin" />
+            <span className="text-[var(--muted)] font-mono text-xs">Loading map</span>
+          </div>
+        </div>
       </div>
     );
   }
@@ -665,6 +760,14 @@ export default function MapView({ events, spots = [], userLocation, viewRadius }
           wheelPxPerZoomLevel={120}
         >
           <MapResizer />
+          <MapViewUpdater
+            userLocation={localUserLocation}
+            centerPoint={centerPoint}
+            viewRadius={viewRadius}
+            fitAllMarkers={fitAllMarkers}
+            spots={mappableSpots}
+            events={mappableEvents}
+          />
           <TileLayer
             attribution={mapTiles.attribution}
             url={mapTiles.url}
@@ -695,7 +798,15 @@ export default function MapView({ events, spots = [], userLocation, viewRadius }
         </MapContainer>
         {mappableEvents.length === 0 && mappableSpots.length === 0 && (
           <div className="absolute inset-0 flex items-center justify-center bg-[var(--void)]/80">
-            <p className="text-[var(--muted)] font-mono text-sm">Nothing to see here. Literally.</p>
+            <div className="text-center">
+              <div className="w-12 h-12 rounded-full bg-[var(--twilight)] flex items-center justify-center mx-auto mb-3">
+                <svg className="w-6 h-6 text-[var(--muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                </svg>
+              </div>
+              <p className="text-[var(--cream)] font-medium text-sm mb-1">No events on the map</p>
+              <p className="text-[var(--muted)] text-xs">Try adjusting your filters or check back later</p>
+            </div>
           </div>
         )}
       </div>

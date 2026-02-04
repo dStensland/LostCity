@@ -392,6 +392,7 @@ export default function VenueDetailView({ slug, portalSlug, onClose }: VenueDeta
   const [error, setError] = useState<string | null>(null);
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
+  const [isLowRes, setIsLowRes] = useState(false);
 
   useEffect(() => {
     async function fetchSpot() {
@@ -427,7 +428,7 @@ export default function VenueDetailView({ slug, portalSlug, onClose }: VenueDeta
 
   if (loading) {
     return (
-      <div className="animate-fadeIn pt-6">
+      <div className="pt-6">
         <NeonBackButton onClose={onClose} />
         <div className="space-y-4">
           <div className="aspect-video skeleton-shimmer rounded-xl" />
@@ -439,7 +440,7 @@ export default function VenueDetailView({ slug, portalSlug, onClose }: VenueDeta
 
   if (error || !spot) {
     return (
-      <div className="animate-fadeIn pt-6">
+      <div className="pt-6">
         <NeonBackButton onClose={onClose} />
         <div className="text-center py-12">
           <p className="text-[var(--muted)]">{error || "Spot not found"}</p>
@@ -454,7 +455,7 @@ export default function VenueDetailView({ slug, portalSlug, onClose }: VenueDeta
   const showImage = spot.image_url && !imageError;
 
   return (
-    <div className="animate-fadeIn pt-6 pb-8">
+    <div className="pt-6 pb-8">
       {/* Back button */}
       <NeonBackButton onClose={onClose} />
 
@@ -468,8 +469,11 @@ export default function VenueDetailView({ slug, portalSlug, onClose }: VenueDeta
             src={spot.image_url!}
             alt={spot.name}
             fill
-            className={`object-cover transition-opacity duration-300 ${imageLoaded ? "opacity-100" : "opacity-0"}`}
-            onLoad={() => setImageLoaded(true)}
+            className={`${isLowRes ? "object-contain" : "object-cover"} transition-opacity duration-300 ${imageLoaded ? "opacity-100" : "opacity-0"}`}
+            onLoad={(e) => {
+              setImageLoaded(true);
+              if (e.currentTarget.naturalWidth < 600) setIsLowRes(true);
+            }}
             onError={() => setImageError(true)}
           />
         </div>
@@ -478,16 +482,29 @@ export default function VenueDetailView({ slug, portalSlug, onClose }: VenueDeta
       {/* Main spot info card */}
       <div className="border border-[var(--twilight)] rounded-xl p-6 bg-[var(--dusk)]">
         {/* Type badge */}
-        {typeInfo && (
-          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-[var(--night)] border border-[var(--twilight)] rounded text-sm mb-4">
-            <span>{typeInfo.icon}</span>
-            <span className="font-mono text-xs text-[var(--muted)] uppercase tracking-wider">
-              {spot.spot_types && spot.spot_types.length > 1
-                ? getSpotTypeLabels(spot.spot_types)
-                : typeInfo.label}
+        {typeInfo && (() => {
+          const badgeColor = getCategoryColor(primaryType || "");
+          return (
+            <span
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-sm mb-4"
+              style={{
+                backgroundColor: `color-mix(in srgb, ${badgeColor} 15%, transparent)`,
+                borderWidth: "1px",
+                borderColor: `color-mix(in srgb, ${badgeColor} 30%, transparent)`,
+              }}
+            >
+              <CategoryIcon type={primaryType || ""} size={16} glow="subtle" />
+              <span
+                className="font-mono text-xs font-medium uppercase tracking-wider"
+                style={{ color: badgeColor }}
+              >
+                {spot.spot_types && spot.spot_types.length > 1
+                  ? getSpotTypeLabels(spot.spot_types)
+                  : typeInfo.label}
+              </span>
             </span>
-          </span>
-        )}
+          );
+        })()}
 
         {/* Name + Follow/Recommend */}
         <div className="flex items-start justify-between gap-4">

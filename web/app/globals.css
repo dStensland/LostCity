@@ -12,6 +12,18 @@
   --space-2xl: 2.5rem;   /* 40px */
   --space-3xl: 4rem;     /* 64px */
 
+  /* ============================================
+     TYPOGRAPHY SCALE
+     ============================================ */
+  --text-2xs: 0.625rem;   /* 10px - micro labels */
+  --text-xs: 0.6875rem;   /* 11px - badges, mono labels */
+  --text-sm: 0.8125rem;   /* 13px - metadata, details */
+  --text-base: 0.9375rem; /* 15px - body text */
+  --text-lg: 1.125rem;    /* 18px - card titles */
+  --text-xl: 1.25rem;     /* 20px - section headers secondary */
+  --text-2xl: 1.5rem;     /* 24px - section headers primary */
+  --text-3xl: 1.875rem;   /* 30px - page titles */
+
   /* Underground dark palette */
   --void: #09090B;
   --night: #0F0F14;
@@ -278,6 +290,14 @@
   --surface-base: var(--void);
   --surface-raised: var(--night);
   --surface-elevated: var(--dusk);
+}
+
+/* ============================================
+   INTERACTIVE ELEMENT DEFAULTS
+   ============================================ */
+button:not(:disabled),
+[role="button"]:not([aria-disabled="true"]) {
+  cursor: pointer;
 }
 
 /* ============================================
@@ -3545,7 +3565,7 @@ textarea:focus-visible {
 
 .section-header-primary {
   font-family: var(--font-serif);
-  font-size: 1.5rem;
+  font-size: var(--text-2xl);
   font-weight: 600;
   letter-spacing: -0.02em;
   color: var(--cream);
@@ -3553,7 +3573,7 @@ textarea:focus-visible {
 
 .section-header-secondary {
   font-family: var(--font-serif);
-  font-size: 1.25rem;
+  font-size: var(--text-xl);
   font-weight: 600;
   letter-spacing: -0.01em;
   color: var(--cream);
@@ -3561,7 +3581,7 @@ textarea:focus-visible {
 
 .section-header-tertiary {
   font-family: var(--font-mono), monospace;
-  font-size: 1rem;
+  font-size: var(--text-base);
   font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -3591,4 +3611,69 @@ textarea:focus-visible {
 
 .section-header-see-all-primary {
   box-shadow: 0 0 12px color-mix(in srgb, var(--section-accent) 30%, transparent);
+}
+
+/* ============================================
+   SEARCH ENTRANCE ANIMATION
+   ============================================ */
+@keyframes search-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.98) translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.animate-search-enter {
+  animation: search-enter 0.3s cubic-bezier(0.32, 0.72, 0, 1) forwards;
+}
+
+@keyframes search-backdrop-enter {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-search-backdrop {
+  animation: search-backdrop-enter 0.2s ease-out forwards;
+}
+
+/* ============================================
+   DETAIL VIEW TRANSITIONS
+   ============================================ */
+@keyframes detail-enter {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes detail-exit {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+
+.animate-detail-enter {
+  animation: detail-enter 0.3s ease-out forwards;
+}
+
+.animate-detail-exit {
+  animation: detail-exit 0.2s ease-in forwards;
+  pointer-events: none;
 }

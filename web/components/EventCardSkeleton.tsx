@@ -1,28 +1,18 @@
 "use client";
 
-interface EventCardSkeletonProps {
-  /** Show thumbnail skeleton on mobile (matches EventCard showThumbnail prop) */
-  showThumbnail?: boolean;
-}
-
 // Skeleton must match EventCard exactly: p-3, flex gap-3, same structure
-export default function EventCardSkeleton({ showThumbnail = false }: EventCardSkeletonProps) {
+export default function EventCardSkeleton() {
   return (
     <div
       className="block p-3 mb-4 rounded-lg border border-[var(--twilight)]"
       style={{ borderLeftWidth: "3px", borderLeftColor: "var(--twilight)", backgroundColor: "var(--card-bg)" }}
     >
       <div className="flex gap-3">
-        {/* Time cell - matches EventCard: w-12, flex-col, center */}
-        <div className="flex-shrink-0 w-12 flex flex-col items-center justify-center">
+        {/* Time cell - matches EventCard: w-14, flex-col, center */}
+        <div className="flex-shrink-0 w-14 flex flex-col items-center justify-center">
           <div className="h-4 w-8 rounded skeleton-shimmer" />
           <div className="h-2 w-5 rounded mt-1 skeleton-shimmer" style={{ animationDelay: "0.1s" }} />
         </div>
-
-        {/* Mobile thumbnail skeleton - hidden on sm+ */}
-        {showThumbnail && (
-          <div className="flex-shrink-0 w-16 h-16 rounded-lg skeleton-shimmer sm:hidden" style={{ animationDelay: "0.05s" }} />
-        )}
 
         {/* Content - matches EventCard structure */}
         <div className="flex-1 min-w-0">
@@ -46,14 +36,13 @@ export default function EventCardSkeleton({ showThumbnail = false }: EventCardSk
 
 interface EventCardSkeletonListProps {
   count?: number;
-  showThumbnail?: boolean;
 }
 
-export function EventCardSkeletonList({ count = 5, showThumbnail = false }: EventCardSkeletonListProps) {
+export function EventCardSkeletonList({ count = 5 }: EventCardSkeletonListProps) {
   return (
     <div>
       {Array.from({ length: count }).map((_, i) => (
-        <EventCardSkeleton key={i} showThumbnail={showThumbnail} />
+        <EventCardSkeleton key={i} />
       ))}
     </div>
   );

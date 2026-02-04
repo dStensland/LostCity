@@ -60,13 +60,23 @@ DAY_MAP = {
 
 def name_similarity(name1: str, name2: str) -> float:
     """Calculate name similarity (0-1)."""
+    import re
+
     def normalize(n):
         n = n.lower().strip()
-        for suffix in [" atlanta", " atl", " - atlanta", " (atlanta)", " ga"]:
+        # Remove special characters (®, ™, etc.)
+        n = re.sub(r'[®™©]', '', n)
+        # Remove common prefixes
+        n = re.sub(r'^the\s+', '', n)
+        # Remove location suffixes
+        for suffix in [" atlanta", " atl", " - atlanta", " (atlanta)", " ga",
+                       " - midtown", " - buckhead", " - decatur", " - east atlanta",
+                       " - downtown", " - virginia highland", " - sandy springs"]:
             n = n.replace(suffix, "")
         # Remove location qualifiers in parens
-        import re
         n = re.sub(r'\s*\([^)]+\)\s*$', '', n)
+        # Remove extra whitespace
+        n = re.sub(r'\s+', ' ', n).strip()
         return n
 
     n1 = normalize(name1)
@@ -80,6 +90,15 @@ def name_similarity(name1: str, name2: str) -> float:
 
     if n1 in n2 or n2 in n1:
         return 0.9
+
+    # Word overlap (good for reordered or partial names)
+    words1 = set(n1.split())
+    words2 = set(n2.split())
+    if words1 and words2:
+        overlap = len(words1 & words2)
+        total = max(len(words1), len(words2))
+        if overlap / total >= 0.7:
+            return 0.8
 
     # First N chars match
     min_len = min(len(n1), len(n2))
@@ -252,24 +271,36 @@ def format_hours_display(hours: dict) -> str:
     return ", ".join(lines)
 
 
+DESTINATION_TYPES = [
+    "restaurant", "bar", "brewery", "distillery", "winery", "coffee_shop",
+    "rooftop", "sports_bar", "food_hall", "music_venue", "comedy_club",
+    "theater", "gallery", "museum", "games", "arcade", "karaoke",
+    "eatertainment", "attraction", "nightclub", "lgbtq", "studio",
+    "cooking_school",
+]
+
+
 def get_venues_needing_hours(
     venue_type: Optional[str] = None,
     limit: int = 50,
+    destinations_only: bool = False,
 ) -> list[dict]:
     """Get venues missing hours."""
     client = get_client()
 
     query = client.table("venues").select(
         "id, name, slug, address, city, lat, lng, hours, venue_type"
-    ).eq("active", True).eq("city", "Atlanta")
+    ).eq("active", True).not_.is_("lat", "null").not_.is_("lng", "null")
 
-    # Must not have hours
-    query = query.is_("hours", "null")
+    # Must not have hours (null or empty object)
+    query = query.or_("hours.is.null,hours.eq.{}")
 
     if venue_type:
         query = query.eq("venue_type", venue_type)
+    elif destinations_only:
+        query = query.in_("venue_type", DESTINATION_TYPES)
 
-    query = query.limit(limit)
+    query = query.order("venue_type").limit(limit)
 
     result = query.execute()
     return result.data or []
@@ -354,6 +385,7 @@ def hydrate_venue_hours(venue: dict, dry_run: bool = False) -> dict:
 def main():
     parser = argparse.ArgumentParser(description="Hydrate venue hours from Google Places")
     parser.add_argument("--venue-type", help="Filter by venue type")
+    parser.add_argument("--destinations", action="store_true", help="Only destination types (bars, restaurants, etc.)")
     parser.add_argument("--limit", type=int, default=50, help="Max venues to process")
     parser.add_argument("--dry-run", action="store_true", help="Preview without updating")
     args = parser.parse_args()
@@ -366,7 +398,7 @@ def main():
     logger.info("Google Places Hours Hydration")
     logger.info("=" * 70)
 
-    venues = get_venues_needing_hours(args.venue_type, args.limit)
+    venues = get_venues_needing_hours(args.venue_type, args.limit, destinations_only=args.destinations)
     logger.info(f"Found {len(venues)} venues missing hours")
     logger.info("")
 

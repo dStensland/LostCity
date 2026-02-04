@@ -1,23 +1,25 @@
 "use client";
 
 import { memo } from "react";
+import CategoryIcon from "@/components/CategoryIcon";
 
 export type FilterCategory = "all" | "food" | "drinks" | "coffee" | "music" | "arts" | "fun";
 
 interface CategoryOption {
   value: FilterCategory;
   label: string;
-  icon: string;
+  /** Maps to CategoryIcon type */
+  iconType: string;
 }
 
 const CATEGORIES: CategoryOption[] = [
-  { value: "all", label: "All", icon: "✨" },
-  { value: "food", label: "Food", icon: "🍽️" },
-  { value: "drinks", label: "Drinks", icon: "🍺" },
-  { value: "coffee", label: "Coffee", icon: "☕" },
-  { value: "music", label: "Music", icon: "🎵" },
-  { value: "arts", label: "Arts", icon: "🎭" },
-  { value: "fun", label: "Fun", icon: "🎯" },
+  { value: "all", label: "All", iconType: "event_space" },
+  { value: "food", label: "Food", iconType: "food_drink" },
+  { value: "drinks", label: "Drinks", iconType: "bar" },
+  { value: "coffee", label: "Coffee", iconType: "coffee_shop" },
+  { value: "music", label: "Music", iconType: "music" },
+  { value: "arts", label: "Arts", iconType: "art" },
+  { value: "fun", label: "Fun", iconType: "nightlife" },
 ];
 
 interface Props {
@@ -48,7 +50,7 @@ function CategoryFilterChips({ selected, onChange, counts, className = "" }: Pro
               }
             `}
           >
-            <span className="text-base">{cat.icon}</span>
+            <CategoryIcon type={cat.iconType} size={16} glow={isSelected ? "subtle" : "none"} weight="light" />
             <span>{cat.label}</span>
             {count !== undefined && count > 0 && (
               <span

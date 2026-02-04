@@ -63,7 +63,7 @@ def parse_price(price_text: str) -> tuple[Optional[float], Optional[float], Opti
 
 
 def crawl(source: dict) -> tuple[int, int, int]:
-    """Crawl The Basement East events using Playwright."""
+    """Crawl The Basement East events using Playwright and JavaScript extraction."""
     source_id = source["id"]
     events_found = 0
     events_new = 0
@@ -84,84 +84,68 @@ def crawl(source: dict) -> tuple[int, int, int]:
             page.goto(CALENDAR_URL, wait_until="domcontentloaded", timeout=30000)
             page.wait_for_timeout(4000)
 
-            # Scroll to load all content
-            for _ in range(5):
-                page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
-                page.wait_for_timeout(1000)
+            # Extract the all_events JavaScript array directly
+            try:
+                events_data = page.evaluate("""
+                    () => {
+                        if (typeof all_events !== 'undefined' && Array.isArray(all_events)) {
+                            return all_events.map(e => ({
+                                title: e.title || '',
+                                start: e.start || '',
+                                displayTime: e.displayTime || '',
+                                imageUrl: e.imageUrl || '',
+                                venue: e.venue || '',
+                            }));
+                        }
+                        return [];
+                    }
+                """)
+            except Exception as e:
+                logger.error(f"Failed to extract all_events JS array: {e}")
+                events_data = []
 
-            # Get page HTML and parse with BeautifulSoup
-            html = page.content()
-            soup = BeautifulSoup(html, "html.parser")
+            if not events_data:
+                logger.warning("No events found in all_events JavaScript array")
+                browser.close()
+                return 0, 0, 0
 
-            # Find all event containers - Uses tw-cal-event (calendar plugin)
-            event_containers = soup.find_all("div", class_="tw-cal-event")
+            logger.info(f"Found {len(events_data)} events in all_events JS array")
 
-            logger.info(f"Found {len(event_containers)} event containers")
-
-            for container in event_containers:
+            for event in events_data:
                 try:
-                    # Extract title from .tw-name div
-                    title_elem = container.find("div", class_="tw-name")
-                    if not title_elem:
+                    # Extract title - may contain HTML tags like <a href="...">Title</a>
+                    raw_title = event.get("title", "")
+                    title = re.sub(r'<[^>]+>', '', raw_title).strip()
+                    if not title:
                         continue
 
-                    title_link = title_elem.find("a")
-                    title = title_link.get_text(strip=True) if title_link else title_elem.get_text(strip=True)
-
-                    # Extract event URL
-                    event_url = CALENDAR_URL
-                    if title_link and title_link.get("href"):
-                        event_url = title_link["href"]
-                        if not event_url.startswith("http"):
-                            event_url = BASE_URL + event_url
-
-                    # Extract date from .tw-event-date span (format: "February 02, 2026")
-                    date_elem = container.find("span", class_="tw-event-date")
-                    if not date_elem:
+                    # Extract date from start field (format: "YYYY-MM-DD")
+                    start_date = event.get("start", "")
+                    if not start_date:
                         continue
 
-                    start_date = None
+                    # Extract time from displayTime (format: "Show: 8:00 PM" or "Doors: 7:00 PM")
                     start_time = None
-
-                    # Date is in format "February 02, 2026"
-                    date_text = date_elem.get_text(strip=True)
-                    try:
-                        dt = datetime.strptime(date_text, "%B %d, %Y")
-                        start_date = dt.strftime("%Y-%m-%d")
-                    except:
-                        logger.warning(f"Could not parse date: {date_text}")
-                        continue
-
-                    # Extract time from .tw-calendar-event-time
-                    time_elem = container.find(["div", "span"], class_="tw-calendar-event-time")
-                    if time_elem:
-                        time_text = time_elem.get_text(strip=True)
-                        time_match = re.search(r"(\d{1,2}:\d{2}\s*[AP]M)", time_text, re.IGNORECASE)
+                    display_time = event.get("displayTime", "")
+                    if display_time:
+                        # Look for time pattern like "8:00 PM"
+                        time_match = re.search(r"(\d{1,2}:\d{2}\s*[AP]M)", display_time, re.IGNORECASE)
                         if time_match:
                             start_time = parse_time(time_match.group(1))
 
-                    # Extract description
-                    description = None
-                    desc_elem = container.find(["p", "div"], class_=re.compile(r"description|excerpt|content"))
-                    if desc_elem:
-                        description = desc_elem.get_text(strip=True)[:500]
-
-                    # Extract price
-                    price_min = None
-                    price_max = None
-                    price_note = None
-                    price_elem = container.find(["span", "div"], class_=re.compile(r"price|cost"))
-                    if price_elem:
-                        price_text = price_elem.get_text(strip=True)
-                        price_min, price_max, price_note = parse_price(price_text)
-
-                    # Extract image URL
+                    # Extract image URL from imageUrl field - may contain HTML like <img src="...">
                     image_url = None
-                    img_elem = container.find("img")
-                    if img_elem and img_elem.get("src"):
-                        image_url = img_elem["src"]
-                        if not image_url.startswith("http"):
-                            image_url = BASE_URL + image_url
+                    raw_image = event.get("imageUrl", "")
+                    if raw_image:
+                        # Try to extract src attribute from <img> tag
+                        img_match = re.search(r'src="([^"]+)"', raw_image)
+                        if img_match:
+                            image_url = img_match.group(1)
+                            if not image_url.startswith("http"):
+                                image_url = BASE_URL + image_url
+                        elif raw_image.startswith("http"):
+                            # Direct URL
+                            image_url = raw_image
 
                     events_found += 1
 
@@ -175,7 +159,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "source_id": source_id,
                         "venue_id": venue_id,
                         "title": title,
-                        "description": description,
+                        "description": None,
                         "start_date": start_date,
                         "start_time": start_time,
                         "end_date": None,
@@ -184,15 +168,15 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "category": "music",
                         "subcategory": "concert",
                         "tags": ["basement-east", "nashville", "live-music", "east-nashville"],
-                        "price_min": price_min,
-                        "price_max": price_max,
-                        "price_note": price_note,
+                        "price_min": None,
+                        "price_max": None,
+                        "price_note": None,
                         "is_free": False,
                         "source_url": CALENDAR_URL,
-                        "ticket_url": event_url,
+                        "ticket_url": CALENDAR_URL,
                         "image_url": image_url,
                         "raw_text": f"{title} - {start_date}",
-                        "extraction_confidence": 0.85,
+                        "extraction_confidence": 0.90,
                         "is_recurring": False,
                         "recurrence_rule": None,
                         "content_hash": content_hash,
@@ -200,7 +184,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     insert_event(event_record)
                     events_new += 1
-                    logger.info(f"Added: {title} on {start_date}")
+                    logger.info(f"Added: {title} on {start_date}" + (f" at {start_time}" if start_time else " (all-day)"))
 
                 except Exception as e:
                     logger.error(f"Failed to parse event: {e}")

@@ -119,7 +119,7 @@ export default function SubmitVenuePage() {
 
       // Check if it was auto-approved (has venue data)
       if (result.venue) {
-        router.push(`/atl/spots/${result.venue.slug}?submitted=true`);
+        router.push(`/atlanta/spots/${result.venue.slug}?submitted=true`);
       } else {
         router.push("/dashboard/submissions?success=venue");
       }

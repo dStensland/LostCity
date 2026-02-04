@@ -1,4 +1,6 @@
-import { Suspense } from "react";
+"use client";
+
+import { Suspense, useState, useEffect, type ReactNode } from "react";
 import FeedView from "@/components/FeedView";
 import TonightsPicks from "@/components/TonightsPicks";
 import TrendingNow from "@/components/TrendingNow";
@@ -6,6 +8,16 @@ import TonightsPicksSkeleton from "@/components/TonightsPicksSkeleton";
 import TrendingNowSkeleton from "@/components/TrendingNowSkeleton";
 import HappeningNowCTA from "./HappeningNowCTA";
 import BrowseByActivity from "@/components/BrowseByActivity";
+
+/** Delays showing skeleton by `delay` ms so fast loads don't flash placeholders */
+function DelayedFallback({ children, delay = 150 }: { children: ReactNode; delay?: number }) {
+  const [show, setShow] = useState(false);
+  useEffect(() => {
+    const timer = setTimeout(() => setShow(true), delay);
+    return () => clearTimeout(timer);
+  }, [delay]);
+  return show ? <>{children}</> : null;
+}
 
 interface CuratedContentProps {
   portalSlug: string;
@@ -20,28 +32,22 @@ export default function CuratedContent({ portalSlug }: CuratedContentProps) {
       </Suspense>
 
       {/* Above-fold: Tonight's Picks - Critical content */}
-      <Suspense fallback={<TonightsPicksSkeleton />}>
+      <Suspense fallback={<DelayedFallback><TonightsPicksSkeleton /></DelayedFallback>}>
         <TonightsPicks portalSlug={portalSlug} />
       </Suspense>
 
       {/* Above-fold: Trending Now - High priority */}
-      <Suspense fallback={<TrendingNowSkeleton />}>
+      <Suspense fallback={<DelayedFallback><TrendingNowSkeleton /></DelayedFallback>}>
         <TrendingNow portalSlug={portalSlug} />
       </Suspense>
 
-      {/* Section divider for visual breathing room */}
-      <div className="h-4" />
-
       {/* Below-fold: Browse by Activity - Lazy loaded */}
-      <Suspense fallback={<BrowseByActivitySkeleton />}>
+      <Suspense fallback={<DelayedFallback><BrowseByActivitySkeleton /></DelayedFallback>}>
         <BrowseByActivity portalSlug={portalSlug} />
       </Suspense>
 
-      {/* Section divider */}
-      <div className="h-4" />
-
       {/* Below-fold: Main Feed - Deferred load */}
-      <Suspense fallback={<FeedViewSkeleton />}>
+      <Suspense fallback={<DelayedFallback><FeedViewSkeleton /></DelayedFallback>}>
         <FeedView />
       </Suspense>
     </div>

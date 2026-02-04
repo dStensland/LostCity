@@ -135,7 +135,7 @@ function FeedShellInner({ portalId, portalSlug, activeTab, curatedContent }: Fee
                 onClick={() => handleTabChange(tab.key)}
                 className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg font-mono text-xs font-medium transition-all duration-200 ${
                   isActive
-                    ? "bg-[var(--coral)] text-[var(--void)] shadow-[0_0_16px_var(--coral)/25]"
+                    ? "bg-[var(--twilight)] text-[var(--coral)] border border-[var(--coral)]/20"
                     : "text-[var(--muted)] hover:text-[var(--cream)] hover:bg-[var(--twilight)]/50"
                 }`}
               >
