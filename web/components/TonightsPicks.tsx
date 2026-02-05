@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { formatTimeSplit } from "@/lib/formats";
 import { getCategoryColor } from "@/lib/category-config";
 import CategoryIcon from "./CategoryIcon";
@@ -124,20 +125,19 @@ export default function TonightsPicks({ portalSlug }: { portalSlug?: string } = 
             willChange: "transform",
           } as React.CSSProperties}
         >
-          {/* Background - optimized for performance */}
+          {/* Background - using Next.js Image for optimization */}
           {heroEvent.image_url ? (
-            <>
-              <div
-                className="absolute inset-0 transition-transform duration-700 group-hover:scale-105"
-                style={{
-                  backgroundImage: `url(${heroEvent.image_url})`,
-                  backgroundSize: "cover",
-                  backgroundPosition: "center",
-                  willChange: "transform",
-                }}
+            <div className="absolute inset-0 overflow-hidden">
+              <Image
+                src={heroEvent.image_url}
+                alt={heroEvent.title}
+                fill
+                priority
+                className="object-cover sm:transition-transform sm:duration-700 sm:group-hover:scale-105"
+                sizes="(max-width: 640px) 100vw, 800px"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/60 to-black/20" />
-            </>
+            </div>
           ) : (
             <CategoryPlaceholder category={heroEvent.category} size="lg" />
           )}

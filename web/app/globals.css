@@ -3610,3 +3610,101 @@ textarea:focus-visible {
   animation: detail-exit 0.2s ease-in forwards;
   pointer-events: none;
 }
+
+/* ============================================
+   MOBILE PERFORMANCE OPTIMIZATIONS
+   Disable expensive GPU effects on mobile for
+   clean, quick, responsive experience
+   ============================================ */
+@media (max-width: 640px) {
+  /* Disable backdrop-blur on mobile - very expensive on GPU */
+  .backdrop-blur-sm,
+  .backdrop-blur-md,
+  .backdrop-blur-lg,
+  .backdrop-blur-xl,
+  [class*="backdrop-blur"] {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+
+  /* Simplify glass panels to solid backgrounds */
+  .glass-panel,
+  .glass-panel-compact {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    background-color: var(--dusk) !important;
+  }
+
+  /* Disable neon glow effects on mobile */
+  .icon-neon,
+  .icon-neon-subtle,
+  .neon-glow,
+  [class*="neon-glow"] {
+    filter: none !important;
+    text-shadow: none !important;
+  }
+
+  /* Simplify card hover animations - just border color change */
+  .card-atmospheric {
+    transition: border-color 0.15s ease !important;
+  }
+
+  .card-atmospheric::before,
+  .card-atmospheric::after {
+    display: none !important;
+  }
+
+  /* Disable card glow effects */
+  .card-hero::before,
+  .card-hero::after {
+    display: none !important;
+  }
+
+  /* Simplify section header icon shadows */
+  .section-header-icon-primary,
+  .section-header-icon-secondary {
+    box-shadow: none !important;
+  }
+
+  /* Disable ambient background animations */
+  .ambient-layer,
+  [class*="ambient-"] {
+    display: none !important;
+  }
+
+  /* Simplify skeleton animations */
+  .skeleton-shimmer {
+    animation-duration: 2s !important;
+  }
+
+  /* Reduce transform animations */
+  .group-hover\:scale-105 {
+    transform: none !important;
+  }
+}
+
+/* Also respect prefers-reduced-motion globally */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .backdrop-blur-sm,
+  .backdrop-blur-md,
+  .backdrop-blur-lg,
+  [class*="backdrop-blur"] {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+
+  .icon-neon,
+  .icon-neon-subtle,
+  .neon-glow {
+    filter: none !important;
+    text-shadow: none !important;
+  }
+}

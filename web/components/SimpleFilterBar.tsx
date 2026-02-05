@@ -554,8 +554,8 @@ export default function SimpleFilterBar({ variant = "full" }: SimpleFilterBarPro
         </div>
       </div>
 
-      {/* Mobile view (< 640px) - Horizontal scrolling pills */}
-      <div className="sm:hidden sticky top-[112px] z-30 bg-[var(--night)] border-b border-[var(--twilight)]">
+      {/* Mobile view (< 640px) - Horizontal scrolling pills (NOT sticky to maximize content area) */}
+      <div className="sm:hidden bg-[var(--night)] border-b border-[var(--twilight)]">
         <div className={`${variant === "compact" ? "py-1.5" : "py-2"}`}>
           {/* Horizontal scrolling filter pills with fade indicators */}
           <div className="relative">

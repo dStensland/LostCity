@@ -110,22 +110,26 @@ function FindViewInner({
   return (
     <div className="py-4">
       {/* Type selector tabs + Add new button */}
-      <div className="flex items-center gap-3 mb-4">
-        <div className="flex p-1 bg-[var(--night)] rounded-lg max-w-md">
+      <div className="flex items-center gap-2 sm:gap-3 mb-4">
+        <div className="flex p-1 bg-[var(--night)] rounded-lg flex-1 sm:flex-initial sm:max-w-md">
           {TYPE_OPTIONS.map((option) => {
             const isActive = findType === option.key;
             return (
               <button
                 key={option.key}
                 onClick={() => handleTypeChange(option.key)}
-                className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-md font-mono text-xs whitespace-nowrap transition-all ${
+                aria-label={option.label}
+                className={`flex-1 flex items-center justify-center gap-1.5 sm:gap-2 px-2 sm:px-4 py-2.5 sm:py-2 rounded-md font-mono text-xs whitespace-nowrap transition-all ${
                   isActive
-                    ? "bg-[var(--coral)] text-[var(--void)] font-medium shadow-[0_0_12px_var(--coral)/20]"
+                    ? "bg-[var(--coral)] text-[var(--void)] font-medium"
                     : "text-[var(--muted)] hover:text-[var(--cream)] hover:bg-[var(--twilight)]/50"
                 }`}
               >
                 {option.icon}
-                {option.label}
+                {/* Mobile: show label only when active, Desktop: always show */}
+                <span className={`${isActive ? "inline" : "hidden"} sm:inline`}>
+                  {option.label}
+                </span>
               </button>
             );
           })}

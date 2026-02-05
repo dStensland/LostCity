@@ -162,7 +162,7 @@ function UnifiedHeaderInner({
             : "bg-[var(--void)]/95 backdrop-blur-sm border-[var(--twilight)]/30"
         }`}
       >
-        <div className="px-4 py-3 flex items-center gap-4">
+        <div className="px-4 py-2 sm:py-3 flex items-center gap-4">
           {/* Left: Back button (optional) + Logo */}
           <div className="flex items-center gap-2 flex-shrink-0">
             {backLink && (
@@ -309,10 +309,10 @@ function UnifiedHeaderInner({
           </div>
         </div>
 
-        {/* Mobile Nav Bar (below header on mobile) */}
+        {/* Mobile Nav Bar (below header on mobile) - compact to maximize content area */}
         {!hideNav && (
           <nav className="sm:hidden border-t border-[var(--twilight)]/30 bg-[var(--night)]/95">
-            <div className="flex py-2 px-4">
+            <div className="flex py-1.5 px-4">
               {TABS.map((tab) => {
                 const active = isActive(tab);
                 const showBadge = tab.key === "community" && pendingCount > 0;
@@ -348,7 +348,7 @@ export default function UnifiedHeader(props: UnifiedHeaderProps) {
   return (
     <Suspense fallback={
       <header className="sticky top-0 z-[100] border-b bg-[var(--void)]/95 backdrop-blur-sm border-[var(--twilight)]/30">
-        <div className="px-4 py-3 flex items-center gap-4">
+        <div className="px-4 py-2 sm:py-3 flex items-center gap-4">
           <div className="h-8 w-24 rounded skeleton-shimmer" />
           <div className="flex-1" />
           <div className="flex items-center gap-2">

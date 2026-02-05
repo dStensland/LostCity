@@ -222,26 +222,28 @@ function EventCard({ event, index = 0, skipAnimation = false, portalSlug, friend
           )}
 
           {/* Details row - venue and metadata with better hierarchy */}
+          {/* Mobile: show only venue + price; Desktop: show all metadata */}
           <div className="flex items-center gap-1.5 text-sm text-[var(--soft)] mt-1">
             {event.venue && (
-              <span className="truncate max-w-[40%] font-medium" title={event.venue.name}>{event.venue.name}</span>
+              <span className="truncate max-w-[60%] sm:max-w-[40%] font-medium" title={event.venue.name}>{event.venue.name}</span>
             )}
-            {/* Subcategory chip - shows activity type when useful */}
+            {/* Subcategory chip - desktop only for cleaner mobile */}
             {shouldShowSubcategory(event.subcategory, event.category) && (
-              <>
+              <span className="hidden sm:contents">
                 <span className="opacity-40">·</span>
                 <SubcategoryChip
                   label={getSubcategoryLabel(event.subcategory!)!}
                   value={event.subcategory!}
                   portalSlug={portalSlug}
                 />
-              </>
+              </span>
             )}
+            {/* Neighborhood - desktop only for cleaner mobile */}
             {event.venue?.neighborhood && (
-              <>
+              <span className="hidden sm:contents">
                 <span className="opacity-40">·</span>
                 <span className="truncate" title={event.venue.neighborhood}>{event.venue.neighborhood}</span>
-              </>
+              </span>
             )}
             {price && price.text && (
               <>
@@ -265,9 +267,9 @@ function EventCard({ event, index = 0, skipAnimation = false, portalSlug, friend
                 )}
               </>
             )}
-            {/* Series badge */}
+            {/* Series badge - desktop only */}
             {event.series && (
-              <>
+              <span className="hidden sm:contents">
                 <span className="opacity-40">·</span>
                 <SeriesBadge
                   seriesType={event.series.series_type}
@@ -275,34 +277,34 @@ function EventCard({ event, index = 0, skipAnimation = false, portalSlug, friend
                   dayOfWeek={event.series.day_of_week}
                   compact
                 />
-              </>
+              </span>
             )}
-            {/* Class badge */}
+            {/* Class badge - desktop only */}
             {event.is_class && (
-              <>
+              <span className="hidden sm:contents">
                 <span className="opacity-40">·</span>
                 <span className="inline-flex items-center px-2 py-0.5 rounded-full font-mono text-[0.6rem] font-semibold bg-[var(--neon-blue,#60a5fa)]/15 text-[var(--neon-blue,#60a5fa)] border border-[var(--neon-blue,#60a5fa)]/25">
                   Class
                 </span>
-              </>
+              </span>
             )}
-            {/* Instructor */}
+            {/* Instructor - desktop only */}
             {event.instructor && (
-              <>
+              <span className="hidden sm:contents">
                 <span className="opacity-40">·</span>
                 <span className="truncate text-[var(--muted)] text-xs" title={event.instructor}>
                   w/ {event.instructor}
                 </span>
-              </>
+              </span>
             )}
-            {/* Skill level */}
+            {/* Skill level - desktop only */}
             {event.skill_level && (
-              <>
+              <span className="hidden sm:contents">
                 <span className="opacity-40">·</span>
                 <span className="inline-flex items-center px-1.5 py-0.5 rounded font-mono text-[0.55rem] text-[var(--muted)] bg-[var(--twilight)]/40 capitalize">
                   {event.skill_level}
                 </span>
-              </>
+              </span>
             )}
           </div>
 
