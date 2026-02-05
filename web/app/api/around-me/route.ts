@@ -147,6 +147,13 @@ export type AroundMeItem = {
   data: AroundMeSpot | AroundMeEvent;
 };
 
+export type VenueTagData = {
+  tag_id: string;
+  tag_label: string;
+  tag_group: string;
+  score: number;
+};
+
 export type AroundMeSpot = {
   id: number;
   name: string;
@@ -165,6 +172,7 @@ export type AroundMeSpot = {
   isOpen: boolean;
   closesAt: string | null; // Formatted time like "2am"
   closingTimeInferred: boolean;
+  tags?: VenueTagData[]; // Batch-loaded venue tags to prevent N+1 queries
 };
 
 export type AroundMeEvent = {
@@ -199,7 +207,9 @@ export async function GET(request: NextRequest) {
   const latParam = searchParams.get("lat");
   const lngParam = searchParams.get("lng");
   const neighborhood = searchParams.get("neighborhood");
-  const radiusMiles = parseFloat(searchParams.get("radius") || "5");
+  const radiusParam = searchParams.get("radius");
+  // If no radius specified, don't filter by distance (show all)
+  const radiusMiles = radiusParam ? parseFloat(radiusParam) : null;
   const category = searchParams.get("category"); // food, drinks, coffee, music, arts, fun
   const limit = parseInt(searchParams.get("limit") || "50", 10);
   const portalSlug = searchParams.get("portal");
@@ -272,6 +282,11 @@ export async function GET(request: NextRequest) {
       .not("lat", "is", null)
       .not("lng", "is", null);
 
+    // Filter by neighborhood if specified (exact match on neighborhood field)
+    if (neighborhood && !usingGps) {
+      spotsQuery = spotsQuery.eq("neighborhood", neighborhood);
+    }
+
     // Filter by spot types if category specified
     if (categoryFilter && categoryFilter.spotTypes.length > 0) {
       const typeFilters = categoryFilter.spotTypes
@@ -329,6 +344,8 @@ export async function GET(request: NextRequest) {
       eventsQuery = eventsQuery.in("category", categoryFilter.eventCategories);
     }
 
+    // Note: neighborhood filtering for events is done post-fetch since it's on the joined venue
+
     // Execute both queries in parallel
     const [spotsResult, eventsResult] = await Promise.all([
       spotsQuery,
@@ -354,7 +371,8 @@ export async function GET(request: NextRequest) {
       if (!spot.lat || !spot.lng) continue;
 
       const distance = calculateDistance(centerLat, centerLng, spot.lat, spot.lng);
-      if (distance > radiusMiles) continue;
+      // Only filter by radius if one was specified
+      if (radiusMiles !== null && distance > radiusMiles) continue;
 
       // Check if open - filter out spots confirmed closed
       let isOpen = true;
@@ -426,8 +444,14 @@ export async function GET(request: NextRequest) {
       const lng = event.venue?.lng;
       if (!lat || !lng) continue;
 
+      // Filter by neighborhood if specified (match venue's neighborhood)
+      if (neighborhood && !usingGps) {
+        if (event.venue?.neighborhood !== neighborhood) continue;
+      }
+
       const distance = calculateDistance(centerLat, centerLng, lat, lng);
-      if (distance > radiusMiles) continue;
+      // Only filter by radius if one was specified (GPS mode)
+      if (radiusMiles !== null && distance > radiusMiles) continue;
 
       processedEvents.push({
         type: "event",
@@ -458,6 +482,39 @@ export async function GET(request: NextRequest) {
           lng,
         },
       });
+    }
+
+    // Batch fetch venue tags to prevent N+1 queries (fixes critical perf issue)
+    const spotIds = processedSpots.map((s) => s.id);
+    if (spotIds.length > 0) {
+      type TagRow = { venue_id: number; tag_id: string; tag_label: string; tag_group: string; score: number };
+      const { data: tagData } = await supabase
+        .from("venue_tag_summary")
+        .select("venue_id, tag_id, tag_label, tag_group, score")
+        .in("venue_id", spotIds)
+        .gte("score", 2)
+        .order("score", { ascending: false });
+
+      // Group tags by venue_id (limit 3 per venue)
+      const tagsByVenue = new Map<number, VenueTagData[]>();
+      for (const tag of (tagData || []) as TagRow[]) {
+        const existing = tagsByVenue.get(tag.venue_id) || [];
+        if (existing.length < 3) {
+          existing.push({
+            tag_id: tag.tag_id,
+            tag_label: tag.tag_label,
+            tag_group: tag.tag_group,
+            score: tag.score,
+          });
+          tagsByVenue.set(tag.venue_id, existing);
+        }
+      }
+
+      // Attach tags to spots
+      for (const spot of processedSpots) {
+        const spotData = spot.data as AroundMeSpot;
+        spotData.tags = tagsByVenue.get(spot.id) || [];
+      }
     }
 
     // Merge and sort by distance

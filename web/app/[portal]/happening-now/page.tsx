@@ -319,85 +319,65 @@ export default function WhatsOpenPage() {
         </div>
       )}
 
-      {/* Status Bar - sticky below header */}
+      {/* Status Bar - simplified for mobile, sticky below header */}
       <div className="sticky top-[52px] z-20 bg-[var(--night)]/95 backdrop-blur-sm border-b border-[var(--twilight)]/50">
-        <div className="max-w-3xl mx-auto px-4 py-2.5">
-          <div className="flex items-center justify-between gap-3">
-            {/* Counts as pill badges */}
-            <div className="flex items-center gap-2">
-              <div
-                className="flex items-center gap-1.5 px-3 py-1 rounded-full border border-[var(--neon-green)]/30 bg-[var(--neon-green)]/10"
-                style={{ boxShadow: counts.spots > 0 ? "0 0 8px var(--neon-green)/15" : "none" }}
-              >
-                <span className="w-2 h-2 rounded-full bg-[var(--neon-green)]" style={{ boxShadow: "0 0 6px var(--neon-green)" }} />
-                <span className="font-mono text-xs font-medium text-[var(--neon-green)]">{counts.spots}</span>
-                <span className="font-mono text-xs text-[var(--cream)]/70">open</span>
-              </div>
-              <div
-                className={`flex items-center gap-1.5 px-3 py-1 rounded-full border ${counts.events > 0 ? "border-[var(--neon-red)]/30 bg-[var(--neon-red)]/10" : "border-[var(--twilight)] bg-[var(--twilight)]/20"}`}
-                style={{ boxShadow: counts.events > 0 ? "0 0 8px var(--neon-red)/15" : "none" }}
-              >
-                {counts.events > 0 ? (
-                  <span className="relative flex h-2 w-2">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--neon-red)] opacity-40" />
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-[var(--neon-red)]" />
-                  </span>
-                ) : (
-                  <span className="w-2 h-2 rounded-full bg-[var(--muted)]/50" />
-                )}
-                <span className={`font-mono text-xs font-medium ${counts.events > 0 ? "text-[var(--neon-red)]" : "text-[var(--muted)]"}`}>{counts.events}</span>
-                <span className={`font-mono text-xs ${counts.events > 0 ? "text-[var(--cream)]/70" : "text-[var(--muted)]/70"}`}>live</span>
-              </div>
-            </div>
+        <div className="max-w-3xl mx-auto px-4 py-2">
+          <div className="flex items-center justify-between gap-2">
+            {/* Location selector - left side for prominence */}
+            <select
+              value={selectedNeighborhood || (userLocation ? "__nearby__" : "")}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (val === "__nearby__") {
+                  setSelectedNeighborhood(null);
+                  requestLocation();
+                } else if (val === "") {
+                  setSelectedNeighborhood(null);
+                  setUserLocation(null);
+                  localStorage.removeItem("userLocation");
+                } else {
+                  setSelectedNeighborhood(val);
+                  setUserLocation(null);
+                  localStorage.removeItem("userLocation");
+                }
+              }}
+              className="flex-1 max-w-[200px] px-3 py-1.5 rounded-lg bg-[var(--dusk)] border border-[var(--twilight)] text-[var(--cream)] font-mono text-sm focus:outline-none focus:border-[var(--coral)] transition-colors appearance-none cursor-pointer"
+              style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236b7280'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`, backgroundRepeat: "no-repeat", backgroundPosition: "right 0.5rem center", backgroundSize: "1rem", paddingRight: "2rem" }}
+            >
+              <option value="__nearby__">{userLocation ? "📍 Nearby" : "📍 Use my location"}</option>
+              <option value="">All of Atlanta</option>
+              {NEIGHBORHOOD_NAMES.map((hood) => (
+                <option key={hood} value={hood}>{hood}</option>
+              ))}
+            </select>
 
-            {/* Location selector */}
-            <div className="flex items-center gap-2">
-              <select
-                value={selectedNeighborhood || (userLocation ? "__nearby__" : "")}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  if (val === "__nearby__") {
-                    // Switch to GPS mode
-                    setSelectedNeighborhood(null);
-                    requestLocation();
-                  } else if (val === "") {
-                    // All of Atlanta
-                    setSelectedNeighborhood(null);
-                    setUserLocation(null);
-                    localStorage.removeItem("userLocation");
-                  } else {
-                    // Neighborhood selected
-                    setSelectedNeighborhood(val);
-                    setUserLocation(null);
-                    localStorage.removeItem("userLocation");
-                  }
-                }}
-                className="px-2.5 py-1 rounded-full bg-[var(--dusk)] border border-[var(--twilight)] text-[var(--cream)] font-mono text-xs focus:outline-none focus:border-[var(--coral)] transition-colors appearance-none cursor-pointer max-w-[160px]"
-                style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236b7280'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`, backgroundRepeat: "no-repeat", backgroundPosition: "right 0.5rem center", backgroundSize: "0.875rem", paddingRight: "1.5rem" }}
-              >
-                <option value="__nearby__">Nearby</option>
-                <option value="">All of Atlanta</option>
-                {NEIGHBORHOOD_NAMES.map((hood) => (
-                  <option key={hood} value={hood}>{hood}</option>
-                ))}
-              </select>
-
-              {userLocation && (
-                <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-[var(--neon-cyan)]/10 border border-[var(--neon-cyan)]/30 font-mono text-[0.65rem] text-[var(--neon-cyan)]">
-                  <svg className="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 24 24">
-                    <circle cx="12" cy="12" r="4" />
-                  </svg>
-                  GPS
-                </span>
-              )}
+            {/* Single unified count badge - right side */}
+            <div
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[var(--neon-green)]/30 bg-[var(--neon-green)]/10"
+            >
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--neon-green)] opacity-40" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-[var(--neon-green)]" />
+              </span>
+              <span className="font-mono text-sm font-medium text-[var(--neon-green)]">
+                {counts.total} live
+              </span>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Map - 60% viewport height on mobile, fixed on desktop */}
+      {/* Category Filter Chips - moved above map for better mobile UX */}
       <div className="max-w-3xl mx-auto px-4 pt-3">
-        <div className="h-[55vh] sm:h-[400px] rounded-xl overflow-hidden border border-[var(--twilight)]">
+        <CategoryFilterChips
+          selected={selectedCategory}
+          onChange={setSelectedCategory}
+        />
+      </div>
+
+      {/* Map - reduced height on mobile to show more content */}
+      <div className="max-w-3xl mx-auto px-4 pt-3">
+        <div className="h-[35vh] sm:h-[400px] rounded-xl overflow-hidden border border-[var(--twilight)]">
           {loading && items.length === 0 ? (
             <div className="h-full bg-[var(--dusk)] animate-pulse flex items-center justify-center">
               <span className="text-[var(--muted)] font-mono text-sm">Loading map...</span>
@@ -413,14 +393,6 @@ export default function WhatsOpenPage() {
             />
           )}
         </div>
-      </div>
-
-      {/* Category Filter Chips */}
-      <div className="max-w-3xl mx-auto px-4 pt-4">
-        <CategoryFilterChips
-          selected={selectedCategory}
-          onChange={setSelectedCategory}
-        />
       </div>
 
       {/* Mixed List */}
@@ -517,6 +489,7 @@ export default function WhatsOpenPage() {
                     index={index}
                     portalSlug={portal.slug}
                     showDistance={userLocation || undefined}
+                    tags={s.tags} // Pass batch-loaded tags to prevent N+1 queries
                     spot={{
                       id: s.id,
                       name: s.name,

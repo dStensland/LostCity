@@ -4,6 +4,16 @@ import { formatPriceLevel } from "@/lib/spots";
 import CategoryIcon, { getCategoryLabel, getCategoryColor } from "./CategoryIcon";
 import { EventsBadge } from "./Badge";
 import VenueTagBadges from "./VenueTagBadges";
+import { VENUE_TAG_GROUPS } from "@/lib/venue-tags";
+import type { VenueTagGroup } from "@/lib/types";
+
+// Tag data that can be passed from parent (batch-loaded) to avoid N+1 queries
+export type SpotTagData = {
+  tag_id: string;
+  tag_label: string;
+  tag_group: string;
+  score: number;
+};
 
 // Get reflection color class based on spot type
 function getReflectionClass(spotType: string): string {
@@ -29,6 +39,8 @@ interface Props {
   index?: number;
   showDistance?: { lat: number; lng: number };
   portalSlug?: string;
+  /** Pre-loaded tags to avoid N+1 fetching - pass from batch-loaded API response */
+  tags?: SpotTagData[];
 }
 
 // Calculate distance between two points using Haversine formula
@@ -50,7 +62,7 @@ function formatDistance(miles: number): string {
   return `${Math.round(miles)} mi`;
 }
 
-export default function SpotCard({ spot, index = 0, showDistance, portalSlug }: Props) {
+export default function SpotCard({ spot, index = 0, showDistance, portalSlug, tags }: Props) {
   // Stagger animation class
   const staggerClass = index < 10 ? `stagger-${index + 1}` : "";
   const priceDisplay = formatPriceLevel(spot.price_level);
@@ -97,8 +109,29 @@ export default function SpotCard({ spot, index = 0, showDistance, portalSlug }: 
           </p>
         )}
 
-        {/* Community tags */}
-        <VenueTagBadges venueId={spot.id} maxTags={3} />
+        {/* Community tags - use pre-loaded tags if available, otherwise fetch (N+1 fallback) */}
+        {tags && tags.length > 0 ? (
+          <div className="flex items-center gap-1 mt-1.5 flex-wrap">
+            {tags.slice(0, 3).map((tag) => {
+              const groupConfig = VENUE_TAG_GROUPS[tag.tag_group as VenueTagGroup];
+              const color = groupConfig?.color || "var(--cream)";
+              return (
+                <span
+                  key={tag.tag_id}
+                  className="inline-flex items-center px-1.5 py-0.5 rounded text-[0.55rem] font-mono"
+                  style={{
+                    backgroundColor: `color-mix(in srgb, ${color} 15%, transparent)`,
+                    color: color,
+                  }}
+                >
+                  {tag.tag_label}
+                </span>
+              );
+            })}
+          </div>
+        ) : (
+          <VenueTagBadges venueId={spot.id} maxTags={3} />
+        )}
 
         {/* Meta row - mobile */}
         <div className="flex items-center gap-3 mt-2 sm:hidden">
