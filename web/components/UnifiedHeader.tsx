@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, Suspense } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import Image from "next/image";
+import Image from "@/components/SmartImage";
 import Logo from "./Logo";
 import UserMenu from "./UserMenu";
 import HeaderSearchButton from "./HeaderSearchButton";

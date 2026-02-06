@@ -1,0 +1,14 @@
+version: 1
+slug: trolley-barn
+name: Trolley Barn
+integration_method: playwright
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://trolleybarn.org
+  fetch:
+    render_js: true
+detail:
+  enabled: false

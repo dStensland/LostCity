@@ -1,0 +1,12 @@
+version: 1
+slug: scad-atlanta
+name: SCAD Atlanta
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.scad.edu/atlanta
+detail:
+  enabled: false

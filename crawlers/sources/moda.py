@@ -112,6 +112,21 @@ def crawl(source: dict) -> tuple[int, int, int]:
             # Extract images from page
             image_map = extract_images_from_page(page)
 
+            # Extract event links - build a map of title -> URL
+            event_links = {}
+            links = page.query_selector_all('a[href*="event"], a[href*="program"], a[href*="workshop"]')
+            for link in links:
+                try:
+                    href = link.get_attribute('href')
+                    text = link.inner_text().strip()
+                    if href and text and len(text) > 3:
+                        if not href.startswith('http'):
+                            href = BASE_URL + href
+                        event_links[text.lower()] = href
+                except Exception:
+                    pass
+            logger.info(f"Found {len(event_links)} event links")
+
             # Scroll to load all content
             for _ in range(3):
                 page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
@@ -217,6 +232,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             # Check if virtual
                             is_virtual = "virtual" in location_info.lower()
 
+                            # Try to find specific event URL
+                            event_url = event_links.get(title.lower(), EVENTS_URL)
+
                             event_record = {
                                 "source_id": source_id,
                                 "venue_id": venue_id if not is_virtual else None,
@@ -234,8 +252,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
                                 "price_max": None,
                                 "price_note": "Check MODA website for pricing",
                                 "is_free": False,
-                                "source_url": EVENTS_URL,
-                                "ticket_url": EVENTS_URL,
+                                "source_url": event_url,
+                                "ticket_url": event_url,
                                 "image_url": image_map.get(title),
                                 "raw_text": f"{title}\n{location_info}\n{description}"[:500],
                                 "extraction_confidence": 0.85,

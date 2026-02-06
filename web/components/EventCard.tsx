@@ -6,11 +6,14 @@ import type { Event } from "@/lib/supabase";
 import { AvatarStack } from "./UserAvatar";
 import { formatTimeSplit, formatSmartDate, formatPriceDetailed } from "@/lib/formats";
 import CategoryIcon, { getCategoryColor } from "./CategoryIcon";
+import ScopedStyles from "@/components/ScopedStyles";
+import { createCssVarClass } from "@/lib/css-utils";
 
 import SeriesBadge from "./SeriesBadge";
 import ReasonBadge, { getTopReasons, type RecommendationReason } from "./ReasonBadge";
 import { SubcategoryChip, getSubcategoryLabel, shouldShowSubcategory } from "./ActivityChip";
 import type { Frequency, DayOfWeek } from "@/lib/recurrence";
+import RSVPButton from "./RSVPButton";
 
 type EventCardEvent = Event & {
   is_live?: boolean;
@@ -80,256 +83,344 @@ function getReflectionClass(category: string | null): string {
   return reflectionMap[category] || "";
 }
 
-function EventCard({ event, index = 0, skipAnimation = false, portalSlug, friendsGoing = [], reasons, contextType, onHide }: Props) {
+// Known ticketing platform domains
+const TICKETING_DOMAINS = [
+  "eventbrite.com",
+  "ticketmaster.com",
+  "axs.com",
+  "dice.fm",
+  "seetickets.us",
+  "etix.com",
+  "ticketweb.com",
+  "showclix.com",
+  "ticketfly.com",
+  "universe.com",
+  "resident-advisor.net",
+  "songkick.com",
+];
+
+// Common reservation platforms
+const RESERVATION_DOMAINS = [
+  "resy.com",
+  "opentable.com",
+  "tock.com",
+  "exploretock.com",
+  "sevenrooms.com",
+  "toasttab.com",
+];
+
+function isTicketingUrl(url: string | null): boolean {
+  if (!url) return false;
+  try {
+    const hostname = new URL(url).hostname.toLowerCase();
+    return TICKETING_DOMAINS.some((domain) => hostname.includes(domain));
+  } catch {
+    return false;
+  }
+}
+
+function isReservationUrl(url: string | null): boolean {
+  if (!url) return false;
+  try {
+    const hostname = new URL(url).hostname.toLowerCase();
+    return RESERVATION_DOMAINS.some((domain) => hostname.includes(domain));
+  } catch {
+    return false;
+  }
+}
+
+function getLinkOutLabel({
+  url,
+  hasTicketUrl,
+  isExternal,
+}: {
+  url: string;
+  hasTicketUrl: boolean;
+  isExternal: boolean;
+}): string {
+  if (isReservationUrl(url)) return "Reserve";
+  if (isTicketingUrl(url)) return "Tickets";
+  if (!isExternal) return "Details";
+  return hasTicketUrl ? "Tickets" : "Details";
+}
+
+function EventCard({ event, index = 0, skipAnimation = false, portalSlug, friendsGoing = [], reasons, contextType }: Props) {
   const { time, period } = formatTimeSplit(event.start_time, event.is_all_day);
   const dateInfo = formatSmartDate(event.start_date);
   const isLive = event.is_live || false;
   // Only apply stagger animation to first 10 initial items, not infinite scroll items
   const staggerClass = !skipAnimation && index < 10 ? `stagger-${index + 1}` : "";
   const animationClass = skipAnimation ? "" : "animate-card-emerge";
-  const categoryColor = event.category ? getCategoryColor(event.category) : null;
+  const accentColor = event.category ? getCategoryColor(event.category) : "var(--neon-magenta)";
   const reflectionClass = getReflectionClass(event.category);
   const price = formatPriceDetailed(event);
+  const accentClass = createCssVarClass("--accent-color", accentColor, "accent");
 
   // Use query param navigation for in-app detail views (preserves auth state)
   const eventHref = portalSlug ? `/${portalSlug}?event=${event.id}` : `/events/${event.id}`;
+  const linkOutUrl = event.ticket_url || event.source_url || eventHref;
+  const isExternalLinkOut = Boolean(event.ticket_url || event.source_url);
+  const linkOutLabel = getLinkOutLabel({
+    url: linkOutUrl,
+    hasTicketUrl: Boolean(event.ticket_url),
+    isExternal: isExternalLinkOut,
+  });
+  const isTicketLinkOut = Boolean(event.ticket_url) || isTicketingUrl(event.source_url);
 
   return (
-    <Link
-      href={eventHref}
-      scroll={false}
-      className={`block p-3 mb-4 rounded-sm border border-[var(--twilight)] card-atmospheric ${reflectionClass} ${animationClass} ${staggerClass} group overflow-hidden`}
-      style={{
-        borderLeftWidth: categoryColor ? "3px" : undefined,
-        borderLeftColor: categoryColor || undefined,
-        backgroundColor: "var(--card-bg)",
-        "--glow-color": categoryColor || "var(--neon-magenta)",
-        "--reflection-color": categoryColor ? `color-mix(in srgb, ${categoryColor} 10%, transparent)` : undefined,
-      } as React.CSSProperties}
-    >
-      <div className="flex gap-3">
-        {/* Time cell - bolder typography for visual hierarchy */}
-        <div className="flex-shrink-0 w-14 flex flex-col items-center justify-center py-1">
-          <span className={`font-mono text-[0.65rem] font-semibold leading-none uppercase tracking-wide ${
-            dateInfo.isHighlight ? "text-[var(--coral)]" : "text-[var(--muted)]"
-          }`}>
-            {dateInfo.label}
-          </span>
-          {event.is_all_day ? (
-            <span className="font-mono text-[0.65rem] font-semibold text-[var(--soft)] leading-none mt-1 uppercase tracking-wide">
-              All Day
-            </span>
-          ) : (
-            <>
-              <span className="font-mono text-base font-bold text-[var(--cream)] leading-none tabular-nums mt-1">
-                {time}
+    <>
+      <ScopedStyles css={accentClass?.css} />
+      <div
+        className={`mb-4 rounded-sm border border-[var(--twilight)] card-atmospheric glow-accent reflection-accent ${reflectionClass} ${animationClass} ${staggerClass} bg-[var(--card-bg)] overflow-hidden group ${accentClass?.className ?? ""} ${
+          event.category ? "border-l-[3px] border-l-[var(--accent-color)]" : ""
+        }`}
+      >
+        <div className="flex gap-3">
+          <Link
+            href={eventHref}
+            scroll={false}
+            className="block flex-1 min-w-0 p-3"
+          >
+            <div className="flex gap-3">
+            {/* Time cell - bolder typography for visual hierarchy */}
+            <div className="flex-shrink-0 w-14 flex flex-col items-center justify-center py-1">
+              <span className={`font-mono text-[0.65rem] font-semibold leading-none uppercase tracking-wide ${
+                dateInfo.isHighlight ? "text-[var(--coral)]" : "text-[var(--muted)]"
+              }`}>
+                {dateInfo.label}
               </span>
-              {period && (
-                <span className="font-mono text-[0.6rem] font-medium text-[var(--soft)] mt-0.5">{period}</span>
+              {event.is_all_day ? (
+                <span className="font-mono text-[0.65rem] font-semibold text-[var(--soft)] leading-none mt-1 uppercase tracking-wide">
+                  All Day
+                </span>
+              ) : (
+                <>
+                  <span className="font-mono text-base font-bold text-[var(--cream)] leading-none tabular-nums mt-1">
+                    {time}
+                  </span>
+                  {period && (
+                    <span className="font-mono text-[0.6rem] font-medium text-[var(--soft)] mt-0.5">{period}</span>
+                  )}
+                </>
               )}
-            </>
-          )}
-        </div>
+            </div>
 
-        {/* Content */}
-        <div className="flex-1 min-w-0">
-          {/* Mobile: Stacked layout for more title space */}
-          <div className="sm:hidden">
-            {/* Top row: category + live badge + menu */}
-            <div className="flex items-center gap-2 mb-1.5">
-              {event.category && (
+            {/* Content */}
+            <div className="flex-1 min-w-0">
+              {/* Mobile: Stacked layout for more title space */}
+              <div className="sm:hidden">
+                {/* Top row: category + live badge + menu */}
+                <div className="flex items-center gap-2 mb-1.5">
+                  {event.category && (
+                    <span className="inline-flex items-center justify-center w-7 h-7 rounded bg-accent-20">
+                      <CategoryIcon type={event.category} size={18} glow="subtle" />
+                    </span>
+                  )}
+                  {isLive && (
+                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded border bg-[var(--neon-red)]/15 border-[var(--neon-red)]/30">
+                      <span className="relative flex h-1.5 w-1.5">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--neon-red)] opacity-40" />
+                        <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-[var(--neon-red)]" />
+                      </span>
+                      <span className="font-mono text-[0.55rem] font-medium text-[var(--neon-red)] uppercase tracking-wide">Live</span>
+                    </span>
+                  )}
+                </div>
+                {/* Title row: full width - larger and bolder */}
+                <h3 className="text-[var(--cream)] font-bold text-lg leading-tight line-clamp-2 group-hover:text-[var(--glow-color,var(--neon-magenta))] transition-colors mb-1">
+                  {event.title}
+                </h3>
+              </div>
+
+              {/* Desktop: Inline layout */}
+              <div className="hidden sm:flex items-center gap-2 mb-0.5">
+                {event.category && (
+                  <span className="flex-shrink-0 inline-flex items-center justify-center w-8 h-8 rounded bg-accent-20">
+                    <CategoryIcon type={event.category} size={20} glow="subtle" />
+                  </span>
+                )}
                 <span
-                  className="inline-flex items-center justify-center w-7 h-7 rounded"
-                  style={{
-                    backgroundColor: categoryColor ? `${categoryColor}20` : undefined,
-                  }}
+                  className="text-[var(--cream)] font-bold text-lg transition-colors line-clamp-1 group-hover:text-[var(--glow-color,var(--neon-magenta))]"
                 >
-                  <CategoryIcon type={event.category} size={18} glow="subtle" />
+                  {event.title}
                 </span>
-              )}
-              {isLive && (
-                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded border bg-[var(--neon-red)]/15 border-[var(--neon-red)]/30">
-                  <span className="relative flex h-1.5 w-1.5">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--neon-red)] opacity-40" />
-                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-[var(--neon-red)]" />
+                {isLive && (
+                  <span className="flex-shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 rounded border bg-[var(--neon-red)]/15 border-[var(--neon-red)]/30">
+                    <span className="relative flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--neon-red)] opacity-40" />
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-[var(--neon-red)]" />
+                    </span>
+                    <span className="font-mono text-[0.55rem] font-medium text-[var(--neon-red)] uppercase tracking-wide">Live</span>
                   </span>
-                  <span className="font-mono text-[0.55rem] font-medium text-[var(--neon-red)] uppercase tracking-wide">Live</span>
-                </span>
+                )}
+              </div>
+
+              {/* Friends going row - elevated above details for social proof */}
+              {friendsGoing.length > 0 && (
+                <div className="flex items-center gap-2 mt-1.5">
+                  {/* Neon avatar stack */}
+                  <AvatarStack
+                    users={friendsGoing.map((f) => ({
+                      id: f.user_id,
+                      name: f.user.display_name || f.user.username,
+                      avatar_url: f.user.avatar_url,
+                    }))}
+                    max={3}
+                    size="xs"
+                    showCount={friendsGoing.length > 3}
+                  />
+                  <span className="text-xs text-[var(--coral)] font-medium">
+                    {friendsGoing.length === 1 ? (
+                      <>
+                        {friendsGoing[0].user.display_name || friendsGoing[0].user.username}
+                        {" "}{friendsGoing[0].status === "going" ? "is going" : "is interested"}
+                      </>
+                    ) : (
+                      <>
+                        {friendsGoing.length} friends
+                        {" "}{friendsGoing.some(f => f.status === "going") ? "are in" : "are interested"}
+                      </>
+                    )}
+                  </span>
+                </div>
+              )}
+
+              {/* Details row - venue and metadata with better hierarchy */}
+              {/* Mobile: show only venue + price; Desktop: show all metadata */}
+              <div className="flex items-center gap-1.5 text-sm text-[var(--soft)] mt-1">
+                {event.venue && (
+                  <span className="truncate max-w-[60%] sm:max-w-[40%] font-medium" title={event.venue.name}>{event.venue.name}</span>
+                )}
+                {/* Subcategory chip - desktop only for cleaner mobile */}
+                {shouldShowSubcategory(event.subcategory, event.category) && (
+                  <span className="hidden sm:contents">
+                    <span className="opacity-40">·</span>
+                    <SubcategoryChip
+                      label={getSubcategoryLabel(event.subcategory!)!}
+                      value={event.subcategory!}
+                      portalSlug={portalSlug}
+                    />
+                  </span>
+                )}
+                {/* Neighborhood - desktop only for cleaner mobile */}
+                {event.venue?.neighborhood && (
+                  <span className="hidden sm:contents">
+                    <span className="opacity-40">·</span>
+                    <span className="truncate" title={event.venue.neighborhood}>{event.venue.neighborhood}</span>
+                  </span>
+                )}
+                {price && price.text && (
+                  <>
+                    <span className="opacity-40">·</span>
+                    {price.isFree ? (
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full font-mono text-[0.65rem] font-semibold ${
+                        price.isEstimate
+                          ? "bg-[var(--neon-green)]/15 text-[var(--neon-green)] border border-[var(--neon-green)]/25"
+                          : "bg-[var(--neon-green)]/25 text-[var(--neon-green)] border border-[var(--neon-green)]/40 shadow-[0_0_8px_var(--neon-green)/15]"
+                      }`}>
+                        {price.text}
+                      </span>
+                    ) : (
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full font-mono text-[0.65rem] font-medium ${
+                        price.isEstimate
+                          ? "bg-[var(--twilight)]/50 text-[var(--muted)]"
+                          : "bg-[var(--twilight)] text-[var(--cream)] border border-[var(--twilight)]"
+                      }`}>
+                        {price.text}
+                      </span>
+                    )}
+                  </>
+                )}
+                {/* Series badge - desktop only */}
+                {event.series && (
+                  <span className="hidden sm:contents">
+                    <span className="opacity-40">·</span>
+                    <SeriesBadge
+                      seriesType={event.series.series_type}
+                      frequency={event.series.frequency}
+                      dayOfWeek={event.series.day_of_week}
+                      compact
+                    />
+                  </span>
+                )}
+                {/* Class badge - desktop only */}
+                {event.is_class && (
+                  <span className="hidden sm:contents">
+                    <span className="opacity-40">·</span>
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full font-mono text-[0.6rem] font-semibold bg-[var(--neon-blue,#60a5fa)]/15 text-[var(--neon-blue,#60a5fa)] border border-[var(--neon-blue,#60a5fa)]/25">
+                      Class
+                    </span>
+                  </span>
+                )}
+                {/* Instructor - desktop only */}
+                {event.instructor && (
+                  <span className="hidden sm:contents">
+                    <span className="opacity-40">·</span>
+                    <span className="truncate text-[var(--muted)] text-xs" title={event.instructor}>
+                      w/ {event.instructor}
+                    </span>
+                  </span>
+                )}
+                {/* Skill level - desktop only */}
+                {event.skill_level && (
+                  <span className="hidden sm:contents">
+                    <span className="opacity-40">·</span>
+                    <span className="inline-flex items-center px-1.5 py-0.5 rounded font-mono text-[0.55rem] text-[var(--muted)] bg-[var(--twilight)]/40 capitalize">
+                      {event.skill_level}
+                    </span>
+                  </span>
+                )}
+              </div>
+
+              {/* Recommendation reasons - filter redundant badges based on context */}
+              {friendsGoing.length === 0 && reasons && reasons.length > 0 && (
+                <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+                  {getTopReasons(
+                    reasons.filter((r) => {
+                      // Filter out redundant badges based on section context
+                      if (contextType === "venue" && r.type === "followed_venue") return false;
+                      if (contextType === "producer" && r.type === "followed_organization") return false;
+                      if (contextType === "interests" && r.type === "category") return false;
+                      if (contextType === "neighborhood" && r.type === "neighborhood") return false;
+                      return true;
+                    }),
+                    2
+                  ).map((reason, idx) => (
+                    <ReasonBadge key={`${reason.type}-${idx}`} reason={reason} size="sm" />
+                  ))}
+                </div>
               )}
             </div>
-            {/* Title row: full width - larger and bolder */}
-            <h3 className="text-[var(--cream)] font-bold text-lg leading-tight line-clamp-2 group-hover:text-[var(--glow-color,var(--neon-magenta))] transition-colors mb-1">
-              {event.title}
-            </h3>
-          </div>
 
-          {/* Desktop: Inline layout */}
-          <div className="hidden sm:flex items-center gap-2 mb-0.5">
-            {event.category && (
-              <span
-                className="flex-shrink-0 inline-flex items-center justify-center w-8 h-8 rounded"
-                style={{
-                  backgroundColor: categoryColor ? `${categoryColor}20` : undefined,
-                }}
+            </div>
+          </Link>
+
+          <div className="flex flex-col items-center gap-2 pt-3 pr-3 pb-3 flex-shrink-0">
+            <RSVPButton eventId={event.id} variant="compact" />
+            {isExternalLinkOut && (
+              <a
+                href={linkOutUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={linkOutLabel}
+                className="w-11 h-11 inline-flex items-center justify-center rounded-xl border border-[var(--twilight)] bg-[var(--dusk)] text-[var(--muted)] hover:text-[var(--cream)] hover:border-[var(--coral)] hover:shadow-[0_0_16px_rgba(255,107,122,0.25)] transition-all"
               >
-                <CategoryIcon type={event.category} size={20} glow="subtle" />
-              </span>
-            )}
-            <span
-              className="text-[var(--cream)] font-bold text-lg transition-colors line-clamp-1 group-hover:text-[var(--glow-color,var(--neon-magenta))]"
-            >
-              {event.title}
-            </span>
-            {isLive && (
-              <span className="flex-shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 rounded border bg-[var(--neon-red)]/15 border-[var(--neon-red)]/30">
-                <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--neon-red)] opacity-40" />
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-[var(--neon-red)]" />
-                </span>
-                <span className="font-mono text-[0.55rem] font-medium text-[var(--neon-red)] uppercase tracking-wide">Live</span>
-              </span>
+                {isTicketLinkOut ? (
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+                  </svg>
+                ) : (
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 3h7v7m0-7L10 14" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10v8a1 1 0 001 1h8" />
+                  </svg>
+                )}
+              </a>
             )}
           </div>
-
-          {/* Friends going row - elevated above details for social proof */}
-          {friendsGoing.length > 0 && (
-            <div className="flex items-center gap-2 mt-1.5">
-              {/* Neon avatar stack */}
-              <AvatarStack
-                users={friendsGoing.map((f) => ({
-                  id: f.user_id,
-                  name: f.user.display_name || f.user.username,
-                  avatar_url: f.user.avatar_url,
-                }))}
-                max={3}
-                size="xs"
-                showCount={friendsGoing.length > 3}
-              />
-              <span className="text-xs text-[var(--coral)] font-medium">
-                {friendsGoing.length === 1 ? (
-                  <>
-                    {friendsGoing[0].user.display_name || friendsGoing[0].user.username}
-                    {" "}{friendsGoing[0].status === "going" ? "is going" : "is interested"}
-                  </>
-                ) : (
-                  <>
-                    {friendsGoing.length} friends
-                    {" "}{friendsGoing.some(f => f.status === "going") ? "are in" : "are interested"}
-                  </>
-                )}
-              </span>
-            </div>
-          )}
-
-          {/* Details row - venue and metadata with better hierarchy */}
-          {/* Mobile: show only venue + price; Desktop: show all metadata */}
-          <div className="flex items-center gap-1.5 text-sm text-[var(--soft)] mt-1">
-            {event.venue && (
-              <span className="truncate max-w-[60%] sm:max-w-[40%] font-medium" title={event.venue.name}>{event.venue.name}</span>
-            )}
-            {/* Subcategory chip - desktop only for cleaner mobile */}
-            {shouldShowSubcategory(event.subcategory, event.category) && (
-              <span className="hidden sm:contents">
-                <span className="opacity-40">·</span>
-                <SubcategoryChip
-                  label={getSubcategoryLabel(event.subcategory!)!}
-                  value={event.subcategory!}
-                  portalSlug={portalSlug}
-                />
-              </span>
-            )}
-            {/* Neighborhood - desktop only for cleaner mobile */}
-            {event.venue?.neighborhood && (
-              <span className="hidden sm:contents">
-                <span className="opacity-40">·</span>
-                <span className="truncate" title={event.venue.neighborhood}>{event.venue.neighborhood}</span>
-              </span>
-            )}
-            {price && price.text && (
-              <>
-                <span className="opacity-40">·</span>
-                {price.isFree ? (
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full font-mono text-[0.65rem] font-semibold ${
-                    price.isEstimate
-                      ? "bg-[var(--neon-green)]/15 text-[var(--neon-green)] border border-[var(--neon-green)]/25"
-                      : "bg-[var(--neon-green)]/25 text-[var(--neon-green)] border border-[var(--neon-green)]/40 shadow-[0_0_8px_var(--neon-green)/15]"
-                  }`}>
-                    {price.text}
-                  </span>
-                ) : (
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full font-mono text-[0.65rem] font-medium ${
-                    price.isEstimate
-                      ? "bg-[var(--twilight)]/50 text-[var(--muted)]"
-                      : "bg-[var(--twilight)] text-[var(--cream)] border border-[var(--twilight)]"
-                  }`}>
-                    {price.text}
-                  </span>
-                )}
-              </>
-            )}
-            {/* Series badge - desktop only */}
-            {event.series && (
-              <span className="hidden sm:contents">
-                <span className="opacity-40">·</span>
-                <SeriesBadge
-                  seriesType={event.series.series_type}
-                  frequency={event.series.frequency}
-                  dayOfWeek={event.series.day_of_week}
-                  compact
-                />
-              </span>
-            )}
-            {/* Class badge - desktop only */}
-            {event.is_class && (
-              <span className="hidden sm:contents">
-                <span className="opacity-40">·</span>
-                <span className="inline-flex items-center px-2 py-0.5 rounded-full font-mono text-[0.6rem] font-semibold bg-[var(--neon-blue,#60a5fa)]/15 text-[var(--neon-blue,#60a5fa)] border border-[var(--neon-blue,#60a5fa)]/25">
-                  Class
-                </span>
-              </span>
-            )}
-            {/* Instructor - desktop only */}
-            {event.instructor && (
-              <span className="hidden sm:contents">
-                <span className="opacity-40">·</span>
-                <span className="truncate text-[var(--muted)] text-xs" title={event.instructor}>
-                  w/ {event.instructor}
-                </span>
-              </span>
-            )}
-            {/* Skill level - desktop only */}
-            {event.skill_level && (
-              <span className="hidden sm:contents">
-                <span className="opacity-40">·</span>
-                <span className="inline-flex items-center px-1.5 py-0.5 rounded font-mono text-[0.55rem] text-[var(--muted)] bg-[var(--twilight)]/40 capitalize">
-                  {event.skill_level}
-                </span>
-              </span>
-            )}
-          </div>
-
-          {/* Recommendation reasons - filter redundant badges based on context */}
-          {friendsGoing.length === 0 && reasons && reasons.length > 0 && (
-            <div className="flex items-center gap-1.5 mt-2 flex-wrap">
-              {getTopReasons(
-                reasons.filter((r) => {
-                  // Filter out redundant badges based on section context
-                  if (contextType === "venue" && r.type === "followed_venue") return false;
-                  if (contextType === "producer" && r.type === "followed_organization") return false;
-                  if (contextType === "interests" && r.type === "category") return false;
-                  if (contextType === "neighborhood" && r.type === "neighborhood") return false;
-                  return true;
-                }),
-                2
-              ).map((reason, idx) => (
-                <ReasonBadge key={`${reason.type}-${idx}`} reason={reason} size="sm" />
-              ))}
-            </div>
-          )}
         </div>
-
       </div>
-    </Link>
+    </>
   );
 }
 

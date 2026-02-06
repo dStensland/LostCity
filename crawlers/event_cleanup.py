@@ -59,9 +59,18 @@ def cleanup_past_events(days_to_keep: int = 0, dry_run: bool = True) -> dict:
         logger.info(f"[DRY RUN] Would delete {len(past_events)} past events")
         return {"deleted": 0, "would_delete": len(past_events), "dry_run": True}
 
-    # Delete in batches
+    # Delete in batches (clear canonical references first)
     event_ids = [e["id"] for e in past_events]
     deleted = 0
+
+    # Clear canonical_event_id references pointing to events we're about to delete
+    for eid in event_ids:
+        try:
+            client.table("events").update(
+                {"canonical_event_id": None}
+            ).eq("canonical_event_id", eid).execute()
+        except Exception:
+            pass
 
     for i in range(0, len(event_ids), 100):
         batch = event_ids[i:i+100]
@@ -114,8 +123,16 @@ def cleanup_duplicate_events(dry_run: bool = True) -> dict:
         logger.info(f"[DRY RUN] Would delete {len(duplicates_to_delete)} duplicates")
         return {"deleted": 0, "would_delete": len(duplicates_to_delete), "dry_run": True}
 
-    # Delete duplicates
+    # Delete duplicates (clear canonical references first)
     deleted = 0
+    for eid in duplicates_to_delete:
+        try:
+            client.table("events").update(
+                {"canonical_event_id": None}
+            ).eq("canonical_event_id", eid).execute()
+        except Exception:
+            pass
+
     for i in range(0, len(duplicates_to_delete), 100):
         batch = duplicates_to_delete[i:i+100]
         try:
@@ -168,8 +185,16 @@ def cleanup_invalid_events(dry_run: bool = True) -> dict:
         logger.info(f"[DRY RUN] Would delete {len(invalid_events)} invalid events")
         return {"deleted": 0, "would_delete": len(invalid_events), "dry_run": True}
 
-    # Delete
+    # Delete (clear canonical references first)
     deleted = 0
+    for eid in invalid_events:
+        try:
+            client.table("events").update(
+                {"canonical_event_id": None}
+            ).eq("canonical_event_id", eid).execute()
+        except Exception:
+            pass
+
     for i in range(0, len(invalid_events), 100):
         batch = invalid_events[i:i+100]
         try:

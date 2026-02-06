@@ -1,0 +1,12 @@
+version: 1
+slug: city-springs
+name: City Springs
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://citysprings.com/events/
+detail:
+  enabled: false

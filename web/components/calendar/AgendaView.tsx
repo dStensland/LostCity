@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import Link from "next/link";
-import Image from "next/image";
+import Image from "@/components/SmartImage";
 import { format, isToday, isTomorrow, isThisWeek, isBefore, parseISO } from "date-fns";
 import CategoryIcon from "@/components/CategoryIcon";
 import { formatTimeSplit, formatPriceDetailed, type PriceableEvent } from "@/lib/formats";
@@ -54,7 +54,6 @@ interface AgendaViewProps {
 
 function getSmartDateLabel(dateStr: string): string {
   const date = parseISO(dateStr);
-  const today = new Date();
 
   if (isToday(date)) return "Today";
   if (isTomorrow(date)) return "Tomorrow";

@@ -1,0 +1,14 @@
+version: 1
+slug: vista-yoga
+name: Vista Yoga
+integration_method: playwright
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.vistayogaatl.com
+  fetch:
+    render_js: true
+detail:
+  enabled: false

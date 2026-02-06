@@ -9,7 +9,7 @@ export function getSeriesTypeLabel(type: string): string {
     film: "Film",
     recurring_show: "Recurring Show",
     class_series: "Class Series",
-    festival_program: "Festival Program",
+    festival_program: "Program",
     tour: "Tour",
     other: "Series",
   };

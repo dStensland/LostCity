@@ -1,0 +1,12 @@
+version: 1
+slug: west-end-neighborhood
+name: Historic West End Neighborhood
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://historicwestend.com
+detail:
+  enabled: false

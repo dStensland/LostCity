@@ -1,0 +1,12 @@
+version: 1
+slug: dekalb-library
+name: DeKalb County Public Library
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.dekalblibrary.org
+detail:
+  enabled: false

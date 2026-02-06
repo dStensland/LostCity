@@ -1,0 +1,12 @@
+version: 1
+slug: mason-fine-art
+name: Mason Fine Art
+integration_method: llm_crawler
+defaults: {}
+discovery:
+  enabled: true
+  type: html
+  urls:
+  - https://www.masonfineart.com
+detail:
+  enabled: false

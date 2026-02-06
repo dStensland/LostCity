@@ -1,0 +1,12 @@
+version: 1
+slug: georgia-tech-arts
+name: Georgia Tech Arts
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://arts.gatech.edu/events
+detail:
+  enabled: false

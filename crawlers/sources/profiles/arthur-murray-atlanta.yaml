@@ -1,0 +1,12 @@
+version: 1
+slug: arthur-murray-atlanta
+name: Arthur Murray Atlanta
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://arthurmurrayatl.com
+detail:
+  enabled: false

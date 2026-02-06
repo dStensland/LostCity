@@ -1,6 +1,14 @@
 import { supabase, type Event } from "./supabase";
 import { createServiceClient } from "./supabase/service";
 import {
+  CATEGORIES,
+  SUBCATEGORIES,
+  DATE_FILTERS,
+  PRICE_FILTERS,
+  TAG_GROUPS,
+  ALL_TAGS,
+} from "./search-constants";
+import {
   startOfDay,
   addDays,
   nextSaturday,
@@ -15,6 +23,8 @@ import { createLogger } from "./logger";
 import type { Frequency, DayOfWeek } from "./recurrence";
 
 const logger = createLogger("search");
+
+export { CATEGORIES, SUBCATEGORIES, DATE_FILTERS, PRICE_FILTERS, TAG_GROUPS, ALL_TAGS };
 
 
 export interface SearchFilters {
@@ -38,6 +48,7 @@ export interface SearchFilters {
   geo_radius_km?: number;    // Portal geo radius in km
   mood?: MoodId;             // Mood-based filtering (expands to vibes/categories)
   portal_id?: string;        // Portal ID filter - all events belong to a portal
+  portal_exclusive?: boolean; // If true, only show events tied to the portal_id
   // Source filters
   source_ids?: number[];     // Explicit list of source IDs to filter by
   // Content filters (set automatically from user preferences / portal settings)
@@ -92,6 +103,15 @@ export type EventWithLocation = Event & {
     image_url: string | null;
     frequency: Frequency;
     day_of_week: DayOfWeek;
+    festival?: {
+      id: string;
+      slug: string;
+      name: string;
+      image_url: string | null;
+      festival_type?: string | null;
+      location?: string | null;
+      neighborhood?: string | null;
+    } | null;
   } | null;
   // Social proof counts (optional, added when requested)
   going_count?: number;
@@ -584,7 +604,7 @@ export async function getFilteredEventsWithSearch(
       *,
       venue:venues(id, name, slug, address, neighborhood, city, state, lat, lng, typical_price_min, typical_price_max, venue_type),
       category_data:categories(typical_price_min, typical_price_max),
-      series:series(id, slug, title, series_type, image_url, frequency, day_of_week)
+      series:series(id, slug, title, series_type, image_url, frequency, day_of_week, festival:festivals(id, slug, name, image_url, festival_type, location, neighborhood))
     `,
       { count: "exact" }
     )
@@ -599,9 +619,12 @@ export async function getFilteredEventsWithSearch(
 
   // Apply portal restriction filter
   // All events must belong to a portal (enforced by database trigger)
-  // Filter directly by portal_id for O(1) lookup
   if (filters.portal_id) {
-    query = query.eq("portal_id", filters.portal_id);
+    if (filters.portal_exclusive) {
+      query = query.eq("portal_id", filters.portal_id);
+    } else {
+      query = query.or(`portal_id.eq.${filters.portal_id},portal_id.is.null`);
+    }
   }
   // Note: If no portal_id provided, no portal filtering is applied (admin/global view)
 
@@ -710,7 +733,7 @@ export async function getFilteredEventsWithCursor(
       *,
       venue:venues(id, name, slug, address, neighborhood, city, state, lat, lng, typical_price_min, typical_price_max, venue_type),
       category_data:categories(typical_price_min, typical_price_max),
-      series:series(id, slug, title, series_type, image_url, frequency, day_of_week)
+      series:series(id, slug, title, series_type, image_url, frequency, day_of_week, festival:festivals(id, slug, name, image_url, festival_type, location, neighborhood))
     `
     )
     .gte("start_date", today)
@@ -720,7 +743,11 @@ export async function getFilteredEventsWithCursor(
 
   // Apply portal restriction filter - all events belong to a portal
   if (filters.portal_id) {
-    query = query.eq("portal_id", filters.portal_id);
+    if (filters.portal_exclusive) {
+      query = query.eq("portal_id", filters.portal_id);
+    } else {
+      query = query.or(`portal_id.eq.${filters.portal_id},portal_id.is.null`);
+    }
   }
 
   // Apply explicit source filtering if provided
@@ -880,7 +907,11 @@ export async function getEventsForMap(
 
   // Apply portal restriction filter - all events belong to a portal
   if (filters.portal_id) {
-    query = query.eq("portal_id", filters.portal_id);
+    if (filters.portal_exclusive) {
+      query = query.eq("portal_id", filters.portal_id);
+    } else {
+      query = query.or(`portal_id.eq.${filters.portal_id},portal_id.is.null`);
+    }
   }
 
   // Apply explicit source filtering if provided
@@ -974,151 +1005,6 @@ export async function getSubcategories(categoryId?: string): Promise<Subcategory
 
   return data as Subcategory[];
 }
-
-// Static categories for initial render (matches database)
-export const CATEGORIES = [
-  { value: "music", label: "Music" },
-  { value: "film", label: "Film" },
-  { value: "comedy", label: "Comedy" },
-  { value: "theater", label: "Theater" },
-  { value: "art", label: "Art" },
-  { value: "sports", label: "Sports" },
-  { value: "food_drink", label: "Food & Drink" },
-  { value: "nightlife", label: "Nightlife" },
-  { value: "community", label: "Community" },
-  { value: "fitness", label: "Fitness" },
-  { value: "family", label: "Family" },
-  { value: "learning", label: "Learning" },
-  { value: "dance", label: "Dance" },
-  { value: "tours", label: "Tours" },
-  { value: "meetup", label: "Meetup" },
-  { value: "words", label: "Words" },
-  { value: "religious", label: "Religious" },
-  { value: "markets", label: "Markets" },
-  { value: "wellness", label: "Wellness" },
-  { value: "gaming", label: "Gaming" },
-  { value: "outdoors", label: "Outdoors" },
-  { value: "other", label: "Other" },
-] as const;
-
-// Subcategories grouped by category for UI dropdowns
-export const SUBCATEGORIES: Record<string, { value: string; label: string }[]> = {
-  music: [
-    { value: "music.live", label: "Live Music" },
-    { value: "music.live.rock", label: "Rock / Indie" },
-    { value: "music.live.hiphop", label: "Hip-Hop / R&B" },
-    { value: "music.live.electronic", label: "Electronic / DJ" },
-    { value: "music.live.jazz", label: "Jazz / Blues" },
-    { value: "music.live.country", label: "Country / Folk" },
-    { value: "music.live.metal", label: "Metal / Punk" },
-    { value: "music.classical", label: "Classical" },
-    { value: "music.openmic", label: "Open Mic" },
-  ],
-  film: [
-    { value: "film.new", label: "New Release" },
-    { value: "film.repertory", label: "Repertory" },
-    { value: "film.documentary", label: "Documentary" },
-    { value: "film.festival", label: "Film Festival" },
-  ],
-  comedy: [
-    { value: "comedy.standup", label: "Stand-Up" },
-    { value: "comedy.improv", label: "Improv" },
-    { value: "comedy.openmic", label: "Open Mic" },
-  ],
-  theater: [
-    { value: "theater.play", label: "Play" },
-    { value: "theater.musical", label: "Musical" },
-    { value: "theater.dance", label: "Dance / Ballet" },
-    { value: "theater.opera", label: "Opera" },
-  ],
-  community: [
-    { value: "community.volunteer", label: "Volunteer" },
-    { value: "community.meetup", label: "Meetup" },
-    { value: "community.networking", label: "Networking" },
-    { value: "community.lgbtq", label: "LGBTQ+" },
-  ],
-  nightlife: [
-    { value: "nightlife.dj", label: "DJ Night" },
-    { value: "nightlife.drag", label: "Drag / Cabaret" },
-    { value: "nightlife.trivia", label: "Trivia" },
-    { value: "nightlife.strip", label: "Strip Club" },
-    { value: "nightlife.burlesque", label: "Burlesque" },
-    { value: "nightlife.lifestyle", label: "Lifestyle" },
-    { value: "nightlife.revue", label: "Adult Revue" },
-  ],
-  meetup: [
-    { value: "meetup.tech", label: "Tech & Science" },
-    { value: "meetup.professional", label: "Professional" },
-    { value: "meetup.social", label: "Social" },
-    { value: "meetup.hobbies", label: "Hobbies" },
-    { value: "meetup.outdoors", label: "Outdoors" },
-    { value: "meetup.learning", label: "Learning" },
-    { value: "meetup.health", label: "Health & Wellness" },
-    { value: "meetup.creative", label: "Arts & Creative" },
-    { value: "meetup.sports", label: "Sports & Fitness" },
-    { value: "meetup.food", label: "Food & Drink" },
-    { value: "meetup.parents", label: "Parents & Family" },
-    { value: "meetup.lgbtq", label: "LGBTQ+" },
-  ],
-  words: [
-    { value: "words.reading", label: "Reading / Signing" },
-    { value: "words.bookclub", label: "Book Club" },
-    { value: "words.poetry", label: "Poetry" },
-    { value: "words.storytelling", label: "Storytelling" },
-    { value: "words.workshop", label: "Writing Workshop" },
-    { value: "words.lecture", label: "Author Talk" },
-  ],
-};
-
-export const DATE_FILTERS = [
-  { value: "now", label: "Live" },
-  { value: "today", label: "Today" },
-  { value: "tomorrow", label: "Tomorrow" },
-  { value: "weekend", label: "The weekend" },
-  { value: "week", label: "This Week" },
-  { value: "month", label: "Next 30 Days" },
-] as const;
-
-export const PRICE_FILTERS = [
-  { value: "free", label: "Free", max: null },
-  { value: "under25", label: "Under $25", max: 25 },
-  { value: "under50", label: "Under $50", max: 50 },
-  { value: "under100", label: "Under $100", max: 100 },
-] as const;
-
-// Event tags for filtering
-export const TAG_GROUPS = {
-  Vibe: [
-    { value: "date-night", label: "Date Night" },
-    { value: "chill", label: "Chill" },
-    { value: "high-energy", label: "High Energy" },
-    { value: "intimate", label: "Intimate" },
-  ],
-  Access: [
-    { value: "free", label: "Free" },
-    { value: "all-ages", label: "All Ages" },
-    { value: "18+", label: "18+" },
-    { value: "21+", label: "21+" },
-    { value: "family-friendly", label: "Family" },
-    { value: "accessible", label: "Accessible" },
-    { value: "outdoor", label: "Outdoor" },
-  ],
-  Special: [
-    { value: "local-artist", label: "Local Artist" },
-    { value: "touring", label: "Touring" },
-    { value: "album-release", label: "Album Release" },
-    { value: "one-night-only", label: "One Night Only" },
-    { value: "opening-night", label: "Opening Night" },
-    { value: "holiday", label: "Holiday" },
-  ],
-} as const;
-
-// Flat array of all tags
-export const ALL_TAGS = [
-  ...TAG_GROUPS.Vibe,
-  ...TAG_GROUPS.Access,
-  ...TAG_GROUPS.Special,
-] as const;
 
 export interface VenueWithCount {
   id: number;
@@ -1264,7 +1150,8 @@ async function getRollupStats(
   dateStart: string,
   dateEnd: string,
   categoryId?: string,
-  portalId?: string
+  portalId?: string,
+  portalExclusive?: boolean
 ): Promise<RollupStats> {
   // Get events with source rollup behavior
   let query = supabase
@@ -1283,9 +1170,11 @@ async function getRollupStats(
 
   // Apply portal restriction filter
   if (portalId) {
-    query = query.or(`portal_id.eq.${portalId},portal_id.is.null`);
-  } else {
-    query = query.is("portal_id", null);
+    if (portalExclusive) {
+      query = query.eq("portal_id", portalId);
+    } else {
+      query = query.or(`portal_id.eq.${portalId},portal_id.is.null`);
+    }
   }
 
   if (categoryId) {
@@ -1356,7 +1245,8 @@ export async function getFilteredEventsWithRollups(
     dateRange.start,
     dateRange.end,
     filters.categories?.[0],
-    filters.portal_id
+    filters.portal_id,
+    filters.portal_exclusive
   );
 
   const venueIdsToExclude = rollupStats.venueRollups.map((v) => v.venueId);

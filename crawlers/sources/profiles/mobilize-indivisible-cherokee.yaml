@@ -1,0 +1,14 @@
+version: 1
+slug: mobilize-indivisible-cherokee
+name: Indivisible Cherokee United (Mobilize)
+integration_method: playwright
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.mobilize.us/indivisiblecherokeeunited/
+  fetch:
+    render_js: true
+detail:
+  enabled: false

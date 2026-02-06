@@ -1,0 +1,14 @@
+version: 1
+slug: buckhead-theatre
+name: Buckhead Theatre
+integration_method: playwright
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.livenation.com/venue/KovZpaIJZ7A/buckhead-theatre-events
+  fetch:
+    render_js: true
+detail:
+  enabled: false

@@ -1,0 +1,12 @@
+version: 1
+slug: grand-ole-opry
+name: Grand Ole Opry
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.opry.com/full-calendar
+detail:
+  enabled: false

@@ -6,9 +6,10 @@ import MarkerClusterGroup from "react-leaflet-cluster";
 import L from "leaflet";
 import Link from "next/link";
 import type { EventWithLocation } from "@/lib/search";
-import type { Spot } from "@/lib/spots";
+import type { Spot } from "@/lib/spots-constants";
 import { getMapTiles } from "@/lib/map-config";
 import { usePortal } from "@/lib/portal-context";
+import ScopedStyles from "@/components/ScopedStyles";
 import { CATEGORY_CONFIG } from "./CategoryIcon";
 import { formatTime } from "@/lib/formats";
 
@@ -18,6 +19,10 @@ import "leaflet/dist/leaflet.css";
 // Icon cache to prevent recreation on every render
 const iconCache = new Map<string, L.DivIcon>();
 const clusterIconCache = new Map<number, L.DivIcon>();
+
+const markerColorClasses = Object.entries(CATEGORY_CONFIG)
+  .map(([key, value]) => `.marker-color-${key} { --marker-color: ${value.color}; }`)
+  .join("\n");
 
 // SVG paths for category and spot type icons (simplified for map markers)
 const ICON_PATHS: Record<string, string> = {
@@ -102,6 +107,28 @@ const getMapStyles = (isLight: boolean) => `
   .leaflet-control-attribution a {
     color: var(--soft, ${isLight ? '#4b5563' : '#A1A1AA'}) !important;
   }
+  .leaflet-bar {
+    background: var(--dusk, ${isLight ? '#F9FAFB' : '#18181F'}) !important;
+    border: 1px solid var(--twilight, ${isLight ? '#E5E7EB' : '#252530'}) !important;
+    border-radius: 12px !important;
+    overflow: hidden;
+    box-shadow: 0 8px 20px ${isLight ? 'rgba(0, 0, 0, 0.15)' : 'rgba(0, 0, 0, 0.45)'};
+  }
+  .leaflet-bar a {
+    background: transparent !important;
+    color: var(--cream, ${isLight ? '#111827' : '#FAFAF9'}) !important;
+    border: 0 !important;
+    width: 34px !important;
+    height: 34px !important;
+    line-height: 34px !important;
+  }
+  .leaflet-bar a:hover {
+    background: color-mix(in srgb, var(--coral) 20%, transparent) !important;
+    color: var(--coral) !important;
+  }
+  .leaflet-control-zoom-in {
+    border-bottom: 1px solid var(--twilight, ${isLight ? '#E5E7EB' : '#252530'}) !important;
+  }
 
   /* Marker styles - minimal transitions to prevent jitter */
   .neon-marker {
@@ -109,6 +136,64 @@ const getMapStyles = (isLight: boolean) => `
   }
   .neon-marker:hover {
     z-index: 1000 !important;
+  }
+  .lc-pin {
+    --marker-color: #E855A0;
+    position: relative;
+    width: 34px;
+    height: 42px;
+  }
+  .lc-pin-halo {
+    position: absolute;
+    top: 6px;
+    left: 50%;
+    width: 24px;
+    height: 24px;
+    transform: translateX(-50%);
+    background: color-mix(in srgb, var(--marker-color) 35%, transparent);
+    filter: blur(6px);
+    border-radius: 50%;
+  }
+  .lc-pin-core {
+    position: absolute;
+    top: 4px;
+    left: 50%;
+    width: 26px;
+    height: 26px;
+    transform: translateX(-50%);
+    background: var(--marker-color);
+    border: 2px solid rgba(255, 255, 255, 0.95);
+    border-radius: 50% 50% 50% 0;
+    transform: translateX(-50%) rotate(-45deg);
+    box-shadow: 0 0 10px color-mix(in srgb, var(--marker-color) 70%, transparent);
+  }
+  .lc-pin-icon {
+    position: absolute;
+    top: 9px;
+    left: 50%;
+    width: 14px;
+    height: 14px;
+    transform: translateX(-50%);
+    fill: none;
+    stroke: rgba(0, 0, 0, 0.8);
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  .lc-pin-dot {
+    position: absolute;
+    bottom: 6px;
+    left: 50%;
+    width: 6px;
+    height: 6px;
+    transform: translateX(-50%);
+    background: rgba(255, 255, 255, 0.8);
+    border-radius: 50%;
+    box-shadow: 0 0 6px rgba(255, 255, 255, 0.6);
+  }
+  ${markerColorClasses}
+  .marker-color-default {
+    --marker-color: #E855A0;
   }
 
   /* Live event pulse animation - subtle */
@@ -120,7 +205,7 @@ const getMapStyles = (isLight: boolean) => `
       box-shadow: 0 0 12px var(--marker-color), 0 0 20px var(--marker-color);
     }
   }
-  .marker-live {
+  .marker-live .lc-pin-core {
     animation: marker-pulse 2s ease-in-out infinite;
   }
 
@@ -150,6 +235,14 @@ const getMapStyles = (isLight: boolean) => `
   }
   .user-location-marker > div {
     animation: user-pulse 2s ease-in-out infinite;
+  }
+  .user-location-dot {
+    width: 16px;
+    height: 16px;
+    background: var(--neon-cyan);
+    border: 3px solid white;
+    border-radius: 50%;
+    box-shadow: 0 0 10px var(--neon-cyan), 0 0 20px var(--neon-cyan);
   }
 
   /* Cluster marker styles - no transitions to prevent jitter */
@@ -182,55 +275,40 @@ const getMapStyles = (isLight: boolean) => `
 const DEFAULT_ICON_PATH = "M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0zM15 11a3 3 0 11-6 0 3 3 0 016 0z";
 
 // Neon marker with glow effect and category icon - uses caching to prevent jitter
-const createNeonIcon = (color: string, iconType: string | null, isLive: boolean = false): L.DivIcon => {
-  // Create a cache key from the parameters
-  const cacheKey = `${color}-${iconType || 'default'}-${isLive}`;
-
-  // Return cached icon if available
-  const cached = iconCache.get(cacheKey);
-  if (cached) return cached;
-
+const createNeonIcon = (iconType: string | null, isLive: boolean = false): L.DivIcon => {
   // Try to get icon path, normalize to lowercase for matching
   const normalizedType = iconType?.toLowerCase().replace(/-/g, "_");
   const iconPath = normalizedType && ICON_PATHS[normalizedType]
     ? ICON_PATHS[normalizedType]
     : DEFAULT_ICON_PATH;
+  const hasCategoryColor = !!normalizedType && Object.prototype.hasOwnProperty.call(CATEGORY_CONFIG, normalizedType);
+  const markerColorClass = hasCategoryColor ? `marker-color-${normalizedType}` : "marker-color-default";
+
+  // Create a cache key from the parameters
+  const cacheKey = `${markerColorClass}-${iconType || "default"}-${isLive}`;
+
+  // Return cached icon if available
+  const cached = iconCache.get(cacheKey);
+  if (cached) return cached;
 
   const icon = L.divIcon({
     className: `neon-marker ${isLive ? "marker-live" : ""}`,
-    html: `<div style="
-      --marker-color: ${color};
-      background-color: ${color};
-      width: 32px;
-      height: 32px;
-      border-radius: 50%;
-      border: 2px solid rgba(255, 255, 255, 0.9);
-      box-shadow: 0 0 6px ${color}80;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    ">
-      <svg viewBox="0 0 24 24" style="width: 16px; height: 16px; fill: none; stroke: rgba(0,0,0,0.8); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;">
+    html: `<div class="lc-pin ${markerColorClass}">
+      <div class="lc-pin-halo"></div>
+      <div class="lc-pin-core"></div>
+      <svg viewBox="0 0 24 24" class="lc-pin-icon">
         <path d="${iconPath}"/>
       </svg>
+      <div class="lc-pin-dot"></div>
     </div>`,
-    iconSize: [32, 32],
-    iconAnchor: [16, 16],
-    popupAnchor: [0, -16],
+    iconSize: [34, 42],
+    iconAnchor: [17, 40],
+    popupAnchor: [0, -36],
   });
 
   // Cache for reuse
   iconCache.set(cacheKey, icon);
   return icon;
-};
-
-// Get category color from config or fallback
-const getCategoryColor = (iconType: string | null): string => {
-  if (!iconType) return "#E855A0"; // Neon magenta fallback
-  // Normalize to lowercase and replace hyphens with underscores for matching
-  const normalizedType = iconType.toLowerCase().replace(/-/g, "_");
-  const config = CATEGORY_CONFIG[normalizedType as keyof typeof CATEGORY_CONFIG];
-  return config?.color || "#E855A0"; // Neon magenta fallback
 };
 
 // Create custom cluster icon with caching
@@ -365,31 +443,25 @@ interface EventMarkerProps {
 
 const EventMarker = memo(function EventMarker({ event, portalSlug }: EventMarkerProps) {
   const iconType = event.venue?.venue_type || event.category || null;
-  const color = getCategoryColor(iconType);
   const isLive = event.is_live || false;
+  const categoryKey = iconType || "other";
 
   return (
     <Marker
       position={[event.venue!.lat!, event.venue!.lng!]}
-      icon={createNeonIcon(color, iconType, isLive)}
+      icon={createNeonIcon(iconType, isLive)}
     >
       <Popup className="dark-popup">
         <div
-          className="min-w-[260px] p-4 rounded-lg"
-          style={{
-            borderLeft: `4px solid ${color}`,
-            background: `linear-gradient(135deg, ${color}08 0%, transparent 50%)`,
-          }}
+          data-category={categoryKey}
+          className="min-w-[260px] p-4 rounded-lg map-popup-card"
         >
           {/* Category badge */}
           <div className="flex items-center justify-between mb-2">
             {event.category && (
               <span
-                className="inline-flex items-center gap-1.5 px-2 py-0.5 text-[0.6rem] font-mono font-medium uppercase tracking-wide rounded"
-                style={{
-                  backgroundColor: `${color}20`,
-                  color: color,
-                }}
+                data-category={categoryKey}
+                className="inline-flex items-center gap-1.5 px-2 py-0.5 text-[0.6rem] font-mono font-medium uppercase tracking-wide rounded map-popup-badge"
               >
                 {event.category.replace(/_/g, " ")}
               </span>
@@ -504,30 +576,24 @@ interface SpotMarkerProps {
 
 const SpotMarker = memo(function SpotMarker({ spot, portalSlug }: SpotMarkerProps) {
   const iconType = spot.venue_type || "venue";
-  const color = getCategoryColor(iconType);
+  const categoryKey = iconType || "other";
 
   return (
     <Marker
       position={[spot.lat!, spot.lng!]}
-      icon={createNeonIcon(color, iconType, false)}
+      icon={createNeonIcon(iconType, false)}
     >
       <Popup className="dark-popup">
         <div
-          className="min-w-[240px] p-4 rounded-lg"
-          style={{
-            borderLeft: `4px solid ${color}`,
-            background: `linear-gradient(135deg, ${color}08 0%, transparent 50%)`,
-          }}
+          data-category={categoryKey}
+          className="min-w-[240px] p-4 rounded-lg map-popup-card"
         >
           {/* Venue type badge */}
           <div className="flex items-center justify-between mb-2">
             {spot.venue_type && (
               <span
-                className="inline-flex items-center gap-1.5 px-2 py-0.5 text-[0.6rem] font-mono font-medium uppercase tracking-wide rounded"
-                style={{
-                  backgroundColor: `${color}20`,
-                  color: color,
-                }}
+                data-category={categoryKey}
+                className="inline-flex items-center gap-1.5 px-2 py-0.5 text-[0.6rem] font-mono font-medium uppercase tracking-wide rounded map-popup-badge"
               >
                 {spot.venue_type.replace(/_/g, " ")}
               </span>
@@ -723,10 +789,7 @@ export default function MapView({ events, spots = [], userLocation, viewRadius, 
     return (
       <div className="w-full h-full bg-[var(--night)] rounded-lg border border-[var(--twilight)] relative overflow-hidden">
         {/* Skeleton map grid lines */}
-        <div className="absolute inset-0 opacity-[0.04]" style={{
-          backgroundImage: `linear-gradient(var(--soft) 1px, transparent 1px), linear-gradient(90deg, var(--soft) 1px, transparent 1px)`,
-          backgroundSize: '60px 60px',
-        }} />
+        <div className="absolute inset-0 opacity-[0.04] map-grid-lines" />
         {/* Shimmer overlay */}
         <div className="absolute inset-0 skeleton-shimmer" />
         {/* Centered loading indicator */}
@@ -742,15 +805,14 @@ export default function MapView({ events, spots = [], userLocation, viewRadius, 
 
   return (
     <>
-      <style dangerouslySetInnerHTML={{ __html: mapStyles }} />
+      <ScopedStyles css={mapStyles} />
       <div className="w-full h-full rounded-lg overflow-hidden border border-[var(--twilight)] relative bg-[var(--void)]">
         <MapContainer
           center={mapCenter}
           zoom={defaultZoom}
           bounds={!localUserLocation && bounds ? bounds : undefined}
           boundsOptions={{ padding: [50, 50] }}
-          className="w-full h-full"
-          style={{ background: 'var(--void)' }}
+          className="w-full h-full bg-[var(--void)]"
           scrollWheelZoom={true}
           zoomAnimation={true}
           fadeAnimation={true}
@@ -782,14 +844,7 @@ export default function MapView({ events, spots = [], userLocation, viewRadius, 
               position={[localUserLocation.lat, localUserLocation.lng]}
               icon={L.divIcon({
                 className: "user-location-marker",
-                html: `<div style="
-                  width: 16px;
-                  height: 16px;
-                  background: var(--neon-cyan);
-                  border: 3px solid white;
-                  border-radius: 50%;
-                  box-shadow: 0 0 10px var(--neon-cyan), 0 0 20px var(--neon-cyan);
-                "></div>`,
+                html: `<div class="user-location-dot"></div>`,
                 iconSize: [16, 16],
                 iconAnchor: [8, 8],
               })}
@@ -797,15 +852,24 @@ export default function MapView({ events, spots = [], userLocation, viewRadius, 
           )}
         </MapContainer>
         {mappableEvents.length === 0 && mappableSpots.length === 0 && (
-          <div className="absolute inset-0 flex items-center justify-center bg-[var(--void)]/80">
-            <div className="text-center">
-              <div className="w-12 h-12 rounded-full bg-[var(--twilight)] flex items-center justify-center mx-auto mb-3">
-                <svg className="w-6 h-6 text-[var(--muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="absolute inset-0 flex items-center justify-center bg-[var(--void)]/70 backdrop-blur-sm">
+            <div className="text-center px-6 py-5 rounded-2xl border border-[var(--twilight)]/70 bg-[var(--dusk)]/90 shadow-[0_18px_40px_rgba(0,0,0,0.5)] max-w-xs">
+              <div className="w-12 h-12 rounded-full bg-[var(--coral)]/15 flex items-center justify-center mx-auto mb-3">
+                <svg className="w-6 h-6 text-[var(--coral)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
                 </svg>
               </div>
               <p className="text-[var(--cream)] font-medium text-sm mb-1">No events on the map</p>
-              <p className="text-[var(--muted)] text-xs">Try adjusting your filters or check back later</p>
+              <p className="text-[var(--muted)] text-xs mb-3">Try adjusting your filters or check back later</p>
+              <Link
+                href={`/${portal.slug}?view=find&type=events&display=map`}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[var(--coral)] text-[var(--void)] text-xs font-mono font-medium hover:bg-[var(--rose)] transition-colors"
+              >
+                Clear filters
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </Link>
             </div>
           </div>
         )}

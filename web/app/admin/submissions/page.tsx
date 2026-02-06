@@ -1,8 +1,18 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
+import Image from "next/image";
+import type { ReactNode } from "react";
 import Link from "next/link";
-import type { SubmissionWithProfile, SubmissionStatus, SubmissionType } from "@/lib/types";
+import type {
+  SubmissionWithProfile,
+  SubmissionStatus,
+  SubmissionType,
+  EventSubmissionData,
+  VenueSubmissionData,
+  ProducerSubmissionData,
+} from "@/lib/types";
 
 const STATUS_OPTIONS: { value: SubmissionStatus | "all"; label: string }[] = [
   { value: "all", label: "All" },
@@ -12,14 +22,27 @@ const STATUS_OPTIONS: { value: SubmissionStatus | "all"; label: string }[] = [
   { value: "rejected", label: "Rejected" },
 ];
 
+const STATUS_FILTERS: Array<SubmissionStatus | "all"> = [
+  "all",
+  "pending",
+  "needs_edit",
+  "approved",
+  "rejected",
+];
+
 const TYPE_OPTIONS: { value: SubmissionType | "all"; label: string }[] = [
   { value: "all", label: "All Types" },
   { value: "event", label: "Events" },
   { value: "venue", label: "Venues" },
-  { value: "organization", label: "Organizations" },
+  { value: "producer", label: "Organizations" },
 ];
+const TYPE_FILTERS: Array<SubmissionType | "all"> = ["all", "event", "venue", "producer"];
 
 export default function AdminSubmissionsPage() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const statusParam = searchParams.get("status") as SubmissionStatus | "all" | null;
+  const typeParam = searchParams.get("type") as SubmissionType | "all" | null;
   const [submissions, setSubmissions] = useState<SubmissionWithProfile[]>([]);
   const [summary, setSummary] = useState({
     total: 0,
@@ -27,10 +50,17 @@ export default function AdminSubmissionsPage() {
     byType: { event: 0, venue: 0, producer: 0 },
   });
   const [loading, setLoading] = useState(true);
-  const [statusFilter, setStatusFilter] = useState<SubmissionStatus | "all">("pending");
-  const [typeFilter, setTypeFilter] = useState<SubmissionType | "all">("all");
+  const [statusFilter, setStatusFilter] = useState<SubmissionStatus | "all">(() => {
+    if (statusParam && STATUS_FILTERS.includes(statusParam)) return statusParam;
+    return "pending";
+  });
+  const [typeFilter, setTypeFilter] = useState<SubmissionType | "all">(() => {
+    if (typeParam && TYPE_FILTERS.includes(typeParam)) return typeParam;
+    return "all";
+  });
   const [selectedSubmission, setSelectedSubmission] = useState<SubmissionWithProfile | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
+  const [trustLoading, setTrustLoading] = useState(false);
   const [rejectionReason, setRejectionReason] = useState("");
 
   const fetchSubmissions = useCallback(async () => {
@@ -55,6 +85,49 @@ export default function AdminSubmissionsPage() {
   useEffect(() => {
     fetchSubmissions();
   }, [fetchSubmissions]);
+
+  useEffect(() => {
+    const nextStatus = statusParam && STATUS_FILTERS.includes(statusParam) ? statusParam : "pending";
+    const nextType = typeParam && TYPE_FILTERS.includes(typeParam) ? typeParam : "all";
+
+    setStatusFilter(nextStatus);
+    setTypeFilter(nextType);
+
+    const params = new URLSearchParams(searchParams.toString());
+    let dirty = false;
+
+    if (statusParam !== nextStatus) {
+      params.set("status", nextStatus);
+      dirty = true;
+    }
+    if (typeParam !== nextType) {
+      params.set("type", nextType);
+      dirty = true;
+    }
+
+    if (dirty) {
+      const query = params.toString();
+      router.replace(`/admin/submissions${query ? `?${query}` : ""}`);
+    }
+  }, [statusParam, typeParam, router, searchParams]);
+
+  const handleStatusChange = (next: SubmissionStatus | "all") => {
+    setStatusFilter(next);
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("status", next);
+    params.set("type", typeFilter);
+    const query = params.toString();
+    router.replace(`/admin/submissions${query ? `?${query}` : ""}`);
+  };
+
+  const handleTypeChange = (next: SubmissionType | "all") => {
+    setTypeFilter(next);
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("status", statusFilter);
+    params.set("type", next);
+    const query = params.toString();
+    router.replace(`/admin/submissions${query ? `?${query}` : ""}`);
+  };
 
   const handleApprove = async (id: string) => {
     setActionLoading(true);
@@ -122,6 +195,25 @@ export default function AdminSubmissionsPage() {
     }
   };
 
+  const handlePromoteTrusted = async (userId: string) => {
+    setTrustLoading(true);
+    try {
+      const res = await fetch(`/api/admin/users/${userId}/trust`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          trust_tier: "trusted_submitter",
+        }),
+      });
+      if (!res.ok) throw new Error("Failed to promote");
+      fetchSubmissions();
+    } catch (err) {
+      console.error("Failed to promote submitter:", err);
+    } finally {
+      setTrustLoading(false);
+    }
+  };
+
   // Note: Admin auth is handled by the admin layout (server-side)
   // No client-side check needed here
 
@@ -153,7 +245,7 @@ export default function AdminSubmissionsPage() {
             {STATUS_OPTIONS.map((opt) => (
               <button
                 key={opt.value}
-                onClick={() => setStatusFilter(opt.value)}
+                onClick={() => handleStatusChange(opt.value)}
                 className={`px-3 py-1.5 rounded-lg font-mono text-xs transition-colors ${
                   statusFilter === opt.value
                     ? "bg-[var(--coral)] text-[var(--void)]"
@@ -173,7 +265,7 @@ export default function AdminSubmissionsPage() {
             {TYPE_OPTIONS.map((opt) => (
               <button
                 key={opt.value}
-                onClick={() => setTypeFilter(opt.value)}
+                onClick={() => handleTypeChange(opt.value)}
                 className={`px-3 py-1.5 rounded-lg font-mono text-xs transition-colors ${
                   typeFilter === opt.value
                     ? "bg-[var(--twilight)] text-[var(--cream)]"
@@ -200,11 +292,24 @@ export default function AdminSubmissionsPage() {
             {submissions.map((submission) => {
               const data = submission.data as Record<string, unknown>;
               const title = (data.title as string) || (data.name as string) || "Untitled";
+              const approvedId = submission.submission_type === "event"
+                ? submission.approved_event_id
+                : submission.submission_type === "venue"
+                  ? submission.approved_venue_id
+                  : submission.approved_organization_id;
+              const duplicateLabel = submission.potential_duplicate_id
+                ? `${submission.potential_duplicate_type || "item"} #${submission.potential_duplicate_id}`
+                : null;
               const submitter = submission.submitter as {
+                id: string;
                 username: string;
                 approved_count: number;
                 rejected_count: number;
+                trust_tier?: string | null;
               } | null;
+              const trustTier = (submission as { submitter_trust_tier?: string }).submitter_trust_tier || submitter?.trust_tier || "standard";
+              const isTrusted = trustTier === "trusted_submitter";
+              const isEligible = (submission as { submitter_is_trust_eligible?: boolean }).submitter_is_trust_eligible === true;
 
               return (
                 <div
@@ -214,9 +319,11 @@ export default function AdminSubmissionsPage() {
                       ? "border-[var(--coral)] bg-[var(--coral)]/5"
                       : "border-[var(--twilight)] bg-[var(--dusk)] hover:border-[var(--coral)]"
                   }`}
-                  onClick={() => setSelectedSubmission(
-                    selectedSubmission?.id === submission.id ? null : submission
-                  )}
+                  onClick={() => {
+                    const isSame = selectedSubmission?.id === submission.id;
+                    setSelectedSubmission(isSame ? null : submission);
+                    if (!isSame) setRejectionReason("");
+                  }}
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1">
@@ -232,9 +339,14 @@ export default function AdminSubmissionsPage() {
                         <span className="px-2 py-0.5 rounded text-xs font-mono bg-[var(--twilight)] text-[var(--muted)]">
                           {submission.submission_type}
                         </span>
-                        {(submission as { submitter_is_trusted?: boolean }).submitter_is_trusted && (
+                        {isTrusted && (
                           <span className="px-2 py-0.5 rounded text-xs font-mono bg-green-500/20 text-green-400">
                             trusted
+                          </span>
+                        )}
+                        {!isTrusted && isEligible && (
+                          <span className="px-2 py-0.5 rounded text-xs font-mono bg-yellow-500/20 text-yellow-400">
+                            eligible
                           </span>
                         )}
                       </div>
@@ -253,31 +365,98 @@ export default function AdminSubmissionsPage() {
 
                   {/* Expanded View */}
                   {selectedSubmission?.id === submission.id && (
-                    <div className="mt-4 pt-4 border-t border-[var(--twilight)]">
-                      {/* Data Preview */}
-                      <div className="mb-4 p-3 rounded-lg bg-[var(--void)]/50 font-mono text-xs overflow-x-auto">
-                        <pre className="text-[var(--muted)]">
-                          {JSON.stringify(data, null, 2)}
-                        </pre>
+                    <div
+                      className="mt-4 pt-4 border-t border-[var(--twilight)] space-y-4"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <div className="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+                        <div className="p-4 rounded-lg bg-[var(--void)]/50">
+                          <div className="font-mono text-xs text-[var(--muted)] uppercase tracking-wider mb-3">
+                            Submission details
+                          </div>
+                          {submission.submission_type === "event" ? (
+                            <EventPreview data={data as EventSubmissionData} />
+                          ) : submission.submission_type === "venue" ? (
+                            <VenuePreview data={data as VenueSubmissionData} />
+                          ) : (
+                            <OrgPreview data={data as ProducerSubmissionData} />
+                          )}
+                        </div>
+                        <div className="space-y-4">
+                          <div className="p-4 rounded-lg bg-[var(--void)]/50">
+                            <div className="font-mono text-xs text-[var(--muted)] uppercase tracking-wider mb-3">
+                              Review metadata
+                            </div>
+                            <div className="space-y-2">
+                              <MetaRow label="Submitted" value={formatDateTime(submission.created_at)} />
+                              <MetaRow label="Reviewed" value={formatDateTime(submission.reviewed_at)} />
+                              <MetaRow label="Portal" value={submission.portal?.name || "—"} />
+                              <MetaRow label="Reviewer" value={submission.reviewer?.username || "—"} />
+                              <MetaRow label="Approved ID" value={approvedId ? String(approvedId) : "—"} />
+                              <MetaRow label="Potential duplicate" value={duplicateLabel || "—"} />
+                              {submission.potential_duplicate_id && (
+                                <MetaRow
+                                  label="Duplicate acknowledged"
+                                  value={submission.duplicate_acknowledged ? "Yes" : "No"}
+                                />
+                              )}
+                            </div>
+                          </div>
+                          {submission.rejection_reason && (
+                            <div className="p-4 rounded-lg bg-[var(--void)]/50">
+                              <div className="font-mono text-xs text-[var(--muted)] uppercase tracking-wider mb-2">
+                                Feedback to submitter
+                              </div>
+                              <p className="text-[var(--cream)] text-sm">
+                                {submission.rejection_reason}
+                              </p>
+                            </div>
+                          )}
+                        </div>
                       </div>
 
                       {/* Images */}
                       {submission.image_urls && submission.image_urls.length > 0 && (
                         <div className="mb-4 flex gap-2">
                           {submission.image_urls.map((url, i) => (
-                            <img
+                            <Image
                               key={i}
                               src={url}
                               alt=""
+                              width={96}
+                              height={96}
                               className="w-24 h-24 rounded-lg object-cover"
                             />
                           ))}
                         </div>
                       )}
 
+                      <details className="p-4 rounded-lg bg-[var(--void)]/50">
+                        <summary className="font-mono text-xs text-[var(--muted)] uppercase tracking-wider cursor-pointer">
+                          Raw submission data
+                        </summary>
+                        <pre className="mt-3 text-[var(--muted)] font-mono text-xs overflow-x-auto">
+                          {JSON.stringify(data, null, 2)}
+                        </pre>
+                      </details>
+
                       {/* Actions */}
                       {["pending", "needs_edit"].includes(submission.status) && (
                         <div className="space-y-3">
+                          {submitter?.id && !isTrusted && isEligible && (
+                            <div className="flex justify-end">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handlePromoteTrusted(submitter.id);
+                                }}
+                                disabled={trustLoading}
+                                className="px-3 py-2 rounded-lg border border-green-500 text-green-400 font-mono text-xs hover:bg-green-500/10 transition-colors disabled:opacity-50"
+                              >
+                                Promote to Trusted
+                              </button>
+                            </div>
+                          )}
                           <textarea
                             value={rejectionReason}
                             onChange={(e) => setRejectionReason(e.target.value)}
@@ -327,6 +506,155 @@ export default function AdminSubmissionsPage() {
           </div>
         )}
       </main>
+    </div>
+  );
+}
+
+const formatDateTime = (value?: string | null) => {
+  if (!value) return "—";
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return value;
+  return parsed.toLocaleString();
+};
+
+function MetaRow({ label, value }: { label: string; value: ReactNode }) {
+  const display = value === null || value === undefined || value === "" ? "—" : value;
+  return (
+    <div className="flex items-start justify-between gap-3 text-xs">
+      <span className="font-mono text-[var(--muted)] uppercase tracking-wider">{label}</span>
+      <span className="text-[var(--cream)] text-right">{display}</span>
+    </div>
+  );
+}
+
+function PreviewRow({ label, value }: { label: string; value?: ReactNode }) {
+  if (value === null || value === undefined || value === "") return null;
+  return (
+    <div className="flex flex-wrap gap-2 text-sm">
+      <span className="font-mono text-[10px] text-[var(--muted)] uppercase tracking-wider">{label}</span>
+      <span className="text-[var(--cream)]">{value}</span>
+    </div>
+  );
+}
+
+function EventPreview({ data }: { data: EventSubmissionData }) {
+  const startLabel = data.start_date
+    ? `${data.start_date}${data.is_all_day ? " (All day)" : data.start_time ? ` at ${data.start_time}` : ""}`
+    : undefined;
+  const endLabel = data.end_date
+    ? `${data.end_date}${data.is_all_day ? "" : data.end_time ? ` at ${data.end_time}` : ""}`
+    : undefined;
+  const venueLabel = data.venue?.name || (data.venue_id ? `Venue #${data.venue_id}` : undefined);
+  const orgLabel = data.organization?.name || (data.organization_id ? `Organization #${data.organization_id}` : undefined);
+  const tagsLabel = data.tags?.length ? data.tags.join(", ") : undefined;
+  const seriesLabel = data.series_title || data.recurrence_pattern || (data.recurrence_notes ? "Recurring event" : undefined);
+  const hasMin = typeof data.price_min === "number";
+  const hasMax = typeof data.price_max === "number";
+  let priceLabel: string | undefined;
+  if (data.is_free) {
+    priceLabel = "Free";
+  } else if (hasMin || hasMax) {
+    if (hasMin && hasMax) {
+      priceLabel = `$${data.price_min}–$${data.price_max}`;
+    } else if (hasMin) {
+      priceLabel = `$${data.price_min}+`;
+    } else if (hasMax) {
+      priceLabel = `Up to $${data.price_max}`;
+    }
+  } else if (data.price_note) {
+    priceLabel = data.price_note;
+  }
+
+  return (
+    <div className="space-y-2 text-sm text-[var(--soft)]">
+      <PreviewRow label="Title" value={data.title} />
+      <PreviewRow label="Date" value={startLabel} />
+      <PreviewRow label="Ends" value={endLabel} />
+      <PreviewRow label="Venue" value={venueLabel} />
+      <PreviewRow label="Organization" value={orgLabel} />
+      <PreviewRow label="Series" value={seriesLabel} />
+      <PreviewRow label="Recurs until" value={data.recurrence_ends_on} />
+      <PreviewRow label="Category" value={data.category} />
+      <PreviewRow label="Tags" value={tagsLabel} />
+      <PreviewRow label="Price" value={priceLabel} />
+      <PreviewRow
+        label="Ticket"
+        value={
+          data.ticket_url ? (
+            <a
+              href={data.ticket_url}
+              target="_blank"
+              rel="noreferrer"
+              className="text-[var(--coral)] hover:underline break-all"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {data.ticket_url}
+            </a>
+          ) : undefined
+        }
+      />
+      <PreviewRow
+        label="Source"
+        value={
+          data.source_url ? (
+            <a
+              href={data.source_url}
+              target="_blank"
+              rel="noreferrer"
+              className="text-[var(--coral)] hover:underline break-all"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {data.source_url}
+            </a>
+          ) : undefined
+        }
+      />
+      {data.description && (
+        <div className="pt-2">
+          <span className="font-mono text-[10px] text-[var(--muted)] uppercase tracking-wider">
+            Description
+          </span>
+          <p className="text-[var(--soft)] mt-1 whitespace-pre-wrap">{data.description}</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function VenuePreview({ data }: { data: VenueSubmissionData }) {
+  return (
+    <div className="space-y-2 text-sm text-[var(--soft)]">
+      <PreviewRow label="Name" value={data.name} />
+      <PreviewRow label="Address" value={data.address} />
+      <PreviewRow label="Neighborhood" value={data.neighborhood} />
+      <PreviewRow label="Website" value={data.website} />
+      <PreviewRow label="Type" value={data.venue_type} />
+      <PreviewRow label="Google Place ID" value={data.google_place_id} />
+      <PreviewRow label="Foursquare ID" value={data.foursquare_id} />
+    </div>
+  );
+}
+
+function OrgPreview({ data }: { data: ProducerSubmissionData }) {
+  const categoriesLabel = data.categories?.length ? data.categories.join(", ") : undefined;
+  return (
+    <div className="space-y-2 text-sm text-[var(--soft)]">
+      <PreviewRow label="Name" value={data.name} />
+      <PreviewRow label="Type" value={data.org_type} />
+      <PreviewRow label="Categories" value={categoriesLabel} />
+      <PreviewRow label="Website" value={data.website} />
+      <PreviewRow label="Email" value={data.email} />
+      <PreviewRow label="Instagram" value={data.instagram} />
+      <PreviewRow label="Facebook" value={data.facebook} />
+      <PreviewRow label="Neighborhood" value={data.neighborhood} />
+      {data.description && (
+        <div className="pt-2">
+          <span className="font-mono text-[10px] text-[var(--muted)] uppercase tracking-wider">
+            Description
+          </span>
+          <p className="text-[var(--soft)] mt-1 whitespace-pre-wrap">{data.description}</p>
+        </div>
+      )}
     </div>
   );
 }

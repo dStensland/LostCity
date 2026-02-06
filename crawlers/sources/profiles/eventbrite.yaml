@@ -1,0 +1,14 @@
+version: 1
+slug: eventbrite
+name: Eventbrite
+integration_method: aggregator
+defaults: {}
+discovery:
+  enabled: true
+  type: api
+  urls:
+  - https://api.eventbrite.com
+  api:
+    adapter: eventbrite
+detail:
+  enabled: false

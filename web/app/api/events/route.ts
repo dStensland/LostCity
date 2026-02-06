@@ -32,6 +32,7 @@ export async function GET(request: Request) {
     const venueId = venueParam ? safeParseInt(venueParam, 0, 0, 999999) : undefined;
 
     const portalId = searchParams.get("portal_id") || undefined;
+    const portalExclusive = searchParams.get("portal_exclusive") === "true";
 
     const filters: SearchFilters = {
       search: searchParams.get("search") || undefined,
@@ -46,6 +47,7 @@ export async function GET(request: Request) {
       venue_id: venueId || undefined,
       mood: (searchParams.get("mood") as MoodId) || undefined,
       portal_id: portalId,
+      portal_exclusive: portalExclusive,
       // All events belong to a portal, filter directly by portal_id
     };
 

@@ -1,0 +1,14 @@
+version: 1
+slug: the-loft
+name: The Loft
+integration_method: playwright
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.theloftatl.com
+  fetch:
+    render_js: true
+detail:
+  enabled: false

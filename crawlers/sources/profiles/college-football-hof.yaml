@@ -1,0 +1,14 @@
+version: 1
+slug: college-football-hof
+name: College Football Hall of Fame
+integration_method: playwright
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.cfbhall.com
+  fetch:
+    render_js: true
+detail:
+  enabled: false

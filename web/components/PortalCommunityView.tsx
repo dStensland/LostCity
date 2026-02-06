@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
-import Image from "next/image";
-import CategoryIcon, { getCategoryColor } from "@/components/CategoryIcon";
+import Image from "@/components/SmartImage";
+import CategoryIcon from "@/components/CategoryIcon";
 import CategorySkeleton from "@/components/CategorySkeleton";
 
 type Organization = {
@@ -72,25 +72,18 @@ function OrganizationCard({
   orgConfig: { label: string; color: string } | undefined;
 }) {
   const hasEvents = (organization.event_count ?? 0) > 0;
-  const glowColor = orgConfig?.color || "var(--coral)";
-
   return (
     <Link
       href={`/${portalSlug}?org=${organization.slug}`}
       scroll={false}
-      className="block p-5 rounded-xl border border-[var(--twilight)] card-atmospheric group transition-all duration-300 hover:translate-y-[-2px]"
-      style={{
-        backgroundColor: "var(--card-bg)",
-        "--glow-color": glowColor,
-        "--reflection-color": orgConfig?.color ? `color-mix(in srgb, ${orgConfig.color} 15%, transparent)` : undefined,
-      } as React.CSSProperties}
+      data-org-type={organization.org_type}
+      className="block p-5 rounded-xl border border-[var(--twilight)] card-atmospheric group transition-all duration-300 hover:translate-y-[-2px] org-card"
     >
       <div className="flex items-start gap-4">
         {/* Logo with subtle hover glow - reduced intensity */}
         <div className="flex-shrink-0 relative">
           <div
-            className="absolute inset-0 rounded-xl opacity-0 group-hover:opacity-40 transition-opacity duration-300 blur-lg"
-            style={{ backgroundColor: glowColor, transform: "scale(1.2)" }}
+            className="absolute inset-0 rounded-xl opacity-0 group-hover:opacity-40 transition-opacity duration-300 blur-lg scale-[1.2] org-glow"
           />
           {organization.logo_url ? (
             <div className="relative w-[72px] h-[72px] rounded-xl bg-white flex items-center justify-center overflow-hidden">
@@ -99,18 +92,13 @@ function OrganizationCard({
                 alt={organization.name}
                 width={72}
                 height={72}
-                className="object-contain"
-                style={{ width: 72, height: 72 }}
+                className="object-contain w-[72px] h-[72px]"
               />
             </div>
           ) : (
             <div
-              className="relative w-[72px] h-[72px] rounded-xl flex items-center justify-center"
-              style={{
-                backgroundColor: organization.categories?.[0]
-                  ? `${getCategoryColor(organization.categories[0])}20`
-                  : "var(--twilight)",
-              }}
+              data-category={organization.categories?.[0] || undefined}
+              className="relative w-[72px] h-[72px] rounded-xl flex items-center justify-center org-placeholder"
             >
               <CategoryIcon
                 type={organization.categories?.[0] || "community"}
@@ -129,11 +117,8 @@ function OrganizationCard({
             </h3>
             <div className="flex items-center gap-2 mt-1">
               <span
-                className="inline-flex items-center px-2 py-0.5 rounded-md text-[0.65rem] font-mono font-medium uppercase tracking-wider"
-                style={{
-                  backgroundColor: orgConfig?.color ? `${orgConfig.color}20` : "var(--twilight)",
-                  color: orgConfig?.color || "var(--muted)",
-                }}
+                data-org-type={organization.org_type}
+                className="inline-flex items-center px-2 py-0.5 rounded-md text-[0.65rem] font-mono font-medium uppercase tracking-wider org-type-badge"
               >
                 {orgConfig?.label || organization.org_type.replace(/_/g, " ")}
               </span>
@@ -157,15 +142,11 @@ function OrganizationCard({
           {organization.categories && organization.categories.length > 0 && (
             <div className="mt-3 flex flex-wrap gap-1.5">
               {organization.categories.slice(0, 5).map((cat) => {
-                const color = getCategoryColor(cat);
                 return (
                   <span
                     key={cat}
-                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[0.6rem] font-mono uppercase tracking-wider"
-                    style={{
-                      backgroundColor: `${color}15`,
-                      color: color,
-                    }}
+                    data-category={cat}
+                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[0.6rem] font-mono uppercase tracking-wider org-category-chip"
                   >
                     <CategoryIcon type={cat} size={10} glow="none" />
                     {cat.replace(/_/g, " ")}
@@ -447,12 +428,12 @@ export default function PortalCommunityView({ portalId, portalSlug, portalName }
                   aria-controls={`category-${type}`}
                 >
                   <div
-                    className="w-2 h-2 rounded-full"
-                    style={{ backgroundColor: orgConfig?.color || "var(--muted)" }}
+                    data-org-type={type}
+                    className="w-2 h-2 rounded-full org-type-dot"
                   />
                   <h3
-                    className="font-mono text-xs font-medium uppercase tracking-wider flex-1 text-left"
-                    style={{ color: orgConfig?.color || "var(--muted)" }}
+                    data-org-type={type}
+                    className="font-mono text-xs font-medium uppercase tracking-wider flex-1 text-left org-type-label"
                   >
                     {orgConfig?.label || type.replace(/_/g, " ")}
                   </h3>

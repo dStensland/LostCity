@@ -1,0 +1,14 @@
+version: 1
+slug: pushpush-arts
+name: PushPush Arts
+integration_method: playwright
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.pushpusharts.com/calendar
+  fetch:
+    render_js: true
+detail:
+  enabled: false

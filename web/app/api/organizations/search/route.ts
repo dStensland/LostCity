@@ -1,7 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import { errorResponse, isValidString, escapeSQLPattern } from "@/lib/api-utils";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
+
+type OrganizationPortalSchema = {
+  public: {
+    Tables: {
+      organization_portals: {
+        Row: {
+          organization_id: string;
+        };
+      };
+    };
+  };
+};
 
 // GET /api/organizations/search?q= - Search organizations for autocomplete
 export async function GET(request: NextRequest) {
@@ -18,6 +31,8 @@ export async function GET(request: NextRequest) {
   const limit = Math.min(parseInt(searchParams.get("limit") || "10"), 20);
   const category = searchParams.get("category");
   const includeUnverified = searchParams.get("include_unverified") === "true";
+  const portalIdParam = searchParams.get("portal_id");
+  const portalSlug = searchParams.get("portal_slug");
 
   if (!query || !isValidString(query, 1, 100)) {
     return NextResponse.json({ error: "Query parameter 'q' is required" }, { status: 400 });
@@ -27,6 +42,16 @@ export async function GET(request: NextRequest) {
 
   // Normalize search query
   const normalizedQuery = query.toLowerCase().trim();
+
+  let portalId = portalIdParam || null;
+  if (!portalId && portalSlug) {
+    const { data: portalData } = await supabase
+      .from("portals")
+      .select("id")
+      .eq("slug", portalSlug)
+      .maybeSingle();
+    portalId = (portalData as { id: string } | null)?.id || null;
+  }
 
   // Search organizations by name
   let searchQuery = supabase
@@ -54,6 +79,38 @@ export async function GET(request: NextRequest) {
     .order("featured", { ascending: false })
     .order("total_events_tracked", { ascending: false, nullsFirst: false })
     .limit(limit);
+
+  if (portalId) {
+    const portalClient = supabase as SupabaseClient<OrganizationPortalSchema>;
+    const { data: memberships, error: membershipError } = await portalClient
+      .from("organization_portals")
+      .select("organization_id")
+      .eq("portal_id", portalId);
+
+    if (membershipError) {
+      // Fall back to organizations.portal_id when join table isn't available
+      searchQuery = searchQuery.eq("portal_id", portalId);
+    } else {
+      const portalOrgIds = (memberships || []).map(
+        (row: { organization_id: string }) => row.organization_id
+      );
+      if (portalOrgIds.length === 0) {
+        return NextResponse.json(
+          {
+            organizations: [],
+            query: query,
+            count: 0,
+          },
+          {
+            headers: {
+              "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120",
+            },
+          }
+        );
+      }
+      searchQuery = searchQuery.in("id", portalOrgIds);
+    }
+  }
 
   // Filter by category if provided
   if (category && isValidString(category, 1, 50)) {

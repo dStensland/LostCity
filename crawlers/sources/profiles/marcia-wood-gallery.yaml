@@ -1,0 +1,12 @@
+version: 1
+slug: marcia-wood-gallery
+name: Marcia Wood Gallery
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.marciawoodgallery.com
+detail:
+  enabled: false

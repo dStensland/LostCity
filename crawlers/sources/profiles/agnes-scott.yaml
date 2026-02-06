@@ -1,0 +1,14 @@
+version: 1
+slug: agnes-scott
+name: Agnes Scott College
+integration_method: api
+defaults: {}
+discovery:
+  enabled: true
+  type: api
+  urls:
+  - https://www.agnesscott.edu/events
+  api:
+    adapter: custom
+detail:
+  enabled: false

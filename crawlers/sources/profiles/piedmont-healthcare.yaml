@@ -1,0 +1,12 @@
+version: 1
+slug: piedmont-healthcare
+name: Piedmont Healthcare
+integration_method: llm_crawler
+defaults: {}
+discovery:
+  enabled: true
+  type: html
+  urls:
+  - https://www.piedmont.org/classes-and-events/classes-and-events
+detail:
+  enabled: false

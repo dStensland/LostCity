@@ -1,28 +1,7 @@
 "use client";
 
 import { format } from "date-fns";
-import Image from "next/image";
-
-// Category to CSS variable mapping
-const categoryColors: Record<string, string> = {
-  music: "var(--cat-music)",
-  film: "var(--cat-film)",
-  comedy: "var(--cat-comedy)",
-  theater: "var(--cat-theater)",
-  art: "var(--cat-art)",
-  community: "var(--cat-community)",
-  food: "var(--cat-food)",
-  sports: "var(--cat-sports)",
-  fitness: "var(--cat-fitness)",
-  nightlife: "var(--cat-nightlife)",
-  family: "var(--cat-family)",
-};
-
-function getCategoryColor(category: string | null): string {
-  if (!category) return "var(--muted)";
-  const normalized = category.toLowerCase().replace(/[^a-z]/g, "");
-  return categoryColors[normalized] || "var(--muted)";
-}
+import Image from "@/components/SmartImage";
 
 interface CalendarEvent {
   id: number;
@@ -128,8 +107,8 @@ export default function DayCell({
             >
               {/* Category dot */}
               <span
-                className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-                style={{ backgroundColor: getCategoryColor(event.category) }}
+                data-category={event.category}
+                className="w-1.5 h-1.5 rounded-full flex-shrink-0 bg-[var(--category-color)]"
               />
               {/* Event title */}
               <span className="text-[0.6rem] text-[var(--cream)] truncate leading-tight">

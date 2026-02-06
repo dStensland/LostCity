@@ -1,0 +1,14 @@
+version: 1
+slug: shrine-cultural-center
+name: Shrine Cultural Center
+integration_method: aggregator
+defaults: {}
+discovery:
+  enabled: true
+  type: api
+  urls:
+  - https://www.eventbrite.com/o/shrine-cultural-center-51764997263
+  api:
+    adapter: eventbrite
+detail:
+  enabled: false

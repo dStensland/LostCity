@@ -1,0 +1,12 @@
+version: 1
+slug: clark-atlanta
+name: Clark Atlanta University
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.cau.edu/events
+detail:
+  enabled: false

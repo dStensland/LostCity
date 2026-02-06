@@ -1,0 +1,12 @@
+version: 1
+slug: dancing-dogs-yoga
+name: Dancing Dogs Yoga
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.dancingdogsyoga.com
+detail:
+  enabled: false

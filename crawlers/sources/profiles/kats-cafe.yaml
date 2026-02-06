@@ -1,0 +1,12 @@
+version: 1
+slug: kats-cafe
+name: Kat's Cafe
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.katscafe.com
+detail:
+  enabled: false

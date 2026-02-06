@@ -1,6 +1,8 @@
 "use client";
 
 import type { OnboardingStep } from "@/lib/types";
+import ScopedStyles from "@/components/ScopedStyles";
+import { createCssVarClassForLength } from "@/lib/css-utils";
 
 interface OnboardingProgressProps {
   currentStep: OnboardingStep;
@@ -16,14 +18,19 @@ export function OnboardingProgress({ currentStep, showSubcategories }: Onboardin
   const currentIndex = steps.indexOf(currentStep);
   const totalSteps = steps.length;
   const progress = ((currentIndex + 1) / totalSteps) * 100;
+  const progressClass = createCssVarClassForLength(
+    "--onboarding-progress",
+    `${progress}%`,
+    "onboarding-progress"
+  );
 
   return (
     <div className="w-full">
+      <ScopedStyles css={progressClass?.css} />
       {/* Progress bar */}
       <div className="h-1 bg-[var(--twilight)]">
         <div
-          className="h-full bg-[var(--coral)] transition-all duration-500 ease-out"
-          style={{ width: `${progress}%` }}
+          className={`h-full bg-[var(--coral)] transition-all duration-500 ease-out w-[var(--onboarding-progress)] ${progressClass?.className ?? ""}`}
         />
       </div>
 

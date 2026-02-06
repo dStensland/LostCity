@@ -1,0 +1,12 @@
+version: 1
+slug: southern-museum
+name: Southern Museum of Civil War and Locomotive History
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.southernmuseum.org
+detail:
+  enabled: false

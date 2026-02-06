@@ -19,6 +19,8 @@ const SKELETON_COLORS = [
   "rgba(253, 186, 116, 0.4)", // Events - muted peach
 ];
 
+const SKELETON_COLOR_CLASSES = SKELETON_COLORS.map((_, index) => `skeleton-color-${index}`);
+
 interface CategorySkeletonProps {
   /** Number of category rows to show */
   count?: number;
@@ -32,6 +34,7 @@ interface CategorySkeletonProps {
 
 // Deterministic width pattern to avoid Math.random() during render
 const WIDTH_PATTERN = [55, 42, 68, 51, 63, 47, 58, 44, 66, 52, 61, 49];
+const SKELETON_WIDTH_CLASSES = WIDTH_PATTERN.map((width) => `skeleton-width-${width}`);
 
 /**
  * A skeleton loader that mimics collapsed category headers with a rainbow color palette.
@@ -44,7 +47,7 @@ function CategorySkeleton({
   showSortButtons = true,
 }: CategorySkeletonProps) {
   // Use a subset of colors based on count, cycling through if needed
-  const colors = Array.from({ length: count }, (_, i) => SKELETON_COLORS[i % SKELETON_COLORS.length]);
+  const colors = Array.from({ length: count }, (_, i) => SKELETON_COLOR_CLASSES[i % SKELETON_COLORS.length]);
 
   return (
     <div className="py-6 animate-fade-in">
@@ -57,17 +60,17 @@ function CategorySkeleton({
             ) : (
               <div className="h-6 w-24 rounded skeleton-shimmer" />
             )}
-            {subtitle ? (
-              <p className="text-sm text-[var(--muted)] mt-1">{subtitle}</p>
-            ) : (
-              <div className="h-4 w-48 rounded skeleton-shimmer mt-2" style={{ animationDelay: "0.1s" }} />
-            )}
+          {subtitle ? (
+            <p className="text-sm text-[var(--muted)] mt-1">{subtitle}</p>
+          ) : (
+            <div className="h-4 w-48 rounded skeleton-shimmer mt-2" />
+          )}
           </div>
           {showSortButtons && (
             <div className="flex items-center gap-1">
-              <div className="h-6 w-16 rounded skeleton-shimmer" style={{ animationDelay: "0.05s" }} />
-              <div className="h-6 w-12 rounded skeleton-shimmer" style={{ animationDelay: "0.1s" }} />
-              <div className="h-6 w-10 rounded skeleton-shimmer" style={{ animationDelay: "0.15s" }} />
+              <div className="h-6 w-16 rounded skeleton-shimmer" />
+              <div className="h-6 w-12 rounded skeleton-shimmer" />
+              <div className="h-6 w-10 rounded skeleton-shimmer" />
             </div>
           )}
         </div>
@@ -78,9 +81,8 @@ function CategorySkeleton({
         {colors.map((color, i) => (
           <CategoryRowSkeleton
             key={i}
-            color={color}
-            delay={i * 0.08}
-            widthPercent={WIDTH_PATTERN[i % WIDTH_PATTERN.length]}
+            colorClass={color}
+            widthClass={SKELETON_WIDTH_CLASSES[i % WIDTH_PATTERN.length]}
           />
         ))}
       </div>
@@ -89,57 +91,37 @@ function CategorySkeleton({
 }
 
 interface CategoryRowSkeletonProps {
-  color: string;
-  delay: number;
-  widthPercent: number;
+  colorClass: string;
+  widthClass: string;
 }
 
 /**
  * A single category row skeleton with colored dot and shimmer effect
  */
 const CategoryRowSkeleton = memo(function CategoryRowSkeleton({
-  color,
-  delay,
-  widthPercent,
+  colorClass,
+  widthClass,
 }: CategoryRowSkeletonProps) {
   return (
-    <div
-      className="flex items-center gap-2 py-3 px-1"
-      style={{ animationDelay: `${delay}s` }}
-    >
+    <div className="flex items-center gap-2 py-3 px-1">
       {/* Colored dot - subtle glow */}
       <div
-        className="w-2 h-2 rounded-full flex-shrink-0 animate-pulse"
-        style={{
-          backgroundColor: color,
-          boxShadow: `0 0 6px ${color}`,
-          animationDelay: `${delay}s`,
-          animationDuration: "2s",
-        }}
+        className={`w-2 h-2 rounded-full flex-shrink-0 animate-pulse skeleton-dot ${colorClass}`}
       />
 
       {/* Category label skeleton - subtle tint */}
       <div
-        className="h-3 rounded flex-1"
-        style={{
-          maxWidth: `${widthPercent}%`,
-          background: `linear-gradient(90deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.03) 50%, rgba(255,255,255,0.06) 100%)`,
-          backgroundSize: "200% 100%",
-          animation: `skeleton-shimmer 1.5s ease-in-out infinite`,
-          animationDelay: `${delay}s`,
-        }}
+        className={`h-3 rounded flex-1 skeleton-shimmer ${widthClass}`}
       />
 
       {/* Count badge skeleton */}
       <div
         className="h-3 w-6 rounded skeleton-shimmer flex-shrink-0"
-        style={{ animationDelay: `${delay + 0.1}s` }}
       />
 
       {/* Chevron placeholder */}
       <div
         className="w-4 h-4 rounded skeleton-shimmer flex-shrink-0"
-        style={{ animationDelay: `${delay + 0.15}s` }}
       />
     </div>
   );

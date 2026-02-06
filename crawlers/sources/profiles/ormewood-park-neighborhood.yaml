@@ -1,0 +1,12 @@
+version: 1
+slug: ormewood-park-neighborhood
+name: Ormewood Park Civic Association
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://ormewoodpark.org
+detail:
+  enabled: false

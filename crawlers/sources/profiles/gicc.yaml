@@ -1,0 +1,12 @@
+version: 1
+slug: gicc
+name: Georgia International Convention Center
+integration_method: llm_crawler
+defaults: {}
+discovery:
+  enabled: true
+  type: html
+  urls:
+  - https://www.gicc.com
+detail:
+  enabled: false

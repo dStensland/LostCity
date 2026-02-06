@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient, getUser } from "@/lib/supabase/server";
 import { escapeSQLPattern } from "@/lib/api-utils";
 import { logger } from "@/lib/logger";
+import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 
 type Profile = {
   id: string;
@@ -14,6 +15,9 @@ type Profile = {
 // GET /api/users/search?q=searchterm&limit=20
 // Search for users by username or display name
 export async function GET(request: Request) {
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.search, getClientIdentifier(request));
+  if (rateLimitResult) return rateLimitResult;
+
   const { searchParams } = new URL(request.url);
   const query = searchParams.get("q")?.trim().toLowerCase();
   const limit = Math.min(parseInt(searchParams.get("limit") || "20", 10), 50);

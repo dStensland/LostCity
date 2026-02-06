@@ -12,16 +12,6 @@ interface ListCreateModalProps {
   onCreated: (list: List) => void;
 }
 
-const CATEGORY_COLORS: Record<string, string> = {
-  best_of: "#FBBF24",
-  hidden_gems: "#A78BFA",
-  date_night: "#F472B6",
-  with_friends: "#6EE7B7",
-  solo: "#5EEAD4",
-  budget: "#4ADE80",
-  special_occasion: "#F9A8D4",
-};
-
 const CATEGORIES = [
   {
     value: "best_of",
@@ -119,8 +109,6 @@ export default function ListCreateModal({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [onClose]);
 
-  const selectedColor = category ? CATEGORY_COLORS[category] : "var(--coral)";
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -178,15 +166,12 @@ export default function ListCreateModal({
 
       {/* Modal */}
       <div
-        className="relative w-full max-w-md bg-[var(--dusk)] border rounded-xl shadow-2xl overflow-hidden"
-        style={{ borderColor: selectedColor + "40" }}
+        data-category={category || "other"}
+        className="relative w-full max-w-md bg-[var(--dusk)] border rounded-xl shadow-2xl overflow-hidden list-create-modal"
       >
         {/* Gradient header */}
         <div
-          className="absolute top-0 left-0 right-0 h-24 opacity-20"
-          style={{
-            background: `linear-gradient(135deg, ${selectedColor}40 0%, transparent 100%)`,
-          }}
+          className="absolute top-0 left-0 right-0 h-24 opacity-20 list-create-header"
         />
 
         {/* Header */}
@@ -223,12 +208,14 @@ export default function ListCreateModal({
         {/* Step indicator */}
         <div className="flex gap-2 px-4 pt-4">
           <div
-            className="flex-1 h-1 rounded-full transition-colors"
-            style={{ backgroundColor: step >= 1 ? selectedColor : "var(--twilight)" }}
+            className={`flex-1 h-1 rounded-full transition-colors ${
+              step >= 1 ? "bg-[var(--category-color,var(--twilight))]" : "bg-[var(--twilight)]"
+            }`}
           />
           <div
-            className="flex-1 h-1 rounded-full transition-colors"
-            style={{ backgroundColor: step >= 2 ? selectedColor : "var(--twilight)" }}
+            className={`flex-1 h-1 rounded-full transition-colors ${
+              step >= 2 ? "bg-[var(--category-color,var(--twilight))]" : "bg-[var(--twilight)]"
+            }`}
           />
         </div>
 
@@ -243,37 +230,29 @@ export default function ListCreateModal({
               <div className="grid grid-cols-2 gap-2">
                 {CATEGORIES.map((cat) => {
                   const isSelected = category === cat.value;
-                  const color = CATEGORY_COLORS[cat.value];
                   return (
                     <button
                       key={cat.value}
                       type="button"
                       onClick={() => setCategory(cat.value)}
-                      className={`p-3 rounded-xl text-left transition-all ${
+                      data-category={cat.value}
+                      className={`p-3 rounded-xl text-left transition-all border ${
                         isSelected
-                          ? "ring-2 ring-offset-2 ring-offset-[var(--dusk)]"
-                          : "hover:bg-[var(--night)]"
+                          ? "ring-2 ring-offset-2 ring-offset-[var(--dusk)] bg-[color-mix(in_srgb,var(--category-color)_20%,transparent)] border-[var(--category-color)] ring-[var(--category-color)]"
+                          : "hover:bg-[var(--night)] bg-[var(--night)] border-[var(--twilight)]"
                       }`}
-                      style={{
-                        backgroundColor: isSelected ? `${color}20` : "var(--night)",
-                        borderColor: isSelected ? color : "var(--twilight)",
-                        "--tw-ring-color": isSelected ? color : undefined,
-                      } as React.CSSProperties}
                     >
                       <div className="flex items-center gap-2">
                         <div
-                          className="w-8 h-8 rounded-lg flex items-center justify-center"
-                          style={{
-                            backgroundColor: `${color}20`,
-                            color: color,
-                          }}
+                          className="w-8 h-8 rounded-lg flex items-center justify-center list-category-icon"
                         >
                           {cat.icon}
                         </div>
                         <div className="flex-1 min-w-0">
                           <div
-                            className="font-mono text-xs font-medium"
-                            style={{ color: isSelected ? color : "var(--cream)" }}
+                            className={`font-mono text-xs font-medium ${
+                              isSelected ? "text-[var(--category-color)]" : "text-[var(--cream)]"
+                            }`}
                           >
                             {cat.label}
                           </div>
@@ -295,13 +274,13 @@ export default function ListCreateModal({
               {/* Selected category preview */}
               {category && (
                 <div
-                  className="flex items-center gap-2 px-3 py-2 rounded-lg"
-                  style={{ backgroundColor: `${selectedColor}20` }}
+                  data-category={category}
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[color-mix(in_srgb,var(--category-color)_20%,transparent)]"
                 >
-                  <span style={{ color: selectedColor }}>
+                  <span className="text-[var(--category-color)]">
                     {CATEGORIES.find((c) => c.value === category)?.icon}
                   </span>
-                  <span className="text-sm font-mono" style={{ color: selectedColor }}>
+                  <span className="text-sm font-mono text-[var(--category-color)]">
                     {CATEGORIES.find((c) => c.value === category)?.label}
                   </span>
                 </div>
@@ -317,8 +296,9 @@ export default function ListCreateModal({
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="e.g., Best Coffee Shops in Midtown"
-                  className="w-full px-3 py-2.5 bg-[var(--night)] border border-[var(--twilight)] rounded-lg text-[var(--cream)] placeholder-[var(--muted)] focus:outline-none transition-colors"
-                  style={{ borderColor: title.trim() ? selectedColor : undefined }}
+                  className={`w-full px-3 py-2.5 bg-[var(--night)] border rounded-lg text-[var(--cream)] placeholder-[var(--muted)] focus:outline-none transition-colors ${
+                    title.trim() ? "border-[var(--category-color)]" : "border-[var(--twilight)]"
+                  }`}
                   maxLength={100}
                   autoFocus
                 />
@@ -393,11 +373,9 @@ export default function ListCreateModal({
                 type="button"
                 onClick={() => setStep(2)}
                 disabled={!canProceed}
-                className="flex-1 px-4 py-2.5 rounded-lg font-mono text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                style={{
-                  backgroundColor: canProceed ? selectedColor : "var(--twilight)",
-                  color: canProceed ? "var(--void)" : "var(--muted)",
-                }}
+                className={`flex-1 px-4 py-2.5 rounded-lg font-mono text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed list-create-action ${
+                  canProceed ? "list-create-action-primary" : "list-create-action-disabled"
+                }`}
               >
                 Continue
               </button>
@@ -405,11 +383,7 @@ export default function ListCreateModal({
               <button
                 type="submit"
                 disabled={saving || !title.trim()}
-                className="flex-1 px-4 py-2.5 rounded-lg font-mono text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                style={{
-                  backgroundColor: selectedColor,
-                  color: "var(--void)",
-                }}
+                className="flex-1 px-4 py-2.5 rounded-lg font-mono text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed list-create-action list-create-action-primary"
               >
                 {saving ? "Creating..." : "Create List"}
               </button>

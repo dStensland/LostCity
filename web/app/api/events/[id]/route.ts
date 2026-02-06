@@ -25,15 +25,54 @@ export async function GET(
 
   const supabase = await createClient();
 
-  // Fetch event with venue (producer/series joins removed - FKs don't exist)
-  const { data: event, error } = await supabase
+  // Fetch event with venue, series, and producer
+  let event: unknown | null = null;
+  let error: { message?: string } | null = null;
+
+  const fullSelect = `
+    *,
+    venue:venues(id, name, slug, address, neighborhood, city, state, vibes, description, lat, lng),
+    series:series_id(
+      id,
+      title,
+      slug,
+      series_type,
+      festival:festivals(id, name, slug, image_url, festival_type, location, neighborhood)
+    ),
+    producer:organizations(id, name, slug, org_type, website, logo_url)
+  `;
+
+  const fullResult = await supabase
     .from("events")
-    .select(`
-      *,
-      venue:venues(id, name, slug, address, neighborhood, city, state, vibes, description, lat, lng)
-    `)
+    .select(fullSelect)
     .eq("id", eventId)
     .maybeSingle();
+
+  event = fullResult.data;
+  error = fullResult.error as { message?: string } | null;
+
+  // Fallback: schema may not include producer/series relationships yet
+  if (error && !event) {
+    const message = error.message || "";
+    const isSchemaMismatch =
+      message.includes("column") ||
+      message.includes("relationship") ||
+      message.includes("schema cache");
+
+    if (isSchemaMismatch) {
+      const fallbackResult = await supabase
+        .from("events")
+        .select(`
+          *,
+          venue:venues(id, name, slug, address, neighborhood, city, state, vibes, description, lat, lng)
+        `)
+        .eq("id", eventId)
+        .maybeSingle();
+
+      event = fallbackResult.data;
+      error = fallbackResult.error as { message?: string } | null;
+    }
+  }
 
   if (error || !event) {
     logger.error("Event fetch error", error, { eventId, component: "events/[id]" });

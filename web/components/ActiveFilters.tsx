@@ -2,7 +2,7 @@
 
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useCallback, useMemo } from "react";
-import { CATEGORIES, SUBCATEGORIES } from "@/lib/search";
+import { CATEGORIES, SUBCATEGORIES } from "@/lib/search-constants";
 
 export default function ActiveFilters() {
   const router = useRouter();

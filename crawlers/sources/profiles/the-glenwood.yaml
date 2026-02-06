@@ -1,0 +1,12 @@
+version: 1
+slug: the-glenwood
+name: The Glenwood
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.theglenwoodatl.com
+detail:
+  enabled: false

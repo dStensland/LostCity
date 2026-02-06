@@ -16,6 +16,7 @@ from playwright.sync_api import sync_playwright
 
 from db import get_or_create_venue, insert_event, find_event_by_hash, remove_stale_source_events
 from dedupe import generate_content_hash
+from utils import extract_event_links, find_event_url
 
 logger = logging.getLogger(__name__)
 
@@ -98,6 +99,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
             for _ in range(5):
                 page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
                 page.wait_for_timeout(1000)
+
+            # Extract event links for specific URLs
+            event_links = extract_event_links(page, BASE_URL)
 
             # Get all event list items
             event_elements = page.query_selector_all(".event-list-item")
@@ -192,6 +196,13 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         events_updated += 1
                         continue
 
+                    # Get specific event URL
+
+
+                    event_url = find_event_url(title, event_links, EVENTS_URL)
+
+
+
                     event_record = {
                         "source_id": source_id,
                         "venue_id": venue_id,
@@ -209,8 +220,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "price_max": None,
                         "price_note": None,
                         "is_free": False,
-                        "source_url": EVENTS_URL,
-                        "ticket_url": EVENTS_URL,
+                        "source_url": event_url,
+                        "ticket_url": event_url,
                         "image_url": image_url if image_url else None,
                         "raw_text": event_text[:500],
                         "extraction_confidence": 0.90,

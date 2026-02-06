@@ -16,6 +16,7 @@ from playwright.sync_api import sync_playwright
 
 from db import get_or_create_venue, insert_event, find_event_by_hash
 from dedupe import generate_content_hash
+from utils import extract_event_links, find_event_url
 
 logger = logging.getLogger(__name__)
 
@@ -169,6 +170,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
                 page.wait_for_timeout(1500)
 
+            # Extract event links for specific URLs
+            event_links = extract_event_links(page, BASE_URL)
+
             # Get body text and parse events
             body_text = page.inner_text('body')
             lines = [l.strip() for l in body_text.split('\n') if l.strip()]
@@ -260,6 +264,13 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     # Determine category
                     category, subcategory, tags = determine_category(title, description)
 
+                    # Get specific event URL
+
+
+                    event_url = find_event_url(title, event_links, EVENTS_URL)
+
+
+
                     event_record = {
                         "source_id": source_id,
                         "venue_id": venue_id,
@@ -277,8 +288,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "price_max": None,
                         "price_note": "Sliding scale / donation",
                         "is_free": False,
-                        "source_url": EVENTS_URL,
-                        "ticket_url": EVENTS_URL,
+                        "source_url": event_url,
+                        "ticket_url": event_url,
                         "image_url": None,
                         "raw_text": f"{title}\n{line}\n{description or ''}"[:500],
                         "extraction_confidence": 0.80,

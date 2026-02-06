@@ -1,0 +1,12 @@
+version: 1
+slug: decatur-farmers-market
+name: Decatur Farmers Market
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.decaturfarmersmarket.com
+detail:
+  enabled: false

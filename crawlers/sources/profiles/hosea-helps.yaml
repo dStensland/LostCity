@@ -1,0 +1,14 @@
+version: 1
+slug: hosea-helps
+name: Hosea Helps
+integration_method: playwright
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://hoseahelps.org/events
+  fetch:
+    render_js: true
+detail:
+  enabled: false

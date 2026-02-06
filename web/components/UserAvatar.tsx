@@ -1,7 +1,9 @@
 "use client";
 
-import Image from "next/image";
+import Image from "@/components/SmartImage";
 import { memo, useMemo } from "react";
+import ScopedStyles from "@/components/ScopedStyles";
+import { createCssVarClass, createCssVarClassForLength, createCssVarClassForNumber } from "@/lib/css-utils";
 
 // Neon color palette for avatar gradients
 const NEON_GRADIENTS = [
@@ -27,11 +29,11 @@ function getGradientForString(str: string): typeof NEON_GRADIENTS[0] {
 type AvatarSize = "xs" | "sm" | "md" | "lg" | "xl";
 
 const SIZE_CONFIG: Record<AvatarSize, { size: number; text: string; ring: string; glow: string }> = {
-  xs: { size: 20, text: "text-[0.5rem]", ring: "ring-1", glow: "0 0 8px" },
-  sm: { size: 28, text: "text-[0.6rem]", ring: "ring-[1.5px]", glow: "0 0 10px" },
-  md: { size: 36, text: "text-xs", ring: "ring-2", glow: "0 0 12px" },
-  lg: { size: 48, text: "text-sm", ring: "ring-2", glow: "0 0 16px" },
-  xl: { size: 64, text: "text-base", ring: "ring-[3px]", glow: "0 0 20px" },
+  xs: { size: 20, text: "text-[0.5rem]", ring: "ring-1", glow: "8px" },
+  sm: { size: 28, text: "text-[0.6rem]", ring: "ring-[1.5px]", glow: "10px" },
+  md: { size: 36, text: "text-xs", ring: "ring-2", glow: "12px" },
+  lg: { size: 48, text: "text-sm", ring: "ring-2", glow: "16px" },
+  xl: { size: 64, text: "text-base", ring: "ring-[3px]", glow: "20px" },
 };
 
 interface UserAvatarProps {
@@ -57,41 +59,41 @@ function UserAvatar({
   const config = SIZE_CONFIG[size];
   const gradient = useMemo(() => getGradientForString(name), [name]);
   const initial = name.charAt(0).toUpperCase();
+  const onlineSize = Math.max(8, Math.round(config.size * 0.25));
 
-  // Common styles for the avatar container
-  const containerStyle = useMemo(() => ({
-    width: config.size,
-    height: config.size,
-    "--avatar-glow-from": gradient.from,
-    "--avatar-glow-to": gradient.to,
-  } as React.CSSProperties), [config.size, gradient]);
+  const sizeClass = createCssVarClassForLength("--avatar-size", `${config.size}px`, "avatar-size");
+  const glowSizeClass = createCssVarClassForLength("--avatar-glow-size", config.glow, "avatar-glow");
+  const fromClass = createCssVarClass("--avatar-from", gradient.from, "avatar-from");
+  const toClass = createCssVarClass("--avatar-to", gradient.to, "avatar-to");
+  const onlineSizeClass = createCssVarClassForLength("--avatar-online-size", `${onlineSize}px`, "avatar-online");
 
-  // Glow effect style
-  const glowStyle = useMemo(() => {
-    if (!glow) return {};
-    return {
-      boxShadow: `${config.glow} color-mix(in srgb, ${gradient.from} 40%, transparent)`,
-    };
-  }, [glow, config.glow, gradient.from]);
+  const css = [
+    sizeClass?.css,
+    glowSizeClass?.css,
+    fromClass?.css,
+    toClass?.css,
+    onlineSizeClass?.css,
+  ].filter(Boolean).join("\n");
+
+  const varClasses = [
+    sizeClass?.className,
+    glowSizeClass?.className,
+    fromClass?.className,
+    toClass?.className,
+    onlineSizeClass?.className,
+  ].filter(Boolean).join(" ");
 
   return (
     <div
-      className={`relative flex-shrink-0 ${className}`}
-      style={{ width: config.size, height: config.size }}
+      className={`relative flex-shrink-0 avatar-root ${className} ${varClasses}`}
     >
+      <ScopedStyles css={css} />
       {/* Neon ring background */}
-      <div
-        className="absolute inset-0 rounded-full opacity-60 blur-[1px]"
-        style={{
-          background: `linear-gradient(135deg, ${gradient.from}, ${gradient.to})`,
-          transform: "scale(1.1)",
-        }}
-      />
+      <div className="absolute inset-0 rounded-full opacity-60 blur-[1px] avatar-gradient avatar-ring-scale" />
 
       {/* Main avatar container */}
       <div
-        className={`relative rounded-full overflow-hidden ${config.ring} ring-[var(--void)] transition-all duration-300`}
-        style={{ ...containerStyle, ...glowStyle }}
+        className={`relative rounded-full overflow-hidden ${config.ring} ring-[var(--void)] transition-all duration-300 avatar-ring ${glow ? "avatar-glow" : ""}`}
       >
         {src ? (
           <Image
@@ -104,12 +106,7 @@ function UserAvatar({
         ) : (
           /* Gradient fallback with initial */
           <div
-            className={`w-full h-full flex items-center justify-center font-bold ${config.text}`}
-            style={{
-              background: `linear-gradient(135deg, ${gradient.from}, ${gradient.to})`,
-              color: "var(--void)",
-              textShadow: "0 1px 2px rgba(0,0,0,0.3)",
-            }}
+            className={`w-full h-full flex items-center justify-center font-bold ${config.text} avatar-gradient avatar-initial`}
           >
             {initial}
           </div>
@@ -121,12 +118,7 @@ function UserAvatar({
         <div
           className={`absolute -bottom-0.5 -right-0.5 rounded-full border-2 border-[var(--void)] ${
             online ? "bg-[var(--neon-green)]" : "bg-[var(--muted)]"
-          }`}
-          style={{
-            width: Math.max(8, config.size * 0.25),
-            height: Math.max(8, config.size * 0.25),
-            boxShadow: online ? `0 0 6px var(--neon-green)` : undefined,
-          }}
+          } avatar-online ${online ? "avatar-online-glow" : ""}`}
         >
           {online && (
             <div className="absolute inset-0 rounded-full bg-[var(--neon-green)] animate-ping opacity-50" />
@@ -161,17 +153,28 @@ export const AvatarStack = memo(function AvatarStack({
   const visibleUsers = users.slice(0, max);
   const remainingCount = users.length - max;
   const overlap = Math.round(config.size * 0.35);
+  const overlapClass = createCssVarClassForLength("--avatar-overlap", `${-overlap}px`, "avatar-overlap");
+  const sizeClass = createCssVarClassForLength("--avatar-size", `${config.size}px`, "avatar-size");
+  const zClasses = visibleUsers.map((_, idx) =>
+    createCssVarClassForNumber("--avatar-stack-z", String(visibleUsers.length - idx), "avatar-z")
+  );
+  const countZClass = createCssVarClassForNumber("--avatar-stack-z", "0", "avatar-z");
+  const baseCss = [
+    overlapClass?.css,
+    sizeClass?.css,
+    ...zClasses.map((entry) => entry?.css),
+    countZClass?.css,
+  ].filter(Boolean).join("\n");
+  const baseVarClasses = [overlapClass?.className, sizeClass?.className].filter(Boolean).join(" ");
 
   return (
-    <div className="flex items-center">
-      <div className="flex" style={{ marginRight: remainingCount > 0 ? 4 : 0 }}>
+    <div className={`flex items-center ${baseVarClasses}`}>
+      <ScopedStyles css={baseCss} />
+      <div className={`flex ${remainingCount > 0 ? "mr-1" : ""}`}>
         {visibleUsers.map((user, idx) => (
           <div
             key={user.id}
-            style={{
-              marginLeft: idx > 0 ? -overlap : 0,
-              zIndex: visibleUsers.length - idx,
-            }}
+            className={`avatar-stack-item ${idx === 0 ? "avatar-stack-first" : ""} ${zClasses[idx]?.className ?? ""}`}
           >
             <UserAvatar
               src={user.avatar_url}
@@ -184,13 +187,7 @@ export const AvatarStack = memo(function AvatarStack({
 
       {showCount && remainingCount > 0 && (
         <div
-          className={`flex items-center justify-center rounded-full bg-[var(--twilight)] border-2 border-[var(--void)] font-mono font-bold text-[var(--soft)] ${config.text}`}
-          style={{
-            width: config.size,
-            height: config.size,
-            marginLeft: -overlap,
-            zIndex: 0,
-          }}
+          className={`flex items-center justify-center rounded-full bg-[var(--twilight)] border-2 border-[var(--void)] font-mono font-bold text-[var(--soft)] ${config.text} avatar-root avatar-stack-item ${countZClass?.className ?? ""}`}
         >
           +{remainingCount}
         </div>

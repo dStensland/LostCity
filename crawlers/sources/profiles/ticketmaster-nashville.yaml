@@ -1,0 +1,14 @@
+version: 1
+slug: ticketmaster-nashville
+name: Ticketmaster Nashville
+integration_method: api
+defaults: {}
+discovery:
+  enabled: true
+  type: api
+  urls:
+  - https://www.ticketmaster.com
+  api:
+    adapter: custom
+detail:
+  enabled: false

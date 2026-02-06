@@ -1,0 +1,12 @@
+version: 1
+slug: 529
+name: '529'
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://529atlanta.com/calendar/
+detail:
+  enabled: false

@@ -1,0 +1,14 @@
+version: 1
+slug: piedmont-cancer-support
+name: Piedmont Cancer Institute Support
+integration_method: playwright
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.piedmontcancerinstitute.com/support-groups.php
+  fetch:
+    render_js: true
+detail:
+  enabled: false

@@ -1,0 +1,12 @@
+version: 1
+slug: the-painted-duck
+name: The Painted Duck
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://thepaintedduck.com
+detail:
+  enabled: false

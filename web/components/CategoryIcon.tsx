@@ -1,4 +1,4 @@
-import { CSSProperties, type ComponentType } from "react";
+import type { ComponentType } from "react";
 import type { IconProps } from "@phosphor-icons/react";
 
 // Phosphor icon imports - using Light weight for neon tube aesthetic
@@ -199,7 +199,6 @@ interface Props {
   size?: number;
   className?: string;
   showLabel?: boolean;
-  style?: CSSProperties;
   glow?: GlowIntensity;
   /** Use thin weight for maximum neon effect */
   weight?: "thin" | "light" | "regular" | "bold";
@@ -220,12 +219,11 @@ export default function CategoryIcon({
   size = 20,
   className = "",
   showLabel = false,
-  style,
   glow = "default",
   weight = "light",
 }: Props) {
   const config = CATEGORY_CONFIG[type as CategoryType];
-  const color = config?.color || "#8B8B94";
+  const safeType = config ? type : "other";
   const label = config?.label || type;
 
   const IconComponent = ICON_MAP[type] || ICON_MAP.other || CirclesFour;
@@ -233,8 +231,8 @@ export default function CategoryIcon({
 
   return (
     <span
-      className={`inline-flex items-center gap-1.5 ${className}`}
-      style={{ color, ...style }}
+      data-category={safeType}
+      className={`inline-flex items-center gap-1.5 category-icon ${className}`}
     >
       <IconComponent
         size={size}
@@ -249,4 +247,3 @@ export default function CategoryIcon({
     </span>
   );
 }
-

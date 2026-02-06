@@ -1,6 +1,9 @@
 "use client";
 
 import { useState, useRef, useCallback } from "react";
+import Image from "next/image";
+import ScopedStyles from "@/components/ScopedStyles";
+import { createCssVarClassForLength } from "@/lib/css-utils";
 
 interface ImageUploaderProps {
   value: string | null;
@@ -27,9 +30,15 @@ export default function ImageUploader({
   const [uploadProgress, setUploadProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
+  const progressClass = createCssVarClassForLength(
+    "--upload-progress",
+    `${uploadProgress}%`,
+    "upload-progress"
+  );
+
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const validateFile = (file: File): string | null => {
+  const validateFile = useCallback((file: File): string | null => {
     if (!allowedTypes.includes(file.type)) {
       return `Invalid file type. Allowed: ${allowedTypes.map((t) => t.split("/")[1].toUpperCase()).join(", ")}`;
     }
@@ -37,9 +46,9 @@ export default function ImageUploader({
       return `File too large. Maximum size: ${Math.round(maxSize / 1024 / 1024)}MB`;
     }
     return null;
-  };
+  }, [allowedTypes, maxSize]);
 
-  const uploadFile = async (file: File) => {
+  const uploadFile = useCallback(async (file: File) => {
     setError(null);
     setIsUploading(true);
     setUploadProgress(0);
@@ -84,7 +93,7 @@ export default function ImageUploader({
       setIsUploading(false);
       setUploadProgress(0);
     }
-  };
+  }, [onChange, onError, validateFile]);
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -107,7 +116,7 @@ export default function ImageUploader({
     if (files.length > 0) {
       uploadFile(files[0]);
     }
-  }, []);
+  }, [uploadFile]);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -126,13 +135,16 @@ export default function ImageUploader({
 
   return (
     <div className="space-y-2">
+      <ScopedStyles css={progressClass?.css} />
       {value ? (
         // Image preview
-        <div className="relative rounded-lg overflow-hidden border border-[var(--twilight)]">
-          <img
+        <div className="relative rounded-lg overflow-hidden border border-[var(--twilight)] h-48">
+          <Image
             src={value}
             alt="Uploaded preview"
-            className="w-full h-48 object-cover"
+            fill
+            sizes="100vw"
+            className="object-cover"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 hover:opacity-100 transition-opacity flex items-end justify-center p-4">
             <button
@@ -173,8 +185,7 @@ export default function ImageUploader({
               </p>
               <div className="w-full bg-[var(--twilight)] rounded-full h-1.5">
                 <div
-                  className="bg-[var(--coral)] h-1.5 rounded-full transition-all"
-                  style={{ width: `${uploadProgress}%` }}
+                  className={`bg-[var(--coral)] h-1.5 rounded-full transition-all w-[var(--upload-progress)] ${progressClass?.className ?? ""}`}
                 />
               </div>
             </div>

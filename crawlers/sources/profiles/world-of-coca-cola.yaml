@@ -1,0 +1,14 @@
+version: 1
+slug: world-of-coca-cola
+name: World of Coca-Cola
+integration_method: playwright
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.worldofcoca-cola.com
+  fetch:
+    render_js: true
+detail:
+  enabled: false

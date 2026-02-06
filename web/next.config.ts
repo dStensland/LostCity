@@ -37,22 +37,51 @@ const securityHeaders = [
     key: "Strict-Transport-Security",
     value: "max-age=31536000; includeSubDomains; preload",
   },
-  {
-    key: "Content-Security-Policy",
-    value: [
-      "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' https://*.sentry.io https://*.supabase.co",
-      "style-src 'self' 'unsafe-inline'",
-      "img-src 'self' data: blob: https:",
-      "font-src 'self' data:",
-      "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.sentry.io https://api.mapbox.com https://events.mapbox.com",
-      "frame-ancestors 'none'",
-      "form-action 'self'",
-      "base-uri 'self'",
-      "upgrade-insecure-requests",
-    ].join("; "),
-  },
 ];
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseHost = supabaseUrl ? new URL(supabaseUrl).hostname : null;
+
+const extraImageHosts = (process.env.NEXT_PUBLIC_IMAGE_HOSTS || "")
+  .split(",")
+  .map((host) => host.trim())
+  .filter(Boolean);
+
+const imageHosts = new Set([
+  // Event platforms
+  "img.evbuc.com",
+  "cdn.evbuc.com",
+  "s1.ticketm.net",
+  "s1.ticketmaster.com",
+  // Image CDNs
+  "images.unsplash.com",
+  "res.cloudinary.com",
+  "i.imgur.com",
+  "static.imgix.net",
+  "indy-systems.imgix.net",
+  // Media databases
+  "image.tmdb.org",
+  "upload.wikimedia.org",
+  "user-images.githubusercontent.com",
+  // Atlanta venue/org sites
+  "www.aso.org",
+  "admin.paintingwithatwist.com",
+  "14d14a1b70be1f7f7d4a-0863ae42a3340022d3e557e78745c047.ssl.cf5.rackcdn.com",
+  "images.squarespace-cdn.com",
+  "static1.squarespace.com",
+  "www.foxtheatre.org",
+  "www.dadsgaragetheatre.com",
+  "alliancetheatre.org",
+  "high.org",
+  "atlantahistorycenter.com",
+  "www.atlantabg.org",
+  "centerstage.net",
+  ...extraImageHosts,
+]);
+
+if (supabaseHost) {
+  imageHosts.add(supabaseHost);
+}
 
 const nextConfig: NextConfig = {
   async headers() {
@@ -73,12 +102,20 @@ const nextConfig: NextConfig = {
     optimizePackageImports: ["@phosphor-icons/react"],
   },
   images: {
-    // Allow all HTTPS images - we trust our data sources
-    // This replaces the 50+ individual patterns that were hitting the Next.js limit
+    // Allow only known HTTPS image hosts. Add more via NEXT_PUBLIC_IMAGE_HOSTS.
+    localPatterns: [
+      // Allow proxied images with query params plus standard local assets.
+      { pathname: "/api/image-proxy" },
+      { pathname: "/**" },
+    ],
     remotePatterns: [
+      ...Array.from(imageHosts).map((hostname) => ({
+        protocol: "https",
+        hostname,
+      })),
       {
         protocol: "https",
-        hostname: "**",
+        hostname: "**.squarespace.com",
       },
       {
         protocol: "http",

@@ -23,12 +23,11 @@ export default function HeaderSearchButton() {
     <>
       <button
         onClick={() => setIsSearchOpen(true)}
-        className="flex items-center gap-2 p-2.5 rounded-lg text-[var(--cream)] hover:text-[var(--neon-amber)] hover:bg-[var(--twilight)]/70 transition-colors active:scale-95"
-        style={{ filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.8))" }}
+        className="flex items-center gap-2 p-2 sm:p-2.5 rounded-lg text-[var(--cream)] hover:text-[var(--neon-amber)] hover:bg-[var(--twilight)]/70 transition-colors active:scale-95 drop-shadow-strong"
         aria-label="Search (⌘K)"
       >
         <svg
-          className="w-5 h-5"
+          className="w-4 h-4 sm:w-5 sm:h-5"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"

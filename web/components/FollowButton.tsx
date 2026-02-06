@@ -27,7 +27,7 @@ export default function FollowButton({
   className = "",
 }: FollowButtonProps) {
   // Support both old and new prop names
-  const organizationId = targetOrganizationId || targetProducerId;
+  const organizationId = targetOrganizationId || targetOrgId || targetProducerId;
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
   const { showToast } = useToast();
@@ -36,6 +36,7 @@ export default function FollowButton({
   const [loading, setLoading] = useState(initialIsFollowing === undefined);
   const [actionLoading, setActionLoading] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
+  const [lastActionTime, setLastActionTime] = useState(0);
 
   // Check if already following via API (skip if initialIsFollowing provided)
   useEffect(() => {
@@ -104,6 +105,13 @@ export default function FollowButton({
       router.push(`/auth/login?redirect=${encodeURIComponent(currentPath)}`);
       return;
     }
+
+    // Debounce: prevent rapid clicking (2 second cooldown)
+    const now = Date.now();
+    if (now - lastActionTime < 2000) {
+      return;
+    }
+    setLastActionTime(now);
 
     setActionLoading(true);
     setIsAnimating(true);

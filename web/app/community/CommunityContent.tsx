@@ -3,11 +3,13 @@
 import { useState, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import Image from "next/image";
+import Image from "@/components/SmartImage";
 import FollowButton from "@/components/FollowButton";
 import CategoryIcon, { getCategoryColor, CATEGORY_CONFIG } from "@/components/CategoryIcon";
 import { EventsBadge } from "@/components/Badge";
 import type { Organization } from "./page";
+import ScopedStyles from "@/components/ScopedStyles";
+import { createCssVarClass } from "@/lib/css-utils";
 
 // Event categories that producers can create events in
 const EVENT_CATEGORIES = [
@@ -68,6 +70,27 @@ export default function CommunityContent({
   const [search, setSearch] = useState(searchQuery);
   const [sortBy, setSortBy] = useState<"category" | "alphabetical">("category");
 
+  const orgTypeAccentClasses = Object.fromEntries(
+    Object.entries(ORG_TYPE_CONFIG).map(([value, config]) => [
+      value,
+      createCssVarClass("--accent-color", config.color, "org-type"),
+    ])
+  ) as Record<string, ReturnType<typeof createCssVarClass> | null>;
+
+  const categoryAccentClasses = Object.fromEntries(
+    EVENT_CATEGORIES.map((cat) => [
+      cat,
+      createCssVarClass("--accent-color", getCategoryColor(cat), "org-category"),
+    ])
+  ) as Record<string, ReturnType<typeof createCssVarClass> | null>;
+
+  const scopedCss = [
+    ...Object.values(orgTypeAccentClasses).map((entry) => entry?.css),
+    ...Object.values(categoryAccentClasses).map((entry) => entry?.css),
+  ]
+    .filter(Boolean)
+    .join("\n");
+
   // Sort organizations based on selected sort option
   const sortedOrganizations = useMemo(() => {
     const sorted = [...organizations];
@@ -127,6 +150,7 @@ export default function CommunityContent({
 
   return (
     <>
+      <ScopedStyles css={scopedCss} />
       {/* Header */}
       <section className="py-6 border-b border-[var(--twilight)]">
         <div className="max-w-3xl mx-auto px-4">
@@ -172,22 +196,19 @@ export default function CommunityContent({
             {Object.entries(ORG_TYPES).map(([value, label]) => {
               const isSelected = selectedType === value;
               const config = ORG_TYPE_CONFIG[value];
+              const accentClass = config ? orgTypeAccentClasses[value] : null;
+              const selectedClass = config
+                ? `bg-accent text-[#1a1a2e] ${accentClass?.className ?? ""}`
+                : "bg-[var(--coral)] text-[var(--void)]";
               return (
                 <button
                   key={value}
                   onClick={() => handleTypeChange(value)}
                   className={`px-3 py-1.5 rounded-full font-mono text-xs font-medium whitespace-nowrap transition-all border ${
                     isSelected
-                      ? "border-transparent"
+                      ? `border-transparent ${selectedClass}`
                       : "border-transparent bg-[var(--twilight)] text-[var(--muted)] hover:text-[var(--cream)] hover:bg-[var(--twilight)]/80"
                   }`}
-                  style={
-                    isSelected && config
-                      ? { backgroundColor: config.color, color: "#1a1a2e" }
-                      : isSelected
-                      ? { backgroundColor: "var(--coral)", color: "var(--void)" }
-                      : undefined
-                  }
                 >
                   {label}
                 </button>
@@ -208,19 +229,23 @@ export default function CommunityContent({
               {EVENT_CATEGORIES.map((cat) => {
                 const isSelected = selectedCategories.includes(cat);
                 const config = CATEGORY_CONFIG[cat];
-                const color = config?.color || "var(--muted)";
+                const accentClass = categoryAccentClasses[cat];
                 return (
                   <button
                     key={cat}
                     onClick={() => handleCategoryToggle(cat)}
                     className={`flex items-center gap-1 px-2 py-1 rounded-full font-mono text-[0.65rem] font-medium whitespace-nowrap transition-all ${
                       isSelected
-                        ? "text-[var(--void)]"
+                        ? `bg-accent text-[var(--void)] ${accentClass?.className ?? ""}`
                         : "bg-[var(--twilight)]/50 text-[var(--muted)] hover:text-[var(--cream)]"
                     }`}
-                    style={isSelected ? { backgroundColor: color } : undefined}
                   >
-                    <CategoryIcon type={cat} size={12} glow={isSelected ? "none" : "subtle"} />
+                    <CategoryIcon
+                      type={cat}
+                      size={12}
+                      glow={isSelected ? "none" : "subtle"}
+                      className={isSelected ? "!text-[var(--void)]" : ""}
+                    />
                     {config?.label || cat}
                   </button>
                 );
@@ -277,18 +302,22 @@ export default function CommunityContent({
               );
               const orgConfig = ORG_TYPE_CONFIG[producer.org_type];
               const hasEvents = (producer.event_count ?? 0) > 0;
+              const orgAccent = orgConfig?.color || "var(--muted)";
+              const orgAccentClass = createCssVarClass("--accent-color", orgAccent, "accent");
+              const primaryCategory = producer.categories?.[0];
+              const categoryAccent = primaryCategory ? getCategoryColor(primaryCategory) : null;
+              const categoryAccentClass = categoryAccent
+                ? createCssVarClass("--accent-color", categoryAccent, "accent")
+                : null;
 
               return (
-                <div key={producer.id}>
+                <div key={producer.id} className={orgAccentClass?.className ?? ""}>
+                  <ScopedStyles css={orgAccentClass?.css} />
                   {showCategoryHeader && (
                     <div className="flex items-center gap-2 mb-3 mt-6 first:mt-0">
-                      <div
-                        className="w-2 h-2 rounded-full"
-                        style={{ backgroundColor: orgConfig?.color || "var(--muted)" }}
-                      />
+                      <div className="w-2 h-2 rounded-full bg-accent" />
                       <h2
-                        className="font-mono text-xs font-medium uppercase tracking-wider"
-                        style={{ color: orgConfig?.color || "var(--muted)" }}
+                        className="font-mono text-xs font-medium uppercase tracking-wider text-accent"
                       >
                         {orgConfig?.label || producer.org_type.replace(/_/g, " ")}
                       </h2>
@@ -296,12 +325,7 @@ export default function CommunityContent({
                   )}
                   <Link
                   href={`/community/${producer.slug}`}
-                  className="block p-5 rounded-xl border border-[var(--twilight)] transition-all hover:border-[var(--coral)]/50 group card-atmospheric relative"
-                  style={{
-                    backgroundColor: "var(--card-bg)",
-                    "--glow-color": orgConfig?.color || "var(--coral)",
-                    "--reflection-color": orgConfig?.color ? `color-mix(in srgb, ${orgConfig.color} 15%, transparent)` : undefined,
-                  } as React.CSSProperties}
+                  className="block p-5 rounded-xl border border-[var(--twilight)] transition-all hover:border-[var(--coral)]/50 group card-atmospheric glow-accent reflection-accent relative bg-[var(--card-bg)]"
                 >
                   <div className="flex items-start gap-4">
                     {/* Logo */}
@@ -313,19 +337,16 @@ export default function CommunityContent({
                             alt={producer.name}
                             width={64}
                             height={64}
-                            className="object-contain"
-                            style={{ width: 64, height: 64 }}
+                            className="object-contain w-16 h-16"
                           />
                         </div>
                       ) : (
                         <div
-                          className="w-16 h-16 rounded-xl flex items-center justify-center"
-                          style={{
-                            backgroundColor: producer.categories?.[0]
-                              ? `${getCategoryColor(producer.categories[0])}20`
-                              : "var(--twilight)",
-                          }}
+                          className={`w-16 h-16 rounded-xl flex items-center justify-center ${
+                            categoryAccent ? "bg-accent-20" : "bg-[var(--twilight)]"
+                          } ${categoryAccentClass?.className ?? ""}`}
                         >
+                          <ScopedStyles css={categoryAccentClass?.css} />
                           <CategoryIcon
                             type={producer.categories?.[0] || "community"}
                             size={28}
@@ -345,11 +366,9 @@ export default function CommunityContent({
                           <div className="flex items-center gap-2 mt-1">
                             {/* Org Type Badge */}
                             <span
-                              className="inline-flex items-center px-2 py-0.5 rounded-md text-[0.6rem] font-mono font-medium uppercase tracking-wider"
-                              style={{
-                                backgroundColor: orgConfig?.color ? `${orgConfig.color}20` : "var(--twilight)",
-                                color: orgConfig?.color || "var(--muted)",
-                              }}
+                              className={`inline-flex items-center px-2 py-0.5 rounded-md text-[0.6rem] font-mono font-medium uppercase tracking-wider ${
+                                orgConfig?.color ? "bg-accent-20 text-accent" : "bg-[var(--twilight)] text-[var(--muted)]"
+                              }`}
                             >
                               {orgConfig?.label || producer.org_type.replace(/_/g, " ")}
                             </span>
@@ -374,15 +393,13 @@ export default function CommunityContent({
                         <div className="mt-2 flex flex-wrap gap-1">
                           {producer.categories.slice(0, 4).map((cat) => {
                             const color = getCategoryColor(cat);
+                            const tagAccentClass = createCssVarClass("--accent-color", color, "accent");
                             return (
                               <span
                                 key={cat}
-                                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[0.55rem] font-mono uppercase tracking-wider"
-                                style={{
-                                  backgroundColor: `${color}15`,
-                                  color: color,
-                                }}
+                                className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[0.55rem] font-mono uppercase tracking-wider bg-accent-15 text-accent ${tagAccentClass?.className ?? ""}`}
                               >
+                                <ScopedStyles css={tagAccentClass?.css} />
                                 <CategoryIcon type={cat} size={9} />
                                 {cat.replace(/_/g, " ")}
                               </span>

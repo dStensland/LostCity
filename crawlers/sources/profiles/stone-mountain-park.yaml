@@ -1,0 +1,12 @@
+version: 1
+slug: stone-mountain-park
+name: Stone Mountain Park
+integration_method: llm_crawler
+defaults: {}
+discovery:
+  enabled: true
+  type: html
+  urls:
+  - https://stonemountainpark.com/activities/events/
+detail:
+  enabled: false

@@ -14,7 +14,6 @@ import {
   isToday,
   isBefore,
 } from "date-fns";
-import { getCategoryColor } from "./CategoryIcon";
 import CategoryIcon from "./CategoryIcon";
 import { formatTimeSplit } from "@/lib/formats";
 import { DEFAULT_PORTAL_SLUG } from "@/lib/portal-context";
@@ -220,6 +219,16 @@ export default function CalendarView({ portalId, portalSlug = DEFAULT_PORTAL_SLU
               const hasEvents = day.events.length > 0;
               const categories = getDayCategories(day.events);
               const density = day.events.length / maxEventsInDay;
+              const densityClass =
+                hasEvents && day.isCurrentMonth && !isSelected
+                  ? density >= 0.75
+                    ? "bg-[var(--coral)]/20"
+                    : density >= 0.5
+                      ? "bg-[var(--coral)]/15"
+                      : density >= 0.25
+                        ? "bg-[var(--coral)]/10"
+                        : "bg-[var(--coral)]/5"
+                  : "";
 
               return (
                 <button
@@ -234,12 +243,8 @@ export default function CalendarView({ portalId, portalSlug = DEFAULT_PORTAL_SLU
                       : "border-[var(--twilight)]/50 hover:bg-[var(--twilight)]/30"
                     }
                     ${day.isToday ? "ring-2 ring-[var(--gold)] ring-offset-1 ring-offset-[var(--void)]" : ""}
+                    ${densityClass}
                   `}
-                  style={{
-                    backgroundColor: hasEvents && day.isCurrentMonth && !isSelected
-                      ? `rgba(var(--coral-rgb, 255, 107, 107), ${density * 0.15})`
-                      : undefined,
-                  }}
                 >
                   {/* Day number */}
                   <span
@@ -266,8 +271,8 @@ export default function CalendarView({ portalId, portalSlug = DEFAULT_PORTAL_SLU
                       {categories.map((cat) => (
                         <span
                           key={cat}
-                          className="w-1.5 h-1.5 rounded-full"
-                          style={{ backgroundColor: getCategoryColor(cat) || "var(--muted)" }}
+                          data-category={cat}
+                          className="w-1.5 h-1.5 rounded-full bg-[var(--category-color,var(--muted))]"
                         />
                       ))}
                     </div>
@@ -317,16 +322,16 @@ export default function CalendarView({ portalId, portalSlug = DEFAULT_PORTAL_SLU
               {loading && !initialLoadDone ? (
                 <div className="space-y-3">
                   {[1, 2, 3].map((i) => (
-                    <div key={i} className="p-3 rounded-lg border border-[var(--twilight)]" style={{ backgroundColor: "var(--card-bg)" }}>
+                    <div key={i} className="p-3 rounded-lg border border-[var(--twilight)] bg-[var(--card-bg)]">
                       <div className="flex items-center gap-2 mb-2">
                         <div className="h-3 w-12 rounded skeleton-shimmer" />
-                        <div className="h-4 w-10 rounded-full skeleton-shimmer" style={{ animationDelay: "0.05s" }} />
+                        <div className="h-4 w-10 rounded-full skeleton-shimmer" />
                       </div>
                       <div className="flex items-center gap-2 mb-1">
                         <div className="w-3.5 h-3.5 rounded skeleton-shimmer" />
-                        <div className="h-4 w-3/4 rounded skeleton-shimmer" style={{ animationDelay: `${i * 0.1}s` }} />
+                        <div className="h-4 w-3/4 rounded skeleton-shimmer" />
                       </div>
-                      <div className="h-3 w-1/2 rounded skeleton-shimmer" style={{ animationDelay: `${i * 0.1 + 0.1}s` }} />
+                      <div className="h-3 w-1/2 rounded skeleton-shimmer" />
                     </div>
                   ))}
                 </div>
@@ -334,7 +339,6 @@ export default function CalendarView({ portalId, portalSlug = DEFAULT_PORTAL_SLU
                 <div className="space-y-2 max-h-[60vh] min-h-[200px] overflow-y-auto pr-2 scrollbar-thin">
                   {selectedDayEvents.map((event) => {
                     const { time, period } = formatTimeSplit(event.start_time, event.is_all_day);
-                    const categoryColor = event.category ? getCategoryColor(event.category) : null;
                     const reflectionClass = getReflectionClass(event.category);
 
                     return (
@@ -342,14 +346,8 @@ export default function CalendarView({ portalId, portalSlug = DEFAULT_PORTAL_SLU
                         key={event.id}
                         href={`/${portalSlug}?event=${event.id}`}
                         scroll={false}
-                        className={`block p-3 rounded-lg border border-[var(--twilight)] card-atmospheric ${reflectionClass} group`}
-                        style={{
-                          borderLeftWidth: categoryColor ? "3px" : undefined,
-                          borderLeftColor: categoryColor || undefined,
-                          backgroundColor: "var(--card-bg)",
-                          "--glow-color": categoryColor || "var(--coral)",
-                          "--reflection-color": categoryColor ? `color-mix(in srgb, ${categoryColor} 15%, transparent)` : undefined,
-                        } as React.CSSProperties}
+                        data-category={event.category || undefined}
+                        className={`block p-3 rounded-lg border border-[var(--twilight)] bg-[var(--card-bg)] card-atmospheric calendar-event-card ${reflectionClass} group ${event.category ? "glow-category" : ""}`}
                       >
                         {/* Time */}
                         <div className="flex items-center gap-2 mb-1">
@@ -435,8 +433,8 @@ export default function CalendarView({ portalId, portalSlug = DEFAULT_PORTAL_SLU
               return (
                 <div key={cat} className="flex items-center gap-1.5">
                   <span
-                    className="w-2 h-2 rounded-full"
-                    style={{ backgroundColor: getCategoryColor(cat) || "var(--muted)" }}
+                    data-category={cat}
+                    className="w-2 h-2 rounded-full bg-[var(--category-color,var(--muted))]"
                   />
                   <span className="font-mono">{count}</span>
                 </div>

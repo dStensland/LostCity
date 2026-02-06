@@ -1,0 +1,12 @@
+version: 1
+slug: blind-willies
+name: Blind Willie's
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.blindwilliesblues.com
+detail:
+  enabled: false

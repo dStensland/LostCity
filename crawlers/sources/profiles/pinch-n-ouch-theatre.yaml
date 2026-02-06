@@ -1,0 +1,14 @@
+version: 1
+slug: pinch-n-ouch-theatre
+name: Pinch 'n' Ouch Theatre
+integration_method: playwright
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - http://www.pnotheatre.org
+  fetch:
+    render_js: true
+detail:
+  enabled: false

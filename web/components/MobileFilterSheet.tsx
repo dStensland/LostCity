@@ -1,7 +1,7 @@
 "use client";
 
 import { memo, useEffect, useState, useRef } from "react";
-import { CATEGORIES } from "@/lib/search";
+import { CATEGORIES } from "@/lib/search-constants";
 import CategoryIcon from "./CategoryIcon";
 import { triggerHaptic } from "@/lib/haptics";
 
@@ -113,21 +113,16 @@ export const MobileFilterSheet = memo(function MobileFilterSheet({
 
   return (
     <div
-      className="fixed inset-0 z-50"
+      className={`fixed inset-0 z-50 transition-colors duration-300 ${
+        isAnimating ? "bg-black/50" : "bg-transparent"
+      }`}
       onClick={handleBackdropClick}
-      style={{
-        transition: "background-color 300ms ease-out",
-        backgroundColor: isAnimating ? "rgba(0, 0, 0, 0.5)" : "rgba(0, 0, 0, 0)",
-      }}
     >
       <div
         ref={sheetRef}
-        className="fixed bottom-0 left-0 right-0 bg-[var(--void)] border-t border-[var(--twilight)] rounded-t-2xl shadow-2xl"
-        style={{
-          maxHeight: "85vh",
-          transition: "transform 300ms ease-out",
-          transform: isAnimating ? "translateY(0)" : "translateY(100%)",
-        }}
+        className={`fixed bottom-0 left-0 right-0 bg-[var(--void)] border-t border-[var(--twilight)] rounded-t-2xl shadow-2xl max-h-[85vh] transition-transform duration-300 ${
+          isAnimating ? "translate-y-0" : "translate-y-full"
+        }`}
       >
         {/* Drag handle */}
         <div className="flex justify-center pt-3 pb-2">
@@ -149,7 +144,7 @@ export const MobileFilterSheet = memo(function MobileFilterSheet({
         </div>
 
         {/* Scrollable content */}
-        <div className="overflow-y-auto" style={{ maxHeight: "calc(85vh - 120px)" }}>
+        <div className="overflow-y-auto max-h-[calc(85vh-120px)]">
           <div className="px-4 pb-6 space-y-6">
             {/* When Section */}
             <div>
@@ -194,7 +189,7 @@ export const MobileFilterSheet = memo(function MobileFilterSheet({
                         type={cat.value}
                         size={16}
                         glow="none"
-                        style={{ flexShrink: 0 }}
+                        className="shrink-0"
                       />
                       <span className="truncate">{cat.label}</span>
                       {isActive && (

@@ -1,0 +1,12 @@
+version: 1
+slug: janke-studios
+name: Janke Studios
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - http://jankestudios.com/
+detail:
+  enabled: false

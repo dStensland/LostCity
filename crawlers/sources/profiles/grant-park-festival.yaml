@@ -1,0 +1,12 @@
+version: 1
+slug: grant-park-festival
+name: Grant Park Summer Shade Festival
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.grantparkfestival.org
+detail:
+  enabled: false

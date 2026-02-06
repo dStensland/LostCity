@@ -1,0 +1,12 @@
+version: 1
+slug: atlanta-ballet
+name: Atlanta Ballet
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://atlantaballet.com
+detail:
+  enabled: false

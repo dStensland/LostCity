@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useId } from "react";
+import ScopedStyles from "@/components/ScopedStyles";
 import type { PortalAmbientConfig } from "@/lib/portal-context";
 
 interface FlowingStreetsAmbientProps {
@@ -100,11 +101,52 @@ export default function FlowingStreetsAmbient({ config }: FlowingStreetsAmbientP
     });
   }, [config.colors, speedMultiplier]);
 
+  const rawId = useId();
+  const instanceClass = `flowing-streets-${rawId.replace(/[^a-zA-Z0-9_-]/g, "")}`;
+  const pathRules = paths
+    .map(
+      (path) => `.${instanceClass} .flow-path-${path.id} { animation-duration: ${path.duration}s; animation-delay: ${path.delay}s; }`
+    )
+    .join("\n");
+  const css = `
+    .${instanceClass} .flow-path {
+      animation-name: flow-wave;
+      animation-timing-function: ease-in-out;
+      animation-iteration-count: infinite;
+      transform-origin: center;
+    }
+    ${pathRules}
+    @keyframes flow-wave {
+      0%, 100% {
+        transform: translateY(0) translateX(0) scale(1);
+        opacity: ${opacity};
+      }
+      25% {
+        transform: translateY(${-5 * speedMultiplier}px) translateX(${3 * speedMultiplier}px) scale(1.02);
+        opacity: ${opacity * 0.8};
+      }
+      50% {
+        transform: translateY(${2 * speedMultiplier}px) translateX(${-2 * speedMultiplier}px) scale(0.98);
+        opacity: ${opacity * 1.1};
+      }
+      75% {
+        transform: translateY(${-3 * speedMultiplier}px) translateX(${2 * speedMultiplier}px) scale(1.01);
+        opacity: ${opacity * 0.9};
+      }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .${instanceClass} .flow-path {
+        animation: none !important;
+      }
+    }
+  `;
+
   return (
     <div
-      className="ambient-layer fixed inset-0 pointer-events-none z-0 overflow-hidden"
+      className={`ambient-layer fixed inset-0 pointer-events-none z-0 overflow-hidden ${instanceClass}`}
       aria-hidden="true"
     >
+      <ScopedStyles css={css} />
       <svg
         className="absolute inset-0 w-full h-full"
         preserveAspectRatio="none"
@@ -132,42 +174,10 @@ export default function FlowingStreetsAmbient({ config }: FlowingStreetsAmbientP
             stroke={`url(#${path.gradientId})`}
             strokeWidth={strokeWidth}
             strokeLinecap="round"
-            style={{
-              animation: `flow-wave ${path.duration}s ease-in-out infinite`,
-              animationDelay: `${path.delay}s`,
-              transformOrigin: "center",
-            }}
+            className={`flow-path flow-path-${path.id}`}
           />
         ))}
       </svg>
-
-      {/* Keyframes injected via style tag */}
-      <style>{`
-        @keyframes flow-wave {
-          0%, 100% {
-            transform: translateY(0) translateX(0) scale(1);
-            opacity: ${opacity};
-          }
-          25% {
-            transform: translateY(${-5 * speedMultiplier}px) translateX(${3 * speedMultiplier}px) scale(1.02);
-            opacity: ${opacity * 0.8};
-          }
-          50% {
-            transform: translateY(${2 * speedMultiplier}px) translateX(${-2 * speedMultiplier}px) scale(0.98);
-            opacity: ${opacity * 1.1};
-          }
-          75% {
-            transform: translateY(${-3 * speedMultiplier}px) translateX(${2 * speedMultiplier}px) scale(1.01);
-            opacity: ${opacity * 0.9};
-          }
-        }
-
-        @media (prefers-reduced-motion: reduce) {
-          svg path {
-            animation: none !important;
-          }
-        }
-      `}</style>
     </div>
   );
 }

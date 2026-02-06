@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState, useEffect } from "react";
+import { Suspense, useSyncExternalStore } from "react";
 import dynamic from "next/dynamic";
 import { usePortalOptional, DEFAULT_PORTAL } from "@/lib/portal-context";
 import { applyPreset } from "@/lib/apply-preset";
@@ -30,24 +30,34 @@ const NeonBroadwayAmbient = dynamic(() => import("./NeonBroadwayAmbient"), { ssr
 function AmbientBackgroundInner() {
   const portalContext = usePortalOptional();
   const portal = portalContext?.portal ?? DEFAULT_PORTAL;
-  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+  const prefersReducedMotion = useSyncExternalStore(
+    (callback) => {
+      if (typeof window === "undefined" || !window.matchMedia) return () => {};
+      const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+      const handler = () => callback();
+      if (mediaQuery.addEventListener) {
+        mediaQuery.addEventListener("change", handler);
+      } else {
+        mediaQuery.addListener(handler);
+      }
+      return () => {
+        if (mediaQuery.removeEventListener) {
+          mediaQuery.removeEventListener("change", handler);
+        } else {
+          mediaQuery.removeListener(handler);
+        }
+      };
+    },
+    () => {
+      if (typeof window === "undefined" || !window.matchMedia) return false;
+      return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    },
+    () => false
+  );
 
   // Get the resolved branding with preset defaults applied
   const branding = applyPreset(portal.branding);
   const ambientConfig = branding.ambient;
-
-  // Check for reduced motion preference in useEffect to avoid hydration mismatch
-  useEffect(() => {
-    if (typeof window !== "undefined" && window.matchMedia) {
-      const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
-      setPrefersReducedMotion(mediaQuery.matches);
-
-      // Listen for changes
-      const handler = (e: MediaQueryListEvent) => setPrefersReducedMotion(e.matches);
-      mediaQuery.addEventListener("change", handler);
-      return () => mediaQuery.removeEventListener("change", handler);
-    }
-  }, []);
 
   // Check for reduced motion preference
   if (prefersReducedMotion) {

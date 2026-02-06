@@ -20,6 +20,7 @@ from playwright.sync_api import sync_playwright
 
 from db import get_or_create_venue, insert_event, find_event_by_hash, remove_stale_source_events
 from dedupe import generate_content_hash
+from utils import extract_event_links, find_event_url
 
 logger = logging.getLogger(__name__)
 
@@ -244,6 +245,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
                 page.wait_for_timeout(1000)
 
+            # Extract event links for specific URLs
+            event_links = extract_event_links(page, BASE_URL)
+
             # Try JSON-LD extraction first (structured data)
             jsonld_events = parse_jsonld_events(page)
 
@@ -289,6 +293,13 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                         category = infer_category(title)
 
+                        # Get specific event URL
+
+
+                        event_url = find_event_url(title, event_links, EVENTS_URL)
+
+
+
                         event_record = {
                             "source_id": source_id,
                             "venue_id": venue_id,
@@ -306,7 +317,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             "price_max": None,
                             "price_note": None,
                             "is_free": False,
-                            "source_url": EVENTS_URL,
+                            "source_url": event_url,
                             "ticket_url": event_data.get("url", EVENTS_URL),
                             "image_url": image_url,
                             "raw_text": f"{title} - {start_date}",
@@ -392,6 +403,13 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                         category = infer_category(title)
 
+                        # Get specific event URL
+
+
+                        event_url = find_event_url(title, event_links, EVENTS_URL)
+
+
+
                         event_record = {
                             "source_id": source_id,
                             "venue_id": venue_id,
@@ -409,8 +427,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             "price_max": None,
                             "price_note": None,
                             "is_free": False,
-                            "source_url": EVENTS_URL,
-                            "ticket_url": EVENTS_URL,
+                            "source_url": event_url,
+                            "ticket_url": event_url,
                             "image_url": None,
                             "raw_text": f"{title} - {date_text} {time_text}",
                             "extraction_confidence": 0.80,

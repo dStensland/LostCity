@@ -1,0 +1,37 @@
+<svg viewBox="0 0 400 300" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="neonReflection" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#00e5ff"/>
+      <stop offset="50%" stop-color="#ff6b7a"/>
+      <stop offset="100%" stop-color="#e040fb"/>
+    </linearGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Top skyline silhouette -->
+  <path d="
+    M50 120 L50 100 L70 100 L70 80 L90 80 L90 50 L110 50 L110 30 L130 30 L130 50
+    L150 50 L150 70 L170 70 L170 50 L190 50 L190 30 L210 30 L210 50
+    L230 50 L230 70 L250 70 L250 50 L270 50 L270 30 L290 30 L290 50
+    L310 50 L310 80 L330 80 L330 100 L350 100 L350 120
+    L350 140 L50 140 Z
+  " fill="#1a3a5c"/>
+
+  <!-- LOST CITY text -->
+  <text x="200" y="155" text-anchor="middle" font-family="Arial Black, sans-serif" font-size="42" font-weight="900" letter-spacing="6" fill="#e8e8e8">LOST CITY</text>
+
+  <!-- Bottom neon reflection -->
+  <path d="
+    M50 170 L50 190 L70 190 L70 210 L90 210 L90 240 L110 240 L110 260 L130 260 L130 240
+    L150 240 L150 220 L170 220 L170 240 L190 240 L190 260 L210 260 L210 240
+    L230 240 L230 220 L250 220 L250 240 L270 240 L270 260 L290 260 L290 240
+    L310 310 L310 210 L330 210 L330 190 L350 190 L350 170
+    L350 160 L50 160 Z
+  " fill="url(#neonReflection)" filter="url(#glow)" opacity="0.85"/>
+</svg>

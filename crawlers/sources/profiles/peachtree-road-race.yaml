@@ -1,0 +1,12 @@
+version: 1
+slug: peachtree-road-race
+name: Peachtree Road Race
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.atlantatrackclub.org/peachtree
+detail:
+  enabled: false

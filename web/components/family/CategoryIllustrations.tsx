@@ -6,13 +6,10 @@
  * Hover states swap to magical highlighted versions
  */
 
-import Image from "next/image";
-import { CSSProperties } from "react";
-
+import Image from "@/components/SmartImage";
 export type IllustrationProps = {
   isHovered?: boolean;
   className?: string;
-  style?: CSSProperties;
 };
 
 // Base path for category illustrations
@@ -24,7 +21,6 @@ function CategoryIllustration({
   alt,
   isHovered,
   className,
-  style,
 }: IllustrationProps & { name: string; alt: string }) {
   const normalSrc = `${BASE_PATH}/${name}.png`;
   const hoverSrc = `${BASE_PATH}/${name}-hover.png`;
@@ -32,16 +28,14 @@ function CategoryIllustration({
   return (
     <div
       className={`relative w-full h-full overflow-hidden ${className || ""}`}
-      style={style}
     >
       {/* Hover state - render first (underneath) */}
       <Image
         src={hoverSrc}
         alt={`${alt} - highlighted`}
         fill
-        className="object-cover"
+        className="object-cover z-[1]"
         sizes="(max-width: 768px) 50vw, 33vw"
-        style={{ zIndex: 1 }}
         loading="eager"
       />
       {/* Normal state - render second (on top), fades out on hover */}
@@ -49,11 +43,10 @@ function CategoryIllustration({
         src={normalSrc}
         alt={alt}
         fill
-        className={`object-cover transition-opacity duration-300 ${
+        className={`object-cover transition-opacity duration-300 z-[2] ${
           isHovered ? "opacity-0" : "opacity-100"
         }`}
         sizes="(max-width: 768px) 50vw, 33vw"
-        style={{ zIndex: 2 }}
         priority
       />
     </div>

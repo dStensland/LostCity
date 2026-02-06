@@ -37,7 +37,7 @@ function safeParseInt(
  * - portal: Portal ID for scoped search
  * - portalSlug: Portal slug (for building URLs)
  * - viewMode: Current view mode (feed, find, community)
- * - findType: Current find type (events, destinations, orgs)
+ * - findType: Current find type (events, classes, destinations)
  *
  * Response:
  * {

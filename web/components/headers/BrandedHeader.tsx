@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { usePathname, useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import Image from "next/image";
+import Image from "@/components/SmartImage";
 import Logo from "../Logo";
 import UserMenu from "../UserMenu";
 import HeaderSearchButton from "../HeaderSearchButton";
@@ -249,34 +249,26 @@ export default function BrandedHeader({
 
       {/* Center row: Large logo - collapses on scroll with smooth transform */}
       <div
-        className="px-4 flex items-center justify-center overflow-hidden"
-        style={{
-          height: isScrolled ? "50px" : "86px",
-          transition: "height 300ms ease-out",
-        }}
+        className={`px-4 flex items-center justify-center overflow-hidden transition-[height] duration-300 ease-out ${
+          isScrolled ? "h-[50px]" : "h-[86px]"
+        }`}
       >
         {/* ATLittle logo for atlanta-families portal */}
         {portalSlug === "atlanta-families" ? (
           <Link
             href={`/${portalSlug}`}
-            className="block"
-            style={{
-              transform: isScrolled ? "scale(0.65)" : "scale(1)",
-              transformOrigin: "center center",
-              transition: "transform 300ms ease-out",
-            }}
+            className={`block origin-center transition-transform duration-300 ease-out ${
+              isScrolled ? "scale-[0.65]" : "scale-100"
+            }`}
           >
             <ATLittleLogo variant="header" className="h-[70px] w-auto" />
           </Link>
         ) : branding?.logo_url ? (
           <Link
             href={`/${portalSlug}`}
-            className="block"
-            style={{
-              transform: isScrolled ? "scale(0.6)" : "scale(1)",
-              transformOrigin: "center center",
-              transition: "transform 300ms ease-out",
-            }}
+            className={`block origin-center transition-transform duration-300 ease-out ${
+              isScrolled ? "scale-[0.6]" : "scale-100"
+            }`}
           >
             <Image
               src={branding.logo_url}
@@ -288,11 +280,9 @@ export default function BrandedHeader({
           </Link>
         ) : (
           <div
-            style={{
-              transform: isScrolled ? "scale(0.7)" : "scale(1)",
-              transformOrigin: "center center",
-              transition: "transform 300ms ease-out",
-            }}
+            className={`origin-center transition-transform duration-300 ease-out ${
+              isScrolled ? "scale-[0.7]" : "scale-100"
+            }`}
           >
             <Logo href={`/${portalSlug}`} size="lg" portal={portalSlug} />
           </div>

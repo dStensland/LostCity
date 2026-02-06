@@ -1,0 +1,12 @@
+version: 1
+slug: generic-venue-crawler
+name: Generic Venue Crawler
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://lostcity.ai
+detail:
+  enabled: false

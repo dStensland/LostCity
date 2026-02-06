@@ -1,0 +1,14 @@
+version: 1
+slug: sweetwater
+name: SweetWater Brewing Company
+integration_method: playwright
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.sweetwaterbrew.com
+  fetch:
+    render_js: true
+detail:
+  enabled: false

@@ -1,7 +1,9 @@
 "use client";
 
-import Image from "next/image";
-import { HERO_HEIGHT_VALUES, type HeroHeight } from "@/lib/visual-presets";
+import Image from "@/components/SmartImage";
+import { type HeroHeight } from "@/lib/visual-presets";
+import ScopedStyles from "@/components/ScopedStyles";
+import { createCssVarClassForNumber } from "@/lib/css-utils";
 
 interface HeroSectionProps {
   /** Hero background image URL */
@@ -34,16 +36,18 @@ export default function HeroSection({
   logoUrl,
   className = "",
 }: HeroSectionProps) {
-  const heightValue = HERO_HEIGHT_VALUES[height];
+  const heightClass = `hero-height-${height}`;
+  const overlayClass = createCssVarClassForNumber(
+    "--overlay-opacity",
+    `${overlayOpacity}`,
+    "hero-overlay"
+  );
 
   return (
     <section
-      className={`relative w-full overflow-hidden ${className}`}
-      style={{
-        height: heightValue,
-        contain: "layout style paint",
-      }}
+      className={`relative w-full overflow-hidden hero-contain ${heightClass} ${className}`}
     >
+      <ScopedStyles css={overlayClass?.css} />
       {/* Background Image - optimized for performance */}
       <div className="absolute inset-0">
         <Image
@@ -52,18 +56,14 @@ export default function HeroSection({
           fill
           priority
           quality={90}
-          className="object-cover transition-transform duration-700 hover:scale-105"
           sizes="100vw"
-          style={{ willChange: "transform" }}
+          className="object-cover transition-transform duration-700 hover:scale-105 will-change-transform"
         />
       </div>
 
       {/* Gradient Overlay - smoother gradient for better visual depth */}
       <div
-        className="absolute inset-0 pointer-events-none"
-        style={{
-          background: `linear-gradient(to bottom, rgba(0, 0, 0, ${overlayOpacity * 0.2}) 0%, rgba(0, 0, 0, ${overlayOpacity * 0.6}) 40%, rgba(0, 0, 0, ${overlayOpacity * 0.8}) 70%, rgba(9, 9, 11, 1) 100%)`,
-        }}
+        className={`absolute inset-0 pointer-events-none hero-overlay ${overlayClass?.className ?? ""}`}
       />
 
       {/* Content - with improved typography and animations */}

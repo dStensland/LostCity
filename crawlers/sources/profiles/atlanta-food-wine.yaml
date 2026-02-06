@@ -1,0 +1,12 @@
+version: 1
+slug: atlanta-food-wine
+name: Atlanta Food & Wine Festival
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.atlantafoodandwinefestival.com
+detail:
+  enabled: false

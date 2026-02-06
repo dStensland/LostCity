@@ -1,0 +1,14 @@
+version: 1
+slug: song
+name: Southerners on New Ground (SONG)
+integration_method: playwright
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://southernersonnewground.org/events
+  fetch:
+    render_js: true
+detail:
+  enabled: false

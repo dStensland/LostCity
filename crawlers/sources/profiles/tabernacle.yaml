@@ -1,0 +1,14 @@
+version: 1
+slug: tabernacle
+name: Tabernacle
+integration_method: playwright
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.tabernacleatl.com
+  fetch:
+    render_js: true
+detail:
+  enabled: false

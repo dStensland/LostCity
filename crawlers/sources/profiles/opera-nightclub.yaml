@@ -1,0 +1,14 @@
+version: 1
+slug: opera-nightclub
+name: Opera Nightclub
+integration_method: playwright
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.operaatlanta.com
+  fetch:
+    render_js: true
+detail:
+  enabled: false

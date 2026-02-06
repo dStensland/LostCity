@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useId } from "react";
+import ScopedStyles from "@/components/ScopedStyles";
 import type { PortalAmbientConfig } from "@/lib/portal-context";
 
 interface ConstellationAmbientProps {
@@ -97,11 +98,65 @@ export default function ConstellationAmbient({ config }: ConstellationAmbientPro
     return { dots: generatedDots, lines: generatedLines };
   }, [speedMultiplier]);
 
+  const rawId = useId();
+  const instanceClass = `constellation-${rawId.replace(/[^a-zA-Z0-9_-]/g, "")}`;
+  const lineRules = lines
+    .map(
+      (line, index) => `.${instanceClass} .line-${index} { animation-duration: ${line.duration}s; animation-delay: ${line.delay}s; }`
+    )
+    .join("\n");
+  const dotRules = dots
+    .map(
+      (dot, index) => `.${instanceClass} .dot-${index} { animation-duration: ${dot.pulseDuration}s; animation-delay: ${dot.pulseDelay}s; }`
+    )
+    .join("\n");
+  const css = `
+    .${instanceClass} .constellation-line {
+      animation-name: fade-line;
+      animation-timing-function: ease-in-out;
+      animation-iteration-count: infinite;
+    }
+    .${instanceClass} .constellation-dot {
+      animation-name: pulse-dot;
+      animation-timing-function: ease-in-out;
+      animation-iteration-count: infinite;
+      transform-origin: center;
+    }
+    ${lineRules}
+    ${dotRules}
+    @keyframes fade-line {
+      0%, 100% {
+        opacity: ${lineOpacity * 0.3};
+      }
+      50% {
+        opacity: ${lineOpacity};
+      }
+    }
+    @keyframes pulse-dot {
+      0%, 100% {
+        opacity: ${dotOpacity * 0.6};
+        transform: scale(1);
+      }
+      50% {
+        opacity: ${dotOpacity};
+        transform: scale(1.2);
+      }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .${instanceClass} .constellation-line,
+      .${instanceClass} .constellation-dot {
+        animation: none !important;
+        opacity: ${lineOpacity * 0.5} !important;
+      }
+    }
+  `;
+
   return (
     <div
-      className="ambient-layer fixed inset-0 pointer-events-none z-0 overflow-hidden"
+      className={`ambient-layer fixed inset-0 pointer-events-none z-0 overflow-hidden ${instanceClass}`}
       aria-hidden="true"
     >
+      <ScopedStyles css={css} />
       <svg
         className="absolute inset-0 w-full h-full"
         preserveAspectRatio="none"
@@ -119,7 +174,7 @@ export default function ConstellationAmbient({ config }: ConstellationAmbientPro
 
         {/* Connection lines */}
         <g>
-          {lines.map((line) => (
+          {lines.map((line, index) => (
             <line
               key={line.id}
               x1={`${line.x1}%`}
@@ -129,17 +184,14 @@ export default function ConstellationAmbient({ config }: ConstellationAmbientPro
               stroke={lineColor}
               strokeWidth="1"
               opacity={lineOpacity}
-              style={{
-                animation: `fade-line ${line.duration}s ease-in-out infinite`,
-                animationDelay: `${line.delay}s`,
-              }}
+              className={`constellation-line line-${index}`}
             />
           ))}
         </g>
 
         {/* Dots */}
         <g filter="url(#constellation-glow)">
-          {dots.map((dot) => (
+          {dots.map((dot, index) => (
             <circle
               key={dot.id}
               cx={`${dot.x}%`}
@@ -147,45 +199,11 @@ export default function ConstellationAmbient({ config }: ConstellationAmbientPro
               r={dot.size}
               fill={dotColor}
               opacity={dotOpacity}
-              style={{
-                animation: `pulse-dot ${dot.pulseDuration}s ease-in-out infinite`,
-                animationDelay: `${dot.pulseDelay}s`,
-              }}
+              className={`constellation-dot dot-${index}`}
             />
           ))}
         </g>
       </svg>
-
-      {/* Keyframes injected via style tag */}
-      <style>{`
-        @keyframes fade-line {
-          0%, 100% {
-            opacity: ${lineOpacity * 0.3};
-          }
-          50% {
-            opacity: ${lineOpacity};
-          }
-        }
-
-        @keyframes pulse-dot {
-          0%, 100% {
-            opacity: ${dotOpacity * 0.6};
-            transform: scale(1);
-          }
-          50% {
-            opacity: ${dotOpacity};
-            transform: scale(1.2);
-          }
-        }
-
-        @media (prefers-reduced-motion: reduce) {
-          svg line,
-          svg circle {
-            animation: none !important;
-            opacity: ${lineOpacity * 0.5} !important;
-          }
-        }
-      `}</style>
     </div>
   );
 }

@@ -1,0 +1,12 @@
+version: 1
+slug: canton-street-roswell
+name: Canton Street Roswell
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.visitroswellga.com
+detail:
+  enabled: false

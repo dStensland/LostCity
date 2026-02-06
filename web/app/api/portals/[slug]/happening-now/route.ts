@@ -5,6 +5,7 @@ import { getLocalDateString } from "@/lib/formats";
 import { getChainVenueIds } from "@/lib/chain-venues";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier} from "@/lib/rate-limit";
 import { isValidUUID } from "@/lib/api-utils";
+import { isSpotOpen, DESTINATION_CATEGORIES } from "@/lib/spots";
 import { logger } from "@/lib/logger";
 
 type RouteContext = {
@@ -83,7 +84,38 @@ export async function GET(request: NextRequest, context: RouteContext) {
     }
 
     if (countOnly) {
-      return NextResponse.json({ count: count || 0 });
+      // Also count open spots for the banner
+      const placeTypes = Object.keys(DESTINATION_CATEGORIES).flatMap(
+        (key) => DESTINATION_CATEGORIES[key as keyof typeof DESTINATION_CATEGORIES]
+      );
+      const typeFilters = placeTypes.map((t) => `venue_type.eq.${t}`).join(",");
+
+      type HoursData = Record<string, { open: string; close: string } | null>;
+      type SpotRow = { id: number; hours: HoursData | null };
+
+      const { data: spots } = await supabase
+        .from("venues")
+        .select("id, hours")
+        .eq("active", true)
+        .or(typeFilters) as { data: SpotRow[] | null };
+
+      // Count spots that are currently open
+      let openSpotCount = 0;
+      for (const spot of spots || []) {
+        try {
+          const result = isSpotOpen(spot.hours, false);
+          if (result.isOpen) openSpotCount++;
+        } catch {
+          // If hours parsing fails, assume open
+          openSpotCount++;
+        }
+      }
+
+      return NextResponse.json({
+        count: (count || 0) + openSpotCount,
+        eventCount: count || 0,
+        spotCount: openSpotCount,
+      });
     }
 
     // Filter events that haven't ended yet

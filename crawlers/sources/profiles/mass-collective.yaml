@@ -1,0 +1,12 @@
+version: 1
+slug: mass-collective
+name: MASS Collective
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.masscollective.org/classes
+detail:
+  enabled: false

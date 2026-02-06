@@ -1,0 +1,14 @@
+version: 1
+slug: state-farm-arena
+name: State Farm Arena
+integration_method: playwright
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.statefarmarena.com
+  fetch:
+    render_js: true
+detail:
+  enabled: false

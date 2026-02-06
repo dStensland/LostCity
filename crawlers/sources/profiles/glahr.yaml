@@ -1,0 +1,12 @@
+version: 1
+slug: glahr
+name: GLAHR - Georgia Latino Alliance for Human Rights
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://glahr.org/events/
+detail:
+  enabled: false

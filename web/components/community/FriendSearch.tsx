@@ -57,9 +57,7 @@ export function FriendSearch({ onResultsChange }: FriendSearchProps) {
       {/* Glass search container with focus glow */}
       <div className="glass rounded-xl p-1 group focus-within:shadow-lg transition-shadow duration-300">
         {/* Focus glow effect */}
-        <div className="absolute inset-0 rounded-xl opacity-0 group-focus-within:opacity-100 transition-opacity duration-300 pointer-events-none blur-xl" style={{
-          background: "radial-gradient(circle at center, var(--coral) 0%, transparent 70%)",
-        }} />
+        <div className="absolute inset-0 rounded-xl opacity-0 group-focus-within:opacity-100 transition-opacity duration-300 pointer-events-none blur-xl friend-search-glow" />
 
         <div className="relative">
           <input

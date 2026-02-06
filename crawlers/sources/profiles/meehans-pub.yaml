@@ -1,0 +1,12 @@
+version: 1
+slug: meehans-pub
+name: Meehan's Public House
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.meehanspublichouse.com
+detail:
+  enabled: false

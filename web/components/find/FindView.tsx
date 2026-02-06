@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState, useEffect, useRef } from "react";
+import { Suspense, useState, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import SimpleFilterBar from "@/components/SimpleFilterBar";
 import EventList from "@/components/EventList";
@@ -8,12 +8,11 @@ import MapViewWrapper from "@/components/MapViewWrapper";
 import CalendarView from "@/components/CalendarView";
 import MobileCalendarView from "@/components/calendar/MobileCalendarView";
 import PortalSpotsView from "@/components/PortalSpotsView";
-import PortalCommunityView from "@/components/PortalCommunityView";
 import ClassesView from "@/components/find/ClassesView";
 import { ActiveFiltersRow } from "@/components/filters";
 import AddNewChooser from "@/components/find/AddNewChooser";
 
-type FindType = "events" | "classes" | "destinations" | "orgs";
+type FindType = "events" | "classes" | "destinations";
 type DisplayMode = "list" | "map" | "calendar";
 
 interface FindViewProps {
@@ -54,15 +53,6 @@ const TYPE_OPTIONS: { key: FindType; label: string; icon: React.ReactNode }[] = 
       </svg>
     ),
   },
-  {
-    key: "orgs",
-    label: "Orgs",
-    icon: (
-      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-      </svg>
-    ),
-  },
 ];
 
 function FindViewInner({
@@ -78,11 +68,6 @@ function FindViewInner({
   const [eventSearch, setEventSearch] = useState(searchParams?.get("search") || "");
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const pathname = `/${portalSlug}`;
-
-  // Sync local state when URL search param changes externally
-  useEffect(() => {
-    setEventSearch(searchParams?.get("search") || "");
-  }, [searchParams]);
 
   const updateSearchParam = (value: string) => {
     setEventSearch(value);
@@ -109,9 +94,9 @@ function FindViewInner({
 
   return (
     <div className="py-4">
-      {/* Type selector tabs + Add new button */}
-      <div className="flex items-center gap-2 sm:gap-3 mb-4">
-        <div className="flex p-1 bg-[var(--night)] rounded-lg flex-1 sm:flex-initial sm:max-w-md">
+      {/* Type selector tabs */}
+      <div className="flex items-center justify-between gap-3 mb-4">
+        <div className="flex p-1 bg-[var(--night)] rounded-lg flex-1 sm:flex-initial sm:max-w-md min-w-0">
           {TYPE_OPTIONS.map((option) => {
             const isActive = findType === option.key;
             return (
@@ -134,6 +119,14 @@ function FindViewInner({
             );
           })}
         </div>
+        {/* Desktop: inline add button */}
+        <div className="hidden sm:block flex-shrink-0">
+          <AddNewChooser portalSlug={portalSlug} />
+        </div>
+      </div>
+
+      {/* Mobile: Add button on separate row */}
+      <div className="sm:hidden mb-4">
         <AddNewChooser portalSlug={portalSlug} />
       </div>
 
@@ -243,20 +236,13 @@ function FindViewInner({
         </div>
       )}
 
-      {findType === "orgs" && (
-        <Suspense fallback={<div className="py-16 text-center text-[var(--muted)]">Loading organizations...</div>}>
-          <PortalCommunityView
-            portalId={portalId}
-            portalSlug={portalSlug}
-            portalName=""
-          />
-        </Suspense>
-      )}
     </div>
   );
 }
 
 export default function FindView(props: FindViewProps) {
+  const searchParams = useSearchParams();
+  const searchKey = searchParams?.get("search") || "";
   return (
     <Suspense
       fallback={
@@ -274,7 +260,7 @@ export default function FindView(props: FindViewProps) {
         </div>
       }
     >
-      <FindViewInner {...props} />
+      <FindViewInner key={searchKey} {...props} />
     </Suspense>
   );
 }

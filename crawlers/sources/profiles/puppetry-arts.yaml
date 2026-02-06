@@ -1,0 +1,12 @@
+version: 1
+slug: puppetry-arts
+name: Center for Puppetry Arts
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://puppet.org
+detail:
+  enabled: false

@@ -1,0 +1,12 @@
+version: 1
+slug: woofs-atlanta
+name: Woofs Atlanta
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.woofsatlanta.com
+detail:
+  enabled: false

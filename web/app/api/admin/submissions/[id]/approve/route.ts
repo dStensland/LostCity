@@ -5,6 +5,11 @@ import { isValidUUID, adminErrorResponse } from "@/lib/api-utils";
 import type { EventSubmissionData, VenueSubmissionData, ProducerSubmissionData, Submission } from "@/lib/types";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 import { logger } from "@/lib/logger";
+import {
+  createEventFromSubmission,
+  createVenueFromSubmission,
+  createOrganizationFromSubmission,
+} from "@/lib/submissions/approval";
 
 type Props = {
   params: Promise<{ id: string }>;
@@ -93,7 +98,7 @@ export async function POST(request: NextRequest, { params }: Props) {
         submission.submitted_by,
         submission.id
       );
-    } else if (submission.submission_type === "organization") {
+    } else if (submission.submission_type === "organization" || submission.submission_type === "producer") {
       approvedEntityId = await createOrganizationFromSubmission(
         serviceClient,
         submission.data as unknown as ProducerSubmissionData,
@@ -118,7 +123,7 @@ export async function POST(request: NextRequest, { params }: Props) {
     updateData.approved_event_id = approvedEntityId;
   } else if (submission.submission_type === "venue") {
     updateData.approved_venue_id = approvedEntityId;
-  } else if (submission.submission_type === "organization") {
+  } else if (submission.submission_type === "organization" || submission.submission_type === "producer") {
     updateData.approved_organization_id = approvedEntityId;
   }
 
@@ -138,188 +143,4 @@ export async function POST(request: NextRequest, { params }: Props) {
     approved_entity_id: approvedEntityId,
     message: "Submission approved successfully",
   });
-}
-
-// Create event from submission data
-async function createEventFromSubmission(
-  supabase: ReturnType<typeof createServiceClient>,
-  data: EventSubmissionData,
-  submittedBy: string,
-  submissionId: string
-): Promise<number> {
-  // Get user submissions source ID
-  const { data: sourceData } = await supabase
-    .from("sources")
-    .select("id")
-    .eq("slug", "user-submissions")
-    .maybeSingle();
-
-  const source = sourceData as { id: number } | null;
-  if (!source) {
-    throw new Error("User submissions source not found");
-  }
-
-  // Handle inline venue creation if needed
-  let venueId = data.venue_id;
-  if (!venueId && data.venue) {
-    venueId = await createVenueFromSubmission(
-      supabase,
-      data.venue,
-      submittedBy,
-      submissionId
-    );
-  }
-
-  // Handle inline organization creation if needed
-  let organizationId = data.organization_id;
-  if (!organizationId && data.organization) {
-    organizationId = await createOrganizationFromSubmission(
-      supabase,
-      data.organization,
-      submittedBy,
-      submissionId
-    );
-  }
-
-  // Create the event
-  const { data: eventData, error } = await supabase
-    .from("events")
-    .insert({
-      source_id: source.id,
-      venue_id: venueId || null,
-      organization_id: organizationId || null,
-      title: data.title,
-      description: data.description || null,
-      start_date: data.start_date,
-      start_time: data.start_time || null,
-      end_date: data.end_date || null,
-      end_time: data.end_time || null,
-      is_all_day: data.is_all_day || false,
-      category: data.category || null,
-      subcategory: data.subcategory || null,
-      tags: data.tags || null,
-      price_min: data.price_min || null,
-      price_max: data.price_max || null,
-      price_note: data.price_note || null,
-      is_free: data.is_free || false,
-      source_url: data.source_url || `https://lostcity.io/submit/${submissionId}`,
-      ticket_url: data.ticket_url || null,
-      image_url: data.image_url || null,
-      submitted_by: submittedBy,
-      from_submission: submissionId,
-    } as never)
-    .select("id")
-    .maybeSingle();
-
-  const event = eventData as { id: number } | null;
-  if (error || !event) {
-    throw error || new Error("Failed to create event");
-  }
-
-  return event.id;
-}
-
-// Create venue from submission data
-async function createVenueFromSubmission(
-  supabase: ReturnType<typeof createServiceClient>,
-  data: VenueSubmissionData,
-  submittedBy: string,
-  submissionId: string
-): Promise<number> {
-  // Generate slug from name
-  const slug = data.name
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "");
-
-  // Check if slug exists
-  const { data: existing } = await supabase
-    .from("venues")
-    .select("id")
-    .eq("slug", slug)
-    .maybeSingle();
-
-  // If exists, add a unique suffix
-  const finalSlug = existing
-    ? `${slug}-${Date.now().toString(36)}`
-    : slug;
-
-  const { data: venueData, error } = await supabase
-    .from("venues")
-    .insert({
-      name: data.name,
-      slug: finalSlug,
-      address: data.address || null,
-      neighborhood: data.neighborhood || null,
-      city: data.city || "Atlanta",
-      state: data.state || "GA",
-      zip: data.zip || null,
-      website: data.website || null,
-      venue_type: data.venue_type || null,
-      submitted_by: submittedBy,
-      from_submission: submissionId,
-    } as never)
-    .select("id")
-    .maybeSingle();
-
-  const venue = venueData as { id: number } | null;
-  if (error || !venue) {
-    throw error || new Error("Failed to create venue");
-  }
-
-  return venue.id;
-}
-
-// Create organization from submission data
-async function createOrganizationFromSubmission(
-  supabase: ReturnType<typeof createServiceClient>,
-  data: ProducerSubmissionData,
-  submittedBy: string,
-  submissionId: string
-): Promise<string> {
-  // Generate ID and slug from name
-  const baseSlug = data.name
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "");
-
-  // Check if ID/slug exists
-  const { data: existing } = await supabase
-    .from("organizations")
-    .select("id")
-    .eq("id", baseSlug)
-    .maybeSingle();
-
-  // If exists, add a unique suffix
-  const finalId = existing
-    ? `${baseSlug}-${Date.now().toString(36)}`
-    : baseSlug;
-
-  const { data: organizationData, error } = await supabase
-    .from("organizations")
-    .insert({
-      id: finalId,
-      name: data.name,
-      slug: finalId,
-      org_type: data.org_type || "community_group",
-      website: data.website || null,
-      email: data.email || null,
-      instagram: data.instagram || null,
-      facebook: data.facebook || null,
-      neighborhood: data.neighborhood || null,
-      description: data.description || null,
-      categories: data.categories || null,
-      is_verified: false, // User-submitted organizations start unverified
-      submitted_by: submittedBy,
-      from_submission: submissionId,
-    } as never)
-    .select("id")
-    .maybeSingle();
-
-  const organization = organizationData as { id: string } | null;
-  if (error || !organization) {
-    throw error || new Error("Failed to create organization");
-  }
-
-  return organization.id;
 }

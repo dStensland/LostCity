@@ -1,0 +1,14 @@
+version: 1
+slug: college-park-main-street
+name: College Park Main Street Association
+integration_method: aggregator
+defaults: {}
+discovery:
+  enabled: true
+  type: api
+  urls:
+  - https://www.eventbrite.com/o/college-park-main-street-association-78944267493
+  api:
+    adapter: eventbrite
+detail:
+  enabled: false

@@ -17,7 +17,7 @@ from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeo
 
 from db import get_or_create_venue, insert_event, find_event_by_hash
 from dedupe import generate_content_hash
-from utils import extract_images_from_page, normalize_time_format
+from utils import extract_images_from_page, normalize_time_format, extract_event_links, find_event_url
 
 logger = logging.getLogger(__name__)
 
@@ -195,6 +195,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
             # Extract images from page
             image_map = extract_images_from_page(page)
 
+            # Extract event links for specific URLs
+            event_links = extract_event_links(page, BASE_URL)
+
             # Scroll to load all content
             for _ in range(5):
                 page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
@@ -275,6 +278,13 @@ def crawl(source: dict) -> tuple[int, int, int]:
                                 events_updated += 1
                                 continue
 
+                            # Get specific event URL
+
+
+                            event_url = find_event_url(title, event_links, EVENTS_URL)
+
+
+
                             event_record = {
                                 "source_id": source_id,
                                 "venue_id": venue_id,
@@ -292,8 +302,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
                                 "price_max": None,
                                 "price_note": None,
                                 "is_free": is_free,
-                                "source_url": EVENTS_URL,
-                                "ticket_url": None,
+                                "source_url": event_url,
+                                "ticket_url": event_url if event_url != (EVENTS_URL if "EVENTS_URL" in dir() else BASE_URL) else None,
                                 "image_url": image_map.get(title),
                                 "raw_text": f"{title} | {event_text[:300]}"[:500],
                                 "extraction_confidence": 0.8,
@@ -357,6 +367,11 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             )
 
                             if not find_event_by_hash(content_hash):
+                                # Get specific event URL
+
+                                event_url = find_event_url(title, event_links, EVENTS_URL)
+
+
                                 event_record = {
                                     "source_id": source_id,
                                     "venue_id": venue_id,
@@ -374,8 +389,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
                                     "price_max": None,
                                     "price_note": None,
                                     "is_free": is_free,
-                                    "source_url": EVENTS_URL,
-                                    "ticket_url": None,
+                                    "source_url": event_url,
+                                    "ticket_url": event_url if event_url != (EVENTS_URL if "EVENTS_URL" in dir() else BASE_URL) else None,
                                     "image_url": image_map.get(title),
                                     "raw_text": f"{title} | {description[:200]}"[:500],
                                     "extraction_confidence": 0.75,

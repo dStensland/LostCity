@@ -1,0 +1,14 @@
+version: 1
+slug: theatrical-outfit
+name: Theatrical Outfit
+integration_method: playwright
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.theatricaloutfit.org
+  fetch:
+    render_js: true
+detail:
+  enabled: false

@@ -1,0 +1,14 @@
+version: 1
+slug: punch-bowl-social
+name: Punch Bowl Social
+integration_method: playwright
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.punchbowlsocial.com
+  fetch:
+    render_js: true
+detail:
+  enabled: false

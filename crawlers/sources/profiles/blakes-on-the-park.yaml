@@ -1,0 +1,12 @@
+version: 1
+slug: blakes-on-the-park
+name: Blake's on the Park
+integration_method: llm_crawler
+defaults: {}
+discovery:
+  enabled: true
+  type: html
+  urls:
+  - https://www.instagram.com/blakesatl/
+detail:
+  enabled: false

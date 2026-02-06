@@ -1,0 +1,12 @@
+version: 1
+slug: georgian-terrace-hotel
+name: The Georgian Terrace Hotel
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://thegeorgianterrace.com
+detail:
+  enabled: false

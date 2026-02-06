@@ -2,11 +2,13 @@
 
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import Image from "next/image";
+import Image from "@/components/SmartImage";
 import Link from "next/link";
 import Logo from "@/components/Logo";
 import { useAuth } from "@/lib/auth-context";
 import { createClient } from "@/lib/supabase/client";
+import ScopedStyles from "@/components/ScopedStyles";
+import { createCssVarClass, createCssVarClassForLength } from "@/lib/css-utils";
 
 type Portal = {
   id: string;
@@ -292,8 +294,29 @@ function WelcomeContent() {
 
   const progress = step === "categories" ? 33 : step === "neighborhoods" ? 66 : step === "producers" ? 90 : 100;
 
+  const progressClass = createCssVarClassForLength(
+    "--welcome-progress",
+    `${progress}%`,
+    "welcome-progress"
+  );
+
+  const categoryAccentClasses = Object.fromEntries(
+    displayCategories.map((category) => [
+      category.id,
+      createCssVarClass("--accent-color", category.color, "welcome-cat"),
+    ])
+  ) as Record<string, ReturnType<typeof createCssVarClass> | null>;
+
+  const scopedCss = [
+    progressClass?.css,
+    ...Object.values(categoryAccentClasses).map((entry) => entry?.css),
+  ]
+    .filter(Boolean)
+    .join("\n");
+
   return (
     <div className="min-h-screen flex flex-col">
+      <ScopedStyles css={scopedCss} />
       {/* Header */}
       <header className="px-4 sm:px-6 py-4 border-b border-[var(--twilight)]">
         <div className="flex items-center gap-3">
@@ -320,8 +343,7 @@ function WelcomeContent() {
       {step !== "complete" && (
         <div className="h-1 bg-[var(--twilight)]">
           <div
-            className="h-full bg-[var(--coral)] transition-all duration-300"
-            style={{ width: `${progress}%` }}
+            className={`h-full bg-[var(--coral)] transition-all duration-300 w-[var(--welcome-progress)] ${progressClass?.className ?? ""}`}
           />
         </div>
       )}
@@ -343,6 +365,7 @@ function WelcomeContent() {
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
                 {displayCategories.map((category) => {
                   const isSelected = selectedCategories.includes(category.id);
+                  const accentClass = categoryAccentClasses[category.id];
                   return (
                     <button
                       key={category.id}
@@ -354,11 +377,7 @@ function WelcomeContent() {
                       }`}
                     >
                       <div
-                        className="w-12 h-12 mx-auto rounded-full flex items-center justify-center mb-2"
-                        style={{
-                          backgroundColor: `${category.color}20`,
-                          color: category.color,
-                        }}
+                        className={`w-12 h-12 mx-auto rounded-full flex items-center justify-center mb-2 bg-accent-20 text-accent ${accentClass?.className ?? ""}`}
                       >
                         {category.icon}
                       </div>

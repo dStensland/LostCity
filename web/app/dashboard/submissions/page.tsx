@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import UnifiedHeader from "@/components/UnifiedHeader";
 import { useAuth } from "@/lib/auth-context";
@@ -13,17 +13,22 @@ const STATUS_LABELS: Record<SubmissionStatus, { label: string; color: string }> 
   rejected: { label: "Not Approved", color: "red" },
   needs_edit: { label: "Needs Changes", color: "orange" },
 };
+const STATUS_FILTERS: SubmissionStatus[] = ["pending", "approved", "rejected", "needs_edit"];
 
 const TYPE_LABELS: Record<SubmissionType, string> = {
   event: "Event",
   venue: "Venue",
   organization: "Organization",
+  producer: "Organization",
 };
 
 export default function UserSubmissionsPage() {
   const { user } = useAuth();
   const searchParams = useSearchParams();
+  const router = useRouter();
   const success = searchParams.get("success");
+  const deleted = searchParams.get("deleted");
+  const statusParam = searchParams.get("status") as SubmissionStatus | null;
 
   const [submissions, setSubmissions] = useState<SubmissionWithProfile[]>([]);
   const [counts, setCounts] = useState({
@@ -33,6 +38,12 @@ export default function UserSubmissionsPage() {
     rejected: 0,
     needs_edit: 0,
   });
+  const [trust, setTrust] = useState<{
+    score: number | null;
+    eligible: boolean;
+    tier: string;
+    is_trusted: boolean;
+  } | null>(null);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<SubmissionStatus | "all">("all");
 
@@ -49,6 +60,7 @@ export default function UserSubmissionsPage() {
         const data = await res.json();
         setSubmissions(data.submissions || []);
         setCounts(c => data.counts || c);
+        setTrust(data.trust || null);
       } catch (err) {
         console.error("Failed to fetch submissions:", err);
       } finally {
@@ -58,6 +70,35 @@ export default function UserSubmissionsPage() {
 
     fetchSubmissions();
   }, [user, filter]);
+
+  useEffect(() => {
+    if (statusParam && !STATUS_FILTERS.includes(statusParam)) {
+      const params = new URLSearchParams(searchParams.toString());
+      params.delete("status");
+      const query = params.toString();
+      router.replace(`/dashboard/submissions${query ? `?${query}` : ""}`);
+      return;
+    }
+    if (statusParam && STATUS_FILTERS.includes(statusParam) && statusParam !== filter) {
+      setFilter(statusParam);
+      return;
+    }
+    if (!statusParam && filter !== "all") {
+      setFilter("all");
+    }
+  }, [statusParam, filter, router, searchParams]);
+
+  const handleFilterChange = (next: SubmissionStatus | "all") => {
+    setFilter(next);
+    const params = new URLSearchParams(searchParams.toString());
+    if (next === "all") {
+      params.delete("status");
+    } else {
+      params.set("status", next);
+    }
+    const query = params.toString();
+    router.replace(`/dashboard/submissions${query ? `?${query}` : ""}`);
+  };
 
   if (!user) {
     return (
@@ -70,10 +111,12 @@ export default function UserSubmissionsPage() {
     );
   }
 
-  const trustScore = counts.approved + counts.rejected > 0
-    ? (counts.approved / (counts.approved + counts.rejected) * 100).toFixed(0)
+  const trustScore = trust?.score !== null && trust?.score !== undefined
+    ? (trust.score * 100).toFixed(0)
     : null;
-  const isTrusted = counts.approved >= 5 && trustScore !== null && parseInt(trustScore) >= 90;
+  const isTrusted = trust?.is_trusted === true;
+  const isEligible = trust?.eligible === true;
+  const hasNeedsEdit = counts.needs_edit > 0;
 
   return (
     <div className="min-h-screen">
@@ -90,12 +133,20 @@ export default function UserSubmissionsPage() {
               Track your submitted events, venues, and organizations
             </p>
           </div>
-          <Link
-            href="/submit"
-            className="px-4 py-2 rounded-lg bg-[var(--coral)] text-[var(--void)] font-mono text-sm font-medium hover:bg-[var(--rose)] transition-colors"
-          >
-            Submit New
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link
+              href="/dashboard/claims"
+              className="px-4 py-2 rounded-lg border border-[var(--twilight)] text-[var(--muted)] font-mono text-sm hover:text-[var(--cream)] hover:border-[var(--coral)] transition-colors"
+            >
+              My Claims
+            </Link>
+            <Link
+              href="/submit"
+              className="px-4 py-2 rounded-lg bg-[var(--coral)] text-[var(--void)] font-mono text-sm font-medium hover:bg-[var(--rose)] transition-colors"
+            >
+              Submit New
+            </Link>
+          </div>
         </div>
 
         {/* Success Message */}
@@ -104,11 +155,27 @@ export default function UserSubmissionsPage() {
             Your {success} submission was received! We&apos;ll review it soon.
           </div>
         )}
+        {deleted && (
+          <div className="mb-6 p-4 rounded-lg bg-red-500/10 border border-red-500 text-red-400 font-mono text-sm">
+            Submission canceled. You can resubmit anytime.
+          </div>
+        )}
+        {hasNeedsEdit && filter !== "needs_edit" && (
+          <div className="mb-6 p-4 rounded-lg bg-orange-500/10 border border-orange-500 text-orange-200 font-mono text-sm flex flex-wrap items-center justify-between gap-3">
+            <span>You have {counts.needs_edit} submission{counts.needs_edit === 1 ? "" : "s"} that need updates.</span>
+            <button
+              onClick={() => handleFilterChange("needs_edit")}
+              className="px-3 py-1.5 rounded-lg border border-orange-400 text-orange-200 font-mono text-xs hover:bg-orange-500/10 transition-colors"
+            >
+              Review edits
+            </button>
+          </div>
+        )}
 
         {/* Stats */}
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 mb-8">
           <button
-            onClick={() => setFilter("all")}
+            onClick={() => handleFilterChange("all")}
             className={`p-4 rounded-xl border transition-colors ${
               filter === "all"
                 ? "border-[var(--coral)] bg-[var(--coral)]/10"
@@ -119,7 +186,7 @@ export default function UserSubmissionsPage() {
             <div className="font-mono text-xs text-[var(--muted)]">Total</div>
           </button>
           <button
-            onClick={() => setFilter("pending")}
+            onClick={() => handleFilterChange("pending")}
             className={`p-4 rounded-xl border transition-colors ${
               filter === "pending"
                 ? "border-yellow-500 bg-yellow-500/10"
@@ -130,7 +197,7 @@ export default function UserSubmissionsPage() {
             <div className="font-mono text-xs text-[var(--muted)]">Pending</div>
           </button>
           <button
-            onClick={() => setFilter("approved")}
+            onClick={() => handleFilterChange("approved")}
             className={`p-4 rounded-xl border transition-colors ${
               filter === "approved"
                 ? "border-green-500 bg-green-500/10"
@@ -141,7 +208,7 @@ export default function UserSubmissionsPage() {
             <div className="font-mono text-xs text-[var(--muted)]">Approved</div>
           </button>
           <button
-            onClick={() => setFilter("rejected")}
+            onClick={() => handleFilterChange("rejected")}
             className={`p-4 rounded-xl border transition-colors ${
               filter === "rejected"
                 ? "border-red-500 bg-red-500/10"
@@ -152,7 +219,7 @@ export default function UserSubmissionsPage() {
             <div className="font-mono text-xs text-[var(--muted)]">Rejected</div>
           </button>
           <button
-            onClick={() => setFilter("needs_edit")}
+            onClick={() => handleFilterChange("needs_edit")}
             className={`p-4 rounded-xl border transition-colors ${
               filter === "needs_edit"
                 ? "border-orange-500 bg-orange-500/10"
@@ -165,7 +232,7 @@ export default function UserSubmissionsPage() {
         </div>
 
         {/* Trust Status */}
-        {trustScore !== null && (
+        {(trustScore !== null || isTrusted) && (
           <div className={`mb-8 p-4 rounded-xl border ${
             isTrusted
               ? "border-green-500 bg-green-500/10"
@@ -174,12 +241,14 @@ export default function UserSubmissionsPage() {
             <div className="flex items-center justify-between">
               <div>
                 <div className="font-mono text-sm text-[var(--cream)]">
-                  Approval Rate: {trustScore}%
+                  Approval Rate: {trustScore ?? "—"}%
                 </div>
                 <div className="font-mono text-xs text-[var(--muted)] mt-1">
                   {isTrusted
                     ? "You're a trusted submitter! Your submissions auto-publish."
-                    : `Submit ${Math.max(0, 5 - counts.approved)} more approved events to become trusted.`}
+                    : isEligible
+                      ? "You're eligible for trusted status. A community manager can promote you."
+                      : `Submit ${Math.max(0, 5 - counts.approved)} more approved events to become eligible.`}
                 </div>
               </div>
               {isTrusted && (
@@ -235,19 +304,38 @@ export default function UserSubmissionsPage() {
                           {TYPE_LABELS[submission.submission_type as SubmissionType]}
                         </span>
                       </div>
-                      <h3 className="text-[var(--cream)] font-medium">{title}</h3>
+                      <h3 className="text-[var(--cream)] font-medium">
+                        <Link
+                          href={`/dashboard/submissions/${submission.id}`}
+                          className="hover:underline"
+                        >
+                          {title}
+                        </Link>
+                      </h3>
                       <div className="font-mono text-xs text-[var(--muted)] mt-1">
                         Submitted {new Date(submission.created_at).toLocaleDateString()}
                       </div>
                     </div>
-                    {submission.status === "needs_edit" && (
+                    <div className="flex flex-col items-end gap-2">
                       <Link
-                        href={`/submit/${submission.submission_type === "organization" ? "org" : submission.submission_type}?edit=${submission.id}`}
-                        className="px-3 py-1.5 rounded-lg border border-orange-500 text-orange-400 font-mono text-xs hover:bg-orange-500/10 transition-colors"
+                        href={`/dashboard/submissions/${submission.id}`}
+                        className="px-3 py-1.5 rounded-lg border border-[var(--twilight)] text-[var(--muted)] font-mono text-xs hover:text-[var(--cream)] hover:border-[var(--coral)] transition-colors"
                       >
-                        Edit
+                        View details
                       </Link>
-                    )}
+                      {submission.status === "needs_edit" && (
+                        <Link
+                          href={`/submit/${
+                            submission.submission_type === "organization" || submission.submission_type === "producer"
+                              ? "org"
+                              : submission.submission_type
+                          }?edit=${submission.id}`}
+                          className="px-3 py-1.5 rounded-lg border border-orange-500 text-orange-400 font-mono text-xs hover:bg-orange-500/10 transition-colors"
+                        >
+                          Edit
+                        </Link>
+                      )}
+                    </div>
                   </div>
 
                   {/* Rejection reason */}

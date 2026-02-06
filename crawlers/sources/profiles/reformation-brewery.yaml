@@ -1,0 +1,14 @@
+version: 1
+slug: reformation-brewery
+name: Reformation Brewery
+integration_method: playwright
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.reformationbrewery.com
+  fetch:
+    render_js: true
+detail:
+  enabled: false

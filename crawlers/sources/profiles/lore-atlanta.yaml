@@ -1,0 +1,12 @@
+version: 1
+slug: lore-atlanta
+name: Lore Atlanta
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://loreatl.com
+detail:
+  enabled: false

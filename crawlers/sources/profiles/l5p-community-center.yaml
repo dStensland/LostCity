@@ -1,0 +1,12 @@
+version: 1
+slug: l5p-community-center
+name: Little Five Points Community Center
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.l5pcc.org
+detail:
+  enabled: false

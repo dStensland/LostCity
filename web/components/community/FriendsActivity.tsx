@@ -2,10 +2,13 @@
 
 import Link from "next/link";
 import { useEffect, useRef } from "react";
+import Image from "@/components/SmartImage";
 import UserAvatar, { AvatarStack } from "@/components/UserAvatar";
 import CategoryIcon, { getCategoryColor } from "@/components/CategoryIcon";
 import { formatDistanceToNow, format, parseISO, isToday, isYesterday, isThisWeek } from "date-fns";
 import { useInfiniteActivities } from "@/lib/hooks/useInfiniteActivities";
+import ScopedStyles from "@/components/ScopedStyles";
+import { createCssVarClass } from "@/lib/css-utils";
 
 export type ActivityItem = {
   id: string;
@@ -176,6 +179,7 @@ interface TimeSectionProps {
 }
 
 function TimeSection({ title, activities, accentColor }: TimeSectionProps) {
+  const accentClass = createCssVarClass("--accent-color", accentColor, "accent");
   // Group RSVP activities by event for display
   const localGroupedActivities = activities.reduce<GroupedActivity[]>((acc, activity) => {
     if (activity.activity_type === "rsvp" && activity.event) {
@@ -202,35 +206,16 @@ function TimeSection({ title, activities, accentColor }: TimeSectionProps) {
   );
 
   return (
-    <div className="space-y-3">
+    <div className={`space-y-3 ${accentClass?.className ?? ""}`}>
+      <ScopedStyles css={accentClass?.css} />
       {/* Enhanced section header with colored accent, gradient divider, and event count */}
       <div className="flex items-center gap-3">
-        <div
-          className="w-1 h-4 rounded-full"
-          style={{ backgroundColor: accentColor }}
-        />
-        <h3
-          className="font-mono text-xs font-bold uppercase tracking-wider"
-          style={{
-            color: accentColor,
-            textShadow: `0 0 20px ${accentColor}40`,
-          }}
-        >
+        <div className="w-1 h-4 rounded-full bg-accent" />
+        <h3 className="font-mono text-xs font-bold uppercase tracking-wider text-accent-glow">
           {title}
         </h3>
-        <div
-          className="flex-1 h-px"
-          style={{
-            background: `linear-gradient(to right, ${accentColor}40, transparent)`,
-          }}
-        />
-        <span
-          className="font-mono text-xs px-2 py-0.5 rounded-full"
-          style={{
-            backgroundColor: `${accentColor}15`,
-            color: accentColor,
-          }}
-        >
+        <div className="flex-1 h-px divider-accent" />
+        <span className="font-mono text-xs px-2 py-0.5 rounded-full badge-accent">
           {activities.length}
         </span>
       </div>
@@ -250,21 +235,12 @@ function TimeSection({ title, activities, accentColor }: TimeSectionProps) {
 
 function EmptyState() {
   return (
-    <div className="relative py-12 text-center">
-      <div
-        className="absolute inset-0 pointer-events-none"
-        style={{
-          background: "radial-gradient(ellipse at center, color-mix(in srgb, var(--coral) 8%, transparent) 0%, transparent 60%)",
-        }}
-      />
+    <div className="relative py-12 text-center accent-coral">
+      <div className="absolute inset-0 pointer-events-none empty-state-bg" />
       <div className="relative z-10">
         <div className="mb-4 flex justify-center animate-stagger-1">
           <div
-            className="relative flex items-center justify-center w-16 h-16 rounded-full"
-            style={{
-              background: "linear-gradient(135deg, var(--twilight), var(--dusk))",
-              boxShadow: "0 0 20px color-mix(in srgb, var(--coral) 40%, transparent)",
-            }}
+            className="relative flex items-center justify-center w-16 h-16 rounded-full empty-state-icon-bg empty-state-icon-emphasis"
           >
             <svg
               className="w-8 h-8 text-[var(--coral)] animate-empty-icon-pulse"
@@ -290,12 +266,7 @@ function EmptyState() {
         <div className="mt-6 animate-stagger-4">
           <Link
             href="/community"
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg font-mono text-sm font-medium transition-all hover:scale-105"
-            style={{
-              backgroundColor: "var(--coral)",
-              color: "var(--void)",
-              boxShadow: "0 0 20px color-mix(in srgb, var(--coral) 40%, transparent)",
-            }}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg font-mono text-sm font-medium transition-all hover:scale-105 empty-state-action"
           >
             Find Friends
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -333,6 +304,8 @@ function GroupedEventCard({ group }: { group: GroupedActivity }) {
   const event = group.event!;
   const dateObj = parseISO(event.start_date);
   const categoryColor = event.category ? getCategoryColor(event.category) : null;
+  const accentColor = categoryColor || "var(--neon-magenta)";
+  const accentClass = createCssVarClass("--accent-color", accentColor, "accent");
 
   // Format time
   const timeStr = event.is_all_day
@@ -345,21 +318,16 @@ function GroupedEventCard({ group }: { group: GroupedActivity }) {
   const dateLabel = format(dateObj, "MMM d");
 
   return (
-    <Link
-      href={`/events/${event.id}`}
-      className="block p-3 rounded-lg glass border border-[var(--twilight)]/50 hover:border-[var(--coral)]/30 transition-all group relative"
-      style={{
-        borderLeftWidth: categoryColor ? "3px" : undefined,
-        borderLeftColor: categoryColor || undefined,
-      }}
-    >
+    <>
+      <ScopedStyles css={accentClass?.css} />
+      <Link
+        href={`/events/${event.id}`}
+        className={`block p-3 rounded-lg glass border border-[var(--twilight)]/50 hover:border-[var(--coral)]/30 transition-all group relative ${accentClass?.className ?? ""} ${
+          categoryColor ? "border-l-[3px] border-l-[var(--accent-color)]" : ""
+        }`}
+      >
       {/* Hover glow effect */}
-      <div
-        className="absolute inset-0 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none blur-xl"
-        style={{
-          background: "radial-gradient(circle at center, var(--coral) 0%, var(--neon-magenta) 50%, transparent 70%)",
-        }}
-      />
+      <div className="absolute inset-0 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none blur-xl hover-glow-coral-magenta" />
       <div className="flex flex-col sm:flex-row gap-3 relative z-10">
         {/* Time cell - like EventCard */}
         <div className="flex-shrink-0 w-14 flex flex-col items-center justify-center py-1">
@@ -380,10 +348,7 @@ function GroupedEventCard({ group }: { group: GroupedActivity }) {
           <div className="flex items-center gap-2 mb-1">
             {event.category && (
               <span
-                className="flex-shrink-0 inline-flex items-center justify-center w-5 h-5 rounded"
-                style={{
-                  backgroundColor: categoryColor ? `${categoryColor}20` : undefined,
-                }}
+                className="flex-shrink-0 inline-flex items-center justify-center w-5 h-5 rounded bg-accent-20"
               >
                 <CategoryIcon type={event.category} size={12} glow="subtle" />
               </span>
@@ -453,13 +418,19 @@ function GroupedEventCard({ group }: { group: GroupedActivity }) {
 
         {/* Thumbnail if available */}
         {event.image_url && (
-          <div
-            className="hidden sm:block flex-shrink-0 w-16 h-16 rounded-lg border border-[var(--twilight)] bg-cover bg-center"
-            style={{ backgroundImage: `url(${event.image_url})` }}
-          />
+          <div className="hidden sm:block flex-shrink-0 w-16 h-16 rounded-lg border border-[var(--twilight)] overflow-hidden">
+            <Image
+              src={event.image_url}
+              alt={event.title}
+              width={64}
+              height={64}
+              className="w-full h-full object-cover"
+            />
+          </div>
         )}
       </div>
-    </Link>
+      </Link>
+    </>
   );
 }
 
@@ -470,6 +441,8 @@ function ActivityCard({ activity }: { activity: ActivityItem }) {
   if ((activity.activity_type === "save" || activity.activity_type === "rsvp") && activity.event) {
     const eventDate = parseISO(activity.event.start_date);
     const categoryColor = activity.event.category ? getCategoryColor(activity.event.category) : null;
+    const accentColor = categoryColor || "var(--neon-magenta)";
+    const accentClass = createCssVarClass("--accent-color", accentColor, "accent");
 
     // Format time
     const timeStr = activity.event.is_all_day
@@ -482,21 +455,16 @@ function ActivityCard({ activity }: { activity: ActivityItem }) {
     const dateLabel = format(eventDate, "MMM d");
 
     return (
-      <Link
-        href={`/events/${activity.event.id}`}
-        className="block p-3 rounded-lg glass border border-[var(--twilight)]/50 hover:border-[var(--neon-magenta)]/30 transition-all group relative"
-        style={{
-          borderLeftWidth: categoryColor ? "3px" : undefined,
-          borderLeftColor: categoryColor || undefined,
-        }}
-      >
+      <>
+        <ScopedStyles css={accentClass?.css} />
+        <Link
+          href={`/events/${activity.event.id}`}
+          className={`block p-3 rounded-lg glass border border-[var(--twilight)]/50 hover:border-[var(--neon-magenta)]/30 transition-all group relative ${accentClass?.className ?? ""} ${
+            categoryColor ? "border-l-[3px] border-l-[var(--accent-color)]" : ""
+          }`}
+        >
         {/* Hover glow effect */}
-        <div
-          className="absolute inset-0 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none blur-xl"
-          style={{
-            background: "radial-gradient(circle at center, var(--neon-magenta) 0%, var(--coral) 50%, transparent 70%)",
-          }}
-        />
+        <div className="absolute inset-0 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none blur-xl hover-glow-magenta-coral" />
         <div className="flex flex-col sm:flex-row gap-3 relative z-10">
           {/* Time cell - like EventCard */}
           <div className="flex-shrink-0 w-14 flex flex-col items-center justify-center py-1">
@@ -533,16 +501,13 @@ function ActivityCard({ activity }: { activity: ActivityItem }) {
 
             {/* Category icon + title */}
             <div className="flex items-center gap-2 mb-1">
-              {activity.event.category && (
-                <span
-                  className="flex-shrink-0 inline-flex items-center justify-center w-5 h-5 rounded"
-                  style={{
-                    backgroundColor: categoryColor ? `${categoryColor}20` : undefined,
-                  }}
-                >
-                  <CategoryIcon type={activity.event.category} size={12} glow="subtle" />
-                </span>
-              )}
+            {activity.event.category && (
+              <span
+                className="flex-shrink-0 inline-flex items-center justify-center w-5 h-5 rounded bg-accent-20"
+              >
+                <CategoryIcon type={activity.event.category} size={12} glow="subtle" />
+              </span>
+            )}
               <h3 className="text-[var(--cream)] font-medium leading-snug line-clamp-2 sm:line-clamp-1 group-hover:text-[var(--neon-magenta)] transition-colors">
                 {activity.event.title}
               </h3>
@@ -558,13 +523,19 @@ function ActivityCard({ activity }: { activity: ActivityItem }) {
 
           {/* Thumbnail if available */}
           {activity.event.image_url && (
-            <div
-              className="hidden sm:block flex-shrink-0 w-16 h-16 rounded-lg border border-[var(--twilight)] bg-cover bg-center"
-              style={{ backgroundImage: `url(${activity.event.image_url})` }}
-            />
+            <div className="hidden sm:block flex-shrink-0 w-16 h-16 rounded-lg border border-[var(--twilight)] overflow-hidden">
+              <Image
+                src={activity.event.image_url}
+                alt={activity.event.title}
+                width={64}
+                height={64}
+                className="w-full h-full object-cover"
+              />
+            </div>
           )}
         </div>
-      </Link>
+        </Link>
+      </>
     );
   }
 
@@ -576,12 +547,7 @@ function ActivityCard({ activity }: { activity: ActivityItem }) {
         className="block p-3 rounded-lg glass border border-[var(--twilight)]/50 hover:border-[var(--coral)]/30 transition-all group relative"
       >
         {/* Hover glow effect */}
-        <div
-          className="absolute inset-0 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none blur-xl"
-          style={{
-            background: "radial-gradient(circle at center, var(--coral) 0%, transparent 70%)",
-          }}
-        />
+        <div className="absolute inset-0 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none blur-xl hover-glow-coral" />
         {/* Header */}
         <div className="flex flex-wrap items-center gap-2 mb-2 relative z-10">
           <UserAvatar
@@ -623,12 +589,7 @@ function ActivityCard({ activity }: { activity: ActivityItem }) {
         className="block p-3 rounded-lg glass border border-[var(--twilight)]/50 hover:border-[var(--neon-cyan)]/30 transition-all group relative"
       >
         {/* Hover glow effect */}
-        <div
-          className="absolute inset-0 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none blur-xl"
-          style={{
-            background: "radial-gradient(circle at center, var(--neon-cyan) 0%, transparent 70%)",
-          }}
-        />
+        <div className="absolute inset-0 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none blur-xl hover-glow-cyan" />
         {/* Header */}
         <div className="flex flex-wrap items-center gap-2 mb-2 relative z-10">
           <UserAvatar

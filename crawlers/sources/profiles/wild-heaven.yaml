@@ -1,0 +1,12 @@
+version: 1
+slug: wild-heaven
+name: Wild Heaven Beer
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.wildheavenbeer.com
+detail:
+  enabled: false

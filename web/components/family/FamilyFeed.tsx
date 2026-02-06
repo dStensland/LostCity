@@ -3,6 +3,7 @@
 import { useMemo, useState, type ComponentType, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
+import Image from "next/image";
 import type { EventWithLocation } from "@/lib/search";
 import {
   MuseumScene,
@@ -49,6 +50,7 @@ import {
 const C = {
   // Primary
   orange: "#FF5722",
+  orangeLight: "#FF7043",
   green: "#4CAF50",
   purple: "#9C27B0",
   blue: "#2196F3",
@@ -63,6 +65,8 @@ const C = {
   pencil: "#5D4E37",
   faded: "#9E9E9E",
 };
+
+type FamilyTone = "orange" | "green" | "purple" | "blue" | "pink" | "yellow" | "teal";
 
 interface FamilyFeedProps {
   portalId: string;
@@ -82,12 +86,12 @@ const ILLUSTRATIONS: Record<string, ComponentType<IllustrationProps>> = {
 
 // Illustrated category data with Where's Waldo-style scenes
 const ADVENTURES = [
-  { id: "museums", label: "Museums", color: C.orange, size: "large" },
-  { id: "outdoor", label: "Outdoors", color: C.green, size: "small" },
-  { id: "theater", label: "Shows", color: C.purple, size: "small" },
-  { id: "sports", label: "Sports", color: C.blue, size: "medium" },
-  { id: "festivals", label: "Festivals", color: C.pink, size: "medium" },
-  { id: "camps", label: "Camps", color: C.teal, size: "small" },
+  { id: "museums", label: "Museums", tone: "orange", size: "large" },
+  { id: "outdoor", label: "Outdoors", tone: "green", size: "small" },
+  { id: "theater", label: "Shows", tone: "purple", size: "small" },
+  { id: "sports", label: "Sports", tone: "blue", size: "medium" },
+  { id: "festivals", label: "Festivals", tone: "pink", size: "medium" },
+  { id: "camps", label: "Camps", tone: "teal", size: "small" },
 ] as const;
 
 const FILTERS: Record<string, string> = {
@@ -144,43 +148,41 @@ async function fetchEvents(
 function AdventureTicket({
   event,
   portalSlug,
-  accent = C.orange,
+  tone = "orange",
   variant = "default"
 }: {
   event: EventWithLocation;
   portalSlug: string;
-  accent?: string;
+  tone?: FamilyTone;
   variant?: "default" | "featured";
 }) {
   const isToday = new Date(event.start_date).toDateString() === new Date().toDateString();
   const isFree = event.is_free;
   const isFeatured = variant === "featured";
+  const accent = C[tone];
 
   return (
     <Link
       href={`/${portalSlug}?event=${event.id}`}
       className={`group block bg-white rounded-2xl overflow-hidden transition-all duration-300
-        hover:-translate-y-2 hover:rotate-1 hover:shadow-xl atlittle-btn ${
+        hover:-translate-y-2 hover:rotate-1 hover:shadow-xl atlittle-btn family-ticket ${
         isFeatured ? "col-span-2 row-span-2" : ""
       }`}
-      style={{
-        border: `3px solid ${C.ink}`,
-        boxShadow: `4px 4px 0 ${C.ink}`,
-      }}
+      data-family-tone={tone}
     >
       {/* Ticket stub top */}
       <div
-        className="relative overflow-hidden"
-        style={{
-          height: isFeatured ? "200px" : "140px",
-          backgroundColor: event.image_url ? undefined : accent,
-        }}
+        className={`relative overflow-hidden ${
+          isFeatured ? "h-[200px]" : "h-[140px]"
+        } ${event.image_url ? "" : "bg-[var(--family-accent)]"}`}
       >
         {event.image_url ? (
-          <img
+          <Image
             src={event.image_url}
-            alt=""
-            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+            alt={event.title}
+            fill
+            sizes="(max-width: 768px) 100vw, 600px"
+            className="object-cover transition-transform duration-500 group-hover:scale-110"
           />
         ) : (
           // Illustrated placeholder - doodle ticket
@@ -192,26 +194,12 @@ function AdventureTicket({
         {/* Badges - bold, visible, and PULSING */}
         <div className="absolute top-3 left-3 flex gap-2">
           {isToday && (
-            <span
-              className="px-3 py-1 rounded-full text-xs font-black text-white uppercase tracking-wide atlittle-badge-pulse"
-              style={{
-                backgroundColor: C.pink,
-                border: `2px solid ${C.ink}`,
-                color: C.pink,
-              }}
-            >
+            <span className="px-3 py-1 rounded-full text-xs font-black uppercase tracking-wide atlittle-badge-pulse family-badge bg-[var(--family-pink)] text-[var(--family-pink)]">
               <span className="text-white">Today!</span>
             </span>
           )}
           {isFree && (
-            <span
-              className="px-3 py-1 rounded-full text-xs font-black text-white uppercase tracking-wide atlittle-badge-pulse atlittle-stagger-2"
-              style={{
-                backgroundColor: C.green,
-                border: `2px solid ${C.ink}`,
-                color: C.green,
-              }}
-            >
+            <span className="px-3 py-1 rounded-full text-xs font-black uppercase tracking-wide atlittle-badge-pulse atlittle-stagger-2 family-badge bg-[var(--family-green)] text-[var(--family-green)]">
               <span className="text-white">Free</span>
             </span>
           )}
@@ -233,13 +221,12 @@ function AdventureTicket({
         <h3
           className={`font-black leading-tight text-gray-900 group-hover:text-gray-600 transition-colors line-clamp-2 ${
             isFeatured ? "text-xl" : "text-base"
-          }`}
-          style={{ fontFamily: "var(--font-baloo), var(--font-nunito), system-ui" }}
+          } family-font-display`}
         >
           {event.title}
         </h3>
 
-        <div className="mt-2 flex items-center gap-2 text-sm" style={{ color: C.pencil }}>
+        <div className="mt-2 flex items-center gap-2 text-sm family-font text-[var(--family-pencil)]">
           <span className="font-bold">
             {new Date(event.start_date).toLocaleDateString("en-US", {
               weekday: "short",
@@ -257,8 +244,7 @@ function AdventureTicket({
 
         {event.venue?.name && (
           <p
-            className="mt-1 text-sm font-bold truncate flex items-center gap-1"
-            style={{ color: accent }}
+            className="mt-1 text-sm font-bold truncate flex items-center gap-1 family-font text-[var(--family-accent)]"
           >
             <DoodlePin size={16} color={accent} /> {event.venue.name}
           </p>
@@ -272,7 +258,7 @@ function AdventureTicket({
 function AdventureSection({
   title,
   icon,
-  color,
+  tone,
   events,
   viewMoreHref,
   portalSlug,
@@ -280,7 +266,7 @@ function AdventureSection({
 }: {
   title: string;
   icon: ReactNode;
-  color: string;
+  tone: FamilyTone;
   events: EventWithLocation[];
   viewMoreHref: string;
   portalSlug: string;
@@ -305,22 +291,17 @@ function AdventureSection({
   if (events.length === 0) return null;
 
   return (
-    <section className="mb-10 px-4">
+    <section className="mb-10 px-4" data-family-tone={tone}>
       {/* Section header - BIG and bold */}
       <div className="flex items-center justify-between mb-5">
         <div className="flex items-center gap-3">
           <div
-            className="w-12 h-12 rounded-xl flex items-center justify-center"
-            style={{ backgroundColor: color, border: `3px solid ${C.ink}` }}
+            className="w-12 h-12 rounded-xl flex items-center justify-center bg-[var(--family-accent)] family-border-ink-3"
           >
             {icon}
           </div>
           <h2
-            className="text-2xl font-black"
-            style={{
-              color: C.ink,
-              fontFamily: "var(--font-baloo), var(--font-nunito), system-ui",
-            }}
+            className="text-2xl font-black family-font-display text-[var(--family-ink)]"
           >
             {title}
           </h2>
@@ -328,12 +309,7 @@ function AdventureSection({
 
         <Link
           href={viewMoreHref}
-          className="flex items-center gap-1 px-4 py-2 rounded-full font-bold text-sm transition-all hover:scale-105"
-          style={{
-            backgroundColor: color,
-            color: "white",
-            border: `2px solid ${C.ink}`,
-          }}
+          className="flex items-center gap-1 px-4 py-2 rounded-full font-bold text-sm transition-all hover:scale-105 bg-[var(--family-accent)] text-white family-border-ink-2"
         >
           See All →
         </Link>
@@ -346,7 +322,7 @@ function AdventureSection({
             key={event.id}
             event={event}
             portalSlug={portalSlug}
-            accent={color}
+            tone={tone}
             variant={i === 0 ? "featured" : "default"}
           />
         ))}
@@ -381,33 +357,23 @@ export function FamilyFeed({ portalId, portalSlug }: FamilyFeedProps) {
   });
 
   return (
-    <div className="min-h-screen pb-16" style={{ backgroundColor: C.cream }}>
+    <div className="family-theme min-h-screen pb-16 bg-[var(--family-cream)]">
 
       {/* HERO - The Welcome Mat - Animated & Vibrant */}
-      <div
-        className="relative px-5 pt-8 pb-12 overflow-hidden"
-        style={{
-          background: `linear-gradient(135deg, ${C.orange} 0%, #FF7043 50%, ${C.orange} 100%)`,
-          backgroundSize: "200% 200%",
-          animation: "gradient-flow 8s ease-in-out infinite",
-        }}
-      >
+      <div className="relative px-5 pt-8 pb-12 overflow-hidden family-hero">
         {/* Decorative splat/melty elements - BIGGER & ANIMATED */}
         <div
-          className="absolute -top-2 right-6 opacity-60 pointer-events-none atlittle-float"
-          style={{ ["--rotate" as string]: "12deg" }}
+          className="absolute -top-2 right-6 opacity-60 pointer-events-none atlittle-float rotate-var-12"
         >
           <MeltyDrip className="w-20 h-32" color="#FFC107" />
         </div>
         <div
-          className="absolute bottom-2 right-2 opacity-70 pointer-events-none atlittle-wobble"
-          style={{ ["--rotate" as string]: "-6deg" }}
+          className="absolute bottom-2 right-2 opacity-70 pointer-events-none atlittle-wobble rotate-var--6"
         >
           <SplatBlob className="w-28 h-28" color="#E91E63" />
         </div>
         <div
-          className="absolute top-1/4 left-0 opacity-50 pointer-events-none atlittle-float atlittle-stagger-2"
-          style={{ ["--rotate" as string]: "6deg" }}
+          className="absolute top-1/4 left-0 opacity-50 pointer-events-none atlittle-float atlittle-stagger-2 rotate-var-6"
         >
           <GooeyS className="w-20 h-20" color="#FFC107" />
         </div>
@@ -423,32 +389,17 @@ export function FamilyFeed({ portalId, portalSlug }: FamilyFeedProps) {
 
         {/* Main content with bounce animations */}
         <div className="relative">
-          <p
-            className="text-white/90 text-base font-bold uppercase tracking-wider animate-fade-in stagger-1 italic"
-            style={{ fontFamily: "var(--font-nunito), system-ui" }}
-          >
+          <p className="text-white/90 text-base font-bold uppercase tracking-wider animate-fade-in stagger-1 italic family-font">
             {subtext}
           </p>
           <h1
-            className="text-5xl md:text-6xl font-black text-white leading-tight mt-2 atlittle-bounce-in"
-            style={{
-              fontFamily: "var(--font-baloo), var(--font-nunito), system-ui",
-              textShadow: "0 4px 12px rgba(0, 0, 0, 0.2)",
-              letterSpacing: "-0.02em",
-            }}
+            className="text-5xl md:text-6xl font-black text-white leading-tight mt-2 atlittle-bounce-in family-font-display family-hero-title"
           >
             {greeting}
           </h1>
 
           {/* Search prompt - wiggly and playful */}
-          <div
-            className="mt-7 bg-white rounded-2xl p-4 flex items-center gap-3 cursor-pointer atlittle-wiggle-in atlittle-btn hover:scale-[1.03] hover:rotate-1 transition-transform"
-            style={{
-              border: `3px solid ${C.ink}`,
-              boxShadow: `6px 6px 0 ${C.ink}`,
-              willChange: "transform",
-            }}
-          >
+          <div className="mt-7 bg-white rounded-2xl p-4 flex items-center gap-3 cursor-pointer atlittle-wiggle-in atlittle-btn hover:scale-[1.03] hover:rotate-1 transition-transform family-search-prompt">
             <DoodleSearch size={28} color="#FF5722" />
             <span className="text-gray-400 font-semibold">What are you looking for?</span>
           </div>
@@ -456,20 +407,13 @@ export function FamilyFeed({ portalId, portalSlug }: FamilyFeedProps) {
       </div>
 
       {/* ADVENTURE PICKER - Where's Waldo-style illustrated grid */}
-      <div className="px-4 py-8 relative" style={{ backgroundColor: C.paper }}>
+      <div className="px-4 py-8 relative bg-[var(--family-paper)]">
         {/* Background decoration */}
         <div className="absolute top-4 right-4 opacity-15 pointer-events-none atlittle-float">
           <ConfettiBurst className="w-24 h-24" />
         </div>
 
-        <h2
-          className="text-2xl md:text-3xl font-black mb-5"
-          style={{
-            color: C.ink,
-            fontFamily: "var(--font-baloo), system-ui",
-            letterSpacing: "-0.01em",
-          }}
-        >
+        <h2 className="text-2xl md:text-3xl font-black mb-5 family-font-display text-[var(--family-ink)] family-section-title">
           Pick Your Adventure
         </h2>
 
@@ -482,17 +426,15 @@ export function FamilyFeed({ portalId, portalSlug }: FamilyFeedProps) {
               <Link
                 key={adv.id}
                 href={`/${portalSlug}?view=find&type=events&${FILTERS[adv.id]}`}
-                className={`relative rounded-2xl overflow-hidden transition-all duration-300 ${
-                  adv.size === "large" ? "col-span-2 row-span-2" :
-                  adv.size === "medium" ? "col-span-2" : ""
+                className={`relative rounded-2xl overflow-hidden transition-all duration-300 family-border-ink-3 bg-[var(--family-accent)] ${
+                  adv.size === "large" ? "col-span-2 row-span-2 min-h-[180px]" :
+                  adv.size === "medium" ? "col-span-2 min-h-[100px]" : "min-h-[120px]"
+                } ${
+                  isHovered
+                    ? "family-shadow-lg -translate-x-0.5 -translate-y-0.5"
+                    : "family-shadow-sm"
                 }`}
-                style={{
-                  backgroundColor: adv.color,
-                  border: `3px solid ${C.ink}`,
-                  boxShadow: isHovered ? `6px 6px 0 ${C.ink}` : `3px 3px 0 ${C.ink}`,
-                  transform: isHovered ? "translate(-2px, -2px)" : "none",
-                  minHeight: adv.size === "large" ? "180px" : adv.size === "medium" ? "100px" : "120px",
-                }}
+                data-family-tone={adv.tone}
                 onMouseEnter={() => setHoveredAdventure(adv.id)}
                 onMouseLeave={() => setHoveredAdventure(null)}
               >
@@ -500,26 +442,18 @@ export function FamilyFeed({ portalId, portalSlug }: FamilyFeedProps) {
                 <div className="absolute inset-0">
                   <Illustration
                     isHovered={isHovered}
-                    className="w-full h-full"
-                    style={{ opacity: 0.9 }}
+                    className="w-full h-full opacity-90"
                   />
                 </div>
 
                 {/* Label overlay at bottom */}
                 <div
-                  className="absolute bottom-0 left-0 right-0 px-3 py-2"
-                  style={{
-                    background: `linear-gradient(transparent, ${adv.color}ee, ${adv.color})`,
-                  }}
+                  className="absolute bottom-0 left-0 right-0 px-3 py-2 family-adventure-label"
                 >
                   <span
                     className={`font-black text-white drop-shadow-md ${
                       adv.size === "large" ? "text-xl" : "text-sm"
-                    }`}
-                    style={{
-                      fontFamily: "var(--font-baloo), system-ui",
-                      textShadow: "1px 1px 0 rgba(0,0,0,0.3)",
-                    }}
+                    } family-font-display family-label-shadow`}
                   >
                     {adv.label}
                   </span>
@@ -528,8 +462,7 @@ export function FamilyFeed({ portalId, portalSlug }: FamilyFeedProps) {
                 {/* Hover hint */}
                 {isHovered && (
                   <div
-                    className="absolute top-2 right-2 px-2 py-1 rounded-full text-xs font-bold text-white"
-                    style={{ backgroundColor: C.ink }}
+                    className="absolute top-2 right-2 px-2 py-1 rounded-full text-xs font-bold text-white bg-[var(--family-ink)]"
                   >
                     Explore →
                   </div>
@@ -541,7 +474,7 @@ export function FamilyFeed({ portalId, portalSlug }: FamilyFeedProps) {
       </div>
 
       {/* Decorative divider - animated squiggly line */}
-      <div className="flex justify-center items-center gap-4 py-6" style={{ backgroundColor: C.cream }}>
+      <div className="flex justify-center items-center gap-4 py-6 bg-[var(--family-cream)]">
         <DoodleStar size={24} color={C.yellow} className="atlittle-twinkle" />
         <Squiggle className="opacity-70 atlittle-squiggle-draw" color={C.orange} />
         <DoodleStar size={24} color={C.yellow} className="atlittle-twinkle atlittle-stagger-3" />
@@ -552,7 +485,7 @@ export function FamilyFeed({ portalId, portalSlug }: FamilyFeedProps) {
         <AdventureSection
           title="Happening Today"
           icon={<DoodleBolt size={26} color="#FFC107" />}
-          color={C.pink}
+          tone="pink"
           events={todayEvents || []}
           viewMoreHref={`/${portalSlug}?view=find&type=events&date=today`}
           portalSlug={portalSlug}
@@ -564,7 +497,7 @@ export function FamilyFeed({ portalId, portalSlug }: FamilyFeedProps) {
       <AdventureSection
         title="This Weekend"
         icon={<DoodleParty size={26} />}
-        color={C.purple}
+        tone="purple"
         events={weekendEvents || []}
         viewMoreHref={`/${portalSlug}?view=find&type=events&date=weekend`}
         portalSlug={portalSlug}
@@ -575,7 +508,7 @@ export function FamilyFeed({ portalId, portalSlug }: FamilyFeedProps) {
       <AdventureSection
         title="Free for Families"
         icon={<DoodleTag size={26} color="#4CAF50" />}
-        color={C.green}
+        tone="green"
         events={freeEvents || []}
         viewMoreHref={`/${portalSlug}?view=find&type=events&free=1`}
         portalSlug={portalSlug}
@@ -586,13 +519,7 @@ export function FamilyFeed({ portalId, portalSlug }: FamilyFeedProps) {
       <div className="px-4 mt-8 mb-4">
         <Link
           href={`/${portalSlug}?view=find&type=events`}
-          className="block w-full py-5 rounded-2xl text-center font-black text-xl text-white transition-all hover:scale-[1.03] hover:-rotate-1 atlittle-btn"
-          style={{
-            backgroundColor: C.ink,
-            fontFamily: "var(--font-baloo), system-ui",
-            boxShadow: `6px 6px 0 ${C.orange}`,
-            border: `3px solid ${C.ink}`,
-          }}
+          className="block w-full py-5 rounded-2xl text-center font-black text-xl text-white transition-all hover:scale-[1.03] hover:-rotate-1 atlittle-btn family-cta family-font-display"
         >
           Explore All Adventures
           <DoodleRocket size={32} className="inline-block ml-3 -mt-1 group-hover:animate-bounce" />

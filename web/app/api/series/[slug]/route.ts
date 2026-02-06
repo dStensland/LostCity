@@ -26,7 +26,10 @@ export async function GET(
   // Fetch series data
   const { data: seriesData, error } = await supabase
     .from("series")
-    .select("*")
+    .select(`
+      *,
+      festival:festivals(id, slug, name, image_url, festival_type, location, neighborhood)
+    `)
     .eq("slug", slug)
     .maybeSingle();
 

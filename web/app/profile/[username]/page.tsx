@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import Image from "next/image";
+import Image from "@/components/SmartImage";
 import UnifiedHeader from "@/components/UnifiedHeader";
 import PageFooter from "@/components/PageFooter";
 import FollowButton from "@/components/FollowButton";
@@ -394,7 +394,7 @@ function ActivityItem({ activity }: { activity: Activity }) {
   };
 
   return (
-    <div className="flex gap-3 p-3 rounded-lg border border-[var(--twilight)] card-event-hover" style={{ backgroundColor: "var(--card-bg)" }}>
+    <div className="flex gap-3 p-3 rounded-lg border border-[var(--twilight)] bg-[var(--card-bg)] card-event-hover">
       {getActivityIcon()}
       <div className="flex-1 min-w-0">
         <p className="text-sm text-[var(--cream)]">

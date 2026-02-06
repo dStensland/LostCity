@@ -1,0 +1,14 @@
+version: 1
+slug: candler-park-fest
+name: Candler Park Fall Fest
+integration_method: playwright
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.candlerparkfest.org
+  fetch:
+    render_js: true
+detail:
+  enabled: false

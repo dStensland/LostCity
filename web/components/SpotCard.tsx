@@ -1,11 +1,9 @@
 import Link from "next/link";
-import type { Spot } from "@/lib/spots";
-import { formatPriceLevel } from "@/lib/spots";
-import CategoryIcon, { getCategoryLabel, getCategoryColor } from "./CategoryIcon";
+import type { Spot } from "@/lib/spots-constants";
+import { formatPriceLevel } from "@/lib/spots-constants";
+import CategoryIcon, { getCategoryLabel } from "./CategoryIcon";
 import { EventsBadge } from "./Badge";
 import VenueTagBadges from "./VenueTagBadges";
-import { VENUE_TAG_GROUPS } from "@/lib/venue-tags";
-import type { VenueTagGroup } from "@/lib/types";
 
 // Tag data that can be passed from parent (batch-loaded) to avoid N+1 queries
 export type SpotTagData = {
@@ -67,7 +65,6 @@ export default function SpotCard({ spot, index = 0, showDistance, portalSlug, ta
   const staggerClass = index < 10 ? `stagger-${index + 1}` : "";
   const priceDisplay = formatPriceLevel(spot.price_level);
   const venueType = spot.venue_type || "music_venue";
-  const categoryColor = getCategoryColor(venueType);
   const reflectionClass = getReflectionClass(venueType);
 
   // Calculate distance if we have user location and spot coordinates
@@ -79,11 +76,9 @@ export default function SpotCard({ spot, index = 0, showDistance, portalSlug, ta
     <Link
       href={portalSlug ? `/${portalSlug}?spot=${spot.slug}` : `/spots/${spot.slug}`}
       scroll={false}
-      className={`event-item animate-fade-in ${staggerClass} group card-atmospheric ${reflectionClass}`}
-      style={{
-        "--glow-color": categoryColor,
-        "--reflection-color": `color-mix(in srgb, ${categoryColor} 15%, transparent)`,
-      } as React.CSSProperties}
+      data-category={venueType}
+      data-accent="category"
+      className={`event-item animate-fade-in ${staggerClass} group card-atmospheric glow-accent reflection-accent ${reflectionClass}`}
     >
       {/* Icon column */}
       <div className="w-10 flex-shrink-0 flex items-center justify-center">
@@ -113,16 +108,11 @@ export default function SpotCard({ spot, index = 0, showDistance, portalSlug, ta
         {tags && tags.length > 0 ? (
           <div className="flex items-center gap-1 mt-1.5 flex-wrap">
             {tags.slice(0, 3).map((tag) => {
-              const groupConfig = VENUE_TAG_GROUPS[tag.tag_group as VenueTagGroup];
-              const color = groupConfig?.color || "var(--cream)";
               return (
                 <span
                   key={tag.tag_id}
-                  className="inline-flex items-center px-1.5 py-0.5 rounded text-[0.55rem] font-mono"
-                  style={{
-                    backgroundColor: `color-mix(in srgb, ${color} 15%, transparent)`,
-                    color: color,
-                  }}
+                  data-tag-group={tag.tag_group}
+                  className="inline-flex items-center px-1.5 py-0.5 rounded text-[0.55rem] font-mono bg-accent-15 text-accent"
                 >
                   {tag.tag_label}
                 </span>

@@ -1,0 +1,14 @@
+version: 1
+slug: project-south
+name: Project South
+integration_method: playwright
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://projectsouth.org/events
+  fetch:
+    render_js: true
+detail:
+  enabled: false

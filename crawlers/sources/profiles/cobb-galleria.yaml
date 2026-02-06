@@ -1,0 +1,12 @@
+version: 1
+slug: cobb-galleria
+name: Cobb Galleria Centre
+integration_method: llm_crawler
+defaults: {}
+discovery:
+  enabled: true
+  type: html
+  urls:
+  - https://www.cobbgalleria.com
+detail:
+  enabled: false

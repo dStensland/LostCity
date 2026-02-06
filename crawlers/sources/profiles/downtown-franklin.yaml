@@ -1,0 +1,12 @@
+version: 1
+slug: downtown-franklin
+name: Downtown Franklin Association
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://downtownfranklintn.com/events
+detail:
+  enabled: false

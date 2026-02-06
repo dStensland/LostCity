@@ -1,0 +1,13 @@
+version: 1
+slug: spelman-college
+name: Spelman College
+integration_method: llm_extraction
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.spelman.edu/events
+detail:
+  enabled: true
+  use_llm: true

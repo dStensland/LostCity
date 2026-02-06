@@ -1,0 +1,12 @@
+version: 1
+slug: brewhouse-cafe
+name: Brewhouse Cafe
+integration_method: llm_crawler
+defaults: {}
+discovery:
+  enabled: true
+  type: html
+  urls:
+  - https://www.brewhousecafe.com
+detail:
+  enabled: false

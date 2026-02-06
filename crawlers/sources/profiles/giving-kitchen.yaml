@@ -1,0 +1,12 @@
+version: 1
+slug: giving-kitchen
+name: Giving Kitchen
+integration_method: llm_crawler
+defaults: {}
+discovery:
+  enabled: true
+  type: html
+  urls:
+  - https://givingkitchen.org/events
+detail:
+  enabled: false

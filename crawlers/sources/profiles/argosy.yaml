@@ -1,0 +1,12 @@
+version: 1
+slug: argosy
+name: Argosy
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://argosyeastatlanta.com
+detail:
+  enabled: false

@@ -1,0 +1,12 @@
+version: 1
+slug: decatur-arts-festival
+name: Decatur Arts Festival
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.decaturartsfestival.com
+detail:
+  enabled: false

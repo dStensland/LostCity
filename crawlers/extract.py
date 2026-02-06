@@ -24,6 +24,8 @@ RULES:
 7. TIME VALIDATION: Be careful with AM/PM. Events between 1:00-5:00 AM are rare except for nightlife/music venues. If an event seems like daytime (workshops, volunteer events, family events) but parses to early AM, the source probably meant PM or there's an error - use null instead.
 8. ALL-DAY EVENTS: Set is_all_day=true ONLY for events that genuinely span the entire day (festivals, exhibitions, markets, open houses). Do NOT set is_all_day=true just because a specific time is unknown. "Night", "Evening", "Afternoon" events are NOT all-day - set is_all_day=false and start_time=null if time is unknown.
 9. YEAR INFERENCE: When a date has no year specified, use 2026 for dates from January-December. Only use a past year if the content explicitly shows a past year.
+10. detail_url should be the canonical event detail page when available (not the ticketing checkout link).
+11. If multiple performers are listed, include them in artists ordered with the headliner first.
 
 CATEGORIES (pick one):
 music, art, comedy, theater, film, sports, food_drink, nightlife, community, fitness, family, learning, dance, tours, meetup, words, religious, markets, wellness, gaming, outdoors, activism, other
@@ -47,12 +49,16 @@ Some events are instances of a "series" - a recurring show or film playing multi
 - Films at theaters (same movie, multiple showtimes)
 - Recurring shows ("Tuesday Night Improv", "Open Mic Night")
 - Touring acts passing through
-- Festival programs (DragonCon panels, Film Fest screenings)
+- Class series (recurring workshops or courses with multiple sessions)
+- Festival/conference programs (DragonCon panels, Film Fest screenings, conference tracks)
 
 If the event appears to be part of a series, populate the series_hint field:
 - series_type: "film" | "recurring_show" | "class_series" | "festival_program" | "tour" | null
 - series_title: The canonical name of the series (movie title, show name)
+- For class series: use the class/course name as series_title
+- For festival/conference programs: set series_title to the program/track name if shown
 - For films: include director, runtime_minutes, year, rating if available
+ - For festival/conference programs: include festival_name if the parent festival is named
 
 GENRES:
 For film, music, theater, and sports events, identify relevant genres:
@@ -87,10 +93,12 @@ Return valid JSON matching this schema:
       "price_note": string | null,
       "is_free": boolean,
       "ticket_url": string | null,
+      "detail_url": string | null,
       "image_url": string | null,
       "is_recurring": boolean,
       "recurrence_rule": string | null,
       "confidence": number,
+      "artists": string[] | null,
       "genres": string[] | null,
       "series_hint": {
         "series_type": "film" | "recurring_show" | "class_series" | "festival_program" | "tour" | null,
@@ -100,7 +108,8 @@ Return valid JSON matching this schema:
         "year": number | null,
         "rating": string | null,
         "frequency": string | null,
-        "genres": string[] | null
+        "genres": string[] | null,
+        "festival_name": string | null
       } | null
     }
   ]
@@ -124,6 +133,7 @@ class SeriesHint(BaseModel):
     rating: Optional[str] = None  # PG, R, etc.
     frequency: Optional[str] = None  # weekly, monthly, etc. for recurring
     genres: list[str] = []  # Genre tags for the series
+    festival_name: Optional[str] = None  # Parent festival/conference name (if applicable)
 
 
 class EventData(BaseModel):
@@ -144,10 +154,12 @@ class EventData(BaseModel):
     price_note: Optional[str] = None
     is_free: bool = False
     ticket_url: Optional[str] = None
+    detail_url: Optional[str] = None
     image_url: Optional[str] = None
     is_recurring: bool = False
     recurrence_rule: Optional[str] = None
     confidence: float
+    artists: list[str] = []
     genres: list[str] = []  # Genre tags for standalone events
     series_hint: Optional[SeriesHint] = None
 

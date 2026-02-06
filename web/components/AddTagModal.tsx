@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { getTagGroupsForEntity } from "@/lib/venue-tags";
+import { getTagGroupsForEntity } from "@/lib/venue-tags-config";
 import type { VenueTagDefinition, TagEntityType, TagGroup } from "@/lib/types";
 
 interface AddTagModalProps {
@@ -152,8 +152,7 @@ export default function AddTagModal({ venueId, entityType = "venue", onClose, on
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60">
       <div
         ref={modalRef}
-        className="w-full max-w-md max-h-[80vh] rounded-xl border border-[var(--twilight)] shadow-2xl overflow-hidden flex flex-col"
-        style={{ backgroundColor: "var(--void)" }}
+        className="w-full max-w-md max-h-[80vh] rounded-xl border border-[var(--twilight)] shadow-2xl overflow-hidden flex flex-col bg-[var(--void)]"
       >
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--twilight)]">
@@ -256,8 +255,8 @@ export default function AddTagModal({ venueId, entityType = "venue", onClose, on
                     return (
                       <div key={group}>
                         <h3
-                          className="font-mono text-[0.65rem] uppercase tracking-wider mb-2"
-                          style={{ color: groupConfig?.color || "var(--muted)" }}
+                          data-tag-group={group}
+                          className="font-mono text-[0.65rem] uppercase tracking-wider mb-2 tag-group-label"
                         >
                           {groupConfig?.label || group}
                         </h3>
@@ -267,12 +266,8 @@ export default function AddTagModal({ venueId, entityType = "venue", onClose, on
                               key={tag.id}
                               onClick={() => handleAddTag(tag.id)}
                               disabled={isSubmitting}
-                              className="px-2.5 py-1 rounded-lg font-mono text-xs font-medium transition-colors hover:opacity-80 disabled:opacity-50"
-                              style={{
-                                backgroundColor: `color-mix(in srgb, ${groupConfig?.color || "var(--twilight)"} 15%, transparent)`,
-                                color: groupConfig?.color || "var(--cream)",
-                                border: `1px solid color-mix(in srgb, ${groupConfig?.color || "var(--twilight)"} 30%, transparent)`,
-                              }}
+                              data-tag-group={group}
+                              className="px-2.5 py-1 rounded-lg font-mono text-xs font-medium transition-colors hover:opacity-80 disabled:opacity-50 tag-group-button"
                             >
                               {tag.label}
                             </button>

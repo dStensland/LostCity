@@ -1,0 +1,14 @@
+version: 1
+slug: piedmont-heart-conferences
+name: Piedmont Heart Conferences
+integration_method: playwright
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.piedmont.org/heart/healthcare-professionals/conferences
+  fetch:
+    render_js: true
+detail:
+  enabled: false

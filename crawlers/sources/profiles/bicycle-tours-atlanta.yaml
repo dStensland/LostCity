@@ -1,0 +1,12 @@
+version: 1
+slug: bicycle-tours-atlanta
+name: Bicycle Tours of Atlanta
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://biketoursatl.com
+detail:
+  enabled: false

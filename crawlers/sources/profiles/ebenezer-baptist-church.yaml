@@ -1,0 +1,12 @@
+version: 1
+slug: ebenezer-baptist-church
+name: Ebenezer Baptist Church
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.ebenezeratl.org/upcoming-events/
+detail:
+  enabled: false

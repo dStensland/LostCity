@@ -1,0 +1,12 @@
+version: 1
+slug: atlanta-jazz-festival
+name: Atlanta Jazz Festival
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.atlantafestivals.com/atlanta-jazz-festival
+detail:
+  enabled: false

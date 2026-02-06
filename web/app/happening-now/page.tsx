@@ -6,7 +6,7 @@ import Link from "next/link";
 import type { AroundMeItem, AroundMeSpot, AroundMeEvent } from "@/app/api/around-me/route";
 import AroundMeCard from "@/components/AroundMeCard";
 import CategoryFilterChips, { type FilterCategory } from "@/components/CategoryFilterChips";
-import { NEIGHBORHOODS, type Spot } from "@/lib/spots";
+import { NEIGHBORHOODS, type Spot } from "@/lib/spots-constants";
 import { DEFAULT_PORTAL_SLUG } from "@/lib/portal-context";
 
 // Dynamically import heavy components
@@ -15,8 +15,8 @@ const MainNav = dynamic(() => import("@/components/MainNav"), { ssr: false });
 const MapViewWrapper = dynamic(() => import("@/components/MapViewWrapper"), { ssr: false });
 const NeighborhoodGrid = dynamic(() => import("@/components/NeighborhoodGrid"), { ssr: false });
 
-// Distance filter for GPS mode (miles)
-const NEARBY_RADIUS_MILES = 5;
+// Distance filter for GPS mode (miles) - tight radius for "nearby"
+const NEARBY_RADIUS_MILES = 1;
 
 // Refetch interval for freshness (ms)
 const REFETCH_INTERVAL = 30_000;
@@ -39,9 +39,10 @@ export default function HappeningNowPage() {
   const [items, setItems] = useState<AroundMeItem[]>([]);
   const [counts, setCounts] = useState<{ spots: number; events: number; total: number }>({ spots: 0, events: 0, total: 0 });
   const [loading, setLoading] = useState(true);
+  const [initialized, setInitialized] = useState(false);
   const refetchTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Check if location was previously granted
+  // Check if location was previously granted - run before fetching
   useEffect(() => {
     const savedLocation = localStorage.getItem("userLocation");
     if (savedLocation) {
@@ -53,22 +54,26 @@ export default function HappeningNowPage() {
         // ignore
       }
     }
+    setInitialized(true);
   }, []);
 
   // Fetch from unified /api/around-me
   const fetchAroundMe = useCallback(async (signal?: AbortSignal) => {
     const params = new URLSearchParams();
-    if (userLocation) {
+    if (userLocation && !selectedNeighborhood) {
+      // GPS mode: tight 1-mile radius from user's actual location
       params.set("lat", userLocation.lat.toString());
       params.set("lng", userLocation.lng.toString());
+      params.set("radius", String(NEARBY_RADIUS_MILES));
     }
     if (selectedNeighborhood) {
+      // Neighborhood mode: filter by neighborhood name, not radius
       params.set("neighborhood", selectedNeighborhood);
     }
+    // When neither GPS nor neighborhood, don't set radius - API will return all
     if (selectedCategory !== "all") {
       params.set("category", selectedCategory);
     }
-    params.set("radius", String(NEARBY_RADIUS_MILES));
     params.set("limit", "60");
     params.set("portal", DEFAULT_PORTAL_SLUG);
 
@@ -77,8 +82,10 @@ export default function HappeningNowPage() {
     return (await res.json()) as AroundMeResponse;
   }, [userLocation, selectedNeighborhood, selectedCategory]);
 
-  // Fetch data when params change
+  // Fetch data when params change - wait for initialization
   useEffect(() => {
+    if (!initialized) return;
+
     const abortController = new AbortController();
     let mounted = true;
 
@@ -108,10 +115,11 @@ export default function HappeningNowPage() {
       mounted = false;
       abortController.abort();
     };
-  }, [fetchAroundMe]);
+  }, [fetchAroundMe, initialized]);
 
   // Periodic refetch for freshness
   useEffect(() => {
+    if (!initialized) return;
     if (refetchTimerRef.current) clearInterval(refetchTimerRef.current);
 
     refetchTimerRef.current = setInterval(async () => {
@@ -127,7 +135,7 @@ export default function HappeningNowPage() {
     return () => {
       if (refetchTimerRef.current) clearInterval(refetchTimerRef.current);
     };
-  }, [fetchAroundMe]);
+  }, [fetchAroundMe, initialized]);
 
   // Request user location
   const requestLocation = () => {
@@ -278,7 +286,7 @@ export default function HappeningNowPage() {
               <button
                 onClick={requestLocation}
                 disabled={locationLoading}
-                className="w-full px-4 py-3 rounded-lg bg-[var(--neon-magenta)] text-[var(--void)] font-mono text-sm font-medium hover:bg-[var(--coral)] transition-colors disabled:opacity-50"
+                className="w-full px-4 py-3 rounded-lg bg-[var(--neon-magenta)] text-[var(--cream)] font-mono text-sm font-medium hover:bg-[var(--neon-magenta)]/80 hover:shadow-[0_0_20px_var(--neon-magenta)/40] transition-all disabled:opacity-50"
               >
                 {locationLoading ? (
                   <span className="flex items-center justify-center gap-2">
@@ -308,8 +316,7 @@ export default function HappeningNowPage() {
                   setSelectedNeighborhood(e.target.value || null);
                   setShowLocationPrompt(false);
                 }}
-                className="w-full px-4 py-3 rounded-lg bg-[var(--dusk)] border border-[var(--twilight)] text-[var(--cream)] font-mono text-sm focus:outline-none focus:border-[var(--neon-amber)] transition-colors appearance-none cursor-pointer"
-                style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236b7280'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`, backgroundRepeat: "no-repeat", backgroundPosition: "right 0.75rem center", backgroundSize: "1.25rem" }}
+                className="w-full px-4 py-3 rounded-lg bg-[var(--dusk)] border border-[var(--twilight)] text-[var(--cream)] font-mono text-sm focus:outline-none focus:border-[var(--neon-amber)] transition-colors appearance-none cursor-pointer select-chevron-lg"
               >
                 <option value="">Select neighborhood...</option>
                 {NEIGHBORHOODS.map((hood) => (
@@ -334,14 +341,15 @@ export default function HappeningNowPage() {
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
               <span
-                className="w-2 h-2 rounded-full bg-[var(--neon-red)] animate-pulse flex-shrink-0"
-                style={{ boxShadow: "0 0 6px var(--neon-red)" }}
+                className="w-2 h-2 rounded-full bg-[var(--neon-red)] animate-pulse flex-shrink-0 neon-red-glow"
               />
               <span className="font-mono text-xs text-[var(--muted)]">
                 {counts.spots} open · {counts.events} live
-                {userLocation && !selectedNeighborhood && (
+                {userLocation && !selectedNeighborhood ? (
                   <span className="text-[var(--neon-cyan)]"> (within {NEARBY_RADIUS_MILES}mi)</span>
-                )}
+                ) : selectedNeighborhood ? (
+                  <span className="text-[var(--soft)]"> in {selectedNeighborhood}</span>
+                ) : null}
               </span>
             </div>
 
@@ -350,8 +358,7 @@ export default function HappeningNowPage() {
               <select
                 value={selectedNeighborhood || ""}
                 onChange={(e) => setSelectedNeighborhood(e.target.value || null)}
-                className="px-2 py-1 rounded-md bg-[var(--dusk)] border border-[var(--twilight)] text-[var(--cream)] font-mono text-[0.65rem] focus:outline-none focus:border-[var(--neon-amber)] transition-colors appearance-none cursor-pointer"
-                style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236b7280'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`, backgroundRepeat: "no-repeat", backgroundPosition: "right 0.25rem center", backgroundSize: "0.875rem", paddingRight: "1.25rem" }}
+                className="px-2 py-1 rounded-md bg-[var(--dusk)] border border-[var(--twilight)] text-[var(--cream)] font-mono text-[0.65rem] focus:outline-none focus:border-[var(--neon-amber)] transition-colors appearance-none cursor-pointer select-chevron-sm"
               >
                 <option value="">Nearby</option>
                 {NEIGHBORHOODS.map((hood) => (
@@ -429,7 +436,7 @@ export default function HappeningNowPage() {
               {selectedCategory !== "all"
                 ? "No results for this category. Try a different filter."
                 : userLocation && !selectedNeighborhood
-                  ? "No spots open within 5 miles. Try selecting a neighborhood instead."
+                  ? "No spots open within 1 mile. Try selecting a neighborhood instead."
                   : "Check back later or browse upcoming events"}
             </p>
             <Link
@@ -444,40 +451,26 @@ export default function HappeningNowPage() {
             {/* Neon Sign Header */}
             <div className="relative mb-6 py-4">
               <div
-                className="absolute inset-0 blur-2xl opacity-20"
-                style={{
-                  background: 'radial-gradient(ellipse at center, var(--coral) 0%, transparent 70%)',
-                }}
+                className="absolute inset-0 blur-2xl opacity-20 neon-sign-glow"
               />
-              <div className="absolute left-0 right-0 top-0 h-px opacity-30" style={{ background: 'var(--coral)' }} />
-              <div className="absolute left-0 right-0 bottom-0 h-px opacity-30" style={{ background: 'var(--coral)' }} />
+              <div className="absolute left-0 right-0 top-0 h-px opacity-30 neon-sign-line" />
+              <div className="absolute left-0 right-0 bottom-0 h-px opacity-30 neon-sign-line" />
               <div className="relative flex justify-center">
                 <div className="relative">
                   <h2
-                    className="absolute inset-0 font-bold text-lg sm:text-xl tracking-[0.2em] uppercase blur-md opacity-60"
-                    style={{ color: 'var(--coral)' }}
+                    className="absolute inset-0 font-bold text-lg sm:text-xl tracking-[0.2em] uppercase blur-md opacity-60 text-[var(--coral)]"
                     aria-hidden="true"
                   >
                     What&apos;s Open
                   </h2>
                   <h2
-                    className="absolute inset-0 font-bold text-lg sm:text-xl tracking-[0.2em] uppercase blur-sm opacity-80"
-                    style={{ color: 'var(--coral)' }}
+                    className="absolute inset-0 font-bold text-lg sm:text-xl tracking-[0.2em] uppercase blur-sm opacity-80 text-[var(--coral)]"
                     aria-hidden="true"
                   >
                     What&apos;s Open
                   </h2>
                   <h2
-                    className="relative font-bold text-lg sm:text-xl tracking-[0.2em] uppercase"
-                    style={{
-                      color: '#FFE4E1',
-                      textShadow: `
-                        0 0 5px var(--coral),
-                        0 0 10px var(--coral),
-                        0 0 20px var(--coral),
-                        0 0 40px rgba(255,107,107,0.5)
-                      `,
-                    }}
+                    className="relative font-bold text-lg sm:text-xl tracking-[0.2em] uppercase neon-sign-text"
                   >
                     What&apos;s Open
                   </h2>

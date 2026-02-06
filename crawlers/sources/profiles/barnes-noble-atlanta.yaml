@@ -1,0 +1,12 @@
+version: 1
+slug: barnes-noble-atlanta
+name: Barnes & Noble Atlanta
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://stores.barnesandnoble.com
+detail:
+  enabled: false

@@ -1,0 +1,12 @@
+version: 1
+slug: echo-room
+name: Echo Room
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.songkick.com/venues/3586926-echo-room
+detail:
+  enabled: false

@@ -1,0 +1,12 @@
+version: 1
+slug: render-atl
+name: Render ATL
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.renderatl.com
+detail:
+  enabled: false

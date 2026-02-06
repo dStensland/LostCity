@@ -1,0 +1,12 @@
+version: 1
+slug: mobilize-hrc-georgia
+name: HRC in Georgia (Mobilize)
+integration_method: llm_crawler
+defaults: {}
+discovery:
+  enabled: true
+  type: html
+  urls:
+  - https://www.mobilize.us/hrcingeorgia/
+detail:
+  enabled: false

@@ -1,0 +1,14 @@
+version: 1
+slug: ponce-city-market
+name: Ponce City Market
+integration_method: playwright
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.poncecitymarket.com
+  fetch:
+    render_js: true
+detail:
+  enabled: false

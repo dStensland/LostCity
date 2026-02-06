@@ -1,0 +1,14 @@
+version: 1
+slug: theatre-for-young-audiences
+name: Theatre for Young Audiences (Alliance Theatre)
+integration_method: playwright
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.alliancetheatre.org/family-programming/
+  fetch:
+    render_js: true
+detail:
+  enabled: false

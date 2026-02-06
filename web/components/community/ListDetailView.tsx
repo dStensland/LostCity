@@ -2,11 +2,13 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import Image from "next/image";
+import Image from "@/components/SmartImage";
 import { useAuth } from "@/lib/auth-context";
 import ListItemCard, { type ListItem } from "./ListItemCard";
 import LinkifyText from "@/components/LinkifyText";
 import { AddItemsModal } from "@/components/community/AddItemsModal";
+import ScopedStyles from "@/components/ScopedStyles";
+import { createCssVarClass } from "@/lib/css-utils";
 
 type ListDetail = {
   id: string;
@@ -158,6 +160,7 @@ export default function ListDetailView({ portalSlug, listSlug }: ListDetailViewP
 
   const isOwner = user?.id === list?.creator_id;
   const categoryColor = list?.category ? CATEGORY_COLORS[list.category] || "var(--coral)" : "var(--coral)";
+  const accentClass = createCssVarClass("--accent-color", categoryColor, "accent");
 
   const handleVoteList = async () => {
     if (!user || !list || isVoting) return;
@@ -283,7 +286,8 @@ export default function ListDetailView({ portalSlug, listSlug }: ListDetailViewP
   }
 
   return (
-    <div>
+    <div className={accentClass?.className ?? ""}>
+      <ScopedStyles css={accentClass?.css} />
       {/* Back link */}
       <Link
         href={`/${portalSlug}?view=community`}
@@ -300,11 +304,7 @@ export default function ListDetailView({ portalSlug, listSlug }: ListDetailViewP
         {/* Category badge */}
         {list.category && (
           <div
-            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-mono uppercase tracking-wider mb-4"
-            style={{
-              backgroundColor: `${categoryColor}20`,
-              color: categoryColor,
-            }}
+            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-mono uppercase tracking-wider mb-4 bg-accent-20 text-accent"
           >
             {CATEGORY_ICONS[list.category]}
             {CATEGORY_LABELS[list.category] || list.category}
@@ -338,8 +338,7 @@ export default function ListDetailView({ portalSlug, listSlug }: ListDetailViewP
                 />
               ) : (
                 <div
-                  className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold"
-                  style={{ backgroundColor: categoryColor, color: "var(--void)" }}
+                  className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold bg-accent text-[var(--void)]"
                 >
                   {(list.creator.display_name || list.creator.username).charAt(0).toUpperCase()}
                 </div>
@@ -353,7 +352,7 @@ export default function ListDetailView({ portalSlug, listSlug }: ListDetailViewP
           <span className="opacity-40">·</span>
 
           {/* Stats */}
-          <div className="flex items-center gap-1" style={{ color: categoryColor }}>
+          <div className="flex items-center gap-1 text-accent">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
             </svg>

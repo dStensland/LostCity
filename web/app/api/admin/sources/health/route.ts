@@ -11,6 +11,7 @@ type SourceHealth = {
   slug: string;
   url: string;
   is_active: boolean;
+  integration_method: string | null;
   last_run: string | null;
   last_status: string | null;
   last_error: string | null;
@@ -30,6 +31,7 @@ type SourceRow = {
   slug: string;
   url: string;
   is_active: boolean;
+  integration_method?: string | null;
   owner_portal_id?: string | null;
   owner_portal?: { id: string; name: string; slug: string } | null;
 };
@@ -52,7 +54,7 @@ export async function GET(request: NextRequest) {
   const { data: sourcesWithOwner, error: ownerError } = await supabase
     .from("sources")
     .select(`
-      id, name, slug, url, is_active, owner_portal_id,
+      id, name, slug, url, is_active, integration_method, owner_portal_id,
       owner_portal:portals!sources_owner_portal_id_fkey(id, name, slug)
     `)
     .order("name");
@@ -62,9 +64,9 @@ export async function GET(request: NextRequest) {
   } else {
     // Fallback: get basic source info without federation columns
     const { data: basicSources, error: basicError } = await supabase
-      .from("sources")
-      .select("id, name, slug, url, is_active")
-      .order("name");
+    .from("sources")
+    .select("id, name, slug, url, is_active, integration_method")
+    .order("name");
 
     if (basicError) {
       return NextResponse.json({ error: basicError.message }, { status: 500 });
@@ -133,6 +135,7 @@ export async function GET(request: NextRequest) {
       slug: source.slug,
       url: source.url,
       is_active: source.is_active,
+      integration_method: source.integration_method || null,
       last_run: lastLog?.started_at || null,
       last_status: lastLog?.status || null,
       last_error: lastLog?.error_message || null,

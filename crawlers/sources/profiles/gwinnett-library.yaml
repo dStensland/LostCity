@@ -1,0 +1,12 @@
+version: 1
+slug: gwinnett-library
+name: Gwinnett County Public Library
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://gwinnettpl.libnet.info/events
+detail:
+  enabled: false

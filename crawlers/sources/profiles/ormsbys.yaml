@@ -1,0 +1,12 @@
+version: 1
+slug: ormsbys
+name: Ormsby's
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.ormsbysatlanta.com
+detail:
+  enabled: false

@@ -1,0 +1,12 @@
+version: 1
+slug: atlutd-pubs
+name: Atlanta United Pub Partners
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.atlutd.com/fans/pub-partners
+detail:
+  enabled: false

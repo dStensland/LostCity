@@ -2,8 +2,8 @@
 
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useCallback, useMemo, useState, useEffect, useRef, useTransition } from "react";
-import { CATEGORIES } from "@/lib/search";
-import CategoryIcon, { CATEGORY_CONFIG, type CategoryType } from "./CategoryIcon";
+import { CATEGORIES } from "@/lib/search-constants";
+import CategoryIcon from "./CategoryIcon";
 import { useAuth } from "@/lib/auth-context";
 import { MobileFilterSheet } from "./MobileFilterSheet";
 
@@ -215,7 +215,7 @@ export default function SimpleFilterBar({ variant = "full" }: SimpleFilterBarPro
   return (
     <>
       {/* Desktop view (>= 640px) */}
-      <div className="hidden sm:block sticky top-[112px] z-40 bg-[var(--night)] border-b border-[var(--twilight)]">
+      <div className="hidden sm:block sticky top-[112px] z-40 filter-bar-surface">
         <div className={`max-w-5xl mx-auto px-4 ${variant === "compact" ? "py-1.5" : "py-2"}`}>
           <div className="flex items-center gap-2">
             {/* Category dropdown */}
@@ -225,10 +225,10 @@ export default function SimpleFilterBar({ variant = "full" }: SimpleFilterBarPro
                   setCategoryDropdownOpen(!categoryDropdownOpen);
                   setDateDropdownOpen(false);
                 }}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full font-mono text-xs font-medium transition-all ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full font-mono text-xs font-medium transition-all border ${
                   currentCategories.length > 0
-                    ? "bg-[var(--coral)] text-[var(--void)]"
-                    : "bg-[var(--twilight)] text-[var(--muted)] hover:text-[var(--cream)]"
+                    ? "bg-[var(--coral)] text-[var(--void)] border-[var(--coral)]/40 shadow-sm"
+                    : "bg-[var(--dusk)]/80 text-[var(--cream)]/80 border-[var(--twilight)]/80 hover:text-[var(--cream)] hover:border-[var(--coral)]/30"
                 }`}
               >
                 {categoryLabel}
@@ -239,7 +239,7 @@ export default function SimpleFilterBar({ variant = "full" }: SimpleFilterBarPro
 
               {/* Category dropdown menu */}
               {categoryDropdownOpen && (
-                <div className="absolute top-full left-0 mt-1 w-56 max-h-80 overflow-y-auto rounded-lg border border-[var(--twilight)] shadow-xl z-[100]" style={{ backgroundColor: "var(--void)" }}>
+                <div className="absolute top-full left-0 mt-1 w-56 max-h-80 overflow-y-auto rounded-lg border border-[var(--twilight)] shadow-xl z-[100] bg-[var(--void)]">
                   <div className="p-2">
                     {Object.entries(CATEGORY_GROUPS).map(([groupName, categoryValues], groupIdx) => (
                       <div key={groupName}>
@@ -266,7 +266,7 @@ export default function SimpleFilterBar({ variant = "full" }: SimpleFilterBarPro
                               <CategoryIcon
                                 type={cat.value}
                                 size={14}
-                                style={{ color: isActive ? "var(--void)" : CATEGORY_CONFIG[cat.value as CategoryType]?.color }}
+                                className={isActive ? "text-[var(--void)]" : "text-[var(--category-color,var(--muted))]"}
                                 glow={isActive ? "none" : "subtle"}
                               />
                               {cat.label}
@@ -308,7 +308,7 @@ export default function SimpleFilterBar({ variant = "full" }: SimpleFilterBarPro
                               <CategoryIcon
                                 type={cat.value}
                                 size={14}
-                                style={{ color: isActive ? "var(--void)" : CATEGORY_CONFIG[cat.value as CategoryType]?.color }}
+                                className={isActive ? "text-[var(--void)]" : "text-[var(--category-color,var(--muted))]"}
                                 glow={isActive ? "none" : "subtle"}
                               />
                               {cat.label}
@@ -334,10 +334,10 @@ export default function SimpleFilterBar({ variant = "full" }: SimpleFilterBarPro
                   setDateDropdownOpen(!dateDropdownOpen);
                   setCategoryDropdownOpen(false);
                 }}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full font-mono text-xs font-medium transition-all ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full font-mono text-xs font-medium transition-all border ${
                   currentDateFilter
-                    ? "bg-[var(--gold)] text-[var(--void)]"
-                    : "bg-[var(--twilight)] text-[var(--muted)] hover:text-[var(--cream)]"
+                    ? "bg-[var(--gold)] text-[var(--void)] border-[var(--gold)]/40 shadow-sm"
+                    : "bg-[var(--dusk)]/80 text-[var(--cream)]/80 border-[var(--twilight)]/80 hover:text-[var(--cream)] hover:border-[var(--coral)]/30"
                 }`}
               >
                 {dateFilterLabel}
@@ -348,7 +348,7 @@ export default function SimpleFilterBar({ variant = "full" }: SimpleFilterBarPro
 
               {/* Date dropdown menu */}
               {dateDropdownOpen && (
-                <div className="absolute top-full left-0 mt-1 w-40 rounded-lg border border-[var(--twilight)] shadow-xl z-[100]" style={{ backgroundColor: "var(--void)" }}>
+                <div className="absolute top-full left-0 mt-1 w-40 rounded-lg border border-[var(--twilight)] shadow-xl z-[100] bg-[var(--void)]">
                   <div className="p-2">
                     {SIMPLE_DATE_FILTERS.map((df) => {
                       const isActive = currentDateFilter === df.value;
@@ -396,10 +396,10 @@ export default function SimpleFilterBar({ variant = "full" }: SimpleFilterBarPro
             {/* Free only toggle */}
             <button
               onClick={toggleFreeOnly}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full font-mono text-xs font-medium transition-all ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full font-mono text-xs font-medium transition-all border ${
                 currentFreeOnly
-                  ? "bg-[var(--neon-green)] text-[var(--void)]"
-                  : "bg-[var(--twilight)] text-[var(--muted)] hover:text-[var(--cream)]"
+                  ? "bg-[var(--neon-green)] text-[var(--void)] border-[var(--neon-green)]/40 shadow-sm"
+                : "bg-[var(--dusk)]/80 text-[var(--cream)]/80 border-[var(--twilight)]/80 hover:text-[var(--cream)] hover:border-[var(--coral)]/30"
               }`}
             >
               <span className={`w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center ${
@@ -569,13 +569,7 @@ export default function SimpleFilterBar({ variant = "full" }: SimpleFilterBarPro
             {/* Scrollable pills container */}
             <div
               ref={scrollContainerRef}
-              className="flex items-center gap-2 overflow-x-auto px-4 pb-1 scrollbar-hide scroll-smooth"
-              style={{
-                scrollbarWidth: "none",
-                msOverflowStyle: "none",
-                WebkitOverflowScrolling: "touch",
-                scrollSnapType: "x proximity",
-              }}
+              className="flex items-center gap-2 overflow-x-auto px-4 pb-1 scrollbar-hide scroll-smooth snap-x snap-proximity scroll-touch scrollbar-none"
             >
               {/* Weekend pill */}
               <button
@@ -584,8 +578,7 @@ export default function SimpleFilterBar({ variant = "full" }: SimpleFilterBarPro
                   currentDateFilter === "weekend"
                     ? "bg-[var(--gold)] text-[var(--void)]"
                     : "bg-[var(--twilight)] text-[var(--cream)]"
-                }`}
-                style={{ scrollSnapAlign: "start" }}
+                } snap-start`}
               >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -600,8 +593,7 @@ export default function SimpleFilterBar({ variant = "full" }: SimpleFilterBarPro
                   currentFreeOnly
                     ? "bg-[var(--neon-green)] text-[var(--void)]"
                     : "bg-[var(--twilight)] text-[var(--cream)]"
-                }`}
-                style={{ scrollSnapAlign: "start" }}
+                } snap-start`}
               >
               <span className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
                 currentFreeOnly
@@ -624,14 +616,13 @@ export default function SimpleFilterBar({ variant = "full" }: SimpleFilterBarPro
                   <button
                     key={catValue}
                     onClick={() => toggleCategory(catValue)}
-                    className="flex-shrink-0 min-h-[44px] flex items-center gap-2 px-4 py-2.5 rounded-full font-mono text-xs font-medium bg-[var(--coral)] text-[var(--void)] transition-all"
-                    style={{ scrollSnapAlign: "start" }}
+                    className="flex-shrink-0 min-h-[44px] flex items-center gap-2 px-4 py-2.5 rounded-full font-mono text-xs font-medium bg-[var(--coral)] text-[var(--void)] transition-all snap-start"
                   >
                     <CategoryIcon
                       type={catValue}
                       size={14}
                       glow="none"
-                      style={{ color: "var(--void)" }}
+                      className="text-[var(--void)]"
                     />
                     {cat.label}
                     <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -644,16 +635,14 @@ export default function SimpleFilterBar({ variant = "full" }: SimpleFilterBarPro
               <>
                 <button
                   onClick={() => toggleCategory("music")}
-                  className="flex-shrink-0 min-h-[44px] flex items-center gap-2 px-4 py-2.5 rounded-full font-mono text-xs font-medium bg-[var(--twilight)] text-[var(--cream)] transition-all"
-                  style={{ scrollSnapAlign: "start" }}
+                  className="flex-shrink-0 min-h-[44px] flex items-center gap-2 px-4 py-2.5 rounded-full font-mono text-xs font-medium bg-[var(--twilight)] text-[var(--cream)] transition-all snap-start"
                 >
                   <CategoryIcon type="music" size={14} glow="none" />
                   Music
                 </button>
                 <button
                   onClick={() => toggleCategory("food_drink")}
-                  className="flex-shrink-0 min-h-[44px] flex items-center gap-2 px-4 py-2.5 rounded-full font-mono text-xs font-medium bg-[var(--twilight)] text-[var(--cream)] transition-all"
-                  style={{ scrollSnapAlign: "start" }}
+                  className="flex-shrink-0 min-h-[44px] flex items-center gap-2 px-4 py-2.5 rounded-full font-mono text-xs font-medium bg-[var(--twilight)] text-[var(--cream)] transition-all snap-start"
                 >
                   <CategoryIcon type="food_drink" size={14} glow="none" />
                   Food
@@ -664,8 +653,7 @@ export default function SimpleFilterBar({ variant = "full" }: SimpleFilterBarPro
               {/* More button - opens bottom sheet */}
               <button
                 onClick={() => setMobileSheetOpen(true)}
-                className="flex-shrink-0 min-h-[44px] flex items-center gap-1.5 px-4 py-2.5 rounded-full font-mono text-xs font-medium bg-[var(--twilight)] text-[var(--cream)] border border-[var(--twilight)] transition-all"
-                style={{ scrollSnapAlign: "start" }}
+                className="flex-shrink-0 min-h-[44px] flex items-center gap-1.5 px-4 py-2.5 rounded-full font-mono text-xs font-medium bg-[var(--twilight)] text-[var(--cream)] border border-[var(--twilight)] transition-all snap-start"
               >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />

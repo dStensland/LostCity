@@ -1,0 +1,14 @@
+version: 1
+slug: schwartz-center
+name: Schwartz Center for Performing Arts
+integration_method: playwright
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://arts.emory.edu
+  fetch:
+    render_js: true
+detail:
+  enabled: false

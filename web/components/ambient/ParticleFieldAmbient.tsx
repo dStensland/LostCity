@@ -1,6 +1,12 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useId } from "react";
+import ScopedStyles from "@/components/ScopedStyles";
+import {
+  createCssVarClass,
+  createCssVarClassForLength,
+  createCssVarClassForTime,
+} from "@/lib/css-utils";
 import type { PortalAmbientConfig } from "@/lib/portal-context";
 
 interface ParticleFieldAmbientProps {
@@ -69,50 +75,80 @@ export default function ParticleFieldAmbient({ config }: ParticleFieldAmbientPro
     }));
   }, [particleCount, primaryColor, secondaryColor, speedMultiplier, sizeMultiplier]);
 
+  const rawId = useId();
+  const instanceClass = `particle-field-${rawId.replace(/[^a-zA-Z0-9_-]/g, "")}`;
+  const particleStyles = particles.map((particle) => ({
+    leftClass: createCssVarClassForLength("--particle-left", particle.left, "particle-left"),
+    topClass: createCssVarClassForLength("--particle-top", particle.top, "particle-top"),
+    sizeClass: createCssVarClassForLength("--particle-size", `${particle.size}px`, "particle-size"),
+    colorClass: createCssVarClass("--particle-color", particle.color, "particle-color"),
+    delayClass: createCssVarClassForTime("--particle-delay", `${particle.delay}s`, "particle-delay"),
+    durationClass: createCssVarClassForTime("--particle-duration", `${particle.duration}s`, "particle-duration"),
+  }));
+  const particleVars = particleStyles
+    .flatMap((entry) => [
+      entry.leftClass?.css,
+      entry.topClass?.css,
+      entry.sizeClass?.css,
+      entry.colorClass?.css,
+      entry.delayClass?.css,
+      entry.durationClass?.css,
+    ])
+    .filter(Boolean)
+    .join("\n");
+  const css = `
+    ${particleVars}
+    .${instanceClass} .particle {
+      position: absolute;
+      left: var(--particle-left);
+      top: var(--particle-top);
+      width: var(--particle-size);
+      height: var(--particle-size);
+      background-color: var(--particle-color);
+      opacity: ${opacity};
+      border-radius: 9999px;
+      box-shadow: 0 0 calc(var(--particle-size) * 0.5) color-mix(in srgb, var(--particle-color) 25%, transparent);
+      animation: particle-float var(--particle-duration) ease-in-out infinite;
+      animation-delay: var(--particle-delay);
+    }
+    @keyframes particle-float {
+      0%, 100% {
+        transform: translate(0, 0) scale(1);
+        opacity: ${opacity};
+      }
+      25% {
+        transform: translate(${20 * speedMultiplier}px, -${30 * speedMultiplier}px) scale(1.1);
+        opacity: ${opacity * 0.8};
+      }
+      50% {
+        transform: translate(${-10 * speedMultiplier}px, ${20 * speedMultiplier}px) scale(0.9);
+        opacity: ${opacity * 1.2};
+      }
+      75% {
+        transform: translate(${-20 * speedMultiplier}px, -${10 * speedMultiplier}px) scale(1.05);
+        opacity: ${opacity * 0.9};
+      }
+    }
+  `;
+
   return (
     <div
-      className="ambient-layer fixed inset-0 pointer-events-none z-0 overflow-hidden"
+      className={`ambient-layer fixed inset-0 pointer-events-none z-0 overflow-hidden ${instanceClass}`}
       aria-hidden="true"
     >
-      {particles.map((particle) => (
+      <ScopedStyles css={css} />
+      {particles.map((particle, index) => (
         <div
           key={particle.id}
-          className="absolute rounded-full"
-          style={{
-            left: particle.left,
-            top: particle.top,
-            width: particle.size,
-            height: particle.size,
-            backgroundColor: particle.color,
-            opacity: opacity,
-            boxShadow: `0 0 ${particle.size * 0.5}px ${particle.color}40`, // Softer glow
-            animation: `particle-float ${particle.duration}s ease-in-out infinite`,
-            animationDelay: `${particle.delay}s`,
-          }}
+          className={`particle ${
+            particleStyles[index].leftClass?.className ?? ""
+          } ${particleStyles[index].topClass?.className ?? ""} ${
+            particleStyles[index].sizeClass?.className ?? ""
+          } ${particleStyles[index].colorClass?.className ?? ""} ${
+            particleStyles[index].delayClass?.className ?? ""
+          } ${particleStyles[index].durationClass?.className ?? ""}`}
         />
       ))}
-
-      {/* Keyframes injected via style tag */}
-      <style>{`
-        @keyframes particle-float {
-          0%, 100% {
-            transform: translate(0, 0) scale(1);
-            opacity: ${opacity};
-          }
-          25% {
-            transform: translate(${20 * speedMultiplier}px, -${30 * speedMultiplier}px) scale(1.1);
-            opacity: ${opacity * 0.8};
-          }
-          50% {
-            transform: translate(${-10 * speedMultiplier}px, ${20 * speedMultiplier}px) scale(0.9);
-            opacity: ${opacity * 1.2};
-          }
-          75% {
-            transform: translate(${-20 * speedMultiplier}px, -${10 * speedMultiplier}px) scale(1.05);
-            opacity: ${opacity * 0.9};
-          }
-        }
-      `}</style>
     </div>
   );
 }

@@ -1,0 +1,12 @@
+version: 1
+slug: le-colonial-atlanta
+name: Le Colonial Atlanta
+integration_method: llm_crawler
+defaults: {}
+discovery:
+  enabled: true
+  type: html
+  urls:
+  - https://www.lecolonial.com/atlanta/happenings/
+detail:
+  enabled: false

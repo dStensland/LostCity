@@ -1,6 +1,7 @@
 import { getSpotBySlug, getUpcomingEventsForSpot, getNearbySpots, formatPriceLevel, getSpotTypeLabel, getSpotTypeLabels, SPOT_TYPES, type SpotType } from "@/lib/spots";
 import { getCachedPortalBySlug } from "@/lib/portal";
 import { notFound } from "next/navigation";
+import Link from "next/link";
 import type { Metadata } from "next";
 import { cache } from "react";
 import { format, parseISO } from "date-fns";
@@ -8,6 +9,8 @@ import { formatTimeSplit, safeJsonLd } from "@/lib/formats";
 import UnifiedHeader from "@/components/UnifiedHeader";
 import PortalFooter from "@/components/PortalFooter";
 import { PortalTheme } from "@/components/PortalTheme";
+import ScopedStylesServer from "@/components/ScopedStylesServer";
+import { createCssVarClass } from "@/lib/css-utils";
 import VenueTagList from "@/components/VenueTagList";
 import FlagButton from "@/components/FlagButton";
 import FollowButton from "@/components/FollowButton";
@@ -122,7 +125,14 @@ export default async function PortalSpotPage({ params }: Props) {
   const primaryType = spot.venue_type as SpotType | null;
   const typeInfo = primaryType ? SPOT_TYPES[primaryType] : null;
   const spotTypeColor = getSpotTypeColor(spot.venue_type);
+  const spotTypeAccentClass = createCssVarClass("--accent-color", spotTypeColor, "spot-type");
   const priceDisplay = formatPriceLevel(spot.price_level);
+  const claimHref = `/claim?${new URLSearchParams({
+    type: "venue",
+    id: spot.id.toString(),
+    name: spot.name,
+    return: `/${activePortalSlug}/spots/${spot.slug}`,
+  }).toString()}`;
 
   // Generate Schema.org LocalBusiness JSON-LD
   const schema = {
@@ -152,6 +162,8 @@ export default async function PortalSpotPage({ params }: Props) {
       {/* Portal-specific theming */}
       {portal && <PortalTheme portal={portal} />}
 
+      <ScopedStylesServer css={spotTypeAccentClass?.css} />
+
       <div className="min-h-screen">
         <UnifiedHeader
           portalSlug={activePortalSlug}
@@ -174,12 +186,10 @@ export default async function PortalSpotPage({ params }: Props) {
             }
             badge={
               typeInfo && (
-                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-mono uppercase tracking-wider"
-                  style={{
-                    backgroundColor: `${spotTypeColor}20`,
-                    color: spotTypeColor,
-                    border: `1px solid ${spotTypeColor}40`,
-                  }}
+                <span
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-mono uppercase tracking-wider bg-accent-20 text-accent border border-accent-40 ${
+                    spotTypeAccentClass?.className ?? ""
+                  }`}
                 >
                   <span>{typeInfo.icon}</span>
                   {spot.venue_types && spot.venue_types.length > 1
@@ -193,6 +203,12 @@ export default async function PortalSpotPage({ params }: Props) {
             <div className="flex items-center gap-2 mt-3">
               <FollowButton targetVenueId={spot.id} size="sm" />
               <RecommendButton venueId={spot.id} size="sm" />
+              <Link
+                href={claimHref}
+                className="text-[var(--muted)] hover:text-[var(--cream)] font-mono text-xs"
+              >
+                Claim this venue
+              </Link>
             </div>
           </DetailHero>
 

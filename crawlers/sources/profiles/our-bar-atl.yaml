@@ -1,0 +1,12 @@
+version: 1
+slug: our-bar-atl
+name: Our Bar ATL
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.ourbaratl.com
+detail:
+  enabled: false

@@ -1,0 +1,14 @@
+version: 1
+slug: atlanta-gladiators
+name: Atlanta Gladiators
+integration_method: playwright
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.atlantagladiators.com/schedule
+  fetch:
+    render_js: true
+detail:
+  enabled: false

@@ -1,0 +1,12 @@
+version: 1
+slug: castleberry-art-stroll
+name: Castleberry Hill Art Stroll
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://castleberryhill.org
+detail:
+  enabled: false

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient, getUser } from "@/lib/supabase/server";
 import { errorResponse } from "@/lib/api-utils";
 import { logger } from "@/lib/logger";
+import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 
 type UserPreferences = {
   favorite_categories: string[] | null;
@@ -21,12 +22,15 @@ type RsvpStat = {
   status: string;
 };
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const user = await getUser();
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.read, getClientIdentifier(request));
+    if (rateLimitResult) return rateLimitResult;
 
     const supabase = await createClient();
 

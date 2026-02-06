@@ -1,0 +1,12 @@
+version: 1
+slug: carter-center
+name: The Carter Center
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://cartercenter.org/events
+detail:
+  enabled: false

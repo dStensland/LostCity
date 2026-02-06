@@ -1,6 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import ScopedStyles from "@/components/ScopedStyles";
+import {
+  createCssVarClass,
+  createCssVarClassForLength,
+  createCssVarClassForNumber,
+  createCssVarClassForTime,
+} from "@/lib/css-utils";
 
 interface ConfettiProps {
   isActive: boolean;
@@ -61,25 +68,45 @@ export default function Confetti({ isActive, duration = 2000 }: ConfettiProps) {
 
   if (!show || particles.length === 0) return null;
 
+  const particleStyles = particles.map((particle) => ({
+    xClass: createCssVarClassForLength("--confetti-x", `${particle.x}%`, "confetti-x"),
+    delayClass: createCssVarClassForTime("--confetti-delay", `${particle.delay}s`, "confetti-delay"),
+    rotationClass: createCssVarClassForNumber("--confetti-rotation", `${particle.rotation}`, "confetti-rot"),
+    scaleClass: createCssVarClassForNumber("--confetti-scale", `${particle.scale}`, "confetti-scale"),
+    colorClass: createCssVarClass("--confetti-color", particle.color, "confetti-color"),
+  }));
+
+  const confettiCss = particleStyles
+    .flatMap((entry) => [
+      entry.xClass?.css,
+      entry.delayClass?.css,
+      entry.rotationClass?.css,
+      entry.scaleClass?.css,
+      entry.colorClass?.css,
+    ])
+    .filter(Boolean)
+    .join("\n");
+
   return (
     <div className="fixed inset-0 pointer-events-none z-[200] overflow-hidden">
-      {particles.map((particle) => (
+      <ScopedStyles css={confettiCss} />
+      {particles.map((particle, index) => {
+        const classes = particleStyles[index];
+        return (
         <div
           key={particle.id}
-          className="absolute animate-confetti-fall"
-          style={{
-            left: `${particle.x}%`,
-            top: "-20px",
-            animationDelay: `${particle.delay}s`,
-            transform: `rotate(${particle.rotation}deg) scale(${particle.scale})`,
-          }}
+          className={`absolute animate-confetti-fall confetti-delay confetti-transform left-[var(--confetti-x)] top-[-20px] ${
+            classes.xClass?.className ?? ""
+          } ${classes.delayClass?.className ?? ""} ${classes.rotationClass?.className ?? ""} ${
+            classes.scaleClass?.className ?? ""
+          }`}
         >
           <div
-            className="w-3 h-3 rounded-sm"
-            style={{ backgroundColor: particle.color }}
+            className={`w-3 h-3 rounded-sm bg-[var(--confetti-color)] ${classes.colorClass?.className ?? ""}`}
           />
         </div>
-      ))}
+      );
+      })}
     </div>
   );
 }

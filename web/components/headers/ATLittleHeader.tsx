@@ -25,15 +25,6 @@ const TABS: NavTab[] = [
   { key: "community", label: "Friends", emoji: "👋", href: "?view=community" },
 ];
 
-const C = {
-  orange: "#FF5722",
-  green: "#4CAF50",
-  purple: "#9C27B0",
-  cream: "#FFF8E7",
-  paper: "#FFFDF5",
-  ink: "#1A1A1A",
-};
-
 export default function ATLittleHeader() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -114,17 +105,12 @@ export default function ATLittleHeader() {
   }, [router]);
 
   return (
-    <header
-      className="sticky top-0 z-[100]"
-      style={{ backgroundColor: C.cream }}
-    >
+    <header className="sticky top-0 z-[100] family-theme bg-[var(--family-cream)]">
       {/* Main bar */}
       <div
-        className="relative h-16 flex items-center justify-between px-4 transition-shadow duration-200"
-        style={{
-          boxShadow: isScrolled ? `0 4px 0 ${C.ink}` : "none",
-          borderBottom: `3px solid ${C.ink}`,
-        }}
+        className={`relative h-16 flex items-center justify-between px-4 transition-shadow duration-200 family-header ${
+          isScrolled ? "family-header-shadow" : ""
+        }`}
       >
         {/* Logo */}
         <Link
@@ -133,16 +119,10 @@ export default function ATLittleHeader() {
         >
           {/* Badge style logo */}
           <div
-            className="relative px-4 py-1.5 rounded-full transition-transform group-hover:scale-105 group-hover:-rotate-2"
-            style={{
-              backgroundColor: C.orange,
-              border: `3px solid ${C.ink}`,
-              boxShadow: `3px 3px 0 ${C.ink}`,
-            }}
+            className="relative px-4 py-1.5 rounded-full transition-transform group-hover:scale-105 group-hover:-rotate-2 family-logo-badge"
           >
             <span
-              className="text-xl font-black text-white"
-              style={{ fontFamily: "var(--font-baloo), var(--font-nunito), system-ui" }}
+              className="text-xl font-black text-white family-font-display"
             >
               ATLittle
             </span>
@@ -152,8 +132,7 @@ export default function ATLittleHeader() {
         {/* Desktop Nav - Pill style */}
         <nav className="hidden sm:flex items-center" role="tablist" aria-label="Main navigation">
           <div
-            className="flex items-center gap-1 p-1 rounded-full"
-            style={{ backgroundColor: C.paper, border: `2px solid ${C.ink}` }}
+            className="flex items-center gap-1 p-1 rounded-full family-nav-wrap"
           >
             {TABS.map((tab, index) => {
               const active = isActive(tab);
@@ -161,12 +140,9 @@ export default function ATLittleHeader() {
                 <Link
                   key={tab.key}
                   href={`/${portalSlug}${tab.href}`}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-full font-bold text-sm transition-all"
-                  style={{
-                    backgroundColor: active ? C.ink : "transparent",
-                    color: active ? "white" : C.ink,
-                    fontFamily: "var(--font-nunito), system-ui",
-                  }}
+                  className={`flex items-center gap-1.5 px-4 py-2 rounded-full font-bold text-sm transition-all family-font ${
+                    active ? "bg-[var(--family-ink)] text-white" : "text-[var(--family-ink)]"
+                  }`}
                   role="tab"
                   aria-selected={active}
                   aria-controls={`${tab.key}-panel`}
@@ -185,24 +161,14 @@ export default function ATLittleHeader() {
         <div className="flex items-center gap-2">
           {/* Search */}
           <div
-            className="rounded-full transition-transform hover:scale-105"
-            style={{
-              border: `2px solid ${C.ink}`,
-              boxShadow: `2px 2px 0 ${C.ink}`,
-              backgroundColor: C.paper,
-            }}
+            className="rounded-full transition-transform hover:scale-105 family-header-pill"
           >
             <HeaderSearchButton />
           </div>
 
           {/* User */}
           <div
-            className="rounded-full transition-transform hover:scale-105"
-            style={{
-              border: `2px solid ${C.ink}`,
-              boxShadow: `2px 2px 0 ${C.ink}`,
-              backgroundColor: C.paper,
-            }}
+            className="rounded-full transition-transform hover:scale-105 family-header-pill"
           >
             <UserMenu />
           </div>
@@ -211,13 +177,9 @@ export default function ATLittleHeader() {
           <div className="relative sm:hidden" ref={mobileMenuRef}>
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="flex items-center justify-center w-10 h-10 rounded-full transition-all"
-              style={{
-                backgroundColor: mobileMenuOpen ? C.ink : C.paper,
-                color: mobileMenuOpen ? "white" : C.ink,
-                border: `2px solid ${C.ink}`,
-                boxShadow: `2px 2px 0 ${C.ink}`,
-              }}
+              className={`flex items-center justify-center w-10 h-10 rounded-full transition-all family-header-pill ${
+                mobileMenuOpen ? "bg-[var(--family-ink)] text-white" : "bg-[var(--family-paper)] text-[var(--family-ink)]"
+              }`}
               aria-expanded={mobileMenuOpen}
               aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
             >
@@ -226,12 +188,7 @@ export default function ATLittleHeader() {
 
             {mobileMenuOpen && (
               <div
-                className="absolute right-0 top-full mt-3 w-52 rounded-2xl overflow-hidden z-50"
-                style={{
-                  backgroundColor: C.paper,
-                  border: `3px solid ${C.ink}`,
-                  boxShadow: `4px 4px 0 ${C.ink}`,
-                }}
+                className="absolute right-0 top-full mt-3 w-52 rounded-2xl overflow-hidden z-50 family-menu-panel"
               >
                 {TABS.map((tab) => {
                   const active = isActive(tab);
@@ -240,12 +197,9 @@ export default function ATLittleHeader() {
                       key={tab.key}
                       href={`/${portalSlug}${tab.href}`}
                       onClick={() => setMobileMenuOpen(false)}
-                      className="flex items-center gap-3 px-4 py-3 font-bold text-base transition-colors"
-                      style={{
-                        backgroundColor: active ? C.orange : "transparent",
-                        color: active ? "white" : C.ink,
-                        fontFamily: "var(--font-nunito), system-ui",
-                      }}
+                      className={`flex items-center gap-3 px-4 py-3 font-bold text-base transition-colors family-font ${
+                        active ? "bg-[var(--family-orange)] text-white" : "text-[var(--family-ink)]"
+                      }`}
                     >
                       <span className="text-xl">{tab.emoji}</span>
                       <span>{tab.label}</span>

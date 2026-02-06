@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
-import { isValidString, isValidUrl, validationError, checkBodySize, apiResponse, errorApiResponse, successResponse } from "@/lib/api-utils";
+import { isValidString, isValidUrl, validationError, checkBodySize, errorApiResponse, successResponse } from "@/lib/api-utils";
 import { logger } from "@/lib/logger";
 
 /**
@@ -13,8 +13,9 @@ import { logger } from "@/lib/logger";
  * users always have a profile before doing authenticated operations.
  */
 export async function GET(request: NextRequest) {
-  // Apply rate limiting to prevent abuse
-  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.auth, getClientIdentifier(request));
+  // Apply rate limiting - use standard limit since profile fetches happen frequently
+  // (auth limit is for login/signup brute force protection)
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.standard, getClientIdentifier(request));
   if (rateLimitResult) return rateLimitResult;
 
   try {

@@ -1,0 +1,14 @@
+version: 1
+slug: pisces-atlanta
+name: Pisces Atlanta
+integration_method: playwright
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.piscesatlanta.com
+  fetch:
+    render_js: true
+detail:
+  enabled: false

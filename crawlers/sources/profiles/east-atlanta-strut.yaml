@@ -1,0 +1,12 @@
+version: 1
+slug: east-atlanta-strut
+name: East Atlanta Strut
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.eastatlantastrut.com
+detail:
+  enabled: false

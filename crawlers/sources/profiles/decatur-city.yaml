@@ -1,0 +1,12 @@
+version: 1
+slug: decatur-city
+name: City of Decatur
+integration_method: llm_crawler
+defaults: {}
+discovery:
+  enabled: true
+  type: html
+  urls:
+  - https://www.decaturga.com/calendar
+detail:
+  enabled: false

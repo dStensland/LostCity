@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, getUser, isAdmin } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 import {
   errorResponse,
   isValidEnum,
@@ -14,6 +15,7 @@ import type {
   ProducerSubmissionData,
 } from "@/lib/types";
 import { autoApproveVenue } from "@/lib/venue-auto-approve";
+import { createEventFromSubmission } from "@/lib/submissions/approval";
 import crypto from "crypto";
 import { logger } from "@/lib/logger";
 import { escapeSQLPattern } from "@/lib/api-utils";
@@ -79,8 +81,9 @@ export async function GET(request: NextRequest) {
     query = query.eq("status", status);
   }
 
-  if (type && isValidEnum(type, ["event", "venue", "producer"] as const)) {
-    query = query.eq("submission_type", type);
+  const normalizedType = type === "organization" ? "producer" : type;
+  if (normalizedType && isValidEnum(normalizedType, ["event", "venue", "producer"] as const)) {
+    query = query.eq("submission_type", normalizedType);
   }
 
   const { data, error, count } = await query;
@@ -105,9 +108,29 @@ export async function GET(request: NextRequest) {
     needs_edit: statusCounts?.filter((s) => s.status === "needs_edit").length || 0,
   };
 
+  const { data: profileData } = await supabase
+    .from("profiles")
+    .select("trust_tier")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  const profile = profileData as { trust_tier: string | null } | null;
+  const trustScore = counts.approved + counts.rejected > 0
+    ? counts.approved / (counts.approved + counts.rejected)
+    : null;
+  const trustEligible =
+    trustScore !== null && counts.approved >= 5 && trustScore >= 0.9;
+  const trustTier = profile?.trust_tier || "standard";
+
   return NextResponse.json({
     submissions: data || [],
     counts,
+    trust: {
+      score: trustScore,
+      eligible: trustEligible,
+      tier: trustTier,
+      is_trusted: trustTier === "trusted_submitter",
+    },
     pagination: {
       total: count || 0,
       limit,
@@ -137,15 +160,18 @@ export async function POST(request: NextRequest) {
     duplicate_acknowledged,
     image_urls,
   } = body as {
-    submission_type: SubmissionType;
+    submission_type: SubmissionType | "producer" | "organization";
     data: EventSubmissionData | VenueSubmissionData | ProducerSubmissionData;
     portal_id?: string;
     duplicate_acknowledged?: boolean;
     image_urls?: string[];
   };
 
+  const normalizedSubmissionType =
+    submission_type === "organization" ? "producer" : submission_type;
+
   // Validate submission type
-  if (!isValidEnum(submission_type, ["event", "venue", "producer"] as const)) {
+  if (!isValidEnum(normalizedSubmissionType, ["event", "venue", "producer"] as const)) {
     return NextResponse.json(
       { error: "Invalid submission_type. Must be event, venue, or producer" },
       { status: 400 }
@@ -179,14 +205,14 @@ export async function POST(request: NextRequest) {
       .from("submissions")
       .select("*", { count: "exact", head: true })
       .eq("submitted_by", user.id)
-      .eq("submission_type", submission_type)
+      .eq("submission_type", normalizedSubmissionType)
       .gte("created_at", today.toISOString());
 
-    const dailyLimit = SUBMISSION_LIMITS[submission_type];
+    const dailyLimit = SUBMISSION_LIMITS[normalizedSubmissionType as keyof typeof SUBMISSION_LIMITS];
     if ((todayCount || 0) >= dailyLimit) {
       return NextResponse.json(
         {
-          error: `Daily limit reached. You can submit ${dailyLimit} ${submission_type}s per day.`,
+          error: `Daily limit reached. You can submit ${dailyLimit} ${normalizedSubmissionType}s per day.`,
           limit: dailyLimit,
           used: todayCount,
         },
@@ -196,12 +222,13 @@ export async function POST(request: NextRequest) {
   }
 
   // Validate type-specific required fields
-  const validationError = validateSubmissionData(submission_type, data);
+  const validationError = validateSubmissionData(normalizedSubmissionType, data);
   if (validationError) {
     return NextResponse.json({ error: validationError }, { status: 400 });
   }
 
   // Check portal permissions if portal_id provided
+  let portalSettings: { submissions?: { enabled?: boolean; require_approval?: boolean; who_can_submit?: string } } | null = null;
   if (portal_id) {
     const { data: portalData } = await supabase
       .from("portals")
@@ -216,8 +243,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if submissions are enabled for this portal
-    const settings = portal.settings as { submissions?: { enabled?: boolean; who_can_submit?: string } } | null;
-    if (settings?.submissions?.enabled === false) {
+    portalSettings = portal.settings as { submissions?: { enabled?: boolean; require_approval?: boolean; who_can_submit?: string } } | null;
+    if (portalSettings?.submissions?.enabled === false) {
       return NextResponse.json(
         { error: "Submissions are not enabled for this portal" },
         { status: 403 }
@@ -226,14 +253,14 @@ export async function POST(request: NextRequest) {
   }
 
   // Generate content hash for duplicate detection
-  const contentHash = generateContentHash(submission_type, data);
+  const contentHash = generateContentHash(normalizedSubmissionType, data);
 
   // Check for potential duplicates
   let potentialDuplicate: { id: number; type: string } | null = null;
-  if (submission_type === "event") {
+  if (normalizedSubmissionType === "event") {
     const eventData = data as EventSubmissionData;
     potentialDuplicate = await findEventDuplicate(supabase, eventData, contentHash);
-  } else if (submission_type === "venue") {
+  } else if (normalizedSubmissionType === "venue") {
     const venueData = data as VenueSubmissionData;
     potentialDuplicate = await findVenueDuplicate(supabase, venueData);
   }
@@ -250,8 +277,127 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  // Auto-approve events for trusted submitters (existing venues only)
+  if (normalizedSubmissionType === "event") {
+    const eventData = data as EventSubmissionData;
+    const serviceClient = createServiceClient();
+    const { data: profileData } = await serviceClient
+      .from("profiles")
+      .select("trust_tier, is_admin")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    const profile = profileData as { trust_tier: string | null; is_admin: boolean | null } | null;
+    const isTrusted =
+      profile?.is_admin === true || profile?.trust_tier === "trusted_submitter";
+
+    const portalRequiresApproval = portalSettings?.submissions?.require_approval === true;
+
+    const hasProof =
+      Boolean(eventData.ticket_url || eventData.source_url) ||
+      (image_urls?.length ?? 0) > 0;
+
+    const hasExistingVenue = Boolean(eventData.venue_id);
+    const hasInlineVenue = Boolean(eventData.venue);
+    const hasInlineOrganization = Boolean(eventData.organization);
+
+    let canAutoApprove =
+      isTrusted &&
+      !portalRequiresApproval &&
+      hasExistingVenue &&
+      !hasInlineVenue &&
+      !hasInlineOrganization &&
+      hasProof &&
+      !potentialDuplicate;
+
+    if (canAutoApprove && eventData.venue_id) {
+      const { data: venueExists } = await serviceClient
+        .from("venues")
+        .select("id")
+        .eq("id", eventData.venue_id)
+        .maybeSingle();
+      if (!venueExists) {
+        canAutoApprove = false;
+      }
+    }
+
+    if (canAutoApprove && eventData.organization_id) {
+      const { data: orgExists } = await serviceClient
+        .from("organizations")
+        .select("id")
+        .eq("id", eventData.organization_id)
+        .maybeSingle();
+      if (!orgExists) {
+        canAutoApprove = false;
+      }
+    }
+
+    if (canAutoApprove) {
+      const ip = request.headers.get("x-forwarded-for")?.split(",")[0] ||
+        request.headers.get("x-real-ip") ||
+        null;
+
+      const { data: submission, error: submissionError } = await serviceClient
+        .from("submissions")
+        .insert({
+          submission_type: "event",
+          status: "pending",
+          submitted_by: user.id,
+          portal_id: portal_id || null,
+          data,
+          content_hash: contentHash,
+          potential_duplicate_id: potentialDuplicate?.id || null,
+          potential_duplicate_type: potentialDuplicate?.type || null,
+          duplicate_acknowledged: duplicate_acknowledged || false,
+          image_urls: image_urls || null,
+          ip_address: ip,
+        } as never)
+        .select()
+        .maybeSingle();
+
+      if (submissionError || !submission) {
+        logger.error("Trusted auto-approve submission creation error", submissionError, { userId: user.id, component: "submissions" });
+        return errorResponse(submissionError, "submission creation");
+      }
+
+      try {
+        const approvedEventId = await createEventFromSubmission(
+          serviceClient,
+          eventData,
+          user.id,
+          submission.id
+        );
+
+        const { data: updated } = await serviceClient
+          .from("submissions")
+          .update({
+            status: "approved",
+            approved_event_id: approvedEventId,
+            reviewed_at: new Date().toISOString(),
+            admin_notes: "Auto-approved (trusted submitter)",
+          } as never)
+          .eq("id", submission.id)
+          .select()
+          .maybeSingle();
+
+        return NextResponse.json(
+          {
+            submission: updated || submission,
+            approved_event_id: approvedEventId,
+            autoApproved: true,
+            message: "Submission auto-approved.",
+          },
+          { status: 201 }
+        );
+      } catch (error) {
+        logger.error("Trusted auto-approve event creation failed", error, { userId: user.id, component: "submissions" });
+        return errorResponse(error, "auto-approve event creation");
+      }
+    }
+  }
+
   // Auto-approve venue with Foursquare Place ID
-  if (submission_type === "venue") {
+  if (normalizedSubmissionType === "venue") {
     const venueData = data as VenueSubmissionData;
     const placeId = venueData.foursquare_id || venueData.google_place_id;
     if (placeId) {
@@ -306,7 +452,7 @@ export async function POST(request: NextRequest) {
   const { data: submission, error } = await supabase
     .from("submissions")
     .insert({
-      submission_type,
+      submission_type: normalizedSubmissionType,
       submitted_by: user.id,
       portal_id: portal_id || null,
       data,

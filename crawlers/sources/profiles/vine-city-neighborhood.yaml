@@ -1,0 +1,12 @@
+version: 1
+slug: vine-city-neighborhood
+name: Vine City Neighborhood (NPU-L)
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.atlantaga.gov
+detail:
+  enabled: false

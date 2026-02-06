@@ -1,0 +1,12 @@
+version: 1
+slug: shaky-knees
+name: Shaky Knees Festival
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.shakykneesfestival.com
+detail:
+  enabled: false

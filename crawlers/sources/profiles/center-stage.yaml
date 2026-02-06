@@ -1,0 +1,12 @@
+version: 1
+slug: center-stage
+name: Center Stage
+integration_method: llm_crawler
+defaults: {}
+discovery:
+  enabled: true
+  type: html
+  urls:
+  - https://www.centerstage-atlanta.com
+detail:
+  enabled: false

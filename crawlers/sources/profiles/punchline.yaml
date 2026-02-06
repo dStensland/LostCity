@@ -1,0 +1,14 @@
+version: 1
+slug: punchline
+name: Punchline Comedy Club
+integration_method: playwright
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://punchline.com
+  fetch:
+    render_js: true
+detail:
+  enabled: false

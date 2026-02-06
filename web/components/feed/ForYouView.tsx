@@ -46,13 +46,12 @@ function EventSkeleton() {
   );
 }
 
-function ForYouViewInner({ portalSlug, portalId }: ForYouViewProps) {
+function ForYouViewInner({ portalSlug }: ForYouViewProps) {
   const loaderRef = useRef<HTMLDivElement>(null);
-  const { filters, hasActiveFilters, togglePersonalized } = useForYouFilters();
+  const { hasActiveFilters } = useForYouFilters();
 
   const {
     events,
-    personalization,
     hasPreferences,
     isLoading,
     isFetchingNextPage,
@@ -250,7 +249,7 @@ function ForYouViewInner({ portalSlug, portalId }: ForYouViewProps) {
 }
 
 export default function ForYouView(props: ForYouViewProps) {
-  const { hasActiveFilters, togglePersonalized } = useForYouFilters();
+  const { togglePersonalized } = useForYouFilters();
   const { personalization } = useForYouEvents({ portalSlug: props.portalSlug });
 
   return (

@@ -1,0 +1,12 @@
+version: 1
+slug: schermerhorn
+name: Schermerhorn Symphony Center
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.nashvillesymphony.org/tickets/
+detail:
+  enabled: false

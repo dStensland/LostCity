@@ -1,0 +1,12 @@
+version: 1
+slug: mint-gallery
+name: Mint Gallery
+integration_method: llm_crawler
+defaults: {}
+discovery:
+  enabled: true
+  type: html
+  urls:
+  - https://mintgallery.com/events
+detail:
+  enabled: false

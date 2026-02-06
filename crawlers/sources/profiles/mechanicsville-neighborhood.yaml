@@ -1,0 +1,12 @@
+version: 1
+slug: mechanicsville-neighborhood
+name: Mechanicsville Neighborhood (NPU-V)
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.atlantaga.gov
+detail:
+  enabled: false

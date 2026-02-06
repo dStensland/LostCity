@@ -1,0 +1,12 @@
+version: 1
+slug: high-museum
+name: High Museum
+integration_method: llm_crawler
+defaults: {}
+discovery:
+  enabled: true
+  type: html
+  urls:
+  - https://high.org/events
+detail:
+  enabled: false

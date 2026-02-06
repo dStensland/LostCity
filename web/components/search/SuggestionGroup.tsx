@@ -59,10 +59,7 @@ export default function SuggestionGroup({
       {/* Group header */}
       <div className="flex items-center gap-2 px-3 pb-1.5 pt-1">
         <TypeIcon type={type} className={`h-3 w-3 ${typeColor}`} />
-        <span
-          className="text-[0.6rem] font-mono uppercase tracking-wider"
-          style={{ color: getTypeAccent(type) }}
-        >
+        <span className={`text-[0.6rem] font-mono uppercase tracking-wider ${typeColor}`}>
           {typeLabel}
         </span>
         {displayCount > 0 && (
@@ -93,12 +90,11 @@ export default function SuggestionGroup({
             aria-selected={isSelected}
             onMouseDown={() => onSelect(result)}
             onMouseEnter={() => onHover(globalIndex)}
-            className={`flex items-center gap-2.5 w-full text-left px-3 py-2 text-sm rounded-lg transition-all mx-1 ${
+            className={`flex items-center gap-2.5 w-full text-left px-3 py-2 text-sm rounded-lg transition-all mx-1 w-[calc(100%-8px)] ${
               isSelected
                 ? "bg-[var(--twilight)] text-[var(--cream)] translate-x-0.5"
                 : "text-[var(--cream)] hover:bg-[var(--twilight)]/50"
             }`}
-            style={{ width: "calc(100% - 8px)" }}
           >
             {/* Result icon */}
             <TypeIcon
@@ -176,19 +172,6 @@ function getTypeColor(type: SearchResult["type"]): string {
     category: "text-[var(--muted)]",
   };
   return colors[type] || "text-[var(--muted)]";
-}
-
-function getTypeAccent(type: SearchResult["type"]): string {
-  const colors: Record<SearchResult["type"], string> = {
-    event: "var(--neon-magenta)",
-    venue: "var(--coral)",
-    organizer: "var(--coral)",
-    series: "var(--gold)",
-    list: "var(--neon-green)",
-    neighborhood: "var(--soft)",
-    category: "var(--muted)",
-  };
-  return colors[type] || "var(--muted)";
 }
 
 function formatEventDate(dateStr: string): string {

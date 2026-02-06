@@ -1,0 +1,14 @@
+version: 1
+slug: resident-advisor
+name: Resident Advisor
+integration_method: playwright
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://ra.co/events/us/atlanta
+  fetch:
+    render_js: true
+detail:
+  enabled: false

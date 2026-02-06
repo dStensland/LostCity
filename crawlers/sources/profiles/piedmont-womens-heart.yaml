@@ -1,0 +1,14 @@
+version: 1
+slug: piedmont-womens-heart
+name: Piedmont Womens Heart Support
+integration_method: playwright
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.piedmont.org/heart/services-and-programs/womens-heart/dottie-fuqua-womens-heart-support-network
+  fetch:
+    render_js: true
+detail:
+  enabled: false

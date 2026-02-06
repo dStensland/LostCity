@@ -1,0 +1,12 @@
+version: 1
+slug: eeg-arena
+name: EEG Arena
+integration_method: llm_crawler
+defaults: {}
+discovery:
+  enabled: true
+  type: html
+  urls:
+  - https://www.eeg.com
+detail:
+  enabled: false

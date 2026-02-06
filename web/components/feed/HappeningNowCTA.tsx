@@ -51,8 +51,11 @@ function HappeningNowSkeleton() {
 
 export default function HappeningNowCTA({ portalSlug }: HappeningNowCTAProps) {
   const { portal } = usePortal();
-  const [liveCount, setLiveCount] = useState<number | null>(null);
+  const [eventCount, setEventCount] = useState<number>(0);
+  const [spotCount, setSpotCount] = useState<number>(0);
   const [loading, setLoading] = useState(true);
+
+  const totalCount = eventCount + spotCount;
 
   useEffect(() => {
     async function fetchLiveCount() {
@@ -60,7 +63,8 @@ export default function HappeningNowCTA({ portalSlug }: HappeningNowCTAProps) {
         const res = await fetch(`/api/portals/${portalSlug}/happening-now?countOnly=true`);
         if (res.ok) {
           const data = await res.json();
-          setLiveCount(data.count || 0);
+          setEventCount(data.eventCount || 0);
+          setSpotCount(data.spotCount || 0);
         }
       } catch (error) {
         console.error("Failed to fetch happening now count:", error);
@@ -81,8 +85,8 @@ export default function HappeningNowCTA({ portalSlug }: HappeningNowCTAProps) {
     return <HappeningNowSkeleton />;
   }
 
-  // Don't render if no live events
-  if (liveCount === null || liveCount === 0) {
+  // Don't render if nothing is happening
+  if (totalCount === 0) {
     return null;
   }
 
@@ -95,9 +99,9 @@ export default function HappeningNowCTA({ portalSlug }: HappeningNowCTAProps) {
         <div className="flex items-center gap-3">
           {/* Live indicator - enhanced quadruple ring pulse effect with brighter accent */}
           <div className="relative flex items-center justify-center w-7 h-7">
-            <span className="absolute w-7 h-7 bg-[var(--neon-red)]/25 rounded-full animate-ping" style={{ animationDuration: '1.5s' }} />
-            <span className="absolute w-5 h-5 bg-[var(--neon-red)]/35 rounded-full animate-pulse" style={{ animationDuration: '2s' }} />
-            <span className="absolute w-3 h-3 bg-[var(--neon-red)]/50 rounded-full animate-ping" style={{ animationDuration: '1s' }} />
+            <span className="absolute w-7 h-7 bg-[var(--neon-red)]/25 rounded-full animate-ping animate-duration-1500" />
+            <span className="absolute w-5 h-5 bg-[var(--neon-red)]/35 rounded-full animate-pulse animate-duration-2000" />
+            <span className="absolute w-3 h-3 bg-[var(--neon-red)]/50 rounded-full animate-ping animate-duration-1000" />
             <span className="relative w-2.5 h-2.5 bg-[var(--neon-red)] rounded-full shadow-[0_0_16px_var(--neon-red)]" />
           </div>
 
@@ -106,14 +110,31 @@ export default function HappeningNowCTA({ portalSlug }: HappeningNowCTAProps) {
               <span className="font-mono text-sm font-bold text-[var(--neon-red)] uppercase tracking-wider">
                 LIVE NOW
               </span>
-              <span className="px-2 py-0.5 rounded-full bg-[var(--neon-red)] text-[var(--void)] font-mono text-xs font-bold shadow-[0_0_8px_var(--neon-red)/40]">
-                {liveCount}
-              </span>
+              {eventCount > 0 && (
+                <span className="px-2 py-0.5 rounded-full bg-[var(--neon-red)]/20 text-[var(--neon-red)] border border-[var(--neon-red)]/50 font-mono text-xs font-bold">
+                  {eventCount} {eventCount === 1 ? "event" : "events"}
+                </span>
+              )}
+              {spotCount > 0 && (
+                <span className="px-2 py-0.5 rounded-full bg-[var(--neon-green)]/20 text-[var(--neon-green)] border border-[var(--neon-green)]/50 font-mono text-xs font-bold">
+                  {spotCount} open
+                </span>
+              )}
             </div>
             <p className="text-sm text-[var(--soft)] mt-0.5 font-medium">
-              {liveCount === 1
-                ? "1 event happening right now in "
-                : `${liveCount} events happening right now in `}
+              {eventCount > 0 && spotCount > 0 ? (
+                <>
+                  {eventCount} {eventCount === 1 ? "event" : "events"} live, {spotCount} {spotCount === 1 ? "spot" : "spots"} open in{" "}
+                </>
+              ) : eventCount > 0 ? (
+                <>
+                  {eventCount} {eventCount === 1 ? "event happening" : "events happening"} right now in{" "}
+                </>
+              ) : (
+                <>
+                  {spotCount} {spotCount === 1 ? "spot" : "spots"} open right now in{" "}
+                </>
+              )}
               <span className="text-[var(--cream)]">{portal.name}</span>
             </p>
           </div>

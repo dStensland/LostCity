@@ -1,0 +1,14 @@
+version: 1
+slug: poem88-gallery
+name: Poem88 Gallery
+integration_method: playwright
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.poem88.net
+  fetch:
+    render_js: true
+detail:
+  enabled: false

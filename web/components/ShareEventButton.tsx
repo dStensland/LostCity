@@ -85,11 +85,10 @@ export default function ShareEventButton({
       }
     >
       <svg
-        className={isIcon ? "w-5 h-5" : "w-4 h-4"}
+        className={isIcon ? "w-5 h-5 icon-drop-shadow" : "w-4 h-4"}
         fill="none"
         stroke="currentColor"
         viewBox="0 0 24 24"
-        style={isIcon ? { filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.3))' } : undefined}
       >
         <path
           strokeLinecap="round"

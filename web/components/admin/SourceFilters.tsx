@@ -8,6 +8,7 @@ export type SourceFilters = {
   status: HealthStatus | "all";
   healthTags: string[];
   sourceType: string | "all";
+  integrationMethod: string | "all";
   inSeason: boolean;
   search: string;
 };
@@ -16,6 +17,7 @@ type Props = {
   filters: SourceFilters;
   onFiltersChange: (filters: SourceFilters) => void;
   sourceTypes: string[];
+  integrationMethods: string[];
   showInSeasonFilter?: boolean;
 };
 
@@ -23,6 +25,7 @@ export default function SourceFiltersComponent({
   filters,
   onFiltersChange,
   sourceTypes,
+  integrationMethods,
   showInSeasonFilter = true,
 }: Props) {
   const [tagDropdownOpen, setTagDropdownOpen] = useState(false);
@@ -48,6 +51,7 @@ export default function SourceFiltersComponent({
       status: "all",
       healthTags: [],
       sourceType: "all",
+      integrationMethod: "all",
       inSeason: false,
       search: "",
     });
@@ -57,6 +61,7 @@ export default function SourceFiltersComponent({
     filters.status !== "all" ||
     filters.healthTags.length > 0 ||
     filters.sourceType !== "all" ||
+    filters.integrationMethod !== "all" ||
     filters.inSeason ||
     filters.search;
 
@@ -139,6 +144,22 @@ export default function SourceFiltersComponent({
           {sourceTypes.map((type) => (
             <option key={type} value={type}>
               {type}
+            </option>
+          ))}
+        </select>
+      )}
+
+      {/* Integration method filter */}
+      {integrationMethods.length > 0 && (
+        <select
+          value={filters.integrationMethod}
+          onChange={(e) => onFiltersChange({ ...filters, integrationMethod: e.target.value })}
+          className="px-3 py-1.5 bg-[var(--night)] border border-[var(--twilight)] rounded-lg font-mono text-sm text-[var(--cream)] focus:outline-none focus:border-[var(--coral)]"
+        >
+          <option value="all">All Methods</option>
+          {integrationMethods.map((method) => (
+            <option key={method} value={method}>
+              {method}
             </option>
           ))}
         </select>

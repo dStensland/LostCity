@@ -1,0 +1,12 @@
+version: 1
+slug: bookhouse-pub
+name: Bookhouse Pub
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.bookhousepub.com
+detail:
+  enabled: false

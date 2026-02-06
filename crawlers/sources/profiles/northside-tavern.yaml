@@ -1,0 +1,12 @@
+version: 1
+slug: northside-tavern
+name: Northside Tavern
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.northsidetavern.com
+detail:
+  enabled: false

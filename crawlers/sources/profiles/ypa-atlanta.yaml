@@ -1,0 +1,14 @@
+version: 1
+slug: ypa-atlanta
+name: Young Professionals of Atlanta
+integration_method: playwright
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.ypatl.org
+  fetch:
+    render_js: true
+detail:
+  enabled: false

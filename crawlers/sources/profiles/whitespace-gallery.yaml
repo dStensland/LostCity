@@ -1,0 +1,14 @@
+version: 1
+slug: whitespace-gallery
+name: Whitespace Gallery
+integration_method: playwright
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.whitespace814.com
+  fetch:
+    render_js: true
+detail:
+  enabled: false

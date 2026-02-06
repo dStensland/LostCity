@@ -1,0 +1,4125 @@
+{
+  "timestamp": "2026-02-06T12:41:39.783818+00:00",
+  "mode": "apply",
+  "total_profiles": 522,
+  "already_aligned": 4,
+  "profiles_changed": 518,
+  "skipped_no_method": 0,
+  "manual_review_required": 27,
+  "changes_by_method": {
+    "html": {
+      "profiles_changed": 220,
+      "total_changes": 220
+    },
+    "playwright": {
+      "profiles_changed": 188,
+      "total_changes": 376
+    },
+    "aggregator": {
+      "profiles_changed": 33,
+      "total_changes": 72
+    },
+    "llm_crawler": {
+      "profiles_changed": 66,
+      "total_changes": 132
+    },
+    "feed": {
+      "profiles_changed": 3,
+      "total_changes": 9
+    },
+    "jsonld_only": {
+      "profiles_changed": 2,
+      "total_changes": 8
+    },
+    "api": {
+      "profiles_changed": 4,
+      "total_changes": 12
+    },
+    "llm_extraction": {
+      "profiles_changed": 2,
+      "total_changes": 6
+    }
+  },
+  "profile_changes": [
+    {
+      "slug": "10times",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "13-stories",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "404-found-atl",
+      "method": "aggregator",
+      "changes": [
+        "discovery.type: list -> api",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "529",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "7-stages",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "a-cappella-books",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "abv-gallery",
+      "method": "aggregator",
+      "changes": [
+        "discovery.type: list -> api",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "academy-ballroom",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "access-atlanta",
+      "method": "aggregator",
+      "changes": [
+        "discovery.type: list -> api",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "aclu-georgia",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "activate-games",
+      "method": "llm_crawler",
+      "changes": [
+        "discovery.type: list -> html",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "actors-express",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "acworth-city",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "agnes-scott",
+      "method": "aggregator",
+      "changes": [
+        "discovery.type: list -> api",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "aisle-5",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "aisle5",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "ajff",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "alliance-theatre",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "alpharetta-city",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "amc-atlanta",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "americasmart",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "ameris-bank-amphitheatre",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "ansley-park-civic",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "apache-xlr",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "apex-museum",
+      "method": "aggregator",
+      "changes": [
+        "discovery.type: list -> api",
+        "discovery.enabled: False -> True",
+        "discovery.api.adapter: <unset> -> eventbrite"
+      ]
+    },
+    {
+      "slug": "argosy",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "arthur-murray-atlanta",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "arts-atl",
+      "method": "aggregator",
+      "changes": [
+        "discovery.type: list -> api",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "artsatl-calendar",
+      "method": "aggregator",
+      "changes": [
+        "discovery.type: list -> api",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "aso",
+      "method": "aggregator",
+      "changes": [
+        "discovery.type: list -> api",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "asw-distillery",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "atkins-park",
+      "method": "llm_crawler",
+      "changes": [
+        "discovery.type: list -> html",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "atl-gaming",
+      "method": "llm_crawler",
+      "changes": [
+        "discovery.type: list -> html",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "atlanta-art-fair",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "atlanta-ballet",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "atlanta-beltline",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "atlanta-botanical-garden",
+      "method": "llm_crawler",
+      "changes": [
+        "discovery.type: list -> html",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "atlanta-clay-works",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "atlanta-comedy-theater",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "atlanta-contemporary",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "atlanta-cultural-affairs",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "atlanta-cycling",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "atlanta-dance-ballroom",
+      "method": "llm_crawler",
+      "changes": [
+        "discovery.type: list -> html",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "atlanta-dogwood",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "atlanta-eagle",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "atlanta-film-festival",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "atlanta-film-series",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "atlanta-film-society",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "atlanta-food-wine",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "atlanta-freethought",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "atlanta-gladiators",
+      "method": "aggregator",
+      "changes": [
+        "discovery.type: list -> api",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "atlanta-history-center",
+      "method": "feed",
+      "changes": [
+        "discovery.type: list -> feed",
+        "discovery.enabled: False -> True",
+        "discovery.feed.format: <unset> -> auto"
+      ]
+    },
+    {
+      "slug": "atlanta-jazz-festival",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "atlanta-liberation-center",
+      "method": "aggregator",
+      "changes": [
+        "discovery.type: list -> api",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "atlanta-lyric-theatre",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "atlanta-mission",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "atlanta-motor-speedway",
+      "method": "aggregator",
+      "changes": [
+        "discovery.type: list -> api",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "atlanta-opera",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "atlanta-preservation-center",
+      "method": "aggregator",
+      "changes": [
+        "discovery.type: list -> api",
+        "discovery.enabled: False -> True",
+        "discovery.api.adapter: <unset> -> eventbrite"
+      ]
+    },
+    {
+      "slug": "atlanta-pride",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "atlanta-recurring-social",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "atlanta-tech-village",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "atlanta-tech-week",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "atlantic-station",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "atlutd-pubs",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "auburn-ave-library",
+      "method": "feed",
+      "changes": [
+        "discovery.type: list -> feed",
+        "discovery.enabled: False -> True",
+        "discovery.feed.format: <unset> -> auto"
+      ]
+    },
+    {
+      "slug": "aurora-cineplex",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "aurora-theatre",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "avalon-alpharetta",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "avondale-arts",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "ballroom-impact",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "barnes-noble-atlanta",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "basement-atlanta",
+      "method": "llm_crawler",
+      "changes": [
+        "discovery.type: list -> html",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "basement-east",
+      "method": "llm_crawler",
+      "changes": [
+        "discovery.type: list -> html",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "battery-atlanta",
+      "method": "jsonld_only",
+      "changes": [
+        "detail.jsonld_only: <unset> -> True",
+        "detail.use_jsonld: <unset> -> True",
+        "detail.enabled: False -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "battle-and-brew",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "belcourt-theatre",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "believe-music-hall",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "beltline",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "bicycle-tours-atlanta",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "big-brothers-big-sisters-atl",
+      "method": "aggregator",
+      "changes": [
+        "discovery.type: list -> api",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "big-peach-running",
+      "method": "llm_crawler",
+      "changes": [
+        "discovery.type: list -> html",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "blakes-on-park",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "blakes-on-the-park",
+      "method": "llm_crawler",
+      "changes": [
+        "discovery.type: list -> html",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "blind-willies",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "blue-merle-studios",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "bluebird-cafe",
+      "method": "llm_crawler",
+      "changes": [
+        "discovery.type: list -> html",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "bold-monk-brewing",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "book-boutique",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "bookhouse-pub",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "bookish-atlanta",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "boot-barn-hall",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "brake-pad",
+      "method": "llm_crawler",
+      "changes": [
+        "discovery.type: list -> html",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "breman-museum",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "brewhouse-cafe",
+      "method": "llm_crawler",
+      "changes": [
+        "discovery.type: list -> html",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "brick-store-pub",
+      "method": "llm_crawler",
+      "changes": [
+        "discovery.type: list -> html",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "bridgestone-arena",
+      "method": "aggregator",
+      "changes": [
+        "discovery.type: list -> api",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "brooklyn-bowl-nashville",
+      "method": "aggregator",
+      "changes": [
+        "discovery.type: list -> api",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "buckhead-theatre",
+      "method": "aggregator",
+      "changes": [
+        "discovery.type: list -> api",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "bulldogs-atlanta",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "buried-alive",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "c4-atlanta",
+      "method": "llm_crawler",
+      "changes": [
+        "discovery.type: list -> html",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "caffeine-octane",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "cair-georgia",
+      "method": "llm_crawler",
+      "changes": [
+        "discovery.type: list -> html",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "candler-park-fest",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "canton-street-roswell",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "carlos-museum",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "carter-center",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "castleberry-art-stroll",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "center-stage",
+      "method": "llm_crawler",
+      "changes": [
+        "discovery.type: list -> html",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "charis-books",
+      "method": "llm_crawler",
+      "changes": [
+        "discovery.type: list -> html",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "chastain-arts",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "chastain-park-amphitheatre",
+      "method": "aggregator",
+      "changes": [
+        "discovery.type: list -> api",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "chattahoochee-nature",
+      "method": "llm_crawler",
+      "changes": [
+        "discovery.type: list -> html",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "cherry-street-brewing",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "cheshire-bridge-district",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "childrens-museum",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "church-atlanta",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "church-bar",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "cinemark-atlanta",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "city-springs",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "city-winery-atlanta",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "civil-rights-center",
+      "method": "llm_crawler",
+      "changes": [
+        "discovery.type: list -> html",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "clark-atlanta",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "club-wander",
+      "method": "llm_crawler",
+      "changes": [
+        "discovery.type: list -> html",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "cobb-energy",
+      "method": "aggregator",
+      "changes": [
+        "discovery.type: list -> api",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "cobb-galleria",
+      "method": "llm_crawler",
+      "changes": [
+        "discovery.type: list -> html",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "cobb-library",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "coca-cola-roxy",
+      "method": "llm_crawler",
+      "changes": [
+        "discovery.type: list -> html",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "college-football-hof",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "college-park-city",
+      "method": "aggregator",
+      "changes": [
+        "discovery.type: list -> api",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "college-park-main-street",
+      "method": "aggregator",
+      "changes": [
+        "discovery.type: list -> api",
+        "discovery.enabled: False -> True",
+        "discovery.api.adapter: <unset> -> eventbrite"
+      ]
+    },
+    {
+      "slug": "community-foundation-atl",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "compound-atlanta",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "country-music-hof",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "creative-loafing",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "criminal-records",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "dancing-dogs-yoga",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "dancing4fun",
+      "method": "aggregator",
+      "changes": [
+        "discovery.type: list -> api",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "dark-horse-tavern",
+      "method": "llm_crawler",
+      "changes": [
+        "discovery.type: list -> html",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "decatur-arts-festival",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "decatur-book-festival",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "decatur-city",
+      "method": "llm_crawler",
+      "changes": [
+        "discovery.type: list -> html",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "decatur-farmers-market",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "decatur-makers",
+      "method": "api",
+      "changes": [
+        "discovery.type: list -> api",
+        "discovery.enabled: False -> True",
+        "discovery.api.adapter: <unset> -> custom"
+      ]
+    },
+    {
+      "slug": "decatur-recreation",
+      "method": "llm_crawler",
+      "changes": [
+        "discovery.type: list -> html",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "defy-atlanta",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "dekalb-library",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "der-biergarten",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "dirty-south-trivia",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "discover-atlanta",
+      "method": "llm_crawler",
+      "changes": [
+        "discovery.type: list -> html",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "district-atlanta",
+      "method": "aggregator",
+      "changes": [
+        "discovery.type: list -> api",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "do404",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "do615",
+      "method": "aggregator",
+      "changes": [
+        "discovery.type: list -> api",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "dogwood-alliance",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "domaine-atlanta",
+      "method": "llm_crawler",
+      "changes": [
+        "discovery.type: list -> html",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "downtown-duluth",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "downtown-franklin",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "dragon-con",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "drunken-unicorn",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "duluth-city",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "eagle-eye-books",
+      "method": "llm_crawler",
+      "changes": [
+        "discovery.type: list -> html",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "east-atlanta-strut",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "east-lake-neighborhood",
+      "method": "llm_crawler",
+      "changes": [
+        "discovery.type: list -> html",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "eav-farmers-market",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "ebenezer-baptist-church",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "echo-room",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "eddies-attic",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "eeg-arena",
+      "method": "llm_crawler",
+      "changes": [
+        "discovery.type: list -> html",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "ellis-station-candle-co",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "elmyr",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "emory-events",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "emory-schwartz-center",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "eventbrite",
+      "method": "aggregator",
+      "changes": [
+        "discovery.type: list -> api",
+        "discovery.enabled: False -> True",
+        "discovery.api.adapter: <unset> -> eventbrite"
+      ]
+    },
+    {
+      "slug": "eventbrite-nashville",
+      "method": "aggregator",
+      "changes": [
+        "discovery.type: list -> api",
+        "discovery.enabled: False -> True",
+        "discovery.api.adapter: <unset> -> eventbrite"
+      ]
+    },
+    {
+      "slug": "eventide-brewing",
+      "method": "llm_crawler",
+      "changes": [
+        "discovery.type: list -> html",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "everybody-wins-atlanta",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "evolation-yoga",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "exhibition-hub",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "exit-in",
+      "method": "llm_crawler",
+      "changes": [
+        "discovery.type: list -> html",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "eyedrum",
+      "method": "aggregator",
+      "changes": [
+        "discovery.type: list -> api",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "factory-franklin",
+      "method": "jsonld_only",
+      "changes": [
+        "detail.jsonld_only: <unset> -> True",
+        "detail.use_jsonld: <unset> -> True",
+        "detail.enabled: False -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "fado-irish-pub",
+      "method": "llm_crawler",
+      "changes": [
+        "discovery.type: list -> html",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "faith-alliance",
+      "method": "llm_crawler",
+      "changes": [
+        "discovery.type: list -> html",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "fancons",
+      "method": "aggregator",
+      "changes": [
+        "discovery.type: list -> api",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "farmers-markets",
+      "method": "llm_crawler",
+      "changes": [
+        "discovery.type: list -> html",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "fernbank",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "ferst-center",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "fire-maker-brewing",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "flatiron",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "folklore-haunted",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "food-well-alliance",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "forward-warrior",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "fowling-warehouse",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "fox-theatre",
+      "method": "aggregator",
+      "changes": [
+        "discovery.type: list -> api",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "foxtale-books",
+      "method": "llm_crawler",
+      "changes": [
+        "discovery.type: list -> html",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "franklin-theatre",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "freedom-farmers-market",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "freeroll-atlanta",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "freeside-atlanta",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "friends-on-ponce",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "frist-art-museum",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "fulton-library",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "future-atlanta",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "gas-south",
+      "method": "aggregator",
+      "changes": [
+        "discovery.type: list -> api",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "geeks-who-drink",
+      "method": "llm_crawler",
+      "changes": [
+        "discovery.type: list -> html",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "generic-venue-crawler",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "georgia-aquarium",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "georgia-chess",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "georgia-ensemble-theatre",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "georgia-organics",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "georgia-peace",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "georgia-state-university",
+      "method": "feed",
+      "changes": [
+        "discovery.type: list -> feed",
+        "discovery.enabled: False -> True",
+        "discovery.feed.format: <unset> -> auto"
+      ]
+    },
+    {
+      "slug": "georgia-tech-arts",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "georgia-tech-athletics",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "georgia-tech-events",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "georgian-terrace-hotel",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "gicc",
+      "method": "llm_crawler",
+      "changes": [
+        "discovery.type: list -> html",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "giving-kitchen",
+      "method": "llm_crawler",
+      "changes": [
+        "discovery.type: list -> html",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "glahr",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "gold-room",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "grand-ole-opry",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "grant-park-farmers-market",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "grant-park-festival",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "gsu-athletics",
+      "method": "llm_crawler",
+      "changes": [
+        "discovery.type: list -> html",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "gwcc",
+      "method": "llm_crawler",
+      "changes": [
+        "discovery.type: list -> html",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "gwinnett-library",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "gwinnett-stripers",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "gypsy-kitchen",
+      "method": "llm_crawler",
+      "changes": [
+        "discovery.type: list -> html",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "halfway-crooks",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "hambidge-center",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "hammonds-house",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "hands-on-atlanta",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "hathaway-contemporary",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "havana-club",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "hawks-bars",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "helium-comedy",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "high-museum",
+      "method": "llm_crawler",
+      "changes": [
+        "discovery.type: list -> html",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "highland-tap",
+      "method": "llm_crawler",
+      "changes": [
+        "discovery.type: list -> html",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "highland-yoga",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "home-depot-kids-workshops",
+      "method": "llm_crawler",
+      "changes": [
+        "discovery.type: list -> html",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "horizon-theatre",
+      "method": "llm_crawler",
+      "changes": [
+        "discovery.type: list -> html",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "hosea-helps",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "hotel-clermont",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "hudgens-center",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "indivisible-atl",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "industrious-atlanta",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "inman-park-festival",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "irwin-street-cooking",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "janke-studios",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "johnnys-hideaway",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "johns-creek",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "joystick-gamebar",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "jungle-atlanta",
+      "method": "llm_crawler",
+      "changes": [
+        "discovery.type: list -> html",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "kai-lin-art",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "kats-cafe",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "kennesaw-city",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "kennesaw-state",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "king-center",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "knock-music-house",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "krog-street-market",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "ksu-athletics",
+      "method": "llm_crawler",
+      "changes": [
+        "discovery.type: list -> html",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "l5p-community-center",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "ladybird-grove",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "landmark-midtown",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "laughing-skull",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "lawrenceville-city",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "le-colonial-atlanta",
+      "method": "llm_crawler",
+      "changes": [
+        "discovery.type: list -> html",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "lego-discovery-center",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "leons-full-service",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "level-up-gaming",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "lindbergh-city-center",
+      "method": "llm_crawler",
+      "changes": [
+        "discovery.type: list -> html",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "lips-atlanta",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "little-shop-of-stories",
+      "method": "llm_crawler",
+      "changes": [
+        "discovery.type: list -> html",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "live-at-battery",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "lore-atlanta",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "lyfe-atlanta",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "madlife-stage",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "main-street-murfreesboro",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "manuels-tavern",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "marathon-music-works",
+      "method": "llm_crawler",
+      "changes": [
+        "discovery.type: list -> html",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "marcia-wood-gallery",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "marietta-cobb-museum",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "marys",
+      "method": "llm_crawler",
+      "changes": [
+        "discovery.type: list -> html",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "marys-bar",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "mason-fine-art",
+      "method": "llm_crawler",
+      "changes": [
+        "discovery.type: list -> html",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "mass-collective",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "max-lagers",
+      "method": "llm_crawler",
+      "changes": [
+        "discovery.type: list -> html",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "meals-on-wheels-atlanta",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "mechanicsville-neighborhood",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "meehans-pub",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "meetup",
+      "method": "api",
+      "changes": [
+        "discovery.type: list -> api",
+        "discovery.enabled: False -> True",
+        "discovery.api.adapter: <unset> -> custom"
+      ]
+    },
+    {
+      "slug": "mercedes-benz-stadium",
+      "method": "aggregator",
+      "changes": [
+        "discovery.type: list -> api",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "midway-pub",
+      "method": "llm_crawler",
+      "changes": [
+        "discovery.type: list -> html",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "mint-gallery",
+      "method": "llm_crawler",
+      "changes": [
+        "discovery.type: list -> html",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "mjq-concourse",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "mobilize-50501-georgia",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "mobilize-dekalb-dems",
+      "method": "llm_crawler",
+      "changes": [
+        "discovery.type: list -> html",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "mobilize-ga-dems",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "mobilize-hrc-georgia",
+      "method": "llm_crawler",
+      "changes": [
+        "discovery.type: list -> html",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "mobilize-indivisible-atl",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "mobilize-indivisible-cherokee",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "mobilize-indivisible-cobb",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "mobilize-indivisible-ga10",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "mobilize-necessary-trouble",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "mobilize-voteriders",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "moca-ga",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "moda",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "moes-and-joes",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "momocon",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "monday-night",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "monday-night-garage",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "monday-night-run-club",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "moods-music",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "morehouse-college",
+      "method": "llm_extraction",
+      "changes": [
+        "detail.use_llm: <unset> -> True",
+        "detail.enabled: False -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "morningside-civic",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "morningside-farmers-market",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "mother-bar",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "mtsu-events",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "mudfire",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "murfreesboro-city",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "music-midtown",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "my-sisters-room",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "nashville-com",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "nashville-scene",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "ncg-cinemas-atlanta",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "netherworld",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "new-georgia-project",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "new-realm-brewing",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "nightmares-gate",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "nonis",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "northside-tavern",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "oakland-cemetery",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "oddities-museum",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "oglethorpe-university",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "onstage-atlanta",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "opera-nightclub",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "ormewood-park-neighborhood",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "ormsbys",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "orpheus-brewing",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "our-bar-atl",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "out-front-theatre",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "out-of-box-theatre",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "out-on-film",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "outspoken-entertainment",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "painted-duck",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "painted-pin",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "painting-with-a-twist",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "paranoia-haunted",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "park-tavern",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "path-foundation",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "peachtree-road-farmers-market",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "peachtree-road-race",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "peoplestown-neighborhood",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "perfect-note-atlanta",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "piedmont-athens",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "piedmont-auxiliary",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "piedmont-cancer-support",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "piedmont-classes",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "piedmont-cme",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "piedmont-fitness",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "piedmont-foundation",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "piedmont-healthcare",
+      "method": "llm_crawler",
+      "changes": [
+        "discovery.type: list -> html",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "piedmont-heart-conferences",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "piedmont-heights-civic",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "piedmont-luminaria",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "piedmont-park",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "piedmont-transplant",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "piedmont-womens-heart",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "piedmonthealthcare-events",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "pinch-n-ouch-theatre",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "pisces-atlanta",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "pittsburgh-yards",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "plaza-theatre",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "poem88-gallery",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "ponce-city-market",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "pontoon-brewing",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "project-south",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "ptc-running-club",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "publix-aprons",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "punch-bowl-social",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "punchline",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "puppetry-arts",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "pushpush-arts",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "pushpush-theater",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "puttshack",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "ravine-atlanta",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "red-light-cafe",
+      "method": "aggregator",
+      "changes": [
+        "discovery.type: list -> api",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "reformation-brewery",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "regal-atlanta",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "render-atl",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "resident-advisor",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "rialto-center",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "roswell-city",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "roswell-cultural-arts",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "round-trip-brewing",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "rowdy-tiger",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "ryman-auditorium",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "sandy-springs-pac",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "scad-atlanta",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "scad-fash",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "schermerhorn",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "schoolhouse-brewing",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "schwartz-center",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "scofflaw-brewing",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "second-self-brewing",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "shakespeare-tavern",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "shaky-knees",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "shrine-cultural-center",
+      "method": "aggregator",
+      "changes": [
+        "discovery.type: list -> api",
+        "discovery.enabled: False -> True",
+        "discovery.api.adapter: <unset> -> eventbrite"
+      ]
+    },
+    {
+      "slug": "side-saddle",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "sidebar",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "silverspot-cinema-atlanta",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "sister-louisas",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "six-flags-over-georgia",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "sky-zone-atlanta",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "skylounge-glenn-hotel",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "smiths-olde-bar",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "snellville-city",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "snellville-farmers-market",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "song",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "sound-table",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "south-river-art",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "south-river-forest",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "southern-fried-gaming",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "southern-fried-queer-pride",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "southern-museum",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "spaceman-rooftop",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "spelman-college",
+      "method": "llm_extraction",
+      "changes": [
+        "detail.use_llm: <unset> -> True",
+        "detail.enabled: False -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "spivey-hall",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "sports-social",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "springs-cinema",
+      "method": "llm_crawler",
+      "changes": [
+        "discovery.type: list -> html",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "spruill-center",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "st-james-live",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "stage-door-players",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "star-community-bar",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "starlight-drive-in",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "state-farm-arena",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "station-inn",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "stats-downtown",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "steady-hand-beer",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "stone-mountain-park",
+      "method": "llm_crawler",
+      "changes": [
+        "discovery.type: list -> html",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "strand-theatre",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "studio-movie-grill-atlanta",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "sun-dial-restaurant",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "supermarket-atl",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "sur-la-table",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "sweet-auburn-market",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "sweet-auburn-springfest",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "sweetwater",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "switchyards",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "synchronicity-theatre",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "tabernacle",
+      "method": "aggregator",
+      "changes": [
+        "discovery.type: list -> api",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "tara-theatre",
+      "method": "llm_crawler",
+      "changes": [
+        "discovery.type: list -> html",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "team-trivia",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "terminal-west",
+      "method": "llm_crawler",
+      "changes": [
+        "discovery.type: list -> html",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "terminus-modern-ballet",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "the-eastern",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "the-glenwood",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "the-heretic",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "the-loft",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "the-maker-station",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "the-masquerade",
+      "method": "llm_crawler",
+      "changes": [
+        "discovery.type: list -> html",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "the-painted-duck",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "the-porter",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "the-square-pub",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "the-vortex",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "theatre-for-young-audiences",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "theatre-in-the-square",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "theatrical-outfit",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "third-and-lindsley",
+      "method": "llm_crawler",
+      "changes": [
+        "discovery.type: list -> html",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "three-taverns",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "ticketmaster-nashville",
+      "method": "api",
+      "changes": [
+        "discovery.type: list -> api",
+        "discovery.enabled: False -> True",
+        "discovery.api.adapter: <unset> -> custom"
+      ]
+    },
+    {
+      "slug": "token-gaming-pub",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "tongue-and-groove",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "torched-hop",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "tpac",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "trees-atlanta",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "trolley-barn",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "true-colors-theatre",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "truist-park",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "twains-brewpub",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "united-way-atlanta",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "uptown-comedy",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "urban-air-atlanta",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "urban-grind",
+      "method": "api",
+      "changes": [
+        "discovery.type: list -> api",
+        "discovery.enabled: False -> True",
+        "discovery.api.adapter: <unset> -> custom"
+      ]
+    },
+    {
+      "slug": "urban-league-atlanta",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "user-submissions",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "variant-brewing",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "variety-playhouse",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "venkmans",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "victory-sandwich-bar",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "vine-city-neighborhood",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "virginia-highland-civic",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "visit-franklin",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "visit-music-city",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "vista-yoga",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "wax-n-facts",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "west-end-neighborhood",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "wewatchstuff",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "wework-atlanta",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "whitespace-gallery",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "whole-world-improv",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "wild-aster-books",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "wild-heaven",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "williams-sonoma",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "wonderroot",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "woodys-atlanta",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "woofs-atlanta",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "working-title-playwrights",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "world-of-coca-cola",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "wrecking-bar",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "wrens-nest",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "wrfg-radio",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "ymca-atlanta",
+      "method": "html",
+      "changes": [
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "yonder-yoga",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "ypa-atlanta",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "zoo-atlanta",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    },
+    {
+      "slug": "zucot-gallery",
+      "method": "playwright",
+      "changes": [
+        "discovery.fetch.render_js: <unset> -> True",
+        "discovery.enabled: False -> True"
+      ]
+    }
+  ],
+  "manual_review_items": [
+    {
+      "slug": "404-found-atl",
+      "reason": "Cannot infer aggregator adapter from URL",
+      "url": "https://www.404foundatl.com/upcoming-events"
+    },
+    {
+      "slug": "abv-gallery",
+      "reason": "Cannot infer aggregator adapter from URL",
+      "url": "https://www.abvgallery.com"
+    },
+    {
+      "slug": "access-atlanta",
+      "reason": "Cannot infer aggregator adapter from URL",
+      "url": "https://events.accessatlanta.com"
+    },
+    {
+      "slug": "agnes-scott",
+      "reason": "Cannot infer aggregator adapter from URL",
+      "url": "https://www.agnesscott.edu/events"
+    },
+    {
+      "slug": "arts-atl",
+      "reason": "Cannot infer aggregator adapter from URL",
+      "url": "https://www.artsatl.org"
+    },
+    {
+      "slug": "artsatl-calendar",
+      "reason": "Cannot infer aggregator adapter from URL",
+      "url": "https://www.artsatl.org/calendar/"
+    },
+    {
+      "slug": "aso",
+      "reason": "Cannot infer aggregator adapter from URL",
+      "url": "https://www.aso.org/concerts"
+    },
+    {
+      "slug": "atlanta-gladiators",
+      "reason": "Cannot infer aggregator adapter from URL",
+      "url": "https://www.atlantagladiators.com/schedule"
+    },
+    {
+      "slug": "atlanta-liberation-center",
+      "reason": "Cannot infer aggregator adapter from URL",
+      "url": "https://www.liberationatl.org/events"
+    },
+    {
+      "slug": "atlanta-motor-speedway",
+      "reason": "Cannot infer aggregator adapter from URL",
+      "url": "https://www.atlantamotorspeedway.com"
+    },
+    {
+      "slug": "big-brothers-big-sisters-atl",
+      "reason": "Cannot infer aggregator adapter from URL",
+      "url": "https://bbbsatl.org/events"
+    },
+    {
+      "slug": "bridgestone-arena",
+      "reason": "Cannot infer aggregator adapter from URL",
+      "url": "https://www.bridgestonearena.com/events"
+    },
+    {
+      "slug": "brooklyn-bowl-nashville",
+      "reason": "Cannot infer aggregator adapter from URL",
+      "url": "https://www.brooklynbowl.com/nashville/shows/all"
+    },
+    {
+      "slug": "buckhead-theatre",
+      "reason": "Cannot infer aggregator adapter from URL",
+      "url": "https://www.livenation.com/venue/KovZpaIJZ7A/buckhead-theatre-events"
+    },
+    {
+      "slug": "chastain-park-amphitheatre",
+      "reason": "Cannot infer aggregator adapter from URL",
+      "url": "https://www.livenation.com/venue/KovZpZAEkkIA"
+    },
+    {
+      "slug": "cobb-energy",
+      "reason": "Cannot infer aggregator adapter from URL",
+      "url": "https://www.cobbenergycentre.com"
+    },
+    {
+      "slug": "college-park-city",
+      "reason": "Cannot infer aggregator adapter from URL",
+      "url": "https://www.collegeparkga.gov/calendar.aspx"
+    },
+    {
+      "slug": "dancing4fun",
+      "reason": "Cannot infer aggregator adapter from URL",
+      "url": "https://www.dancing4fun.com"
+    },
+    {
+      "slug": "district-atlanta",
+      "reason": "Cannot infer aggregator adapter from URL",
+      "url": "https://www.districtatlanta.com"
+    },
+    {
+      "slug": "do615",
+      "reason": "Cannot infer aggregator adapter from URL",
+      "url": "https://do615.com/"
+    },
+    {
+      "slug": "eyedrum",
+      "reason": "Cannot infer aggregator adapter from URL",
+      "url": "https://eyedrum.org/calendar-events-performances-art-music"
+    },
+    {
+      "slug": "fancons",
+      "reason": "Cannot infer aggregator adapter from URL",
+      "url": "https://fancons.com/events/schedule.php?loc=usGA"
+    },
+    {
+      "slug": "fox-theatre",
+      "reason": "Cannot infer aggregator adapter from URL",
+      "url": "https://www.foxtheatre.org"
+    },
+    {
+      "slug": "gas-south",
+      "reason": "Cannot infer aggregator adapter from URL",
+      "url": "https://www.gassouthdistrict.com/events"
+    },
+    {
+      "slug": "mercedes-benz-stadium",
+      "reason": "Cannot infer aggregator adapter from URL",
+      "url": "https://www.mercedesbenzstadium.com"
+    },
+    {
+      "slug": "red-light-cafe",
+      "reason": "Cannot infer aggregator adapter from URL",
+      "url": "https://www.redlightcafe.com"
+    },
+    {
+      "slug": "tabernacle",
+      "reason": "Cannot infer aggregator adapter from URL",
+      "url": "https://www.tabernacleatl.com"
+    }
+  ]
+}

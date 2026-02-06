@@ -1,0 +1,14 @@
+version: 1
+slug: atlanta-history-center
+name: Atlanta History Center
+integration_method: feed
+defaults: {}
+discovery:
+  enabled: true
+  type: feed
+  urls:
+  - https://www.atlantahistorycenter.com
+  feed:
+    format: auto
+detail:
+  enabled: false

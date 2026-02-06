@@ -1,0 +1,12 @@
+version: 1
+slug: inman-park-festival
+name: Inman Park Festival
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.inmanparkfestival.org
+detail:
+  enabled: false

@@ -1,0 +1,14 @@
+version: 1
+slug: friends-on-ponce
+name: Friends on Ponce
+integration_method: playwright
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.friendsonponce.com
+  fetch:
+    render_js: true
+detail:
+  enabled: false

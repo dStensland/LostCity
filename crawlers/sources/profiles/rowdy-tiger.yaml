@@ -1,0 +1,12 @@
+version: 1
+slug: rowdy-tiger
+name: Rowdy Tiger
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.rowdytigeratl.com
+detail:
+  enabled: false

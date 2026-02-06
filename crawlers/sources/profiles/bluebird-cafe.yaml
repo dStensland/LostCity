@@ -1,0 +1,12 @@
+version: 1
+slug: bluebird-cafe
+name: Bluebird Cafe
+integration_method: llm_crawler
+defaults: {}
+discovery:
+  enabled: true
+  type: html
+  urls:
+  - https://bluebirdcafe.com/shows/
+detail:
+  enabled: false

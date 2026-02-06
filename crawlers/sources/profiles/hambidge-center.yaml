@@ -1,0 +1,12 @@
+version: 1
+slug: hambidge-center
+name: The Hambidge Center
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.hambidge.org/events
+detail:
+  enabled: false

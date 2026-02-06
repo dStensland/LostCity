@@ -137,8 +137,7 @@ export default function QuickTagsRow({ className = "", showGroupLabels = false }
         tabIndex={0}
         role="region"
         aria-label="Quick filter tags"
-        className="flex items-center gap-2 overflow-x-auto scrollbar-hide snap-x snap-mandatory md:snap-none py-2 -mx-4 px-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--coral)] focus-visible:ring-inset rounded-lg"
-        style={{ WebkitOverflowScrolling: "touch" }}
+        className="flex items-center gap-2 overflow-x-auto scrollbar-hide snap-x snap-mandatory md:snap-none py-2 -mx-4 px-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--coral)] focus-visible:ring-inset rounded-lg momentum-scroll"
       >
         {GROUP_ORDER.map((groupKey, groupIdx) => {
           const tags = groupedTags[groupKey];
@@ -183,12 +182,7 @@ export default function QuickTagsRow({ className = "", showGroupLabels = false }
       {/* Overflow indicator with count - accessible */}
       {overflowCount > 0 && (
         <div
-          className="absolute right-0 top-0 bottom-0 flex items-center pointer-events-none z-10"
-          style={{
-            background: "linear-gradient(to right, transparent, var(--night) 50%)",
-            paddingLeft: "2rem",
-            paddingRight: "0.5rem",
-          }}
+          className="absolute right-0 top-0 bottom-0 flex items-center pointer-events-none z-10 overflow-indicator"
         >
           <span
             className="font-mono text-[0.6rem] text-[var(--soft)] bg-[var(--twilight)] px-2 py-1 rounded-full border border-[var(--muted)]/30"
@@ -203,10 +197,7 @@ export default function QuickTagsRow({ className = "", showGroupLabels = false }
       {/* Fade gradient on right edge (when no overflow count shown, desktop only) */}
       {overflowCount === 0 && (
         <div
-          className="hidden md:block absolute right-0 top-0 bottom-0 w-12 pointer-events-none z-10"
-          style={{
-            background: "linear-gradient(to right, transparent, var(--night))",
-          }}
+          className="hidden md:block absolute right-0 top-0 bottom-0 w-12 pointer-events-none z-10 fade-right-night"
         />
       )}
     </div>

@@ -1,8 +1,10 @@
 "use client";
 
 import { useState, useCallback, type ReactNode } from "react";
-import Image from "next/image";
+import Image from "@/components/SmartImage";
 import CategoryPlaceholder from "../CategoryPlaceholder";
+import ScopedStyles from "@/components/ScopedStyles";
+import { createCssVarClass } from "@/lib/css-utils";
 
 export interface DetailHeroProps {
   mode: "image" | "poster" | "fallback";
@@ -32,6 +34,7 @@ export function DetailHero({
   const [imgError, setImgError] = useState(false);
   const [imgLoaded, setImgLoaded] = useState(false);
   const [isLowRes, setIsLowRes] = useState(false);
+  const heroAccentClass = createCssVarClass("--hero-accent", categoryColor, "hero-accent");
 
   const handleImageLoad = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
     setImgLoaded(true);
@@ -43,12 +46,12 @@ export function DetailHero({
 
   if (effectiveMode === "fallback") {
     return (
-      <div className="relative w-full aspect-video sm:rounded-lg overflow-hidden">
+      <div className={`relative w-full aspect-video sm:rounded-lg overflow-hidden ${heroAccentClass?.className ?? ""}`}>
+        <ScopedStyles css={heroAccentClass?.css} />
         {/* Neon category placeholder */}
         <CategoryPlaceholder category={category} color={categoryColor} size="lg" />
 
         <HeroOverlay
-          categoryColor={categoryColor}
           title={title}
           subtitle={subtitle}
           badge={badge}
@@ -62,16 +65,14 @@ export function DetailHero({
 
   if (effectiveMode === "poster") {
     return (
-      <div className="relative w-full sm:rounded-lg overflow-hidden bg-[var(--night)]">
+      <div className={`relative w-full sm:rounded-lg overflow-hidden bg-[var(--night)] ${heroAccentClass?.className ?? ""}`}>
+        <ScopedStyles css={heroAccentClass?.css} />
         <div className="flex flex-col sm:flex-row gap-6 p-6">
           {/* Image (poster) */}
           <div className="relative w-full sm:w-[200px] aspect-square sm:aspect-[2/3] flex-shrink-0 rounded-lg overflow-hidden">
             {!imgLoaded && (
               <div
-                className="absolute inset-0 skeleton-shimmer"
-                style={{
-                  background: `linear-gradient(135deg, ${categoryColor}10 0%, var(--dusk) 50%, ${categoryColor}05 100%)`,
-                }}
+                className="absolute inset-0 skeleton-shimmer detail-hero-skeleton"
               >
                 <div className="absolute inset-0 flex items-center justify-center opacity-20">
                   {categoryIcon}
@@ -95,10 +96,7 @@ export function DetailHero({
             {badge && <div className="mb-3">{badge}</div>}
 
             <h1
-              className="text-2xl sm:text-3xl md:text-4xl font-bold text-[var(--cream)] leading-tight mb-2"
-              style={{
-                textShadow: `0 0 30px ${categoryColor}30`,
-              }}
+              className="text-2xl sm:text-3xl md:text-4xl font-bold text-[var(--cream)] leading-tight mb-2 detail-hero-title-glow"
             >
               {title}
             </h1>
@@ -111,26 +109,18 @@ export function DetailHero({
           </div>
         </div>
 
-        <div
-          className="absolute bottom-0 left-0 right-0 h-[3px]"
-          style={{
-            background: `linear-gradient(to right, ${categoryColor}, ${categoryColor}80, transparent)`,
-            boxShadow: `0 0 20px ${categoryColor}40, 0 0 40px ${categoryColor}20`,
-          }}
-        />
+        <div className="absolute bottom-0 left-0 right-0 h-[3px] detail-hero-bar" />
       </div>
     );
   }
 
   // Default: image mode (full 16:9 with overlay)
   return (
-    <div className="relative w-full aspect-video sm:rounded-lg overflow-hidden">
+    <div className={`relative w-full aspect-video sm:rounded-lg overflow-hidden ${heroAccentClass?.className ?? ""}`}>
+      <ScopedStyles css={heroAccentClass?.css} />
       {!imgLoaded && (
         <div
-          className="absolute inset-0 skeleton-shimmer"
-          style={{
-            background: `linear-gradient(135deg, ${categoryColor}10 0%, var(--dusk) 50%, ${categoryColor}05 100%)`,
-          }}
+          className="absolute inset-0 skeleton-shimmer detail-hero-skeleton"
         >
           <div className="absolute inset-0 flex items-center justify-center opacity-20">
             {categoryIcon}
@@ -158,26 +148,18 @@ export function DetailHero({
         {children}
       </HeroOverlay>
 
-      <div
-        className="absolute bottom-0 left-0 right-0 h-[3px]"
-        style={{
-          background: `linear-gradient(to right, ${categoryColor}, ${categoryColor}80, transparent)`,
-          boxShadow: `0 0 20px ${categoryColor}40, 0 0 40px ${categoryColor}20`,
-        }}
-      />
+      <div className="absolute bottom-0 left-0 right-0 h-[3px] detail-hero-bar" />
     </div>
   );
 }
 
 function HeroOverlay({
-  categoryColor,
   title,
   subtitle,
   badge,
   isLive,
   children,
 }: {
-  categoryColor: string;
   title: string;
   subtitle?: string;
   badge?: ReactNode;
@@ -186,10 +168,7 @@ function HeroOverlay({
 }) {
   return (
     <div
-      className="absolute bottom-0 left-0 right-0 glass-wet"
-      style={{
-        background: `linear-gradient(to top, rgba(9, 9, 11, 0.98) 0%, rgba(9, 9, 11, 0.9) 40%, rgba(9, 9, 11, 0.6) 70%, transparent 100%)`,
-      }}
+      className="absolute bottom-0 left-0 right-0 glass-wet detail-hero-overlay"
     >
       <div className="px-4 sm:px-6 pb-5 pt-12">
         <div className="flex items-center gap-2 mb-2">
@@ -203,20 +182,14 @@ function HeroOverlay({
         </div>
 
         <h1
-          className="text-xl sm:text-2xl md:text-3xl font-bold text-[var(--cream)] leading-tight mb-1"
-          style={{
-            textShadow: `0 2px 4px rgba(0,0,0,0.8), 0 0 30px ${categoryColor}40`,
-          }}
+          className="text-xl sm:text-2xl md:text-3xl font-bold text-[var(--cream)] leading-tight mb-1 detail-hero-title-shadow"
         >
           {title}
         </h1>
 
         {subtitle && (
           <p
-            className="text-sm text-[var(--soft)] font-serif"
-            style={{
-              textShadow: "0 1px 3px rgba(0,0,0,0.8)",
-            }}
+            className="text-sm text-[var(--soft)] font-serif detail-hero-subtitle-shadow"
           >
             {subtitle}
           </p>

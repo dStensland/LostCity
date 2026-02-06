@@ -1,0 +1,12 @@
+version: 1
+slug: evolation-yoga
+name: Evolation Yoga
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.evolationyoga.com
+detail:
+  enabled: false

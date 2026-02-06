@@ -3,7 +3,7 @@
 import { memo } from "react";
 import Link from "next/link";
 import type { AroundMeItem, AroundMeSpot, AroundMeEvent } from "@/app/api/around-me/route";
-import CategoryIcon, { getCategoryColor } from "./CategoryIcon";
+import CategoryIcon from "./CategoryIcon";
 import { formatTimeSplit } from "@/lib/formats";
 
 interface Props {
@@ -20,17 +20,11 @@ function formatDistance(miles: number): string {
 
 // Spot card variant
 function SpotCardContent({ spot, distance, portalSlug }: { spot: AroundMeSpot; distance: number; portalSlug?: string }) {
-  const categoryColor = spot.venue_type ? getCategoryColor(spot.venue_type) : null;
-
   return (
     <Link
       href={portalSlug ? `/${portalSlug}?spot=${spot.slug}` : `/spots/${spot.slug}`}
       scroll={false}
-      className="block p-3 rounded-sm border border-[var(--twilight)] bg-[var(--card-bg)] hover:border-[var(--neon-green)]/40 transition-all group"
-      style={{
-        borderLeftWidth: "3px",
-        borderLeftColor: "var(--neon-green)",
-      }}
+      className="block p-3 rounded-sm border border-[var(--twilight)] bg-[var(--card-bg)] hover:border-[var(--neon-green)]/40 transition-all group border-l-[3px] border-l-[var(--neon-green)]"
     >
       <div className="flex items-start gap-3">
         {/* Type badge + icon column */}
@@ -39,10 +33,8 @@ function SpotCardContent({ spot, distance, portalSlug }: { spot: AroundMeSpot; d
             Open
           </span>
           <span
-            className="inline-flex items-center justify-center w-8 h-8 rounded"
-            style={{
-              backgroundColor: categoryColor ? `${categoryColor}20` : "var(--twilight)",
-            }}
+            data-category={spot.venue_type || undefined}
+            className="inline-flex items-center justify-center w-8 h-8 rounded category-chip"
           >
             <span className="text-lg">{spot.icon}</span>
           </span>
@@ -88,17 +80,12 @@ function SpotCardContent({ spot, distance, portalSlug }: { spot: AroundMeSpot; d
 // Event card variant
 function EventCardContent({ event, distance, portalSlug }: { event: AroundMeEvent; distance: number; portalSlug?: string }) {
   const { time, period } = formatTimeSplit(event.start_time, event.is_all_day);
-  const categoryColor = event.category ? getCategoryColor(event.category) : null;
 
   return (
     <Link
       href={portalSlug ? `/${portalSlug}?event=${event.id}` : `/events/${event.id}`}
       scroll={false}
-      className="block p-3 rounded-sm border border-[var(--twilight)] bg-[var(--card-bg)] hover:border-[var(--neon-red)]/40 transition-all group"
-      style={{
-        borderLeftWidth: "3px",
-        borderLeftColor: "var(--neon-red)",
-      }}
+      className="block p-3 rounded-sm border border-[var(--twilight)] bg-[var(--card-bg)] hover:border-[var(--neon-red)]/40 transition-all group border-l-[3px] border-l-[var(--neon-red)]"
     >
       <div className="flex items-start gap-3">
         {/* Type badge + icon column */}
@@ -114,10 +101,8 @@ function EventCardContent({ event, distance, portalSlug }: { event: AroundMeEven
           </span>
           {event.category && (
             <span
-              className="inline-flex items-center justify-center w-8 h-8 rounded"
-              style={{
-                backgroundColor: categoryColor ? `${categoryColor}20` : "var(--twilight)",
-              }}
+              data-category={event.category}
+              className="inline-flex items-center justify-center w-8 h-8 rounded category-chip"
             >
               <CategoryIcon type={event.category} size={18} glow="subtle" />
             </span>

@@ -1,0 +1,12 @@
+version: 1
+slug: jungle-atlanta
+name: Jungle Atlanta
+integration_method: llm_crawler
+defaults: {}
+discovery:
+  enabled: true
+  type: html
+  urls:
+  - https://www.jungleatl.com
+detail:
+  enabled: false

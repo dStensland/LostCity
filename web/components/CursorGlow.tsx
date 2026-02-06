@@ -13,6 +13,7 @@ export default function CursorGlow() {
   const [isEnabled, setIsEnabled] = useState(true);
   const [mounted, setMounted] = useState(false);
   const glowRef = useRef<HTMLDivElement>(null);
+  const animationRef = useRef<Animation | null>(null);
   const rafRef = useRef<number | null>(null);
   const targetRef = useRef({ x: 0, y: 0 });
   const currentPosRef = useRef({ x: 0, y: 0 });
@@ -87,8 +88,19 @@ export default function CursorGlow() {
         current.y = target.y;
         // Direct DOM update - bypasses React render cycle
         if (glowRef.current) {
-          glowRef.current.style.left = `${target.x - 200}px`;
-          glowRef.current.style.top = `${target.y - 200}px`;
+          const x = target.x - 200;
+          const y = target.y - 200;
+          if (!animationRef.current) {
+            animationRef.current = glowRef.current.animate(
+              [{ transform: `translate3d(${x}px, ${y}px, 0)` }],
+              { duration: 0, fill: "forwards" }
+            );
+          } else {
+            animationRef.current.effect?.setKeyframes([
+              { transform: `translate3d(${x}px, ${y}px, 0)` },
+            ]);
+            animationRef.current.play();
+          }
         }
         isAnimatingRef.current = false;
         rafRef.current = null;
@@ -100,8 +112,19 @@ export default function CursorGlow() {
       current.y += dy * 0.15;
       // Direct DOM update - bypasses React render cycle
       if (glowRef.current) {
-        glowRef.current.style.left = `${current.x - 200}px`;
-        glowRef.current.style.top = `${current.y - 200}px`;
+        const x = current.x - 200;
+        const y = current.y - 200;
+        if (!animationRef.current) {
+          animationRef.current = glowRef.current.animate(
+            [{ transform: `translate3d(${x}px, ${y}px, 0)` }],
+            { duration: 0, fill: "forwards" }
+          );
+        } else {
+          animationRef.current.effect?.setKeyframes([
+            { transform: `translate3d(${x}px, ${y}px, 0)` },
+          ]);
+          animationRef.current.play();
+        }
       }
 
       rafRef.current = requestAnimationFrame(animate);
@@ -185,6 +208,9 @@ export default function CursorGlow() {
       if (rafRef.current) {
         cancelAnimationFrame(rafRef.current);
       }
+      if (animationRef.current) {
+        animationRef.current.cancel();
+      }
       if (idleTimeoutRef.current !== null) {
         clearTimeout(idleTimeoutRef.current);
       }
@@ -206,14 +232,9 @@ export default function CursorGlow() {
     >
       <div
         ref={glowRef}
-        className="absolute w-[400px] h-[400px] rounded-full transition-opacity duration-300"
-        style={{
-          left: 0,
-          top: 0,
-          background: `radial-gradient(circle, rgba(255, 107, 122, 0.06) 0%, rgba(255, 107, 122, 0.02) 40%, transparent 70%)`,
-          opacity: isVisible ? 1 : 0,
-          filter: "blur(40px)",
-        }}
+        className={`absolute w-[400px] h-[400px] rounded-full transition-opacity duration-300 cursor-glow ${
+          isVisible ? "opacity-100" : "opacity-0"
+        }`}
       />
     </div>
   );

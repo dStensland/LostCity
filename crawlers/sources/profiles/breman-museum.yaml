@@ -1,0 +1,12 @@
+version: 1
+slug: breman-museum
+name: The Breman Museum
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.thebreman.org/Events
+detail:
+  enabled: false

@@ -1,0 +1,26 @@
+version: 1
+slug: the-earl
+name: The EARL
+integration_method: llm_crawler
+defaults:
+  venue_name: The EARL
+  category: music
+  subcategory: concert
+  tags:
+    - music
+discovery:
+  enabled: true
+  type: html
+  urls:
+  - https://badearl.com/show-calendar/
+  - https://badearl.com
+  fetch:
+    render_js: true
+    wait_ms: 4000
+detail:
+  enabled: true
+  fetch:
+    render_js: true
+    wait_ms: 4000
+  selectors:
+    artists: "#headliner-contain .headliner, #support-contain .support"

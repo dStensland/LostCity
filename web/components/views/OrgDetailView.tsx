@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
+import Image from "@/components/SmartImage";
 import { format, parseISO } from "date-fns";
 import { formatTimeSplit } from "@/lib/formats";
 import FollowButton from "@/components/FollowButton";
@@ -10,6 +10,8 @@ import RecommendButton from "@/components/RecommendButton";
 import CategoryIcon, { getCategoryColor } from "@/components/CategoryIcon";
 import LinkifyText from "@/components/LinkifyText";
 import CollapsibleSection, { CategoryIcons, CATEGORY_COLORS } from "@/components/CollapsibleSection";
+import ScopedStyles from "@/components/ScopedStyles";
+import { createCssVarClass } from "@/lib/css-utils";
 
 type ProducerData = {
   id: string;
@@ -76,34 +78,18 @@ function getDomainFromUrl(url: string): string {
 const NeonBackButton = ({ onClose }: { onClose: () => void }) => (
   <button
     onClick={onClose}
-    className="group flex items-center gap-2 px-3.5 py-2 rounded-full font-mono text-xs font-semibold tracking-wide uppercase transition-all duration-300 hover:scale-105 mb-4"
-    style={{
-      background: 'linear-gradient(135deg, rgba(0,0,0,0.7) 0%, rgba(20,20,30,0.8) 100%)',
-      backdropFilter: 'blur(8px)',
-      border: '1px solid rgba(255,107,107,0.3)',
-      boxShadow: '0 0 15px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.1)',
-    }}
-    onMouseEnter={(e) => {
-      e.currentTarget.style.borderColor = 'rgba(255,107,107,0.6)';
-      e.currentTarget.style.boxShadow = '0 0 20px rgba(255,107,107,0.3), 0 0 40px rgba(255,107,107,0.1), inset 0 1px 0 rgba(255,255,255,0.1)';
-    }}
-    onMouseLeave={(e) => {
-      e.currentTarget.style.borderColor = 'rgba(255,107,107,0.3)';
-      e.currentTarget.style.boxShadow = '0 0 15px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.1)';
-    }}
+    className="group flex items-center gap-2 px-3.5 py-2 rounded-full font-mono text-xs font-semibold tracking-wide uppercase transition-all duration-300 hover:scale-105 mb-4 neon-back-btn"
   >
     <svg
-      className="w-4 h-4 transition-transform duration-300 group-hover:-translate-x-0.5"
+      className="w-4 h-4 transition-transform duration-300 group-hover:-translate-x-0.5 neon-back-icon"
       fill="none"
       stroke="currentColor"
       viewBox="0 0 24 24"
-      style={{ filter: 'drop-shadow(0 0 3px rgba(255,107,107,0.5))' }}
     >
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
     </svg>
     <span
-      className="transition-all duration-300 group-hover:text-[var(--coral)]"
-      style={{ textShadow: '0 0 10px rgba(255,107,107,0.3)' }}
+      className="transition-all duration-300 group-hover:text-[var(--coral)] neon-back-text"
     >
       Back
     </span>
@@ -176,10 +162,17 @@ export default function OrgDetailView({ slug, portalSlug, onClose }: OrgDetailVi
   }
 
   const orgConfig = ORG_TYPE_CONFIG[producer.org_type];
+  const orgAccent = orgConfig?.color || "var(--muted)";
+  const orgAccentClass = createCssVarClass("--accent-color", orgAccent, "accent");
   const showLogo = producer.logo_url && !imageError;
+  const primaryCategory = producer.categories?.[0];
+  const categoryAccentClass = primaryCategory
+    ? createCssVarClass("--accent-color", getCategoryColor(primaryCategory), "accent")
+    : null;
 
   return (
-    <div className="pt-6 pb-8">
+    <div className={`pt-6 pb-8 ${orgAccentClass?.className ?? ""}`}>
+      <ScopedStyles css={orgAccentClass?.css} />
       {/* Back button */}
       <NeonBackButton onClose={onClose} />
 
@@ -205,13 +198,11 @@ export default function OrgDetailView({ slug, portalSlug, onClose }: OrgDetailVi
               </div>
             ) : (
               <div
-                className="w-20 h-20 rounded-xl flex items-center justify-center"
-                style={{
-                  backgroundColor: producer.categories?.[0]
-                    ? `${getCategoryColor(producer.categories[0])}20`
-                    : "var(--twilight)",
-                }}
+                className={`w-20 h-20 rounded-xl flex items-center justify-center ${
+                  primaryCategory ? "bg-accent-20" : "bg-[var(--twilight)]"
+                } ${categoryAccentClass?.className ?? ""}`}
               >
+                <ScopedStyles css={categoryAccentClass?.css} />
                 <CategoryIcon
                   type={producer.categories?.[0] || "community"}
                   size={40}
@@ -230,11 +221,9 @@ export default function OrgDetailView({ slug, portalSlug, onClose }: OrgDetailVi
                 </h1>
                 <div className="flex items-center gap-2 mt-2 flex-wrap">
                   <span
-                    className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-mono font-medium uppercase tracking-wider"
-                    style={{
-                      backgroundColor: orgConfig?.color ? `${orgConfig.color}20` : "var(--twilight)",
-                      color: orgConfig?.color || "var(--muted)",
-                    }}
+                    className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-mono font-medium uppercase tracking-wider ${
+                      orgConfig?.color ? "bg-accent-20 text-accent" : "bg-[var(--twilight)] text-[var(--muted)]"
+                    }`}
                   >
                     {orgConfig?.label || producer.org_type.replace(/_/g, " ")}
                   </span>
@@ -271,15 +260,13 @@ export default function OrgDetailView({ slug, portalSlug, onClose }: OrgDetailVi
           <div className="mt-4 flex flex-wrap gap-2">
             {producer.categories.map((cat) => {
               const color = getCategoryColor(cat);
+              const tagAccentClass = createCssVarClass("--accent-color", color, "accent");
               return (
                 <span
                   key={cat}
-                  className="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs font-mono uppercase tracking-wider"
-                  style={{
-                    backgroundColor: `${color}15`,
-                    color: color,
-                  }}
+                  className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs font-mono uppercase tracking-wider bg-accent-15 text-accent ${tagAccentClass?.className ?? ""}`}
                 >
+                  <ScopedStyles css={tagAccentClass?.css} />
                   <CategoryIcon type={cat} size={12} />
                   {cat.replace(/_/g, " ")}
                 </span>

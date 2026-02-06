@@ -1,5 +1,5 @@
 import Link from "next/link";
-import Image from "next/image";
+import Image from "@/components/SmartImage";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function AdminDashboard() {
@@ -55,6 +55,12 @@ export default async function AdminDashboard() {
           className="px-4 py-2 bg-[var(--coral)] text-[var(--void)] font-mono text-sm rounded hover:opacity-90 transition-opacity"
         >
           Manage Portals
+        </Link>
+        <Link
+          href="/admin/claims"
+          className="px-4 py-2 bg-[var(--neon-cyan)] text-[var(--void)] font-mono text-sm rounded hover:opacity-90 transition-opacity"
+        >
+          Claim Requests
         </Link>
         <Link
           href="/admin/events"

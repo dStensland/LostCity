@@ -438,3 +438,106 @@ def extract_images_from_page(
         logger.warning(f"Error extracting images from page: {e}")
 
     return image_map
+
+
+def extract_event_links(
+    page,  # Playwright Page object
+    base_url: str,
+    skip_words: Optional[list[str]] = None,
+) -> dict[str, str]:
+    """
+    Extract title-to-URL mapping from a Playwright page.
+
+    Useful for linking events to their specific detail pages instead of
+    generic listing pages.
+
+    Args:
+        page: Playwright Page object
+        base_url: Base URL for making relative links absolute
+        skip_words: Optional list of words to skip (navigation items, etc.)
+
+    Returns:
+        Dict mapping lowercase titles to full URLs
+    """
+    if skip_words is None:
+        skip_words = [
+            "view more", "learn more", "read more", "see all", "load more",
+            "submit", "upcoming", "donate", "subscribe", "newsletter",
+            "sign up", "log in", "register", "contact", "about", "home",
+            "menu", "navigation", "search", "filter", "sort", "reset",
+            "privacy", "terms", "cookie", "accept", "decline",
+        ]
+
+    event_links = {}
+    try:
+        # Get all links that might be event links
+        links = page.query_selector_all("a[href]")
+        for link in links:
+            try:
+                href = link.get_attribute("href")
+                text = link.inner_text().strip()
+
+                if not href or not text or len(text) < 3:
+                    continue
+
+                # Skip navigation/UI links
+                text_lower = text.lower()
+                if any(skip in text_lower for skip in skip_words):
+                    continue
+
+                # Skip anchor links and javascript
+                if href.startswith("#") or href.startswith("javascript:"):
+                    continue
+
+                # Make URL absolute
+                if not href.startswith("http"):
+                    if href.startswith("/"):
+                        href = base_url.rstrip("/") + href
+                    else:
+                        href = base_url.rstrip("/") + "/" + href
+
+                # Store with lowercase title for matching
+                event_links[text_lower] = href
+
+            except Exception:
+                continue
+
+    except Exception as e:
+        logger.warning(f"Error extracting event links from page: {e}")
+
+    return event_links
+
+
+def find_event_url(
+    title: str,
+    event_links: dict[str, str],
+    fallback_url: str,
+) -> str:
+    """
+    Find the best matching URL for an event title.
+
+    Args:
+        title: Event title to match
+        event_links: Dict from extract_event_links()
+        fallback_url: URL to return if no match found
+
+    Returns:
+        Best matching URL or fallback
+    """
+    title_lower = title.lower().strip()
+
+    # Exact match
+    if title_lower in event_links:
+        return event_links[title_lower]
+
+    # Try without quotes
+    title_clean = title_lower.strip('"').strip("'")
+    if title_clean in event_links:
+        return event_links[title_clean]
+
+    # Try partial match (title contains link text or vice versa)
+    for link_text, url in event_links.items():
+        if title_lower in link_text or link_text in title_lower:
+            return url
+
+    return fallback_url

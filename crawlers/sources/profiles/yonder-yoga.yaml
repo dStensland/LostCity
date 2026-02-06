@@ -1,0 +1,14 @@
+version: 1
+slug: yonder-yoga
+name: Yonder Yoga
+integration_method: playwright
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.yonderyoga.com
+  fetch:
+    render_js: true
+detail:
+  enabled: false

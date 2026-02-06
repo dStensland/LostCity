@@ -1,0 +1,14 @@
+version: 1
+slug: apex-museum
+name: APEX Museum
+integration_method: aggregator
+defaults: {}
+discovery:
+  enabled: true
+  type: api
+  urls:
+  - https://www.eventbrite.com/d/ga--atlanta/apex-museum/
+  api:
+    adapter: eventbrite
+detail:
+  enabled: false

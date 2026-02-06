@@ -1,0 +1,14 @@
+version: 1
+slug: six-flags-over-georgia
+name: Six Flags Over Georgia
+integration_method: playwright
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.sixflags.com/overgeorgia/events
+  fetch:
+    render_js: true
+detail:
+  enabled: false

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import Image from "next/image";
+import Image from "@/components/SmartImage";
 import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
 

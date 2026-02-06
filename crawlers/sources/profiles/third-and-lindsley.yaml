@@ -1,0 +1,12 @@
+version: 1
+slug: third-and-lindsley
+name: 3rd & Lindsley
+integration_method: llm_crawler
+defaults: {}
+discovery:
+  enabled: true
+  type: html
+  urls:
+  - https://www.3rdandlindsley.com/calendar/
+detail:
+  enabled: false

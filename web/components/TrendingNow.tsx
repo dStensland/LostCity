@@ -1,8 +1,53 @@
+"use client";
+
+import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
-import { getTrendingEvents, type EventWithLocation } from "@/lib/search";
 import { formatTimeSplit } from "@/lib/formats";
 import { format, parseISO, isToday, isTomorrow } from "date-fns";
-import CategoryIcon, { getCategoryColor } from "./CategoryIcon";
+import CategoryIcon from "./CategoryIcon";
+import SeriesCard from "@/components/SeriesCard";
+import FestivalCard from "@/components/FestivalCard";
+import { groupEventsForDisplay } from "@/lib/event-grouping";
+import type { EventWithLocation } from "@/lib/search";
+
+type TrendingEvent = {
+  id: number;
+  title: string;
+  start_date: string;
+  start_time: string | null;
+  end_date: string | null;
+  end_time: string | null;
+  is_all_day: boolean;
+  is_free: boolean;
+  category: string | null;
+  image_url: string | null;
+  going_count: number;
+  series_id?: string | null;
+  series?: {
+    id: string;
+    slug: string;
+    title: string;
+    series_type: string;
+    image_url: string | null;
+    frequency: string | null;
+    day_of_week: string | null;
+    festival?: {
+      id: string;
+      slug: string;
+      name: string;
+      image_url: string | null;
+      festival_type?: string | null;
+      location: string | null;
+      neighborhood: string | null;
+    } | null;
+  } | null;
+  venue: {
+    id: number;
+    name: string;
+    slug: string;
+    neighborhood: string | null;
+  } | null;
+};
 
 // Get reflection color class based on category
 function getReflectionClass(category: string | null): string {
@@ -31,14 +76,51 @@ function getSmartDate(dateStr: string): string {
   return format(date, "EEE, MMM d");
 }
 
-export default async function TrendingNow({ portalSlug }: { portalSlug?: string } = {}) {
-  let events: EventWithLocation[] = [];
+export default function TrendingNow({ portalSlug }: { portalSlug?: string } = {}) {
+  const [events, setEvents] = useState<TrendingEvent[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  try {
-    events = await getTrendingEvents(6);
-  } catch (error) {
-    console.error("Failed to fetch trending events:", error);
-    return null;
+  useEffect(() => {
+    async function fetchEvents() {
+      try {
+        const response = await fetch("/api/trending");
+        if (!response.ok) {
+          setEvents([]);
+          return;
+        }
+        const data = await response.json();
+        setEvents(data.events || []);
+      } catch (error) {
+        console.error("Failed to fetch trending events:", error);
+        setEvents([]);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchEvents();
+  }, []);
+
+  const displayItems = useMemo(
+    () =>
+      groupEventsForDisplay(
+        events.map((event) => ({
+          ...event,
+          category_id: event.category,
+          subcategory_id: null,
+        })) as unknown as EventWithLocation[],
+        {
+          collapseFestivals: true,
+          collapseFestivalPrograms: true,
+          rollupVenues: false,
+          rollupCategories: false,
+          sortByTime: false,
+        }
+      ),
+    [events]
+  );
+
+  if (loading) {
+    return null; // Parent will show skeleton
   }
 
   // Don't render if no trending events
@@ -66,32 +148,60 @@ export default async function TrendingNow({ portalSlug }: { portalSlug?: string 
 
         {/* Horizontal scroll container with scroll snap on mobile */}
         <div className="flex gap-3 overflow-x-auto pb-3 -mx-4 px-4 scrollbar-hide snap-x snap-mandatory md:snap-none">
-          {events.map((event) => (
-            <TrendingEventCard key={event.id} event={event} portalSlug={portalSlug} />
-          ))}
+          {displayItems.map((item) => {
+            if (item.type === "event") {
+              return (
+                <TrendingEventCard key={item.event.id} event={item.event as TrendingEvent} portalSlug={portalSlug} />
+              );
+            }
+            if (item.type === "series-group") {
+              return (
+                <SeriesCard
+                  key={`series-${item.seriesId}`}
+                  series={item.series}
+                  venueGroups={item.venueGroups}
+                  portalSlug={portalSlug}
+                  skipAnimation
+                  disableMargin
+                  className="flex-shrink-0 w-72 snap-start"
+                />
+              );
+            }
+            if (item.type === "festival-group") {
+              return (
+                <FestivalCard
+                  key={`festival-${item.festivalId}`}
+                  festival={item.festival}
+                  summary={item.summary}
+                  portalSlug={portalSlug}
+                  skipAnimation
+                  disableMargin
+                  className="flex-shrink-0 w-72 snap-start"
+                />
+              );
+            }
+            return null;
+          })}
         </div>
       </div>
     </section>
   );
 }
 
-function TrendingEventCard({ event, portalSlug }: { event: EventWithLocation; portalSlug?: string }) {
+function TrendingEventCard({ event, portalSlug }: { event: TrendingEvent; portalSlug?: string }) {
   const { time, period } = formatTimeSplit(event.start_time, event.is_all_day);
-  const categoryColor = event.category ? getCategoryColor(event.category) : null;
   const reflectionClass = getReflectionClass(event.category);
   const smartDate = getSmartDate(event.start_date);
   const goingCount = event.going_count || 0;
+  const accentMode = event.category ? "category" : "trending";
 
   return (
     <Link
       href={portalSlug ? `/${portalSlug}?event=${event.id}` : `/events/${event.id}`}
       scroll={false}
-      className={`flex-shrink-0 w-72 p-3 bg-[var(--dusk)] rounded-xl border border-[var(--twilight)] transition-all duration-200 group card-atmospheric card-trending snap-start hover:border-[var(--twilight)]/80 hover:bg-[var(--dusk)]/80 ${reflectionClass}`}
-      style={{
-        "--glow-color": categoryColor || "var(--neon-magenta)",
-        "--reflection-color": categoryColor ? `color-mix(in srgb, ${categoryColor} 15%, transparent)` : undefined,
-        willChange: "border-color, background-color",
-      } as React.CSSProperties}
+      data-category={event.category || undefined}
+      data-accent={accentMode}
+      className={`flex-shrink-0 w-72 p-3 bg-[var(--dusk)] rounded-xl border border-[var(--twilight)] transition-all duration-200 group card-atmospheric card-trending snap-start hover:border-[var(--twilight)]/80 hover:bg-[var(--dusk)]/80 glow-accent reflection-accent will-change-border-bg ${reflectionClass}`}
     >
       <div className="flex items-start gap-3">
         {/* Trending indicator */}

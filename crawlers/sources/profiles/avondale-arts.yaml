@@ -1,0 +1,12 @@
+version: 1
+slug: avondale-arts
+name: Avondale Arts Alliance
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.avondaleartsalliance.com/events
+detail:
+  enabled: false

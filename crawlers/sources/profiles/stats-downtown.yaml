@@ -1,0 +1,12 @@
+version: 1
+slug: stats-downtown
+name: Stats Brewpub
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.statsatl.com
+detail:
+  enabled: false

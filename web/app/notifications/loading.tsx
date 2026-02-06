@@ -1,3 +1,5 @@
+import Skeleton from "@/components/Skeleton";
+
 export default function NotificationsLoading() {
   return (
     <div className="min-h-screen">
@@ -8,7 +10,7 @@ export default function NotificationsLoading() {
         {/* Page header skeleton */}
         <div className="flex items-center justify-between mb-6">
           <div className="h-8 w-40 skeleton-shimmer rounded" />
-          <div className="h-4 w-28 skeleton-shimmer rounded" style={{ animationDelay: "0.05s" }} />
+          <Skeleton className="h-4 w-28 rounded" delay="0.05s" />
         </div>
 
         {/* Notifications list skeleton */}
@@ -19,13 +21,13 @@ export default function NotificationsLoading() {
               className="p-4 bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg"
             >
               <div className="flex gap-4">
-                <div className="w-10 h-10 rounded-full skeleton-shimmer" style={{ animationDelay: `${i * 0.05}s` }} />
+                <Skeleton className="w-10 h-10 rounded-full" delay={`${i * 0.05}s`} />
                 <div className="flex-1 space-y-2">
-                  <div className="h-4 skeleton-shimmer rounded w-3/4" style={{ animationDelay: `${i * 0.05 + 0.05}s` }} />
-                  <div className="h-3 skeleton-shimmer rounded w-20" style={{ animationDelay: `${i * 0.05 + 0.1}s` }} />
+                  <Skeleton className="h-4 rounded w-3/4" delay={`${i * 0.05 + 0.05}s`} />
+                  <Skeleton className="h-3 rounded w-20" delay={`${i * 0.05 + 0.1}s`} />
                 </div>
                 <div className="flex-shrink-0 self-center">
-                  <div className="w-2.5 h-2.5 rounded-full skeleton-shimmer" style={{ animationDelay: `${i * 0.05 + 0.15}s` }} />
+                  <Skeleton className="w-2.5 h-2.5 rounded-full" delay={`${i * 0.05 + 0.15}s`} />
                 </div>
               </div>
             </div>

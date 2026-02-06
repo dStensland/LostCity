@@ -1,0 +1,12 @@
+version: 1
+slug: aisle-5
+name: Aisle 5
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://aisle5atl.com
+detail:
+  enabled: false

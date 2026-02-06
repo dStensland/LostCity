@@ -1,0 +1,12 @@
+version: 1
+slug: atlanta-lyric-theatre
+name: Atlanta Lyric Theatre
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.atlantalyrictheatre.com
+detail:
+  enabled: false

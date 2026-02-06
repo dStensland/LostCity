@@ -1,0 +1,12 @@
+version: 1
+slug: georgia-ensemble-theatre
+name: Georgia Ensemble Theatre
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://get.org/25-26-season/
+detail:
+  enabled: false

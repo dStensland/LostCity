@@ -16,6 +16,7 @@ from playwright.sync_api import sync_playwright, Page
 
 from db import get_or_create_venue, insert_event, find_event_by_hash, remove_stale_source_events
 from dedupe import generate_content_hash
+from utils import extract_event_links, find_event_url
 
 logger = logging.getLogger(__name__)
 
@@ -127,6 +128,13 @@ def extract_movies(
                         events_updated += 1
                         continue
 
+                    # Get specific event URL
+
+
+                    event_url = find_event_url(title, event_links, EVENTS_URL)
+
+
+
                     event_record = {
                         "source_id": source_id,
                         "venue_id": venue_id,
@@ -144,8 +152,8 @@ def extract_movies(
                         "price_max": None,
                         "price_note": None,
                         "is_free": False,
-                        "source_url": BASE_URL,
-                        "ticket_url": None,
+                        "source_url": event_url,
+                        "ticket_url": event_url if event_url != (EVENTS_URL if "EVENTS_URL" in dir() else BASE_URL) else None,
                         "image_url": image_url,
                         "raw_text": None,
                         "extraction_confidence": 0.85,
@@ -212,6 +220,11 @@ def _extract_from_text(
                         if existing:
                             events_updated += 1
                         else:
+                            # Get specific event URL
+
+                            event_url = find_event_url(title, event_links, EVENTS_URL)
+
+
                             event_record = {
                                 "source_id": source_id,
                                 "venue_id": venue_id,
@@ -229,8 +242,8 @@ def _extract_from_text(
                                 "price_max": None,
                                 "price_note": None,
                                 "is_free": False,
-                                "source_url": BASE_URL,
-                                "ticket_url": None,
+                                "source_url": event_url,
+                                "ticket_url": event_url if event_url != (EVENTS_URL if "EVENTS_URL" in dir() else BASE_URL) else None,
                                 "image_url": None,
                                 "raw_text": None,
                                 "extraction_confidence": 0.80,

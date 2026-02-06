@@ -1,20 +1,24 @@
 "use client";
 
-import { useRef, useState, useEffect, useCallback } from "react";
+import { useRef, useState, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { format, parseISO } from "date-fns";
 import { usePortal } from "@/lib/portal-context";
-import { getCategoryColor } from "../CategoryIcon";
 import CategoryPlaceholder from "../CategoryPlaceholder";
 import LinkifyText from "../LinkifyText";
 import { FreeBadge } from "../Badge";
 import FeedSectionHeader from "./FeedSectionHeader";
+import SeriesCard from "@/components/SeriesCard";
+import FestivalCard from "@/components/FestivalCard";
+import { groupEventsForDisplay } from "@/lib/event-grouping";
+import type { EventWithLocation } from "@/lib/search";
 
 type FeaturedEvent = {
   id: number;
   title: string;
   start_date: string;
   start_time: string | null;
+  end_date: string | null;
   end_time: string | null;
   is_all_day: boolean;
   is_free: boolean;
@@ -25,6 +29,25 @@ type FeaturedEvent = {
   image_url: string | null;
   description: string | null;
   featured_blurb?: string | null;
+  series_id?: string | null;
+  series?: {
+    id: string;
+    slug: string;
+    title: string;
+    series_type: string;
+    image_url: string | null;
+    frequency: string | null;
+    day_of_week: string | null;
+    festival?: {
+      id: string;
+      slug: string;
+      name: string;
+      image_url: string | null;
+      festival_type?: string | null;
+      location: string | null;
+      neighborhood: string | null;
+    } | null;
+  } | null;
   venue: {
     id: number;
     name: string;
@@ -48,6 +71,27 @@ export function FeaturedCarousel({ events }: Props) {
   const cardWidth = 320; // w-80 = 20rem = 320px
   const gap = 16; // gap-4 = 1rem = 16px
 
+  const displayItems = useMemo(
+    () =>
+      groupEventsForDisplay(
+        events.map((event) => ({
+          ...event,
+          category_id: event.category,
+          subcategory_id: event.subcategory,
+        })) as unknown as EventWithLocation[],
+        {
+          collapseFestivals: true,
+          collapseFestivalPrograms: true,
+          rollupVenues: false,
+          rollupCategories: false,
+          sortByTime: false,
+        }
+      ),
+    [events]
+  );
+
+  const displayCount = displayItems.length;
+
   // Update scroll state and active index
   const updateScrollState = useCallback(() => {
     if (!scrollRef.current) return;
@@ -57,8 +101,8 @@ export function FeaturedCarousel({ events }: Props) {
 
     // Calculate which card is most visible
     const index = Math.round(scrollLeft / (cardWidth + gap));
-    setActiveIndex(Math.min(index, events.length - 1));
-  }, [events.length]);
+    setActiveIndex(Math.min(index, Math.max(displayCount - 1, 0)));
+  }, [displayCount]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -86,9 +130,42 @@ export function FeaturedCarousel({ events }: Props) {
     });
   };
 
-  if (events.length === 0) {
+  if (displayCount === 0) {
     return null;
   }
+
+  const renderDisplayItem = (item: ReturnType<typeof groupEventsForDisplay>[number]) => {
+    if (item.type === "event") {
+      return <FeaturedCard key={item.event.id} event={item.event as FeaturedEvent} portalSlug={portal.slug} />;
+    }
+    if (item.type === "series-group") {
+      return (
+        <SeriesCard
+          key={`series-${item.seriesId}`}
+          series={item.series}
+          venueGroups={item.venueGroups}
+          portalSlug={portal.slug}
+          skipAnimation
+          disableMargin
+          className="flex-shrink-0 w-80 snap-start"
+        />
+      );
+    }
+    if (item.type === "festival-group") {
+      return (
+        <FestivalCard
+          key={`festival-${item.festivalId}`}
+          festival={item.festival}
+          summary={item.summary}
+          portalSlug={portal.slug}
+          skipAnimation
+          disableMargin
+          className="flex-shrink-0 w-80 snap-start"
+        />
+      );
+    }
+    return null;
+  };
 
   return (
     <section className="mb-10">
@@ -141,15 +218,13 @@ export function FeaturedCarousel({ events }: Props) {
           ref={scrollRef}
           className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide snap-x snap-mandatory px-4 scroll-smooth"
         >
-          {events.map((event) => (
-            <FeaturedCard key={event.id} event={event} portalSlug={portal.slug} />
-          ))}
+          {displayItems.map((item) => renderDisplayItem(item))}
         </div>
 
         {/* Mobile indicator dots */}
-        {events.length > 1 && (
+        {displayCount > 1 && (
           <div className="flex sm:hidden justify-center gap-1.5 mt-3">
-            {events.map((_, idx) => (
+            {displayItems.map((_, idx) => (
               <button
                 key={idx}
                 onClick={() => {
@@ -178,7 +253,6 @@ export function FeaturedCarousel({ events }: Props) {
 function FeaturedCard({ event, portalSlug }: { event: FeaturedEvent; portalSlug: string }) {
   const [imageLoaded, setImageLoaded] = useState(!event.image_url);
   const [imageError, setImageError] = useState(false);
-  const categoryColor = event.category ? getCategoryColor(event.category) : "var(--coral)";
   const showImage = event.image_url && !imageError;
 
   return (
@@ -211,16 +285,9 @@ function FeaturedCard({ event, portalSlug }: { event: FeaturedEvent; portalSlug:
           {/* Featured badge - bottom left of image */}
           <div className="absolute bottom-3 left-3 z-10">
             <span
-              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-sm text-xs font-mono font-medium border uppercase tracking-wider"
-              style={{
-                background: "linear-gradient(135deg, rgba(255, 215, 0, 0.2) 0%, rgba(255, 180, 0, 0.1) 100%)",
-                borderColor: "rgba(255, 215, 0, 0.4)",
-                color: "var(--gold)",
-                boxShadow: "0 0 12px rgba(255, 215, 0, 0.3), 0 0 24px rgba(255, 215, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.1)",
-                backdropFilter: "blur(8px)",
-              }}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-sm text-xs font-mono font-medium border uppercase tracking-wider featured-badge"
             >
-              <svg className="w-3 h-3" viewBox="0 0 20 20" fill="currentColor" style={{ filter: "drop-shadow(0 0 3px rgba(255, 215, 0, 0.6))" }}>
+              <svg className="w-3 h-3 featured-badge-icon" viewBox="0 0 20 20" fill="currentColor">
                 <path d="M11 1L4 11h5l-1 8 8-10h-5l1-8z" />
               </svg>
               Featured
@@ -233,16 +300,9 @@ function FeaturedCard({ event, portalSlug }: { event: FeaturedEvent; portalSlug:
           {/* Featured badge - bottom left of placeholder */}
           <div className="absolute bottom-3 left-3 z-10">
             <span
-              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-sm text-xs font-mono font-medium border uppercase tracking-wider"
-              style={{
-                background: "linear-gradient(135deg, rgba(255, 215, 0, 0.2) 0%, rgba(255, 180, 0, 0.1) 100%)",
-                borderColor: "rgba(255, 215, 0, 0.4)",
-                color: "var(--gold)",
-                boxShadow: "0 0 12px rgba(255, 215, 0, 0.3), 0 0 24px rgba(255, 215, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.1)",
-                backdropFilter: "blur(8px)",
-              }}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-sm text-xs font-mono font-medium border uppercase tracking-wider featured-badge"
             >
-              <svg className="w-3 h-3" viewBox="0 0 20 20" fill="currentColor" style={{ filter: "drop-shadow(0 0 3px rgba(255, 215, 0, 0.6))" }}>
+              <svg className="w-3 h-3 featured-badge-icon" viewBox="0 0 20 20" fill="currentColor">
                 <path d="M11 1L4 11h5l-1 8 8-10h-5l1-8z" />
               </svg>
               Featured
@@ -304,8 +364,8 @@ function FeaturedCard({ event, portalSlug }: { event: FeaturedEvent; portalSlug:
       {/* Category accent bar at bottom */}
       {event.category && (
         <div
-          className="h-1 w-full"
-          style={{ backgroundColor: categoryColor }}
+          data-category={event.category}
+          className="h-1 w-full bg-[var(--category-color)]"
         />
       )}
     </Link>

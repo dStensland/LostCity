@@ -1,0 +1,12 @@
+version: 1
+slug: hotel-clermont
+name: Hotel Clermont
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.hotelclermont.com
+detail:
+  enabled: false

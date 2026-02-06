@@ -299,8 +299,7 @@ export default function WhatsOpenPage() {
                   setSelectedNeighborhood(e.target.value || null);
                   setShowLocationPrompt(false);
                 }}
-                className="w-full px-4 py-3 rounded-lg bg-[var(--dusk)] border border-[var(--twilight)] text-[var(--cream)] font-mono text-sm focus:outline-none focus:border-[var(--neon-amber)] transition-colors appearance-none cursor-pointer"
-                style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236b7280'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`, backgroundRepeat: "no-repeat", backgroundPosition: "right 0.75rem center", backgroundSize: "1.25rem" }}
+                className="w-full px-4 py-3 rounded-lg bg-[var(--dusk)] border border-[var(--twilight)] text-[var(--cream)] font-mono text-sm focus:outline-none focus:border-[var(--neon-amber)] transition-colors appearance-none cursor-pointer select-chevron-lg"
               >
                 <option value="">Select neighborhood...</option>
                 {NEIGHBORHOOD_NAMES.map((hood) => (
@@ -324,26 +323,25 @@ export default function WhatsOpenPage() {
         <div className="max-w-3xl mx-auto px-4 py-2">
           <div className="flex items-center justify-between gap-2">
             {/* Location selector - left side for prominence */}
-            <select
-              value={selectedNeighborhood || (userLocation ? "__nearby__" : "")}
-              onChange={(e) => {
-                const val = e.target.value;
-                if (val === "__nearby__") {
-                  setSelectedNeighborhood(null);
-                  requestLocation();
-                } else if (val === "") {
-                  setSelectedNeighborhood(null);
-                  setUserLocation(null);
-                  localStorage.removeItem("userLocation");
-                } else {
-                  setSelectedNeighborhood(val);
-                  setUserLocation(null);
-                  localStorage.removeItem("userLocation");
-                }
-              }}
-              className="flex-1 max-w-[200px] px-3 py-1.5 rounded-lg bg-[var(--dusk)] border border-[var(--twilight)] text-[var(--cream)] font-mono text-sm focus:outline-none focus:border-[var(--coral)] transition-colors appearance-none cursor-pointer"
-              style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236b7280'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`, backgroundRepeat: "no-repeat", backgroundPosition: "right 0.5rem center", backgroundSize: "1rem", paddingRight: "2rem" }}
-            >
+              <select
+                value={selectedNeighborhood || (userLocation ? "__nearby__" : "")}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val === "__nearby__") {
+                    setSelectedNeighborhood(null);
+                    requestLocation();
+                  } else if (val === "") {
+                    setSelectedNeighborhood(null);
+                    setUserLocation(null);
+                    localStorage.removeItem("userLocation");
+                  } else {
+                    setSelectedNeighborhood(val);
+                    setUserLocation(null);
+                    localStorage.removeItem("userLocation");
+                  }
+                }}
+                className="flex-1 max-w-[200px] px-3 py-1.5 rounded-lg bg-[var(--dusk)] border border-[var(--twilight)] text-[var(--cream)] font-mono text-sm focus:outline-none focus:border-[var(--coral)] transition-colors appearance-none cursor-pointer select-chevron-md"
+              >
               <option value="__nearby__">{userLocation ? "📍 Nearby" : "📍 Use my location"}</option>
               <option value="">All of Atlanta</option>
               {NEIGHBORHOOD_NAMES.map((hood) => (

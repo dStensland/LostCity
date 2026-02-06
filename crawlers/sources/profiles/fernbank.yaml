@@ -1,0 +1,12 @@
+version: 1
+slug: fernbank
+name: Fernbank Museum of Natural History
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.fernbankmuseum.org
+detail:
+  enabled: false

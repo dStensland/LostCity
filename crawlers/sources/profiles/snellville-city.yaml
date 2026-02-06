@@ -1,0 +1,12 @@
+version: 1
+slug: snellville-city
+name: City of Snellville
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.snellville.org
+detail:
+  enabled: false

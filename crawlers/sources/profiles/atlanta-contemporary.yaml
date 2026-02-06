@@ -1,0 +1,12 @@
+version: 1
+slug: atlanta-contemporary
+name: Atlanta Contemporary
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.atlantacontemporary.org
+detail:
+  enabled: false

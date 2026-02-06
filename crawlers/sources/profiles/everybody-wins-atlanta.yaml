@@ -1,0 +1,12 @@
+version: 1
+slug: everybody-wins-atlanta
+name: Everybody Wins Atlanta
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://everybodywinsatlanta.org/events
+detail:
+  enabled: false

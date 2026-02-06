@@ -1,0 +1,14 @@
+version: 1
+slug: schoolhouse-brewing
+name: Schoolhouse Brewing
+integration_method: playwright
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://schoolhousebrewing.com/events
+  fetch:
+    render_js: true
+detail:
+  enabled: false

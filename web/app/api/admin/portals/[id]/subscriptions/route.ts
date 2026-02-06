@@ -9,6 +9,7 @@ import {
   refreshPortalSourceAccess,
 } from "@/lib/federation";
 import { createServiceClient } from "@/lib/supabase/service";
+import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +19,9 @@ type Props = {
 
 // GET /api/admin/portals/[id]/subscriptions - Get portal subscriptions
 export async function GET(request: NextRequest, { params }: Props) {
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
+  if (rateLimitResult) return rateLimitResult;
+
   const { id } = await params;
 
   // Verify user can manage this portal
@@ -53,6 +57,9 @@ export async function GET(request: NextRequest, { params }: Props) {
 
 // POST /api/admin/portals/[id]/subscriptions - Create a subscription
 export async function POST(request: NextRequest, { params }: Props) {
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
+  if (rateLimitResult) return rateLimitResult;
+
   const { id } = await params;
 
   // Verify user can manage this portal
@@ -152,6 +159,9 @@ export async function POST(request: NextRequest, { params }: Props) {
 
 // PATCH /api/admin/portals/[id]/subscriptions - Update a subscription
 export async function PATCH(request: NextRequest, { params }: Props) {
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
+  if (rateLimitResult) return rateLimitResult;
+
   const { id } = await params;
 
   // Verify user can manage this portal
@@ -227,6 +237,9 @@ export async function PATCH(request: NextRequest, { params }: Props) {
 
 // DELETE /api/admin/portals/[id]/subscriptions - Delete a subscription
 export async function DELETE(request: NextRequest, { params }: Props) {
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
+  if (rateLimitResult) return rateLimitResult;
+
   const { id } = await params;
 
   // Verify user can manage this portal

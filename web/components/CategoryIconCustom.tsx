@@ -1,4 +1,4 @@
-import { CSSProperties, type ReactNode } from "react";
+import { type ReactNode } from "react";
 
 // Unified category/type definitions with colors
 export const CATEGORY_CONFIG = {
@@ -89,7 +89,6 @@ interface Props {
   size?: number;
   className?: string;
   showLabel?: boolean;
-  style?: CSSProperties;
   glow?: GlowIntensity;
 }
 
@@ -796,18 +795,17 @@ export default function CategoryIcon({
   size = 20,
   className = "",
   showLabel = false,
-  style,
   glow = "default",
 }: Props) {
   const config = CATEGORY_CONFIG[type as CategoryType];
-  const color = config?.color || "#8B8B94";
+  const safeType = config ? type : "other";
   const label = config?.label || type;
   const glowClass = GLOW_CLASSES[glow];
 
   return (
     <span
-      className={`inline-flex items-center gap-1.5 ${className}`}
-      style={{ color, ...style }}
+      data-category={safeType}
+      className={`inline-flex items-center gap-1.5 category-icon ${className}`}
     >
       <svg
         width={size}

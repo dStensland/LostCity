@@ -5,6 +5,8 @@ import Link from "next/link";
 import type { EventWithLocation } from "@/lib/search";
 import { formatTime, formatTimeSplit } from "@/lib/formats";
 import CategoryIcon, { getCategoryColor } from "./CategoryIcon";
+import ScopedStyles from "@/components/ScopedStyles";
+import { createCssVarClass } from "@/lib/css-utils";
 
 // Map known venues to their primary category type
 const VENUE_CATEGORY_MAP: Record<string, string> = {
@@ -141,18 +143,16 @@ export default function EventGroup({
   const dominantCategory = venueCategory || events[0]?.category || null;
   const categoryColor = dominantCategory ? getCategoryColor(dominantCategory) : null;
   const reflectionClass = getReflectionClass(dominantCategory);
+  const accentColor = categoryColor || "var(--neon-magenta)";
+  const accentClass = createCssVarClass("--accent-color", accentColor, "accent");
 
   return (
     <div
-      className={`rounded-sm border border-[var(--twilight)] mb-4 overflow-hidden card-atmospheric ${reflectionClass} ${skipAnimation ? "" : "animate-fade-in"}`}
-      style={{
-        borderLeftWidth: categoryColor ? "3px" : undefined,
-        borderLeftColor: categoryColor || undefined,
-        backgroundColor: "var(--card-bg)",
-        "--glow-color": categoryColor || "var(--neon-magenta)",
-        "--reflection-color": categoryColor ? `color-mix(in srgb, ${categoryColor} 15%, transparent)` : undefined,
-      } as React.CSSProperties}
+      className={`rounded-sm border border-[var(--twilight)] mb-4 overflow-hidden card-atmospheric glow-accent reflection-accent bg-[var(--card-bg)] ${reflectionClass} ${skipAnimation ? "" : "animate-fade-in"} ${accentClass?.className ?? ""} ${
+        categoryColor ? "border-l-[3px] border-l-[var(--accent-color)]" : ""
+      }`}
     >
+      <ScopedStyles css={accentClass?.css} />
       {/* Header - clickable to expand/collapse */}
       <button
         type="button"
@@ -174,12 +174,7 @@ export default function EventGroup({
           );
         })()}
         {dominantCategory && (
-          <span
-            className="flex-shrink-0 inline-flex items-center justify-center w-7 h-7 rounded"
-            style={{
-              backgroundColor: categoryColor ? `${categoryColor}20` : undefined,
-            }}
-          >
+          <span className="flex-shrink-0 inline-flex items-center justify-center w-7 h-7 rounded bg-accent-20">
             <CategoryIcon type={dominantCategory} size={18} glow="subtle" />
           </span>
         )}
@@ -200,11 +195,9 @@ export default function EventGroup({
         </div>
         {/* Event count badge - prominent styling */}
         <span
-          className="font-mono text-xs px-2 py-1 rounded-full flex-shrink-0 whitespace-nowrap font-medium"
-          style={{
-            backgroundColor: categoryColor ? `${categoryColor}20` : "var(--twilight)",
-            color: categoryColor || "var(--cream)",
-          }}
+          className={`font-mono text-xs px-2 py-1 rounded-full flex-shrink-0 whitespace-nowrap font-medium ${
+            categoryColor ? "bg-accent-20 text-accent" : "bg-[var(--twilight)] text-[var(--cream)]"
+          }`}
         >
           {events.length} {events.length === 1 ? "event" : "events"}
         </span>

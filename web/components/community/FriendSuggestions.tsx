@@ -94,26 +94,15 @@ export function FriendSuggestions({ suggestions, isLoading = false }: FriendSugg
       {/* Section header with cyan accent and gradient divider */}
       <div className="flex items-center gap-3">
         <h3
-          className="font-mono text-xs font-bold uppercase tracking-wider"
-          style={{
-            color: "var(--neon-cyan)",
-            textShadow: "0 0 20px var(--neon-cyan)40",
-          }}
+          className="font-mono text-xs font-bold uppercase tracking-wider text-neon-cyan-glow"
         >
           People You May Know
         </h3>
         <div
-          className="flex-1 h-px"
-          style={{
-            background: "linear-gradient(to right, var(--neon-cyan)40, transparent)",
-          }}
+          className="flex-1 h-px divider-neon-cyan"
         />
         <span
-          className="font-mono text-xs px-2 py-0.5 rounded-full"
-          style={{
-            backgroundColor: "var(--neon-cyan)15",
-            color: "var(--neon-cyan)",
-          }}
+          className="font-mono text-xs px-2 py-0.5 rounded-full badge-neon-cyan"
         >
           {visibleSuggestions.length}
         </span>
@@ -175,10 +164,7 @@ function UserCard({ profile, onDismiss }: UserCardProps) {
     >
       {/* Hover glow effect */}
       <div
-        className="absolute inset-0 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none blur-xl"
-        style={{
-          background: "radial-gradient(circle at center, var(--coral) 0%, var(--neon-cyan) 50%, transparent 70%)",
-        }}
+        className="absolute inset-0 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none blur-xl hover-glow-coral-cyan"
       />
       <Link href={`/profile/${profile.username}`} className="flex-shrink-0 relative z-10">
         <UserAvatar

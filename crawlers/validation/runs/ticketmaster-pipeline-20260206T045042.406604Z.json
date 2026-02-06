@@ -1,0 +1,165 @@
+{
+  "source": {
+    "id": 11,
+    "slug": "ticketmaster",
+    "name": "Ticketmaster"
+  },
+  "mode": "pipeline",
+  "generated_at": "2026-02-06T04:50:42.406604Z",
+  "filters": {
+    "updated_since": "2026-02-06T02:50:41.584548Z",
+    "days": 180,
+    "include_past": false,
+    "max": null
+  },
+  "counts": {
+    "total": 128,
+    "with_description": 128,
+    "with_ticket_url": 98,
+    "with_image": 128,
+    "with_tags": 127,
+    "with_start_time": 128,
+    "with_price": 1,
+    "with_artists": 0
+  },
+  "coverage": {
+    "description": 100.0,
+    "ticket_url": 76.56,
+    "image": 100.0,
+    "tags": 99.22,
+    "start_time": 100.0,
+    "price": 0.78,
+    "artists": 0.0
+  },
+  "summary": {
+    "median_description_length": 45
+  },
+  "samples": {
+    "missing_ticket_url": [
+      {
+        "id": 17510,
+        "title": "ID Card Template 600000 minutes",
+        "start_date": "2025-01-05",
+        "source_url": ""
+      },
+      {
+        "id": 568,
+        "title": "Gladiators vs Jacksonville - Suites",
+        "start_date": "2026-02-06",
+        "source_url": ""
+      },
+      {
+        "id": 585,
+        "title": "Riverdance",
+        "start_date": "2026-02-07",
+        "source_url": ""
+      },
+      {
+        "id": 596,
+        "title": "HAWKS SUITE PASS: Charlotte Hornets",
+        "start_date": "2026-02-07",
+        "source_url": ""
+      },
+      {
+        "id": 608,
+        "title": "Truist Park Tour Feb 08",
+        "start_date": "2026-02-08",
+        "source_url": ""
+      },
+      {
+        "id": 13826,
+        "title": "Member Open Gym",
+        "start_date": "2026-02-10",
+        "source_url": ""
+      },
+      {
+        "id": 17512,
+        "title": "February 12 NANM Reception",
+        "start_date": "2026-02-12",
+        "source_url": ""
+      },
+      {
+        "id": 562,
+        "title": "MVY: The Tin Man's Oz -Feb 06, 2026 11:15am",
+        "start_date": "2026-02-06",
+        "source_url": ""
+      },
+      {
+        "id": 639,
+        "title": "Behind the Curtain: West Side Story",
+        "start_date": "2026-02-13",
+        "source_url": ""
+      },
+      {
+        "id": 638,
+        "title": "Chamber Performance - Feb 13, 2026 10:00AM",
+        "start_date": "2026-02-13",
+        "source_url": ""
+      }
+    ],
+    "missing_image": [],
+    "missing_description": [],
+    "missing_artists": [
+      {
+        "id": 17511,
+        "title": "Jonah Kagen",
+        "start_date": "2026-02-11",
+        "source_url": "https://www.ticketmaster.com/event/Z7r9jZ1A7OSOI"
+      },
+      {
+        "id": 17510,
+        "title": "ID Card Template 600000 minutes",
+        "start_date": "2025-01-05",
+        "source_url": ""
+      },
+      {
+        "id": 552,
+        "title": "Atlanta Hawks v. Utah Jazz",
+        "start_date": "2026-02-05",
+        "source_url": "https://www.ticketmaster.com/atlanta-hawks-v-utah-jazz-atlanta-georgia-02-05-2026/event/0E0062FD9AC21609"
+      },
+      {
+        "id": 560,
+        "title": "Jimmy O. Yang: Big & Tall Tour",
+        "start_date": "2026-02-05",
+        "source_url": "https://www.ticketmaster.com/jimmy-o-yang-big-tall-tour-atlanta-georgia-02-05-2026/event/0E0062A2EA717A36"
+      },
+      {
+        "id": 16244,
+        "title": "Tours: Truist Park",
+        "start_date": "2026-02-06",
+        "source_url": "https://www.ticketmaster.com/tours-truist-park-atlanta-georgia-02-06-2026/event/0E00636B9D737E94"
+      },
+      {
+        "id": 6181,
+        "title": "Family Fun Selfie Tour Carnival",
+        "start_date": "2026-02-06",
+        "source_url": "https://www.universe.com/events/family-fun-selfie-tour-carnival-tickets-Q0YNJP?ref=ticketmaster"
+      },
+      {
+        "id": 6182,
+        "title": "Love Carnival at Selfie Paradise Museum",
+        "start_date": "2026-02-06",
+        "source_url": "https://www.universe.com/events/love-carnival-at-selfie-paradise-museum-tickets-Y5DH4Z?ref=ticketmaster"
+      },
+      {
+        "id": 567,
+        "title": "Jackie Hill Perry",
+        "start_date": "2026-02-06",
+        "source_url": "https://www.ticketmaster.com/jackie-hill-perry-fayetteville-georgia-02-06-2026/event/0E00639E9C7B5135"
+      },
+      {
+        "id": 573,
+        "title": "Much Ado About Nothing",
+        "start_date": "2026-02-06",
+        "source_url": "https://www.ticketmaster.com/event/Z7r9jZ1A7p4qp"
+      },
+      {
+        "id": 6186,
+        "title": "Riverdance",
+        "start_date": "2026-02-06",
+        "source_url": "https://www.ticketmaster.com/event/Z7r9jZ1A74auU"
+      }
+    ]
+  }
+}

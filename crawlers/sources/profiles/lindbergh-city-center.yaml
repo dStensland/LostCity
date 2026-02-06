@@ -1,0 +1,12 @@
+version: 1
+slug: lindbergh-city-center
+name: Lindbergh City Center
+integration_method: llm_crawler
+defaults: {}
+discovery:
+  enabled: true
+  type: html
+  urls:
+  - https://lindberghcitycenter.com
+detail:
+  enabled: false

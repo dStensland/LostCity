@@ -1,0 +1,12 @@
+version: 1
+slug: sweet-auburn-springfest
+name: Sweet Auburn Springfest
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.sweetauburn.com
+detail:
+  enabled: false

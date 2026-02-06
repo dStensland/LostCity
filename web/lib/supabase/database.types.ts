@@ -748,6 +748,7 @@ export type Database = {
           categories: string[] | null
           created_at: string | null
           description: string | null
+          festival_type: string | null
           free: boolean | null
           id: string
           image_url: string | null
@@ -772,6 +773,7 @@ export type Database = {
           categories?: string[] | null
           created_at?: string | null
           description?: string | null
+          festival_type?: string | null
           free?: boolean | null
           id: string
           image_url?: string | null
@@ -796,6 +798,7 @@ export type Database = {
           categories?: string[] | null
           created_at?: string | null
           description?: string | null
+          festival_type?: string | null
           free?: boolean | null
           id?: string
           image_url?: string | null
@@ -1333,6 +1336,7 @@ export type Database = {
           neighborhood: string | null
           org_type: string
           phone: string | null
+          portal_id: string | null
           search_vector: unknown
           slug: string
           submitted_by: string | null
@@ -1364,6 +1368,7 @@ export type Database = {
           neighborhood?: string | null
           org_type: string
           phone?: string | null
+          portal_id?: string | null
           search_vector?: unknown
           slug: string
           submitted_by?: string | null
@@ -1395,6 +1400,7 @@ export type Database = {
           neighborhood?: string | null
           org_type?: string
           phone?: string | null
+          portal_id?: string | null
           search_vector?: unknown
           slug?: string
           submitted_by?: string | null
@@ -1409,6 +1415,46 @@ export type Database = {
             columns: ["submitted_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organizations_portal_id_fkey"
+            columns: ["portal_id"]
+            isOneToOne: false
+            referencedRelation: "portals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organization_portals: {
+        Row: {
+          created_at: string | null
+          organization_id: string
+          portal_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          organization_id: string
+          portal_id: string
+        }
+        Update: {
+          created_at?: string | null
+          organization_id?: string
+          portal_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_portals_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_portals_portal_id_fkey"
+            columns: ["portal_id"]
+            isOneToOne: false
+            referencedRelation: "portals"
             referencedColumns: ["id"]
           },
         ]
@@ -1879,6 +1925,7 @@ export type Database = {
           day_of_week: string | null
           description: string | null
           director: string | null
+          festival_id: string | null
           frequency: string | null
           genres: string[] | null
           id: string
@@ -1903,6 +1950,7 @@ export type Database = {
           day_of_week?: string | null
           description?: string | null
           director?: string | null
+          festival_id?: string | null
           frequency?: string | null
           genres?: string[] | null
           id?: string
@@ -1927,6 +1975,7 @@ export type Database = {
           day_of_week?: string | null
           description?: string | null
           director?: string | null
+          festival_id?: string | null
           frequency?: string | null
           genres?: string[] | null
           id?: string
@@ -1945,7 +1994,15 @@ export type Database = {
           updated_at?: string | null
           year?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "series_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "festivals"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       source_sharing_rules: {
         Row: {

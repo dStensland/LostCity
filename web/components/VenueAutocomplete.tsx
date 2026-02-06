@@ -84,6 +84,13 @@ export default function VenueAutocomplete({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  const selectVenue = useCallback((venue: VenueResult) => {
+    onChange({ id: venue.id, name: venue.name });
+    setQuery(venue.name);
+    setIsOpen(false);
+    setHighlightedIndex(-1);
+  }, [onChange]);
+
   // Handle keyboard navigation
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
@@ -117,15 +124,8 @@ export default function VenueAutocomplete({
           break;
       }
     },
-    [isOpen, highlightedIndex, results]
+    [isOpen, highlightedIndex, results, selectVenue]
   );
-
-  const selectVenue = (venue: VenueResult) => {
-    onChange({ id: venue.id, name: venue.name });
-    setQuery(venue.name);
-    setIsOpen(false);
-    setHighlightedIndex(-1);
-  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newQuery = e.target.value;

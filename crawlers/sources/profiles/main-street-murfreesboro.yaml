@@ -1,0 +1,12 @@
+version: 1
+slug: main-street-murfreesboro
+name: Main Street Murfreesboro
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.mainstreetmurfreesboro.org/calendar/
+detail:
+  enabled: false

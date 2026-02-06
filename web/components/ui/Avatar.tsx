@@ -1,4 +1,4 @@
-import Image from "next/image";
+import Image from "@/components/SmartImage";
 import Link from "next/link";
 
 type AvatarSize = "xs" | "sm" | "md" | "lg" | "xl";

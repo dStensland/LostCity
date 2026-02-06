@@ -1,0 +1,12 @@
+version: 1
+slug: mother-bar
+name: Mother Bar
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.motheredgewood.com
+detail:
+  enabled: false

@@ -90,8 +90,7 @@ export default function EventCardMenu({ eventId, onHide, className = "" }: Event
       {/* Dropdown menu */}
       {isOpen && (
         <div
-          className="absolute right-0 top-full mt-1 w-48 rounded-lg border border-[var(--twilight)] shadow-xl z-50 overflow-hidden"
-          style={{ backgroundColor: "var(--void)" }}
+          className="absolute right-0 top-full mt-1 w-48 rounded-lg border border-[var(--twilight)] shadow-xl z-50 overflow-hidden bg-[var(--void)]"
           role="menu"
           aria-orientation="vertical"
         >

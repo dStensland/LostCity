@@ -1,0 +1,12 @@
+version: 1
+slug: eventide-brewing
+name: Eventide Brewing
+integration_method: llm_crawler
+defaults: {}
+discovery:
+  enabled: true
+  type: html
+  urls:
+  - https://www.eventidebrewing.com
+detail:
+  enabled: false

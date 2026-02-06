@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import Image from "next/image";
-
+import Image from "@/components/SmartImage";
+import ScopedStyles from "@/components/ScopedStyles";
+import { createCssVarClass } from "@/lib/css-utils";
 interface LazyImageProps {
   src: string;
   alt: string;
@@ -49,30 +50,25 @@ export default function LazyImage({
 }: LazyImageProps) {
   const [isLoaded, setIsLoaded] = useState(false);
   const validSrc = useMemo(() => isValidImageSrc(src), [src]);
+  const placeholder = createCssVarClass("--placeholder-color", placeholderColor, "placeholder");
 
   // If src is not a valid URL, render placeholder only
   if (!validSrc) {
     return (
-      <div
-        className={`relative overflow-hidden ${className}`}
-        style={{ backgroundColor: placeholderColor }}
-      />
+      <>
+        <ScopedStyles css={placeholder?.css} />
+        <div className={`relative overflow-hidden lazy-image ${placeholder?.className ?? ""} ${className}`} />
+      </>
     );
   }
 
   return (
-    <div
-      className={`relative overflow-hidden ${className}`}
-      style={{
-        backgroundColor: placeholderColor,
-      }}
-    >
+    <>
+      <ScopedStyles css={placeholder?.css} />
+      <div className={`relative overflow-hidden lazy-image ${placeholder?.className ?? ""} ${className}`}>
       {/* Shimmer placeholder - visible until image loads */}
       {!isLoaded && (
-        <div
-          className="absolute inset-0 skeleton-shimmer"
-          style={{ backgroundColor: placeholderColor }}
-        />
+        <div className="absolute inset-0 skeleton-shimmer lazy-image-placeholder" />
       )}
 
       {/* Image with native lazy loading */}
@@ -92,6 +88,7 @@ export default function LazyImage({
         }}
         priority={priority}
       />
-    </div>
+      </div>
+    </>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useId } from "react";
+import ScopedStyles from "@/components/ScopedStyles";
 import type { PortalAmbientConfig } from "@/lib/portal-context";
 
 interface GrowingGardenAmbientProps {
@@ -98,11 +99,58 @@ export default function GrowingGardenAmbient({ config }: GrowingGardenAmbientPro
     });
   }, [colors, speedMultiplier]);
 
+  const rawId = useId();
+  const instanceClass = `growing-garden-${rawId.replace(/[^a-zA-Z0-9_-]/g, "")}`;
+  const plantRules = plants
+    .map(
+      (plant) => `.${instanceClass} .plant-${plant.id} { animation-duration: ${plant.duration}s; animation-delay: ${plant.delay}s; }`
+    )
+    .join("\n");
+  const css = `
+    .${instanceClass} .plant-group {
+      animation-name: bloom-cycle;
+      animation-timing-function: ease-in-out;
+      animation-iteration-count: infinite;
+      transform-origin: center;
+    }
+    ${plantRules}
+    @keyframes bloom-cycle {
+      0% {
+        transform: scale(0) rotate(0deg);
+        opacity: 0;
+      }
+      5% {
+        transform: scale(1) rotate(${5 * speedMultiplier}deg);
+        opacity: ${opacity};
+      }
+      48% {
+        transform: scale(1.05) rotate(${-3 * speedMultiplier}deg);
+        opacity: ${opacity};
+      }
+      91% {
+        transform: scale(1) rotate(${2 * speedMultiplier}deg);
+        opacity: ${opacity};
+      }
+      100% {
+        transform: scale(0) rotate(${10 * speedMultiplier}deg);
+        opacity: 0;
+      }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .${instanceClass} .plant-group {
+        animation: none !important;
+        opacity: ${opacity * 0.5} !important;
+        transform: scale(1) !important;
+      }
+    }
+  `;
+
   return (
     <div
-      className="ambient-layer fixed inset-0 pointer-events-none z-0 overflow-hidden"
+      className={`ambient-layer fixed inset-0 pointer-events-none z-0 overflow-hidden ${instanceClass}`}
       aria-hidden="true"
     >
+      <ScopedStyles css={css} />
       <svg
         className="absolute inset-0 w-full h-full"
         preserveAspectRatio="none"
@@ -112,11 +160,7 @@ export default function GrowingGardenAmbient({ config }: GrowingGardenAmbientPro
           <g
             key={plant.id}
             transform={`translate(${plant.x}%, ${plant.y}%) rotate(${plant.rotation})`}
-            style={{
-              animation: `bloom-cycle ${plant.duration}s ease-in-out infinite`,
-              animationDelay: `${plant.delay}s`,
-              transformOrigin: "center",
-            }}
+            className={`plant-group plant-${plant.id}`}
           >
             {plant.shape === "circle" && (
               <circle
@@ -163,45 +207,6 @@ export default function GrowingGardenAmbient({ config }: GrowingGardenAmbientPro
           </g>
         ))}
       </svg>
-
-      {/* Keyframes injected via style tag */}
-      <style>{`
-        @keyframes bloom-cycle {
-          /* Emerge: 0-5% (3s of 58s = ~5%) */
-          0% {
-            transform: scale(0) rotate(0deg);
-            opacity: 0;
-          }
-          5% {
-            transform: scale(1) rotate(${5 * speedMultiplier}deg);
-            opacity: ${opacity};
-          }
-
-          /* Bloom: 5-91% (50s of 58s) */
-          48% {
-            transform: scale(1.05) rotate(${-3 * speedMultiplier}deg);
-            opacity: ${opacity};
-          }
-          91% {
-            transform: scale(1) rotate(${2 * speedMultiplier}deg);
-            opacity: ${opacity};
-          }
-
-          /* Fade: 91-100% (5s of 58s) */
-          100% {
-            transform: scale(0) rotate(${10 * speedMultiplier}deg);
-            opacity: 0;
-          }
-        }
-
-        @media (prefers-reduced-motion: reduce) {
-          svg g {
-            animation: none !important;
-            opacity: ${opacity * 0.5} !important;
-            transform: scale(1) !important;
-          }
-        }
-      `}</style>
     </div>
   );
 }

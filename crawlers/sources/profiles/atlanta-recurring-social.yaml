@@ -1,0 +1,12 @@
+version: 1
+slug: atlanta-recurring-social
+name: Atlanta Recurring Social Events
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://badslava.com/
+detail:
+  enabled: false

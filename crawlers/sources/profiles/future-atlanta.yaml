@@ -1,0 +1,14 @@
+version: 1
+slug: future-atlanta
+name: Future Atlanta
+integration_method: playwright
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.futureatl.com
+  fetch:
+    render_js: true
+detail:
+  enabled: false

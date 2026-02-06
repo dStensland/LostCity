@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useId } from "react";
+import ScopedStyles from "@/components/ScopedStyles";
 import type { PortalAmbientConfig } from "@/lib/portal-context";
 
 interface ShiftingNeighborhoodAmbientProps {
@@ -91,11 +92,40 @@ export default function ShiftingNeighborhoodAmbient({ config }: ShiftingNeighbor
     });
   }, [colors, speedMultiplier]);
 
+  const rawId = useId();
+  const instanceClass = `shifting-neighborhood-${rawId.replace(/[^a-zA-Z0-9_-]/g, "")}`;
+  const buildingRules = buildings
+    .map(
+      (building) => `.${instanceClass} .building-${building.id} { animation-duration: ${building.duration}s; animation-delay: ${building.delay}s; }`
+    )
+    .join("\n");
+  const css = `
+    .${instanceClass} .building-group {
+      animation-name: shift-building;
+      animation-timing-function: ease-in-out;
+      animation-iteration-count: infinite;
+      transform-origin: center;
+    }
+    ${buildingRules}
+    @keyframes shift-building {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(15px); }
+      50% { transform: translateX(-8px); }
+      75% { transform: translateX(10px); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .${instanceClass} .building-group {
+        animation: none !important;
+      }
+    }
+  `;
+
   return (
     <div
-      className="ambient-layer fixed inset-0 pointer-events-none z-0 overflow-hidden"
+      className={`ambient-layer fixed inset-0 pointer-events-none z-0 overflow-hidden ${instanceClass}`}
       aria-hidden="true"
     >
+      <ScopedStyles css={css} />
       <svg
         className="absolute inset-0 w-full h-full"
         preserveAspectRatio="none"
@@ -104,11 +134,7 @@ export default function ShiftingNeighborhoodAmbient({ config }: ShiftingNeighbor
         {buildings.map((building) => (
           <g
             key={building.id}
-            style={{
-              animation: `shift-building ${building.duration}s ease-in-out infinite`,
-              animationDelay: `${building.delay}s`,
-              transformOrigin: "center",
-            }}
+            className={`building-group building-${building.id}`}
           >
             {building.isTriangle ? (
               <polygon
@@ -129,30 +155,6 @@ export default function ShiftingNeighborhoodAmbient({ config }: ShiftingNeighbor
           </g>
         ))}
       </svg>
-
-      {/* Keyframes injected via style tag */}
-      <style>{`
-        @keyframes shift-building {
-          0%, 100% {
-            transform: translateX(0);
-          }
-          25% {
-            transform: translateX(15px);
-          }
-          50% {
-            transform: translateX(-8px);
-          }
-          75% {
-            transform: translateX(10px);
-          }
-        }
-
-        @media (prefers-reduced-motion: reduce) {
-          svg g {
-            animation: none !important;
-          }
-        }
-      `}</style>
     </div>
   );
 }

@@ -1,0 +1,12 @@
+version: 1
+slug: aclu-georgia
+name: ACLU Georgia
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.acluga.org/events/
+detail:
+  enabled: false

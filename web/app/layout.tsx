@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import { Suspense } from "react";
 import { Outfit, JetBrains_Mono, Nunito } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
@@ -48,14 +49,17 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const nonce = (await headers()).get("x-nonce") ?? "";
+
   return (
     <html lang="en">
       <head>
+        <meta name="csp-nonce" content={nonce} />
         {/* Preconnect to external domains for faster resource loading */}
         <link rel="preconnect" href="https://rtppvljfrkjtoxmaizea.supabase.co" />
         <link rel="preconnect" href="https://img.evbuc.com" />

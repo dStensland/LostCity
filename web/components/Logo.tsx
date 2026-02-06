@@ -31,8 +31,15 @@ export default function Logo({ size = "md", href = "/", className = "", portal }
       : portalConfig.name
     : null;
 
+  const sizeClass = size === "sm" ? "logo-size-sm" : size === "md" ? "logo-size-md" : "logo-size-lg";
+
   const content = (
-    <span className={`inline-flex items-center ${config.gap}`}>
+    <span
+      data-portal={portalConfig ? portal : undefined}
+      className={`inline-flex items-center logo-root ${config.gap} ${sizeClass} ${
+        config.inline ? "logo-inline" : "logo-stack"
+      }`}
+    >
       {/* Abstract geometric mark — hidden at sm size */}
       {config.icon > 0 && (
         <svg
@@ -52,28 +59,12 @@ export default function Logo({ size = "md", href = "/", className = "", portal }
       )}
       {config.inline ? (
         /* Single-line lockup for sm size */
-        <span
-          style={{
-            fontFamily: "var(--font-outfit), sans-serif",
-            fontSize: config.text,
-            fontWeight: config.weight,
-            letterSpacing: config.tracking,
-            whiteSpace: "nowrap",
-            filter: "drop-shadow(0 1px 3px rgba(0,0,0,0.8))",
-          }}
-        >
-          <span style={{ color: "#FF6B7A" }}>LOST</span>
-          <span style={{ color: "#ffffff", marginLeft: "0.15em" }}>CITY</span>
+        <span className={`logo-text ${sizeClass}`}>
+          <span className="logo-lost">LOST</span>
+          <span className="logo-city">CITY</span>
           {portalConfig && portalLabel && (
             <span
-              style={{
-                color: portalConfig.color,
-                marginLeft: "0.3em",
-                fontSize: config.portal,
-                fontWeight: 700,
-                textShadow: `0 0 12px ${portalConfig.glow}`,
-                letterSpacing: "0.12em",
-              }}
+              className="logo-portal logo-portal-inline"
             >
               {portalLabel}
             </span>
@@ -81,29 +72,14 @@ export default function Logo({ size = "md", href = "/", className = "", portal }
         </span>
       ) : (
         /* Stacked layout for md/lg */
-        <span className="inline-flex flex-col" style={{ lineHeight: 1.05 }}>
-          <span
-            style={{
-              fontFamily: "var(--font-outfit), sans-serif",
-              fontSize: config.text,
-              fontWeight: config.weight,
-              letterSpacing: config.tracking,
-              whiteSpace: "nowrap",
-            }}
-          >
-            <span style={{ color: "#FF6B7A" }}>LOST</span>
-            <span style={{ color: "#ffffff", marginLeft: "0.2em" }}>CITY</span>
+        <span className="inline-flex flex-col logo-stack">
+          <span className={`logo-text ${sizeClass}`}>
+            <span className="logo-lost">LOST</span>
+            <span className="logo-city">CITY</span>
           </span>
           {portalConfig && portalLabel && (
             <span
-              style={{
-                fontFamily: "var(--font-outfit), sans-serif",
-                fontSize: config.portal,
-                fontWeight: 600,
-                letterSpacing: "0.2em",
-                color: portalConfig.color,
-                textShadow: `0 0 8px ${portalConfig.glow}`,
-              }}
+              className="logo-portal logo-portal-stack"
             >
               {portalLabel}
             </span>

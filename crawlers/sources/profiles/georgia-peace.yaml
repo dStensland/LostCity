@@ -1,0 +1,12 @@
+version: 1
+slug: georgia-peace
+name: Georgia Peace and Justice Coalition
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://georgiapeace.org/events
+detail:
+  enabled: false

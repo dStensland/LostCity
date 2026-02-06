@@ -1,0 +1,12 @@
+version: 1
+slug: 7-stages
+name: 7 Stages
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.7stages.org
+detail:
+  enabled: false

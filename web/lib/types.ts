@@ -76,6 +76,7 @@ export type Database = {
           website: string | null;
           is_public: boolean;
           is_admin: boolean;
+          trust_tier: string | null;
           submission_count: number;
           approved_count: number;
           rejected_count: number;
@@ -92,6 +93,7 @@ export type Database = {
           website?: string | null;
           is_public?: boolean;
           is_admin?: boolean;
+          trust_tier?: string | null;
           submission_count?: number;
           approved_count?: number;
           rejected_count?: number;
@@ -105,6 +107,7 @@ export type Database = {
           website?: string | null;
           is_public?: boolean;
           is_admin?: boolean;
+          trust_tier?: string | null;
           submission_count?: number;
           approved_count?: number;
           rejected_count?: number;
@@ -471,7 +474,7 @@ export type Database = {
       submissions: {
         Row: {
           id: string;
-          submission_type: "event" | "venue" | "organization";
+          submission_type: "event" | "venue" | "organization" | "producer";
           submitted_by: string;
           portal_id: string | null;
           status: "pending" | "approved" | "rejected" | "needs_edit";
@@ -493,7 +496,7 @@ export type Database = {
           updated_at: string;
         };
         Insert: {
-          submission_type: "event" | "venue" | "organization";
+          submission_type: "event" | "venue" | "organization" | "producer";
           submitted_by: string;
           portal_id?: string | null;
           status?: "pending" | "approved" | "rejected" | "needs_edit";
@@ -519,6 +522,240 @@ export type Database = {
           approved_venue_id?: number | null;
           approved_organization_id?: string | null;
           image_urls?: string[] | null;
+        };
+      };
+      entity_claim_requests: {
+        Row: {
+          id: string;
+          requested_by: string;
+          venue_id: number | null;
+          organization_id: string | null;
+          status: "pending" | "approved" | "rejected" | "needs_info";
+          verification_method: string | null;
+          verification_domain: string | null;
+          verification_token: string | null;
+          notes: string | null;
+          reviewed_by: string | null;
+          reviewed_at: string | null;
+          rejection_reason: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          requested_by: string;
+          venue_id?: number | null;
+          organization_id?: string | null;
+          status?: "pending" | "approved" | "rejected" | "needs_info";
+          verification_method?: string | null;
+          verification_domain?: string | null;
+          verification_token?: string | null;
+          notes?: string | null;
+          reviewed_by?: string | null;
+          reviewed_at?: string | null;
+          rejection_reason?: string | null;
+        };
+        Update: {
+          status?: "pending" | "approved" | "rejected" | "needs_info";
+          verification_method?: string | null;
+          verification_domain?: string | null;
+          verification_token?: string | null;
+          notes?: string | null;
+          reviewed_by?: string | null;
+          reviewed_at?: string | null;
+          rejection_reason?: string | null;
+        };
+      };
+      entity_claims: {
+        Row: {
+          id: string;
+          user_id: string;
+          venue_id: number | null;
+          organization_id: string | null;
+          role: string;
+          created_from_request: string | null;
+          created_at: string;
+        };
+        Insert: {
+          user_id: string;
+          venue_id?: number | null;
+          organization_id?: string | null;
+          role?: string;
+          created_from_request?: string | null;
+        };
+        Update: {
+          role?: string;
+        };
+      };
+      trust_actions: {
+        Row: {
+          id: string;
+          user_id: string;
+          action: string;
+          performed_by: string | null;
+          reason: string | null;
+          created_at: string;
+        };
+        Insert: {
+          user_id: string;
+          action: string;
+          performed_by?: string | null;
+          reason?: string | null;
+        };
+        Update: {
+          action?: string;
+          performed_by?: string | null;
+          reason?: string | null;
+        };
+      };
+      series: {
+        Row: {
+          id: string;
+          slug: string;
+          title: string;
+          description: string | null;
+          series_type: string;
+          image_url: string | null;
+          trailer_url: string | null;
+          director: string | null;
+          runtime_minutes: number | null;
+          year: number | null;
+          rating: string | null;
+          imdb_id: string | null;
+          tmdb_id: string | null;
+          frequency: string | null;
+          day_of_week: string | null;
+          category: string | null;
+          tags: string[] | null;
+          genres: string[] | null;
+          organization_id: string | null;
+          festival_id: string | null;
+          is_active: boolean | null;
+          created_at: string | null;
+          updated_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          slug: string;
+          title: string;
+          description?: string | null;
+          series_type: string;
+          image_url?: string | null;
+          trailer_url?: string | null;
+          director?: string | null;
+          runtime_minutes?: number | null;
+          year?: number | null;
+          rating?: string | null;
+          imdb_id?: string | null;
+          tmdb_id?: string | null;
+          frequency?: string | null;
+          day_of_week?: string | null;
+          category?: string | null;
+          tags?: string[] | null;
+          genres?: string[] | null;
+          organization_id?: string | null;
+          festival_id?: string | null;
+          is_active?: boolean | null;
+          created_at?: string | null;
+          updated_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          slug?: string;
+          title?: string;
+          description?: string | null;
+          series_type?: string;
+          image_url?: string | null;
+          trailer_url?: string | null;
+          director?: string | null;
+          runtime_minutes?: number | null;
+          year?: number | null;
+          rating?: string | null;
+          imdb_id?: string | null;
+          tmdb_id?: string | null;
+          frequency?: string | null;
+          day_of_week?: string | null;
+          category?: string | null;
+          tags?: string[] | null;
+          genres?: string[] | null;
+          organization_id?: string | null;
+          festival_id?: string | null;
+          is_active?: boolean | null;
+          created_at?: string | null;
+          updated_at?: string | null;
+        };
+      };
+      festivals: {
+        Row: {
+          id: string;
+          name: string;
+          slug: string;
+          website: string | null;
+          typical_month: number | null;
+          typical_duration_days: number | null;
+          location: string | null;
+          neighborhood: string | null;
+          categories: string[] | null;
+          free: boolean | null;
+          last_year_start: string | null;
+          last_year_end: string | null;
+          announced_2026: boolean | null;
+          announced_start: string | null;
+          announced_end: string | null;
+          ticket_url: string | null;
+          organization_id: string | null;
+          description: string | null;
+          image_url: string | null;
+          notes: string | null;
+          created_at: string | null;
+          updated_at: string | null;
+        };
+        Insert: {
+          id: string;
+          name: string;
+          slug: string;
+          website?: string | null;
+          typical_month?: number | null;
+          typical_duration_days?: number | null;
+          location?: string | null;
+          neighborhood?: string | null;
+          categories?: string[] | null;
+          free?: boolean | null;
+          last_year_start?: string | null;
+          last_year_end?: string | null;
+          announced_2026?: boolean | null;
+          announced_start?: string | null;
+          announced_end?: string | null;
+          ticket_url?: string | null;
+          organization_id?: string | null;
+          description?: string | null;
+          image_url?: string | null;
+          notes?: string | null;
+          created_at?: string | null;
+          updated_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          name?: string;
+          slug?: string;
+          website?: string | null;
+          typical_month?: number | null;
+          typical_duration_days?: number | null;
+          location?: string | null;
+          neighborhood?: string | null;
+          categories?: string[] | null;
+          free?: boolean | null;
+          last_year_start?: string | null;
+          last_year_end?: string | null;
+          announced_2026?: boolean | null;
+          announced_start?: string | null;
+          announced_end?: string | null;
+          ticket_url?: string | null;
+          organization_id?: string | null;
+          description?: string | null;
+          image_url?: string | null;
+          notes?: string | null;
+          created_at?: string | null;
+          updated_at?: string | null;
         };
       };
     };
@@ -752,7 +989,7 @@ export interface OnboardingState {
 // SUBMISSIONS TYPES
 // ============================================================================
 
-export type SubmissionType = "event" | "venue" | "organization";
+export type SubmissionType = "event" | "venue" | "organization" | "producer";
 export type SubmissionStatus = "pending" | "approved" | "rejected" | "needs_edit";
 
 export type Submission = Database["public"]["Tables"]["submissions"]["Row"];
@@ -768,6 +1005,10 @@ export interface EventSubmissionData {
   end_date?: string;
   end_time?: string;
   is_all_day?: boolean;
+  series_title?: string;
+  recurrence_pattern?: string;
+  recurrence_ends_on?: string;
+  recurrence_notes?: string;
   category?: string;
   subcategory?: string;
   tags?: string[];
@@ -823,6 +1064,7 @@ export interface SubmissionWithProfile extends Submission {
     submission_count: number;
     approved_count: number;
     rejected_count: number;
+    trust_tier?: string | null;
   };
   reviewer?: {
     id: string;

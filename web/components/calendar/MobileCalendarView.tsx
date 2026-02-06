@@ -16,7 +16,6 @@ import {
   isToday,
   isBefore,
 } from "date-fns";
-import { getCategoryColor } from "@/components/CategoryIcon";
 import CategoryIcon from "@/components/CategoryIcon";
 import { formatTimeSplit } from "@/lib/formats";
 import { DEFAULT_PORTAL_SLUG } from "@/lib/portal-context";
@@ -233,7 +232,6 @@ export default function MobileCalendarView({
           {weekDays.map((day) => {
             const hasEvents = day.events.length > 0;
             const topCategory = day.events[0]?.category;
-            const categoryColor = topCategory ? getCategoryColor(topCategory) : null;
 
             return (
               <button
@@ -269,12 +267,12 @@ export default function MobileCalendarView({
                 {/* Event indicator dot */}
                 {hasEvents && (
                   <span
-                    className="w-1.5 h-1.5 rounded-full mt-0.5"
-                    style={{
-                      backgroundColor: day.isSelected
-                        ? "var(--void)"
-                        : categoryColor || "var(--coral)"
-                    }}
+                    data-category={!day.isSelected ? (topCategory || undefined) : undefined}
+                    className={`w-1.5 h-1.5 rounded-full mt-0.5 ${
+                      day.isSelected
+                        ? "bg-[var(--void)]"
+                        : "bg-[var(--category-color,var(--coral))]"
+                    }`}
                   />
                 )}
               </button>
@@ -300,7 +298,6 @@ export default function MobileCalendarView({
             {calendarDays.map((day, idx) => {
               const hasEvents = day.events.length > 0;
               const topCategory = day.events[0]?.category;
-              const categoryColor = topCategory ? getCategoryColor(topCategory) : null;
 
               return (
                 <button
@@ -329,12 +326,12 @@ export default function MobileCalendarView({
                   {/* Event indicator */}
                   {hasEvents && day.isCurrentMonth && (
                     <span
-                      className="absolute bottom-1 w-1 h-1 rounded-full"
-                      style={{
-                        backgroundColor: day.isSelected
-                          ? "var(--void)"
-                          : categoryColor || "var(--coral)"
-                      }}
+                      data-category={!day.isSelected ? (topCategory || undefined) : undefined}
+                      className={`absolute bottom-1 w-1 h-1 rounded-full ${
+                        day.isSelected
+                          ? "bg-[var(--void)]"
+                          : "bg-[var(--category-color,var(--coral))]"
+                      }`}
                     />
                   )}
                 </button>
@@ -374,15 +371,14 @@ export default function MobileCalendarView({
             {[1, 2, 3].map((i) => (
               <div
                 key={i}
-                className="p-3 rounded-xl border border-[var(--twilight)]"
-                style={{ backgroundColor: "var(--card-bg)" }}
+                className="p-3 rounded-xl border border-[var(--twilight)] bg-[var(--card-bg)]"
               >
                 <div className="flex items-center gap-2 mb-2">
                   <div className="h-3 w-12 rounded skeleton-shimmer" />
-                  <div className="h-4 w-10 rounded-full skeleton-shimmer" style={{ animationDelay: "0.05s" }} />
+                  <div className="h-4 w-10 rounded-full skeleton-shimmer" />
                 </div>
-                <div className="h-5 w-3/4 rounded skeleton-shimmer" style={{ animationDelay: `${i * 0.1}s` }} />
-                <div className="h-3 w-1/2 rounded skeleton-shimmer mt-2" style={{ animationDelay: `${i * 0.1 + 0.05}s` }} />
+                <div className="h-5 w-3/4 rounded skeleton-shimmer" />
+                <div className="h-3 w-1/2 rounded skeleton-shimmer mt-2" />
               </div>
             ))}
           </div>
@@ -427,18 +423,13 @@ export default function MobileCalendarView({
 // Event card component
 function EventCard({ event, portalSlug }: { event: CalendarEvent; portalSlug: string }) {
   const { time, period } = formatTimeSplit(event.start_time, event.is_all_day);
-  const categoryColor = event.category ? getCategoryColor(event.category) : null;
 
   return (
     <Link
       href={`/${portalSlug}?event=${event.id}`}
       scroll={false}
-      className="block p-3 rounded-xl border border-[var(--twilight)] hover:border-[var(--coral)]/40 transition-all group"
-      style={{
-        borderLeftWidth: categoryColor ? "3px" : undefined,
-        borderLeftColor: categoryColor || undefined,
-        backgroundColor: "var(--card-bg)",
-      }}
+      data-category={event.category || undefined}
+      className="block p-3 rounded-xl border border-[var(--twilight)] bg-[var(--card-bg)] hover:border-[var(--coral)]/40 transition-all group calendar-event-card"
     >
       {/* Time + badges row */}
       <div className="flex items-center gap-2 mb-1.5">

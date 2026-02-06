@@ -1,0 +1,14 @@
+version: 1
+slug: tongue-and-groove
+name: Tongue & Groove
+integration_method: playwright
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.tongueandgroove.com
+  fetch:
+    render_js: true
+detail:
+  enabled: false

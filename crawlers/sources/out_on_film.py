@@ -92,6 +92,24 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             venue_id = get_or_create_venue(VENUE_DATA)
 
+            # Extract event links - build a map of title -> URL
+            event_links = {}
+            links = page.query_selector_all('a[href]')
+            for link in links:
+                try:
+                    href = link.get_attribute('href')
+                    text = link.inner_text().strip()
+                    if href and text and len(text) > 3:
+                        # Skip navigation links
+                        if any(skip in text.lower() for skip in ['view more', 'learn more', 'submit', 'upcoming', 'donate']):
+                            continue
+                        if not href.startswith('http'):
+                            href = BASE_URL + href
+                        event_links[text.lower().strip('"').strip("'")] = href
+                except Exception:
+                    pass
+            logger.info(f"Found {len(event_links)} event links")
+
             body_text = page.inner_text("body")
             lines = [l.strip() for l in body_text.split("\n") if l.strip()]
 
@@ -162,6 +180,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
                                 if existing:
                                     events_updated += 1
                                 else:
+                                    # Try to find specific event URL
+                                    event_url = event_links.get(title.lower(), BASE_URL)
+
                                     event_record = {
                                         "source_id": source_id,
                                         "venue_id": venue_id,
@@ -184,8 +205,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
                                         "price_max": None,
                                         "price_note": None,
                                         "is_free": False,
-                                        "source_url": BASE_URL,
-                                        "ticket_url": None,
+                                        "source_url": event_url,
+                                        "ticket_url": event_url if event_url != BASE_URL else None,
                                         "image_url": image_map.get(title),
                                         "raw_text": None,
                                         "extraction_confidence": 0.85,

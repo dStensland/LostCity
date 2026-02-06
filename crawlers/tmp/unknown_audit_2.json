@@ -1,0 +1,582 @@
+[
+  {
+    "slug": "actors-express",
+    "url": "https://www.actorsexpress.com",
+    "events": "",
+    "method": "unknown",
+    "signals": {},
+    "notes": [
+      "audit_error: [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1129)"
+    ]
+  },
+  {
+    "slug": "aisle5",
+    "url": "https://www.aaborhood.com",
+    "events": "",
+    "method": "unknown",
+    "signals": {},
+    "notes": [
+      "audit_error: [Errno 8] nodename nor servname provided, or not known"
+    ]
+  },
+  {
+    "slug": "americasmart",
+    "url": "https://www.americasmart.com",
+    "events": "",
+    "method": "unknown",
+    "signals": {},
+    "notes": [
+      "audit_error: [SSL: TLSV1_ALERT_PROTOCOL_VERSION] tlsv1 alert protocol version (_ssl.c:1129)"
+    ]
+  },
+  {
+    "slug": "ameris-bank-amphitheatre",
+    "url": "https://www.amerisbankamphitheatre.com",
+    "events": "",
+    "method": "unknown",
+    "signals": {},
+    "notes": [
+      "audit_error: timed out"
+    ]
+  },
+  {
+    "slug": "argosy",
+    "url": "https://argosyeastatlanta.com",
+    "events": "",
+    "method": "unknown",
+    "signals": {},
+    "notes": [
+      "audit_error: [Errno 8] nodename nor servname provided, or not known"
+    ]
+  },
+  {
+    "slug": "atlanta-art-fair",
+    "url": "https://www.atlantaartfair.com",
+    "events": "",
+    "method": "unknown",
+    "signals": {},
+    "notes": [
+      "audit_error: [Errno 8] nodename nor servname provided, or not known"
+    ]
+  },
+  {
+    "slug": "atlanta-comedy-theater",
+    "url": "https://www.atlantacomedytheater.com",
+    "events": "",
+    "method": "unknown",
+    "signals": {},
+    "notes": [
+      "audit_error: [SSL: TLSV1_ALERT_PROTOCOL_VERSION] tlsv1 alert protocol version (_ssl.c:1129)"
+    ]
+  },
+  {
+    "slug": "atlanta-jazz-festival",
+    "url": "https://www.atlantafestivals.com/atlanta-jazz-festival",
+    "events": "",
+    "method": "unknown",
+    "signals": {},
+    "notes": [
+      "audit_error: [SSL: TLSV1_ALERT_PROTOCOL_VERSION] tlsv1 alert protocol version (_ssl.c:1129)"
+    ]
+  },
+  {
+    "slug": "atlanta-pride",
+    "url": "https://www.atlantapride.org",
+    "events": "",
+    "method": "unknown",
+    "signals": {},
+    "notes": [
+      "audit_error: [SSL: TLSV1_ALERT_PROTOCOL_VERSION] tlsv1 alert protocol version (_ssl.c:1129)"
+    ]
+  },
+  {
+    "slug": "aurora-cineplex",
+    "url": "https://www.auroracineplex.com",
+    "events": "",
+    "method": "unknown",
+    "signals": {},
+    "notes": [
+      "audit_error: [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1129)"
+    ]
+  },
+  {
+    "slug": "blakes-on-park",
+    "url": "https://www.blakesonthepark.com",
+    "events": "",
+    "method": "unknown",
+    "signals": {},
+    "notes": [
+      "audit_error: [Errno 8] nodename nor servname provided, or not known"
+    ]
+  },
+  {
+    "slug": "book-boutique",
+    "url": "https://www.thebookboutiqueatl.com",
+    "events": "",
+    "method": "unknown",
+    "signals": {},
+    "notes": [
+      "audit_error: [Errno 8] nodename nor servname provided, or not known"
+    ]
+  },
+  {
+    "slug": "bookish-atlanta",
+    "url": "https://www.bookishatlanta.com",
+    "events": "",
+    "method": "unknown",
+    "signals": {},
+    "notes": [
+      "audit_error: [Errno 8] nodename nor servname provided, or not known"
+    ]
+  },
+  {
+    "slug": "bulldogs-atlanta",
+    "url": "https://www.bulldogsatl.com",
+    "events": "",
+    "method": "unknown",
+    "signals": {},
+    "notes": [
+      "audit_error: [Errno 8] nodename nor servname provided, or not known"
+    ]
+  },
+  {
+    "slug": "candler-park-fest",
+    "url": "https://www.candlerparkfest.org",
+    "events": "",
+    "method": "unknown",
+    "signals": {},
+    "notes": [
+      "audit_error: [Errno 8] nodename nor servname provided, or not known"
+    ]
+  },
+  {
+    "slug": "chastain-arts",
+    "url": "https://www.chastainartscenter.org/events",
+    "events": "",
+    "method": "unknown",
+    "signals": {},
+    "notes": [
+      "audit_error: [Errno 8] nodename nor servname provided, or not known"
+    ]
+  },
+  {
+    "slug": "cheshire-bridge-district",
+    "url": "https://cheshirebridge.com",
+    "events": "",
+    "method": "unknown",
+    "signals": {},
+    "notes": [
+      "audit_error: [Errno 8] nodename nor servname provided, or not known"
+    ]
+  },
+  {
+    "slug": "church-atlanta",
+    "url": "https://www.thechurchatl.com",
+    "events": "",
+    "method": "unknown",
+    "signals": {},
+    "notes": [
+      "audit_error: [Errno 8] nodename nor servname provided, or not known"
+    ]
+  },
+  {
+    "slug": "church-bar",
+    "url": "https://www.churchedgewood.com",
+    "events": "",
+    "method": "unknown",
+    "signals": {},
+    "notes": [
+      "audit_error: [Errno 8] nodename nor servname provided, or not known"
+    ]
+  },
+  {
+    "slug": "college-football-hof",
+    "url": "https://www.cfbhall.com",
+    "events": "",
+    "method": "unknown",
+    "signals": {},
+    "notes": [
+      "audit_error: [SSL: TLSV1_ALERT_PROTOCOL_VERSION] tlsv1 alert protocol version (_ssl.c:1129)"
+    ]
+  },
+  {
+    "slug": "community-foundation-atl",
+    "url": "https://www.cfgreateratlanta.org",
+    "events": "",
+    "method": "unknown",
+    "signals": {},
+    "notes": [
+      "audit_error: [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: Hostname mismatch, certificate is not valid for 'www.cfgreateratlanta.org'. (_ssl.c:1129)"
+    ]
+  },
+  {
+    "slug": "defy-atlanta",
+    "url": "https://www.defyatlanta.com",
+    "events": "",
+    "method": "unknown",
+    "signals": {},
+    "notes": [
+      "audit_error: [Errno 8] nodename nor servname provided, or not known"
+    ]
+  },
+  {
+    "slug": "do404",
+    "url": "https://do404.com",
+    "events": "",
+    "method": "unknown",
+    "signals": {},
+    "notes": [
+      "audit_error: [Errno 8] nodename nor servname provided, or not known"
+    ]
+  },
+  {
+    "slug": "downtown-duluth",
+    "url": "https://exploreduluth.org",
+    "events": "",
+    "method": "unknown",
+    "signals": {},
+    "notes": [
+      "audit_error: [Errno 8] nodename nor servname provided, or not known"
+    ]
+  },
+  {
+    "slug": "duluth-city",
+    "url": "https://www.duluthga.gov",
+    "events": "",
+    "method": "unknown",
+    "signals": {},
+    "notes": [
+      "audit_error: [Errno 8] nodename nor servname provided, or not known"
+    ]
+  },
+  {
+    "slug": "elmyr",
+    "url": "https://www.elmyratlanta.com",
+    "events": "",
+    "method": "unknown",
+    "signals": {},
+    "notes": [
+      "audit_error: [Errno 8] nodename nor servname provided, or not known"
+    ]
+  },
+  {
+    "slug": "exhibition-hub",
+    "url": "https://www.exhibitionhubatlanta.com/",
+    "events": "",
+    "method": "unknown",
+    "signals": {},
+    "notes": [
+      "audit_error: timed out"
+    ]
+  },
+  {
+    "slug": "flatiron",
+    "url": "https://www.flatironatlanta.com",
+    "events": "",
+    "method": "unknown",
+    "signals": {},
+    "notes": [
+      "audit_error: [Errno 8] nodename nor servname provided, or not known"
+    ]
+  },
+  {
+    "slug": "folklore-haunted",
+    "url": "https://www.folklorehh.com",
+    "events": "",
+    "method": "unknown",
+    "signals": {},
+    "notes": [
+      "audit_error: [Errno 8] nodename nor servname provided, or not known"
+    ]
+  },
+  {
+    "slug": "freeside-atlanta",
+    "url": "https://freesideatl.org/events",
+    "events": "",
+    "method": "unknown",
+    "signals": {},
+    "notes": [
+      "audit_error: [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: Hostname mismatch, certificate is not valid for 'freesideatl.org'. (_ssl.c:1129)"
+    ]
+  },
+  {
+    "slug": "future-atlanta",
+    "url": "https://www.futureatl.com",
+    "events": "",
+    "method": "unknown",
+    "signals": {},
+    "notes": [
+      "audit_error: [Errno 8] nodename nor servname provided, or not known"
+    ]
+  },
+  {
+    "slug": "grant-park-festival",
+    "url": "https://www.grantparkfestival.org",
+    "events": "",
+    "method": "unknown",
+    "signals": {},
+    "notes": [
+      "audit_error: [Errno 8] nodename nor servname provided, or not known"
+    ]
+  },
+  {
+    "slug": "gwinnett-stripers",
+    "url": "https://www.gostripers.com/schedule",
+    "events": "",
+    "method": "unknown",
+    "signals": {},
+    "notes": [
+      "audit_error: [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: Hostname mismatch, certificate is not valid for 'www.gostripers.com'. (_ssl.c:1129)"
+    ]
+  },
+  {
+    "slug": "hammonds-house",
+    "url": "https://hammondshouse.org",
+    "events": "",
+    "method": "unknown",
+    "signals": {},
+    "notes": [
+      "audit_error: [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: Hostname mismatch, certificate is not valid for 'hammondshouse.org'. (_ssl.c:1129)"
+    ]
+  },
+  {
+    "slug": "hathaway-contemporary",
+    "url": "https://www.hathawaycontemporary.com",
+    "events": "",
+    "method": "unknown",
+    "signals": {},
+    "notes": [
+      "audit_error: [Errno 8] nodename nor servname provided, or not known"
+    ]
+  },
+  {
+    "slug": "hawks-bars",
+    "url": "https://www.nba.com/hawks",
+    "events": "",
+    "method": "unknown",
+    "signals": {},
+    "notes": [
+      "audit_error: The read operation timed out"
+    ]
+  },
+  {
+    "slug": "hosea-helps",
+    "url": "https://hoseahelps.org/events",
+    "events": "",
+    "method": "unknown",
+    "signals": {},
+    "notes": [
+      "audit_error: timed out"
+    ]
+  },
+  {
+    "slug": "irwin-street-cooking",
+    "url": "https://www.irwinstreet.com",
+    "events": "",
+    "method": "unknown",
+    "signals": {},
+    "notes": [
+      "audit_error: [Errno 8] nodename nor servname provided, or not known"
+    ]
+  },
+  {
+    "slug": "ladybird-grove",
+    "url": "https://www.ladybirdatlanta.com",
+    "events": "",
+    "method": "unknown",
+    "signals": {},
+    "notes": [
+      "audit_error: [SSL: TLSV1_ALERT_PROTOCOL_VERSION] tlsv1 alert protocol version (_ssl.c:1129)"
+    ]
+  },
+  {
+    "slug": "lego-discovery-center",
+    "url": "https://www.legolanddiscoverycenter.com/atlanta/",
+    "events": "",
+    "method": "unknown",
+    "signals": {},
+    "notes": [
+      "audit_error: [SSL: TLSV1_ALERT_PROTOCOL_VERSION] tlsv1 alert protocol version (_ssl.c:1129)"
+    ]
+  },
+  {
+    "slug": "madlife-stage",
+    "url": "https://madlifestage.com/events",
+    "events": "",
+    "method": "unknown",
+    "signals": {},
+    "notes": [
+      "audit_error: [Errno 8] nodename nor servname provided, or not known"
+    ]
+  },
+  {
+    "slug": "meals-on-wheels-atlanta",
+    "url": "https://mowama.org/events",
+    "events": "",
+    "method": "unknown",
+    "signals": {},
+    "notes": [
+      "audit_error: [Errno 8] nodename nor servname provided, or not known"
+    ]
+  },
+  {
+    "slug": "mint-gallery",
+    "url": "https://mintgallery.com/events",
+    "events": "",
+    "method": "llm_crawler",
+    "signals": {
+      "feed_confirmed": false,
+      "feed_format": null,
+      "feed_links": [],
+      "has_jsonld_event": false,
+      "jsonld_fields": {},
+      "looks_js_app": false,
+      "text_len": 0,
+      "api_candidate": false,
+      "aggregator_candidate": false
+    },
+    "notes": [
+      "No strong structured signals; LLM-powered discovery likely required."
+    ]
+  },
+  {
+    "slug": "mobilize-50501-georgia",
+    "url": "https://www.mobilize.us/50501georgia/",
+    "events": "",
+    "method": "playwright",
+    "signals": {
+      "feed_confirmed": false,
+      "feed_format": null,
+      "feed_links": [],
+      "has_jsonld_event": false,
+      "jsonld_fields": {},
+      "looks_js_app": true,
+      "text_len": 129,
+      "api_candidate": false,
+      "aggregator_candidate": false
+    },
+    "notes": [
+      "Page looks JS-rendered; likely needs browser automation."
+    ]
+  },
+  {
+    "slug": "mobilize-dekalb-dems",
+    "url": "https://www.mobilize.us/dekalbdems/",
+    "events": "",
+    "method": "llm_crawler",
+    "signals": {
+      "feed_confirmed": false,
+      "feed_format": null,
+      "feed_links": [],
+      "has_jsonld_event": false,
+      "jsonld_fields": {},
+      "looks_js_app": false,
+      "text_len": 84,
+      "api_candidate": false,
+      "aggregator_candidate": false
+    },
+    "notes": [
+      "No strong structured signals; LLM-powered discovery likely required."
+    ]
+  },
+  {
+    "slug": "mobilize-ga-dems",
+    "url": "https://www.mobilize.us/georgiademocrats/",
+    "events": "",
+    "method": "playwright",
+    "signals": {
+      "feed_confirmed": false,
+      "feed_format": null,
+      "feed_links": [],
+      "has_jsonld_event": false,
+      "jsonld_fields": {},
+      "looks_js_app": true,
+      "text_len": 143,
+      "api_candidate": false,
+      "aggregator_candidate": false
+    },
+    "notes": [
+      "Page looks JS-rendered; likely needs browser automation."
+    ]
+  },
+  {
+    "slug": "mobilize-hrc-georgia",
+    "url": "https://www.mobilize.us/hrcingeorgia/",
+    "events": "",
+    "method": "llm_crawler",
+    "signals": {
+      "feed_confirmed": false,
+      "feed_format": null,
+      "feed_links": [],
+      "has_jsonld_event": false,
+      "jsonld_fields": {},
+      "looks_js_app": false,
+      "text_len": 84,
+      "api_candidate": false,
+      "aggregator_candidate": false
+    },
+    "notes": [
+      "No strong structured signals; LLM-powered discovery likely required."
+    ]
+  },
+  {
+    "slug": "mobilize-indivisible-atl",
+    "url": "https://www.mobilize.us/indivisibleatl/",
+    "events": "",
+    "method": "playwright",
+    "signals": {
+      "feed_confirmed": false,
+      "feed_format": null,
+      "feed_links": [],
+      "has_jsonld_event": false,
+      "jsonld_fields": {},
+      "looks_js_app": true,
+      "text_len": 131,
+      "api_candidate": false,
+      "aggregator_candidate": false
+    },
+    "notes": [
+      "Page looks JS-rendered; likely needs browser automation."
+    ]
+  },
+  {
+    "slug": "mobilize-indivisible-cherokee",
+    "url": "https://www.mobilize.us/indivisiblecherokeeunited/",
+    "events": "",
+    "method": "playwright",
+    "signals": {
+      "feed_confirmed": false,
+      "feed_format": null,
+      "feed_links": [],
+      "has_jsonld_event": false,
+      "jsonld_fields": {},
+      "looks_js_app": true,
+      "text_len": 143,
+      "api_candidate": false,
+      "aggregator_candidate": false
+    },
+    "notes": [
+      "Page looks JS-rendered; likely needs browser automation."
+    ]
+  },
+  {
+    "slug": "mobilize-indivisible-cobb",
+    "url": "https://www.mobilize.us/indivisiblecobb/",
+    "events": "",
+    "method": "playwright",
+    "signals": {
+      "feed_confirmed": false,
+      "feed_format": null,
+      "feed_links": [],
+      "has_jsonld_event": false,
+      "jsonld_fields": {},
+      "looks_js_app": true,
+      "text_len": 132,
+      "api_candidate": false,
+      "aggregator_candidate": false
+    },
+    "notes": [
+      "Page looks JS-rendered; likely needs browser automation."
+    ]
+  }
+]

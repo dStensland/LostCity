@@ -173,6 +173,7 @@ async def crawl(source: dict) -> tuple[int, int, int]:
                         "recurrence_rule": f"Weekly on {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'][day_of_week]}s",
                         "content_hash": content_hash,
                         "is_class": True,
+                        "class_category": "crafts",
                     }
 
                     try:

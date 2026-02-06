@@ -1,0 +1,12 @@
+version: 1
+slug: der-biergarten
+name: Der Biergarten
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.derbiergarten.com
+detail:
+  enabled: false

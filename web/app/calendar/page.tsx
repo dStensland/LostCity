@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo, useCallback, useEffect } from "react";
 import Link from "next/link";
-import Image from "next/image";
+import Image from "@/components/SmartImage";
 import {
   format,
   startOfMonth,
@@ -609,11 +609,9 @@ export default function CalendarPage() {
                             key={event.id}
                             href={`/la?event=${event.id}`}
                             scroll={false}
-                            className="block p-3 rounded-lg border border-[var(--nebula)] bg-[var(--cosmic-blue)]/30 hover:border-[var(--neon-cyan)]/50 transition-colors group"
-                            style={{
-                              borderLeftWidth: "3px",
-                              borderLeftColor: event.rsvp_status === "going" ? "var(--coral)" : "var(--gold)",
-                            }}
+                            className={`block p-3 rounded-lg border border-[var(--nebula)] border-l-[3px] bg-[var(--cosmic-blue)]/30 hover:border-[var(--neon-cyan)]/50 transition-colors group ${
+                              event.rsvp_status === "going" ? "border-l-[var(--coral)]" : "border-l-[var(--gold)]"
+                            }`}
                           >
                             <div className="flex items-center justify-between mb-1">
                               <span className="font-mono text-xs text-[var(--muted)]">

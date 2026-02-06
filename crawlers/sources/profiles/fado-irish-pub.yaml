@@ -1,0 +1,12 @@
+version: 1
+slug: fado-irish-pub
+name: Fado Irish Pub
+integration_method: llm_crawler
+defaults: {}
+discovery:
+  enabled: true
+  type: html
+  urls:
+  - https://www.fadoirishpub.com/atlanta
+detail:
+  enabled: false

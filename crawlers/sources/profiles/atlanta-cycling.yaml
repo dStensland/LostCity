@@ -1,0 +1,12 @@
+version: 1
+slug: atlanta-cycling
+name: Atlanta Cycling
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.atlantacycling.com
+detail:
+  enabled: false

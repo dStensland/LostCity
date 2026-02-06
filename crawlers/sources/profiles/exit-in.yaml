@@ -1,0 +1,12 @@
+version: 1
+slug: exit-in
+name: Exit/In
+integration_method: llm_crawler
+defaults: {}
+discovery:
+  enabled: true
+  type: html
+  urls:
+  - https://exitin.com/calendar/
+detail:
+  enabled: false

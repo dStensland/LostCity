@@ -156,7 +156,7 @@ export function useAuthenticatedFetch() {
         return { data: null, error: errorMessage, status: 0 };
       }
     },
-    [user, authLoading, router, showToast]
+    [user, router, showToast]
   );
 
   return { authFetch, user, isLoading: authLoading };

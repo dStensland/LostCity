@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { usePathname, useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import Image from "next/image";
+import Image from "@/components/SmartImage";
 import Logo from "../Logo";
 import UserMenu from "../UserMenu";
 import HeaderSearchButton from "../HeaderSearchButton";
@@ -192,7 +192,7 @@ export default function StandardHeader({
       >
         {/* Content layer */}
         <div className="relative z-10 flex flex-col">
-        <div className="px-4 py-3 flex items-center gap-4 relative">
+        <div className="px-4 py-2 sm:py-3 flex items-center gap-3 relative">
           {/* Left: Back button (optional) + Logo */}
           <div className="flex items-center gap-2 flex-shrink-0">
             {backLink && (
@@ -250,11 +250,8 @@ export default function StandardHeader({
                     className={`nav-tab relative flex-1 text-center px-3 py-1.5 rounded-md font-mono text-xs whitespace-nowrap transition-all duration-300 ${
                       active
                         ? "nav-tab-active text-[var(--void)] font-medium"
-                        : "text-[var(--cream)] hover:text-[var(--neon-amber)] border border-transparent font-semibold"
+                        : "text-[var(--cream)] hover:text-[var(--neon-amber)] border border-transparent font-semibold nav-tab-shadow"
                     }`}
-                    style={!active ? {
-                      textShadow: "0 1px 3px rgba(0,0,0,0.9), 0 0 12px rgba(0,0,0,0.5)",
-                    } : undefined}
                     role="tab"
                     aria-selected={active}
                     aria-controls={`${tab.key}-panel`}
@@ -269,7 +266,7 @@ export default function StandardHeader({
           )}
 
           {/* Right: Search, User menu, Mobile menu */}
-          <div className="flex items-center gap-2 flex-shrink-0 ml-auto">
+          <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0 ml-auto">
             {headerConfig.show_search_in_header !== false && <HeaderSearchButton />}
             <UserMenu />
 
@@ -277,8 +274,7 @@ export default function StandardHeader({
             <div className="relative sm:hidden" ref={mobileMenuRef}>
               <button
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className="p-2 text-[var(--cream)] hover:text-[var(--neon-amber)] hover:bg-[var(--twilight)]/70 rounded-lg transition-colors active:scale-95"
-                style={{ filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.8))" }}
+                className="p-2 text-[var(--cream)] hover:text-[var(--neon-amber)] hover:bg-[var(--twilight)]/70 rounded-lg transition-colors active:scale-95 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]"
                 aria-expanded={mobileMenuOpen}
                 aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
               >
@@ -359,14 +355,14 @@ export default function StandardHeader({
             role="tablist"
             aria-label="Main navigation"
           >
-            <div className="flex py-2 px-4">
+            <div className="flex py-1.5 px-3">
               {TABS.map((tab, index) => {
                 const active = isActive(tab);
                 return (
                   <Link
                     key={tab.key}
                     href={getHref(tab)}
-                    className={`nav-tab relative flex-1 text-center py-1.5 rounded-md font-mono text-xs whitespace-nowrap transition-all duration-300 ${
+                    className={`nav-tab relative flex-1 text-center py-1 rounded-md font-mono text-[0.65rem] whitespace-nowrap transition-all duration-300 ${
                       active
                         ? "nav-tab-active text-[var(--void)] font-medium"
                         : "text-[var(--cream)] hover:text-[var(--neon-amber)] border border-transparent font-semibold"

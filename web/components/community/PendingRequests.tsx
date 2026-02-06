@@ -172,19 +172,12 @@ export function PendingRequests({ requests }: PendingRequestsProps) {
       <div className="flex items-center gap-3 mb-4">
         <div className="w-1 h-4 rounded-full bg-[var(--coral)] animate-pulse-slow" />
         <h2
-          className="font-mono text-sm font-medium uppercase tracking-wider"
-          style={{
-            color: "var(--coral)",
-            textShadow: "0 0 20px var(--coral)40",
-          }}
+          className="font-mono text-sm font-medium uppercase tracking-wider text-coral-glow"
         >
           Friend Requests ({requests.length})
         </h2>
         <div
-          className="flex-1 h-px"
-          style={{
-            background: "linear-gradient(to right, var(--coral)40, transparent)",
-          }}
+          className="flex-1 h-px divider-coral"
         />
       </div>
       <div className="space-y-3">
@@ -199,10 +192,7 @@ export function PendingRequests({ requests }: PendingRequestsProps) {
             >
               {/* Subtle pulsing glow with coral/red accent */}
               <div
-                className="absolute inset-0 rounded-lg opacity-20 animate-pulse-slow pointer-events-none blur-xl"
-                style={{
-                  background: "radial-gradient(circle at center, var(--coral) 0%, var(--neon-red) 50%, transparent 70%)",
-                }}
+                className="absolute inset-0 rounded-lg opacity-20 animate-pulse-slow pointer-events-none blur-xl hover-glow-coral-red"
               />
               <Link href={`/profile/${otherUser.username}`} className="flex-shrink-0 relative z-10">
                 <UserAvatar

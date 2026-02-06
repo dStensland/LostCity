@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import Image from "next/image";
+import Image from "@/components/SmartImage";
 import { useRouter } from "next/navigation";
 import UnifiedHeader from "@/components/UnifiedHeader";
 import FriendRequestCard from "@/components/FriendRequestCard";

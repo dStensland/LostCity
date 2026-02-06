@@ -1,0 +1,14 @@
+version: 1
+slug: georgia-state-university
+name: Georgia State University
+integration_method: feed
+defaults: {}
+discovery:
+  enabled: true
+  type: feed
+  urls:
+  - https://calendar.gsu.edu
+  feed:
+    format: auto
+detail:
+  enabled: false

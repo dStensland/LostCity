@@ -1,0 +1,12 @@
+version: 1
+slug: wrecking-bar
+name: Wrecking Bar Brewpub
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://wreckingbarbrewpub.com
+detail:
+  enabled: false

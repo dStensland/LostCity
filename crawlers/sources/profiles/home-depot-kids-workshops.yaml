@@ -1,0 +1,12 @@
+version: 1
+slug: home-depot-kids-workshops
+name: Home Depot Kids Workshops
+integration_method: llm_crawler
+defaults: {}
+discovery:
+  enabled: true
+  type: html
+  urls:
+  - https://www.homedepot.com/workshops/
+detail:
+  enabled: false

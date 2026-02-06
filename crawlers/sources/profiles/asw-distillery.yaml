@@ -1,0 +1,12 @@
+version: 1
+slug: asw-distillery
+name: ASW Distillery
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.aswdistillery.com
+detail:
+  enabled: false

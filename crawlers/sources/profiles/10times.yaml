@@ -1,0 +1,12 @@
+version: 1
+slug: 10times
+name: 10times Atlanta
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://10times.com/atlanta-us/tradeshows
+detail:
+  enabled: false

@@ -146,12 +146,26 @@ def parse_event(event_data: dict) -> Optional[dict]:
         # Images - get the highest resolution
         images = event_data.get("images", [])
         image_url = None
+        images_list = []
         if images:
             # Sort by width descending and get largest
             sorted_images = sorted(
                 images, key=lambda x: x.get("width", 0), reverse=True
             )
             image_url = sorted_images[0].get("url")
+            for img in sorted_images:
+                url = img.get("url")
+                if not url:
+                    continue
+                images_list.append(
+                    {
+                        "url": url,
+                        "width": img.get("width"),
+                        "height": img.get("height"),
+                        "type": img.get("ratio"),
+                        "is_primary": url == image_url,
+                    }
+                )
 
         # URLs
         source_url = event_data.get("url", "")
@@ -172,6 +186,11 @@ def parse_event(event_data: dict) -> Optional[dict]:
         elif not description and venue_data:
             description = f"Event at {venue_data['name']}."
 
+        links = []
+        if source_url:
+            links.append({"type": "event", "url": source_url})
+            links.append({"type": "ticket", "url": source_url})
+
         return {
             "title": title,
             "description": description,
@@ -180,6 +199,8 @@ def parse_event(event_data: dict) -> Optional[dict]:
             "source_url": source_url,
             "ticket_url": source_url,
             "image_url": image_url,
+            "images": images_list,
+            "links": links,
             "category": category,
             "subcategory": subcategory,
             "genre": genre,

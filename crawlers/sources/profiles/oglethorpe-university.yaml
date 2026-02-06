@@ -1,0 +1,12 @@
+version: 1
+slug: oglethorpe-university
+name: Oglethorpe University
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://oglethorpe.edu/events
+detail:
+  enabled: false

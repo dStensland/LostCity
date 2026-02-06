@@ -1,0 +1,12 @@
+version: 1
+slug: piedmont-park
+name: Piedmont Park Conservancy
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.piedmontpark.org
+detail:
+  enabled: false

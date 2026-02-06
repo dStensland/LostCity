@@ -1,0 +1,12 @@
+version: 1
+slug: cobb-library
+name: Cobb County Public Library
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.cobbcounty.gov/events?department=85
+detail:
+  enabled: false

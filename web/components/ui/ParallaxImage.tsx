@@ -1,8 +1,9 @@
 "use client";
 
 import { useRef, useEffect, useState, ReactNode } from "react";
-import Image from "next/image";
-
+import Image from "@/components/SmartImage";
+import ScopedStyles from "@/components/ScopedStyles";
+import { createCssVarClassForLength } from "@/lib/css-utils";
 interface ParallaxImageProps {
   src: string;
   alt: string;
@@ -74,13 +75,21 @@ export default function ParallaxImage({
     return () => window.removeEventListener("scroll", handleScroll);
   }, [parallaxSpeed, isReducedMotion]);
 
+  const offsetClass = createCssVarClassForLength(
+    "--parallax-offset",
+    `${offset}px`,
+    "parallax-offset"
+  );
+
   return (
     <div ref={containerRef} className={`relative overflow-hidden ${className}`}>
+      <ScopedStyles css={offsetClass?.css} />
       <div
-        className="absolute inset-0 transition-transform duration-100 ease-out"
-        style={{
-          transform: isReducedMotion ? "none" : `translateY(${offset}px) scale(1.1)`,
-        }}
+        className={`absolute inset-0 transition-transform duration-100 ease-out ${
+          isReducedMotion
+            ? "parallax-layer-reduced"
+            : `parallax-layer ${offsetClass?.className ?? ""}`
+        }`}
       >
         <Image
           src={src}

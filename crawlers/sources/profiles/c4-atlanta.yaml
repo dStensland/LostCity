@@ -1,0 +1,12 @@
+version: 1
+slug: c4-atlanta
+name: C4 Atlanta
+integration_method: llm_crawler
+defaults: {}
+discovery:
+  enabled: true
+  type: html
+  urls:
+  - https://c4atlanta.org/events
+detail:
+  enabled: false

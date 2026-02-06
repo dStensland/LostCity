@@ -1,0 +1,12 @@
+version: 1
+slug: manuels-tavern
+name: Manuel's Tavern
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://manuelstavern.com
+detail:
+  enabled: false

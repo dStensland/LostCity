@@ -1,0 +1,14 @@
+version: 1
+slug: starlight-drive-in
+name: Starlight Drive-In Theatre
+integration_method: playwright
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://starlightdrivein.com
+  fetch:
+    render_js: true
+detail:
+  enabled: false

@@ -1,0 +1,12 @@
+version: 1
+slug: sun-dial-restaurant
+name: The Sun Dial Restaurant
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.sundialrestaurant.com
+detail:
+  enabled: false

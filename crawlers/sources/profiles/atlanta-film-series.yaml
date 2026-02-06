@@ -1,0 +1,12 @@
+version: 1
+slug: atlanta-film-series
+name: Atlanta Film Series
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://atlantafilmseries.com
+detail:
+  enabled: false

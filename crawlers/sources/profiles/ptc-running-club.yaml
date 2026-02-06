@@ -1,0 +1,14 @@
+version: 1
+slug: ptc-running-club
+name: Peachtree City Running Club
+integration_method: playwright
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://ptcrc.com
+  fetch:
+    render_js: true
+detail:
+  enabled: false

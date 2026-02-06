@@ -1,0 +1,14 @@
+version: 1
+slug: aurora-cineplex
+name: Aurora Cineplex
+integration_method: playwright
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.auroracineplex.com
+  fetch:
+    render_js: true
+detail:
+  enabled: false

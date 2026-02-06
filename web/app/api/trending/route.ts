@@ -1,144 +1,141 @@
 import { createClient } from "@/lib/supabase/server";
-import { applyRateLimit, RATE_LIMITS, getClientIdentifier} from "@/lib/rate-limit";
-import { getLocalDateString } from "@/lib/formats";
-import { apiResponse, errorApiResponse, isValidUUID } from "@/lib/api-utils";
-import { logger } from "@/lib/logger";
+import { NextRequest, NextResponse } from "next/server";
+import { format, startOfDay, addDays } from "date-fns";
+import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 
-export const revalidate = 300; // Cache for 5 minutes
-
-export async function GET(request: Request) {
-  const supabase = await createClient();
-
-  // Rate limit: expensive endpoint with RSVP aggregation
-  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.expensive, getClientIdentifier(request));
+export async function GET(request: NextRequest) {
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.read, getClientIdentifier(request));
   if (rateLimitResult) return rateLimitResult;
-  const { searchParams } = new URL(request.url);
-  const limit = Math.min(parseInt(searchParams.get("limit") || "6", 10), 20);
-  const portalSlug = searchParams.get("portal");
-
-  const today = getLocalDateString();
-  const nextWeekDate = new Date();
-  nextWeekDate.setDate(nextWeekDate.getDate() + 7);
-  const nextWeek = getLocalDateString(nextWeekDate);
-
-  // Get portal data if specified
-  let portalId: string | null = null;
-  let portalFilters: { categories?: string[] } = {};
-
-  if (portalSlug) {
-    const { data: portal } = await supabase
-      .from("portals")
-      .select("id, filters")
-      .eq("slug", portalSlug)
-      .eq("status", "active")
-      .maybeSingle();
-
-    const portalData = portal as { id: string; filters: typeof portalFilters } | null;
-    if (portalData && isValidUUID(portalData.id)) {
-      portalId = portalData.id;
-      portalFilters = portalData.filters || {};
-    }
-  }
 
   try {
-    // Build query for events happening this week
-    let query = supabase
+    const now = new Date();
+    const today = format(startOfDay(now), "yyyy-MM-dd");
+    const weekFromNow = format(addDays(startOfDay(now), 7), "yyyy-MM-dd");
+    const hours48Ago = new Date(now.getTime() - 48 * 60 * 60 * 1000).toISOString();
+
+    const supabase = await createClient();
+
+    // Get upcoming events this week
+    const { data: events } = await supabase
       .from("events")
       .select(`
         id,
         title,
         start_date,
         start_time,
+        end_date,
+        end_time,
         is_all_day,
         is_free,
-        price_min,
         category,
         image_url,
-        portal_id,
-        venue:venues(id, name, neighborhood, slug)
+        series_id,
+        series:series_id(
+          id,
+          slug,
+          title,
+          series_type,
+          image_url,
+          frequency,
+          day_of_week,
+          festival:festivals(id, slug, name, image_url, festival_type, location, neighborhood)
+        ),
+        venue:venues(id, name, slug, neighborhood)
       `)
       .gte("start_date", today)
-      .lte("start_date", nextWeek)
-      .is("canonical_event_id", null) // Only show canonical events, not duplicates
+      .lte("start_date", weekFromNow)
+      .eq("is_active", true)
+      .is("canonical_event_id", null)
+      .is("portal_id", null)
       .order("start_date", { ascending: true })
-      .limit(100);
-
-    // Apply portal filter if specified
-    if (portalId) {
-      // Show portal-specific events + public events
-      query = query.or(`portal_id.eq.${portalId},portal_id.is.null`);
-
-      // Apply portal category filters
-      if (portalFilters.categories?.length) {
-        query = query.in("category", portalFilters.categories);
-      }
-    } else {
-      // No portal - only show public events
-      query = query.is("portal_id", null);
-    }
-
-    const { data: events, error } = await query;
-
-    if (error) {
-      logger.error("Error fetching trending events:", error);
-      return errorApiResponse("Failed to fetch trending events", 500);
-    }
-
-    // Get event IDs for RSVP lookup (batch query instead of fetching ALL RSVPs)
-    const eventIds = (events || []).map((e: { id: number }) => e.id);
-
-    // Fetch RSVPs only for the events we're considering (not ALL events in database)
-    const rsvpMap: Record<number, number> = {};
-    if (eventIds.length > 0) {
-      const { data: rsvpCounts } = await supabase
-        .from("event_rsvps")
-        .select("event_id")
-        .in("event_id", eventIds)
-        .in("status", ["going", "interested"]);
-
-      // Count RSVPs per event
-      for (const rsvp of (rsvpCounts || []) as { event_id: number }[]) {
-        rsvpMap[rsvp.event_id] = (rsvpMap[rsvp.event_id] || 0) + 1;
-      }
-    }
-
-    type EventWithRsvps = {
-      id: number;
-      title: string;
-      start_date: string;
-      start_time: string | null;
-      is_all_day: boolean;
-      is_free: boolean;
-      price_min: number | null;
-      category: string | null;
-      image_url: string | null;
-      venue: {
+      .limit(200) as { data: Array<{
         id: number;
-        name: string;
-        neighborhood: string | null;
-        slug: string | null;
-      } | null;
-      rsvp_count: number;
-    };
+        title: string;
+        start_date: string;
+        start_time: string | null;
+        end_date: string | null;
+        end_time: string | null;
+        is_all_day: boolean;
+        is_free: boolean;
+        category: string | null;
+        image_url: string | null;
+        series_id?: string | null;
+        series?: {
+          id: string;
+          slug: string;
+          title: string;
+          series_type: string;
+          image_url: string | null;
+          frequency: string | null;
+          day_of_week: string | null;
+          festival?: {
+            id: string;
+            slug: string;
+            name: string;
+            image_url: string | null;
+            festival_type?: string | null;
+            location: string | null;
+            neighborhood: string | null;
+          } | null;
+        } | null;
+        venue: { id: number; name: string; slug: string; neighborhood: string | null } | null;
+      }> | null };
 
-    // Add RSVP counts and sort by popularity
-    const eventsWithRsvps: EventWithRsvps[] = ((events || []) as Omit<EventWithRsvps, "rsvp_count">[])
-      .map((event) => ({
-        ...event,
-        rsvp_count: rsvpMap[event.id] || 0,
-      }))
-      .sort((a, b) => b.rsvp_count - a.rsvp_count)
-      .slice(0, limit);
+    if (!events || events.length === 0) {
+      return NextResponse.json({ events: [] }, {
+        headers: {
+          "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600"
+        }
+      });
+    }
 
-    return apiResponse({
-      events: eventsWithRsvps,
-    }, {
+    const eventIds = events.map((e) => e.id);
+
+    // Get recent RSVPs (last 48 hours) - this shows momentum
+    const { data: recentRsvps } = await supabase
+      .from("event_rsvps")
+      .select("event_id")
+      .in("event_id", eventIds)
+      .gte("created_at", hours48Ago) as { data: Array<{ event_id: number }> | null };
+
+    // Get total going counts
+    const { data: goingCounts } = await supabase
+      .from("event_rsvps")
+      .select("event_id")
+      .in("event_id", eventIds)
+      .eq("status", "going") as { data: Array<{ event_id: number }> | null };
+
+    // Count recent RSVPs per event
+    const recentRsvpCounts: Record<number, number> = {};
+    for (const rsvp of recentRsvps || []) {
+      recentRsvpCounts[rsvp.event_id] = (recentRsvpCounts[rsvp.event_id] || 0) + 1;
+    }
+
+    // Count total going per event
+    const totalGoingCounts: Record<number, number> = {};
+    for (const rsvp of goingCounts || []) {
+      totalGoingCounts[rsvp.event_id] = (totalGoingCounts[rsvp.event_id] || 0) + 1;
+    }
+
+    // Score events based on recent activity + total interest
+    type EventWithScore = typeof events[0] & { score: number; going_count: number };
+    const scored: EventWithScore[] = events.map((event) => ({
+      ...event,
+      score: (recentRsvpCounts[event.id] || 0) * 3 + (totalGoingCounts[event.id] || 0),
+      going_count: totalGoingCounts[event.id] || 0,
+    }));
+
+    // Sort by score descending, take top 6
+    scored.sort((a, b) => b.score - a.score);
+    const trending = scored.slice(0, 6);
+
+    return NextResponse.json({ events: trending }, {
       headers: {
-        "Cache-Control": "public, max-age=300, stale-while-revalidate=600",
-      },
+        "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600"
+      }
     });
-  } catch (err) {
-    logger.error("Error in trending API:", err);
-    return errorApiResponse("Internal server error", 500);
+  } catch (error) {
+    console.error("Error in trending API:", error);
+    return NextResponse.json({ events: [] }, { status: 500 });
   }
 }

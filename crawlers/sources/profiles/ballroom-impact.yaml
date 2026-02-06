@@ -1,0 +1,12 @@
+version: 1
+slug: ballroom-impact
+name: Ballroom Impact
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.ballroomimpact.com
+detail:
+  enabled: false

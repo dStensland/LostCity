@@ -1,0 +1,12 @@
+version: 1
+slug: book-boutique
+name: The Book Boutique
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.thebookboutiqueatl.com
+detail:
+  enabled: false

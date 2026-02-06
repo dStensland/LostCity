@@ -1,0 +1,12 @@
+version: 1
+slug: the-porter
+name: The Porter Beer Bar
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.theporterbeerbar.com/wordpress/elementor-1726/
+detail:
+  enabled: false

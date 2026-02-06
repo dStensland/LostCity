@@ -1,0 +1,7 @@
+<svg viewBox="0 0 100 50" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Top skyline silhouette only (dark blue) -->
+  <path
+    d="M10 45 L10 38 L18 38 L18 28 L26 28 L26 18 L34 18 L34 8 L42 8 L42 18 L50 18 L50 28 L58 28 L58 18 L66 18 L66 8 L74 8 L74 18 L82 18 L82 28 L90 28 L90 38 L90 45 L90 50 L10 50 Z"
+    fill="#1a3a5c"
+  />
+</svg>

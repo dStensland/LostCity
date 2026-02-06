@@ -1,0 +1,12 @@
+version: 1
+slug: alliance-theatre
+name: Alliance Theatre
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.alliancetheatre.org
+detail:
+  enabled: false

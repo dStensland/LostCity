@@ -13,6 +13,8 @@ import {
 } from "date-fns";
 import { formatTimeSplit } from "@/lib/formats";
 import CategoryIcon, { getCategoryColor } from "@/components/CategoryIcon";
+import ScopedStyles from "@/components/ScopedStyles";
+import { createCssVarClass } from "@/lib/css-utils";
 
 // Common event type that works with both EventDetailView and VenueDetailView
 export type VenueEvent = {
@@ -295,7 +297,8 @@ function EventCard({
   compact: boolean;
 }) {
   const { time, period } = formatTimeSplit(event.start_time);
-  const categoryColor = event.category ? getCategoryColor(event.category) : null;
+  const accentColor = event.category ? getCategoryColor(event.category) : "var(--neon-magenta)";
+  const accentClass = createCssVarClass("--accent-color", accentColor, "accent");
 
   const cardContent = (
     <div className="flex items-start justify-between gap-3">
@@ -303,10 +306,7 @@ function EventCard({
         <div className="flex items-center gap-2">
           {event.category && (
             <span
-              className="flex-shrink-0 inline-flex items-center justify-center w-4 h-4 rounded"
-              style={{
-                backgroundColor: categoryColor ? `${categoryColor}20` : undefined,
-              }}
+              className="flex-shrink-0 inline-flex items-center justify-center w-4 h-4 rounded bg-accent-20"
             >
               <CategoryIcon type={event.category} size={10} glow="subtle" />
             </span>
@@ -357,26 +357,27 @@ function EventCard({
     </div>
   );
 
-  const cardStyles = {
-    borderLeftWidth: categoryColor ? "3px" : undefined,
-    borderLeftColor: categoryColor || undefined,
-  };
-
   const cardClassName = `block w-full text-left border border-[var(--twilight)] rounded-lg bg-[var(--dusk)] hover:border-[var(--coral)]/50 transition-colors group ${
     compact ? "p-3" : "p-4"
-  }`;
+  } ${accentClass?.className ?? ""} ${event.category ? "border-l-[3px] border-l-[var(--accent-color)]" : ""}`;
 
   if (href) {
     return (
-      <Link href={href} className={cardClassName} style={cardStyles}>
-        {cardContent}
-      </Link>
+      <>
+        <ScopedStyles css={accentClass?.css} />
+        <Link href={href} className={cardClassName}>
+          {cardContent}
+        </Link>
+      </>
     );
   }
 
   return (
-    <button onClick={onClick} className={cardClassName} style={cardStyles}>
-      {cardContent}
-    </button>
+    <>
+      <ScopedStyles css={accentClass?.css} />
+      <button onClick={onClick} className={cardClassName}>
+        {cardContent}
+      </button>
+    </>
   );
 }

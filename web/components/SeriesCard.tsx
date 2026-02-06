@@ -6,6 +6,8 @@ import { getSeriesTypeLabel, getSeriesTypeColor } from "@/lib/series-utils";
 import { formatTimeSplit } from "@/lib/formats";
 import { formatRecurrence, type Frequency, type DayOfWeek } from "@/lib/recurrence";
 import SeriesBadge from "./SeriesBadge";
+import ScopedStyles from "@/components/ScopedStyles";
+import { createCssVarClass } from "@/lib/css-utils";
 
 export interface SeriesVenueGroup {
   venue: {
@@ -32,6 +34,10 @@ interface Props {
   venueGroups: SeriesVenueGroup[];
   portalSlug?: string;
   skipAnimation?: boolean;
+  className?: string;
+  disableMargin?: boolean;
+  contextLabel?: string;
+  contextColor?: string;
 }
 
 const SeriesCard = memo(function SeriesCard({
@@ -39,10 +45,20 @@ const SeriesCard = memo(function SeriesCard({
   venueGroups,
   portalSlug,
   skipAnimation,
+  className,
+  disableMargin,
+  contextLabel,
+  contextColor,
 }: Props) {
   const typeColor = getSeriesTypeColor(series.series_type);
   const typeLabel = getSeriesTypeLabel(series.series_type);
   const seriesUrl = portalSlug ? `/${portalSlug}?series=${series.slug}` : `/series/${series.slug}`;
+  const accentClass = createCssVarClass("--accent-color", typeColor, "accent");
+  const contextAccentClass = contextColor
+    ? createCssVarClass("--context-accent", contextColor, "context-accent")
+    : null;
+  const scopedCss = [accentClass?.css, contextAccentClass?.css].filter(Boolean).join("\n");
+  const contextLabelClass = contextColor ? "text-[var(--context-accent)]" : "text-accent";
 
   // Get total showtime count
   const totalShowtimes = venueGroups.reduce((sum, vg) => sum + vg.showtimes.length, 0);
@@ -63,18 +79,13 @@ const SeriesCard = memo(function SeriesCard({
   );
 
   return (
-    <Link
-      href={seriesUrl}
-      scroll={false}
-      className={`block p-3 mb-4 rounded-sm border border-[var(--twilight)] card-atmospheric group overflow-hidden ${skipAnimation ? "" : "animate-card-emerge"}`}
-      style={{
-        borderLeftWidth: "3px",
-        borderLeftColor: typeColor,
-        backgroundColor: "var(--card-bg)",
-        "--glow-color": typeColor,
-        "--reflection-color": `color-mix(in srgb, ${typeColor} 10%, transparent)`,
-      } as React.CSSProperties}
-    >
+    <>
+      <ScopedStyles css={scopedCss} />
+      <Link
+        href={seriesUrl}
+        scroll={false}
+        className={`block p-3 ${disableMargin ? "" : "mb-4"} rounded-sm border border-[var(--twilight)] card-atmospheric glow-accent reflection-accent group overflow-hidden bg-[var(--card-bg)] border-l-[3px] border-l-[var(--accent-color)] ${accentClass?.className ?? ""} ${contextAccentClass?.className ?? ""} ${skipAnimation ? "" : "animate-card-emerge"} ${className ?? ""}`}
+      >
       <div className="flex gap-3">
         {/* Time cell - matches EventCard typography */}
         <div className="flex-shrink-0 w-14 flex flex-col items-center justify-center py-1">
@@ -103,32 +114,42 @@ const SeriesCard = memo(function SeriesCard({
           <div className="sm:hidden">
             <div className="flex items-center gap-2 mb-1.5">
               <span
-                className="inline-flex items-center justify-center w-7 h-7 rounded"
-                style={{ backgroundColor: `${typeColor}20` }}
+                className="inline-flex items-center justify-center w-7 h-7 rounded bg-accent-20"
               >
-                <span className="text-xs font-bold" style={{ color: typeColor }}>
+                <span className="text-xs font-bold text-accent">
                   {typeLabel.charAt(0)}
                 </span>
               </span>
             </div>
+            {contextLabel && (
+              <div className={`text-[0.6rem] font-mono uppercase tracking-wider ${contextLabelClass} mb-1`}>
+                {contextLabel}
+              </div>
+            )}
             <h3 className="text-[var(--cream)] font-bold text-lg leading-tight line-clamp-2 group-hover:text-[var(--glow-color)] transition-colors mb-1">
               {series.title}
             </h3>
           </div>
 
           {/* Desktop: Inline layout matching EventCard */}
-          <div className="hidden sm:flex items-center gap-2 mb-0.5">
-            <span
-              className="flex-shrink-0 inline-flex items-center justify-center w-8 h-8 rounded"
-              style={{ backgroundColor: `${typeColor}20` }}
-            >
-              <span className="text-sm font-bold" style={{ color: typeColor }}>
-                {typeLabel.charAt(0)}
+          <div className="hidden sm:block">
+            {contextLabel && (
+              <div className={`text-[0.6rem] font-mono uppercase tracking-wider ${contextLabelClass} mb-0.5`}>
+                {contextLabel}
+              </div>
+            )}
+            <div className="flex items-center gap-2 mb-0.5">
+              <span
+                className="flex-shrink-0 inline-flex items-center justify-center w-8 h-8 rounded bg-accent-20"
+              >
+                <span className="text-sm font-bold text-accent">
+                  {typeLabel.charAt(0)}
+                </span>
               </span>
-            </span>
-            <span className="text-[var(--cream)] font-bold text-lg transition-colors line-clamp-1 group-hover:text-[var(--glow-color)]">
-              {series.title}
-            </span>
+              <span className="text-[var(--cream)] font-bold text-lg transition-colors line-clamp-1 group-hover:text-[var(--glow-color)]">
+                {series.title}
+              </span>
+            </div>
           </div>
 
           {/* Details row - matches EventCard style */}
@@ -161,11 +182,7 @@ const SeriesCard = memo(function SeriesCard({
           {recurrenceText ? (
             <div className="flex items-center gap-1.5 mt-2 flex-wrap">
               <span
-                className="inline-flex items-center gap-1 font-mono text-[0.6rem] px-1.5 py-0.5 rounded font-medium"
-                style={{
-                  backgroundColor: `${typeColor}20`,
-                  color: typeColor,
-                }}
+                className="inline-flex items-center gap-1 font-mono text-[0.6rem] px-1.5 py-0.5 rounded font-medium bg-accent-20 text-accent"
               >
                 <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -186,7 +203,8 @@ const SeriesCard = memo(function SeriesCard({
         </div>
 
       </div>
-    </Link>
+      </Link>
+    </>
   );
 });
 

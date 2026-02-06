@@ -159,8 +159,7 @@ export default function SaveButton({
   if (loading) {
     return (
       <div
-        className={`${sizeClasses[size]} rounded-lg bg-[var(--twilight)] animate-pulse ${className}`}
-        style={{ width: size === "sm" ? 40 : 44, height: size === "sm" ? 40 : 44 }}
+        className={`${sizeClasses[size]} ${size === "sm" ? "w-10 h-10" : "w-11 h-11"} rounded-lg bg-[var(--twilight)] animate-pulse ${className}`}
       />
     );
   }

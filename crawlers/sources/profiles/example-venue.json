@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "slug": "example-venue",
+  "name": "Example Venue",
+  "integration_method": "html",
+  "defaults": {
+    "venue_name": "Example Venue",
+    "category": "music",
+    "subcategory": "concert",
+    "tags": ["music"]
+  },
+  "discovery": {
+    "enabled": true,
+    "type": "list",
+    "urls": ["https://example.com/events"],
+    "event_card": ".event-card",
+    "fields": {
+      "title": ".event-title",
+      "date": ".event-date",
+      "time": ".event-time",
+      "detail_url": "a.event-link@href",
+      "image_url": "img@src"
+    }
+  },
+  "detail": {
+    "enabled": true,
+    "selectors": {
+      "description": ".event-description",
+      "ticket_url": "a:has-text('Tickets')@href",
+      "image_url": ".event-hero img@src"
+    },
+    "use_jsonld": true,
+    "use_open_graph": true,
+    "use_heuristic": true,
+    "use_llm": false
+  }
+}

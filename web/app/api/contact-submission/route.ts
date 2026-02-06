@@ -121,16 +121,23 @@ Submitter Email: ${data.email}
 `.trim();
 
   const html = `
+<style>
+  .lc-table { border-collapse: collapse; margin: 20px 0; }
+  .lc-cell { padding: 8px; }
+  .lc-label { font-weight: bold; }
+  .lc-top { vertical-align: top; }
+  .lc-note { color: #666; font-size: 12px; margin-top: 20px; }
+</style>
 <h2>New Event Submission</h2>
-<table style="border-collapse: collapse; margin: 20px 0;">
-  <tr><td style="padding: 8px; font-weight: bold;">Event Name:</td><td style="padding: 8px;">${escapeHtml(data.eventName)}</td></tr>
-  <tr><td style="padding: 8px; font-weight: bold;">Date:</td><td style="padding: 8px;">${escapeHtml(data.date)}</td></tr>
-  <tr><td style="padding: 8px; font-weight: bold;">Venue/Location:</td><td style="padding: 8px;">${escapeHtml(data.venueLocation)}</td></tr>
-  ${data.description ? `<tr><td style="padding: 8px; font-weight: bold; vertical-align: top;">Description:</td><td style="padding: 8px;">${escapeHtml(data.description)}</td></tr>` : ""}
-  ${data.website ? `<tr><td style="padding: 8px; font-weight: bold;">Website:</td><td style="padding: 8px;"><a href="${escapeHtml(data.website)}">${escapeHtml(data.website)}</a></td></tr>` : ""}
+<table class="lc-table">
+  <tr><td class="lc-cell lc-label">Event Name:</td><td class="lc-cell">${escapeHtml(data.eventName)}</td></tr>
+  <tr><td class="lc-cell lc-label">Date:</td><td class="lc-cell">${escapeHtml(data.date)}</td></tr>
+  <tr><td class="lc-cell lc-label">Venue/Location:</td><td class="lc-cell">${escapeHtml(data.venueLocation)}</td></tr>
+  ${data.description ? `<tr><td class="lc-cell lc-label lc-top">Description:</td><td class="lc-cell">${escapeHtml(data.description)}</td></tr>` : ""}
+  ${data.website ? `<tr><td class="lc-cell lc-label">Website:</td><td class="lc-cell"><a href="${escapeHtml(data.website)}">${escapeHtml(data.website)}</a></td></tr>` : ""}
 </table>
 <p><strong>Submitter Email:</strong> <a href="mailto:${escapeHtml(data.email)}">${escapeHtml(data.email)}</a></p>
-<p style="color: #666; font-size: 12px; margin-top: 20px;">Reply directly to this email to contact the submitter.</p>
+<p class="lc-note">Reply directly to this email to contact the submitter.</p>
 `.trim();
 
   return { subject, text, html };
@@ -151,15 +158,22 @@ Submitter Email: ${data.email}
 `.trim();
 
   const html = `
+<style>
+  .lc-table { border-collapse: collapse; margin: 20px 0; }
+  .lc-cell { padding: 8px; }
+  .lc-label { font-weight: bold; }
+  .lc-top { vertical-align: top; }
+  .lc-note { color: #666; font-size: 12px; margin-top: 20px; }
+</style>
 <h2>New Organization Submission</h2>
-<table style="border-collapse: collapse; margin: 20px 0;">
-  <tr><td style="padding: 8px; font-weight: bold;">Organization Name:</td><td style="padding: 8px;">${escapeHtml(data.orgName)}</td></tr>
-  ${data.orgType ? `<tr><td style="padding: 8px; font-weight: bold;">Type:</td><td style="padding: 8px;">${escapeHtml(data.orgType)}</td></tr>` : ""}
-  ${data.description ? `<tr><td style="padding: 8px; font-weight: bold; vertical-align: top;">Description:</td><td style="padding: 8px;">${escapeHtml(data.description)}</td></tr>` : ""}
-  ${data.website ? `<tr><td style="padding: 8px; font-weight: bold;">Website:</td><td style="padding: 8px;"><a href="${escapeHtml(data.website)}">${escapeHtml(data.website)}</a></td></tr>` : ""}
+<table class="lc-table">
+  <tr><td class="lc-cell lc-label">Organization Name:</td><td class="lc-cell">${escapeHtml(data.orgName)}</td></tr>
+  ${data.orgType ? `<tr><td class="lc-cell lc-label">Type:</td><td class="lc-cell">${escapeHtml(data.orgType)}</td></tr>` : ""}
+  ${data.description ? `<tr><td class="lc-cell lc-label lc-top">Description:</td><td class="lc-cell">${escapeHtml(data.description)}</td></tr>` : ""}
+  ${data.website ? `<tr><td class="lc-cell lc-label">Website:</td><td class="lc-cell"><a href="${escapeHtml(data.website)}">${escapeHtml(data.website)}</a></td></tr>` : ""}
 </table>
 <p><strong>Submitter Email:</strong> <a href="mailto:${escapeHtml(data.email)}">${escapeHtml(data.email)}</a></p>
-<p style="color: #666; font-size: 12px; margin-top: 20px;">Reply directly to this email to contact the submitter.</p>
+<p class="lc-note">Reply directly to this email to contact the submitter.</p>
 `.trim();
 
   return { subject, text, html };

@@ -1,9 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
+import Image from "@/components/SmartImage";
 import type { List } from "./ListsView";
 import LinkifyText from "@/components/LinkifyText";
+import ScopedStyles from "@/components/ScopedStyles";
+import { createCssVarClass } from "@/lib/css-utils";
 
 interface ListCardProps {
   list: List;
@@ -62,16 +64,15 @@ export default function ListCard({ list, portalSlug }: ListCardProps) {
   const categoryColor = list.category ? CATEGORY_COLORS[list.category] || "var(--coral)" : "var(--coral)";
   const categoryIcon = list.category ? CATEGORY_ICONS[list.category] : null;
   const thumbnails = list.thumbnails || [];
+  const accentClass = createCssVarClass("--accent-color", categoryColor, "accent");
 
   return (
-    <Link
-      href={`/${portalSlug}/lists/${list.slug}`}
-      className="block p-4 rounded-xl border border-[var(--twilight)] card-atmospheric group"
-      style={{
-        backgroundColor: "var(--card-bg)",
-        "--glow-color": categoryColor,
-      } as React.CSSProperties}
-    >
+    <>
+      <ScopedStyles css={accentClass?.css} />
+      <Link
+        href={`/${portalSlug}/lists/${list.slug}`}
+        className={`block p-4 rounded-xl border border-[var(--twilight)] card-atmospheric glow-accent group bg-[var(--card-bg)] ${accentClass?.className ?? ""}`}
+      >
       <div className="flex items-start gap-4">
         {/* Thumbnails or Category icon */}
         {thumbnails.length > 0 ? (
@@ -80,15 +81,9 @@ export default function ListCard({ list, portalSlug }: ListCardProps) {
             {thumbnails.slice(0, 3).map((url, index) => (
               <div
                 key={url}
-                className="absolute rounded-lg overflow-hidden border-2 shadow-md"
-                style={{
-                  width: "40px",
-                  height: "40px",
-                  left: `${index * 8}px`,
-                  top: `${index * 4}px`,
-                  zIndex: 3 - index,
-                  borderColor: index === 0 ? categoryColor : "var(--twilight)",
-                }}
+                className={`absolute rounded-lg overflow-hidden border-2 shadow-md w-10 h-10 ${
+                  index === 0 ? "border-accent" : "border-[var(--twilight)]"
+                } thumb-stack-${index}`}
               >
                 <Image
                   src={url}
@@ -102,8 +97,7 @@ export default function ListCard({ list, portalSlug }: ListCardProps) {
           </div>
         ) : (
           <div
-            className="w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0"
-            style={{ backgroundColor: `${categoryColor}20`, color: categoryColor }}
+            className="w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0 bg-accent-20 text-accent"
           >
             {categoryIcon || (
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -136,7 +130,7 @@ export default function ListCard({ list, portalSlug }: ListCardProps) {
             </span>
 
             {/* Vote count */}
-            <span className="flex items-center gap-1" style={{ color: categoryColor }}>
+            <span className="flex items-center gap-1 text-accent">
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
               </svg>
@@ -158,8 +152,7 @@ export default function ListCard({ list, portalSlug }: ListCardProps) {
                     />
                   ) : (
                     <span
-                      className="w-3.5 h-3.5 rounded-full flex items-center justify-center text-[8px] font-bold"
-                      style={{ backgroundColor: categoryColor, color: "var(--void)" }}
+                      className="w-3.5 h-3.5 rounded-full flex items-center justify-center text-[8px] font-bold bg-accent text-[var(--void)]"
                     >
                       {(list.creator.display_name || list.creator.username).charAt(0).toUpperCase()}
                     </span>
@@ -181,6 +174,7 @@ export default function ListCard({ list, portalSlug }: ListCardProps) {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
         </svg>
       </div>
-    </Link>
+      </Link>
+    </>
   );
 }

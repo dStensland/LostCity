@@ -64,8 +64,7 @@ export default function VenueVibes({ vibes, className = "", limit = 5 }: VenueVi
       {displayVibes.map((vibe) => (
         <span
           key={vibe}
-          className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-mono uppercase tracking-wide text-[var(--soft)] rounded-full border border-[var(--twilight)] transition-colors hover:border-[var(--muted)] hover:text-[var(--cream)]"
-          style={{ backgroundColor: "var(--void)" }}
+          className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-mono uppercase tracking-wide text-[var(--soft)] rounded-full border border-[var(--twilight)] bg-[var(--void)] transition-colors hover:border-[var(--muted)] hover:text-[var(--cream)]"
         >
           <span className="text-sm" aria-hidden="true">
             {getVibeIcon(vibe)}
@@ -75,8 +74,7 @@ export default function VenueVibes({ vibes, className = "", limit = 5 }: VenueVi
       ))}
       {remainingCount > 0 && (
         <span
-          className="inline-flex items-center px-2.5 py-1 text-xs font-mono text-[var(--muted)] rounded-full border border-[var(--twilight)]"
-          style={{ backgroundColor: "var(--void)" }}
+          className="inline-flex items-center px-2.5 py-1 text-xs font-mono text-[var(--muted)] rounded-full border border-[var(--twilight)] bg-[var(--void)]"
         >
           +{remainingCount} more
         </span>

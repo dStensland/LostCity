@@ -16,7 +16,9 @@ from playwright.sync_api import sync_playwright
 from db import get_or_create_venue, insert_event, find_event_by_hash
 from dedupe import generate_content_hash
 from utils import extract_images_from_page
-from description_fetcher import fetch_description_playwright
+from description_fetcher import fetch_detail_html_playwright
+from pipeline.detail_enrich import enrich_from_detail
+from pipeline.models import DetailConfig
 
 logger = logging.getLogger(__name__)
 
@@ -247,13 +249,28 @@ def crawl(source: dict) -> tuple[int, int, int]:
             # Fetch descriptions from detail pages for new events
             detail_page = context.new_page()
             detail_fetches = 0
+            detail_config = DetailConfig()
             for evt in new_events:
                 title = evt["title"]
                 detail_url = detail_links.get(title)
                 if detail_url and detail_fetches < 20:
-                    desc = fetch_description_playwright(detail_page, detail_url)
-                    if desc:
-                        evt["description"] = desc
+                    html = fetch_detail_html_playwright(detail_page, detail_url)
+                    if html:
+                        fields = enrich_from_detail(html, detail_url, "Tabernacle", detail_config)
+                        if fields.get("description"):
+                            evt["description"] = fields["description"]
+                        if fields.get("ticket_url") and not evt.get("ticket_url"):
+                            evt["ticket_url"] = fields["ticket_url"]
+                        if fields.get("image_url") and not evt.get("image_url"):
+                            evt["image_url"] = fields["image_url"]
+                        if fields.get("price_min") is not None and evt.get("price_min") is None:
+                            evt["price_min"] = fields["price_min"]
+                        if fields.get("price_max") is not None and evt.get("price_max") is None:
+                            evt["price_max"] = fields["price_max"]
+                        if fields.get("price_note") and not evt.get("price_note"):
+                            evt["price_note"] = fields["price_note"]
+                        if fields.get("is_free"):
+                            evt["is_free"] = True
                     detail_fetches += 1
                     page.wait_for_timeout(1000)
 

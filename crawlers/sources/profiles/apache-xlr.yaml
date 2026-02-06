@@ -1,0 +1,14 @@
+version: 1
+slug: apache-xlr
+name: Apache Cafe
+integration_method: playwright
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://apachexlr.com/
+  fetch:
+    render_js: true
+detail:
+  enabled: false

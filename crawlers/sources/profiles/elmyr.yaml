@@ -1,0 +1,12 @@
+version: 1
+slug: elmyr
+name: Elmyr
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.elmyratlanta.com
+detail:
+  enabled: false

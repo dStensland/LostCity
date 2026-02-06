@@ -6,14 +6,6 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import EventCard from "../EventCard";
 import type { EventWithLocation } from "@/lib/search";
 
-const COLORS = {
-  peachMain: "#FBAB7E",
-  peachLight: "#FFCFA7",
-  greenMain: "#059669",
-  textGreen: "#4A7C59",
-  warmCream: "#FFF8F0",
-};
-
 interface FamilyDiscoveryViewProps {
   portalId: string;
   portalSlug: string;
@@ -294,10 +286,10 @@ export function FamilyDiscoveryView({ portalId, portalSlug, portalExclusive }: F
   };
 
   return (
-    <div className="py-4 space-y-6" style={{ backgroundColor: COLORS.warmCream }}>
+    <div className="family-theme py-4 space-y-6 bg-[var(--family-warm-cream)]">
       {/* Quick Filters - Horizontal scrolling pills */}
       <div>
-        <h2 className="text-sm font-bold mb-3 px-4" style={{ color: COLORS.textGreen, fontFamily: "var(--font-nunito), system-ui, sans-serif" }}>
+        <h2 className="text-sm font-bold mb-3 px-4 family-font text-[var(--family-text-green)]">
           Quick Filters
         </h2>
         <div className="flex gap-2 overflow-x-auto px-4 pb-1 scrollbar-hide">
@@ -307,13 +299,11 @@ export function FamilyDiscoveryView({ portalId, portalSlug, portalExclusive }: F
               <button
                 key={filter.id}
                 onClick={() => toggleQuickFilter(filter)}
-                className="flex-shrink-0 min-h-[44px] flex items-center gap-2 px-4 py-2.5 rounded-full font-semibold text-sm transition-all shadow-sm"
-                style={{
-                  fontFamily: "var(--font-nunito), system-ui, sans-serif",
-                  backgroundColor: isActive ? COLORS.greenMain : "white",
-                  color: isActive ? "white" : COLORS.textGreen,
-                  border: `2px solid ${isActive ? COLORS.greenMain : "#E8D5C4"}`,
-                }}
+                className={`flex-shrink-0 min-h-[44px] flex items-center gap-2 px-4 py-2.5 rounded-full font-semibold text-sm transition-all shadow-sm border-2 family-font ${
+                  isActive
+                    ? "bg-[var(--family-green-main)] text-white border-[var(--family-green-main)]"
+                    : "bg-white text-[var(--family-text-green)] border-[var(--family-border-cream)]"
+                }`}
               >
                 <span className="text-lg">{filter.emoji}</span>
                 {filter.label}
@@ -325,7 +315,7 @@ export function FamilyDiscoveryView({ portalId, portalSlug, portalExclusive }: F
 
       {/* Age Range Pills */}
       <div>
-        <h2 className="text-sm font-bold mb-3 px-4" style={{ color: COLORS.textGreen, fontFamily: "var(--font-nunito), system-ui, sans-serif" }}>
+        <h2 className="text-sm font-bold mb-3 px-4 family-font text-[var(--family-text-green)]">
           Age Range
         </h2>
         <div className="flex gap-2 overflow-x-auto px-4 pb-1 scrollbar-hide">
@@ -335,13 +325,11 @@ export function FamilyDiscoveryView({ portalId, portalSlug, portalExclusive }: F
               <button
                 key={age.id}
                 onClick={() => toggleAgeRange(age)}
-                className="flex-shrink-0 min-h-[44px] flex items-center gap-2 px-4 py-2.5 rounded-full font-semibold text-sm transition-all shadow-sm whitespace-nowrap"
-                style={{
-                  fontFamily: "var(--font-nunito), system-ui, sans-serif",
-                  backgroundColor: isActive ? COLORS.peachMain : "white",
-                  color: isActive ? "white" : COLORS.textGreen,
-                  border: `2px solid ${isActive ? COLORS.peachMain : "#E8D5C4"}`,
-                }}
+                className={`flex-shrink-0 min-h-[44px] flex items-center gap-2 px-4 py-2.5 rounded-full font-semibold text-sm transition-all shadow-sm whitespace-nowrap border-2 family-font ${
+                  isActive
+                    ? "bg-[var(--family-peach-main)] text-white border-[var(--family-peach-main)]"
+                    : "bg-white text-[var(--family-text-green)] border-[var(--family-border-cream)]"
+                }`}
               >
                 <span className="text-lg">{age.emoji}</span>
                 {age.label}
@@ -353,7 +341,7 @@ export function FamilyDiscoveryView({ portalId, portalSlug, portalExclusive }: F
 
       {/* Category Grid */}
       <div>
-        <h2 className="text-sm font-bold mb-3 px-4" style={{ color: COLORS.textGreen, fontFamily: "var(--font-nunito), system-ui, sans-serif" }}>
+        <h2 className="text-sm font-bold mb-3 px-4 family-font text-[var(--family-text-green)]">
           Activities
         </h2>
         <div className="grid grid-cols-2 gap-3 px-4">
@@ -363,13 +351,11 @@ export function FamilyDiscoveryView({ portalId, portalSlug, portalExclusive }: F
               <button
                 key={cat.id}
                 onClick={() => handleCategoryClick(cat)}
-                className="min-h-[80px] flex flex-col items-center justify-center gap-2 p-4 rounded-xl font-bold text-sm transition-all shadow-sm"
-                style={{
-                  fontFamily: "var(--font-nunito), system-ui, sans-serif",
-                  backgroundColor: isActive ? COLORS.peachMain : "white",
-                  color: isActive ? "white" : COLORS.textGreen,
-                  border: `2px solid ${isActive ? COLORS.peachMain : "#E8D5C4"}`,
-                }}
+                className={`min-h-[80px] flex flex-col items-center justify-center gap-2 p-4 rounded-xl font-bold text-sm transition-all shadow-sm border-2 family-font ${
+                  isActive
+                    ? "bg-[var(--family-peach-main)] text-white border-[var(--family-peach-main)]"
+                    : "bg-white text-[var(--family-text-green)] border-[var(--family-border-cream)]"
+                }`}
               >
                 <span className="text-3xl">{cat.emoji}</span>
                 <span className="text-center leading-tight">{cat.label}</span>
@@ -381,7 +367,7 @@ export function FamilyDiscoveryView({ portalId, portalSlug, portalExclusive }: F
 
       {/* Curated Collections */}
       <div>
-        <h2 className="text-sm font-bold mb-3 px-4" style={{ color: COLORS.textGreen, fontFamily: "var(--font-nunito), system-ui, sans-serif" }}>
+        <h2 className="text-sm font-bold mb-3 px-4 family-font text-[var(--family-text-green)]">
           Curated for You
         </h2>
         <div className="space-y-2 px-4">
@@ -389,22 +375,18 @@ export function FamilyDiscoveryView({ portalId, portalSlug, portalExclusive }: F
             <button
               key={collection.id}
               onClick={() => handleCollectionClick(collection)}
-              className="w-full flex items-center gap-3 p-4 rounded-xl transition-all shadow-sm text-left"
-              style={{
-                backgroundColor: "white",
-                border: "2px solid #E8D5C4",
-              }}
+              className="w-full flex items-center gap-3 p-4 rounded-xl transition-all shadow-sm text-left bg-white border-2 border-[var(--family-border-cream)]"
             >
               <span className="text-3xl flex-shrink-0">{collection.emoji}</span>
               <div className="flex-1 min-w-0">
-                <h3 className="font-bold text-sm leading-tight" style={{ color: COLORS.textGreen, fontFamily: "var(--font-nunito), system-ui, sans-serif" }}>
+                <h3 className="font-bold text-sm leading-tight family-font text-[var(--family-text-green)]">
                   {collection.title}
                 </h3>
-                <p className="text-xs mt-0.5" style={{ color: "#8B7355", fontFamily: "var(--font-nunito), system-ui, sans-serif" }}>
+                <p className="text-xs mt-0.5 family-font text-[var(--family-brown)]">
                   {collection.subtitle}
                 </p>
               </div>
-              <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke={COLORS.textGreen} viewBox="0 0 24 24">
+              <svg className="w-5 h-5 flex-shrink-0 text-[var(--family-text-green)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
               </svg>
             </button>
@@ -417,13 +399,7 @@ export function FamilyDiscoveryView({ portalId, portalSlug, portalExclusive }: F
         <div className="px-4">
           <button
             onClick={clearAllFilters}
-            className="w-full py-3 rounded-xl font-semibold text-sm transition-all"
-            style={{
-              fontFamily: "var(--font-nunito), system-ui, sans-serif",
-              backgroundColor: "white",
-              color: COLORS.peachMain,
-              border: `2px solid ${COLORS.peachMain}`,
-            }}
+            className="w-full py-3 rounded-xl font-semibold text-sm transition-all family-font bg-white text-[var(--family-peach-main)] border-2 border-[var(--family-peach-main)]"
           >
             Clear All Filters
           </button>
@@ -432,21 +408,21 @@ export function FamilyDiscoveryView({ portalId, portalSlug, portalExclusive }: F
 
       {/* Events List - Grouped by day */}
       <div className="px-4 space-y-4">
-        <h2 className="text-sm font-bold" style={{ color: COLORS.textGreen, fontFamily: "var(--font-nunito), system-ui, sans-serif" }}>
+        <h2 className="text-sm font-bold family-font text-[var(--family-text-green)]">
           {hasActiveFilters ? "Filtered Events" : "All Family Events"}
         </h2>
 
         {isLoading && (
           <div className="space-y-3">
             {[1, 2, 3, 4, 5].map((i) => (
-              <div key={i} className="h-24 rounded-xl" style={{ backgroundColor: "#F5EDE3" }} />
+              <div key={i} className="h-24 rounded-xl bg-[var(--family-cream-light)]" />
             ))}
           </div>
         )}
 
         {isError && (
           <div className="text-center py-8">
-            <p className="text-sm" style={{ color: "#8B7355" }}>
+            <p className="text-sm text-[var(--family-brown)]">
               Failed to load events. Please try again.
             </p>
           </div>
@@ -454,21 +430,16 @@ export function FamilyDiscoveryView({ portalId, portalSlug, portalExclusive }: F
 
         {!isLoading && !isError && allEvents.length === 0 && (
           <div className="text-center py-12">
-            <p className="text-lg font-semibold mb-2" style={{ color: COLORS.textGreen, fontFamily: "var(--font-nunito), system-ui, sans-serif" }}>
+            <p className="text-lg font-semibold mb-2 family-font text-[var(--family-text-green)]">
               No events found
             </p>
-            <p className="text-sm mb-4" style={{ color: "#8B7355" }}>
+            <p className="text-sm mb-4 text-[var(--family-brown)]">
               Try adjusting your filters to see more results
             </p>
             {hasActiveFilters && (
               <button
                 onClick={clearAllFilters}
-                className="px-6 py-2 rounded-full font-semibold text-sm"
-                style={{
-                  fontFamily: "var(--font-nunito), system-ui, sans-serif",
-                  backgroundColor: COLORS.peachMain,
-                  color: "white",
-                }}
+                className="px-6 py-2 rounded-full font-semibold text-sm family-font bg-[var(--family-peach-main)] text-white"
               >
                 Clear Filters
               </button>
@@ -490,10 +461,10 @@ export function FamilyDiscoveryView({ portalId, portalSlug, portalExclusive }: F
                 <div key={date}>
                   {/* Day header */}
                   <div className="flex items-center gap-2 mb-3">
-                    <h3 className="text-base font-bold" style={{ color: COLORS.textGreen, fontFamily: "var(--font-nunito), system-ui, sans-serif" }}>
+                    <h3 className="text-base font-bold family-font text-[var(--family-text-green)]">
                       {dateLabel}
                     </h3>
-                    <span className="px-2 py-0.5 rounded-full text-xs font-semibold" style={{ backgroundColor: COLORS.peachLight, color: COLORS.textGreen }}>
+                    <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-[var(--family-peach-light)] text-[var(--family-text-green)]">
                       {events.length}
                     </span>
                   </div>
@@ -503,8 +474,7 @@ export function FamilyDiscoveryView({ portalId, portalSlug, portalExclusive }: F
                     {events.map((event, idx) => (
                       <div
                         key={event.id}
-                        className="rounded-xl overflow-hidden shadow-sm"
-                        style={{ backgroundColor: "white", border: "1px solid #E8D5C4" }}
+                        className="rounded-xl overflow-hidden shadow-sm bg-white border border-[var(--family-border-cream)]"
                       >
                         <EventCard
                           event={event}
@@ -523,13 +493,9 @@ export function FamilyDiscoveryView({ portalId, portalSlug, portalExclusive }: F
               <button
                 onClick={() => fetchNextPage()}
                 disabled={isFetchingNextPage}
-                className="w-full py-3 rounded-xl font-semibold text-sm transition-all"
-                style={{
-                  fontFamily: "var(--font-nunito), system-ui, sans-serif",
-                  backgroundColor: COLORS.greenMain,
-                  color: "white",
-                  opacity: isFetchingNextPage ? 0.6 : 1,
-                }}
+                className={`w-full py-3 rounded-xl font-semibold text-sm transition-all family-font bg-[var(--family-green-main)] text-white ${
+                  isFetchingNextPage ? "opacity-60" : ""
+                }`}
               >
                 {isFetchingNextPage ? "Loading..." : "Load More Events"}
               </button>

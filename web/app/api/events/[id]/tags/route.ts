@@ -7,6 +7,7 @@ import {
   suggestTag,
 } from "@/lib/venue-tags";
 import type { EventTagGroup, TagGroup } from "@/lib/types";
+import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -16,6 +17,9 @@ type Props = {
 
 // GET /api/events/[id]/tags - Get all tags for an event
 export async function GET(request: NextRequest, { params }: Props) {
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.read, getClientIdentifier(request));
+  if (rateLimitResult) return rateLimitResult;
+
   const { id } = await params;
 
   const eventId = parseInt(id);
@@ -36,6 +40,9 @@ export async function GET(request: NextRequest, { params }: Props) {
 
 // POST /api/events/[id]/tags - Add a tag to an event or suggest a new tag
 export async function POST(request: NextRequest, { params }: Props) {
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
+  if (rateLimitResult) return rateLimitResult;
+
   const { id } = await params;
 
   const eventId = parseInt(id);
@@ -108,6 +115,9 @@ export async function POST(request: NextRequest, { params }: Props) {
 
 // DELETE /api/events/[id]/tags?tagId=xxx - Remove your own tag
 export async function DELETE(request: NextRequest, { params }: Props) {
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
+  if (rateLimitResult) return rateLimitResult;
+
   const { id } = await params;
   const { searchParams } = new URL(request.url);
   const tagId = searchParams.get("tagId");

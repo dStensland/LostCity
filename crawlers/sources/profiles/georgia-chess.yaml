@@ -1,0 +1,12 @@
+version: 1
+slug: georgia-chess
+name: Georgia Chess Association
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.georgiachess.org
+detail:
+  enabled: false

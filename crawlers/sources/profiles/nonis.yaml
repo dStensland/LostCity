@@ -1,0 +1,12 @@
+version: 1
+slug: nonis
+name: Noni's Bar & Deli
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.nonisbar.com
+detail:
+  enabled: false

@@ -1,0 +1,12 @@
+version: 1
+slug: marietta-cobb-museum
+name: Marietta Cobb Museum of Art
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://mariettacobbartmuseum.org/events
+detail:
+  enabled: false

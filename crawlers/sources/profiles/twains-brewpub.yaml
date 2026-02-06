@@ -1,0 +1,12 @@
+version: 1
+slug: twains-brewpub
+name: Twain's Brewpub & Billiards
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.twainsbilliards.com
+detail:
+  enabled: false

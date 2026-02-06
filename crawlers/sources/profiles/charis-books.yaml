@@ -1,0 +1,12 @@
+version: 1
+slug: charis-books
+name: Charis Books & More
+integration_method: llm_crawler
+defaults: {}
+discovery:
+  enabled: true
+  type: html
+  urls:
+  - https://www.charisbooksandmore.com
+detail:
+  enabled: false

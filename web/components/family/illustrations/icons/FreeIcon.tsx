@@ -47,7 +47,7 @@ export function FreeIcon({ size = 24, className }: FreeIconProps) {
         fontFamily="system-ui"
         fontWeight="900"
         fontSize="8"
-        style={{ letterSpacing: "-0.5px" }}
+        className="tracking-[-0.5px]"
       >
         FREE
       </text>

@@ -2,9 +2,12 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
+import Image from "@/components/SmartImage";
 import { format, parseISO } from "date-fns";
 import LinkifyText from "../LinkifyText";
+import ScopedStyles from "@/components/ScopedStyles";
+import { createCssVarClass } from "@/lib/css-utils";
+import { usePortalOptional } from "@/lib/portal-context";
 
 type SeriesData = {
   id: string;
@@ -21,6 +24,15 @@ type SeriesData = {
   genres: string[] | null;
   frequency: string | null;
   day_of_week: string | null;
+  festival?: {
+    id: string;
+    slug: string;
+    name: string;
+    image_url: string | null;
+    festival_type?: string | null;
+    location: string | null;
+    neighborhood: string | null;
+  } | null;
 };
 
 type VenueShowtime = {
@@ -48,7 +60,7 @@ interface SeriesDetailViewProps {
 const SERIES_TYPE_CONFIG: Record<string, { label: string; color: string }> = {
   film: { label: "Film", color: "#A5B4FC" },
   recurring_show: { label: "Recurring Show", color: "#F472B6" },
-  festival_program: { label: "Festival", color: "#FBBF24" },
+  festival_program: { label: "Program", color: "#FBBF24" },
   convention: { label: "Convention", color: "#22D3EE" },
   tour: { label: "Tour", color: "#4ADE80" },
 };
@@ -100,34 +112,18 @@ function groupEventsByDate(
 const NeonFloatingBackButton = ({ onClose }: { onClose: () => void }) => (
   <button
     onClick={onClose}
-    className="group absolute top-3 left-3 flex items-center gap-2 px-3.5 py-2 rounded-full font-mono text-xs font-semibold tracking-wide uppercase transition-all duration-300 z-10 hover:scale-105"
-    style={{
-      background: 'linear-gradient(135deg, rgba(0,0,0,0.7) 0%, rgba(20,20,30,0.8) 100%)',
-      backdropFilter: 'blur(8px)',
-      border: '1px solid rgba(255,107,107,0.3)',
-      boxShadow: '0 0 15px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.1)',
-    }}
-    onMouseEnter={(e) => {
-      e.currentTarget.style.borderColor = 'rgba(255,107,107,0.6)';
-      e.currentTarget.style.boxShadow = '0 0 20px rgba(255,107,107,0.3), 0 0 40px rgba(255,107,107,0.1), inset 0 1px 0 rgba(255,255,255,0.1)';
-    }}
-    onMouseLeave={(e) => {
-      e.currentTarget.style.borderColor = 'rgba(255,107,107,0.3)';
-      e.currentTarget.style.boxShadow = '0 0 15px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.1)';
-    }}
+    className="group absolute top-3 left-3 flex items-center gap-2 px-3.5 py-2 rounded-full font-mono text-xs font-semibold tracking-wide uppercase transition-all duration-300 z-10 hover:scale-105 neon-back-btn"
   >
     <svg
-      className="w-4 h-4 transition-transform duration-300 group-hover:-translate-x-0.5"
+      className="w-4 h-4 transition-transform duration-300 group-hover:-translate-x-0.5 neon-back-icon"
       fill="none"
       stroke="currentColor"
       viewBox="0 0 24 24"
-      style={{ filter: 'drop-shadow(0 0 3px rgba(255,107,107,0.5))' }}
     >
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
     </svg>
     <span
-      className="transition-all duration-300 group-hover:text-[var(--coral)]"
-      style={{ textShadow: '0 0 10px rgba(255,107,107,0.3)' }}
+      className="transition-all duration-300 group-hover:text-[var(--coral)] neon-back-text"
     >
       Back
     </span>
@@ -136,6 +132,8 @@ const NeonFloatingBackButton = ({ onClose }: { onClose: () => void }) => (
 
 export default function SeriesDetailView({ slug, portalSlug, onClose }: SeriesDetailViewProps) {
   const router = useRouter();
+  const portalContext = usePortalOptional();
+  const portalId = portalContext?.portal?.id || null;
   const [series, setSeries] = useState<SeriesData | null>(null);
   const [venueShowtimes, setVenueShowtimes] = useState<VenueShowtime[]>([]);
   const [loading, setLoading] = useState(true);
@@ -149,7 +147,8 @@ export default function SeriesDetailView({ slug, portalSlug, onClose }: SeriesDe
       setError(null);
 
       try {
-        const res = await fetch(`/api/series/${slug}`);
+        const qs = portalId ? `?${new URLSearchParams({ portal_id: portalId }).toString()}` : "";
+        const res = await fetch(`/api/series/${slug}${qs}`);
         if (!res.ok) {
           throw new Error("Series not found");
         }
@@ -164,7 +163,7 @@ export default function SeriesDetailView({ slug, portalSlug, onClose }: SeriesDe
     }
 
     fetchSeries();
-  }, [slug]);
+  }, [slug, portalId]);
 
   const handleEventClick = (id: number) => {
     router.push(`/${portalSlug}?event=${id}`, { scroll: false });
@@ -172,6 +171,10 @@ export default function SeriesDetailView({ slug, portalSlug, onClose }: SeriesDe
 
   const handleVenueClick = (venueSlug: string) => {
     router.push(`/${portalSlug}?spot=${venueSlug}`, { scroll: false });
+  };
+
+  const handleFestivalClick = (festivalSlug: string) => {
+    router.push(`/${portalSlug}?festival=${festivalSlug}`, { scroll: false });
   };
 
   if (loading) {
@@ -216,16 +219,13 @@ export default function SeriesDetailView({ slug, portalSlug, onClose }: SeriesDe
   const typeLabel = getSeriesTypeLabel(series.series_type);
   const showImage = series.image_url && !imageError;
   const totalEvents = venueShowtimes.reduce((sum, vs) => sum + vs.events.length, 0);
+  const accentClass = createCssVarClass("--accent-color", typeColor, "accent");
 
   return (
-    <div className="pt-6 pb-8">
+    <div className={`pt-6 pb-8 ${accentClass?.className ?? ""}`}>
+      <ScopedStyles css={accentClass?.css} />
       {/* Hero with poster and info */}
-      <div
-        className="relative rounded-xl overflow-hidden mb-6 border border-[var(--twilight)]"
-        style={{
-          background: `linear-gradient(to bottom, ${typeColor}10, var(--dusk))`,
-        }}
-      >
+      <div className="relative rounded-xl overflow-hidden mb-6 border border-[var(--twilight)] series-hero-bg">
         {/* Floating back button */}
         <NeonFloatingBackButton onClose={onClose} />
         <div className="p-6 flex items-start gap-4">
@@ -247,10 +247,9 @@ export default function SeriesDetailView({ slug, portalSlug, onClose }: SeriesDe
               </div>
             ) : (
               <div
-                className="w-28 h-40 rounded-lg flex items-center justify-center"
-                style={{ backgroundColor: `${typeColor}20` }}
+                className="w-28 h-40 rounded-lg flex items-center justify-center bg-accent-20"
               >
-                <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: typeColor }}>
+                <svg className="w-10 h-10 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   {series.series_type === "film" ? (
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z" />
                   ) : (
@@ -265,11 +264,7 @@ export default function SeriesDetailView({ slug, portalSlug, onClose }: SeriesDe
           <div className="flex-1 min-w-0">
             {/* Type badge */}
             <span
-              className="inline-flex items-center px-2 py-0.5 rounded text-xs font-mono font-medium uppercase tracking-wider mb-2"
-              style={{
-                backgroundColor: `${typeColor}20`,
-                color: typeColor,
-              }}
+              className="inline-flex items-center px-2 py-0.5 rounded text-xs font-mono font-medium uppercase tracking-wider mb-2 bg-accent-20 text-accent"
             >
               {typeLabel}
             </span>
@@ -329,6 +324,19 @@ export default function SeriesDetailView({ slug, portalSlug, onClose }: SeriesDe
         </div>
       </div>
 
+      {series.festival && (
+        <button
+          onClick={() => handleFestivalClick(series.festival!.slug)}
+          className={`w-full mb-5 flex items-center justify-between gap-3 rounded-lg border border-[var(--twilight)] bg-[var(--void)] px-4 py-3 text-left transition-colors hover:border-[var(--coral)]/50 ${accentClass?.className ?? ""}`}
+        >
+          <div className="min-w-0">
+            <p className="text-xs font-mono uppercase tracking-wider text-[var(--muted)]">Part of</p>
+            <p className="text-[var(--cream)] font-medium truncate">{series.festival.name}</p>
+          </div>
+          <span className="text-[0.65rem] font-mono text-[var(--soft)]">View festival</span>
+        </button>
+      )}
+
       {/* Description */}
       {series.description && (
         <div className="border border-[var(--twilight)] rounded-xl p-4 bg-[var(--dusk)] mb-6">
@@ -359,14 +367,10 @@ export default function SeriesDetailView({ slug, portalSlug, onClose }: SeriesDe
       {/* Recurring show callout */}
       {series.series_type === "recurring_show" && series.frequency && (
         <div
-          className="rounded-xl border p-4 mb-6"
-          style={{
-            borderColor: `${typeColor}40`,
-            background: `linear-gradient(135deg, ${typeColor}08, ${typeColor}04)`,
-          }}
+          className="rounded-xl border p-4 mb-6 series-callout"
         >
           <div className="flex items-start gap-3">
-            <svg className="w-5 h-5 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: typeColor }}>
+            <svg className="w-5 h-5 flex-shrink-0 mt-0.5 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
             </svg>
             <div>
@@ -440,7 +444,7 @@ export default function SeriesDetailView({ slug, portalSlug, onClose }: SeriesDe
                         onClick={() => handleEventClick(venueShowtimes[0].events[0].id)}
                         className="w-full flex items-center gap-3 px-2 py-1.5 rounded-lg bg-[var(--twilight)]/30 hover:bg-[var(--coral)] hover:text-[var(--void)] transition-colors group/next"
                       >
-                        <span className="text-xs font-medium" style={{ color: typeColor }}>Next</span>
+                        <span className="text-xs font-medium text-accent">Next</span>
                         <span className="text-sm font-medium text-[var(--cream)] group-hover/next:text-inherit">
                           {formatDate(venueShowtimes[0].events[0].date)}
                         </span>

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 /**
  * Manually confirm a user's email
  * Usage: node scripts/confirm-user.cjs <email>
@@ -45,7 +46,7 @@ async function main() {
   }
 
   // Confirm the user
-  const { data, error } = await supabase.auth.admin.updateUserById(user.id, {
+  const { error } = await supabase.auth.admin.updateUserById(user.id, {
     email_confirm: true
   });
 

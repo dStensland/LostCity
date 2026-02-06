@@ -1,0 +1,14 @@
+version: 1
+slug: netherworld
+name: Netherworld Haunted House
+integration_method: playwright
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.fearworld.com
+  fetch:
+    render_js: true
+detail:
+  enabled: false

@@ -1,0 +1,14 @@
+version: 1
+slug: ryman-auditorium
+name: Ryman Auditorium
+integration_method: playwright
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.ryman.com/events
+  fetch:
+    render_js: true
+detail:
+  enabled: false

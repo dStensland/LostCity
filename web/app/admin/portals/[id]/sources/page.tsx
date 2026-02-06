@@ -19,6 +19,7 @@ type SourceWithHealth = {
   url: string;
   is_active: boolean;
   source_type: string | null;
+  integration_method: string | null;
   health_tags: string[];
   active_months: number[] | null;
   last_run: string | null;
@@ -65,6 +66,7 @@ export default function PortalSourcesPage({ params }: { params: Promise<{ id: st
     status: "all",
     healthTags: [],
     sourceType: "all",
+    integrationMethod: "all",
     inSeason: false,
     search: "",
   });
@@ -108,6 +110,15 @@ export default function PortalSourcesPage({ params }: { params: Promise<{ id: st
     return Array.from(types).sort();
   }, [ownedSources, subscribedSources]);
 
+  const integrationMethods = useMemo(() => {
+    const methods = new Set<string>();
+    [...ownedSources, ...subscribedSources].forEach((s) => {
+      if (s.integration_method) methods.add(s.integration_method);
+      else methods.add("unknown");
+    });
+    return Array.from(methods).sort();
+  }, [ownedSources, subscribedSources]);
+
   // Filter and sort sources
   const filteredSources = useMemo(() => {
     const sources = activeTab === "owned" ? ownedSources : subscribedSources;
@@ -135,6 +146,14 @@ export default function PortalSourcesPage({ params }: { params: Promise<{ id: st
 
         // Source type filter
         if (filters.sourceType !== "all" && source.source_type !== filters.sourceType) {
+          return false;
+        }
+
+        // Integration method filter
+        if (
+          filters.integrationMethod !== "all" &&
+          (source.integration_method || "unknown") !== filters.integrationMethod
+        ) {
           return false;
         }
 
@@ -182,6 +201,64 @@ export default function PortalSourcesPage({ params }: { params: Promise<{ id: st
         return sortDirection === "asc" ? comparison : -comparison;
       });
   }, [activeTab, ownedSources, subscribedSources, filters, sortKey, sortDirection, currentMonth]);
+
+  const integrationSummary = useMemo(() => {
+    const summary = new Map<
+      string,
+      {
+        total: number;
+        active: number;
+        healthy: number;
+        warning: number;
+        failing: number;
+        successRates: number[];
+      }
+    >();
+
+    const sources = filteredSources;
+    sources.forEach((source) => {
+      const method = source.integration_method || "unknown";
+      if (!summary.has(method)) {
+        summary.set(method, { total: 0, active: 0, healthy: 0, warning: 0, failing: 0, successRates: [] });
+      }
+
+      const entry = summary.get(method)!;
+      entry.total += 1;
+
+      if (source.is_active) {
+        entry.active += 1;
+        if (source.last_run) {
+          entry.successRates.push(source.success_rate_7d);
+        }
+
+        const status = getHealthStatus(
+          source.is_active,
+          source.success_rate_7d,
+          source.last_run,
+          source.last_status
+        );
+        if (status === "healthy") entry.healthy += 1;
+        else if (status === "warning") entry.warning += 1;
+        else if (status === "failing") entry.failing += 1;
+      }
+    });
+
+    return Array.from(summary.entries())
+      .map(([method, data]) => {
+        const avgSuccess =
+          data.successRates.length > 0
+            ? Math.round(data.successRates.reduce((sum, v) => sum + v, 0) / data.successRates.length)
+            : 0;
+        const healthyRate = data.active > 0 ? Math.round((data.healthy / data.active) * 100) : 0;
+        return {
+          method,
+          ...data,
+          avgSuccessRate: avgSuccess,
+          healthyRate,
+        };
+      })
+      .sort((a, b) => b.total - a.total);
+  }, [filteredSources]);
 
   async function handleTriggerCrawl(sourceId: number) {
     setTriggeringCrawl(sourceId);
@@ -399,15 +476,45 @@ export default function PortalSourcesPage({ params }: { params: Promise<{ id: st
         filters={filters}
         onFiltersChange={setFilters}
         sourceTypes={sourceTypes}
+        integrationMethods={integrationMethods}
         showInSeasonFilter={true}
       />
+
+      {/* Integration Summary */}
+      {integrationSummary.length > 0 && (
+        <div className="mb-6">
+          <div className="font-mono text-xs text-[var(--muted)] uppercase mb-2">
+            Integration Methods (filtered)
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {integrationSummary.map((entry) => (
+              <div
+                key={entry.method}
+                className="p-3 bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg"
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <span className="font-mono text-xs text-[var(--muted)] uppercase">
+                    {entry.method}
+                  </span>
+                  <span className="font-mono text-xs text-[var(--cream)]">{entry.total}</span>
+                </div>
+                <div className="flex items-center gap-3 font-mono text-xs text-[var(--soft)]">
+                  <span>Healthy {entry.healthyRate}%</span>
+                  <span>Avg Success {entry.avgSuccessRate}%</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Sources Table */}
       <div className="bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg overflow-hidden">
         {/* Table Header */}
-        <div className="grid grid-cols-[auto_2fr_1fr_1fr_1fr_1fr_auto] gap-4 p-4 border-b border-[var(--twilight)] bg-[var(--night)]">
+        <div className="grid grid-cols-[auto_2fr_1fr_1fr_1fr_1fr_1fr_auto] gap-4 p-4 border-b border-[var(--twilight)] bg-[var(--night)]">
           <div className="w-8" /> {/* Status indicator */}
           <SortHeader label="Name" sortKeyName="name" />
+          <div className="font-mono text-xs text-[var(--muted)] uppercase">Method</div>
           <SortHeader label="Last Run" sortKeyName="last_run" />
           <SortHeader label="Success" sortKeyName="success_rate_7d" />
           <SortHeader label="Events" sortKeyName="total_events" />
@@ -431,7 +538,7 @@ export default function PortalSourcesPage({ params }: { params: Promise<{ id: st
             filteredSources.map((source) => (
               <div key={source.id}>
                 <div
-                  className={`grid grid-cols-[auto_2fr_1fr_1fr_1fr_1fr_auto] gap-4 p-4 items-center hover:bg-[var(--night)] transition-colors ${
+                  className={`grid grid-cols-[auto_2fr_1fr_1fr_1fr_1fr_1fr_auto] gap-4 p-4 items-center hover:bg-[var(--night)] transition-colors ${
                     !source.is_owned ? "border-l-2 border-l-blue-500/50" : ""
                   }`}
                 >
@@ -462,6 +569,11 @@ export default function PortalSourcesPage({ params }: { params: Promise<{ id: st
                         {source.last_error}
                       </p>
                     )}
+                  </div>
+
+                  {/* Integration Method */}
+                  <div className="font-mono text-xs text-[var(--soft)]">
+                    {source.integration_method || "unknown"}
                   </div>
 
                   {/* Last Run */}

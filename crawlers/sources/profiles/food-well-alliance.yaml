@@ -1,0 +1,12 @@
+version: 1
+slug: food-well-alliance
+name: Food Well Alliance
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://foodwellalliance.org/events
+detail:
+  enabled: false

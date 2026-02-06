@@ -3,7 +3,7 @@
 import { useState, useEffect, use, useCallback } from "react";
 import Link from "next/link";
 import Logo from "@/components/Logo";
-import { CATEGORIES } from "@/lib/search";
+import { CATEGORIES } from "@/lib/search-constants";
 
 type SectionItem = {
   id: string;

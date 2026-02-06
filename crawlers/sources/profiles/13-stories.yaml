@@ -1,0 +1,14 @@
+version: 1
+slug: 13-stories
+name: 13 Stories Haunted House
+integration_method: playwright
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.13stories.com
+  fetch:
+    render_js: true
+detail:
+  enabled: false

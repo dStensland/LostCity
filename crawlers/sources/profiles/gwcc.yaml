@@ -1,0 +1,12 @@
+version: 1
+slug: gwcc
+name: Georgia World Congress Center
+integration_method: llm_crawler
+defaults: {}
+discovery:
+  enabled: true
+  type: html
+  urls:
+  - https://www.gwcca.org/event-calendar
+detail:
+  enabled: false

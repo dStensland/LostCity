@@ -1,0 +1,62 @@
+{
+  "source": {
+    "id": 4,
+    "slug": "the-earl",
+    "name": "The Earl"
+  },
+  "mode": "pipeline",
+  "generated_at": "2026-02-06T04:50:35.017987Z",
+  "filters": {
+    "updated_since": "2026-02-06T02:50:34.511230Z",
+    "days": 180,
+    "include_past": false,
+    "max": null
+  },
+  "counts": {
+    "total": 9,
+    "with_description": 9,
+    "with_ticket_url": 6,
+    "with_image": 9,
+    "with_tags": 9,
+    "with_start_time": 9,
+    "with_price": 8,
+    "with_artists": 9
+  },
+  "coverage": {
+    "description": 100.0,
+    "ticket_url": 66.67,
+    "image": 100.0,
+    "tags": 100.0,
+    "start_time": 100.0,
+    "price": 88.89,
+    "artists": 100.0
+  },
+  "summary": {
+    "median_description_length": 23
+  },
+  "samples": {
+    "missing_ticket_url": [
+      {
+        "id": 17508,
+        "title": "Bad Bad Hats",
+        "start_date": "2026-02-07",
+        "source_url": "https://badearl.com"
+      },
+      {
+        "id": 17516,
+        "title": "MX Lonely",
+        "start_date": "2026-03-11",
+        "source_url": "https://badearl.com/show/mx-lonely-the-earl/"
+      },
+      {
+        "id": 17519,
+        "title": "The Belair Lip Bombs",
+        "start_date": "2026-04-16",
+        "source_url": "https://badearl.com/show/the-belair-lipbombs-the-earl/"
+      }
+    ],
+    "missing_image": [],
+    "missing_description": [],
+    "missing_artists": []
+  }
+}

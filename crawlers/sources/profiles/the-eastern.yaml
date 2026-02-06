@@ -1,0 +1,12 @@
+version: 1
+slug: the-eastern
+name: The Eastern
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://easternatl.com
+detail:
+  enabled: false

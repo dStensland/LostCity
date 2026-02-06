@@ -1,0 +1,14 @@
+version: 1
+slug: true-colors-theatre
+name: True Colors Theatre
+integration_method: playwright
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.truecolorstheatre.org
+  fetch:
+    render_js: true
+detail:
+  enabled: false

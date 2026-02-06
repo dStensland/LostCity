@@ -1,0 +1,12 @@
+version: 1
+slug: believe-music-hall
+name: Believe Music Hall
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.believemusichall.com
+detail:
+  enabled: false

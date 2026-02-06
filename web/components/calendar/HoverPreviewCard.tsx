@@ -4,6 +4,8 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import Link from "next/link";
 import CategoryIcon from "@/components/CategoryIcon";
 import { formatTimeSplit, formatPriceDetailed, type PriceableEvent } from "@/lib/formats";
+import ScopedStyles from "@/components/ScopedStyles";
+import { createCssVarClassForLength } from "@/lib/css-utils";
 
 interface CalendarEvent {
   id: number;
@@ -143,20 +145,28 @@ export default function HoverPreviewCard({
   const priceResult = formatPriceDetailed(event as PriceableEvent);
   const price = priceResult.text || null;
 
+  const topClass = createCssVarClassForLength(
+    "--hover-top",
+    `${position.top}px`,
+    "hover-card-top"
+  );
+  const leftClass = createCssVarClassForLength(
+    "--hover-left",
+    `${position.left}px`,
+    "hover-card-left"
+  );
+
   return (
     <div
       ref={cardRef}
       className={`
         fixed z-50 w-72 bg-[var(--midnight-blue)] border border-[var(--nebula)] rounded-xl shadow-xl shadow-[var(--deep-violet)]/50
-        transition-opacity duration-150
+        transition-opacity duration-150 hover-preview-card ${topClass?.className ?? ""} ${leftClass?.className ?? ""}
       `}
-      style={{
-        top: position.top,
-        left: position.left,
-      }}
       onMouseEnter={() => {}} // Handled by parent keepPreviewOpen
       onMouseLeave={onClose}
     >
+      <ScopedStyles css={[topClass?.css, leftClass?.css].filter(Boolean).join("\n")} />
       {/* Header with category */}
       <div className="p-4 border-b border-[var(--nebula)]/50">
         <div className="flex items-start gap-3">

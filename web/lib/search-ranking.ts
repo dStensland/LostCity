@@ -43,7 +43,7 @@ export type ResultType = SearchResult["type"];
  * Boost factors for result types based on current view context.
  * Higher numbers = higher priority in results.
  */
-type FindTypeKey = "events" | "destinations" | "orgs" | "default";
+type FindTypeKey = "events" | "classes" | "destinations" | "default";
 
 const CONTEXT_BOOSTS: Record<
   ViewMode,
@@ -60,8 +60,8 @@ const CONTEXT_BOOSTS: Record<
       category: 2,
     },
     events: { event: 10, venue: 10, organizer: 10, series: 8, list: 5, neighborhood: 3, category: 2 },
+    classes: { event: 10, venue: 10, organizer: 10, series: 8, list: 5, neighborhood: 3, category: 2 },
     destinations: { event: 10, venue: 10, organizer: 10, series: 8, list: 5, neighborhood: 3, category: 2 },
-    orgs: { event: 10, venue: 10, organizer: 10, series: 8, list: 5, neighborhood: 3, category: 2 },
   },
   find: {
     default: {
@@ -91,14 +91,14 @@ const CONTEXT_BOOSTS: Record<
       neighborhood: 15,
       category: 5,
     },
-    orgs: {
-      organizer: 30,
-      event: 15, // Events by organizers
-      venue: 5,
-      series: 10,
+    classes: {
+      event: 25, // Classes are events
+      venue: 20, // Studios/venues offering classes
+      organizer: 15,
+      series: 15,
       list: 5,
-      neighborhood: 3,
-      category: 5,
+      neighborhood: 10,
+      category: 10,
     },
   },
   community: {
@@ -112,8 +112,8 @@ const CONTEXT_BOOSTS: Record<
       category: 3,
     },
     events: { organizer: 25, list: 20, event: 10, venue: 5, series: 10, neighborhood: 3, category: 3 },
+    classes: { organizer: 25, list: 20, event: 10, venue: 5, series: 10, neighborhood: 3, category: 3 },
     destinations: { organizer: 25, list: 20, event: 10, venue: 5, series: 10, neighborhood: 3, category: 3 },
-    orgs: { organizer: 25, list: 20, event: 10, venue: 5, series: 10, neighborhood: 3, category: 3 },
   },
 };
 
@@ -398,8 +398,8 @@ export function getGroupDisplayOrder(context: SearchContext): ResultType[] {
         return ["event", "venue", "organizer", "series", "neighborhood", "category", "list"];
       case "destinations":
         return ["venue", "neighborhood", "event", "organizer", "series", "category", "list"];
-      case "orgs":
-        return ["organizer", "event", "venue", "series", "list", "neighborhood", "category"];
+      case "classes":
+        return ["event", "venue", "organizer", "series", "neighborhood", "category", "list"];
     }
   }
 

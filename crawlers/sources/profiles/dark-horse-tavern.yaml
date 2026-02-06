@@ -1,0 +1,12 @@
+version: 1
+slug: dark-horse-tavern
+name: Dark Horse Tavern
+integration_method: llm_crawler
+defaults: {}
+discovery:
+  enabled: true
+  type: html
+  urls:
+  - https://www.darkhorsetavern.net
+detail:
+  enabled: false

@@ -1,0 +1,12 @@
+version: 1
+slug: civil-rights-center
+name: National Center for Civil and Human Rights
+integration_method: llm_crawler
+defaults: {}
+discovery:
+  enabled: true
+  type: html
+  urls:
+  - https://www.civilandhumanrights.org
+detail:
+  enabled: false

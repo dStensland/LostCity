@@ -1,0 +1,12 @@
+version: 1
+slug: halfway-crooks
+name: Halfway Crooks
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.halfwaycrooks.com
+detail:
+  enabled: false

@@ -1,0 +1,12 @@
+version: 1
+slug: carlos-museum
+name: Michael C. Carlos Museum
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://carlos.emory.edu
+detail:
+  enabled: false

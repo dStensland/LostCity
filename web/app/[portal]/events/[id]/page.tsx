@@ -2,7 +2,7 @@ import { getEventById, getRelatedEvents } from "@/lib/supabase";
 import { getNearbySpots, getSpotTypeLabel } from "@/lib/spots";
 import { getCachedPortalBySlug } from "@/lib/portal";
 import { getSeriesTypeLabel, getSeriesTypeColor } from "@/lib/series";
-import Image from "next/image";
+import Image from "@/components/SmartImage";
 import CategoryIcon, { getCategoryColor } from "@/components/CategoryIcon";
 import FollowButton from "@/components/FollowButton";
 import FriendsGoing from "@/components/FriendsGoing";
@@ -35,6 +35,8 @@ import {
   DetailStickyBar,
 } from "@/components/detail";
 import VenueEventsByDay from "@/components/VenueEventsByDay";
+import ScopedStylesServer from "@/components/ScopedStylesServer";
+import { createCssVarClass } from "@/lib/css-utils";
 
 export const revalidate = 60;
 
@@ -236,6 +238,21 @@ export default async function PortalEventPage({ params }: Props) {
   const isLive = (event as { is_live?: boolean }).is_live || false;
   const recurrenceText = parseRecurrenceRule(event.recurrence_rule);
   const categoryColor = event.category ? getCategoryColor(event.category) : "var(--coral)";
+  const categoryAccentClass = createCssVarClass("--accent-color", categoryColor, "accent");
+  const seriesAccentClass = event.series
+    ? createCssVarClass(
+        "--accent-color",
+        getSeriesTypeColor(event.series.series_type),
+        "series-accent"
+      )
+    : null;
+  const festivalAccentClass = event.series?.festival
+    ? createCssVarClass(
+        "--accent-color",
+        getSeriesTypeColor("festival_program"),
+        "festival-accent"
+      )
+    : null;
 
   // Format metadata
   const dateObj = parseISO(event.start_date);
@@ -262,7 +279,11 @@ export default async function PortalEventPage({ params }: Props) {
       {/* Portal-specific theming */}
       {portal && <PortalTheme portal={portal} />}
 
-      <div className="min-h-screen">
+      <ScopedStylesServer
+        css={[categoryAccentClass?.css, seriesAccentClass?.css, festivalAccentClass?.css].filter(Boolean).join("\n")}
+      />
+
+      <div className={`min-h-screen ${categoryAccentClass?.className ?? ""}`}>
         <UnifiedHeader
           portalSlug={activePortalSlug}
           portalName={activePortalName}
@@ -281,12 +302,7 @@ export default async function PortalEventPage({ params }: Props) {
             badge={
               <div className="flex items-center gap-2">
                 <span
-                  className="inline-flex items-center gap-2 px-3 py-1.5 rounded text-xs font-mono uppercase tracking-wider"
-                  style={{
-                    backgroundColor: `${categoryColor}20`,
-                    color: categoryColor,
-                    border: `1px solid ${categoryColor}40`,
-                  }}
+                  className="inline-flex items-center gap-2 px-3 py-1.5 rounded text-xs font-mono uppercase tracking-wider bg-accent-20 text-accent border border-accent-40"
                 >
                   <CategoryIcon type={event.category || "other"} size={16} />
                   {event.category}
@@ -300,8 +316,7 @@ export default async function PortalEventPage({ params }: Props) {
           {/* Recurring Event Notice */}
           {event.is_recurring && recurrenceText && (
             <div
-              className="flex items-center gap-3 p-4 rounded-lg border border-[var(--twilight)]"
-              style={{ backgroundColor: "var(--card-bg)" }}
+              className="flex items-center gap-3 p-4 rounded-lg border border-[var(--twilight)] bg-[var(--card-bg)]"
             >
               <div className="w-10 h-10 rounded-full bg-[var(--twilight)] flex items-center justify-center flex-shrink-0">
                 <svg className="w-5 h-5 text-[var(--coral)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -357,8 +372,7 @@ export default async function PortalEventPage({ params }: Props) {
                   <Link
                     href={`/${activePortalSlug}?venue=${event.venue.slug}`}
                     scroll={false}
-                    className="block p-4 rounded-lg border border-[var(--twilight)] transition-all hover:bg-[var(--card-bg-hover)] hover:border-[var(--soft)] group"
-                    style={{ backgroundColor: "var(--void)" }}
+                    className="block p-4 rounded-lg border border-[var(--twilight)] bg-[var(--void)] transition-all hover:bg-[var(--card-bg-hover)] hover:border-[var(--soft)] group"
                   >
                     <p className="text-[var(--soft)]">
                       <span className="text-[var(--cream)] font-medium group-hover:text-[var(--coral)] transition-colors">
@@ -394,18 +408,48 @@ export default async function PortalEventPage({ params }: Props) {
             {event.series && (
               <>
                 <SectionHeader title="Series" />
+                {event.series.festival && (
+                  <Link
+                    href={`/${activePortalSlug}?festival=${event.series.festival.slug}`}
+                    scroll={false}
+                    className={`flex items-center gap-3 p-4 rounded-lg border border-[var(--twilight)] bg-[var(--void)] transition-all hover:bg-[var(--card-bg-hover)] hover:border-[var(--soft)] group mb-3 ${festivalAccentClass?.className ?? ""}`}
+                  >
+                    <svg
+                      className="w-5 h-5 flex-shrink-0 text-accent"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M5 4v16m0-12h9l-1.5 3L14 14H5" />
+                    </svg>
+                    <div className="flex-1 min-w-0">
+                      <span className="text-sm text-[var(--soft)] group-hover:text-[var(--coral)] transition-colors">
+                        Part of{" "}
+                        <span className="text-[var(--cream)] font-medium">
+                          {event.series.festival.name}
+                        </span>
+                      </span>
+                      <span
+                        className="ml-2 text-[0.6rem] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded bg-accent-20 text-accent"
+                      >
+                        Festival
+                      </span>
+                    </div>
+                    <svg className="w-4 h-4 text-[var(--muted)] group-hover:text-[var(--coral)] transition-colors flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </Link>
+                )}
                 <Link
                   href={`/${activePortalSlug}?series=${event.series.slug}`}
                   scroll={false}
-                  className="flex items-center gap-3 p-4 rounded-lg border border-[var(--twilight)] transition-all hover:bg-[var(--card-bg-hover)] hover:border-[var(--soft)] group mb-6"
-                  style={{ backgroundColor: "var(--void)" }}
+                  className={`flex items-center gap-3 p-4 rounded-lg border border-[var(--twilight)] bg-[var(--void)] transition-all hover:bg-[var(--card-bg-hover)] hover:border-[var(--soft)] group mb-6 ${seriesAccentClass?.className ?? ""}`}
                 >
                   <svg
-                    className="w-5 h-5 flex-shrink-0"
+                    className="w-5 h-5 flex-shrink-0 text-accent"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
-                    style={{ color: getSeriesTypeColor(event.series.series_type) }}
                   >
                     <path
                       strokeLinecap="round"
@@ -419,11 +463,7 @@ export default async function PortalEventPage({ params }: Props) {
                       Part of <span className="text-[var(--cream)] font-medium">{event.series.title}</span>
                     </span>
                     <span
-                      className="ml-2 text-[0.6rem] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded"
-                      style={{
-                        backgroundColor: `${getSeriesTypeColor(event.series.series_type)}20`,
-                        color: getSeriesTypeColor(event.series.series_type),
-                      }}
+                      className="ml-2 text-[0.6rem] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded bg-accent-20 text-accent"
                     >
                       {getSeriesTypeLabel(event.series.series_type)}
                     </span>
@@ -439,7 +479,7 @@ export default async function PortalEventPage({ params }: Props) {
             {event.organization && (
               <>
                 <SectionHeader title="Presented by" />
-                <div className="flex items-center justify-between gap-4 p-4 rounded-lg border border-[var(--twilight)] mb-6" style={{ backgroundColor: "var(--void)" }}>
+                <div className="flex items-center justify-between gap-4 p-4 rounded-lg border border-[var(--twilight)] mb-6 bg-[var(--void)]">
                   <div className="flex items-center gap-3 min-w-0">
                     {event.organization.logo_url ? (
                       <Image
@@ -479,8 +519,7 @@ export default async function PortalEventPage({ params }: Props) {
                   {event.tags.map((tag) => (
                     <span
                       key={tag}
-                      className="px-2.5 py-1 text-[var(--soft)] rounded border border-[var(--twilight)] text-xs"
-                      style={{ backgroundColor: "var(--void)" }}
+                      className="px-2.5 py-1 text-[var(--soft)] rounded border border-[var(--twilight)] text-xs bg-[var(--void)]"
                     >
                       {tag}
                     </span>

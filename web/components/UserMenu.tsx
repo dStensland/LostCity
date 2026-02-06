@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
-import Image from "next/image";
+import Image from "@/components/SmartImage";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import ShareInviteLink from "./ShareInviteLink";
@@ -51,9 +51,14 @@ export default function UserMenu() {
     return (
       <Link
         href={loginUrl}
-        className="font-mono text-[0.7rem] font-medium text-[var(--muted)] uppercase tracking-wide hover:text-[var(--cream)] transition-colors"
+        className="inline-flex items-center gap-1.5 font-mono text-[0.7rem] font-medium text-[var(--muted)] uppercase tracking-wide hover:text-[var(--cream)] transition-colors"
+        aria-label="Sign in"
       >
-        Sign in
+        <svg className="w-4 h-4 sm:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0z" />
+        </svg>
+        <span className="hidden sm:inline">Sign in</span>
+        <span className="sr-only">Sign in</span>
       </Link>
     );
   }
@@ -70,10 +75,14 @@ export default function UserMenu() {
       <NotificationDropdown />
 
       {/* Invite Friends */}
-      <ShareInviteLink variant="icon" />
+      <div className="hidden sm:block">
+        <ShareInviteLink variant="icon" />
+      </div>
 
       {/* Calendar */}
-      <CalendarButton />
+      <div className="hidden sm:block">
+        <CalendarButton />
+      </div>
 
       {/* Avatar and dropdown */}
       <div className="relative flex items-center z-[1000]" ref={menuRef}>

@@ -1,0 +1,12 @@
+version: 1
+slug: foxtale-books
+name: FoxTale Book Shoppe
+integration_method: llm_crawler
+defaults: {}
+discovery:
+  enabled: true
+  type: html
+  urls:
+  - https://www.foxtalebookshoppe.com
+detail:
+  enabled: false

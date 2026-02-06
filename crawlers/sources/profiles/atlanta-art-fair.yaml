@@ -1,0 +1,14 @@
+version: 1
+slug: atlanta-art-fair
+name: Atlanta Art Fair
+integration_method: playwright
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.atlantaartfair.com
+  fetch:
+    render_js: true
+detail:
+  enabled: false

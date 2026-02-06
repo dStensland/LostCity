@@ -180,8 +180,7 @@ export function AddItemsModal({ listId, existingItems, onClose, onItemsAdded }: 
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[var(--void)]/80 backdrop-blur-sm">
       <div
         ref={modalRef}
-        className="w-full max-w-lg max-h-[80vh] rounded-xl border border-[var(--twilight)] shadow-2xl overflow-hidden flex flex-col"
-        style={{ backgroundColor: "var(--void)" }}
+        className="w-full max-w-lg max-h-[80vh] rounded-xl border border-[var(--twilight)] shadow-2xl overflow-hidden flex flex-col bg-[var(--void)]"
       >
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--twilight)]">

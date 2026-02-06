@@ -1,4 +1,6 @@
 import { type ReactNode } from "react";
+import ScopedStyles from "@/components/ScopedStyles";
+import { createCssVarClass } from "@/lib/css-utils";
 
 export interface InfoCardProps {
   accentColor?: string;
@@ -11,14 +13,18 @@ export function InfoCard({
   children,
   className = "",
 }: InfoCardProps) {
+  const accentClass = createCssVarClass("--info-accent", accentColor, "info-card");
+
   return (
-    <div
-      className={`rounded-lg bg-[var(--card-bg)] p-6 sm:p-8 ${className}`}
-      style={{
-        borderLeft: `3px solid ${accentColor}`,
-      }}
-    >
-      {children}
-    </div>
+    <>
+      <ScopedStyles css={accentClass?.css} />
+      <div
+        className={`rounded-lg bg-[var(--card-bg)] p-6 sm:p-8 info-card ${
+          accentClass?.className ?? ""
+        } ${className}`}
+      >
+        {children}
+      </div>
+    </>
   );
 }

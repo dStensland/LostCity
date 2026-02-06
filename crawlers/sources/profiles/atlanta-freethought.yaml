@@ -1,0 +1,12 @@
+version: 1
+slug: atlanta-freethought
+name: Atlanta Freethought Society
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://atlantafreethought.org/events
+detail:
+  enabled: false

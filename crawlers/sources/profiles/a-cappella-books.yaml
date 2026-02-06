@@ -1,0 +1,12 @@
+version: 1
+slug: a-cappella-books
+name: A Cappella Books
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.acappellabooks.com
+detail:
+  enabled: false

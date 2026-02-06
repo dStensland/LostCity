@@ -20,6 +20,107 @@ def slugify(text: str) -> str:
     return slug.strip('-')
 
 
+def infer_festival_type(festival_name: str) -> Optional[str]:
+    """Infer festival type from name."""
+    if not festival_name:
+        return None
+    name = festival_name.lower()
+    if re.search(r"\b(conference|summit|symposium|forum|congress)\b", name):
+        return "conference"
+    if re.search(r"\b(convention|expo|con)\b", name):
+        return "convention"
+    return None
+
+
+def _ensure_festival_slug(client: Client, base_slug: str) -> str:
+    """Ensure a unique festival slug."""
+    slug = base_slug
+    counter = 1
+    while True:
+        existing = client.table("festivals").select("id").eq("slug", slug).execute()
+        if not existing.data:
+            return slug
+        slug = f"{base_slug}-{counter}"
+        counter += 1
+
+
+def create_festival(
+    client: Client,
+    festival_name: str,
+    festival_type: Optional[str] = None,
+    website: Optional[str] = None,
+) -> str:
+    """Create a new festival record and return its ID."""
+    base_slug = slugify(festival_name)
+    slug = _ensure_festival_slug(client, base_slug)
+    festival_id = slug
+
+    festival_data = {
+        "id": festival_id,
+        "name": festival_name,
+        "slug": slug,
+    }
+    if festival_type:
+        festival_data["festival_type"] = festival_type
+    if website:
+        festival_data["website"] = website
+
+    result = client.table("festivals").insert(festival_data).execute()
+    return result.data[0]["id"]
+
+
+def resolve_festival_id(
+    client: Client,
+    festival_name: Optional[str],
+    festival_type: Optional[str] = None,
+    website: Optional[str] = None,
+    create_if_missing: bool = False,
+) -> Optional[str]:
+    """Resolve a festival ID from a provided festival name or slug."""
+    if not festival_name:
+        return None
+
+    inferred_type = festival_type or infer_festival_type(festival_name)
+
+    def _maybe_update(existing: dict) -> None:
+        updates = {}
+        if inferred_type and not existing.get("festival_type"):
+            updates["festival_type"] = inferred_type
+        if website and not existing.get("website"):
+            updates["website"] = website
+        if updates:
+            client.table("festivals").update(updates).eq("id", existing["id"]).execute()
+
+    # Try exact slug match first (with and without slugify)
+    for candidate in {festival_name, slugify(festival_name)}:
+        if not candidate:
+            continue
+        result = client.table("festivals").select("id, festival_type, website").eq("slug", candidate).execute()
+        if result.data:
+            existing = result.data[0]
+            _maybe_update(existing)
+            return existing["id"]
+
+    # Try exact name match (case-insensitive)
+    result = client.table("festivals").select("id, festival_type, website").ilike("name", festival_name).execute()
+    if result.data:
+        existing = result.data[0]
+        _maybe_update(existing)
+        return existing["id"]
+
+    # Try partial name match as a fallback
+    result = client.table("festivals").select("id, festival_type, website").ilike("name", f"%{festival_name}%").execute()
+    if result.data:
+        existing = result.data[0]
+        _maybe_update(existing)
+        return existing["id"]
+
+    if create_if_missing:
+        return create_festival(client, festival_name, inferred_type, website=website)
+
+    return None
+
+
 def normalize_title(title: str) -> str:
     """Normalize a title for comparison."""
     # Remove common prefixes/suffixes
@@ -94,9 +195,21 @@ def get_or_create_series(client: Client, series_hint: dict, category: str = None
     if not series_type or not series_title:
         return None
 
+    # Resolve festival link if provided
+    festival_id = series_hint.get("festival_id") or resolve_festival_id(
+        client,
+        series_hint.get("festival_name"),
+        festival_type=series_hint.get("festival_type"),
+        website=series_hint.get("festival_website"),
+        create_if_missing=True,
+    )
+
     # Check for existing series
     existing = find_series_by_title(client, series_title, series_type)
     if existing:
+        # Backfill festival_id if missing
+        if festival_id and not existing.get("festival_id"):
+            client.table("series").update({"festival_id": festival_id}).eq("id", existing["id"]).execute()
         logger.debug(f"Found existing series: {series_title}")
         return existing["id"]
 
@@ -113,6 +226,8 @@ def get_or_create_series(client: Client, series_hint: dict, category: str = None
         "series_type": series_type,
         "category": category,
     }
+    if festival_id:
+        series_data["festival_id"] = festival_id
 
     # Add film-specific fields
     if series_type == "film":

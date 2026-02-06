@@ -1,0 +1,14 @@
+version: 1
+slug: decatur-makers
+name: Decatur Makers
+integration_method: api
+defaults: {}
+discovery:
+  enabled: true
+  type: api
+  urls:
+  - https://www.meetup.com/decatur-makers/
+  api:
+    adapter: custom
+detail:
+  enabled: false

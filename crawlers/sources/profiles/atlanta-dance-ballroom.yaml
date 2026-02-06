@@ -1,0 +1,12 @@
+version: 1
+slug: atlanta-dance-ballroom
+name: Atlanta Dance Ballroom
+integration_method: llm_crawler
+defaults: {}
+discovery:
+  enabled: true
+  type: html
+  urls:
+  - https://atlantadance.com
+detail:
+  enabled: false

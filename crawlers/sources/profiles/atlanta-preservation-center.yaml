@@ -1,0 +1,14 @@
+version: 1
+slug: atlanta-preservation-center
+name: Atlanta Preservation Center
+integration_method: aggregator
+defaults: {}
+discovery:
+  enabled: true
+  type: api
+  urls:
+  - https://preserveatl.eventbrite.com
+  api:
+    adapter: eventbrite
+detail:
+  enabled: false

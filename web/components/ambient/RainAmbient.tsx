@@ -12,27 +12,21 @@ interface RainAmbientProps {
  * Uses the existing .rain-overlay CSS class from globals.css.
  */
 export default function RainAmbient({ config }: RainAmbientProps) {
-  // Intensity affects opacity
-  const opacity = (() => {
+  const intensityClass = (() => {
     switch (config.intensity) {
       case "subtle":
-        return 0.5;
+        return "rain-intensity-subtle";
       case "bold":
-        return 1.2;
+        return "rain-intensity-bold";
       default:
-        return 1;
+        return "rain-intensity-default";
     }
   })();
 
   return (
     <div
-      className="ambient-layer rain-overlay"
+      className={`ambient-layer rain-overlay rain-z-0 ${intensityClass}`}
       aria-hidden="true"
-      style={{
-        opacity,
-        // Rain overlay is at z-10 in CSS, but we want it consistent with other ambients
-        zIndex: 0
-      }}
     />
   );
 }

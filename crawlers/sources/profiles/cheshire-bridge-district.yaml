@@ -1,0 +1,12 @@
+version: 1
+slug: cheshire-bridge-district
+name: Cheshire Bridge District
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://cheshirebridge.com
+detail:
+  enabled: false

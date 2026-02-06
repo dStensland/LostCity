@@ -1,6 +1,8 @@
 "use client";
 
 import { ReactNode } from "react";
+import ScopedStyles from "@/components/ScopedStyles";
+import { createCssVarClass } from "@/lib/css-utils";
 
 // Pre-built variant configurations
 export type EmptyStateVariant = "no-events" | "no-results" | "no-saved" | "connect-friends" | "no-activity" | "no-friends" | "default";
@@ -55,17 +57,14 @@ export default function EmptyState({
   atmospheric = true,
 }: EmptyStateProps) {
   const accentColor = getVariantColor(variant);
+  const accentClass = createCssVarClass("--accent-color", accentColor, "accent");
 
   return (
-    <div className={`py-12 text-center relative ${atmospheric ? "empty-state-atmospheric" : ""} ${className}`}>
+    <div className={`py-12 text-center relative ${atmospheric ? "empty-state-atmospheric" : ""} ${className} ${accentClass?.className ?? ""}`}>
+      <ScopedStyles css={accentClass?.css} />
       {/* Radial gradient background */}
       {atmospheric && (
-        <div
-          className="absolute inset-0 pointer-events-none"
-          style={{
-            background: `radial-gradient(ellipse at center, color-mix(in srgb, ${accentColor} 8%, transparent) 0%, transparent 60%)`,
-          }}
-        />
+        <div className="absolute inset-0 pointer-events-none empty-state-bg" />
       )}
 
       {/* Content with staggered animations */}
@@ -73,13 +72,9 @@ export default function EmptyState({
         {icon && (
           <div className={`mb-4 flex justify-center ${atmospheric ? "animate-stagger-1" : ""}`}>
             <div
-              className={`relative flex items-center justify-center w-16 h-16 rounded-full ${atmospheric ? "empty-state-icon-glow animate-float" : ""}`}
-              style={{
-                background: `linear-gradient(135deg, var(--twilight), var(--dusk))`,
-                "--glow-color": accentColor,
-              } as React.CSSProperties}
+              className={`relative flex items-center justify-center w-16 h-16 rounded-full empty-state-icon-bg ${atmospheric ? "empty-state-icon-glow animate-float" : ""}`}
             >
-              <div className={`text-[var(--muted)] ${atmospheric ? "animate-empty-icon-pulse" : ""}`} style={{ color: accentColor }}>
+              <div className={`text-[var(--muted)] text-accent ${atmospheric ? "animate-empty-icon-pulse" : ""}`}>
                 {icon}
               </div>
             </div>
@@ -113,12 +108,7 @@ export default function EmptyState({
             {action && (
               <button
                 onClick={action.onClick}
-                className="px-4 py-2 rounded-lg font-mono text-sm font-medium transition-all hover:scale-105"
-                style={{
-                  backgroundColor: accentColor,
-                  color: "var(--void)",
-                  boxShadow: `0 0 20px color-mix(in srgb, ${accentColor} 40%, transparent)`,
-                }}
+                className="px-4 py-2 rounded-lg font-mono text-sm font-medium transition-all hover:scale-105 empty-state-action"
               >
                 {action.label}
               </button>

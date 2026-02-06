@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import Image from "next/image";
+import Image from "@/components/SmartImage";
 import { useAuth } from "@/lib/auth-context";
 import { usePortalOptional, DEFAULT_PORTAL } from "@/lib/portal-context";
 import { formatDistanceToNow } from "date-fns";

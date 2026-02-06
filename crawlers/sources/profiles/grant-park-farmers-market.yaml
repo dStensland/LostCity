@@ -1,0 +1,12 @@
+version: 1
+slug: grant-park-farmers-market
+name: Grant Park Farmers Market
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.grantparkmarket.org
+detail:
+  enabled: false

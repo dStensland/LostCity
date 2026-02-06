@@ -15,19 +15,8 @@ export default async function Image({ params }: { params: { id: string } }) {
   if (isNaN(eventId)) {
     return new ImageResponse(
       (
-        <div
-          style={{
-            display: "flex",
-            width: "100%",
-            height: "100%",
-            alignItems: "center",
-            justifyContent: "center",
-            backgroundColor: "#0D0D10",
-            color: "#F5F5DC",
-            fontFamily: "system-ui",
-          }}
-        >
-          <span style={{ fontSize: 48 }}>Invalid Event ID</span>
+        <div tw="w-full h-full flex items-center justify-center bg-[#0D0D10] text-[#F5F5DC] font-sans">
+          <span tw="text-[48px]">Invalid Event ID</span>
         </div>
       ),
       size
@@ -39,19 +28,8 @@ export default async function Image({ params }: { params: { id: string } }) {
   if (!event) {
     return new ImageResponse(
       (
-        <div
-          style={{
-            display: "flex",
-            width: "100%",
-            height: "100%",
-            alignItems: "center",
-            justifyContent: "center",
-            backgroundColor: "#0D0D10",
-            color: "#F5F5DC",
-            fontFamily: "system-ui",
-          }}
-        >
-          <span style={{ fontSize: 48 }}>Event Not Found</span>
+        <div tw="w-full h-full flex items-center justify-center bg-[#0D0D10] text-[#F5F5DC] font-sans">
+          <span tw="text-[48px]">Event Not Found</span>
         </div>
       ),
       size
@@ -66,40 +44,86 @@ export default async function Image({ params }: { params: { id: string } }) {
   const venueName = event.venue?.name || "TBA";
   const neighborhood = event.venue?.neighborhood || "";
 
-  // Category colors
-  const categoryColors: Record<string, string> = {
-    music: "#F9A8D4",
-    film: "#A5B4FC",
-    comedy: "#FCD34D",
-    theater: "#F0ABFC",
-    art: "#C4B5FD",
-    community: "#6EE7B7",
-    food_drink: "#FDBA74",
-    sports: "#7DD3FC",
-    fitness: "#5EEAD4",
-    nightlife: "#E879F9",
-    family: "#A78BFA",
+  const categoryStyles: Record<
+    string,
+    { accent: string; badgeBg: string; gradient: string }
+  > = {
+    music: {
+      accent: "text-[#F9A8D4]",
+      badgeBg: "bg-[#F9A8D4]",
+      gradient: "bg-[linear-gradient(90deg,_#F9A8D4,_#FF6B6B)]",
+    },
+    film: {
+      accent: "text-[#A5B4FC]",
+      badgeBg: "bg-[#A5B4FC]",
+      gradient: "bg-[linear-gradient(90deg,_#A5B4FC,_#FF6B6B)]",
+    },
+    comedy: {
+      accent: "text-[#FCD34D]",
+      badgeBg: "bg-[#FCD34D]",
+      gradient: "bg-[linear-gradient(90deg,_#FCD34D,_#FF6B6B)]",
+    },
+    theater: {
+      accent: "text-[#F0ABFC]",
+      badgeBg: "bg-[#F0ABFC]",
+      gradient: "bg-[linear-gradient(90deg,_#F0ABFC,_#FF6B6B)]",
+    },
+    art: {
+      accent: "text-[#C4B5FD]",
+      badgeBg: "bg-[#C4B5FD]",
+      gradient: "bg-[linear-gradient(90deg,_#C4B5FD,_#FF6B6B)]",
+    },
+    community: {
+      accent: "text-[#6EE7B7]",
+      badgeBg: "bg-[#6EE7B7]",
+      gradient: "bg-[linear-gradient(90deg,_#6EE7B7,_#FF6B6B)]",
+    },
+    food_drink: {
+      accent: "text-[#FDBA74]",
+      badgeBg: "bg-[#FDBA74]",
+      gradient: "bg-[linear-gradient(90deg,_#FDBA74,_#FF6B6B)]",
+    },
+    sports: {
+      accent: "text-[#7DD3FC]",
+      badgeBg: "bg-[#7DD3FC]",
+      gradient: "bg-[linear-gradient(90deg,_#7DD3FC,_#FF6B6B)]",
+    },
+    fitness: {
+      accent: "text-[#5EEAD4]",
+      badgeBg: "bg-[#5EEAD4]",
+      gradient: "bg-[linear-gradient(90deg,_#5EEAD4,_#FF6B6B)]",
+    },
+    nightlife: {
+      accent: "text-[#E879F9]",
+      badgeBg: "bg-[#E879F9]",
+      gradient: "bg-[linear-gradient(90deg,_#E879F9,_#FF6B6B)]",
+    },
+    family: {
+      accent: "text-[#A78BFA]",
+      badgeBg: "bg-[#A78BFA]",
+      gradient: "bg-[linear-gradient(90deg,_#A78BFA,_#FF6B6B)]",
+    },
+    default: {
+      accent: "text-[#FF6B6B]",
+      badgeBg: "bg-[#FF6B6B]",
+      gradient: "bg-[linear-gradient(90deg,_#FF6B6B,_#FF6B6B)]",
+    },
   };
 
-  const accentColor = event.category
-    ? categoryColors[event.category] || "#FF6B6B"
-    : "#FF6B6B";
+  const accentStyle =
+    (event.category && categoryStyles[event.category]) || categoryStyles.default;
 
   // If event has an image, use it as background
   const hasImage = event.image_url && event.image_url.length > 0;
+  const titleSize = event.title.length > 50 ? "text-[44px]" : "text-[56px]";
+  const timeColor = hasImage ? "text-[#E5E5E5]" : "text-[#8B8B94]";
+  const venueColor = hasImage ? "text-[#D0D0D0]" : "text-[#8B8B94]";
+  const neighborhoodColor = hasImage ? "text-[#A0A0A0]" : "text-[#555560]";
+  const footerColor = hasImage ? "text-[#999999]" : "text-[#555560]";
 
   return new ImageResponse(
     (
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          width: "100%",
-          height: "100%",
-          backgroundColor: "#0D0D10",
-          position: "relative",
-        }}
-      >
+      <div tw="relative flex flex-col w-full h-full bg-[#0D0D10]">
         {/* Background image with overlay */}
         {hasImage && (
           <>
@@ -107,72 +131,31 @@ export default async function Image({ params }: { params: { id: string } }) {
             <img
               src={event.image_url || ""}
               alt=""
-              style={{
-                position: "absolute",
-                top: 0,
-                left: 0,
-                width: "100%",
-                height: "100%",
-                objectFit: "cover",
-              }}
+              tw="absolute inset-0 w-full h-full object-cover"
             />
             {/* Dark gradient overlay for text readability */}
             <div
-              style={{
-                position: "absolute",
-                top: 0,
-                left: 0,
-                width: "100%",
-                height: "100%",
-                background: "linear-gradient(to top, rgba(13, 13, 16, 0.95) 0%, rgba(13, 13, 16, 0.7) 50%, rgba(13, 13, 16, 0.4) 100%)",
-              }}
+              tw="absolute inset-0 bg-[linear-gradient(to_top,_rgba(13,13,16,0.95)_0%,_rgba(13,13,16,0.7)_50%,_rgba(13,13,16,0.4)_100%)]"
             />
           </>
         )}
 
         {/* Gradient accent */}
         <div
-          style={{
-            position: "absolute",
-            top: 0,
-            left: 0,
-            width: "100%",
-            height: 8,
-            background: `linear-gradient(90deg, ${accentColor}, #FF6B6B)`,
-          }}
+          tw={`absolute top-0 left-0 w-full h-2 ${accentStyle.gradient}`}
         />
 
         {/* Main content */}
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            flex: 1,
-            justifyContent: "flex-end",
-            padding: 60,
-            position: "relative",
-          }}
-        >
+        <div tw="relative flex flex-col flex-1 justify-end p-[60px]">
           {/* Category badge */}
           {event.category && (
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                marginBottom: 16,
-              }}
-            >
+            <div tw="flex items-center mb-4">
               <span
-                style={{
-                  fontSize: 18,
-                  fontWeight: 600,
-                  color: hasImage ? "#FFFFFF" : accentColor,
-                  textTransform: "uppercase",
-                  letterSpacing: "0.1em",
-                  backgroundColor: hasImage ? accentColor : "transparent",
-                  padding: hasImage ? "6px 12px" : 0,
-                  borderRadius: 6,
-                }}
+                tw={`text-[18px] font-semibold uppercase tracking-[0.1em] ${
+                  hasImage ? "text-white" : accentStyle.accent
+                } ${hasImage ? accentStyle.badgeBg : "bg-transparent"} ${
+                  hasImage ? "px-3 py-1.5 rounded-md" : ""
+                }`}
               >
                 {event.category.replace("_", " ")}
               </span>
@@ -181,55 +164,28 @@ export default async function Image({ params }: { params: { id: string } }) {
 
           {/* Event title */}
           <h1
-            style={{
-              fontSize: event.title.length > 50 ? 44 : 56,
-              fontWeight: 700,
-              color: "#FFFFFF",
-              lineHeight: 1.15,
-              marginBottom: 20,
-              maxWidth: "95%",
-              textShadow: hasImage ? "0 2px 10px rgba(0,0,0,0.5)" : "none",
-            }}
+            tw={`font-bold text-white leading-[1.15] mb-5 max-w-[95%] ${
+              hasImage ? "drop-shadow-[0_2px_10px_rgba(0,0,0,0.5)]" : ""
+            } ${titleSize}`}
           >
             {event.title}
           </h1>
 
           {/* Date, time, and venue */}
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 16,
-              marginBottom: 8,
-            }}
-          >
+          <div tw="flex items-center gap-4 mb-2">
             <span
-              style={{
-                fontSize: 26,
-                fontWeight: 600,
-                color: "#FF6B6B",
-              }}
+              tw="text-[26px] font-semibold text-[#FF6B6B]"
             >
               {formattedDate}
             </span>
             <span
-              style={{
-                fontSize: 24,
-                color: hasImage ? "#E5E5E5" : "#8B8B94",
-              }}
+              tw={`text-[24px] ${timeColor}`}
             >
               {formattedTime}
             </span>
             {event.is_free && (
               <span
-                style={{
-                  fontSize: 16,
-                  fontWeight: 600,
-                  color: "#34D399",
-                  backgroundColor: "rgba(52, 211, 153, 0.2)",
-                  padding: "4px 10px",
-                  borderRadius: 6,
-                }}
+                tw="text-[16px] font-semibold text-[#34D399] bg-[rgba(52,211,153,0.2)] px-2.5 py-1 rounded-md"
               >
                 FREE
               </span>
@@ -237,28 +193,15 @@ export default async function Image({ params }: { params: { id: string } }) {
           </div>
 
           {/* Venue */}
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-              marginBottom: 24,
-            }}
-          >
+          <div tw="flex items-center gap-2 mb-6">
             <span
-              style={{
-                fontSize: 22,
-                color: hasImage ? "#D0D0D0" : "#8B8B94",
-              }}
+              tw={`text-[22px] ${venueColor}`}
             >
               {venueName}
             </span>
             {neighborhood && (
               <span
-                style={{
-                  fontSize: 18,
-                  color: hasImage ? "#A0A0A0" : "#555560",
-                }}
+                tw={`text-[18px] ${neighborhoodColor}`}
               >
                 &bull; {neighborhood}
               </span>
@@ -266,27 +209,14 @@ export default async function Image({ params }: { params: { id: string } }) {
           </div>
 
           {/* Footer with branding */}
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 12,
-            }}
-          >
+          <div tw="flex items-center gap-3">
             <span
-              style={{
-                fontSize: 20,
-                fontWeight: 700,
-                color: "#FF6B6B",
-              }}
+              tw="text-[20px] font-bold text-[#FF6B6B]"
             >
               Lost City
             </span>
             <span
-              style={{
-                fontSize: 16,
-                color: hasImage ? "#999999" : "#555560",
-              }}
+              tw={`text-[16px] ${footerColor}`}
             >
               lostcity.ai
             </span>

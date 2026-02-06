@@ -1,0 +1,14 @@
+version: 1
+slug: wax-n-facts
+name: Wax n Facts
+integration_method: playwright
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.waxnfacts.com
+  fetch:
+    render_js: true
+detail:
+  enabled: false

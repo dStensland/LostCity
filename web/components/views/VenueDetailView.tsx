@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useEffect, useRef, useMemo } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
+import Image from "@/components/SmartImage";
 import { format, parseISO, isSameDay, isToday, isTomorrow, addDays, startOfDay } from "date-fns";
 import { formatTimeSplit } from "@/lib/formats";
-import { SPOT_TYPES, formatPriceLevel, getSpotTypeLabels, type SpotType } from "@/lib/spots";
+import { SPOT_TYPES, formatPriceLevel, getSpotTypeLabels, type SpotType } from "@/lib/spots-constants";
 import FollowButton from "@/components/FollowButton";
 import RecommendButton from "@/components/RecommendButton";
 import VenueTagList from "@/components/VenueTagList";
@@ -15,6 +15,8 @@ import CollapsibleSection, { CategoryIcons, CATEGORY_COLORS } from "@/components
 import CategoryIcon, { getCategoryColor } from "@/components/CategoryIcon";
 import HoursSection, { OpenStatusBadge } from "@/components/HoursSection";
 import { type HoursData } from "@/lib/hours";
+import ScopedStyles from "@/components/ScopedStyles";
+import { createCssVarClass } from "@/lib/css-utils";
 
 type SpotData = {
   id: number;
@@ -82,34 +84,18 @@ interface VenueDetailViewProps {
 const NeonBackButton = ({ onClose }: { onClose: () => void }) => (
   <button
     onClick={onClose}
-    className="group flex items-center gap-2 px-3.5 py-2 rounded-full font-mono text-xs font-semibold tracking-wide uppercase transition-all duration-300 hover:scale-105 mb-4"
-    style={{
-      background: 'linear-gradient(135deg, rgba(0,0,0,0.7) 0%, rgba(20,20,30,0.8) 100%)',
-      backdropFilter: 'blur(8px)',
-      border: '1px solid rgba(255,107,107,0.3)',
-      boxShadow: '0 0 15px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.1)',
-    }}
-    onMouseEnter={(e) => {
-      e.currentTarget.style.borderColor = 'rgba(255,107,107,0.6)';
-      e.currentTarget.style.boxShadow = '0 0 20px rgba(255,107,107,0.3), 0 0 40px rgba(255,107,107,0.1), inset 0 1px 0 rgba(255,255,255,0.1)';
-    }}
-    onMouseLeave={(e) => {
-      e.currentTarget.style.borderColor = 'rgba(255,107,107,0.3)';
-      e.currentTarget.style.boxShadow = '0 0 15px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.1)';
-    }}
+    className="group flex items-center gap-2 px-3.5 py-2 rounded-full font-mono text-xs font-semibold tracking-wide uppercase transition-all duration-300 hover:scale-105 mb-4 neon-back-btn"
   >
     <svg
-      className="w-4 h-4 transition-transform duration-300 group-hover:-translate-x-0.5"
+      className="w-4 h-4 transition-transform duration-300 group-hover:-translate-x-0.5 neon-back-icon"
       fill="none"
       stroke="currentColor"
       viewBox="0 0 24 24"
-      style={{ filter: 'drop-shadow(0 0 3px rgba(255,107,107,0.5))' }}
     >
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
     </svg>
     <span
-      className="transition-all duration-300 group-hover:text-[var(--coral)]"
-      style={{ textShadow: '0 0 10px rgba(255,107,107,0.3)' }}
+      className="transition-all duration-300 group-hover:text-[var(--coral)] neon-back-text"
     >
       Back
     </span>
@@ -199,22 +185,12 @@ function VenueEventsSection({
       {/* Header */}
       <div className="mb-4 relative">
         <h2
-          className="font-mono text-lg font-bold uppercase tracking-wider"
-          style={{
-            color: "var(--coral)",
-            textShadow:
-              "0 0 10px rgba(255,107,107,0.5), 0 0 20px rgba(255,107,107,0.3), 0 0 30px rgba(255,107,107,0.2)",
-          }}
+          className="font-mono text-lg font-bold uppercase tracking-wider text-coral-strong"
         >
-          <span style={{ filter: "blur(0.5px)" }}>More at {venueName}</span>
+          <span className="text-blur-soft">More at {venueName}</span>
         </h2>
         <div
-          className="absolute inset-0 pointer-events-none"
-          style={{
-            background:
-              "linear-gradient(90deg, transparent, rgba(255,107,107,0.1) 50%, transparent)",
-            filter: "blur(8px)",
-          }}
+          className="absolute inset-0 pointer-events-none coral-sweep"
         />
       </div>
 
@@ -309,28 +285,24 @@ function VenueEventsSection({
             const categoryColor = event.category
               ? getCategoryColor(event.category)
               : null;
+            const accentColor = categoryColor || "var(--neon-magenta)";
+            const accentClass = createCssVarClass("--accent-color", accentColor, "accent");
 
             return (
+              <React.Fragment key={event.id}>
+                <ScopedStyles css={accentClass?.css} />
               <button
-                key={event.id}
                 onClick={() => onEventClick(event.id)}
-                className="block w-full text-left p-4 border border-[var(--twilight)] rounded-xl bg-[var(--dusk)] hover:border-[var(--coral)]/50 transition-colors group"
-                style={{
-                  borderLeftWidth: categoryColor ? "3px" : undefined,
-                  borderLeftColor: categoryColor || undefined,
-                }}
+                className={`block w-full text-left p-4 border border-[var(--twilight)] rounded-xl bg-[var(--dusk)] hover:border-[var(--coral)]/50 transition-colors group ${accentClass?.className ?? ""} ${
+                  categoryColor ? "border-l-[3px] border-l-[var(--accent-color)]" : ""
+                }`}
               >
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       {event.category && (
                         <span
-                          className="flex-shrink-0 inline-flex items-center justify-center w-5 h-5 rounded"
-                          style={{
-                            backgroundColor: categoryColor
-                              ? `${categoryColor}20`
-                              : undefined,
-                          }}
+                          className="flex-shrink-0 inline-flex items-center justify-center w-5 h-5 rounded bg-accent-20"
                         >
                           <CategoryIcon
                             type={event.category}
@@ -375,6 +347,7 @@ function VenueEventsSection({
                   </span>
                 </div>
               </button>
+              </React.Fragment>
             );
           })
         )}
@@ -482,22 +455,16 @@ export default function VenueDetailView({ slug, portalSlug, onClose }: VenueDeta
 
       {/* Main spot info card */}
       <div className="border border-[var(--twilight)] rounded-xl p-6 bg-[var(--dusk)]">
-        {/* Type badge */}
-        {typeInfo && (() => {
+      {/* Type badge */}
+      {typeInfo && (() => {
           const badgeColor = getCategoryColor(primaryType || "");
+          const badgeClass = createCssVarClass("--accent-color", badgeColor, "accent");
           return (
-            <span
-              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-sm mb-4"
-              style={{
-                backgroundColor: `color-mix(in srgb, ${badgeColor} 15%, transparent)`,
-                borderWidth: "1px",
-                borderColor: `color-mix(in srgb, ${badgeColor} 30%, transparent)`,
-              }}
-            >
+            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-sm mb-4 border bg-accent-15 border-accent-40 ${badgeClass?.className ?? ""}`}>
+              <ScopedStyles css={badgeClass?.css} />
               <CategoryIcon type={primaryType || ""} size={16} glow="subtle" />
               <span
-                className="font-mono text-xs font-medium uppercase tracking-wider"
-                style={{ color: badgeColor }}
+                className="font-mono text-xs font-medium uppercase tracking-wider text-accent"
               >
                 {spot.spot_types && spot.spot_types.length > 1
                   ? getSpotTypeLabels(spot.spot_types)
@@ -674,20 +641,12 @@ export default function VenueDetailView({ slug, portalSlug, onClose }: VenueDeta
               {/* Neon header */}
               <div className="mb-6 relative">
                 <h2
-                  className="font-mono text-lg font-bold uppercase tracking-wider"
-                  style={{
-                    color: 'var(--coral)',
-                    textShadow: '0 0 10px rgba(255,107,107,0.5), 0 0 20px rgba(255,107,107,0.3), 0 0 30px rgba(255,107,107,0.2)',
-                  }}
+                  className="font-mono text-lg font-bold uppercase tracking-wider text-coral-strong"
                 >
-                  <span style={{ filter: 'blur(0.5px)' }}>Happening Around Here</span>
+                  <span className="text-blur-soft">Happening Around Here</span>
                 </h2>
                 <div
-                  className="absolute inset-0 pointer-events-none"
-                  style={{
-                    background: 'linear-gradient(90deg, transparent, rgba(255,107,107,0.1) 50%, transparent)',
-                    filter: 'blur(8px)',
-                  }}
+                  className="absolute inset-0 pointer-events-none coral-sweep"
                 />
               </div>
 

@@ -1,0 +1,12 @@
+version: 1
+slug: ansley-park-civic
+name: Ansley Park Civic Association
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://ansleypark.org
+detail:
+  enabled: false

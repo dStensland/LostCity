@@ -1,9 +1,11 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { usePortal } from "@/lib/portal-context";
 import FeedSection, { type FeedSectionData, THEMED_SLUGS, HolidayGrid } from "./feed/FeedSection";
+import FestivalDebugPanel from "@/components/FestivalDebugPanel";
 
 
 // Reserved for future use
@@ -17,6 +19,8 @@ import FeedSection, { type FeedSectionData, THEMED_SLUGS, HolidayGrid } from "./
 
 export default function FeedView() {
   const { portal } = usePortal();
+  const searchParams = useSearchParams();
+  const showFestivalDebug = searchParams?.get("debug") === "festivals";
 
   const [sections, setSections] = useState<FeedSectionData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -66,11 +70,11 @@ export default function FeedView() {
         <div>
           <div className="flex items-center justify-between mb-4">
             <div className="h-6 w-36 rounded skeleton-shimmer" />
-            <div className="h-6 w-16 rounded-full skeleton-shimmer" style={{ animationDelay: "0.1s" }} />
+            <div className="h-6 w-16 rounded-full skeleton-shimmer" />
           </div>
           <div className="flex gap-3 overflow-hidden -mx-4 px-4">
             {[...Array(4)].map((_, j) => (
-              <div key={j} className="flex-shrink-0 w-72 rounded-xl h-52 skeleton-shimmer" style={{ animationDelay: `${j * 0.1}s` }} />
+              <div key={j} className="flex-shrink-0 w-72 rounded-xl h-52 skeleton-shimmer" />
             ))}
           </div>
         </div>
@@ -79,11 +83,11 @@ export default function FeedView() {
         <div>
           <div className="flex items-center justify-between mb-4">
             <div className="h-6 w-32 rounded skeleton-shimmer" />
-            <div className="h-6 w-16 rounded-full skeleton-shimmer" style={{ animationDelay: "0.1s" }} />
+            <div className="h-6 w-16 rounded-full skeleton-shimmer" />
           </div>
           <div className="grid grid-cols-2 gap-3">
             {[...Array(4)].map((_, j) => (
-              <div key={j} className="rounded-xl h-52 skeleton-shimmer" style={{ animationDelay: `${j * 0.1 + 0.2}s` }} />
+              <div key={j} className="rounded-xl h-52 skeleton-shimmer" />
             ))}
           </div>
         </div>
@@ -92,11 +96,11 @@ export default function FeedView() {
         <div>
           <div className="flex items-center justify-between mb-4">
             <div className="h-6 w-28 rounded skeleton-shimmer" />
-            <div className="h-6 w-16 rounded-full skeleton-shimmer" style={{ animationDelay: "0.1s" }} />
+            <div className="h-6 w-16 rounded-full skeleton-shimmer" />
           </div>
           <div className="space-y-2">
             {[...Array(5)].map((_, j) => (
-              <div key={j} className="rounded-lg h-16 skeleton-shimmer" style={{ animationDelay: `${j * 0.08 + 0.3}s` }} />
+              <div key={j} className="rounded-lg h-16 skeleton-shimmer" />
             ))}
           </div>
         </div>
@@ -161,6 +165,8 @@ export default function FeedView() {
 
   return (
     <div className="py-4">
+      {showFestivalDebug && <FestivalDebugPanel portalSlug={portal.slug} />}
+
       {/* Holiday cards - 2-column grid */}
       <HolidayGrid sections={holidaySections} portalSlug={portal.slug} />
 

@@ -3,7 +3,7 @@
 import { useCallback, useMemo, useRef } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import FilterChip from "./FilterChip";
-import { SUBCATEGORIES, CATEGORIES } from "@/lib/search";
+import { SUBCATEGORIES, CATEGORIES } from "@/lib/search-constants";
 
 interface SubcategoryRowProps {
   className?: string;
@@ -84,8 +84,7 @@ export default function SubcategoryRow({ className = "" }: SubcategoryRowProps) 
       {/* Horizontal scrolling container */}
       <div
         ref={scrollRef}
-        className="flex items-center gap-2 overflow-x-auto scrollbar-hide snap-x snap-mandatory md:snap-none py-2 -mx-4 px-4"
-        style={{ WebkitOverflowScrolling: "touch" }}
+        className="flex items-center gap-2 overflow-x-auto scrollbar-hide snap-x snap-mandatory md:snap-none py-2 -mx-4 px-4 momentum-scroll"
       >
 
         {subcategoriesByCategory.map((group, groupIndex) => (
@@ -124,10 +123,7 @@ export default function SubcategoryRow({ className = "" }: SubcategoryRowProps) 
 
       {/* Fade gradient on right edge (desktop only) */}
       <div
-        className="hidden md:block absolute right-0 top-0 bottom-0 w-12 pointer-events-none z-10"
-        style={{
-          background: "linear-gradient(to right, transparent, var(--night))",
-        }}
+        className="hidden md:block absolute right-0 top-0 bottom-0 w-12 pointer-events-none z-10 fade-right-night"
       />
     </div>
   );

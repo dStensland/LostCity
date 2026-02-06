@@ -1,0 +1,14 @@
+version: 1
+slug: rialto-center
+name: Rialto Center for the Arts
+integration_method: playwright
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://rfrialto.gsu.edu
+  fetch:
+    render_js: true
+detail:
+  enabled: false

@@ -1,0 +1,14 @@
+version: 1
+slug: shakespeare-tavern
+name: Shakespeare Tavern Playhouse
+integration_method: playwright
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - http://www.shakespearetavern.com
+  fetch:
+    render_js: true
+detail:
+  enabled: false

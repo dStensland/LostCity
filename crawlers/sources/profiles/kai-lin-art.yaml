@@ -1,0 +1,12 @@
+version: 1
+slug: kai-lin-art
+name: Kai Lin Art
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.kailinart.com
+detail:
+  enabled: false

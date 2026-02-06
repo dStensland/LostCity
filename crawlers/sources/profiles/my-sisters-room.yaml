@@ -1,0 +1,14 @@
+version: 1
+slug: my-sisters-room
+name: My Sister's Room
+integration_method: playwright
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.mysistersroom.com
+  fetch:
+    render_js: true
+detail:
+  enabled: false

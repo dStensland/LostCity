@@ -1,0 +1,12 @@
+version: 1
+slug: city-winery-atlanta
+name: City Winery Atlanta
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://citywinery.com/atlanta
+detail:
+  enabled: false

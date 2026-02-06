@@ -1,6 +1,8 @@
 "use client";
 
 import { usePullToRefresh } from "@/lib/hooks/usePullToRefresh";
+import ScopedStyles from "@/components/ScopedStyles";
+import { createCssVarClassForLength } from "@/lib/css-utils";
 
 interface PullToRefreshProps {
   onRefresh: () => Promise<void>;
@@ -13,7 +15,7 @@ export default function PullToRefresh({
   children,
   disabled = false,
 }: PullToRefreshProps) {
-  const { pullDistance, isRefreshing, isPulling, containerRef, indicatorStyle } =
+  const { pullDistance, isRefreshing, isPulling, containerRef } =
     usePullToRefresh({
       onRefresh,
       threshold: 80,
@@ -23,18 +25,20 @@ export default function PullToRefresh({
 
   const progress = Math.min(pullDistance / 80, 1);
   const showIndicator = pullDistance > 10 || isRefreshing;
+  const pullDistanceClass = createCssVarClassForLength(
+    "--pull-distance",
+    `${pullDistance}px`,
+    "pull-distance"
+  );
 
   return (
     <div ref={containerRef} className="relative">
+      <ScopedStyles css={pullDistanceClass?.css} />
       {/* Pull indicator */}
       <div
-        className="absolute left-0 right-0 flex justify-center pointer-events-none z-30"
-        style={{
-          top: -50,
-          transform: `translateY(${pullDistance}px)`,
-          opacity: showIndicator ? 1 : 0,
-          transition: isPulling ? "opacity 0.1s" : "transform 0.3s ease-out, opacity 0.2s",
-        }}
+        className={`absolute left-0 right-0 flex justify-center pointer-events-none z-30 top-[-50px] pull-indicator ${
+          pullDistanceClass?.className ?? ""
+        } ${isPulling ? "pulling" : "released"} ${showIndicator ? "opacity-100" : "opacity-0"}`}
       >
         <div
           className={`
@@ -68,13 +72,12 @@ export default function PullToRefresh({
           ) : (
             // Arrow indicator
             <svg
-              className="w-5 h-5 text-[var(--coral)] transition-transform duration-200"
+              className={`w-5 h-5 text-[var(--coral)] transition-transform duration-200 ${
+                progress >= 1 ? "rotate-180" : "rotate-0"
+              }`}
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
-              style={{
-                transform: `rotate(${progress >= 1 ? 180 : 0}deg)`,
-              }}
             >
               <path
                 strokeLinecap="round"
@@ -88,7 +91,13 @@ export default function PullToRefresh({
       </div>
 
       {/* Content with pull transform */}
-      <div style={indicatorStyle}>{children}</div>
+      <div
+        className={`pull-content ${pullDistanceClass?.className ?? ""} ${
+          isPulling ? "pulling" : "released"
+        }`}
+      >
+        {children}
+      </div>
     </div>
   );
 }

@@ -1,0 +1,12 @@
+version: 1
+slug: peoplestown-neighborhood
+name: Peoplestown Neighborhood
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.peoplestown.org
+detail:
+  enabled: false

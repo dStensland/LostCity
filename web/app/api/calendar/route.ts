@@ -59,6 +59,7 @@ export async function GET(request: NextRequest) {
   const neighborhoods = searchParams.get("neighborhoods")?.split(",").filter(Boolean);
   const priceFilter = searchParams.get("price");
   const portalId = searchParams.get("portal_id");
+  const portalExclusive = searchParams.get("portal_exclusive") === "true";
 
   // Type for calendar events (minimal fields)
   type CalendarEvent = {
@@ -120,9 +121,13 @@ export async function GET(request: NextRequest) {
       query = query.gte("price_min", 75);
     }
 
-    // Apply portal filter - all events belong to a portal, filter directly
+    // Apply portal filter
     if (portalId) {
-      query = query.eq("portal_id", portalId);
+      if (portalExclusive) {
+        query = query.eq("portal_id", portalId);
+      } else {
+        query = query.or(`portal_id.eq.${portalId},portal_id.is.null`);
+      }
     }
 
     return query;

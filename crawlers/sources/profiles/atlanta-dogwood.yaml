@@ -1,0 +1,12 @@
+version: 1
+slug: atlanta-dogwood
+name: Atlanta Dogwood Festival
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.dogwood.org
+detail:
+  enabled: false

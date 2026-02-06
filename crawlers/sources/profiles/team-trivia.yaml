@@ -1,0 +1,12 @@
+version: 1
+slug: team-trivia
+name: Team Trivia
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.teamtrivia.com/locations/
+detail:
+  enabled: false

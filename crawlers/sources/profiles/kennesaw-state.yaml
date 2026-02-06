@@ -1,0 +1,12 @@
+version: 1
+slug: kennesaw-state
+name: Kennesaw State University
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://arts.kennesaw.edu
+detail:
+  enabled: false

@@ -1,0 +1,12 @@
+version: 1
+slug: forward-warrior
+name: Forward Warrior
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.forwardwarrior.com
+detail:
+  enabled: false

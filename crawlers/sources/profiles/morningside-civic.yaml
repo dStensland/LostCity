@@ -1,0 +1,12 @@
+version: 1
+slug: morningside-civic
+name: Morningside Lenox Park Association
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://mlpa.org
+detail:
+  enabled: false

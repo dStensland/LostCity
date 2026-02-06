@@ -2,14 +2,16 @@
 
 import React, { useEffect, useState, useMemo, useCallback } from "react";
 import Link from "next/link";
-import CategoryIcon, { getCategoryLabel, getCategoryColor } from "./CategoryIcon";
+import CategoryIcon, { getCategoryLabel } from "./CategoryIcon";
 import SubmitVenueModal from "./SubmitVenueModal";
 import CategorySkeleton from "./CategorySkeleton";
 import LazyImage from "./LazyImage";
 import { OpenStatusBadge } from "./HoursSection";
 import { formatCloseTime, type HoursData } from "@/lib/hours";
-import { formatPriceLevel } from "@/lib/spots";
+import { formatPriceLevel } from "@/lib/spots-constants";
 import { ITP_NEIGHBORHOODS } from "@/config/neighborhoods";
+import ScopedStyles from "@/components/ScopedStyles";
+import { createCssVarClass } from "@/lib/css-utils";
 
 // ITP neighborhood names for quick filter
 const ITP_NEIGHBORHOOD_NAMES = ITP_NEIGHBORHOODS.map(n => n.name);
@@ -121,25 +123,24 @@ const FEATURED_EVENT_THRESHOLD = 5;
 // Spot card component
 function SpotCard({ spot, portalSlug }: { spot: Spot; portalSlug: string }) {
   const [imageError, setImageError] = useState(false);
-  const categoryColor = spot.venue_type ? getCategoryColor(spot.venue_type) : "var(--coral)";
-  const config = SPOT_TYPE_CONFIG[spot.venue_type || "other"] || SPOT_TYPE_CONFIG.other;
   const hasImage = spot.image_url && !imageError;
   const isFeatured = (spot.event_count ?? 0) >= FEATURED_EVENT_THRESHOLD;
+  const categoryKey = spot.venue_type || "other";
 
   return (
     <Link
       href={`/${portalSlug}?spot=${spot.slug}`}
       scroll={false}
-      className="block p-3 rounded-lg border border-[var(--twilight)] bg-[var(--card-bg)] hover:border-[var(--coral)]/50 hover:bg-[var(--card-bg-hover)] transition-all group"
-      style={{ "--glow-color": categoryColor } as React.CSSProperties}
+      data-category={categoryKey}
+      data-accent="category"
+      className="block p-3 rounded-lg border border-[var(--twilight)] bg-[var(--card-bg)] hover:border-[var(--coral)]/50 hover:bg-[var(--card-bg-hover)] transition-all group glow-category"
     >
       <div className="flex items-start gap-3">
         {/* Thumbnail */}
         <div
-          className="flex-shrink-0 w-14 h-14 rounded-lg overflow-hidden border border-[var(--twilight)] flex items-center justify-center"
-          style={{
-            background: hasImage ? undefined : `linear-gradient(135deg, ${categoryColor}20, ${categoryColor}08)`,
-          }}
+          className={`flex-shrink-0 w-14 h-14 rounded-lg overflow-hidden border border-[var(--twilight)] flex items-center justify-center ${
+            hasImage ? "" : "bg-accent-gradient"
+          }`}
         >
           {hasImage ? (
             <LazyImage
@@ -148,7 +149,7 @@ function SpotCard({ spot, portalSlug }: { spot: Spot; portalSlug: string }) {
               fill
               sizes="56px"
               className="w-full h-full object-cover"
-              placeholderColor={`${categoryColor}15`}
+              placeholderColor="color-mix(in srgb, var(--accent-color) 15%, transparent)"
               onError={() => setImageError(true)}
             />
           ) : (
@@ -167,8 +168,7 @@ function SpotCard({ spot, portalSlug }: { spot: Spot; portalSlug: string }) {
             )}
             {isFeatured && (
               <span
-                className="flex-shrink-0 px-1.5 py-0.5 rounded font-mono text-[0.5rem] font-medium uppercase"
-                style={{ backgroundColor: `${categoryColor}25`, color: categoryColor, border: `1px solid ${categoryColor}40` }}
+                className="flex-shrink-0 px-1.5 py-0.5 rounded font-mono text-[0.5rem] font-medium uppercase bg-accent-25 text-accent border border-accent-40"
               >
                 Hot
               </span>
@@ -180,7 +180,11 @@ function SpotCard({ spot, portalSlug }: { spot: Spot; portalSlug: string }) {
           )}
 
           <div className="flex items-center gap-2 font-mono text-[0.65rem] text-[var(--muted)] mt-1 flex-wrap">
-            {spot.venue_type && <span style={{ color: config.color }}>{getCategoryLabel(spot.venue_type)}</span>}
+            {spot.venue_type && (
+              <span data-category={spot.venue_type} className="text-category">
+                {getCategoryLabel(spot.venue_type)}
+              </span>
+            )}
             {spot.neighborhood && (
               <>
                 <span className="opacity-40">·</span>
@@ -410,26 +414,30 @@ function FilterDeck({
         {QUICK_VENUE_TYPES.map(({ key, label, types, color }) => {
           const isActive = types.every(t => filters.venueTypes.includes(t));
           const isPartial = types.some(t => filters.venueTypes.includes(t)) && !isActive;
+          const accent = createCssVarClass("--accent-color", color, "accent");
 
           return (
-            <button
-              key={key}
-              onClick={() => toggleVenueTypeGroup(types)}
-              className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full font-mono text-xs font-medium whitespace-nowrap transition-all ${
-                isActive
-                  ? "text-[var(--void)] shadow-[0_0_12px_rgba(255,255,255,0.1)]"
-                  : isPartial
-                  ? "bg-[var(--dusk)] border-2 border-dashed text-[var(--soft)]"
-                  : "bg-[var(--dusk)] text-[var(--muted)] border border-[var(--twilight)] hover:text-[var(--cream)] hover:border-[var(--soft)]"
-              }`}
-              style={{
-                backgroundColor: isActive ? `${color}` : undefined,
-                borderColor: isPartial ? color : undefined,
-              }}
-            >
-              <CategoryIcon type={types[0]} size={14} style={{ color: isActive ? "var(--void)" : color }} />
-              {label}
-            </button>
+            <React.Fragment key={key}>
+              <ScopedStyles css={accent?.css} />
+              <button
+                onClick={() => toggleVenueTypeGroup(types)}
+                data-accent
+                className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full font-mono text-xs font-medium whitespace-nowrap transition-all ${
+                  isActive
+                    ? "bg-accent text-[var(--void)] shadow-[0_0_12px_rgba(255,255,255,0.1)]"
+                    : isPartial
+                    ? "bg-[var(--dusk)] border-2 border-dashed text-[var(--soft)] border-accent"
+                    : "bg-[var(--dusk)] text-[var(--muted)] border border-[var(--twilight)] hover:text-[var(--cream)] hover:border-[var(--soft)]"
+                } ${accent?.className ?? ""}`}
+              >
+                <CategoryIcon
+                  type={types[0]}
+                  size={14}
+                  className={isActive ? "!text-[var(--void)]" : "text-accent"}
+                />
+                {label}
+              </button>
+            </React.Fragment>
           );
         })}
       </div>
@@ -726,11 +734,21 @@ export default function PortalSpotsView({ portalId, portalSlug, isExclusive = fa
         <div className="space-y-2">
           {groupedSpots.map(({ type, spots: groupSpots, config }) => {
             const isExpanded = expandedCategories.has(type);
+            const accent = createCssVarClass("--accent-color", config.color, "accent");
             return (
               <div key={type}>
-                <button onClick={() => toggleCategory(type)} className="w-full flex items-center gap-2 py-3 px-1 group/header">
-                  {sortBy === "category" && <div className="w-2 h-2 rounded-sm" style={{ backgroundColor: config.color }} />}
-                  <h3 className="font-mono text-xs font-medium uppercase tracking-wider flex-1 text-left" style={{ color: sortBy === "category" ? config.color : "var(--muted)" }}>
+                <ScopedStyles css={accent?.css} />
+                <button
+                  onClick={() => toggleCategory(type)}
+                  data-accent
+                  className={`w-full flex items-center gap-2 py-3 px-1 group/header ${accent?.className ?? ""}`}
+                >
+                  {sortBy === "category" && <div className="w-2 h-2 rounded-sm bg-accent" />}
+                  <h3
+                    className={`font-mono text-xs font-medium uppercase tracking-wider flex-1 text-left ${
+                      sortBy === "category" ? "text-accent" : "text-[var(--muted)]"
+                    }`}
+                  >
                     {config.label}
                   </h3>
                   <span className="font-mono text-[0.6rem] text-[var(--muted)] mr-2">{groupSpots.length}</span>

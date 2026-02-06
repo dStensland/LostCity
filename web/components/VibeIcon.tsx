@@ -1,4 +1,4 @@
-import { CSSProperties, type ReactNode } from "react";
+import { type ReactNode } from "react";
 
 // Vibe configurations with colors
 export const VIBE_CONFIG = {
@@ -24,7 +24,6 @@ interface Props {
   type: string;
   size?: number;
   className?: string;
-  style?: CSSProperties;
 }
 
 // SVG icon paths for each vibe
@@ -181,10 +180,8 @@ export default function VibeIcon({
   type,
   size = 20,
   className = "",
-  style,
 }: Props) {
   const config = VIBE_CONFIG[type as VibeType];
-  const color = config?.color || "#8B8B94";
 
   return (
     <svg
@@ -193,8 +190,8 @@ export default function VibeIcon({
       viewBox="0 0 24 24"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
-      className={`flex-shrink-0 ${className}`}
-      style={{ color, ...style }}
+      data-vibe={config ? type : undefined}
+      className={`flex-shrink-0 vibe-icon ${className}`}
     >
       {iconPaths[type] || defaultIcon}
     </svg>

@@ -22,28 +22,24 @@ export default function SearchResultItem({
 }: SearchResultItemProps) {
   const config = getTypeConfig(result.type);
   const href = getPortalAwareHref(result, portalSlug);
+  const hoverBorderClass = config.iconClass.includes("magenta")
+    ? "hover:border-l-[var(--neon-magenta)]"
+    : config.iconClass.includes("coral")
+    ? "hover:border-l-[var(--coral)]"
+    : config.iconClass.includes("gold")
+    ? "hover:border-l-[var(--gold)]"
+    : config.iconClass.includes("green")
+    ? "hover:border-l-[var(--neon-green)]"
+    : "hover:border-l-[var(--soft)]";
 
   return (
     <Link
       href={href}
       scroll={false}
       onClick={onClick}
-      className={`flex items-center gap-3 rounded-lg hover:bg-[var(--twilight)]/50 transition-all group focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--coral)] focus-visible:ring-inset border-l-2 border-transparent hover:border-l-2 ${
+      className={`flex items-center gap-3 rounded-lg hover:bg-[var(--twilight)]/50 transition-all group focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--coral)] focus-visible:ring-inset border-l-2 border-transparent hover:border-l-2 ${hoverBorderClass} ${
         compact ? "p-2" : "px-3 py-2.5"
       }`}
-      style={{
-        ["--hover-accent" as string]: config.iconClass.includes("magenta") ? "var(--neon-magenta)"
-          : config.iconClass.includes("coral") ? "var(--coral)"
-          : config.iconClass.includes("gold") ? "var(--gold)"
-          : config.iconClass.includes("green") ? "var(--neon-green)"
-          : "var(--soft)",
-      }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.borderLeftColor = `var(--hover-accent)`;
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.borderLeftColor = "transparent";
-      }}
     >
       {/* Type Icon */}
       <div

@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { usePathname, useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import Image from "next/image";
+import Image from "@/components/SmartImage";
 import Logo from "../Logo";
 import UserMenu from "../UserMenu";
 import HeaderSearchButton from "../HeaderSearchButton";
@@ -126,13 +126,8 @@ export default function ImmersiveHeader({
   // Logo size classes
   const logoSizeClass = headerConfig.logo_size === "sm" ? "h-8" : headerConfig.logo_size === "md" ? "h-10" : "h-12";
 
-  // Dynamic header styles based on scroll
-  const headerBg = scrollProgress > 0.3
-    ? `rgba(9, 9, 11, ${Math.min(0.95, scrollProgress)})`
-    : "transparent";
-  const headerBorder = scrollProgress > 0.5
-    ? "rgba(37, 37, 48, 0.5)"
-    : "transparent";
+  const showHeaderBg = scrollProgress > 0.3;
+  const showHeaderBorder = scrollProgress > 0.5;
 
   // Keyboard navigation for tabs
   const handleKeyDown = useCallback((event: React.KeyboardEvent, currentIndex: number) => {
@@ -181,12 +176,9 @@ export default function ImmersiveHeader({
 
       {/* Floating Header */}
       <header
-        className="fixed top-0 left-0 right-0 z-[100] transition-all duration-300"
-        style={{
-          background: headerBg,
-          borderBottom: `1px solid ${headerBorder}`,
-          backdropFilter: scrollProgress > 0.3 ? "blur(12px)" : "none",
-        }}
+        className={`fixed top-0 left-0 right-0 z-[100] transition-all duration-300 border-b ${
+          showHeaderBg ? "bg-[rgba(9,9,11,0.9)] backdrop-blur-lg" : "bg-transparent backdrop-blur-none"
+        } ${showHeaderBorder ? "border-[rgba(37,37,48,0.5)]" : "border-transparent"}`}
       >
         <div className="px-4 py-3 flex items-center justify-between">
           {/* Left: Back button (optional) + Logo (when not centered) */}

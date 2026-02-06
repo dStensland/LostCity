@@ -1,0 +1,14 @@
+version: 1
+slug: south-river-forest
+name: South River Forest Coalition
+integration_method: playwright
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://defendatlantaforest.org/events
+  fetch:
+    render_js: true
+detail:
+  enabled: false

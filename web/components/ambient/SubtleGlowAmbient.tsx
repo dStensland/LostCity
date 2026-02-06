@@ -1,6 +1,9 @@
 "use client";
 
+import { useId } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
+import ScopedStyles from "@/components/ScopedStyles";
+import { createCssVarClass } from "@/lib/css-utils";
 import type { PortalAmbientConfig } from "@/lib/portal-context";
 
 // Default category color mapping for ambient glow
@@ -132,26 +135,32 @@ export default function SubtleGlowAmbient({
 
   // Compute a lighter version for bottom gradient
   const bottomColor = ambientColor.replace(/[\d.]+\)$/, (m) => `${parseFloat(m) * 0.5})`);
+  const topClass = createCssVarClass("--subtle-glow-top", ambientColor, "subtle-glow-top");
+  const bottomClass = createCssVarClass("--subtle-glow-bottom", bottomColor, "subtle-glow-bottom");
+  const rawId = useId();
+  const instanceClass = `subtle-glow-${rawId.replace(/[^a-zA-Z0-9_-]/g, "")}`;
+  const css = `
+    .${instanceClass} .subtle-glow-top {
+      background: radial-gradient(ellipse 80% 50% at 50% 0%, var(--subtle-glow-top), transparent);
+    }
+    .${instanceClass} .subtle-glow-bottom {
+      background: radial-gradient(ellipse 100% 100% at 50% 100%, var(--subtle-glow-bottom), transparent);
+    }
+  `;
+  const scopedCss = [topClass?.css, bottomClass?.css, css].filter(Boolean).join("\n");
 
   return (
     <div
-      className="ambient-layer fixed inset-0 pointer-events-none z-0 transition-opacity duration-500"
+      className={`ambient-layer fixed inset-0 pointer-events-none z-0 transition-opacity duration-500 ${instanceClass} ${
+        topClass?.className ?? ""
+      } ${bottomClass?.className ?? ""}`}
       aria-hidden="true"
     >
+      <ScopedStyles css={scopedCss} />
       {/* Top gradient */}
-      <div
-        className="absolute top-0 left-0 right-0 h-96"
-        style={{
-          background: `radial-gradient(ellipse 80% 50% at 50% 0%, ${ambientColor}, transparent)`,
-        }}
-      />
+      <div className="absolute top-0 left-0 right-0 h-96 subtle-glow-top" />
       {/* Bottom subtle gradient */}
-      <div
-        className="absolute bottom-0 left-0 right-0 h-48"
-        style={{
-          background: `radial-gradient(ellipse 100% 100% at 50% 100%, ${bottomColor}, transparent)`,
-        }}
-      />
+      <div className="absolute bottom-0 left-0 right-0 h-48 subtle-glow-bottom" />
     </div>
   );
 }

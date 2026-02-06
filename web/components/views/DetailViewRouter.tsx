@@ -6,15 +6,15 @@ import EventDetailView from "./EventDetailView";
 import VenueDetailView from "./VenueDetailView";
 import SeriesDetailView from "./SeriesDetailView";
 import OrgDetailView from "./OrgDetailView";
+import FestivalDetailView from "./FestivalDetailView";
 
 interface DetailViewRouterProps {
   portalSlug: string;
   children: React.ReactNode;
 }
 
-function AnimatedDetailWrapper({ children, onClose, portalSlug, searchParams }: {
+function AnimatedDetailWrapper({ children, portalSlug, searchParams }: {
   children: React.ReactNode;
-  onClose: () => void;
   portalSlug: string;
   searchParams: URLSearchParams;
 }) {
@@ -34,6 +34,7 @@ function AnimatedDetailWrapper({ children, onClose, portalSlug, searchParams }: 
       params.delete("event");
       params.delete("spot");
       params.delete("series");
+      params.delete("festival");
       params.delete("org");
       const queryString = params.toString();
       router.push(`/${portalSlug}${queryString ? `?${queryString}` : ""}`, { scroll: false });
@@ -66,6 +67,7 @@ export default function DetailViewRouter({ portalSlug, children }: DetailViewRou
   const eventId = searchParams.get("event");
   const spotSlug = searchParams.get("spot");
   const seriesSlug = searchParams.get("series");
+  const festivalSlug = searchParams.get("festival");
   const orgSlug = searchParams.get("org");
 
   // Direct close handler (fallback, used when not in animated wrapper)
@@ -74,6 +76,7 @@ export default function DetailViewRouter({ portalSlug, children }: DetailViewRou
     params.delete("event");
     params.delete("spot");
     params.delete("series");
+    params.delete("festival");
     params.delete("org");
     const queryString = params.toString();
     router.push(`/${portalSlug}${queryString ? `?${queryString}` : ""}`, { scroll: false });
@@ -84,7 +87,7 @@ export default function DetailViewRouter({ portalSlug, children }: DetailViewRou
     const id = parseInt(eventId, 10);
     if (!isNaN(id)) {
       return (
-        <AnimatedDetailWrapper onClose={handleClose} portalSlug={portalSlug} searchParams={searchParams}>
+        <AnimatedDetailWrapper portalSlug={portalSlug} searchParams={searchParams}>
           <EventDetailView
             eventId={id}
             portalSlug={portalSlug}
@@ -97,7 +100,7 @@ export default function DetailViewRouter({ portalSlug, children }: DetailViewRou
 
   if (spotSlug) {
     return (
-      <AnimatedDetailWrapper onClose={handleClose} portalSlug={portalSlug} searchParams={searchParams}>
+      <AnimatedDetailWrapper portalSlug={portalSlug} searchParams={searchParams}>
         <VenueDetailView
           slug={spotSlug}
           portalSlug={portalSlug}
@@ -109,7 +112,7 @@ export default function DetailViewRouter({ portalSlug, children }: DetailViewRou
 
   if (seriesSlug) {
     return (
-      <AnimatedDetailWrapper onClose={handleClose} portalSlug={portalSlug} searchParams={searchParams}>
+      <AnimatedDetailWrapper portalSlug={portalSlug} searchParams={searchParams}>
         <SeriesDetailView
           slug={seriesSlug}
           portalSlug={portalSlug}
@@ -119,9 +122,21 @@ export default function DetailViewRouter({ portalSlug, children }: DetailViewRou
     );
   }
 
+  if (festivalSlug) {
+    return (
+      <AnimatedDetailWrapper portalSlug={portalSlug} searchParams={searchParams}>
+        <FestivalDetailView
+          slug={festivalSlug}
+          portalSlug={portalSlug}
+          onClose={handleClose}
+        />
+      </AnimatedDetailWrapper>
+    );
+  }
+
   if (orgSlug) {
     return (
-      <AnimatedDetailWrapper onClose={handleClose} portalSlug={portalSlug} searchParams={searchParams}>
+      <AnimatedDetailWrapper portalSlug={portalSlug} searchParams={searchParams}>
         <OrgDetailView
           slug={orgSlug}
           portalSlug={portalSlug}

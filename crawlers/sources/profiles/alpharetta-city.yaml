@@ -1,0 +1,12 @@
+version: 1
+slug: alpharetta-city
+name: City of Alpharetta
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.alpharetta.ga.us
+detail:
+  enabled: false

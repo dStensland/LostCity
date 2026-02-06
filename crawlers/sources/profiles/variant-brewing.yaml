@@ -1,0 +1,12 @@
+version: 1
+slug: variant-brewing
+name: Variant Brewing
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://variantbrewing.com
+detail:
+  enabled: false

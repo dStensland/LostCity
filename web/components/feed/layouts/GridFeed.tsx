@@ -25,10 +25,7 @@ export const GridFeed = memo(function GridFeed({
       )}
 
       <div
-        className="feed-content grid gap-4"
-        style={{
-          gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
-        }}
+        className="feed-content grid gap-4 feed-grid-auto"
       >
         {children}
       </div>

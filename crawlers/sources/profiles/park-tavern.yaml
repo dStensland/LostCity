@@ -1,0 +1,12 @@
+version: 1
+slug: park-tavern
+name: Park Tavern
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.parktavern.com
+detail:
+  enabled: false

@@ -1,0 +1,12 @@
+version: 1
+slug: atlanta-cultural-affairs
+name: Atlanta Cultural Affairs
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.atlantaga.gov/government/mayor-s-office/executive-offices/office-of-cultural-affairs
+detail:
+  enabled: false

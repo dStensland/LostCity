@@ -13,27 +13,8 @@ import {
   subWeeks,
 } from "date-fns";
 import CategoryIcon from "@/components/CategoryIcon";
-
-// Category to CSS variable mapping
-const categoryColors: Record<string, string> = {
-  music: "var(--cat-music)",
-  film: "var(--cat-film)",
-  comedy: "var(--cat-comedy)",
-  theater: "var(--cat-theater)",
-  art: "var(--cat-art)",
-  community: "var(--cat-community)",
-  food: "var(--cat-food)",
-  sports: "var(--cat-sports)",
-  fitness: "var(--cat-fitness)",
-  nightlife: "var(--cat-nightlife)",
-  family: "var(--cat-family)",
-};
-
-function getCategoryColor(category: string | null): string {
-  if (!category) return "var(--muted)";
-  const normalized = category.toLowerCase().replace(/[^a-z]/g, "");
-  return categoryColors[normalized] || "var(--muted)";
-}
+import ScopedStyles from "@/components/ScopedStyles";
+import { createCssVarClassForLength } from "@/lib/css-utils";
 
 interface CalendarEvent {
   id: number;
@@ -106,6 +87,24 @@ export default function WeekView({
   const goToNextWeek = () => onDateChange(addWeeks(currentDate, 1));
   const goToToday = () => onDateChange(new Date());
 
+  const hourTopClasses = HOURS.map((hour) =>
+    createCssVarClassForLength(
+      "--hour-top",
+      `${(hour - 6) * HOUR_HEIGHT}px`,
+      "week-hour"
+    )
+  );
+  const hourTopCss = hourTopClasses
+    .map((entry) => entry?.css)
+    .filter(Boolean)
+    .join("\n");
+
+  const gridHeightClass = createCssVarClassForLength(
+    "--grid-height",
+    `${HOURS.length * HOUR_HEIGHT}px`,
+    "week-grid"
+  );
+
   // Get all-day events for each day
   const allDayEventsByDate = useMemo(() => {
     const map = new Map<string, CalendarEvent[]>();
@@ -132,6 +131,7 @@ export default function WeekView({
 
   return (
     <div className="bg-gradient-to-br from-[var(--deep-violet)] to-[var(--midnight-blue)] rounded-xl border border-[var(--nebula)] overflow-hidden">
+      <ScopedStyles css={[hourTopCss, gridHeightClass?.css].filter(Boolean).join("\n")} />
       {/* Week header */}
       <div className="flex items-center justify-between p-4 border-b border-[var(--nebula)]">
         <div className="flex items-center gap-3">
@@ -214,11 +214,8 @@ export default function WeekView({
                     key={event.id}
                     href={`/${portalSlug}?event=${event.id}`}
                     scroll={false}
-                    className="block mb-1 px-2 py-1 rounded text-[0.6rem] truncate transition-colors hover:opacity-80"
-                    style={{
-                      backgroundColor: `color-mix(in srgb, ${getCategoryColor(event.category)} 20%, transparent)`,
-                      borderLeft: `2px solid ${getCategoryColor(event.category)}`,
-                    }}
+                    data-category={event.category || "other"}
+                    className="block mb-1 px-2 py-1 rounded text-[0.6rem] truncate transition-colors hover:opacity-80 calendar-all-day"
                     title={event.title}
                   >
                     <span className="text-[var(--cream)]">{event.title}</span>
@@ -242,13 +239,14 @@ export default function WeekView({
           {HOURS.map((hour) => (
             <div
               key={hour}
-              className="absolute right-2 font-mono text-[0.6rem] text-[var(--muted)] -translate-y-1/2"
-              style={{ top: (hour - 6) * HOUR_HEIGHT }}
+              className={`absolute right-2 font-mono text-[0.6rem] text-[var(--muted)] -translate-y-1/2 calendar-hour-label ${
+                hourTopClasses[hour - 6]?.className ?? ""
+              }`}
             >
               {formatHour(hour)}
             </div>
           ))}
-          <div style={{ height: HOURS.length * HOUR_HEIGHT }} />
+          <div className={`calendar-grid-height ${gridHeightClass?.className ?? ""}`} />
         </div>
 
         {/* Day columns with events */}
@@ -268,8 +266,9 @@ export default function WeekView({
               {HOURS.map((hour) => (
                 <div
                   key={`line-${hour}`}
-                  className="absolute w-full border-t border-[var(--nebula)]/20"
-                  style={{ top: (hour - 6) * HOUR_HEIGHT }}
+                  className={`absolute w-full border-t border-[var(--nebula)]/20 calendar-hour-line ${
+                    hourTopClasses[hour - 6]?.className ?? ""
+                  }`}
                 />
               ))}
 
@@ -298,25 +297,46 @@ export default function WeekView({
                   ? timedEvents.filter((e, i) => i < idx && conflicting.includes(e)).length
                   : 0;
                 const totalConflicts = conflicting.length + 1;
-                const width = totalConflicts > 1 ? `${100 / totalConflicts}%` : "calc(100% - 4px)";
-                const left = totalConflicts > 1 ? `${(conflictIndex * 100) / totalConflicts}%` : "2px";
+                const width = totalConflicts > 1 ? `${100 / totalConflicts}%` : null;
+                const left = totalConflicts > 1 ? `${(conflictIndex * 100) / totalConflicts}%` : null;
+
+                const topClass = createCssVarClassForLength(
+                  "--event-top",
+                  `${top}px`,
+                  "week-event-top"
+                );
+                const heightClass = createCssVarClassForLength(
+                  "--event-height",
+                  `${height}px`,
+                  "week-event-height"
+                );
+                const leftClass = left
+                  ? createCssVarClassForLength("--event-left", left, "week-event-left")
+                  : null;
+                const widthClass = width
+                  ? createCssVarClassForLength("--event-width", width, "week-event-width")
+                  : null;
+                const eventCss = [topClass?.css, heightClass?.css, leftClass?.css, widthClass?.css]
+                  .filter(Boolean)
+                  .join("\n");
 
                 return (
-                  <Link
-                    key={event.id}
-                    href={`/${portalSlug}?event=${event.id}`}
-                    scroll={false}
-                    className="absolute rounded-md overflow-hidden transition-all hover:scale-[1.02] hover:z-10 group"
-                    style={{
-                      top,
-                      height,
-                      left,
-                      width,
-                      backgroundColor: `color-mix(in srgb, ${getCategoryColor(event.category)} 30%, var(--midnight-blue))`,
-                      borderLeft: `3px solid ${getCategoryColor(event.category)}`,
-                    }}
-                    title={`${event.title}${event.venue ? ` @ ${event.venue.name}` : ""}`}
-                  >
+                  <>
+                    <ScopedStyles css={eventCss} />
+                    <Link
+                      key={event.id}
+                      href={`/${portalSlug}?event=${event.id}`}
+                      scroll={false}
+                      data-category={event.category || "other"}
+                      className={`absolute rounded-md overflow-hidden transition-all hover:scale-[1.02] hover:z-10 group calendar-event ${
+                        topClass?.className ?? ""
+                      } ${heightClass?.className ?? ""} ${
+                        totalConflicts > 1
+                          ? `calendar-event-offset ${leftClass?.className ?? ""} ${widthClass?.className ?? ""}`
+                          : "calendar-event-full"
+                      }`}
+                      title={`${event.title}${event.venue ? ` @ ${event.venue.name}` : ""}`}
+                    >
                     <div className="p-1.5 h-full flex flex-col">
                       <div className="flex items-center gap-1">
                         {event.category && (
@@ -343,12 +363,13 @@ export default function WeekView({
                         `}
                       />
                     </div>
-                  </Link>
+                    </Link>
+                  </>
                 );
               })}
 
               {/* Bottom spacer for scrolling */}
-              <div style={{ height: HOURS.length * HOUR_HEIGHT }} />
+              <div className={`calendar-grid-height ${gridHeightClass?.className ?? ""}`} />
             </div>
           );
         })}

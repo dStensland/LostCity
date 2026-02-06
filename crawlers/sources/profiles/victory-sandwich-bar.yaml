@@ -1,0 +1,12 @@
+version: 1
+slug: victory-sandwich-bar
+name: Victory Sandwich Bar
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.victorysandwichbar.com
+detail:
+  enabled: false

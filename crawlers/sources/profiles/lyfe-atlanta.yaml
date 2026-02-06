@@ -1,0 +1,12 @@
+version: 1
+slug: lyfe-atlanta
+name: LYFE Atlanta
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.lyfeatl.com
+detail:
+  enabled: false

@@ -1,0 +1,12 @@
+version: 1
+slug: faith-alliance
+name: Faith Alliance of Metro Atlanta
+integration_method: llm_crawler
+defaults: {}
+discovery:
+  enabled: true
+  type: html
+  urls:
+  - https://faithallianceofmetroatlanta.org/events
+detail:
+  enabled: false

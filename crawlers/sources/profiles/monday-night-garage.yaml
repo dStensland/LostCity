@@ -1,0 +1,12 @@
+version: 1
+slug: monday-night-garage
+name: Monday Night Garage
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://mondaynightbrewing.com
+detail:
+  enabled: false

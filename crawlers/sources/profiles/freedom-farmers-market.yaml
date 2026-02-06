@@ -1,0 +1,12 @@
+version: 1
+slug: freedom-farmers-market
+name: Freedom Farmers Market
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://freedomfarmersmkt.com
+detail:
+  enabled: false

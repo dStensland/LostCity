@@ -44,6 +44,16 @@ export interface Series {
   tags: string[] | null;
   genres: string[] | null;
   producer_id: string | null;
+  festival_id?: string | null;
+  festival?: {
+    id: string;
+    slug: string;
+    name: string;
+    image_url: string | null;
+    festival_type?: string | null;
+    location?: string | null;
+    neighborhood?: string | null;
+  } | null;
   is_active: boolean;
   created_at: string;
   // Computed
@@ -72,7 +82,10 @@ export async function getSeriesBySlug(slug: string): Promise<Series | null> {
 
   const { data, error } = await supabase
     .from("series")
-    .select("*")
+    .select(`
+      *,
+      festival:festivals(id, slug, name, image_url, festival_type, location, neighborhood)
+    `)
     .eq("slug", slug)
     .maybeSingle();
 

@@ -1,0 +1,14 @@
+version: 1
+slug: aso
+name: Atlanta Symphony Orchestra
+integration_method: playwright
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.aso.org/concerts
+  fetch:
+    render_js: true
+detail:
+  enabled: false

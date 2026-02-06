@@ -1,0 +1,12 @@
+version: 1
+slug: eav-farmers-market
+name: EAV Farmers Market
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://cfmatl.org/eav/
+detail:
+  enabled: false

@@ -8,6 +8,7 @@ CREATE TABLE sources (
   slug TEXT UNIQUE NOT NULL,
   url TEXT NOT NULL,
   source_type TEXT NOT NULL,
+  integration_method TEXT,
   crawl_frequency TEXT DEFAULT 'daily',
   is_active BOOLEAN DEFAULT true,
   created_at TIMESTAMPTZ DEFAULT NOW()
@@ -55,12 +56,51 @@ CREATE TABLE events (
   image_url TEXT,
   raw_text TEXT,
   extraction_confidence DECIMAL(3, 2),
+  field_provenance JSONB,
+  field_confidence JSONB,
+  extraction_version TEXT,
   is_recurring BOOLEAN DEFAULT false,
   recurrence_rule TEXT,
   content_hash TEXT,
   canonical_event_id INTEGER REFERENCES events(id),
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Artists linked to events (headliners/supporting acts)
+CREATE TABLE event_artists (
+  id SERIAL PRIMARY KEY,
+  event_id INTEGER REFERENCES events(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  role TEXT,
+  billing_order INTEGER,
+  is_headliner BOOLEAN DEFAULT false,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Images linked to events
+CREATE TABLE event_images (
+  id SERIAL PRIMARY KEY,
+  event_id INTEGER REFERENCES events(id) ON DELETE CASCADE,
+  url TEXT NOT NULL,
+  width INTEGER,
+  height INTEGER,
+  type TEXT,
+  source TEXT,
+  confidence DECIMAL(3, 2),
+  is_primary BOOLEAN DEFAULT false,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Links linked to events (ticketing, organizer, etc.)
+CREATE TABLE event_links (
+  id SERIAL PRIMARY KEY,
+  event_id INTEGER REFERENCES events(id) ON DELETE CASCADE,
+  type TEXT NOT NULL,
+  url TEXT NOT NULL,
+  source TEXT,
+  confidence DECIMAL(3, 2),
+  created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- Crawl logs: track crawler runs for monitoring
@@ -83,6 +123,14 @@ CREATE INDEX idx_events_category ON events(category);
 CREATE INDEX idx_events_venue_id ON events(venue_id);
 CREATE INDEX idx_events_content_hash ON events(content_hash);
 CREATE INDEX idx_events_source_id ON events(source_id);
+CREATE INDEX idx_event_artists_event_id ON event_artists(event_id);
+CREATE INDEX idx_event_artists_name ON event_artists(name);
+CREATE UNIQUE INDEX idx_event_artists_event_name ON event_artists(event_id, name);
+CREATE INDEX idx_event_images_event_id ON event_images(event_id);
+CREATE UNIQUE INDEX idx_event_images_event_url ON event_images(event_id, url);
+CREATE INDEX idx_event_links_event_id ON event_links(event_id);
+CREATE INDEX idx_event_links_type ON event_links(type);
+CREATE UNIQUE INDEX idx_event_links_event_type_url ON event_links(event_id, type, url);
 CREATE INDEX idx_crawl_logs_source_id ON crawl_logs(source_id);
 CREATE INDEX idx_crawl_logs_started_at ON crawl_logs(started_at);
 

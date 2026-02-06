@@ -1,0 +1,14 @@
+version: 1
+slug: urban-grind
+name: Urban Grind
+integration_method: api
+defaults: {}
+discovery:
+  enabled: true
+  type: api
+  urls:
+  - https://www.urbangrindcoffee.com
+  api:
+    adapter: custom
+detail:
+  enabled: false

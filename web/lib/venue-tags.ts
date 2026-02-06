@@ -5,55 +5,16 @@ import type {
   VenueTagSummary,
   VenueTagWithVote,
   TagEntityType,
-  VenueTagGroup,
-  EventTagGroup,
-  OrgTagGroup,
   TagGroup,
 } from "./types";
 
-// Tag group display configuration by entity type
-export const VENUE_TAG_GROUPS: Record<VenueTagGroup, { label: string; color: string }> = {
-  vibes: { label: "Vibes", color: "var(--neon-cyan)" },
-  amenities: { label: "Amenities", color: "var(--sage)" },
-  good_for: { label: "Good For", color: "var(--coral)" },
-  accessibility: { label: "Accessibility", color: "var(--lavender)" },
-  heads_up: { label: "Heads Up", color: "var(--gold)" },
-};
-
-export const EVENT_TAG_GROUPS: Record<EventTagGroup, { label: string; color: string }> = {
-  audience: { label: "Audience", color: "var(--lavender)" },
-  social: { label: "Social", color: "var(--coral)" },
-  vibe: { label: "Vibe", color: "var(--neon-cyan)" },
-  format: { label: "Format", color: "var(--sage)" },
-  practical: { label: "Practical", color: "var(--twilight)" },
-  heads_up: { label: "Heads Up", color: "var(--gold)" },
-};
-
-export const ORG_TAG_GROUPS: Record<OrgTagGroup, { label: string; color: string }> = {
-  values: { label: "Values", color: "var(--lavender)" },
-  structure: { label: "Structure", color: "var(--sage)" },
-  engagement: { label: "Engagement", color: "var(--coral)" },
-  heads_up: { label: "Heads Up", color: "var(--gold)" },
-};
-
-// Get tag groups config for an entity type
-export function getTagGroupsForEntity(
-  entityType: TagEntityType
-): Record<string, { label: string; color: string }> {
-  switch (entityType) {
-    case "venue":
-      return VENUE_TAG_GROUPS;
-    case "event":
-      return EVENT_TAG_GROUPS;
-    case "org":
-      return ORG_TAG_GROUPS;
-    default:
-      return VENUE_TAG_GROUPS;
-  }
-}
-
-// Legacy alias for backwards compatibility
-export const TAG_CATEGORIES = VENUE_TAG_GROUPS;
+export {
+  VENUE_TAG_GROUPS,
+  EVENT_TAG_GROUPS,
+  ORG_TAG_GROUPS,
+  getTagGroupsForEntity,
+  TAG_CATEGORIES,
+} from "./venue-tags-config";
 
 // Type helper for untyped tables (new tables not yet in generated types)
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -360,6 +321,7 @@ export async function suggestTag(
   userId: string,
   _entityType: TagEntityType = "venue"
 ): Promise<{ success: boolean; suggestionId?: string; error?: string }> {
+  void _entityType;
   // Use service client to bypass RLS - auth is validated in API route
   let serviceClient;
   try {

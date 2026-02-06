@@ -1,0 +1,12 @@
+version: 1
+slug: freeroll-atlanta
+name: Freeroll Atlanta
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.freerollatlanta.com
+detail:
+  enabled: false

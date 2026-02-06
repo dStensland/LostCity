@@ -1,0 +1,14 @@
+version: 1
+slug: sound-table
+name: Sound Table
+integration_method: playwright
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.soundtable.com
+  fetch:
+    render_js: true
+detail:
+  enabled: false

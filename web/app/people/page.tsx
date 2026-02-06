@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import Image from "next/image";
+import Image from "@/components/SmartImage";
 import UnifiedHeader from "@/components/UnifiedHeader";
 import PageFooter from "@/components/PageFooter";
 import FollowButton from "@/components/FollowButton";
@@ -104,8 +104,7 @@ export default function PeoplePage() {
             {searchResults.map((profile) => (
               <div
                 key={profile.id}
-                className="flex items-center gap-4 p-4 rounded-xl border border-[var(--twilight)] card-event-hover"
-                style={{ backgroundColor: "var(--card-bg)" }}
+                className="flex items-center gap-4 p-4 rounded-xl border border-[var(--twilight)] bg-[var(--card-bg)] card-event-hover"
               >
                 <Link href={`/profile/${profile.username}`}>
                   {profile.avatar_url ? (

@@ -1,0 +1,12 @@
+version: 1
+slug: eddies-attic
+name: Eddie's Attic
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://eddiesattic.com
+detail:
+  enabled: false

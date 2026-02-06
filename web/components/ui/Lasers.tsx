@@ -1,6 +1,12 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
+import ScopedStyles from "@/components/ScopedStyles";
+import {
+  createCssVarClass,
+  createCssVarClassForNumber,
+  createCssVarClassForTime,
+} from "@/lib/css-utils";
 
 interface LasersProps {
   isActive: boolean;
@@ -73,37 +79,50 @@ export default function Lasers({ isActive, duration = 1500 }: LasersProps) {
 
   if (!showState.isVisible || showState.beams.length === 0) return null;
 
+  const beamStyles = showState.beams.map((beam) => ({
+    angleClass: createCssVarClassForNumber("--laser-angle", `${beam.angle}`, "laser-angle"),
+    delayClass: createCssVarClassForTime("--laser-delay", `${beam.delay}s`, "laser-delay"),
+    lengthClass: createCssVarClassForNumber("--laser-length", `${beam.length}`, "laser-length"),
+    colorClass: createCssVarClass("--laser-color", beam.color, "laser-color"),
+  }));
+
+  const laserCss = beamStyles
+    .flatMap((entry) => [
+      entry.angleClass?.css,
+      entry.delayClass?.css,
+      entry.lengthClass?.css,
+      entry.colorClass?.css,
+    ])
+    .filter(Boolean)
+    .join("\n");
+
   return (
     <div className="fixed inset-0 pointer-events-none z-[200] overflow-hidden">
+      <ScopedStyles css={laserCss} />
       {/* Center point - where lasers originate */}
-      <div
-        className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
-        style={{ perspective: "1000px" }}
-      >
+      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 laser-origin">
         {/* Central flash */}
         <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white animate-laser-flash" />
 
         {/* Laser beams */}
-        {showState.beams.map((beam) => (
+        {showState.beams.map((beam, index) => {
+          const classes = beamStyles[index];
+          return (
           <div
             key={beam.id}
-            className="absolute left-1/2 top-1/2 origin-left animate-laser-shoot"
-            style={{
-              transform: `rotate(${beam.angle}deg)`,
-              animationDelay: `${beam.delay}s`,
-            }}
+            className={`absolute left-1/2 top-1/2 origin-left animate-laser-shoot laser-beam ${
+              classes.angleClass?.className ?? ""
+            } ${classes.delayClass?.className ?? ""}`}
           >
             {/* Laser beam with glow */}
             <div
-              className="h-[3px] rounded-full"
-              style={{
-                width: `${beam.length}vmin`,
-                background: `linear-gradient(90deg, white 0%, ${beam.color} 20%, transparent 100%)`,
-                boxShadow: `0 0 10px ${beam.color}, 0 0 20px ${beam.color}, 0 0 30px ${beam.color}`,
-              }}
+              className={`h-[3px] rounded-full laser-line ${
+                classes.lengthClass?.className ?? ""
+              } ${classes.colorClass?.className ?? ""}`}
             />
           </div>
-        ))}
+        );
+        })}
       </div>
     </div>
   );

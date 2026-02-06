@@ -1,0 +1,12 @@
+version: 1
+slug: atkins-park
+name: Atkins Park Restaurant & Bar
+integration_method: llm_crawler
+defaults: {}
+discovery:
+  enabled: true
+  type: html
+  urls:
+  - https://www.atkinspark.com
+detail:
+  enabled: false

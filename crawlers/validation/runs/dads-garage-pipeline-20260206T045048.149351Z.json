@@ -1,0 +1,104 @@
+{
+  "source": {
+    "id": 6,
+    "slug": "dads-garage",
+    "name": "Dad's Garage"
+  },
+  "mode": "pipeline",
+  "generated_at": "2026-02-06T04:50:48.149351Z",
+  "filters": {
+    "updated_since": "2026-02-06T02:50:47.535147Z",
+    "days": 180,
+    "include_past": false,
+    "max": null
+  },
+  "counts": {
+    "total": 85,
+    "with_description": 85,
+    "with_ticket_url": 85,
+    "with_image": 85,
+    "with_tags": 85,
+    "with_start_time": 85,
+    "with_price": 0,
+    "with_artists": 0
+  },
+  "coverage": {
+    "description": 100.0,
+    "ticket_url": 100.0,
+    "image": 100.0,
+    "tags": 100.0,
+    "start_time": 100.0,
+    "price": 0.0,
+    "artists": 0.0
+  },
+  "summary": {
+    "median_description_length": 458
+  },
+  "samples": {
+    "missing_ticket_url": [],
+    "missing_image": [],
+    "missing_description": [],
+    "missing_artists": [
+      {
+        "id": 10068,
+        "title": "New Year\u2019s Eve 2025 - 7:30 PM",
+        "start_date": "2026-12-31",
+        "source_url": "https://dadsgarage.com/shows/nye1"
+      },
+      {
+        "id": 10010,
+        "title": "Always The Goat",
+        "start_date": "2026-02-26",
+        "source_url": "https://dadsgarage.com/shows/af6e3r6aamnm3pp-rmwkw-ab9ld-e35n4-zfg9b"
+      },
+      {
+        "id": 10012,
+        "title": "BlackGround",
+        "start_date": "2026-02-27",
+        "source_url": "https://dadsgarage.com/shows/8w73lfsyfnstyna-53fw2-aslsc-p3al8-s23pb-m2t2c-l7l8d-2hgw9-2r2rc-3b745-ddc6e-lpt8x-rpyfd-br43r-3y8p5-np823"
+      },
+      {
+        "id": 10015,
+        "title": "TheatreSports",
+        "start_date": "2026-02-28",
+        "source_url": "https://dadsgarage.com/shows/ksztz7tncnrhtdt-hky4r-82atx-ktrnc-pkp34-stb8a-97drc-xawkg-7mc6g-ta6a3-sglxj-pa7sx-wfhcr-myrd5-6bd4a-e6hl4-mflng-c27mf-xtw2c-gkdrd-cb28g-br9bp-as63e-b7hz2-e28nf-w5wap-lefxx-mgnm3-glcem"
+      },
+      {
+        "id": 10022,
+        "title": "TheatreSports",
+        "start_date": "2026-03-07",
+        "source_url": "https://dadsgarage.com/shows/ksztz7tncnrhtdt-hky4r-82atx-ktrnc-pkp34-stb8a-97drc-xawkg-7mc6g-ta6a3-sglxj-pa7sx-wfhcr-myrd5-6bd4a-e6hl4-mflng-c27mf-xtw2c-gkdrd-cb28g-br9bp-as63e-b7hz2-e28nf-w5wap-lefxx-mgnm3-glcem-ysg7n"
+      },
+      {
+        "id": 10037,
+        "title": "The Primrose Friends LIVE! (Kid\u2019s Show)",
+        "start_date": "2026-03-21",
+        "source_url": "https://dadsgarage.com/shows/d698plafe724tkw-62kjd-7whls-hzba3-y44nx-z4rgm-5eryf-fhf2c-jzdsl-atdnd-4w54x-ddhcn-g7wcm-xzlen-rag8x-pcpe4-kea2d-r5a98-5csa9-fay32"
+      },
+      {
+        "id": 10046,
+        "title": "The Primrose Friends LIVE! (Kid\u2019s Show)",
+        "start_date": "2026-04-11",
+        "source_url": "https://dadsgarage.com/shows/d698plafe724tkw-62kjd-7whls-hzba3-y44nx-z4rgm-5eryf-fhf2c-jzdsl-atdnd-4w54x-ddhcn-g7wcm-xzlen-rag8x-pcpe4-kea2d-r5a98-5csa9-fay32-rhx8m-nmfk3-pfj66"
+      },
+      {
+        "id": 10008,
+        "title": "Dad\u2019s Garage Band",
+        "start_date": "2026-02-21",
+        "source_url": "https://dadsgarage.com/shows/xxma985a44ls7s3-kjy9j-tb5jp-f53eb-ta42x-ymzlh-g8rbe-gf8kr-fdcx9-rc57n-ep2l9-r5rym-bxhlc-42b77-cwz6j-62msd-md6yr-lg33b-sa3p6-fcpwj-azm3d-xb53h-896j3-lxs86-wc4e2-gtnan-mfg6n-pendm-ar3ll-c5z32-e63nj"
+      },
+      {
+        "id": 10018,
+        "title": "Only Improv in the Building",
+        "start_date": "2026-03-06",
+        "source_url": "https://dadsgarage.com/shows/dd8x8bt23fc8xjh-fxtys-lzn8h-k5sps-pg6ra"
+      },
+      {
+        "id": 10009,
+        "title": "TheatreSports",
+        "start_date": "2026-02-21",
+        "source_url": "https://dadsgarage.com/shows/ksztz7tncnrhtdt-hky4r-82atx-ktrnc-pkp34-stb8a-97drc-xawkg-7mc6g-ta6a3-sglxj-pa7sx-wfhcr-myrd5-6bd4a-e6hl4-mflng-c27mf-xtw2c-gkdrd-cb28g-br9bp-as63e-b7hz2-e28nf-w5wap-lefxx-mgnm3"
+      }
+    ]
+  }
+}

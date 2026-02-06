@@ -1,0 +1,12 @@
+version: 1
+slug: the-vortex
+name: The Vortex Bar & Grill
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.thevortexatl.com
+detail:
+  enabled: false

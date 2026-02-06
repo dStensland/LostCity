@@ -1,0 +1,12 @@
+version: 1
+slug: star-community-bar
+name: Star Community Bar
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - http://www.starbar.net
+detail:
+  enabled: false

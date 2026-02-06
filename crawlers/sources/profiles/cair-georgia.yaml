@@ -1,0 +1,12 @@
+version: 1
+slug: cair-georgia
+name: CAIR Georgia
+integration_method: llm_crawler
+defaults: {}
+discovery:
+  enabled: true
+  type: html
+  urls:
+  - https://cairgeorgia.com/events
+detail:
+  enabled: false

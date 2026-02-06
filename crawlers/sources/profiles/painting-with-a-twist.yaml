@@ -1,0 +1,12 @@
+version: 1
+slug: painting-with-a-twist
+name: Painting With a Twist
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.paintingwithatwist.com
+detail:
+  enabled: false

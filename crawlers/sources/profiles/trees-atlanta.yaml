@@ -1,0 +1,14 @@
+version: 1
+slug: trees-atlanta
+name: Trees Atlanta
+integration_method: playwright
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.treesatlanta.org/get-involved/events/
+  fetch:
+    render_js: true
+detail:
+  enabled: false

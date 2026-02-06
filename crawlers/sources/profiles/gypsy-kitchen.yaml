@@ -1,0 +1,12 @@
+version: 1
+slug: gypsy-kitchen
+name: Gypsy Kitchen
+integration_method: llm_crawler
+defaults: {}
+discovery:
+  enabled: true
+  type: html
+  urls:
+  - https://www.gypsykitchen.com
+detail:
+  enabled: false

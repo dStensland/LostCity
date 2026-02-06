@@ -1,0 +1,12 @@
+version: 1
+slug: bold-monk-brewing
+name: Bold Monk Brewing
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://boldmonkbrewingco.com/events
+detail:
+  enabled: false

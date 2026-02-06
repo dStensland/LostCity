@@ -27,7 +27,7 @@ export const FamilyCompassLogo = memo(function FamilyCompassLogo({
       aria-label="Atlanta Families Compass Logo"
     >
       {/* Outer compass ring with 8 divisions */}
-      <g className={shouldAnimate ? "animate-[spin_20s_linear_infinite]" : ""} style={{ transformOrigin: "50% 50%" }}>
+      <g className={`${shouldAnimate ? "animate-[spin_20s_linear_infinite]" : ""} compass-origin`}>
         <circle
           cx="50"
           cy="50"
@@ -77,10 +77,10 @@ export const FamilyCompassLogo = memo(function FamilyCompassLogo({
 
       {/* Cardinal points with pulsing dots */}
       {[
-        { x: 50, y: 5, delay: 0 },    // North
-        { x: 95, y: 50, delay: 0.75 }, // East
-        { x: 50, y: 95, delay: 1.5 },  // South
-        { x: 5, y: 50, delay: 2.25 },  // West
+        { x: 50, y: 5, delayClass: "pulse-delay-0" },    // North
+        { x: 95, y: 50, delayClass: "pulse-delay-75" }, // East
+        { x: 50, y: 95, delayClass: "pulse-delay-150" },  // South
+        { x: 5, y: 50, delayClass: "pulse-delay-225" },  // West
       ].map((point, index) => (
         <circle
           key={index}
@@ -88,8 +88,7 @@ export const FamilyCompassLogo = memo(function FamilyCompassLogo({
           cy={point.y}
           r="4"
           fill="#f59e0b"
-          className={shouldAnimate ? "animate-[pulse_3s_ease-in-out_infinite]" : ""}
-          style={shouldAnimate ? { animationDelay: `${point.delay}s` } : undefined}
+          className={shouldAnimate ? `animate-[pulse_3s_ease-in-out_infinite] ${point.delayClass}` : ""}
         />
       ))}
     </svg>

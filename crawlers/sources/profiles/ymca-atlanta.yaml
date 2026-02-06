@@ -1,0 +1,12 @@
+version: 1
+slug: ymca-atlanta
+name: YMCA of Metro Atlanta
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://ymcaatlanta.org/events
+detail:
+  enabled: false

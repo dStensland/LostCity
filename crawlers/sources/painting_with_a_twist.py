@@ -344,6 +344,7 @@ def crawl_location(
                 "recurrence_rule": None,
                 "content_hash": content_hash,
                 "is_class": True,
+                "class_category": "painting",
             }
 
             try:

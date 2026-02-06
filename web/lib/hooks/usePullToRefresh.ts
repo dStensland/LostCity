@@ -14,7 +14,6 @@ interface UsePullToRefreshReturn {
   isRefreshing: boolean;
   isPulling: boolean;
   containerRef: React.RefObject<HTMLDivElement | null>;
-  indicatorStyle: React.CSSProperties;
 }
 
 export function usePullToRefresh({
@@ -113,16 +112,10 @@ export function usePullToRefresh({
     };
   }, [handleTouchStart, handleTouchMove, handleTouchEnd, disabled]);
 
-  const indicatorStyle: React.CSSProperties = {
-    transform: `translateY(${pullDistance}px)`,
-    transition: isPulling ? "none" : "transform 0.3s ease-out",
-  };
-
   return {
     pullDistance,
     isRefreshing,
     isPulling,
     containerRef,
-    indicatorStyle,
   };
 }

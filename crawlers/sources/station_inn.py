@@ -17,6 +17,7 @@ from bs4 import BeautifulSoup
 
 from db import get_or_create_venue, insert_event, find_event_by_hash
 from dedupe import generate_content_hash
+from utils import extract_event_links, find_event_url
 
 logger = logging.getLogger(__name__)
 
@@ -125,6 +126,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
                 page.wait_for_timeout(1000)
 
+            # Extract event links for specific URLs
+            event_links = extract_event_links(page, BASE_URL)
+
             # Get page HTML and parse with BeautifulSoup
             html = page.content()
             soup = BeautifulSoup(html, "html.parser")
@@ -216,6 +220,13 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     # Build tags
                     tags = ["station-inn", "the-gulch", "bluegrass", "live-music", "legendary-venue"]
 
+                    # Get specific event URL
+
+
+                    event_url = find_event_url(title, event_links, EVENTS_URL)
+
+
+
                     event_record = {
                         "source_id": source_id,
                         "venue_id": venue_id,
@@ -233,7 +244,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "price_max": None,
                         "price_note": "Cash cover at door",
                         "is_free": False,
-                        "source_url": EVENTS_URL,
+                        "source_url": event_url,
                         "ticket_url": ticket_url,
                         "image_url": image_url,
                         "raw_text": f"{title} - {start_date} - {description}",

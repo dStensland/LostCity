@@ -1,0 +1,12 @@
+version: 1
+slug: georgia-organics
+name: Georgia Organics
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://georgiaorganics.org/events
+detail:
+  enabled: false

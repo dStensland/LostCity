@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 /**
  * Subscribe Atlanta Families portal to Atlanta's shared sources
  *

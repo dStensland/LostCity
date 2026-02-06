@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 /**
  * Curate sources for Atlanta Families portal
  * More refined categorization with manual overrides

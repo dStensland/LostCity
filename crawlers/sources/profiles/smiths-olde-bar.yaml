@@ -1,0 +1,14 @@
+version: 1
+slug: smiths-olde-bar
+name: Smith's Olde Bar
+integration_method: playwright
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://smithsoldebar.com
+  fetch:
+    render_js: true
+detail:
+  enabled: false

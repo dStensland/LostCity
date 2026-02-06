@@ -1,0 +1,12 @@
+version: 1
+slug: 404-found-atl
+name: 404 Found ATL
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.404foundatl.com/upcoming-events
+detail:
+  enabled: false

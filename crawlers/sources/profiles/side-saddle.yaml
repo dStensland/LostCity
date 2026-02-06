@@ -1,0 +1,12 @@
+version: 1
+slug: side-saddle
+name: Side Saddle
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.sidesaddleatl.com
+detail:
+  enabled: false

@@ -1,0 +1,14 @@
+version: 1
+slug: roswell-cultural-arts
+name: Roswell Cultural Arts Center
+integration_method: playwright
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.roswellgov.com/government/departments/recreation-parks-historic-cultural-affairs/cultural-arts
+  fetch:
+    render_js: true
+detail:
+  enabled: false

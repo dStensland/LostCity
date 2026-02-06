@@ -1,0 +1,12 @@
+version: 1
+slug: georgia-tech-athletics
+name: Georgia Tech Athletics
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://ramblinwreck.com
+detail:
+  enabled: false

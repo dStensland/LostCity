@@ -3,7 +3,7 @@
 import { useCallback, useMemo } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import FilterChip, { getTagVariant, type FilterChipVariant } from "./FilterChip";
-import { CATEGORIES, SUBCATEGORIES, TAG_GROUPS } from "@/lib/search";
+import { CATEGORIES, SUBCATEGORIES, TAG_GROUPS } from "@/lib/search-constants";
 
 // Date filter display labels
 const DATE_LABELS: Record<string, string> = {

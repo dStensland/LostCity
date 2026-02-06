@@ -1,0 +1,12 @@
+version: 1
+slug: virginia-highland-civic
+name: Virginia-Highland Civic Association
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://vahi.org
+detail:
+  enabled: false

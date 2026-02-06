@@ -1,0 +1,12 @@
+version: 1
+slug: hammonds-house
+name: Hammonds House Museum
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://hammondshouse.org
+detail:
+  enabled: false

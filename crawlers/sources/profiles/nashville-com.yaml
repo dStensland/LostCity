@@ -1,0 +1,14 @@
+version: 1
+slug: nashville-com
+name: Nashville.com Events
+integration_method: playwright
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.nashville.com/calendar-of-events/
+  fetch:
+    render_js: true
+detail:
+  enabled: false

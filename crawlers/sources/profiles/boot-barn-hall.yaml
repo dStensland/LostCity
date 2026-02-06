@@ -1,0 +1,12 @@
+version: 1
+slug: boot-barn-hall
+name: Boot Barn Hall at The Hall
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.thehallga.com/calendar
+detail:
+  enabled: false

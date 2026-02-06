@@ -1,0 +1,14 @@
+version: 1
+slug: token-gaming-pub
+name: Token Gaming Pub
+integration_method: playwright
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.tokengamingpub.com
+  fetch:
+    render_js: true
+detail:
+  enabled: false

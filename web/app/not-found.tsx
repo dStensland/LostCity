@@ -7,13 +7,7 @@ export default function NotFound() {
     <div className="min-h-screen flex flex-col items-center justify-center p-4 relative overflow-hidden">
       {/* Coral glow effect */}
       <div
-        className="absolute pointer-events-none"
-        style={{
-          top: "-50px",
-          width: "500px",
-          height: "300px",
-          background: "radial-gradient(ellipse, rgba(255, 107, 122, 0.15) 0%, transparent 70%)",
-        }}
+        className="absolute pointer-events-none not-found-glow"
         aria-hidden="true"
       />
 

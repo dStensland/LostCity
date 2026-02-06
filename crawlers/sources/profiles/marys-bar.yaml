@@ -1,0 +1,12 @@
+version: 1
+slug: marys-bar
+name: Mary's Bar
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.marysatlanta.com
+detail:
+  enabled: false

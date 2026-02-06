@@ -1,0 +1,12 @@
+version: 1
+slug: activate-games
+name: Activate Games Atlanta
+integration_method: llm_crawler
+defaults: {}
+discovery:
+  enabled: true
+  type: html
+  urls:
+  - https://www.playactivate.com
+detail:
+  enabled: false

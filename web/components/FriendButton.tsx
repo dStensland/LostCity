@@ -104,12 +104,15 @@ export default function FriendButton({
     sm: "px-3 py-1 text-xs",
     md: "px-4 py-1.5 text-sm",
   };
+  const skeletonWidthClasses = {
+    sm: "w-[90px]",
+    md: "w-[110px]",
+  };
 
   if (isLoading || authLoading) {
     return (
       <div
-        className={`${sizeClasses[size]} rounded-full bg-[var(--twilight)] animate-pulse ${className}`}
-        style={{ width: size === "sm" ? 90 : 110 }}
+        className={`${sizeClasses[size]} ${skeletonWidthClasses[size]} rounded-full bg-[var(--twilight)] animate-pulse ${className}`}
       />
     );
   }

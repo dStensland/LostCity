@@ -1,0 +1,14 @@
+version: 1
+slug: madlife-stage
+name: MadLife Stage & Studios
+integration_method: playwright
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://madlifestage.com/events
+  fetch:
+    render_js: true
+detail:
+  enabled: false

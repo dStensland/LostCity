@@ -26,6 +26,8 @@ import {
 } from "@/components/detail";
 import { safeJsonLd } from "@/lib/formats";
 import type { Metadata } from "next";
+import ScopedStylesServer from "@/components/ScopedStylesServer";
+import { createCssVarClass } from "@/lib/css-utils";
 
 export const revalidate = 300; // 5 minutes
 
@@ -46,20 +48,29 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 
   const portalName = portal?.name || "Lost City";
+  const contextLabel = series.festival
+    ? series.series_type === "festival_program"
+      ? `Program in ${series.festival.name}`
+      : `Part of ${series.festival.name}`
+    : null;
+  const fallbackDescription = contextLabel
+    ? `${contextLabel}. See all sessions and venues for ${series.title}.`
+    : `See all showtimes and venues for ${series.title}`;
+  const description = series.description || fallbackDescription;
 
   return {
     title: `${series.title} | ${portalName}`,
-    description: series.description || `See all showtimes and venues for ${series.title}`,
+    description,
     openGraph: {
       title: series.title,
-      description: series.description || `See all showtimes and venues for ${series.title}`,
+      description,
       type: "website",
       images: series.image_url ? [{ url: series.image_url }] : [],
     },
     twitter: {
       card: series.image_url ? "summary_large_image" : "summary",
       title: series.title,
-      description: series.description || `See all showtimes and venues for ${series.title}`,
+      description,
       images: series.image_url ? [series.image_url] : [],
     },
   };
@@ -282,6 +293,10 @@ export default async function PortalSeriesPage({ params }: Props) {
   const events = await getSeriesEvents(series.id);
   const venueShowtimes = groupSeriesEventsByVenue(events);
   const typeColor = getSeriesTypeColor(series.series_type);
+  const seriesAccentClass = createCssVarClass("--accent-color", typeColor, "accent");
+  const festivalAccentClass = series.festival
+    ? createCssVarClass("--accent-color", getSeriesTypeColor("festival_program"), "festival-accent")
+    : null;
   const relatedSeries = await getRelatedSeries(series.id, series.series_type, series.genres);
   const seriesSchema = generateSeriesSchema(series, events);
 
@@ -298,10 +313,12 @@ export default async function PortalSeriesPage({ params }: Props) {
         dangerouslySetInnerHTML={{ __html: safeJsonLd(seriesSchema) }}
       />
 
+      <ScopedStylesServer css={[seriesAccentClass?.css, festivalAccentClass?.css].filter(Boolean).join("\n")} />
+
       {/* Portal-specific theming */}
       {portal && <PortalTheme portal={portal} />}
 
-      <div className="min-h-screen">
+      <div className={`min-h-screen ${seriesAccentClass?.className ?? ""}`}>
         <UnifiedHeader
           portalSlug={activePortalSlug}
           portalName={activePortalName}
@@ -318,12 +335,7 @@ export default async function PortalSeriesPage({ params }: Props) {
             categoryIcon={getSeriesTypeIcon(series.series_type)}
             badge={
               <span
-                className="inline-flex items-center gap-2 px-3 py-1.5 rounded text-xs font-mono uppercase tracking-wider"
-                style={{
-                  backgroundColor: `${typeColor}20`,
-                  color: typeColor,
-                  border: `1px solid ${typeColor}40`,
-                }}
+                className="inline-flex items-center gap-2 px-3 py-1.5 rounded text-xs font-mono uppercase tracking-wider bg-accent-20 text-accent border border-accent-40"
               >
                 {getSeriesTypeLabel(series.series_type)}
               </span>
@@ -345,6 +357,39 @@ export default async function PortalSeriesPage({ params }: Props) {
             )}
           </DetailHero>
 
+          {/* Festival Context */}
+          {series.festival && (
+            <Link
+              href={`/${activePortalSlug}/festivals/${series.festival.slug}`}
+              className={`flex items-center justify-between gap-4 p-4 rounded-xl border border-[var(--twilight)] bg-[var(--card-bg)] hover:bg-[var(--card-bg-hover)] transition-all group ${festivalAccentClass?.className ?? ""}`}
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-10 h-10 rounded-lg border border-[var(--twilight)] bg-accent-20 flex items-center justify-center flex-shrink-0">
+                  <svg className="w-5 h-5 text-[var(--accent-color)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M5 4v16m0-12h9l-1.5 3L14 14H5" />
+                  </svg>
+                </div>
+                <div className="min-w-0">
+                  <div className="text-[0.65rem] font-mono uppercase tracking-wider text-[var(--muted)]">
+                    Festival
+                  </div>
+                  <div className="text-sm text-[var(--soft)] group-hover:text-[var(--accent-color)] transition-colors">
+                    Part of{" "}
+                    <span className="text-[var(--cream)] font-medium">{series.festival.name}</span>
+                  </div>
+                  {(series.festival.location || series.festival.neighborhood) && (
+                    <div className="text-xs text-[var(--muted)] truncate">
+                      {series.festival.location || series.festival.neighborhood}
+                    </div>
+                  )}
+                </div>
+              </div>
+              <svg className="w-5 h-5 text-[var(--muted)] group-hover:text-[var(--accent-color)] transition-colors flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+              </svg>
+            </Link>
+          )}
+
           {/* Main Content Card */}
           <InfoCard accentColor={typeColor}>
             {/* Metadata Grid */}
@@ -354,6 +399,22 @@ export default async function PortalSeriesPage({ params }: Props) {
                   { label: "Year", value: series.year?.toString() || "Unknown" },
                   { label: "Runtime", value: formatRuntime(series.runtime_minutes) },
                   { label: "Rating", value: series.rating || "NR" },
+                ]}
+                className="mb-8"
+              />
+            ) : series.series_type === "festival_program" ? (
+              <MetadataGrid
+                items={[
+                  { label: "Festival", value: series.festival?.name || "Festival" },
+                  {
+                    label: "Dates",
+                    value: events.length === 0
+                      ? "TBD"
+                      : events[0].start_date === events[events.length - 1].start_date
+                        ? formatDate(events[0].start_date)
+                        : `${formatDate(events[0].start_date)} – ${formatDate(events[events.length - 1].start_date)}`,
+                  },
+                  { label: "Sessions", value: `${events.length} session${events.length !== 1 ? "s" : ""}` },
                 ]}
                 className="mb-8"
               />
@@ -386,8 +447,7 @@ export default async function PortalSeriesPage({ params }: Props) {
                   {series.genres.map((genre) => (
                     <span
                       key={genre}
-                      className="px-2.5 py-1 rounded-full text-xs font-medium border border-[var(--twilight)]"
-                      style={{ backgroundColor: "var(--void)" }}
+                      className="px-2.5 py-1 rounded-full text-xs font-medium border border-[var(--twilight)] bg-[var(--void)]"
                     >
                       {formatGenre(genre)}
                     </span>
@@ -422,14 +482,10 @@ export default async function PortalSeriesPage({ params }: Props) {
           {/* Recurring show callout */}
           {series.series_type === "recurring_show" && series.frequency && (
             <div
-              className="rounded-lg border p-5"
-              style={{
-                borderColor: `${typeColor}40`,
-                background: `linear-gradient(135deg, ${typeColor}08, ${typeColor}04)`,
-              }}
+              className="rounded-lg border p-5 series-callout"
             >
               <div className="flex items-start gap-3">
-                <svg className="w-5 h-5 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: typeColor }}>
+                <svg className="w-5 h-5 flex-shrink-0 mt-0.5 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                 </svg>
                 <div>
@@ -459,9 +515,15 @@ export default async function PortalSeriesPage({ params }: Props) {
             <SectionHeader
               title={
                 events.length > 0
-                  ? `${events.length} Upcoming ${series.series_type === "film" ? "Showtime" : "Event"}${events.length !== 1 ? "s" : ""}${venueShowtimes.length > 0 ? ` at ${venueShowtimes.length} ${venueShowtimes.length === 1 ? "Venue" : "Venues"}` : ""}`
+                  ? `${events.length} Upcoming ${
+                      series.series_type === "film"
+                        ? "Showtime"
+                        : series.series_type === "festival_program"
+                          ? "Session"
+                          : "Event"
+                    }${events.length !== 1 ? "s" : ""}${venueShowtimes.length > 0 ? ` at ${venueShowtimes.length} ${venueShowtimes.length === 1 ? "Venue" : "Venues"}` : ""}`
                   : series.series_type === "festival_program"
-                    ? "No Scheduled Events"
+                    ? "No Scheduled Sessions"
                     : "No Upcoming Events"
               }
               count={events.length}
@@ -472,8 +534,7 @@ export default async function PortalSeriesPage({ params }: Props) {
                 {/* Compact single-venue layout for recurring shows */}
                 {series.series_type === "recurring_show" && venueShowtimes.length === 1 ? (
                   <div
-                    className="rounded-lg border border-[var(--twilight)] overflow-hidden"
-                    style={{ backgroundColor: "var(--card-bg)" }}
+                    className="rounded-lg border border-[var(--twilight)] overflow-hidden bg-[var(--card-bg)]"
                   >
                     {/* Venue header */}
                     <div className="p-4 border-b border-[var(--twilight)]/50">
@@ -508,7 +569,7 @@ export default async function PortalSeriesPage({ params }: Props) {
                             href={`/${activePortalSlug}/events/${venueShowtimes[0].events[0].id}`}
                             className="flex items-center gap-3 px-3 py-2 rounded-lg bg-[var(--twilight)]/30 hover:bg-[var(--coral)] hover:text-[var(--void)] transition-colors group/next"
                           >
-                            <span className="text-xs font-medium" style={{ color: typeColor }}>Next</span>
+                            <span className="text-xs font-medium text-accent">Next</span>
                             <span className="text-sm font-medium text-[var(--cream)] group-hover/next:text-inherit">
                               {formatDate(venueShowtimes[0].events[0].date)}
                             </span>
@@ -543,8 +604,7 @@ export default async function PortalSeriesPage({ params }: Props) {
                     return (
                       <div
                         key={vs.venue.id}
-                        className="rounded-lg border border-[var(--twilight)] overflow-hidden"
-                        style={{ backgroundColor: "var(--card-bg)" }}
+                        className="rounded-lg border border-[var(--twilight)] overflow-hidden bg-[var(--card-bg)]"
                       >
                         {/* Venue header */}
                         <div className="p-4 border-b border-[var(--twilight)]/50">
@@ -707,7 +767,12 @@ export default async function PortalSeriesPage({ params }: Props) {
         primaryAction={
           events.length > 0
             ? {
-                label: "See Showtimes",
+                label:
+                  series.series_type === "film"
+                    ? "See Showtimes"
+                    : series.series_type === "festival_program"
+                      ? "See Sessions"
+                      : "See Events",
                 href: "#showtimes",
               }
             : undefined

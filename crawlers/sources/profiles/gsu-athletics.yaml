@@ -1,0 +1,12 @@
+version: 1
+slug: gsu-athletics
+name: Georgia State Athletics
+integration_method: llm_crawler
+defaults: {}
+discovery:
+  enabled: true
+  type: html
+  urls:
+  - https://georgiastatesports.com
+detail:
+  enabled: false

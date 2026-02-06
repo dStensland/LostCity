@@ -1,0 +1,12 @@
+version: 1
+slug: cherry-street-brewing
+name: Cherry Street Brewing
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.cherrystreetbrewing.com
+detail:
+  enabled: false

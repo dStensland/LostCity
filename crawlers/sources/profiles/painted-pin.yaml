@@ -1,0 +1,14 @@
+version: 1
+slug: painted-pin
+name: The Painted Pin
+integration_method: playwright
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.thepaintedpin.com
+  fetch:
+    render_js: true
+detail:
+  enabled: false

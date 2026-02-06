@@ -1,0 +1,12 @@
+version: 1
+slug: emory-events
+name: Emory Events
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://emory.edu/events
+detail:
+  enabled: false

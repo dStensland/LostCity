@@ -1,0 +1,14 @@
+version: 1
+slug: piedmont-cme
+name: Piedmont CME/CE Portal
+integration_method: playwright
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://piedmont.cloud-cme.com
+  fetch:
+    render_js: true
+detail:
+  enabled: false

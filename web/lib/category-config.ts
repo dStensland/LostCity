@@ -61,8 +61,10 @@ export const CATEGORY_CONFIG = {
   record_store: { label: "Record Store", color: "#EC4899" },
   lgbtq: { label: "LGBTQ+", color: "#F472B6" },
   sports_bar: { label: "Sports Bar", color: "#38BDF8" },
+  sports_venue: { label: "Sports Venue", color: "#4ADE80" },
   attraction: { label: "Attraction", color: "#FBBF24" },
   studio: { label: "Studio", color: "#A3E635" },
+  nightclub: { label: "Nightclub", color: "#E879F9" },
   cooking_school: { label: "Cooking School", color: "#F97316" },
   community_center: { label: "Community Center", color: "#6EE7B7" },
 

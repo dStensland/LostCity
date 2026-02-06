@@ -1,0 +1,12 @@
+version: 1
+slug: pittsburgh-yards
+name: Pittsburgh Yards
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://pittsburghyards.com
+detail:
+  enabled: false

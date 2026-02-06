@@ -1,10 +1,13 @@
 import { notFound } from "next/navigation";
+import Link from "next/link";
 import { unstable_cache } from "next/cache";
 import { supabase } from "@/lib/supabase";
 import { getCachedPortalBySlug } from "@/lib/portal";
 import UnifiedHeader from "@/components/UnifiedHeader";
 import PortalFooter from "@/components/PortalFooter";
 import { PortalTheme } from "@/components/PortalTheme";
+import ScopedStylesServer from "@/components/ScopedStylesServer";
+import { createCssVarClass } from "@/lib/css-utils";
 import FollowButton from "@/components/FollowButton";
 import RecommendButton from "@/components/RecommendButton";
 import CategoryIcon, { getCategoryColor } from "@/components/CategoryIcon";
@@ -273,6 +276,12 @@ export default async function PortalOrganizerPage({ params }: Props) {
   // Use the URL portal or fall back
   const activePortalSlug = portal?.slug || portalSlug;
   const activePortalName = portal?.name || portalSlug.charAt(0).toUpperCase() + portalSlug.slice(1);
+  const claimHref = `/claim?${new URLSearchParams({
+    type: "organization",
+    id: organization.id,
+    name: organization.name,
+    return: `/${activePortalSlug}/community/${organization.slug}`,
+  }).toString()}`;
 
   // Fetch data in parallel
   const [events, similarOrgs] = await Promise.all([
@@ -281,6 +290,19 @@ export default async function PortalOrganizerPage({ params }: Props) {
   ]);
 
   const orgColor = getOrgTypeColor(organization.org_type);
+  const orgAccentClass = createCssVarClass("--accent-color", orgColor, "org-accent");
+  const categoryAccentClasses = Object.fromEntries(
+    (organization.categories || []).map((cat) => [
+      cat,
+      createCssVarClass("--accent-color", getCategoryColor(cat), "org-category"),
+    ])
+  ) as Record<string, ReturnType<typeof createCssVarClass> | null>;
+  const scopedCss = [
+    orgAccentClass?.css,
+    ...Object.values(categoryAccentClasses).map((entry) => entry?.css),
+  ]
+    .filter(Boolean)
+    .join("\n");
   const organizationSchema = generateOrganizationSchema(organization);
 
   // Format location display
@@ -298,6 +320,8 @@ export default async function PortalOrganizerPage({ params }: Props) {
 
       {/* Portal-specific theming */}
       {portal && <PortalTheme portal={portal} />}
+
+      <ScopedStylesServer css={scopedCss} />
 
       <div className="min-h-screen">
         <UnifiedHeader
@@ -325,12 +349,9 @@ export default async function PortalOrganizerPage({ params }: Props) {
             }
             badge={
               <span
-                className="inline-flex items-center px-3 py-1.5 rounded text-xs font-mono uppercase tracking-wider"
-                style={{
-                  backgroundColor: `${orgColor}20`,
-                  color: orgColor,
-                  border: `1px solid ${orgColor}40`,
-                }}
+                className={`inline-flex items-center px-3 py-1.5 rounded text-xs font-mono uppercase tracking-wider bg-accent-20 text-accent border border-accent-40 ${
+                  orgAccentClass?.className ?? ""
+                }`}
               >
                 {formatOrgType(organization.org_type)}
               </span>
@@ -340,6 +361,12 @@ export default async function PortalOrganizerPage({ params }: Props) {
             <div className="flex items-center gap-2 mt-4">
               <FollowButton targetOrganizationId={organization.id} size="sm" />
               <RecommendButton organizationId={organization.id} size="sm" />
+              <Link
+                href={claimHref}
+                className="text-[var(--muted)] hover:text-[var(--cream)] font-mono text-xs"
+              >
+                Claim this organization
+              </Link>
             </div>
           </DetailHero>
 
@@ -443,15 +470,13 @@ export default async function PortalOrganizerPage({ params }: Props) {
                 <SectionHeader title="Categories" count={organization.categories.length} />
                 <div className="flex flex-wrap gap-2 mb-6">
                   {organization.categories.map((cat) => {
-                    const color = getCategoryColor(cat);
+                    const accentClass = categoryAccentClasses[cat];
                     return (
                       <span
                         key={cat}
-                        className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-mono"
-                        style={{
-                          backgroundColor: `${color}15`,
-                          color: color,
-                        }}
+                        className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-mono bg-accent-15 text-accent ${
+                          accentClass?.className ?? ""
+                        }`}
                       >
                         <CategoryIcon type={cat} size={16} glow="subtle" />
                         {cat.replace(/_/g, " ")}

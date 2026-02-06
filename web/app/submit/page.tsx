@@ -1,15 +1,31 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import UnifiedHeader from "@/components/UnifiedHeader";
 import { useAuth } from "@/lib/auth-context";
+
+type SubmissionCounts = {
+  total: number;
+  pending: number;
+  approved: number;
+  rejected: number;
+  needs_edit: number;
+};
+
+type TrustStatus = {
+  score: number | null;
+  eligible: boolean;
+  tier: string;
+  is_trusted: boolean;
+};
 
 const submissionTypes = [
   {
     type: "event",
     href: "/submit/event",
     title: "Submit an Event",
-    description: "Event organizers: email us at coach@lostcity.ai to partner",
+    description: "Submit a public event for review (2–3 minutes)",
     icon: (
       <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -46,6 +62,34 @@ const submissionTypes = [
 
 export default function SubmitPage() {
   const { user } = useAuth();
+  const [counts, setCounts] = useState<SubmissionCounts | null>(null);
+  const [trust, setTrust] = useState<TrustStatus | null>(null);
+  const [loadingStats, setLoadingStats] = useState(true);
+
+  useEffect(() => {
+    if (!user) return;
+    let isActive = true;
+
+    fetch("/api/submissions?limit=1")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!isActive || !data) return;
+        setCounts(data.counts || null);
+        setTrust(data.trust || null);
+      })
+      .catch(() => {
+        if (!isActive) return;
+        setCounts(null);
+        setTrust(null);
+      })
+      .finally(() => {
+        if (isActive) setLoadingStats(false);
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, [user]);
 
   if (!user) {
     return (
@@ -83,6 +127,66 @@ export default function SubmitPage() {
           <p className="text-[var(--muted)] font-mono text-sm">
             Help us discover more great events, venues, and organizations in Atlanta
           </p>
+        </div>
+
+        <div className="mb-8 p-6 rounded-xl bg-[var(--void)]/60 border border-[var(--twilight)]">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <div className="font-mono text-xs text-[var(--muted)] uppercase tracking-wider">
+                Your Submission Status
+              </div>
+              <div className="text-lg font-semibold text-[var(--cream)] mt-1">
+                {trust?.is_trusted ? "Trusted Submitter" : "Standard Submitter"}
+              </div>
+              <p className="text-[var(--muted)] font-mono text-xs mt-1 max-w-md">
+                {trust?.is_trusted
+                  ? "Your submissions can be auto-approved when they include proof or verified place data."
+                  : "Most submissions are reviewed before publishing. Add links and details to speed things up."}
+              </p>
+            </div>
+            <Link
+              href="/dashboard/submissions"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[var(--dusk)] border border-[var(--twilight)] text-[var(--cream)] font-mono text-xs hover:border-[var(--coral)] transition-colors"
+            >
+              View submissions
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </Link>
+          </div>
+
+          <div className="mt-5 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs font-mono">
+            <div className="p-3 rounded-lg bg-[var(--dusk)]/70 border border-[var(--twilight)]">
+              <div className="text-[var(--muted)] uppercase tracking-wider">Approved</div>
+              <div className="text-[var(--cream)] text-sm mt-1">
+                {loadingStats ? "…" : counts?.approved ?? 0}
+              </div>
+            </div>
+            <div className="p-3 rounded-lg bg-[var(--dusk)]/70 border border-[var(--twilight)]">
+              <div className="text-[var(--muted)] uppercase tracking-wider">Pending</div>
+              <div className="text-[var(--cream)] text-sm mt-1">
+                {loadingStats ? "…" : counts?.pending ?? 0}
+              </div>
+            </div>
+            <div className="p-3 rounded-lg bg-[var(--dusk)]/70 border border-[var(--twilight)]">
+              <div className="text-[var(--muted)] uppercase tracking-wider">Needs Edit</div>
+              <div className="text-[var(--cream)] text-sm mt-1">
+                {loadingStats ? "…" : counts?.needs_edit ?? 0}
+              </div>
+            </div>
+            <div className="p-3 rounded-lg bg-[var(--dusk)]/70 border border-[var(--twilight)]">
+              <div className="text-[var(--muted)] uppercase tracking-wider">Approval Rate</div>
+              <div className="text-[var(--cream)] text-sm mt-1">
+                {loadingStats || !trust?.score ? "—" : `${Math.round(trust.score * 100)}%`}
+              </div>
+            </div>
+          </div>
+
+          {trust?.eligible && !trust?.is_trusted && (
+            <div className="mt-4 p-3 rounded-lg bg-[var(--neon-green)]/10 border border-[var(--neon-green)]/30 text-[var(--neon-green)] font-mono text-xs">
+              You&apos;re eligible for Trusted Submitter status. A community manager can promote you.
+            </div>
+          )}
         </div>
 
         <div className="space-y-4">
@@ -127,7 +231,11 @@ export default function SubmitPage() {
           <ul className="space-y-2 text-[var(--muted)] font-mono text-xs">
             <li className="flex items-start gap-2">
               <span className="text-[var(--coral)]">•</span>
-              All submissions are reviewed before publishing
+              Untrusted submissions are reviewed before publishing
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-[var(--coral)]">•</span>
+              Places matched to verified map data can be auto-approved instantly
             </li>
             <li className="flex items-start gap-2">
               <span className="text-[var(--coral)]">•</span>
@@ -139,7 +247,7 @@ export default function SubmitPage() {
             </li>
             <li className="flex items-start gap-2">
               <span className="text-[var(--coral)]">•</span>
-              After 5+ approved submissions with a 90%+ approval rate, your submissions will auto-publish
+              After 5+ approved submissions with a 90%+ approval rate, a community manager can promote you to trusted
             </li>
           </ul>
         </div>

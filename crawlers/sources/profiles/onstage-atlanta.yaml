@@ -1,0 +1,14 @@
+version: 1
+slug: onstage-atlanta
+name: OnStage Atlanta
+integration_method: playwright
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.onstageatlanta.com
+  fetch:
+    render_js: true
+detail:
+  enabled: false

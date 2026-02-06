@@ -1,0 +1,12 @@
+version: 1
+slug: johnnys-hideaway
+name: Johnny's Hideaway
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.johnnyshideaway.com
+detail:
+  enabled: false

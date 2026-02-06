@@ -6,89 +6,34 @@ export async function GET() {
   return new ImageResponse(
     (
       <div
-        style={{
-          width: "100%",
-          height: "100%",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          background: "linear-gradient(135deg, #0a0a0f 0%, #1a1a2e 50%, #16213e 100%)",
-          fontFamily: "system-ui, sans-serif",
-        }}
+        tw="relative w-full h-full flex flex-col items-center justify-center bg-[linear-gradient(135deg,_#0a0a0f_0%,_#1a1a2e_50%,_#16213e_100%)] font-sans"
       >
         {/* Ambient glow effect */}
         <div
-          style={{
-            position: "absolute",
-            top: "20%",
-            left: "30%",
-            width: "400px",
-            height: "400px",
-            background: "radial-gradient(circle, rgba(255,107,107,0.15) 0%, transparent 70%)",
-            borderRadius: "50%",
-          }}
+          tw="absolute top-[20%] left-[30%] w-[400px] h-[400px] rounded-full bg-[radial-gradient(circle,_rgba(255,107,107,0.15)_0%,_transparent_70%)]"
         />
         <div
-          style={{
-            position: "absolute",
-            bottom: "20%",
-            right: "20%",
-            width: "300px",
-            height: "300px",
-            background: "radial-gradient(circle, rgba(0,255,255,0.1) 0%, transparent 70%)",
-            borderRadius: "50%",
-          }}
+          tw="absolute bottom-[20%] right-[20%] w-[300px] h-[300px] rounded-full bg-[radial-gradient(circle,_rgba(0,255,255,0.1)_0%,_transparent_70%)]"
         />
 
         {/* Logo text */}
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            gap: "16px",
-          }}
-        >
+        <div tw="flex flex-col items-center gap-4">
           <div
-            style={{
-              fontSize: "72px",
-              fontWeight: "bold",
-              color: "#fff5eb",
-              letterSpacing: "-2px",
-              textShadow: "0 0 40px rgba(255,107,107,0.5)",
-            }}
+            tw="text-[72px] font-bold text-[#fff5eb] tracking-[-2px] drop-shadow-[0_0_40px_rgba(255,107,107,0.5)]"
           >
             Lost City
           </div>
-          <div
-            style={{
-              fontSize: "28px",
-              color: "#9ca3af",
-              letterSpacing: "4px",
-              textTransform: "uppercase",
-            }}
-          >
+          <div tw="text-[28px] text-[#9ca3af] tracking-[4px] uppercase">
             Discover Local Events
           </div>
         </div>
 
         {/* Bottom tagline */}
-        <div
-          style={{
-            position: "absolute",
-            bottom: "48px",
-            display: "flex",
-            alignItems: "center",
-            gap: "8px",
-            color: "#6b7280",
-            fontSize: "18px",
-          }}
-        >
+        <div tw="absolute bottom-[48px] flex items-center gap-2 text-[#6b7280] text-[18px]">
           <span>AI-powered event discovery</span>
-          <span style={{ color: "#ff6b6b" }}>•</span>
-          <span>20+ sources</span>
-          <span style={{ color: "#ff6b6b" }}>•</span>
+          <span tw="text-[#ff6b6b]">•</span>
+          <span>450+ sources</span>
+          <span tw="text-[#ff6b6b]">•</span>
           <span>Atlanta</span>
         </div>
       </div>

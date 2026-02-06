@@ -1,0 +1,12 @@
+version: 1
+slug: creative-loafing
+name: Creative Loafing
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://creativeloafing.com/events
+detail:
+  enabled: false

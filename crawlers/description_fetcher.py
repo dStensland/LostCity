@@ -158,6 +158,20 @@ def fetch_description_playwright(page, url: str) -> Optional[str]:
         return None
 
 
+def fetch_detail_html_playwright(page, url: str) -> Optional[str]:
+    """Fetch a URL using an already-open Playwright page and return HTML."""
+    if not url:
+        return None
+
+    try:
+        page.goto(url, wait_until="domcontentloaded", timeout=15000)
+        page.wait_for_timeout(1500)
+        return page.content()
+    except Exception as e:
+        logger.debug(f"Failed to fetch HTML via Playwright from {url}: {e}")
+        return None
+
+
 def generate_synthetic_description(
     title: str,
     venue_name: Optional[str] = None,

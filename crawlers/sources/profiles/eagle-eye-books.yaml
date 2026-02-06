@@ -1,0 +1,12 @@
+version: 1
+slug: eagle-eye-books
+name: Eagle Eye Book Shop
+integration_method: llm_crawler
+defaults: {}
+discovery:
+  enabled: true
+  type: html
+  urls:
+  - https://www.eagleeyebooks.com
+detail:
+  enabled: false

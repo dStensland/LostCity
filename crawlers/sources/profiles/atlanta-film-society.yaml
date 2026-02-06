@@ -1,0 +1,12 @@
+version: 1
+slug: atlanta-film-society
+name: Atlanta Film Society
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.atlantafilmsociety.org
+detail:
+  enabled: false

@@ -1,0 +1,14 @@
+version: 1
+slug: eventbrite-nashville
+name: Eventbrite Nashville
+integration_method: aggregator
+defaults: {}
+discovery:
+  enabled: true
+  type: api
+  urls:
+  - https://www.eventbrite.com/d/tn--nashville/events/
+  api:
+    adapter: eventbrite
+detail:
+  enabled: false

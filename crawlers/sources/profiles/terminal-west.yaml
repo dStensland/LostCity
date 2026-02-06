@@ -1,0 +1,12 @@
+version: 1
+slug: terminal-west
+name: Terminal West
+integration_method: llm_crawler
+defaults: {}
+discovery:
+  enabled: true
+  type: html
+  urls:
+  - https://terminalwestatl.com/events
+detail:
+  enabled: false

@@ -1,0 +1,14 @@
+version: 1
+slug: steady-hand-beer
+name: Steady Hand Beer Co
+integration_method: playwright
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.steadyhandbeer.com
+  fetch:
+    render_js: true
+detail:
+  enabled: false

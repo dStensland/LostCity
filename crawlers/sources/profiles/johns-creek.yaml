@@ -1,0 +1,12 @@
+version: 1
+slug: johns-creek
+name: City of Johns Creek
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://johnscreekga.gov/events/
+detail:
+  enabled: false

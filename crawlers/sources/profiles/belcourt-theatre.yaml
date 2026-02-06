@@ -1,0 +1,12 @@
+version: 1
+slug: belcourt-theatre
+name: Belcourt Theatre
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.belcourt.org/events/
+detail:
+  enabled: false

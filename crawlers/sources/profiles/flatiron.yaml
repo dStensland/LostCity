@@ -1,0 +1,12 @@
+version: 1
+slug: flatiron
+name: Flatiron
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.flatironatlanta.com
+detail:
+  enabled: false

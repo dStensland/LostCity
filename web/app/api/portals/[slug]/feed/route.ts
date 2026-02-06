@@ -65,6 +65,7 @@ type Event = {
   title: string;
   start_date: string;
   start_time: string | null;
+  end_date: string | null;
   end_time: string | null;
   is_all_day: boolean;
   is_free: boolean;
@@ -77,6 +78,25 @@ type Event = {
   featured_blurb: string | null;
   going_count?: number;
   source_id?: number | null;
+  series_id?: string | null;
+  series?: {
+    id: string;
+    slug: string;
+    title: string;
+    series_type: string;
+    image_url: string | null;
+    frequency: string | null;
+    day_of_week: string | null;
+    festival?: {
+      id: string;
+      slug: string;
+      name: string;
+      image_url: string | null;
+      festival_type?: string | null;
+      location: string | null;
+      neighborhood: string | null;
+    } | null;
+  } | null;
   venue: {
     id: number;
     name: string;
@@ -177,8 +197,8 @@ function getDateRange(filter: string): { start: string; end: string } {
 export async function GET(request: NextRequest, { params }: Props) {
   const supabase = await createClient();
 
-  // Rate limit - this is an expensive endpoint
-  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.expensive, getClientIdentifier(request));
+  // Rate limit - use read limit since this is a common read endpoint
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.read, getClientIdentifier(request));
   if (rateLimitResult) return rateLimitResult;
 
   const { slug } = await params;
@@ -187,25 +207,44 @@ export async function GET(request: NextRequest, { params }: Props) {
   const defaultLimit = parseInt(searchParams.get("limit") || "5");
 
   // Get portal
-  const { data: portalData, error: portalError } = await supabase
+  // Try with parent_portal_id first, fall back if column doesn't exist (older schemas)
+  let portalResult = await supabase
     .from("portals")
-    .select("id, slug, name, portal_type, settings")
+    .select("id, slug, name, portal_type, parent_portal_id, settings")
     .eq("slug", slug)
     .eq("status", "active")
     .maybeSingle();
 
-  if (portalError || !portalData) {
+  if (portalResult.error && portalResult.error.message?.includes("column")) {
+    portalResult = await supabase
+      .from("portals")
+      .select("id, slug, name, portal_type, settings")
+      .eq("slug", slug)
+      .eq("status", "active")
+      .maybeSingle();
+  }
+
+  const portalData = portalResult.data as { id: string; slug: string; name: string; portal_type: string; parent_portal_id?: string | null; settings: Record<string, unknown> } | null;
+
+  if (portalResult.error || !portalData) {
     return NextResponse.json({ error: "Portal not found" }, { status: 404 });
   }
 
-  const portal = portalData as { id: string; slug: string; name: string; portal_type: string; settings: Record<string, unknown> };
+  const portal = {
+    id: portalData.id,
+    slug: portalData.slug,
+    name: portalData.name,
+    portal_type: portalData.portal_type,
+    parent_portal_id: portalData.parent_portal_id ?? null,
+    settings: portalData.settings,
+  };
 
   // Validate portal ID to prevent injection
   if (!isValidUUID(portal.id)) {
     return NextResponse.json({ error: "Invalid portal" }, { status: 400 });
   }
 
-  const isBusinessPortal = portal.portal_type === "business";
+  const isExclusivePortal = portal.portal_type === "business" && !portal.parent_portal_id;
   const feedSettings = (portal.settings?.feed || {}) as {
     feed_type?: string;
     featured_section_ids?: string[];
@@ -290,6 +329,7 @@ export async function GET(request: NextRequest, { params }: Props) {
         title,
         start_date,
         start_time,
+        end_date,
         end_time,
         is_all_day,
         is_free,
@@ -300,6 +340,17 @@ export async function GET(request: NextRequest, { params }: Props) {
         image_url,
         description,
         featured_blurb,
+        series_id,
+        series:series_id(
+          id,
+          slug,
+          title,
+          series_type,
+          image_url,
+          frequency,
+          day_of_week,
+          festival:festivals(id, slug, name, image_url, festival_type, location, neighborhood)
+        ),
         venue:venues(id, name, neighborhood, slug)
       `)
       .in("id", Array.from(eventIds))
@@ -335,6 +386,7 @@ export async function GET(request: NextRequest, { params }: Props) {
         title,
         start_date,
         start_time,
+        end_date,
         end_time,
         is_all_day,
         is_free,
@@ -345,6 +397,17 @@ export async function GET(request: NextRequest, { params }: Props) {
         image_url,
         description,
         featured_blurb,
+        series_id,
+        series:series_id(
+          id,
+          slug,
+          title,
+          series_type,
+          image_url,
+          frequency,
+          day_of_week,
+          festival:festivals(id, slug, name, image_url, festival_type, location, neighborhood)
+        ),
         venue:venues(id, name, neighborhood, slug)
       `)
       .in("id", Array.from(pinnedEventIds))
@@ -391,6 +454,7 @@ export async function GET(request: NextRequest, { params }: Props) {
         title,
         start_date,
         start_time,
+        end_date,
         end_time,
         is_all_day,
         is_free,
@@ -401,6 +465,17 @@ export async function GET(request: NextRequest, { params }: Props) {
         image_url,
         description,
         featured_blurb,
+        series_id,
+        series:series_id(
+          id,
+          slug,
+          title,
+          series_type,
+          image_url,
+          frequency,
+          day_of_week,
+          festival:festivals(id, slug, name, image_url, festival_type, location, neighborhood)
+        ),
         source_id,
         venue:venues(id, name, neighborhood, slug)
       `)
@@ -409,17 +484,17 @@ export async function GET(request: NextRequest, { params }: Props) {
       .is("canonical_event_id", null); // Only show canonical events, not duplicates
 
     // Apply portal filter with federation support
-    if (isBusinessPortal) {
+    if (isExclusivePortal) {
       if (hasSubscribedSources) {
-        // Business portal with subscriptions: show portal events + events from subscribed sources
+        // Exclusive business portal with subscriptions: portal events + subscribed sources
         const sourceIdList = federationAccess.sourceIds.join(",");
         poolQuery = poolQuery.or(`portal_id.eq.${portal.id},source_id.in.(${sourceIdList})`);
       } else {
-        // Business portal without subscriptions: only show portal-specific events
+        // Exclusive business portal without subscriptions: only portal-specific events
         poolQuery = poolQuery.eq("portal_id", portal.id);
       }
     } else {
-      // City portals: show public events + portal-specific events + events from subscribed sources
+      // City + white-label portals: public events + portal-specific events + subscribed sources
       if (hasSubscribedSources) {
         const sourceIdList = federationAccess.sourceIds.join(",");
         poolQuery = poolQuery.or(`portal_id.eq.${portal.id},portal_id.is.null,source_id.in.(${sourceIdList})`);
@@ -641,6 +716,7 @@ export async function GET(request: NextRequest, { params }: Props) {
           title,
           start_date,
           start_time,
+          end_date,
           end_time,
           is_all_day,
           is_free,
@@ -652,6 +728,17 @@ export async function GET(request: NextRequest, { params }: Props) {
           description,
           featured_blurb,
           tags,
+          series_id,
+          series:series_id(
+            id,
+            slug,
+            title,
+            series_type,
+            image_url,
+            frequency,
+            day_of_week,
+            festival:festivals(id, slug, name, image_url, festival_type, location, neighborhood)
+          ),
           venue:venues(id, name, neighborhood, slug)
         `)
         .or(tagConditions)

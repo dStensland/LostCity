@@ -3,16 +3,13 @@
 import dynamic from "next/dynamic";
 import { useMapEvents } from "@/lib/hooks/useMapEvents";
 import type { EventWithLocation } from "@/lib/search";
-import type { Spot } from "@/lib/spots";
+import type { Spot } from "@/lib/spots-constants";
 
 const MapView = dynamic(() => import("./MapView"), {
   ssr: false,
   loading: () => (
     <div className="w-full h-full bg-[var(--night)] rounded-lg border border-[var(--twilight)] relative overflow-hidden">
-      <div className="absolute inset-0 opacity-[0.04]" style={{
-        backgroundImage: `linear-gradient(var(--soft) 1px, transparent 1px), linear-gradient(90deg, var(--soft) 1px, transparent 1px)`,
-        backgroundSize: '60px 60px',
-      }} />
+      <div className="absolute inset-0 opacity-[0.04] map-grid-lines" />
       <div className="absolute inset-0 skeleton-shimmer" />
       <div className="absolute inset-0 flex items-center justify-center">
         <div className="flex items-center gap-3 px-4 py-2.5 rounded-lg bg-[var(--dusk)]/80 backdrop-blur-sm border border-[var(--twilight)]">
@@ -58,10 +55,7 @@ export default function MapViewWrapper({ events: providedEvents, spots, userLoca
     return (
       <div className="w-full h-full bg-[var(--night)] rounded-lg border border-[var(--twilight)] relative overflow-hidden">
         {/* Skeleton map grid lines */}
-        <div className="absolute inset-0 opacity-[0.04]" style={{
-          backgroundImage: `linear-gradient(var(--soft) 1px, transparent 1px), linear-gradient(90deg, var(--soft) 1px, transparent 1px)`,
-          backgroundSize: '60px 60px',
-        }} />
+        <div className="absolute inset-0 opacity-[0.04] map-grid-lines" />
         {/* Shimmer overlay */}
         <div className="absolute inset-0 skeleton-shimmer" />
         {/* Centered loading indicator */}

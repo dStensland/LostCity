@@ -1,0 +1,14 @@
+version: 1
+slug: out-of-box-theatre
+name: Out of Box Theatre
+integration_method: playwright
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.outofboxtheatre.com
+  fetch:
+    render_js: true
+detail:
+  enabled: false

@@ -40,12 +40,11 @@ export function QuickAction({
       aria-selected={isSelected}
       onMouseDown={() => onSelect(action)}
       onMouseEnter={() => onHover(index)}
-      className={`flex items-center gap-2.5 w-full text-left px-3 py-2 text-sm rounded-lg transition-all mx-1 ${
+      className={`flex items-center gap-2.5 w-full text-left px-3 py-2 text-sm rounded-lg transition-all mx-1 w-[calc(100%-8px)] ${
         isSelected
           ? "bg-[var(--coral)]/20 text-[var(--coral)] translate-x-0.5"
           : "text-[var(--cream)] hover:bg-[var(--twilight)]/50"
       }`}
-      style={{ width: "calc(100% - 8px)" }}
     >
       {/* Lightning bolt icon */}
       <QuickActionIcon icon={action.icon} isSelected={isSelected} />

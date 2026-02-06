@@ -1,0 +1,14 @@
+version: 1
+slug: mobilize-indivisible-ga10
+name: Indivisible GA District 10 (Mobilize)
+integration_method: playwright
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.mobilize.us/indivisiblega10/
+  fetch:
+    render_js: true
+detail:
+  enabled: false

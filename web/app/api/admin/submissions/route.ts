@@ -79,7 +79,7 @@ export async function GET(request: NextRequest) {
       reviewed_at,
       submitter:profiles!submissions_submitted_by_fkey (
         id, username, display_name, avatar_url,
-        submission_count, approved_count, rejected_count
+        submission_count, approved_count, rejected_count, trust_tier
       ),
       reviewer:profiles!submissions_reviewed_by_fkey (
         id, username, display_name
@@ -98,8 +98,9 @@ export async function GET(request: NextRequest) {
     query = query.eq("status", status);
   }
 
-  if (type && isValidEnum(type, ["event", "venue", "producer"] as const)) {
-    query = query.eq("submission_type", type);
+  const normalizedType = type === "organization" ? "producer" : type;
+  if (normalizedType && isValidEnum(normalizedType, ["event", "venue", "producer"] as const)) {
+    query = query.eq("submission_type", normalizedType);
   }
 
   if (portalId) {
@@ -152,22 +153,27 @@ export async function GET(request: NextRequest) {
     const submitter = submission.submitter as {
       approved_count: number;
       rejected_count: number;
+      trust_tier: string | null;
     } | null;
     let trustScore = null;
     let isTrusted = false;
+    let isEligible = false;
 
     if (submitter) {
       const total = submitter.approved_count + submitter.rejected_count;
       if (total > 0) {
         trustScore = submitter.approved_count / total;
-        isTrusted = submitter.approved_count >= 5 && trustScore >= 0.9;
+        isEligible = submitter.approved_count >= 5 && trustScore >= 0.9;
       }
+      isTrusted = submitter.trust_tier === "trusted_submitter";
     }
 
     return {
       ...submission,
       submitter_trust_score: trustScore,
       submitter_is_trusted: isTrusted,
+      submitter_is_trust_eligible: isEligible,
+      submitter_trust_tier: submitter?.trust_tier || "standard",
     };
   });
 

@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Logo from "@/components/Logo";
 import { DEFAULT_PORTAL_SLUG } from "@/lib/portal-context";
+import ScopedStyles from "@/components/ScopedStyles";
+import { createCssVarClass } from "@/lib/css-utils";
 
 type PortalBranding = {
   logo_url?: string;
@@ -156,6 +158,42 @@ export default function EditPortalPage({ params }: { params: Promise<{ id: strin
     token: string | null;
   } | null>(null);
   const [verifyingDomain, setVerifyingDomain] = useState(false);
+
+  const previewBgClass = createCssVarClass(
+    "--preview-bg",
+    branding.background_color || "#0a0a12",
+    "preview-bg"
+  );
+  const previewBorderClass = createCssVarClass(
+    "--preview-border",
+    branding.secondary_color || "#2a2a4a",
+    "preview-border"
+  );
+  const previewPrimaryClass = createCssVarClass(
+    "--preview-primary",
+    branding.primary_color || "#E87B6B",
+    "preview-primary"
+  );
+  const previewSecondaryClass = createCssVarClass(
+    "--preview-secondary",
+    branding.secondary_color || "#2a2a4a",
+    "preview-secondary"
+  );
+  const previewButtonTextClass = createCssVarClass(
+    "--preview-button-text",
+    branding.background_color || "#0a0a12",
+    "preview-button-text"
+  );
+
+  const previewCss = [
+    previewBgClass?.css,
+    previewBorderClass?.css,
+    previewPrimaryClass?.css,
+    previewSecondaryClass?.css,
+    previewButtonTextClass?.css,
+  ]
+    .filter(Boolean)
+    .join("\n");
 
   const loadPortal = useCallback(async () => {
     try {
@@ -340,6 +378,7 @@ export default function EditPortalPage({ params }: { params: Promise<{ id: strin
 
   return (
     <div className="min-h-screen">
+      <ScopedStyles css={previewCss} />
       {/* Header */}
       <header className="px-4 sm:px-6 py-4 flex justify-between items-center border-b border-[var(--twilight)]">
         <div className="flex items-baseline gap-3">
@@ -1234,30 +1273,24 @@ const { geo_center: _geo_center, ...rest } = filters;
               <div className="mt-6 pt-4 border-t border-[var(--twilight)]">
                 <h3 className="font-mono text-xs text-[var(--soft)] mb-3">Preview</h3>
                 <div
-                  className="p-4 rounded-lg border"
-                  style={{
-                    backgroundColor: branding.background_color || "#0a0a12",
-                    borderColor: branding.secondary_color || "#2a2a4a",
-                  }}
+                  className={`p-4 rounded-lg border bg-[var(--preview-bg)] border-[var(--preview-border)] ${
+                    previewBgClass?.className ?? ""
+                  } ${previewBorderClass?.className ?? ""} ${previewPrimaryClass?.className ?? ""} ${
+                    previewSecondaryClass?.className ?? ""
+                  } ${previewButtonTextClass?.className ?? ""}`}
                 >
                   <div
-                    className="font-serif text-lg mb-2"
-                    style={{ color: branding.primary_color || "#E87B6B" }}
+                    className="font-serif text-lg mb-2 text-[var(--preview-primary)]"
                   >
                     {name || "Portal Name"}
                   </div>
                   <div
-                    className="font-mono text-sm"
-                    style={{ color: branding.secondary_color || "#2a2a4a" }}
+                    className="font-mono text-sm text-[var(--preview-secondary)]"
                   >
                     {tagline || "Portal tagline goes here"}
                   </div>
                   <button
-                    className="mt-3 px-4 py-1.5 rounded font-mono text-xs"
-                    style={{
-                      backgroundColor: branding.primary_color || "#E87B6B",
-                      color: branding.background_color || "#0a0a12",
-                    }}
+                    className="mt-3 px-4 py-1.5 rounded font-mono text-xs bg-[var(--preview-primary)] text-[var(--preview-button-text)]"
                   >
                     Sample Button
                   </button>

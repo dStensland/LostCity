@@ -1,0 +1,14 @@
+version: 1
+slug: dancing4fun
+name: Dancing4Fun
+integration_method: playwright
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.dancing4fun.com
+  fetch:
+    render_js: true
+detail:
+  enabled: false

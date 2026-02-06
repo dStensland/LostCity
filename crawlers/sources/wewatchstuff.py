@@ -17,6 +17,7 @@ from playwright.sync_api import sync_playwright
 
 from db import get_or_create_venue, insert_event, find_event_by_hash
 from dedupe import generate_content_hash
+from utils import extract_event_links, find_event_url
 
 logger = logging.getLogger(__name__)
 
@@ -302,6 +303,11 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     # Build event record
                     # Use Encyclomedia as the screening venue
+                    # Get specific event URL
+
+                    event_url = find_event_url(title, event_links, EVENTS_URL)
+
+
                     event_record = {
                         "source_id": source_id,
                         "venue_id": screening_venue_id,
@@ -319,7 +325,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "price_max": None,
                         "price_note": "Free",
                         "is_free": True,
-                        "source_url": BASE_URL,
+                        "source_url": event_url,
                         "ticket_url": href if 'forms' in href else None,
                         "image_url": poster_url,
                         "raw_text": text,

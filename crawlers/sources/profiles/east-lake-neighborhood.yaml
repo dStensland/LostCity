@@ -1,0 +1,12 @@
+version: 1
+slug: east-lake-neighborhood
+name: East Lake Neighborhood
+integration_method: llm_crawler
+defaults: {}
+discovery:
+  enabled: true
+  type: html
+  urls:
+  - https://eastlakefoundation.org
+detail:
+  enabled: false

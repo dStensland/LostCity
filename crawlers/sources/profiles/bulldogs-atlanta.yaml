@@ -1,0 +1,14 @@
+version: 1
+slug: bulldogs-atlanta
+name: Bulldogs Atlanta
+integration_method: playwright
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.bulldogsatl.com
+  fetch:
+    render_js: true
+detail:
+  enabled: false

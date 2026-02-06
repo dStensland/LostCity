@@ -1,0 +1,12 @@
+version: 1
+slug: sidebar
+name: Sidebar
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.sidebaratlanta.com
+detail:
+  enabled: false

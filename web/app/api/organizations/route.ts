@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 import { getLocalDateString } from "@/lib/formats";
@@ -18,6 +19,18 @@ type Organization = {
   featured: boolean;
 };
 
+type OrganizationPortalSchema = {
+  public: {
+    Tables: {
+      organization_portals: {
+        Row: {
+          organization_id: string;
+        };
+      };
+    };
+  };
+};
+
 export async function GET(request: NextRequest) {
   const supabase = await createClient();
 
@@ -26,16 +39,75 @@ export async function GET(request: NextRequest) {
   if (rateLimitResult) return rateLimitResult;
 
   try {
+    const { searchParams } = new URL(request.url);
+    const portalIdParam = searchParams.get("portal_id");
+    const portalSlug = searchParams.get("portal_slug");
+    const limitParam = searchParams.get("limit");
+
+    const limit = limitParam ? Math.min(Math.max(parseInt(limitParam, 10) || 0, 0), 200) : null;
+
+    let portalId = portalIdParam || null;
+    if (!portalId && portalSlug) {
+      const { data: portalData } = await supabase
+        .from("portals")
+        .select("id")
+        .eq("slug", portalSlug)
+        .maybeSingle();
+      portalId = (portalData as { id: string } | null)?.id || null;
+    }
+
     // Get current date for event counting
     const today = getLocalDateString();
 
+    // Resolve organizations by portal membership if requested
+    let portalOrgIds: string[] | null = null;
+    if (portalId) {
+      const portalClient = supabase as SupabaseClient<OrganizationPortalSchema>;
+      const { data: memberships, error: membershipError } = await portalClient
+        .from("organization_portals")
+        .select("organization_id")
+        .eq("portal_id", portalId);
+
+      if (membershipError) {
+        logger.warn("organization_portals lookup failed, falling back to organizations.portal_id", membershipError);
+      } else {
+        portalOrgIds = (memberships || []).map(
+          (row: { organization_id: string }) => row.organization_id
+        );
+      }
+    }
+
     // Fetch organizations
-    const { data: organizations, error } = await supabase
+    let orgQuery = supabase
       .from("organizations")
       .select("id, name, slug, org_type, website, instagram, logo_url, description, categories, neighborhood, featured")
       .eq("hidden", false)
       .order("featured", { ascending: false })
       .order("name");
+
+    if (portalId) {
+      if (portalOrgIds) {
+        if (portalOrgIds.length === 0) {
+          return NextResponse.json(
+            { organizations: [] },
+            {
+              headers: {
+                "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600",
+              },
+            }
+          );
+        }
+        orgQuery = orgQuery.in("id", portalOrgIds);
+      } else {
+        orgQuery = orgQuery.eq("portal_id", portalId);
+      }
+    }
+
+    if (limit) {
+      orgQuery = orgQuery.limit(limit);
+    }
+
+    const { data: organizations, error } = await orgQuery;
 
     if (error) {
       logger.error("Error fetching organizations", error);
@@ -43,11 +115,17 @@ export async function GET(request: NextRequest) {
     }
 
     // Get event counts for each organization
-    const { data: events } = await supabase
+    let eventsQuery = supabase
       .from("events")
       .select("organization_id")
       .gte("start_date", today)
       .not("organization_id", "is", null);
+
+    if (portalId) {
+      eventsQuery = eventsQuery.eq("portal_id", portalId);
+    }
+
+    const { data: events } = await eventsQuery;
 
     const eventCounts: Record<string, number> = {};
     for (const event of (events || []) as { organization_id: string }[]) {

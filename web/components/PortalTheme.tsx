@@ -1,6 +1,4 @@
-"use client";
-
-import { useEffect } from "react";
+import { headers } from "next/headers";
 import type { Portal, PortalBranding } from "@/lib/portal-context";
 import { applyPreset } from "@/lib/apply-preset";
 import {
@@ -50,7 +48,9 @@ function sanitizeFontFamily(value: string): string | null {
  * Renders a <style> tag with CSS custom properties that override defaults.
  * Now supports deep white-labeling with visual presets and component styles.
  */
-export function PortalTheme({ portal }: PortalThemeProps) {
+export async function PortalTheme({ portal }: PortalThemeProps) {
+  const headerList = await headers();
+  const nonce = headerList.get("x-nonce") ?? "";
   const branding = portal.branding || {};
   const settings = portal.settings || {};
 
@@ -391,88 +391,6 @@ export function PortalTheme({ portal }: PortalThemeProps) {
     .filter(Boolean)
     .join("\n");
 
-  // Validate color contrast in development
-  useEffect(() => {
-    if (process.env.NODE_ENV === "development") {
-      const checks = [
-        { fg: buttonTextColor, bg: buttonColor, name: "Button text on button" },
-        { fg: textColor, bg: backgroundColor, name: "Text on background" },
-        { fg: textColor, bg: cardColor, name: "Text on card" },
-      ];
-
-      for (const check of checks) {
-        if (check.fg && check.bg) {
-          const ratio = getContrastRatio(check.fg, check.bg);
-          if (ratio < 4.5) {
-            console.warn(
-              `⚠️ WCAG Contrast Warning: ${check.name} has ratio ${ratio.toFixed(2)}:1 (needs 4.5:1 for AA).`,
-              `\n  Foreground: ${check.fg}`,
-              `\n  Background: ${check.bg}`,
-              `\n  Portal: ${portal.slug}`
-            );
-          }
-        }
-      }
-    }
-  }, [buttonTextColor, buttonColor, textColor, backgroundColor, cardColor, portal.slug]);
-
-  // Set data attributes on body element for component style targeting
-  useEffect(() => {
-    const body = document.body;
-
-    // Set card style
-    if (componentStyle.card_style && componentStyle.card_style !== "default") {
-      body.dataset.cardStyle = componentStyle.card_style;
-    } else {
-      delete body.dataset.cardStyle;
-    }
-
-    // Set button style
-    if (componentStyle.button_style && componentStyle.button_style !== "default") {
-      body.dataset.buttonStyle = componentStyle.button_style;
-    } else {
-      delete body.dataset.buttonStyle;
-    }
-
-    // Set glow state
-    if (!componentStyle.glow_enabled) {
-      body.dataset.glow = "disabled";
-    } else {
-      delete body.dataset.glow;
-    }
-
-    // Set glass state
-    if (!componentStyle.glass_enabled) {
-      body.dataset.glass = "disabled";
-    } else {
-      delete body.dataset.glass;
-    }
-
-    // Set animation level
-    if (componentStyle.animations && componentStyle.animations !== "full") {
-      body.dataset.animations = componentStyle.animations;
-    } else {
-      delete body.dataset.animations;
-    }
-
-    // Set theme mode
-    if (isLight) {
-      body.dataset.theme = "light";
-    } else {
-      delete body.dataset.theme;
-    }
-
-    // Cleanup on unmount
-    return () => {
-      delete body.dataset.cardStyle;
-      delete body.dataset.buttonStyle;
-      delete body.dataset.glow;
-      delete body.dataset.glass;
-      delete body.dataset.animations;
-      delete body.dataset.theme;
-    };
-  }, [componentStyle, isLight]);
-
   // Don't render anything if no customizations
   if (!styleContent && !googleFontsUrl) {
     return null;
@@ -491,7 +409,7 @@ export function PortalTheme({ portal }: PortalThemeProps) {
 
       {/* Inject portal theme CSS variables */}
       {styleContent && (
-        <style dangerouslySetInnerHTML={{ __html: styleContent }} />
+        <style nonce={nonce} dangerouslySetInnerHTML={{ __html: styleContent }} />
       )}
     </>
   );

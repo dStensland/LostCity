@@ -1,0 +1,12 @@
+version: 1
+slug: marathon-music-works
+name: Marathon Music Works
+integration_method: llm_crawler
+defaults: {}
+discovery:
+  enabled: true
+  type: html
+  urls:
+  - https://www.marathonmusicworks.com/tickets/
+detail:
+  enabled: false

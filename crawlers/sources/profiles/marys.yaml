@@ -1,0 +1,12 @@
+version: 1
+slug: marys
+name: Mary's
+integration_method: llm_crawler
+defaults: {}
+discovery:
+  enabled: true
+  type: html
+  urls:
+  - https://www.instagram.com/marysatl/
+detail:
+  enabled: false

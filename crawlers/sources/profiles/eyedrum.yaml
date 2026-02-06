@@ -1,0 +1,14 @@
+version: 1
+slug: eyedrum
+name: Eyedrum
+integration_method: playwright
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://eyedrum.org/calendar-events-performances-art-music
+  fetch:
+    render_js: true
+detail:
+  enabled: false

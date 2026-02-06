@@ -1,0 +1,12 @@
+version: 1
+slug: strand-theatre
+name: Earl Smith Strand Theatre
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.earlsmithstrand.org
+detail:
+  enabled: false

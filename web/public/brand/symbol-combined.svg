@@ -1,0 +1,30 @@
+<svg viewBox="0 0 100 90" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="neonGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#00e5ff"/>
+      <stop offset="50%" stop-color="#ff6b7a"/>
+      <stop offset="100%" stop-color="#e040fb"/>
+    </linearGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="2" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Top skyline (dark blue) -->
+  <path
+    d="M10 45 L10 38 L18 38 L18 28 L26 28 L26 18 L34 18 L34 8 L42 8 L42 18 L50 18 L50 28 L58 28 L58 18 L66 18 L66 8 L74 8 L74 18 L82 18 L82 28 L90 28 L90 38 L90 45 Z"
+    fill="#1a3a5c"
+  />
+
+  <!-- Bottom reflection (neon gradient) -->
+  <path
+    d="M10 48 L10 55 L18 55 L18 65 L26 65 L26 75 L34 75 L34 85 L42 85 L42 75 L50 75 L50 65 L58 65 L58 75 L66 75 L66 85 L74 85 L74 75 L82 75 L82 65 L90 65 L90 55 L90 48 Z"
+    fill="url(#neonGradient)"
+    filter="url(#glow)"
+    opacity="0.9"
+  />
+</svg>

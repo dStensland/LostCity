@@ -50,6 +50,8 @@ interface AnimatedEventListProps {
   isFetchingNextPage?: boolean;
   isRefetching?: boolean;
   getFriendsForEvent?: (eventId: number) => FriendGoing[];
+  collapseFestivals?: boolean;
+  collapseFestivalPrograms?: boolean;
 }
 
 /**
@@ -64,6 +66,8 @@ export default function AnimatedEventList({
   isFetchingNextPage = false,
   isRefetching = false,
   getFriendsForEvent,
+  collapseFestivals = true,
+  collapseFestivalPrograms,
 }: AnimatedEventListProps) {
   // Track initial events for animation purposes (use state since we read during render)
   const [initialEventIds, setInitialEventIds] = useState<Set<number>>(new Set());
@@ -96,9 +100,12 @@ export default function AnimatedEventList({
 
   return (
     <div className={showDimmed ? "opacity-60 transition-opacity duration-200" : ""}>
-      {dates.map((date, dateIndex) => {
+      {dates.map((date) => {
         const dateEvents = eventsByDate[date];
-        const displayItems = groupEventsForDisplay(dateEvents);
+        const displayItems = groupEventsForDisplay(dateEvents, {
+          collapseFestivals,
+          collapseFestivalPrograms,
+        });
         const timePeriods = groupByTimePeriod(displayItems);
         const eventCount = dateEvents.length;
 
@@ -106,7 +113,6 @@ export default function AnimatedEventList({
           <section
             key={date}
             className="animate-fade-in"
-            style={{ animationDelay: `${dateIndex * 0.05}s` }}
           >
             {/* Date header - improved typography hierarchy */}
             <div className="sticky top-[165px] bg-[var(--void)]/95 backdrop-blur-sm z-20 py-3 -mx-4 px-4 border-b border-[var(--twilight)]/30">
@@ -161,16 +167,13 @@ export default function AnimatedEventList({
                         : item.type === "series-group"
                         ? `series-${item.seriesId}`
                         : item.type === "festival-group"
-                        ? `festival-${item.seriesId}`
+                        ? `festival-${item.festivalId}`
                         : `cat-${item.categoryId}`;
 
                     return (
                       <div
                         key={key}
                         className={isInfiniteScrollItem ? "" : "animate-card-emerge"}
-                        style={{
-                          animationDelay: isInfiniteScrollItem ? undefined : `${idx * 0.03}s`,
-                        }}
                       >
                         {renderItem(item, idx, portalSlug, isInfiniteScrollItem, getFriendsForEvent)}
                       </div>
@@ -217,7 +220,7 @@ function renderItem(
   if (item.type === "festival-group") {
     return (
       <FestivalCard
-        series={item.series}
+        festival={item.festival}
         summary={item.summary}
         portalSlug={portalSlug}
         skipAnimation={skipAnimation}

@@ -1,0 +1,1024 @@
+[
+  {
+    "slug": "ticketmaster",
+    "url": "https://app.ticketmaster.com",
+    "events": "963",
+    "method": "api",
+    "signals": {
+      "feed_confirmed": false,
+      "feed_format": null,
+      "feed_links": [],
+      "has_jsonld_event": false,
+      "jsonld_fields": {},
+      "looks_js_app": false,
+      "text_len": 76,
+      "api_candidate": true,
+      "aggregator_candidate": true
+    },
+    "notes": [
+      "URL looks like JSON/API; verify if first-party API is available."
+    ]
+  },
+  {
+    "slug": "ticketmaster-nashville",
+    "url": "https://www.ticketmaster.com",
+    "events": "853",
+    "method": "api",
+    "signals": {
+      "feed_confirmed": false,
+      "feed_format": null,
+      "feed_links": [],
+      "has_jsonld_event": false,
+      "jsonld_fields": {},
+      "looks_js_app": false,
+      "text_len": 20,
+      "api_candidate": true,
+      "aggregator_candidate": true
+    },
+    "notes": [
+      "URL looks like JSON/API; verify if first-party API is available."
+    ]
+  },
+  {
+    "slug": "stone-mountain-park",
+    "url": "https://stonemountainpark.com/activities/events/",
+    "events": "832",
+    "method": "llm_crawler",
+    "signals": {
+      "feed_confirmed": false,
+      "feed_format": null,
+      "feed_links": [],
+      "has_jsonld_event": false,
+      "jsonld_fields": {},
+      "looks_js_app": false,
+      "text_len": 33,
+      "api_candidate": false,
+      "aggregator_candidate": false
+    },
+    "notes": [
+      "No strong structured signals; LLM-powered discovery likely required."
+    ]
+  },
+  {
+    "slug": "painting-with-a-twist",
+    "url": "https://www.paintingwithatwist.com",
+    "events": "807",
+    "method": "html",
+    "signals": {
+      "feed_confirmed": false,
+      "feed_format": null,
+      "feed_links": [],
+      "has_jsonld_event": false,
+      "jsonld_fields": {},
+      "looks_js_app": false,
+      "text_len": 3796,
+      "api_candidate": false,
+      "aggregator_candidate": false
+    },
+    "notes": [
+      "Static HTML with enough text to parse deterministically."
+    ]
+  },
+  {
+    "slug": "fulton-library",
+    "url": "https://www.fulcolibrary.org",
+    "events": "559",
+    "method": "html",
+    "signals": {
+      "feed_confirmed": false,
+      "feed_format": null,
+      "feed_links": [
+        "https://www.fulcolibrary.org/feed/",
+        "https://www.fulcolibrary.org/comments/feed/",
+        "https://www.fulcolibrary.org/homepage-third-draft/feed/"
+      ],
+      "has_jsonld_event": false,
+      "jsonld_fields": {},
+      "looks_js_app": false,
+      "text_len": 10887,
+      "api_candidate": false,
+      "aggregator_candidate": false
+    },
+    "notes": [
+      "Static HTML with enough text to parse deterministically."
+    ]
+  },
+  {
+    "slug": "the-masquerade",
+    "url": "https://www.masqueradeatlanta.com",
+    "events": "387",
+    "method": "llm_crawler",
+    "signals": {
+      "feed_confirmed": false,
+      "feed_format": null,
+      "feed_links": [],
+      "has_jsonld_event": false,
+      "jsonld_fields": {},
+      "looks_js_app": false,
+      "text_len": 33,
+      "api_candidate": false,
+      "aggregator_candidate": false
+    },
+    "notes": [
+      "No strong structured signals; LLM-powered discovery likely required."
+    ]
+  },
+  {
+    "slug": "atlanta-recurring-social",
+    "url": "https://badslava.com/",
+    "events": "321",
+    "method": "html",
+    "signals": {
+      "feed_confirmed": false,
+      "feed_format": null,
+      "feed_links": [],
+      "has_jsonld_event": false,
+      "jsonld_fields": {},
+      "looks_js_app": false,
+      "text_len": 10957,
+      "api_candidate": false,
+      "aggregator_candidate": false
+    },
+    "notes": [
+      "Static HTML with enough text to parse deterministically."
+    ]
+  },
+  {
+    "slug": "springs-cinema",
+    "url": "https://www.springscinema.com",
+    "events": "249",
+    "method": "llm_crawler",
+    "signals": {
+      "feed_confirmed": false,
+      "feed_format": null,
+      "feed_links": [],
+      "has_jsonld_event": false,
+      "jsonld_fields": {},
+      "looks_js_app": false,
+      "text_len": 42,
+      "api_candidate": false,
+      "aggregator_candidate": false
+    },
+    "notes": [
+      "No strong structured signals; LLM-powered discovery likely required."
+    ]
+  },
+  {
+    "slug": "tara-theatre",
+    "url": "https://www.taraatlanta.com",
+    "events": "189",
+    "method": "llm_crawler",
+    "signals": {
+      "feed_confirmed": false,
+      "feed_format": null,
+      "feed_links": [],
+      "has_jsonld_event": false,
+      "jsonld_fields": {},
+      "looks_js_app": false,
+      "text_len": 19,
+      "api_candidate": false,
+      "aggregator_candidate": false
+    },
+    "notes": [
+      "No strong structured signals; LLM-powered discovery likely required."
+    ]
+  },
+  {
+    "slug": "eventbrite",
+    "url": "https://api.eventbrite.com",
+    "events": "168",
+    "method": "aggregator",
+    "signals": {
+      "feed_confirmed": false,
+      "feed_format": null,
+      "feed_links": [],
+      "has_jsonld_event": false,
+      "jsonld_fields": {},
+      "looks_js_app": false,
+      "text_len": 3296,
+      "api_candidate": false,
+      "aggregator_candidate": true
+    },
+    "notes": [
+      "Aggregator domain detected (Ticketmaster/Eventbrite)."
+    ]
+  },
+  {
+    "slug": "third-and-lindsley",
+    "url": "https://www.3rdandlindsley.com/calendar/",
+    "events": "153",
+    "method": "llm_crawler",
+    "signals": {
+      "feed_confirmed": false,
+      "feed_format": null,
+      "feed_links": [],
+      "has_jsonld_event": false,
+      "jsonld_fields": {},
+      "looks_js_app": false,
+      "text_len": 33,
+      "api_candidate": false,
+      "aggregator_candidate": false
+    },
+    "notes": [
+      "No strong structured signals; LLM-powered discovery likely required."
+    ]
+  },
+  {
+    "slug": "eventbrite-nashville",
+    "url": "https://www.eventbrite.com/d/tn--nashville/events/",
+    "events": "147",
+    "method": "aggregator",
+    "signals": {
+      "feed_confirmed": false,
+      "feed_format": null,
+      "feed_links": [],
+      "has_jsonld_event": false,
+      "jsonld_fields": {},
+      "looks_js_app": false,
+      "text_len": 47103,
+      "api_candidate": false,
+      "aggregator_candidate": true
+    },
+    "notes": [
+      "Aggregator domain detected (Ticketmaster/Eventbrite)."
+    ]
+  },
+  {
+    "slug": "dads-garage",
+    "url": "https://dadsgarage.com/shows",
+    "events": "129",
+    "method": "html",
+    "signals": {
+      "feed_confirmed": false,
+      "feed_format": null,
+      "feed_links": [],
+      "has_jsonld_event": false,
+      "jsonld_fields": {},
+      "looks_js_app": false,
+      "text_len": 56008,
+      "api_candidate": false,
+      "aggregator_candidate": false
+    },
+    "notes": [
+      "Static HTML with enough text to parse deterministically."
+    ]
+  },
+  {
+    "slug": "gsu-athletics",
+    "url": "https://georgiastatesports.com",
+    "events": "127",
+    "method": "llm_crawler",
+    "signals": {
+      "feed_confirmed": false,
+      "feed_format": null,
+      "feed_links": [],
+      "has_jsonld_event": false,
+      "jsonld_fields": {},
+      "looks_js_app": false,
+      "text_len": 0,
+      "api_candidate": false,
+      "aggregator_candidate": false
+    },
+    "notes": [
+      "No strong structured signals; LLM-powered discovery likely required."
+    ]
+  },
+  {
+    "slug": "georgia-tech-athletics",
+    "url": "https://ramblinwreck.com",
+    "events": "124",
+    "method": "html",
+    "signals": {
+      "feed_confirmed": false,
+      "feed_format": null,
+      "feed_links": [
+        "https://ramblinwreck.com/feed/"
+      ],
+      "has_jsonld_event": false,
+      "jsonld_fields": {},
+      "looks_js_app": false,
+      "text_len": 5583,
+      "api_candidate": false,
+      "aggregator_candidate": false
+    },
+    "notes": [
+      "Static HTML with enough text to parse deterministically."
+    ]
+  },
+  {
+    "slug": "piedmont-healthcare",
+    "url": "https://www.piedmont.org/classes-and-events/classes-and-events",
+    "events": "103",
+    "method": "llm_crawler",
+    "signals": {
+      "feed_confirmed": false,
+      "feed_format": null,
+      "feed_links": [],
+      "has_jsonld_event": false,
+      "jsonld_fields": {},
+      "looks_js_app": false,
+      "text_len": 15,
+      "api_candidate": false,
+      "aggregator_candidate": false
+    },
+    "notes": [
+      "No strong structured signals; LLM-powered discovery likely required."
+    ]
+  },
+  {
+    "slug": "basement-east",
+    "url": "https://www.thebasementnashville.com/basement-east-calendar/",
+    "events": "93",
+    "method": "llm_crawler",
+    "signals": {
+      "feed_confirmed": false,
+      "feed_format": null,
+      "feed_links": [],
+      "has_jsonld_event": false,
+      "jsonld_fields": {},
+      "looks_js_app": false,
+      "text_len": 33,
+      "api_candidate": false,
+      "aggregator_candidate": false
+    },
+    "notes": [
+      "No strong structured signals; LLM-powered discovery likely required."
+    ]
+  },
+  {
+    "slug": "the-earl",
+    "url": "https://badearl.com/events",
+    "events": "81",
+    "method": "html",
+    "signals": {
+      "feed_confirmed": false,
+      "feed_format": null,
+      "feed_links": [
+        "https://badearl.com/feed/",
+        "https://badearl.com/comments/feed/"
+      ],
+      "has_jsonld_event": false,
+      "jsonld_fields": {},
+      "looks_js_app": false,
+      "text_len": 650,
+      "api_candidate": false,
+      "aggregator_candidate": false
+    },
+    "notes": [
+      "Static HTML with enough text to parse deterministically."
+    ]
+  },
+  {
+    "slug": "factory-franklin",
+    "url": "https://factoryatfranklin.com/events/",
+    "events": "78",
+    "method": "jsonld_only",
+    "signals": {
+      "feed_confirmed": false,
+      "feed_format": null,
+      "feed_links": [
+        "https://factoryatfranklin.com/events/feed/"
+      ],
+      "has_jsonld_event": true,
+      "jsonld_fields": {
+        "title": true,
+        "start_date": true,
+        "ticket_url": false,
+        "image_url": true,
+        "description": true
+      },
+      "looks_js_app": false,
+      "text_len": 44009,
+      "api_candidate": false,
+      "aggregator_candidate": false
+    },
+    "notes": [
+      "JSON-LD Event appears complete enough to ingest without HTML selectors."
+    ]
+  },
+  {
+    "slug": "freeroll-atlanta",
+    "url": "https://www.freerollatlanta.com",
+    "events": "77",
+    "method": "html",
+    "signals": {
+      "feed_confirmed": false,
+      "feed_format": null,
+      "feed_links": [
+        "https://www.freerollatlanta.com/feed/",
+        "https://www.freerollatlanta.com/comments/feed/"
+      ],
+      "has_jsonld_event": false,
+      "jsonld_fields": {},
+      "looks_js_app": false,
+      "text_len": 1199,
+      "api_candidate": false,
+      "aggregator_candidate": false
+    },
+    "notes": [
+      "Static HTML with enough text to parse deterministically."
+    ]
+  },
+  {
+    "slug": "city-springs",
+    "url": "https://citysprings.com/events/",
+    "events": "71",
+    "method": "html",
+    "signals": {
+      "feed_confirmed": false,
+      "feed_format": null,
+      "feed_links": [],
+      "has_jsonld_event": false,
+      "jsonld_fields": {},
+      "looks_js_app": false,
+      "text_len": 16781,
+      "api_candidate": false,
+      "aggregator_candidate": false
+    },
+    "notes": [
+      "Static HTML with enough text to parse deterministically."
+    ]
+  },
+  {
+    "slug": "529",
+    "url": "https://529atlanta.com/calendar/",
+    "events": "71",
+    "method": "html",
+    "signals": {
+      "feed_confirmed": false,
+      "feed_format": null,
+      "feed_links": [
+        "https://529atlanta.com/feed/",
+        "https://529atlanta.com/comments/feed/"
+      ],
+      "has_jsonld_event": false,
+      "jsonld_fields": {},
+      "looks_js_app": false,
+      "text_len": 5861,
+      "api_candidate": false,
+      "aggregator_candidate": false
+    },
+    "notes": [
+      "Static HTML with enough text to parse deterministically."
+    ]
+  },
+  {
+    "slug": "terminal-west",
+    "url": "https://terminalwestatl.com/events",
+    "events": "68",
+    "method": "llm_crawler",
+    "signals": {
+      "feed_confirmed": false,
+      "feed_format": null,
+      "feed_links": [],
+      "has_jsonld_event": false,
+      "jsonld_fields": {},
+      "looks_js_app": false,
+      "text_len": 33,
+      "api_candidate": false,
+      "aggregator_candidate": false
+    },
+    "notes": [
+      "No strong structured signals; LLM-powered discovery likely required."
+    ]
+  },
+  {
+    "slug": "brooklyn-bowl-nashville",
+    "url": "https://www.brooklynbowl.com/nashville/shows/all",
+    "events": "65",
+    "method": "aggregator",
+    "signals": {
+      "feed_confirmed": false,
+      "feed_format": null,
+      "feed_links": [],
+      "has_jsonld_event": false,
+      "jsonld_fields": {},
+      "looks_js_app": false,
+      "text_len": 10993,
+      "api_candidate": false,
+      "aggregator_candidate": true
+    },
+    "notes": [
+      "Aggregator domain detected (Ticketmaster/Eventbrite)."
+    ]
+  },
+  {
+    "slug": "lore-atlanta",
+    "url": "https://loreatl.com",
+    "events": "64",
+    "method": "html",
+    "signals": {
+      "feed_confirmed": false,
+      "feed_format": null,
+      "feed_links": [],
+      "has_jsonld_event": false,
+      "jsonld_fields": {},
+      "looks_js_app": false,
+      "text_len": 1092,
+      "api_candidate": false,
+      "aggregator_candidate": false
+    },
+    "notes": [
+      "Static HTML with enough text to parse deterministically."
+    ]
+  },
+  {
+    "slug": "tabernacle",
+    "url": "https://www.tabernacleatl.com",
+    "events": "63",
+    "method": "aggregator",
+    "signals": {
+      "feed_confirmed": false,
+      "feed_format": null,
+      "feed_links": [],
+      "has_jsonld_event": true,
+      "jsonld_fields": {
+        "title": true,
+        "start_date": true,
+        "ticket_url": false,
+        "image_url": true,
+        "description": false
+      },
+      "looks_js_app": false,
+      "text_len": 7155,
+      "api_candidate": false,
+      "aggregator_candidate": true
+    },
+    "notes": [
+      "Aggregator domain detected (Ticketmaster/Eventbrite)."
+    ]
+  },
+  {
+    "slug": "meetup",
+    "url": "https://api.meetup.com",
+    "events": "62",
+    "method": "api",
+    "signals": {
+      "feed_confirmed": false,
+      "feed_format": null,
+      "feed_links": [],
+      "has_jsonld_event": false,
+      "jsonld_fields": {},
+      "looks_js_app": false,
+      "text_len": 23,
+      "api_candidate": true,
+      "aggregator_candidate": false
+    },
+    "notes": [
+      "URL looks like JSON/API; verify if first-party API is available."
+    ]
+  },
+  {
+    "slug": "piedmont-park",
+    "url": "https://www.piedmontpark.org",
+    "events": "60",
+    "method": "html",
+    "signals": {
+      "feed_confirmed": false,
+      "feed_format": null,
+      "feed_links": [
+        "https://piedmontpark.org/feed/",
+        "https://piedmontpark.org/comments/feed/",
+        "https://piedmontpark.org/calendar/?ical=1"
+      ],
+      "has_jsonld_event": false,
+      "jsonld_fields": {},
+      "looks_js_app": false,
+      "text_len": 3325,
+      "api_candidate": false,
+      "aggregator_candidate": false
+    },
+    "notes": [
+      "Static HTML with enough text to parse deterministically."
+    ]
+  },
+  {
+    "slug": "ksu-athletics",
+    "url": "https://ksuowls.com",
+    "events": "59",
+    "method": "llm_crawler",
+    "signals": {
+      "feed_confirmed": false,
+      "feed_format": null,
+      "feed_links": [],
+      "has_jsonld_event": false,
+      "jsonld_fields": {},
+      "looks_js_app": false,
+      "text_len": 0,
+      "api_candidate": false,
+      "aggregator_candidate": false
+    },
+    "notes": [
+      "No strong structured signals; LLM-powered discovery likely required."
+    ]
+  },
+  {
+    "slug": "gwcc",
+    "url": "https://www.gwcca.org/event-calendar",
+    "events": "54",
+    "method": "llm_crawler",
+    "signals": {
+      "feed_confirmed": false,
+      "feed_format": null,
+      "feed_links": [],
+      "has_jsonld_event": false,
+      "jsonld_fields": {},
+      "looks_js_app": false,
+      "text_len": 58,
+      "api_candidate": false,
+      "aggregator_candidate": false
+    },
+    "notes": [
+      "No strong structured signals; LLM-powered discovery likely required."
+    ]
+  },
+  {
+    "slug": "mjq-concourse",
+    "url": "https://www.mjqofficial.com",
+    "events": "53",
+    "method": "html",
+    "signals": {
+      "feed_confirmed": false,
+      "feed_format": null,
+      "feed_links": [],
+      "has_jsonld_event": false,
+      "jsonld_fields": {},
+      "looks_js_app": false,
+      "text_len": 1049,
+      "api_candidate": false,
+      "aggregator_candidate": false
+    },
+    "notes": [
+      "Static HTML with enough text to parse deterministically."
+    ]
+  },
+  {
+    "slug": "variety-playhouse",
+    "url": "https://varietyplayhouse.com",
+    "events": "52",
+    "method": "unknown",
+    "signals": {},
+    "notes": [
+      "audit_error: Server disconnected without sending a response."
+    ]
+  },
+  {
+    "slug": "big-peach-running",
+    "url": "https://www.bigpeachrunningco.com",
+    "events": "51",
+    "method": "llm_crawler",
+    "signals": {
+      "feed_confirmed": false,
+      "feed_format": null,
+      "feed_links": [],
+      "has_jsonld_event": false,
+      "jsonld_fields": {},
+      "looks_js_app": false,
+      "text_len": 33,
+      "api_candidate": false,
+      "aggregator_candidate": false
+    },
+    "notes": [
+      "No strong structured signals; LLM-powered discovery likely required."
+    ]
+  },
+  {
+    "slug": "exit-in",
+    "url": "https://exitin.com/calendar/",
+    "events": "49",
+    "method": "llm_crawler",
+    "signals": {
+      "feed_confirmed": false,
+      "feed_format": null,
+      "feed_links": [],
+      "has_jsonld_event": false,
+      "jsonld_fields": {},
+      "looks_js_app": false,
+      "text_len": 33,
+      "api_candidate": false,
+      "aggregator_candidate": false
+    },
+    "notes": [
+      "No strong structured signals; LLM-powered discovery likely required."
+    ]
+  },
+  {
+    "slug": "schermerhorn",
+    "url": "https://www.nashvillesymphony.org/tickets/",
+    "events": "48",
+    "method": "html",
+    "signals": {
+      "feed_confirmed": false,
+      "feed_format": null,
+      "feed_links": [],
+      "has_jsonld_event": false,
+      "jsonld_fields": {},
+      "looks_js_app": false,
+      "text_len": 27903,
+      "api_candidate": false,
+      "aggregator_candidate": false
+    },
+    "notes": [
+      "Static HTML with enough text to parse deterministically."
+    ]
+  },
+  {
+    "slug": "eddies-attic",
+    "url": "https://eddiesattic.com",
+    "events": "47",
+    "method": "html",
+    "signals": {
+      "feed_confirmed": false,
+      "feed_format": null,
+      "feed_links": [],
+      "has_jsonld_event": false,
+      "jsonld_fields": {},
+      "looks_js_app": false,
+      "text_len": 1592,
+      "api_candidate": false,
+      "aggregator_candidate": false
+    },
+    "notes": [
+      "Static HTML with enough text to parse deterministically."
+    ]
+  },
+  {
+    "slug": "franklin-theatre",
+    "url": "https://www.franklintheatre.com/all-events/",
+    "events": "47",
+    "method": "html",
+    "signals": {
+      "feed_confirmed": false,
+      "feed_format": null,
+      "feed_links": [],
+      "has_jsonld_event": false,
+      "jsonld_fields": {},
+      "looks_js_app": false,
+      "text_len": 1161,
+      "api_candidate": false,
+      "aggregator_candidate": false
+    },
+    "notes": [
+      "Static HTML with enough text to parse deterministically."
+    ]
+  },
+  {
+    "slug": "landmark-midtown",
+    "url": "https://www.landmarktheatres.com/atlanta/midtown-art-cinema",
+    "events": "45",
+    "method": "html",
+    "signals": {
+      "feed_confirmed": false,
+      "feed_format": null,
+      "feed_links": [],
+      "has_jsonld_event": false,
+      "jsonld_fields": {},
+      "looks_js_app": false,
+      "text_len": 2828,
+      "api_candidate": false,
+      "aggregator_candidate": false
+    },
+    "notes": [
+      "Static HTML with enough text to parse deterministically."
+    ]
+  },
+  {
+    "slug": "boot-barn-hall",
+    "url": "https://www.thehallga.com/calendar",
+    "events": "44",
+    "method": "html",
+    "signals": {
+      "feed_confirmed": false,
+      "feed_format": null,
+      "feed_links": [],
+      "has_jsonld_event": false,
+      "jsonld_fields": {},
+      "looks_js_app": false,
+      "text_len": 6834,
+      "api_candidate": false,
+      "aggregator_candidate": false
+    },
+    "notes": [
+      "Static HTML with enough text to parse deterministically."
+    ]
+  },
+  {
+    "slug": "laughing-skull",
+    "url": "https://laughingskulllounge.com",
+    "events": "44",
+    "method": "html",
+    "signals": {
+      "feed_confirmed": false,
+      "feed_format": null,
+      "feed_links": [],
+      "has_jsonld_event": true,
+      "jsonld_fields": {
+        "title": true,
+        "start_date": true,
+        "ticket_url": true,
+        "image_url": false,
+        "description": false
+      },
+      "looks_js_app": false,
+      "text_len": 11441,
+      "api_candidate": false,
+      "aggregator_candidate": false
+    },
+    "notes": [
+      "JSON-LD Event present but incomplete; use HTML selectors with JSON-LD precedence."
+    ]
+  },
+  {
+    "slug": "the-eastern",
+    "url": "https://easternatl.com",
+    "events": "42",
+    "method": "html",
+    "signals": {
+      "feed_confirmed": false,
+      "feed_format": null,
+      "feed_links": [],
+      "has_jsonld_event": false,
+      "jsonld_fields": {},
+      "looks_js_app": false,
+      "text_len": 672,
+      "api_candidate": false,
+      "aggregator_candidate": false
+    },
+    "notes": [
+      "Static HTML with enough text to parse deterministically."
+    ]
+  },
+  {
+    "slug": "coca-cola-roxy",
+    "url": "https://www.roxyatlanta.com",
+    "events": "42",
+    "method": "llm_crawler",
+    "signals": {
+      "feed_confirmed": false,
+      "feed_format": null,
+      "feed_links": [],
+      "has_jsonld_event": false,
+      "jsonld_fields": {},
+      "looks_js_app": false,
+      "text_len": 0,
+      "api_candidate": false,
+      "aggregator_candidate": false
+    },
+    "notes": [
+      "No strong structured signals; LLM-powered discovery likely required."
+    ]
+  },
+  {
+    "slug": "aisle5",
+    "url": "https://www.aaborhood.com",
+    "events": "40",
+    "method": "unknown",
+    "signals": {},
+    "notes": [
+      "audit_error: [Errno 8] nodename nor servname provided, or not known"
+    ]
+  },
+  {
+    "slug": "puppetry-arts",
+    "url": "https://puppet.org",
+    "events": "39",
+    "method": "html",
+    "signals": {
+      "feed_confirmed": false,
+      "feed_format": null,
+      "feed_links": [
+        "https://puppet.org/feed/",
+        "https://puppet.org/comments/feed/"
+      ],
+      "has_jsonld_event": false,
+      "jsonld_fields": {},
+      "looks_js_app": false,
+      "text_len": 5376,
+      "api_candidate": false,
+      "aggregator_candidate": false
+    },
+    "notes": [
+      "Static HTML with enough text to parse deterministically."
+    ]
+  },
+  {
+    "slug": "helium-comedy",
+    "url": "https://atlanta.heliumcomedy.com",
+    "events": "38",
+    "method": "html",
+    "signals": {
+      "feed_confirmed": false,
+      "feed_format": null,
+      "feed_links": [],
+      "has_jsonld_event": false,
+      "jsonld_fields": {},
+      "looks_js_app": false,
+      "text_len": 2105,
+      "api_candidate": false,
+      "aggregator_candidate": false
+    },
+    "notes": [
+      "Static HTML with enough text to parse deterministically."
+    ]
+  },
+  {
+    "slug": "kennesaw-state",
+    "url": "https://arts.kennesaw.edu",
+    "events": "37",
+    "method": "html",
+    "signals": {
+      "feed_confirmed": false,
+      "feed_format": null,
+      "feed_links": [],
+      "has_jsonld_event": false,
+      "jsonld_fields": {},
+      "looks_js_app": false,
+      "text_len": 6001,
+      "api_candidate": false,
+      "aggregator_candidate": false
+    },
+    "notes": [
+      "Static HTML with enough text to parse deterministically."
+    ]
+  },
+  {
+    "slug": "moda",
+    "url": "https://www.museumofdesign.org/events",
+    "events": "37",
+    "method": "html",
+    "signals": {
+      "feed_confirmed": false,
+      "feed_format": null,
+      "feed_links": [],
+      "has_jsonld_event": false,
+      "jsonld_fields": {},
+      "looks_js_app": false,
+      "text_len": 10355,
+      "api_candidate": false,
+      "aggregator_candidate": false
+    },
+    "notes": [
+      "Static HTML with enough text to parse deterministically."
+    ]
+  },
+  {
+    "slug": "red-light-cafe",
+    "url": "https://www.redlightcafe.com",
+    "events": "37",
+    "method": "aggregator",
+    "signals": {
+      "feed_confirmed": false,
+      "feed_format": null,
+      "feed_links": [],
+      "has_jsonld_event": false,
+      "jsonld_fields": {},
+      "looks_js_app": false,
+      "text_len": 24021,
+      "api_candidate": false,
+      "aggregator_candidate": true
+    },
+    "notes": [
+      "Aggregator domain detected (Ticketmaster/Eventbrite)."
+    ]
+  },
+  {
+    "slug": "home-depot-kids-workshops",
+    "url": "https://www.homedepot.com/workshops/",
+    "events": "36",
+    "method": "llm_crawler",
+    "signals": {
+      "feed_confirmed": false,
+      "feed_format": null,
+      "feed_links": [],
+      "has_jsonld_event": false,
+      "jsonld_fields": {},
+      "looks_js_app": false,
+      "text_len": 166,
+      "api_candidate": false,
+      "aggregator_candidate": false
+    },
+    "notes": [
+      "No strong structured signals; LLM-powered discovery likely required."
+    ]
+  },
+  {
+    "slug": "a-cappella-books",
+    "url": "https://www.acappellabooks.com",
+    "events": "36",
+    "method": "html",
+    "signals": {
+      "feed_confirmed": false,
+      "feed_format": null,
+      "feed_links": [],
+      "has_jsonld_event": false,
+      "jsonld_fields": {},
+      "looks_js_app": false,
+      "text_len": 3669,
+      "api_candidate": false,
+      "aggregator_candidate": false
+    },
+    "notes": [
+      "Static HTML with enough text to parse deterministically."
+    ]
+  }
+]

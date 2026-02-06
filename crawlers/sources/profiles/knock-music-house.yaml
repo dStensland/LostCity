@@ -1,0 +1,14 @@
+version: 1
+slug: knock-music-house
+name: Knock Music House
+integration_method: playwright
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.knockmusichouse.com
+  fetch:
+    render_js: true
+detail:
+  enabled: false

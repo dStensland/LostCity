@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import CategoryIcon, { getCategoryColor } from "./CategoryIcon";
+import { getCategoryColor } from "./CategoryIcon";
 
 export interface ActivityChipProps {
   label: string;

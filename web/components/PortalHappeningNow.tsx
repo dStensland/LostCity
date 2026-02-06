@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/client";
 import EventCard from "./EventCard";
 import type { Event } from "@/lib/supabase";
 import { getLocalDateString } from "@/lib/formats";
+import Skeleton from "@/components/Skeleton";
 
 type EventWithVenue = Event & {
   venue?: {
@@ -27,6 +28,7 @@ interface Props {
 export default function PortalHappeningNow({ portalId, portalSlug, isExclusive = false }: Props) {
   const [events, setEvents] = useState<EventWithVenue[]>([]);
   const [loading, setLoading] = useState(true);
+  const supabase = useMemo(() => createClient(), []);
 
   useEffect(() => {
     let isMounted = true;
@@ -127,7 +129,7 @@ export default function PortalHappeningNow({ portalId, portalSlug, isExclusive =
       isMounted = false;
       clearInterval(interval);
     };
-  }, [portalId, isExclusive]);
+  }, [portalId, isExclusive, supabase]);
 
   if (loading) {
     return (
@@ -140,8 +142,7 @@ export default function PortalHappeningNow({ portalId, portalSlug, isExclusive =
           {[...Array(3)].map((_, i) => (
             <div
               key={i}
-              className="p-3 rounded-lg border border-[var(--twilight)]"
-              style={{ backgroundColor: "var(--card-bg)" }}
+              className="p-3 rounded-lg border border-[var(--twilight)] bg-[var(--card-bg)]"
             >
               <div className="flex gap-3">
                 <div className="flex-shrink-0 w-12 flex flex-col items-center justify-center">
@@ -150,11 +151,11 @@ export default function PortalHappeningNow({ portalId, portalSlug, isExclusive =
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-2">
                     <div className="w-3.5 h-3.5 rounded skeleton-shimmer" />
-                    <div className="h-4 rounded w-3/4 skeleton-shimmer" style={{ animationDelay: `${i * 0.1}s` }} />
+                    <Skeleton className="h-4 rounded w-3/4" delay={`${i * 0.1}s`} />
                   </div>
                   <div className="flex items-center gap-1.5">
-                    <div className="h-3 rounded w-24 skeleton-shimmer" style={{ animationDelay: `${i * 0.1 + 0.1}s` }} />
-                    <div className="h-3 rounded w-16 skeleton-shimmer" style={{ animationDelay: `${i * 0.1 + 0.15}s` }} />
+                    <Skeleton className="h-3 rounded w-24" delay={`${i * 0.1 + 0.1}s`} />
+                    <Skeleton className="h-3 rounded w-16" delay={`${i * 0.1 + 0.15}s`} />
                   </div>
                 </div>
               </div>
@@ -207,8 +208,8 @@ export default function PortalHappeningNow({ portalId, portalSlug, isExclusive =
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
           <span className="relative flex h-4 w-4">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--neon-red)] opacity-40" style={{ animationDuration: '1.5s' }} />
-            <span className="animate-pulse absolute inline-flex h-3 w-3 rounded-full bg-[var(--neon-red)] opacity-60" style={{ animationDuration: '2s' }} />
+            <span className="animate-ping animate-duration-1500 absolute inline-flex h-full w-full rounded-full bg-[var(--neon-red)] opacity-40" />
+            <span className="animate-pulse animate-duration-2000 absolute inline-flex h-3 w-3 rounded-full bg-[var(--neon-red)] opacity-60" />
             <span className="relative inline-flex rounded-full h-2 w-2 bg-[var(--neon-red)] shadow-[0_0_8px_var(--neon-red)]" />
           </span>
           <p className="font-mono text-base font-bold text-[var(--neon-red)]">

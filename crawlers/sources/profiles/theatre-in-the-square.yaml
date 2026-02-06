@@ -1,0 +1,12 @@
+version: 1
+slug: theatre-in-the-square
+name: Theatre in the Square
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://mariettatheatre.com
+detail:
+  enabled: false

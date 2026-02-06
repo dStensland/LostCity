@@ -6,6 +6,7 @@ import {
   removeTagFromEntity,
 } from "@/lib/venue-tags";
 import type { OrgTagGroup } from "@/lib/types";
+import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -15,6 +16,9 @@ type Props = {
 
 // GET /api/organizations/[id]/tags - Get all tags for an organization
 export async function GET(request: NextRequest, { params }: Props) {
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.read, getClientIdentifier(request));
+  if (rateLimitResult) return rateLimitResult;
+
   const { id } = await params;
 
   // Get current user if authenticated
@@ -30,6 +34,9 @@ export async function GET(request: NextRequest, { params }: Props) {
 
 // POST /api/organizations/[id]/tags - Add a tag to an organization or suggest a new tag
 export async function POST(request: NextRequest, { params }: Props) {
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
+  if (rateLimitResult) return rateLimitResult;
+
   const { id } = await params;
 
   // Require authentication
@@ -86,6 +93,9 @@ export async function POST(request: NextRequest, { params }: Props) {
 
 // DELETE /api/organizations/[id]/tags?tagId=xxx - Remove your own tag
 export async function DELETE(request: NextRequest, { params }: Props) {
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
+  if (rateLimitResult) return rateLimitResult;
+
   const { id } = await params;
   const { searchParams } = new URL(request.url);
   const tagId = searchParams.get("tagId");

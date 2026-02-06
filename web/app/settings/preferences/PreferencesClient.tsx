@@ -6,6 +6,8 @@ import Link from "next/link";
 import UnifiedHeader from "@/components/UnifiedHeader";
 import CategoryIcon, { CATEGORY_CONFIG, type CategoryType } from "@/components/CategoryIcon";
 import VibeIcon, { getVibeColor } from "@/components/VibeIcon";
+import ScopedStyles from "@/components/ScopedStyles";
+import { createCssVarClass } from "@/lib/css-utils";
 import {
   PREFERENCE_CATEGORIES,
   PREFERENCE_NEIGHBORHOODS,
@@ -35,6 +37,31 @@ export default function PreferencesClient({
   const [selectedNeighborhoods, setSelectedNeighborhoods] = useState<string[]>(initialPreferences.neighborhoods);
   const [selectedVibes, setSelectedVibes] = useState<string[]>(initialPreferences.vibes);
   const [pricePreference, setPricePreference] = useState<string>(initialPreferences.pricePreference);
+
+  const categoryAccentClasses = Object.fromEntries(
+    PREFERENCE_CATEGORIES.map((cat) => [
+      cat.value,
+      createCssVarClass(
+        "--accent-color",
+        CATEGORY_CONFIG[cat.value as CategoryType]?.color || "var(--coral)",
+        "pref-cat"
+      ),
+    ])
+  ) as Record<string, ReturnType<typeof createCssVarClass> | null>;
+
+  const vibeAccentClasses = Object.fromEntries(
+    PREFERENCE_VIBES.map((vibe) => [
+      vibe.value,
+      createCssVarClass("--accent-color", getVibeColor(vibe.value), "pref-vibe"),
+    ])
+  ) as Record<string, ReturnType<typeof createCssVarClass> | null>;
+
+  const scopedCss = [
+    ...Object.values(categoryAccentClasses).map((entry) => entry?.css),
+    ...Object.values(vibeAccentClasses).map((entry) => entry?.css),
+  ]
+    .filter(Boolean)
+    .join("\n");
 
   const toggleCategory = (value: string) => {
     setSelectedCategories((prev) =>
@@ -92,6 +119,7 @@ export default function PreferencesClient({
 
   return (
     <div className="min-h-screen">
+      <ScopedStyles css={scopedCss} />
       <UnifiedHeader />
 
       <main className="max-w-2xl mx-auto px-4 py-8">
@@ -159,28 +187,22 @@ export default function PreferencesClient({
             <div className="flex flex-wrap gap-2">
               {PREFERENCE_CATEGORIES.map((cat) => {
                 const isActive = selectedCategories.includes(cat.value);
-                const categoryColor = CATEGORY_CONFIG[cat.value as CategoryType]?.color || "var(--coral)";
+                const accentClass = categoryAccentClasses[cat.value];
                 return (
                   <button
                     key={cat.value}
                     onClick={() => toggleCategory(cat.value)}
-                    className={`flex items-center gap-2 px-3.5 py-2.5 rounded-xl font-mono text-sm transition-all duration-200 ${
+                    className={`flex items-center gap-2 px-3.5 py-2.5 rounded-xl font-mono text-sm transition-all duration-200 ${accentClass?.className ?? ""} ${
                       isActive
-                        ? "text-[var(--void)] font-medium"
+                        ? "bg-accent text-[var(--void)] font-medium border border-transparent"
                         : "bg-[var(--night)] text-[var(--muted)] hover:text-[var(--cream)] border border-[var(--twilight)] hover:border-[var(--soft)]/30"
                     }`}
-                    style={isActive ? {
-                      backgroundColor: categoryColor,
-                      border: "1px solid transparent",
-                    } : undefined}
                   >
                     <CategoryIcon
                       type={cat.value}
                       size={18}
                       glow="none"
-                      style={{
-                        color: isActive ? "var(--void)" : categoryColor,
-                      }}
+                      className={isActive ? "!text-[var(--void)]" : ""}
                     />
                     {cat.label}
                   </button>
@@ -257,26 +279,21 @@ export default function PreferencesClient({
             <div className="flex flex-wrap gap-2">
               {PREFERENCE_VIBES.map((vibe) => {
                 const isActive = selectedVibes.includes(vibe.value);
-                const vibeColor = getVibeColor(vibe.value);
+                const accentClass = vibeAccentClasses[vibe.value];
                 return (
                   <button
                     key={vibe.value}
                     onClick={() => toggleVibe(vibe.value)}
-                    className={`flex items-center gap-2 px-3.5 py-2.5 rounded-xl font-mono text-sm transition-all duration-200 ${
+                    className={`flex items-center gap-2 px-3.5 py-2.5 rounded-xl font-mono text-sm transition-all duration-200 ${accentClass?.className ?? ""} ${
                       isActive
-                        ? "text-[var(--void)] font-medium border border-transparent"
+                        ? "bg-accent text-[var(--void)] font-medium border border-transparent"
                         : "bg-[var(--night)] text-[var(--muted)] hover:text-[var(--cream)] border border-[var(--twilight)] hover:border-[var(--soft)]/30"
                     }`}
-                    style={isActive ? {
-                      backgroundColor: vibeColor,
-                    } : undefined}
                   >
                     <VibeIcon
                       type={vibe.value}
                       size={18}
-                      style={{
-                        color: isActive ? "var(--void)" : vibeColor,
-                      }}
+                      className={isActive ? "!text-[var(--void)]" : "text-accent"}
                     />
                     {vibe.label}
                   </button>

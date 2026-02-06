@@ -72,94 +72,135 @@ export async function GET(request: NextRequest) {
   const supabase = await createClient();
   const today = new Date().toISOString().split("T")[0];
 
-  let query = supabase
-    .from("events")
-    .select(
+  const buildQuery = (includeFestival: boolean) => {
+    const seriesSelect = includeFestival
+      ? `
+        series:series(
+          id,
+          slug,
+          title,
+          series_type,
+          image_url,
+          frequency,
+          day_of_week,
+          festival:festivals(id, slug, name, image_url, festival_type, location, neighborhood)
+        )
       `
-      id,
-      title,
-      slug,
-      description,
-      start_date,
-      start_time,
-      end_date,
-      end_time,
-      is_all_day,
-      category,
-      subcategory,
-      tags,
-      price_min,
-      price_max,
-      price_note,
-      is_free,
-      source_url,
-      ticket_url,
-      image_url,
-      is_class,
-      class_category,
-      skill_level,
-      instructor,
-      capacity,
-      is_recurring,
-      recurrence_rule,
-      series_id,
-      venue:venues(id, name, slug, address, neighborhood, city, state),
-      series:series(id, title, series_type, frequency, day_of_week)
-    `,
-      { count: "exact" }
-    )
-    .eq("is_class", true)
-    .gte("start_date", startDate || today);
+      : `
+        series:series(
+          id,
+          slug,
+          title,
+          series_type,
+          image_url,
+          frequency,
+          day_of_week
+        )
+      `;
 
-  // Apply filters
-  if (endDate) {
-    query = query.lte("start_date", endDate);
+    let query = supabase
+      .from("events")
+      .select(
+        `
+        id,
+        title,
+        description,
+        start_date,
+        start_time,
+        end_date,
+        end_time,
+        is_all_day,
+        category,
+        subcategory,
+        tags,
+        price_min,
+        price_max,
+        price_note,
+        is_free,
+        source_url,
+        ticket_url,
+        image_url,
+        is_class,
+        class_category,
+        skill_level,
+        instructor,
+        capacity,
+        is_recurring,
+        recurrence_rule,
+        series_id,
+        venue:venues(id, name, slug, address, neighborhood, city, state),
+        ${seriesSelect}
+      `,
+        { count: "exact" }
+      )
+      .eq("is_class", true)
+      .gte("start_date", startDate || today);
+
+    // Apply filters
+    if (endDate) {
+      query = query.lte("start_date", endDate);
+    }
+
+    if (classCategory) {
+      query = query.eq("class_category", classCategory);
+    }
+
+    if (skillLevel) {
+      query = query.eq("skill_level", skillLevel);
+    }
+
+    if (priceMin !== null) {
+      query = query.gte("price_min", priceMin);
+    }
+
+    if (priceMax !== null) {
+      query = query.lte("price_max", priceMax);
+    }
+
+    if (neighborhood && isValidString(neighborhood, 1, 100)) {
+      query = query.eq("venues.neighborhood", neighborhood);
+    }
+
+    // Portal filtering
+    if (portalId) {
+      query = query.or(`portal_id.eq.${portalId},portal_id.is.null`);
+    } else {
+      query = query.is("portal_id", null);
+    }
+
+    // Sorting
+    if (sort === "price") {
+      query = query
+        .order("price_min", { ascending: true, nullsFirst: false })
+        .order("start_date", { ascending: true });
+    } else {
+      query = query
+        .order("start_date", { ascending: true })
+        .order("start_time", { ascending: true });
+    }
+
+    // Pagination
+    query = query.range(offset, offset + limit - 1);
+
+    return query;
+  };
+
+  let { data, error, count } = await buildQuery(true);
+  if (error && error.message?.includes("relationship between 'series' and 'festivals'")) {
+    ({ data, error, count } = await buildQuery(false));
   }
-
-  if (classCategory) {
-    query = query.eq("class_category", classCategory);
-  }
-
-  if (skillLevel) {
-    query = query.eq("skill_level", skillLevel);
-  }
-
-  if (priceMin !== null) {
-    query = query.gte("price_min", priceMin);
-  }
-
-  if (priceMax !== null) {
-    query = query.lte("price_max", priceMax);
-  }
-
-  if (neighborhood && isValidString(neighborhood, 1, 100)) {
-    query = query.eq("venues.neighborhood", neighborhood);
-  }
-
-  // Portal filtering
-  if (portalId) {
-    query = query.or(`portal_id.eq.${portalId},portal_id.is.null`);
-  } else {
-    query = query.is("portal_id", null);
-  }
-
-  // Sorting
-  if (sort === "price") {
-    query = query
-      .order("price_min", { ascending: true, nullsFirst: false })
-      .order("start_date", { ascending: true });
-  } else {
-    query = query
-      .order("start_date", { ascending: true })
-      .order("start_time", { ascending: true });
-  }
-
-  // Pagination
-  query = query.range(offset, offset + limit - 1);
-
-  const { data, error, count } = await query;
 
   if (error) {
+    if (process.env.NODE_ENV === "development") {
+      return NextResponse.json(
+        {
+          error: error.message,
+          details: error.details,
+          hint: error.hint,
+        },
+        { status: 500 }
+      );
+    }
     return errorResponse(error, "classes list");
   }
 

@@ -14,7 +14,7 @@ export const revalidate = 60;
 
 type ViewMode = "feed" | "find" | "community";
 type FeedTab = "curated" | "foryou";
-type FindType = "events" | "classes" | "destinations" | "orgs";
+type FindType = "events" | "classes" | "destinations";
 type FindDisplay = "list" | "map" | "calendar";
 
 type Props = {
@@ -73,8 +73,9 @@ export default async function PortalPage({ params, searchParams }: Props) {
   }
 
   // Determine find type - support legacy view params
+  // Note: "orgs" was moved to community view, redirect to events
   let findType: FindType = "events";
-  if (searchParamsData.type) {
+  if (searchParamsData.type && searchParamsData.type !== "orgs") {
     findType = searchParamsData.type as FindType;
   } else if (viewParam === "spots") {
     findType = "destinations";

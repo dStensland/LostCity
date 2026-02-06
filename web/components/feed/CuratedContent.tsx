@@ -41,14 +41,14 @@ export default function CuratedContent({ portalSlug }: CuratedContentProps) {
         <TrendingNow portalSlug={portalSlug} />
       </Suspense>
 
-      {/* Below-fold: Browse by Activity - Lazy loaded */}
-      <Suspense fallback={<DelayedFallback><BrowseByActivitySkeleton /></DelayedFallback>}>
-        <BrowseByActivity portalSlug={portalSlug} />
-      </Suspense>
-
       {/* Below-fold: Main Feed - Deferred load */}
       <Suspense fallback={<DelayedFallback><FeedViewSkeleton /></DelayedFallback>}>
         <FeedView />
+      </Suspense>
+
+      {/* Below-fold: Browse by Activity - Lazy loaded */}
+      <Suspense fallback={<DelayedFallback><BrowseByActivitySkeleton /></DelayedFallback>}>
+        <BrowseByActivity portalSlug={portalSlug} />
       </Suspense>
     </div>
   );

@@ -1,0 +1,12 @@
+version: 1
+slug: level-up-gaming
+name: Level Up Gaming Lounge
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.levelupatl.com
+detail:
+  enabled: false

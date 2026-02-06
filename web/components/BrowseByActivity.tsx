@@ -3,8 +3,8 @@
 import Link from "next/link";
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import CategoryIcon, { getCategoryColor, CATEGORY_CONFIG } from "./CategoryIcon";
-import { CATEGORIES } from "@/lib/search";
+import CategoryIcon, { CATEGORY_CONFIG } from "./CategoryIcon";
+import { CATEGORIES } from "@/lib/search-constants";
 import { usePortal } from "@/lib/portal-context";
 
 type DateFilter = "today" | "week" | "month";
@@ -96,7 +96,6 @@ interface ActivityWithCount {
   iconType: string;
   count: number;
   type: "subcategory" | "category";
-  color: string;
 }
 
 interface BrowseByActivityProps {
@@ -180,7 +179,6 @@ export default function BrowseByActivity({ portalSlug }: BrowseByActivityProps) 
         const withCounts = ALL_ACTIVITY_CONFIG.map((activity) => ({
           ...activity,
           count: data.counts?.[activity.value] || 0,
-          color: getCategoryColor(activity.iconType) || "#F97068",
         }));
 
         setActivities(withCounts);
@@ -190,7 +188,6 @@ export default function BrowseByActivity({ portalSlug }: BrowseByActivityProps) 
         setActivities(ALL_ACTIVITY_CONFIG.map((a) => ({
           ...a,
           count: 0,
-          color: getCategoryColor(a.iconType) || "#F97068",
         })));
       }
     } catch {
@@ -198,7 +195,6 @@ export default function BrowseByActivity({ portalSlug }: BrowseByActivityProps) 
       setActivities(ALL_ACTIVITY_CONFIG.map((a) => ({
         ...a,
         count: 0,
-        color: getCategoryColor(a.iconType) || "#F97068",
       })));
     } finally {
       setIsLoading(false);
@@ -308,19 +304,19 @@ export default function BrowseByActivity({ portalSlug }: BrowseByActivityProps) 
     .filter((a) => a.count > 0);
 
   return (
-    <section className="py-6">
+    <section className="py-3">
       {/* Section header with improved visual hierarchy */}
-      <div className="mb-5">
-        <h2 className="text-xl font-display font-semibold text-[var(--cream)] mb-1 tracking-tight">
+      <div className="mb-3">
+        <h2 className="text-base font-display font-semibold text-[var(--cream)] mb-1 tracking-tight">
           What are you in the mood for?
         </h2>
-        <p className="font-mono text-xs text-[var(--muted)]">
+        <p className="font-mono text-[0.7rem] text-[var(--muted)]">
           Browse events by category and vibe
         </p>
       </div>
 
       {/* Date Filter Toggle */}
-      <div className="flex gap-2 mb-5">
+      <div className="flex gap-2 mb-3">
         {DATE_FILTER_OPTIONS.map((option) => (
           <button
             key={option.value}
@@ -329,7 +325,7 @@ export default function BrowseByActivity({ portalSlug }: BrowseByActivityProps) 
               setIsLoading(true);
             }}
             className={`
-              px-3 py-1.5 rounded-full text-xs font-mono font-medium transition-all duration-150
+              px-2.5 py-1 rounded-full text-[0.7rem] font-mono font-medium transition-all duration-150
               ${dateFilter === option.value
                 ? "bg-[var(--coral)] text-[var(--void)] shadow-[0_0_8px_var(--coral)/25]"
                 : "bg-[var(--twilight)] text-[var(--muted)] hover:text-[var(--cream)] hover:bg-[var(--twilight)]/80"
@@ -395,9 +391,9 @@ export default function BrowseByActivity({ portalSlug }: BrowseByActivityProps) 
           {secondaryActivities.length > 0 && (
             <button
               onClick={() => setShowMore(!showMore)}
-              className="w-full mt-3 py-3 px-5 rounded-xl bg-gradient-to-r from-[var(--twilight)]/60 to-[var(--twilight)]/40 border-2 border-[var(--twilight)]
+              className="w-full mt-3 py-2.5 px-4 rounded-xl bg-gradient-to-r from-[var(--twilight)]/60 to-[var(--twilight)]/40 border border-[var(--twilight)]
                 text-[var(--cream)] hover:text-[var(--cream)] hover:bg-gradient-to-r hover:from-[var(--twilight)]/80 hover:to-[var(--twilight)]/60 hover:border-[var(--coral)]/40
-                transition-all duration-200 flex items-center justify-center gap-2.5 text-base font-semibold shadow-lg hover:shadow-[var(--coral)]/10 group"
+                transition-all duration-200 flex items-center justify-center gap-2 text-sm font-semibold shadow-lg hover:shadow-[var(--coral)]/10 group"
             >
               {showMore ? (
                 <>
@@ -488,44 +484,32 @@ function CategoryCard({
     <Link
       href={buildUrl()}
       onClick={onClick}
-      className={`group relative flex items-center gap-3 p-3 rounded-xl bg-[var(--card-bg)] border hover:border-opacity-60 hover:bg-[var(--twilight)]/30 transition-all duration-200 overflow-hidden ${
-        isExpanded ? "ring-2 ring-offset-1 ring-offset-[var(--void)]" : ""
+      className={`group relative flex items-center gap-3 p-3 rounded-xl bg-[var(--card-bg)] border hover:border-opacity-60 hover:bg-[var(--twilight)]/30 transition-all duration-200 overflow-hidden activity-card ${
+        isExpanded ? "ring-2 ring-[var(--category-color)] ring-offset-1 ring-offset-[var(--void)]" : ""
       }`}
-      style={{
-        "--activity-color": activity.color,
-        borderColor: isExpanded ? activity.color : `color-mix(in srgb, ${activity.color} 20%, transparent)`,
-        ...(isExpanded && { ringColor: activity.color }),
-      } as React.CSSProperties}
+      data-category={activity.iconType}
+      data-expanded={isExpanded ? "true" : "false"}
     >
       {/* Subtle glow on hover */}
       <div
-        className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-        style={{
-          background: `radial-gradient(circle at 20% 50%, color-mix(in srgb, ${activity.color} 8%, transparent), transparent 70%)`,
-        }}
+        className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 activity-card-glow"
       />
 
       {/* Icon with glow */}
       <div
-        className="relative z-10 w-9 h-9 flex-shrink-0 flex items-center justify-center rounded-lg transition-all duration-200 group-hover:scale-110"
-        style={{
-          backgroundColor: `color-mix(in srgb, ${activity.color} 15%, transparent)`,
-        }}
+        className="relative z-10 w-9 h-9 flex-shrink-0 flex items-center justify-center rounded-lg transition-all duration-200 group-hover:scale-110 activity-card-icon"
       >
         <CategoryIcon
           type={activity.iconType}
           size={18}
           glow="subtle"
-          style={{ color: activity.color }}
+          className="text-[var(--category-color)]"
         />
       </div>
 
       {/* Label and count */}
       <div className="relative z-10 flex-1 min-w-0">
-        <h3
-          className="font-medium text-sm text-[var(--cream)] transition-colors group-hover:text-[var(--activity-color)] truncate"
-          style={{ "--activity-color": activity.color } as React.CSSProperties}
-        >
+        <h3 className="font-medium text-sm text-[var(--cream)] transition-colors group-hover:text-[var(--category-color)] truncate">
           {activity.label}
         </h3>
         {countLabel && (
@@ -536,10 +520,7 @@ function CategoryCard({
       </div>
 
       {/* Indicator: chevron-up when expanded, chevron-down for subcategories, arrow for direct nav */}
-      <span
-        className="relative z-10 flex-shrink-0 opacity-50 group-hover:opacity-100 transition-all"
-        style={{ color: activity.color }}
-      >
+      <span className="relative z-10 flex-shrink-0 opacity-50 group-hover:opacity-100 transition-all text-[var(--category-color)]">
         {isExpanded ? (
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
@@ -580,29 +561,23 @@ function ExpandedCategoryPanel({
 }: ExpandedCategoryPanelProps) {
   return (
     <div
-      className="mt-2 p-3 rounded-xl bg-[var(--card-bg)] border transition-all duration-300 overflow-hidden animate-in fade-in-0 slide-in-from-top-2"
-      style={{
-        borderColor: activity.color,
-        boxShadow: `0 0 20px color-mix(in srgb, ${activity.color} 15%, transparent)`,
-      }}
+      className="mt-2 p-3 rounded-xl bg-[var(--card-bg)] border transition-all duration-300 overflow-hidden animate-in fade-in-0 slide-in-from-top-2 activity-panel"
+      data-category={activity.iconType}
     >
       {/* Header row */}
       <div className="flex items-center gap-3 mb-3">
         <div
-          className="w-9 h-9 flex-shrink-0 flex items-center justify-center rounded-lg"
-          style={{
-            backgroundColor: `color-mix(in srgb, ${activity.color} 15%, transparent)`,
-          }}
+          className="w-9 h-9 flex-shrink-0 flex items-center justify-center rounded-lg activity-panel-icon"
         >
           <CategoryIcon
             type={activity.iconType}
             size={18}
             glow="subtle"
-            style={{ color: activity.color }}
+            className="text-[var(--category-color)]"
           />
         </div>
         <div className="flex-1 min-w-0">
-          <h3 className="font-medium text-sm" style={{ color: activity.color }}>
+          <h3 className="font-medium text-sm text-[var(--category-color)]">
             {activity.label}
           </h3>
           {countLabel && (
@@ -644,11 +619,10 @@ function ExpandedCategoryPanel({
               className={`
                 px-2.5 py-1 rounded-full text-xs font-mono font-medium transition-all duration-150
                 ${isSelected
-                  ? "text-[var(--void)]"
+                  ? "bg-[var(--category-color)] text-[var(--void)]"
                   : "bg-[var(--twilight)] text-[var(--muted)] hover:text-[var(--cream)]"
                 }
               `}
-              style={isSelected ? { backgroundColor: activity.color } : {}}
             >
               {subcat.label} ({subcat.count})
             </button>
@@ -659,11 +633,7 @@ function ExpandedCategoryPanel({
       {/* View Events button */}
       <button
         onClick={onViewEvents}
-        className="w-full py-2 rounded-lg font-medium text-sm transition-all duration-150 hover:brightness-110"
-        style={{
-          backgroundColor: activity.color,
-          color: "var(--void)",
-        }}
+        className="w-full py-2 rounded-lg font-medium text-sm transition-all duration-150 hover:brightness-110 bg-[var(--category-color)] text-[var(--void)]"
       >
         View Events
       </button>

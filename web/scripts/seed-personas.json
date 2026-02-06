@@ -1,0 +1,788 @@
+{
+  "description": "Seed user personas for LostCity Atlanta. Mix of Fighting Baseball legends and Atlanta-centric characters.",
+  "generated": "2026-02-05",
+  "config": {
+    "all_follow_user": "coach",
+    "friendship_type": "mutual"
+  },
+  "founder": {
+    "id": "coach",
+    "name": "Coach",
+    "username": "coach",
+    "bio": "Building LostCity. Finding the best of Atlanta so you don't have to scroll. DM me your favorite hidden gems.",
+    "home_neighborhood": "Old Fourth Ward",
+    "frequents": ["East Atlanta Village", "Little Five Points", "Decatur", "Edgewood", "West End"],
+    "categories": ["music", "food", "art", "comedy", "nightlife", "community", "tech"],
+    "vibes": ["dive-bar", "intimate", "local", "weird", "late-night"],
+    "activity_level": "power",
+    "personality": "Omnivore who loves discovering the weird, wonderful, and under-the-radar. Equally at home at a punk show, a gallery opening, or a taco truck at 2am.",
+    "favorite_venues": [
+      "Mary's",
+      "The EARL",
+      "Variety Playhouse",
+      "Plaza Theatre",
+      "Criminal Records",
+      "Sister Louisa's Church",
+      "Brick Store Pub",
+      "Octopus Bar",
+      "Mother",
+      "The Bakery",
+      "529",
+      "Bookhouse Pub"
+    ],
+    "favorite_categories": {
+      "music": ["indie", "punk", "hip-hop", "jazz", "electronic"],
+      "food": ["tacos", "ramen", "bbq", "brunch", "late-night"],
+      "nightlife": ["dive-bars", "dance-nights", "karaoke", "comedy"],
+      "art": ["galleries", "street-art", "film", "theater"]
+    },
+    "sample_rsvps": {
+      "description": "Events coach would typically RSVP to",
+      "patterns": [
+        "Any show at The EARL, 529, Variety Playhouse, or Terminal West",
+        "Art openings at Goat Farm, WonderRoot, or Dashboard",
+        "Comedy at Laughing Skull or Dad's Garage",
+        "Film screenings at Plaza Theatre",
+        "Food festivals and pop-ups",
+        "Album release parties and local band showcases",
+        "Neighborhood block parties and street festivals",
+        "Late-night DJ sets and dance parties"
+      ]
+    },
+    "recommended_venues": [
+      "marys",
+      "the-earl",
+      "plaza-theatre",
+      "brick-store-pub",
+      "criminal-records",
+      "sister-louisas",
+      "529",
+      "variety-playhouse",
+      "octopus-bar",
+      "dads-garage",
+      "wrecking-bar",
+      "the-porter",
+      "goat-farm",
+      "bookhouse-pub",
+      "eddies-attic",
+      "laughing-skull"
+    ],
+    "lists": [
+      {
+        "title": "Best Dive Bars in Atlanta",
+        "description": "No craft cocktails, no dress code, no problem",
+        "venues": ["marys", "the-local", "mothers", "elmyr", "bookhouse-pub", "the-glenwood", "midway-pub"]
+      },
+      {
+        "title": "Late Night Eats (After Midnight)",
+        "description": "When the bars close and hunger strikes",
+        "venues": ["octopus-bar", "el-rey", "majestic-diner", "r-thomas", "taqueria-del-sol"]
+      },
+      {
+        "title": "Best Live Music Venues",
+        "description": "Where to catch a show",
+        "venues": ["the-earl", "529", "variety-playhouse", "terminal-west", "the-masquerade", "aisle-5", "eddies-attic"]
+      }
+    ]
+  },
+  "personas": [
+    {
+      "id": "george-p-burdell",
+      "name": "George P. Burdell",
+      "username": "gpburdell",
+      "email": "seed-george-p-burdell@lostcity.local",
+      "bio": "Georgia Tech's longest-tenured student. Still figuring out my major after 97 years. Go Jackets!",
+      "avatar_seed": "gpburdell",
+      "home_neighborhood": "Midtown",
+      "frequents": ["Georgia Tech", "West Midtown", "Buckhead"],
+      "categories": ["tech", "sports", "networking", "comedy"],
+      "vibes": ["nerdy", "nostalgic", "casual"],
+      "activity_level": "power",
+      "personality": "Enthusiastic tech nerd who shows up to everything GT-related. Loves trivia nights and hackathons.",
+      "recommended_venues": ["atlanta-tech-village", "battle-and-brew", "joystick-gamebar", "ferst-center", "dads-garage", "laughing-skull", "der-biergarten", "stats-downtown"]
+    },
+    {
+      "id": "sleve-mcdichael",
+      "name": "Sleve McDichael",
+      "username": "sleve",
+      "email": "seed-sleve-mcdichael@lostcity.local",
+      "bio": "Former pro athlete turned Atlanta foodie. You'll find me wherever the wings are hot.",
+      "avatar_seed": "sleve",
+      "home_neighborhood": "East Atlanta",
+      "frequents": ["Grant Park", "Cabbagetown", "Reynoldstown"],
+      "categories": ["food", "sports", "music"],
+      "vibes": ["dive-bar", "late-night", "loud"],
+      "activity_level": "power",
+      "personality": "Gregarious sports bar regular. RSVPs to every watch party and wing night.",
+      "recommended_venues": ["the-glenwood", "flatiron", "the-earl", "argosy", "elmyr", "stats-downtown", "fado-irish-pub", "twains-brewpub"]
+    },
+    {
+      "id": "bobson-dugnutt",
+      "name": "Bobson Dugnutt",
+      "username": "bobsondug",
+      "email": "seed-bobson-dugnutt@lostcity.local",
+      "bio": "Just a simple man who loves live music and cold beer. Catch me at the show.",
+      "avatar_seed": "bobson",
+      "home_neighborhood": "East Atlanta Village",
+      "frequents": ["Little Five Points", "Edgewood", "Cabbagetown"],
+      "categories": ["music", "nightlife", "comedy"],
+      "vibes": ["dive-bar", "loud", "standing-room"],
+      "activity_level": "power",
+      "personality": "Music venue regular. Has seen every band that's come through the EARL and Variety Playhouse.",
+      "recommended_venues": ["the-earl", "variety-playhouse", "529", "drunken-unicorn", "star-community-bar", "the-masquerade", "aisle5", "blind-willies"],
+      "lists": [
+        {
+          "title": "Best Small Music Venues",
+          "description": "Intimate spaces where you can actually see the band. No nosebleed seats here.",
+          "venues": ["the-earl", "529", "drunken-unicorn", "star-community-bar", "aisle5", "eddies-attic", "blind-willies", "red-light-cafe"]
+        }
+      ]
+    },
+    {
+      "id": "mike-truk",
+      "name": "Mike Truk",
+      "username": "miketruk",
+      "email": "seed-mike-truk@lostcity.local",
+      "bio": "Outdoor enthusiast. Trail runner. Dog dad. Let's touch grass.",
+      "avatar_seed": "miketruk",
+      "home_neighborhood": "Grant Park",
+      "frequents": ["Piedmont Park", "Westside Trail", "Decatur"],
+      "categories": ["fitness", "outdoor", "pets", "wellness"],
+      "vibes": ["active", "daytime", "casual"],
+      "activity_level": "regular",
+      "personality": "Fitness buff who RSVPs to every run club, hike, and outdoor yoga session.",
+      "recommended_venues": ["atlanta-track-club", "piedmont-park", "atlanta-beltline", "chattahoochee-nature", "stone-mountain-park", "trees-atlanta", "big-peach-running"]
+    },
+    {
+      "id": "todd-bonzalez",
+      "name": "Todd Bonzalez",
+      "username": "toddb",
+      "email": "seed-todd-bonzalez@lostcity.local",
+      "bio": "Art collector. Gallery hopper. Occasionally pretentious but always sincere.",
+      "avatar_seed": "toddb",
+      "home_neighborhood": "West Midtown",
+      "frequents": ["Castleberry Hill", "Midtown", "Inman Park"],
+      "categories": ["art", "gallery", "theater", "film"],
+      "vibes": ["upscale", "quiet", "intimate"],
+      "activity_level": "regular",
+      "personality": "Arts patron who never misses an opening. First to RSVP to gallery shows and film premieres.",
+      "recommended_venues": ["high-museum", "atlanta-contemporary", "goat-farm", "whitespace-gallery", "sandler-hudson", "mason-fine-art", "poem88-gallery", "zucot-gallery", "hammonds-house"],
+      "lists": [
+        {
+          "title": "Gallery Crawl Essentials",
+          "description": "Hit these spots for a perfect art day in Atlanta. Start in Castleberry Hill, end in West Midtown.",
+          "venues": ["high-museum", "atlanta-contemporary", "whitespace-gallery", "sandler-hudson", "goat-farm", "zucot-gallery", "hammonds-house"]
+        }
+      ]
+    },
+    {
+      "id": "karl-dandleton",
+      "name": "Karl Dandleton",
+      "username": "karld",
+      "email": "seed-karl-dandleton@lostcity.local",
+      "bio": "Craft beer evangelist. Brewery tour guide in a past life. Will travel for a good sour.",
+      "avatar_seed": "karld",
+      "home_neighborhood": "West End",
+      "frequents": ["Lee + White", "Westside", "Decatur"],
+      "categories": ["food", "nightlife", "tours"],
+      "vibes": ["casual", "social", "chill"],
+      "activity_level": "regular",
+      "personality": "Brewery hopper who knows every taproom in the city. Loves beer festivals and food pairings.",
+      "recommended_venues": ["monday-night", "three-taverns", "orpheus-brewing", "sweetwater", "wild-heaven-beer", "scofflaw-brewing", "second-self-brewing", "bold-monk-brewing", "reformation-brewery"],
+      "lists": [
+        {
+          "title": "Best Taprooms in Atlanta",
+          "description": "Ranked by vibes, beer selection, and whether you can bring your dog. All dog-friendly.",
+          "venues": ["monday-night", "orpheus-brewing", "three-taverns", "wild-heaven-beer", "bold-monk-brewing", "scofflaw-brewing", "sweetwater", "second-self-brewing"]
+        }
+      ]
+    },
+    {
+      "id": "onson-sweemey",
+      "name": "Onson Sweemey",
+      "username": "onsons",
+      "email": "seed-onson-sweemey@lostcity.local",
+      "bio": "Jazz hands forever. Catch me at the theater or dancing somewhere inappropriate.",
+      "avatar_seed": "onsons",
+      "home_neighborhood": "Virginia-Highland",
+      "frequents": ["Midtown", "Decatur", "Buckhead"],
+      "categories": ["theater", "dance", "music", "comedy"],
+      "vibes": ["upscale", "lively", "dressed-up"],
+      "activity_level": "regular",
+      "personality": "Theater kid grown up. Season ticket holder at multiple venues. Loves cabaret and musicals.",
+      "recommended_venues": ["alliance-theatre", "fox-theatre", "aurora-theatre", "horizon-theatre", "actors-express", "dads-garage", "theatrical-outfit", "shakespeare-tavern"],
+      "lists": [
+        {
+          "title": "Atlanta Theater Guide",
+          "description": "From Broadway tours to local gems. Where to catch a show in ATL.",
+          "venues": ["fox-theatre", "alliance-theatre", "aurora-theatre", "horizon-theatre", "dads-garage", "theatrical-outfit", "actors-express", "shakespeare-tavern"]
+        }
+      ]
+    },
+    {
+      "id": "willie-dustice",
+      "name": "Willie Dustice",
+      "username": "willied",
+      "email": "seed-willie-dustice@lostcity.local",
+      "bio": "History buff. Cemetery walker. If it's haunted, I'm there.",
+      "avatar_seed": "willied",
+      "home_neighborhood": "Oakland",
+      "frequents": ["Grant Park", "Downtown", "Decatur"],
+      "categories": ["tours", "history", "halloween", "walking"],
+      "vibes": ["educational", "spooky", "quiet"],
+      "activity_level": "casual",
+      "personality": "Loves historic tours, ghost walks, and anything at Oakland Cemetery. Very into local history.",
+      "recommended_venues": ["oakland-cemetery", "atlanta-history-center", "atlanta-preservation-center", "king-center", "apex-museum", "wrens-nest", "netherworld", "thirteen-stories"]
+    },
+    {
+      "id": "dwigt-ransen",
+      "name": "Dwigt Ransen",
+      "username": "dwigt",
+      "email": "seed-dwigt-ransen@lostcity.local",
+      "bio": "Comedian by night. Corporate drone by day. Laugh so I don't cry.",
+      "avatar_seed": "dwigt",
+      "home_neighborhood": "Buckhead",
+      "frequents": ["Midtown", "Downtown", "Sandy Springs"],
+      "categories": ["comedy", "nightlife", "networking"],
+      "vibes": ["loud", "social", "late-night"],
+      "activity_level": "regular",
+      "personality": "Open mic regular and comedy show enthusiast. Never misses stand-up at Laughing Skull.",
+      "recommended_venues": ["laughing-skull", "dads-garage", "punchline", "uptown-comedy", "whole-world-improv", "atlanta-comedy-theater", "red-light-cafe"],
+      "lists": [
+        {
+          "title": "Best Comedy Spots in Atlanta",
+          "description": "Where to catch a show, try an open mic, or just laugh until it hurts.",
+          "venues": ["laughing-skull", "dads-garage", "punchline", "uptown-comedy", "red-light-cafe"]
+        }
+      ]
+    },
+    {
+      "id": "rey-mcsriff",
+      "name": "Rey McSriff",
+      "username": "reymcs",
+      "email": "seed-rey-mcsriff@lostcity.local",
+      "bio": "DJ / Producer / Professional vibe curator. The party starts when I arrive.",
+      "avatar_seed": "reymcs",
+      "home_neighborhood": "Edgewood",
+      "frequents": ["East Atlanta Village", "West Midtown", "Old Fourth Ward"],
+      "categories": ["music", "nightlife", "dance", "dj"],
+      "vibes": ["loud", "late-night", "club"],
+      "activity_level": "power",
+      "personality": "Club kid who knows every DJ and promoter in town. RSVPs to all the dance nights.",
+      "recommended_venues": ["sound-table", "mother-bar", "church-atlanta", "mjq-concourse", "tongue-and-groove", "district-atlanta", "opera-nightclub", "believe-music-hall"],
+      "lists": [
+        {
+          "title": "Best Dance Clubs & DJ Nights",
+          "description": "Where to lose yourself on the dance floor. Warning: you will sweat.",
+          "venues": ["sound-table", "mother-bar", "church-atlanta", "tongue-and-groove", "opera-nightclub", "believe-music-hall"]
+        }
+      ]
+    },
+    {
+      "id": "raul-chamgerlain",
+      "name": "Raul Chamgerlain",
+      "username": "raulc",
+      "email": "seed-raul-chamgerlain@lostcity.local",
+      "bio": "Salsa dancer. Latin music lover. Will teach you to dance if you ask nicely.",
+      "avatar_seed": "raulc",
+      "home_neighborhood": "Buford Highway",
+      "frequents": ["Midtown", "Buckhead", "Doraville"],
+      "categories": ["dance", "music", "latin", "classes"],
+      "vibes": ["lively", "social", "dressed-up"],
+      "activity_level": "regular",
+      "personality": "Salsa and bachata enthusiast. Goes to every Latin night and dance social in the city.",
+      "recommended_venues": ["salsa-atlanta", "havana-club", "dancing4fun", "academy-ballroom", "atlanta-dance-ballroom", "ballroom-impact", "pasofino-dance"]
+    },
+    {
+      "id": "kevin-nogilny",
+      "name": "Kevin Nogilny",
+      "username": "kevnog",
+      "email": "seed-kevin-nogilny@lostcity.local",
+      "bio": "Startup founder. Pitch deck perfectionist. Networking is my cardio.",
+      "avatar_seed": "kevnog",
+      "home_neighborhood": "Midtown",
+      "frequents": ["Buckhead", "Tech Square", "Ponce City Market"],
+      "categories": ["tech", "networking", "talks", "startup"],
+      "vibes": ["professional", "social", "upscale"],
+      "activity_level": "regular",
+      "personality": "Startup scene regular. Goes to every pitch night, tech talk, and networking happy hour.",
+      "recommended_venues": ["atlanta-tech-village", "switchyards", "industrious-atlanta", "gathering-spot", "wework-atlanta", "ponce-city-market", "freeside-atlanta"]
+    },
+    {
+      "id": "anatoli-smorin",
+      "name": "Anatoli Smorin",
+      "username": "anatolism",
+      "email": "seed-anatoli-smorin@lostcity.local",
+      "bio": "Chess player. Board game collector. Will destroy you at Catan and feel bad about it.",
+      "avatar_seed": "anatolism",
+      "home_neighborhood": "Decatur",
+      "frequents": ["Little Five Points", "East Atlanta", "Avondale"],
+      "categories": ["games", "trivia", "social", "comedy"],
+      "vibes": ["nerdy", "casual", "intimate"],
+      "activity_level": "casual",
+      "personality": "Board game cafe regular. RSVPs to trivia nights and game tournaments.",
+      "recommended_venues": ["battle-and-brew", "joystick-gamebar", "my-parents-basement", "the-porter", "brick-store-pub", "victory-sandwich-bar"]
+    },
+    {
+      "id": "shown-furcotte",
+      "name": "Shown Furcotte",
+      "username": "shownf",
+      "email": "seed-shown-furcotte@lostcity.local",
+      "bio": "Photographer. Urban explorer. Chasing golden hour across Atlanta.",
+      "avatar_seed": "shownf",
+      "home_neighborhood": "Old Fourth Ward",
+      "frequents": ["BeltLine", "West End", "Cabbagetown"],
+      "categories": ["art", "photography", "tours", "outdoor"],
+      "vibes": ["creative", "quiet", "daytime"],
+      "activity_level": "casual",
+      "personality": "Always looking for photo walks and urban exploration meetups. Loves street art tours.",
+      "recommended_venues": ["atlanta-beltline", "krog-street-market", "ponce-city-market", "pullman-yards", "goat-farm", "castleberry-art-stroll", "cabbagetown-neighborhood"]
+    },
+    {
+      "id": "glenallen-mixon",
+      "name": "Glenallen Mixon",
+      "username": "glenmix",
+      "email": "seed-glenallen-mixon@lostcity.local",
+      "bio": "BBQ judge. Pitmaster in training. If it's smoked, I'm in.",
+      "avatar_seed": "glenmix",
+      "home_neighborhood": "Marietta",
+      "frequents": ["Smyrna", "West Midtown", "Grant Park"],
+      "categories": ["food", "festivals", "bbq", "beer"],
+      "vibes": ["casual", "outdoor", "social"],
+      "activity_level": "regular",
+      "personality": "Food festival regular. RSVPs to every BBQ competition, food truck rally, and tasting event.",
+      "recommended_venues": ["taste-of-atlanta", "chomp-and-stomp", "atlanta-food-wine", "grant-park-festival", "atl-food-wine", "sweet-auburn-springfest", "sweetwater-420-fest"]
+    },
+    {
+      "id": "dean-wesrey",
+      "name": "Dean Wesrey",
+      "username": "deanw",
+      "email": "seed-dean-wesrey@lostcity.local",
+      "bio": "Yoga teacher. Meditation guide. Finding inner peace one downward dog at a time.",
+      "avatar_seed": "deanw",
+      "home_neighborhood": "Inman Park",
+      "frequents": ["Piedmont Park", "Candler Park", "Decatur"],
+      "categories": ["wellness", "fitness", "yoga", "meditation"],
+      "vibes": ["chill", "quiet", "daytime"],
+      "activity_level": "regular",
+      "personality": "Wellness enthusiast. Goes to every yoga class, sound bath, and meditation workshop.",
+      "recommended_venues": ["highland-yoga", "vista-yoga", "evolation-yoga", "yonder-yoga", "dancing-dogs-yoga", "piedmont-park"]
+    },
+    {
+      "id": "cola-pemberton-iii",
+      "name": "Cola Pemberton III",
+      "username": "colapiii",
+      "email": "seed-cola-pemberton@lostcity.local",
+      "bio": "Old Atlanta family. Patron of the arts. My great-great-grandfather invented something refreshing.",
+      "avatar_seed": "colapiii",
+      "home_neighborhood": "Buckhead",
+      "frequents": ["Midtown", "Downtown", "Virginia-Highland"],
+      "categories": ["art", "theater", "classical", "charity"],
+      "vibes": ["upscale", "dressed-up", "exclusive"],
+      "activity_level": "casual",
+      "personality": "High society arts patron. RSVPs to galas, symphony performances, and museum openings.",
+      "recommended_venues": ["high-museum", "atlanta-opera", "aso", "atlanta-ballet", "alliance-theatre", "fox-theatre", "world-of-coca-cola", "carlos-museum"]
+    },
+    {
+      "id": "delta-hartsman",
+      "name": "Delta Hartsman",
+      "username": "deltah",
+      "email": "seed-delta-hartsman@lostcity.local",
+      "bio": "Million miler. Airport lounge connoisseur. ATL is my hub and my home.",
+      "avatar_seed": "deltah",
+      "home_neighborhood": "College Park",
+      "frequents": ["East Point", "Downtown", "Midtown"],
+      "categories": ["networking", "food", "travel", "talks"],
+      "vibes": ["professional", "casual", "social"],
+      "activity_level": "casual",
+      "personality": "Business traveler who catches events between flights. Loves airport-area restaurants.",
+      "recommended_venues": ["college-park-main-street", "atlanta-tech-village", "ponce-city-market", "gathering-spot"]
+    },
+    {
+      "id": "ponce-de-lenox",
+      "name": "Ponce de Lenox",
+      "username": "poncedelenox",
+      "email": "seed-ponce-de-lenox@lostcity.local",
+      "bio": "BeltLine walker. Brunch enthusiast. PCM is my second home.",
+      "avatar_seed": "poncedelenox",
+      "home_neighborhood": "Old Fourth Ward",
+      "frequents": ["Ponce City Market", "Inman Park", "Virginia-Highland"],
+      "categories": ["food", "fitness", "outdoor", "brunch"],
+      "vibes": ["trendy", "daytime", "social"],
+      "activity_level": "power",
+      "personality": "Quintessential BeltLine lifestyle. RSVPs to every pop-up, rooftop event, and brunch spot opening.",
+      "recommended_venues": ["ponce-city-market", "atlanta-beltline", "krog-street-market", "ladybird-grove", "new-realm-brewing", "park-tavern", "atkins-park"]
+    },
+    {
+      "id": "edgewood-fontaine",
+      "name": "Edgewood Fontaine",
+      "username": "edgefontaine",
+      "email": "seed-edgewood-fontaine@lostcity.local",
+      "bio": "Night owl. Bar crawler. I know every bartender on Edgewood Ave by name.",
+      "avatar_seed": "edgefontaine",
+      "home_neighborhood": "Edgewood",
+      "frequents": ["Old Fourth Ward", "East Atlanta Village", "Little Five Points"],
+      "categories": ["nightlife", "music", "dance", "late-night"],
+      "vibes": ["dive-bar", "loud", "late-night"],
+      "activity_level": "power",
+      "personality": "Edgewood Ave regular. Goes out 4-5 nights a week. Knows about every secret party.",
+      "recommended_venues": ["mother-bar", "church-atlanta", "sound-table", "nonis", "sister-louisas", "joystick-gamebar", "argosy"],
+      "lists": [
+        {
+          "title": "The Edgewood Bar Crawl",
+          "description": "The official guide to Edgewood Ave. Start at Church, end wherever you end up.",
+          "venues": ["church-atlanta", "sister-louisas", "mother-bar", "sound-table", "nonis", "joystick-gamebar", "argosy"]
+        }
+      ]
+    },
+    {
+      "id": "little-cinco-patterson",
+      "name": "Little Cinco Patterson",
+      "username": "l5pcinco",
+      "email": "seed-little-cinco-patterson@lostcity.local",
+      "bio": "Punk rock forever. Vintage vinyl collector. Keep L5P weird.",
+      "avatar_seed": "l5pcinco",
+      "home_neighborhood": "Little Five Points",
+      "frequents": ["East Atlanta", "Cabbagetown", "Reynoldstown"],
+      "categories": ["music", "art", "vintage", "alternative"],
+      "vibes": ["alternative", "loud", "diy"],
+      "activity_level": "regular",
+      "personality": "L5P scene kid. Record store regular. RSVPs to punk shows, zine fairs, and tattoo conventions.",
+      "recommended_venues": ["criminal-records", "wax-n-facts", "the-vortex", "the-porter", "star-community-bar", "529", "eyedrum", "elmyr"],
+      "lists": [
+        {
+          "title": "Keep L5P Weird",
+          "description": "Everything that makes Little Five Points the weirdest, best neighborhood in Atlanta.",
+          "venues": ["criminal-records", "wax-n-facts", "the-vortex", "the-porter", "star-community-bar", "elmyr"]
+        }
+      ]
+    },
+    {
+      "id": "decatur-stevens",
+      "name": "Decatur Stevens",
+      "username": "decaturstevens",
+      "email": "seed-decatur-stevens@lostcity.local",
+      "bio": "Bookworm. Festival volunteer. It's greater in Decatur and I'll die on that hill.",
+      "avatar_seed": "decaturstevens",
+      "home_neighborhood": "Decatur",
+      "frequents": ["Avondale Estates", "Kirkwood", "Agnes Scott"],
+      "categories": ["books", "festivals", "family", "community"],
+      "vibes": ["quiet", "daytime", "educational"],
+      "activity_level": "regular",
+      "personality": "Decatur square regular. Book festival volunteer. RSVPs to author readings and community events.",
+      "recommended_venues": ["little-shop-of-stories", "a-cappella-books", "decatur-book-festival", "brick-store-pub", "victory-sandwich-bar", "eddies-attic", "decatur-arts-festival"],
+      "lists": [
+        {
+          "title": "Best of Decatur Square",
+          "description": "Everything within walking distance of the square. Perfect for a weekend afternoon.",
+          "venues": ["brick-store-pub", "victory-sandwich-bar", "eddies-attic", "little-shop-of-stories"]
+        }
+      ]
+    },
+    {
+      "id": "peachtree-battle-worthington",
+      "name": "Peachtree Battle-Worthington",
+      "username": "ptreebattle",
+      "email": "seed-peachtree-battle@lostcity.local",
+      "bio": "Buckhead born and raised. Charity board member. My tennis game is acceptable.",
+      "avatar_seed": "ptreebattle",
+      "home_neighborhood": "Buckhead",
+      "frequents": ["Midtown", "Vinings", "Brookhaven"],
+      "categories": ["charity", "sports", "wine", "networking"],
+      "vibes": ["upscale", "exclusive", "dressed-up"],
+      "activity_level": "casual",
+      "personality": "Buckhead socialite. RSVPs to charity galas, wine tastings, and country club events.",
+      "recommended_venues": ["atlanta-history-center", "buckhead-theatre", "le-colonial", "chastain-park-amphitheatre", "piedmont-auxiliary"]
+    },
+    {
+      "id": "waffle-housman",
+      "name": "Waffle Housman",
+      "username": "waffleh",
+      "email": "seed-waffle-housman@lostcity.local",
+      "bio": "Scattered, smothered, covered. Third shift energy. The night is young at 3am.",
+      "avatar_seed": "waffleh",
+      "home_neighborhood": "East Point",
+      "frequents": ["College Park", "East Atlanta", "Decatur"],
+      "categories": ["food", "nightlife", "late-night", "comedy"],
+      "vibes": ["dive-bar", "late-night", "casual"],
+      "activity_level": "regular",
+      "personality": "Late night creature. RSVPs to after-hours events, late shows, and anything that ends at 2am+.",
+      "recommended_venues": ["marys", "octopus-bar", "majestic-diner", "r-thomas", "clermont-lounge", "northside-tavern", "the-local"],
+      "lists": [
+        {
+          "title": "Late Night Eats (After 2am)",
+          "description": "When the bars close but you're not ready to go home. Open late or 24/7.",
+          "venues": ["octopus-bar", "majestic-diner", "r-thomas"]
+        }
+      ]
+    },
+    {
+      "id": "clermont-loungeley",
+      "name": "Clermont Loungeley",
+      "username": "clermontl",
+      "email": "seed-clermont-loungeley@lostcity.local",
+      "bio": "Dive bar philosopher. Pabst connoisseur. Keeping it real since before it was cool.",
+      "avatar_seed": "clermontl",
+      "home_neighborhood": "Poncey-Highland",
+      "frequents": ["Little Five Points", "East Atlanta Village", "Cabbagetown"],
+      "categories": ["nightlife", "music", "karaoke", "comedy"],
+      "vibes": ["dive-bar", "loud", "unpretentious"],
+      "activity_level": "power",
+      "personality": "Dive bar devotee. Knows every cheap beer special in town. RSVPs to karaoke and open mics.",
+      "recommended_venues": ["hotel-clermont", "marys", "the-local", "midway-pub", "elmyr", "bookhouse-pub", "moes-and-joes", "dark-horse-tavern", "friends-on-ponce"],
+      "lists": [
+        {
+          "title": "Dive Bar Hall of Fame",
+          "description": "No pretense. No bottle service. Just cheap drinks and real people.",
+          "venues": ["marys", "the-local", "elmyr", "bookhouse-pub", "midway-pub", "dark-horse-tavern", "friends-on-ponce", "moes-and-joes"]
+        }
+      ]
+    },
+    {
+      "id": "varsity-mconion",
+      "name": "Varsity McOnion",
+      "username": "varsitymac",
+      "email": "seed-varsity-mconion@lostcity.local",
+      "bio": "What'll ya have? Classic Atlanta through and through. Sports, cars, and chili dogs.",
+      "avatar_seed": "varsitymac",
+      "home_neighborhood": "Downtown",
+      "frequents": ["Midtown", "Georgia Tech", "West End"],
+      "categories": ["sports", "food", "cars", "history"],
+      "vibes": ["nostalgic", "casual", "loud"],
+      "activity_level": "casual",
+      "personality": "Old school Atlanta. RSVPs to car shows, sports watch parties, and anything nostalgic.",
+      "recommended_venues": ["state-farm-arena", "mercedes-benz-stadium", "truist-park", "caffeine-octane", "atlanta-motor-speedway", "atlanta-history-center", "college-football-hof"]
+    },
+    {
+      "id": "andre-threestacks-jr",
+      "name": "Andre Threestacks Jr.",
+      "username": "threestacksjr",
+      "email": "seed-andre-threestacks@lostcity.local",
+      "bio": "ATL hip-hop historian. Vinyl collector. The South still has something to say.",
+      "avatar_seed": "threestacksjr",
+      "home_neighborhood": "East Point",
+      "frequents": ["College Park", "West End", "Edgewood"],
+      "categories": ["music", "hiphop", "culture", "history"],
+      "vibes": ["chill", "cultural", "nostalgic"],
+      "activity_level": "regular",
+      "personality": "Hip-hop head. RSVPs to rap shows, DJ nights, and anything celebrating ATL music culture.",
+      "recommended_venues": ["trap-music-museum", "criminal-records", "moods-music", "apache-xlr", "one-musicfest", "sound-table", "music-midtown"]
+    },
+    {
+      "id": "freaknik-williams",
+      "name": "Freaknik Williams",
+      "username": "freaknikw",
+      "email": "seed-freaknik-williams@lostcity.local",
+      "bio": "90s baby. Block party organizer. Let's bring back the cookout.",
+      "avatar_seed": "freaknikw",
+      "home_neighborhood": "West End",
+      "frequents": ["Cascade", "East Point", "Downtown"],
+      "categories": ["music", "festivals", "dance", "community"],
+      "vibes": ["loud", "outdoor", "social"],
+      "activity_level": "regular",
+      "personality": "Block party enthusiast. RSVPs to festivals, cookouts, and outdoor dance parties.",
+      "recommended_venues": ["one-musicfest", "atlanta-jazz-festival", "music-midtown", "shaky-knees", "piedmont-park", "centennial-olympic-park", "west-end-neighborhood"]
+    },
+    {
+      "id": "marta-peoplesmover",
+      "name": "Marta Peoplesmover",
+      "username": "martapeople",
+      "email": "seed-marta-peoplesmover@lostcity.local",
+      "bio": "Transit advocate. Urban planner by day. Smarter city, better Atlanta.",
+      "avatar_seed": "martapeople",
+      "home_neighborhood": "Midtown",
+      "frequents": ["Downtown", "Decatur", "Five Points"],
+      "categories": ["community", "talks", "urban", "activism"],
+      "vibes": ["educational", "social", "daytime"],
+      "activity_level": "casual",
+      "personality": "Urbanist. RSVPs to city planning talks, community meetings, and transit advocacy events.",
+      "recommended_venues": ["atlanta-beltline", "atlanta-city-studio", "civic-dinners", "gathering-spot", "carter-center", "auburn-ave-library"]
+    },
+    {
+      "id": "big-chicken-mcpherson",
+      "name": "Big Chicken McPherson",
+      "username": "bigchickenm",
+      "email": "seed-big-chicken@lostcity.local",
+      "bio": "Marietta native. Suburb defender. Yes I drive everywhere, fight me.",
+      "avatar_seed": "bigchickenm",
+      "home_neighborhood": "Marietta",
+      "frequents": ["Kennesaw", "Smyrna", "Buckhead"],
+      "categories": ["family", "food", "sports", "outdoor"],
+      "vibes": ["casual", "daytime", "family-friendly"],
+      "activity_level": "casual",
+      "personality": "Suburban family person. RSVPs to kid-friendly events, festivals, and Braves games.",
+      "recommended_venues": ["truist-park", "marietta-square", "kennesaw-mountain", "six-flags", "childrens-museum", "legoland-discovery-center", "zoo-atlanta"]
+    },
+    {
+      "id": "sweetwater-paulding",
+      "name": "Sweetwater Paulding",
+      "username": "sweetwaterp",
+      "email": "seed-sweetwater-paulding@lostcity.local",
+      "bio": "Brewery founder dreams. Home brewer reality. 420 is a lifestyle.",
+      "avatar_seed": "sweetwaterp",
+      "home_neighborhood": "West Midtown",
+      "frequents": ["Lee + White", "Grant Park", "Decatur"],
+      "categories": ["beer", "food", "music", "outdoor"],
+      "vibes": ["chill", "casual", "outdoor"],
+      "activity_level": "regular",
+      "personality": "Craft beer enthusiast. RSVPs to every brewery release party and beer festival.",
+      "recommended_venues": ["sweetwater", "monday-night", "wild-heaven-beer", "three-taverns", "orpheus-brewing", "sweetwater-420-fest", "atlanta-beer-week"]
+    },
+    {
+      "id": "piedmont-parkinson",
+      "name": "Piedmont Parkinson",
+      "username": "piedmontp",
+      "email": "seed-piedmont-parkinson@lostcity.local",
+      "bio": "Park rat. Frisbee golfer. Picnic professional. Grass is always greener in Piedmont.",
+      "avatar_seed": "piedmontp",
+      "home_neighborhood": "Midtown",
+      "frequents": ["Piedmont Park", "Virginia-Highland", "Ansley Park"],
+      "categories": ["outdoor", "fitness", "pets", "festivals"],
+      "vibes": ["daytime", "casual", "active"],
+      "activity_level": "power",
+      "personality": "Piedmont Park regular. RSVPs to every outdoor yoga, run club, and park festival.",
+      "recommended_venues": ["piedmont-park", "atlanta-dogwood", "music-midtown", "park-tavern", "atlanta-beltline", "piedmont-luminaria"]
+    },
+    {
+      "id": "midtown-minglewood",
+      "name": "Midtown Minglewood",
+      "username": "midtownming",
+      "email": "seed-midtown-minglewood@lostcity.local",
+      "bio": "Pride year-round. Brunch monarchy. Supporting queer Atlanta always.",
+      "avatar_seed": "midtownming",
+      "home_neighborhood": "Midtown",
+      "frequents": ["Cheshire Bridge", "East Atlanta Village", "Little Five Points"],
+      "categories": ["nightlife", "drag", "pride", "dance"],
+      "vibes": ["loud", "inclusive", "late-night"],
+      "activity_level": "power",
+      "personality": "LGBTQ+ scene regular. RSVPs to Pride events, drag shows, and queer nightlife.",
+      "recommended_venues": ["blakes-on-the-park", "bulldogs-atlanta", "marys", "my-sisters-room", "woofs-atlanta", "the-heretic", "atlanta-pride", "out-on-film", "southern-fried-queer-pride"],
+      "lists": [
+        {
+          "title": "Queer Atlanta: Best LGBTQ+ Spots",
+          "description": "Bars, clubs, and community spaces. Pride year-round, not just in October.",
+          "venues": ["blakes-on-the-park", "marys", "my-sisters-room", "bulldogs-atlanta", "woofs-atlanta", "the-heretic"]
+        }
+      ]
+    },
+    {
+      "id": "tim-sandaele",
+      "name": "Tim Sandaele",
+      "username": "timsand",
+      "email": "seed-tim-sandaele@lostcity.local",
+      "bio": "Soccer dad energy. ATL UTD ultra. The A is for Atlanta and for Always showing up.",
+      "avatar_seed": "timsand",
+      "home_neighborhood": "Kirkwood",
+      "frequents": ["Downtown", "Summerhill", "Grant Park"],
+      "categories": ["sports", "soccer", "beer", "food"],
+      "vibes": ["loud", "social", "outdoor"],
+      "activity_level": "regular",
+      "personality": "Atlanta United superfan. RSVPs to every watch party, tailgate, and soccer event.",
+      "recommended_venues": ["mercedes-benz-stadium", "atlutd-pubs", "fado-irish-pub", "meehans-pub", "brewhouse-cafe", "georgia-beer-garden"]
+    },
+    {
+      "id": "mike-sernandez",
+      "name": "Mike Sernandez",
+      "username": "mikes",
+      "email": "seed-mike-sernandez@lostcity.local",
+      "bio": "Plant dad. Farmers market regular. Growing my own tomatoes is a personality trait now.",
+      "avatar_seed": "mikes",
+      "home_neighborhood": "Candler Park",
+      "frequents": ["Decatur", "Grant Park", "Inman Park"],
+      "categories": ["food", "gardening", "markets", "outdoor"],
+      "vibes": ["daytime", "casual", "sustainable"],
+      "activity_level": "casual",
+      "personality": "Farmers market enthusiast. RSVPs to plant swaps, gardening workshops, and farm tours.",
+      "recommended_venues": ["freedom-farmers-market", "grant-park-farmers-market", "decatur-farmers-market", "peachtree-road-farmers-market", "food-well-alliance", "trees-atlanta", "georgia-organics"]
+    },
+    {
+      "id": "tony-smehrik",
+      "name": "Tony Smehrik",
+      "username": "tonysm",
+      "email": "seed-tony-smehrik@lostcity.local",
+      "bio": "Film buff. Indie cinema defender. If it's projected on 35mm, I'm in that seat.",
+      "avatar_seed": "tonysm",
+      "home_neighborhood": "Avondale Estates",
+      "frequents": ["Plaza Theatre", "Midtown", "Decatur"],
+      "categories": ["film", "art", "comedy", "talks"],
+      "vibes": ["quiet", "intimate", "cultural"],
+      "activity_level": "regular",
+      "personality": "Indie film lover. RSVPs to every film festival, movie premiere, and cinema event.",
+      "recommended_venues": ["plaza-theatre", "tara-theatre", "aurora-cineplex", "atlanta-film-festival", "out-on-film", "silverspot-atlanta", "starlight-drive-in"],
+      "lists": [
+        {
+          "title": "Best Movie Theaters in Atlanta",
+          "description": "Skip the multiplex. These are the theaters worth seeking out.",
+          "venues": ["plaza-theatre", "tara-theatre", "starlight-drive-in", "silverspot-atlanta"]
+        }
+      ]
+    },
+    {
+      "id": "mario-mcrlwain",
+      "name": "Mario McRlwain",
+      "username": "mariomcr",
+      "email": "seed-mario-mcrlwain@lostcity.local",
+      "bio": "Retro gamer. Arcade defender. High score holder at Battle & Brew (probably).",
+      "avatar_seed": "mariomcr",
+      "home_neighborhood": "Sandy Springs",
+      "frequents": ["Marietta", "Decatur", "Little Five Points"],
+      "categories": ["games", "trivia", "comedy", "nightlife"],
+      "vibes": ["nerdy", "casual", "social"],
+      "activity_level": "regular",
+      "personality": "Gamer bar regular. RSVPs to gaming tournaments, trivia nights, and arcade events.",
+      "recommended_venues": ["battle-and-brew", "joystick-gamebar", "southern-fried-gaming", "momocon", "dragon-con", "token-gaming-pub", "activate-games"],
+      "lists": [
+        {
+          "title": "Best Arcade & Game Bars",
+          "description": "Beer + games = the perfect combo. These spots have both.",
+          "venues": ["battle-and-brew", "joystick-gamebar", "activate-games"]
+        }
+      ]
+    },
+    {
+      "id": "darryl-archideld",
+      "name": "Darryl Archideld",
+      "username": "darryld",
+      "email": "seed-darryl-archideld@lostcity.local",
+      "bio": "Home chef. Recipe experimenter. Invite me to your dinner party, I'll bring dessert.",
+      "avatar_seed": "darryld",
+      "home_neighborhood": "Brookhaven",
+      "frequents": ["Buckhead", "Chamblee", "Buford Highway"],
+      "categories": ["food", "classes", "wine", "social"],
+      "vibes": ["intimate", "upscale", "social"],
+      "activity_level": "casual",
+      "personality": "Foodie who loves cooking classes, supper clubs, and wine pairing dinners.",
+      "recommended_venues": ["cooks-warehouse", "sur-la-table", "irwin-street-cooking", "publix-aprons", "williams-sonoma", "le-colonial"]
+    },
+    {
+      "id": "scott-dansen",
+      "name": "Scott Dansen",
+      "username": "scottd",
+      "email": "seed-scott-dansen@lostcity.local",
+      "bio": "Swing dancer. Lindy hopper. Dressed vintage on purpose.",
+      "avatar_seed": "scottd",
+      "home_neighborhood": "Virginia-Highland",
+      "frequents": ["Decatur", "Midtown", "East Atlanta"],
+      "categories": ["dance", "music", "vintage", "social"],
+      "vibes": ["dressed-up", "social", "nostalgic"],
+      "activity_level": "regular",
+      "personality": "Swing dance scene regular. RSVPs to dance socials, vintage markets, and jazz nights.",
+      "recommended_venues": ["salsa-atlanta", "northside-tavern", "blind-willies", "eddies-attic", "red-light-cafe", "churchill-grounds"]
+    },
+    {
+      "id": "jeromy-gansen",
+      "name": "Jeromy Gansen",
+      "username": "jeromyg",
+      "email": "seed-jeromy-gansen@lostcity.local",
+      "bio": "Marathon runner. Trail enthusiast. Yes I will talk about my splits if asked.",
+      "avatar_seed": "jeromyg",
+      "home_neighborhood": "Druid Hills",
+      "frequents": ["Piedmont Park", "Decatur", "Stone Mountain"],
+      "categories": ["fitness", "running", "outdoor", "wellness"],
+      "vibes": ["active", "daytime", "social"],
+      "activity_level": "power",
+      "personality": "Running club regular. RSVPs to every race, fun run, and trail event.",
+      "recommended_venues": ["atlanta-track-club", "big-peach-running", "peachtree-road-race", "chattahoochee-nature", "stone-mountain-park", "atlanta-beltline", "monday-night-run-club"]
+    }
+  ]
+}

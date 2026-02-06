@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
-import Image from "next/image";
+import Image from "@/components/SmartImage";
 import UnifiedHeader from "@/components/UnifiedHeader";
 import CreateCollectionButton from "@/components/CreateCollectionButton";
 

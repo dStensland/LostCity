@@ -1,0 +1,14 @@
+version: 1
+slug: chastain-arts
+name: Chastain Arts Center
+integration_method: playwright
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.chastainartscenter.org/events
+  fetch:
+    render_js: true
+detail:
+  enabled: false

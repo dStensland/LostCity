@@ -7,7 +7,7 @@ import { createContext, useContext, useMemo, type ReactNode } from "react";
 // ============================================
 
 export type ViewMode = "feed" | "find" | "community";
-export type FindType = "events" | "destinations" | "orgs" | null;
+export type FindType = "events" | "classes" | "destinations" | null;
 
 export interface UserPreferences {
   favoriteCategories: string[];
@@ -18,7 +18,7 @@ export interface UserPreferences {
 export interface SearchContextValue {
   /** Current view mode (feed, find, community) */
   viewMode: ViewMode;
-  /** Current find sub-type (events, destinations, orgs) - only set when viewMode is "find" */
+  /** Current find sub-type (events, classes, destinations) - only set when viewMode is "find" */
   findType: FindType;
   /** Portal slug (e.g., "atlanta") */
   portalSlug: string;

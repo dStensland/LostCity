@@ -128,6 +128,13 @@ def generate_html_report(portal_summary, daily_counts, category_breakdown, unass
     # Calculate max for scaling
     max_daily = max(sum(counts.values()) for counts in daily_counts.values()) if daily_counts else 1
     
+    width_classes = set()
+
+    def width_class(width_pct: float) -> str:
+        width_str = str(width_pct)
+        width_classes.add(width_str)
+        return f"w-{width_str.replace('.', '_')}"
+
     # Generate HTML
     html = f"""<!DOCTYPE html>
 <html lang="en">
@@ -421,6 +428,8 @@ def generate_html_report(portal_summary, daily_counts, category_breakdown, unass
                 grid-template-columns: 1fr;
             }}
         }}
+    
+__EXTRA_CSS__
     </style>
 </head>
 <body>
@@ -452,19 +461,19 @@ def generate_html_report(portal_summary, daily_counts, category_breakdown, unass
                 
                 <div class="legend">
                     <div class="legend-item">
-                        <div class="legend-color" style="background: #667eea;"></div>
+                        <div class="legend-color legend-color-667eea"></div>
                         <span class="legend-label">Atlanta</span>
                     </div>
                     <div class="legend-item">
-                        <div class="legend-color" style="background: #f093fb;"></div>
+                        <div class="legend-color legend-color-f093fb"></div>
                         <span class="legend-label">Nashville</span>
                     </div>
                     <div class="legend-item">
-                        <div class="legend-color" style="background: #4bc0c8;"></div>
+                        <div class="legend-color legend-color-4bc0c8"></div>
                         <span class="legend-label">Piedmont</span>
                     </div>
                     <div class="legend-item">
-                        <div class="legend-color" style="background: #f5576c;"></div>
+                        <div class="legend-color legend-color-f5576c"></div>
                         <span class="legend-label">Unassigned</span>
                     </div>
                 </div>
@@ -498,8 +507,9 @@ def generate_html_report(portal_summary, daily_counts, category_breakdown, unass
             if count > 0:
                 width_pct = (count / total * 100) if total > 0 else 0
                 portal_class = portal.lower()
+                width_class_name = width_class(width_pct)
                 html += f"""
-                                <div class="bar-segment {portal_class}" style="width: {width_pct}%;" title="{portal}: {count}">
+                                <div class="bar-segment {portal_class} {width_class_name}" title="{portal}: {count}">
                                     {count if count > 5 else ''}
                                 </div>
 """
@@ -535,10 +545,11 @@ def generate_html_report(portal_summary, daily_counts, category_breakdown, unass
         sorted_categories = sorted(categories.items(), key=lambda x: x[1], reverse=True)
         for category, count in sorted_categories[:10]:  # Top 10 categories
             width_pct = (count / max_count * 100) if max_count > 0 else 0
+            width_class_name = width_class(width_pct)
             html += f"""
                         <div class="category-bar">
                             <div class="category-name">{category}</div>
-                            <div class="category-bar-fill" style="width: {width_pct}%;"></div>
+                            <div class="category-bar-fill {width_class_name}"></div>
                             <div class="category-count">{count}</div>
                         </div>
 """
@@ -558,7 +569,7 @@ def generate_html_report(portal_summary, daily_counts, category_breakdown, unass
                     <thead>
                         <tr>
                             <th>Source Name</th>
-                            <th style="text-align: right;">Event Count</th>
+                            <th class="table-count-header">Event Count</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -570,14 +581,14 @@ def generate_html_report(portal_summary, daily_counts, category_breakdown, unass
         html += f"""
                         <tr>
                             <td>{source_name}</td>
-                            <td style="text-align: right; font-weight: 600;">{count:,}</td>
+                            <td class="table-count">{count:,}</td>
                         </tr>
 """
     
     html += f"""
                     </tbody>
                 </table>
-                <p style="margin-top: 1rem; color: #666; font-style: italic;">
+                <p class="report-note">
                     Total unassigned events: {sum(unassigned_sources.values()):,}
                 </p>
             </div>
@@ -586,7 +597,23 @@ def generate_html_report(portal_summary, daily_counts, category_breakdown, unass
 </body>
 </html>
 """
-    
+
+    legend_css = [
+        "        .legend-color-667eea { background: #667eea; }",
+        "        .legend-color-f093fb { background: #f093fb; }",
+        "        .legend-color-4bc0c8 { background: #4bc0c8; }",
+        "        .legend-color-f5576c { background: #f5576c; }",
+        "        .table-count-header { text-align: right; }",
+        "        .table-count { text-align: right; font-weight: 600; }",
+        "        .report-note { margin-top: 1rem; color: #666; font-style: italic; }",
+    ]
+    width_css = [
+        f"        .w-{width.replace('.', '_')} {{ width: {width}%; }}"
+        for width in sorted(width_classes, key=float)
+    ]
+    extra_css = "\n".join(legend_css + width_css)
+    html = html.replace("__EXTRA_CSS__", extra_css)
+
     return html
 
 def main():

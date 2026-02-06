@@ -1,0 +1,14 @@
+version: 1
+slug: new-realm-brewing
+name: New Realm Brewing
+integration_method: playwright
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://newrealmbrewing.com/atlanta/
+  fetch:
+    render_js: true
+detail:
+  enabled: false

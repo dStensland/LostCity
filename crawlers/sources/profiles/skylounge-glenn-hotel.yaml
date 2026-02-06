@@ -1,0 +1,12 @@
+version: 1
+slug: skylounge-glenn-hotel
+name: Skylounge at Glenn Hotel
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://glennhotel.com/skylounge
+detail:
+  enabled: false

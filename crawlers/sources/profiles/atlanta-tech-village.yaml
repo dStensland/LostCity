@@ -1,0 +1,12 @@
+version: 1
+slug: atlanta-tech-village
+name: Atlanta Tech Village
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.atlantatechvillage.com
+detail:
+  enabled: false

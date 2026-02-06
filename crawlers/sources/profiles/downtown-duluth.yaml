@@ -1,0 +1,12 @@
+version: 1
+slug: downtown-duluth
+name: Downtown Duluth
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://exploreduluth.org
+detail:
+  enabled: false

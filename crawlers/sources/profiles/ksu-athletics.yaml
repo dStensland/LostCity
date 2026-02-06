@@ -1,0 +1,12 @@
+version: 1
+slug: ksu-athletics
+name: Kennesaw State Athletics
+integration_method: llm_crawler
+defaults: {}
+discovery:
+  enabled: true
+  type: html
+  urls:
+  - https://ksuowls.com
+detail:
+  enabled: false

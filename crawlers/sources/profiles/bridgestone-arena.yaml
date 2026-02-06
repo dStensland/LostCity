@@ -1,0 +1,14 @@
+version: 1
+slug: bridgestone-arena
+name: Bridgestone Arena
+integration_method: playwright
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.bridgestonearena.com/events
+  fetch:
+    render_js: true
+detail:
+  enabled: false

@@ -1,0 +1,12 @@
+version: 1
+slug: ferst-center
+name: Ferst Center for the Arts
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://arts.gatech.edu
+detail:
+  enabled: false

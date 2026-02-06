@@ -1,0 +1,12 @@
+version: 1
+slug: indivisible-atl
+name: Indivisible ATL
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.indivisibleatl.com/events
+detail:
+  enabled: false

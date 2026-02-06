@@ -1,0 +1,14 @@
+version: 1
+slug: meals-on-wheels-atlanta
+name: Meals On Wheels Atlanta
+integration_method: playwright
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://mowama.org/events
+  fetch:
+    render_js: true
+detail:
+  enabled: false

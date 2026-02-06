@@ -10,6 +10,9 @@ export default function NavigationProgress() {
   const [progress, setProgress] = useState(0);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const barRef = useRef<HTMLDivElement>(null);
+  const animationRef = useRef<Animation | null>(null);
+  const lastProgressRef = useRef(0);
   const isFirstRender = useRef(true);
 
   // Handle route completion when pathname/search changes
@@ -82,6 +85,23 @@ export default function NavigationProgress() {
     };
   }, [pathname, searchParams]);
 
+  useEffect(() => {
+    if (!barRef.current) return;
+
+    const prev = lastProgressRef.current / 100;
+    const next = progress / 100;
+    lastProgressRef.current = progress;
+
+    animationRef.current?.cancel();
+    animationRef.current = barRef.current.animate(
+      [
+        { transform: `scaleX(${prev})` },
+        { transform: `scaleX(${next})` },
+      ],
+      { duration: 150, easing: "ease-out", fill: "forwards" }
+    );
+  }, [progress]);
+
   if (!isNavigating && progress === 0) return null;
 
   return (
@@ -93,16 +113,10 @@ export default function NavigationProgress() {
       aria-valuemax={100}
     >
       <div
-        className="h-full transition-all duration-150 ease-out"
-        style={{
-          width: `${progress}%`,
-          background: "linear-gradient(90deg, var(--neon-magenta), var(--coral))",
-          boxShadow: "0 0 10px var(--neon-magenta), 0 0 20px var(--coral)",
-          opacity: progress === 100 ? 0 : 1,
-          transition: progress === 100
-            ? "width 150ms ease-out, opacity 200ms ease-out 150ms"
-            : "width 150ms ease-out",
-        }}
+        ref={barRef}
+        className={`h-full nav-progress-bar transition-opacity duration-200 ease-out ${
+          progress === 100 ? "opacity-0 delay-150" : "opacity-100"
+        }`}
       />
     </div>
   );

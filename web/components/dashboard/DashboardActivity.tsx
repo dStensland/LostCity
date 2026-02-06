@@ -91,16 +91,10 @@ function UnauthenticatedView() {
       <div className="relative overflow-hidden">
         {/* Aurora ambient background pools */}
         <div
-          className="absolute top-0 left-1/4 w-64 h-64 rounded-full blur-[120px] opacity-20 pointer-events-none"
-          style={{
-            background: "radial-gradient(circle, var(--coral) 0%, transparent 70%)",
-          }}
+          className="absolute top-0 left-1/4 w-64 h-64 rounded-full blur-[120px] opacity-20 pointer-events-none dashboard-aurora-coral"
         />
         <div
-          className="absolute bottom-0 right-1/4 w-64 h-64 rounded-full blur-[120px] opacity-15 pointer-events-none"
-          style={{
-            background: "radial-gradient(circle, var(--neon-magenta) 0%, transparent 70%)",
-          }}
+          className="absolute bottom-0 right-1/4 w-64 h-64 rounded-full blur-[120px] opacity-15 pointer-events-none dashboard-aurora-magenta"
         />
 
         {/* Glass card */}
@@ -139,10 +133,7 @@ function UnauthenticatedView() {
           {/* Fake friend request - glass card */}
           <div className="flex items-center gap-4 p-4 glass border border-[var(--coral)]/30 rounded-lg relative">
             <div
-              className="absolute inset-0 rounded-lg opacity-30 blur-xl pointer-events-none"
-              style={{
-                background: "radial-gradient(circle at center, var(--coral) 0%, transparent 70%)",
-              }}
+              className="absolute inset-0 rounded-lg opacity-30 blur-xl pointer-events-none dashboard-activity-glow"
             />
             <div className="w-10 h-10 rounded-full bg-[var(--coral)] relative z-10" />
             <div className="flex-1 relative z-10">

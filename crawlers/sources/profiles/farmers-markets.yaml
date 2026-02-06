@@ -1,0 +1,12 @@
+version: 1
+slug: farmers-markets
+name: Farmers Markets
+integration_method: llm_crawler
+defaults: {}
+discovery:
+  enabled: true
+  type: html
+  urls:
+  - https://lostcity.ai/farmers-markets
+detail:
+  enabled: false

@@ -1,0 +1,12 @@
+version: 1
+slug: georgia-aquarium
+name: Georgia Aquarium
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.georgiaaquarium.org
+detail:
+  enabled: false

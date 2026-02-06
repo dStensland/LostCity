@@ -1,0 +1,12 @@
+version: 1
+slug: franklin-theatre
+name: Franklin Theatre
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.franklintheatre.com/all-events/
+detail:
+  enabled: false

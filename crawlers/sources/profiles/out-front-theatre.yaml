@@ -1,0 +1,14 @@
+version: 1
+slug: out-front-theatre
+name: Out Front Theatre Company
+integration_method: playwright
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://outfronttheatre.com/shows
+  fetch:
+    render_js: true
+detail:
+  enabled: false

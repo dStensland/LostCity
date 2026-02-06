@@ -1,8 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { VENUE_TAG_GROUPS } from "@/lib/venue-tags";
-import type { VenueTagWithVote, VenueTagGroup } from "@/lib/types";
+import type { VenueTagWithVote } from "@/lib/types";
 
 interface TagChipProps {
   tag: VenueTagWithVote;
@@ -21,9 +20,6 @@ export default function TagChip({
   const [optimisticVote, setOptimisticVote] = useState<"up" | "down" | null | undefined>(
     undefined
   );
-
-  const groupConfig = VENUE_TAG_GROUPS[tag.tag_group as VenueTagGroup];
-  const color = groupConfig?.color || "var(--cream)";
 
   const currentVote = optimisticVote !== undefined ? optimisticVote : tag.user_vote;
   const isVerified = tag.score >= 5;
@@ -52,12 +48,8 @@ export default function TagChip({
     // Compact view for SpotCard - just show label
     return (
       <span
-        className="inline-flex items-center px-2 py-0.5 rounded-full text-[0.6rem] font-mono font-medium border"
-        style={{
-          borderColor: `color-mix(in srgb, ${color} 40%, transparent)`,
-          backgroundColor: `color-mix(in srgb, ${color} 10%, transparent)`,
-          color: color,
-        }}
+        data-tag-group={tag.tag_group}
+        className="inline-flex items-center px-2 py-0.5 rounded-full text-[0.6rem] font-mono font-medium border tag-chip"
       >
         {tag.tag_label}
         {tag.score > 0 && (
@@ -69,16 +61,12 @@ export default function TagChip({
 
   return (
     <div
-      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border transition-colors"
-      style={{
-        borderColor: `color-mix(in srgb, ${color} 40%, transparent)`,
-        backgroundColor: `color-mix(in srgb, ${color} 10%, transparent)`,
-      }}
+      data-tag-group={tag.tag_group}
+      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border transition-colors tag-chip"
     >
       {/* Tag label */}
       <span
-        className="font-mono text-xs font-medium"
-        style={{ color }}
+        className="font-mono text-xs font-medium tag-chip-text"
       >
         {tag.tag_label}
       </span>
@@ -121,8 +109,7 @@ export default function TagChip({
 
           {/* Score */}
           <span
-            className="font-mono text-[0.65rem] min-w-[1.5rem] text-center"
-            style={{ color }}
+            className="font-mono text-[0.65rem] min-w-[1.5rem] text-center tag-chip-text"
           >
             {tag.score}
           </span>

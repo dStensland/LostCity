@@ -1,0 +1,14 @@
+version: 1
+slug: nightmares-gate
+name: Nightmare's Gate
+integration_method: playwright
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.nightmaresgate.com
+  fetch:
+    render_js: true
+detail:
+  enabled: false

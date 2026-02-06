@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { ReactNode } from "react";
+import ScopedStyles from "@/components/ScopedStyles";
+import { createCssVarClass } from "@/lib/css-utils";
 
 export type SectionPriority = "primary" | "secondary" | "tertiary";
 
@@ -24,7 +26,7 @@ const FeaturedIcon = ({ className }: { className?: string }) => (
     <path
       d="M13 2L4 14h7l-2 8 11-12h-7l2-8z"
       fill="currentColor"
-      style={{ filter: "drop-shadow(0 0 4px currentColor)" }}
+      className="section-icon-glow"
     />
     {/* Electric crackle accents */}
     <path
@@ -54,7 +56,7 @@ export default function FeedSectionHeader({
       case "primary":
         return {
           titleClass: "section-header-primary text-2xl",
-          subtitleClass: "font-mono text-xs text-[var(--muted)] mt-0.5",
+          subtitleClass: "font-mono text-[0.75rem] text-[var(--muted)] mt-0.5",
           containerClass: "mb-5 pb-2",
           iconSize: "w-6 h-6",
           defaultAccent: "var(--gold)",
@@ -63,7 +65,7 @@ export default function FeedSectionHeader({
       case "secondary":
         return {
           titleClass: "section-header-secondary text-xl",
-          subtitleClass: "font-mono text-[0.65rem] text-[var(--muted)] mt-0.5",
+          subtitleClass: "font-mono text-[0.7rem] text-[var(--muted)] mt-0.5",
           containerClass: "mb-4",
           iconSize: "w-5 h-5",
           defaultAccent: accentColor || "var(--coral)",
@@ -83,6 +85,13 @@ export default function FeedSectionHeader({
 
   const styles = getPriorityStyles();
   const effectiveAccent = accentColor || styles.defaultAccent;
+  const accentClass = createCssVarClass("--section-accent", effectiveAccent, "section-accent");
+  const titleColorClass = priority === "tertiary"
+    ? "text-[var(--soft)]"
+    : accentColor
+    ? "text-[var(--section-accent)]"
+    : "text-[var(--cream)]";
+  const titleGlowClass = priority === "primary" && accentColor ? "section-title-glow" : "";
 
   // Determine which icon to show
   const displayIcon = icon || (styles.showDefaultIcon ? <FeaturedIcon className={styles.iconSize} /> : null);
@@ -99,15 +108,16 @@ export default function FeedSectionHeader({
 
   return (
     <div
-      className={`flex items-center justify-between ${styles.containerClass} ${className}`}
-      style={{ "--section-accent": effectiveAccent } as React.CSSProperties}
+      className={`flex items-center justify-between section-accent ${styles.containerClass} ${className} ${
+        accentClass?.className ?? ""
+      }`}
     >
+      <ScopedStyles css={accentClass?.css} />
       <div className="flex items-center gap-3">
         {/* Icon with glow (for primary and secondary) */}
         {displayIcon && priority !== "tertiary" && (
           <div
-            className={`flex items-center justify-center ${priority === "primary" ? "w-12 h-12" : "w-10 h-10"} rounded-lg ${iconGlowClass}`}
-            style={{ color: effectiveAccent }}
+            className={`flex items-center justify-center ${priority === "primary" ? "w-12 h-12" : "w-10 h-10"} rounded-lg ${iconGlowClass} text-[var(--section-accent)]`}
           >
             {displayIcon}
           </div>
@@ -117,12 +127,7 @@ export default function FeedSectionHeader({
           {/* Badge (above title for primary) */}
           {badge && priority === "primary" && (
             <span
-              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[0.6rem] font-mono font-medium uppercase tracking-wider mb-1"
-              style={{
-                backgroundColor: `color-mix(in srgb, ${effectiveAccent} 20%, transparent)`,
-                color: effectiveAccent,
-                border: `1px solid color-mix(in srgb, ${effectiveAccent} 30%, transparent)`,
-              }}
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[0.6rem] font-mono font-medium uppercase tracking-wider mb-1 bg-accent-20 text-accent border border-accent-40"
             >
               {badge}
             </span>
@@ -130,23 +135,13 @@ export default function FeedSectionHeader({
 
           {/* Title */}
           <h3
-            className={styles.titleClass}
-            style={{
-              color: priority === "tertiary" ? "var(--soft)" : accentColor || "var(--cream)",
-              textShadow: priority === "primary" && accentColor
-                ? `0 0 20px color-mix(in srgb, ${accentColor} 50%, transparent)`
-                : undefined,
-            }}
+            className={`${styles.titleClass} ${titleColorClass} ${titleGlowClass}`}
           >
             {title}
             {/* Inline badge for secondary/tertiary */}
             {badge && priority !== "primary" && (
               <span
-                className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-[0.55rem] font-mono font-medium uppercase"
-                style={{
-                  backgroundColor: `color-mix(in srgb, ${effectiveAccent} 20%, transparent)`,
-                  color: effectiveAccent,
-                }}
+                className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-[0.55rem] font-mono font-medium uppercase bg-accent-20 text-accent"
               >
                 {badge}
               </span>
@@ -164,8 +159,7 @@ export default function FeedSectionHeader({
       {seeAllHref && (
         <Link
           href={seeAllHref}
-          className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-mono transition-all group hover:scale-105 ${seeAllClass}`}
-          style={{ color: effectiveAccent }}
+          className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-mono transition-all group hover:scale-105 ${seeAllClass} text-accent`}
         >
           {seeAllLabel}
           <svg

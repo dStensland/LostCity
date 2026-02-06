@@ -1,0 +1,12 @@
+version: 1
+slug: live-at-battery
+name: The Battery Atlanta
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.batteryatl.com
+detail:
+  enabled: false

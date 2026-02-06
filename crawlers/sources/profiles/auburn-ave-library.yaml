@@ -1,0 +1,14 @@
+version: 1
+slug: auburn-ave-library
+name: Auburn Avenue Research Library
+integration_method: feed
+defaults: {}
+discovery:
+  enabled: true
+  type: feed
+  urls:
+  - https://gateway.bibliocommons.com/v2/libraries/fulcolibrary/rss/events?types=5faac707c118654500b6f842
+  feed:
+    format: auto
+detail:
+  enabled: false

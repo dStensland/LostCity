@@ -1,0 +1,14 @@
+version: 1
+slug: atlanta-comedy-theater
+name: Atlanta Comedy Theater
+integration_method: playwright
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.atlantacomedytheater.com
+  fetch:
+    render_js: true
+detail:
+  enabled: false

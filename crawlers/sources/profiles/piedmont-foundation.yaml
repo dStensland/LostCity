@@ -1,0 +1,14 @@
+version: 1
+slug: piedmont-foundation
+name: Piedmont Foundation Events
+integration_method: playwright
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.piedmont.org/about-piedmont-healthcare/foundation-and-giving/overview/special-events
+  fetch:
+    render_js: true
+detail:
+  enabled: false

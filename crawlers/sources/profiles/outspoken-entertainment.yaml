@@ -1,0 +1,12 @@
+version: 1
+slug: outspoken-entertainment
+name: Outspoken Entertainment
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.outspokenentertainment.com/wheretoplay
+detail:
+  enabled: false

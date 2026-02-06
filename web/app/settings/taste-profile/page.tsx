@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 import CategoryIcon, { getCategoryColor, CATEGORY_CONFIG, type CategoryType } from "@/components/CategoryIcon";
+import ScopedStyles from "@/components/ScopedStyles";
+import { createCssVarClass, createCssVarClassForLength } from "@/lib/css-utils";
 
 type ProfileData = {
   explicit: {
@@ -120,8 +122,33 @@ export default function TasteProfilePage() {
     1
   );
 
+  const categoryKeys = Array.from(new Set([
+    ...profile.explicit.favorite_categories,
+    ...profile.stats.topCategories.map((cat) => cat.category),
+  ]));
+
+  const categoryAccentClasses = Object.fromEntries(
+    categoryKeys.map((cat) => [
+      cat,
+      createCssVarClass("--accent-color", getCategoryColor(cat), "taste-cat"),
+    ])
+  ) as Record<string, ReturnType<typeof createCssVarClass> | null>;
+
+  const categoryBarWidthClasses = profile.stats.topCategories.map((cat) => {
+    const percentage = (cat.score / maxCategoryScore) * 100;
+    return createCssVarClassForLength("--bar-width", `${percentage}%`, "taste-bar");
+  });
+
+  const scopedCss = [
+    ...Object.values(categoryAccentClasses).map((entry) => entry?.css),
+    ...categoryBarWidthClasses.map((entry) => entry?.css),
+  ]
+    .filter(Boolean)
+    .join("\n");
+
   return (
     <div className="min-h-screen bg-[var(--void)]">
+      <ScopedStyles css={scopedCss} />
       {/* Header */}
       <header className="border-b border-[var(--twilight)] sticky top-0 bg-[var(--void)]/95 backdrop-blur-md z-10">
         <div className="max-w-2xl mx-auto px-4 py-4 flex items-center gap-4">
@@ -140,19 +167,19 @@ export default function TasteProfilePage() {
       <main className="max-w-2xl mx-auto px-4 py-8 space-y-8">
         {/* Activity Summary */}
         <section className="grid grid-cols-3 gap-3">
-          <div className="p-4 rounded-xl border border-[var(--twilight)] text-center" style={{ backgroundColor: "var(--card-bg)" }}>
+          <div className="p-4 rounded-xl border border-[var(--twilight)] text-center bg-[var(--card-bg)]">
             <div className="text-2xl font-semibold text-[var(--coral)]">
               {profile.stats.rsvps.going + profile.stats.rsvps.interested + profile.stats.rsvps.went}
             </div>
             <div className="text-xs text-[var(--muted)] font-mono mt-1">RSVPs</div>
           </div>
-          <div className="p-4 rounded-xl border border-[var(--twilight)] text-center" style={{ backgroundColor: "var(--card-bg)" }}>
+          <div className="p-4 rounded-xl border border-[var(--twilight)] text-center bg-[var(--card-bg)]">
             <div className="text-2xl font-semibold text-[var(--neon-cyan)]">
               {profile.stats.followedVenues}
             </div>
             <div className="text-xs text-[var(--muted)] font-mono mt-1">Venues</div>
           </div>
-          <div className="p-4 rounded-xl border border-[var(--twilight)] text-center" style={{ backgroundColor: "var(--card-bg)" }}>
+          <div className="p-4 rounded-xl border border-[var(--twilight)] text-center bg-[var(--card-bg)]">
             <div className="text-2xl font-semibold text-[var(--lavender)]">
               {profile.stats.followedProducers}
             </div>
@@ -161,7 +188,7 @@ export default function TasteProfilePage() {
         </section>
 
         {/* Explicit Preferences */}
-        <section className="rounded-xl border border-[var(--twilight)] p-5" style={{ backgroundColor: "var(--card-bg)" }}>
+        <section className="rounded-xl border border-[var(--twilight)] p-5 bg-[var(--card-bg)]">
           <div className="flex items-center justify-between mb-4">
             <div>
               <h2 className="font-semibold text-[var(--cream)]">Your Preferences</h2>
@@ -181,19 +208,18 @@ export default function TasteProfilePage() {
                 <div>
                   <h3 className="text-xs text-[var(--muted)] font-mono uppercase tracking-wider mb-2">Categories</h3>
                   <div className="flex flex-wrap gap-2">
-                    {profile.explicit.favorite_categories.map((cat) => (
+                    {profile.explicit.favorite_categories.map((cat) => {
+                      const accentClass = categoryAccentClasses[cat];
+                      return (
                       <span
                         key={cat}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-mono"
-                        style={{
-                          backgroundColor: `${getCategoryColor(cat)}15`,
-                          color: getCategoryColor(cat),
-                        }}
+                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-mono bg-accent-15 text-accent ${accentClass?.className ?? ""}`}
                       >
                         <CategoryIcon type={cat} size={14} />
                         {CATEGORY_CONFIG[cat as CategoryType]?.label || cat}
                       </span>
-                    ))}
+                    );
+                    })}
                   </div>
                 </div>
               )}
@@ -225,7 +251,7 @@ export default function TasteProfilePage() {
         </section>
 
         {/* Learned Preferences - Category Affinity */}
-        <section className="rounded-xl border border-[var(--twilight)] p-5" style={{ backgroundColor: "var(--card-bg)" }}>
+        <section className="rounded-xl border border-[var(--twilight)] p-5 bg-[var(--card-bg)]">
           <div className="flex items-center justify-between mb-4">
             <div>
               <h2 className="font-semibold text-[var(--cream)]">Category Affinity</h2>
@@ -235,9 +261,9 @@ export default function TasteProfilePage() {
 
           {profile.stats.topCategories.length > 0 ? (
             <div className="space-y-3">
-              {profile.stats.topCategories.map((cat) => {
-                const percentage = (cat.score / maxCategoryScore) * 100;
-                const color = getCategoryColor(cat.category);
+              {profile.stats.topCategories.map((cat, index) => {
+                const accentClass = categoryAccentClasses[cat.category];
+                const widthClass = categoryBarWidthClasses[index];
                 return (
                   <div key={cat.category}>
                     <div className="flex items-center justify-between mb-1">
@@ -253,11 +279,7 @@ export default function TasteProfilePage() {
                     </div>
                     <div className="h-2 rounded-full bg-[var(--twilight)] overflow-hidden">
                       <div
-                        className="h-full rounded-full transition-all duration-500"
-                        style={{
-                          width: `${percentage}%`,
-                          backgroundColor: color,
-                        }}
+                        className={`h-full rounded-full transition-all duration-500 bg-accent w-[var(--bar-width)] ${accentClass?.className ?? ""} ${widthClass?.className ?? ""}`}
                       />
                     </div>
                   </div>
@@ -273,7 +295,7 @@ export default function TasteProfilePage() {
 
         {/* Neighborhood Preferences */}
         {profile.stats.topNeighborhoods.length > 0 && (
-          <section className="rounded-xl border border-[var(--twilight)] p-5" style={{ backgroundColor: "var(--card-bg)" }}>
+          <section className="rounded-xl border border-[var(--twilight)] p-5 bg-[var(--card-bg)]">
             <div className="mb-4">
               <h2 className="font-semibold text-[var(--cream)]">Favorite Neighborhoods</h2>
               <p className="text-xs text-[var(--muted)] mt-0.5">Where you like to go</p>
@@ -296,7 +318,7 @@ export default function TasteProfilePage() {
         )}
 
         {/* Reset Section */}
-        <section className="rounded-xl border border-[var(--twilight)] p-5" style={{ backgroundColor: "var(--card-bg)" }}>
+        <section className="rounded-xl border border-[var(--twilight)] p-5 bg-[var(--card-bg)]">
           <div className="flex items-center justify-between">
             <div>
               <h2 className="font-semibold text-[var(--cream)]">Reset Learned Preferences</h2>

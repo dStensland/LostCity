@@ -1,0 +1,14 @@
+version: 1
+slug: sur-la-table
+name: Sur La Table - Lenox
+integration_method: playwright
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.surlatable.com
+  fetch:
+    render_js: true
+detail:
+  enabled: false

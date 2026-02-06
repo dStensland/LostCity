@@ -78,8 +78,7 @@ export default function EventQuickActions({ event, isLive, className = "" }: Eve
 
   return (
     <div
-      className={`rounded-xl border border-[var(--twilight)] ${className}`}
-      style={{ backgroundColor: "var(--card-bg)" }}
+      className={`rounded-xl border border-[var(--twilight)] bg-[var(--card-bg)] ${className}`}
     >
       {/* Summary row: Price | Date | Time */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--twilight)]">

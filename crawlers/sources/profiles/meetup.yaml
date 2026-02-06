@@ -1,0 +1,14 @@
+version: 1
+slug: meetup
+name: Meetup
+integration_method: api
+defaults: {}
+discovery:
+  enabled: true
+  type: api
+  urls:
+  - https://api.meetup.com
+  api:
+    adapter: custom
+detail:
+  enabled: false

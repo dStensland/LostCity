@@ -20,6 +20,18 @@ const directionClasses = {
   fade: { hidden: "", visible: "" },
 };
 
+const DELAY_CLASSES = [
+  { ms: 0, className: "" },
+  { ms: 75, className: "delay-75" },
+  { ms: 100, className: "delay-100" },
+  { ms: 150, className: "delay-150" },
+  { ms: 200, className: "delay-200" },
+  { ms: 300, className: "delay-300" },
+  { ms: 500, className: "delay-500" },
+  { ms: 700, className: "delay-700" },
+  { ms: 1000, className: "delay-1000" },
+];
+
 export default function ScrollReveal({
   children,
   className = "",
@@ -30,6 +42,9 @@ export default function ScrollReveal({
 }: Props) {
   const { ref, isVisible } = useScrollReveal<HTMLDivElement>({ threshold });
   const dirClass = directionClasses[direction];
+  const resolvedDelay = DELAY_CLASSES.reduce((closest, next) => (
+    Math.abs(next.ms - delay) < Math.abs(closest.ms - delay) ? next : closest
+  ), DELAY_CLASSES[0]);
 
   return (
     <Component
@@ -38,8 +53,7 @@ export default function ScrollReveal({
         isVisible
           ? `opacity-100 ${dirClass.visible}`
           : `opacity-0 ${dirClass.hidden}`
-      } ${className}`}
-      style={{ transitionDelay: isVisible ? `${delay}ms` : "0ms" }}
+      } ${resolvedDelay.className} ${className}`}
     >
       {children}
     </Component>

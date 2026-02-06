@@ -29,10 +29,9 @@ function NeighborhoodCard({ name, liveCount, openCount, isSelected, onClick }: N
       </div>
       <div className="flex items-center gap-2">
         {liveCount > 0 && (
-          <span className="flex items-center gap-1">
+            <span className="flex items-center gap-1">
             <span
-              className="w-1.5 h-1.5 rounded-full bg-[var(--neon-red)]"
-              style={{ boxShadow: "0 0 4px var(--neon-red)" }}
+              className="w-1.5 h-1.5 rounded-full bg-[var(--neon-red)] shadow-[0_0_4px_var(--neon-red)]"
             />
             <span className="font-mono text-[0.6rem] text-[var(--neon-red)]">
               {liveCount}

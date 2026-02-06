@@ -132,6 +132,22 @@ export function useForYouEvents(options: UseForYouEventsOptions = {}) {
       const params = buildApiParams(pageParam as string | null);
       const res = await fetch(`/api/feed?${params}`, { signal });
 
+      if (res.status === 401) {
+        return {
+          events: [],
+          cursor: null,
+          hasMore: false,
+          hasPreferences: false,
+          personalization: {
+            followedVenueIds: [],
+            followedOrgIds: [],
+            favoriteNeighborhoods: [],
+            favoriteCategories: [],
+            isPersonalized: false,
+          },
+        };
+      }
+
       if (!res.ok) {
         const error = await res.json().catch(() => ({}));
         throw new Error(error.error || `Failed to fetch feed: ${res.status}`);
@@ -145,10 +161,7 @@ export function useForYouEvents(options: UseForYouEventsOptions = {}) {
     refetchOnWindowFocus: false,
     retry: 3,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
-    throwOnError: (error) => {
-      if (error.name === "AbortError") return false;
-      return true;
-    },
+    throwOnError: false,
   });
 
   // Flatten all pages into a single events array

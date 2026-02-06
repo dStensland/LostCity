@@ -290,8 +290,7 @@ export default function SubmitVenueModal({ isOpen, onClose, portalSlug = "atlant
           <div className="text-center py-10">
             <div className="w-24 h-24 mx-auto mb-5 relative">
               <svg
-                className="w-24 h-24 animate-spin"
-                style={{ animationDuration: "2s" }}
+                className="w-24 h-24 animate-[spin_2s_linear_infinite]"
                 viewBox="0 0 100 100"
               >
                 {/* Crust */}
@@ -333,9 +332,9 @@ export default function SubmitVenueModal({ isOpen, onClose, portalSlug = "atlant
               </svg>
               {/* Steam wisps */}
               <div className="absolute -top-2 left-1/2 -translate-x-1/2 flex gap-2">
-                <span className="block w-1 h-4 bg-[var(--muted)] rounded-full opacity-40 animate-pulse" style={{ animationDelay: "0s" }} />
-                <span className="block w-1 h-6 bg-[var(--muted)] rounded-full opacity-30 animate-pulse" style={{ animationDelay: "0.5s" }} />
-                <span className="block w-1 h-4 bg-[var(--muted)] rounded-full opacity-40 animate-pulse" style={{ animationDelay: "1s" }} />
+                <span className="block w-1 h-4 bg-[var(--muted)] rounded-full opacity-40 animate-pulse" />
+                <span className="block w-1 h-6 bg-[var(--muted)] rounded-full opacity-30 animate-pulse" />
+                <span className="block w-1 h-4 bg-[var(--muted)] rounded-full opacity-40 animate-pulse" />
               </div>
             </div>
             <p className="text-[var(--cream)] font-medium mb-1">Adding your spot...</p>

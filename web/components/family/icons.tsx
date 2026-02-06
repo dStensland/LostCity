@@ -1,6 +1,8 @@
 // Polished playful icons - clean lines with personality
 
 import { SVGProps } from "react";
+import ScopedStyles from "@/components/ScopedStyles";
+import { createCssVarClass } from "@/lib/css-utils";
 
 type IconProps = SVGProps<SVGSVGElement> & {
   size?: number;
@@ -226,8 +228,15 @@ export function SplatShape({ className, ...props }: SVGProps<SVGSVGElement>) {
 }
 
 export function SlimeDrip({ color, className }: { color: string; className?: string }) {
+  const colorClass = createCssVarClass("--slime-color", color, "slime-color");
   return (
-    <div className={className} style={{ backgroundColor: color, height: "100%" }} />
+    <div
+      className={`h-full bg-[var(--slime-color)] ${className ?? ""} ${
+        colorClass?.className ?? ""
+      }`}
+    >
+      <ScopedStyles css={colorClass?.css ?? null} />
+    </div>
   );
 }
 
@@ -240,8 +249,15 @@ export function SlimeBurst({ className, ...props }: SVGProps<SVGSVGElement>) {
 }
 
 export function SquigglyLine({ color, className }: { color: string; className?: string }) {
+  const colorClass = createCssVarClass("--squiggle-color", color, "squiggle-color");
   return (
-    <div className={className} style={{ height: "2px", backgroundColor: color }} />
+    <div
+      className={`h-[2px] bg-[var(--squiggle-color)] ${className ?? ""} ${
+        colorClass?.className ?? ""
+      }`}
+    >
+      <ScopedStyles css={colorClass?.css ?? null} />
+    </div>
   );
 }
 

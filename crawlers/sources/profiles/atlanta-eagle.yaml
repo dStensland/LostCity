@@ -1,0 +1,12 @@
+version: 1
+slug: atlanta-eagle
+name: Atlanta Eagle
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.atlantaeagle.com
+detail:
+  enabled: false

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, ReactNode } from "react";
+import { useState, ReactNode } from "react";
 
 // Category accent colors - vibrant neon palette
 export const CATEGORY_COLORS = {
@@ -12,6 +12,11 @@ export const CATEGORY_COLORS = {
   events: "#FF6B6B", // coral
   venue: "#FF00FF", // magenta
 } as const;
+
+const ACCENT_COLOR_KEYS = Object.entries(CATEGORY_COLORS).reduce((acc, [key, value]) => {
+  acc[value] = key as CategoryKey;
+  return acc;
+}, {} as Record<string, CategoryKey>);
 
 // Fun category labels with flair
 const CATEGORY_LABELS: Record<string, string> = {
@@ -53,37 +58,11 @@ export default function CollapsibleSection({
 }: CollapsibleSectionProps) {
   const [isOpen, setIsOpen] = useState(defaultOpen);
   const [showAll, setShowAll] = useState(false);
-  const contentRef = useRef<HTMLDivElement>(null);
-  const [contentHeight, setContentHeight] = useState<number | undefined>(undefined);
-
-  const color = accentColor || (category ? CATEGORY_COLORS[category] : "#FF6B6B");
   const displayTitle = category && CATEGORY_LABELS[category] ? CATEGORY_LABELS[category] : title;
   const itemCount = totalItems ?? count ?? 0;
   const hasMore = itemCount > maxItems && !showAll;
-
-  // Update content height when isOpen changes
-  useEffect(() => {
-    if (contentRef.current) {
-      if (isOpen) {
-        setContentHeight(contentRef.current.scrollHeight);
-      } else {
-        setContentHeight(0);
-      }
-    }
-  }, [isOpen, showAll, children]);
-
-  // Watch for content changes
-  useEffect(() => {
-    if (isOpen && contentRef.current) {
-      const observer = new ResizeObserver(() => {
-        if (contentRef.current) {
-          setContentHeight(contentRef.current.scrollHeight);
-        }
-      });
-      observer.observe(contentRef.current);
-      return () => observer.disconnect();
-    }
-  }, [isOpen]);
+  const accentKey = accentColor ? ACCENT_COLOR_KEYS[accentColor] : category;
+  const dataAccent = accentKey || "default";
 
   const handleSeeAll = () => {
     if (onSeeAll) {
@@ -95,14 +74,9 @@ export default function CollapsibleSection({
 
   return (
     <div
-      className="relative rounded-xl overflow-hidden transition-all duration-300"
-      style={{
-        background: `linear-gradient(135deg, rgba(20,20,30,0.9) 0%, rgba(30,30,45,0.85) 100%)`,
-        border: `1px solid ${color}${isOpen ? '40' : '20'}`,
-        boxShadow: isOpen
-          ? `0 0 20px ${color}25, inset 0 1px 0 ${color}15`
-          : `0 0 8px ${color}10`,
-      }}
+      data-accent={dataAccent}
+      data-open={isOpen ? "true" : "false"}
+      className="relative rounded-xl overflow-hidden transition-all duration-300 collapsible-section"
     >
 
       {/* Header */}
@@ -112,28 +86,16 @@ export default function CollapsibleSection({
       >
         {/* Left accent bar - subtle glow when open */}
         <div
-          className="absolute left-0 top-2 bottom-2 w-1 rounded-full transition-all duration-300"
-          style={{
-            background: color,
-            opacity: isOpen ? 1 : 0.6,
-            boxShadow: isOpen ? `0 0 8px ${color}80` : 'none',
-          }}
+          className="absolute left-0 top-2 bottom-2 w-1 rounded-full transition-all duration-300 collapsible-accent"
         />
 
         {/* Icon with subtle glow when open */}
         {icon && (
           <div
-            className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ml-2 transition-all duration-300"
-            style={{
-              background: `linear-gradient(135deg, ${color}${isOpen ? '30' : '20'} 0%, ${color}10 100%)`,
-              boxShadow: isOpen ? `0 0 12px ${color}30` : 'none',
-            }}
+            className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ml-2 transition-all duration-300 collapsible-icon"
           >
             <span
-              className="text-xl transition-all duration-300"
-              style={{
-                filter: isOpen ? `drop-shadow(0 0 4px ${color}80)` : 'none',
-              }}
+              className="text-xl transition-all duration-300 collapsible-icon-mark"
             >
               {icon}
             </span>
@@ -143,11 +105,7 @@ export default function CollapsibleSection({
         {/* Title and count */}
         <div className="flex-1 min-w-0 ml-1">
           <h3
-            className="font-semibold text-sm tracking-wide transition-all duration-300"
-            style={{
-              color: isOpen ? color : 'var(--cream)',
-              textShadow: isOpen ? `0 0 12px ${color}60` : 'none',
-            }}
+            className="font-semibold text-sm tracking-wide transition-all duration-300 collapsible-title"
           >
             {displayTitle}
           </h3>
@@ -161,13 +119,7 @@ export default function CollapsibleSection({
         {/* Count badge with subtle glow */}
         {count !== undefined && count > 0 && (
           <span
-            className="px-2.5 py-1 rounded-full text-[0.7rem] font-bold font-mono transition-all duration-300"
-            style={{
-              background: `${color}${isOpen ? '25' : '15'}`,
-              color: color,
-              border: `1px solid ${color}${isOpen ? '50' : '30'}`,
-              boxShadow: isOpen ? `0 0 8px ${color}40` : 'none',
-            }}
+            className="px-2.5 py-1 rounded-full text-[0.7rem] font-bold font-mono transition-all duration-300 collapsible-count"
           >
             {count}
           </span>
@@ -176,12 +128,7 @@ export default function CollapsibleSection({
         {/* Animated chevron with glow */}
         <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0">
           <svg
-            className="w-5 h-5 transition-all duration-300"
-            style={{
-              transform: isOpen ? "rotate(180deg)" : "rotate(0deg)",
-              color: isOpen ? color : 'var(--muted)',
-              filter: isOpen ? `drop-shadow(0 0 3px ${color})` : 'none',
-            }}
+            className="w-5 h-5 transition-all duration-300 collapsible-chevron"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -192,21 +139,11 @@ export default function CollapsibleSection({
       </button>
 
       {/* Content */}
-      <div
-        ref={contentRef}
-        className="overflow-hidden transition-all duration-300 ease-out"
-        style={{
-          height: contentHeight !== undefined ? `${contentHeight}px` : "auto",
-          opacity: isOpen ? 1 : 0,
-        }}
-      >
+      <div className="overflow-hidden transition-all duration-300 ease-out collapsible-content">
         <div className="px-4 pb-4 pt-0">
           {/* Subtle divider */}
           <div
-            className="h-px mb-4"
-            style={{
-              background: `linear-gradient(90deg, transparent 0%, ${color}25 50%, transparent 100%)`,
-            }}
+            className="h-px mb-4 collapsible-divider"
           />
 
           {children}
@@ -215,12 +152,7 @@ export default function CollapsibleSection({
           {hasMore && (
             <button
               onClick={handleSeeAll}
-              className="mt-4 w-full py-2.5 text-center text-sm font-mono font-semibold tracking-wider uppercase transition-all duration-200 rounded-lg border hover:opacity-80"
-              style={{
-                color,
-                borderColor: `${color}30`,
-                background: `${color}08`,
-              }}
+              className="mt-4 w-full py-2.5 text-center text-sm font-mono font-semibold tracking-wider uppercase transition-all duration-200 rounded-lg border hover:opacity-80 collapsible-see-all"
             >
               See all {itemCount} →
             </button>

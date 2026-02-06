@@ -43,16 +43,6 @@ const CATEGORIES = [
   { value: "special_occasion", label: "Special Occasion" },
 ];
 
-const CATEGORY_COLORS: Record<string, string> = {
-  best_of: "#FBBF24",
-  hidden_gems: "#A78BFA",
-  date_night: "#F472B6",
-  with_friends: "#6EE7B7",
-  solo: "#5EEAD4",
-  budget: "#4ADE80",
-  special_occasion: "#F9A8D4",
-};
-
 const CATEGORY_ICONS: Record<string, React.ReactNode> = {
   best_of: (
     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -270,18 +260,14 @@ export default function ListsView({ portalId, portalSlug }: ListsViewProps) {
                 key={list.id}
                 href={`/${portalSlug}/lists/${list.slug}`}
                 className="flex-shrink-0 w-64 p-4 rounded-xl border border-[var(--twilight)] bg-gradient-to-br from-[var(--card-bg)] to-[var(--dusk)]/50 hover:border-[var(--coral)]/50 transition-all group"
+                data-list-category={list.category || "other"}
               >
                 <div className="flex items-start gap-3 mb-3">
                   <div
-                    className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
-                    style={{
-                      backgroundColor: list.category
-                        ? `${CATEGORY_COLORS[list.category]}20`
-                        : "var(--twilight)",
-                    }}
+                    className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 list-category-icon"
                   >
                     {list.category && CATEGORY_ICONS[list.category] ? (
-                      <span style={{ color: CATEGORY_COLORS[list.category] }}>
+                      <span className="text-[var(--list-category-color)]">
                         {CATEGORY_ICONS[list.category]}
                       </span>
                     ) : (
@@ -302,7 +288,7 @@ export default function ListsView({ portalId, portalSlug }: ListsViewProps) {
                   </div>
                 </div>
                 <div className="flex items-center gap-3 text-xs text-[var(--muted)]">
-                  <span className="flex items-center gap-1" style={{ color: "var(--coral)" }}>
+                  <span className="flex items-center gap-1 text-[var(--coral)]">
                     <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
                     </svg>
@@ -358,17 +344,17 @@ export default function ListsView({ portalId, portalSlug }: ListsViewProps) {
               </p>
               <div className="flex flex-wrap gap-2 justify-center">
                 {[
-                  { label: "Date Night Spots", icon: "💕", color: "#F472B6" },
-                  { label: "Hidden Gems", icon: "💎", color: "#A78BFA" },
-                  { label: "Best Coffee", icon: "☕", color: "#FBBF24" },
-                  { label: "Budget-Friendly", icon: "💰", color: "#4ADE80" },
-                  { label: "Late Night Eats", icon: "🌙", color: "#5EEAD4" },
-                  { label: "Family Fun", icon: "👨‍👩‍👧", color: "#6EE7B7" },
+                  { label: "Date Night Spots", icon: "💕", tone: "date-night" },
+                  { label: "Hidden Gems", icon: "💎", tone: "hidden-gems" },
+                  { label: "Best Coffee", icon: "☕", tone: "best-coffee" },
+                  { label: "Budget-Friendly", icon: "💰", tone: "budget" },
+                  { label: "Late Night Eats", icon: "🌙", tone: "late-night" },
+                  { label: "Family Fun", icon: "👨‍👩‍👧", tone: "family-fun" },
                 ].map((example) => (
                   <span
                     key={example.label}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border border-[var(--twilight)] bg-[var(--void)]/50"
-                    style={{ color: example.color }}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border border-[var(--twilight)] bg-[var(--void)]/50 list-example-chip"
+                    data-list-tone={example.tone}
                   >
                     <span>{example.icon}</span>
                     <span>{example.label}</span>

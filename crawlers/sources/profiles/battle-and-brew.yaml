@@ -1,0 +1,12 @@
+version: 1
+slug: battle-and-brew
+name: Battle & Brew
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.battleandbrew.com
+detail:
+  enabled: false

@@ -1,0 +1,14 @@
+version: 1
+slug: oddities-museum
+name: The Oddities Museum
+integration_method: playwright
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://theodditiesmuseum.org/calendar-of-events
+  fetch:
+    render_js: true
+detail:
+  enabled: false

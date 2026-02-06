@@ -1,0 +1,12 @@
+version: 1
+slug: atlanta-mission
+name: Atlanta Mission
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://atlantamission.org/get-involved/volunteer
+detail:
+  enabled: false

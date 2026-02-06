@@ -1,0 +1,12 @@
+version: 1
+slug: country-music-hof
+name: Country Music Hall of Fame
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.countrymusichalloffame.org/calendar
+detail:
+  enabled: false

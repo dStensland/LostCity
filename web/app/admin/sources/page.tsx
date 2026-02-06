@@ -10,6 +10,7 @@ type SourceHealth = {
   slug: string;
   url: string;
   is_active: boolean;
+  integration_method: string | null;
   last_run: string | null;
   last_status: string | null;
   last_error: string | null;
@@ -38,6 +39,7 @@ export default function SourceHealthPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<"all" | "active" | "failing">("active");
+  const [integrationFilter, setIntegrationFilter] = useState<string>("all");
 
   useEffect(() => {
     async function loadData() {
@@ -60,7 +62,50 @@ export default function SourceHealthPage() {
     if (filter === "active") return s.is_active;
     if (filter === "failing") return s.is_active && (s.success_rate_7d === 0 || s.last_status === "error");
     return true;
+  }).filter((s) => {
+    if (integrationFilter === "all") return true;
+    return (s.integration_method || "unknown") === integrationFilter;
   });
+
+  const integrationMethods = Array.from(
+    new Set(sources.map((s) => s.integration_method || "unknown"))
+  ).sort();
+
+  const integrationSummary = (() => {
+    const summary = new Map<
+      string,
+      { total: number; active: number; healthy: number; warning: number; failing: number; successRates: number[] }
+    >();
+
+    filteredSources.forEach((source) => {
+      const method = source.integration_method || "unknown";
+      if (!summary.has(method)) {
+        summary.set(method, { total: 0, active: 0, healthy: 0, warning: 0, failing: 0, successRates: [] });
+      }
+      const entry = summary.get(method)!;
+      entry.total += 1;
+      if (source.is_active) {
+        entry.active += 1;
+        if (source.last_run) {
+          entry.successRates.push(source.success_rate_7d);
+        }
+        if (source.success_rate_7d >= 80 && source.last_run) entry.healthy += 1;
+        else if (source.success_rate_7d > 0) entry.warning += 1;
+        else entry.failing += 1;
+      }
+    });
+
+    return Array.from(summary.entries())
+      .map(([method, data]) => {
+        const avgSuccess =
+          data.successRates.length > 0
+            ? Math.round(data.successRates.reduce((sum, v) => sum + v, 0) / data.successRates.length)
+            : 0;
+        const healthyRate = data.active > 0 ? Math.round((data.healthy / data.active) * 100) : 0;
+        return { method, ...data, avgSuccessRate: avgSuccess, healthyRate };
+      })
+      .sort((a, b) => b.total - a.total);
+  })();
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
@@ -111,7 +156,49 @@ export default function SourceHealthPage() {
                   {f === "all" ? "All Sources" : f === "active" ? "Active Only" : "Failing"}
                 </button>
               ))}
+              {integrationMethods.length > 0 && (
+                <select
+                  value={integrationFilter}
+                  onChange={(e) => setIntegrationFilter(e.target.value)}
+                  className="ml-auto px-3 py-1.5 bg-[var(--night)] border border-[var(--twilight)] rounded-lg font-mono text-xs text-[var(--cream)] focus:outline-none focus:border-[var(--coral)]"
+                >
+                  <option value="all">All Methods</option>
+                  {integrationMethods.map((method) => (
+                    <option key={method} value={method}>
+                      {method}
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
+
+            {/* Integration Summary */}
+            {integrationSummary.length > 0 && (
+              <div className="mb-6">
+                <div className="font-mono text-xs text-[var(--muted)] uppercase mb-2">
+                  Integration Methods (filtered)
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {integrationSummary.map((entry) => (
+                    <div
+                      key={entry.method}
+                      className="p-3 bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg"
+                    >
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="font-mono text-xs text-[var(--muted)] uppercase">
+                          {entry.method}
+                        </span>
+                        <span className="font-mono text-xs text-[var(--cream)]">{entry.total}</span>
+                      </div>
+                      <div className="flex items-center gap-3 font-mono text-xs text-[var(--soft)]">
+                        <span>Healthy {entry.healthyRate}%</span>
+                        <span>Avg Success {entry.avgSuccessRate}%</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Source Table */}
             <div className="bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg overflow-hidden">
@@ -121,6 +208,7 @@ export default function SourceHealthPage() {
                     <tr className="border-b border-[var(--twilight)] bg-[var(--night)]">
                       <th className="text-left px-4 py-3 font-mono text-xs text-[var(--muted)] uppercase">Source</th>
                       <th className="text-left px-4 py-3 font-mono text-xs text-[var(--muted)] uppercase">Owner</th>
+                      <th className="text-left px-4 py-3 font-mono text-xs text-[var(--muted)] uppercase">Method</th>
                       <th className="text-left px-4 py-3 font-mono text-xs text-[var(--muted)] uppercase">Status</th>
                       <th className="text-left px-4 py-3 font-mono text-xs text-[var(--muted)] uppercase">Last Run</th>
                       <th className="text-right px-4 py-3 font-mono text-xs text-[var(--muted)] uppercase">7d Runs</th>
@@ -228,6 +316,11 @@ function SourceRow({ source }: { source: SourceHealth }) {
           )}
         </td>
         <td className="px-4 py-3">
+          <span className="font-mono text-xs text-[var(--soft)]">
+            {source.integration_method || "unknown"}
+          </span>
+        </td>
+        <td className="px-4 py-3">
           <span className={`font-mono text-xs ${statusColor}`}>{statusText}</span>
         </td>
         <td className="px-4 py-3">
@@ -258,7 +351,7 @@ function SourceRow({ source }: { source: SourceHealth }) {
       {/* Expanded Details */}
       {expanded && (
         <tr className="bg-[var(--night)]">
-          <td colSpan={8} className="px-4 py-3">
+          <td colSpan={9} className="px-4 py-3">
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
                 <p className="font-mono text-xs text-[var(--muted)] mb-1">Source URL</p>

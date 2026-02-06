@@ -1,0 +1,14 @@
+version: 1
+slug: fancons
+name: FanCons Georgia
+integration_method: playwright
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://fancons.com/events/schedule.php?loc=usGA
+  fetch:
+    render_js: true
+detail:
+  enabled: false

@@ -263,6 +263,10 @@ export default function RSVPButton({
     sm: "px-3 py-1.5 text-xs",
     md: "px-4 py-2 text-sm",
   };
+  const primarySizeClasses = {
+    sm: "px-4 py-2 text-sm",
+    md: "px-6 py-3 text-base",
+  };
 
   // Variant-specific styles
   const getButtonClasses = () => {
@@ -280,7 +284,7 @@ export default function RSVPButton({
 
     if (variant === "primary") {
       // Full-width primary button for sticky bar
-      return `${baseClasses} px-6 py-3 shadow-sm hover:shadow-md ${
+      return `${baseClasses} ${primarySizeClasses[size]} shadow-sm hover:shadow-md ${
         status
           ? `${currentConfig?.color} text-[var(--void)]`
           : "bg-[var(--coral)] text-[var(--void)] hover:bg-[var(--rose)]"

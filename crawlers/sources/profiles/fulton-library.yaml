@@ -1,0 +1,12 @@
+version: 1
+slug: fulton-library
+name: Atlanta-Fulton Public Library
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.fulcolibrary.org
+detail:
+  enabled: false

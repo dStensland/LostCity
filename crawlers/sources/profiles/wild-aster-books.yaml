@@ -1,0 +1,12 @@
+version: 1
+slug: wild-aster-books
+name: Wild Aster Books
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.wildasterbooks.com
+detail:
+  enabled: false

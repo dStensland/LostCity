@@ -1,0 +1,14 @@
+version: 1
+slug: do615
+name: Do615
+integration_method: playwright
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://do615.com/
+  fetch:
+    render_js: true
+detail:
+  enabled: false

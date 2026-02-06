@@ -1,0 +1,12 @@
+version: 1
+slug: sister-louisas
+name: Sister Louisa's Church
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.churchbar.net
+detail:
+  enabled: false

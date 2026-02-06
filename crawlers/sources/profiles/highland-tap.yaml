@@ -1,0 +1,12 @@
+version: 1
+slug: highland-tap
+name: Highland Tap
+integration_method: llm_crawler
+defaults: {}
+discovery:
+  enabled: true
+  type: html
+  urls:
+  - https://www.highlandtap.com
+detail:
+  enabled: false

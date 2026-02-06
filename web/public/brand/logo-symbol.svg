@@ -1,0 +1,14 @@
+<svg viewBox="0 0 200 180" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Top skyline (solid dark blue) -->
+  <path d="M100 0 L100 20 L80 20 L80 35 L60 35 L60 55 L40 55 L40 80 L20 80 L20 90 L0 90 L0 100 L40 100 L40 90 L60 90 L60 75 L80 75 L80 55 L100 55 L100 75 L120 75 L120 90 L140 90 L140 75 L160 75 L160 100 L200 100 L200 90 L180 90 L180 80 L160 80 L160 55 L140 55 L140 35 L120 35 L120 20 L100 20 L100 0 Z" fill="#1e3a5f"/>
+
+  <!-- Bottom reflection (cyan to magenta gradient) -->
+  <defs>
+    <linearGradient id="neonGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#00e5ff"/>
+      <stop offset="50%" stop-color="#ff6b7a"/>
+      <stop offset="100%" stop-color="#ff00ff"/>
+    </linearGradient>
+  </defs>
+  <path d="M0 105 L0 115 L20 115 L20 105 L40 105 L40 115 L60 115 L60 130 L80 130 L80 150 L100 150 L100 180 L100 150 L120 150 L120 130 L140 130 L140 115 L160 115 L160 105 L200 105 L200 115 L180 115 L180 125 L160 125 L160 150 L140 150 L140 170 L120 170 L120 180 L80 180 L80 170 L60 170 L60 150 L40 150 L40 125 L20 125 L20 115 L0 115 Z" fill="url(#neonGradient)" opacity="0.9"/>
+</svg>

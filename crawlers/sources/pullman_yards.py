@@ -15,7 +15,7 @@ from playwright.sync_api import sync_playwright
 
 from db import get_or_create_venue, insert_event, find_event_by_hash
 from dedupe import generate_content_hash
-from utils import extract_images_from_page
+from utils import extract_images_from_page, extract_event_links, find_event_url
 
 logger = logging.getLogger(__name__)
 
@@ -131,6 +131,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
             # Extract images
             image_map = extract_images_from_page(page)
 
+            # Extract event links for specific URLs
+            event_links = extract_event_links(page, BASE_URL)
+
             # Scroll to load content
             for _ in range(5):
                 page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
@@ -206,6 +209,13 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             if event_url and event_url.startswith("/"):
                                 event_url = BASE_URL + event_url
 
+                            # Get specific event URL
+
+
+                            event_url = find_event_url(title, event_links, EVENTS_URL)
+
+
+
                             event_record = {
                                 "source_id": source_id,
                                 "venue_id": venue_id,
@@ -276,6 +286,13 @@ def crawl(source: dict) -> tuple[int, int, int]:
                                     if not find_event_by_hash(content_hash):
                                         category, subcategory, tags = determine_category(title)
 
+                                        # Get specific event URL
+
+
+                                        event_url = find_event_url(title, event_links, EVENTS_URL)
+
+
+
                                         event_record = {
                                             "source_id": source_id,
                                             "venue_id": venue_id,
@@ -293,8 +310,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
                                             "price_max": None,
                                             "price_note": None,
                                             "is_free": False,
-                                            "source_url": EVENTS_URL,
-                                            "ticket_url": EVENTS_URL,
+                                            "source_url": event_url,
+                                            "ticket_url": event_url,
                                             "image_url": None,
                                             "raw_text": f"{title} - {date_result}",
                                             "extraction_confidence": 0.70,

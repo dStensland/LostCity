@@ -1,0 +1,11 @@
+version: 1
+slug: ticketmaster
+name: Ticketmaster
+integration_method: aggregator
+discovery:
+  enabled: true
+  type: api
+  api:
+    adapter: ticketmaster
+detail:
+  enabled: false

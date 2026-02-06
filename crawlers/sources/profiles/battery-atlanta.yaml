@@ -1,0 +1,14 @@
+version: 1
+slug: battery-atlanta
+name: The Battery Atlanta
+integration_method: jsonld_only
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.batteryatl.com/events/
+detail:
+  enabled: true
+  jsonld_only: true
+  use_jsonld: true

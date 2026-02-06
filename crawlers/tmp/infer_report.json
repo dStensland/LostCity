@@ -1,0 +1,2612 @@
+[
+  {
+    "slug": "10times",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "13-stories",
+    "method": "playwright",
+    "source": "existing"
+  },
+  {
+    "slug": "404-found-atl",
+    "method": "aggregator",
+    "source": "existing"
+  },
+  {
+    "slug": "529",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "7-stages",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "a-cappella-books",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "abv-gallery",
+    "method": "aggregator",
+    "source": "existing"
+  },
+  {
+    "slug": "academy-ballroom",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "access-atlanta",
+    "method": "aggregator",
+    "source": "existing"
+  },
+  {
+    "slug": "aclu-georgia",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "activate-games",
+    "method": "llm_crawler",
+    "source": "existing"
+  },
+  {
+    "slug": "actors-express",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "acworth-city",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "agnes-scott",
+    "method": "aggregator",
+    "source": "existing"
+  },
+  {
+    "slug": "aisle-5",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "aisle5",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "ajff",
+    "method": "playwright",
+    "source": "existing"
+  },
+  {
+    "slug": "alliance-theatre",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "alpharetta-city",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "amc-atlanta",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "americasmart",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "ameris-bank-amphitheatre",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "ansley-park-civic",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "apache-xlr",
+    "method": "playwright",
+    "source": "existing"
+  },
+  {
+    "slug": "apex-museum",
+    "method": "aggregator",
+    "source": "existing"
+  },
+  {
+    "slug": "argosy",
+    "method": "html",
+    "source": "code"
+  },
+  {
+    "slug": "arthur-murray-atlanta",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "arts-atl",
+    "method": "aggregator",
+    "source": "existing"
+  },
+  {
+    "slug": "artsatl-calendar",
+    "method": "aggregator",
+    "source": "existing"
+  },
+  {
+    "slug": "aso",
+    "method": "aggregator",
+    "source": "existing"
+  },
+  {
+    "slug": "asw-distillery",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "atkins-park",
+    "method": "llm_crawler",
+    "source": "existing"
+  },
+  {
+    "slug": "atl-gaming",
+    "method": "llm_crawler",
+    "source": "existing"
+  },
+  {
+    "slug": "atlanta-art-fair",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "atlanta-ballet",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "atlanta-beltline",
+    "method": "playwright",
+    "source": "existing"
+  },
+  {
+    "slug": "atlanta-botanical-garden",
+    "method": "llm_crawler",
+    "source": "existing"
+  },
+  {
+    "slug": "atlanta-clay-works",
+    "method": "playwright",
+    "source": "existing"
+  },
+  {
+    "slug": "atlanta-comedy-theater",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "atlanta-contemporary",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "atlanta-cultural-affairs",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "atlanta-cycling",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "atlanta-dance-ballroom",
+    "method": "llm_crawler",
+    "source": "existing"
+  },
+  {
+    "slug": "atlanta-dogwood",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "atlanta-eagle",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "atlanta-film-festival",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "atlanta-film-series",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "atlanta-film-society",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "atlanta-food-wine",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "atlanta-freethought",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "atlanta-gladiators",
+    "method": "aggregator",
+    "source": "existing"
+  },
+  {
+    "slug": "atlanta-history-center",
+    "method": "feed",
+    "source": "existing"
+  },
+  {
+    "slug": "atlanta-jazz-festival",
+    "method": "html",
+    "source": "code"
+  },
+  {
+    "slug": "atlanta-liberation-center",
+    "method": "aggregator",
+    "source": "existing"
+  },
+  {
+    "slug": "atlanta-lyric-theatre",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "atlanta-mission",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "atlanta-motor-speedway",
+    "method": "aggregator",
+    "source": "existing"
+  },
+  {
+    "slug": "atlanta-opera",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "atlanta-preservation-center",
+    "method": "aggregator",
+    "source": "existing"
+  },
+  {
+    "slug": "atlanta-pride",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "atlanta-recurring-social",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "atlanta-tech-village",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "atlanta-tech-week",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "atlantic-station",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "atlutd-pubs",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "auburn-ave-library",
+    "method": "feed",
+    "source": "existing"
+  },
+  {
+    "slug": "aurora-cineplex",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "aurora-theatre",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "avalon-alpharetta",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "avondale-arts",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "ballroom-impact",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "barnes-noble-atlanta",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "basement-atlanta",
+    "method": "llm_crawler",
+    "source": "existing"
+  },
+  {
+    "slug": "basement-east",
+    "method": "llm_crawler",
+    "source": "existing"
+  },
+  {
+    "slug": "battery-atlanta",
+    "method": "jsonld_only",
+    "source": "existing"
+  },
+  {
+    "slug": "battle-and-brew",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "belcourt-theatre",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "believe-music-hall",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "beltline",
+    "method": "playwright",
+    "source": "existing"
+  },
+  {
+    "slug": "bicycle-tours-atlanta",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "big-brothers-big-sisters-atl",
+    "method": "aggregator",
+    "source": "existing"
+  },
+  {
+    "slug": "big-peach-running",
+    "method": "llm_crawler",
+    "source": "existing"
+  },
+  {
+    "slug": "blakes-on-park",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "blakes-on-the-park",
+    "method": "llm_crawler",
+    "source": "existing"
+  },
+  {
+    "slug": "blind-willies",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "blue-merle-studios",
+    "method": "playwright",
+    "source": "existing"
+  },
+  {
+    "slug": "bluebird-cafe",
+    "method": "llm_crawler",
+    "source": "existing"
+  },
+  {
+    "slug": "bold-monk-brewing",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "book-boutique",
+    "method": "html",
+    "source": "code"
+  },
+  {
+    "slug": "bookhouse-pub",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "bookish-atlanta",
+    "method": "html",
+    "source": "code"
+  },
+  {
+    "slug": "boot-barn-hall",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "brake-pad",
+    "method": "llm_crawler",
+    "source": "existing"
+  },
+  {
+    "slug": "breman-museum",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "brewhouse-cafe",
+    "method": "llm_crawler",
+    "source": "existing"
+  },
+  {
+    "slug": "brick-store-pub",
+    "method": "llm_crawler",
+    "source": "existing"
+  },
+  {
+    "slug": "bridgestone-arena",
+    "method": "aggregator",
+    "source": "existing"
+  },
+  {
+    "slug": "brooklyn-bowl-nashville",
+    "method": "aggregator",
+    "source": "existing"
+  },
+  {
+    "slug": "buckhead-theatre",
+    "method": "aggregator",
+    "source": "existing"
+  },
+  {
+    "slug": "bulldogs-atlanta",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "buried-alive",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "c4-atlanta",
+    "method": "llm_crawler",
+    "source": "existing"
+  },
+  {
+    "slug": "caffeine-octane",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "cair-georgia",
+    "method": "llm_crawler",
+    "source": "existing"
+  },
+  {
+    "slug": "candler-park-fest",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "canton-street-roswell",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "carlos-museum",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "carter-center",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "castleberry-art-stroll",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "center-stage",
+    "method": "llm_crawler",
+    "source": "existing"
+  },
+  {
+    "slug": "charis-books",
+    "method": "llm_crawler",
+    "source": "existing"
+  },
+  {
+    "slug": "chastain-arts",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "chastain-park-amphitheatre",
+    "method": "aggregator",
+    "source": "existing"
+  },
+  {
+    "slug": "chattahoochee-nature",
+    "method": "llm_crawler",
+    "source": "existing"
+  },
+  {
+    "slug": "cherry-street-brewing",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "cheshire-bridge-district",
+    "method": "html",
+    "source": "code"
+  },
+  {
+    "slug": "childrens-museum",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "church-atlanta",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "church-bar",
+    "method": "html",
+    "source": "code"
+  },
+  {
+    "slug": "cinemark-atlanta",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "city-springs",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "city-winery-atlanta",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "civil-rights-center",
+    "method": "llm_crawler",
+    "source": "existing"
+  },
+  {
+    "slug": "clark-atlanta",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "club-wander",
+    "method": "llm_crawler",
+    "source": "existing"
+  },
+  {
+    "slug": "cobb-energy",
+    "method": "aggregator",
+    "source": "existing"
+  },
+  {
+    "slug": "cobb-galleria",
+    "method": "llm_crawler",
+    "source": "existing"
+  },
+  {
+    "slug": "cobb-library",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "coca-cola-roxy",
+    "method": "llm_crawler",
+    "source": "existing"
+  },
+  {
+    "slug": "college-football-hof",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "college-park-city",
+    "method": "aggregator",
+    "source": "existing"
+  },
+  {
+    "slug": "college-park-main-street",
+    "method": "aggregator",
+    "source": "existing"
+  },
+  {
+    "slug": "community-foundation-atl",
+    "method": "html",
+    "source": "code"
+  },
+  {
+    "slug": "compound-atlanta",
+    "method": "playwright",
+    "source": "existing"
+  },
+  {
+    "slug": "country-music-hof",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "creative-loafing",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "criminal-records",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "dads-garage",
+    "method": "playwright",
+    "source": "existing"
+  },
+  {
+    "slug": "dancing-dogs-yoga",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "dancing4fun",
+    "method": "aggregator",
+    "source": "existing"
+  },
+  {
+    "slug": "dark-horse-tavern",
+    "method": "llm_crawler",
+    "source": "existing"
+  },
+  {
+    "slug": "decatur-arts-festival",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "decatur-book-festival",
+    "method": "playwright",
+    "source": "existing"
+  },
+  {
+    "slug": "decatur-city",
+    "method": "llm_crawler",
+    "source": "existing"
+  },
+  {
+    "slug": "decatur-farmers-market",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "decatur-makers",
+    "method": "api",
+    "source": "existing"
+  },
+  {
+    "slug": "decatur-recreation",
+    "method": "llm_crawler",
+    "source": "existing"
+  },
+  {
+    "slug": "defy-atlanta",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "dekalb-library",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "der-biergarten",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "dirty-south-trivia",
+    "method": "playwright",
+    "source": "existing"
+  },
+  {
+    "slug": "discover-atlanta",
+    "method": "llm_crawler",
+    "source": "existing"
+  },
+  {
+    "slug": "district-atlanta",
+    "method": "aggregator",
+    "source": "existing"
+  },
+  {
+    "slug": "do404",
+    "method": "html",
+    "source": "default"
+  },
+  {
+    "slug": "do615",
+    "method": "aggregator",
+    "source": "existing"
+  },
+  {
+    "slug": "dogwood-alliance",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "domaine-atlanta",
+    "method": "llm_crawler",
+    "source": "existing"
+  },
+  {
+    "slug": "downtown-duluth",
+    "method": "html",
+    "source": "code"
+  },
+  {
+    "slug": "downtown-franklin",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "dragon-con",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "drunken-unicorn",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "duluth-city",
+    "method": "html",
+    "source": "code"
+  },
+  {
+    "slug": "eagle-eye-books",
+    "method": "llm_crawler",
+    "source": "existing"
+  },
+  {
+    "slug": "east-atlanta-strut",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "east-lake-neighborhood",
+    "method": "llm_crawler",
+    "source": "existing"
+  },
+  {
+    "slug": "eav-farmers-market",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "ebenezer-baptist-church",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "echo-room",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "eddies-attic",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "eeg-arena",
+    "method": "llm_crawler",
+    "source": "existing"
+  },
+  {
+    "slug": "ellis-station-candle-co",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "elmyr",
+    "method": "html",
+    "source": "code"
+  },
+  {
+    "slug": "emory-events",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "emory-schwartz-center",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "eventbrite",
+    "method": "aggregator",
+    "source": "existing"
+  },
+  {
+    "slug": "eventbrite-nashville",
+    "method": "aggregator",
+    "source": "existing"
+  },
+  {
+    "slug": "eventide-brewing",
+    "method": "llm_crawler",
+    "source": "existing"
+  },
+  {
+    "slug": "everybody-wins-atlanta",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "evolation-yoga",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "example-venue",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "exhibition-hub",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "exit-in",
+    "method": "llm_crawler",
+    "source": "existing"
+  },
+  {
+    "slug": "eyedrum",
+    "method": "aggregator",
+    "source": "existing"
+  },
+  {
+    "slug": "factory-franklin",
+    "method": "jsonld_only",
+    "source": "existing"
+  },
+  {
+    "slug": "fado-irish-pub",
+    "method": "llm_crawler",
+    "source": "existing"
+  },
+  {
+    "slug": "faith-alliance",
+    "method": "llm_crawler",
+    "source": "existing"
+  },
+  {
+    "slug": "fancons",
+    "method": "aggregator",
+    "source": "existing"
+  },
+  {
+    "slug": "farmers-markets",
+    "method": "llm_crawler",
+    "source": "existing"
+  },
+  {
+    "slug": "fernbank",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "ferst-center",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "fire-maker-brewing",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "flatiron",
+    "method": "html",
+    "source": "code"
+  },
+  {
+    "slug": "folklore-haunted",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "food-well-alliance",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "forward-warrior",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "fowling-warehouse",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "fox-theatre",
+    "method": "aggregator",
+    "source": "existing"
+  },
+  {
+    "slug": "foxtale-books",
+    "method": "llm_crawler",
+    "source": "existing"
+  },
+  {
+    "slug": "franklin-theatre",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "freedom-farmers-market",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "freeroll-atlanta",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "freeside-atlanta",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "friends-on-ponce",
+    "method": "playwright",
+    "source": "existing"
+  },
+  {
+    "slug": "frist-art-museum",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "fulton-library",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "future-atlanta",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "gas-south",
+    "method": "aggregator",
+    "source": "existing"
+  },
+  {
+    "slug": "geeks-who-drink",
+    "method": "llm_crawler",
+    "source": "existing"
+  },
+  {
+    "slug": "generic-venue-crawler",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "georgia-aquarium",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "georgia-chess",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "georgia-ensemble-theatre",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "georgia-organics",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "georgia-peace",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "georgia-state-university",
+    "method": "feed",
+    "source": "existing"
+  },
+  {
+    "slug": "georgia-tech-arts",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "georgia-tech-athletics",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "georgia-tech-events",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "georgian-terrace-hotel",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "gicc",
+    "method": "llm_crawler",
+    "source": "existing"
+  },
+  {
+    "slug": "giving-kitchen",
+    "method": "llm_crawler",
+    "source": "existing"
+  },
+  {
+    "slug": "glahr",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "gold-room",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "grand-ole-opry",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "grant-park-farmers-market",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "grant-park-festival",
+    "method": "html",
+    "source": "code"
+  },
+  {
+    "slug": "gsu-athletics",
+    "method": "llm_crawler",
+    "source": "existing"
+  },
+  {
+    "slug": "gwcc",
+    "method": "llm_crawler",
+    "source": "existing"
+  },
+  {
+    "slug": "gwinnett-library",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "gwinnett-stripers",
+    "method": "html",
+    "source": "code"
+  },
+  {
+    "slug": "gypsy-kitchen",
+    "method": "llm_crawler",
+    "source": "existing"
+  },
+  {
+    "slug": "halfway-crooks",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "hambidge-center",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "hammonds-house",
+    "method": "html",
+    "source": "code"
+  },
+  {
+    "slug": "hands-on-atlanta",
+    "method": "playwright",
+    "source": "existing"
+  },
+  {
+    "slug": "hathaway-contemporary",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "havana-club",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "hawks-bars",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "helium-comedy",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "high-museum",
+    "method": "llm_crawler",
+    "source": "existing"
+  },
+  {
+    "slug": "highland-tap",
+    "method": "llm_crawler",
+    "source": "existing"
+  },
+  {
+    "slug": "highland-yoga",
+    "method": "playwright",
+    "source": "existing"
+  },
+  {
+    "slug": "home-depot-kids-workshops",
+    "method": "llm_crawler",
+    "source": "existing"
+  },
+  {
+    "slug": "horizon-theatre",
+    "method": "llm_crawler",
+    "source": "existing"
+  },
+  {
+    "slug": "hosea-helps",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "hotel-clermont",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "hudgens-center",
+    "method": "playwright",
+    "source": "existing"
+  },
+  {
+    "slug": "indivisible-atl",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "industrious-atlanta",
+    "method": "playwright",
+    "source": "existing"
+  },
+  {
+    "slug": "inman-park-festival",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "irwin-street-cooking",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "janke-studios",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "johnnys-hideaway",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "johns-creek",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "joystick-gamebar",
+    "method": "playwright",
+    "source": "existing"
+  },
+  {
+    "slug": "jungle-atlanta",
+    "method": "llm_crawler",
+    "source": "existing"
+  },
+  {
+    "slug": "kai-lin-art",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "kats-cafe",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "kennesaw-city",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "kennesaw-state",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "king-center",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "knock-music-house",
+    "method": "playwright",
+    "source": "existing"
+  },
+  {
+    "slug": "krog-street-market",
+    "method": "playwright",
+    "source": "existing"
+  },
+  {
+    "slug": "ksu-athletics",
+    "method": "llm_crawler",
+    "source": "existing"
+  },
+  {
+    "slug": "l5p-community-center",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "ladybird-grove",
+    "method": "html",
+    "source": "code"
+  },
+  {
+    "slug": "landmark-midtown",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "laughing-skull",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "lawrenceville-city",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "le-colonial-atlanta",
+    "method": "llm_crawler",
+    "source": "existing"
+  },
+  {
+    "slug": "lego-discovery-center",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "leons-full-service",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "level-up-gaming",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "lindbergh-city-center",
+    "method": "llm_crawler",
+    "source": "existing"
+  },
+  {
+    "slug": "lips-atlanta",
+    "method": "playwright",
+    "source": "existing"
+  },
+  {
+    "slug": "little-shop-of-stories",
+    "method": "llm_crawler",
+    "source": "existing"
+  },
+  {
+    "slug": "live-at-battery",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "lore-atlanta",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "lyfe-atlanta",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "madlife-stage",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "main-street-murfreesboro",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "manuels-tavern",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "marathon-music-works",
+    "method": "llm_crawler",
+    "source": "existing"
+  },
+  {
+    "slug": "marcia-wood-gallery",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "marietta-cobb-museum",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "marys",
+    "method": "llm_crawler",
+    "source": "existing"
+  },
+  {
+    "slug": "marys-bar",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "mason-fine-art",
+    "method": "llm_crawler",
+    "source": "existing"
+  },
+  {
+    "slug": "mass-collective",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "max-lagers",
+    "method": "llm_crawler",
+    "source": "existing"
+  },
+  {
+    "slug": "meals-on-wheels-atlanta",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "mechanicsville-neighborhood",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "meehans-pub",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "meetup",
+    "method": "api",
+    "source": "existing"
+  },
+  {
+    "slug": "mercedes-benz-stadium",
+    "method": "aggregator",
+    "source": "existing"
+  },
+  {
+    "slug": "midway-pub",
+    "method": "llm_crawler",
+    "source": "existing"
+  },
+  {
+    "slug": "mint-gallery",
+    "method": "llm_crawler",
+    "source": "existing"
+  },
+  {
+    "slug": "mjq-concourse",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "mobilize-50501-georgia",
+    "method": "playwright",
+    "source": "existing"
+  },
+  {
+    "slug": "mobilize-dekalb-dems",
+    "method": "llm_crawler",
+    "source": "existing"
+  },
+  {
+    "slug": "mobilize-ga-dems",
+    "method": "playwright",
+    "source": "existing"
+  },
+  {
+    "slug": "mobilize-hrc-georgia",
+    "method": "llm_crawler",
+    "source": "existing"
+  },
+  {
+    "slug": "mobilize-indivisible-atl",
+    "method": "playwright",
+    "source": "existing"
+  },
+  {
+    "slug": "mobilize-indivisible-cherokee",
+    "method": "playwright",
+    "source": "existing"
+  },
+  {
+    "slug": "mobilize-indivisible-cobb",
+    "method": "playwright",
+    "source": "existing"
+  },
+  {
+    "slug": "mobilize-indivisible-ga10",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "mobilize-necessary-trouble",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "mobilize-voteriders",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "moca-ga",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "moda",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "moes-and-joes",
+    "method": "html",
+    "source": "code"
+  },
+  {
+    "slug": "momocon",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "monday-night",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "monday-night-garage",
+    "method": "html",
+    "source": "code"
+  },
+  {
+    "slug": "monday-night-run-club",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "moods-music",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "morehouse-college",
+    "method": "llm_extraction",
+    "source": "code"
+  },
+  {
+    "slug": "morningside-civic",
+    "method": "html",
+    "source": "code"
+  },
+  {
+    "slug": "morningside-farmers-market",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "mother-bar",
+    "method": "html",
+    "source": "code"
+  },
+  {
+    "slug": "mtsu-events",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "mudfire",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "murfreesboro-city",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "music-midtown",
+    "method": "html",
+    "source": "code"
+  },
+  {
+    "slug": "my-sisters-room",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "nashville-com",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "nashville-scene",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "ncg-cinemas-atlanta",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "netherworld",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "new-georgia-project",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "new-realm-brewing",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "nightmares-gate",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "nonis",
+    "method": "html",
+    "source": "code"
+  },
+  {
+    "slug": "northside-tavern",
+    "method": "html",
+    "source": "code"
+  },
+  {
+    "slug": "oakland-cemetery",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "oddities-museum",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "oglethorpe-university",
+    "method": "html",
+    "source": "code"
+  },
+  {
+    "slug": "onstage-atlanta",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "opera-nightclub",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "ormewood-park-neighborhood",
+    "method": "html",
+    "source": "code"
+  },
+  {
+    "slug": "ormsbys",
+    "method": "html",
+    "source": "code"
+  },
+  {
+    "slug": "orpheus-brewing",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "our-bar-atl",
+    "method": "html",
+    "source": "code"
+  },
+  {
+    "slug": "out-front-theatre",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "out-of-box-theatre",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "out-on-film",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "outspoken-entertainment",
+    "method": "html",
+    "source": "default"
+  },
+  {
+    "slug": "painted-duck",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "painted-pin",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "painting-with-a-twist",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "paranoia-haunted",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "park-tavern",
+    "method": "html",
+    "source": "code"
+  },
+  {
+    "slug": "path-foundation",
+    "method": "html",
+    "source": "default"
+  },
+  {
+    "slug": "peachtree-road-farmers-market",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "peachtree-road-race",
+    "method": "html",
+    "source": "code"
+  },
+  {
+    "slug": "peoplestown-neighborhood",
+    "method": "html",
+    "source": "code"
+  },
+  {
+    "slug": "perfect-note-atlanta",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "piedmont-athens",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "piedmont-auxiliary",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "piedmont-cancer-support",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "piedmont-classes",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "piedmont-cme",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "piedmont-fitness",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "piedmont-foundation",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "piedmont-healthcare",
+    "method": "llm_crawler",
+    "source": "existing"
+  },
+  {
+    "slug": "piedmont-heart-conferences",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "piedmont-heights-civic",
+    "method": "html",
+    "source": "code"
+  },
+  {
+    "slug": "piedmont-luminaria",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "piedmont-park",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "piedmont-transplant",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "piedmont-womens-heart",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "piedmonthealthcare-events",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "pinch-n-ouch-theatre",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "pisces-atlanta",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "pittsburgh-yards",
+    "method": "html",
+    "source": "code"
+  },
+  {
+    "slug": "plaza-theatre",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "poem88-gallery",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "ponce-city-market",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "pontoon-brewing",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "project-south",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "ptc-running-club",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "publix-aprons",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "punch-bowl-social",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "punchline",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "puppetry-arts",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "pushpush-arts",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "pushpush-theater",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "puttshack",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "ravine-atlanta",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "red-light-cafe",
+    "method": "aggregator",
+    "source": "existing"
+  },
+  {
+    "slug": "reformation-brewery",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "regal-atlanta",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "render-atl",
+    "method": "html",
+    "source": "code"
+  },
+  {
+    "slug": "resident-advisor",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "rialto-center",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "roswell-city",
+    "method": "html",
+    "source": "code"
+  },
+  {
+    "slug": "roswell-cultural-arts",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "round-trip-brewing",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "rowdy-tiger",
+    "method": "html",
+    "source": "code"
+  },
+  {
+    "slug": "ryman-auditorium",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "sandy-springs-pac",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "scad-atlanta",
+    "method": "html",
+    "source": "code"
+  },
+  {
+    "slug": "scad-fash",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "schermerhorn",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "schoolhouse-brewing",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "schwartz-center",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "scofflaw-brewing",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "second-self-brewing",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "shakespeare-tavern",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "shaky-knees",
+    "method": "html",
+    "source": "code"
+  },
+  {
+    "slug": "shrine-cultural-center",
+    "method": "aggregator",
+    "source": "url"
+  },
+  {
+    "slug": "side-saddle",
+    "method": "html",
+    "source": "code"
+  },
+  {
+    "slug": "sidebar",
+    "method": "html",
+    "source": "code"
+  },
+  {
+    "slug": "silverspot-cinema-atlanta",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "sister-louisas",
+    "method": "html",
+    "source": "code"
+  },
+  {
+    "slug": "six-flags-over-georgia",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "sky-zone-atlanta",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "skylounge-glenn-hotel",
+    "method": "html",
+    "source": "code"
+  },
+  {
+    "slug": "smiths-olde-bar",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "snellville-city",
+    "method": "html",
+    "source": "code"
+  },
+  {
+    "slug": "snellville-farmers-market",
+    "method": "html",
+    "source": "code"
+  },
+  {
+    "slug": "song",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "sound-table",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "south-river-art",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "south-river-forest",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "southern-fried-gaming",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "southern-fried-queer-pride",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "southern-museum",
+    "method": "html",
+    "source": "code"
+  },
+  {
+    "slug": "spaceman-rooftop",
+    "method": "html",
+    "source": "code"
+  },
+  {
+    "slug": "spelman-college",
+    "method": "llm_extraction",
+    "source": "code"
+  },
+  {
+    "slug": "spivey-hall",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "sports-social",
+    "method": "html",
+    "source": "code"
+  },
+  {
+    "slug": "springs-cinema",
+    "method": "llm_crawler",
+    "source": "existing"
+  },
+  {
+    "slug": "spruill-center",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "st-james-live",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "stage-door-players",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "star-community-bar",
+    "method": "html",
+    "source": "code"
+  },
+  {
+    "slug": "starlight-drive-in",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "state-farm-arena",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "station-inn",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "stats-downtown",
+    "method": "html",
+    "source": "code"
+  },
+  {
+    "slug": "steady-hand-beer",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "stone-mountain-park",
+    "method": "llm_crawler",
+    "source": "existing"
+  },
+  {
+    "slug": "strand-theatre",
+    "method": "html",
+    "source": "code"
+  },
+  {
+    "slug": "studio-movie-grill-atlanta",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "sun-dial-restaurant",
+    "method": "html",
+    "source": "code"
+  },
+  {
+    "slug": "supermarket-atl",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "sur-la-table",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "sweet-auburn-market",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "sweet-auburn-springfest",
+    "method": "html",
+    "source": "code"
+  },
+  {
+    "slug": "sweetwater",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "switchyards",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "synchronicity-theatre",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "tabernacle",
+    "method": "aggregator",
+    "source": "existing"
+  },
+  {
+    "slug": "tara-theatre",
+    "method": "llm_crawler",
+    "source": "existing"
+  },
+  {
+    "slug": "team-trivia",
+    "method": "html",
+    "source": "default"
+  },
+  {
+    "slug": "terminal-west",
+    "method": "llm_crawler",
+    "source": "existing"
+  },
+  {
+    "slug": "terminus-modern-ballet",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "the-earl",
+    "method": "llm_crawler",
+    "source": "existing"
+  },
+  {
+    "slug": "the-eastern",
+    "method": "html",
+    "source": "existing"
+  },
+  {
+    "slug": "the-glenwood",
+    "method": "html",
+    "source": "code"
+  },
+  {
+    "slug": "the-heretic",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "the-loft",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "the-maker-station",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "the-masquerade",
+    "method": "llm_crawler",
+    "source": "existing"
+  },
+  {
+    "slug": "the-painted-duck",
+    "method": "html",
+    "source": "code"
+  },
+  {
+    "slug": "the-porter",
+    "method": "html",
+    "source": "code"
+  },
+  {
+    "slug": "the-square-pub",
+    "method": "html",
+    "source": "code"
+  },
+  {
+    "slug": "the-vortex",
+    "method": "html",
+    "source": "code"
+  },
+  {
+    "slug": "theatre-for-young-audiences",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "theatre-in-the-square",
+    "method": "html",
+    "source": "code"
+  },
+  {
+    "slug": "theatrical-outfit",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "third-and-lindsley",
+    "method": "llm_crawler",
+    "source": "existing"
+  },
+  {
+    "slug": "three-taverns",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "ticketmaster",
+    "method": "aggregator",
+    "source": "existing"
+  },
+  {
+    "slug": "ticketmaster-nashville",
+    "method": "api",
+    "source": "existing"
+  },
+  {
+    "slug": "token-gaming-pub",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "tongue-and-groove",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "torched-hop",
+    "method": "html",
+    "source": "code"
+  },
+  {
+    "slug": "tpac",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "trees-atlanta",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "trolley-barn",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "true-colors-theatre",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "truist-park",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "twains-brewpub",
+    "method": "html",
+    "source": "code"
+  },
+  {
+    "slug": "united-way-atlanta",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "uptown-comedy",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "urban-air-atlanta",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "urban-grind",
+    "method": "api",
+    "source": "code"
+  },
+  {
+    "slug": "urban-league-atlanta",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "user-submissions",
+    "method": "html",
+    "source": "default"
+  },
+  {
+    "slug": "variant-brewing",
+    "method": "html",
+    "source": "code"
+  },
+  {
+    "slug": "variety-playhouse",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "venkmans",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "victory-sandwich-bar",
+    "method": "html",
+    "source": "code"
+  },
+  {
+    "slug": "vine-city-neighborhood",
+    "method": "html",
+    "source": "code"
+  },
+  {
+    "slug": "virginia-highland-civic",
+    "method": "html",
+    "source": "code"
+  },
+  {
+    "slug": "visit-franklin",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "visit-music-city",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "vista-yoga",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "wax-n-facts",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "west-end-neighborhood",
+    "method": "html",
+    "source": "code"
+  },
+  {
+    "slug": "wewatchstuff",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "wework-atlanta",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "whitespace-gallery",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "whole-world-improv",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "wild-aster-books",
+    "method": "html",
+    "source": "code"
+  },
+  {
+    "slug": "wild-heaven",
+    "method": "html",
+    "source": "code"
+  },
+  {
+    "slug": "williams-sonoma",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "wonderroot",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "woodys-atlanta",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "woofs-atlanta",
+    "method": "html",
+    "source": "code"
+  },
+  {
+    "slug": "working-title-playwrights",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "world-of-coca-cola",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "wrecking-bar",
+    "method": "html",
+    "source": "code"
+  },
+  {
+    "slug": "wrens-nest",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "wrfg-radio",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "ymca-atlanta",
+    "method": "html",
+    "source": "code"
+  },
+  {
+    "slug": "yonder-yoga",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "ypa-atlanta",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "zoo-atlanta",
+    "method": "playwright",
+    "source": "code"
+  },
+  {
+    "slug": "zucot-gallery",
+    "method": "playwright",
+    "source": "code"
+  }
+]

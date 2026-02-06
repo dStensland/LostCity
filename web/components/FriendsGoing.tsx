@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import Image from "next/image";
+import Image from "@/components/SmartImage";
 import { useAuth } from "@/lib/auth-context";
 
 type FriendsGoingProps = {
@@ -94,14 +94,11 @@ export default function FriendsGoing({ eventId, fallbackCount = 0, className = "
         {friends.length > 1 && (
           <div className="absolute -inset-1 bg-[var(--coral)]/10 rounded-full blur-sm animate-pulse-slow" />
         )}
-        {friends.slice(0, 3).map((friend, idx) => (
+        {friends.slice(0, 3).map((friend) => (
           <Link
             key={friend.user.id}
             href={`/profile/${friend.user.username}`}
             className="relative block animate-scale-in"
-            style={{
-              animationDelay: `${idx * 100}ms`,
-            }}
             title={friend.user.display_name || friend.user.username}
           >
             {friend.user.avatar_url ? (
@@ -126,9 +123,6 @@ export default function FriendsGoing({ eventId, fallbackCount = 0, className = "
         {friends.length > 3 && (
           <div
             className="w-6 h-6 rounded-full bg-[var(--twilight)] flex items-center justify-center border-2 border-[var(--night)] animate-scale-in"
-            style={{
-              animationDelay: "300ms",
-            }}
           >
             <span className="font-mono text-[0.5rem] font-medium text-[var(--muted)]">
               +{friends.length - 3}
@@ -138,7 +132,7 @@ export default function FriendsGoing({ eventId, fallbackCount = 0, className = "
       </div>
 
       {/* Text with fade-in animation */}
-      <span className="font-mono text-xs text-[var(--muted)] animate-fade-in" style={{ animationDelay: "200ms" }}>
+      <span className="font-mono text-xs text-[var(--muted)] animate-fade-in">
         {goingFriends.length > 0 && (
           <>
             <span className="text-[var(--coral)] font-bold">{goingFriends.length}</span>

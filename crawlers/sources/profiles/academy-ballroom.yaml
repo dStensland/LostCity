@@ -1,0 +1,12 @@
+version: 1
+slug: academy-ballroom
+name: Academy Ballroom
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://academyballroomatl.com
+detail:
+  enabled: false

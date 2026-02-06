@@ -1,0 +1,12 @@
+version: 1
+slug: fowling-warehouse
+name: Fowling Warehouse Atlanta
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.fowlingwarehouse.com
+detail:
+  enabled: false

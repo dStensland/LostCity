@@ -242,6 +242,8 @@ export async function GET(request: Request) {
       title,
       start_date,
       start_time,
+      end_date,
+      end_time,
       is_all_day,
       is_free,
       price_min,
@@ -254,6 +256,17 @@ export async function GET(request: Request) {
       organization_id,
       source_id,
       portal_id,
+      series_id,
+      series:series_id(
+        id,
+        slug,
+        title,
+        series_type,
+        image_url,
+        frequency,
+        day_of_week,
+        festival:festivals(id, slug, name, image_url, festival_type, location, neighborhood)
+      ),
       venue:venues(id, name, neighborhood, slug)
     `)
     .gte("start_date", startDateFilter)
@@ -306,6 +319,8 @@ export async function GET(request: Request) {
     title,
     start_date,
     start_time,
+    end_date,
+    end_time,
     is_all_day,
     is_free,
     price_min,
@@ -318,6 +333,17 @@ export async function GET(request: Request) {
     organization_id,
     source_id,
     portal_id,
+    series_id,
+    series:series_id(
+      id,
+      slug,
+      title,
+      series_type,
+      image_url,
+      frequency,
+      day_of_week,
+      festival:festivals(id, slug, name, image_url, festival_type, location, neighborhood)
+    ),
     venue:venues(id, name, neighborhood, slug)
   `;
 
@@ -518,6 +544,8 @@ export async function GET(request: Request) {
     title: string;
     start_date: string;
     start_time: string | null;
+    end_date: string | null;
+    end_time: string | null;
     is_all_day: boolean;
     is_free: boolean;
     price_min: number | null;
@@ -529,6 +557,25 @@ export async function GET(request: Request) {
     ticket_url: string | null;
     organization_id: string | null;
     source_id: number | null;
+    series_id?: string | null;
+    series?: {
+      id: string;
+      slug: string;
+      title: string;
+      series_type: string;
+      image_url: string | null;
+      frequency: string | null;
+      day_of_week: string | null;
+      festival?: {
+        id: string;
+        slug: string;
+        name: string;
+        image_url: string | null;
+        festival_type?: string | null;
+        location: string | null;
+        neighborhood: string | null;
+      } | null;
+    } | null;
     venue: {
       id: number;
       name: string;

@@ -1,0 +1,12 @@
+version: 1
+slug: emory-schwartz-center
+name: Emory Schwartz Center
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://schwartz.emory.edu/events-tickets/calendar.html
+detail:
+  enabled: false

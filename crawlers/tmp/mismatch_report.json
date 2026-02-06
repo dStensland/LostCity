@@ -1,0 +1,12 @@
+{
+  "timestamp": "2026-02-06T12:49:29.268153+00:00",
+  "total_profiles": 522,
+  "checked": 522,
+  "skipped": 0,
+  "total_fails": 0,
+  "total_warnings": 0,
+  "profiles_with_issues": 0,
+  "fails_by_method": {},
+  "warnings_by_method": {},
+  "issues": []
+}

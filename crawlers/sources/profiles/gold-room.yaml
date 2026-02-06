@@ -1,0 +1,12 @@
+version: 1
+slug: gold-room
+name: Gold Room
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.goldroomatlanta.com
+detail:
+  enabled: false

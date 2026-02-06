@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { User, Session } from "@supabase/supabase-js";
+import type { User, Session } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 
 export type Profile = {
@@ -119,7 +119,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   // Fetch profile via API - ensures profile exists and handles creation
-  const fetchProfile = useCallback(async (userId: string): Promise<Profile | null> => {
+  const fetchProfile = useCallback(async (): Promise<Profile | null> => {
     // Track this fetch ID to detect if a newer fetch has started
     const fetchId = Date.now();
     profileFetchIdRef.current = fetchId;
@@ -157,7 +157,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const refreshProfile = useCallback(async () => {
     const userId = currentUserIdRef.current;
     if (userId) {
-      const newProfile = await fetchProfile(userId);
+      const newProfile = await fetchProfile();
       if (isMountedRef.current && newProfile) {
         setProfile(newProfile);
         // Broadcast to other tabs
@@ -218,7 +218,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setLoading(false);
 
         // Fetch profile (non-blocking for initial render)
-        const userProfile = await fetchProfile(userId);
+        const userProfile = await fetchProfile();
         if (isMountedRef.current && userProfile) {
           setProfile(userProfile);
         }

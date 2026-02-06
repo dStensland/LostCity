@@ -1,5 +1,7 @@
 "use client";
 
+import ScopedStyles from "@/components/ScopedStyles";
+import { createCssVarClass, createCssVarClassForLength } from "@/lib/css-utils";
 import { getCategoryColor } from "./CategoryIcon";
 
 // Theme configurations for seasonal placeholders
@@ -127,9 +129,9 @@ function getPatternSvg(pattern: string, color: string): string {
       return `
         <defs>
           <linearGradient id="soundwave-grad" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" style="stop-color:${color};stop-opacity:0"/>
-            <stop offset="50%" style="stop-color:${color};stop-opacity:0.15"/>
-            <stop offset="100%" style="stop-color:${color};stop-opacity:0"/>
+            <stop offset="0%" stop-color="${color}" stop-opacity="0"/>
+            <stop offset="50%" stop-color="${color}" stop-opacity="0.15"/>
+            <stop offset="100%" stop-color="${color}" stop-opacity="0"/>
           </linearGradient>
         </defs>
         <g fill="none" stroke="url(#soundwave-grad)" stroke-width="2">
@@ -174,8 +176,8 @@ function getPatternSvg(pattern: string, color: string): string {
       return `
         <defs>
           <radialGradient id="dot-grad">
-            <stop offset="0%" style="stop-color:${color};stop-opacity:0.3"/>
-            <stop offset="100%" style="stop-color:${color};stop-opacity:0"/>
+            <stop offset="0%" stop-color="${color}" stop-opacity="0.3"/>
+            <stop offset="100%" stop-color="${color}" stop-opacity="0"/>
           </radialGradient>
         </defs>
         <g>
@@ -191,8 +193,8 @@ function getPatternSvg(pattern: string, color: string): string {
       return `
         <defs>
           <linearGradient id="ray-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" style="stop-color:${color};stop-opacity:0.2"/>
-            <stop offset="100%" style="stop-color:${color};stop-opacity:0"/>
+            <stop offset="0%" stop-color="${color}" stop-opacity="0.2"/>
+            <stop offset="100%" stop-color="${color}" stop-opacity="0"/>
           </linearGradient>
         </defs>
         <g fill="none" stroke="url(#ray-grad)" stroke-width="2">
@@ -250,9 +252,9 @@ function getPatternSvg(pattern: string, color: string): string {
       return `
         <defs>
           <linearGradient id="pulse-grad" x1="0%" y1="50%" x2="100%" y2="50%">
-            <stop offset="0%" style="stop-color:${color};stop-opacity:0"/>
-            <stop offset="50%" style="stop-color:${color};stop-opacity:0.2"/>
-            <stop offset="100%" style="stop-color:${color};stop-opacity:0"/>
+            <stop offset="0%" stop-color="${color}" stop-opacity="0"/>
+            <stop offset="50%" stop-color="${color}" stop-opacity="0.2"/>
+            <stop offset="100%" stop-color="${color}" stop-opacity="0"/>
           </linearGradient>
         </defs>
         <path d="M0,50 L20,50 L25,30 L35,70 L45,40 L55,60 L65,45 L75,55 L80,50 L100,50"
@@ -264,9 +266,9 @@ function getPatternSvg(pattern: string, color: string): string {
       return `
         <defs>
           <linearGradient id="wave-grad" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" style="stop-color:${color};stop-opacity:0"/>
-            <stop offset="50%" style="stop-color:${color};stop-opacity:0.12"/>
-            <stop offset="100%" style="stop-color:${color};stop-opacity:0"/>
+            <stop offset="0%" stop-color="${color}" stop-opacity="0"/>
+            <stop offset="50%" stop-color="${color}" stop-opacity="0.12"/>
+            <stop offset="100%" stop-color="${color}" stop-opacity="0"/>
           </linearGradient>
         </defs>
         <g fill="none" stroke="url(#wave-grad)" stroke-width="1.5">
@@ -310,38 +312,28 @@ export default function CategoryPlaceholder({
 
   // Featured variant styling
   const isFeatured = variant === "featured";
-  const featuredBorderColor = isFeatured ? "var(--gold)" : `${color}30`;
-  const featuredBorderWidth = isFeatured ? "2px" : "1px";
 
   // Apply icon pulse animation for large size
   const iconPulseClass = size === "lg" ? "animate-placeholder-icon-pulse" : "";
+  const colorClass = createCssVarClass("--placeholder-color", color, "placeholder-color");
+  const glowClass = createCssVarClassForLength("--placeholder-glow-size", glowIntensity, "placeholder-glow");
+  const placeholderCss = [colorClass?.css, glowClass?.css].filter(Boolean).join("\n");
 
   return (
-    <div className={`relative w-full h-full overflow-hidden ${isFeatured ? "placeholder-featured" : ""} ${className}`}>
+    <div
+      className={`relative w-full h-full overflow-hidden category-placeholder ${
+        isFeatured ? "placeholder-featured" : ""
+      } ${colorClass?.className ?? ""} ${glowClass?.className ?? ""} ${className}`}
+    >
+      <ScopedStyles css={placeholderCss} />
       {/* Deep void background */}
       <div className="absolute inset-0 bg-[var(--void)]" />
 
       {/* Primary gradient glow from top */}
-      <div
-        className="absolute inset-0"
-        style={{
-          background: `
-            radial-gradient(ellipse 120% 80% at 50% -20%, ${color}${isFeatured ? "50" : "35"} 0%, transparent 50%),
-            radial-gradient(ellipse 80% 60% at 100% 100%, ${color}${isFeatured ? "30" : "20"} 0%, transparent 45%),
-            radial-gradient(ellipse 60% 60% at 0% 80%, ${color}${isFeatured ? "25" : "15"} 0%, transparent 40%)
-          `,
-        }}
-      />
+      <div className="absolute inset-0 placeholder-glow" />
 
       {/* Animated neon line at top */}
-      <div
-        className="absolute top-0 left-0 right-0 h-[2px]"
-        style={{
-          background: `linear-gradient(90deg, transparent 0%, ${isFeatured ? "var(--gold)" : color} 20%, ${isFeatured ? "var(--gold)" : color} 80%, transparent 100%)`,
-          boxShadow: `0 0 20px ${isFeatured ? "rgba(255, 215, 0, 0.6)" : `${color}60`}, 0 0 40px ${isFeatured ? "rgba(255, 215, 0, 0.3)" : `${color}30`}`,
-          opacity: isFeatured ? 1 : 0.8,
-        }}
-      />
+      <div className="absolute top-0 left-0 right-0 h-[2px] placeholder-line" />
 
       {/* Pattern layer */}
       <svg
@@ -353,22 +345,10 @@ export default function CategoryPlaceholder({
       </svg>
 
       {/* Floating orb - top right */}
-      <div
-        className="absolute -top-8 -right-8 w-32 h-32 rounded-full"
-        style={{
-          background: `radial-gradient(circle at 30% 30%, ${color}25 0%, ${color}10 40%, transparent 70%)`,
-          filter: `blur(2px)`,
-        }}
-      />
+      <div className="absolute -top-8 -right-8 w-32 h-32 rounded-full placeholder-orb placeholder-orb-top" />
 
       {/* Floating orb - bottom left */}
-      <div
-        className="absolute -bottom-12 -left-12 w-40 h-40 rounded-full"
-        style={{
-          background: `radial-gradient(circle at 70% 70%, ${color}20 0%, ${color}08 40%, transparent 70%)`,
-          filter: `blur(3px)`,
-        }}
-      />
+      <div className="absolute -bottom-12 -left-12 w-40 h-40 rounded-full placeholder-orb placeholder-orb-bottom" />
 
       {/* Theme overlay icon (for seasonal themes) */}
       {themeConfig?.overlayIcon && (
@@ -379,34 +359,14 @@ export default function CategoryPlaceholder({
 
       {/* Center icon with neon glow */}
       <div className="absolute inset-0 flex items-center justify-center">
-        <div
-          className={`relative flex items-center justify-center ${containerSize} rounded-2xl`}
-          style={{
-            background: `
-              linear-gradient(135deg, ${color}12 0%, transparent 50%),
-              linear-gradient(315deg, ${color}08 0%, transparent 50%),
-              rgba(0,0,0,0.3)
-            `,
-            border: `${featuredBorderWidth} solid ${featuredBorderColor}`,
-            boxShadow: `
-              0 0 ${glowIntensity} ${color}${isFeatured ? "40" : "25"},
-              ${isFeatured ? `0 0 ${parseInt(glowIntensity) * 1.5}px rgba(255, 215, 0, 0.2),` : ""}
-              inset 0 1px 0 ${color}15,
-              inset 0 -1px 0 rgba(0,0,0,0.3)
-            `,
-            backdropFilter: "blur(8px)",
-          }}
-        >
+        <div className={`relative flex items-center justify-center ${containerSize} rounded-2xl placeholder-center`}>
           {/* Icon with neon effect */}
           <svg
-            className={`${iconSize} ${iconPulseClass}`}
+            className={`${iconSize} ${iconPulseClass} placeholder-icon`}
             fill="none"
             stroke={color}
             viewBox="0 0 24 24"
             strokeWidth={1.5}
-            style={{
-              filter: `drop-shadow(0 0 12px ${color}80) drop-shadow(0 0 4px ${color})`,
-            }}
           >
             <path strokeLinecap="round" strokeLinejoin="round" d={config.icon} />
           </svg>
@@ -414,32 +374,10 @@ export default function CategoryPlaceholder({
       </div>
 
       {/* Subtle scanline effect */}
-      <div
-        className="absolute inset-0 pointer-events-none opacity-[0.03]"
-        style={{
-          backgroundImage: `repeating-linear-gradient(
-            0deg,
-            transparent,
-            transparent 2px,
-            ${color} 2px,
-            ${color} 3px
-          )`,
-        }}
-      />
+      <div className="absolute inset-0 pointer-events-none opacity-[0.03] placeholder-scanlines" />
 
       {/* Bottom accent line */}
-      <div
-        className="absolute bottom-0 left-0 right-0"
-        style={{
-          height: isFeatured ? "4px" : "3px",
-          background: isFeatured
-            ? `linear-gradient(90deg, ${color}60 0%, var(--gold) 50%, ${color}60 100%)`
-            : `linear-gradient(90deg, ${color}60 0%, ${color} 50%, ${color}60 100%)`,
-          boxShadow: isFeatured
-            ? `0 0 20px rgba(255, 215, 0, 0.5), 0 -5px 25px ${color}30`
-            : `0 0 15px ${color}50, 0 -5px 20px ${color}20`,
-        }}
-      />
+      <div className="absolute bottom-0 left-0 right-0 placeholder-accent" />
     </div>
   );
 }

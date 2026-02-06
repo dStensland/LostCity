@@ -2,6 +2,30 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import type { CookieOptions } from "@supabase/ssr";
 import { getCachedDomain, setCachedDomain } from "@/lib/domain-cache";
+import { buildCsp } from "@/lib/csp";
+
+function generateNonce(): string {
+  const bytes = new Uint8Array(16);
+  crypto.getRandomValues(bytes);
+  let binary = "";
+  bytes.forEach((b) => {
+    binary += String.fromCharCode(b);
+  });
+  return btoa(binary);
+}
+
+function applyCspHeaders(
+  response: NextResponse,
+  csp: string,
+  nonce: string,
+  reportOnlyCsp?: string
+) {
+  response.headers.set("Content-Security-Policy", csp);
+  if (reportOnlyCsp) {
+    response.headers.set("Content-Security-Policy-Report-Only", reportOnlyCsp);
+  }
+  response.headers.set("X-Nonce", nonce);
+}
 
 // Sanitize API key - remove any whitespace, control chars, or URL encoding artifacts
 function sanitizeKey(key: string | undefined): string | undefined {
@@ -97,15 +121,38 @@ async function resolveCustomDomainInMiddleware(
  * - Other routes (events, collections, etc.) work globally on any subdomain
  */
 export async function middleware(request: NextRequest) {
+  const nonce = generateNonce();
+  const isDev = process.env.NODE_ENV !== "production";
+  const csp = buildCsp(nonce, { isDev });
+  const cspReportOnly = buildCsp(nonce, {
+    isDev,
+    allowInlineStyles: true,
+    includeUpgradeInsecureRequests: false,
+    reportUri: "/api/csp-report",
+  });
+
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set("content-security-policy", csp);
+  requestHeaders.set("x-nonce", nonce);
+
   // Create response that will be modified for auth
-  let response = NextResponse.next({ request });
+  let response = NextResponse.next({ request: { headers: requestHeaders } });
+  applyCspHeaders(response, csp, nonce, cspReportOnly);
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
   const supabaseKey = sanitizeKey(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 
   // Skip auth if Supabase isn't configured
   if (!supabaseUrl || !supabaseKey) {
-    return handleSubdomainRouting(request, response, []);
+    return handleSubdomainRouting(
+      request,
+      response,
+      [],
+      requestHeaders,
+      csp,
+      nonce,
+      cspReportOnly
+    );
   }
 
   // Track cookies that need to be set (with full options)
@@ -125,7 +172,8 @@ export async function middleware(request: NextRequest) {
             request.cookies.set(name, value);
             cookiesToSet.push({ name, value, options });
           });
-          response = NextResponse.next({ request });
+          response = NextResponse.next({ request: { headers: requestHeaders } });
+          applyCspHeaders(response, csp, nonce, cspReportOnly);
           cookies.forEach(({ name, value, options }) =>
             response.cookies.set(name, value, options)
           );
@@ -177,19 +225,32 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  return await handleSubdomainRouting(request, response, cookiesToSet);
+  return await handleSubdomainRouting(
+    request,
+    response,
+    cookiesToSet,
+    requestHeaders,
+    csp,
+    nonce,
+    cspReportOnly
+  );
 }
 
 async function handleSubdomainRouting(
   request: NextRequest,
   response: NextResponse,
-  cookiesToSet: Array<{ name: string; value: string; options: CookieOptions }>
+  cookiesToSet: Array<{ name: string; value: string; options: CookieOptions }>,
+  requestHeaders: Headers,
+  csp: string,
+  nonce: string,
+  reportOnlyCsp?: string
 ) {
   const host = request.headers.get("host") || "";
   const url = request.nextUrl.clone();
 
   // Don't process API routes
   if (url.pathname.startsWith("/api/")) {
+    applyCspHeaders(response, csp, nonce, reportOnlyCsp);
     return response;
   }
 
@@ -206,19 +267,23 @@ async function handleSubdomainRouting(
       if (url.pathname === "/" || url.pathname === "") {
         url.pathname = `/${portalSlug}`;
 
-        const rewriteResponse = NextResponse.rewrite(url);
+        const rewriteResponse = NextResponse.rewrite(url, {
+          request: { headers: requestHeaders },
+        });
         cookiesToSet.forEach(({ name, value, options }) => {
           rewriteResponse.cookies.set(name, value, options);
         });
         // Mark as custom domain for downstream code
         rewriteResponse.headers.set("x-portal-slug", portalSlug);
         rewriteResponse.headers.set("x-custom-domain", "true");
+        applyCspHeaders(rewriteResponse, csp, nonce, reportOnlyCsp);
         return rewriteResponse;
       }
 
       // For non-root paths, pass through with portal context
       response.headers.set("x-portal-slug", portalSlug);
       response.headers.set("x-custom-domain", "true");
+      applyCspHeaders(response, csp, nonce, reportOnlyCsp);
       return response;
     }
 
@@ -261,10 +326,13 @@ async function handleSubdomainRouting(
       url.searchParams.delete("portal");
 
       // Create rewrite response with auth cookies (preserve full options)
-      const rewriteResponse = NextResponse.rewrite(url);
+      const rewriteResponse = NextResponse.rewrite(url, {
+        request: { headers: requestHeaders },
+      });
       cookiesToSet.forEach(({ name, value, options }) => {
         rewriteResponse.cookies.set(name, value, options);
       });
+      applyCspHeaders(rewriteResponse, csp, nonce, reportOnlyCsp);
       return rewriteResponse;
     }
 
@@ -273,6 +341,7 @@ async function handleSubdomainRouting(
     response.headers.set("x-portal-slug", portalSlug);
   }
 
+  applyCspHeaders(response, csp, nonce, reportOnlyCsp);
   return response;
 }
 

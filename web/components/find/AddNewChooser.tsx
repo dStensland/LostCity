@@ -91,9 +91,10 @@ export default function AddNewChooser({ portalSlug }: AddNewChooserProps) {
   return (
     <>
       <div ref={dropdownRef} className="relative">
+        {/* Desktop: compact square button */}
         <button
           onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-          className="flex items-center justify-center w-10 h-10 rounded-lg border-2 border-[var(--coral)] text-[var(--coral)] hover:bg-[var(--coral)]/10 transition-colors"
+          className="hidden sm:flex items-center justify-center w-10 h-10 rounded-lg border-2 border-[var(--coral)] text-[var(--coral)] hover:bg-[var(--coral)]/10 transition-colors"
           aria-label="Add new"
           aria-expanded={isDropdownOpen}
           aria-haspopup="true"
@@ -103,8 +104,22 @@ export default function AddNewChooser({ portalSlug }: AddNewChooserProps) {
           </svg>
         </button>
 
+        {/* Mobile: full width button with text */}
+        <button
+          onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+          className="sm:hidden flex items-center justify-center gap-2 w-full py-2.5 px-4 rounded-lg border border-dashed border-[var(--twilight)] text-[var(--muted)] hover:border-[var(--coral)] hover:text-[var(--coral)] transition-colors"
+          aria-label="Add new"
+          aria-expanded={isDropdownOpen}
+          aria-haspopup="true"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          </svg>
+          <span className="font-mono text-xs">Submit an event or destination</span>
+        </button>
+
         {isDropdownOpen && (
-          <div className="absolute top-full left-0 mt-2 w-48 bg-[var(--night)] border border-[var(--twilight)] rounded-lg shadow-xl py-1 z-50 animate-in fade-in slide-in-from-top-1 duration-150">
+          <div className="absolute top-full right-0 sm:left-0 sm:right-auto mt-2 w-48 bg-[var(--night)] border border-[var(--twilight)] rounded-lg shadow-xl py-1 z-50 animate-in fade-in slide-in-from-top-1 duration-150">
             {OPTIONS.map((option) => (
               <button
                 key={option.key}

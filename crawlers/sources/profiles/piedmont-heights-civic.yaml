@@ -1,0 +1,12 @@
+version: 1
+slug: piedmont-heights-civic
+name: Piedmont Heights Civic Association
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://piedmontheights.org
+detail:
+  enabled: false

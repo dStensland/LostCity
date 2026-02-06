@@ -1,0 +1,12 @@
+version: 1
+slug: caffeine-octane
+name: Caffeine and Octane
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.caffeine-and-octane.com
+detail:
+  enabled: false

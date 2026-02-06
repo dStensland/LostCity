@@ -1,0 +1,12 @@
+version: 1
+slug: moes-and-joes
+name: Moe's and Joe's
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.moesandjoes.com
+detail:
+  enabled: false

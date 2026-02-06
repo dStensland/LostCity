@@ -73,6 +73,7 @@ def get_validation_stats() -> ValidationStats:
     return _validation_stats
 
 _client: Optional[Client] = None
+_SOURCE_CACHE: dict[int, dict] = {}
 
 
 def retry_on_network_error(max_retries: int = 3, base_delay: float = 0.5):
@@ -146,6 +147,24 @@ def get_client() -> Client:
     return _client
 
 
+def get_source_info(source_id: int) -> Optional[dict]:
+    """Fetch source info with caching."""
+    if source_id in _SOURCE_CACHE:
+        return _SOURCE_CACHE[source_id]
+
+    client = get_client()
+    result = (
+        client.table("sources")
+        .select("id, slug, name, url, owner_portal_id")
+        .eq("id", source_id)
+        .execute()
+    )
+    if result.data:
+        _SOURCE_CACHE[source_id] = result.data[0]
+        return result.data[0]
+    return None
+
+
 def get_source_by_slug(slug: str) -> Optional[dict]:
     """Fetch a source by its slug."""
     client = get_client()
@@ -189,6 +208,110 @@ _SOURCE_PRODUCER_MAP = {
     'decatur-arts-festival': 'decatur-arts',
     'taste-of-atlanta': 'taste-of-atlanta',
 }
+
+# Festival/conference source overrides for rollup + festival linking
+_FESTIVAL_SOURCE_OVERRIDES = {
+    "dragon-con": {"festival_type": "convention"},
+    "momocon": {"festival_type": "convention"},
+    "fancons": {"festival_type": "convention"},
+    "anime-weekend-atlanta": {"festival_type": "convention"},
+    "atlanta-tech-week": {"festival_type": "conference"},
+    "render-atl": {"festival_type": "conference"},
+    "piedmont-heart-conferences": {"festival_type": "conference"},
+}
+
+_FESTIVAL_SOURCE_SLUGS = {
+    "atlanta-film-festival",
+    "atlanta-jazz-festival",
+    "decatur-arts-festival",
+    "decatur-book-festival",
+    "grant-park-festival",
+    "inman-park-festival",
+    "shaky-knees",
+    "atlanta-dogwood",
+    "atlanta-food-wine",
+    "sweet-auburn-springfest",
+    "candler-park-fest",
+    "east-atlanta-strut",
+    "peachtree-road-race",
+    "atlanta-pride",
+    "atlanta-black-pride",
+    "out-on-film",
+    "ajff",
+    "buried-alive",
+}
+
+_FESTIVAL_NAME_PATTERN = re.compile(
+    r"\b(festival|fest|conference|convention|summit|symposium|expo|week)\b",
+    re.IGNORECASE,
+)
+
+_FESTIVAL_CONFERENCE_PATTERN = re.compile(
+    r"\b(conference|summit|symposium|forum|congress)\b",
+    re.IGNORECASE,
+)
+
+_FESTIVAL_CONVENTION_PATTERN = re.compile(
+    r"\b(convention|expo|con)\b",
+    re.IGNORECASE,
+)
+
+_PROGRAM_TITLE_KEYWORDS = {
+    "track", "program", "stage", "room", "hall", "session", "panel",
+    "workshop", "keynote", "talk", "lecture", "summit", "forum",
+    "expo", "screening", "showcase",
+}
+
+
+def infer_festival_type_from_name(name: Optional[str]) -> Optional[str]:
+    """Infer festival type (conference vs convention) from name."""
+    if not name:
+        return None
+    if _FESTIVAL_CONFERENCE_PATTERN.search(name):
+        return "conference"
+    if _FESTIVAL_CONVENTION_PATTERN.search(name):
+        return "convention"
+    return None
+
+
+def get_festival_source_hint(source_slug: Optional[str], source_name: Optional[str]) -> Optional[dict]:
+    """Return festival metadata hint if the source looks like a festival/conference."""
+    slug = source_slug or ""
+    if slug in _FESTIVAL_SOURCE_OVERRIDES or slug in _FESTIVAL_SOURCE_SLUGS:
+        override = _FESTIVAL_SOURCE_OVERRIDES.get(slug, {})
+        name = override.get("festival_name") or source_name
+        return {
+            "festival_name": name,
+            "festival_type": override.get("festival_type") or infer_festival_type_from_name(name),
+        }
+
+    if source_name and _FESTIVAL_NAME_PATTERN.search(source_name):
+        return {
+            "festival_name": source_name,
+            "festival_type": infer_festival_type_from_name(source_name),
+        }
+
+    return None
+
+
+def infer_program_title(title: Optional[str]) -> Optional[str]:
+    """Infer a program/track title from an event title."""
+    if not title:
+        return None
+    separators = [" - ", ": ", " | "]
+    for sep in separators:
+        if sep not in title:
+            continue
+        left, right = title.split(sep, 1)
+        left = left.strip()
+        right = right.strip()
+        if not left or not right:
+            continue
+        if len(left) < 4 or len(left) > 60:
+            continue
+        if any(keyword in left.lower() for keyword in _PROGRAM_TITLE_KEYWORDS):
+            return left
+    return None
 
 
 def get_producer_id_for_source(source_id: int) -> Optional[str]:
@@ -534,8 +657,20 @@ def insert_event(event_data: dict, series_hint: dict = None, genres: list = None
     if "producer_id" in event_data:
         event_data.pop("producer_id")
 
-    # Remove is_class if present (not a database column - used only for tag inference)
+    # Extract is_class flag (will be re-added before insert)
     is_class_flag = event_data.pop("is_class", None)
+
+    # Fetch source info once for class/festival inference and portal linking
+    source_info = None
+    source_slug = None
+    source_name = None
+    source_url = None
+    if event_data.get("source_id"):
+        source_info = get_source_info(event_data["source_id"])
+        if source_info:
+            source_slug = source_info.get("slug")
+            source_name = source_info.get("name")
+            source_url = source_info.get("url")
 
     # Get venue info for tag inheritance
     venue_vibes = []
@@ -571,16 +706,48 @@ def insert_event(event_data: dict, series_hint: dict = None, genres: list = None
 
     # Auto-infer is_class if not explicitly set
     if not is_class_flag:
-        source_slug = None
-        if event_data.get("source_id"):
-            try:
-                src = client.table("sources").select("slug").eq("id", event_data["source_id"]).execute()
-                if src.data and src.data[0].get("slug"):
-                    source_slug = src.data[0]["slug"]
-            except Exception:
-                pass
         if infer_is_class(event_data, source_slug=source_slug, venue_type=venue_type):
             is_class_flag = True
+
+    # Festival/conference rollup hints based on source
+    festival_hint = get_festival_source_hint(source_slug, source_name)
+    if festival_hint:
+        if not series_hint:
+            if event_data.get("category") == "film":
+                series_type = "film"
+            elif is_class_flag:
+                series_type = "class_series"
+            elif event_data.get("is_recurring"):
+                series_type = "recurring_show"
+            else:
+                series_type = "festival_program"
+
+            series_title = infer_program_title(event_data.get("title")) or event_data.get("title") or festival_hint.get("festival_name")
+            series_hint = {
+                "series_type": series_type,
+                "series_title": series_title,
+            }
+
+        if festival_hint.get("festival_name") and not series_hint.get("festival_name"):
+            series_hint["festival_name"] = festival_hint["festival_name"]
+        if festival_hint.get("festival_type") and not series_hint.get("festival_type"):
+            series_hint["festival_type"] = festival_hint["festival_type"]
+        if source_url and not series_hint.get("festival_website"):
+            series_hint["festival_website"] = source_url
+
+    # Class rollup hints
+    if not series_hint and is_class_flag:
+        series_hint = {
+            "series_type": "class_series",
+            "series_title": event_data.get("title"),
+        }
+
+    # Recurring show rollup hints
+    if not series_hint and event_data.get("is_recurring"):
+        series_hint = {
+            "series_type": "recurring_show",
+            "series_title": event_data.get("title"),
+        }
 
     # Infer and merge tags
     event_data["tags"] = infer_tags(event_data, venue_vibes, venue_type=venue_type)
@@ -643,10 +810,12 @@ def insert_event(event_data: dict, series_hint: dict = None, genres: list = None
         )
 
     # Inherit portal_id from source if not explicitly set
-    if not event_data.get("portal_id") and event_data.get("source_id"):
-        source = client.table("sources").select("owner_portal_id").eq("id", event_data["source_id"]).execute()
-        if source.data and source.data[0].get("owner_portal_id"):
-            event_data["portal_id"] = source.data[0]["owner_portal_id"]
+    if not event_data.get("portal_id") and source_info and source_info.get("owner_portal_id"):
+        event_data["portal_id"] = source_info["owner_portal_id"]
+
+    # Persist is_class flag to database
+    if is_class_flag:
+        event_data["is_class"] = True
 
     result = client.table("events").insert(event_data).execute()
     return result.data[0]["id"]
@@ -656,6 +825,332 @@ def update_event(event_id: int, event_data: dict) -> None:
     """Update an existing event."""
     client = get_client()
     client.table("events").update(event_data).eq("id", event_id).execute()
+
+
+def upsert_event_artists(event_id: int, artists: list) -> None:
+    """Replace event artists for an event, preserving billing order."""
+    if not artists:
+        return
+
+    cleaned: list[dict] = []
+    seen: set[str] = set()
+
+    for idx, entry in enumerate(artists, start=1):
+        if isinstance(entry, dict):
+            name = entry.get("name")
+            role = entry.get("role")
+            billing_order = entry.get("billing_order") or entry.get("order") or idx
+            is_headliner = entry.get("is_headliner")
+        else:
+            name = entry
+            role = None
+            billing_order = idx
+            is_headliner = None
+
+        if not name:
+            continue
+
+        normalized = " ".join(str(name).split())
+        if not normalized:
+            continue
+
+        key = normalized.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+
+        if is_headliner is None and role:
+            is_headliner = str(role).lower() == "headliner"
+
+        cleaned.append(
+            {
+                "name": normalized,
+                "role": role,
+                "billing_order": billing_order,
+                "is_headliner": is_headliner if is_headliner is not None else None,
+            }
+        )
+
+    if not cleaned:
+        return
+
+    client = get_client()
+    client.table("event_artists").delete().eq("event_id", event_id).execute()
+
+    payload = []
+    for item in cleaned:
+        payload.append(
+            {
+                "event_id": event_id,
+                "name": item["name"],
+                "role": item.get("role"),
+                "billing_order": item.get("billing_order"),
+                "is_headliner": item.get("is_headliner"),
+            }
+        )
+
+    client.table("event_artists").insert(payload).execute()
+
+
+def upsert_event_images(event_id: int, images: list) -> None:
+    """Upsert images for an event."""
+    if not images:
+        return
+
+    payload = []
+    seen: set[str] = set()
+
+    for entry in images:
+        if isinstance(entry, dict):
+            url = entry.get("url")
+            width = entry.get("width")
+            height = entry.get("height")
+            img_type = entry.get("type")
+            source = entry.get("source")
+            confidence = entry.get("confidence")
+            is_primary = entry.get("is_primary", False)
+        else:
+            url = entry
+            width = None
+            height = None
+            img_type = None
+            source = None
+            confidence = None
+            is_primary = False
+
+        if not url:
+            continue
+        normalized = str(url).strip()
+        if not normalized:
+            continue
+        if normalized in seen:
+            continue
+        seen.add(normalized)
+
+        payload.append(
+            {
+                "event_id": event_id,
+                "url": normalized,
+                "width": width,
+                "height": height,
+                "type": img_type,
+                "source": source,
+                "confidence": confidence,
+                "is_primary": bool(is_primary),
+            }
+        )
+
+    if not payload:
+        return
+
+    client = get_client()
+    client.table("event_images").upsert(payload, on_conflict="event_id,url").execute()
+
+
+def upsert_event_links(event_id: int, links: list) -> None:
+    """Upsert links for an event (ticketing, organizer, etc.)."""
+    if not links:
+        return
+
+    payload = []
+    seen: set[tuple[str, str]] = set()
+
+    for entry in links:
+        if isinstance(entry, dict):
+            link_type = entry.get("type")
+            url = entry.get("url")
+            source = entry.get("source")
+            confidence = entry.get("confidence")
+        else:
+            link_type = None
+            url = entry
+            source = None
+            confidence = None
+
+        if not link_type or not url:
+            continue
+
+        normalized_url = str(url).strip()
+        normalized_type = str(link_type).strip()
+        if not normalized_url or not normalized_type:
+            continue
+
+        key = (normalized_type.lower(), normalized_url)
+        if key in seen:
+            continue
+        seen.add(key)
+
+        payload.append(
+            {
+                "event_id": event_id,
+                "type": normalized_type,
+                "url": normalized_url,
+                "source": source,
+                "confidence": confidence,
+            }
+        )
+
+    if not payload:
+        return
+
+    client = get_client()
+    client.table("event_links").upsert(payload, on_conflict="event_id,type,url").execute()
+
+
+def update_event_extraction_metadata(
+    event_id: int,
+    field_provenance: Optional[dict] = None,
+    field_confidence: Optional[dict] = None,
+    extraction_version: Optional[str] = None,
+) -> None:
+    """Update per-field provenance/confidence metadata for an event."""
+    update_data: dict = {}
+    if field_provenance is not None:
+        update_data["field_provenance"] = field_provenance
+    if field_confidence is not None:
+        update_data["field_confidence"] = field_confidence
+    if extraction_version is not None:
+        update_data["extraction_version"] = extraction_version
+
+    if not update_data:
+        return
+
+    client = get_client()
+    client.table("events").update(update_data).eq("id", event_id).execute()
+
+
+# ===== EVENT UPDATE NOTIFICATIONS =====
+
+_CANCEL_KEYWORDS = ("canceled", "cancelled", "postponed")
+
+
+def _event_looks_cancelled(title: Optional[str], description: Optional[str]) -> bool:
+    text = f"{title or ''} {description or ''}".lower()
+    return any(word in text for word in _CANCEL_KEYWORDS)
+
+
+def format_event_update_message(
+    title: str,
+    changes: list[str],
+    cancelled: bool = False,
+) -> str:
+    if cancelled:
+        return f"Update: {title} was canceled."
+    if changes:
+        change_summary = "; ".join(changes)
+        return f"Update: {title} changed — {change_summary}."
+    return f"Update: {title} has new details."
+
+
+def _filter_users_with_event_updates(user_ids: list[str]) -> list[str]:
+    """Filter users by notification_settings.event_updates (default true)."""
+    if not user_ids:
+        return []
+    client = get_client()
+    try:
+        result = client.table("profiles").select("id,notification_settings").in_("id", user_ids).execute()
+    except Exception as e:
+        logger.warning(
+            "Failed to load notification_settings; defaulting to all users",
+            exc_info=e,
+        )
+        return user_ids
+    allowed: list[str] = []
+    for row in (result.data or []):
+        settings = row.get("notification_settings") or {}
+        if settings.get("event_updates", True):
+            allowed.append(row["id"])
+    return allowed
+
+
+def create_event_update_notifications(event_id: int, message: str) -> int:
+    """Create in-app notifications for users with RSVPs or saved items."""
+    client = get_client()
+
+    # RSVP users (going/interested)
+    rsvp_result = client.table("event_rsvps").select("user_id,status").eq("event_id", event_id).execute()
+    rsvp_users = {
+        row["user_id"]
+        for row in (rsvp_result.data or [])
+        if row.get("status") in ("going", "interested")
+    }
+
+    # Saved users
+    saved_result = client.table("saved_items").select("user_id").eq("event_id", event_id).execute()
+    saved_users = {row["user_id"] for row in (saved_result.data or []) if row.get("user_id")}
+
+    user_ids = list(rsvp_users | saved_users)
+    user_ids = _filter_users_with_event_updates(user_ids)
+
+    if not user_ids:
+        return 0
+
+    payload = [
+        {
+            "user_id": user_id,
+            "type": "event_update",
+            "event_id": event_id,
+            "message": message,
+        }
+        for user_id in user_ids
+    ]
+
+    client.table("notifications").insert(payload).execute()
+    return len(payload)
+
+
+def compute_event_update(existing: dict, incoming: dict) -> tuple[dict, list[str], bool]:
+    """Compute update fields and a change summary for notifications."""
+    update_data: dict = {}
+    changes: list[str] = []
+
+    # Time/date changes
+    if incoming.get("start_date") and incoming.get("start_date") != existing.get("start_date"):
+        changes.append(
+            f"date {existing.get('start_date')} → {incoming.get('start_date')}"
+        )
+        update_data["start_date"] = incoming.get("start_date")
+    if incoming.get("start_time") and incoming.get("start_time") != existing.get("start_time"):
+        changes.append(
+            f"time {existing.get('start_time') or 'TBA'} → {incoming.get('start_time')}"
+        )
+        update_data["start_time"] = incoming.get("start_time")
+    if incoming.get("end_date") and incoming.get("end_date") != existing.get("end_date"):
+        update_data["end_date"] = incoming.get("end_date")
+    if incoming.get("end_time") and incoming.get("end_time") != existing.get("end_time"):
+        update_data["end_time"] = incoming.get("end_time")
+
+    # Venue change
+    if incoming.get("venue_id") and incoming.get("venue_id") != existing.get("venue_id"):
+        changes.append("venue updated")
+        update_data["venue_id"] = incoming.get("venue_id")
+
+    # Title change (preserve cancellation/reschedule markers)
+    incoming_title = incoming.get("title")
+    if incoming_title and incoming_title != existing.get("title"):
+        if _event_looks_cancelled(incoming_title, incoming.get("description")):
+            update_data["title"] = incoming_title
+
+    # Description (prefer longer)
+    incoming_desc = incoming.get("description")
+    if incoming_desc and (
+        not existing.get("description") or len(incoming_desc) > len(existing.get("description", ""))
+    ):
+        update_data["description"] = incoming_desc
+
+    # Image / ticket / price if missing
+    for field in ("image_url", "ticket_url", "price_note"):
+        if incoming.get(field) and not existing.get(field):
+            update_data[field] = incoming.get(field)
+    for field in ("price_min", "price_max"):
+        if incoming.get(field) is not None and existing.get(field) is None:
+            update_data[field] = incoming.get(field)
+
+    cancelled = _event_looks_cancelled(incoming.get("title"), incoming.get("description")) and not _event_looks_cancelled(
+        existing.get("title"), existing.get("description")
+    )
+
+    return update_data, changes, cancelled
 
 
 @retry_on_network_error(max_retries=3, base_delay=0.5)

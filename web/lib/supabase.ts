@@ -45,6 +45,15 @@ export type SeriesInfo = {
   series_type: string;
   image_url: string | null;
   genres: string[] | null;
+  festival?: {
+    id: string;
+    slug: string;
+    name: string;
+    image_url: string | null;
+    festival_type?: string | null;
+    location?: string | null;
+    neighborhood?: string | null;
+  } | null;
 };
 
 export type Event = {
@@ -120,7 +129,16 @@ export async function getEventById(id: number): Promise<EventWithProducer | null
       `
       *,
       venue:venues(id, name, slug, address, neighborhood, city, state, vibes, description),
-      organization:organizations(id, name, slug, org_type, website, instagram, logo_url, description)
+      organization:organizations(id, name, slug, org_type, website, instagram, logo_url, description),
+      series:series_id(
+        id,
+        slug,
+        title,
+        series_type,
+        image_url,
+        genres,
+        festival:festivals(id, slug, name, image_url, festival_type, location, neighborhood)
+      )
     `
     )
     .eq("id", id)

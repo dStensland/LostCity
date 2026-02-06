@@ -1,0 +1,14 @@
+version: 1
+slug: abv-gallery
+name: ABV Gallery
+integration_method: playwright
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.abvgallery.com
+  fetch:
+    render_js: true
+detail:
+  enabled: false

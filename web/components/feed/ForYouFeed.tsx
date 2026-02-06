@@ -5,6 +5,12 @@ import Link from "next/link";
 import EventCard, { type FriendGoing } from "@/components/EventCard";
 import { getLocalDateString } from "@/lib/formats";
 import type { FeedEvent } from "@/lib/hooks/useForYouEvents";
+import ScopedStyles from "@/components/ScopedStyles";
+import { createCssVarClass } from "@/lib/css-utils";
+import SeriesCard from "@/components/SeriesCard";
+import FestivalCard from "@/components/FestivalCard";
+import { groupEventsForDisplay, type DisplayItem } from "@/lib/event-grouping";
+import type { EventWithLocation } from "@/lib/search";
 
 type UserPreferences = {
   favorite_categories: string[];
@@ -105,6 +111,15 @@ const SECTION_CONFIG = {
   },
 } as const;
 
+const ROLLUP_CONTEXT_LABELS = {
+  friendsGoing: "Friends going to sessions",
+  interests: "Matches your interests",
+  venue: "From venues you follow",
+  producer: "From organizations you follow",
+  neighborhood: "In your neighborhoods",
+  trending: "Trending this week",
+} as const;
+
 // Quick filter options
 type QuickFilter = "all" | "today" | "weekend" | "free";
 
@@ -142,55 +157,104 @@ function QuickFilters({
   );
 }
 
+function buildDisplayItems(events: FeedEvent[]): DisplayItem[] {
+  return groupEventsForDisplay(
+    events.map((event) => ({
+      ...event,
+      category_id: event.category,
+      subcategory_id: event.subcategory,
+    })) as unknown as EventWithLocation[],
+    {
+      collapseFestivals: true,
+      collapseFestivalPrograms: true,
+      rollupVenues: false,
+      rollupCategories: false,
+      sortByTime: false,
+    }
+  );
+}
+
 // FriendsGoingHighlight component - shows events where friends are going
 function FriendsGoingHighlight({
-  events,
+  items,
   portalSlug,
 }: {
-  events: FeedEvent[];
+  items: DisplayItem[];
   portalSlug: string;
 }) {
-  if (events.length === 0) return null;
+  if (items.length === 0) return null;
+  const contextLabel = ROLLUP_CONTEXT_LABELS.friendsGoing;
+
+  const accentClass = createCssVarClass(
+    "--accent-color",
+    SECTION_CONFIG.friendsGoing.color,
+    "friends-going"
+  );
 
   return (
     <section className="mb-8">
+      <ScopedStyles css={accentClass?.css} />
       {/* Section header with cyan accent - improved spacing */}
-      <div className="flex items-center gap-2 mb-4 px-1">
-        <div
-          className="w-1 h-5 rounded-full"
-          style={{ backgroundColor: SECTION_CONFIG.friendsGoing.color }}
-        />
-        <span className="icon-neon-subtle" style={{ color: SECTION_CONFIG.friendsGoing.color }}>{SECTION_CONFIG.friendsGoing.icon}</span>
-        <h2
-          className="font-semibold text-sm"
-          style={{ color: SECTION_CONFIG.friendsGoing.color }}
-        >
+      <div className={`flex items-center gap-2 mb-4 px-1 ${accentClass?.className ?? ""}`}>
+        <div className="w-1 h-5 rounded-full bg-accent" />
+        <span className="icon-neon-subtle text-accent">{SECTION_CONFIG.friendsGoing.icon}</span>
+        <h2 className="font-semibold text-sm text-accent">
           {SECTION_CONFIG.friendsGoing.title}
         </h2>
         <span
-          className="ml-auto px-2 py-0.5 rounded-full text-[0.65rem] font-mono font-medium"
-          style={{
-            backgroundColor: `${SECTION_CONFIG.friendsGoing.color}20`,
-            color: SECTION_CONFIG.friendsGoing.color,
-          }}
+          className="ml-auto px-2 py-0.5 rounded-full text-[0.65rem] font-mono font-medium bg-accent-20 text-accent"
         >
-          {events.length}
+          {items.length}
         </span>
       </div>
 
       {/* Highlighted cards with subtle coral background - simplified border treatment */}
       <div className="space-y-3 p-3 rounded-xl border border-[var(--coral)]/25 bg-[var(--coral)]/5">
-        {events.slice(0, 3).map((event, idx) => (
-          <EventCard
-            key={event.id}
-            event={event}
-            index={idx}
-            portalSlug={portalSlug}
-            friendsGoing={convertFriendsGoing(event.friends_going)}
-            reasons={event.reasons}
-            skipAnimation
-          />
-        ))}
+        {items.slice(0, 3).map((item, idx) => {
+          if (item.type === "event") {
+            const event = item.event as FeedEvent;
+            return (
+              <EventCard
+                key={event.id}
+                event={event}
+                index={idx}
+                portalSlug={portalSlug}
+                friendsGoing={convertFriendsGoing(event.friends_going)}
+                reasons={event.reasons}
+                skipAnimation
+              />
+            );
+          }
+          if (item.type === "series-group") {
+            return (
+              <SeriesCard
+                key={`series-${item.seriesId}`}
+                series={item.series}
+                venueGroups={item.venueGroups}
+                portalSlug={portalSlug}
+                skipAnimation
+                disableMargin
+                contextLabel={contextLabel}
+                contextColor={accentColor}
+              />
+            );
+          }
+          if (item.type === "festival-group") {
+            return (
+              <FestivalCard
+                key={`festival-${item.festivalId}`}
+                festival={item.festival}
+                summary={item.summary}
+                portalSlug={portalSlug}
+                skipAnimation
+                disableMargin
+                contextLabel={contextLabel}
+                contextColor={accentColor}
+              />
+            );
+          }
+          return null;
+        })}
       </div>
     </section>
   );
@@ -202,79 +266,106 @@ function ExpandableSection({
   icon,
   accentColor,
   contextType,
-  events,
+  items,
+  rollupContextLabel,
   portalSlug,
   initialVisible = 3,
 }: {
   title: string;
   icon: React.ReactNode;
-  count: number;
   accentColor: string;
   contextType?: "interests" | "venue" | "producer" | "neighborhood";
-  events: FeedEvent[];
+  items: DisplayItem[];
+  rollupContextLabel?: string;
   portalSlug: string;
   initialVisible?: number;
 }) {
   const [showAll, setShowAll] = useState(false);
-  const visibleEvents = showAll ? events : events.slice(0, initialVisible);
-  const hiddenCount = events.length - initialVisible;
+  const visibleItems = showAll ? items : items.slice(0, initialVisible);
+  const hiddenCount = items.length - initialVisible;
   const hasMore = hiddenCount > 0;
+  const accentClass = createCssVarClass("--accent-color", accentColor, "expandable-section");
+  const contextLabel =
+    rollupContextLabel ||
+    (contextType ? ROLLUP_CONTEXT_LABELS[contextType] : undefined);
 
-  if (events.length === 0) return null;
+  if (items.length === 0) return null;
 
   return (
     <section className="mb-8">
+      <ScopedStyles css={accentClass?.css} />
       {/* Section header - always visible, improved spacing */}
-      <div className="flex items-center gap-2 mb-4 px-1">
-        <div
-          className="w-1 h-5 rounded-full"
-          style={{ backgroundColor: accentColor }}
-        />
-        <span className="icon-neon-subtle" style={{ color: accentColor }}>{icon}</span>
-        <h2
-          className="font-semibold text-sm"
-          style={{ color: accentColor }}
-        >
+      <div className={`flex items-center gap-2 mb-4 px-1 ${accentClass?.className ?? ""}`}>
+        <div className="w-1 h-5 rounded-full bg-accent" />
+        <span className="icon-neon-subtle text-accent">{icon}</span>
+        <h2 className="font-semibold text-sm text-accent">
           {title}
         </h2>
         {/* Show "X of Y" only when there's more to show, otherwise just total */}
         <span
-          className="ml-auto px-2 py-0.5 rounded-full text-[0.65rem] font-mono font-medium"
-          style={{
-            backgroundColor: `${accentColor}20`,
-            color: accentColor,
-          }}
+          className="ml-auto px-2 py-0.5 rounded-full text-[0.65rem] font-mono font-medium bg-accent-20 text-accent"
         >
-          {hasMore && !showAll ? `${initialVisible} of ${events.length}` : events.length}
+          {hasMore && !showAll ? `${initialVisible} of ${items.length}` : items.length}
         </span>
       </div>
 
       {/* Events - always visible */}
       <div>
-        {visibleEvents.map((event, idx) => (
-          <EventCard
-            key={event.id}
-            event={event}
-            index={idx}
-            portalSlug={portalSlug}
-            reasons={event.reasons}
-            friendsGoing={convertFriendsGoing(event.friends_going)}
-            contextType={contextType}
-            skipAnimation
-          />
-        ))}
+        {visibleItems.map((item, idx) => {
+          if (item.type === "event") {
+            const event = item.event as FeedEvent;
+            return (
+              <EventCard
+                key={event.id}
+                event={event}
+                index={idx}
+                portalSlug={portalSlug}
+                reasons={event.reasons}
+                friendsGoing={convertFriendsGoing(event.friends_going)}
+                contextType={contextType}
+                skipAnimation
+              />
+            );
+          }
+          if (item.type === "series-group") {
+            return (
+              <SeriesCard
+                key={`series-${item.seriesId}`}
+                series={item.series}
+                venueGroups={item.venueGroups}
+                portalSlug={portalSlug}
+                skipAnimation
+                disableMargin
+                contextLabel={contextLabel}
+                contextColor={SECTION_CONFIG.friendsGoing.color}
+              />
+            );
+          }
+          if (item.type === "festival-group") {
+            return (
+              <FestivalCard
+                key={`festival-${item.festivalId}`}
+                festival={item.festival}
+                summary={item.summary}
+                portalSlug={portalSlug}
+                skipAnimation
+                disableMargin
+                contextLabel={contextLabel}
+                contextColor={SECTION_CONFIG.friendsGoing.color}
+              />
+            );
+          }
+          return null;
+        })}
       </div>
 
       {/* Show more button */}
       {!showAll && hasMore && (
         <button
           onClick={() => setShowAll(true)}
-          className="w-full mt-2 py-2 text-center text-xs font-mono font-medium tracking-wider rounded-lg border transition-all hover:opacity-80"
-          style={{
-            color: accentColor,
-            borderColor: `${accentColor}30`,
-            background: `${accentColor}08`,
-          }}
+          className={`w-full mt-2 py-2 text-center text-xs font-mono font-medium tracking-wider rounded-lg border transition-all hover:opacity-80 bg-accent-08 text-accent border-accent-40 ${
+            accentClass?.className ?? ""
+          }`}
         >
           Show {hiddenCount} more
         </button>
@@ -462,6 +553,13 @@ export default function ForYouFeed({ portalSlug }: ForYouFeedProps) {
     grouped.followedOrganizations.length > 0 ||
     grouped.yourNeighborhoods.length > 0;
 
+  const friendsGoingItems = useMemo(() => buildDisplayItems(grouped.friendsGoing), [grouped.friendsGoing]);
+  const yourInterestsItems = useMemo(() => buildDisplayItems(grouped.yourInterests), [grouped.yourInterests]);
+  const followedVenuesItems = useMemo(() => buildDisplayItems(grouped.followedVenues), [grouped.followedVenues]);
+  const followedOrganizationsItems = useMemo(() => buildDisplayItems(grouped.followedOrganizations), [grouped.followedOrganizations]);
+  const yourNeighborhoodItems = useMemo(() => buildDisplayItems(grouped.yourNeighborhoods), [grouped.yourNeighborhoods]);
+  const trendingItems = useMemo(() => buildDisplayItems(trendingEvents), [trendingEvents]);
+
   if (loading) {
     return (
       <div className="space-y-4">
@@ -529,9 +627,9 @@ export default function ForYouFeed({ portalSlug }: ForYouFeedProps) {
           <ExpandableSection
             title={SECTION_CONFIG.trending.title}
             icon={SECTION_CONFIG.trending.icon}
-            count={trendingEvents.length}
             accentColor={SECTION_CONFIG.trending.color}
-            events={trendingEvents}
+            items={trendingItems}
+            rollupContextLabel={ROLLUP_CONTEXT_LABELS.trending}
             portalSlug={portalSlug}
           />
         )}
@@ -547,7 +645,7 @@ export default function ForYouFeed({ portalSlug }: ForYouFeedProps) {
 
       {/* Friends Going Highlight - top priority social proof */}
       <FriendsGoingHighlight
-        events={grouped.friendsGoing}
+        items={friendsGoingItems}
         portalSlug={portalSlug}
       />
 
@@ -555,10 +653,9 @@ export default function ForYouFeed({ portalSlug }: ForYouFeedProps) {
       <ExpandableSection
         title={SECTION_CONFIG.yourInterests.title}
         icon={SECTION_CONFIG.yourInterests.icon}
-        count={grouped.yourInterests.length}
         accentColor={SECTION_CONFIG.yourInterests.color}
         contextType="interests"
-        events={grouped.yourInterests}
+        items={yourInterestsItems}
         portalSlug={portalSlug}
       />
 
@@ -566,10 +663,9 @@ export default function ForYouFeed({ portalSlug }: ForYouFeedProps) {
       <ExpandableSection
         title={SECTION_CONFIG.followedVenues.title}
         icon={SECTION_CONFIG.followedVenues.icon}
-        count={grouped.followedVenues.length}
         accentColor={SECTION_CONFIG.followedVenues.color}
         contextType="venue"
-        events={grouped.followedVenues}
+        items={followedVenuesItems}
         portalSlug={portalSlug}
       />
 
@@ -577,10 +673,9 @@ export default function ForYouFeed({ portalSlug }: ForYouFeedProps) {
       <ExpandableSection
         title={SECTION_CONFIG.followedOrganizations.title}
         icon={SECTION_CONFIG.followedOrganizations.icon}
-        count={grouped.followedOrganizations.length}
         accentColor={SECTION_CONFIG.followedOrganizations.color}
         contextType="producer"
-        events={grouped.followedOrganizations}
+        items={followedOrganizationsItems}
         portalSlug={portalSlug}
       />
 
@@ -588,10 +683,9 @@ export default function ForYouFeed({ portalSlug }: ForYouFeedProps) {
       <ExpandableSection
         title={SECTION_CONFIG.yourNeighborhoods.title}
         icon={SECTION_CONFIG.yourNeighborhoods.icon}
-        count={grouped.yourNeighborhoods.length}
         accentColor={SECTION_CONFIG.yourNeighborhoods.color}
         contextType="neighborhood"
-        events={grouped.yourNeighborhoods}
+        items={yourNeighborhoodItems}
         portalSlug={portalSlug}
       />
 
@@ -624,9 +718,9 @@ export default function ForYouFeed({ portalSlug }: ForYouFeedProps) {
         <ExpandableSection
           title={SECTION_CONFIG.trending.title}
           icon={SECTION_CONFIG.trending.icon}
-          count={trendingEvents.length}
           accentColor={SECTION_CONFIG.trending.color}
-          events={trendingEvents}
+          items={trendingItems}
+          rollupContextLabel={ROLLUP_CONTEXT_LABELS.trending}
           portalSlug={portalSlug}
           initialVisible={3}
         />

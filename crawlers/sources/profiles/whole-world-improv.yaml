@@ -1,0 +1,14 @@
+version: 1
+slug: whole-world-improv
+name: Whole World Improv Theatre
+integration_method: playwright
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.wholeworldtheatre.com
+  fetch:
+    render_js: true
+detail:
+  enabled: false

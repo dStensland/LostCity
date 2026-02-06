@@ -1,0 +1,14 @@
+version: 1
+slug: blakes-on-park
+name: Blake's on the Park
+integration_method: playwright
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.blakesonthepark.com
+  fetch:
+    render_js: true
+detail:
+  enabled: false

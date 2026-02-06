@@ -1,0 +1,12 @@
+version: 1
+slug: fire-maker-brewing
+name: Fire Maker Brewing
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.firemakerbeer.com
+detail:
+  enabled: false

@@ -2,6 +2,7 @@ import { isAdmin, canManagePortal } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { logger } from "@/lib/logger";
+import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -16,6 +17,7 @@ type SourceWithHealth = {
   url: string;
   is_active: boolean;
   source_type: string | null;
+  integration_method: string | null;
   health_tags: string[];
   active_months: number[] | null;
   // Health metrics
@@ -44,6 +46,7 @@ type SourceRow = {
   url: string;
   is_active: boolean;
   source_type: string | null;
+  integration_method: string | null;
   health_tags: string[] | null;
   active_months: number[] | null;
   owner_portal_id: string | null;
@@ -64,6 +67,9 @@ type EventCountRow = {
 
 // GET /api/admin/portals/[id]/sources/health - Get health data for portal's sources
 export async function GET(request: NextRequest, { params }: Props) {
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
+  if (rateLimitResult) return rateLimitResult;
+
   const { id: portalId } = await params;
 
   // Verify user can manage this portal
@@ -88,7 +94,7 @@ export async function GET(request: NextRequest, { params }: Props) {
   const { data: ownedSourcesData, error: ownedError } = await supabase
     .from("sources")
     .select(`
-      id, name, slug, url, is_active, source_type, health_tags, active_months,
+      id, name, slug, url, is_active, source_type, integration_method, health_tags, active_months,
       owner_portal_id
     `)
     .eq("owner_portal_id", portalId)
@@ -107,7 +113,7 @@ export async function GET(request: NextRequest, { params }: Props) {
     .select(`
       id,
       source:sources!source_subscriptions_source_id_fkey(
-        id, name, slug, url, is_active, source_type, health_tags, active_months, owner_portal_id,
+        id, name, slug, url, is_active, source_type, integration_method, health_tags, active_months, owner_portal_id,
         owner_portal:portals!sources_owner_portal_id_fkey(id, name, slug)
       )
     `)
@@ -214,6 +220,7 @@ function buildSourceHealth(
     url: source.url,
     is_active: source.is_active,
     source_type: source.source_type,
+    integration_method: source.integration_method,
     health_tags: source.health_tags || [],
     active_months: source.active_months,
     last_run: lastLog?.started_at || null,

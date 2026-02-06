@@ -1,0 +1,12 @@
+version: 1
+slug: atlantic-station
+name: Atlantic Station
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://atlanticstation.com
+detail:
+  enabled: false

@@ -456,8 +456,7 @@ export default function SearchBar() {
           id={suggestionsId}
           role="listbox"
           aria-label="Search suggestions"
-          className="absolute top-full left-0 right-0 mt-1 border border-[var(--twilight)] rounded-lg shadow-xl z-[10000] overflow-hidden animate-dropdown-in bg-[var(--dusk)]"
-          style={{ boxShadow: "0 4px 20px rgba(0, 0, 0, 0.5)" }}
+          className="absolute top-full left-0 right-0 mt-1 border border-[var(--twilight)] rounded-lg shadow-xl shadow-[0_4px_20px_rgba(0,0,0,0.5)] z-[10000] overflow-hidden animate-dropdown-in bg-[var(--dusk)]"
         >
           {/* Recent Searches */}
           {showRecent && (
@@ -556,10 +555,14 @@ export default function SearchBar() {
                     maxItems={3}
                     totalCount={facetCount}
                     onViewAll={hasMore ? () => {
-                      const findType = type === "venue" ? "destinations" : type === "organizer" ? "orgs" : "events";
                       setShowDropdown(false);
                       setSelectedIndex(-1);
-                      router.push(`/${portalSlug}?view=find&type=${findType}&search=${encodeURIComponent(query)}`, { scroll: false });
+                      if (type === "organizer") {
+                        router.push(`/${portalSlug}?view=community&search=${encodeURIComponent(query)}`, { scroll: false });
+                      } else {
+                        const findType = type === "venue" ? "destinations" : "events";
+                        router.push(`/${portalSlug}?view=find&type=${findType}&search=${encodeURIComponent(query)}`, { scroll: false });
+                      }
                     } : undefined}
                   />
                 );

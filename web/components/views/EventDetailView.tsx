@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
+import Image from "@/components/SmartImage";
 import CategoryIcon, { getCategoryColor } from "@/components/CategoryIcon";
 import FollowButton from "@/components/FollowButton";
 import FriendsGoing from "@/components/FriendsGoing";
@@ -18,6 +18,8 @@ import { getSeriesTypeLabel, getSeriesTypeColor } from "@/lib/series-utils";
 import CollapsibleSection, { CategoryIcons } from "@/components/CollapsibleSection";
 import { formatCloseTime } from "@/lib/hours";
 import VenueEventsByDay from "@/components/VenueEventsByDay";
+import ScopedStyles from "@/components/ScopedStyles";
+import { createCssVarClass } from "@/lib/css-utils";
 
 type EventData = {
   id: number;
@@ -63,6 +65,15 @@ type EventData = {
     title: string;
     slug: string;
     series_type: string;
+    festival?: {
+      id: string;
+      name: string;
+      slug: string;
+      image_url: string | null;
+      festival_type?: string | null;
+      location: string | null;
+      neighborhood: string | null;
+    } | null;
   } | null;
 };
 
@@ -183,6 +194,10 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
     router.push(`/${portalSlug}?series=${slug}`, { scroll: false });
   };
 
+  const handleFestivalClick = (slug: string) => {
+    router.push(`/${portalSlug}?festival=${slug}`, { scroll: false });
+  };
+
   const toggleSection = (key: string) => {
     setExpandedSections(prev => ({ ...prev, [key]: !prev[key] }));
   };
@@ -192,36 +207,18 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
     <button
       onClick={onClose}
       aria-label="Back to event list"
-      className="group absolute top-3 left-3 flex items-center gap-2 px-4 py-3 rounded-full font-mono text-xs font-semibold tracking-wide uppercase transition-all duration-300 z-10 hover:scale-110 hover:brightness-110 active:scale-105"
-      style={{
-        minWidth: '48px',
-        minHeight: '48px',
-        background: 'linear-gradient(135deg, rgba(0,0,0,0.7) 0%, rgba(20,20,30,0.8) 100%)',
-        backdropFilter: 'blur(8px)',
-        border: '1px solid rgba(255,107,107,0.3)',
-        boxShadow: '0 0 15px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.1)',
-      }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.borderColor = 'rgba(255,107,107,0.6)';
-        e.currentTarget.style.boxShadow = '0 0 20px rgba(255,107,107,0.3), 0 0 40px rgba(255,107,107,0.1), inset 0 1px 0 rgba(255,255,255,0.1)';
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.borderColor = 'rgba(255,107,107,0.3)';
-        e.currentTarget.style.boxShadow = '0 0 15px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.1)';
-      }}
+      className="group absolute top-3 left-3 flex items-center gap-2 px-4 py-3 rounded-full font-mono text-xs font-semibold tracking-wide uppercase transition-all duration-300 z-10 hover:scale-110 hover:brightness-110 active:scale-105 neon-back-btn"
     >
       <svg
-        className="w-4 h-4 transition-transform duration-300 group-hover:-translate-x-0.5"
+        className="w-4 h-4 transition-transform duration-300 group-hover:-translate-x-0.5 neon-back-icon"
         fill="none"
         stroke="currentColor"
         viewBox="0 0 24 24"
-        style={{ filter: 'drop-shadow(0 0 3px rgba(255,107,107,0.5))' }}
       >
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
       </svg>
       <span
-        className="transition-all duration-300 group-hover:text-[var(--coral)]"
-        style={{ textShadow: '0 0 10px rgba(255,107,107,0.3)' }}
+        className="transition-all duration-300 group-hover:text-[var(--coral)] neon-back-text"
       >
         Back
       </span>
@@ -255,6 +252,25 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
   const isLive = event.is_live || false;
   const recurrenceText = parseRecurrenceRule(event.recurrence_rule);
   const showImage = event.image_url && !imageError;
+  const heroAccentClass = createCssVarClass(
+    "--hero-accent",
+    getCategoryColor(event.category || "other"),
+    "hero-accent"
+  );
+  const seriesColorClass = event.series
+    ? createCssVarClass(
+        "--series-color",
+        getSeriesTypeColor(event.series.series_type),
+        "series-color"
+      )
+    : null;
+  const festivalColorClass = event.series?.festival
+    ? createCssVarClass(
+        "--series-color",
+        getSeriesTypeColor("festival_program"),
+        "festival-color"
+      )
+    : null;
 
   // Count items for related sections
   const hasVenueEvents = venueEvents.length > 0;
@@ -268,11 +284,14 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
 
   return (
     <div className="pt-6 pb-8">
+      <ScopedStyles
+        css={[heroAccentClass?.css, seriesColorClass?.css, festivalColorClass?.css].filter(Boolean).join("\n")}
+      />
       {/* Hero Image with integrated back button */}
       <div
         className={`relative aspect-[2/1] bg-[var(--night)] rounded-xl overflow-hidden mb-4 ${
           isLive ? "ring-2 ring-[var(--coral)] ring-opacity-50" : ""
-        }`}
+        } ${heroAccentClass?.className ?? ""}`}
       >
         {showImage ? (
           <>
@@ -298,46 +317,17 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
           <>
             {/* Branded gradient hero fallback — animated neon aesthetic */}
             <div className="absolute inset-0 bg-[var(--void)]" />
-            <div
-              className="absolute inset-0"
-              style={{
-                background: `
-                  radial-gradient(ellipse 120% 80% at 50% -20%, ${getCategoryColor(event.category || "other")}40 0%, transparent 50%),
-                  radial-gradient(ellipse 80% 60% at 100% 100%, ${getCategoryColor(event.category || "other")}25 0%, transparent 45%),
-                  radial-gradient(ellipse 60% 60% at 0% 80%, ${getCategoryColor(event.category || "other")}18 0%, transparent 40%)
-                `,
-              }}
-            />
+            <div className="absolute inset-0 hero-fallback-ambient" />
             {/* Neon top line */}
-            <div
-              className="absolute top-0 left-0 right-0 h-[2px]"
-              style={{
-                background: `linear-gradient(90deg, transparent 0%, ${getCategoryColor(event.category || "other")} 20%, ${getCategoryColor(event.category || "other")} 80%, transparent 100%)`,
-                boxShadow: `0 0 20px ${getCategoryColor(event.category || "other")}60, 0 0 40px ${getCategoryColor(event.category || "other")}30`,
-                opacity: 0.8,
-              }}
-            />
+            <div className="absolute top-0 left-0 right-0 h-[2px] hero-fallback-topline" />
             {/* Center icon */}
             <div className="absolute inset-0 flex items-center justify-center">
-              <div
-                className="flex items-center justify-center w-20 h-20 rounded-2xl"
-                style={{
-                  background: `linear-gradient(135deg, ${getCategoryColor(event.category || "other")}12 0%, transparent 50%), rgba(0,0,0,0.3)`,
-                  border: `1px solid ${getCategoryColor(event.category || "other")}30`,
-                  boxShadow: `0 0 40px ${getCategoryColor(event.category || "other")}25, inset 0 1px 0 ${getCategoryColor(event.category || "other")}15`,
-                  backdropFilter: "blur(8px)",
-                }}
-              >
+              <div className="flex items-center justify-center w-20 h-20 rounded-2xl hero-fallback-icon">
                 <CategoryIcon type={event.category || "other"} size={40} glow="intense" />
               </div>
             </div>
             {/* Scanline effect */}
-            <div
-              className="absolute inset-0 pointer-events-none opacity-[0.03]"
-              style={{
-                backgroundImage: `repeating-linear-gradient(0deg, transparent, transparent 2px, ${getCategoryColor(event.category || "other")} 2px, ${getCategoryColor(event.category || "other")} 3px)`,
-              }}
-            />
+            <div className="absolute inset-0 pointer-events-none opacity-[0.03] hero-fallback-scanlines" />
             {/* Bottom gradient for title overlay */}
             <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
           </>
@@ -360,8 +350,7 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
             href={event.source_url}
             target="_blank"
             rel="noopener noreferrer"
-            className="absolute top-3 right-3 px-2 py-1 bg-black/60 backdrop-blur-sm rounded text-[0.55rem] font-mono text-[var(--muted)] hover:text-[var(--soft)] transition-colors z-10"
-            style={{ display: isLive ? "none" : undefined }}
+            className={`absolute top-3 right-3 px-2 py-1 bg-black/60 backdrop-blur-sm rounded text-[0.55rem] font-mono text-[var(--muted)] hover:text-[var(--soft)] transition-colors z-10 ${isLive ? "hidden" : ""}`}
             title="View original source"
           >
             <svg className="w-3 h-3 inline-block mr-1 -mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -468,17 +457,44 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
 
         {/* Series link */}
         {event.series && (
-          <div className="pt-5 border-t border-[var(--twilight)]">
+          <div className="pt-5 border-t border-[var(--twilight)] space-y-3">
+            {event.series.festival && (
+              <button
+                onClick={() => handleFestivalClick(event.series!.festival!.slug)}
+                className={`flex items-center gap-3 w-full p-3 rounded-lg border border-[var(--twilight)] transition-colors hover:border-[var(--coral)]/50 group bg-[var(--void)] text-left ${festivalColorClass?.className ?? ""}`}
+              >
+                <svg
+                  className="w-5 h-5 flex-shrink-0 series-accent"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M5 4v16m0-12h9l-1.5 3L14 14H5" />
+                </svg>
+                <div className="flex-1 min-w-0">
+                  <span className="text-sm text-[var(--soft)] group-hover:text-[var(--coral)] transition-colors">
+                    Part of <span className="text-[var(--cream)] font-medium">{event.series.festival.name}</span>
+                  </span>
+                  <span
+                    className="ml-2 text-[0.6rem] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded series-bg-20 series-accent"
+                  >
+                    Festival
+                  </span>
+                </div>
+                <svg className="w-4 h-4 text-[var(--muted)] group-hover:text-[var(--coral)] transition-colors flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+            )}
             <button
               onClick={() => handleSeriesClick(event.series!.slug)}
-              className="flex items-center gap-3 w-full p-3 rounded-lg border border-[var(--twilight)] transition-colors hover:border-[var(--coral)]/50 group bg-[var(--void)] text-left"
+              className={`flex items-center gap-3 w-full p-3 rounded-lg border border-[var(--twilight)] transition-colors hover:border-[var(--coral)]/50 group bg-[var(--void)] text-left ${seriesColorClass?.className ?? ""}`}
             >
               <svg
-                className="w-5 h-5 flex-shrink-0"
+                className="w-5 h-5 flex-shrink-0 series-accent"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
-                style={{ color: getSeriesTypeColor(event.series.series_type) }}
               >
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z" />
               </svg>
@@ -487,11 +503,7 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
                   Part of <span className="text-[var(--cream)] font-medium">{event.series.title}</span>
                 </span>
                 <span
-                  className="ml-2 text-[0.6rem] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded"
-                  style={{
-                    backgroundColor: `${getSeriesTypeColor(event.series.series_type)}20`,
-                    color: getSeriesTypeColor(event.series.series_type),
-                  }}
+                  className="ml-2 text-[0.6rem] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded series-bg-20 series-accent"
                 >
                   {getSeriesTypeLabel(event.series.series_type)}
                 </span>
@@ -607,48 +619,32 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
           {/* Neon Sign Header - Blade Runner aesthetic */}
           <div className="relative mb-8 py-4">
             {/* Background glow wash */}
-            <div
-              className="absolute inset-0 blur-2xl opacity-20"
-              style={{
-                background: 'radial-gradient(ellipse at center, var(--coral) 0%, transparent 70%)',
-              }}
-            />
+            <div className="absolute inset-0 blur-2xl opacity-20 neon-coral-wash" />
 
             {/* Neon tube lines */}
-            <div className="absolute left-0 right-0 top-0 h-px opacity-30" style={{ background: 'var(--coral)' }} />
-            <div className="absolute left-0 right-0 bottom-0 h-px opacity-30" style={{ background: 'var(--coral)' }} />
+            <div className="absolute left-0 right-0 top-0 h-px opacity-30 neon-coral-line" />
+            <div className="absolute left-0 right-0 bottom-0 h-px opacity-30 neon-coral-line" />
 
             {/* Title container */}
             <div className="relative flex justify-center">
               <div className="relative">
                 {/* Outer glow layer */}
                 <h2
-                  className="absolute inset-0 font-bold text-lg sm:text-xl tracking-[0.2em] uppercase blur-md opacity-60"
-                  style={{ color: 'var(--coral)' }}
+                  className="absolute inset-0 font-bold text-lg sm:text-xl tracking-[0.2em] uppercase blur-md opacity-60 text-coral-glow-outer"
                   aria-hidden="true"
                 >
                   Happening Around Here
                 </h2>
                 {/* Mid glow layer */}
                 <h2
-                  className="absolute inset-0 font-bold text-lg sm:text-xl tracking-[0.2em] uppercase blur-sm opacity-80"
-                  style={{ color: 'var(--coral)' }}
+                  className="absolute inset-0 font-bold text-lg sm:text-xl tracking-[0.2em] uppercase blur-sm opacity-80 text-coral-glow-outer"
                   aria-hidden="true"
                 >
                   Happening Around Here
                 </h2>
                 {/* Main text */}
                 <h2
-                  className="relative font-bold text-lg sm:text-xl tracking-[0.2em] uppercase"
-                  style={{
-                    color: '#FFE4E1',
-                    textShadow: `
-                      0 0 5px var(--coral),
-                      0 0 10px var(--coral),
-                      0 0 20px var(--coral),
-                      0 0 40px rgba(255,107,107,0.5)
-                    `,
-                  }}
+                  className="relative font-bold text-lg sm:text-xl tracking-[0.2em] uppercase text-coral-glow-main"
                 >
                   Happening Around Here
                 </h2>

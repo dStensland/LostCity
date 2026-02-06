@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useId } from "react";
+import ScopedStyles from "@/components/ScopedStyles";
 import type { PortalAmbientConfig } from "@/lib/portal-context";
 
 interface FloatingLeavesAmbientProps {
@@ -106,11 +107,82 @@ export default function FloatingLeavesAmbient({ config }: FloatingLeavesAmbientP
     });
   }, [leafCount, leafColors, speedMultiplier]);
 
+  const rawId = useId();
+  const instanceClass = `floating-leaves-${rawId.replace(/[^a-zA-Z0-9_-]/g, "")}`;
+  const leafRules = leaves
+    .map(
+      (leaf) => `.${instanceClass} .leaf-${leaf.id} { animation-duration: ${leaf.duration}s; animation-delay: ${leaf.delay}s; }`
+    )
+    .join("\n");
+  const css = `
+    .${instanceClass} .leaf-group {
+      animation-timing-function: ease-in-out;
+      animation-iteration-count: infinite;
+    }
+    .${instanceClass} .leaf-float-0 { animation-name: leaf-float-0; }
+    .${instanceClass} .leaf-float-1 { animation-name: leaf-float-1; }
+    .${instanceClass} .leaf-float-2 { animation-name: leaf-float-2; }
+    ${leafRules}
+    @keyframes leaf-float-0 {
+      0%, 100% {
+        transform: translate(0, 0) rotate(0deg);
+        opacity: ${opacity};
+      }
+      25% {
+        transform: translate(${12 * speedMultiplier}px, ${8 * speedMultiplier}px) rotate(10deg);
+        opacity: ${opacity * 0.85};
+      }
+      50% {
+        transform: translate(${-8 * speedMultiplier}px, ${18 * speedMultiplier}px) rotate(-8deg);
+        opacity: ${opacity * 0.95};
+      }
+      75% {
+        transform: translate(${4 * speedMultiplier}px, ${12 * speedMultiplier}px) rotate(6deg);
+        opacity: ${opacity * 0.9};
+      }
+    }
+    @keyframes leaf-float-1 {
+      0%, 100% {
+        transform: translate(0, 0) rotate(0deg);
+        opacity: ${opacity * 0.9};
+      }
+      30% {
+        transform: translate(${-15 * speedMultiplier}px, ${10 * speedMultiplier}px) rotate(-15deg);
+        opacity: ${opacity};
+      }
+      60% {
+        transform: translate(${8 * speedMultiplier}px, ${22 * speedMultiplier}px) rotate(10deg);
+        opacity: ${opacity * 0.75};
+      }
+    }
+    @keyframes leaf-float-2 {
+      0%, 100% {
+        transform: translate(0, 0) rotate(0deg);
+        opacity: ${opacity * 0.85};
+      }
+      40% {
+        transform: translate(${-10 * speedMultiplier}px, ${14 * speedMultiplier}px) rotate(-12deg);
+        opacity: ${opacity * 0.95};
+      }
+      70% {
+        transform: translate(${6 * speedMultiplier}px, ${20 * speedMultiplier}px) rotate(8deg);
+        opacity: ${opacity * 0.8};
+      }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .${instanceClass} .leaf-group {
+        animation: none !important;
+        opacity: ${opacity * 0.5} !important;
+      }
+    }
+  `;
+
   return (
     <div
-      className="ambient-layer fixed inset-0 pointer-events-none z-0 overflow-hidden"
+      className={`ambient-layer fixed inset-0 pointer-events-none z-0 overflow-hidden ${instanceClass}`}
       aria-hidden="true"
     >
+      <ScopedStyles css={css} />
       <svg
         className="absolute inset-0 w-full h-full"
         preserveAspectRatio="xMidYMid slice"
@@ -137,10 +209,7 @@ export default function FloatingLeavesAmbient({ config }: FloatingLeavesAmbientP
         {leaves.map((leaf) => (
           <g
             key={leaf.id}
-            style={{
-              animation: `leaf-float-${leaf.id % 3} ${leaf.duration}s ease-in-out infinite`,
-              animationDelay: `${leaf.delay}s`,
-            }}
+            className={`leaf-group leaf-float-${leaf.id % 3} leaf-${leaf.id}`}
           >
             <g transform={`translate(${leaf.x}, ${leaf.y})`}>
               <g transform={`rotate(${leaf.rotation})`}>
@@ -169,65 +238,6 @@ export default function FloatingLeavesAmbient({ config }: FloatingLeavesAmbientP
           </g>
         ))}
       </svg>
-
-      {/* Keyframes for floating animation - gentler, more natural */}
-      <style>{`
-        @keyframes leaf-float-0 {
-          0%, 100% {
-            transform: translate(0, 0) rotate(0deg);
-            opacity: ${opacity};
-          }
-          25% {
-            transform: translate(${12 * speedMultiplier}px, ${8 * speedMultiplier}px) rotate(10deg);
-            opacity: ${opacity * 0.85};
-          }
-          50% {
-            transform: translate(${-8 * speedMultiplier}px, ${18 * speedMultiplier}px) rotate(-8deg);
-            opacity: ${opacity * 0.95};
-          }
-          75% {
-            transform: translate(${4 * speedMultiplier}px, ${12 * speedMultiplier}px) rotate(6deg);
-            opacity: ${opacity * 0.9};
-          }
-        }
-
-        @keyframes leaf-float-1 {
-          0%, 100% {
-            transform: translate(0, 0) rotate(0deg);
-            opacity: ${opacity * 0.9};
-          }
-          30% {
-            transform: translate(${-15 * speedMultiplier}px, ${10 * speedMultiplier}px) rotate(-15deg);
-            opacity: ${opacity};
-          }
-          60% {
-            transform: translate(${8 * speedMultiplier}px, ${22 * speedMultiplier}px) rotate(10deg);
-            opacity: ${opacity * 0.75};
-          }
-        }
-
-        @keyframes leaf-float-2 {
-          0%, 100% {
-            transform: translate(0, 0) rotate(0deg);
-            opacity: ${opacity * 0.85};
-          }
-          40% {
-            transform: translate(${-10 * speedMultiplier}px, ${14 * speedMultiplier}px) rotate(-12deg);
-            opacity: ${opacity * 0.95};
-          }
-          70% {
-            transform: translate(${6 * speedMultiplier}px, ${20 * speedMultiplier}px) rotate(8deg);
-            opacity: ${opacity * 0.8};
-          }
-        }
-
-        @media (prefers-reduced-motion: reduce) {
-          svg g {
-            animation: none !important;
-            opacity: ${opacity * 0.5} !important;
-          }
-        }
-      `}</style>
     </div>
   );
 }

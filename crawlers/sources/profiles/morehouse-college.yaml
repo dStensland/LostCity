@@ -1,0 +1,13 @@
+version: 1
+slug: morehouse-college
+name: Morehouse College
+integration_method: llm_extraction
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.morehouse.edu/events
+detail:
+  enabled: true
+  use_llm: true

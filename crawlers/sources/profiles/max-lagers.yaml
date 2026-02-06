@@ -1,0 +1,12 @@
+version: 1
+slug: max-lagers
+name: Max Lager's
+integration_method: llm_crawler
+defaults: {}
+discovery:
+  enabled: true
+  type: html
+  urls:
+  - https://www.maxlagers.com
+detail:
+  enabled: false

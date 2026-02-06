@@ -17,7 +17,7 @@ from playwright.sync_api import sync_playwright
 
 from db import get_or_create_venue, insert_event, find_event_by_hash, get_portal_id_by_slug
 from dedupe import generate_content_hash
-from utils import extract_images_from_page
+from utils import extract_images_from_page, extract_event_links, find_event_url
 
 # Portal ID for Piedmont-exclusive events
 PORTAL_SLUG = "piedmont"
@@ -240,6 +240,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
             # Extract images from page
             image_map = extract_images_from_page(page)
 
+            # Extract event links for specific URLs
+            event_links = extract_event_links(page, BASE_URL)
+
             # Scroll to load all content
             for _ in range(3):
                 page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
@@ -367,6 +370,13 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     is_free = False
                     price_note = "Tickets required - proceeds benefit Piedmont Healthcare"
 
+                    # Get specific event URL
+
+
+                    event_url = find_event_url(title, event_links, EVENTS_URL)
+
+
+
                     event_record = {
                         "source_id": source_id,
                         "venue_id": venue_id,
@@ -385,8 +395,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "price_max": None,
                         "price_note": price_note,
                         "is_free": is_free,
-                        "source_url": EVENTS_URL,
-                        "ticket_url": EVENTS_URL,
+                        "source_url": event_url,
+                        "ticket_url": event_url,
                         "image_url": image_map.get(title),
                         "raw_text": f"{title} - {start_date} at {venue_data['name']}",
                         "extraction_confidence": 0.85,

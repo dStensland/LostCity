@@ -1,0 +1,12 @@
+version: 1
+slug: criminal-records
+name: Criminal Records
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.criminalatl.com
+detail:
+  enabled: false

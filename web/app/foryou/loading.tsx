@@ -1,4 +1,5 @@
 import { EventCardSkeletonList } from "@/components/EventCardSkeleton";
+import Skeleton from "@/components/Skeleton";
 
 export default function ForYouLoading() {
   return (
@@ -6,19 +7,16 @@ export default function ForYouLoading() {
       {/* Header skeleton */}
       <div className="mb-6">
         <div className="h-8 w-32 skeleton-shimmer rounded mb-2" />
-        <div className="h-4 w-56 skeleton-shimmer rounded" style={{ animationDelay: "0.05s" }} />
+        <Skeleton className="h-4 w-56 rounded" delay="0.05s" />
       </div>
 
       {/* Filter row skeleton */}
       <div className="flex gap-2 mb-6 overflow-hidden">
-        {[1, 2, 3, 4].map((i) => (
-          <div
-            key={i}
-            className="h-8 rounded-lg skeleton-shimmer flex-shrink-0"
-            style={{
-              width: `${60 + i * 10}px`,
-              animationDelay: `${i * 0.05}s`,
-            }}
+        {(["w-16", "w-20", "w-24", "w-28"] as const).map((widthClass, i) => (
+          <Skeleton
+            key={widthClass}
+            className={`h-8 rounded-lg flex-shrink-0 ${widthClass}`}
+            delay={`${(i + 1) * 0.05}s`}
           />
         ))}
       </div>

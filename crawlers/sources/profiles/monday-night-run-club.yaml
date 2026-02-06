@@ -1,0 +1,14 @@
+version: 1
+slug: monday-night-run-club
+name: Monday Night Run Club
+integration_method: playwright
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.mondaynightbrewing.com
+  fetch:
+    render_js: true
+detail:
+  enabled: false

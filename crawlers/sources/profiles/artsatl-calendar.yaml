@@ -1,0 +1,12 @@
+version: 1
+slug: artsatl-calendar
+name: ArtsATL Calendar
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.artsatl.org/calendar/
+detail:
+  enabled: false

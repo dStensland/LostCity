@@ -1,0 +1,14 @@
+version: 1
+slug: joystick-gamebar
+name: Joystick Gamebar
+integration_method: playwright
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.joystickgamebar.com
+  fetch:
+    render_js: true
+detail:
+  enabled: false

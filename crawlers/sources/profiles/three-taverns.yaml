@@ -1,0 +1,14 @@
+version: 1
+slug: three-taverns
+name: Three Taverns Craft Brewery
+integration_method: playwright
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.threetavernsbrewery.com
+  fetch:
+    render_js: true
+detail:
+  enabled: false

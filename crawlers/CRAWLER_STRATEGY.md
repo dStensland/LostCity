@@ -29,12 +29,34 @@ Curators (ArtsATL, Nashville Scene, Discover Atlanta, Visit Music City, etc.) du
 - Ticketmaster / AXS -- structured ticketing APIs, cover venues without their own calendars
 - Eventbrite -- community events from small orgs that don't have websites
 
+Exception: if a venue/org has no first-party API and is well covered by Ticketmaster or Eventbrite, prefer the aggregator API over scraping the venue site.
+
 **Do not use** as sources:
 - Editorial calendars (ArtsATL, Creative Loafing, Nashville Scene, AccessATlanta)
 - Tourism boards (Discover Atlanta, Visit Music City, Visit Franklin)
 - City guides (Do615, Nashville.com)
 
 If an event appears in a curator but not in our database, add a crawler for the original venue instead.
+
+### Strategy Priority Order (Per Source)
+1. First-party org/venue API.
+2. Aggregator APIs (Ticketmaster/Eventbrite) when the venue has no API or the aggregator data is materially better.
+3. Structured feeds (ICS/RSS/ical).
+4. Schema.org-only ingestion (JSON-LD Event required; skip pages without it).
+5. Deterministic HTML crawlers (selectors + JSON-LD + microdata).
+6. LLM-powered crawler (LLM drives discovery + extraction) for sources that cannot be parsed deterministically.
+7. LLM extraction (HTML -> structured) as fallback inside deterministic crawlers.
+8. Browser automation (Playwright) when content requires JS or interaction.
+9. User submissions.
+
+Schema.org-only is enforced via `detail.jsonld_only: true` in the source profile.
+
+### Source Audit CLI
+Use the audit tool when investigating a new source to recommend an integration method:
+```
+python scripts/source_audit.py --url https://example.org/events
+```
+It reports signals (feeds, JSON-LD, JS rendering) and a recommended method based on the priority order.
 
 ### Tier 1: High-Volume Aggregators (Priority: First)
 **Goal:** Establish baseline coverage quickly
@@ -95,13 +117,39 @@ START: Analyzing a new source
 │
 ├─► Does it have a public API?
 │   ├─► YES → Use API approach (highest quality)
-│   │         • Ticketmaster, Eventbrite, Meetup patterns
+│   │         • First-party org/venue API
 │   │         • Structured JSON, pagination support
 │   │         • Confidence: 0.90-0.95
 │   │
 │   └─► NO → Continue...
 │
-├─► Does the site use JavaScript to load events?
+├─► Is it covered by Ticketmaster/Eventbrite?
+│   ├─► YES → Use aggregator API
+│   │         • Confidence: 0.85-0.95
+│   │
+│   └─► NO → Continue...
+│
+├─► Does it have a structured feed (ICS/RSS)?
+│   ├─► YES → Use feed ingestion
+│   │         • Low maintenance, high precision
+│   │         • Confidence: 0.85-0.95
+│   │
+│   └─► NO → Continue...
+│
+├─► Does the site publish JSON-LD Event?
+│   ├─► YES → If complete, use schema.org-only
+│   │         • Otherwise parse JSON-LD + HTML selectors
+│   │         • Confidence: 0.85-0.90
+│   │
+│   └─► NO → Continue...
+│
+├─► Can we parse deterministically from HTML?
+│   ├─► YES → Use selectors + microdata
+│   │         • Confidence: 0.70-0.85
+│   │
+│   └─► NO → Continue...
+│
+├─► Is the content JS-driven or requires interaction?
 │   ├─► YES → Use Playwright
 │   │         • Wait for content to load
 │   │         • Handle infinite scroll
@@ -110,22 +158,15 @@ START: Analyzing a new source
 │   │
 │   └─► NO → Continue...
 │
-├─► Does the site have JSON-LD structured data?
-│   ├─► YES → Parse JSON-LD first, fall back to HTML
-│   │         • Look for <script type="application/ld+json">
-│   │         • Schema.org Event format
-│   │         • Confidence: 0.85-0.90
-│   │
-│   └─► NO → Use BeautifulSoup
-│             • Static HTML parsing
-│             • CSS selectors for event cards
-│             • Confidence: 0.70-0.85
-│
 └─► SPECIAL CASES:
+    • Use LLM-powered crawler for sources that cannot be parsed deterministically
+    • Use LLM extraction as fallback for missing fields or non-standard pages
     • Theaters/Cinemas: Always use Playwright for date navigation
     • Calendars with filters: Playwright to interact with dropdowns
     • Infinite scroll: Playwright with scroll handling
 ```
+
+Note: if static HTML is available, prefer LLM extraction over Playwright. Use Playwright only when content is JS-only or requires interaction to render events.
 
 ### When to Use Each Approach
 

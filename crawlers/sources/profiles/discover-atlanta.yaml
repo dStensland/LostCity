@@ -1,0 +1,12 @@
+version: 1
+slug: discover-atlanta
+name: Discover Atlanta
+integration_method: llm_crawler
+defaults: {}
+discovery:
+  enabled: true
+  type: html
+  urls:
+  - https://discoveratlanta.com/events
+detail:
+  enabled: false

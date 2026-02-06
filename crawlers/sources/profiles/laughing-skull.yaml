@@ -1,0 +1,12 @@
+version: 1
+slug: laughing-skull
+name: Laughing Skull Lounge
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://laughingskulllounge.com
+detail:
+  enabled: false

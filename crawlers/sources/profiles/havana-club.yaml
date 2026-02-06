@@ -1,0 +1,12 @@
+version: 1
+slug: havana-club
+name: Havana Club
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.havanaclubatl.com
+detail:
+  enabled: false

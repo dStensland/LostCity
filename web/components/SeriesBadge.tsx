@@ -2,6 +2,8 @@
 
 import { memo } from "react";
 import { formatRecurrence, type Frequency, type DayOfWeek } from "@/lib/recurrence";
+import ScopedStyles from "@/components/ScopedStyles";
+import { createCssVarClass } from "@/lib/css-utils";
 
 // Inline helpers to avoid importing from server-only lib/series.ts
 function getSeriesTypeLabel(type: string): string {
@@ -9,7 +11,7 @@ function getSeriesTypeLabel(type: string): string {
     film: "Film",
     recurring_show: "Recurring Show",
     class_series: "Class Series",
-    festival_program: "Festival Program",
+    festival_program: "Program",
     tour: "Tour",
     other: "Series",
   };
@@ -40,19 +42,18 @@ function SeriesBadge({ seriesType, frequency, dayOfWeek, compact = true }: Serie
   const recurrenceText = formatRecurrence(frequency || null, dayOfWeek || null);
   const typeLabel = getSeriesTypeLabel(seriesType);
   const typeColor = getSeriesTypeColor(seriesType);
+  const seriesClass = createCssVarClass("--series-color", typeColor, "series-color");
 
   if (compact) {
     // Compact version: show recurrence if available, otherwise type
     const displayText = recurrenceText || typeLabel;
 
     return (
-      <span
-        className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[0.6rem] font-mono font-medium"
-        style={{
-          backgroundColor: `${typeColor}20`,
-          color: typeColor,
-        }}
-      >
+      <>
+        <ScopedStyles css={seriesClass?.css} />
+        <span
+          className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[0.6rem] font-mono font-medium series-bg-20 series-accent ${seriesClass?.className ?? ""}`}
+        >
         {/* Repeat icon for recurring events */}
         {recurrenceText && (
           <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -65,20 +66,17 @@ function SeriesBadge({ seriesType, frequency, dayOfWeek, compact = true }: Serie
           </svg>
         )}
         {displayText}
-      </span>
+        </span>
+      </>
     );
   }
 
   // Full version: show both type and recurrence
   return (
-    <div className="inline-flex items-center gap-2">
+    <div className={`inline-flex items-center gap-2 ${seriesClass?.className ?? ""}`}>
+      <ScopedStyles css={seriesClass?.css} />
       <span
-        className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-mono font-medium"
-        style={{
-          backgroundColor: `${typeColor}15`,
-          color: typeColor,
-          border: `1px solid ${typeColor}30`,
-        }}
+        className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-mono font-medium series-bg-15 series-accent series-border-30"
       >
         {/* Series type icon based on type */}
         {seriesType === "film" && (

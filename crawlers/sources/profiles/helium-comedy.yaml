@@ -1,0 +1,12 @@
+version: 1
+slug: helium-comedy
+name: Helium Comedy Club
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://atlanta.heliumcomedy.com
+detail:
+  enabled: false
