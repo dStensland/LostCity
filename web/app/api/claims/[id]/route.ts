@@ -112,9 +112,11 @@ export async function PATCH(request: NextRequest, { params }: Props) {
     return NextResponse.json({ error: "Claim request not found" }, { status: 404 });
   }
 
-  if (!["pending", "needs_info"].includes(existing.status)) {
+  const claim = existing as { id: string; status: string };
+
+  if (!["pending", "needs_info"].includes(claim.status)) {
     return NextResponse.json(
-      { error: `Cannot update claim with status: ${existing.status}` },
+      { error: `Cannot update claim with status: ${claim.status}` },
       { status: 400 }
     );
   }
@@ -124,7 +126,7 @@ export async function PATCH(request: NextRequest, { params }: Props) {
   if (verification_domain !== undefined) updates.verification_domain = verification_domain;
   if (verification_token !== undefined) updates.verification_token = verification_token;
   if (notes !== undefined) updates.notes = notes;
-  if (existing.status === "needs_info") {
+  if (claim.status === "needs_info") {
     updates.status = "pending";
     updates.rejection_reason = null;
   }

@@ -175,7 +175,8 @@ export async function POST(request: NextRequest) {
       ? await existingRequestQuery.eq("venue_id", venue_id).maybeSingle()
       : await existingRequestQuery.eq("organization_id", organization_id as string).maybeSingle();
 
-  if (existingRequest.data && ["pending", "needs_info", "approved"].includes(existingRequest.data.status)) {
+  const existingReq = existingRequest.data as { id: string; status: string } | null;
+  if (existingReq && ["pending", "needs_info", "approved"].includes(existingReq.status)) {
     return NextResponse.json(
       { error: "You already have a claim request for this entity." },
       { status: 409 }
