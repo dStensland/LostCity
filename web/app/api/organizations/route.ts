@@ -69,7 +69,7 @@ export async function GET(request: NextRequest) {
         .eq("portal_id", portalId);
 
       if (membershipError) {
-        logger.warn("organization_portals lookup failed, falling back to organizations.portal_id", membershipError);
+        logger.warn("organization_portals lookup failed, falling back to organizations.portal_id", { error: membershipError.message });
       } else {
         portalOrgIds = (memberships || []).map(
           (row: { organization_id: string }) => row.organization_id
