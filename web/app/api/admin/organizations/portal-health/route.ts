@@ -53,7 +53,7 @@ export async function GET(request: NextRequest) {
   try {
     const supabase = getSupabaseAdmin();
 
-    const portalClient = supabase as SupabaseClient<OrganizationPortalSchema>;
+    const portalClient = supabase as unknown as SupabaseClient<OrganizationPortalSchema>;
     const [{ data: organizations, error: orgError }, { data: memberships, error: membershipError }] =
       await Promise.all([
         supabase.from("organizations").select("id, name, portal_id").eq("hidden", false),

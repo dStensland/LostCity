@@ -62,7 +62,7 @@ export async function GET(request: NextRequest) {
     // Resolve organizations by portal membership if requested
     let portalOrgIds: string[] | null = null;
     if (portalId) {
-      const portalClient = supabase as SupabaseClient<OrganizationPortalSchema>;
+      const portalClient = supabase as unknown as SupabaseClient<OrganizationPortalSchema>;
       const { data: memberships, error: membershipError } = await portalClient
         .from("organization_portals")
         .select("organization_id")

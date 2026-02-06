@@ -81,7 +81,7 @@ export async function GET(request: NextRequest) {
     .limit(limit);
 
   if (portalId) {
-    const portalClient = supabase as SupabaseClient<OrganizationPortalSchema>;
+    const portalClient = supabase as unknown as SupabaseClient<OrganizationPortalSchema>;
     const { data: memberships, error: membershipError } = await portalClient
       .from("organization_portals")
       .select("organization_id")
