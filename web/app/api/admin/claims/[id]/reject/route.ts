@@ -38,9 +38,11 @@ export async function POST(request: NextRequest, { params }: Props) {
     return NextResponse.json({ error: "Claim request not found" }, { status: 404 });
   }
 
-  if (!["pending", "needs_info"].includes(claimData.status)) {
+  const claim = claimData as { id: string; status: string };
+
+  if (!["pending", "needs_info"].includes(claim.status)) {
     return NextResponse.json(
-      { error: `Cannot reject claim with status: ${claimData.status}` },
+      { error: `Cannot reject claim with status: ${claim.status}` },
       { status: 400 }
     );
   }
