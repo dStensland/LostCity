@@ -96,7 +96,7 @@ export default function CursorGlow() {
               { duration: 0, fill: "forwards" }
             );
           } else {
-            animationRef.current.effect?.setKeyframes([
+            (animationRef.current.effect as KeyframeEffect)?.setKeyframes([
               { transform: `translate3d(${x}px, ${y}px, 0)` },
             ]);
             animationRef.current.play();
@@ -120,7 +120,7 @@ export default function CursorGlow() {
             { duration: 0, fill: "forwards" }
           );
         } else {
-          animationRef.current.effect?.setKeyframes([
+          (animationRef.current.effect as KeyframeEffect)?.setKeyframes([
             { transform: `translate3d(${x}px, ${y}px, 0)` },
           ]);
           animationRef.current.play();

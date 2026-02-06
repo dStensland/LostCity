@@ -235,7 +235,7 @@ function FriendsGoingHighlight({
                 skipAnimation
                 disableMargin
                 contextLabel={contextLabel}
-                contextColor={accentColor}
+                contextColor={SECTION_CONFIG.friendsGoing.color}
               />
             );
           }
@@ -249,7 +249,7 @@ function FriendsGoingHighlight({
                 skipAnimation
                 disableMargin
                 contextLabel={contextLabel}
-                contextColor={accentColor}
+                contextColor={SECTION_CONFIG.friendsGoing.color}
               />
             );
           }

@@ -3,6 +3,9 @@ import type { Event } from "./supabase";
 import { getLocalDateString } from "@/lib/formats";
 import {
   isSpotOpen,
+  EVENT_VENUE_TYPES,
+  PLACE_VENUE_TYPES,
+  type SpotCategory,
   type HoursData,
   type Spot,
 } from "./spots-constants";

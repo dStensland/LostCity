@@ -110,15 +110,15 @@ const nextConfig: NextConfig = {
     ],
     remotePatterns: [
       ...Array.from(imageHosts).map((hostname) => ({
-        protocol: "https",
+        protocol: "https" as const,
         hostname,
       })),
       {
-        protocol: "https",
+        protocol: "https" as const,
         hostname: "**.squarespace.com",
       },
       {
-        protocol: "http",
+        protocol: "http" as const,
         hostname: "**.squarespace.com",
       },
     ],

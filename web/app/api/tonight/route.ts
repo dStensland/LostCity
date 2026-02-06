@@ -329,7 +329,8 @@ export async function GET(request: NextRequest) {
 
     // Aggregate RSVP counts
     const rsvpCounts = new Map<number, { going: number; interested: number }>();
-    for (const rsvp of rsvpData || []) {
+    const typedRsvps = (rsvpData || []) as { event_id: number; status: string }[];
+    for (const rsvp of typedRsvps) {
       const counts = rsvpCounts.get(rsvp.event_id) || { going: 0, interested: 0 };
       if (rsvp.status === "going") counts.going++;
       else if (rsvp.status === "interested") counts.interested++;
@@ -347,7 +348,8 @@ export async function GET(request: NextRequest) {
         .in("venue_id", venueIds)
         .eq("visibility", "public");
 
-      for (const rec of recData || []) {
+      const typedRecs = (recData || []) as { venue_id: number }[];
+      for (const rec of typedRecs) {
         if (rec.venue_id) {
           venueRecCounts.set(rec.venue_id, (venueRecCounts.get(rec.venue_id) || 0) + 1);
         }

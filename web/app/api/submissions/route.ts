@@ -360,12 +360,14 @@ export async function POST(request: NextRequest) {
         return errorResponse(submissionError, "submission creation");
       }
 
+      const sub = submission as { id: string; [key: string]: unknown };
+
       try {
         const approvedEventId = await createEventFromSubmission(
           serviceClient,
           eventData,
           user.id,
-          submission.id
+          sub.id
         );
 
         const { data: updated } = await serviceClient
@@ -376,7 +378,7 @@ export async function POST(request: NextRequest) {
             reviewed_at: new Date().toISOString(),
             admin_notes: "Auto-approved (trusted submitter)",
           } as never)
-          .eq("id", submission.id)
+          .eq("id", sub.id)
           .select()
           .maybeSingle();
 

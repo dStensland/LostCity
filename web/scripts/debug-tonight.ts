@@ -42,7 +42,7 @@ async function main() {
 
   console.log("\nEvents for next 3 days:");
   for (const e of upcoming || []) {
-    const venueName = (e.venue?.name || "?").slice(0, 30);
+    const venueName = ((e.venue as unknown as { name: string } | null)?.name || "?").slice(0, 30);
     // Skip painting with a twist for cleaner output
     if (venueName.toLowerCase().includes("painting with")) continue;
     console.log(`  ${e.start_date} ${e.start_time || "all-day"} | ${(e.category || "?").padEnd(10)} | ${venueName}`);
@@ -112,7 +112,7 @@ async function main() {
   // Score events
   const scored = (data || []).map(e => {
     let score = 0;
-    const venueName = e.venue?.name || "";
+    const venueName = (e.venue as unknown as { name: string } | null)?.name || "";
     const cat = e.category || "";
 
     // Hip venue +20
@@ -141,7 +141,7 @@ async function main() {
     const rsvps = String(e.rsvps).padStart(5);
     const vRecs = String(e.venueRecs).padStart(9);
     const cat = (e.category || "?").padEnd(10).slice(0, 10);
-    const venue = (e.venue?.name || "?").padEnd(25).slice(0, 25);
+    const venue = ((e.venue as unknown as { name: string } | null)?.name || "?").padEnd(25).slice(0, 25);
     const title = e.title.slice(0, 40);
     console.log(`${score} | ${rsvps} | ${vRecs} | ${cat} | ${venue} | ${title}`);
   }

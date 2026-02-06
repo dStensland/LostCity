@@ -160,6 +160,7 @@ function HeroOverlay({
   isLive,
   children,
 }: {
+  categoryColor?: string;
   title: string;
   subtitle?: string;
   badge?: ReactNode;
