@@ -375,11 +375,11 @@ export default function AdminSubmissionsPage() {
                             Submission details
                           </div>
                           {submission.submission_type === "event" ? (
-                            <EventPreview data={data as EventSubmissionData} />
+                            <EventPreview data={data as unknown as EventSubmissionData} />
                           ) : submission.submission_type === "venue" ? (
-                            <VenuePreview data={data as VenueSubmissionData} />
+                            <VenuePreview data={data as unknown as VenueSubmissionData} />
                           ) : (
-                            <OrgPreview data={data as ProducerSubmissionData} />
+                            <OrgPreview data={data as unknown as ProducerSubmissionData} />
                           )}
                         </div>
                         <div className="space-y-4">
