@@ -82,9 +82,10 @@ export async function GET(
     .order("start_time", { ascending: true })
     .limit(20);
 
-  const upcomingEventIds = (upcomingEvents || []).map((event) => event.id);
+  const eventRows = (upcomingEvents || []) as { id: number; title: string; start_date: string; start_time: string | null; end_time: string | null; is_free: boolean | null; price_min: number | null; category: string | null }[];
+  const upcomingEventIds = eventRows.map((event) => event.id);
   const upcomingCounts = await fetchSocialProofCounts(upcomingEventIds);
-  const upcomingEventsWithCounts = (upcomingEvents || []).map((event) => {
+  const upcomingEventsWithCounts = eventRows.map((event) => {
     const counts = upcomingCounts.get(event.id);
     return {
       ...event,
