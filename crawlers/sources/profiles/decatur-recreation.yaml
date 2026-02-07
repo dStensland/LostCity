@@ -8,5 +8,7 @@ discovery:
   type: html
   urls:
   - https://www.decaturga.com/recreation
+  fetch:
+    render_js: true
 detail:
   enabled: false

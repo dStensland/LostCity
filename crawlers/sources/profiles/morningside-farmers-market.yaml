@@ -1,14 +1,12 @@
 version: 1
 slug: morningside-farmers-market
 name: Morningside Farmers Market
-integration_method: playwright
+integration_method: html
 defaults: {}
 discovery:
   enabled: true
   type: list
   urls:
   - https://www.morningsidemarket.com
-  fetch:
-    render_js: true
 detail:
   enabled: false

@@ -1,14 +1,12 @@
 version: 1
 slug: sweet-auburn-market
 name: Sweet Auburn Curb Market
-integration_method: playwright
+integration_method: html
 defaults: {}
 discovery:
   enabled: true
   type: list
   urls:
   - https://www.sweetauburncurbmarket.com
-  fetch:
-    render_js: true
 detail:
   enabled: false

@@ -1,13 +1,21 @@
 version: 1
 slug: punchline
 name: Punchline Comedy Club
-integration_method: playwright
-defaults: {}
+integration_method: html
+defaults:
+  venue_name: Punchline Comedy Club
+  category: comedy
+  subcategory: standup
+  tags:
+    - comedy
+    - standup
+    - live-entertainment
 discovery:
   enabled: true
-  type: list
+  type: html
   urls:
-  - https://punchline.com
+  - https://punchline.com/shows/
+  # Custom WordPress layout — needs LLM extraction or Playwright
   fetch:
     render_js: true
 detail:

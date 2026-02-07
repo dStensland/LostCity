@@ -8,5 +8,7 @@ discovery:
   type: html
   urls:
   - https://faithallianceofmetroatlanta.org/events
+  fetch:
+    render_js: true
 detail:
   enabled: false

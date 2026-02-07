@@ -1,14 +1,12 @@
 version: 1
 slug: visit-music-city
 name: Visit Music City
-integration_method: playwright
+integration_method: html
 defaults: {}
 discovery:
   enabled: true
   type: list
   urls:
   - https://www.visitmusiccity.com/nashville-events
-  fetch:
-    render_js: true
 detail:
   enabled: false

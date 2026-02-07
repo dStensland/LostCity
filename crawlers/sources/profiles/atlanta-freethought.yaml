@@ -1,11 +1,11 @@
 version: 1
 slug: atlanta-freethought
 name: Atlanta Freethought Society
-integration_method: html
+integration_method: llm_crawler
 defaults: {}
 discovery:
-  enabled: true
-  type: list
+  enabled: false  # 503 Service Unavailable — 2026-02-06 audit
+  type: html
   urls:
   - https://atlantafreethought.org/events
 detail:

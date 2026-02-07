@@ -1,12 +1,14 @@
 version: 1
 slug: havana-club
 name: Havana Club
-integration_method: html
+integration_method: playwright
 defaults: {}
 discovery:
   enabled: true
   type: list
   urls:
   - https://www.havanaclubatl.com
+  fetch:
+    render_js: true
 detail:
   enabled: false

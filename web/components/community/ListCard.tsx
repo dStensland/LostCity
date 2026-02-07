@@ -126,16 +126,22 @@ export default function ListCard({ list, portalSlug }: ListCardProps) {
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
               </svg>
-              {list.item_count} item{list.item_count !== 1 ? "s" : ""}
+              {list.item_count} spot{list.item_count !== 1 ? "s" : ""}
             </span>
 
-            {/* Vote count */}
-            <span className="flex items-center gap-1 text-accent">
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-              </svg>
-              {list.vote_count}
-            </span>
+            {/* Vote count - only show when there are votes */}
+            {list.vote_count > 0 ? (
+              <span className="flex items-center gap-1 text-accent">
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                </svg>
+                {list.vote_count}
+              </span>
+            ) : (
+              <span className="px-1.5 py-0.5 rounded text-[0.6rem] font-medium bg-[var(--twilight)] text-[var(--soft)]">
+                New
+              </span>
+            )}
 
             {/* Creator */}
             {list.creator && (

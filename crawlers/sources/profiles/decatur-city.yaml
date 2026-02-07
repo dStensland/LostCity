@@ -8,5 +8,7 @@ discovery:
   type: html
   urls:
   - https://www.decaturga.com/calendar
+  fetch:
+    render_js: true
 detail:
   enabled: false

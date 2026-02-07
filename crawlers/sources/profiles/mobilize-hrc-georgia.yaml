@@ -4,7 +4,7 @@ name: HRC in Georgia (Mobilize)
 integration_method: llm_crawler
 defaults: {}
 discovery:
-  enabled: true
+  enabled: false  # Mobilize org slug returns 404 — 2026-02-06 audit
   type: html
   urls:
   - https://www.mobilize.us/hrcingeorgia/

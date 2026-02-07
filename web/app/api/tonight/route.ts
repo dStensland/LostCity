@@ -284,6 +284,7 @@ export async function GET(request: NextRequest) {
       `)
       .in("start_date", [today, tomorrow, dayAfter])
       .is("canonical_event_id", null)
+      .or("is_class.eq.false,is_class.is.null")
       .or(`portal_id.eq.${atlantaPortal.id},portal_id.is.null`)
       .order("start_date", { ascending: true })
       .order("start_time", { ascending: true })

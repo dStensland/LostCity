@@ -1,14 +1,12 @@
 version: 1
 slug: atlanta-motor-speedway
 name: Atlanta Motor Speedway
-integration_method: playwright
+integration_method: html
 defaults: {}
 discovery:
   enabled: true
   type: list
   urls:
   - https://www.atlantamotorspeedway.com
-  fetch:
-    render_js: true
 detail:
   enabled: false

@@ -1,14 +1,14 @@
 """
-LLM-based event extraction using Claude.
+LLM-based event extraction.
 Converts raw HTML/text into structured event data.
 """
 
 import json
 import logging
 from typing import Optional
-from anthropic import Anthropic
 from pydantic import BaseModel
-from config import get_config
+
+from llm_client import generate_text
 
 logger = logging.getLogger(__name__)
 
@@ -169,16 +169,27 @@ class ExtractionResult(BaseModel):
     events: list[EventData]
 
 
-_client: Optional[Anthropic] = None
+def _strip_html_boilerplate(html: str) -> str:
+    """Strip scripts, styles, and other non-content elements from HTML.
 
-
-def get_anthropic_client() -> Anthropic:
-    """Get or create Anthropic client."""
-    global _client
-    if _client is None:
-        cfg = get_config()
-        _client = Anthropic(api_key=cfg.llm.anthropic_api_key)
-    return _client
+    This dramatically reduces token count so the LLM sees actual event
+    content rather than kilobytes of CSS/JS boilerplate.
+    """
+    try:
+        from bs4 import BeautifulSoup
+        soup = BeautifulSoup(html, "lxml")
+        for tag in soup.find_all(["script", "style", "noscript", "link", "meta", "svg", "iframe"]):
+            tag.decompose()
+        # Remove head entirely — it's all metadata
+        if soup.head:
+            soup.head.decompose()
+        # Remove nav/footer which rarely contain event data
+        for tag in soup.find_all(["nav", "footer"]):
+            tag.decompose()
+        return str(soup)
+    except Exception:
+        # Fallback: return raw content if BeautifulSoup fails
+        return html
 
 
 def extract_events(
@@ -197,26 +208,16 @@ def extract_events(
     Returns:
         List of extracted EventData objects
     """
-    cfg = get_config()
-    client = get_anthropic_client()
+    cleaned = _strip_html_boilerplate(raw_content)
 
     user_message = f"""Source: {source_name}
 URL: {source_url}
 
 Content to extract:
-{raw_content[:50000]}"""  # Truncate very long content
+{cleaned[:50000]}"""  # Truncate very long content
 
     try:
-        response = client.messages.create(
-            model=cfg.llm.model,
-            max_tokens=cfg.llm.max_tokens,
-            temperature=cfg.llm.temperature,
-            system=EXTRACTION_PROMPT,
-            messages=[{"role": "user", "content": user_message}]
-        )
-
-        # Parse the response
-        response_text = response.content[0].text
+        response_text = generate_text(EXTRACTION_PROMPT, user_message)
 
         # Try to extract JSON from response
         json_str = response_text
@@ -255,6 +256,8 @@ Content to extract:
                 event_data["is_all_day"] = False
             if event_data.get("is_recurring") is None:
                 event_data["is_recurring"] = False
+            if event_data.get("artists") is None:
+                event_data["artists"] = []
             if event_data.get("genres") is None:
                 event_data["genres"] = []
             if event_data.get("tags") is None:

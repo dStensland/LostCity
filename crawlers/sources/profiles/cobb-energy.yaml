@@ -1,14 +1,12 @@
 version: 1
 slug: cobb-energy
 name: Cobb Energy Performing Arts Centre
-integration_method: playwright
+integration_method: html
 defaults: {}
 discovery:
   enabled: true
   type: list
   urls:
   - https://www.cobbenergycentre.com
-  fetch:
-    render_js: true
 detail:
   enabled: false

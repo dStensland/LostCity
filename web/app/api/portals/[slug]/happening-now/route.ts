@@ -99,15 +99,15 @@ export async function GET(request: NextRequest, context: RouteContext) {
         .eq("active", true)
         .or(typeFilters) as { data: SpotRow[] | null };
 
-      // Count spots that are currently open
+      // Count spots that are currently open (only those with known hours)
       let openSpotCount = 0;
       for (const spot of spots || []) {
+        if (!spot.hours) continue; // Skip spots with unknown hours
         try {
           const result = isSpotOpen(spot.hours, false);
           if (result.isOpen) openSpotCount++;
         } catch {
-          // If hours parsing fails, assume open
-          openSpotCount++;
+          // If hours parsing fails, skip this spot
         }
       }
 

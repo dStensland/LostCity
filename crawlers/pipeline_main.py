@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import argparse
 import logging
+from dataclasses import dataclass
 from urllib.parse import urljoin
 
 from db import (
@@ -26,8 +27,11 @@ from db import (
     compute_event_update,
     create_event_update_notifications,
     format_event_update_message,
+    create_crawl_log,
+    update_crawl_log,
 )
 from dedupe import generate_content_hash
+from crawler_health import record_crawl_start, record_crawl_success, record_crawl_failure
 from utils import setup_logging, slugify
 
 from pipeline.loader import load_profile
@@ -39,6 +43,14 @@ from pipeline.html_discovery import discover_from_html
 from pipeline.api_adapters import discover_events as discover_api_events
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass
+class CrawlResult:
+    """Tracks event counts across a pipeline run."""
+    events_found: int = 0
+    events_new: int = 0
+    events_updated: int = 0
 
 _VENUE_CACHE: dict[str, int] = {}
 _DISCOVERY_CONFIDENCE = 0.70
@@ -166,7 +178,8 @@ def _should_skip_jsonld_only(profile, detail_url: str | None, enriched: dict) ->
     return False
 
 
-def run_profile(slug: str, dry_run: bool, limit: int | None) -> None:
+def run_profile(slug: str, dry_run: bool, limit: int | None) -> CrawlResult:
+    result = CrawlResult()
     profile = load_profile(slug)
     source = get_source_by_slug(slug)
     if not source:
@@ -174,17 +187,21 @@ def run_profile(slug: str, dry_run: bool, limit: int | None) -> None:
 
     if not profile.discovery.enabled:
         logger.info(f"{slug}: discovery disabled")
-        return
+        return result
 
     default_venue_id = _get_or_create_default_venue(profile)
 
     if profile.discovery.type == "api":
         if not profile.discovery.api:
             raise ValueError(f"API discovery requires api config for '{slug}'")
-        events = discover_api_events(profile.discovery.api.adapter, limit=limit)
+        events = discover_api_events(
+            profile.discovery.api.adapter,
+            limit=limit,
+            params=profile.discovery.api.params or None,
+        )
         logger.info(f"{slug}: {len(events)} API events discovered")
-        _process_api_events(events, source, profile, default_venue_id, dry_run=dry_run)
-        return
+        _process_api_events(events, source, profile, default_venue_id, dry_run=dry_run, result=result)
+        return result
 
     if profile.discovery.type == "feed":
         all_seeds: list[dict] = []
@@ -272,6 +289,9 @@ def run_profile(slug: str, dry_run: bool, limit: int | None) -> None:
                 "content_hash": content_hash,
             }
 
+            if not event_record.get("ticket_url") and detail_url:
+                event_record["ticket_url"] = detail_url
+
             ticket_url = event_record.get("ticket_url")
             image_url = event_record.get("image_url")
 
@@ -293,11 +313,13 @@ def run_profile(slug: str, dry_run: bool, limit: int | None) -> None:
             if field_confidence:
                 event_record["field_confidence"] = field_confidence
 
+            result.events_found += 1
             existing = find_event_by_hash(content_hash)
             if existing:
                 update_data, changes, cancelled = compute_event_update(existing, event_record)
                 if update_data:
                     update_event(existing["id"], update_data)
+                    result.events_updated += 1
                     message = format_event_update_message(
                         existing.get("title", title),
                         changes,
@@ -322,9 +344,11 @@ def run_profile(slug: str, dry_run: bool, limit: int | None) -> None:
 
             if dry_run:
                 logger.info(f"[DRY RUN] {title} ({start_date}) -> {event_record.get('ticket_url')}")
+                result.events_new += 1
             else:
                 try:
                     event_id = insert_event(event_record)
+                    result.events_new += 1
                     if artists:
                         upsert_event_artists(event_id, artists)
                     if images:
@@ -334,11 +358,11 @@ def run_profile(slug: str, dry_run: bool, limit: int | None) -> None:
                     logger.info(f"Inserted: {title} ({start_date})")
                 except Exception as e:
                     logger.warning(f"Insert failed: {title} - {e}")
-        return
+        return result
 
     if profile.discovery.type == "html":
-        _process_llm_discovery(profile, source, default_venue_id, dry_run=dry_run, limit=limit)
-        return
+        _process_llm_discovery(profile, source, default_venue_id, dry_run=dry_run, limit=limit, result=result)
+        return result
 
     # List-based discovery
     all_seeds: list[dict] = []
@@ -426,6 +450,9 @@ def run_profile(slug: str, dry_run: bool, limit: int | None) -> None:
             "content_hash": content_hash,
         }
 
+        if not event_record.get("ticket_url") and detail_url:
+            event_record["ticket_url"] = detail_url
+
         ticket_url = event_record.get("ticket_url")
         image_url = event_record.get("image_url")
 
@@ -447,11 +474,13 @@ def run_profile(slug: str, dry_run: bool, limit: int | None) -> None:
         if field_confidence:
             event_record["field_confidence"] = field_confidence
 
+        result.events_found += 1
         existing = find_event_by_hash(content_hash)
         if existing:
             update_data, changes, cancelled = compute_event_update(existing, event_record)
             if update_data:
                 update_event(existing["id"], update_data)
+                result.events_updated += 1
                 message = format_event_update_message(
                     existing.get("title", title),
                     changes,
@@ -476,9 +505,11 @@ def run_profile(slug: str, dry_run: bool, limit: int | None) -> None:
 
         if dry_run:
             logger.info(f"[DRY RUN] {title} ({start_date}) -> {event_record.get('ticket_url')}")
+            result.events_new += 1
         else:
             try:
                 event_id = insert_event(event_record)
+                result.events_new += 1
                 if artists:
                     upsert_event_artists(event_id, artists)
                 if images:
@@ -489,8 +520,12 @@ def run_profile(slug: str, dry_run: bool, limit: int | None) -> None:
             except Exception as e:
                 logger.warning(f"Insert failed: {title} - {e}")
 
+    return result
 
-def _process_llm_discovery(profile, source, default_venue_id: int | None, dry_run: bool, limit: int | None) -> None:
+
+def _process_llm_discovery(profile, source, default_venue_id: int | None, dry_run: bool, limit: int | None, result: CrawlResult | None = None) -> None:
+    if result is None:
+        result = CrawlResult()
     all_events: list[dict] = []
     for url in profile.discovery.urls:
         html, err = fetch_html(url, profile.discovery.fetch)
@@ -573,6 +608,9 @@ def _process_llm_discovery(profile, source, default_venue_id: int | None, dry_ru
             "content_hash": content_hash,
         }
 
+        if not event_record.get("ticket_url") and detail_url:
+            event_record["ticket_url"] = detail_url
+
         ticket_url = event_record.get("ticket_url")
         image_url = event_record.get("image_url")
         source_url = event_record.get("source_url")
@@ -595,11 +633,13 @@ def _process_llm_discovery(profile, source, default_venue_id: int | None, dry_ru
         if field_confidence:
             event_record["field_confidence"] = field_confidence
 
+        result.events_found += 1
         existing = find_event_by_hash(content_hash)
         if existing:
             update_data, changes, cancelled = compute_event_update(existing, event_record)
             if update_data:
                 update_event(existing["id"], update_data)
+                result.events_updated += 1
                 message = format_event_update_message(
                     existing.get("title", title),
                     changes,
@@ -624,9 +664,11 @@ def _process_llm_discovery(profile, source, default_venue_id: int | None, dry_ru
 
         if dry_run:
             logger.info(f"[DRY RUN] {title} ({start_date}) -> {event_record.get('ticket_url')}")
+            result.events_new += 1
         else:
             try:
                 event_id = insert_event(event_record)
+                result.events_new += 1
                 if artists:
                     upsert_event_artists(event_id, artists)
                 if images:
@@ -638,7 +680,9 @@ def _process_llm_discovery(profile, source, default_venue_id: int | None, dry_ru
                 logger.warning(f"Insert failed: {title} - {e}")
 
 
-def _process_api_events(events: list[dict], source: dict, profile, default_venue_id: int | None, dry_run: bool) -> None:
+def _process_api_events(events: list[dict], source: dict, profile, default_venue_id: int | None, dry_run: bool, result: CrawlResult | None = None) -> None:
+    if result is None:
+        result = CrawlResult()
     api_confidence = 0.95
     for event in events:
         title = event.get("title")
@@ -684,6 +728,9 @@ def _process_api_events(events: list[dict], source: dict, profile, default_venue
             "content_hash": content_hash,
         }
 
+        if not event_record.get("ticket_url") and event_record.get("source_url"):
+            event_record["ticket_url"] = event_record["source_url"]
+
         for key in ("title", "description", "start_date", "start_time", "ticket_url", "image_url", "price_min", "price_max"):
             if event_record.get(key) is not None:
                 field_provenance[key] = {"source": "api", "url": event.get("source_url")}
@@ -704,11 +751,13 @@ def _process_api_events(events: list[dict], source: dict, profile, default_venue
         if event.get("ticket_url"):
             _ensure_link(links, "ticket", event.get("ticket_url"), "api", api_confidence)
 
+        result.events_found += 1
         existing = find_event_by_hash(content_hash)
         if existing:
             update_data, changes, cancelled = compute_event_update(existing, event_record)
             if update_data:
                 update_event(existing["id"], update_data)
+                result.events_updated += 1
                 message = format_event_update_message(
                     existing.get("title", title),
                     changes,
@@ -733,9 +782,11 @@ def _process_api_events(events: list[dict], source: dict, profile, default_venue
 
         if dry_run:
             logger.info(f"[DRY RUN] {title} ({start_date}) -> {event_record.get('ticket_url')}")
+            result.events_new += 1
         else:
             try:
                 event_id = insert_event(event_record)
+                result.events_new += 1
                 if event.get("artists"):
                     upsert_event_artists(event_id, event.get("artists"))
                 if images:
@@ -749,16 +800,59 @@ def _process_api_events(events: list[dict], source: dict, profile, default_venue
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Run config-driven pipeline")
-    parser.add_argument("--source", action="append", required=True, help="Source slug (repeatable)")
+    parser.add_argument("--source", action="append", help="Source slug (repeatable)")
     parser.add_argument("--insert", action="store_true", help="Insert events into DB")
     parser.add_argument("--limit", type=int, default=0, help="Limit seeds per source")
+    parser.add_argument("--post-crawl", action="store_true", help="Run post-crawl health report and HTML dashboard")
     args = parser.parse_args()
 
     setup_logging()
+
+    if args.post_crawl:
+        from crawler_health import print_health_report
+        from post_crawl_report import save_report
+
+        print_health_report()
+        filepath = save_report()
+        logger.info(f"HTML report saved: {filepath}")
+        return
+
+    if not args.source:
+        parser.error("--source is required unless --post-crawl is used")
+
     dry_run = not args.insert
 
     for slug in args.source:
-        run_profile(slug, dry_run=dry_run, limit=args.limit or None)
+        source = get_source_by_slug(slug)
+        source_id = source["id"] if source else None
+
+        # Start health + crawl log tracking
+        run_id = record_crawl_start(slug)
+        crawl_log_id = None
+        if source_id and not dry_run:
+            try:
+                crawl_log_id = create_crawl_log(source_id)
+            except Exception as e:
+                logger.debug(f"Could not create crawl_log: {e}")
+
+        try:
+            result = run_profile(slug, dry_run=dry_run, limit=args.limit or None)
+            record_crawl_success(run_id, result.events_found, result.events_new, result.events_updated)
+            if crawl_log_id:
+                update_crawl_log(
+                    crawl_log_id,
+                    status="success",
+                    events_found=result.events_found,
+                    events_new=result.events_new,
+                    events_updated=result.events_updated,
+                )
+            logger.info(f"{slug}: found={result.events_found} new={result.events_new} updated={result.events_updated}")
+        except Exception as e:
+            error_msg = str(e)
+            record_crawl_failure(run_id, error_msg)
+            if crawl_log_id:
+                update_crawl_log(crawl_log_id, status="error", error_message=error_msg[:500])
+            logger.error(f"{slug}: {error_msg}")
 
 
 if __name__ == "__main__":

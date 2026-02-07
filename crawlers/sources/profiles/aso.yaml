@@ -8,7 +8,7 @@ discovery:
   type: list
   urls:
   - https://www.aso.org/concerts
-  fetch:
-    render_js: true
 detail:
   enabled: false
+  fetch:
+    render_js: true

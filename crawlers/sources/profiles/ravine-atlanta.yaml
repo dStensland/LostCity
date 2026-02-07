@@ -1,14 +1,12 @@
 version: 1
 slug: ravine-atlanta
 name: Ravine Atlanta
-integration_method: playwright
+integration_method: html
 defaults: {}
 discovery:
   enabled: true
   type: list
   urls:
   - https://ravineatl.com
-  fetch:
-    render_js: true
 detail:
   enabled: false

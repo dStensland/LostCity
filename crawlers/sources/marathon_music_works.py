@@ -108,12 +108,20 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     title_link = title_elem.find("a")
                     title = title_link.get_text(strip=True) if title_link else title_elem.get_text(strip=True)
 
-                    # Extract event URL
+                    # Extract event URL - try title link, then ticket/buy buttons
                     event_url = CALENDAR_URL
                     if title_link and title_link.get("href"):
                         event_url = title_link["href"]
                         if not event_url.startswith("http"):
                             event_url = BASE_URL + event_url
+                    else:
+                        ticket_link = container.find("a", href=re.compile(r"ticket|buy|event", re.IGNORECASE))
+                        if not ticket_link:
+                            ticket_link = container.find("a", class_=re.compile(r"ticket|buy|btn|button", re.IGNORECASE))
+                        if ticket_link and ticket_link.get("href"):
+                            event_url = ticket_link["href"]
+                            if not event_url.startswith("http"):
+                                event_url = BASE_URL + event_url
 
                     # Extract date from date-wrapper structure
                     date_wrapper = container.find("span", class_="date-wrapper")

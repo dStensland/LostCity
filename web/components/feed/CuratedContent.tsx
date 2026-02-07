@@ -25,7 +25,7 @@ interface CuratedContentProps {
 
 export default function CuratedContent({ portalSlug }: CuratedContentProps) {
   return (
-    <div className="space-y-2">
+    <div className="space-y-4">
       {/* Above-fold: Happening Now CTA - Priority load */}
       <Suspense fallback={null}>
         <HappeningNowCTA portalSlug={portalSlug} />

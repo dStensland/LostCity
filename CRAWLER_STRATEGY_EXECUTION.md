@@ -115,3 +115,85 @@ Run dry-run for a representative sample to validate that each integration method
 ## Notes
 - If `sync_integration_methods.py` fails due to YAML dependency issues, ensure `pyyaml` is installed from `requirements.txt`.
 - Keep alignment changes mechanical and reversible, minimize manual edits.
+## Quality & Curation (Add to Plan)
+
+### Goals
+- Improve event hydration: more complete fields, fewer placeholders, better ticket links, cleaner images.
+- Improve curation: suppress low-signal events and prioritize high-confidence sources and fields.
+
+### Field Quality Rubric (Per Event)
+Score each event 0–100 using weighted signals:
+- Title present + sane length: 10
+- Start date/time present and valid: 15
+- Venue present (name + city): 10
+- Description present (>= 120 chars): 15
+- Image URL present and valid: 10
+- Ticket/registration URL present and valid: 10
+- Category/subcategory set: 8
+- Tags present (>= 2): 6
+- Price info present (min/max/free): 6
+- Source URL present: 10
+
+**Quality tiers**
+- 80–100: High quality → show prominently
+- 60–79: Acceptable → show normally
+- 40–59: Low → show only if no higher-quality alternatives
+- <40: Quarantine → hidden unless manually reviewed
+
+### Field Provenance & Confidence
+- Every field should carry `source` and `confidence`.
+- Confidence hierarchy:
+  - API > JSON‑LD > Structured feed > HTML selectors > LLM extraction
+- If multiple sources provide the same field, choose highest confidence.
+
+### Ticket Link Selection
+- Prefer explicit `ticket_url` from API/JSON‑LD/OG.
+- If multiple links:
+  - Prefer official domain of venue/promoter if known.
+  - Exclude tracking/redirect-heavy links if a clean canonical is available.
+- Always keep `source_url` even if ticket URL missing.
+
+### Image Selection
+- Pick highest-confidence image with minimum size (if available in metadata).
+- Prefer OG/JSON‑LD image over scraped list thumbnails.
+- Maintain multiple images, mark one as `is_primary`.
+
+### Description Curation
+- Prefer JSON‑LD / meta description over low-signal HTML snippets.
+- LLM extraction allowed when description < 120 chars or missing.
+
+### Tags & Category Rules
+- Use deterministic tags from source/category mapping when possible.
+- LLM tags only when source signals are weak.
+- Enforce tag vocab; drop anything not in whitelist.
+
+### Fallback Order for Missing Fields
+1. API
+2. JSON‑LD
+3. Structured feed
+4. HTML selectors
+5. LLM extraction
+6. Heuristic fallback (regex / string cleanup)
+
+### Low‑Quality Quarantine
+- Events below score 40 go into quarantine table or flagged in DB.
+- Show only if category has <N events in next 14 days.
+
+### Source Reliability Tracking
+- Track success rate and median quality score per source.
+- Sources falling below a quality threshold should be deprioritized or require stronger extraction methods.
+
+### Performer Extraction (Headliner/Support)
+- Parse title using delimiters (`w/`, `with`, `featuring`, `+`, `&`, `:`).
+- Normalize artists list; mark first as headliner by default.
+- If source provides structured lineup (JSON‑LD / API), use that instead.
+
+### Change Detection & Notifications (future phase)
+- Detect time changes, cancellations, and venue changes on crawl updates.
+- Record diff and notify interested users.
+
+### Deliverables
+- Add quality scoring function (server-side) and store score per event.
+- Add `field_confidence` and `field_provenance` coverage to all key fields.
+- Add quarantine flag or table.
+- Add source reliability dashboard to admin health panel.

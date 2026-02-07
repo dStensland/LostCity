@@ -1,14 +1,12 @@
 version: 1
 slug: south-river-art
 name: South River Art Studios
-integration_method: playwright
+integration_method: html
 defaults: {}
 discovery:
   enabled: true
   type: list
   urls:
   - https://www.southriverartstudios.com/events
-  fetch:
-    render_js: true
 detail:
   enabled: false

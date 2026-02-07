@@ -55,15 +55,21 @@ function HeroImage({
   category,
   size = "lg",
   loading = "eager",
+  overlay = "strong",
 }: {
   src: string;
   alt: string;
   category: string | null;
   size?: "sm" | "md" | "lg";
   loading?: "eager" | "lazy";
+  overlay?: "strong" | "soft";
 }) {
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState(false);
+  const overlayClass =
+    overlay === "soft"
+      ? "bg-gradient-to-t from-black/70 via-black/35 to-black/10"
+      : "bg-gradient-to-t from-black/95 via-black/60 to-black/20";
 
   if (error) {
     return <CategoryPlaceholder category={category} size={size} />;
@@ -86,7 +92,7 @@ function HeroImage({
         onError={() => setError(true)}
         loading={loading}
       />
-      <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/60 to-black/20" />
+      <div className={`absolute inset-0 ${overlayClass}`} />
     </div>
   );
 }
@@ -222,31 +228,15 @@ export default function TonightsPicks({ portalSlug }: { portalSlug?: string } = 
         data-category={heroCategory}
         className="absolute inset-0 opacity-20 pointer-events-none tonight-picks-glow"
       />
+      {/* Clear zone behind hero to reduce texture noise */}
+      <div className="absolute inset-0 bg-gradient-to-b from-[var(--void)]/70 via-[var(--void)]/35 to-transparent pointer-events-none" />
 
       <div className="relative">
         <FeedSectionHeader
           title={`Some picks for ${todayLabel}`}
-          subtitle="Pipin hot picks straight from the oven"
-          priority="primary"
+          subtitle="Piping hot picks straight from the oven"
+          priority="tertiary"
           accentColor="var(--neon-amber)"
-          icon={
-            <svg viewBox="0 0 24 24" fill="none" className="w-6 h-6 drop-shadow-[0_0_6px_currentColor]">
-              <path
-                d="M3 20h18M4 20V9.5l4-2v12.5M8 20V6.5l4-2v15.5M12 20V8l4-2v14M16 20V10.5l4-2V20"
-                stroke="currentColor"
-                strokeWidth="1.6"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-              <path
-                d="M6.5 12.5h1.8M6.5 15.2h1.8M10.5 9.6h1.8M10.5 12.5h1.8M14.5 11.5h1.8M18.5 13.5h1.8"
-                stroke="currentColor"
-                strokeWidth="1.2"
-                strokeLinecap="round"
-                opacity="0.7"
-              />
-            </svg>
-          }
           seeAllHref={portalSlug ? `/${portalSlug}?view=events&date=today` : `/?view=events&date=today`}
           seeAllLabel="View all"
         />
@@ -259,7 +249,7 @@ export default function TonightsPicks({ portalSlug }: { portalSlug?: string } = 
               href={portalSlug ? `/${portalSlug}?event=${heroEvent.id}` : `/events/${heroEvent.id}`}
               scroll={false}
               data-category={heroCategory}
-              className="block relative rounded-2xl overflow-hidden group card-atmospheric card-hero transition-transform duration-300 hover:scale-[1.01] glow-category will-change-transform"
+              className="block relative rounded-[1.35rem] overflow-hidden group card-atmospheric card-hero transition-transform duration-300 hover:scale-[1.01] glow-category will-change-transform"
             >
               {/* Background - using native img to support any image host */}
               {heroEvent.image_url ? (
@@ -269,7 +259,7 @@ export default function TonightsPicks({ portalSlug }: { portalSlug?: string } = 
               )}
 
               {/* Content */}
-              <div className="relative p-5 pt-32">
+              <div className="relative p-5 pt-36 sm:pt-40">
                 <div className="flex items-center gap-2 mb-2">
                   {(() => {
                     const badge = getTimeBadge(heroEvent.start_time, heroEvent.is_all_day);
@@ -342,7 +332,7 @@ export default function TonightsPicks({ portalSlug }: { portalSlug?: string } = 
             </Link>
 
             {hasCarousel && (
-              <div className="absolute top-4 right-4 flex items-center gap-1.5 z-10">
+              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-1.5 z-10">
                 {carouselEvents.map((event, index) => (
                   <button
                     key={event.id}
@@ -352,7 +342,7 @@ export default function TonightsPicks({ portalSlug }: { portalSlug?: string } = 
                     className={`h-2.5 w-2.5 rounded-full transition-all ${
                       index === safeHeroIndex
                         ? "bg-[var(--neon-magenta)] shadow-[0_0_8px_rgba(255,85,170,0.8)]"
-                        : "bg-white/25 hover:bg-white/60"
+                        : "bg-white/20 hover:bg-white/50"
                     }`}
                   />
                 ))}
@@ -388,50 +378,56 @@ export default function TonightsPicks({ portalSlug }: { portalSlug?: string } = 
         )}
 
         {carouselEvents.length > 1 && (
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
-            {carouselEvents.map((event, index) => (
-              <button
-                key={event.id}
-                type="button"
-                onClick={() => setHeroIndex(index)}
-                onFocus={() => setHeroIndex(index)}
-                className={`relative overflow-hidden rounded-xl border transition-all text-left group card-atmospheric ${
-                  index === safeHeroIndex
-                    ? "border-[var(--neon-magenta)]/70 shadow-[0_0_18px_rgba(255,85,170,0.35)]"
-                    : "border-[var(--twilight)] hover:border-[var(--neon-magenta)]/40"
-                }`}
-              >
-                <div className="absolute inset-0">
-                  {event.image_url ? (
-                    <HeroImage
-                      src={event.image_url}
-                      alt={event.title}
-                      category={event.category}
-                      size="sm"
-                      loading="lazy"
-                    />
-                  ) : (
-                    <CategoryPlaceholder category={event.category} size="sm" />
-                  )}
-                </div>
-                <div className="relative p-3 pt-20">
-                  <div className="flex items-center justify-between text-[0.55rem] text-white/70 font-mono mb-1">
-                    <span>
-                      {event.start_time ? formatTimeSplit(event.start_time, event.is_all_day).time : "Today"}
-                    </span>
-                    {event.category && (
-                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-black/40 text-white/70">
-                        <CategoryIcon type={event.category} size={10} glow="none" className="opacity-80" />
-                        <span>{getCategoryLabel(event.category)}</span>
-                      </span>
+          <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1 snap-x snap-mandatory sm:mx-0 sm:px-0 sm:grid sm:grid-cols-4 sm:gap-3 sm:overflow-visible sm:snap-none mb-4">
+            {carouselEvents.map((event, index) => {
+              const isSecondaryRow = index >= 4;
+              return (
+                <button
+                  key={event.id}
+                  type="button"
+                  onClick={() => setHeroIndex(index)}
+                  onFocus={() => setHeroIndex(index)}
+                  className={`relative overflow-hidden rounded-xl border transition-all text-left group card-atmospheric min-w-[9.5rem] snap-start sm:min-w-0 sm:w-auto ${
+                    index === safeHeroIndex
+                      ? "border-[var(--neon-magenta)]/70 shadow-[0_0_18px_rgba(255,85,170,0.35)]"
+                      : "border-[var(--twilight)] hover:border-[var(--neon-magenta)]/40"
+                  } ${isSecondaryRow ? "sm:scale-[0.96] sm:opacity-80" : ""}`}
+                >
+                  <div className="absolute inset-0">
+                    {event.image_url ? (
+                      <HeroImage
+                        src={event.image_url}
+                        alt={event.title}
+                        category={event.category}
+                        size="sm"
+                        loading="lazy"
+                        overlay="soft"
+                      />
+                    ) : (
+                      <CategoryPlaceholder category={event.category} size="sm" />
                     )}
                   </div>
-                  <h4 className="text-xs text-white/90 font-semibold line-clamp-2">
-                    {event.title}
-                  </h4>
-                </div>
-              </button>
-            ))}
+                  <div className="absolute inset-0 ring-1 ring-white/10 rounded-xl pointer-events-none" />
+                  <div className="absolute inset-x-0 bottom-0 h-3/4 bg-gradient-to-t from-black/80 via-black/40 to-transparent pointer-events-none rounded-b-xl" />
+                  <div className="relative p-3 pt-20">
+                    <div className="flex items-center justify-between text-[0.55rem] text-white/70 font-mono mb-1">
+                      <span>
+                        {event.start_time ? formatTimeSplit(event.start_time, event.is_all_day).time : "Today"}
+                      </span>
+                      {event.category && (
+                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-black/60 border border-white/10 text-white/80 text-[0.5rem] max-w-[6.5rem]">
+                          <CategoryIcon type={event.category} size={10} glow="none" className="opacity-90" />
+                          <span className="truncate">{getCategoryLabel(event.category)}</span>
+                        </span>
+                      )}
+                    </div>
+                    <h4 className="text-xs text-white/90 font-semibold line-clamp-2">
+                      {event.title}
+                    </h4>
+                  </div>
+                </button>
+              );
+            })}
           </div>
         )}
 

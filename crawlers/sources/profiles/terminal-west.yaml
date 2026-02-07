@@ -1,12 +1,23 @@
 version: 1
 slug: terminal-west
 name: Terminal West
-integration_method: llm_crawler
-defaults: {}
+integration_method: api
+defaults:
+  venue_name: Terminal West
+  category: music
+  subcategory: concert
+  tags:
+    - music
+    - live-music
+    - concert
 discovery:
   enabled: true
-  type: html
+  type: api
   urls:
   - https://terminalwestatl.com/events
+  api:
+    adapter: aeg
+    params:
+      venue_id: "211"
 detail:
   enabled: false

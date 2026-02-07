@@ -146,6 +146,44 @@ export async function GET(request: NextRequest) {
       };
     });
 
+    // Fetch social proof counts (followers + recommendations)
+    const venueIds = spots.map((spot) => spot.id);
+    const followerCounts = new Map<number, number>();
+    const recommendationCounts = new Map<number, number>();
+
+    if (venueIds.length > 0) {
+      const [{ data: followsData }, { data: recData }] = await Promise.all([
+        supabase
+          .from("follows")
+          .select("followed_venue_id")
+          .in("followed_venue_id", venueIds)
+          .not("followed_venue_id", "is", null),
+        supabase
+          .from("recommendations")
+          .select("venue_id")
+          .in("venue_id", venueIds)
+          .eq("visibility", "public"),
+      ]);
+
+      for (const row of (followsData || []) as { followed_venue_id: number | null }[]) {
+        if (row.followed_venue_id) {
+          followerCounts.set(
+            row.followed_venue_id,
+            (followerCounts.get(row.followed_venue_id) || 0) + 1
+          );
+        }
+      }
+
+      for (const row of (recData || []) as { venue_id: number | null }[]) {
+        if (row.venue_id) {
+          recommendationCounts.set(
+            row.venue_id,
+            (recommendationCounts.get(row.venue_id) || 0) + 1
+          );
+        }
+      }
+    }
+
     // Filter to only venues with events if requested
     if (withEventsOnly) {
       spots = spots.filter(s => s.event_count > 0);
@@ -166,6 +204,12 @@ export async function GET(request: NextRequest) {
     }
 
     // Sort: venues with events first (by count), then alphabetically
+    spots = spots.map((spot) => ({
+      ...spot,
+      follower_count: followerCounts.get(spot.id) || 0,
+      recommendation_count: recommendationCounts.get(spot.id) || 0,
+    }));
+
     spots.sort((a, b) => {
       if (a.event_count !== b.event_count) {
         return b.event_count - a.event_count;

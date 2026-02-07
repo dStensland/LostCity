@@ -1,12 +1,14 @@
 version: 1
 slug: ormsbys
 name: Ormsby's
-integration_method: html
+integration_method: playwright
 defaults: {}
 discovery:
   enabled: true
   type: list
   urls:
   - https://www.ormsbysatlanta.com
+  fetch:
+    render_js: true
 detail:
   enabled: false

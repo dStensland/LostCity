@@ -1,14 +1,12 @@
 version: 1
 slug: peachtree-road-farmers-market
 name: Peachtree Road Farmers Market
-integration_method: playwright
+integration_method: html
 defaults: {}
 discovery:
   enabled: true
   type: list
   urls:
   - https://www.peachtreeroadfarmersmarket.com
-  fetch:
-    render_js: true
 detail:
   enabled: false

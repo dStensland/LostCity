@@ -10,6 +10,7 @@ import { createServiceClient } from "./supabase/service";
 import { analyzeQueryIntent, applyIntentBoost, type QueryIntentResult, type SearchType } from "./query-intent";
 import { getLocalDateString } from "@/lib/formats";
 import { escapeSQLPattern } from "@/lib/api-utils";
+import { fetchSocialProofCounts } from "@/lib/search";
 
 // ============================================
 // Types
@@ -34,6 +35,8 @@ export interface SearchResult {
     orgType?: string;
     eventCount?: number;
     followerCount?: number;
+    rsvpCount?: number;
+    recommendationCount?: number;
     // Series-specific
     seriesType?: string;
     nextEventDate?: string;
@@ -454,6 +457,192 @@ export async function unifiedSearch(
 
   // Sort by enhanced score
   allResults.sort((a, b) => b.score - a.score);
+
+  // Add social proof metadata for search cards
+  const eventIds = allResults
+    .filter((result) => result.type === "event")
+    .map((result) => Number(result.id))
+    .filter((id) => !Number.isNaN(id));
+  const venueIds = allResults
+    .filter((result) => result.type === "venue")
+    .map((result) => Number(result.id))
+    .filter((id) => !Number.isNaN(id));
+  const organizerIds = allResults
+    .filter((result) => result.type === "organizer")
+    .map((result) => String(result.id));
+  const seriesIds = allResults
+    .filter((result) => result.type === "series")
+    .map((result) => String(result.id));
+
+  const [eventCounts, venueFollowData, venueRecData, organizerFollowData, organizerRecData, organizerLegacyRecData, seriesEvents] =
+    await Promise.all([
+      fetchSocialProofCounts(eventIds),
+      venueIds.length > 0
+        ? client
+            .from("follows")
+            .select("followed_venue_id")
+            .in("followed_venue_id", venueIds)
+            .not("followed_venue_id", "is", null)
+        : Promise.resolve({ data: null }),
+      venueIds.length > 0
+        ? client
+            .from("recommendations")
+            .select("venue_id")
+            .in("venue_id", venueIds)
+            .eq("visibility", "public")
+        : Promise.resolve({ data: null }),
+      organizerIds.length > 0
+        ? client
+            .from("follows")
+            .select("followed_organization_id")
+            .in("followed_organization_id", organizerIds)
+            .not("followed_organization_id", "is", null)
+        : Promise.resolve({ data: null }),
+      organizerIds.length > 0
+        ? client
+            .from("recommendations")
+            .select("organization_id")
+            .in("organization_id", organizerIds)
+            .eq("visibility", "public")
+        : Promise.resolve({ data: null }),
+      organizerIds.length > 0
+        ? client
+            .from("recommendations")
+            .select("org_id")
+            .in("org_id", organizerIds)
+            .eq("visibility", "public")
+        : Promise.resolve({ data: null }),
+      seriesIds.length > 0
+        ? client
+            .from("events")
+            .select("id, series_id")
+            .in("series_id", seriesIds)
+        : Promise.resolve({ data: null }),
+    ]);
+
+  const venueFollowerCounts = new Map<number, number>();
+  for (const row of (venueFollowData?.data || []) as { followed_venue_id: number | null }[]) {
+    if (row.followed_venue_id) {
+      venueFollowerCounts.set(
+        row.followed_venue_id,
+        (venueFollowerCounts.get(row.followed_venue_id) || 0) + 1
+      );
+    }
+  }
+
+  const venueRecommendationCounts = new Map<number, number>();
+  for (const row of (venueRecData?.data || []) as { venue_id: number | null }[]) {
+    if (row.venue_id) {
+      venueRecommendationCounts.set(
+        row.venue_id,
+        (venueRecommendationCounts.get(row.venue_id) || 0) + 1
+      );
+    }
+  }
+
+  const organizerFollowerCounts = new Map<string, number>();
+  for (const row of (organizerFollowData?.data || []) as { followed_organization_id: string | null }[]) {
+    if (row.followed_organization_id) {
+      organizerFollowerCounts.set(
+        row.followed_organization_id,
+        (organizerFollowerCounts.get(row.followed_organization_id) || 0) + 1
+      );
+    }
+  }
+
+  const organizerRecommendationCounts = new Map<string, number>();
+  for (const row of (organizerRecData?.data || []) as { organization_id: string | null }[]) {
+    if (row.organization_id) {
+      organizerRecommendationCounts.set(
+        row.organization_id,
+        (organizerRecommendationCounts.get(row.organization_id) || 0) + 1
+      );
+    }
+  }
+  for (const row of (organizerLegacyRecData?.data || []) as { org_id: string | null }[]) {
+    if (row.org_id) {
+      organizerRecommendationCounts.set(
+        row.org_id,
+        (organizerRecommendationCounts.get(row.org_id) || 0) + 1
+      );
+    }
+  }
+
+  const seriesEventIds = (seriesEvents?.data || []) as { id: number; series_id: string | null }[];
+  const seriesEventMap = new Map<string, number[]>();
+  for (const row of seriesEventIds) {
+    if (!row.series_id) continue;
+    const list = seriesEventMap.get(row.series_id) || [];
+    list.push(row.id);
+    seriesEventMap.set(row.series_id, list);
+  }
+  const seriesCounts = new Map<string, { rsvp: number; recs: number }>();
+  if (seriesEventIds.length > 0) {
+    const seriesEventIdList = Array.from(new Set(seriesEventIds.map((row) => row.id)));
+    const seriesEventCounts = await fetchSocialProofCounts(seriesEventIdList);
+    for (const [seriesId, ids] of seriesEventMap.entries()) {
+      let rsvp = 0;
+      let recs = 0;
+      for (const id of ids) {
+        const counts = seriesEventCounts.get(id);
+        if (counts) {
+          rsvp += counts.going + counts.interested;
+          recs += counts.recommendations;
+        }
+      }
+      if (rsvp > 0 || recs > 0) {
+        seriesCounts.set(seriesId, { rsvp, recs });
+      }
+    }
+  }
+
+  allResults = allResults.map((result) => {
+    if (result.type === "event") {
+      const counts = eventCounts.get(Number(result.id));
+      return {
+        ...result,
+        metadata: {
+          ...result.metadata,
+          rsvpCount: counts ? counts.going + counts.interested : 0,
+          recommendationCount: counts?.recommendations || 0,
+        },
+      };
+    }
+    if (result.type === "venue") {
+      const id = Number(result.id);
+      return {
+        ...result,
+        metadata: {
+          ...result.metadata,
+          followerCount: venueFollowerCounts.get(id) || 0,
+          recommendationCount: venueRecommendationCounts.get(id) || 0,
+        },
+      };
+    }
+    if (result.type === "organizer") {
+      const id = String(result.id);
+      return {
+        ...result,
+        metadata: {
+          ...result.metadata,
+          followerCount: organizerFollowerCounts.get(id) || 0,
+          recommendationCount: organizerRecommendationCounts.get(id) || 0,
+        },
+      };
+    }
+    if (result.type === "series") {
+      const counts = seriesCounts.get(String(result.id));
+      return {
+        ...result,
+        metadata: {
+          ...result.metadata,
+          rsvpCount: counts?.rsvp || 0,
+          recommendationCount: counts?.recs || 0,
+        },
+      };
+    }
+    return result;
+  });
 
   // Calculate total from facets
   const total = facets.reduce((sum, f) => sum + f.count, 0);

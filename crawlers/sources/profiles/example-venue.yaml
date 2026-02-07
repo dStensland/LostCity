@@ -9,7 +9,7 @@ defaults:
   tags:
     - music
 discovery:
-  enabled: true
+  enabled: false  # Template/example, not a real source — 2026-02-06 audit
   type: list
   urls:
     - https://example.com/events

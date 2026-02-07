@@ -1,7 +1,7 @@
 version: 1
 slug: hammonds-house
 name: Hammonds House Museum
-integration_method: html
+integration_method: playwright
 defaults: {}
 discovery:
   enabled: true
@@ -10,3 +10,5 @@ discovery:
   - https://hammondshouse.org
 detail:
   enabled: false
+  fetch:
+    render_js: true

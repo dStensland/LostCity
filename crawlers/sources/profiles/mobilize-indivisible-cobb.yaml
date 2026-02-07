@@ -1,14 +1,12 @@
 version: 1
 slug: mobilize-indivisible-cobb
 name: Indivisible Cobb (Mobilize)
-integration_method: playwright
+integration_method: html
 defaults: {}
 discovery:
   enabled: true
   type: list
   urls:
   - https://www.mobilize.us/indivisiblecobb/
-  fetch:
-    render_js: true
 detail:
   enabled: false

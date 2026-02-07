@@ -2,11 +2,24 @@ version: 1
 slug: strand-theatre
 name: Earl Smith Strand Theatre
 integration_method: html
-defaults: {}
+defaults:
+  venue_name: Earl Smith Strand Theatre
+  category: arts
+  subcategory: theatre
+  tags:
+    - theatre
+    - performing-arts
+    - film
 discovery:
   enabled: true
-  type: list
+  type: html
   urls:
-  - https://www.earlsmithstrand.org
+  - https://thestrand.my.salesforce-sites.com/ticket/
+  # Events live on Salesforce-hosted ticketing SPA, not the WordPress /events/ page
+  fetch:
+    render_js: true
+    wait_until: load
+    wait_ms: 5000
+    timeout_ms: 30000
 detail:
   enabled: false

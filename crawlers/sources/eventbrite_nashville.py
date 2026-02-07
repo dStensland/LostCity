@@ -302,6 +302,74 @@ def process_event(event_data: dict, source_id: int, producer_id: Optional[int], 
         return None
 
 
+def parse_event_for_pipeline(event_data: dict) -> dict | None:
+    """Parse Eventbrite API event data into pipeline-compatible dict (no DB ops)."""
+    try:
+        title = event_data.get("name", {}).get("text", "").strip()
+        if not title:
+            return None
+
+        start_info = event_data.get("start", {})
+        start_date, start_time = parse_datetime(start_info.get("local"))
+        if not start_date:
+            return None
+
+        if start_date < datetime.now().strftime("%Y-%m-%d"):
+            return None
+
+        description = event_data.get("description", {}).get("text", "")
+        if description:
+            description = description[:2000]
+
+        # Venue
+        venue_data = event_data.get("venue") or {}
+        venue_dict = None
+        if venue_data and venue_data.get("name"):
+            address = venue_data.get("address", {})
+            region = address.get("region", "")
+            if region and region not in ["TN", "Tennessee"]:
+                return None
+            venue_dict = {
+                "name": venue_data["name"].strip(),
+                "address": address.get("address_1"),
+                "city": address.get("city", "Nashville"),
+                "state": "TN",
+                "zip": address.get("postal_code"),
+            }
+
+        # Category
+        category_data = event_data.get("category") or {}
+        category_name = category_data.get("name") if category_data else None
+        category, subcategory = get_category(category_name)
+
+        # Image
+        logo = event_data.get("logo") or {}
+        image_url = None
+        if logo:
+            original = logo.get("original") or {}
+            image_url = original.get("url")
+
+        event_url = event_data.get("url", "")
+
+        return {
+            "title": title[:500],
+            "description": description,
+            "start_date": start_date,
+            "start_time": start_time,
+            "source_url": event_url,
+            "ticket_url": event_url,
+            "image_url": image_url,
+            "category": category,
+            "subcategory": subcategory,
+            "price_min": None,
+            "price_max": None,
+            "venue": venue_dict,
+        }
+    except Exception as e:
+        logger.error(f"Error parsing event for pipeline: {e}")
+        return None
+
+
 def crawl(source: dict) -> tuple[int, int, int]:
     """Hybrid crawl: discover via website, fetch via API."""
     source_id = source["id"]

@@ -8,5 +8,7 @@ discovery:
   type: html
   urls:
   - https://www.masonfineart.com
+  fetch:
+    render_js: true
 detail:
   enabled: false

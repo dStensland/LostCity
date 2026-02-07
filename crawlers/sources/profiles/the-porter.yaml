@@ -2,11 +2,20 @@ version: 1
 slug: the-porter
 name: The Porter Beer Bar
 integration_method: html
-defaults: {}
+defaults:
+  venue_name: The Porter Beer Bar
+  category: nightlife
+  subcategory: bar
+  tags:
+    - beer
+    - bar
+    - craft-beer
+    - live-music
 discovery:
   enabled: true
-  type: list
+  type: html
   urls:
   - https://www.theporterbeerbar.com/wordpress/elementor-1726/
+  # Custom Elementor layout with day headers (h4.qodef-e-day) — needs LLM extraction
 detail:
   enabled: false

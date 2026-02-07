@@ -61,13 +61,19 @@ export async function POST(request: NextRequest, context: RouteContext) {
     }
 
     // Check for existing vote
-    const { data: existingVote } = await supabase
+    let existingVoteQuery = supabase
       .from("list_votes")
       .select("id, vote_type")
       .eq("list_id", listId)
-      .eq("user_id", user.id)
-      .is("item_id", item_id || null)
-      .maybeSingle();
+      .eq("user_id", user.id);
+
+    if (item_id) {
+      existingVoteQuery = existingVoteQuery.eq("item_id", item_id);
+    } else {
+      existingVoteQuery = existingVoteQuery.is("item_id", null);
+    }
+
+    const { data: existingVote } = await existingVoteQuery.maybeSingle();
 
     if (existingVote) {
       if (!vote_type || existingVote.vote_type === vote_type) {

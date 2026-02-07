@@ -49,6 +49,7 @@ export interface SearchFilters {
   mood?: MoodId;             // Mood-based filtering (expands to vibes/categories)
   portal_id?: string;        // Portal ID filter - all events belong to a portal
   portal_exclusive?: boolean; // If true, only show events tied to the portal_id
+  exclude_classes?: boolean; // If true, exclude class events from results
   // Source filters
   source_ids?: number[];     // Explicit list of source IDs to filter by
   // Content filters (set automatically from user preferences / portal settings)
@@ -528,6 +529,11 @@ async function applySearchFilters(
   // Apply venue filter
   if (filters.venue_id) {
     query = query.eq("venue_id", filters.venue_id);
+  }
+
+  // Exclude classes (events marked as classes)
+  if (filters.exclude_classes) {
+    query = query.or("is_class.eq.false,is_class.is.null");
   }
 
   // Apply multiple venues filter (portal filter)

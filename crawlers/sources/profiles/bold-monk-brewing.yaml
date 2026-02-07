@@ -1,12 +1,20 @@
 version: 1
 slug: bold-monk-brewing
 name: Bold Monk Brewing
-integration_method: html
-defaults: {}
+integration_method: llm_crawler
+defaults:
+  venue_name: Bold Monk Brewing
+  category: nightlife
+  subcategory: brewery
+  tags:
+    - brewery
+    - beer
+    - craft-beer
 discovery:
   enabled: true
-  type: list
+  type: html
   urls:
   - https://boldmonkbrewingco.com/events
+  # Events page shows "No Results Found" — may be seasonal or site issue
 detail:
   enabled: false

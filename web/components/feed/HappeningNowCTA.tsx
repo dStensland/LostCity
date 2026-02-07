@@ -10,7 +10,7 @@ interface HappeningNowCTAProps {
 
 function HappeningNowSkeleton() {
   return (
-    <div className="mb-6 p-4 rounded-xl border border-[var(--coral)]/20 bg-gradient-to-r from-[var(--coral)]/5 via-[var(--rose)]/3 to-transparent relative overflow-hidden">
+    <div className="px-4 py-3 rounded-xl border border-[var(--coral)]/15 bg-gradient-to-r from-[var(--coral)]/4 via-[var(--rose)]/2 to-transparent relative overflow-hidden">
       {/* Animated scan line */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute inset-y-0 w-full animate-coral-shimmer bg-gradient-to-r from-transparent via-[var(--coral)] to-transparent" />
@@ -19,22 +19,22 @@ function HappeningNowSkeleton() {
       <div className="flex items-center justify-between relative">
         <div className="flex items-center gap-3">
           {/* Pulsing live indicator - triple ring effect */}
-          <div className="relative flex items-center justify-center w-5 h-5">
-            <span className="absolute w-5 h-5 bg-[var(--coral)]/20 rounded-full animate-ping" />
-            <span className="absolute w-4 h-4 bg-[var(--coral)]/30 rounded-full animate-coral-pulse" />
-            <span className="relative w-2.5 h-2.5 bg-[var(--coral)]/50 rounded-full animate-pulse" />
+          <div className="relative flex items-center justify-center w-4 h-4">
+            <span className="absolute w-4 h-4 bg-[var(--coral)]/18 rounded-full animate-ping" />
+            <span className="absolute w-3 h-3 bg-[var(--coral)]/24 rounded-full animate-coral-pulse" />
+            <span className="relative w-2 h-2 bg-[var(--coral)]/45 rounded-full animate-pulse" />
           </div>
 
           <div className="space-y-2">
             {/* "Happening Now" text skeleton with shimmer */}
             <div className="flex items-center gap-2">
-              <div className="h-3.5 w-24 rounded-sm bg-[var(--coral)]/15 relative overflow-hidden">
+              <div className="h-3.5 w-24 rounded-sm bg-[var(--coral)]/12 relative overflow-hidden">
                 <div className="absolute inset-0 animate-coral-scan bg-gradient-to-r from-transparent via-[var(--coral)]/30 to-transparent" />
               </div>
-              <div className="h-4 w-7 rounded bg-[var(--coral)]/25 animate-coral-pulse" />
+              <div className="h-4 w-7 rounded bg-[var(--coral)]/20 animate-coral-pulse" />
             </div>
             {/* Description skeleton */}
-            <div className="h-3 w-48 rounded-sm bg-[var(--twilight)] relative overflow-hidden">
+            <div className="h-3 w-48 rounded-sm bg-[var(--twilight)]/80 relative overflow-hidden">
               <div className="absolute inset-0 animate-coral-scan delay-200 bg-gradient-to-r from-transparent via-white/10 to-transparent" />
             </div>
           </div>
@@ -93,21 +93,21 @@ export default function HappeningNowCTA({ portalSlug }: HappeningNowCTAProps) {
   return (
     <Link
       href={`/${portalSlug}/happening-now`}
-      className="block mb-6 p-4 rounded-xl border-2 border-[var(--neon-red)]/40 bg-gradient-to-r from-[var(--neon-red)]/15 via-[var(--neon-red)]/8 to-transparent hover:border-[var(--neon-red)]/60 hover:shadow-[0_0_24px_var(--neon-red)/25] hover:scale-[1.01] active:scale-[0.99] transition-all duration-200 group animate-happening-now-pulse"
+      className="block px-4 py-3 rounded-xl border border-[var(--neon-red)]/30 bg-gradient-to-r from-[var(--neon-red)]/10 via-[var(--neon-red)]/4 to-transparent hover:border-[var(--neon-red)]/45 hover:shadow-[0_0_18px_var(--neon-red)/18] hover:scale-[1.005] active:scale-[0.99] transition-all duration-200 group"
     >
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           {/* Live indicator - enhanced quadruple ring pulse effect with brighter accent */}
-          <div className="relative flex items-center justify-center w-7 h-7">
-            <span className="absolute w-7 h-7 bg-[var(--neon-red)]/25 rounded-full animate-ping animate-duration-1500" />
-            <span className="absolute w-5 h-5 bg-[var(--neon-red)]/35 rounded-full animate-pulse animate-duration-2000" />
-            <span className="absolute w-3 h-3 bg-[var(--neon-red)]/50 rounded-full animate-ping animate-duration-1000" />
-            <span className="relative w-2.5 h-2.5 bg-[var(--neon-red)] rounded-full shadow-[0_0_16px_var(--neon-red)]" />
+          <div className="relative flex items-center justify-center w-6 h-6">
+            <span className="absolute w-6 h-6 bg-[var(--neon-red)]/20 rounded-full animate-ping animate-duration-1800" />
+            <span className="absolute w-4 h-4 bg-[var(--neon-red)]/28 rounded-full animate-pulse animate-duration-2400" />
+            <span className="absolute w-2.5 h-2.5 bg-[var(--neon-red)]/40 rounded-full animate-ping animate-duration-1200" />
+            <span className="relative w-2 h-2 bg-[var(--neon-red)] rounded-full shadow-[0_0_12px_var(--neon-red)]" />
           </div>
 
           <div>
             <div className="flex items-center gap-2">
-              <span className="font-mono text-sm font-bold text-[var(--neon-red)] uppercase tracking-wider">
+              <span className="font-mono text-xs font-bold text-[var(--neon-red)] uppercase tracking-wider">
                 LIVE NOW
               </span>
               {eventCount > 0 && (
@@ -142,7 +142,7 @@ export default function HappeningNowCTA({ portalSlug }: HappeningNowCTAProps) {
 
         {/* Arrow with pulse */}
         <svg
-          className="w-5 h-5 text-[var(--neon-red)] group-hover:translate-x-1 transition-transform animate-pulse"
+          className="w-5 h-5 text-[var(--neon-red)] group-hover:translate-x-1 transition-transform"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"

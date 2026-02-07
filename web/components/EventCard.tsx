@@ -1,10 +1,11 @@
 "use client";
 
-import { memo } from "react";
+import { memo, useState, useCallback } from "react";
+import type { CSSProperties } from "react";
 import Link from "next/link";
 import type { Event } from "@/lib/supabase";
 import { AvatarStack } from "./UserAvatar";
-import { formatTimeSplit, formatSmartDate, formatPriceDetailed } from "@/lib/formats";
+import { formatTimeSplit, formatSmartDate, formatPriceDetailed, formatCompactCount } from "@/lib/formats";
 import CategoryIcon, { getCategoryColor } from "./CategoryIcon";
 import ScopedStyles from "@/components/ScopedStyles";
 import { createCssVarClass } from "@/lib/css-utils";
@@ -13,7 +14,10 @@ import SeriesBadge from "./SeriesBadge";
 import ReasonBadge, { getTopReasons, type RecommendationReason } from "./ReasonBadge";
 import { SubcategoryChip, getSubcategoryLabel, shouldShowSubcategory } from "./ActivityChip";
 import type { Frequency, DayOfWeek } from "@/lib/recurrence";
-import RSVPButton from "./RSVPButton";
+import RSVPButton, { type RSVPStatus } from "./RSVPButton";
+import AnimatedCount from "./AnimatedCount";
+
+const POPULAR_THRESHOLD = 10;
 
 type EventCardEvent = Event & {
   is_live?: boolean;
@@ -36,6 +40,9 @@ type EventCardEvent = Event & {
   class_category?: string | null;
   skill_level?: string | null;
   instructor?: string | null;
+  going_count?: number;
+  interested_count?: number;
+  recommendation_count?: number;
 };
 
 export type FriendGoing = {
@@ -156,6 +163,30 @@ function EventCard({ event, index = 0, skipAnimation = false, portalSlug, friend
   const price = formatPriceDetailed(event);
   const accentClass = createCssVarClass("--accent-color", accentColor, "accent");
 
+  // Optimistic RSVP count adjustments — user's own RSVP immediately ticks the count
+  const [countAdjust, setCountAdjust] = useState({ going: 0, interested: 0, recommendation: 0 });
+
+  const handleRSVPChange = useCallback((newStatus: RSVPStatus, prevStatus: RSVPStatus) => {
+    setCountAdjust((prev) => {
+      const next = { ...prev };
+      // Remove contribution from previous status
+      if (prevStatus === "going") next.going -= 1;
+      else if (prevStatus === "interested") next.interested -= 1;
+      else if (prevStatus === "went") next.recommendation -= 1;
+      // Add contribution from new status
+      if (newStatus === "going") next.going += 1;
+      else if (newStatus === "interested") next.interested += 1;
+      else if (newStatus === "went") next.recommendation += 1;
+      return next;
+    });
+  }, []);
+
+  const goingCount = (event.going_count ?? 0) + countAdjust.going;
+  const interestedCount = (event.interested_count ?? 0) + countAdjust.interested;
+  const recommendationCount = (event.recommendation_count ?? 0) + countAdjust.recommendation;
+  const hasSocialProof = goingCount > 0 || interestedCount > 0 || recommendationCount > 0;
+  const isPopular = goingCount >= POPULAR_THRESHOLD;
+
   // Use query param navigation for in-app detail views (preserves auth state)
   const eventHref = portalSlug ? `/${portalSlug}?event=${event.id}` : `/events/${event.id}`;
   const linkOutUrl = event.ticket_url || event.source_url || eventHref;
@@ -174,6 +205,12 @@ function EventCard({ event, index = 0, skipAnimation = false, portalSlug, friend
         className={`mb-4 rounded-sm border border-[var(--twilight)] card-atmospheric glow-accent reflection-accent ${reflectionClass} ${animationClass} ${staggerClass} bg-[var(--card-bg)] overflow-hidden group ${accentClass?.className ?? ""} ${
           event.category ? "border-l-[3px] border-l-[var(--accent-color)]" : ""
         }`}
+        style={
+          {
+            "--cta-border": "color-mix(in srgb, var(--accent-color) 70%, transparent)",
+            "--cta-glow": "color-mix(in srgb, var(--accent-color) 35%, transparent)",
+          } as CSSProperties
+        }
       >
         <div className="flex gap-3">
           <Link
@@ -254,36 +291,6 @@ function EventCard({ event, index = 0, skipAnimation = false, portalSlug, friend
                   </span>
                 )}
               </div>
-
-              {/* Friends going row - elevated above details for social proof */}
-              {friendsGoing.length > 0 && (
-                <div className="flex items-center gap-2 mt-1.5">
-                  {/* Neon avatar stack */}
-                  <AvatarStack
-                    users={friendsGoing.map((f) => ({
-                      id: f.user_id,
-                      name: f.user.display_name || f.user.username,
-                      avatar_url: f.user.avatar_url,
-                    }))}
-                    max={3}
-                    size="xs"
-                    showCount={friendsGoing.length > 3}
-                  />
-                  <span className="text-xs text-[var(--coral)] font-medium">
-                    {friendsGoing.length === 1 ? (
-                      <>
-                        {friendsGoing[0].user.display_name || friendsGoing[0].user.username}
-                        {" "}{friendsGoing[0].status === "going" ? "is going" : "is interested"}
-                      </>
-                    ) : (
-                      <>
-                        {friendsGoing.length} friends
-                        {" "}{friendsGoing.some(f => f.status === "going") ? "are in" : "are interested"}
-                      </>
-                    )}
-                  </span>
-                </div>
-              )}
 
               {/* Details row - venue and metadata with better hierarchy */}
               {/* Mobile: show only venue + price; Desktop: show all metadata */}
@@ -390,20 +397,84 @@ function EventCard({ event, index = 0, skipAnimation = false, portalSlug, friend
                   ))}
                 </div>
               )}
+
+              {/* Social proof row — uses RSVP-button visual language (solid pill, mono, glow) */}
+              {(friendsGoing.length > 0 || hasSocialProof) && (
+                <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+                  {/* Friends going — coral pill matching "I'm in" state */}
+                  {friendsGoing.length > 0 && (
+                    <span className="inline-flex items-center gap-1.5 pl-1 pr-2.5 py-1 rounded-lg bg-[var(--coral)]/15 border border-[var(--coral)]/30 shadow-[0_0_8px_var(--coral)/10]">
+                      <AvatarStack
+                        users={friendsGoing.map((f) => ({
+                          id: f.user_id,
+                          name: f.user.display_name || f.user.username,
+                          avatar_url: f.user.avatar_url,
+                        }))}
+                        max={3}
+                        size="xs"
+                        showCount={friendsGoing.length > 3}
+                      />
+                      <span className="font-mono text-xs font-medium text-[var(--coral)]">
+                        {friendsGoing.length === 1 ? (
+                          <>
+                            {friendsGoing[0].user.display_name || friendsGoing[0].user.username}
+                            {" "}{friendsGoing[0].status === "going" ? "is in" : "is interested"}
+                          </>
+                        ) : (
+                          <>
+                            {friendsGoing.length} friends {friendsGoing.some(f => f.status === "going") ? "are in" : "interested"}
+                          </>
+                        )}
+                      </span>
+                    </span>
+                  )}
+
+                  {/* Going count — coral pill */}
+                  {goingCount > 0 && (friendsGoing.length === 0 || goingCount > friendsGoing.length) && (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[var(--coral)]/10 border border-[var(--coral)]/20 font-mono text-xs font-medium text-[var(--coral)]">
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      <AnimatedCount value={goingCount} format={formatCompactCount} /> going
+                    </span>
+                  )}
+
+                  {/* Interested count — gold pill matching "Maybe" state */}
+                  {interestedCount > 0 && (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[var(--gold)]/15 border border-[var(--gold)]/30 font-mono text-xs font-medium text-[var(--gold)]">
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.286 3.957" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
+                      </svg>
+                      <AnimatedCount value={interestedCount} format={formatCompactCount} /> maybe
+                    </span>
+                  )}
+
+                  {/* Recommendations — lavender pill */}
+                  {recommendationCount > 0 && (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[var(--lavender)]/15 border border-[var(--lavender)]/30 font-mono text-xs font-medium text-[var(--lavender)]">
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+                      </svg>
+                      <AnimatedCount value={recommendationCount} format={formatCompactCount} /> rec&apos;d
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
 
             </div>
           </Link>
 
-          <div className="flex flex-col items-center gap-2 pt-3 pr-3 pb-3 flex-shrink-0">
-            <RSVPButton eventId={event.id} variant="compact" />
+          <div className="flex items-start gap-2 pt-3 pr-3 pb-3 flex-shrink-0">
+            <RSVPButton eventId={event.id} variant="compact" onRSVPChange={handleRSVPChange} />
             {isExternalLinkOut && (
               <a
                 href={linkOutUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label={linkOutLabel}
-                className="w-11 h-11 inline-flex items-center justify-center rounded-xl border border-[var(--twilight)] bg-[var(--dusk)] text-[var(--muted)] hover:text-[var(--cream)] hover:border-[var(--coral)] hover:shadow-[0_0_16px_rgba(255,107,122,0.25)] transition-all"
+                className="w-11 h-11 inline-flex items-center justify-center rounded-xl border border-[var(--twilight)]/80 bg-[var(--dusk)]/70 text-[var(--muted)] backdrop-blur-[2px] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.02)] hover:text-[var(--cream)] hover:border-[var(--cta-border,rgba(255,107,122,0.7))] hover:shadow-[0_0_18px_var(--cta-glow,rgba(255,107,122,0.25))] transition-all"
               >
                 {isTicketLinkOut ? (
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

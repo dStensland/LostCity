@@ -212,14 +212,7 @@ export default function ListsView({ portalId, portalSlug }: ListsViewProps) {
         <div>
           <h2 className="text-xl font-semibold text-[var(--cream)]">Lists</h2>
           <p className="text-sm text-[var(--muted)] mt-1">
-            Community-curated recommendations
-            <span className="mx-2 opacity-40">·</span>
-            <Link
-              href="/submit/venue"
-              className="text-[var(--coral)] hover:text-[var(--rose)] transition-colors"
-            >
-              Add a venue
-            </Link>
+            The best of Atlanta, ranked by locals
           </p>
         </div>
 
@@ -251,7 +244,7 @@ export default function ListsView({ portalId, portalSlug }: ListsViewProps) {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.975 7.975 0 0120 13a7.975 7.975 0 01-2.343 5.657z" />
             </svg>
             <h3 className="font-mono text-sm font-medium text-[var(--coral)] uppercase tracking-wider">
-              Trending
+              Popular right now
             </h3>
           </div>
           <div className="flex gap-3 overflow-x-auto pb-3 scrollbar-hide -mx-4 px-4">
@@ -288,13 +281,15 @@ export default function ListsView({ portalId, portalSlug }: ListsViewProps) {
                   </div>
                 </div>
                 <div className="flex items-center gap-3 text-xs text-[var(--muted)]">
-                  <span className="flex items-center gap-1 text-[var(--coral)]">
-                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-                    </svg>
-                    {list.vote_count}
-                  </span>
-                  <span>{list.item_count} items</span>
+                  {list.vote_count > 0 ? (
+                    <span className="flex items-center gap-1 text-[var(--coral)]">
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                      </svg>
+                      {list.vote_count}
+                    </span>
+                  ) : null}
+                  <span>{list.item_count} spots</span>
                 </div>
               </Link>
             ))}
@@ -328,19 +323,19 @@ export default function ListsView({ portalId, portalSlug }: ListsViewProps) {
             </svg>
           </div>
           <h3 className="font-serif text-xl text-[var(--cream)] mb-2">
-            {selectedCategory !== "all" ? "No Lists Yet" : "Start Curating Your Favorites"}
+            {selectedCategory !== "all" ? "Nothing here yet" : "Know something we don't?"}
           </h3>
           <p className="text-sm text-[var(--soft)] mb-3 max-w-md mx-auto">
             {selectedCategory !== "all"
-              ? "No lists in this category yet. Be the first to create one!"
-              : "Lists are curated collections of events and spots you recommend. Share your insider knowledge with the community."}
+              ? "Be the first to drop a list in this category."
+              : "Make a list of your favorite spots. The places you'd actually send a friend."}
           </p>
 
           {/* Example categories for inspiration */}
           {selectedCategory === "all" && (
             <div className="mb-6 max-w-lg mx-auto">
               <p className="text-xs font-mono text-[var(--muted)] uppercase tracking-wider mb-3">
-                Popular List Ideas
+                Ideas to get you started
               </p>
               <div className="flex flex-wrap gap-2 justify-center">
                 {[
@@ -388,8 +383,15 @@ export default function ListsView({ portalId, portalSlug }: ListsViewProps) {
         </div>
       ) : (
         <div className="space-y-4">
-          {lists.map((list) => (
-            <ListCard key={list.id} list={list} portalSlug={portalSlug} />
+          {lists.map((list, index) => (
+            <div
+              key={list.id}
+              style={{
+                animation: `stagger-fade-in 0.4s ease-out ${Math.min(index * 0.06, 0.6)}s backwards`,
+              }}
+            >
+              <ListCard list={list} portalSlug={portalSlug} />
+            </div>
           ))}
         </div>
       )}

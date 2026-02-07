@@ -4,7 +4,8 @@ name: Meetup
 integration_method: api
 defaults: {}
 discovery:
-  enabled: true
+  # Runs via main.py (Meetup API/Playwright); pipeline discovery disabled
+  enabled: false
   type: api
   urls:
   - https://api.meetup.com

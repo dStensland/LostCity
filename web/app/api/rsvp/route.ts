@@ -18,7 +18,10 @@ export const POST = withAuth(async (request, { user, serviceClient }) => {
   if (sizeCheck) return sizeCheck;
 
   // Apply rate limiting
-  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
+  // Use a per-user identifier so local/dev traffic (often missing forwarded IP headers) doesn't collapse into
+  // a single shared "unknown" bucket and trip 429s immediately.
+  const rateLimitId = `${user.id}:${getClientIdentifier(request)}`;
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write, rateLimitId);
   if (rateLimitResult) return rateLimitResult;
 
   try {
@@ -81,7 +84,8 @@ export const POST = withAuth(async (request, { user, serviceClient }) => {
  */
 export const DELETE = withAuth(async (request, { user, serviceClient }) => {
   // Apply rate limiting
-  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
+  const rateLimitId = `${user.id}:${getClientIdentifier(request)}`;
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write, rateLimitId);
   if (rateLimitResult) return rateLimitResult;
 
   try {

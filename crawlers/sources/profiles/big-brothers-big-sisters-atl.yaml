@@ -1,14 +1,12 @@
 version: 1
 slug: big-brothers-big-sisters-atl
 name: Big Brothers Big Sisters of Metro Atlanta
-integration_method: playwright
+integration_method: html
 defaults: {}
 discovery:
   enabled: true
   type: list
   urls:
   - https://bbbsatl.org/events
-  fetch:
-    render_js: true
 detail:
   enabled: false

@@ -164,7 +164,7 @@ export default function FeedView() {
   const regularSections = sections.filter(s => !THEMED_SLUGS.includes(s.slug));
 
   return (
-    <div className="py-4">
+    <div className="pt-1 pb-4">
       {showFestivalDebug && <FestivalDebugPanel portalSlug={portal.slug} />}
 
       {/* Holiday cards - 2-column grid */}

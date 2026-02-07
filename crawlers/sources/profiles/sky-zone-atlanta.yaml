@@ -1,14 +1,14 @@
 version: 1
 slug: sky-zone-atlanta
 name: Sky Zone Trampoline Parks - Atlanta
-integration_method: playwright
+integration_method: jsonld_only
 defaults: {}
 discovery:
   enabled: true
   type: list
   urls:
   - https://www.skyzone.com
-  fetch:
-    render_js: true
 detail:
-  enabled: false
+  enabled: true
+  jsonld_only: true
+  use_jsonld: true

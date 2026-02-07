@@ -1,13 +1,20 @@
 version: 1
 slug: onstage-atlanta
 name: OnStage Atlanta
-integration_method: playwright
-defaults: {}
+integration_method: html
+defaults:
+  venue_name: OnStage Atlanta
+  category: arts
+  subcategory: theatre
+  tags:
+    - theatre
+    - community-theatre
 discovery:
   enabled: true
-  type: list
+  type: html
   urls:
-  - https://www.onstageatlanta.com
+  - https://www.onstageatlanta.com/our-shows/
+  # Custom WordPress page layouts — needs LLM extraction
   fetch:
     render_js: true
 detail:

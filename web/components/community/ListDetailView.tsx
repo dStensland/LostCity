@@ -352,16 +352,19 @@ export default function ListDetailView({ portalSlug, listSlug }: ListDetailViewP
           <span className="opacity-40">·</span>
 
           {/* Stats */}
-          <div className="flex items-center gap-1 text-accent">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-            </svg>
-            <span className="font-mono">{list.vote_count} votes</span>
-          </div>
+          {list.vote_count > 0 && (
+            <>
+              <div className="flex items-center gap-1 text-accent">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                </svg>
+                <span className="font-mono">{list.vote_count} vote{list.vote_count !== 1 ? "s" : ""}</span>
+              </div>
+              <span className="opacity-40">·</span>
+            </>
+          )}
 
-          <span className="opacity-40">·</span>
-
-          <span className="font-mono">{list.item_count} items</span>
+          <span className="font-mono">{list.item_count} spot{list.item_count !== 1 ? "s" : ""}</span>
         </div>
 
         {/* Action buttons */}
@@ -413,7 +416,7 @@ export default function ListDetailView({ portalSlug, listSlug }: ListDetailViewP
       {items.length > 0 && (
         <div className="flex items-center justify-between mb-4 pb-4 border-b border-[var(--twilight)]">
           <span className="font-mono text-xs text-[var(--muted)] uppercase tracking-wider">
-            {items.length} item{items.length !== 1 ? "s" : ""}
+            {items.length} spot{items.length !== 1 ? "s" : ""}
           </span>
           <div className="flex items-center gap-2">
             <span className="font-mono text-xs text-[var(--muted)]">Sort:</span>
@@ -459,16 +462,22 @@ export default function ListDetailView({ portalSlug, listSlug }: ListDetailViewP
       ) : (
         <div className="space-y-3">
           {sortedItems.map((item, index) => (
-            <ListItemCard
+            <div
               key={item.id}
-              item={item}
-              rank={sortBy === "position" ? item.position : index + 1}
-              categoryColor={categoryColor}
-              portalSlug={portalSlug}
-              isOwner={isOwner}
-              onVote={handleItemVote}
-              onRemove={handleRemoveItem}
-            />
+              style={{
+                animation: `stagger-fade-in 0.4s ease-out ${Math.min(index * 0.06, 0.6)}s backwards`,
+              }}
+            >
+              <ListItemCard
+                item={item}
+                rank={sortBy === "position" ? item.position + 1 : index + 1}
+                categoryColor={categoryColor}
+                portalSlug={portalSlug}
+                isOwner={isOwner}
+                onVote={handleItemVote}
+                onRemove={handleRemoveItem}
+              />
+            </div>
           ))}
         </div>
       )}

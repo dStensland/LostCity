@@ -9,10 +9,12 @@ import GlowOrb from "@/components/home/GlowOrb";
 import CategoryIcon from "@/components/CategoryIcon";
 import { DEFAULT_PORTAL_SLUG, DEFAULT_PORTAL_NAME } from "@/lib/constants";
 import { createClient } from "@/lib/supabase/server";
+import { formatCompactCount } from "@/lib/formats";
 
 function formatStat(n: number): string {
   if (n >= 1000) {
-    return Math.floor(n / 100) * 100 + "+";
+    // Keep it short so it fits the 3-up stat cards on mobile (e.g. "10k+")
+    return `${formatCompactCount(Math.floor(n / 100) * 100)}+`;
   }
   return n.toLocaleString();
 }
@@ -167,7 +169,7 @@ export default async function Home() {
             ].map((stat, i) => (
               <ScrollReveal key={stat.label} direction="up" delay={i * 100}>
                 <div className="text-center p-4 md:p-6 rounded-lg border border-[#1a1a24] hover:border-[#2a2a34] home-stat-card transition-all duration-300 group">
-                  <div className={`text-4xl md:text-5xl font-semibold tracking-tight mb-1 ${stat.colorClass}`}>
+                  <div className={`text-[clamp(1.75rem,5vw,3.25rem)] font-semibold tracking-tight mb-1 leading-none tabular-nums whitespace-nowrap ${stat.colorClass}`}>
                     {stat.value}
                   </div>
                   <div className="text-xs md:text-sm uppercase tracking-[0.15em] text-[var(--cream)]/70 group-hover:text-[var(--cream)] transition-colors">

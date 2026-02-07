@@ -1,14 +1,12 @@
 version: 1
 slug: krog-street-market
 name: Krog Street Market
-integration_method: playwright
+integration_method: html
 defaults: {}
 discovery:
   enabled: true
   type: list
   urls:
   - https://www.krogstreetmarket.com
-  fetch:
-    render_js: true
 detail:
   enabled: false

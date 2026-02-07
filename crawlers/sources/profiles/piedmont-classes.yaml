@@ -4,7 +4,7 @@ name: Piedmont Classes
 integration_method: playwright
 defaults: {}
 discovery:
-  enabled: true
+  enabled: false  # Inquicker SPA, needs API integration — 2026-02-06 audit
   type: list
   urls:
   - https://classes.inquicker.com/?ClientID=12422

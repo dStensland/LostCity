@@ -1,7 +1,7 @@
 version: 1
 slug: our-bar-atl
 name: Our Bar ATL
-integration_method: html
+integration_method: jsonld_only
 defaults: {}
 discovery:
   enabled: true
@@ -9,4 +9,6 @@ discovery:
   urls:
   - https://www.ourbaratl.com
 detail:
-  enabled: false
+  enabled: true
+  jsonld_only: true
+  use_jsonld: true

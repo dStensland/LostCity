@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "@/components/SmartImage";
-import FollowButton from "./FollowButton";
+// FollowButton removed — benched for curator feature
 
 type UserListItem = {
   id: string;
@@ -66,7 +66,6 @@ export default function UserList({ users, emptyMessage = "No users found" }: Use
             )}
           </div>
 
-          <FollowButton targetUserId={user.id} size="sm" />
         </div>
       ))}
     </div>

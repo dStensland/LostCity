@@ -4,7 +4,8 @@ name: Urban Grind
 integration_method: api
 defaults: {}
 discovery:
-  enabled: true
+  # Runs via main.py (standalone crawler); pipeline discovery disabled
+  enabled: false
   type: api
   urls:
   - https://www.urbangrindcoffee.com

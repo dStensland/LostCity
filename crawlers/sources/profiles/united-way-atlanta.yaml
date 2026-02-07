@@ -1,14 +1,12 @@
 version: 1
 slug: united-way-atlanta
 name: United Way of Greater Atlanta
-integration_method: playwright
+integration_method: html
 defaults: {}
 discovery:
   enabled: true
   type: list
   urls:
   - https://volunteer.unitedwayatlanta.org/calendar
-  fetch:
-    render_js: true
 detail:
   enabled: false

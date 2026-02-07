@@ -1,7 +1,7 @@
 version: 1
 slug: downtown-duluth
 name: Downtown Duluth
-integration_method: html
+integration_method: playwright
 defaults: {}
 discovery:
   enabled: true
@@ -10,3 +10,5 @@ discovery:
   - https://exploreduluth.org
 detail:
   enabled: false
+  fetch:
+    render_js: true

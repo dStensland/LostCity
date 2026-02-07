@@ -48,6 +48,7 @@ export async function GET(request: Request) {
       mood: (searchParams.get("mood") as MoodId) || undefined,
       portal_id: portalId,
       portal_exclusive: portalExclusive,
+      exclude_classes: true,
       // All events belong to a portal, filter directly by portal_id
     };
 

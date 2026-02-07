@@ -1,14 +1,12 @@
 version: 1
 slug: highland-yoga
 name: Highland Yoga
-integration_method: playwright
+integration_method: html
 defaults: {}
 discovery:
   enabled: true
   type: list
   urls:
   - https://www.highland-yoga.com
-  fetch:
-    render_js: true
 detail:
   enabled: false

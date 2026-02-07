@@ -212,6 +212,8 @@ export type Spot = {
   featured: boolean;
   active: boolean;
   event_count?: number;
+  follower_count?: number;
+  recommendation_count?: number;
 };
 
 export function formatPriceLevel(level: number | null): string {
@@ -330,7 +332,7 @@ export function isSpotOpen(
   is24Hours?: boolean
 ): { isOpen: boolean; closesAt?: string } {
   if (is24Hours) return { isOpen: true };
-  if (!hours) return { isOpen: true };
+  if (!hours) return { isOpen: false };
 
   const now = new Date();
   const dayNames = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];

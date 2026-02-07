@@ -5,7 +5,7 @@ import Link from "next/link";
 import Image from "@/components/SmartImage";
 import UnifiedHeader from "@/components/UnifiedHeader";
 import PageFooter from "@/components/PageFooter";
-import FollowButton from "@/components/FollowButton";
+// FollowButton removed from people page — benched for curator feature
 import FriendButton from "@/components/FriendButton";
 import { useAuth } from "@/lib/auth-context";
 import { useDebounce } from "@/lib/hooks/useDebounce";
@@ -142,7 +142,6 @@ export default function PeoplePage() {
                       targetUsername={profile.username}
                       size="sm"
                     />
-                    <FollowButton targetUserId={profile.id} size="sm" />
                   </div>
                 )}
               </div>

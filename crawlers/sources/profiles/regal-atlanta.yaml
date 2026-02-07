@@ -1,14 +1,12 @@
 version: 1
 slug: regal-atlanta
 name: Regal Cinemas Atlanta
-integration_method: playwright
+integration_method: html
 defaults: {}
 discovery:
   enabled: true
   type: list
   urls:
   - https://www.regmovies.com
-  fetch:
-    render_js: true
 detail:
   enabled: false

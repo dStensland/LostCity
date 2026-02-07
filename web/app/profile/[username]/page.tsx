@@ -3,7 +3,7 @@ import Link from "next/link";
 import Image from "@/components/SmartImage";
 import UnifiedHeader from "@/components/UnifiedHeader";
 import PageFooter from "@/components/PageFooter";
-import FollowButton from "@/components/FollowButton";
+// FollowButton removed from user profiles — benched for curator feature
 import FriendButton from "@/components/FriendButton";
 import { createClient } from "@/lib/supabase/server";
 import { formatDistanceToNow, format } from "date-fns";
@@ -169,7 +169,6 @@ export default async function ProfilePage({ params }: Props) {
               </div>
               <div className="flex items-center gap-2">
                 <FriendButton targetUserId={profile.id} targetUsername={profile.username} initialRelationship={initialRelationship} />
-                <FollowButton targetUserId={profile.id} initialIsFollowing={initialIsFollowing} />
               </div>
             </div>
 
@@ -181,28 +180,6 @@ export default async function ProfilePage({ params }: Props) {
 
             {/* Stats */}
             <div className="flex flex-wrap gap-4 sm:gap-6 mt-4">
-              <Link
-                href={`/profile/${profile.username}/followers`}
-                className="hover:text-[var(--coral)] transition-colors"
-              >
-                <span className="font-mono text-sm text-[var(--cream)]">
-                  {followerCount || 0}
-                </span>
-                <span className="font-mono text-xs text-[var(--muted)] ml-1">
-                  followers
-                </span>
-              </Link>
-              <Link
-                href={`/profile/${profile.username}/following`}
-                className="hover:text-[var(--coral)] transition-colors"
-              >
-                <span className="font-mono text-sm text-[var(--cream)]">
-                  {followingCount || 0}
-                </span>
-                <span className="font-mono text-xs text-[var(--muted)] ml-1">
-                  following
-                </span>
-              </Link>
               {(eventsAttended ?? 0) > 0 && (
                 <div>
                   <span className="font-mono text-sm text-[var(--cream)]">

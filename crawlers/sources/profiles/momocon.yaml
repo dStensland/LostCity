@@ -1,14 +1,12 @@
 version: 1
 slug: momocon
 name: MomoCon
-integration_method: playwright
+integration_method: html
 defaults: {}
 discovery:
   enabled: true
   type: list
   urls:
   - https://www.momocon.com
-  fetch:
-    render_js: true
 detail:
   enabled: false

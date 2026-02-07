@@ -62,10 +62,19 @@ const SPOT_TYPE_LABELS: Record<string, string> = {
   brewery: "Brewery",
   gallery: "Gallery",
   club: "Club",
+  nightclub: "Nightclub",
   theater: "Theater",
   arena: "Arena",
   comedy_club: "Comedy Club",
   museum: "Museum",
+  distillery: "Distillery",
+  winery: "Winery",
+  food_hall: "Food Hall",
+  rooftop: "Rooftop",
+  sports_bar: "Sports Bar",
+  event_space: "Event Space",
+  park: "Park",
+  bookstore: "Bookstore",
 };
 
 export default function ListItemCard({

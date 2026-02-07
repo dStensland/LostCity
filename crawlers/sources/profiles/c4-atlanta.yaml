@@ -2,11 +2,21 @@ version: 1
 slug: c4-atlanta
 name: C4 Atlanta
 integration_method: llm_crawler
-defaults: {}
+defaults:
+  venue_name: C4 Atlanta
+  category: community
+  subcategory: activism
+  tags:
+    - community
+    - activism
+    - social-justice
 discovery:
   enabled: true
   type: html
   urls:
   - https://c4atlanta.org/events
+  # Site may redirect — needs LLM with Playwright
+  fetch:
+    render_js: true
 detail:
   enabled: false

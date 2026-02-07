@@ -41,7 +41,7 @@ def fetch_html(url: str, fetch: Optional[FetchConfig] = None) -> Tuple[str, Opti
                 )
                 page = context.new_page()
                 try:
-                    page.goto(url, wait_until="networkidle", timeout=cfg.timeout_ms)
+                    page.goto(url, wait_until=cfg.wait_until, timeout=cfg.timeout_ms)
                     page.wait_for_timeout(cfg.wait_ms)
                     html = page.content()
                     return html, None

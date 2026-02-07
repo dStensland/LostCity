@@ -17,11 +17,15 @@ import requests
 from utils import slugify
 from db import get_or_create_venue, insert_event, find_event_by_hash
 from dedupe import generate_content_hash
+from extractors.structured import extract_jsonld_event_fields, extract_open_graph_fields
 
 logger = logging.getLogger(__name__)
 
 API_KEY = os.getenv("TICKETMASTER_API_KEY")
 BASE_URL = "https://app.ticketmaster.com/discovery/v2"
+DETAIL_ENRICH = os.getenv("TICKETMASTER_ENRICH_DETAIL", "1") != "0"
+DETAIL_TIMEOUT = int(os.getenv("TICKETMASTER_DETAIL_TIMEOUT", "12"))
+DETAIL_UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
 
 # Atlanta area - using lat/long for better coverage
 ATLANTA_LATLONG = "33.749,-84.388"
@@ -51,6 +55,43 @@ GENRE_MAP = {
     "Metal": "metal",
     "Electronic": "electronic",
 }
+
+
+def _is_low_quality_description(description: Optional[str]) -> bool:
+    if not description:
+        return True
+    if len(description) < 120:
+        return True
+    lowered = description.lower()
+    return lowered.startswith(
+        (
+            "event at ",
+            "music event at ",
+            "sports event at ",
+            "theatre event at ",
+            "dance event at ",
+            "other event at ",
+        )
+    )
+
+
+def _fetch_detail_description(url: str) -> Optional[str]:
+    if not url:
+        return None
+    try:
+        resp = requests.get(url, headers={"User-Agent": DETAIL_UA}, timeout=DETAIL_TIMEOUT)
+        if not resp.ok:
+            return None
+        html = resp.text
+        jsonld = extract_jsonld_event_fields(html)
+        description = jsonld.get("description")
+        if description:
+            return description
+        og = extract_open_graph_fields(html)
+        return og.get("description")
+    except Exception as e:
+        logger.debug("Ticketmaster detail fetch failed for %s: %s", url, e)
+        return None
 
 
 def fetch_events(page: int = 0, size: int = 200) -> dict:
@@ -185,6 +226,11 @@ def parse_event(event_data: dict) -> Optional[dict]:
             description = f"{genre} event at {venue_data['name']}."
         elif not description and venue_data:
             description = f"Event at {venue_data['name']}."
+
+        if DETAIL_ENRICH and source_url and _is_low_quality_description(description):
+            enriched_description = _fetch_detail_description(source_url)
+            if enriched_description and (not description or len(enriched_description) > len(description)):
+                description = enriched_description
 
         links = []
         if source_url:

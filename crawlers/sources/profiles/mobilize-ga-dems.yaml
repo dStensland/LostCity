@@ -1,14 +1,12 @@
 version: 1
 slug: mobilize-ga-dems
 name: Democratic Party of Georgia (Mobilize)
-integration_method: playwright
+integration_method: html
 defaults: {}
 discovery:
   enabled: true
   type: list
   urls:
   - https://www.mobilize.us/georgiademocrats/
-  fetch:
-    render_js: true
 detail:
   enabled: false

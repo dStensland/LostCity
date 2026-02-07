@@ -1,9 +1,8 @@
 "use client";
 
-import React, { useEffect, useState, useMemo, useCallback } from "react";
+import React, { useEffect, useRef, useState, useMemo, useCallback } from "react";
 import Link from "next/link";
 import CategoryIcon, { getCategoryLabel } from "./CategoryIcon";
-import SubmitVenueModal from "./SubmitVenueModal";
 import CategorySkeleton from "./CategorySkeleton";
 import LazyImage from "./LazyImage";
 import { OpenStatusBadge } from "./HoursSection";
@@ -223,7 +222,94 @@ function SpotCard({ spot, portalSlug }: { spot: Spot; portalSlug: string }) {
   );
 }
 
-// Filter Control Deck
+// Reusable dropdown for filter controls
+function FilterDropdown<T extends string>({
+  label,
+  value,
+  options,
+  onSelect,
+  renderOption,
+  renderSelected,
+}: {
+  label: string;
+  value: T;
+  options: { key: T; label: string; icon?: string }[];
+  onSelect: (key: T) => void;
+  renderOption?: (opt: { key: T; label: string; icon?: string }, isActive: boolean) => React.ReactNode;
+  renderSelected?: (opt: { key: T; label: string; icon?: string }) => React.ReactNode;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const selected = options.find((o) => o.key === value) || options[0];
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    if (open) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [open]);
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        onClick={() => setOpen(!open)}
+        className="flex items-center gap-2 bg-[var(--night)] border border-[var(--twilight)] rounded-lg px-3 py-2 font-mono text-xs cursor-pointer hover:border-[var(--coral)]/50 transition-colors"
+      >
+        {renderSelected ? renderSelected(selected) : (
+          <>
+            {selected.icon && (
+              <span data-category={selected.icon} className="category-icon">
+                <CategoryIcon type={selected.icon} size={14} glow="subtle" />
+              </span>
+            )}
+            <span className="text-[var(--cream)]">{selected.label}</span>
+          </>
+        )}
+        <svg
+          className={`w-3 h-3 text-[var(--muted)] transition-transform duration-200 ml-1 ${open ? "rotate-180" : ""}`}
+          fill="none" stroke="currentColor" viewBox="0 0 24 24"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+
+      {open && (
+        <div className="absolute z-50 mt-1 w-52 max-h-72 overflow-y-auto bg-[var(--night)] border border-[var(--twilight)] rounded-lg shadow-xl shadow-black/40">
+          {options.map((opt) => {
+            const isActive = value === opt.key;
+            return (
+              <button
+                key={opt.key}
+                onClick={() => { onSelect(opt.key); setOpen(false); }}
+                className={`w-full flex items-center gap-2.5 px-3 py-2 text-left font-mono text-xs transition-colors ${
+                  isActive
+                    ? "bg-[var(--coral)]/15 text-[var(--coral)]"
+                    : "text-[var(--soft)] hover:bg-[var(--twilight)]/30 hover:text-[var(--cream)]"
+                }`}
+              >
+                {renderOption ? renderOption(opt, isActive) : (
+                  <>
+                    {opt.icon && (
+                      <span data-category={opt.icon} className="category-icon flex-shrink-0">
+                        <CategoryIcon type={opt.icon} size={14} glow={isActive ? "default" : "none"} />
+                      </span>
+                    )}
+                    <span>{opt.label}</span>
+                  </>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Filter Control Deck — compact dropdowns
 function FilterDeck({
   filters,
   setFilters,
@@ -235,151 +321,153 @@ function FilterDeck({
   openCount: number;
   neighborhoods: string[];
 }) {
-  const [showMore, setShowMore] = useState(false);
+  // Build neighborhood options: "All", "ITP", then individual neighborhoods
+  const neighborhoodOptions = useMemo(() => {
+    const opts: { key: string; label: string }[] = [
+      { key: "all", label: "All Areas" },
+      { key: "itp", label: "ITP (Inside Perimeter)" },
+      ...neighborhoods.map((n) => ({ key: n, label: n })),
+    ];
+    return opts;
+  }, [neighborhoods]);
+
+  // Derive current neighborhood selection as a single key for the dropdown
+  const neighborhoodValue = useMemo(() => {
+    if (filters.neighborhoods.length === 0) return "all";
+    const hasAllITP = ITP_NEIGHBORHOOD_NAMES.every((n) => filters.neighborhoods.includes(n));
+    if (hasAllITP && filters.neighborhoods.length === ITP_NEIGHBORHOOD_NAMES.length) return "itp";
+    if (filters.neighborhoods.length === 1) return filters.neighborhoods[0];
+    // Multiple specific neighborhoods — show first one
+    return filters.neighborhoods[0];
+  }, [filters.neighborhoods]);
+
+  const handleNeighborhoodSelect = (key: string) => {
+    if (key === "all") {
+      setFilters((f) => ({ ...f, neighborhoods: [] }));
+    } else if (key === "itp") {
+      setFilters((f) => ({ ...f, neighborhoods: [...ITP_NEIGHBORHOOD_NAMES] }));
+    } else {
+      setFilters((f) => ({ ...f, neighborhoods: [key] }));
+    }
+  };
+
+  // Price options
+  const priceOptions = [
+    { key: "all", label: "Any Price" },
+    { key: "1", label: "$" },
+    { key: "2", label: "$$" },
+    { key: "1,2", label: "$ – $$" },
+    { key: "3", label: "$$$" },
+    { key: "4", label: "$$$$" },
+    { key: "3,4", label: "$$$ – $$$$" },
+  ];
+
+  const priceValue = filters.priceLevel.length === 0
+    ? "all"
+    : filters.priceLevel.sort().join(",");
+
+  const handlePriceSelect = (key: string) => {
+    if (key === "all") {
+      setFilters((f) => ({ ...f, priceLevel: [] }));
+    } else {
+      setFilters((f) => ({ ...f, priceLevel: key.split(",").map(Number) }));
+    }
+  };
+
+  // Category options built from QUICK_VENUE_TYPES + "All"
+  const categoryOptions = [
+    { key: "all", label: "All Types", icon: "other" as string },
+    ...QUICK_VENUE_TYPES.map(({ key, label, types }) => ({
+      key: types.join(","),
+      label,
+      icon: types[0],
+    })),
+  ];
+
+  const categoryValue = filters.venueTypes.length === 0
+    ? "all"
+    : filters.venueTypes.sort().join(",");
+
+  const handleCategorySelect = (key: string) => {
+    if (key === "all") {
+      setFilters((f) => ({ ...f, venueTypes: [] }));
+    } else {
+      setFilters((f) => ({ ...f, venueTypes: key.split(",") }));
+    }
+  };
 
   const hasActiveFilters = filters.openNow || filters.priceLevel.length > 0 ||
     filters.venueTypes.length > 0 || filters.neighborhoods.length > 0 ||
     filters.search || filters.withEvents;
 
-  const clearFilters = () => {
-    setFilters({
-      openNow: false,
-      priceLevel: [],
-      venueTypes: [],
-      neighborhoods: [],
-      search: "",
-      withEvents: false,
-    });
-  };
-
-  const toggleVenueTypeGroup = (types: string[]) => {
-    const allSelected = types.every(t => filters.venueTypes.includes(t));
-    if (allSelected) {
-      setFilters(f => ({ ...f, venueTypes: f.venueTypes.filter(t => !types.includes(t)) }));
-    } else {
-      setFilters(f => ({ ...f, venueTypes: [...new Set([...f.venueTypes, ...types])] }));
-    }
-  };
-
-  const togglePriceLevel = (level: number) => {
-    setFilters(f => ({
-      ...f,
-      priceLevel: f.priceLevel.includes(level)
-        ? f.priceLevel.filter(l => l !== level)
-        : [...f.priceLevel, level],
-    }));
-  };
-
-  const toggleNeighborhood = (hood: string) => {
-    setFilters(f => ({
-      ...f,
-      neighborhoods: f.neighborhoods.includes(hood)
-        ? f.neighborhoods.filter(n => n !== hood)
-        : [...f.neighborhoods, hood],
-    }));
-  };
-
   return (
     <div className="mb-6 space-y-3">
-      {/* Primary Filter Row - Open Now + Search + Price */}
-      <div className="flex items-center gap-3 flex-wrap">
-        {/* Open Now Toggle - Prominent "Power Switch" Style */}
-        <button
-          onClick={() => setFilters(f => ({ ...f, openNow: !f.openNow }))}
-          className={`relative flex items-center gap-2 px-4 py-2 rounded-xl font-mono text-sm font-medium transition-all active:scale-[0.98] ${
-            filters.openNow
-              ? "bg-[var(--neon-green)]/20 text-[var(--neon-green)] border-2 border-[var(--neon-green)]/50 shadow-[0_0_20px_rgba(34,197,94,0.3)]"
-              : "bg-[var(--dusk)] text-[var(--muted)] border-2 border-[var(--twilight)] hover:border-[var(--neon-green)]/30 hover:text-[var(--soft)]"
-          }`}
-        >
-          <span className={`w-2.5 h-2.5 rounded-full transition-all ${
-            filters.openNow ? "bg-[var(--neon-green)] shadow-[0_0_8px_var(--neon-green)] animate-pulse" : "bg-[var(--twilight)]"
-          }`} />
-          <span>Open Now</span>
-          {openCount > 0 && (
-            <span className={`text-xs ${filters.openNow ? "text-[var(--neon-green)]/70" : "text-[var(--muted)]"}`}>
-              ({openCount})
-            </span>
-          )}
-        </button>
-
-        {/* ITP Toggle */}
-        <button
-          onClick={() => {
-            // Toggle ITP: if any ITP neighborhoods are selected, clear them; otherwise select all ITP
-            const hasITP = ITP_NEIGHBORHOOD_NAMES.some(n => filters.neighborhoods.includes(n));
-            if (hasITP) {
-              setFilters(f => ({ ...f, neighborhoods: f.neighborhoods.filter(n => !ITP_NEIGHBORHOOD_NAMES.includes(n)) }));
-            } else {
-              setFilters(f => ({ ...f, neighborhoods: [...new Set([...f.neighborhoods, ...ITP_NEIGHBORHOOD_NAMES])] }));
-            }
-          }}
-          className={`relative flex items-center gap-2 px-4 py-2 rounded-xl font-mono text-sm font-medium transition-all active:scale-[0.98] ${
-            ITP_NEIGHBORHOOD_NAMES.some(n => filters.neighborhoods.includes(n))
-              ? "bg-[var(--coral)]/20 text-[var(--coral)] border-2 border-[var(--coral)]/50 shadow-[0_0_20px_hsl(var(--coral-hsl)/0.3)]"
-              : "bg-[var(--dusk)] text-[var(--muted)] border-2 border-[var(--twilight)] hover:border-[var(--coral)]/30 hover:text-[var(--soft)]"
-          }`}
-          title="Inside the Perimeter"
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <circle cx="12" cy="12" r="9" strokeWidth={2} />
-            <circle cx="12" cy="12" r="3" strokeWidth={2} />
-          </svg>
-          <span>ITP</span>
-        </button>
-
-        {/* Search Input */}
-        <div className="relative flex-1 min-w-[200px] max-w-xs">
-          <input
-            type="text"
-            placeholder="Search destinations..."
-            value={filters.search}
-            onChange={(e) => setFilters(f => ({ ...f, search: e.target.value }))}
-            className="w-full px-4 py-2 pl-10 bg-[var(--dusk)] border-2 border-[var(--twilight)] rounded-xl font-mono text-sm text-[var(--cream)] placeholder:text-[var(--muted)] focus:outline-none focus:border-[var(--coral)]/50 focus:shadow-[0_0_15px_rgba(255,107,107,0.15)] transition-all"
-          />
-          <svg
-            className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--muted)]"
-            fill="none" stroke="currentColor" viewBox="0 0 24 24"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-          </svg>
-          {filters.search && (
-            <button
-              onClick={() => setFilters(f => ({ ...f, search: "" }))}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--muted)] hover:text-[var(--cream)]"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+      {/* Filter Row: Dropdowns + Toggles + Search */}
+      <div className="flex items-center gap-2 flex-wrap">
+        {/* Neighborhood Dropdown */}
+        <FilterDropdown
+          label="Area"
+          value={neighborhoodValue}
+          options={neighborhoodOptions}
+          onSelect={handleNeighborhoodSelect}
+          renderSelected={(opt) => (
+            <>
+              <svg className="w-3.5 h-3.5 text-[var(--coral)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
               </svg>
-            </button>
+              <span className="text-[var(--cream)]">{opt.label}</span>
+            </>
           )}
-        </div>
+        />
 
-        {/* Price Level Selector */}
-        <div className="flex items-center gap-1 bg-[var(--dusk)] border-2 border-[var(--twilight)] rounded-xl p-1">
-          {[1, 2, 3, 4].map((level) => (
-            <button
-              key={level}
-              onClick={() => togglePriceLevel(level)}
-              className={`px-2.5 py-1 rounded font-mono text-sm transition-all ${
-                filters.priceLevel.includes(level)
-                  ? "bg-[var(--gold)]/20 text-[var(--gold)] shadow-[0_0_10px_rgba(251,191,36,0.2)]"
-                  : "text-[var(--muted)] hover:text-[var(--gold)]"
-              }`}
-              title={`Price level ${level}`}
-            >
-              {"$".repeat(level)}
-            </button>
-          ))}
-        </div>
+        {/* Price Dropdown */}
+        <FilterDropdown
+          label="Price"
+          value={priceValue}
+          options={priceOptions}
+          onSelect={handlePriceSelect}
+          renderSelected={(opt) => (
+            <>
+              <span className="text-[var(--gold)]">$</span>
+              <span className="text-[var(--cream)]">{opt.label}</span>
+            </>
+          )}
+          renderOption={(opt, isActive) => (
+            <span className={isActive ? "text-[var(--gold)]" : ""}>{opt.label}</span>
+          )}
+        />
+
+        {/* Category Dropdown */}
+        <FilterDropdown
+          label="Category"
+          value={categoryValue}
+          options={categoryOptions}
+          onSelect={handleCategorySelect}
+        />
+
+        {/* Open Now Toggle */}
+        <button
+          onClick={() => setFilters((f) => ({ ...f, openNow: !f.openNow }))}
+          className={`flex items-center gap-1.5 px-3 py-2 rounded-lg font-mono text-xs font-medium transition-all active:scale-[0.98] ${
+            filters.openNow
+              ? "bg-[var(--neon-green)]/20 text-[var(--neon-green)] border border-[var(--neon-green)]/50"
+              : "bg-[var(--night)] text-[var(--muted)] border border-[var(--twilight)] hover:border-[var(--neon-green)]/30"
+          }`}
+        >
+          <span className={`w-2 h-2 rounded-full ${
+            filters.openNow ? "bg-[var(--neon-green)] shadow-[0_0_6px_var(--neon-green)]" : "bg-[var(--twilight)]"
+          }`} />
+          Open{openCount > 0 ? ` (${openCount})` : ""}
+        </button>
 
         {/* Has Events Toggle */}
         <button
-          onClick={() => setFilters(f => ({ ...f, withEvents: !f.withEvents }))}
-          className={`flex items-center gap-2 px-3 py-2 rounded-xl font-mono text-xs font-medium transition-all active:scale-[0.98] ${
+          onClick={() => setFilters((f) => ({ ...f, withEvents: !f.withEvents }))}
+          className={`flex items-center gap-1.5 px-3 py-2 rounded-lg font-mono text-xs font-medium transition-all active:scale-[0.98] ${
             filters.withEvents
               ? "bg-[var(--coral)]/20 text-[var(--coral)] border border-[var(--coral)]/50"
-              : "bg-[var(--dusk)] text-[var(--muted)] border border-[var(--twilight)] hover:border-[var(--coral)]/30"
+              : "bg-[var(--night)] text-[var(--muted)] border border-[var(--twilight)] hover:border-[var(--coral)]/30"
           }`}
         >
           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -388,134 +476,40 @@ function FilterDeck({
           Events
         </button>
 
-        {/* More Filters Toggle */}
-        <button
-          onClick={() => setShowMore(!showMore)}
-          className={`flex items-center gap-1.5 px-3 py-2 rounded-xl font-mono text-xs font-medium transition-all active:scale-[0.98] ${
-            showMore || filters.venueTypes.length > 0 || filters.neighborhoods.length > 0
-              ? "bg-[var(--rose)]/20 text-[var(--rose)] border border-[var(--rose)]/50"
-              : "bg-[var(--dusk)] text-[var(--muted)] border border-[var(--twilight)] hover:text-[var(--cream)]"
-          }`}
-        >
-          <svg className={`w-3.5 h-3.5 transition-transform ${showMore ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        {/* Search Input */}
+        <div className="relative flex-1 min-w-[160px] max-w-xs">
+          <input
+            type="text"
+            placeholder="Search..."
+            value={filters.search}
+            onChange={(e) => setFilters((f) => ({ ...f, search: e.target.value }))}
+            className="w-full px-3 py-2 pl-8 bg-[var(--night)] border border-[var(--twilight)] rounded-lg font-mono text-xs text-[var(--cream)] placeholder:text-[var(--muted)] focus:outline-none focus:border-[var(--coral)]/50 transition-colors"
+          />
+          <svg className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[var(--muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
-          More
-          {(filters.venueTypes.length > 0 || filters.neighborhoods.length > 0) && (
-            <span className="ml-1 px-1.5 py-0.5 rounded bg-[var(--rose)]/30 text-[0.6rem]">
-              {filters.venueTypes.length + filters.neighborhoods.length}
-            </span>
+          {filters.search && (
+            <button
+              onClick={() => setFilters((f) => ({ ...f, search: "" }))}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--muted)] hover:text-[var(--cream)]"
+            >
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
           )}
-        </button>
-      </div>
-
-      {/* Quick Category Chips */}
-      <div className="flex gap-2 overflow-x-auto scrollbar-hide -mx-4 px-4 pb-1">
-        {QUICK_VENUE_TYPES.map(({ key, label, types, color }) => {
-          const isActive = types.every(t => filters.venueTypes.includes(t));
-          const isPartial = types.some(t => filters.venueTypes.includes(t)) && !isActive;
-          const accent = createCssVarClass("--accent-color", color, "accent");
-
-          return (
-            <React.Fragment key={key}>
-              <ScopedStyles css={accent?.css} />
-              <button
-                onClick={() => toggleVenueTypeGroup(types)}
-                data-accent
-                className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full font-mono text-xs font-medium whitespace-nowrap transition-all ${
-                  isActive
-                    ? "bg-accent text-[var(--void)] shadow-[0_0_12px_rgba(255,255,255,0.1)]"
-                    : isPartial
-                    ? "bg-[var(--dusk)] border-2 border-dashed text-[var(--soft)] border-accent"
-                    : "bg-[var(--dusk)] text-[var(--muted)] border border-[var(--twilight)] hover:text-[var(--cream)] hover:border-[var(--soft)]"
-                } ${accent?.className ?? ""}`}
-              >
-                <CategoryIcon
-                  type={types[0]}
-                  size={14}
-                  className={isActive ? "!text-[var(--void)]" : "text-accent"}
-                />
-                {label}
-              </button>
-            </React.Fragment>
-          );
-        })}
-      </div>
-
-      {/* Expanded Filters */}
-      {showMore && (
-        <div className="pt-3 border-t border-[var(--twilight)] space-y-4">
-          {/* Neighborhoods */}
-          <div>
-            <div className="font-mono text-[0.65rem] text-[var(--muted)] uppercase tracking-wider mb-2">
-              Neighborhoods
-            </div>
-            <div className="flex flex-wrap gap-1.5">
-              {neighborhoods.map((hood) => (
-                <button
-                  key={hood}
-                  onClick={() => toggleNeighborhood(hood)}
-                  className={`px-2.5 py-1 rounded font-mono text-[0.7rem] transition-all ${
-                    filters.neighborhoods.includes(hood)
-                      ? "bg-[var(--coral)] text-[var(--void)]"
-                      : "bg-[var(--dusk)] text-[var(--muted)] border border-[var(--twilight)] hover:text-[var(--cream)] hover:border-[var(--soft)]"
-                  }`}
-                >
-                  {hood}
-                </button>
-              ))}
-            </div>
-          </div>
         </div>
-      )}
 
-      {/* Active Filters Summary */}
-      {hasActiveFilters && (
-        <div className="flex items-center gap-2 flex-wrap pt-2 border-t border-[var(--twilight)]/50">
-          <span className="font-mono text-[0.6rem] text-[var(--muted)] uppercase tracking-wider">
-            Active:
-          </span>
-          {filters.openNow && (
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-[var(--neon-green)]/20 text-[var(--neon-green)] font-mono text-[0.65rem]">
-              Open Now
-              <button onClick={() => setFilters(f => ({ ...f, openNow: false }))} className="hover:text-white">×</button>
-            </span>
-          )}
-          {filters.withEvents && (
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-[var(--coral)]/20 text-[var(--coral)] font-mono text-[0.65rem]">
-              Has Events
-              <button onClick={() => setFilters(f => ({ ...f, withEvents: false }))} className="hover:text-white">×</button>
-            </span>
-          )}
-          {filters.priceLevel.map(level => (
-            <span key={level} className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-[var(--gold)]/20 text-[var(--gold)] font-mono text-[0.65rem]">
-              {"$".repeat(level)}
-              <button onClick={() => togglePriceLevel(level)} className="hover:text-white">×</button>
-            </span>
-          ))}
-          {filters.venueTypes.slice(0, 3).map(type => (
-            <span key={type} className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-[var(--twilight)] text-[var(--cream)] font-mono text-[0.65rem]">
-              {getCategoryLabel(type)}
-              <button onClick={() => setFilters(f => ({ ...f, venueTypes: f.venueTypes.filter(t => t !== type) }))} className="hover:text-[var(--coral)]">×</button>
-            </span>
-          ))}
-          {filters.venueTypes.length > 3 && (
-            <span className="text-[var(--muted)] font-mono text-[0.65rem]">+{filters.venueTypes.length - 3} more</span>
-          )}
-          {filters.neighborhoods.map(hood => (
-            <span key={hood} className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-[var(--twilight)] text-[var(--cream)] font-mono text-[0.65rem]">
-              {hood}
-              <button onClick={() => toggleNeighborhood(hood)} className="hover:text-[var(--coral)]">×</button>
-            </span>
-          ))}
+        {/* Clear all */}
+        {hasActiveFilters && (
           <button
-            onClick={clearFilters}
-            className="font-mono text-[0.6rem] text-[var(--coral)] hover:text-[var(--rose)] transition-colors ml-auto active:scale-95"
+            onClick={() => setFilters({ openNow: false, priceLevel: [], venueTypes: [], neighborhoods: [], search: "", withEvents: false })}
+            className="font-mono text-[0.65rem] text-[var(--coral)] hover:text-[var(--rose)] transition-colors active:scale-95"
           >
-            Clear all
+            Clear
           </button>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }
@@ -526,8 +520,6 @@ export default function PortalSpotsView({ portalId, portalSlug, isExclusive = fa
   const [sortBy, setSortBy] = useState<SortOption>("category");
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set(["music_venue", "bar", "restaurant"]));
   const [meta, setMeta] = useState<{ openCount: number; neighborhoods: string[] }>({ openCount: 0, neighborhoods: [] });
-  const [showSubmitModal, setShowSubmitModal] = useState(false);
-
   const [filters, setFilters] = useState<FilterState>({
     openNow: false,
     priceLevel: [],
@@ -658,10 +650,6 @@ export default function PortalSpotsView({ portalId, portalSlug, isExclusive = fa
             <h2 className="text-xl font-semibold text-[var(--cream)]">Destinations</h2>
             <p className="text-sm text-[var(--muted)] mt-1">
               <span className="text-[var(--soft)]">{spots.length}</span> places to explore
-              <span className="mx-2 opacity-40">·</span>
-              <button onClick={() => setShowSubmitModal(true)} className="text-[var(--coral)] hover:text-[var(--rose)] transition-colors">
-                Add a venue
-              </button>
             </p>
           </div>
           <div className="flex items-center gap-3">
@@ -771,11 +759,6 @@ export default function PortalSpotsView({ portalId, portalSlug, isExclusive = fa
         </div>
       )}
 
-      <SubmitVenueModal
-        isOpen={showSubmitModal}
-        onClose={() => setShowSubmitModal(false)}
-        portalSlug={portalSlug}
-      />
     </div>
   );
 }

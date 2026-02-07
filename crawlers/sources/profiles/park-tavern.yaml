@@ -1,7 +1,7 @@
 version: 1
 slug: park-tavern
 name: Park Tavern
-integration_method: html
+integration_method: jsonld_only
 defaults: {}
 discovery:
   enabled: true
@@ -9,4 +9,6 @@ discovery:
   urls:
   - https://www.parktavern.com
 detail:
-  enabled: false
+  enabled: true
+  jsonld_only: true
+  use_jsonld: true

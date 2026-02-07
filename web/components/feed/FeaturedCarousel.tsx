@@ -174,7 +174,7 @@ export function FeaturedCarousel({ events }: Props) {
         <FeedSectionHeader
           title="Featured Events"
           subtitle="Handpicked by our editors"
-          priority="primary"
+          priority="tertiary"
           accentColor="var(--gold)"
         />
         {/* Navigation arrows - only show when scrollable */}

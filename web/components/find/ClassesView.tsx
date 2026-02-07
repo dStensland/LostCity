@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import type { Event } from "@/lib/supabase";
 import { format, parseISO, isToday, isTomorrow, isThisWeek } from "date-fns";
-import { formatTimeSplit } from "@/lib/formats";
+import { formatTimeSplit, formatCompactCount } from "@/lib/formats";
 import CategoryIcon from "@/components/CategoryIcon";
 import SeriesCard, { type SeriesInfo, type SeriesVenueGroup } from "@/components/SeriesCard";
 
@@ -13,30 +13,58 @@ interface ClassesViewProps {
   portalSlug: string;
 }
 
+type ClassEvent = Event & {
+  going_count?: number;
+  interested_count?: number;
+  recommendation_count?: number;
+};
+
 const CLASS_CATEGORIES = [
-  { key: "all", label: "All" },
-  { key: "painting", label: "Painting" },
-  { key: "cooking", label: "Cooking" },
-  { key: "pottery", label: "Pottery" },
-  { key: "dance", label: "Dance" },
-  { key: "fitness", label: "Fitness" },
-  { key: "woodworking", label: "Woodworking" },
-  { key: "floral", label: "Floral" },
-  { key: "photography", label: "Photo" },
-  { key: "candle-making", label: "Candles" },
-  { key: "outdoor-skills", label: "Outdoor" },
-  { key: "crafts", label: "Crafts" },
-  { key: "mixed", label: "Mixed" },
+  { key: "all", label: "All Classes", icon: "other" },
+  { key: "painting", label: "Painting", icon: "art" },
+  { key: "cooking", label: "Cooking", icon: "cooking" },
+  { key: "pottery", label: "Pottery", icon: "art" },
+  { key: "dance", label: "Dance", icon: "dance" },
+  { key: "fitness", label: "Fitness", icon: "fitness" },
+  { key: "woodworking", label: "Woodworking", icon: "learning" },
+  { key: "floral", label: "Floral", icon: "garden" },
+  { key: "photography", label: "Photography", icon: "film" },
+  { key: "candle-making", label: "Candles", icon: "markets" },
+  { key: "outdoor-skills", label: "Outdoor", icon: "outdoors" },
+  { key: "crafts", label: "Crafts", icon: "art" },
+  { key: "mixed", label: "Mixed", icon: "community" },
 ] as const;
 
 const PAGE_SIZE = 100; // Fetch more to fill multiple days/venues
+
+const PAINT_TWIST_PATTERN = /painting with a twist/i;
+
+function isPaintTwistVenue(name?: string | null): boolean {
+  if (!name) return false;
+  return PAINT_TWIST_PATTERN.test(name);
+}
+
+function getPaintTwistLocation(name: string): string {
+  let cleaned = name.replace(PAINT_TWIST_PATTERN, "").trim();
+  cleaned = cleaned.replace(/^[\s\-–—|:]+/, "").trim();
+  cleaned = cleaned.replace(/^\((.*)\)$/, "$1").trim();
+  return cleaned || "Main Studio";
+}
+
+function formatLocationList(locations: string[]): string {
+  const unique = Array.from(new Set(locations.map((loc) => loc.trim()).filter(Boolean)));
+  if (unique.length <= 3) return unique.join(" · ");
+  return `${unique.slice(0, 3).join(" · ")} +${unique.length - 3} more`;
+}
 
 // Types for grouping
 interface VenueGroup {
   venueId: number | null;
   venueName: string;
   venueSlug: string | null;
-  classes: Event[];
+  classes: ClassEvent[];
+  locations?: string[];
+  locationGroups?: { location: string; classes: ClassEvent[] }[];
 }
 
 interface SeriesGroup {
@@ -52,8 +80,8 @@ interface DayGroup {
   totalClasses: number;
 }
 
-function buildSeriesVenueGroups(classes: Event[]): SeriesVenueGroup[] {
-  const venueMap = new Map<number, { venue: SeriesVenueGroup["venue"]; events: Event[] }>();
+function buildSeriesVenueGroups(classes: ClassEvent[]): SeriesVenueGroup[] {
+  const venueMap = new Map<number, { venue: SeriesVenueGroup["venue"]; events: ClassEvent[] }>();
 
   for (const cls of classes) {
     if (!cls.venue) continue;
@@ -78,7 +106,12 @@ function buildSeriesVenueGroups(classes: Event[]): SeriesVenueGroup[] {
     events.sort((a, b) => (a.start_time || "").localeCompare(b.start_time || ""));
     venueGroups.push({
       venue,
-      showtimes: events.map((e) => ({ id: e.id, time: e.start_time })),
+      showtimes: events.map((e) => ({
+        id: e.id,
+        time: e.start_time,
+        ticket_url: e.ticket_url,
+        source_url: e.source_url,
+      })),
     });
   }
 
@@ -90,9 +123,9 @@ function buildSeriesVenueGroups(classes: Event[]): SeriesVenueGroup[] {
 }
 
 // Group classes by day, then consolidate series and venues within each day
-function groupClassesByDayAndVenue(classes: Event[]): DayGroup[] {
+function groupClassesByDayAndVenue(classes: ClassEvent[]): DayGroup[] {
   // First pass: group by date
-  const byDate: Record<string, Event[]> = {};
+    const byDate: Record<string, ClassEvent[]> = {};
   for (const cls of classes) {
     const date = cls.start_date;
     if (!byDate[date]) {
@@ -121,8 +154,9 @@ function groupClassesByDayAndVenue(classes: Event[]): DayGroup[] {
       }
 
       // Group by series first, then venue for standalone classes
-      const seriesMap = new Map<string, { series: SeriesInfo; events: Event[] }>();
-      const standalone: Event[] = [];
+      const seriesMap = new Map<string, { series: SeriesInfo; events: ClassEvent[] }>();
+      const standalone: ClassEvent[] = [];
+      const paintTwistClasses: ClassEvent[] = [];
 
       for (const cls of classesOnDate) {
         if (cls.series_id && cls.series) {
@@ -133,16 +167,37 @@ function groupClassesByDayAndVenue(classes: Event[]): DayGroup[] {
           } else {
             seriesMap.set(cls.series_id, { series: seriesInfo, events: [cls] });
           }
+        } else if (isPaintTwistVenue(cls.venue?.name)) {
+          paintTwistClasses.push(cls);
         } else {
           standalone.push(cls);
         }
       }
 
       const seriesGroups = Array.from(seriesMap.values())
-        .map(({ series, events }) => ({
-          series,
-          venueGroups: buildSeriesVenueGroups(events),
-        }))
+        .map(({ series, events }) => {
+          const goingCount = events.reduce(
+            (sum, event) => sum + (event.going_count ?? 0),
+            0
+          );
+          const interestedCount = events.reduce(
+            (sum, event) => sum + (event.interested_count ?? 0),
+            0
+          );
+          const recommendationCount = events.reduce(
+            (sum, event) => sum + (event.recommendation_count ?? 0),
+            0
+          );
+          return {
+            series: {
+              ...series,
+              rsvp_count: goingCount > 0 ? goingCount : undefined,
+              interested_count: interestedCount > 0 ? interestedCount : undefined,
+              recommendation_count: recommendationCount > 0 ? recommendationCount : undefined,
+            },
+            venueGroups: buildSeriesVenueGroups(events),
+          };
+        })
         .sort((a, b) => a.series.title.localeCompare(b.series.title));
 
       // Group standalone classes by venue
@@ -161,7 +216,41 @@ function groupClassesByDayAndVenue(classes: Event[]): DayGroup[] {
       }
 
       // Sort venues by number of classes (most first), then alphabetically
-      const venues = Object.values(venueMap).sort((a, b) => {
+      let venues = Object.values(venueMap);
+
+      if (paintTwistClasses.length > 0) {
+        const locationMap = new Map<string, ClassEvent[]>();
+        for (const cls of paintTwistClasses) {
+          const location = getPaintTwistLocation(cls.venue?.name || "");
+          const list = locationMap.get(location) || [];
+          list.push(cls);
+          locationMap.set(location, list);
+        }
+
+        const locationGroups = Array.from(locationMap.entries())
+          .map(([location, groupClasses]) => {
+            const sorted = [...groupClasses].sort((a, b) => {
+              const timeA = a.start_time || "00:00";
+              const timeB = b.start_time || "00:00";
+              return timeA.localeCompare(timeB);
+            });
+            return { location, classes: sorted };
+          })
+          .sort((a, b) => a.location.localeCompare(b.location));
+
+        const locations = locationGroups.map((group) => group.location);
+
+        venues.push({
+          venueId: null,
+          venueName: "Painting with a Twist",
+          venueSlug: null,
+          classes: paintTwistClasses,
+          locations,
+          locationGroups,
+        });
+      }
+
+      venues = venues.sort((a, b) => {
         if (b.classes.length !== a.classes.length) {
           return b.classes.length - a.classes.length;
         }
@@ -187,15 +276,91 @@ function groupClassesByDayAndVenue(classes: Event[]): DayGroup[] {
     });
 }
 
+// Custom dropdown with category icons
+function CategoryDropdown({
+  category,
+  onSelect,
+}: {
+  category: string;
+  onSelect: (key: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const selected = CLASS_CATEGORIES.find((c) => c.key === category) || CLASS_CATEGORIES[0];
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    if (open) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [open]);
+
+  return (
+    <div ref={dropdownRef} className="relative mb-4">
+      <button
+        onClick={() => setOpen(!open)}
+        className="flex items-center gap-2 bg-[var(--night)] border border-[var(--twilight)] rounded-lg px-3 py-2 font-mono text-xs cursor-pointer hover:border-[var(--coral)]/50 transition-colors"
+      >
+        <span data-category={selected.icon} className="category-icon">
+          <CategoryIcon type={selected.icon} size={14} glow="subtle" />
+        </span>
+        <span className="text-[var(--cream)]">{selected.label}</span>
+        <svg
+          className={`w-3 h-3 text-[var(--muted)] transition-transform duration-200 ml-1 ${open ? "rotate-180" : ""}`}
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+
+      {open && (
+        <div className="absolute z-50 mt-1 w-52 bg-[var(--night)] border border-[var(--twilight)] rounded-lg shadow-xl shadow-black/40 overflow-hidden">
+          {CLASS_CATEGORIES.map((cat) => (
+            <button
+              key={cat.key}
+              onClick={() => {
+                onSelect(cat.key);
+                setOpen(false);
+              }}
+              className={`w-full flex items-center gap-2.5 px-3 py-2 text-left font-mono text-xs transition-colors ${
+                category === cat.key
+                  ? "bg-[var(--coral)]/15 text-[var(--coral)]"
+                  : "text-[var(--soft)] hover:bg-[var(--twilight)]/30 hover:text-[var(--cream)]"
+              }`}
+            >
+              <span data-category={cat.icon} className="category-icon flex-shrink-0">
+                <CategoryIcon type={cat.icon} size={14} glow={category === cat.key ? "default" : "none"} />
+              </span>
+              <span>{cat.label}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // Compact class row for venue rollups
 function ClassRow({
   cls,
   portalSlug,
 }: {
-  cls: Event;
+  cls: ClassEvent;
   portalSlug: string;
 }) {
   const { time, period } = formatTimeSplit(cls.start_time);
+  const goingCount = cls.going_count ?? 0;
+  const interestedCount = cls.interested_count ?? 0;
+  const recommendationCount = cls.recommendation_count ?? 0;
+  const hasSocialProof = goingCount > 0 || interestedCount > 0 || recommendationCount > 0;
 
   return (
     <Link
@@ -232,6 +397,26 @@ function ClassRow({
           `$${cls.price_min}`
         ) : null}
       </span>
+
+      {hasSocialProof && (
+        <span className="flex-shrink-0 flex items-center gap-1.5">
+          {goingCount > 0 && (
+            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-[var(--coral)]/10 border border-[var(--coral)]/20 font-mono text-[0.6rem] font-medium text-[var(--coral)]">
+              {formatCompactCount(goingCount)} going
+            </span>
+          )}
+          {interestedCount > 0 && (
+            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-[var(--gold)]/15 border border-[var(--gold)]/30 font-mono text-[0.6rem] font-medium text-[var(--gold)]">
+              {formatCompactCount(interestedCount)} maybe
+            </span>
+          )}
+          {recommendationCount > 0 && (
+            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-[var(--lavender)]/15 border border-[var(--lavender)]/30 font-mono text-[0.6rem] font-medium text-[var(--lavender)]">
+              {formatCompactCount(recommendationCount)} rec&apos;d
+            </span>
+          )}
+        </span>
+      )}
     </Link>
   );
 }
@@ -254,11 +439,18 @@ function VenueSection({
         onClick={() => setIsOpen(!isOpen)}
         className="w-full flex items-center justify-between p-3 hover:bg-[var(--twilight)]/20 transition-colors"
       >
-        <div className="flex items-center gap-2">
-          <span className="text-[var(--cream)] font-medium">{venue.venueName}</span>
-          <span className="text-xs font-mono text-[var(--muted)] bg-[var(--twilight)]/50 px-1.5 py-0.5 rounded">
-            {venue.classes.length}
-          </span>
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <span className="text-[var(--cream)] font-medium">{venue.venueName}</span>
+            <span className="text-xs font-mono text-[var(--muted)] bg-[var(--twilight)]/50 px-1.5 py-0.5 rounded">
+              {venue.classes.length}
+            </span>
+          </div>
+          {venue.locations && venue.locations.length > 0 && (
+            <div className="text-[0.6rem] font-mono text-[var(--muted)] mt-1 truncate">
+              {formatLocationList(venue.locations)}
+            </div>
+          )}
         </div>
         <svg
           className={`w-4 h-4 text-[var(--muted)] transition-transform duration-200 ${
@@ -274,9 +466,24 @@ function VenueSection({
 
       {isOpen && (
         <div className="border-t border-[var(--twilight)] py-1">
-          {venue.classes.map((cls) => (
-            <ClassRow key={cls.id} cls={cls} portalSlug={portalSlug} />
-          ))}
+          {venue.locationGroups && venue.locationGroups.length > 0 ? (
+            <div className="space-y-2 py-1">
+              {venue.locationGroups.map((group) => (
+                <div key={group.location}>
+                  <div className="px-3 py-1 text-[0.6rem] font-mono uppercase tracking-wider text-[var(--muted)]">
+                    {group.location}
+                  </div>
+                  {group.classes.map((cls) => (
+                    <ClassRow key={cls.id} cls={cls} portalSlug={portalSlug} />
+                  ))}
+                </div>
+              ))}
+            </div>
+          ) : (
+            venue.classes.map((cls) => (
+              <ClassRow key={cls.id} cls={cls} portalSlug={portalSlug} />
+            ))
+          )}
         </div>
       )}
     </div>
@@ -302,7 +509,7 @@ export default function ClassesView({
   portalId,
   portalSlug,
 }: ClassesViewProps) {
-  const [classes, setClasses] = useState<Event[]>([]);
+  const [classes, setClasses] = useState<ClassEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
@@ -393,22 +600,8 @@ export default function ClassesView({
 
   return (
     <div>
-      {/* Category filter chips */}
-      <div className="flex gap-2 overflow-x-auto pb-3 mb-4 scrollbar-hide">
-        {CLASS_CATEGORIES.map((cat) => (
-          <button
-            key={cat.key}
-            onClick={() => setCategory(cat.key)}
-            className={`flex-shrink-0 px-3 py-1.5 rounded-full font-mono text-xs whitespace-nowrap transition-all ${
-              category === cat.key
-                ? "bg-[var(--coral)] text-[var(--void)] font-medium shadow-[0_0_12px_var(--coral)/20]"
-                : "bg-[var(--night)] text-[var(--muted)] hover:text-[var(--cream)] hover:bg-[var(--twilight)]/50 border border-[var(--twilight)]"
-            }`}
-          >
-            {cat.label}
-          </button>
-        ))}
-      </div>
+      {/* Category filter dropdown */}
+      <CategoryDropdown category={category} onSelect={setCategory} />
 
       {/* Results count */}
       {!loading && (

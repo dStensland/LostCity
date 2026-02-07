@@ -241,6 +241,18 @@ export function groupEventsForDisplay(
     // Get series info from first event
     const firstEvent = seriesEvents[0];
     const series = firstEvent.series!;
+    const seriesGoingCount = seriesEvents.reduce(
+      (sum, event) => sum + (event.going_count ?? 0),
+      0
+    );
+    const seriesInterestedCount = seriesEvents.reduce(
+      (sum, event) => sum + (event.interested_count ?? 0),
+      0
+    );
+    const seriesRecommendationCount = seriesEvents.reduce(
+      (sum, event) => sum + (event.recommendation_count ?? 0),
+      0
+    );
 
     // Regular series (film, recurring shows, programs) - expand with showtimes by venue
     // Group events by venue
@@ -271,7 +283,12 @@ export function groupEventsForDisplay(
       venueEvents.sort((a, b) => (a.start_time || "").localeCompare(b.start_time || ""));
       venueGroups.push({
         venue,
-        showtimes: venueEvents.map((e) => ({ id: e.id, time: e.start_time })),
+        showtimes: venueEvents.map((e) => ({
+          id: e.id,
+          time: e.start_time,
+          ticket_url: e.ticket_url,
+          source_url: e.source_url,
+        })),
       });
     }
 
@@ -291,6 +308,9 @@ export function groupEventsForDisplay(
         image_url: series.image_url,
         frequency: series.frequency,
         day_of_week: series.day_of_week,
+        rsvp_count: seriesGoingCount > 0 ? seriesGoingCount : undefined,
+        interested_count: seriesInterestedCount > 0 ? seriesInterestedCount : undefined,
+        recommendation_count: seriesRecommendationCount > 0 ? seriesRecommendationCount : undefined,
       },
       venueGroups,
     });

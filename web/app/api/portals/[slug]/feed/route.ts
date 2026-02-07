@@ -6,6 +6,7 @@ import { getPortalSourceAccess } from "@/lib/federation";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 import { errorResponse, isValidUUID } from "@/lib/api-utils";
 import { getChainVenueIds } from "@/lib/chain-venues";
+import { fetchSocialProofCounts } from "@/lib/search";
 
 // Cache feed for 5 minutes at CDN, allow stale for 1 hour while revalidating
 export const revalidate = 300;
@@ -77,6 +78,8 @@ type Event = {
   description: string | null;
   featured_blurb: string | null;
   going_count?: number;
+  interested_count?: number;
+  recommendation_count?: number;
   source_id?: number | null;
   series_id?: string | null;
   series?: {
@@ -191,6 +194,10 @@ function getDateRange(filter: string): { start: string; end: string } {
         end: getLocalDateString(addDays(today, 14)),
       };
   }
+}
+
+function excludeClassEvents(query: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
+  return query.or("is_class.eq.false,is_class.is.null");
 }
 
 // GET /api/portals/[slug]/feed - Get feed content for a portal
@@ -355,7 +362,8 @@ export async function GET(request: NextRequest, { params }: Props) {
       `)
       .in("id", Array.from(eventIds))
       .gte("start_date", getLocalDateString())
-      .is("canonical_event_id", null); // Only show canonical events, not duplicates
+      .is("canonical_event_id", null)
+      .or("is_class.eq.false,is_class.is.null"); // Only show canonical non-class events
 
     for (const event of (eventsData || []) as Event[]) {
       eventMap.set(event.id, event);
@@ -411,7 +419,8 @@ export async function GET(request: NextRequest, { params }: Props) {
         venue:venues(id, name, neighborhood, slug)
       `)
       .in("id", Array.from(pinnedEventIds))
-      .is("canonical_event_id", null); // Only show canonical events, not duplicates
+      .is("canonical_event_id", null)
+      .or("is_class.eq.false,is_class.is.null"); // Only show canonical non-class events
 
     for (const event of (pinnedEvents || []) as Event[]) {
       eventMap.set(event.id, event);
@@ -481,7 +490,8 @@ export async function GET(request: NextRequest, { params }: Props) {
       `)
       .gte("start_date", today)
       .lte("start_date", maxEndDate)
-      .is("canonical_event_id", null); // Only show canonical events, not duplicates
+      .is("canonical_event_id", null)
+      .or("is_class.eq.false,is_class.is.null"); // Only show canonical non-class events
 
     // Apply portal filter with federation support
     if (isExclusivePortal) {
@@ -740,12 +750,13 @@ export async function GET(request: NextRequest, { params }: Props) {
             festival:festivals(id, slug, name, image_url, festival_type, location, neighborhood)
           ),
           venue:venues(id, name, neighborhood, slug)
-        `)
-        .or(tagConditions)
-        .gte("start_date", today)
-        .lte("start_date", getLocalDateString(addDays(new Date(), 30)))
-        .is("canonical_event_id", null)
-        .order("start_date", { ascending: true });
+      `)
+      .or(tagConditions)
+      .gte("start_date", today)
+      .lte("start_date", getLocalDateString(addDays(new Date(), 30)))
+      .is("canonical_event_id", null)
+      .or("is_class.eq.false,is_class.is.null")
+      .order("start_date", { ascending: true });
 
       // Group events by tag
       if (allHolidayEvents) {
@@ -966,6 +977,26 @@ export async function GET(request: NextRequest, { params }: Props) {
     ...feedSections
   ];
 
+  const allEventIds = Array.from(
+    new Set(
+      finalSections.flatMap((section) => section.events.map((event: Event) => event.id))
+    )
+  );
+  const socialCounts = await fetchSocialProofCounts(allEventIds);
+
+  const sectionsWithCounts = finalSections.map((section) => ({
+    ...section,
+    events: section.events.map((event: Event) => {
+      const eventCounts = socialCounts.get(event.id);
+      return {
+        ...event,
+        going_count: eventCounts?.going || 0,
+        interested_count: eventCounts?.interested || 0,
+        recommendation_count: eventCounts?.recommendations || 0,
+      };
+    }),
+  }));
+
   return NextResponse.json(
     {
       portal: {
@@ -977,7 +1008,7 @@ export async function GET(request: NextRequest, { params }: Props) {
         items_per_section: feedSettings.items_per_section || 5,
         default_layout: feedSettings.default_layout || "list",
       },
-      sections: finalSections,
+      sections: sectionsWithCounts,
     },
     {
       headers: {

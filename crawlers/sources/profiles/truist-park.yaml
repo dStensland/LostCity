@@ -1,14 +1,12 @@
 version: 1
 slug: truist-park
 name: Truist Park
-integration_method: playwright
+integration_method: html
 defaults: {}
 discovery:
   enabled: true
   type: list
   urls:
   - https://www.mlb.com/braves/ballpark
-  fetch:
-    render_js: true
 detail:
   enabled: false

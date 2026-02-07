@@ -95,6 +95,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                                 displayTime: e.displayTime || '',
                                 imageUrl: e.imageUrl || '',
                                 venue: e.venue || '',
+                                url: e.url || e.link || e.ticketUrl || e.eventUrl || '',
                             }));
                         }
                         return [];
@@ -115,9 +116,24 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 try:
                     # Extract title - may contain HTML tags like <a href="...">Title</a>
                     raw_title = event.get("title", "")
+
+                    # Extract event URL from title HTML before stripping tags
+                    event_url = event.get("url", "")
+                    if not event_url:
+                        href_match = re.search(r'href="([^"]+)"', raw_title)
+                        if href_match:
+                            event_url = href_match.group(1)
+
                     title = re.sub(r'<[^>]+>', '', raw_title).strip()
                     if not title:
                         continue
+
+                    # Normalize event URL
+                    if event_url:
+                        if not event_url.startswith("http"):
+                            event_url = BASE_URL + event_url
+                    else:
+                        event_url = CALENDAR_URL
 
                     # Extract date from start field (format: "YYYY-MM-DD")
                     start_date = event.get("start", "")
@@ -172,8 +188,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "price_max": None,
                         "price_note": None,
                         "is_free": False,
-                        "source_url": CALENDAR_URL,
-                        "ticket_url": CALENDAR_URL,
+                        "source_url": event_url,
+                        "ticket_url": event_url,
                         "image_url": image_url,
                         "raw_text": f"{title} - {start_date}",
                         "extraction_confidence": 0.90,

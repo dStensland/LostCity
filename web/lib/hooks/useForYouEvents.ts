@@ -18,6 +18,9 @@ export interface FeedEvent extends Event {
     username: string;
     display_name: string | null;
   }>;
+  going_count?: number;
+  interested_count?: number;
+  recommendation_count?: number;
   // EventCard optional extensions
   is_live?: boolean;
   category_data?: {

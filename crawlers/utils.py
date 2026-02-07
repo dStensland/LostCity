@@ -540,4 +540,18 @@ def find_event_url(
         if title_lower in link_text or link_text in title_lower:
             return url
 
+    # Try word overlap match — handles cases where titles are truncated or reformatted
+    title_words = set(title_lower.split())
+    if len(title_words) >= 2:
+        best_url = None
+        best_overlap = 0
+        for link_text, url in event_links.items():
+            link_words = set(link_text.split())
+            overlap = len(title_words & link_words)
+            if overlap >= 2 and overlap > best_overlap:
+                best_overlap = overlap
+                best_url = url
+        if best_url:
+            return best_url
+
     return fallback_url

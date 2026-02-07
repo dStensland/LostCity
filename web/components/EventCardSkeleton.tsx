@@ -31,6 +31,12 @@ export default function EventCardSkeleton() {
                 <Skeleton className="h-3 rounded w-16" delay="0.2s" />
                 <Skeleton className="h-3 rounded w-12" delay="0.25s" />
               </div>
+
+              {/* Social proof row */}
+              <div className="flex items-center gap-2 mt-2">
+                <Skeleton className="h-5 rounded-full w-24" delay="0.3s" />
+                <Skeleton className="h-5 rounded-full w-16" delay="0.35s" />
+              </div>
             </div>
           </div>
         </div>

@@ -1,14 +1,12 @@
 version: 1
 slug: supermarket-atl
 name: The Supermarket ATL
-integration_method: playwright
+integration_method: html
 defaults: {}
 discovery:
   enabled: true
   type: list
   urls:
   - https://www.thesupermarketatl.com/events
-  fetch:
-    render_js: true
 detail:
   enabled: false

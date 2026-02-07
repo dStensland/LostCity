@@ -1,14 +1,14 @@
 version: 1
 slug: urban-league-atlanta
 name: Urban League of Greater Atlanta
-integration_method: playwright
+integration_method: jsonld_only
 defaults: {}
 discovery:
   enabled: true
   type: list
   urls:
   - https://ulgatl.org/events
-  fetch:
-    render_js: true
 detail:
-  enabled: false
+  enabled: true
+  jsonld_only: true
+  use_jsonld: true

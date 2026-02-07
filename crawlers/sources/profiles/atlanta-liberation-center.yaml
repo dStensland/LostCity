@@ -1,14 +1,12 @@
 version: 1
 slug: atlanta-liberation-center
 name: Atlanta Liberation Center
-integration_method: playwright
+integration_method: html
 defaults: {}
 discovery:
   enabled: true
   type: list
   urls:
   - https://www.liberationatl.org/events
-  fetch:
-    render_js: true
 detail:
   enabled: false

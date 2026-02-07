@@ -2,11 +2,26 @@ version: 1
 slug: 7-stages
 name: 7 Stages
 integration_method: html
-defaults: {}
+defaults:
+  venue_name: 7 Stages
+  category: arts
+  subcategory: theatre
+  tags:
+    - theatre
+    - performing-arts
 discovery:
   enabled: true
   type: list
   urls:
-  - https://www.7stages.org
+  - https://www.7stages.org/shows-productions/
+  event_card: "article.mk-portfolio-item"
+  fields:
+    title: "h3.the-title a"
+    detail_url: "h3.the-title a@href"
+    image_url: "img.portfolio-image@src"
 detail:
-  enabled: false
+  enabled: true
+  use_jsonld: true
+  use_open_graph: true
+  use_heuristic: true
+  use_llm: false

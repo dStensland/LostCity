@@ -4,7 +4,7 @@ name: St. James Live
 integration_method: playwright
 defaults: {}
 discovery:
-  enabled: true
+  enabled: false  # Site error / unreachable — 2026-02-06 audit
   type: list
   urls:
   - https://www.stjameslive.com

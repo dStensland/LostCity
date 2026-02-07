@@ -9,6 +9,6 @@ discovery:
   urls:
   - https://www.ticketmaster.com
   api:
-    adapter: custom
+    adapter: ticketmaster-nashville
 detail:
   enabled: false

@@ -1,14 +1,12 @@
 version: 1
 slug: piedmont-auxiliary
 name: Piedmont Atlanta Hospital Auxiliary
-integration_method: playwright
+integration_method: html
 defaults: {}
 discovery:
   enabled: true
   type: list
   urls:
   - https://www.pahauxiliary.org/calendar
-  fetch:
-    render_js: true
 detail:
   enabled: false

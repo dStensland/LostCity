@@ -71,7 +71,10 @@ def name_similarity(name1: str, name2: str) -> float:
         # Remove location suffixes
         for suffix in [" atlanta", " atl", " - atlanta", " (atlanta)", " ga",
                        " - midtown", " - buckhead", " - decatur", " - east atlanta",
-                       " - downtown", " - virginia highland", " - sandy springs"]:
+                       " - downtown", " - virginia highland", " - sandy springs",
+                       " nashville", " - nashville", " (nashville)", " tn",
+                       " - east nashville", " - germantown", " - the gulch",
+                       " - 12 south", " - sylvan heights", " - music row"]:
             n = n.replace(suffix, "")
         # Remove location qualifiers in parens
         n = re.sub(r'\s*\([^)]+\)\s*$', '', n)
@@ -336,8 +339,9 @@ def hydrate_venue_hours(venue: dict, dry_run: bool = False) -> dict:
     lat = venue.get("lat") or ATLANTA_LAT
     lng = venue.get("lng") or ATLANTA_LNG
 
-    # Search Google
-    query = f"{venue['name']}, Atlanta, GA"
+    # Search Google using venue's actual city
+    city = venue.get("city", "Atlanta")
+    query = f"{venue['name']}, {city}"
     google = search_google_places(query, lat, lng)
 
     if not google:

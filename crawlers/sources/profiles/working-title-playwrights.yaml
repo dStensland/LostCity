@@ -1,14 +1,12 @@
 version: 1
 slug: working-title-playwrights
 name: Working Title Playwrights
-integration_method: playwright
+integration_method: html
 defaults: {}
 discovery:
   enabled: true
   type: list
   urls:
   - https://www.workingtitleplaywrights.com
-  fetch:
-    render_js: true
 detail:
   enabled: false

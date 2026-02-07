@@ -1,14 +1,12 @@
 version: 1
 slug: urban-air-atlanta
 name: Urban Air Adventure Parks - Atlanta
-integration_method: playwright
+integration_method: html
 defaults: {}
 discovery:
   enabled: true
   type: list
   urls:
   - https://www.urbanairtrampolinepark.com
-  fetch:
-    render_js: true
 detail:
   enabled: false

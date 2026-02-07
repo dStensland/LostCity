@@ -1,14 +1,12 @@
 version: 1
 slug: terminus-modern-ballet
 name: Terminus Modern Ballet
-integration_method: playwright
+integration_method: html
 defaults: {}
 discovery:
   enabled: true
   type: list
   urls:
   - https://www.terminusmbt.com
-  fetch:
-    render_js: true
 detail:
   enabled: false

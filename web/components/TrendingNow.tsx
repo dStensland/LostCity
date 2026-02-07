@@ -7,6 +7,7 @@ import { format, parseISO, isToday, isTomorrow } from "date-fns";
 import CategoryIcon from "./CategoryIcon";
 import SeriesCard from "@/components/SeriesCard";
 import FestivalCard from "@/components/FestivalCard";
+import FeedSectionHeader from "@/components/feed/FeedSectionHeader";
 import { groupEventsForDisplay } from "@/lib/event-grouping";
 import type { EventWithLocation } from "@/lib/search";
 
@@ -131,20 +132,31 @@ export default function TrendingNow({ portalSlug }: { portalSlug?: string } = {}
   return (
     <section className="py-6 border-b border-[var(--twilight)]/50">
       <div className="max-w-3xl mx-auto px-4">
-        <div className="flex items-center gap-2.5 mb-4">
-          <div className="w-9 h-9 rounded-lg bg-[var(--neon-magenta)]/10 flex items-center justify-center">
-            <span className="text-lg">📈</span>
-          </div>
-          <div className="flex-1">
-            <h2 className="font-display text-lg font-semibold text-[var(--cream)]">
-              Trending Now
-            </h2>
-            <p className="font-mono text-[0.65rem] text-[var(--muted)]">Most popular this week</p>
-          </div>
-          <span className="px-2 py-1 text-[0.6rem] font-mono font-bold bg-[var(--neon-magenta)]/20 text-[var(--neon-magenta)] rounded-full uppercase tracking-wide">
-            Hot
-          </span>
-        </div>
+        <FeedSectionHeader
+          title="Trending Now"
+          subtitle="Most popular this week"
+          priority="tertiary"
+          accentColor="var(--neon-magenta)"
+          badge="Hot"
+          icon={
+            <svg viewBox="0 0 24 24" fill="none" className="w-5 h-5">
+              <path
+                d="M4 14l5-5 4 4 7-7"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <path
+                d="M14 6h6v6"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          }
+        />
 
         {/* Horizontal scroll container with scroll snap on mobile */}
         <div className="flex gap-3 overflow-x-auto pb-3 -mx-4 px-4 scrollbar-hide snap-x snap-mandatory md:snap-none">
@@ -233,16 +245,21 @@ function TrendingEventCard({ event, portalSlug }: { event: TrendingEvent; portal
             </p>
           )}
 
-          {/* Trending stats */}
-          <div className="flex items-center gap-2 mt-2">
+          {/* Trending stats — RSVP-button pill language */}
+          <div className="flex items-center gap-1.5 mt-2 flex-wrap">
             {goingCount > 0 && (
-              <span className="flex items-center gap-1 font-mono text-[0.6rem] text-[var(--neon-green)]">
-                <span className="inline-block w-1.5 h-1.5 rounded-full bg-[var(--neon-green)] animate-pulse" />
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-[var(--coral)]/10 border border-[var(--coral)]/20 font-mono text-[0.6rem] font-medium text-[var(--coral)]">
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
                 {goingCount} going
               </span>
             )}
-            <span className="font-mono text-[0.55rem] text-[var(--neon-magenta)]">
-              Heating up
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-[var(--gold)]/15 border border-[var(--gold)]/30 font-mono text-[0.6rem] font-medium text-[var(--gold)]">
+              <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 23c-3.6 0-7-1.4-7-5 0-2.5 1.8-4.6 3.5-6.4.6-.6 1.1-1.2 1.5-1.8-1.5 3.2.5 4.7 1.5 3.2.8-1.2.5-3-.5-5C13 5 16 2 17 1c-.5 3 1 5 2.5 7.5C21 11 22 13 22 15c0 5-4.5 8-10 8z" />
+              </svg>
+              Hot
             </span>
           </div>
         </div>

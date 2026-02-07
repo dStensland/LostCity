@@ -138,8 +138,65 @@ export async function GET(request: NextRequest) {
       event_count: eventCounts[o.id] || 0,
     }));
 
+    const organizationIds = organizationsWithCounts.map((org) => org.id);
+    const followerCounts = new Map<string, number>();
+    const recommendationCounts = new Map<string, number>();
+
+    if (organizationIds.length > 0) {
+      const [{ data: followsData }, { data: recData }, { data: legacyRecData }] = await Promise.all([
+        supabase
+          .from("follows")
+          .select("followed_organization_id")
+          .in("followed_organization_id", organizationIds)
+          .not("followed_organization_id", "is", null),
+        supabase
+          .from("recommendations")
+          .select("organization_id")
+          .in("organization_id", organizationIds)
+          .eq("visibility", "public"),
+        supabase
+          .from("recommendations")
+          .select("org_id")
+          .in("org_id", organizationIds)
+          .eq("visibility", "public"),
+      ]);
+
+      for (const row of (followsData || []) as { followed_organization_id: string | null }[]) {
+        if (row.followed_organization_id) {
+          followerCounts.set(
+            row.followed_organization_id,
+            (followerCounts.get(row.followed_organization_id) || 0) + 1
+          );
+        }
+      }
+
+      for (const row of (recData || []) as { organization_id: string | null }[]) {
+        if (row.organization_id) {
+          recommendationCounts.set(
+            row.organization_id,
+            (recommendationCounts.get(row.organization_id) || 0) + 1
+          );
+        }
+      }
+
+      for (const row of (legacyRecData || []) as { org_id: string | null }[]) {
+        if (row.org_id) {
+          recommendationCounts.set(
+            row.org_id,
+            (recommendationCounts.get(row.org_id) || 0) + 1
+          );
+        }
+      }
+    }
+
+    const organizationsWithSocial = organizationsWithCounts.map((org) => ({
+      ...org,
+      follower_count: followerCounts.get(org.id) || 0,
+      recommendation_count: recommendationCounts.get(org.id) || 0,
+    }));
+
     return NextResponse.json(
-      { organizations: organizationsWithCounts },
+      { organizations: organizationsWithSocial },
       {
         headers: {
           // Organizations rarely change - cache for 5 minutes

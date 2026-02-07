@@ -1,14 +1,12 @@
 version: 1
 slug: new-georgia-project
 name: New Georgia Project
-integration_method: playwright
+integration_method: html
 defaults: {}
 discovery:
   enabled: true
   type: list
   urls:
   - https://newgeorgiaproject.org/events
-  fetch:
-    render_js: true
 detail:
   enabled: false

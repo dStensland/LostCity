@@ -4,6 +4,7 @@ import { applyRateLimit, RATE_LIMITS, getClientIdentifier} from "@/lib/rate-limi
 import { getLocalDateString } from "@/lib/formats";
 import { escapeSQLPattern, errorResponse, isValidUUID } from "@/lib/api-utils";
 import { getChainVenueIds } from "@/lib/chain-venues";
+import { fetchSocialProofCounts } from "@/lib/search";
 
 type RecommendationReason = {
   type: "followed_venue" | "followed_organization" | "neighborhood" | "price" | "friends_going" | "trending";
@@ -271,6 +272,7 @@ export async function GET(request: Request) {
     `)
     .gte("start_date", startDateFilter)
     .is("canonical_event_id", null) // Only show canonical events, not duplicates
+    .or("is_class.eq.false,is_class.is.null")
     .order("start_date", { ascending: true });
 
   // Apply end date filter if specified
@@ -365,6 +367,7 @@ export async function GET(request: Request) {
       .in("venue_id", followedVenueIds)
       .gte("start_date", today)
       .is("canonical_event_id", null)
+      .or("is_class.eq.false,is_class.is.null")
       .order("start_date", { ascending: true })
       .limit(50);
 
@@ -386,6 +389,7 @@ export async function GET(request: Request) {
       .in("organization_id", followedOrganizationIds)
       .gte("start_date", today)
       .is("canonical_event_id", null)
+      .or("is_class.eq.false,is_class.is.null")
       .order("start_date", { ascending: true })
       .limit(50);
 
@@ -407,6 +411,7 @@ export async function GET(request: Request) {
       .in("source_id", producerSourceIds)
       .gte("start_date", today)
       .is("canonical_event_id", null)
+      .or("is_class.eq.false,is_class.is.null")
       .order("start_date", { ascending: true })
       .limit(50);
 
@@ -442,6 +447,7 @@ export async function GET(request: Request) {
       .in("category", favoriteCategories)
       .gte("start_date", today)
       .is("canonical_event_id", null)
+      .or("is_class.eq.false,is_class.is.null")
       .order("start_date", { ascending: true })
       .limit(50);
 
@@ -498,6 +504,7 @@ export async function GET(request: Request) {
       .in("venue_id", neighborhoodVenueIds)
       .gte("start_date", today)
       .is("canonical_event_id", null)
+      .or("is_class.eq.false,is_class.is.null")
       .order("start_date", { ascending: true })
       .limit(50);
 
@@ -585,6 +592,9 @@ export async function GET(request: Request) {
     score?: number;
     reasons?: RecommendationReason[];
     friends_going?: { user_id: string; username: string; display_name: string | null }[];
+    going_count?: number;
+    interested_count?: number;
+    recommendation_count?: number;
   };
 
   let events = (mergedEventsData || []) as EventResult[];
@@ -754,12 +764,22 @@ export async function GET(request: Request) {
 
   // Get page of results
   const pageEvents = filteredEvents.slice(0, limit);
+  const counts = await fetchSocialProofCounts(pageEvents.map((event) => event.id));
+  const pageEventsWithCounts = pageEvents.map((event) => {
+    const eventCounts = counts.get(event.id);
+    return {
+      ...event,
+      going_count: eventCounts?.going || 0,
+      interested_count: eventCounts?.interested || 0,
+      recommendation_count: eventCounts?.recommendations || 0,
+    };
+  });
   const hasMore = filteredEvents.length > limit;
 
   // Create cursor for next page
   let nextCursor: string | null = null;
   if (hasMore && pageEvents.length > 0) {
-    const lastEvent = pageEvents[pageEvents.length - 1];
+    const lastEvent = pageEventsWithCounts[pageEventsWithCounts.length - 1];
     nextCursor = createCursor(lastEvent.score || 0, lastEvent.id, lastEvent.start_date);
   }
 
@@ -775,7 +795,7 @@ export async function GET(request: Request) {
   // Return results with cursor pagination
   return NextResponse.json(
     {
-      events: pageEvents,
+      events: pageEventsWithCounts,
       cursor: nextCursor,
       hasMore,
       hasPreferences: !!(

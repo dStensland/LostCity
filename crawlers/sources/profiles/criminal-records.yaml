@@ -2,11 +2,27 @@ version: 1
 slug: criminal-records
 name: Criminal Records
 integration_method: html
-defaults: {}
+defaults:
+  venue_name: Criminal Records
+  category: music
+  subcategory: in-store
+  tags:
+    - music
+    - record-store
+    - in-store-event
 discovery:
   enabled: true
   type: list
   urls:
-  - https://www.criminalatl.com
+  - https://www.criminalatl.com/Events
+  event_card: "div.item-wrap.row"
+  fields:
+    title: "h4.mbr-bold"
+    date: "div.date-wrap h3.mbr-bold"
+    detail_url: "a[href^='/Event/']@href"
 detail:
-  enabled: false
+  enabled: true
+  use_jsonld: true
+  use_open_graph: true
+  use_heuristic: true
+  use_llm: false

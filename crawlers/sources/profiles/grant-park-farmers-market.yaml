@@ -4,7 +4,7 @@ name: Grant Park Farmers Market
 integration_method: html
 defaults: {}
 discovery:
-  enabled: true
+  enabled: false  # Recurring weekly market, not individual events — 2026-02-06 audit
   type: list
   urls:
   - https://www.grantparkmarket.org

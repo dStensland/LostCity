@@ -1,14 +1,14 @@
 version: 1
 slug: 13-stories
 name: 13 Stories Haunted House
-integration_method: playwright
+integration_method: jsonld_only
 defaults: {}
 discovery:
   enabled: true
   type: list
   urls:
   - https://www.13stories.com
-  fetch:
-    render_js: true
 detail:
-  enabled: false
+  enabled: true
+  jsonld_only: true
+  use_jsonld: true

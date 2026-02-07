@@ -1,12 +1,14 @@
 version: 1
 slug: sports-social
 name: Sports Social
-integration_method: html
+integration_method: jsonld_only
 defaults: {}
 discovery:
-  enabled: true
+  enabled: false  # Domain redirects to unrelated site — 2026-02-06 audit
   type: list
   urls:
   - https://www.sportssocial.com
 detail:
-  enabled: false
+  enabled: true
+  jsonld_only: true
+  use_jsonld: true

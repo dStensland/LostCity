@@ -4,7 +4,7 @@ name: Netherworld Haunted House
 integration_method: playwright
 defaults: {}
 discovery:
-  enabled: true
+  enabled: false  # Seasonal haunted house (Sep-Nov only) — 2026-02-06 audit
   type: list
   urls:
   - https://www.fearworld.com

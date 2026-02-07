@@ -1,14 +1,12 @@
 version: 1
 slug: variety-playhouse
 name: Variety Playhouse
-integration_method: playwright
+integration_method: html
 defaults: {}
 discovery:
   enabled: true
   type: list
   urls:
   - https://varietyplayhouse.com
-  fetch:
-    render_js: true
 detail:
   enabled: false

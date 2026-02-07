@@ -8,5 +8,7 @@ discovery:
   type: html
   urls:
   - https://www.atkinspark.com
+  fetch:
+    render_js: true
 detail:
   enabled: false

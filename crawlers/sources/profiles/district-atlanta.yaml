@@ -1,14 +1,12 @@
 version: 1
 slug: district-atlanta
 name: District Atlanta
-integration_method: playwright
+integration_method: html
 defaults: {}
 discovery:
   enabled: true
   type: list
   urls:
   - https://www.districtatlanta.com
-  fetch:
-    render_js: true
 detail:
   enabled: false

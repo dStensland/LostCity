@@ -1,14 +1,12 @@
 version: 1
 slug: access-atlanta
 name: Access Atlanta
-integration_method: playwright
+integration_method: html
 defaults: {}
 discovery:
   enabled: true
   type: list
   urls:
   - https://events.accessatlanta.com
-  fetch:
-    render_js: true
 detail:
   enabled: false

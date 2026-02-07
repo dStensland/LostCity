@@ -1,12 +1,20 @@
 version: 1
 slug: atlanta-cultural-affairs
 name: Atlanta Cultural Affairs
-integration_method: html
-defaults: {}
+integration_method: llm_crawler
+defaults:
+  category: arts
+  subcategory: community
+  tags:
+    - arts
+    - culture
+    - community
+    - government
 discovery:
   enabled: true
-  type: list
+  type: html
   urls:
   - https://www.atlantaga.gov/government/mayor-s-office/executive-offices/office-of-cultural-affairs
+  # Complex government site — LLM extraction needed
 detail:
   enabled: false

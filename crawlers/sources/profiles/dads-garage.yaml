@@ -1,28 +1,27 @@
 version: 1
 slug: dads-garage
 name: Dad's Garage Theatre
-integration_method: playwright
+integration_method: html
 defaults:
   venue_name: Dad's Garage Theatre
   category: comedy
   subcategory: improv
   tags:
-    - comedy
-    - improv
+  - comedy
+  - improv
 discovery:
   enabled: true
   type: list
   urls:
-    - https://dadsgarage.com/shows/
-  event_card: ".eventlist-event"
+  - https://dadsgarage.com/shows/
+  event_card: .eventlist-event
   fields:
-    title: ".eventlist-title"
-    date: ".eventlist-datetag"
-    time: ".eventlist-meta-time"
-    detail_url: "a[href*='/shows/']@href"
-    image_url: "img@data-src"
+    title: .eventlist-title
+    date: .eventlist-datetag
+    time: .eventlist-meta-time
+    detail_url: a[href*='/shows/']@href
+    image_url: img@data-src
   fetch:
-    render_js: true
     wait_ms: 5000
 detail:
   enabled: true

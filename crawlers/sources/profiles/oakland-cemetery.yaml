@@ -1,14 +1,12 @@
 version: 1
 slug: oakland-cemetery
 name: Oakland Cemetery
-integration_method: playwright
+integration_method: html
 defaults: {}
 discovery:
   enabled: true
   type: list
   urls:
   - https://oaklandcemetery.com/events/
-  fetch:
-    render_js: true
 detail:
   enabled: false

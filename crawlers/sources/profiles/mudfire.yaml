@@ -1,14 +1,12 @@
 version: 1
 slug: mudfire
 name: MudFire
-integration_method: playwright
+integration_method: html
 defaults: {}
 discovery:
   enabled: true
   type: list
   urls:
   - https://www.mudfire.com/
-  fetch:
-    render_js: true
 detail:
   enabled: false

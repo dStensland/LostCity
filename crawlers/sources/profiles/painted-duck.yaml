@@ -1,14 +1,12 @@
 version: 1
 slug: painted-duck
 name: The Painted Duck
-integration_method: playwright
+integration_method: html
 defaults: {}
 discovery:
   enabled: true
   type: list
   urls:
   - https://www.thepaintedduck.com
-  fetch:
-    render_js: true
 detail:
   enabled: false

@@ -2093,6 +2093,26 @@ body::after {
   animation: laser-flash 0.4s ease-out forwards;
 }
 
+/* Sparkle burst (Maybe RSVP) */
+@keyframes sparkle-flash {
+  0% { transform: translate(-50%, -50%) scale(0); opacity: 1; }
+  50% { transform: translate(-50%, -50%) scale(2); opacity: 0.8; }
+  100% { transform: translate(-50%, -50%) scale(3); opacity: 0; }
+}
+
+@keyframes sparkle-burst {
+  0% {
+    transform: translate(-50%, -50%) translate(0, 0) scale(0);
+    opacity: 1;
+  }
+  30% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
 /* Neon spinner */
 @keyframes neon-spin {
   0% {
@@ -4753,91 +4773,173 @@ textarea:focus-visible {
   will-change: transform;
 }
 
+/* ============================================
+   Logo — Stacked Split
+   LOST over CITY, cyan pulse, city name below
+   ============================================ */
+
 .logo-root {
-  --portal-color: var(--gold);
-  --portal-glow: rgba(255, 215, 0, 0.4);
+  display: inline-flex;
+  align-items: stretch;
+  gap: 0;
+  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.8));
+  --portal-color: var(--gold, #FFD93D);
+  position: relative;
+  overflow: visible;
 }
 
 .logo-root[data-portal="atlanta"] {
-  --portal-color: var(--gold);
-  --portal-glow: rgba(255, 215, 0, 0.4);
+  --portal-color: var(--gold, #FFD93D);
 }
 
 .logo-root[data-portal="nashville"] {
-  --portal-color: var(--neon-cyan);
-  --portal-glow: rgba(0, 229, 255, 0.4);
+  --portal-color: var(--neon-cyan, #00E5FF);
 }
 
-.logo-inline {
-  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.8));
+/* Cyan pulse — vertical line accent */
+.logo-pulse {
+  width: 2px;
+  align-self: stretch;
+  background: var(--neon-cyan, #00D4E8);
+  margin-right: 0.3em;
+  border-radius: 1px;
+  flex-shrink: 0;
 }
 
-.logo-stack {
-  line-height: 1.05;
-}
-
-.logo-text {
-  font-family: var(--font-outfit), sans-serif;
-  font-size: var(--logo-text-size);
-  font-weight: var(--logo-weight);
-  letter-spacing: var(--logo-letter-spacing);
+/* Stacked wordmark — collision overlap, anarchic energy */
+.logo-wordmark {
+  display: flex;
+  flex-direction: column;
+  line-height: 0.72;
   white-space: nowrap;
 }
 
-.logo-size-sm {
-  --logo-text-size: 1.1rem;
-  --logo-portal-size: 0.85em;
-  --logo-weight: 900;
-  --logo-letter-spacing: 0.08em;
-}
-
-.logo-size-md {
-  --logo-text-size: 1.5rem;
-  --logo-portal-size: 0.7rem;
-  --logo-weight: 800;
-  --logo-letter-spacing: 0.06em;
-}
-
-.logo-size-lg {
-  --logo-text-size: 2.5rem;
-  --logo-portal-size: 1.1rem;
-  --logo-weight: 900;
-  --logo-letter-spacing: 0.06em;
-}
-
-.logo-lost {
-  color: #FF6B7A;
-}
-
+/* CITY crashes upward into LOST's space */
 .logo-city {
-  color: #ffffff;
+  margin-top: -0.06em;
 }
 
-.logo-inline .logo-city {
-  margin-left: 0.15em;
+/* LOST — cream/white, the poetic anchor */
+.logo-lost {
+  font-family: var(--font-outfit), system-ui, sans-serif;
+  font-weight: 900;
+  color: var(--cream, #FAFAF9);
+  letter-spacing: 0.04em;
 }
 
-.logo-stack .logo-city {
-  margin-left: 0.2em;
+/* CITY — coral, the energy */
+.logo-city {
+  font-family: var(--font-outfit), system-ui, sans-serif;
+  font-weight: 900;
+  color: var(--coral, #FF6B7A);
+  letter-spacing: 0.04em;
 }
 
+/* City name — gold, geographic anchor */
 .logo-portal {
-  font-family: var(--font-outfit), sans-serif;
-  font-size: var(--logo-portal-size);
-  color: var(--portal-color);
-}
-
-.logo-portal-inline {
-  margin-left: 0.3em;
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
   font-weight: 700;
-  letter-spacing: 0.12em;
-  text-shadow: 0 0 12px var(--portal-glow);
+  color: var(--portal-color);
+  letter-spacing: 0.14em;
+  line-height: 1;
 }
 
-.logo-portal-stack {
-  font-weight: 600;
-  letter-spacing: 0.2em;
-  text-shadow: 0 0 8px var(--portal-glow);
+/* Size: sm — header context (~36px tall) */
+.logo-size-sm .logo-lost,
+.logo-size-sm .logo-city {
+  font-size: 1.05rem;
+}
+
+.logo-size-sm .logo-pulse {
+  width: 2px;
+  margin-right: 0.25em;
+}
+
+.logo-size-sm .logo-portal {
+  font-size: 0.55rem;
+  margin-top: 0.15em;
+}
+
+/* Size: md — cards, auth pages */
+.logo-size-md .logo-lost,
+.logo-size-md .logo-city {
+  font-size: 1.5rem;
+}
+
+.logo-size-md .logo-pulse {
+  width: 2.5px;
+  margin-right: 0.3em;
+}
+
+.logo-size-md .logo-portal {
+  font-size: 0.7rem;
+  margin-top: 0.15em;
+}
+
+/* Size: lg — hero, marketing */
+.logo-size-lg .logo-lost,
+.logo-size-lg .logo-city {
+  font-size: 2.8rem;
+}
+
+.logo-size-lg .logo-pulse {
+  width: 3px;
+  margin-right: 0.35em;
+}
+
+.logo-size-lg .logo-portal {
+  font-size: 1rem;
+  margin-top: 0.2em;
+  letter-spacing: 0.18em;
+}
+
+/* Etched skyline — extends right from the wordmark like a city emerging */
+.logo-skyline {
+  position: absolute;
+  left: 2.5em;
+  bottom: 0;
+  height: 100%;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.4;
+}
+
+/* Text must sit above the skyline */
+.logo-pulse,
+.logo-wordmark {
+  position: relative;
+  z-index: 1;
+}
+
+/* Skyline width scales with logo size — extends well past the text */
+.logo-size-sm .logo-skyline {
+  width: 200px;
+  left: 2em;
+}
+
+.logo-size-md .logo-skyline {
+  width: 300px;
+  left: 3em;
+}
+
+.logo-size-lg .logo-skyline {
+  width: 420px;
+  left: 4em;
+  opacity: 0.35;
+}
+
+/* Fade out on narrow screens to prevent crowding */
+@media (max-width: 480px) {
+  .logo-skyline {
+    display: none;
+  }
+}
+
+@media (max-width: 768px) and (min-width: 481px) {
+  .logo-skyline {
+    opacity: 0.15;
+    width: 140px;
+  }
 }
 
 [data-accent="trending"] {

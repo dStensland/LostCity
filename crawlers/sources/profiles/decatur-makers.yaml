@@ -4,7 +4,8 @@ name: Decatur Makers
 integration_method: api
 defaults: {}
 discovery:
-  enabled: true
+  # Runs via main.py (Meetup/Playwright); pipeline discovery disabled
+  enabled: false
   type: api
   urls:
   - https://www.meetup.com/decatur-makers/

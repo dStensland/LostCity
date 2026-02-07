@@ -1,14 +1,12 @@
 version: 1
 slug: hawks-bars
 name: Atlanta Hawks Bar Network
-integration_method: playwright
+integration_method: html
 defaults: {}
 discovery:
   enabled: true
   type: list
   urls:
   - https://www.nba.com/hawks
-  fetch:
-    render_js: true
 detail:
   enabled: false

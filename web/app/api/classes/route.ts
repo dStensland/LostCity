@@ -12,6 +12,7 @@ import {
   RATE_LIMITS,
   getClientIdentifier,
 } from "@/lib/rate-limit";
+import { enrichEventsWithSocialProof } from "@/lib/search";
 
 const VALID_CLASS_CATEGORIES = [
   "painting",
@@ -204,9 +205,13 @@ export async function GET(request: NextRequest) {
     return errorResponse(error, "classes list");
   }
 
+  const enrichedClasses = data
+    ? await enrichEventsWithSocialProof(data as unknown as Parameters<typeof enrichEventsWithSocialProof>[0])
+    : [];
+
   return NextResponse.json(
     {
-      classes: data || [],
+      classes: enrichedClasses,
       total: count ?? 0,
       limit,
       offset,

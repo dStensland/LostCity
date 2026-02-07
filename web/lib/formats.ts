@@ -225,6 +225,27 @@ export function formatPriceDetailed(event: PriceableEvent): PriceFormatResult {
 }
 
 // ============================================================================
+// COUNT FORMATTING
+// ============================================================================
+
+/**
+ * Format large counts with compact suffixes: 950 -> "950", 1,200 -> "1.2k", 12,400 -> "12k"
+ */
+export function formatCompactCount(count: number): string {
+  if (!Number.isFinite(count)) return "0";
+  if (count < 1000) return `${count}`;
+  if (count < 10_000) {
+    const formatted = (count / 1000).toFixed(1);
+    return `${formatted.replace(/\.0$/, "")}k`;
+  }
+  if (count < 1_000_000) {
+    return `${Math.round(count / 1000)}k`;
+  }
+  const formatted = (count / 1_000_000).toFixed(1);
+  return `${formatted.replace(/\.0$/, "")}m`;
+}
+
+// ============================================================================
 // DATE UTILITIES
 // ============================================================================
 

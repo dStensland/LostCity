@@ -6,6 +6,7 @@ import { getLocalDateString } from "@/lib/formats";
 import { logger } from "@/lib/logger";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier} from "@/lib/rate-limit";
 import { DESTINATION_CATEGORIES } from "@/lib/spots";
+import { fetchSocialProofCounts } from "@/lib/search";
 
 const NEARBY_RADIUS_MILES = 10;
 
@@ -136,7 +137,7 @@ export async function GET(
 
     if (sameDateEvents) {
       // Filter by distance and time overlap
-      nearbyEvents = sameDateEvents.filter((e) => {
+    nearbyEvents = sameDateEvents.filter((e) => {
         const ev = e as {
           start_time?: string | null;
           end_time?: string | null;
@@ -179,6 +180,33 @@ export async function GET(
 
     nearbyEvents = sameDateEvents || [];
   }
+
+  // Enrich related events with social proof counts
+  const relatedEventIds = [
+    ...((venueEvents as { id: number }[]).map((e) => e.id) || []),
+    ...((nearbyEvents as { id: number }[]).map((e) => e.id) || []),
+  ];
+  const relatedCounts = await fetchSocialProofCounts(Array.from(new Set(relatedEventIds)));
+
+  venueEvents = (venueEvents as { id: number }[]).map((event) => {
+    const counts = relatedCounts.get(event.id);
+    return {
+      ...event,
+      going_count: counts?.going || 0,
+      interested_count: counts?.interested || 0,
+      recommendation_count: counts?.recommendations || 0,
+    };
+  });
+
+  nearbyEvents = (nearbyEvents as { id: number }[]).map((event) => {
+    const counts = relatedCounts.get(event.id);
+    return {
+      ...event,
+      going_count: counts?.going || 0,
+      interested_count: counts?.interested || 0,
+      recommendation_count: counts?.recommendations || 0,
+    };
+  });
 
   type NearbyDestination = {
     id: number;

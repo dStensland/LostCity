@@ -1,7 +1,7 @@
 version: 1
 slug: ladybird-grove
 name: Ladybird Grove & Mess Hall
-integration_method: html
+integration_method: playwright
 defaults: {}
 discovery:
   enabled: true
@@ -10,3 +10,5 @@ discovery:
   - https://www.ladybirdatlanta.com
 detail:
   enabled: false
+  fetch:
+    render_js: true

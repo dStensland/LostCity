@@ -1,14 +1,14 @@
 version: 1
 slug: lego-discovery-center
 name: LEGO Discovery Center Atlanta
-integration_method: playwright
+integration_method: jsonld_only
 defaults: {}
 discovery:
   enabled: true
   type: list
   urls:
   - https://www.legolanddiscoverycenter.com/atlanta/
-  fetch:
-    render_js: true
 detail:
-  enabled: false
+  enabled: true
+  jsonld_only: true
+  use_jsonld: true

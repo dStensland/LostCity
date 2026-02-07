@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "@/components/SmartImage";
 import CategoryIcon from "@/components/CategoryIcon";
 import CategorySkeleton from "@/components/CategorySkeleton";
+import { formatCompactCount } from "@/lib/formats";
 
 type Organization = {
   id: string;
@@ -19,6 +20,8 @@ type Organization = {
   neighborhood: string | null;
   featured: boolean;
   event_count?: number;
+  follower_count?: number;
+  recommendation_count?: number;
 };
 
 const ORG_TYPE_CONFIG: Record<string, { label: string; color: string }> = {
@@ -72,6 +75,9 @@ function OrganizationCard({
   orgConfig: { label: string; color: string } | undefined;
 }) {
   const hasEvents = (organization.event_count ?? 0) > 0;
+  const followerCount = organization.follower_count ?? 0;
+  const recommendationCount = organization.recommendation_count ?? 0;
+  const hasSocialProof = followerCount > 0 || recommendationCount > 0;
   return (
     <Link
       href={`/${portalSlug}?org=${organization.slug}`}
@@ -136,6 +142,27 @@ function OrganizationCard({
               <span className="text-[var(--coral)] font-mono text-sm font-medium">
                 {organization.event_count} upcoming
               </span>
+            </div>
+          )}
+
+          {hasSocialProof && (
+            <div className="mt-3 flex items-center gap-2 flex-wrap text-[0.65rem] font-mono text-[var(--muted)]">
+              {followerCount > 0 && (
+                <span className="inline-flex items-center gap-1 px-2 py-1 rounded bg-[var(--twilight)]/40 text-[var(--soft)]">
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                  {formatCompactCount(followerCount)} followers
+                </span>
+              )}
+              {recommendationCount > 0 && (
+                <span className="inline-flex items-center gap-1 px-2 py-1 rounded bg-[var(--twilight)]/40 text-[var(--soft)]">
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3l2.7 5.5L21 9.2l-4.5 4.3L17.6 20 12 17l-5.6 3 1.1-6.5L3 9.2l6.3-.7L12 3z" />
+                  </svg>
+                  {formatCompactCount(recommendationCount)} recommended
+                </span>
+              )}
             </div>
           )}
 

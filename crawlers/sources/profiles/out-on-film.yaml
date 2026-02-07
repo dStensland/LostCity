@@ -1,14 +1,12 @@
 version: 1
 slug: out-on-film
 name: Out on Film
-integration_method: playwright
+integration_method: html
 defaults: {}
 discovery:
   enabled: true
   type: list
   urls:
   - https://outonfilm.org
-  fetch:
-    render_js: true
 detail:
   enabled: false

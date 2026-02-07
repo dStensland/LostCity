@@ -5,7 +5,7 @@ import Link from "next/link";
 import UserAvatar from "@/components/UserAvatar";
 import { useDebounce } from "@/lib/hooks/useDebounce";
 import FriendButton from "@/components/FriendButton";
-import FollowButton from "@/components/FollowButton";
+// FollowButton removed — benched for curator feature
 
 export type Profile = {
   id: string;
@@ -131,7 +131,6 @@ function UserCard({ profile }: { profile: Profile }) {
           targetUsername={profile.username}
           size="sm"
         />
-        <FollowButton targetUserId={profile.id} size="sm" />
       </div>
     </div>
   );

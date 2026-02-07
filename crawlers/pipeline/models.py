@@ -26,6 +26,7 @@ class FetchConfig(BaseModel):
     wait_ms: int = 1500
     timeout_ms: int = 15000
     user_agent: Optional[str] = None
+    wait_until: Literal["networkidle", "load", "domcontentloaded", "commit"] = "networkidle"
 
 
 class ApiConfig(BaseModel):

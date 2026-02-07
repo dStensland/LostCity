@@ -4,7 +4,8 @@ name: Agnes Scott College
 integration_method: api
 defaults: {}
 discovery:
-  enabled: true
+  # Runs via main.py (Localist API); pipeline discovery disabled
+  enabled: false
   type: api
   urls:
   - https://www.agnesscott.edu/events

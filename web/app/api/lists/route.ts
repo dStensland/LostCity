@@ -24,7 +24,16 @@ export async function GET(request: NextRequest) {
   try {
     // If slug is provided, fetch single list by slug
     if (slug) {
-      let query = supabase
+      // Use service client to fetch list data — ensures we can see any
+      // public list regardless of who is requesting it.
+      let svcSingle: AnySupabase;
+      try {
+        svcSingle = createServiceClient() as AnySupabase;
+      } catch {
+        return NextResponse.json({ error: "Service unavailable" }, { status: 500 });
+      }
+
+      let query = svcSingle
         .from("lists")
         .select(`
           *,
@@ -47,7 +56,7 @@ export async function GET(request: NextRequest) {
 
       // Filter by portal if provided
       if (portalSlug) {
-        const { data: portal } = await supabase
+        const { data: portal } = await svcSingle
           .from("portals")
           .select("id")
           .eq("slug", portalSlug)
@@ -69,8 +78,16 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ error: "List not found" }, { status: 404 });
       }
 
+      // Only allow viewing public lists (or own lists via auth)
+      if (!list.is_public) {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user || user.id !== list.creator_id) {
+          return NextResponse.json({ error: "List not found" }, { status: 404 });
+        }
+      }
+
       // Fetch creator profile separately
-      const { data: creator } = await supabase
+      const { data: creator } = await svcSingle
         .from("profiles")
         .select("username, display_name, avatar_url")
         .eq("id", list.creator_id)
@@ -82,17 +99,17 @@ export async function GET(request: NextRequest) {
       let userVotes: { item_id: string; vote_type: string }[] = [];
 
       if (itemIds.length > 0) {
-        const { data: votes } = await supabase
-          .from("list_item_votes")
+        const { data: votes } = await svcSingle
+          .from("list_votes")
           .select("item_id, vote_type")
           .in("item_id", itemIds);
         itemVotes = votes || [];
 
-        // Get current user's votes
+        // Get current user's votes (needs user-scoped client for auth)
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
-          const { data: uVotes } = await supabase
-            .from("list_item_votes")
+          const { data: uVotes } = await svcSingle
+            .from("list_votes")
             .select("item_id, vote_type")
             .eq("user_id", user.id)
             .in("item_id", itemIds);
@@ -136,7 +153,7 @@ export async function GET(request: NextRequest) {
       })) || [];
 
       // Get total vote count for the list
-      const { count: voteCount } = await supabase
+      const { count: voteCount } = await svcSingle
         .from("list_votes")
         .select("*", { count: "exact", head: true })
         .eq("list_id", list.id);
@@ -153,7 +170,17 @@ export async function GET(request: NextRequest) {
     }
 
     // Otherwise, list all public lists
-    let query = supabase
+    // Use service client to bypass RLS — the query explicitly filters for
+    // is_public=true so this is safe, and avoids issues where the user-scoped
+    // client can't see other users' public lists.
+    let svc: AnySupabase;
+    try {
+      svc = createServiceClient() as AnySupabase;
+    } catch {
+      return NextResponse.json({ error: "Service unavailable" }, { status: 500 });
+    }
+
+    let query = svc
       .from("lists")
       .select(`
         *,
@@ -173,7 +200,7 @@ export async function GET(request: NextRequest) {
     }
 
     if (portalSlug && !portalId) {
-      const { data: portal } = await supabase
+      const { data: portal } = await svc
         .from("portals")
         .select("id")
         .eq("slug", portalSlug)
@@ -203,7 +230,7 @@ export async function GET(request: NextRequest) {
     const listIds = (data || []).map((l: { id: string }) => l.id);
 
     const { data: creators } = creatorIds.length > 0
-      ? await supabase
+      ? await svc
           .from("profiles")
           .select("id, username, display_name, avatar_url")
           .in("id", creatorIds)
@@ -211,7 +238,7 @@ export async function GET(request: NextRequest) {
 
     // Fetch vote counts for all lists
     const { data: voteCounts } = listIds.length > 0
-      ? await supabase
+      ? await svc
           .from("list_votes")
           .select("list_id")
           .in("list_id", listIds)

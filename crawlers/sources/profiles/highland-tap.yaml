@@ -4,7 +4,7 @@ name: Highland Tap
 integration_method: llm_crawler
 defaults: {}
 discovery:
-  enabled: true
+  enabled: false  # Domain parked — 2026-02-06 audit
   type: html
   urls:
   - https://www.highlandtap.com

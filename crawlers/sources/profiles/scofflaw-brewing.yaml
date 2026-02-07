@@ -1,14 +1,12 @@
 version: 1
 slug: scofflaw-brewing
 name: Scofflaw Brewing
-integration_method: playwright
+integration_method: html
 defaults: {}
 discovery:
   enabled: true
   type: list
   urls:
   - https://www.scofflawbeer.com
-  fetch:
-    render_js: true
 detail:
   enabled: false

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import type { SearchResult } from "@/lib/unified-search";
+import { formatCompactCount } from "@/lib/formats";
 
 interface SearchResultItemProps {
   result: SearchResult;
@@ -244,7 +245,18 @@ function getSubtitle(result: SearchResult): string {
   }
 
   if (result.metadata) {
-    const { date, neighborhood, orgType, eventCount, seriesType, itemCount, curatorName } = result.metadata;
+    const {
+      date,
+      neighborhood,
+      orgType,
+      eventCount,
+      seriesType,
+      itemCount,
+      curatorName,
+      followerCount,
+      rsvpCount,
+      recommendationCount,
+    } = result.metadata;
 
     if (date) {
       parts.push(formatDate(date));
@@ -272,6 +284,18 @@ function getSubtitle(result: SearchResult): string {
 
     if (itemCount !== undefined && itemCount > 0) {
       parts.push(`${itemCount} item${itemCount !== 1 ? "s" : ""}`);
+    }
+
+    if (followerCount !== undefined && followerCount > 0) {
+      parts.push(`${formatCompactCount(followerCount)} followers`);
+    }
+
+    if (rsvpCount !== undefined && rsvpCount > 0) {
+      parts.push(`${formatCompactCount(rsvpCount)} RSVPs`);
+    }
+
+    if (recommendationCount !== undefined && recommendationCount > 0) {
+      parts.push(`${formatCompactCount(recommendationCount)} recs`);
     }
   }
 

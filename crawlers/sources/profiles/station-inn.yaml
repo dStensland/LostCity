@@ -1,14 +1,12 @@
 version: 1
 slug: station-inn
 name: Station Inn
-integration_method: playwright
+integration_method: html
 defaults: {}
 discovery:
   enabled: true
   type: list
   urls:
   - https://stationinn.com/
-  fetch:
-    render_js: true
 detail:
   enabled: false

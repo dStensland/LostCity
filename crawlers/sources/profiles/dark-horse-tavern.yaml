@@ -8,5 +8,7 @@ discovery:
   type: html
   urls:
   - https://www.darkhorsetavern.net
+  fetch:
+    render_js: true
 detail:
   enabled: false

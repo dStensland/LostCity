@@ -1,12 +1,14 @@
 version: 1
 slug: render-atl
 name: Render ATL
-integration_method: html
+integration_method: playwright
 defaults: {}
 discovery:
   enabled: true
   type: list
   urls:
   - https://www.renderatl.com
+  fetch:
+    render_js: true
 detail:
   enabled: false

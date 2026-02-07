@@ -1,12 +1,14 @@
 version: 1
 slug: gypsy-kitchen
 name: Gypsy Kitchen
-integration_method: llm_crawler
+integration_method: jsonld_only
 defaults: {}
 discovery:
-  enabled: true
+  enabled: false  # Domain parked — 2026-02-06 audit
   type: html
   urls:
   - https://www.gypsykitchen.com
 detail:
-  enabled: false
+  enabled: true
+  jsonld_only: true
+  use_jsonld: true

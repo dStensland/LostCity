@@ -1,12 +1,14 @@
 version: 1
 slug: acworth-city
 name: City of Acworth
-integration_method: html
+integration_method: playwright
 defaults: {}
 discovery:
   enabled: true
   type: list
   urls:
   - https://acworth-ga.gov
+  fetch:
+    render_js: true
 detail:
   enabled: false

@@ -2,11 +2,20 @@ version: 1
 slug: atl-gaming
 name: ATL Gaming
 integration_method: llm_crawler
-defaults: {}
+defaults:
+  venue_name: ATL Gaming
+  category: entertainment
+  subcategory: gaming
+  tags:
+    - gaming
+    - esports
 discovery:
   enabled: true
   type: html
   urls:
   - https://www.atlgaming.com
+  # Site blocks automated requests — needs Playwright with render_js
+  fetch:
+    render_js: true
 detail:
   enabled: false

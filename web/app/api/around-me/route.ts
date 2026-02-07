@@ -378,17 +378,19 @@ export async function GET(request: NextRequest) {
       let isOpen = true;
       let closesAt: string | undefined;
 
-      try {
-        const result = isSpotOpen(spot.hours, false);
-        isOpen = result.isOpen;
-        closesAt = result.closesAt;
-      } catch {
-        // If hours parsing fails, assume open
-        isOpen = true;
+      if (spot.hours) {
+        try {
+          const result = isSpotOpen(spot.hours, false);
+          isOpen = result.isOpen;
+          closesAt = result.closesAt;
+        } catch {
+          // If hours parsing fails, treat as unknown (include in results)
+          isOpen = true;
+        }
       }
 
       // Skip spots that have hours data and are confirmed closed
-      // Spots without hours data (isSpotOpen returns true by default) still pass through
+      // Spots without hours data still pass through (unknown != closed)
       if (!isOpen) continue;
 
       // Determine closing time display

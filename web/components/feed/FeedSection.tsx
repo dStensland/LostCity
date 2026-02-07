@@ -39,6 +39,8 @@ export type FeedEvent = {
   description: string | null;
   featured_blurb?: string | null;
   going_count?: number;
+  interested_count?: number;
+  recommendation_count?: number;
   is_trending?: boolean;
   series_id?: string | null;
   series?: {
@@ -224,7 +226,7 @@ export default function FeedSection({ section, isFirst }: Props) {
 // ============================================
 
 // Holiday/themed section icon configurations
-const THEMED_SECTION_ICONS: Record<string, { icon: React.ReactNode; color: string }> = {
+const THEMED_SECTION_ICONS: Record<string, { icon: React.ReactNode; color: string; iconBg?: string }> = {
   "valentines-day": {
     color: "#FF69B4", // Hot pink / neon pink
     icon: (
@@ -239,6 +241,7 @@ const THEMED_SECTION_ICONS: Record<string, { icon: React.ReactNode; color: strin
   },
   "super-bowl": {
     color: "var(--neon-green)",
+    iconBg: "color-mix(in srgb, var(--neon-green) 20%, transparent)",
     icon: (
       <Image src="/icons/super-bowl-football.png" alt="" width={32} height={32} className="w-full h-full object-cover" />
     ),
@@ -271,7 +274,7 @@ export function HolidayGrid({ sections, portalSlug }: { sections: FeedSectionDat
       <FeedSectionHeader
         title="Holidays and Special Times"
         subtitle="Good excuses to go out and get together"
-        priority="secondary"
+        priority="tertiary"
         accentColor="var(--neon-amber)"
         icon={<Cake weight="fill" className="w-5 h-5 text-[var(--section-accent)]" />}
       />
@@ -297,8 +300,11 @@ export function HolidayGrid({ sections, portalSlug }: { sections: FeedSectionDat
               >
                 {/* Large icon on left */}
                 {themed?.icon && (
-                  <div className="w-16 h-16 flex-shrink-0 rounded-xl flex items-center justify-center bg-accent-15">
-                    <div className="w-12 h-12 text-accent">
+                  <div
+                    className="w-16 h-16 flex-shrink-0 rounded-xl flex items-center justify-center overflow-hidden bg-accent-15"
+                    style={themed.iconBg ? { backgroundColor: themed.iconBg } : undefined}
+                  >
+                    <div className="w-16 h-16 text-accent">
                       {themed.icon}
                     </div>
                   </div>
@@ -344,17 +350,7 @@ function getSectionPriority(section: FeedSectionData): SectionPriority {
     return "primary";
   }
 
-  // Themed/holiday sections get secondary treatment
-  if (THEMED_SECTION_ICONS[section.slug]) {
-    return "secondary";
-  }
-
-  // Curated sections get secondary treatment
-  if (section.section_type === "curated") {
-    return "secondary";
-  }
-
-  // Default to tertiary for auto sections
+  // Everything else keeps the subtle, magazine-like header
   return "tertiary";
 }
 
@@ -409,32 +405,34 @@ const TrendingIcon = ({ className }: { className?: string }) => (
   </svg>
 );
 
-function SocialProofBadge({ count, variant = "default" }: { count: number; variant?: "default" | "compact" }) {
-  if (count < 3) return null;
-
-  const isHot = count >= 10;
+function SocialProofBadge({
+  count,
+  label = "going",
+  variant = "default",
+}: {
+  count: number;
+  label?: string;
+  variant?: "default" | "compact";
+}) {
+  if (count < 1) return null;
 
   if (variant === "compact") {
     return (
-      <span className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[0.55rem] font-mono font-medium ${
-        isHot
-          ? "bg-[var(--coral)]/20 text-[var(--coral)]"
-          : "bg-[var(--twilight)] text-[var(--muted)]"
-      }`}>
-        {isHot && <TrendingIcon className="w-2.5 h-2.5" />}
-        {count} going
+      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-lg bg-[var(--coral)]/10 border border-[var(--coral)]/20 font-mono text-[0.6rem] font-medium text-[var(--coral)]">
+        <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+        </svg>
+        {count} {label}
       </span>
     );
   }
 
   return (
-    <span className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-mono ${
-      isHot
-        ? "bg-[var(--coral)]/20 text-[var(--coral)]"
-        : "bg-white/20 text-white"
-    }`}>
-      {isHot && <TrendingIcon className="w-3 h-3" />}
-      {count} going
+    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[var(--coral)]/10 border border-[var(--coral)]/20 font-mono text-xs font-medium text-[var(--coral)]">
+      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+      </svg>
+      {count} {label}
     </span>
   );
 }
@@ -450,6 +448,9 @@ function HeroBanner({ section, portalSlug, hideImages }: { section: FeedSectionD
   if (!event) {
     return null;
   }
+  const goingCount = event.going_count || 0;
+  const interestedCount = event.interested_count || 0;
+  const recommendationCount = event.recommendation_count || 0;
 
   const hasImage = !hideImages && event.image_url;
   return (
@@ -541,8 +542,21 @@ function HeroBanner({ section, portalSlug, hideImages }: { section: FeedSectionD
                 From ${event.price_min}
               </span>
             ) : null}
-            {event.going_count !== undefined && event.going_count > 0 && (
-              <SocialProofBadge count={event.going_count} />
+            {goingCount > 0 && (
+              <SocialProofBadge count={goingCount} label="going" />
+            )}
+            {interestedCount > 0 && (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[var(--gold)]/15 border border-[var(--gold)]/30 font-mono text-xs font-medium text-[var(--gold)]">
+                {interestedCount} maybe
+              </span>
+            )}
+            {recommendationCount > 0 && (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[var(--lavender)]/15 border border-[var(--lavender)]/30 font-mono text-xs font-medium text-[var(--lavender)]">
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+                </svg>
+                {recommendationCount} rec&apos;d
+              </span>
             )}
           </div>
         </div>
@@ -834,7 +848,10 @@ function CollapsibleEvents({ section, portalSlug }: { section: FeedSectionData; 
 }
 
 function EventCard({ event, isCarousel, portalSlug }: { event: FeedEvent; isCarousel?: boolean; portalSlug?: string }) {
-  const isPopular = (event.going_count || 0) >= 10;
+  const goingCount = event.going_count || 0;
+  const interestedCount = event.interested_count || 0;
+  const recommendationCount = event.recommendation_count || 0;
+  const isPopular = goingCount >= 10;
   const eventStatus = getEventStatus(event.start_date, event.start_time);
 
   return (
@@ -889,8 +906,21 @@ function EventCard({ event, isCarousel, portalSlug }: { event: FeedEvent; isCaro
               From ${event.price_min}
             </span>
           ) : null}
-          {event.going_count !== undefined && event.going_count >= 3 && !isPopular && (
-            <SocialProofBadge count={event.going_count} variant="compact" />
+          {goingCount > 0 && (
+            <SocialProofBadge count={goingCount} label="going" variant="compact" />
+          )}
+          {interestedCount > 0 && (
+            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-lg bg-[var(--gold)]/15 border border-[var(--gold)]/30 font-mono text-[0.6rem] font-medium text-[var(--gold)]">
+              {interestedCount} maybe
+            </span>
+          )}
+          {recommendationCount > 0 && (
+            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-lg bg-[var(--lavender)]/15 border border-[var(--lavender)]/30 font-mono text-[0.6rem] font-medium text-[var(--lavender)]">
+              <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+              </svg>
+              {recommendationCount} rec&apos;d
+            </span>
           )}
         </div>
       </div>
@@ -1017,6 +1047,8 @@ function EventList({ section, portalSlug }: { section: FeedSectionData; portalSl
 
 function EventListItem({ event, isAlternate, showDate = true, portalSlug }: { event: FeedEvent; isAlternate?: boolean; showDate?: boolean; portalSlug?: string }) {
   const goingCount = event.going_count || 0;
+  const interestedCount = event.interested_count || 0;
+  const recommendationCount = event.recommendation_count || 0;
   const isPopular = goingCount >= 10;
   const isTrending = event.is_trending || false;
   const eventStatus = getEventStatus(event.start_date, event.start_time);
@@ -1073,10 +1105,22 @@ function EventListItem({ event, isAlternate, showDate = true, portalSlug }: { ev
           {event.venue && (
             <span className="truncate">{event.venue.name}</span>
           )}
-          {event.going_count !== undefined && event.going_count >= 5 && (
+          {goingCount > 0 && (
             <>
               <span className="opacity-40">·</span>
-              <span className="text-[var(--coral)]">{event.going_count} going</span>
+              <span className="text-[var(--coral)] font-medium">{goingCount} going</span>
+            </>
+          )}
+          {interestedCount > 0 && (
+            <>
+              <span className="opacity-40">·</span>
+              <span className="text-[var(--gold)] font-medium">{interestedCount} maybe</span>
+            </>
+          )}
+          {recommendationCount > 0 && (
+            <>
+              <span className="opacity-40">·</span>
+              <span className="text-[var(--lavender)] font-medium">{recommendationCount} rec&apos;d</span>
             </>
           )}
         </div>
@@ -1259,7 +1303,7 @@ function VenueList({ section, portalSlug }: { section: FeedSectionData; portalSl
     return null;
   }
 
-  const headerTitle = "Go see some movies";
+  const headerTitle = "Go see movies";
   const headerSubtitle = section.description || undefined;
 
   return (
@@ -1267,7 +1311,7 @@ function VenueList({ section, portalSlug }: { section: FeedSectionData; portalSl
       <FeedSectionHeader
         title={headerTitle}
         subtitle={headerSubtitle}
-        priority="secondary"
+        priority="tertiary"
         accentColor={getCategoryColor("film")}
         icon={<CategoryIcon type="film" size={18} glow="none" className="text-[var(--section-accent)]" />}
       />

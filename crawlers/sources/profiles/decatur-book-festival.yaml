@@ -1,14 +1,14 @@
 version: 1
 slug: decatur-book-festival
 name: Decatur Book Festival
-integration_method: playwright
+integration_method: jsonld_only
 defaults: {}
 discovery:
   enabled: true
   type: list
   urls:
   - https://www.decaturbookfestival.com
-  fetch:
-    render_js: true
 detail:
-  enabled: false
+  enabled: true
+  jsonld_only: true
+  use_jsonld: true

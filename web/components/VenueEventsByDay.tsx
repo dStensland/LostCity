@@ -11,7 +11,7 @@ import {
   addDays,
   startOfDay,
 } from "date-fns";
-import { formatTimeSplit } from "@/lib/formats";
+import { formatTimeSplit, formatCompactCount } from "@/lib/formats";
 import CategoryIcon, { getCategoryColor } from "@/components/CategoryIcon";
 import ScopedStyles from "@/components/ScopedStyles";
 import { createCssVarClass } from "@/lib/css-utils";
@@ -26,6 +26,9 @@ export type VenueEvent = {
   price_min?: number | null;
   category?: string | null;
   venue?: { id: number; name: string; slug: string } | null;
+  going_count?: number;
+  interested_count?: number;
+  recommendation_count?: number;
 };
 
 interface VenueEventsByDayProps {
@@ -299,6 +302,10 @@ function EventCard({
   const { time, period } = formatTimeSplit(event.start_time);
   const accentColor = event.category ? getCategoryColor(event.category) : "var(--neon-magenta)";
   const accentClass = createCssVarClass("--accent-color", accentColor, "accent");
+  const goingCount = event.going_count ?? 0;
+  const interestedCount = event.interested_count ?? 0;
+  const recommendationCount = event.recommendation_count ?? 0;
+  const hasSocialProof = goingCount > 0 || interestedCount > 0 || recommendationCount > 0;
 
   const cardContent = (
     <div className="flex items-start justify-between gap-3">
@@ -338,6 +345,31 @@ function EventCard({
             <span>${event.price_min}+</span>
           ) : null}
         </div>
+        {hasSocialProof && (
+          <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+            {goingCount > 0 && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-[var(--coral)]/10 border border-[var(--coral)]/20 font-mono text-[0.6rem] font-medium text-[var(--coral)]">
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+                {formatCompactCount(goingCount)} going
+              </span>
+            )}
+            {interestedCount > 0 && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-[var(--gold)]/15 border border-[var(--gold)]/30 font-mono text-[0.6rem] font-medium text-[var(--gold)]">
+                {formatCompactCount(interestedCount)} maybe
+              </span>
+            )}
+            {recommendationCount > 0 && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-[var(--lavender)]/15 border border-[var(--lavender)]/30 font-mono text-[0.6rem] font-medium text-[var(--lavender)]">
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+                </svg>
+                {formatCompactCount(recommendationCount)} rec&apos;d
+              </span>
+            )}
+          </div>
+        )}
       </div>
       <span className="text-[var(--muted)] group-hover:text-[var(--coral)] transition-colors flex-shrink-0">
         <svg

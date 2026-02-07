@@ -1,12 +1,21 @@
 version: 1
 slug: academy-ballroom
 name: Academy Ballroom
-integration_method: html
-defaults: {}
+integration_method: feed
+defaults:
+  venue_name: Academy Ballroom
+  category: arts
+  subcategory: dance
+  tags:
+    - dance
+    - ballroom
+    - classes
 discovery:
   enabled: true
-  type: list
+  type: feed
+  feed:
+    format: ics
   urls:
-  - https://academyballroomatl.com
+  - https://calendar.google.com/calendar/ical/academyatl@gmail.com/public/basic.ics
 detail:
   enabled: false

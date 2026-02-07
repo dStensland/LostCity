@@ -7,11 +7,8 @@ from __future__ import annotations
 
 import json
 import logging
-from typing import Optional
 
-from anthropic import Anthropic
-
-from config import get_config
+from llm_client import generate_text
 
 logger = logging.getLogger(__name__)
 
@@ -39,23 +36,9 @@ OUTPUT JSON:
 """
 
 
-_client: Optional[Anthropic] = None
-
-
-def _get_client() -> Anthropic:
-    global _client
-    if _client is None:
-        cfg = get_config()
-        _client = Anthropic(api_key=cfg.llm.anthropic_api_key)
-    return _client
-
-
 def extract_detail_with_llm(html: str, url: str, source_name: str) -> dict:
     if not html:
         return {}
-
-    cfg = get_config()
-    client = _get_client()
 
     user_message = f"""Source: {source_name}
 URL: {url}
@@ -65,15 +48,7 @@ Content:
 """
 
     try:
-        response = client.messages.create(
-            model=cfg.llm.model,
-            max_tokens=cfg.llm.max_tokens,
-            temperature=cfg.llm.temperature,
-            system=DETAIL_PROMPT,
-            messages=[{"role": "user", "content": user_message}],
-        )
-
-        response_text = response.content[0].text
+        response_text = generate_text(DETAIL_PROMPT, user_message)
         json_str = response_text
         if "```json" in response_text:
             json_str = response_text.split("```json")[1].split("```")[0]

@@ -1,14 +1,12 @@
 version: 1
 slug: visit-franklin
 name: Visit Franklin
-integration_method: playwright
+integration_method: html
 defaults: {}
 discovery:
   enabled: true
   type: list
   urls:
   - https://visitfranklin.com/things-to-do-events/
-  fetch:
-    render_js: true
 detail:
   enabled: false

@@ -1,12 +1,14 @@
 version: 1
 slug: rowdy-tiger
 name: Rowdy Tiger
-integration_method: html
+integration_method: jsonld_only
 defaults: {}
 discovery:
-  enabled: true
+  enabled: false  # Domain parked — 2026-02-06 audit
   type: list
   urls:
   - https://www.rowdytigeratl.com
 detail:
-  enabled: false
+  enabled: true
+  jsonld_only: true
+  use_jsonld: true

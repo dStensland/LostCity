@@ -1,7 +1,7 @@
 version: 1
 slug: civil-rights-center
 name: National Center for Civil and Human Rights
-integration_method: llm_crawler
+integration_method: jsonld_only
 defaults: {}
 discovery:
   enabled: true
@@ -9,4 +9,6 @@ discovery:
   urls:
   - https://www.civilandhumanrights.org
 detail:
-  enabled: false
+  enabled: true
+  jsonld_only: true
+  use_jsonld: true

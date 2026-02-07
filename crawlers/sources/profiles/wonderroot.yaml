@@ -4,7 +4,7 @@ name: WonderRoot
 integration_method: playwright
 defaults: {}
 discovery:
-  enabled: true
+  enabled: false  # 404 Not Found — 2026-02-06 audit
   type: list
   urls:
   - https://wonderroot.org/events

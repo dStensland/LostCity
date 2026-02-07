@@ -8,4 +8,4 @@ discovery:
   api:
     adapter: ticketmaster
 detail:
-  enabled: false
+  enabled: true

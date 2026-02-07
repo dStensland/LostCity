@@ -24,7 +24,10 @@ class DatabaseConfig(BaseModel):
 class LLMConfig(BaseModel):
     """LLM API settings."""
     anthropic_api_key: str = Field(default_factory=lambda: os.getenv("ANTHROPIC_API_KEY", ""))
+    openai_api_key: str = Field(default_factory=lambda: os.getenv("OPENAI_API_KEY", ""))
+    provider: str = Field(default_factory=lambda: os.getenv("LLM_PROVIDER", "anthropic"))
     model: str = "claude-sonnet-4-20250514"
+    openai_model: str = Field(default_factory=lambda: os.getenv("OPENAI_MODEL", "gpt-4o-mini"))
     max_tokens: int = 16384  # Increased to handle pages with many events
     temperature: float = 0.0
 

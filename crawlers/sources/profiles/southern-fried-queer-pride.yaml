@@ -1,14 +1,12 @@
 version: 1
 slug: southern-fried-queer-pride
 name: Southern Fried Queer Pride
-integration_method: playwright
+integration_method: html
 defaults: {}
 discovery:
   enabled: true
   type: list
   urls:
   - https://www.southernfriedqueerpride.com/all-events
-  fetch:
-    render_js: true
 detail:
   enabled: false

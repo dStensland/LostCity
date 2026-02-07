@@ -1,14 +1,12 @@
 version: 1
 slug: red-light-cafe
 name: Red Light Cafe
-integration_method: playwright
+integration_method: html
 defaults: {}
 discovery:
   enabled: true
   type: list
   urls:
   - https://www.redlightcafe.com
-  fetch:
-    render_js: true
 detail:
   enabled: false

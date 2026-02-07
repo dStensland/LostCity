@@ -8,5 +8,7 @@ discovery:
   type: html
   urls:
   - https://www.brickstorepub.com
+  fetch:
+    render_js: true
 detail:
   enabled: false

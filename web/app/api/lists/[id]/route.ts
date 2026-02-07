@@ -18,9 +18,18 @@ export async function GET(request: NextRequest, context: RouteContext) {
   const supabase = await createClient() as AnySupabase;
   const { id } = await context.params;
 
+  // Use service client for data queries — bypasses RLS so we can see
+  // any public list regardless of the requesting user's auth state.
+  let svc: AnySupabase;
+  try {
+    svc = createServiceClient() as AnySupabase;
+  } catch {
+    return NextResponse.json({ error: "Service unavailable" }, { status: 500 });
+  }
+
   try {
     // Get the list
-    const { data: list, error: listError } = await supabase
+    const { data: list, error: listError } = await svc
       .from("lists")
       .select(`
         *,
@@ -34,11 +43,19 @@ export async function GET(request: NextRequest, context: RouteContext) {
       return NextResponse.json({ error: "List not found" }, { status: 404 });
     }
 
+    // Only allow viewing public lists (or own lists via auth)
+    if (!list.is_public) {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user || user.id !== list.creator_id) {
+        return NextResponse.json({ error: "List not found" }, { status: 404 });
+      }
+    }
+
     // Get current user for vote status
     const { data: { user } } = await supabase.auth.getUser();
 
     // Get items with vote counts
-    const { data: items, error: itemsError } = await supabase
+    const { data: items, error: itemsError } = await svc
       .from("list_items")
       .select(`
         *,
@@ -54,7 +71,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
     }
 
     // Get vote counts for items
-    const { data: voteCounts } = await supabase
+    const { data: voteCounts } = await svc
       .from("list_votes")
       .select("item_id")
       .eq("list_id", id)
@@ -63,7 +80,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
     // Get user votes if logged in
     let userVotes: Record<string, string> = {};
     if (user) {
-      const { data: votes } = await supabase
+      const { data: votes } = await svc
         .from("list_votes")
         .select("item_id, vote_type")
         .eq("list_id", id)
@@ -99,7 +116,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
     }));
 
     // Get total vote count for the list
-    const { count: totalVotes } = await supabase
+    const { count: totalVotes } = await svc
       .from("list_votes")
       .select("*", { count: "exact", head: true })
       .eq("list_id", id);

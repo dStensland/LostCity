@@ -1,7 +1,7 @@
 "use client";
 
 import { useSearchParams, useRouter } from "next/navigation";
-import { useCallback, useState, useRef } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
 import EventDetailView from "./EventDetailView";
 import VenueDetailView from "./VenueDetailView";
 import SeriesDetailView from "./SeriesDetailView";
@@ -69,6 +69,13 @@ export default function DetailViewRouter({ portalSlug, children }: DetailViewRou
   const seriesSlug = searchParams.get("series");
   const festivalSlug = searchParams.get("festival");
   const orgSlug = searchParams.get("org");
+
+  // When a detail view opens via query params, we want to start at the top instead of preserving
+  // the underlying feed scroll position.
+  useEffect(() => {
+    if (!eventId && !spotSlug && !seriesSlug && !festivalSlug && !orgSlug) return;
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+  }, [eventId, spotSlug, seriesSlug, festivalSlug, orgSlug]);
 
   // Direct close handler (fallback, used when not in animated wrapper)
   const handleClose = useCallback(() => {

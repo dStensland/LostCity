@@ -3,6 +3,7 @@ import { NextRequest } from "next/server";
 import { getDistanceMiles } from "@/lib/geo";
 import { getLocalDateString } from "@/lib/formats";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier} from "@/lib/rate-limit";
+import { fetchSocialProofCounts } from "@/lib/search";
 
 // Destination category mappings for venues
 const DESTINATION_CATEGORIES: Record<string, string[]> = {
@@ -80,6 +81,18 @@ export async function GET(
     .order("start_date", { ascending: true })
     .order("start_time", { ascending: true })
     .limit(20);
+
+  const upcomingEventIds = (upcomingEvents || []).map((event) => event.id);
+  const upcomingCounts = await fetchSocialProofCounts(upcomingEventIds);
+  const upcomingEventsWithCounts = (upcomingEvents || []).map((event) => {
+    const counts = upcomingCounts.get(event.id);
+    return {
+      ...event,
+      going_count: counts?.going || 0,
+      interested_count: counts?.interested || 0,
+      recommendation_count: counts?.recommendations || 0,
+    };
+  });
 
   // Fetch nearby destinations
   const nearbyDestinations: Record<string, NearbyDestination[]> = {
@@ -183,7 +196,7 @@ export async function GET(
 
   return Response.json({
     spot: spotData,
-    upcomingEvents: upcomingEvents || [],
+    upcomingEvents: upcomingEventsWithCounts,
     nearbyDestinations,
   });
 }

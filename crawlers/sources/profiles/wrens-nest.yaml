@@ -1,14 +1,12 @@
 version: 1
 slug: wrens-nest
 name: Wrens Nest House Museum
-integration_method: playwright
+integration_method: html
 defaults: {}
 discovery:
   enabled: true
   type: list
   urls:
   - https://www.wrensnest.org/calendar
-  fetch:
-    render_js: true
 detail:
   enabled: false

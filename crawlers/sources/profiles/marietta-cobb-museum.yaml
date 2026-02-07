@@ -1,7 +1,7 @@
 version: 1
 slug: marietta-cobb-museum
 name: Marietta Cobb Museum of Art
-integration_method: html
+integration_method: jsonld_only
 defaults: {}
 discovery:
   enabled: true
@@ -9,4 +9,6 @@ discovery:
   urls:
   - https://mariettacobbartmuseum.org/events
 detail:
-  enabled: false
+  enabled: true
+  jsonld_only: true
+  use_jsonld: true

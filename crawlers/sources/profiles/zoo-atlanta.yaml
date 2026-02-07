@@ -1,14 +1,12 @@
 version: 1
 slug: zoo-atlanta
 name: Zoo Atlanta
-integration_method: playwright
+integration_method: html
 defaults: {}
 discovery:
   enabled: true
   type: list
   urls:
   - https://www.zooatlanta.org
-  fetch:
-    render_js: true
 detail:
   enabled: false

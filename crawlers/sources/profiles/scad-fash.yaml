@@ -1,14 +1,12 @@
 version: 1
 slug: scad-fash
 name: SCAD FASH Museum of Fashion + Film
-integration_method: playwright
+integration_method: html
 defaults: {}
 discovery:
   enabled: true
   type: list
   urls:
   - https://scadfash.org/events
-  fetch:
-    render_js: true
 detail:
   enabled: false

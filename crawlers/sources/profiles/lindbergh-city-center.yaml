@@ -4,7 +4,7 @@ name: Lindbergh City Center
 integration_method: llm_crawler
 defaults: {}
 discovery:
-  enabled: true
+  enabled: false  # Empty page, no event content — 2026-02-06 audit
   type: html
   urls:
   - https://lindberghcitycenter.com

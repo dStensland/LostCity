@@ -1,7 +1,7 @@
 version: 1
 slug: mint-gallery
 name: Mint Gallery
-integration_method: llm_crawler
+integration_method: playwright
 defaults: {}
 discovery:
   enabled: true
@@ -10,3 +10,5 @@ discovery:
   - https://mintgallery.com/events
 detail:
   enabled: false
+  fetch:
+    render_js: true
