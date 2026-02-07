@@ -25,6 +25,8 @@ import RSVPButton from "@/components/RSVPButton";
 import AddToCalendar from "@/components/AddToCalendar";
 import { EntityTagList } from "@/components/tags/EntityTagList";
 import { SaveToListButton } from "@/components/SaveToListButton";
+import { getEventArtists } from "@/lib/artists";
+import LineupSection from "@/components/LineupSection";
 import {
   DetailHero,
   InfoCard,
@@ -150,7 +152,6 @@ function generateEventSchema(event: EventWithOrganization) {
 
   // Performer (for music/comedy/theater events)
   if (event.category === "music" || event.category === "comedy") {
-    // Use event title as performer name (usually the artist/comedian)
     schema.performer = {
       "@type": event.category === "music" ? "MusicGroup" : "Person",
       name: event.title,
@@ -189,6 +190,25 @@ function generateEventSchema(event: EventWithOrganization) {
   }
 
   return schema;
+}
+
+/** Enhance Schema.org event data with actual artist performers */
+function withPerformerSchema(
+  eventSchema: Record<string, unknown>,
+  artists: Awaited<ReturnType<typeof getEventArtists>>
+): Record<string, unknown> {
+  if (artists.length === 0) return eventSchema;
+
+  const performers = artists.map((a) => ({
+    "@type": a.artist?.discipline === "band" ? "MusicGroup" : "Person",
+    name: a.artist?.name || a.name,
+    ...(a.artist?.image_url ? { image: a.artist.image_url } : {}),
+  }));
+
+  return {
+    ...eventSchema,
+    performer: performers.length === 1 ? performers[0] : performers,
+  };
 }
 
 // Parse recurrence rule to human-readable format
@@ -230,9 +250,12 @@ export default async function PortalEventPage({ params }: Props) {
   const activePortalSlug = portal?.slug || portalSlug;
   const activePortalName = portal?.name || portalSlug.charAt(0).toUpperCase() + portalSlug.slice(1);
 
-  const { venueEvents, sameDateEvents } = await getRelatedEvents(event);
-  const nearbySpots = event.venue?.id ? await getNearbySpots(event.venue.id) : [];
-  const eventSchema = generateEventSchema(event);
+  const [{ venueEvents, sameDateEvents }, nearbySpots, eventArtists] = await Promise.all([
+    getRelatedEvents(event),
+    event.venue?.id ? getNearbySpots(event.venue.id) : Promise.resolve([]),
+    getEventArtists(event.id),
+  ]);
+  const eventSchema = withPerformerSchema(generateEventSchema(event), eventArtists);
 
   // Event state
   const isLive = (event as { is_live?: boolean }).is_live || false;
@@ -290,7 +313,7 @@ export default async function PortalEventPage({ params }: Props) {
           backLink={{ href: `/${activePortalSlug}?view=events`, label: "Events" }}
         />
 
-        <main className="max-w-3xl mx-auto px-4 py-6 pb-28 space-y-8">
+        <main className="max-w-3xl mx-auto px-4 py-4 sm:py-6 pb-28 space-y-5 sm:space-y-8">
           {/* Hero Section */}
           <DetailHero
             mode={event.image_url ? "image" : "fallback"}
@@ -343,7 +366,7 @@ export default async function PortalEventPage({ params }: Props) {
                   color: isFree ? "var(--neon-green)" : "var(--gold)"
                 }] : []),
               ]}
-              className="mb-8"
+              className="mb-5 sm:mb-8"
             />
 
             {/* Description */}
@@ -354,6 +377,18 @@ export default async function PortalEventPage({ params }: Props) {
                   <LinkifyText text={event.description} />
                 </p>
               </>
+            )}
+
+            {/* Lineup / Performers */}
+            {eventArtists.length > 0 && (
+              <div className="mb-6">
+                <LineupSection
+                  artists={eventArtists}
+                  portalSlug={activePortalSlug}
+                  title="Performers"
+                  maxDisplay={12}
+                />
+              </div>
             )}
 
             {/* Location */}
