@@ -4,8 +4,8 @@ import Link from "next/link";
 import Image from "@/components/SmartImage";
 import ScopedStyles from "@/components/ScopedStyles";
 import { createCssVarClass } from "@/lib/css-utils";
-import type { EventArtist } from "@/lib/artists";
-import { getDisciplineColor } from "@/lib/artists";
+import type { EventArtist } from "@/lib/artists-utils";
+import { getDisciplineColor } from "@/lib/artists-utils";
 
 interface ArtistChipProps {
   artist: EventArtist;

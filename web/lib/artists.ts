@@ -1,59 +1,11 @@
 import { createClient } from "@/lib/supabase/server";
 import { getLocalDateString } from "@/lib/formats";
 
-// --- Types ---
+// Re-export client-safe types and utilities for backward compatibility
+export type { Artist, EventArtist, ArtistEvent, ArtistFestival } from "@/lib/artists-utils";
+export { getDisciplineColor, getDisciplineLabel } from "@/lib/artists-utils";
 
-export interface Artist {
-  id: string;
-  name: string;
-  slug: string;
-  discipline: string;
-  bio: string | null;
-  image_url: string | null;
-  genres: string[] | null;
-  hometown: string | null;
-  spotify_id: string | null;
-  musicbrainz_id: string | null;
-  wikidata_id: string | null;
-  created_at: string;
-}
-
-export interface EventArtist {
-  id: number;
-  event_id: number;
-  name: string;
-  role: string | null;
-  billing_order: number | null;
-  is_headliner: boolean;
-  artist: Artist | null;
-}
-
-export interface ArtistEvent {
-  id: number;
-  title: string;
-  start_date: string;
-  start_time: string | null;
-  category: string | null;
-  image_url: string | null;
-  venue: {
-    id: number;
-    name: string;
-    slug: string;
-    neighborhood: string | null;
-  } | null;
-  role: string | null;
-  is_headliner: boolean;
-}
-
-export interface ArtistFestival {
-  id: string;
-  name: string;
-  slug: string;
-  image_url: string | null;
-  announced_start: string | null;
-  announced_end: string | null;
-  categories: string[] | null;
-}
+import type { Artist, EventArtist, ArtistEvent, ArtistFestival } from "@/lib/artists-utils";
 
 // --- Raw types for Supabase query results ---
 
@@ -237,7 +189,7 @@ export async function getArtistEvents(
 ): Promise<ArtistEvent[]> {
   const supabase = await createClient();
 
-  let query = supabase
+  const query = supabase
     .from("event_artists")
     .select(`
       event_id,
@@ -257,10 +209,6 @@ export async function getArtistEvents(
     `)
     .eq("artist_id", artistId)
     .order("event_id", { ascending: false });
-
-  if (futureOnly) {
-    // We can't filter on nested table directly, so we'll filter after
-  }
 
   const { data, error } = await query;
 
@@ -355,36 +303,4 @@ export async function getArtistFestivals(artistId: string): Promise<ArtistFestiv
   }
 
   return festivals as ArtistFestival[];
-}
-
-// --- Helpers ---
-
-/** Map artist discipline to category color CSS variable */
-export function getDisciplineColor(discipline: string): string {
-  const colors: Record<string, string> = {
-    musician: "var(--neon-magenta)",
-    band: "var(--neon-magenta)",
-    dj: "var(--neon-cyan)",
-    comedian: "var(--neon-amber)",
-    visual_artist: "var(--neon-purple)",
-    actor: "var(--coral)",
-    speaker: "var(--gold)",
-    filmmaker: "var(--neon-cyan)",
-  };
-  return colors[discipline] || "var(--coral)";
-}
-
-/** Map artist discipline to a display label */
-export function getDisciplineLabel(discipline: string): string {
-  const labels: Record<string, string> = {
-    musician: "Musician",
-    band: "Band",
-    dj: "DJ",
-    comedian: "Comedian",
-    visual_artist: "Visual Artist",
-    actor: "Actor",
-    speaker: "Speaker",
-    filmmaker: "Filmmaker",
-  };
-  return labels[discipline] || discipline.replace(/_/g, " ");
 }

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import ArtistChip from "@/components/ArtistChip";
-import type { EventArtist } from "@/lib/artists";
+import type { EventArtist } from "@/lib/artists-utils";
 
 interface LineupSectionProps {
   artists: EventArtist[];
