@@ -6,29 +6,29 @@ export const GET = withAuth(async (request, { user, serviceClient }) => {
   const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.read, getClientIdentifier(request));
   if (rateLimitResult) return rateLimitResult;
 
-  // Get current user's friends
+  // Get current user's friends via the friendships table (user_a_id / user_b_id)
   const { data: friendships } = await serviceClient
     .from("friendships")
-    .select("user_id, friend_id")
-    .or(`user_id.eq.${user.id},friend_id.eq.${user.id}`);
+    .select("user_a_id, user_b_id")
+    .or(`user_a_id.eq.${user.id},user_b_id.eq.${user.id}`);
 
   const friendIds = new Set<string>();
-  for (const f of (friendships || []) as Array<{ user_id: string; friend_id: string }>) {
-    if (f.user_id === user.id) friendIds.add(f.friend_id);
-    else friendIds.add(f.user_id);
+  for (const f of (friendships || []) as Array<{ user_a_id: string; user_b_id: string }>) {
+    if (f.user_a_id === user.id) friendIds.add(f.user_b_id);
+    else friendIds.add(f.user_a_id);
   }
 
-  // Get pending requests to exclude
+  // Get pending friend requests to exclude (inviter_id / invitee_id)
   const { data: pendingRequests } = await serviceClient
     .from("friend_requests")
-    .select("sender_id, receiver_id")
-    .or(`sender_id.eq.${user.id},receiver_id.eq.${user.id}`)
+    .select("inviter_id, invitee_id")
+    .or(`inviter_id.eq.${user.id},invitee_id.eq.${user.id}`)
     .eq("status", "pending");
 
   const excludeIds = new Set<string>([user.id, ...friendIds]);
-  for (const r of (pendingRequests || []) as Array<{ sender_id: string; receiver_id: string }>) {
-    excludeIds.add(r.sender_id);
-    excludeIds.add(r.receiver_id);
+  for (const r of (pendingRequests || []) as Array<{ inviter_id: string; invitee_id: string }>) {
+    excludeIds.add(r.inviter_id);
+    excludeIds.add(r.invitee_id);
   }
 
   type Suggestion = {
@@ -49,18 +49,22 @@ export const GET = withAuth(async (request, { user, serviceClient }) => {
     const friendIdArray = Array.from(friendIds);
     const { data: fofData } = await serviceClient
       .from("friendships")
-      .select("user_id, friend_id")
+      .select("user_a_id, user_b_id")
       .or(
-        friendIdArray.map((id) => `user_id.eq.${id}`).join(",") +
+        friendIdArray.map((id) => `user_a_id.eq.${id}`).join(",") +
         "," +
-        friendIdArray.map((id) => `friend_id.eq.${id}`).join(",")
+        friendIdArray.map((id) => `user_b_id.eq.${id}`).join(",")
       );
 
     // Count mutual friends per candidate
+    // Each row is a friendship where at least one side is our friend.
+    // We want the OTHER person — the one who isn't already our friend.
     const mutualCounts = new Map<string, number>();
-    for (const f of (fofData || []) as Array<{ user_id: string; friend_id: string }>) {
-      const candidateId = friendIds.has(f.user_id) ? f.friend_id : f.user_id;
-      if (!excludeIds.has(candidateId)) {
+    for (const f of (fofData || []) as Array<{ user_a_id: string; user_b_id: string }>) {
+      const candidates = [f.user_a_id, f.user_b_id].filter(
+        (id) => !excludeIds.has(id) && !friendIds.has(id)
+      );
+      for (const candidateId of candidates) {
         mutualCounts.set(candidateId, (mutualCounts.get(candidateId) || 0) + 1);
       }
     }

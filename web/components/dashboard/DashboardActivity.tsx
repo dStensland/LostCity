@@ -7,6 +7,7 @@ import { PendingRequests } from "@/components/community/PendingRequests";
 import { FriendsActivity } from "@/components/community/FriendsActivity";
 import { FriendSuggestions } from "@/components/community/FriendSuggestions";
 import { useFriendRequests } from "@/lib/hooks/useFriendRequests";
+import { useFriendSuggestions } from "@/lib/hooks/useFriendSuggestions";
 
 export default function DashboardActivity() {
   const { user } = useAuth();
@@ -15,12 +16,10 @@ export default function DashboardActivity() {
   const { pendingRequests, isLoading: requestsLoading } = useFriendRequests({
     type: "received",
   });
+  const { suggestions: friendSuggestions, isLoading: suggestionsLoading } = useFriendSuggestions();
 
   // Loading state
   const loading = requestsLoading;
-
-  // For now, friend suggestions are empty - this can be added as a separate API endpoint later
-  const friendSuggestions: never[] = [];
 
   if (loading) {
     return <LoadingSkeleton />;
@@ -35,15 +34,15 @@ export default function DashboardActivity() {
       {/* 1. Enhanced Search - Glass style */}
       <FriendSearch />
 
-      {/* 2. Friend Suggestions - Inline, auto-shown if any exist */}
-      {friendSuggestions.length > 0 && (
-        <FriendSuggestions suggestions={friendSuggestions} isLoading={false} />
+      {/* 2. Friend Suggestions */}
+      {(friendSuggestions.length > 0 || suggestionsLoading) && (
+        <FriendSuggestions suggestions={friendSuggestions} isLoading={suggestionsLoading} />
       )}
 
-      {/* 3. Pending Friend Requests - Always visible when present */}
+      {/* 4. Pending Friend Requests - Always visible when present */}
       <PendingRequests requests={pendingRequests} />
 
-      {/* 4. Activity Feed - Primary content */}
+      {/* 5. Activity Feed - Primary content */}
       <FriendsActivity />
     </div>
   );

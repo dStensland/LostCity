@@ -565,7 +565,7 @@
   }
 
   .avatar-glow {
-    box-shadow: 0 0 var(--avatar-glow-size) color-mix(in srgb, var(--avatar-from) 40%, transparent);
+    box-shadow: 0 0 var(--avatar-glow-size) color-mix(in srgb, var(--avatar-from) 20%, transparent);
   }
 
   .avatar-initial {
@@ -680,7 +680,7 @@
 
   .text-neon-cyan-glow {
     color: var(--neon-cyan);
-    text-shadow: 0 0 20px color-mix(in srgb, var(--neon-cyan) 25%, transparent);
+    text-shadow: 0 0 10px color-mix(in srgb, var(--neon-cyan) 15%, transparent);
   }
 
   .divider-neon-cyan {
@@ -693,7 +693,7 @@
   }
 
   .hover-glow-coral-cyan {
-    background: radial-gradient(circle at center, var(--coral) 0%, var(--neon-cyan) 50%, transparent 70%);
+    background: radial-gradient(circle at center, color-mix(in srgb, var(--coral) 30%, transparent) 0%, color-mix(in srgb, var(--neon-cyan) 20%, transparent) 50%, transparent 70%);
   }
 
   .text-coral-glow {
@@ -706,7 +706,7 @@
   }
 
   .hover-glow-coral-red {
-    background: radial-gradient(circle at center, var(--coral) 0%, var(--neon-red) 50%, transparent 70%);
+    background: radial-gradient(circle at center, color-mix(in srgb, var(--coral) 25%, transparent) 0%, color-mix(in srgb, var(--neon-red) 15%, transparent) 50%, transparent 70%);
   }
 
   .text-accent-glow {
@@ -724,19 +724,19 @@
   }
 
   .hover-glow-coral-magenta {
-    background: radial-gradient(circle at center, var(--coral) 0%, var(--neon-magenta) 50%, transparent 70%);
+    background: radial-gradient(circle at center, color-mix(in srgb, var(--coral) 25%, transparent) 0%, color-mix(in srgb, var(--neon-magenta) 15%, transparent) 50%, transparent 70%);
   }
 
   .hover-glow-magenta-coral {
-    background: radial-gradient(circle at center, var(--neon-magenta) 0%, var(--coral) 50%, transparent 70%);
+    background: radial-gradient(circle at center, color-mix(in srgb, var(--neon-magenta) 25%, transparent) 0%, color-mix(in srgb, var(--coral) 15%, transparent) 50%, transparent 70%);
   }
 
   .hover-glow-coral {
-    background: radial-gradient(circle at center, var(--coral) 0%, transparent 70%);
+    background: radial-gradient(circle at center, color-mix(in srgb, var(--coral) 25%, transparent) 0%, transparent 70%);
   }
 
   .hover-glow-cyan {
-    background: radial-gradient(circle at center, var(--neon-cyan) 0%, transparent 70%);
+    background: radial-gradient(circle at center, color-mix(in srgb, var(--neon-cyan) 25%, transparent) 0%, transparent 70%);
   }
 
   .accent-coral {
@@ -1547,11 +1547,11 @@ body::after {
   @apply disabled:cursor-not-allowed disabled:opacity-50;
 }
 
-/* Accent button - special actions (Friend request accept, etc.) */
+/* Accent button - special actions (Add Friend, etc.) */
 .btn-accent {
   @apply inline-flex items-center justify-center font-mono font-medium rounded-xl transition-all duration-150;
-  @apply bg-[var(--neon-cyan)]/20 text-[var(--neon-cyan)] border border-[var(--neon-cyan)]/30;
-  @apply hover:bg-[var(--neon-cyan)]/30 active:scale-[0.98];
+  @apply bg-[var(--coral)] text-[var(--void)] shadow-sm;
+  @apply hover:bg-[var(--rose)] hover:shadow-md active:scale-[0.98];
   @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--coral)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--void)];
   @apply disabled:cursor-not-allowed disabled:opacity-50;
 }
@@ -5338,7 +5338,7 @@ textarea:focus-visible {
    ============================================ */
 
 .friend-search-glow {
-  background: radial-gradient(circle at center, var(--coral) 0%, transparent 70%);
+  background: radial-gradient(circle at center, color-mix(in srgb, var(--coral) 40%, transparent) 0%, transparent 70%);
 }
 
 /* ============================================

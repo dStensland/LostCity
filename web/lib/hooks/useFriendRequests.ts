@@ -81,9 +81,11 @@ export function useFriendRequests(options: UseFriendRequestsOptions = {}) {
     retry: 2,
   });
 
-  // Filter pending requests from the response
+  // Filter pending requests where the current user is the invitee (received only)
   const pendingRequests =
-    query.data?.requests.filter((r) => r.status === "pending") || [];
+    query.data?.requests.filter(
+      (r) => r.status === "pending" && (!user || r.invitee_id === user.id)
+    ) || [];
 
   return {
     requests: query.data?.requests || [],

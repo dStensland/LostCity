@@ -73,43 +73,67 @@ export const POST = withAuth(async (request, { user, supabase, serviceClient }) 
     if (rateLimitResult) return rateLimitResult;
 
     const body = await request.json();
-    const { inviter_id, inviter_username } = body as {
+    const { inviter_id, inviter_username, invitee_id } = body as {
       inviter_id?: string;
       inviter_username?: string;
+      invitee_id?: string;
     };
+
+    // Two flows:
+    // 1. Invite link: inviter_id/inviter_username = the person who shared the link.
+    //    Current user is the invitee (they clicked someone else's link).
+    // 2. Direct request: invitee_id = the person being requested.
+    //    Current user is the inviter (they clicked "Add Friend" on a profile).
 
     // Validate input
     if (inviter_id && !isValidUUID(inviter_id)) {
       return validationError("Invalid inviter_id format");
     }
+    if (invitee_id && !isValidUUID(invitee_id)) {
+      return validationError("Invalid invitee_id format");
+    }
     if (inviter_username && !isValidString(inviter_username, 3, 30)) {
       return validationError("Invalid username format");
     }
 
-    // Resolve inviter_id from username if needed
-    let resolvedInviterId = inviter_id;
-    if (!resolvedInviterId && inviter_username) {
-      const { data: inviterProfile } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("username", inviter_username.toLowerCase())
-        .maybeSingle();
+    let finalInviterId: string;
+    let finalInviteeId: string;
 
-      if (!inviterProfile) {
-        return NextResponse.json({ error: "Inviter not found" }, { status: 404 });
+    if (invitee_id) {
+      // Direct request flow: current user is the inviter
+      finalInviterId = user.id;
+      finalInviteeId = invitee_id;
+    } else {
+      // Invite link flow: resolve the inviter, current user is the invitee
+      let resolvedInviterId = inviter_id;
+      if (!resolvedInviterId && inviter_username) {
+        const { data: inviterProfile } = await supabase
+          .from("profiles")
+          .select("id")
+          .eq("username", inviter_username.toLowerCase())
+          .maybeSingle();
+
+        if (!inviterProfile) {
+          return NextResponse.json({ error: "Inviter not found" }, { status: 404 });
+        }
+        resolvedInviterId = (inviterProfile as { id: string }).id;
       }
-      resolvedInviterId = (inviterProfile as { id: string }).id;
+
+      if (!resolvedInviterId) {
+        return NextResponse.json(
+          { error: "inviter_id, inviter_username, or invitee_id required" },
+          { status: 400 }
+        );
+      }
+
+      finalInviterId = resolvedInviterId;
+      finalInviteeId = user.id;
     }
 
-    if (!resolvedInviterId) {
-      return NextResponse.json(
-        { error: "inviter_id or inviter_username required" },
-        { status: 400 }
-      );
-    }
+    const otherUserId = finalInviterId === user.id ? finalInviteeId : finalInviterId;
 
     // Can't send request to self
-    if (resolvedInviterId === user.id) {
+    if (otherUserId === user.id) {
       return NextResponse.json(
         { error: "Cannot send friend request to yourself" },
         { status: 400 }
@@ -119,7 +143,7 @@ export const POST = withAuth(async (request, { user, supabase, serviceClient }) 
     // Check if already friends using the friendships table
     const { data: areFriends, error: friendCheckError } = await supabase.rpc(
       "are_friends" as never,
-      { user_a: user.id, user_b: resolvedInviterId } as never
+      { user_a: user.id, user_b: otherUserId } as never
     ) as { data: boolean | null; error: Error | null };
 
     if (friendCheckError) {
@@ -142,7 +166,7 @@ export const POST = withAuth(async (request, { user, supabase, serviceClient }) 
       .from("user_blocks" as never)
       .select("id")
       .or(
-        `and(blocker_id.eq.${user.id},blocked_id.eq.${resolvedInviterId}),and(blocker_id.eq.${resolvedInviterId},blocked_id.eq.${user.id})`
+        `and(blocker_id.eq.${user.id},blocked_id.eq.${otherUserId}),and(blocker_id.eq.${otherUserId},blocked_id.eq.${user.id})`
       )
       .maybeSingle();
 
@@ -159,7 +183,7 @@ export const POST = withAuth(async (request, { user, supabase, serviceClient }) 
       .select("id, status, inviter_id")
       .eq("status", "pending")
       .or(
-        `and(inviter_id.eq.${user.id},invitee_id.eq.${resolvedInviterId}),and(inviter_id.eq.${resolvedInviterId},invitee_id.eq.${user.id})`
+        `and(inviter_id.eq.${user.id},invitee_id.eq.${otherUserId}),and(inviter_id.eq.${otherUserId},invitee_id.eq.${user.id})`
       )
       .maybeSingle();
 
@@ -167,8 +191,8 @@ export const POST = withAuth(async (request, { user, supabase, serviceClient }) 
     const existingReq = existingRequest as ExistingRequestType;
 
     if (existingReq) {
-      // If there's a pending request FROM the inviter to us, auto-accept it
-      if (existingReq.inviter_id === resolvedInviterId) {
+      // If there's a pending request FROM the other user to us, auto-accept it
+      if (existingReq.inviter_id === otherUserId) {
         const { error: acceptError } = await serviceClient
           .from("friend_requests" as never)
           .update({ status: "accepted" } as never)
@@ -176,6 +200,16 @@ export const POST = withAuth(async (request, { user, supabase, serviceClient }) 
 
         if (acceptError) {
           return errorResponse(acceptError, "friend-requests:POST:accept");
+        }
+
+        // Create the friendship record
+        const { error: friendshipError } = await serviceClient.rpc(
+          "create_friendship" as never,
+          { user_a: user.id, user_b: otherUserId } as never
+        );
+
+        if (friendshipError) {
+          logger.error("Error creating friendship on auto-accept:", { error: friendshipError.message });
         }
 
         return NextResponse.json({
@@ -191,14 +225,12 @@ export const POST = withAuth(async (request, { user, supabase, serviceClient }) 
       );
     }
 
-    // Create the friend request using service client
-    // The inviter is the person whose link was clicked
-    // The invitee is the current user (who clicked the link)
+    // Create the friend request
     const { data: newRequest, error: insertError } = await serviceClient
       .from("friend_requests" as never)
       .insert({
-        inviter_id: resolvedInviterId,
-        invitee_id: user.id,
+        inviter_id: finalInviterId,
+        invitee_id: finalInviteeId,
         status: "pending",
       } as never)
       .select()

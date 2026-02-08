@@ -5,6 +5,7 @@ import { format, parseISO } from "date-fns";
 import RSVPButton from "./RSVPButton";
 import AddToCalendar from "./AddToCalendar";
 import ShareEventButton from "./ShareEventButton";
+import InviteToEventButton from "./InviteToEventButton";
 
 interface EventQuickActionsProps {
   event: {
@@ -112,6 +113,7 @@ export default function EventQuickActions({ event, isLive, className = "" }: Eve
 
         {/* Secondary actions - desktop */}
         <div className="hidden sm:flex items-center gap-1">
+          <InviteToEventButton eventId={event.id} eventTitle={event.title} variant="icon" />
           <AddToCalendar
             title={event.title}
             date={event.start_date}
@@ -172,6 +174,7 @@ export default function EventQuickActions({ event, isLive, className = "" }: Eve
 
         {/* Mobile secondary actions */}
         <div className="flex sm:hidden items-center gap-1">
+          <InviteToEventButton eventId={event.id} eventTitle={event.title} variant="icon" />
           <ShareEventButton eventId={event.id} eventTitle={event.title} variant="icon" />
         </div>
       </div>

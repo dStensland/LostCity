@@ -179,7 +179,7 @@ function checkRateLimitInMemory(
 
   const now = Date.now();
   const windowMs = config.windowSec * 1000;
-  const key = identifier;
+  const key = `${config.limit}_${config.windowSec}:${identifier}`;
 
   const entry = rateLimitStore.get(key);
 

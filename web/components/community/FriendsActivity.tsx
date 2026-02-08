@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useEffect, useRef } from "react";
-import Image from "@/components/SmartImage";
 import UserAvatar, { AvatarStack } from "@/components/UserAvatar";
 import CategoryIcon, { getCategoryColor } from "@/components/CategoryIcon";
 import { formatDistanceToNow, format, parseISO, isToday, isYesterday, isThisWeek } from "date-fns";
@@ -416,18 +415,6 @@ function GroupedEventCard({ group }: { group: GroupedActivity }) {
           )}
         </div>
 
-        {/* Thumbnail if available */}
-        {event.image_url && (
-          <div className="hidden sm:block flex-shrink-0 w-16 h-16 rounded-lg border border-[var(--twilight)] overflow-hidden">
-            <Image
-              src={event.image_url}
-              alt={event.title}
-              width={64}
-              height={64}
-              className="w-full h-full object-cover"
-            />
-          </div>
-        )}
       </div>
       </Link>
     </>
@@ -521,18 +508,6 @@ function ActivityCard({ activity }: { activity: ActivityItem }) {
             )}
           </div>
 
-          {/* Thumbnail if available */}
-          {activity.event.image_url && (
-            <div className="hidden sm:block flex-shrink-0 w-16 h-16 rounded-lg border border-[var(--twilight)] overflow-hidden">
-              <Image
-                src={activity.event.image_url}
-                alt={activity.event.title}
-                width={64}
-                height={64}
-                className="w-full h-full object-cover"
-              />
-            </div>
-          )}
         </div>
         </Link>
       </>
