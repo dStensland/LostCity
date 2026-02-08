@@ -36,6 +36,9 @@ export default function Logo({ size = "md", href = "/", className = "", portal }
           </span>
         )}
       </span>
+
+      {/* Beta badge */}
+      <span className="logo-beta" aria-label="Beta">BETA</span>
     </span>
   );
 

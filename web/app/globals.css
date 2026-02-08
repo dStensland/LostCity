@@ -4895,6 +4895,47 @@ textarea:focus-visible {
   letter-spacing: 0.18em;
 }
 
+/* Beta badge — neon accent tucked beside wordmark */
+.logo-beta {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-weight: 700;
+  font-size: 0.5rem;
+  letter-spacing: 0.18em;
+  color: #5EF0FF;
+  background: rgba(94, 240, 255, 0.1);
+  border: 1px solid rgba(94, 240, 255, 0.5);
+  border-radius: 3px;
+  padding: 0.15em 0.4em;
+  align-self: flex-end;
+  margin-bottom: 0.2em;
+  margin-left: 0.4em;
+  text-shadow: 0 0 6px rgba(94, 240, 255, 0.8);
+  box-shadow: 0 0 8px rgba(94, 240, 255, 0.2), inset 0 0 4px rgba(94, 240, 255, 0.05);
+  animation: beta-flicker 4s ease-in-out infinite;
+}
+
+@keyframes beta-flicker {
+  0%, 100% { opacity: 0.9; }
+  50% { opacity: 1; }
+  82% { opacity: 0.9; }
+  84% { opacity: 0.4; }
+  86% { opacity: 1; }
+}
+
+.logo-size-sm .logo-beta {
+  font-size: 0.42rem;
+  padding: 0.12em 0.35em;
+  margin-bottom: 0.15em;
+  margin-left: 0.3em;
+}
+
+.logo-size-lg .logo-beta {
+  font-size: 0.65rem;
+  padding: 0.1em 0.4em;
+  margin-bottom: 0.25em;
+  margin-left: 0.4em;
+}
+
 /* Etched skyline — extends right from the wordmark like a city emerging */
 .logo-skyline {
   position: absolute;
