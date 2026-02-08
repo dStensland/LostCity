@@ -4936,6 +4936,11 @@ textarea:focus-visible {
   margin-left: 0.4em;
 }
 
+@keyframes slideInRight {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
 /* Etched skyline — extends right from the wordmark like a city emerging */
 .logo-skyline {
   position: absolute;
