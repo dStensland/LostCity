@@ -5,8 +5,8 @@ integration_method: html
 defaults: {}
 discovery:
   enabled: true
-  type: list
+  type: html
   urls:
   - https://pathfoundation.org/events/
 detail:
-  enabled: false
+  enabled: true

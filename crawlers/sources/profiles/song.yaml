@@ -9,4 +9,4 @@ discovery:
   urls:
   - https://southernersonnewground.org/events
 detail:
-  enabled: false
+  enabled: true

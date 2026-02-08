@@ -522,6 +522,8 @@ SOURCE_MODULES = {
     # ===== Restaurants =====
     "le-colonial-atlanta": "sources.le_colonial",
     # ===== Additional Music Venues =====
+    "boggs-social": "sources.boggs_social",
+    "the-bakery-atl": "sources.the_bakery",
     "echo-room": "sources.echo_room",
     # ===== Historic Sites & Memorials =====
     "king-center": "sources.king_center",

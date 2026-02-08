@@ -1,0 +1,12 @@
+version: 1
+slug: atlanta-greek-festival
+name: Atlanta Greek Festival
+integration_method: festival_schedule
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.atlantagreekfestival.org
+detail:
+  enabled: true

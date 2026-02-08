@@ -1,0 +1,12 @@
+version: 1
+slug: dixie-speedway
+name: Dixie Speedway
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.theredclayatwoodstock.com/events/
+detail:
+  enabled: true

@@ -9,4 +9,4 @@ discovery:
   urls:
   - https://www.indivisibleatl.com/events
 detail:
-  enabled: false
+  enabled: true

@@ -138,7 +138,7 @@ def create_recurring_events(source_id: int, venue_id: int) -> tuple[int, int]:
             "end_date": None,
             "end_time": "17:00",
             "is_all_day": False,
-            "category": "cultural",
+            "category": "community",
             "subcategory": "celebration",
             "tags": ["duluth", "lunar-new-year", "korean", "asian", "cultural", "family-friendly"],
             "price_min": None,

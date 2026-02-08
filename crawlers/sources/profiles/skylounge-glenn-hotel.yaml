@@ -9,4 +9,4 @@ discovery:
   urls:
   - https://glennhotel.com/skylounge
 detail:
-  enabled: false
+  enabled: true

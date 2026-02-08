@@ -156,13 +156,60 @@ function UnifiedHeaderInner({
     <>
       {/* Main Header Bar */}
       <header
-        className={`sticky top-0 z-[100] border-b transition-all duration-300 ${
+        className={`sticky top-0 z-[100] border-b transition-all duration-300 relative ${
           isScrolled
             ? "glass border-[var(--twilight)]/50"
             : "bg-[var(--void)]/95 backdrop-blur-sm border-[var(--twilight)]/30"
         }`}
       >
-        <div className="px-4 py-2 sm:py-3 flex items-center gap-4">
+        {/* Atlanta atmospheric backdrop — inverted skyline */}
+        {portalSlug === "atlanta" && (
+          <div
+            aria-hidden="true"
+            className="absolute inset-0 pointer-events-none z-[1] overflow-hidden"
+          >
+            <div
+              className="absolute inset-0 hidden sm:block"
+              style={{
+                backgroundImage: 'url("/portals/atlanta/header-skyline-collage.jpg")',
+                backgroundSize: "cover",
+                backgroundPosition: "center bottom",
+                backgroundRepeat: "no-repeat",
+                transform: "scaleY(-1)",
+                mixBlendMode: "screen",
+                opacity: 0.5,
+              }}
+            />
+            <div
+              className="absolute inset-0 hidden sm:block"
+              style={{
+                background: "linear-gradient(135deg, hsl(185 100% 46% / 0.12) 0%, hsl(320 80% 62% / 0.08) 100%)",
+                mixBlendMode: "screen",
+                pointerEvents: "none",
+              }}
+            />
+            <div
+              className="absolute inset-0 sm:hidden"
+              style={{
+                backgroundImage: 'url("/portals/atlanta/header-skyline-collage.jpg")',
+                backgroundSize: "cover",
+                backgroundPosition: "center bottom",
+                backgroundRepeat: "no-repeat",
+                transform: "scaleY(-1)",
+                mixBlendMode: "screen",
+                opacity: 0.35,
+              }}
+            />
+            <div
+              className="absolute inset-0"
+              style={{
+                background: "radial-gradient(ellipse 120% 100% at 50% 0%, rgba(0,0,0,0.35) 0%, transparent 70%)",
+                pointerEvents: "none",
+              }}
+            />
+          </div>
+        )}
+        <div className="relative z-10 px-4 py-2 sm:py-3 flex items-center gap-4">
           {/* Left: Back button (optional) + Logo */}
           <div className="flex items-center gap-2 flex-shrink-0">
             {backLink && (

@@ -4,10 +4,11 @@ name: The Cooking School at Irwin Street
 integration_method: playwright
 defaults: {}
 discovery:
-  enabled: true
+  enabled: false
   type: list
   urls:
   - https://www.irwinstreet.com
+  # NOTE: DNS dead as of 2026-02-06
   fetch:
     render_js: true
 detail:

@@ -555,3 +555,75 @@ def find_event_url(
             return best_url
 
     return fallback_url
+
+
+def enrich_event_record(event_record: dict, source_name: str = "") -> dict:
+    """Enrich an event record by fetching its detail page.
+
+    Fills in description, image_url, price_min, price_max, price_note, is_free,
+    start_time, end_time, and ticket_url from the event's source_url.
+
+    Only fills fields that are currently None/empty — never overwrites existing data.
+    Uses the full extraction stack (JSON-LD, Open Graph, heuristic, LLM fallback).
+
+    Args:
+        event_record: Event dict with at least 'source_url' set.
+        source_name: Human-readable source name for LLM extraction context.
+
+    Returns:
+        The same event_record dict, mutated with enriched fields.
+    """
+    detail_url = event_record.get("source_url") or event_record.get("ticket_url")
+    if not detail_url or not detail_url.startswith("http"):
+        return event_record
+
+    # Only enrich if we're missing key fields
+    has_good_desc = len(str(event_record.get("description") or "")) > 50
+    has_image = bool(event_record.get("image_url"))
+    has_price = event_record.get("price_min") is not None or event_record.get("is_free") is not None
+    if has_good_desc and has_image and has_price:
+        return event_record
+
+    try:
+        from pipeline.fetch import fetch_html
+        from pipeline.detail_enrich import enrich_from_detail
+        from pipeline.models import DetailConfig
+
+        html, error = fetch_html(detail_url)
+        if error or not html:
+            return event_record
+
+        config = DetailConfig(
+            enabled=True,
+            use_jsonld=True,
+            use_open_graph=True,
+            use_heuristic=True,
+            use_llm=True,
+        )
+        enriched = enrich_from_detail(html, detail_url, source_name, config)
+
+        # Apply enriched fields — only fill gaps
+        if not has_good_desc and enriched.get("description"):
+            event_record["description"] = enriched["description"]
+        if not has_image and enriched.get("image_url"):
+            event_record["image_url"] = enriched["image_url"]
+        if not has_price:
+            if enriched.get("price_min") is not None:
+                event_record["price_min"] = enriched["price_min"]
+            if enriched.get("price_max") is not None:
+                event_record["price_max"] = enriched["price_max"]
+            if enriched.get("price_note"):
+                event_record["price_note"] = enriched["price_note"]
+            if enriched.get("is_free"):
+                event_record["is_free"] = enriched["is_free"]
+        if not event_record.get("start_time") and enriched.get("start_time"):
+            event_record["start_time"] = enriched["start_time"]
+        if not event_record.get("end_time") and enriched.get("end_time"):
+            event_record["end_time"] = enriched["end_time"]
+        if not event_record.get("ticket_url") and enriched.get("ticket_url"):
+            event_record["ticket_url"] = enriched["ticket_url"]
+
+    except Exception as e:
+        logger.debug(f"Detail enrichment failed for {detail_url}: {e}")
+
+    return event_record

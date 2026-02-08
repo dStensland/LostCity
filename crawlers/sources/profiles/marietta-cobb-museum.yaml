@@ -5,7 +5,7 @@ integration_method: jsonld_only
 defaults: {}
 discovery:
   enabled: true
-  type: list
+  type: html
   urls:
   - https://mariettacobbartmuseum.org/events
 detail:

@@ -4,11 +4,11 @@ name: Church Bar
 integration_method: playwright
 defaults: {}
 discovery:
-  enabled: true
-  type: list
+  enabled: false
+  type: html
   urls:
   - https://www.churchedgewood.com
 detail:
-  enabled: false
+  enabled: true
   fetch:
     render_js: true

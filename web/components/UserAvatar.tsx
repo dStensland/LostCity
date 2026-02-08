@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "@/components/SmartImage";
-import { memo, useMemo } from "react";
+import { memo, useMemo, useState } from "react";
 import ScopedStyles from "@/components/ScopedStyles";
 import { createCssVarClass, createCssVarClassForLength, createCssVarClassForNumber } from "@/lib/css-utils";
 
@@ -59,6 +59,7 @@ function UserAvatar({
   const config = SIZE_CONFIG[size];
   const gradient = useMemo(() => getGradientForString(name), [name]);
   const initial = name.charAt(0).toUpperCase();
+  const [imgError, setImgError] = useState(false);
   const onlineSize = Math.max(8, Math.round(config.size * 0.25));
 
   const sizeClass = createCssVarClassForLength("--avatar-size", `${config.size}px`, "avatar-size");
@@ -95,13 +96,14 @@ function UserAvatar({
       <div
         className={`relative rounded-full overflow-hidden ${config.ring} ring-[var(--void)] transition-all duration-300 avatar-ring ${glow ? "avatar-glow" : ""}`}
       >
-        {src ? (
+        {src && !imgError ? (
           <Image
             src={src}
             alt={name}
             width={config.size}
             height={config.size}
             className="w-full h-full object-cover"
+            onError={() => setImgError(true)}
           />
         ) : (
           /* Gradient fallback with initial */

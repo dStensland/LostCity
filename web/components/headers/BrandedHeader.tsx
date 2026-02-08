@@ -8,6 +8,7 @@ import Logo from "../Logo";
 import UserMenu from "../UserMenu";
 import HeaderSearchButton from "../HeaderSearchButton";
 import ATLittleLogo from "../logos/ATLittleLogo";
+import BackButton from "./BackButton";
 import { usePortalOptional, DEFAULT_PORTAL } from "@/lib/portal-context";
 import { useAuth } from "@/lib/auth-context";
 import type { HeaderConfig } from "@/lib/visual-presets";
@@ -18,7 +19,8 @@ interface BrandedHeaderProps {
   portalName: string;
   branding: PortalBranding;
   backLink?: {
-    href: string;
+    href?: string;
+    fallbackHref?: string;
     label: string;
   };
   hideNav?: boolean;
@@ -179,16 +181,11 @@ export default function BrandedHeader({
         {/* Left: Back button (optional) */}
         <div className="flex items-center gap-2 flex-shrink-0">
           {backLink ? (
-            <Link
+            <BackButton
               href={backLink.href}
-              className="flex items-center gap-1.5 text-[var(--muted)] hover:text-[var(--cream)] transition-colors"
-              aria-label={`Back to ${backLink.label}`}
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-              </svg>
-              <span className="font-mono text-xs hidden sm:inline">{backLink.label}</span>
-            </Link>
+              fallbackHref={backLink.fallbackHref}
+              label={backLink.label}
+            />
           ) : (
             <div className="w-12" /> // Spacer for alignment
           )}

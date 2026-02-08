@@ -4,7 +4,7 @@ name: Atlanta Freethought Society
 integration_method: llm_crawler
 defaults: {}
 discovery:
-  enabled: false  # 503 Service Unavailable — 2026-02-06 audit
+  enabled: true
   type: html
   urls:
   - https://atlantafreethought.org/events

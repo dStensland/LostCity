@@ -9,4 +9,4 @@ discovery:
   urls:
   - https://visitfranklin.com/things-to-do-events/
 detail:
-  enabled: false
+  enabled: true

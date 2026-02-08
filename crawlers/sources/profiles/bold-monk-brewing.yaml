@@ -7,14 +7,13 @@ defaults:
   category: nightlife
   subcategory: brewery
   tags:
-    - brewery
-    - beer
-    - craft-beer
+  - brewery
+  - beer
+  - craft-beer
 discovery:
   enabled: true
   type: html
   urls:
   - https://boldmonkbrewingco.com/events
-  # Events page shows "No Results Found" — may be seasonal or site issue
 detail:
-  enabled: false
+  enabled: true

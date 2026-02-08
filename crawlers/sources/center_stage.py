@@ -22,6 +22,7 @@ from utils import extract_images_from_page, extract_event_links, find_event_url
 logger = logging.getLogger(__name__)
 
 BASE_URL = "https://www.centerstage-atlanta.com"
+EVENTS_URL = BASE_URL
 
 # Venue configurations for the Center Stage complex
 VENUE_DATA = {

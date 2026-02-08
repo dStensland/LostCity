@@ -7,14 +7,12 @@ defaults:
   category: arts
   subcategory: dance
   tags:
-    - dance
-    - classes
+  - dance
+  - classes
 discovery:
   enabled: true
   type: html
   urls:
   - https://www.dancing4fun.com/events/
-  # WordPress "The Events Calendar" plugin — has iCal at /events/?ical=1
-  # Currently showing "no upcoming events" — may be seasonal
 detail:
-  enabled: false
+  enabled: true

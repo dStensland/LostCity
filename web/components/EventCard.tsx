@@ -202,7 +202,7 @@ function EventCard({ event, index = 0, skipAnimation = false, portalSlug, friend
     <>
       <ScopedStyles css={accentClass?.css} />
       <div
-        className={`mb-4 rounded-sm border border-[var(--twilight)] card-atmospheric glow-accent reflection-accent ${reflectionClass} ${animationClass} ${staggerClass} bg-[var(--card-bg)] overflow-hidden group ${accentClass?.className ?? ""} ${
+        className={`mb-4 rounded-sm border border-[var(--twilight)] card-atmospheric glow-accent reflection-accent ${reflectionClass} ${animationClass} ${staggerClass} bg-[var(--card-bg)] overflow-hidden group hover:scale-[1.008] transition-transform ${accentClass?.className ?? ""} ${
           event.category ? "border-l-[3px] border-l-[var(--accent-color)]" : ""
         }`}
         style={
@@ -219,8 +219,8 @@ function EventCard({ event, index = 0, skipAnimation = false, portalSlug, friend
             className="block flex-1 min-w-0 p-3"
           >
             <div className="flex gap-3">
-            {/* Time cell - bolder typography for visual hierarchy */}
-            <div className="flex-shrink-0 w-14 flex flex-col items-center justify-center py-1">
+            {/* Time cell - hidden on mobile (inlined instead), visible on desktop */}
+            <div className="hidden sm:flex flex-shrink-0 w-14 flex-col items-center justify-center py-1">
               <span className={`font-mono text-[0.65rem] font-semibold leading-none uppercase tracking-wide ${
                 dateInfo.isHighlight ? "text-[var(--coral)]" : "text-[var(--muted)]"
               }`}>
@@ -246,8 +246,21 @@ function EventCard({ event, index = 0, skipAnimation = false, portalSlug, friend
             <div className="flex-1 min-w-0">
               {/* Mobile: Stacked layout for more title space */}
               <div className="sm:hidden">
-                {/* Top row: category + live badge + menu */}
+                {/* Top row: inline time + category + live badge */}
                 <div className="flex items-center gap-2 mb-1.5">
+                  {/* Inline time badge — replaces the hidden time column on mobile */}
+                  <span className={`inline-flex items-baseline gap-0.5 font-mono text-sm font-bold leading-none ${
+                    dateInfo.isHighlight ? "text-[var(--coral)]" : "text-[var(--cream)]"
+                  }`}>
+                    {event.is_all_day ? (
+                      <span className="text-[0.65rem] font-semibold text-[var(--soft)] uppercase tracking-wide">All Day</span>
+                    ) : (
+                      <>
+                        {time}
+                        {period && <span className="text-[0.6rem] font-medium text-[var(--soft)]">{period}</span>}
+                      </>
+                    )}
+                  </span>
                   {event.category && (
                     <span className="inline-flex items-center justify-center w-7 h-7 rounded bg-accent-20">
                       <CategoryIcon type={event.category} size={18} glow="subtle" />
@@ -401,7 +414,7 @@ function EventCard({ event, index = 0, skipAnimation = false, portalSlug, friend
               {/* Social proof row — uses RSVP-button visual language (solid pill, mono, glow) */}
               {(friendsGoing.length > 0 || hasSocialProof) && (
                 <div className="flex items-center gap-1.5 mt-2 flex-wrap">
-                  {/* Friends going — coral pill matching "I'm in" state */}
+                  {/* Friends going — coral pill matching "I'm in" state (shown on all sizes) */}
                   {friendsGoing.length > 0 && (
                     <span className="inline-flex items-center gap-1.5 pl-1 pr-2.5 py-1 rounded-lg bg-[var(--coral)]/15 border border-[var(--coral)]/30 shadow-[0_0_8px_var(--coral)/10]">
                       <AvatarStack
@@ -429,36 +442,72 @@ function EventCard({ event, index = 0, skipAnimation = false, portalSlug, friend
                     </span>
                   )}
 
-                  {/* Going count — coral pill */}
-                  {goingCount > 0 && (friendsGoing.length === 0 || goingCount > friendsGoing.length) && (
-                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[var(--coral)]/10 border border-[var(--coral)]/20 font-mono text-xs font-medium text-[var(--coral)]">
-                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                      </svg>
-                      <AnimatedCount value={goingCount} format={formatCompactCount} /> going
-                    </span>
-                  )}
+                  {/* Mobile: collapsed social proof — single summary pill */}
+                  {hasSocialProof && (() => {
+                    const counts = [
+                      { type: "going" as const, count: goingCount, label: "going", color: "coral" },
+                      { type: "interested" as const, count: interestedCount, label: "maybe", color: "gold" },
+                      { type: "recommended" as const, count: recommendationCount, label: "rec'd", color: "lavender" },
+                    ];
+                    const dominant = counts.reduce((a, b) => (b.count > a.count ? b : a));
+                    const totalCount = goingCount + interestedCount + recommendationCount;
+                    if (totalCount <= 0) return null;
+                    return (
+                      <span className={`sm:hidden inline-flex items-center gap-1 px-2 py-0.5 rounded-lg font-mono text-xs font-medium ${
+                        dominant.color === "coral"
+                          ? "bg-[var(--coral)]/10 border border-[var(--coral)]/20 text-[var(--coral)]"
+                          : dominant.color === "gold"
+                            ? "bg-[var(--gold)]/15 border border-[var(--gold)]/30 text-[var(--gold)]"
+                            : "bg-[var(--lavender)]/15 border border-[var(--lavender)]/30 text-[var(--lavender)]"
+                      }`}>
+                        {dominant.type === "going" && (
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                        )}
+                        {dominant.type === "recommended" && (
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+                          </svg>
+                        )}
+                        {formatCompactCount(totalCount)} {dominant.label}
+                      </span>
+                    );
+                  })()}
 
-                  {/* Interested count — gold pill matching "Maybe" state */}
-                  {interestedCount > 0 && (
-                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[var(--gold)]/15 border border-[var(--gold)]/30 font-mono text-xs font-medium text-[var(--gold)]">
-                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.286 3.957" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
-                      </svg>
-                      <AnimatedCount value={interestedCount} format={formatCompactCount} /> maybe
-                    </span>
-                  )}
+                  {/* Desktop: separate pills */}
+                  <span className="hidden sm:contents">
+                    {/* Going count — coral pill */}
+                    {goingCount > 0 && (friendsGoing.length === 0 || goingCount > friendsGoing.length) && (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[var(--coral)]/10 border border-[var(--coral)]/20 font-mono text-xs font-medium text-[var(--coral)]">
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                        <AnimatedCount value={goingCount} format={formatCompactCount} /> going
+                      </span>
+                    )}
 
-                  {/* Recommendations — lavender pill */}
-                  {recommendationCount > 0 && (
-                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[var(--lavender)]/15 border border-[var(--lavender)]/30 font-mono text-xs font-medium text-[var(--lavender)]">
-                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
-                      </svg>
-                      <AnimatedCount value={recommendationCount} format={formatCompactCount} /> rec&apos;d
-                    </span>
-                  )}
+                    {/* Interested count — gold pill matching "Maybe" state */}
+                    {interestedCount > 0 && (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[var(--gold)]/15 border border-[var(--gold)]/30 font-mono text-xs font-medium text-[var(--gold)]">
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.286 3.957" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
+                        </svg>
+                        <AnimatedCount value={interestedCount} format={formatCompactCount} /> maybe
+                      </span>
+                    )}
+
+                    {/* Recommendations — lavender pill */}
+                    {recommendationCount > 0 && (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[var(--lavender)]/15 border border-[var(--lavender)]/30 font-mono text-xs font-medium text-[var(--lavender)]">
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+                        </svg>
+                        <AnimatedCount value={recommendationCount} format={formatCompactCount} /> rec&apos;d
+                      </span>
+                    )}
+                  </span>
                 </div>
               )}
             </div>

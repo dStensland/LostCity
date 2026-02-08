@@ -4,11 +4,13 @@ name: Opera Nightclub
 integration_method: playwright
 defaults: {}
 discovery:
-  enabled: true
+  enabled: false
   type: list
   urls:
   - https://www.operaatlanta.com
   fetch:
     render_js: true
 detail:
-  enabled: false
+  enabled: true
+  fetch:
+    render_js: true

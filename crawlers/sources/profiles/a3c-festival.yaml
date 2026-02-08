@@ -1,0 +1,12 @@
+version: 1
+slug: a3c-festival
+name: A3C Festival & Conference
+integration_method: festival_schedule
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.a3cfestival.com
+detail:
+  enabled: true

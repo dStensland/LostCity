@@ -9,4 +9,4 @@ discovery:
   urls:
   - https://www.thehallga.com/calendar
 detail:
-  enabled: false
+  enabled: true

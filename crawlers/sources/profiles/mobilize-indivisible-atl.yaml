@@ -9,4 +9,4 @@ discovery:
   urls:
   - https://www.mobilize.us/indivisibleatl/
 detail:
-  enabled: false
+  enabled: true

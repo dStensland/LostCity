@@ -9,4 +9,4 @@ discovery:
   urls:
   - https://www.statefarmarena.com
 detail:
-  enabled: false
+  enabled: true

@@ -5,10 +5,8 @@ integration_method: aggregator
 defaults: {}
 discovery:
   enabled: true
-  type: api
+  type: html
   urls:
   - https://www.eventbrite.com/o/college-park-main-street-association-78944267493
-  api:
-    adapter: eventbrite
 detail:
-  enabled: false
+  enabled: true

@@ -55,6 +55,7 @@ export default function SearchBar() {
   const [suggestions, setSuggestions] = useState<(SearchResult & { personalizationReason?: string })[]>([]);
   const [quickActions, setQuickActions] = useState<QuickAction[]>([]);
   const [facets, setFacets] = useState<{ type: string; count: number }[]>([]);
+  const [apiGroupedResults, setApiGroupedResults] = useState<Record<string, SearchResult[]>>({});
   const [recentSearches, setRecentSearches] = useState<string[]>(() => {
     if (typeof window !== "undefined") {
       return getRecentSearches();
@@ -95,6 +96,7 @@ export default function SearchBar() {
       setSuggestions([]);
       setQuickActions([]);
       setFacets([]);
+      setApiGroupedResults({});
       return;
     }
 
@@ -134,12 +136,14 @@ export default function SearchBar() {
         setSuggestions(rankedResults);
         setQuickActions(data.quickActions || detectQuickActions(query, portalSlug));
         setFacets(data.facets || []);
+        setApiGroupedResults(data.groupedResults || {});
         setSelectedIndex(-1);
       } catch (err) {
         console.error("Search error:", err);
         setSuggestions([]);
         setQuickActions([]);
         setFacets([]);
+        setApiGroupedResults({});
       } finally {
         if (fetchId === fetchIdRef.current) {
           setIsLoading(false);
@@ -193,6 +197,7 @@ export default function SearchBar() {
     setSelectedIndex(-1);
     setSuggestions([]);
     setQuickActions([]);
+    setApiGroupedResults({});
   }, []);
 
   const handleFocus = useCallback(() => {
@@ -318,21 +323,27 @@ export default function SearchBar() {
   const showQuickActions = query.length >= 2 && quickActions.length > 0;
 
   // Group suggestions by type for display
+  // Use API's pre-grouped results (which include all types from the full result set)
+  // instead of re-grouping the top-N slice (which drops minority types like festivals)
   const groupedSuggestions = useMemo<Record<SearchResult["type"], SearchResult[]>>(() => {
-    if (!showSuggestions) {
-      return {
-        event: [],
-        venue: [],
-        organizer: [],
-        series: [],
-        list: [],
-        neighborhood: [],
-        category: [],
-        festival: [],
-      };
+    const empty: Record<SearchResult["type"], SearchResult[]> = {
+      event: [],
+      venue: [],
+      organizer: [],
+      series: [],
+      list: [],
+      neighborhood: [],
+      category: [],
+      festival: [],
+    };
+    if (!showSuggestions) return empty;
+
+    // Prefer API grouped results (full type diversity) over re-grouping sliced suggestions
+    if (Object.keys(apiGroupedResults).length > 0) {
+      return { ...empty, ...apiGroupedResults } as Record<SearchResult["type"], SearchResult[]>;
     }
     return groupResultsByType(suggestions);
-  }, [showSuggestions, suggestions]);
+  }, [showSuggestions, suggestions, apiGroupedResults]);
 
   const groupOrder = useMemo(() => {
     return getGroupDisplayOrder(rankingContext);

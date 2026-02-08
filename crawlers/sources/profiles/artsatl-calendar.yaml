@@ -9,4 +9,4 @@ discovery:
   urls:
   - https://www.artsatl.org/calendar/
 detail:
-  enabled: false
+  enabled: true

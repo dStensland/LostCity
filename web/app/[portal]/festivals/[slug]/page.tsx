@@ -1,8 +1,8 @@
 import { notFound } from "next/navigation";
 import { cache } from "react";
-import UnifiedHeader from "@/components/UnifiedHeader";
+import ScrollToTop from "@/components/ScrollToTop";
+import { PortalHeader } from "@/components/headers";
 import PortalFooter from "@/components/PortalFooter";
-import { PortalTheme } from "@/components/PortalTheme";
 import { getCachedPortalBySlug } from "@/lib/portal";
 import {
   getFestivalBySlug,
@@ -20,12 +20,12 @@ import {
   SectionHeader,
   RelatedSection,
   RelatedCard,
-  DetailStickyBar,
 } from "@/components/detail";
-import { safeJsonLd } from "@/lib/formats";
+import { safeJsonLd, decodeHtmlEntities } from "@/lib/formats";
 import type { Metadata } from "next";
 import ScopedStylesServer from "@/components/ScopedStylesServer";
 import { createCssVarClass } from "@/lib/css-utils";
+import { getCategoryAccentColor } from "@/lib/moments-utils";
 
 export const revalidate = 300; // 5 minutes
 
@@ -124,6 +124,12 @@ function generateFestivalSchema(
 // Format festival dates for hero subtitle
 function formatFestivalDates(festival: NonNullable<Awaited<ReturnType<typeof getFestivalBySlug>>>): string {
   if (festival.announced_start && festival.announced_end) {
+    // Single-day festival
+    if (festival.announced_start === festival.announced_end) {
+      const start = new Date(festival.announced_start + "T00:00:00");
+      return start.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+    }
+
     const start = new Date(festival.announced_start + "T00:00:00");
     const end = new Date(festival.announced_end + "T00:00:00");
     const startMonth = start.toLocaleDateString("en-US", { month: "short" });
@@ -150,7 +156,7 @@ function formatFestivalDates(festival: NonNullable<Awaited<ReturnType<typeof get
     return `Typically ${monthNames[festival.typical_month - 1]} (${duration} day${duration > 1 ? "s" : ""})`;
   }
 
-  return "Dates TBA";
+  return "Dates coming soon";
 }
 
 export default async function PortalFestivalPage({ params }: Props) {
@@ -171,7 +177,8 @@ export default async function PortalFestivalPage({ params }: Props) {
     getFestivalEvents(festival.id),
     getFestivalArtists(festival.id),
   ]);
-  const festivalAccentClass = createCssVarClass("--accent-color", "var(--neon-magenta)", "festival");
+  const accentColor = getCategoryAccentColor(festival.categories?.[0]);
+  const festivalAccentClass = createCssVarClass("--accent-color", accentColor, "festival");
   const festivalSchema = generateFestivalSchema(festival, sessions);
 
   // Build subtitle for hero
@@ -179,6 +186,7 @@ export default async function PortalFestivalPage({ params }: Props) {
 
   return (
     <>
+      <ScrollToTop />
       {/* Schema.org JSON-LD */}
       <script
         type="application/ld+json"
@@ -187,23 +195,25 @@ export default async function PortalFestivalPage({ params }: Props) {
 
       <ScopedStylesServer css={festivalAccentClass?.css || ""} />
 
-      {/* Portal-specific theming */}
-      {portal && <PortalTheme portal={portal} />}
+
 
       <div className={`min-h-screen ${festivalAccentClass?.className ?? ""}`}>
-        <UnifiedHeader
+        <PortalHeader
           portalSlug={activePortalSlug}
           portalName={activePortalName}
+          hideNav
         />
 
-        <main className="max-w-3xl mx-auto px-4 py-4 sm:py-6 pb-28 space-y-5 sm:space-y-8">
+        <main className="max-w-3xl mx-auto px-4 py-4 sm:py-6 pb-12 space-y-5 sm:space-y-8">
           {/* Hero Section */}
           <DetailHero
             mode="image"
             imageUrl={festival.image_url}
             title={festival.name}
             subtitle={heroSubtitle}
-            categoryColor="var(--neon-magenta)"
+            categoryColor={accentColor}
+            backFallbackHref={`/${activePortalSlug}`}
+            tall
             badge={
               <span
                 className="inline-flex items-center gap-2 px-3 py-1.5 rounded text-xs font-mono uppercase tracking-wider bg-accent-20 text-accent border border-accent-40"
@@ -216,8 +226,49 @@ export default async function PortalFestivalPage({ params }: Props) {
             }
           />
 
+          {/* CTAs — inline, right after hero */}
+          {(festival.ticket_url || festival.website) && (
+            <div className="flex gap-3">
+              {festival.ticket_url && (
+                <a
+                  href={festival.ticket_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-1 inline-flex items-center justify-center gap-2 px-6 py-3 bg-[var(--coral)] text-white font-semibold rounded-lg hover:bg-[var(--rose)] transition-all shadow-[0_0_20px_rgba(255,107,122,0.3)]"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+                  </svg>
+                  Get Tickets
+                </a>
+              )}
+              {festival.website && (
+                <a
+                  href={festival.website}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={`inline-flex items-center justify-center gap-2 px-5 py-3 rounded-lg border border-[var(--twilight)] hover:bg-[var(--twilight)] text-[var(--soft)] text-sm font-medium transition-colors ${festival.ticket_url ? "" : "flex-1"}`}
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                  </svg>
+                  Website
+                </a>
+              )}
+            </div>
+          )}
+
+          {/* Interactive Schedule — high up for immediate engagement */}
+          {sessions.length > 0 && (
+            <FestivalSchedule
+              sessions={sessions}
+              programs={programs}
+              portalSlug={activePortalSlug}
+            />
+          )}
+
           {/* Main Content Card */}
-          <InfoCard accentColor="var(--neon-magenta)">
+          <InfoCard accentColor={accentColor}>
             {/* Metadata Grid */}
             <MetadataGrid
               items={[
@@ -266,7 +317,7 @@ export default async function PortalFestivalPage({ params }: Props) {
                   {festival.categories.map((category) => (
                     <span
                       key={category}
-                      className="px-2.5 py-1 rounded-full text-xs font-medium border border-[var(--twilight)] bg-[var(--void)]"
+                      className="px-2.5 py-1 rounded-full text-xs font-medium border border-[var(--coral)]/30 bg-[var(--coral)]/10 text-[var(--coral)]"
                     >
                       {category.replace(/_/g, " ")}
                     </span>
@@ -276,45 +327,31 @@ export default async function PortalFestivalPage({ params }: Props) {
             )}
           </InfoCard>
 
-          {/* Lineup / Featured Artists */}
+          {/* Lineup / Featured Artists — labels auto-derived from artist disciplines */}
           {festivalArtists.length > 0 && (
             <LineupSection
               artists={festivalArtists}
               portalSlug={activePortalSlug}
-              title={
-                festival.categories?.includes("music")
-                  ? "Lineup"
-                  : "Featured Guests"
-              }
-              maxDisplay={30}
+              maxDisplay={9}
             />
           )}
 
           {/* Multi-venue map */}
           <FestivalMap sessions={sessions} portalSlug={activePortalSlug} />
 
-          {/* Interactive Schedule */}
-          {sessions.length > 0 && (
-            <FestivalSchedule
-              sessions={sessions}
-              programs={programs}
-              portalSlug={activePortalSlug}
-            />
-          )}
-
-          {/* Programs Section */}
-          {programs.length > 0 && (
+          {/* Programs Section — capped at 9 */}
+          {programs.length > 1 && (
             <RelatedSection
               title="Festival Programs"
               count={programs.length}
               emptyMessage="No programs scheduled"
             >
-              {programs.map((program) => (
+              {programs.slice(0, 9).map((program) => (
                 <RelatedCard
                   key={program.id}
                   variant="image"
                   href={`/${activePortalSlug}/series/${program.slug}`}
-                  title={program.title}
+                  title={decodeHtmlEntities(program.title)}
                   subtitle={program.event_count ? `${program.event_count} session${program.event_count !== 1 ? "s" : ""}` : "Program"}
                   imageUrl={program.image_url || undefined}
                   icon={
@@ -327,7 +364,7 @@ export default async function PortalFestivalPage({ params }: Props) {
                       />
                     </svg>
                   }
-                  accentColor="var(--neon-magenta)"
+                  accentColor={accentColor}
                 />
               ))}
             </RelatedSection>
@@ -337,38 +374,6 @@ export default async function PortalFestivalPage({ params }: Props) {
         <PortalFooter />
       </div>
 
-      {/* Sticky bar with actions */}
-      <DetailStickyBar
-        shareLabel="Share Festival"
-        secondaryActions={
-          festival.website ? (
-            <a
-              href={festival.website}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="px-4 py-2 rounded-lg border border-[var(--twilight)] hover:bg-[var(--twilight)] text-[var(--soft)] text-sm font-medium transition-colors flex items-center gap-2"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-              </svg>
-              Website
-            </a>
-          ) : null
-        }
-        primaryAction={
-          festival.ticket_url
-            ? {
-                label: "Get Tickets",
-                href: festival.ticket_url,
-              }
-            : sessions.length > 0
-              ? {
-                  label: "See Schedule",
-                  href: "#schedule",
-                }
-              : undefined
-        }
-      />
     </>
   );
 }

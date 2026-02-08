@@ -9,4 +9,4 @@ discovery:
   urls:
   - https://www.cherrystreetbrewing.com
 detail:
-  enabled: false
+  enabled: true

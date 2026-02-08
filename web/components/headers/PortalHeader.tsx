@@ -15,9 +15,11 @@ export interface PortalHeaderProps {
   portalSlug?: string;
   /** Override the portal name */
   portalName?: string;
-  /** Show back button with contextual label */
+  /** Show back button with contextual label. Omit href to use browser history. */
   backLink?: {
-    href: string;
+    href?: string;
+    /** Where to go when there's no in-app history (e.g. direct link, external referrer). */
+    fallbackHref?: string;
     label: string;
   };
   /** Hide the main navigation tabs */

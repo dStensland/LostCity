@@ -9,4 +9,4 @@ discovery:
   urls:
   - https://www.believemusichall.com
 detail:
-  enabled: false
+  enabled: true

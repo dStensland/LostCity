@@ -9,4 +9,4 @@ discovery:
   urls:
   - https://www.nashvillescene.com/calendar/
 detail:
-  enabled: false
+  enabled: true

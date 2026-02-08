@@ -2,11 +2,12 @@ version: 1
 slug: tara-theatre
 name: Tara Theatre
 integration_method: llm_crawler
-defaults: {}
+defaults:
+  category: film
 discovery:
   enabled: true
   type: html
   urls:
   - https://www.taraatlanta.com
 detail:
-  enabled: false
+  enabled: true

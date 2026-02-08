@@ -12,6 +12,7 @@ import {
   startOfDay,
 } from "date-fns";
 import { formatTimeSplit, formatCompactCount } from "@/lib/formats";
+import { getEffectiveDate } from "@/lib/event-grouping";
 import CategoryIcon, { getCategoryColor } from "@/components/CategoryIcon";
 import ScopedStyles from "@/components/ScopedStyles";
 import { createCssVarClass } from "@/lib/css-utils";
@@ -21,6 +22,7 @@ export type VenueEvent = {
   id: number;
   title: string;
   start_date: string;
+  end_date?: string | null;
   start_time: string | null;
   is_free?: boolean;
   price_min?: number | null;
@@ -35,6 +37,7 @@ interface VenueEventsByDayProps {
   events: VenueEvent[];
   onEventClick?: (eventId: number) => void; // For client-side navigation
   getEventHref?: (eventId: number) => string; // For SSR/Link-based navigation
+  portalSlug?: string; // Alternative to getEventHref — pass from server components
   maxDates?: number; // Limit visible date tabs (default: 7)
   showDatePicker?: boolean; // Show "jump to date" option (default: false)
   compact?: boolean; // Smaller variant for detail pages (default: false)
@@ -43,20 +46,24 @@ interface VenueEventsByDayProps {
 export default function VenueEventsByDay({
   events,
   onEventClick,
-  getEventHref,
+  getEventHref: getEventHrefProp,
+  portalSlug,
   maxDates = 7,
   showDatePicker = false,
   compact = false,
 }: VenueEventsByDayProps) {
+  // Build getEventHref from prop or portalSlug fallback (safe for server components)
+  const getEventHref = getEventHrefProp ?? (portalSlug ? (id: number) => `/${portalSlug}/events/${id}` : undefined);
+
   const scrollRef = useRef<HTMLDivElement>(null);
   const [showDatePickerInput, setShowDatePickerInput] = useState(false);
   const [datePickerValue, setDatePickerValue] = useState("");
 
-  // Group events by date
+  // Group events by effective date (ongoing multi-day events show as Today)
   const eventsByDate = useMemo(() => {
     const grouped = new Map<string, VenueEvent[]>();
     for (const event of events) {
-      const dateKey = event.start_date;
+      const dateKey = getEffectiveDate(event.start_date, event.end_date);
       if (!grouped.has(dateKey)) {
         grouped.set(dateKey, []);
       }
@@ -347,27 +354,63 @@ function EventCard({
         </div>
         {hasSocialProof && (
           <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
-            {goingCount > 0 && (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-[var(--coral)]/10 border border-[var(--coral)]/20 font-mono text-[0.6rem] font-medium text-[var(--coral)]">
-                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
-                {formatCompactCount(goingCount)} going
-              </span>
-            )}
-            {interestedCount > 0 && (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-[var(--gold)]/15 border border-[var(--gold)]/30 font-mono text-[0.6rem] font-medium text-[var(--gold)]">
-                {formatCompactCount(interestedCount)} maybe
-              </span>
-            )}
-            {recommendationCount > 0 && (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-[var(--lavender)]/15 border border-[var(--lavender)]/30 font-mono text-[0.6rem] font-medium text-[var(--lavender)]">
-                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
-                </svg>
-                {formatCompactCount(recommendationCount)} rec&apos;d
-              </span>
-            )}
+            {/* Mobile: collapsed social proof — single summary pill */}
+            {(() => {
+              const counts = [
+                { type: "going" as const, count: goingCount, label: "going", color: "coral" },
+                { type: "interested" as const, count: interestedCount, label: "maybe", color: "gold" },
+                { type: "recommended" as const, count: recommendationCount, label: "rec'd", color: "lavender" },
+              ];
+              const dominant = counts.reduce((a, b) => (b.count > a.count ? b : a));
+              const totalCount = goingCount + interestedCount + recommendationCount;
+              if (totalCount <= 0) return null;
+              return (
+                <span className={`sm:hidden inline-flex items-center gap-1 px-2 py-0.5 rounded-lg font-mono text-[0.6rem] font-medium ${
+                  dominant.color === "coral"
+                    ? "bg-[var(--coral)]/10 border border-[var(--coral)]/20 text-[var(--coral)]"
+                    : dominant.color === "gold"
+                      ? "bg-[var(--gold)]/15 border border-[var(--gold)]/30 text-[var(--gold)]"
+                      : "bg-[var(--lavender)]/15 border border-[var(--lavender)]/30 text-[var(--lavender)]"
+                }`}>
+                  {dominant.type === "going" && (
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                  )}
+                  {dominant.type === "recommended" && (
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+                    </svg>
+                  )}
+                  {formatCompactCount(totalCount)} {dominant.label}
+                </span>
+              );
+            })()}
+
+            {/* Desktop: separate pills */}
+            <span className="hidden sm:contents">
+              {goingCount > 0 && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-[var(--coral)]/10 border border-[var(--coral)]/20 font-mono text-[0.6rem] font-medium text-[var(--coral)]">
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  {formatCompactCount(goingCount)} going
+                </span>
+              )}
+              {interestedCount > 0 && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-[var(--gold)]/15 border border-[var(--gold)]/30 font-mono text-[0.6rem] font-medium text-[var(--gold)]">
+                  {formatCompactCount(interestedCount)} maybe
+                </span>
+              )}
+              {recommendationCount > 0 && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-[var(--lavender)]/15 border border-[var(--lavender)]/30 font-mono text-[0.6rem] font-medium text-[var(--lavender)]">
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+                  </svg>
+                  {formatCompactCount(recommendationCount)} rec&apos;d
+                </span>
+              )}
+            </span>
           </div>
         )}
       </div>

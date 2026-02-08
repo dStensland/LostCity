@@ -9,4 +9,4 @@ discovery:
   urls:
   - https://ravineatl.com
 detail:
-  enabled: false
+  enabled: true

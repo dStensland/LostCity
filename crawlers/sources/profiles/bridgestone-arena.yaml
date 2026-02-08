@@ -5,10 +5,10 @@ integration_method: playwright
 defaults: {}
 discovery:
   enabled: true
-  type: list
+  type: html
   urls:
   - https://www.bridgestonearena.com/events
 detail:
-  enabled: false
+  enabled: true
   fetch:
     render_js: true

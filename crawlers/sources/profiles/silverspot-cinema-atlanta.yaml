@@ -2,13 +2,16 @@ version: 1
 slug: silverspot-cinema-atlanta
 name: Silverspot Cinema Atlanta
 integration_method: playwright
-defaults: {}
+defaults:
+  category: film
 discovery:
   enabled: true
-  type: list
+  type: html
   urls:
   - https://silverspot.net
   fetch:
     render_js: true
 detail:
-  enabled: false
+  enabled: true
+  fetch:
+    render_js: true

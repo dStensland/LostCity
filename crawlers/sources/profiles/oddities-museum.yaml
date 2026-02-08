@@ -9,4 +9,4 @@ discovery:
   urls:
   - https://theodditiesmuseum.org/calendar-of-events
 detail:
-  enabled: false
+  enabled: true

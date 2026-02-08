@@ -9,4 +9,4 @@ discovery:
   urls:
   - https://arts.gatech.edu/events
 detail:
-  enabled: false
+  enabled: true

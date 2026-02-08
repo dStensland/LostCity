@@ -36,6 +36,8 @@ export interface Festival {
   description: string | null;
   image_url: string | null;
   producer_id: string | null;
+  festival_type?: string | null;
+  portal_id?: string | null;
 }
 
 export interface FestivalProgram {
@@ -192,13 +194,19 @@ export async function getFestivalEvents(
   }));
 }
 
-export async function getAllFestivals(): Promise<Festival[]> {
+export async function getAllFestivals(portalId?: string): Promise<Festival[]> {
   const supabase = await createClient();
 
-  const { data, error } = await supabase
+  let query = supabase
     .from("festivals")
     .select("*")
     .order("announced_start", { ascending: true, nullsFirst: false });
+
+  if (portalId) {
+    query = query.eq("portal_id", portalId);
+  }
+
+  const { data, error } = await query;
 
   if (error || !data) {
     return [];

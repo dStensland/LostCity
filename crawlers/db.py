@@ -215,6 +215,10 @@ _FESTIVAL_SOURCE_OVERRIDES = {
     "momocon": {"festival_type": "convention"},
     "fancons": {"festival_type": "convention"},
     "anime-weekend-atlanta": {"festival_type": "convention"},
+    "dreamhack-atlanta": {"festival_type": "convention"},
+    "blade-show": {"festival_type": "convention"},
+    "furry-weekend-atlanta": {"festival_type": "convention"},
+    "southern-fried-gaming-expo": {"festival_type": "convention"},
     "atlanta-tech-week": {"festival_type": "conference"},
     "render-atl": {"festival_type": "conference"},
     "piedmont-heart-conferences": {"festival_type": "conference"},
@@ -239,6 +243,27 @@ _FESTIVAL_SOURCE_SLUGS = {
     "out-on-film",
     "ajff",
     "buried-alive",
+    # Tier 1 festivals
+    "dragon-con",
+    "momocon",
+    "music-midtown",
+    "one-musicfest",
+    "southern-fried-queer-pride",
+    "dreamhack-atlanta",
+    # Tier 2 festivals
+    "ga-renaissance-festival",
+    "imagine-music-festival",
+    "a3c-festival",
+    "afropunk-atlanta",
+    "japanfest-atlanta",
+    "atlanta-greek-festival",
+    "juneteenth-atlanta",
+    "stone-mountain-highland-games",
+    "atlanta-tattoo-arts-festival",
+    "blade-show",
+    "furry-weekend-atlanta",
+    "southern-fried-gaming-expo",
+    "anime-weekend-atlanta",
 }
 
 _FESTIVAL_NAME_PATTERN = re.compile(
@@ -629,9 +654,36 @@ def validate_event_title(title: str) -> bool:
     return True
 
 
+# ---------------------------------------------------------------------------
+# Category normalization
+# ---------------------------------------------------------------------------
+_CATEGORY_NORMALIZATION_MAP: dict[str, str] = {
+    "arts": "art",
+    "cultural": "community",
+    "haunted": "nightlife",
+    "eatertainment": "nightlife",
+    "entertainment": "family",
+    "food": "food_drink",
+    "yoga": "fitness",
+    "cooking": "learning",
+    "class": "learning",
+}
+
+
+def normalize_category(category):
+    """Normalize a category value to the canonical taxonomy."""
+    if not category:
+        return category
+    return _CATEGORY_NORMALIZATION_MAP.get(category, category)
+
+
 def insert_event(event_data: dict, series_hint: dict = None, genres: list = None) -> int:
     """Insert a new event with inferred tags, series linking, and genres. Returns event ID."""
     client = get_client()
+
+    # Normalize category to canonical taxonomy
+    if event_data.get("category"):
+        event_data["category"] = normalize_category(event_data["category"])
 
     # ===== VALIDATION LAYER =====
     # Validate event data before processing
@@ -704,6 +756,12 @@ def insert_event(event_data: dict, series_hint: dict = None, genres: list = None
         if music_info.genres and not genres:
             genres = music_info.genres
 
+        # Parse lineup from title for later event_artists population
+        if not event_data.get("_parsed_artists"):
+            parsed = parse_lineup_from_title(event_data.get("title", ""))
+            if parsed:
+                event_data["_parsed_artists"] = parsed
+
     # Auto-infer is_class if not explicitly set
     if not is_class_flag:
         if infer_is_class(event_data, source_slug=source_slug, venue_type=venue_type):
@@ -768,8 +826,8 @@ def insert_event(event_data: dict, series_hint: dict = None, genres: list = None
             if value is not None and not series_hint.get(key):
                 series_hint[key] = value
 
-    # Process series association if hint provided
-    if series_hint:
+    # Process series association if hint provided — but only if no series_id already set
+    if series_hint and not event_data.get("series_id"):
         series_id = get_or_create_series(client, series_hint, event_data.get("category"))
         if series_id:
             event_data["series_id"] = series_id
@@ -792,8 +850,9 @@ def insert_event(event_data: dict, series_hint: dict = None, genres: list = None
     if genres and not event_data.get("series_id"):
         event_data["genres"] = genres
 
-    # Backfill description from film metadata (covers Tara, Aurora, Plaza, etc.)
-    if not event_data.get("description") and film_metadata and film_metadata.plot:
+    # Backfill description from film metadata when missing or too short to be useful
+    existing_desc = event_data.get("description") or ""
+    if film_metadata and film_metadata.plot and len(existing_desc) < 80:
         event_data["description"] = film_metadata.plot[:500]
 
     # Last-resort: generate synthetic description so no event is inserted with NULL
@@ -803,11 +862,30 @@ def insert_event(event_data: dict, series_hint: dict = None, genres: list = None
             v = get_venue_by_id(event_data["venue_id"])
             if v:
                 venue_name = v.get("name")
-        event_data["description"] = generate_synthetic_description(
-            event_data.get("title", ""),
-            venue_name=venue_name,
-            category=event_data.get("category"),
-        )
+        # For music events with parsed lineup, generate lineup-based description
+        parsed_artists = event_data.get("_parsed_artists")
+        if event_data.get("category") == "music" and parsed_artists:
+            # Enrich parsed artists with cached Deezer genres for description
+            from artist_images import fetch_artist_info as _fetch_info
+            enriched = []
+            for pa in parsed_artists:
+                entry = dict(pa)
+                info = _fetch_info(pa["name"])  # uses in-memory cache, no API call
+                if info and info.genres:
+                    entry["genres"] = info.genres
+                enriched.append(entry)
+            event_data["description"] = generate_synthetic_description(
+                event_data.get("title", ""),
+                venue_name=venue_name,
+                category="music",
+                artists=enriched,
+            )
+        else:
+            event_data["description"] = generate_synthetic_description(
+                event_data.get("title", ""),
+                venue_name=venue_name,
+                category=event_data.get("category"),
+            )
 
     # Inherit portal_id from source if not explicitly set
     if not event_data.get("portal_id") and source_info and source_info.get("owner_portal_id"):
@@ -817,8 +895,49 @@ def insert_event(event_data: dict, series_hint: dict = None, genres: list = None
     if is_class_flag:
         event_data["is_class"] = True
 
+    # Safety guard: an event with a real price can never be free
+    if event_data.get("price_min") is not None and event_data["price_min"] > 0:
+        event_data["is_free"] = False
+
+    # Pop transient fields before DB insert
+    parsed_artists_for_insert = event_data.pop("_parsed_artists", None)
+
     result = client.table("events").insert(event_data).execute()
-    return result.data[0]["id"]
+    event_id = result.data[0]["id"]
+
+    # Auto-populate event_artists from parsed lineup for music events
+    if parsed_artists_for_insert:
+        try:
+            upsert_event_artists(event_id, parsed_artists_for_insert)
+        except Exception as e:
+            logger.debug(f"Auto event_artists failed for event {event_id}: {e}")
+
+    return event_id
+
+
+def parse_lineup_from_title(title: str) -> list[dict]:
+    """Parse artist lineup from event title.
+
+    Returns list of dicts: [{name, billing_order, is_headliner}, ...]
+    """
+    from extractors.lineup import split_lineup_text, dedupe_artists
+    from artist_images import extract_artist_from_title
+
+    # Try full lineup split first (handles "w/", "+", ",", etc.)
+    artists = dedupe_artists(split_lineup_text(title))
+    if not artists:
+        # Fallback: single artist extraction (removes tour names, prefixes, etc.)
+        headliner = extract_artist_from_title(title)
+        if headliner:
+            artists = [headliner]
+
+    if not artists:
+        return []
+
+    return [
+        {"name": a, "billing_order": i, "is_headliner": i == 1}
+        for i, a in enumerate(artists, 1)
+    ]
 
 
 def update_event(event_id: int, event_data: dict) -> None:
@@ -890,6 +1009,13 @@ def upsert_event_artists(event_id: int, artists: list) -> None:
         )
 
     client.table("event_artists").insert(payload).execute()
+
+    # Resolve canonical artist records and set artist_id FK
+    try:
+        from artists import resolve_and_link_event_artists
+        resolve_and_link_event_artists(event_id)
+    except Exception as e:
+        logger.debug(f"Artist resolution failed for event {event_id}: {e}")
 
 
 def upsert_event_images(event_id: int, images: list) -> None:
@@ -1336,12 +1462,17 @@ def update_crawl_log(
         "events_updated": events_updated,
     }
 
-    # Add events_rejected if provided (column may not exist in older schemas)
-    if events_rejected > 0:
-        update_data["events_rejected"] = events_rejected
-
     if error_message:
         update_data["error_message"] = error_message
+
+    # Try with events_rejected first, fall back without if column doesn't exist
+    if events_rejected > 0:
+        try:
+            update_data["events_rejected"] = events_rejected
+            client.table("crawl_logs").update(update_data).eq("id", log_id).execute()
+            return
+        except Exception:
+            del update_data["events_rejected"]
 
     client.table("crawl_logs").update(update_data).eq("id", log_id).execute()
 

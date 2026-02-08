@@ -328,7 +328,7 @@ def crawl_location(
                 "end_date": None,
                 "end_time": None,
                 "is_all_day": False,
-                "category": "arts",
+                "category": "art",
                 "subcategory": "arts.workshop",
                 "tags": tags,
                 "price_min": price_min,

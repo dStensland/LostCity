@@ -9,4 +9,4 @@ discovery:
   urls:
   - https://www.thesupermarketatl.com/events
 detail:
-  enabled: false
+  enabled: true

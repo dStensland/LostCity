@@ -2,11 +2,12 @@ version: 1
 slug: wewatchstuff
 name: WeWatchStuff
 integration_method: html
-defaults: {}
+defaults:
+  category: film
 discovery:
   enabled: true
   type: list
   urls:
   - https://linktr.ee/wewatchstuff
 detail:
-  enabled: false
+  enabled: true

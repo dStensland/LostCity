@@ -181,7 +181,7 @@ def create_annual_festivals(source_id: int, venue_id: int) -> tuple[int, int]:
             "end_date": None,
             "end_time": "16:00",
             "is_all_day": False,
-            "category": "food",
+            "category": "food_drink",
             "subcategory": "festival",
             "tags": ["kennesaw", "food-festival", "restaurants", "tasting"],
             "price_min": None,

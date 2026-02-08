@@ -9,4 +9,4 @@ discovery:
   urls:
   - https://foodwellalliance.org/events
 detail:
-  enabled: false
+  enabled: true

@@ -2,9 +2,9 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import type { ReactElement } from "react";
 import { cache } from "react";
-import UnifiedHeader from "@/components/UnifiedHeader";
+import ScrollToTop from "@/components/ScrollToTop";
+import { PortalHeader } from "@/components/headers";
 import PortalFooter from "@/components/PortalFooter";
-import { PortalTheme } from "@/components/PortalTheme";
 import { getCachedPortalBySlug } from "@/lib/portal";
 import {
   getSeriesBySlug,
@@ -307,6 +307,7 @@ export default async function PortalSeriesPage({ params }: Props) {
 
   return (
     <>
+      <ScrollToTop />
       {/* Schema.org JSON-LD */}
       <script
         type="application/ld+json"
@@ -315,16 +316,16 @@ export default async function PortalSeriesPage({ params }: Props) {
 
       <ScopedStylesServer css={[seriesAccentClass?.css, festivalAccentClass?.css].filter(Boolean).join("\n")} />
 
-      {/* Portal-specific theming */}
-      {portal && <PortalTheme portal={portal} />}
+
 
       <div className={`min-h-screen ${seriesAccentClass?.className ?? ""}`}>
-        <UnifiedHeader
+        <PortalHeader
           portalSlug={activePortalSlug}
           portalName={activePortalName}
+          hideNav
         />
 
-        <main className="max-w-3xl mx-auto px-4 py-6 pb-28 space-y-8">
+        <main className="max-w-3xl mx-auto px-4 py-4 sm:py-6 pb-28 space-y-5 sm:space-y-8">
           {/* Hero Section - Poster Mode */}
           <DetailHero
             mode="poster"
@@ -332,6 +333,7 @@ export default async function PortalSeriesPage({ params }: Props) {
             title={series.title}
             subtitle={heroSubtitle}
             categoryColor={typeColor}
+            backFallbackHref={`/${activePortalSlug}`}
             categoryIcon={getSeriesTypeIcon(series.series_type)}
             badge={
               <span

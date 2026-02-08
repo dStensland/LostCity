@@ -2,9 +2,26 @@
 Crawler for Plaza Theatre Atlanta (plazaatlanta.com).
 Historic independent cinema showing first-run indie, classic, and cult films.
 
-The site is a Quasar/Vue.js SPA. Movies are rendered as .movie-container
-elements on the /now-showing page with day selector buttons.
-Special events are listed on /special-events/ as text blocks.
+The site is a Quasar/Vue.js SPA with the following structure:
+
+NOW SHOWING PAGE (/now-showing):
+- Movies are rendered as .movie-container elements after JS loads (4-5s wait)
+- Site shows both Plaza Theatre and Tara Theatre with tabs at top
+- Must click "Plaza Theatre Atlanta" tab to see correct schedule
+- Each movie container has:
+  - .text-h5: Movie title (may include format like "35mm" or rating)
+  - button elements: Showtimes with format "7:00 PM\\nENDS AT 9:00 PM"
+  - img.q-img__image: Poster image
+- Day selector buttons at top (Today, Mon, Tue, etc. + "Other" for calendar)
+- Clicking a day button updates the schedule dynamically
+
+SPECIAL EVENTS PAGE (/special-events/):
+- Text-based layout with date headers
+- Format: "Feb 4" followed by event title and optional description
+- May include embedded time like "Event Title at 9:45 PM"
+
+ENRICHMENT:
+- Uses Letterboxd RSS feed for TMDB IDs, high-quality posters, and special event detection
 """
 
 from __future__ import annotations
@@ -160,6 +177,10 @@ def extract_movies_for_date(
     containers = page.query_selector_all(".movie-container")
     logger.debug(f"Found {len(containers)} .movie-container elements for {date_str}")
 
+    # Log a warning if no containers found (might indicate site change)
+    if len(containers) == 0:
+        logger.warning(f"No .movie-container elements found for {date_str} - site structure may have changed, falling back to text extraction")
+
     if containers:
         for container in containers:
             try:
@@ -195,8 +216,10 @@ def extract_movies_for_date(
                         continue
 
                 if not showtimes:
-                    logger.debug(f"  No showtimes for '{movie_title}' on {date_str}")
+                    logger.warning(f"  Movie '{movie_title}' found but has no showtimes on {date_str} - skipping")
                     continue
+
+                logger.debug(f"  Processing '{movie_title}' with {len(showtimes)} showtime(s): {', '.join(showtimes)}")
 
                 # Extract image from this container
                 img_el = container.query_selector("img.q-img__image")
@@ -626,8 +649,11 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 if plaza_tab.is_visible(timeout=3000):
                     plaza_tab.click()
                     page.wait_for_timeout(2000)
-            except Exception:
-                logger.debug("Could not find Plaza Theatre Atlanta tab")
+                    logger.debug("Clicked Plaza Theatre Atlanta tab")
+                else:
+                    logger.debug("Plaza Theatre Atlanta tab not visible")
+            except Exception as e:
+                logger.debug(f"Could not find Plaza Theatre Atlanta tab: {e}")
 
             # Extract movie images
             image_map = extract_movie_images(page)

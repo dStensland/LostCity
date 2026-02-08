@@ -1,6 +1,7 @@
 import { format, parseISO, isToday, isTomorrow } from "date-fns";
 import type { EventWithLocation } from "@/lib/search";
 import type { SeriesInfo, SeriesVenueGroup } from "@/components/SeriesCard";
+import type { Festival } from "@/lib/festivals";
 
 // Rollup thresholds
 const VENUE_ROLLUP_THRESHOLD = 4;
@@ -18,6 +19,7 @@ export interface FestivalInfo {
   festival_type?: string | null;
   location?: string | null;
   neighborhood?: string | null;
+  free?: boolean;
 }
 
 export interface FestivalSummary {
@@ -466,12 +468,24 @@ export function getDateLabel(dateStr: string): string {
 }
 
 /**
+ * Get the effective display date for any item with a date range.
+ * Items that started in the past but are still ongoing display as "today".
+ */
+export function getEffectiveDate(startDate: string, endDate?: string | null): string {
+  const today = format(new Date(), "yyyy-MM-dd");
+  if (startDate < today && endDate && endDate >= today) {
+    return today;
+  }
+  return startDate;
+}
+
+/**
  * Group events by date
  */
 export function groupEventsByDate(events: EventWithLocation[]): Record<string, EventWithLocation[]> {
   return events.reduce(
     (acc, event) => {
-      const date = event.start_date;
+      const date = getEffectiveDate(event.start_date, event.end_date);
       if (!acc[date]) acc[date] = [];
       acc[date].push(event);
       return acc;
@@ -485,4 +499,35 @@ export function groupEventsByDate(events: EventWithLocation[]): Record<string, E
  */
 export function getSortedDates(eventsByDate: Record<string, EventWithLocation[]>): string[] {
   return Object.keys(eventsByDate).sort();
+}
+
+/**
+ * Create a DisplayItem for a standalone festival (one with no linked events).
+ * Used to inject festivals into the event list alongside real events.
+ */
+export function createStandaloneFestivalItem(festival: Festival): DisplayItem {
+  return {
+    type: "festival-group",
+    festivalId: festival.id,
+    festival: {
+      id: festival.id,
+      slug: festival.slug,
+      name: festival.name,
+      image_url: festival.image_url,
+      festival_type: festival.festival_type ?? null,
+      location: festival.location,
+      neighborhood: festival.neighborhood,
+      free: festival.free,
+    },
+    summary: {
+      eventCount: 0,
+      programCount: 0,
+      startDate: festival.announced_start!,
+      endDate: festival.announced_end || festival.announced_start!,
+      startTime: null,
+      endTime: null,
+      venues: [],
+      categories: festival.categories || [],
+    },
+  };
 }

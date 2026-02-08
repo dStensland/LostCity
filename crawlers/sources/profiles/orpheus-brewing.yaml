@@ -4,11 +4,13 @@ name: Orpheus Brewing
 integration_method: playwright
 defaults: {}
 discovery:
-  enabled: true
-  type: list
+  enabled: false
+  type: html
   urls:
   - https://www.orpheusbrewing.com
   fetch:
     render_js: true
 detail:
-  enabled: false
+  enabled: true
+  fetch:
+    render_js: true

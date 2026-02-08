@@ -9,4 +9,4 @@ discovery:
   urls:
   - https://discoveratlanta.com/events
 detail:
-  enabled: false
+  enabled: true

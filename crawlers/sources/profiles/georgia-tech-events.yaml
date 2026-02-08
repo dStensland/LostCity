@@ -9,4 +9,4 @@ discovery:
   urls:
   - https://calendar.gatech.edu
 detail:
-  enabled: false
+  enabled: true

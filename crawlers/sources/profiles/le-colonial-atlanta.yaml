@@ -9,4 +9,4 @@ discovery:
   urls:
   - https://www.lecolonial.com/atlanta/happenings/
 detail:
-  enabled: false
+  enabled: true

@@ -9,4 +9,4 @@ discovery:
   urls:
   - https://www.atlantatrackclub.org/peachtree
 detail:
-  enabled: false
+  enabled: true

@@ -5,8 +5,8 @@ integration_method: html
 defaults: {}
 discovery:
   enabled: true
-  type: list
+  type: html
   urls:
   - https://www.eastatlantastrut.com
 detail:
-  enabled: false
+  enabled: true

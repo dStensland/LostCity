@@ -9,4 +9,4 @@ discovery:
   urls:
   - https://citysprings.com/events/
 detail:
-  enabled: false
+  enabled: true

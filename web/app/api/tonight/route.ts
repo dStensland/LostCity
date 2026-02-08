@@ -240,6 +240,61 @@ export async function GET(request: NextRequest) {
 
     const supabase = await createClient();
 
+    // Check for curated picks first — if editor-curated picks exist for today,
+    // return those directly instead of running the scoring algorithm
+    const { data: curatedPicks } = await supabase
+      .from("curated_picks")
+      .select("event_id, position")
+      .eq("pick_date", today)
+      .order("position", { ascending: true });
+
+    if (curatedPicks && curatedPicks.length > 0) {
+      const curatedIds = (curatedPicks as { event_id: number; position: number }[]).map(p => p.event_id);
+      const { data: curatedEvents } = await supabase
+        .from("events")
+        .select(`
+          id, title, start_date, start_time, end_date, end_time,
+          is_all_day, is_free, category, image_url, description, venue_id,
+          series_id,
+          series:series_id(
+            id, slug, title, series_type, image_url, frequency, day_of_week,
+            festival:festivals(id, slug, name, image_url, festival_type, location, neighborhood)
+          ),
+          venue:venues(name, neighborhood)
+        `)
+        .in("id", curatedIds);
+
+      if (curatedEvents && curatedEvents.length > 0) {
+        // Sort by curated position order
+        const orderMap = new Map(curatedIds.map((id, i) => [id, i]));
+        const sorted = (curatedEvents as unknown as TonightEvent[]).sort(
+          (a, b) => (orderMap.get(a.id) ?? 99) - (orderMap.get(b.id) ?? 99)
+        );
+
+        // Fetch RSVP counts for curated events
+        const cIds = sorted.map(e => e.id);
+        const { data: cRsvps } = await supabase
+          .from("event_rsvps")
+          .select("event_id, status")
+          .in("event_id", cIds)
+          .in("status", ["going", "interested"]);
+
+        const cRsvpCounts = new Map<number, number>();
+        for (const r of (cRsvps || []) as { event_id: number; status: string }[]) {
+          cRsvpCounts.set(r.event_id, (cRsvpCounts.get(r.event_id) || 0) + 1);
+        }
+
+        const result = sorted.map(({ description: _d, venue_id: _v, ...event }) => ({
+          ...event,
+          rsvp_count: (cRsvpCounts.get(event.id) || 0) > 0 ? cRsvpCounts.get(event.id) : undefined,
+        }));
+
+        return NextResponse.json({ events: result }, {
+          headers: { "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600" }
+        });
+      }
+    }
+
     // Get the main Atlanta portal ID
     const { data: atlantaPortal } = await supabase
       .from("portals")

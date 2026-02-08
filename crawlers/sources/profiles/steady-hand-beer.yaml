@@ -4,9 +4,9 @@ name: Steady Hand Beer Co
 integration_method: html
 defaults: {}
 discovery:
-  enabled: true
+  enabled: false
   type: list
   urls:
   - https://www.steadyhandbeer.com
 detail:
-  enabled: false
+  enabled: true

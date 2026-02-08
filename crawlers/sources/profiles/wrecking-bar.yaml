@@ -5,8 +5,8 @@ integration_method: html
 defaults: {}
 discovery:
   enabled: true
-  type: list
+  type: html
   urls:
   - https://wreckingbarbrewpub.com
 detail:
-  enabled: false
+  enabled: true

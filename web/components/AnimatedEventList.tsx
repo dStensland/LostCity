@@ -10,13 +10,16 @@ import {
   groupEventsForDisplay,
   groupByTimePeriod,
   groupEventsByDate,
+  getEffectiveDate,
   getSortedDates,
   getDateLabel,
+  createStandaloneFestivalItem,
   TIME_PERIOD_LABELS,
   type DisplayItem,
   type TimePeriod,
 } from "@/lib/event-grouping";
 import type { EventWithLocation } from "@/lib/search";
+import type { Festival } from "@/lib/festivals";
 import type { FriendGoing } from "@/lib/hooks/use-friends-going";
 
 // Time period icons
@@ -45,6 +48,7 @@ const TIME_PERIOD_ICONS: Record<TimePeriod, React.ReactNode> = {
 
 interface AnimatedEventListProps {
   events: EventWithLocation[];
+  standaloneFestivals?: Festival[];
   portalSlug?: string;
   isLoading?: boolean;
   isFetchingNextPage?: boolean;
@@ -61,6 +65,7 @@ interface AnimatedEventListProps {
  */
 export default function AnimatedEventList({
   events,
+  standaloneFestivals,
   portalSlug,
   isLoading = false,
   isFetchingNextPage = false,
@@ -84,7 +89,59 @@ export default function AnimatedEventList({
 
   // Group events by date
   const eventsByDate = useMemo(() => groupEventsByDate(events), [events]);
-  const dates = useMemo(() => getSortedDates(eventsByDate), [eventsByDate]);
+
+  // Compute display items per date and inject standalone festivals
+  const { allDates, displayItemsByDate, itemCountByDate } = useMemo(() => {
+    // First, compute event-based display items and collect festival IDs from events
+    const eventFestivalIds = new Set<string>();
+    const eventDisplayByDate: Record<string, DisplayItem[]> = {};
+
+    const eventDates = getSortedDates(eventsByDate);
+    for (const date of eventDates) {
+      const items = groupEventsForDisplay(eventsByDate[date], {
+        collapseFestivals,
+        collapseFestivalPrograms,
+      });
+      eventDisplayByDate[date] = items;
+      for (const item of items) {
+        if (item.type === "festival-group") {
+          eventFestivalIds.add(item.festivalId);
+        }
+      }
+    }
+
+    // Filter standalone festivals: must have announced_start and not already in events
+    const festivalsToInject = (standaloneFestivals || []).filter(
+      (f) => f.announced_start && !eventFestivalIds.has(f.id)
+    );
+
+    // Group standalone festivals by effective date (ongoing festivals show as Today)
+    const festivalsByDate: Record<string, DisplayItem[]> = {};
+    for (const festival of festivalsToInject) {
+      const date = getEffectiveDate(festival.announced_start!, festival.announced_end);
+      if (!festivalsByDate[date]) festivalsByDate[date] = [];
+      festivalsByDate[date].push(createStandaloneFestivalItem(festival));
+    }
+
+    // Merge all dates (events + standalone festivals)
+    // The API pre-filters festivals to the loaded event date range
+    const festivalDates = Object.keys(festivalsByDate);
+    const allDateSet = new Set([...eventDates, ...festivalDates]);
+    const sorted = [...allDateSet].sort();
+
+    // Build final display items per date
+    const merged: Record<string, DisplayItem[]> = {};
+    const counts: Record<string, number> = {};
+    for (const date of sorted) {
+      const festivalItems = festivalsByDate[date] || [];
+      const eventItems = eventDisplayByDate[date] || [];
+      // Festivals at the beginning of the day
+      merged[date] = [...festivalItems, ...eventItems];
+      counts[date] = (eventsByDate[date]?.length || 0);
+    }
+
+    return { allDates: sorted, displayItemsByDate: merged, itemCountByDate: counts };
+  }, [eventsByDate, standaloneFestivals, collapseFestivals, collapseFestivalPrograms]);
 
   // Show loading skeleton during initial load or refetch
   if (isLoading || (isRefetching && events.length === 0)) {
@@ -99,15 +156,13 @@ export default function AnimatedEventList({
   const showDimmed = isRefetching && events.length > 0;
 
   return (
-    <div className={showDimmed ? "opacity-60 transition-opacity duration-200" : ""}>
-      {dates.map((date) => {
-        const dateEvents = eventsByDate[date];
-        const displayItems = groupEventsForDisplay(dateEvents, {
-          collapseFestivals,
-          collapseFestivalPrograms,
-        });
+    <div className={showDimmed ? "opacity-60 transition-opacity duration-200" : "animate-fade-in"}>
+      {allDates.map((date) => {
+        const displayItems = displayItemsByDate[date] || [];
         const timePeriods = groupByTimePeriod(displayItems);
-        const eventCount = dateEvents.length;
+        const eventCount = itemCountByDate[date] || 0;
+        const festivalCount = displayItems.filter((i) => i.type === "festival-group" && i.summary.eventCount === 0).length;
+        const totalCount = eventCount + festivalCount;
 
         return (
           <section
@@ -121,7 +176,7 @@ export default function AnimatedEventList({
                   {getDateLabel(date)}
                 </span>
                 <span className="font-mono text-[0.6rem] text-[var(--muted)] bg-[var(--twilight)]/50 px-2 py-0.5 rounded-full">
-                  {eventCount} event{eventCount !== 1 ? "s" : ""}
+                  {totalCount} {totalCount !== 1 ? "items" : "item"}
                 </span>
                 <div className="flex-1 h-px bg-gradient-to-r from-[var(--twilight)]/50 to-transparent" />
               </div>

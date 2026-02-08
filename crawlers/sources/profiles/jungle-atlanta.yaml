@@ -9,6 +9,6 @@ discovery:
   urls:
   - https://www.jungleatl.com
 detail:
-  enabled: false
+  enabled: true
   fetch:
     render_js: true

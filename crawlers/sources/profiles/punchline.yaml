@@ -7,16 +7,17 @@ defaults:
   category: comedy
   subcategory: standup
   tags:
-    - comedy
-    - standup
-    - live-entertainment
+  - comedy
+  - standup
+  - live-entertainment
 discovery:
   enabled: true
   type: html
   urls:
   - https://punchline.com/shows/
-  # Custom WordPress layout — needs LLM extraction or Playwright
   fetch:
     render_js: true
 detail:
-  enabled: false
+  enabled: true
+  fetch:
+    render_js: true

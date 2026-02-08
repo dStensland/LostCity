@@ -1,0 +1,12 @@
+version: 1
+slug: japanfest-atlanta
+name: JapanFest Atlanta
+integration_method: festival_schedule
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.japanfest.org
+detail:
+  enabled: true

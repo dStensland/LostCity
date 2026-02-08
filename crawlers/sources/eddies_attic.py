@@ -140,8 +140,12 @@ def extract_price_info(text: str) -> tuple[Optional[float], Optional[float], Opt
     text_lower = text.lower()
 
     # Check for free
-    if "free" in text_lower or "no cover" in text_lower:
+    if "free" in text_lower:
         return 0, 0, "Free", True
+
+    # Check for "no cover" - means no door charge but not free (food/drink expected)
+    if "no cover" in text_lower:
+        return None, None, "No cover", False
 
     # Find dollar amounts
     amounts = re.findall(r'\$(\d+(?:\.\d{2})?)', text)

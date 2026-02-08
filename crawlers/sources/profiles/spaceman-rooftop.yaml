@@ -4,10 +4,11 @@ name: Spaceman Rooftop
 integration_method: playwright
 defaults: {}
 discovery:
-  enabled: true
+  enabled: false
   type: list
   urls:
   - https://www.spacemanrooftop.com
+  # NOTE: Both spacemanrooftop.com and spacemanatlanta.com DNS dead as of 2026-02-06
 detail:
   enabled: false
   fetch:

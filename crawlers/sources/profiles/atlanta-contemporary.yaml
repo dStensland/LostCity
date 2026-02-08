@@ -9,4 +9,4 @@ discovery:
   urls:
   - https://www.atlantacontemporary.org
 detail:
-  enabled: false
+  enabled: true

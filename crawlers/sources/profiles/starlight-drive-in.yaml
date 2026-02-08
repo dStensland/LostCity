@@ -2,11 +2,12 @@ version: 1
 slug: starlight-drive-in
 name: Starlight Drive-In Theatre
 integration_method: html
-defaults: {}
+defaults:
+  category: film
 discovery:
   enabled: true
-  type: list
+  type: html
   urls:
   - https://starlightdrivein.com
 detail:
-  enabled: false
+  enabled: true

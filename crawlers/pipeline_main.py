@@ -53,6 +53,7 @@ class CrawlResult:
     events_updated: int = 0
 
 _VENUE_CACHE: dict[str, int] = {}
+_VENUE_TYPE_CACHE: dict[int, str | None] = {}
 _DISCOVERY_CONFIDENCE = 0.70
 
 
@@ -71,6 +72,12 @@ def _get_or_create_default_venue(profile) -> int | None:
     }
     venue_id = get_or_create_venue(venue_data)
     _VENUE_CACHE[venue_slug] = venue_id
+
+    from db import get_venue_by_id
+    venue = get_venue_by_id(venue_id)
+    if venue:
+        _VENUE_TYPE_CACHE[venue_id] = venue.get("venue_type")
+
     return venue_id
 
 
@@ -103,6 +110,65 @@ def _merge_tags(event_tags: list | None, default_tags: list | None) -> list:
     tags = set(event_tags or [])
     tags.update(default_tags or [])
     return list(tags)
+
+
+_VENUE_TYPE_TO_CATEGORY: dict[str, str] = {
+    "music_venue": "music",
+    "nightclub": "nightlife",
+    "comedy_club": "comedy",
+    "gallery": "art",
+    "museum": "art",
+    "brewery": "food_drink",
+    "distillery": "food_drink",
+    "winery": "food_drink",
+    "bar": "nightlife",
+    "sports_bar": "sports",
+    "restaurant": "food_drink",
+    "coffee_shop": "food_drink",
+    "cinema": "film",
+    "theater": "theater",
+    "arena": "sports",
+    "church": "community",
+    "library": "learning",
+    "bookstore": "words",
+    "record_store": "music",
+    "fitness_center": "fitness",
+    "park": "outdoors",
+    "garden": "outdoors",
+    "farmers_market": "markets",
+    "food_hall": "food_drink",
+    "community_center": "community",
+    "convention_center": "community",
+    "college": "learning",
+    "university": "learning",
+}
+
+
+def _infer_category(title: str, venue_type: str | None = None) -> str | None:
+    """Best-effort category from title keywords or venue type."""
+    if venue_type and venue_type in _VENUE_TYPE_TO_CATEGORY:
+        return _VENUE_TYPE_TO_CATEGORY[venue_type]
+
+    t = title.lower()
+    if any(w in t for w in ("concert", "live music", "band", "dj set", "open mic")):
+        return "music"
+    if any(w in t for w in ("comedy", "stand-up", "standup", "improv")):
+        return "comedy"
+    if any(w in t for w in ("trivia", "bingo", "karaoke", "game night")):
+        return "nightlife"
+    if any(w in t for w in ("yoga", "run club", "5k", "marathon", "fitness")):
+        return "fitness"
+    if any(w in t for w in ("workshop", "class", "seminar", "lecture")):
+        return "learning"
+    if any(w in t for w in ("exhibit", "gallery", "art show", "opening reception")):
+        return "art"
+    if any(w in t for w in ("film", "movie", "screening")):
+        return "film"
+    if any(w in t for w in ("market", "pop-up", "popup")):
+        return "markets"
+    if any(w in t for w in ("drag", "burlesque")):
+        return "nightlife"
+    return None
 
 
 def _ensure_link(links: list[dict], link_type: str, url: str, source: str, confidence: float) -> None:
@@ -261,6 +327,9 @@ def run_profile(slug: str, dry_run: bool, limit: int | None) -> CrawlResult:
             field_confidence = enriched.get("field_confidence") or {}
             extraction_version = enriched.get("extraction_version") or "pipeline_v3"
 
+            venue_type = _VENUE_TYPE_CACHE.get(default_venue_id) if default_venue_id else None
+            category = profile.defaults.category or _infer_category(title, venue_type)
+
             event_record = {
                 "source_id": source["id"],
                 "venue_id": default_venue_id,
@@ -271,9 +340,9 @@ def run_profile(slug: str, dry_run: bool, limit: int | None) -> CrawlResult:
                 "end_date": enriched.get("end_date") or seed.get("end_date"),
                 "end_time": enriched.get("end_time") or seed.get("end_time"),
                 "is_all_day": False,
-                "category": profile.defaults.category,
+                "category": category,
                 "subcategory": profile.defaults.subcategory,
-                "tags": profile.defaults.tags,
+                "tags": _merge_tags(enriched.get("tags"), profile.defaults.tags),
                 "price_min": enriched.get("price_min"),
                 "price_max": enriched.get("price_max"),
                 "price_note": enriched.get("price_note"),
@@ -422,6 +491,9 @@ def run_profile(slug: str, dry_run: bool, limit: int | None) -> CrawlResult:
         field_confidence = enriched.get("field_confidence") or {}
         extraction_version = enriched.get("extraction_version") or "pipeline_v3"
 
+        venue_type = _VENUE_TYPE_CACHE.get(default_venue_id) if default_venue_id else None
+        category = profile.defaults.category or _infer_category(title, venue_type)
+
         event_record = {
             "source_id": source["id"],
             "venue_id": default_venue_id,
@@ -432,9 +504,9 @@ def run_profile(slug: str, dry_run: bool, limit: int | None) -> CrawlResult:
             "end_date": enriched.get("end_date") or seed.get("end_date"),
             "end_time": enriched.get("end_time") or seed.get("end_time"),
             "is_all_day": False,
-            "category": profile.defaults.category,
+            "category": category,
             "subcategory": profile.defaults.subcategory,
-            "tags": profile.defaults.tags,
+            "tags": _merge_tags(enriched.get("tags"), profile.defaults.tags),
             "price_min": enriched.get("price_min"),
             "price_max": enriched.get("price_max"),
             "price_note": enriched.get("price_note"),
@@ -580,6 +652,9 @@ def _process_llm_discovery(profile, source, default_venue_id: int | None, dry_ru
         field_confidence = enriched.get("field_confidence") or {}
         extraction_version = enriched.get("extraction_version") or "pipeline_v3"
 
+        venue_type = _VENUE_TYPE_CACHE.get(venue_id) if venue_id else None
+        category = event.get("category") or profile.defaults.category or _infer_category(title, venue_type)
+
         event_record = {
             "source_id": source["id"],
             "venue_id": venue_id,
@@ -590,7 +665,7 @@ def _process_llm_discovery(profile, source, default_venue_id: int | None, dry_ru
             "end_date": enriched.get("end_date") or event.get("end_date"),
             "end_time": enriched.get("end_time") or event.get("end_time"),
             "is_all_day": bool(event.get("is_all_day")),
-            "category": event.get("category") or profile.defaults.category,
+            "category": category,
             "subcategory": event.get("subcategory") or profile.defaults.subcategory,
             "tags": _merge_tags(event.get("tags"), profile.defaults.tags),
             "price_min": enriched.get("price_min") or event.get("price_min"),
@@ -601,7 +676,7 @@ def _process_llm_discovery(profile, source, default_venue_id: int | None, dry_ru
             "ticket_url": enriched.get("ticket_url") or event.get("ticket_url"),
             "image_url": enriched.get("image_url") or event.get("image_url"),
             "raw_text": None,
-            "extraction_confidence": event.get("confidence", 0.7),
+            "extraction_confidence": min(event.get("confidence", 0.7), 1.0),
             "extraction_version": extraction_version,
             "is_recurring": bool(event.get("is_recurring")),
             "recurrence_rule": event.get("recurrence_rule"),

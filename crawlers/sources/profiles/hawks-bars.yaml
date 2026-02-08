@@ -4,9 +4,10 @@ name: Atlanta Hawks Bar Network
 integration_method: html
 defaults: {}
 discovery:
-  enabled: true
+  enabled: false
   type: list
   urls:
   - https://www.nba.com/hawks
+  # NOTE: /fans page gone (404), NBA site restructured as of 2026-02-06
 detail:
   enabled: false

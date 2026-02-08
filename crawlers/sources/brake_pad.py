@@ -96,17 +96,23 @@ def parse_date(date_text: str) -> Optional[str]:
     return None
 
 
-def parse_price(text: str) -> tuple[Optional[float], Optional[float], bool]:
-    """Parse price from text like '$20' or 'FREE'."""
-    if "FREE" in text.upper() or "NO COVER" in text.upper():
-        return None, None, True
+def parse_price(text: str) -> tuple[Optional[float], Optional[float], Optional[str], bool]:
+    """Parse price from text like '$20' or 'FREE'. Returns (min, max, note, is_free)."""
+    text_upper = text.upper()
+
+    if "FREE" in text_upper:
+        return None, None, "Free", True
+
+    # "NO COVER" means no door charge but not free (food/drink expected)
+    if "NO COVER" in text_upper:
+        return None, None, "No cover", False
 
     price_match = re.search(r"\$(\d+)", text)
     if price_match:
         price = float(price_match.group(1))
-        return price, price, False
+        return price, price, None, False
 
-    return None, None, False
+    return None, None, None, False
 
 
 def crawl(source: dict) -> tuple[int, int, int]:
@@ -166,9 +172,11 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     description = ""
                     price_min = None
                     price_max = None
+                    price_note = None
                     is_free = False
 
                     # Look in surrounding lines for title, time, and price
+                    price_note = None
                     for offset in range(-2, 8):
                         idx = i + offset
                         if 0 <= idx < len(lines):
@@ -185,9 +193,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
                                     start_time = time_result
 
                             # Look for price
-                            p_min, p_max, free = parse_price(check_line)
-                            if p_min is not None or free:
-                                price_min, price_max, is_free = p_min, p_max, free
+                            p_min, p_max, p_note, free = parse_price(check_line)
+                            if p_min is not None or p_note or free:
+                                price_min, price_max, price_note, is_free = p_min, p_max, p_note, free
 
                             # Look for title - should be a substantial line
                             if not title and len(check_line) > 10:
@@ -280,7 +288,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "tags": tags,
                         "price_min": price_min,
                         "price_max": price_max,
-                        "price_note": None,
+                        "price_note": price_note,
                         "is_free": is_free,
                         "source_url": event_url,
                         "ticket_url": event_url if event_url != (EVENTS_URL if "EVENTS_URL" in dir() else BASE_URL) else None,

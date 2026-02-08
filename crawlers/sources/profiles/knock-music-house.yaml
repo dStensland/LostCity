@@ -5,9 +5,11 @@ integration_method: jsonld_only
 defaults: {}
 discovery:
   enabled: true
-  type: list
+  type: html
   urls:
   - https://www.knockmusichouse.com
+  fetch:
+    render_js: true
 detail:
   enabled: true
   jsonld_only: true

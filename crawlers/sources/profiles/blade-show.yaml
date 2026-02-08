@@ -1,0 +1,12 @@
+version: 1
+slug: blade-show
+name: Blade Show
+integration_method: festival_schedule
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.bladeshow.com
+detail:
+  enabled: true

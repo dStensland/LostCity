@@ -9,4 +9,4 @@ discovery:
   urls:
   - https://www.visitmusiccity.com/nashville-events
 detail:
-  enabled: false
+  enabled: true

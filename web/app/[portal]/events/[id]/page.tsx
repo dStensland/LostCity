@@ -1,3 +1,4 @@
+import ScrollToTop from "@/components/ScrollToTop";
 import { getEventById, getRelatedEvents } from "@/lib/supabase";
 import { getNearbySpots, getSpotTypeLabel } from "@/lib/spots";
 import { getCachedPortalBySlug } from "@/lib/portal";
@@ -7,9 +8,8 @@ import CategoryIcon, { getCategoryColor } from "@/components/CategoryIcon";
 import FollowButton from "@/components/FollowButton";
 import FriendsGoing from "@/components/FriendsGoing";
 import WhosGoing from "@/components/WhosGoing";
-import UnifiedHeader from "@/components/UnifiedHeader";
+import { PortalHeader } from "@/components/headers";
 import PortalFooter from "@/components/PortalFooter";
-import { PortalTheme } from "@/components/PortalTheme";
 import { format, parseISO } from "date-fns";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -293,24 +293,24 @@ export default async function PortalEventPage({ params }: Props) {
 
   return (
     <>
+      <ScrollToTop />
       {/* Schema.org JSON-LD */}
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: safeJsonLd(eventSchema) }}
       />
 
-      {/* Portal-specific theming */}
-      {portal && <PortalTheme portal={portal} />}
+
 
       <ScopedStylesServer
         css={[categoryAccentClass?.css, seriesAccentClass?.css, festivalAccentClass?.css].filter(Boolean).join("\n")}
       />
 
       <div className={`min-h-screen ${categoryAccentClass?.className ?? ""}`}>
-        <UnifiedHeader
+        <PortalHeader
           portalSlug={activePortalSlug}
           portalName={activePortalName}
-          backLink={{ href: `/${activePortalSlug}?view=events`, label: "Events" }}
+          hideNav
         />
 
         <main className="max-w-3xl mx-auto px-4 py-4 sm:py-6 pb-28 space-y-5 sm:space-y-8">
@@ -321,6 +321,7 @@ export default async function PortalEventPage({ params }: Props) {
             title={event.title}
             subtitle={event.venue?.name}
             categoryColor={categoryColor}
+            backFallbackHref={`/${activePortalSlug}`}
             categoryIcon={<CategoryIcon type={event.category || "other"} size={48} />}
             badge={
               <div className="flex items-center gap-2">
@@ -335,6 +336,24 @@ export default async function PortalEventPage({ params }: Props) {
             }
             isLive={isLive}
           />
+
+          {/* Festival Context Banner — prominent breadcrumb back to festival */}
+          {event.series?.festival && (
+            <Link
+              href={`/${activePortalSlug}/festivals/${event.series.festival.slug}`}
+              className={`flex items-center gap-3 px-4 py-3 rounded-lg bg-accent-08 border border-accent-40 transition-all hover:bg-accent-15 group ${festivalAccentClass?.className ?? ""}`}
+            >
+              <svg className="w-4 h-4 text-accent flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+              <span className="text-sm text-[var(--soft)] group-hover:text-[var(--cream)] transition-colors">
+                <span className="text-accent font-medium">{event.series.festival.name}</span>
+              </span>
+              <span className="ml-auto text-[0.6rem] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded bg-accent-20 text-accent">
+                Festival
+              </span>
+            </Link>
+          )}
 
           {/* Recurring Event Notice */}
           {event.is_recurring && recurrenceText && (
@@ -379,13 +398,12 @@ export default async function PortalEventPage({ params }: Props) {
               </>
             )}
 
-            {/* Lineup / Performers */}
+            {/* Lineup / Performers — labels auto-derived from artist disciplines */}
             {eventArtists.length > 0 && (
               <div className="mb-6">
                 <LineupSection
                   artists={eventArtists}
                   portalSlug={activePortalSlug}
-                  title="Performers"
                   maxDisplay={12}
                 />
               </div>
@@ -605,7 +623,7 @@ export default async function PortalEventPage({ params }: Props) {
             >
               <VenueEventsByDay
                 events={venueEvents}
-                getEventHref={(id) => `/${activePortalSlug}/events/${id}`}
+                portalSlug={activePortalSlug}
                 maxDates={5}
                 compact={true}
               />

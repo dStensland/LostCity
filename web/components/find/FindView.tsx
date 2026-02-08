@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState, useRef } from "react";
+import { Suspense, useState, useRef, useMemo, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import SimpleFilterBar from "@/components/SimpleFilterBar";
 import EventList from "@/components/EventList";
@@ -11,6 +11,7 @@ import PortalSpotsView from "@/components/PortalSpotsView";
 import ClassesView from "@/components/find/ClassesView";
 import { ActiveFiltersRow } from "@/components/filters";
 import AddNewChooser from "@/components/find/AddNewChooser";
+import { getNeighborhoodByName, NEIGHBORHOOD_NAMES } from "@/config/neighborhoods";
 
 type FindType = "events" | "classes" | "destinations";
 type DisplayMode = "list" | "map" | "calendar";
@@ -69,6 +70,58 @@ function FindViewInner({
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const pathname = `/${portalSlug}`;
 
+  // Location selector state (map-specific)
+  type LocationMode = "all" | "nearby" | string; // string = neighborhood name
+  const [locationMode, setLocationMode] = useState<LocationMode>("all");
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [locationLoading, setLocationLoading] = useState(false);
+
+  // Load cached GPS location on mount
+  useEffect(() => {
+    const saved = localStorage.getItem("userLocation");
+    if (saved) {
+      try {
+        setUserLocation(JSON.parse(saved));
+      } catch { /* ignore */ }
+    }
+  }, []);
+
+  const requestLocation = useCallback(() => {
+    if (!navigator.geolocation) return;
+    setLocationLoading(true);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const loc = { lat: position.coords.latitude, lng: position.coords.longitude };
+        setUserLocation(loc);
+        localStorage.setItem("userLocation", JSON.stringify(loc));
+        setLocationLoading(false);
+      },
+      () => {
+        setLocationLoading(false);
+        setLocationMode("all");
+      }
+    );
+  }, []);
+
+  const handleLocationChange = useCallback((value: string) => {
+    const params = new URLSearchParams(searchParams?.toString() || "");
+
+    if (value === "nearby") {
+      setLocationMode("nearby");
+      params.delete("neighborhoods");
+      if (!userLocation) requestLocation();
+    } else if (value === "all") {
+      setLocationMode("all");
+      params.delete("neighborhoods");
+    } else {
+      // Neighborhood selected
+      setLocationMode(value);
+      params.set("neighborhoods", value);
+    }
+
+    router.push(`${pathname}?${params.toString()}`, { scroll: false });
+  }, [searchParams, pathname, router, userLocation, requestLocation]);
+
   const updateSearchParam = (value: string) => {
     setEventSearch(value);
     clearTimeout(debounceRef.current);
@@ -82,6 +135,24 @@ function FindViewInner({
       router.push(`${pathname}?${params.toString()}`, { scroll: false });
     }, 300);
   };
+
+  // Derive map zoom props from location mode
+  const neighborhoodFilter = searchParams?.get("neighborhoods") || "";
+  const mapCenterPoint = useMemo(() => {
+    // If exactly one neighborhood is selected, zoom to it
+    const hoods = neighborhoodFilter.split(",").filter(Boolean);
+    if (hoods.length === 1) {
+      const hood = getNeighborhoodByName(hoods[0]);
+      if (hood) {
+        return { lat: hood.lat, lng: hood.lng, radius: hood.radius };
+      }
+    }
+    return null;
+  }, [neighborhoodFilter]);
+
+  const isNearbyMode = locationMode === "nearby" && !!userLocation;
+  const isNeighborhoodMode = !!mapCenterPoint;
+  const shouldFitAll = !isNearbyMode && !isNeighborhoodMode;
 
   const handleTypeChange = (type: FindType) => {
     const params = new URLSearchParams(searchParams?.toString() || "");
@@ -199,12 +270,41 @@ function FindViewInner({
       )}
 
       {findType === "events" && displayMode === "map" && (
-        <div className="relative z-0 h-[calc(100vh-180px)] -mx-4">
-          <MapViewWrapper
-            portalId={portalId}
-            portalExclusive={portalExclusive}
-          />
-        </div>
+        <>
+          {/* Location selector bar */}
+          <div className="flex items-center gap-2 mb-3 px-1">
+            <svg className="w-4 h-4 text-[var(--muted)] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            <select
+              value={locationMode}
+              onChange={(e) => handleLocationChange(e.target.value)}
+              className="flex-1 max-w-[220px] px-3 py-1.5 rounded-lg bg-[var(--dusk)] border border-[var(--twilight)] text-[var(--cream)] font-mono text-xs focus:outline-none focus:border-[var(--coral)] transition-colors appearance-none cursor-pointer select-chevron-md"
+            >
+              <option value="all">All Atlanta</option>
+              <option value="nearby">{locationLoading ? "Locating..." : userLocation ? "Nearby" : "Use my location"}</option>
+              <optgroup label="Neighborhoods">
+                {NEIGHBORHOOD_NAMES.map((hood) => (
+                  <option key={hood} value={hood}>{hood}</option>
+                ))}
+              </optgroup>
+            </select>
+            {locationLoading && (
+              <div className="w-4 h-4 rounded-full border-2 border-[var(--coral)] border-t-transparent animate-spin flex-shrink-0" />
+            )}
+          </div>
+          <div className="relative z-0 h-[calc(100vh-220px)] -mx-4">
+            <MapViewWrapper
+              portalId={portalId}
+              portalExclusive={portalExclusive}
+              userLocation={isNearbyMode ? userLocation : undefined}
+              viewRadius={isNearbyMode ? 1 : undefined}
+              centerPoint={mapCenterPoint}
+              fitAllMarkers={shouldFitAll}
+            />
+          </div>
+        </>
       )}
 
       {findType === "classes" && (
@@ -227,13 +327,41 @@ function FindViewInner({
       )}
 
       {findType === "destinations" && displayMode === "map" && (
-        <div className="relative z-0 h-[calc(100vh-180px)] -mx-4">
-          {/* TODO: Add showVenuesOnly support to MapViewWrapper */}
-          <MapViewWrapper
-            portalId={portalId}
-            portalExclusive={portalExclusive}
-          />
-        </div>
+        <>
+          {/* Location selector bar */}
+          <div className="flex items-center gap-2 mb-3 px-1">
+            <svg className="w-4 h-4 text-[var(--muted)] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            <select
+              value={locationMode}
+              onChange={(e) => handleLocationChange(e.target.value)}
+              className="flex-1 max-w-[220px] px-3 py-1.5 rounded-lg bg-[var(--dusk)] border border-[var(--twilight)] text-[var(--cream)] font-mono text-xs focus:outline-none focus:border-[var(--coral)] transition-colors appearance-none cursor-pointer select-chevron-md"
+            >
+              <option value="all">All Atlanta</option>
+              <option value="nearby">{locationLoading ? "Locating..." : userLocation ? "Nearby" : "Use my location"}</option>
+              <optgroup label="Neighborhoods">
+                {NEIGHBORHOOD_NAMES.map((hood) => (
+                  <option key={hood} value={hood}>{hood}</option>
+                ))}
+              </optgroup>
+            </select>
+            {locationLoading && (
+              <div className="w-4 h-4 rounded-full border-2 border-[var(--coral)] border-t-transparent animate-spin flex-shrink-0" />
+            )}
+          </div>
+          <div className="relative z-0 h-[calc(100vh-220px)] -mx-4">
+            <MapViewWrapper
+              portalId={portalId}
+              portalExclusive={portalExclusive}
+              userLocation={isNearbyMode ? userLocation : undefined}
+              viewRadius={isNearbyMode ? 1 : undefined}
+              centerPoint={mapCenterPoint}
+              fitAllMarkers={shouldFitAll}
+            />
+          </div>
+        </>
       )}
 
     </div>

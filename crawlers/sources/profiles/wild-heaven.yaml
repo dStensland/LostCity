@@ -1,12 +1,22 @@
 version: 1
 slug: wild-heaven
 name: Wild Heaven Beer
-integration_method: html
-defaults: {}
+integration_method: llm_crawler
+defaults:
+  venue_name: Wild Heaven Beer
+  category: nightlife
+  subcategory: nightlife.trivia
+  tags:
+  - brewery
+  - beer
+  - craft-beer
+  - taproom
+  - avondale-estates
 discovery:
   enabled: true
-  type: list
+  type: html
   urls:
-  - https://www.wildheavenbeer.com
+  - https://www.wildheavenbeer.com/avondale/events
+  render_js: true
 detail:
-  enabled: false
+  enabled: true

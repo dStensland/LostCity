@@ -9,4 +9,4 @@ discovery:
   urls:
   - https://www.thebreman.org/Events
 detail:
-  enabled: false
+  enabled: true

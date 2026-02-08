@@ -9,4 +9,4 @@ discovery:
   urls:
   - https://experienceavalon.com/events/
 detail:
-  enabled: false
+  enabled: true

@@ -4,9 +4,9 @@ name: The Painted Duck
 integration_method: html
 defaults: {}
 discovery:
-  enabled: true
-  type: list
+  enabled: false
+  type: html
   urls:
   - https://www.thepaintedduck.com
 detail:
-  enabled: false
+  enabled: true

@@ -9,4 +9,4 @@ discovery:
   urls:
   - https://www.atlantaeagle.com
 detail:
-  enabled: false
+  enabled: true

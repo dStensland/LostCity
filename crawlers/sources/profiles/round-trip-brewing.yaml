@@ -9,4 +9,4 @@ discovery:
   urls:
   - https://www.roundtripbrewing.com
 detail:
-  enabled: false
+  enabled: true

@@ -9,4 +9,4 @@ discovery:
   urls:
   - https://www.piedmont.org/locations/fitness-centers
 detail:
-  enabled: false
+  enabled: true

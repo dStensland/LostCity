@@ -197,7 +197,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 "end_date": end_date,
                 "end_time": end_time,
                 "is_all_day": is_all_day,
-                "category": "class",
+                "category": "learning",
                 "subcategory": "craft",
                 "tags": ["craft", "diy", "workshop", "hands-on", "creative", "local"],
                 "price_min": None,

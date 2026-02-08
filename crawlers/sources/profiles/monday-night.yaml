@@ -9,4 +9,4 @@ discovery:
   urls:
   - https://www.mondaynightbrewing.com
 detail:
-  enabled: false
+  enabled: true

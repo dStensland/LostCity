@@ -147,7 +147,7 @@ export default function EventQuickActions({ event, isLive, className = "" }: Eve
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
               </svg>
             )}
-            {isLive ? "Join Now" : isActuallyTicketed ? "Get Tickets" : "Check it out"}
+            {isLive ? "Join Now" : isActuallyTicketed ? "Get Tickets" : event.is_free ? "RSVP Free" : "Learn More"}
           </a>
         ) : event.source_url ? (
           <a
@@ -159,7 +159,7 @@ export default function EventQuickActions({ event, isLive, className = "" }: Eve
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
             </svg>
-            Check it out
+            {event.is_free ? "RSVP Free" : "Learn More"}
           </a>
         ) : (
           <RSVPButton eventId={event.id} variant="primary" className="flex-1 justify-center py-3.5 text-base" />

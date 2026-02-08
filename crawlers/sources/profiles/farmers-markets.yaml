@@ -9,4 +9,4 @@ discovery:
   urls:
   - https://lostcity.ai/farmers-markets
 detail:
-  enabled: false
+  enabled: true

@@ -7,9 +7,9 @@ defaults:
   category: arts
   subcategory: dance
   tags:
-    - dance
-    - ballroom
-    - classes
+  - dance
+  - ballroom
+  - classes
 discovery:
   enabled: true
   type: feed
@@ -18,4 +18,4 @@ discovery:
   urls:
   - https://calendar.google.com/calendar/ical/academyatl@gmail.com/public/basic.ics
 detail:
-  enabled: false
+  enabled: true

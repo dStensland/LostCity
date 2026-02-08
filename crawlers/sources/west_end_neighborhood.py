@@ -214,7 +214,7 @@ def create_black_history_month(source_id: int, venue_id: int) -> tuple[int, int]
         "end_date": None,
         "end_time": "18:00",
         "is_all_day": False,
-        "category": "cultural",
+        "category": "community",
         "subcategory": "celebration",
         "tags": ["west-end", "black-history-month", "african-american-heritage", "cultural", "educational"],
         "price_min": None,

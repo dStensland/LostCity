@@ -9,4 +9,4 @@ discovery:
   urls:
   - https://www.livenation.com/venue/KovZpaIJZ7A/buckhead-theatre-events
 detail:
-  enabled: false
+  enabled: true

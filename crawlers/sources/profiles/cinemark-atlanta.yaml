@@ -2,11 +2,12 @@ version: 1
 slug: cinemark-atlanta
 name: Cinemark Atlanta
 integration_method: html
-defaults: {}
+defaults:
+  category: film
 discovery:
   enabled: true
-  type: list
+  type: html
   urls:
   - https://www.cinemark.com
 detail:
-  enabled: false
+  enabled: true

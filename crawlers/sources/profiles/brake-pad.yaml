@@ -4,9 +4,9 @@ name: Brake Pad
 integration_method: llm_crawler
 defaults: {}
 discovery:
-  enabled: true
+  enabled: false
   type: html
   urls:
   - https://www.brakepadatlanta.com/events
 detail:
-  enabled: false
+  enabled: true

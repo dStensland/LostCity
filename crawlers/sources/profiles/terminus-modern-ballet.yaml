@@ -9,4 +9,4 @@ discovery:
   urls:
   - https://www.terminusmbt.com
 detail:
-  enabled: false
+  enabled: true

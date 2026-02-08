@@ -6,7 +6,7 @@ import Link from "next/link";
 import AnimatedEventList from "./AnimatedEventList";
 import { EventCardSkeletonList } from "./EventCardSkeleton";
 import PullToRefresh from "./PullToRefresh";
-import { useEventsList } from "@/lib/hooks/useEventsList";
+import { useTimeline } from "@/lib/hooks/useTimeline";
 import { useEventFilters } from "@/lib/hooks/useEventFilters";
 import { useFriendsGoing } from "@/lib/hooks/use-friends-going";
 import type { EventWithLocation } from "@/lib/search";
@@ -39,10 +39,11 @@ export default function EventList({
   const pathname = usePathname();
   const loaderRef = useRef<HTMLDivElement>(null);
 
-  // Use the new hooks
+  // Unified timeline hook — events + festivals in one stream
   const { hasActiveFilters, filters } = useEventFilters();
   const {
     events,
+    festivals,
     isLoading,
     isFetchingNextPage,
     isRefetching,
@@ -50,7 +51,7 @@ export default function EventList({
     error,
     loadMore,
     refresh,
-  } = useEventsList({
+  } = useTimeline({
     portalId,
     portalExclusive,
     initialData: initialEvents,
@@ -191,6 +192,7 @@ export default function EventList({
       {/* Animated event list */}
       <AnimatedEventList
         events={displayEvents}
+        standaloneFestivals={festivals}
         portalSlug={portalSlug}
         isLoading={isLoading}
         isFetchingNextPage={isFetchingNextPage}

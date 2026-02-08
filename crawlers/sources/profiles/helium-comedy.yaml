@@ -9,4 +9,4 @@ discovery:
   urls:
   - https://atlanta.heliumcomedy.com
 detail:
-  enabled: false
+  enabled: true

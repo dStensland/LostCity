@@ -9,4 +9,4 @@ discovery:
   urls:
   - https://volunteer.handsonatlanta.org
 detail:
-  enabled: false
+  enabled: true

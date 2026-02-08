@@ -69,14 +69,15 @@ class TestGenerateContentHash:
         assert hash1 == hash2
 
     def test_prefix_normalization(self):
-        # "The Earl" and "Earl" should produce same hash
-        hash1 = generate_content_hash("Show", "The Earl", "2026-01-15")
+        # Title prefix "The" is stripped, venue prefix is not (venue uses room-aware normalization)
+        hash1 = generate_content_hash("The Show", "Earl", "2026-01-15")
         hash2 = generate_content_hash("Show", "Earl", "2026-01-15")
         assert hash1 == hash2
 
     def test_whitespace_normalization(self):
-        hash1 = generate_content_hash("Rock Show", "The Venue", "2026-01-15")
-        hash2 = generate_content_hash("Rock   Show", "The  Venue", "2026-01-15")
+        # Title whitespace is normalized; venue whitespace preserved by room-aware normalizer
+        hash1 = generate_content_hash("Rock   Show", "The Venue", "2026-01-15")
+        hash2 = generate_content_hash("Rock Show", "The Venue", "2026-01-15")
         assert hash1 == hash2
 
 

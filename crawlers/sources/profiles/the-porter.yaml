@@ -7,15 +7,14 @@ defaults:
   category: nightlife
   subcategory: bar
   tags:
-    - beer
-    - bar
-    - craft-beer
-    - live-music
+  - beer
+  - bar
+  - craft-beer
+  - live-music
 discovery:
-  enabled: true
+  enabled: false
   type: html
   urls:
   - https://www.theporterbeerbar.com/wordpress/elementor-1726/
-  # Custom Elementor layout with day headers (h4.qodef-e-day) — needs LLM extraction
 detail:
-  enabled: false
+  enabled: true

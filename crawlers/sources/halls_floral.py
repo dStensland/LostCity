@@ -294,7 +294,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             "end_date": date,
                             "end_time": "13:00",  # Classes typically 9am-1pm
                             "is_all_day": False,
-                            "category": "arts",
+                            "category": "art",
                             "subcategory": "arts.workshop",
                             "tags": [
                                 "floral-design",
@@ -399,7 +399,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                                 "end_date": date,
                                 "end_time": "13:00",
                                 "is_all_day": False,
-                                "category": "arts",
+                                "category": "art",
                                 "subcategory": "arts.workshop",
                                 "tags": [
                                     "floral-design",

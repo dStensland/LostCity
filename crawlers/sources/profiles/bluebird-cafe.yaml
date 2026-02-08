@@ -9,4 +9,4 @@ discovery:
   urls:
   - https://bluebirdcafe.com/shows/
 detail:
-  enabled: false
+  enabled: true

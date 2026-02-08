@@ -309,6 +309,10 @@ CLASS_TITLE_PATTERNS = [
     "paint and sip", "paint & sip", "paint-and-sip",
     "hands-on class", "hands on class", "masterclass",
     "beginner class", "intermediate class", "advanced class",
+    # Online / virtual courses
+    "online course", "(online course)", "virtual course",
+    "online workshop", "virtual workshop", "webinar",
+    "certification course", "certificate program",
 ]
 
 

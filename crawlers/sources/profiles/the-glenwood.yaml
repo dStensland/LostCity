@@ -4,9 +4,9 @@ name: The Glenwood
 integration_method: html
 defaults: {}
 discovery:
-  enabled: true
-  type: list
+  enabled: false
+  type: html
   urls:
   - https://www.theglenwoodatl.com
 detail:
-  enabled: false
+  enabled: true

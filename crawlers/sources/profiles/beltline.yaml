@@ -9,4 +9,4 @@ discovery:
   urls:
   - https://beltline.org/visit/events/
 detail:
-  enabled: false
+  enabled: true

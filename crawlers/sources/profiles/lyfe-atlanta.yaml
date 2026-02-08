@@ -4,9 +4,10 @@ name: LYFE Atlanta
 integration_method: html
 defaults: {}
 discovery:
-  enabled: true
+  enabled: false
   type: list
   urls:
   - https://www.lyfeatl.com
+  # NOTE: DNS dead as of 2026-02-06
 detail:
   enabled: false

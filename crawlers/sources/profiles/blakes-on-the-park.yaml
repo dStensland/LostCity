@@ -9,4 +9,4 @@ discovery:
   urls:
   - https://www.instagram.com/blakesatl/
 detail:
-  enabled: false
+  enabled: true

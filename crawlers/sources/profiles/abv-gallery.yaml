@@ -9,4 +9,4 @@ discovery:
   urls:
   - https://www.abvgallery.com
 detail:
-  enabled: false
+  enabled: true

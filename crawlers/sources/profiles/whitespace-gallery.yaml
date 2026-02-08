@@ -9,4 +9,4 @@ discovery:
   urls:
   - https://www.whitespace814.com
 detail:
-  enabled: false
+  enabled: true

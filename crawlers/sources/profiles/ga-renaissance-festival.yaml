@@ -1,0 +1,12 @@
+version: 1
+slug: ga-renaissance-festival
+name: Georgia Renaissance Festival
+integration_method: festival_schedule
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.garenfest.com
+detail:
+  enabled: true

@@ -1,0 +1,23 @@
+version: 1
+slug: mjcca
+name: Marcus Jewish Community Center of Atlanta
+integration_method: html
+defaults:
+  venue_name: Marcus Jewish Community Center of Atlanta
+  category: learning
+  tags:
+    - community
+    - family
+    - learning
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.atlantajcc.org/calendar/
+  - https://www.atlantajcc.org/our-programs/arts-authors/
+detail:
+  enabled: true
+  use_jsonld: true
+  use_open_graph: true
+  use_heuristic: true
+  use_llm: false

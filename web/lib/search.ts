@@ -515,10 +515,12 @@ async function applySearchFilters(
     query = query.or(`is_free.eq.true,price_min.lte.${filters.price_max}`);
   }
 
-  // Apply date filter
+  // Apply date filter (include ongoing multi-day events that overlap the range)
   if (filters.date_filter) {
     const { start, end } = getDateRange(filters.date_filter);
-    query = query.gte("start_date", start).lte("start_date", end);
+    query = query.or(
+      `and(start_date.gte.${start},start_date.lte.${end}),and(end_date.gte.${start},start_date.lte.${end})`
+    );
 
     // For "now" filter, also require is_live to be true
     if (filters.date_filter === "now") {
@@ -554,10 +556,14 @@ async function applySearchFilters(
   }
 
   // Apply date range filter (portal filter) - overrides date_filter if set
-  if (filters.date_range_start) {
-    query = query.gte("start_date", filters.date_range_start);
-  }
-  if (filters.date_range_end) {
+  // Include ongoing multi-day events that overlap the range
+  if (filters.date_range_start && filters.date_range_end) {
+    query = query.or(
+      `and(start_date.gte.${filters.date_range_start},start_date.lte.${filters.date_range_end}),and(end_date.gte.${filters.date_range_start},start_date.lte.${filters.date_range_end})`
+    );
+  } else if (filters.date_range_start) {
+    query = query.or(`start_date.gte.${filters.date_range_start},end_date.gte.${filters.date_range_start}`);
+  } else if (filters.date_range_end) {
     query = query.lte("start_date", filters.date_range_end);
   }
 
@@ -614,13 +620,14 @@ export async function getFilteredEventsWithSearch(
     `,
       { count: "exact" }
     )
-    .gte("start_date", today)
+    .or(`start_date.gte.${today},end_date.gte.${today}`)
     // Hide past events for today:
-    // - Show if future date
+    // - Show if future date (start_date > today)
+    // - Show if ongoing multi-day event (end_date > today)
     // - Show if end_time exists and hasn't passed yet
     // - Show if end_time is null but start_time hasn't passed yet
     // - Show all-day events
-    .or(`start_date.gt.${today},end_time.gte.${currentTime},and(end_time.is.null,start_time.gte.${currentTime}),is_all_day.eq.true`)
+    .or(`start_date.gt.${today},end_date.gt.${today},end_time.gte.${currentTime},and(end_time.is.null,start_time.gte.${currentTime}),is_all_day.eq.true`)
     .is("canonical_event_id", null); // Only show canonical events, not duplicates
 
   // Apply portal restriction filter
@@ -742,9 +749,9 @@ export async function getFilteredEventsWithCursor(
       series:series(id, slug, title, series_type, image_url, frequency, day_of_week, festival:festivals(id, slug, name, image_url, festival_type, location, neighborhood))
     `
     )
-    .gte("start_date", today)
+    .or(`start_date.gte.${today},end_date.gte.${today}`)
     // Hide past events for today
-    .or(`start_date.gt.${today},end_time.gte.${currentTime},and(end_time.is.null,start_time.gte.${currentTime}),is_all_day.eq.true`)
+    .or(`start_date.gt.${today},end_date.gt.${today},end_time.gte.${currentTime},and(end_time.is.null,start_time.gte.${currentTime}),is_all_day.eq.true`)
     .is("canonical_event_id", null); // Only show canonical events, not duplicates
 
   // Apply portal restriction filter - all events belong to a portal
@@ -906,7 +913,7 @@ export async function getEventsForMap(
       venue:venues!inner(id, name, slug, address, neighborhood, city, state, lat, lng, venue_type)
     `
     )
-    .gte("start_date", today)
+    .or(`start_date.gte.${today},end_date.gte.${today}`)
     .not("venues.lat", "is", null)
     .not("venues.lng", "is", null)
     .is("canonical_event_id", null); // Only show canonical events, not duplicates
@@ -1027,7 +1034,7 @@ export async function getVenuesWithEvents(): Promise<VenueWithCount[]> {
   const { data: events, error } = await supabase
     .from("events")
     .select("venue_id, venue:venues(id, name, neighborhood)")
-    .gte("start_date", today)
+    .or(`start_date.gte.${today},end_date.gte.${today}`)
     .not("venue_id", "is", null);
 
   if (error || !events) {
@@ -1084,7 +1091,7 @@ export async function getSearchSuggestions(prefix: string): Promise<SearchSugges
       .from("events")
       .select("title")
       .ilike("title", searchTerm)
-      .gte("start_date", today)
+      .or(`start_date.gte.${today},end_date.gte.${today}`)
       .limit(3),
     supabase
       .from("venues")
@@ -1518,7 +1525,7 @@ export async function getPopularEvents(limit = 6): Promise<EventWithLocation[]> 
       venue:venues(*),
       source:sources(name, url)
     `)
-    .gte("start_date", today)
+    .or(`start_date.gte.${today},end_date.gte.${today}`)
     .lte("start_date", weekFromNow)
     .eq("is_active", true)
     .order("start_date", { ascending: true })
@@ -1572,7 +1579,7 @@ export async function getTrendingEvents(limit = 6): Promise<EventWithLocation[]>
       venue:venues(*),
       source:sources(name, url)
     `)
-    .gte("start_date", today)
+    .or(`start_date.gte.${today},end_date.gte.${today}`)
     .lte("start_date", weekFromNow)
     .eq("is_active", true)
     .order("start_date", { ascending: true })

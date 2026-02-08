@@ -9,4 +9,4 @@ discovery:
   urls:
   - https://lostcity.ai
 detail:
-  enabled: false
+  enabled: true

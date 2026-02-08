@@ -9,4 +9,4 @@ discovery:
   urls:
   - https://arthurmurrayatl.com
 detail:
-  enabled: false
+  enabled: true

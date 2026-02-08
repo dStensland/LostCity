@@ -8,6 +8,7 @@ import Logo from "../Logo";
 import UserMenu from "../UserMenu";
 import HeaderSearchButton from "../HeaderSearchButton";
 import HeroSection from "../HeroSection";
+import BackButton from "./BackButton";
 import { usePortalOptional, DEFAULT_PORTAL, DEFAULT_PORTAL_SLUG } from "@/lib/portal-context";
 import { useAuth } from "@/lib/auth-context";
 import type { HeaderConfig } from "@/lib/visual-presets";
@@ -18,7 +19,8 @@ interface ImmersiveHeaderProps {
   portalName: string;
   branding: PortalBranding;
   backLink?: {
-    href: string;
+    href?: string;
+    fallbackHref?: string;
     label: string;
   };
   hideNav?: boolean;
@@ -184,16 +186,12 @@ export default function ImmersiveHeader({
           {/* Left: Back button (optional) + Logo (when not centered) */}
           <div className="flex items-center gap-2 flex-shrink-0">
             {backLink && (
-              <Link
+              <BackButton
                 href={backLink.href}
+                fallbackHref={backLink.fallbackHref}
+                label={backLink.label}
                 className="flex items-center gap-1.5 text-white/80 hover:text-white transition-colors mr-1"
-                aria-label={`Back to ${backLink.label}`}
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                </svg>
-                <span className="font-mono text-xs hidden sm:inline">{backLink.label}</span>
-              </Link>
+              />
             )}
 
             {headerConfig.logo_position !== "center" && (

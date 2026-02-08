@@ -9,4 +9,4 @@ discovery:
   urls:
   - http://jankestudios.com/
 detail:
-  enabled: false
+  enabled: true

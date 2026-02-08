@@ -3,6 +3,7 @@
 import { useState, useCallback, type ReactNode } from "react";
 import Image from "@/components/SmartImage";
 import CategoryPlaceholder from "../CategoryPlaceholder";
+import BackButton from "../headers/BackButton";
 import ScopedStyles from "@/components/ScopedStyles";
 import { createCssVarClass } from "@/lib/css-utils";
 
@@ -16,8 +17,14 @@ export interface DetailHeroProps {
   categoryIcon?: ReactNode;
   badge?: ReactNode;
   isLive?: boolean;
+  tall?: boolean;
+  /** When provided, renders a floating back button over the hero. */
+  backFallbackHref?: string;
   children?: ReactNode;
 }
+
+const BACK_BUTTON_CLASS =
+  "absolute top-3 left-3 sm:top-4 sm:left-4 z-10 flex items-center justify-center w-9 h-9 rounded-full bg-black/50 backdrop-blur-sm text-white/90 hover:bg-black/70 hover:text-white transition-colors";
 
 export function DetailHero({
   mode,
@@ -29,6 +36,8 @@ export function DetailHero({
   categoryIcon,
   badge,
   isLive,
+  tall,
+  backFallbackHref,
   children,
 }: DetailHeroProps) {
   const [imgError, setImgError] = useState(false);
@@ -43,11 +52,15 @@ export function DetailHero({
 
   // Determine effective mode (fallback if image error)
   const effectiveMode = !imageUrl || imgError ? "fallback" : mode;
+  const aspectClass = tall ? "aspect-[16/10]" : "aspect-video";
 
   if (effectiveMode === "fallback") {
     return (
-      <div className={`relative w-full aspect-video sm:rounded-lg overflow-hidden ${heroAccentClass?.className ?? ""}`}>
+      <div className={`relative w-full ${aspectClass} sm:rounded-lg overflow-hidden ${heroAccentClass?.className ?? ""}`}>
         <ScopedStyles css={heroAccentClass?.css} />
+        {backFallbackHref && (
+          <BackButton fallbackHref={backFallbackHref} label="Back" className={BACK_BUTTON_CLASS} iconOnly />
+        )}
         {/* Neon category placeholder */}
         <CategoryPlaceholder category={category} color={categoryColor} size="lg" />
 
@@ -67,6 +80,9 @@ export function DetailHero({
     return (
       <div className={`relative w-full sm:rounded-lg overflow-hidden bg-[var(--night)] ${heroAccentClass?.className ?? ""}`}>
         <ScopedStyles css={heroAccentClass?.css} />
+        {backFallbackHref && (
+          <BackButton fallbackHref={backFallbackHref} label="Back" className={BACK_BUTTON_CLASS} iconOnly />
+        )}
         <div className="flex flex-col sm:flex-row gap-6 p-6">
           {/* Image (poster) */}
           <div className="relative w-full sm:w-[200px] aspect-square sm:aspect-[2/3] flex-shrink-0 rounded-lg overflow-hidden">
@@ -114,10 +130,13 @@ export function DetailHero({
     );
   }
 
-  // Default: image mode (full 16:9 with overlay)
+  // Default: image mode (full-width with overlay)
   return (
-    <div className={`relative w-full aspect-video sm:rounded-lg overflow-hidden ${heroAccentClass?.className ?? ""}`}>
+    <div className={`relative w-full ${aspectClass} sm:rounded-lg overflow-hidden ${heroAccentClass?.className ?? ""}`}>
       <ScopedStyles css={heroAccentClass?.css} />
+      {backFallbackHref && (
+        <BackButton fallbackHref={backFallbackHref} label="Back" className={BACK_BUTTON_CLASS} iconOnly />
+      )}
       {!imgLoaded && (
         <div
           className="absolute inset-0 skeleton-shimmer detail-hero-skeleton"

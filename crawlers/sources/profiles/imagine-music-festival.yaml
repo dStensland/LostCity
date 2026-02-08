@@ -1,0 +1,12 @@
+version: 1
+slug: imagine-music-festival
+name: Imagine Music Festival
+integration_method: festival_schedule
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.imaginefestival.com
+detail:
+  enabled: true

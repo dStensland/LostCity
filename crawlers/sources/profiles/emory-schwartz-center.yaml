@@ -9,4 +9,4 @@ discovery:
   urls:
   - https://schwartz.emory.edu/events-tickets/calendar.html
 detail:
-  enabled: false
+  enabled: true

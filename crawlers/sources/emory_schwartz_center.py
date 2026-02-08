@@ -14,6 +14,7 @@ from bs4 import BeautifulSoup
 
 from db import get_or_create_venue, insert_event, find_event_by_hash
 from dedupe import generate_content_hash
+from utils import enrich_event_record
 
 logger = logging.getLogger(__name__)
 
@@ -255,7 +256,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "source_id": source_id,
                         "venue_id": venue_id,
                         "title": title,
-                        "description": "Performance at Schwartz Center for Performing Arts",
+                        "description": None,
                         "start_date": start_date,
                         "start_time": start_time,
                         "end_date": None,
@@ -279,6 +280,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     }
 
                     try:
+                        enrich_event_record(event_record, "Schwartz Center")
                         insert_event(event_record)
                         events_new += 1
                         logger.debug(f"Added: {title} on {start_date}")

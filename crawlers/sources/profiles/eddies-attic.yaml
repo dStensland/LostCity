@@ -9,4 +9,4 @@ discovery:
   urls:
   - https://eddiesattic.com
 detail:
-  enabled: false
+  enabled: true

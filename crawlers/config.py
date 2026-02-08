@@ -38,6 +38,8 @@ class APIConfig(BaseModel):
     meetup_api_key: str = Field(default_factory=lambda: os.getenv("MEETUP_API_KEY", ""))
     ticketmaster_api_key: str = Field(default_factory=lambda: os.getenv("TICKETMASTER_API_KEY", ""))
     omdb_api_key: str = Field(default_factory=lambda: os.getenv("OMDB_API_KEY", "trilogy"))
+    spotify_client_id: str = Field(default_factory=lambda: os.getenv("SPOTIFY_CLIENT_ID", ""))
+    spotify_client_secret: str = Field(default_factory=lambda: os.getenv("SPOTIFY_CLIENT_SECRET", ""))
 
 
 class CrawlerConfig(BaseModel):

@@ -4,9 +4,9 @@ name: Atlanta United Pub Partners
 integration_method: html
 defaults: {}
 discovery:
-  enabled: true
-  type: list
+  enabled: false
+  type: html
   urls:
   - https://www.atlutd.com/fans/pub-partners
 detail:
-  enabled: false
+  enabled: true

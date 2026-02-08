@@ -9,4 +9,4 @@ discovery:
   urls:
   - https://www.caffeine-and-octane.com
 detail:
-  enabled: false
+  enabled: true

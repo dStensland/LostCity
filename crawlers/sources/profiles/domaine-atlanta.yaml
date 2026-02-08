@@ -8,7 +8,9 @@ discovery:
   type: html
   urls:
   - https://www.domaineatlanta.com
+  fetch:
+    render_js: true
 detail:
-  enabled: false
+  enabled: true
   fetch:
     render_js: true

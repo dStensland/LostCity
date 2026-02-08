@@ -1,0 +1,280 @@
+#!/usr/bin/env python3
+"""
+Lightweight festival date announcement checker.
+
+Scans festival websites for newly announced 2026 dates using plain HTTP
+(no Playwright, no LLM). Fast enough to run daily via cron.
+
+When dates are found, updates the festival record and prints a summary.
+
+Usage:
+    python3 check_festival_dates.py               # Check all missing dates
+    python3 check_festival_dates.py --dry-run      # Preview without writing
+    python3 check_festival_dates.py --months 1-4   # Only festivals in Jan-Apr
+    python3 check_festival_dates.py --soon          # Only festivals within 3 months
+"""
+
+import argparse
+import json
+import logging
+import re
+import sys
+import time
+from datetime import datetime, timedelta
+from pathlib import Path
+from typing import Optional
+
+import requests
+from bs4 import BeautifulSoup
+from dotenv import load_dotenv
+
+env_path = Path(__file__).parent.parent / ".env"
+load_dotenv(env_path)
+
+sys.path.insert(0, str(Path(__file__).parent))
+from db import get_client
+
+logging.basicConfig(level=logging.INFO, format="%(message)s")
+logger = logging.getLogger(__name__)
+
+UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
+CURRENT_YEAR = datetime.now().year
+
+MONTH_MAP = {
+    "jan": 1, "january": 1, "feb": 2, "february": 2, "mar": 3, "march": 3,
+    "apr": 4, "april": 4, "may": 5, "jun": 6, "june": 6,
+    "jul": 7, "july": 7, "aug": 8, "august": 8, "sep": 9, "sept": 9, "september": 9,
+    "oct": 10, "october": 10, "nov": 11, "november": 11, "dec": 12, "december": 12,
+}
+
+# Same-month range: "October 3-5, 2026"
+SAME_MONTH_RE = re.compile(
+    r"(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|"
+    r"sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)"
+    r"\s+(\d{1,2})\s*[–\-]\s*(\d{1,2})\s*,?\s*(20\d{2})",
+    re.IGNORECASE,
+)
+
+# Cross-month range: "March 28 - April 2, 2026"
+CROSS_MONTH_RE = re.compile(
+    r"(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|"
+    r"sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)"
+    r"\s+(\d{1,2})\s*[–\-]\s*"
+    r"(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|"
+    r"sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)"
+    r"\s+(\d{1,2})\s*,?\s*(20\d{2})",
+    re.IGNORECASE,
+)
+
+# Single date: "October 5, 2026"
+SINGLE_DATE_RE = re.compile(
+    r"(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|"
+    r"sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)"
+    r"\s+(\d{1,2})\s*,?\s*(20\d{2})",
+    re.IGNORECASE,
+)
+
+
+def _month_num(name: str) -> Optional[int]:
+    return MONTH_MAP.get(name.lower().rstrip("."))
+
+
+def _safe_date(year: int, month: int, day: int) -> Optional[str]:
+    try:
+        return datetime(year, month, day).strftime("%Y-%m-%d")
+    except (ValueError, OverflowError):
+        return None
+
+
+def extract_dates_from_html(html: str) -> tuple[Optional[str], Optional[str], str]:
+    """
+    Extract start/end dates from HTML. Returns (start, end, method).
+    Tries JSON-LD -> meta tags -> regex, plain HTTP only.
+    """
+    soup = BeautifulSoup(html, "html.parser")
+
+    # 1. JSON-LD
+    for script in soup.find_all("script", type="application/ld+json"):
+        try:
+            data = json.loads(script.string or "")
+            items = data if isinstance(data, list) else [data]
+            for item in items:
+                if not isinstance(item, dict):
+                    continue
+                start = str(item.get("startDate", ""))
+                if str(CURRENT_YEAR) in start and len(start) >= 10:
+                    end = str(item.get("endDate", ""))
+                    end_str = end[:10] if end and len(end) >= 10 else start[:10]
+                    return start[:10], end_str, "json-ld"
+        except (json.JSONDecodeError, TypeError):
+            continue
+
+    # 2. <meta> tags with date content
+    for meta in soup.find_all("meta"):
+        prop = (meta.get("property", "") + meta.get("name", "")).lower()
+        content = meta.get("content", "")
+        if "date" in prop and str(CURRENT_YEAR) in content:
+            m = re.match(r"(\d{4}-\d{2}-\d{2})", content)
+            if m:
+                return m.group(1), m.group(1), "meta"
+
+    # 3. <time> elements
+    for tag in soup.find_all("time"):
+        dt = tag.get("datetime", "")
+        if str(CURRENT_YEAR) in dt and len(dt) >= 10:
+            return dt[:10], dt[:10], "time-el"
+
+    # 4. Regex on visible text
+    text = soup.get_text(" ", strip=True)
+    year_str = str(CURRENT_YEAR)
+
+    # Cross-month first
+    m = CROSS_MONTH_RE.search(text)
+    if m and m.group(5) == year_str:
+        m1 = _month_num(m.group(1))
+        d1 = int(m.group(2))
+        m2 = _month_num(m.group(3))
+        d2 = int(m.group(4))
+        year = int(m.group(5))
+        if m1 and m2:
+            start = _safe_date(year, m1, d1)
+            end = _safe_date(year, m2, d2)
+            if start and end:
+                return start, end, "regex-cross"
+
+    # Same-month range
+    m = SAME_MONTH_RE.search(text)
+    if m and m.group(4) == year_str:
+        month = _month_num(m.group(1))
+        d1 = int(m.group(2))
+        d2 = int(m.group(3))
+        year = int(m.group(4))
+        if month:
+            start = _safe_date(year, month, d1)
+            end = _safe_date(year, month, d2)
+            if start and end:
+                return start, end, "regex-range"
+
+    # Single date
+    m = SINGLE_DATE_RE.search(text)
+    if m and m.group(3) == year_str:
+        month = _month_num(m.group(1))
+        day = int(m.group(2))
+        year = int(m.group(3))
+        if month:
+            d = _safe_date(year, month, day)
+            if d:
+                return d, d, "regex-single"
+
+    return None, None, ""
+
+
+def check_festival_dates(
+    dry_run: bool = False,
+    month_range: Optional[tuple[int, int]] = None,
+    soon_only: bool = False,
+):
+    client = get_client()
+
+    # Get festivals missing announced_start that have websites
+    result = (
+        client.table("festivals")
+        .select("id,slug,name,website,typical_month,announced_start")
+        .is_("announced_start", "null")
+        .not_.is_("website", "null")
+        .order("typical_month")
+        .execute()
+    )
+    festivals = result.data or []
+
+    # Filter by month range
+    if month_range:
+        lo, hi = month_range
+        festivals = [
+            f for f in festivals
+            if f.get("typical_month") and lo <= f["typical_month"] <= hi
+        ]
+
+    # Filter to "soon" — within 3 months
+    if soon_only:
+        now = datetime.now()
+        cutoff_month = (now.month + 3 - 1) % 12 + 1
+        cutoff_wraps = (now.month + 3) > 12
+        festivals = [
+            f for f in festivals
+            if f.get("typical_month") and (
+                (not cutoff_wraps and now.month <= f["typical_month"] <= cutoff_month)
+                or (cutoff_wraps and (f["typical_month"] >= now.month or f["typical_month"] <= cutoff_month))
+            )
+        ]
+
+    if not festivals:
+        logger.info("No festivals to check.")
+        return
+
+    logger.info(f"Festival Date Checker")
+    logger.info(f"{'=' * 70}")
+    logger.info(f"Checking {len(festivals)} festivals | Mode: {'DRY RUN' if dry_run else 'LIVE'}")
+    logger.info(f"{'=' * 70}\n")
+
+    found_count = 0
+    failed_count = 0
+
+    for i, f in enumerate(festivals, 1):
+        name = f["name"]
+        website = f["website"]
+        month = f.get("typical_month") or "?"
+        prefix = f"[{i:3d}/{len(festivals)}] {name[:40]:<40} (mo={month})"
+
+        try:
+            resp = requests.get(website, headers={"User-Agent": UA}, timeout=10, allow_redirects=True)
+            html = resp.text
+        except Exception as e:
+            logger.info(f"{prefix}  ERR: {str(e)[:30]}")
+            failed_count += 1
+            time.sleep(0.5)
+            continue
+
+        start, end, method = extract_dates_from_html(html)
+
+        if start:
+            found_count += 1
+            logger.info(f"{prefix}  FOUND: {start} to {end}  ({method})")
+
+            if not dry_run:
+                updates = {"announced_start": start}
+                if end:
+                    updates["announced_end"] = end
+                client.table("festivals").update(updates).eq("id", f["id"]).execute()
+        else:
+            logger.info(f"{prefix}  --")
+
+        time.sleep(0.5)
+
+    logger.info(f"\n{'=' * 70}")
+    logger.info(f"Checked: {len(festivals)} | Found dates: {found_count} | Failed: {failed_count}")
+    if dry_run:
+        logger.info("DRY RUN — no changes written")
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Check for newly announced festival dates")
+    parser.add_argument("--dry-run", action="store_true", help="Preview without writing")
+    parser.add_argument("--months", type=str, help="Month range, e.g. '1-4' for Jan-Apr")
+    parser.add_argument("--soon", action="store_true", help="Only check festivals within 3 months")
+    args = parser.parse_args()
+
+    month_range = None
+    if args.months:
+        parts = args.months.split("-")
+        month_range = (int(parts[0]), int(parts[1]))
+
+    check_festival_dates(
+        dry_run=args.dry_run,
+        month_range=month_range,
+        soon_only=args.soon,
+    )
+
+
+if __name__ == "__main__":
+    main()

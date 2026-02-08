@@ -5,8 +5,8 @@ integration_method: html
 defaults: {}
 discovery:
   enabled: true
-  type: list
+  type: html
   urls:
   - https://www.songkick.com/venues/3586926-echo-room
 detail:
-  enabled: false
+  enabled: true

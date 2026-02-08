@@ -467,11 +467,13 @@ Every event inserted through `insert_event()` in `db.py` passes through a 7-step
 - **Data fetched:** `vibes` array and `venue_type` from venues table
 - **Used by:** Tag inference and genre delegation (step 5-6)
 
-### 3. Film Poster Fetch (`posters.py`)
+### 3. Film Metadata Fetch (`posters.py`)
 - **Triggered when:** `category == "film"` and `image_url` is missing
 - **API:** OMDB (Open Movie Database) with free "trilogy" API key
 - **Title extraction patterns:** Removes prefixes ("WeWatchStuff:", "Plaza Theatre:"), format indicators ("4K", "35MM"), extracts year from parentheses
-- **Process:** `extract_film_info()` → `fetch_movie_poster(title, year)` → cache result
+- **Process:** `extract_film_info()` → `fetch_film_metadata(title, year)` → cache result
+- **Data returned:** `FilmMetadata` with `poster_url`, `plot`, `director`, `runtime`, `year`, `imdb_id`, `genres`
+- **Description fallback:** If existing description is missing or < 80 characters, backfills from OMDB `plot` field (truncated to 500 chars). This ensures cinema events always have meaningful descriptions even when the source provides stub text like "Buy Tickets" or "Rated PG-13"
 - **Blocking:** Yes (inline during insert)
 - **Cache:** In-memory dict `_poster_cache` by `title|year`
 
@@ -513,6 +515,101 @@ Every event inserted through `insert_event()` in `db.py` passes through a 7-step
 - **Tag inference:** <10ms (local rule engine)
 - **Series lookup:** ~50-100ms (database query)
 - **Total overhead:** ~0-1.5 seconds per event depending on cache hits
+
+---
+
+## Detail Enrichment Pipeline
+
+After discovery (feed, list, or LLM), each event with a `detail_url` passes through a multi-layer detail enrichment stack in `pipeline/detail_enrich.py`. This fills gaps in description, image, ticket URL, start_time, and pricing that the discovery step couldn't provide.
+
+### Extraction Stack (executed in order)
+
+Each layer runs and merges results. Later layers only fill fields still missing — they never overwrite data from earlier layers.
+
+#### Layer 1: JSON-LD (`extractors/json_ld.py`)
+- **Parse:** `<script type="application/ld+json">` blocks
+- **Fields:** title, description, image_url, start_time, end_time, ticket_url, price_min/max, is_free, location
+- **Strengths:** Structured data, highly reliable when present. Best source of start_time
+- **Coverage:** ~30-40% of venue sites include JSON-LD
+
+#### Layer 2: Open Graph (`extractors/opengraph.py`)
+- **Parse:** `<meta property="og:*">` tags
+- **Fields:** description (og:description), image_url (og:image)
+- **Strengths:** Nearly universal, good fallback for images and short descriptions
+- **Limitation:** No time/price data
+
+#### Layer 3: CSS Selectors (`pipeline/detail_enrich.py`)
+- **Parse:** Profile-defined CSS selectors from `detail_selectors` config
+- **Fields:** Any field the profile maps a selector to
+- **Strengths:** Precise, venue-specific extraction
+- **Limitation:** Requires per-source configuration
+
+#### Layer 4: Heuristic (`extractors/heuristic.py`)
+- **Parse:** DOM structure + regex patterns
+- **Fields:** description, image_url, ticket_url, start_time, end_time, price_note, is_free, artists
+- **Time extraction patterns:**
+  - "Doors: 7pm / Show: 8pm" — prefers show time as start_time
+  - "7:00 PM - 10:00 PM" — time range with start and end
+  - CSS class selectors: `.event-time`, `[class*='showtime']`, `[class*='door-time']`, `time` element
+  - Supports 12h ("7pm", "7:30 PM") and 24h ("19:00") formats
+- **Strengths:** Works on any HTML without configuration. Good at finding ticket links and times
+
+#### Layer 5: LLM Detail Extraction (`extractors/llm_detail.py`)
+- **Parse:** Sends trimmed HTML to LLM with structured extraction prompt
+- **Fields:** description, image_url, ticket_url, start_time, end_time, price_min/max, price_note, is_free, artists
+- **Gating:** Only invoked when prior layers left gaps — specifically when any of description (< 50 chars), image, ticket_url, or start_time is still missing
+- **Cost:** ~$0.003 per call, ~2-5 seconds latency
+- **Strengths:** Handles unusual/complex page layouts that structured extractors miss
+
+### LLM Gating Logic
+
+The LLM is expensive and slow, so it only fires when needed:
+
+```python
+has_good_desc = len(str(desc)) > 50
+has_image = bool(enriched.get("image_url") or image_order)
+has_ticket = bool(enriched.get("ticket_url"))
+has_time = bool(enriched.get("start_time"))
+if not (has_good_desc and has_image and has_ticket and has_time):
+    # Invoke LLM extraction
+```
+
+### Hydration Techniques (Post-Crawl Gap Filling)
+
+When the standard enrichment stack leaves gaps (especially for start_time), two additional hydration techniques can recover data from existing records:
+
+#### Technique 1: Description Text Mining
+- **Target:** Events with missing start_time but existing description text
+- **Method:** Regex extraction of time patterns from description field
+- **Patterns matched:**
+  - `at 8:00 pm`, `at 7pm` — explicit time markers
+  - `Doors open at 6:30 PM` — door/show time phrases
+  - `7:00 PM - 10:00 PM` — time ranges
+  - `starts at 8pm`, `begins at 7:30 PM` — start markers
+- **Implementation:** SQL query finds candidates, Python regex extracts and updates
+- **Success rate:** ~12-15% of missing-time events have times buried in descriptions
+- **Cost:** Zero (no API calls, operates on existing data)
+
+#### Technique 2: Page Re-fetch with Playwright
+- **Target:** Events with `detail_url` but missing start_time after standard extraction
+- **Method:** Re-fetch the detail page using Playwright (JS rendering), then run JSON-LD + heuristic extractors
+- **Why separate:** Many venue sites render event times via JavaScript that plain HTTP fetch misses
+- **Implementation:** `render_js: true` fetch → parse JSON-LD → parse heuristic → update if time found
+- **URL dedup:** Cache fetched URLs to avoid re-fetching the same page for multiple events at same venue
+- **Success rate:** ~25-30% of remaining missing-time events yield times via JS rendering
+- **Cost:** ~30 seconds per page (Playwright startup + render), no API cost
+- **When to use:** As a targeted backfill after the standard crawl, not during the main pipeline (too slow)
+
+### Category Inference for Enrichment Triggers
+
+Film poster/metadata fetch and music artist lookup depend on correct `category`. Category is inferred in this priority order:
+
+1. **Explicit from source:** Crawler or feed provides category directly
+2. **Profile defaults:** `defaults.category` in YAML profile (e.g., cinema profiles set `film`)
+3. **Venue-type inference:** `_infer_category()` maps venue_type → category (e.g., `music_venue` → `music`, `comedy_club` → `comedy`, `cinema` → `film`)
+4. **Title keyword matching:** Fallback regex patterns in event titles
+
+**Critical:** Cinema profiles MUST have `defaults.category: film` set, otherwise OMDB metadata fetch never triggers and film events lack posters and descriptions.
 
 ---
 
@@ -783,14 +880,219 @@ Applying this framework to Nashville:
 
 ---
 
-## Data Quality Monitoring
+## Data Health Criteria
 
-### Health Thresholds
+All entity types have defined health criteria. Every crawler, enrichment script, and import should target these standards. Run `python data_health.py` to check current health scores.
+
+### Overall Health Score
+
+Each entity type gets a weighted health score (0-100). System-wide health is the weighted average across all types.
+
+| Score Range | Rating | Action |
+|-------------|--------|--------|
+| 90-100 | Excellent | Maintain |
+| 80-89 | Good | Minor gaps to fill |
+| 65-79 | Needs Attention | Prioritize enrichment |
+| 50-64 | Poor | Dedicated sprint needed |
+| < 50 | Critical | Blocking core features |
+
+---
+
+### Venues (Destinations)
+
+Venues are the core entity — every destination a user might want to visit.
+
+#### Field Requirements
+
+| Field | Priority | Weight | Target | Notes |
+|-------|----------|--------|--------|-------|
+| name | Required | - | 100% | Must be real venue name, not address |
+| slug | Required | - | 100% | Auto-generated from name |
+| address | Critical | 15% | > 95% | Full street address for geocoding |
+| lat/lng | Critical | 20% | > 95% | Required for map placement |
+| neighborhood | Critical | 15% | > 90% | Required for neighborhood filtering |
+| city | Critical | 10% | > 98% | |
+| state | Critical | 5% | > 98% | |
+| venue_type | Critical | 15% | > 98% | From valid taxonomy (see CLAUDE.md) |
+| website | Important | 5% | > 70% | Enables image scraping, description extraction |
+| image_url | Important | 10% | > 80% | Hero image for cards, sourced from website or Google |
+| description | Important | 5% | > 50% | Short blurb about what the venue is |
+| vibes | Nice-to-have | - | > 40% | Discovery tags from website analysis |
+| hours | Nice-to-have | - | > 30% | From Google Places |
+| zip | Nice-to-have | - | > 70% | |
+
+#### Venue Quality Rules
+
+- **No address-only names**: Venue name like "123 Main St" means we failed to find the real name
+- **Coordinates must be paired**: Both lat AND lng set, or both null — never one without the other
+- **Neighborhood from coordinates**: Use `determine_neighborhood()` in `venue_enrich.py` after setting lat/lng
+- **venue_type from taxonomy**: Must match one of the valid types (see CLAUDE.md). Run `classify_venues.py` for cleanup
+- **Image sources (priority)**: 1) Website og:image, 2) Google Places photo, 3) null (never use placeholder)
+
+#### Enrichment Tools
+
+| Gap | Tool | Command |
+|-----|------|---------|
+| Missing lat/lng, neighborhood | `venue_enrich.py` | `python3 venue_enrich.py --limit 200` |
+| Address-like names | `venue_enrich.py` | `python3 venue_enrich.py --addresses --limit 50` |
+| Missing vibes/price/type | `venue_enrich.py` | `python3 venue_enrich.py --website-enrich --limit 50` |
+| Missing images | `scrape_venue_images.py` | `python3 scrape_venue_images.py --venue-type bar` |
+| Missing images (no website) | `fetch_venue_photos_google.py` | `python3 fetch_venue_photos_google.py --limit 200` |
+| Untyped/junk venues | `classify_venues.py` | `python3 classify_venues.py --dry-run` |
+| Manual edge cases | `manual_classify.py` | `python3 manual_classify.py --dry-run` |
+
+---
+
+### Events
+
+Events are time-bound occurrences at venues — concerts, shows, classes, festivals.
+
+#### Field Requirements
+
+| Field | Priority | Weight | Target | Notes |
+|-------|----------|--------|--------|-------|
+| title | Required | - | 100% | Validated by `validate_event_title()` |
+| start_date | Required | - | 100% | |
+| source_url | Required | - | 100% | Link back to original source |
+| venue_id | Critical | 20% | > 98% | Links event to a venue for location |
+| category | Critical | 15% | > 99% | From valid category list |
+| start_time | Important | 15% | > 98% | Never infer is_all_day from missing time. Use detail enrichment stack + hydration techniques |
+| description | Important | 10% | > 80% | From source, LLM extraction, or OMDB plot (film, < 80 char fallback) |
+| image_url | Important | 10% | > 75% | From source, OMDB (film), or Deezer (music) |
+| is_free | Important | 10% | > 95% | Boolean, inferred from price data |
+| price_min | Nice-to-have | 5% | > 30% | Numeric dollar amount |
+| tags | Nice-to-have | 5% | > 60% | Auto-inferred by `tag_inference.py` |
+| ticket_url | Nice-to-have | 5% | > 40% | Direct link to purchase |
+| end_time | Nice-to-have | 5% | > 20% | |
+
+#### Event Quality Rules
+
+- **No permanent attractions as events**: "Play at the Museum", "Mini Golf" are not events
+- **is_all_day = true only for genuinely all-day events**: Festivals, conventions, outdoor markets. NOT for missing start_time
+- **content_hash required**: Every event gets `generate_content_hash(title, venue_name, date)` for dedup
+- **Future events only**: Past events are cleaned up by `event_cleanup.py`
+- **Category from valid list**: music, comedy, theater, film, art, food-drink, sports, community, nightlife, fitness, family, literary, tech, outdoor, holiday, lgbtq, wellness
+
+#### Crawler Output Requirements
+
+Every `crawl()` function must provide at minimum:
+```python
+{
+    "title": str,           # Required
+    "start_date": str,      # Required (YYYY-MM-DD)
+    "source_url": str,      # Required
+    "venue_id": int,        # From get_or_create_venue()
+    "category": str,        # From valid list
+}
+```
+
+---
+
+### Classes
+
+Classes are events with `is_class = true`. They represent structured learning/fitness sessions.
+
+#### Field Requirements (in addition to Event fields)
+
+| Field | Priority | Weight | Target | Notes |
+|-------|----------|--------|--------|-------|
+| is_class | Required | - | 100% | Must be True |
+| class_category | Important | 15% | > 80% | yoga, dance, art, cooking, fitness, etc. |
+| price_min | Important | 15% | > 90% | Classes almost always have a price |
+| image_url | Important | 10% | > 90% | |
+| description | Important | 15% | > 50% | What the class covers |
+| instructor | Nice-to-have | 5% | > 30% | |
+| skill_level | Nice-to-have | 5% | > 20% | beginner, intermediate, advanced, all-levels |
+
+---
+
+### Series
+
+Series group related recurring events (weekly shows, film series, residencies).
+
+#### Field Requirements
+
+| Field | Priority | Weight | Target | Notes |
+|-------|----------|--------|--------|-------|
+| title | Required | - | 100% | |
+| series_type | Required | - | 100% | film, recurring_show, residency, festival |
+| category | Critical | 15% | > 99% | |
+| description | Important | 20% | > 50% | What the series is about |
+| image_url | Important | 20% | > 50% | Representative image |
+| genres | Important | 15% | > 30% | From Deezer (music) or OMDB (film) |
+| frequency | Nice-to-have | 10% | > 40% | weekly, monthly, etc. |
+
+#### Series Quality Rules
+
+- **Genres on series, not events**: When an event belongs to a series, genres go on the series record
+- **Auto-created via series_hint**: Crawlers provide `series_hint` dict to `insert_event()`, series created automatically
+- **Film series**: Should have director, runtime, year from OMDB
+
+---
+
+### Festivals
+
+Festivals are annual/recurring large-scale events with their own identity.
+
+#### Field Requirements
+
+| Field | Priority | Weight | Target | Notes |
+|-------|----------|--------|--------|-------|
+| name | Required | - | 100% | |
+| slug | Required | - | 100% | |
+| website | Critical | 20% | > 95% | |
+| description | Critical | 20% | > 90% | What the festival is, why attend |
+| image_url | Critical | 20% | > 90% | Hero/promotional image |
+| typical_month | Important | 10% | > 80% | When it usually happens |
+| location | Important | 10% | > 80% | Where it takes place |
+| categories | Important | 10% | > 80% | music, food, art, etc. |
+| festival_type | Nice-to-have | 5% | > 60% | |
+| organization_id | Nice-to-have | 5% | > 50% | Link to organizing body |
+
+#### Festival Quality Rules
+
+- **Festivals should be showcase content**: These are high-visibility entities — descriptions and images are mandatory for good UX
+- **Dates**: Track both last year's dates and announced upcoming dates
+- **Not just event listings**: A festival record represents the festival itself, not individual events within it
+
+---
+
+### Organizations
+
+Organizations are entities that host events but aren't destinations themselves.
+
+#### Field Requirements
+
+| Field | Priority | Weight | Target | Notes |
+|-------|----------|--------|--------|-------|
+| name | Required | - | 100% | |
+| slug | Required | - | 100% | |
+| org_type | Critical | 15% | > 98% | arts, community, sports, government, etc. |
+| city | Critical | 10% | > 95% | |
+| description | Important | 20% | > 85% | What the org does |
+| website | Important | 15% | > 80% | |
+| logo_url | Important | 15% | > 60% | From website scraping or meta tags |
+| neighborhood | Nice-to-have | 10% | > 50% | |
+| email | Nice-to-have | 5% | > 30% | |
+| categories | Nice-to-have | 10% | > 60% | |
+
+#### Organization Quality Rules
+
+- **Not a venue**: If people go there as a destination, it's a venue, not an organization
+- **org_type taxonomy**: arts, community, sports, government, education, media, advocacy, religious, professional
+- **Logo from website**: Use `fetch_logos.py` post-crawl task to fill logo_url from website meta tags
+
+---
+
+### Data Quality Monitoring (Events)
+
+#### Health Thresholds
 
 | Metric | Healthy | Warning | Critical |
 |--------|---------|---------|----------|
 | `missing_description` | < 15% | 15-25% | > 25% |
 | `missing_image` | < 20% | 20-30% | > 30% |
+| `missing_start_time` | < 2% | 2-5% | > 5% |
 | `missing_category` | 0% | > 0% | > 0% |
 | `categorized_other` | < 2% | 2-5% | > 5% |
 | `avg_extraction_confidence` | > 0.75 | 0.65-0.75 | < 0.65 |
@@ -844,6 +1146,8 @@ GROUP BY s.id, s.name ORDER BY success_rate, avg_events DESC;
 2. **Category constraint violations** — crawler producing non-standard categories
 3. **Extraction confidence drop** — LLM extraction failing, check API keys/limits
 4. **Missing data trending up** — new sources lacking complete data or image/poster APIs broken
+5. **Missing start_time > 2%** — detail enrichment stack may be broken, check heuristic/LLM extractors. Run description text mining and Playwright re-fetch hydration as backfill
+6. **Cinema events missing descriptions** — check that cinema profiles have `defaults.category: film` set, otherwise OMDB enrichment won't trigger
 
 ### When to Run Full Audit
 

@@ -104,7 +104,7 @@ class TestLLMConfig:
 
         importlib.reload(config)
         cfg = config.LLMConfig()
-        assert cfg.max_tokens == 4096
+        assert cfg.max_tokens == 16384
 
     def test_default_temperature(self):
         """Should have temperature set to 0 for consistency."""

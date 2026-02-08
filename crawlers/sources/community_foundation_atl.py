@@ -4,10 +4,14 @@ Nonprofit events, educational programs, and community gatherings.
 Events often held at Monday Night Garage and other venues.
 """
 
+from __future__ import annotations
+
 import json
 import logging
 import re
 from datetime import datetime
+from typing import Optional
+
 from bs4 import BeautifulSoup
 import requests
 

@@ -81,7 +81,7 @@ def create_monthly_events(source_id: int, venue_id: int) -> tuple[int, int]:
             "end_date": None,
             "end_time": "21:00",
             "is_all_day": False,
-            "category": "cultural",
+            "category": "community",
             "subcategory": "art_walk",
             "tags": ["downtown-duluth", "art-walk", "second-friday", "galleries", "free"],
             "price_min": None,

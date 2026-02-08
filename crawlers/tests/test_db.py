@@ -82,10 +82,11 @@ class TestGetOrCreateVenue:
 class TestInsertEvent:
     """Tests for insert_event function."""
 
+    @patch("db.get_festival_source_hint", return_value=None)
     @patch("db.get_venue_by_id")
     @patch("db.get_client")
     def test_inserts_event_with_tags(
-        self, mock_get_client, mock_get_venue, sample_event_data
+        self, mock_get_client, mock_get_venue, mock_festival_hint, sample_event_data
     ):
         """Should insert event and infer tags."""
         client = MagicMock()
@@ -102,17 +103,18 @@ class TestInsertEvent:
         event_id = insert_event(sample_event_data)
 
         assert event_id == 456
-        client.table.assert_called_with("events")
-        table.insert.assert_called_once()
+        client.table.assert_any_call("events")
+        table.insert.assert_called()
 
-        # Verify tags were added to event data
-        inserted_data = table.insert.call_args[0][0]
+        # Verify tags were added to event data (first insert call is the event)
+        inserted_data = table.insert.call_args_list[0][0][0]
         assert "tags" in inserted_data
 
+    @patch("db.get_festival_source_hint", return_value=None)
     @patch("db.get_venue_by_id")
     @patch("db.get_client")
     def test_inherits_venue_vibes(
-        self, mock_get_client, mock_get_venue, sample_event_data
+        self, mock_get_client, mock_get_venue, mock_festival_hint, sample_event_data
     ):
         """Should inherit vibes from venue when inferring tags."""
         client = MagicMock()
@@ -128,8 +130,8 @@ class TestInsertEvent:
 
         insert_event(sample_event_data)
 
-        # Verify tags include inherited vibes
-        inserted_data = table.insert.call_args[0][0]
+        # Verify tags include inherited vibes (first insert call is the event)
+        inserted_data = table.insert.call_args_list[0][0][0]
         assert "intimate" in inserted_data["tags"]
         assert "all-ages" in inserted_data["tags"]
 

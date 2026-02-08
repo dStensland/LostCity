@@ -4,9 +4,9 @@ name: Bookhouse Pub
 integration_method: html
 defaults: {}
 discovery:
-  enabled: true
-  type: list
+  enabled: false
+  type: html
   urls:
   - https://www.bookhousepub.com
 detail:
-  enabled: false
+  enabled: true

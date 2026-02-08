@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useMemo } from "react";
+import { decodeHtmlEntities } from "@/lib/formats";
 
 interface LinkifyTextProps {
   text: string;
@@ -9,37 +10,6 @@ interface LinkifyTextProps {
 
 // Regex to match URLs (http, https, www)
 const URL_REGEX = /(https?:\/\/[^\s<]+|www\.[^\s<]+)/gi;
-
-// Common HTML entities to decode
-const HTML_ENTITIES: Record<string, string> = {
-  "&amp;": "&",
-  "&lt;": "<",
-  "&gt;": ">",
-  "&quot;": '"',
-  "&#39;": "'",
-  "&apos;": "'",
-  "&nbsp;": " ",
-  "&ndash;": "–",
-  "&mdash;": "—",
-  "&hellip;": "…",
-  "&copy;": "©",
-  "&reg;": "®",
-  "&trade;": "™",
-  "&bull;": "•",
-};
-
-// Decode HTML entities in text
-function decodeHtmlEntities(str: string): string {
-  let result = str;
-  // Decode named entities
-  for (const [entity, char] of Object.entries(HTML_ENTITIES)) {
-    result = result.replace(new RegExp(entity, "gi"), char);
-  }
-  // Decode numeric entities (&#123; or &#x7B;)
-  result = result.replace(/&#(\d+);/g, (_, num) => String.fromCharCode(parseInt(num, 10)));
-  result = result.replace(/&#x([0-9a-f]+);/gi, (_, hex) => String.fromCharCode(parseInt(hex, 16)));
-  return result;
-}
 
 export default function LinkifyText({ text, className = "" }: LinkifyTextProps) {
   const parts = useMemo(() => {

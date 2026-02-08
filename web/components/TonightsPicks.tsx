@@ -222,7 +222,7 @@ export default function TonightsPicks({ portalSlug }: { portalSlug?: string } = 
   const fallbackHeroItem = heroEvent ? null : displayItems[0];
 
   return (
-    <section className="py-8 -mx-4 px-4 mb-2 relative overflow-hidden">
+    <section className="-mx-4 px-4 relative overflow-hidden">
       {/* Atmospheric background glow */}
       <div
         data-category={heroCategory}
@@ -381,12 +381,11 @@ export default function TonightsPicks({ portalSlug }: { portalSlug?: string } = 
           <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1 snap-x snap-mandatory sm:mx-0 sm:px-0 sm:grid sm:grid-cols-4 sm:gap-3 sm:overflow-visible sm:snap-none mb-4">
             {carouselEvents.map((event, index) => {
               const isSecondaryRow = index >= 4;
+              const eventHref = portalSlug ? `/${portalSlug}/events/${event.id}` : `/events/${event.id}`;
               return (
-                <button
+                <Link
                   key={event.id}
-                  type="button"
-                  onClick={() => setHeroIndex(index)}
-                  onFocus={() => setHeroIndex(index)}
+                  href={eventHref}
                   className={`relative overflow-hidden rounded-xl border transition-all text-left group card-atmospheric min-w-[9.5rem] snap-start sm:min-w-0 sm:w-auto ${
                     index === safeHeroIndex
                       ? "border-[var(--neon-magenta)]/70 shadow-[0_0_18px_rgba(255,85,170,0.35)]"
@@ -425,7 +424,7 @@ export default function TonightsPicks({ portalSlug }: { portalSlug?: string } = 
                       {event.title}
                     </h4>
                   </div>
-                </button>
+                </Link>
               );
             })}
           </div>

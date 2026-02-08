@@ -1596,7 +1596,7 @@ body::after {
 }
 
 .animate-fade-in {
-  animation: fadeIn 0.3s ease-out backwards;
+  animation: fadeIn 0.4s ease-out backwards;
 }
 
 /* Smooth enter animation for sections */
@@ -1631,17 +1631,17 @@ body::after {
   animation: contentReveal 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
 }
 
-/* Staggered animation delays */
-.stagger-1 { animation-delay: 0.02s; }
-.stagger-2 { animation-delay: 0.04s; }
-.stagger-3 { animation-delay: 0.06s; }
-.stagger-4 { animation-delay: 0.08s; }
-.stagger-5 { animation-delay: 0.10s; }
-.stagger-6 { animation-delay: 0.12s; }
-.stagger-7 { animation-delay: 0.14s; }
-.stagger-8 { animation-delay: 0.16s; }
-.stagger-9 { animation-delay: 0.18s; }
-.stagger-10 { animation-delay: 0.20s; }
+/* Staggered animation delays — visible cascade */
+.stagger-1 { animation-delay: 0.03s; }
+.stagger-2 { animation-delay: 0.08s; }
+.stagger-3 { animation-delay: 0.13s; }
+.stagger-4 { animation-delay: 0.18s; }
+.stagger-5 { animation-delay: 0.23s; }
+.stagger-6 { animation-delay: 0.28s; }
+.stagger-7 { animation-delay: 0.33s; }
+.stagger-8 { animation-delay: 0.38s; }
+.stagger-9 { animation-delay: 0.43s; }
+.stagger-10 { animation-delay: 0.48s; }
 
 /* Responsive event grid - standardized to sm breakpoint (640px) */
 @media (max-width: 640px) {
@@ -2657,7 +2657,7 @@ textarea:focus-visible {
     var(--twilight) 75%
   );
   background-size: 400% 100%;
-  animation: skeleton-shimmer 3s ease-in-out infinite;
+  animation: skeleton-shimmer 5s ease-in-out infinite;
 }
 
 /* Light mode skeleton shimmer - for family/light theme portals */
@@ -3402,18 +3402,16 @@ textarea:focus-visible {
 @keyframes card-emerge {
   0% {
     opacity: 0;
-    transform: translateY(10px) scale(0.98);
-    filter: blur(4px);
+    transform: translateY(6px);
   }
   100% {
     opacity: 1;
-    transform: translateY(0) scale(1);
-    filter: blur(0);
+    transform: translateY(0);
   }
 }
 
 .animate-card-emerge {
-  animation: card-emerge 0.4s cubic-bezier(0.25, 0.1, 0.25, 1) backwards;
+  animation: card-emerge 0.5s ease-out backwards;
 }
 
 /* Card emerge with glow bloom */
@@ -4782,7 +4780,7 @@ textarea:focus-visible {
   display: inline-flex;
   align-items: stretch;
   gap: 0;
-  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.8));
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.6)) drop-shadow(0 0 6px rgba(0, 0, 0, 0.3));
   --portal-color: var(--gold, #FFD93D);
   position: relative;
   overflow: visible;
@@ -4800,8 +4798,8 @@ textarea:focus-visible {
 .logo-pulse {
   width: 2px;
   align-self: stretch;
-  background: var(--neon-cyan, #00D4E8);
-  margin-right: 0.3em;
+  background: #5EF0FF;
+  margin-right: 0.35em; /* Refined: more breathing room */
   border-radius: 1px;
   flex-shrink: 0;
 }
@@ -4810,36 +4808,36 @@ textarea:focus-visible {
 .logo-wordmark {
   display: flex;
   flex-direction: column;
-  line-height: 0.72;
+  line-height: 0.94; /* Refined: better vertical spacing */
   white-space: nowrap;
 }
 
 /* CITY crashes upward into LOST's space */
 .logo-city {
-  margin-top: -0.06em;
+  margin-top: 0; /* Refined: true tight stacking */
 }
 
 /* LOST — cream/white, the poetic anchor */
 .logo-lost {
   font-family: var(--font-outfit), system-ui, sans-serif;
-  font-weight: 900;
+  font-weight: 700; /* Refined: restraint creates voltage */
   color: var(--cream, #FAFAF9);
-  letter-spacing: 0.04em;
+  letter-spacing: 0.01em; /* Refined: tighter lockup */
 }
 
 /* CITY — coral, the energy */
 .logo-city {
   font-family: var(--font-outfit), system-ui, sans-serif;
-  font-weight: 900;
+  font-weight: 700; /* Refined: restraint creates voltage */
   color: var(--coral, #FF6B7A);
-  letter-spacing: 0.04em;
+  letter-spacing: 0.01em; /* Refined: tighter lockup */
 }
 
-/* City name — gold, geographic anchor */
+/* City name — cream, matching LOST */
 .logo-portal {
   font-family: var(--font-geist-mono), ui-monospace, monospace;
   font-weight: 700;
-  color: var(--portal-color);
+  color: var(--cream, #FAFAF9);
   letter-spacing: 0.14em;
   line-height: 1;
 }
@@ -4847,17 +4845,21 @@ textarea:focus-visible {
 /* Size: sm — header context (~36px tall) */
 .logo-size-sm .logo-lost,
 .logo-size-sm .logo-city {
-  font-size: 1.05rem;
+  font-size: 1.15rem; /* Refined: bolder presence */
 }
 
 .logo-size-sm .logo-pulse {
-  width: 2px;
-  margin-right: 0.25em;
+  width: 1.5px; /* Refined: precise signal */
+  margin-right: 0.35em; /* Refined: more space */
 }
 
 .logo-size-sm .logo-portal {
-  font-size: 0.55rem;
+  font-size: 0.65rem;
   margin-top: 0.15em;
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  color: var(--cream, #FAFAF9);
+  opacity: 0.7;
+  letter-spacing: 0.08em;
 }
 
 /* Size: md — cards, auth pages */
@@ -4867,8 +4869,8 @@ textarea:focus-visible {
 }
 
 .logo-size-md .logo-pulse {
-  width: 2.5px;
-  margin-right: 0.3em;
+  width: 1.5px; /* Refined: consistent precision */
+  margin-right: 0.35em; /* Refined: consistent spacing */
 }
 
 .logo-size-md .logo-portal {
@@ -4883,8 +4885,8 @@ textarea:focus-visible {
 }
 
 .logo-size-lg .logo-pulse {
-  width: 3px;
-  margin-right: 0.35em;
+  width: 2px; /* Refined: scales proportionally */
+  margin-right: 0.4em; /* Refined: proportional spacing */
 }
 
 .logo-size-lg .logo-portal {

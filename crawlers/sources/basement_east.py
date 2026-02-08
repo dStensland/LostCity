@@ -17,6 +17,7 @@ from bs4 import BeautifulSoup
 
 from db import get_or_create_venue, insert_event, find_event_by_hash
 from dedupe import generate_content_hash
+from utils import enrich_event_record
 
 logger = logging.getLogger(__name__)
 
@@ -198,6 +199,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "content_hash": content_hash,
                     }
 
+                    enrich_event_record(event_record, "The Basement East")
                     insert_event(event_record)
                     events_new += 1
                     logger.info(f"Added: {title} on {start_date}" + (f" at {start_time}" if start_time else " (all-day)"))

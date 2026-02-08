@@ -9,4 +9,4 @@ discovery:
   urls:
   - https://www.centerstage-atlanta.com
 detail:
-  enabled: false
+  enabled: true

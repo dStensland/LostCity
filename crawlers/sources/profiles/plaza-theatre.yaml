@@ -2,11 +2,12 @@ version: 1
 slug: plaza-theatre
 name: Plaza Theatre
 integration_method: html
-defaults: {}
+defaults:
+  category: film
 discovery:
   enabled: true
-  type: list
+  type: html
   urls:
   - https://plazaatlanta.com
 detail:
-  enabled: false
+  enabled: true

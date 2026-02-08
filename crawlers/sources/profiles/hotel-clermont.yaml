@@ -9,4 +9,4 @@ discovery:
   urls:
   - https://www.hotelclermont.com
 detail:
-  enabled: false
+  enabled: true

@@ -22,7 +22,7 @@ export function DetailStickyBar({
   secondaryActions,
   primaryAction,
   className = "",
-  scrollThreshold = 400,
+  scrollThreshold = 300,
 }: DetailStickyBarProps) {
   const [isVisible, setIsVisible] = useState(false);
 

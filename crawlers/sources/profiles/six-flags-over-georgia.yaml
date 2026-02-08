@@ -9,4 +9,4 @@ discovery:
   urls:
   - https://www.sixflags.com/overgeorgia/events
 detail:
-  enabled: false
+  enabled: true

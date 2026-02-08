@@ -195,32 +195,7 @@ export function formatPriceDetailed(event: PriceableEvent): PriceFormatResult {
     return { text: `$${event.price_min}–${event.price_max}`, isFree: false, isEstimate: false };
   }
 
-  // Try venue typical price first (more specific)
-  const venueMin = event.venue?.typical_price_min;
-  const venueMax = event.venue?.typical_price_max;
-  if (venueMin !== null && venueMin !== undefined) {
-    if (venueMin === 0 && venueMax === 0) {
-      return { text: "Free", isFree: true, isEstimate: true };
-    }
-    if (venueMin === venueMax || venueMax === null || venueMax === undefined) {
-      return { text: `~$${venueMin}`, isFree: false, isEstimate: true };
-    }
-    return { text: `~$${venueMin}–${venueMax}`, isFree: false, isEstimate: true };
-  }
-
-  // Fall back to category typical price
-  const catMin = event.category_data?.typical_price_min;
-  const catMax = event.category_data?.typical_price_max;
-  if (catMin !== null && catMin !== undefined) {
-    if (catMin === 0 && catMax === 0) {
-      return { text: "Free", isFree: true, isEstimate: true };
-    }
-    if (catMin === catMax || catMax === null || catMax === undefined) {
-      return { text: `~$${catMin}`, isFree: false, isEstimate: true };
-    }
-    return { text: `~$${catMin}–${catMax}`, isFree: false, isEstimate: true };
-  }
-
+  // Don't show estimated prices - return empty string for venue/category defaults
   return { text: "", isFree: false, isEstimate: false };
 }
 
@@ -268,6 +243,39 @@ export function getLocalDateStringOffset(days: number): string {
   const date = new Date();
   date.setDate(date.getDate() + days);
   return getLocalDateString(date);
+}
+
+// ============================================================================
+// TEXT UTILITIES
+// ============================================================================
+
+/**
+ * Decode HTML entities in text (e.g. &#8211; → –, &amp; → &).
+ * Common in crawled data where source HTML entities leak into titles.
+ */
+export function decodeHtmlEntities(str: string): string {
+  const named: Record<string, string> = {
+    "&amp;": "&",
+    "&lt;": "<",
+    "&gt;": ">",
+    "&quot;": '"',
+    "&apos;": "'",
+    "&nbsp;": " ",
+    "&ndash;": "\u2013",
+    "&mdash;": "\u2014",
+    "&lsquo;": "\u2018",
+    "&rsquo;": "\u2019",
+    "&ldquo;": "\u201C",
+    "&rdquo;": "\u201D",
+    "&hellip;": "\u2026",
+  };
+  let result = str;
+  for (const [entity, char] of Object.entries(named)) {
+    result = result.replace(new RegExp(entity, "gi"), char);
+  }
+  result = result.replace(/&#(\d+);/g, (_, num) => String.fromCharCode(parseInt(num, 10)));
+  result = result.replace(/&#x([0-9a-f]+);/gi, (_, hex) => String.fromCharCode(parseInt(hex, 16)));
+  return result;
 }
 
 // ============================================================================

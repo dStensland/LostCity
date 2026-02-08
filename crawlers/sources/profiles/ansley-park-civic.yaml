@@ -9,4 +9,4 @@ discovery:
   urls:
   - https://ansleypark.org
 detail:
-  enabled: false
+  enabled: true

@@ -140,7 +140,7 @@ def extract_tags(title: str, description: str = "") -> list[str]:
         tags.append("world-music")
     if any(word in text for word in ["volunteer", "community service"]):
         tags.append("volunteer")
-    if any(word in text for word in ["free", "no cover"]):
+    if "free" in text:
         tags.append("free")
 
     return list(set(tags))
@@ -150,8 +150,8 @@ def is_free_event(title: str, description: str = "", price_text: str = "") -> bo
     """Determine if event is free based on content."""
     text = f"{title} {description} {price_text}".lower()
 
-    # Check for free indicators
-    if any(word in text for word in ["free", "no cost", "no charge", "no cover", "complimentary"]):
+    # Check for free indicators (excluding "no cover" which just means no door charge)
+    if any(word in text for word in ["free", "no cost", "no charge", "complimentary"]):
         return True
 
     # Check for paid indicators
@@ -292,6 +292,12 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             tags = extract_tags(title, description)
                             is_free = is_free_event(title, description, price_text)
 
+                            # Handle "no cover" separately from is_free
+                            combined_text = f"{title} {description} {price_text}".lower()
+                            note = price_text if price_text else None
+                            if "no cover" in combined_text and not note:
+                                note = "No cover"
+
                             content_hash = generate_content_hash(
                                 title, VENUE_DATA["name"], start_date
                             )
@@ -323,7 +329,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                                 "tags": tags,
                                 "price_min": None,
                                 "price_max": None,
-                                "price_note": price_text if price_text else None,
+                                "price_note": note,
                                 "is_free": is_free,
                                 "source_url": source_url,
                                 "ticket_url": source_url,

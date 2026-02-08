@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "@/components/SmartImage";
 import { useAuth } from "@/lib/auth-context";
@@ -96,6 +97,7 @@ const CATEGORY_COLORS: Record<string, string> = {
 type SortOption = "position" | "votes" | "newest";
 
 export default function ListDetailView({ portalSlug, listSlug }: ListDetailViewProps) {
+  const router = useRouter();
   const { user } = useAuth();
   const [list, setList] = useState<ListDetail | null>(null);
   const [items, setItems] = useState<ListItem[]>([]);
@@ -258,7 +260,35 @@ export default function ListDetailView({ portalSlug, listSlug }: ListDetailViewP
   });
 
   if (loading) {
-    return null; // Suspense fallback handles this
+    return (
+      <div className="animate-fade-in space-y-6">
+        {/* Header skeleton */}
+        <div className="space-y-4">
+          <div className="h-6 w-24 skeleton-shimmer rounded" />
+          <div className="h-10 w-3/4 skeleton-shimmer rounded" />
+          <div className="h-4 w-1/2 skeleton-shimmer rounded" />
+          <div className="flex gap-3 mt-4">
+            <div className="h-10 w-24 skeleton-shimmer rounded-lg" />
+            <div className="h-10 w-24 skeleton-shimmer rounded-lg" />
+          </div>
+        </div>
+        {/* Items skeleton */}
+        <div className="space-y-3 mt-8">
+          {[1, 2, 3, 4, 5].map((i) => (
+            <div key={i} className="p-4 rounded-xl border border-[var(--twilight)] bg-[var(--card-bg)]">
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 skeleton-shimmer rounded-lg" />
+                <div className="w-14 h-14 skeleton-shimmer rounded-lg" />
+                <div className="flex-1 space-y-2">
+                  <div className="h-5 w-2/3 skeleton-shimmer rounded" />
+                  <div className="h-4 w-1/2 skeleton-shimmer rounded" />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
   }
 
   if (error || !list) {
@@ -276,7 +306,7 @@ export default function ListDetailView({ portalSlug, listSlug }: ListDetailViewP
           This list may have been removed or made private.
         </p>
         <Link
-          href={`/${portalSlug}?view=community`}
+          href={`/${portalSlug}?view=community&tab=lists`}
           className="inline-flex items-center gap-2 px-5 py-2.5 bg-[var(--coral)] text-[var(--void)] rounded-lg font-mono text-sm font-medium hover:bg-[var(--rose)] transition-colors"
         >
           Browse Lists
@@ -289,15 +319,15 @@ export default function ListDetailView({ portalSlug, listSlug }: ListDetailViewP
     <div className={accentClass?.className ?? ""}>
       <ScopedStyles css={accentClass?.css} />
       {/* Back link */}
-      <Link
-        href={`/${portalSlug}?view=community`}
+      <button
+        onClick={() => router.back()}
         className="inline-flex items-center gap-2 font-mono text-sm text-[var(--muted)] hover:text-[var(--coral)] transition-colors mb-6"
       >
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
         </svg>
-        Back to Lists
-      </Link>
+        Back
+      </button>
 
       {/* List Header */}
       <header className="mb-8">

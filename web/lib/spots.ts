@@ -193,7 +193,7 @@ export async function getUpcomingEventsForSpot(
     `
     )
     .eq("venue_id", venueId)
-    .gte("start_date", today)
+    .or(`start_date.gte.${today},end_date.gte.${today}`)
     .order("start_date", { ascending: true })
     .order("start_time", { ascending: true })
     .limit(limit);

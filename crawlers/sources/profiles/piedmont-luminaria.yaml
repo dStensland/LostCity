@@ -9,4 +9,4 @@ discovery:
   urls:
   - https://www.piedmontluminaria.org
 detail:
-  enabled: false
+  enabled: true

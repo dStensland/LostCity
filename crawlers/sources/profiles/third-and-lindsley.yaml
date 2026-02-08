@@ -11,4 +11,4 @@ discovery:
   fetch:
     timeout_ms: 45000
 detail:
-  enabled: false
+  enabled: true

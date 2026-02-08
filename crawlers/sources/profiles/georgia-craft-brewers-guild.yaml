@@ -1,0 +1,23 @@
+version: 1
+slug: georgia-craft-brewers-guild
+name: Georgia Craft Brewers Guild
+integration_method: html
+defaults:
+  category: food_drink
+  tags:
+    - beer
+    - craft-beer
+    - community
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.georgiacraftbrewersguild.org/conference.html
+  - https://www.georgiacraftbrewersguild.org/georgia-beer-day.html
+  - https://www.georgiacraftbrewersguild.org/beer-festival.html
+detail:
+  enabled: true
+  use_jsonld: true
+  use_open_graph: true
+  use_heuristic: true
+  use_llm: false

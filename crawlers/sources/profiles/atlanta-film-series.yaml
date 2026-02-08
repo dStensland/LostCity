@@ -9,4 +9,4 @@ discovery:
   urls:
   - https://atlantafilmseries.com
 detail:
-  enabled: false
+  enabled: true

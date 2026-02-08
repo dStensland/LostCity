@@ -4,11 +4,13 @@ name: Fado Irish Pub
 integration_method: llm_crawler
 defaults: {}
 discovery:
-  enabled: true
+  enabled: false
   type: html
   urls:
   - https://www.fadoirishpub.com/atlanta
   fetch:
     render_js: true
 detail:
-  enabled: false
+  enabled: true
+  fetch:
+    render_js: true

@@ -4,9 +4,10 @@ name: Zucot Gallery
 integration_method: html
 defaults: {}
 discovery:
-  enabled: true
+  enabled: false
   type: list
   urls:
   - https://www.zucotgallery.com
+  # NOTE: DNS dead as of 2026-02-06
 detail:
   enabled: false

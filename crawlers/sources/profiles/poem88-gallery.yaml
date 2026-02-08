@@ -9,4 +9,4 @@ discovery:
   urls:
   - https://www.poem88.net
 detail:
-  enabled: false
+  enabled: true

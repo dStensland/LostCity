@@ -6,15 +6,14 @@ defaults:
   category: arts
   subcategory: community
   tags:
-    - arts
-    - culture
-    - community
-    - government
+  - arts
+  - culture
+  - community
+  - government
 discovery:
   enabled: true
   type: html
   urls:
   - https://www.atlantaga.gov/government/mayor-s-office/executive-offices/office-of-cultural-affairs
-  # Complex government site — LLM extraction needed
 detail:
-  enabled: false
+  enabled: true

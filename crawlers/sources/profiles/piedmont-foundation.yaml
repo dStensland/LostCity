@@ -9,4 +9,4 @@ discovery:
   urls:
   - https://www.piedmont.org/about-piedmont-healthcare/foundation-and-giving/overview/special-events
 detail:
-  enabled: false
+  enabled: true

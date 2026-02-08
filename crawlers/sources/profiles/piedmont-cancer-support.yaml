@@ -9,4 +9,4 @@ discovery:
   urls:
   - https://www.piedmontcancerinstitute.com/support-groups.php
 detail:
-  enabled: false
+  enabled: true

@@ -1,0 +1,236 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 300" width="800" height="300">
+  <defs>
+    <pattern id="scanlines" x="0" y="0" width="4" height="4" patternUnits="userSpaceOnUse">
+      <rect width="4" height="2" fill="rgba(0,0,0,0.12)"/>
+    </pattern>
+    <linearGradient id="fieldGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0a2e1a"/>
+      <stop offset="50%" stop-color="#0f3d24"/>
+      <stop offset="100%" stop-color="#081f10"/>
+    </linearGradient>
+    <filter id="lineGlow">
+      <feGaussianBlur stdDeviation="1.5" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <radialGradient id="vignette" cx="50%" cy="50%" r="70%">
+      <stop offset="0%" stop-color="transparent"/>
+      <stop offset="100%" stop-color="#050f08" stop-opacity="0.7"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Base field -->
+  <rect width="800" height="300" fill="url(#fieldGrad)"/>
+
+  <!-- Yard lines -->
+  <g opacity="0.12" stroke="#4ade80" stroke-width="2" filter="url(#lineGlow)">
+    <line x1="80" y1="0" x2="80" y2="300"/>
+    <line x1="160" y1="0" x2="160" y2="300"/>
+    <line x1="240" y1="0" x2="240" y2="300"/>
+    <line x1="320" y1="0" x2="320" y2="300"/>
+    <line x1="400" y1="0" x2="400" y2="300"/>
+    <line x1="480" y1="0" x2="480" y2="300"/>
+    <line x1="560" y1="0" x2="560" y2="300"/>
+    <line x1="640" y1="0" x2="640" y2="300"/>
+    <line x1="720" y1="0" x2="720" y2="300"/>
+  </g>
+
+  <!-- Hash marks -->
+  <g opacity="0.08" stroke="#4ade80" stroke-width="1.5">
+    <line x1="75" y1="100" x2="85" y2="100"/>
+    <line x1="155" y1="100" x2="165" y2="100"/>
+    <line x1="235" y1="100" x2="245" y2="100"/>
+    <line x1="315" y1="100" x2="325" y2="100"/>
+    <line x1="395" y1="100" x2="405" y2="100"/>
+    <line x1="475" y1="100" x2="485" y2="100"/>
+    <line x1="555" y1="100" x2="565" y2="100"/>
+    <line x1="635" y1="100" x2="645" y2="100"/>
+    <line x1="715" y1="100" x2="725" y2="100"/>
+    <line x1="75" y1="200" x2="85" y2="200"/>
+    <line x1="155" y1="200" x2="165" y2="200"/>
+    <line x1="235" y1="200" x2="245" y2="200"/>
+    <line x1="315" y1="200" x2="325" y2="200"/>
+    <line x1="395" y1="200" x2="405" y2="200"/>
+    <line x1="475" y1="200" x2="485" y2="200"/>
+    <line x1="555" y1="200" x2="565" y2="200"/>
+    <line x1="635" y1="200" x2="645" y2="200"/>
+    <line x1="715" y1="200" x2="725" y2="200"/>
+  </g>
+
+  <!-- Sideline stripes -->
+  <rect x="0" y="0" width="800" height="3" fill="#4ade80" opacity="0.06"/>
+  <rect x="0" y="297" width="800" height="3" fill="#4ade80" opacity="0.06"/>
+
+  <!-- ============================================================ -->
+  <!-- PIXEL PLAYER SPRITE: each player = helmet(4x4) + jersey(8x6) + legs(8x4) -->
+  <!-- Offense: White/Silver team, shifted right for visibility -->
+  <!-- ============================================================ -->
+
+  <g opacity="0.5">
+    <!-- ===== OFFENSE (white team) ===== -->
+
+    <!-- Center (#50) -->
+    <rect x="478" y="140" width="6" height="4" fill="#d0c8b8"/><!-- helmet -->
+    <rect x="476" y="144" width="10" height="6" fill="#e8e8e8"/><!-- jersey -->
+    <rect x="476" y="150" width="4" height="5" fill="#e8e8e8"/><!-- left leg -->
+    <rect x="482" y="150" width="4" height="5" fill="#e8e8e8"/><!-- right leg -->
+
+    <!-- Left Guard -->
+    <rect x="478" y="116" width="6" height="4" fill="#d0c8b8"/>
+    <rect x="476" y="120" width="10" height="6" fill="#e8e8e8"/>
+    <rect x="476" y="126" width="4" height="5" fill="#e8e8e8"/>
+    <rect x="482" y="126" width="4" height="5" fill="#e8e8e8"/>
+
+    <!-- Right Guard -->
+    <rect x="478" y="164" width="6" height="4" fill="#d0c8b8"/>
+    <rect x="476" y="168" width="10" height="6" fill="#e8e8e8"/>
+    <rect x="476" y="174" width="4" height="5" fill="#e8e8e8"/>
+    <rect x="482" y="174" width="4" height="5" fill="#e8e8e8"/>
+
+    <!-- Left Tackle -->
+    <rect x="478" y="96" width="6" height="4" fill="#d0c8b8"/>
+    <rect x="476" y="100" width="10" height="6" fill="#e8e8e8"/>
+    <rect x="476" y="106" width="4" height="5" fill="#e8e8e8"/>
+    <rect x="482" y="106" width="4" height="5" fill="#e8e8e8"/>
+
+    <!-- Right Tackle -->
+    <rect x="478" y="184" width="6" height="4" fill="#d0c8b8"/>
+    <rect x="476" y="188" width="10" height="6" fill="#e8e8e8"/>
+    <rect x="476" y="194" width="4" height="5" fill="#e8e8e8"/>
+    <rect x="482" y="194" width="4" height="5" fill="#e8e8e8"/>
+
+    <!-- QB (behind center) -->
+    <rect x="454" y="140" width="6" height="4" fill="#d0c8b8"/>
+    <rect x="452" y="144" width="10" height="6" fill="#e8e8e8"/>
+    <rect x="452" y="150" width="4" height="5" fill="#e8e8e8"/>
+    <rect x="458" y="150" width="4" height="5" fill="#e8e8e8"/>
+    <!-- Football in QB's hand -->
+    <rect x="462" y="146" width="5" height="3" fill="#8B4513" rx="1"/>
+
+    <!-- RB -->
+    <rect x="438" y="126" width="6" height="4" fill="#d0c8b8"/>
+    <rect x="436" y="130" width="10" height="6" fill="#e8e8e8"/>
+    <rect x="436" y="136" width="4" height="5" fill="#e8e8e8"/>
+    <rect x="442" y="136" width="4" height="5" fill="#e8e8e8"/>
+
+    <!-- FB -->
+    <rect x="444" y="160" width="6" height="4" fill="#d0c8b8"/>
+    <rect x="442" y="164" width="10" height="6" fill="#e8e8e8"/>
+    <rect x="442" y="170" width="4" height="5" fill="#e8e8e8"/>
+    <rect x="448" y="170" width="4" height="5" fill="#e8e8e8"/>
+
+    <!-- WR (split wide top) -->
+    <rect x="484" y="68" width="6" height="4" fill="#d0c8b8"/>
+    <rect x="482" y="72" width="10" height="6" fill="#e8e8e8"/>
+    <rect x="482" y="78" width="4" height="5" fill="#e8e8e8"/>
+    <rect x="488" y="78" width="4" height="5" fill="#e8e8e8"/>
+
+    <!-- WR (split wide bottom) -->
+    <rect x="484" y="216" width="6" height="4" fill="#d0c8b8"/>
+    <rect x="482" y="220" width="10" height="6" fill="#e8e8e8"/>
+    <rect x="482" y="226" width="4" height="5" fill="#e8e8e8"/>
+    <rect x="488" y="226" width="4" height="5" fill="#e8e8e8"/>
+
+    <!-- TE -->
+    <rect x="484" y="200" width="6" height="4" fill="#d0c8b8"/>
+    <rect x="482" y="204" width="10" height="6" fill="#e8e8e8"/>
+    <rect x="482" y="210" width="4" height="5" fill="#e8e8e8"/>
+    <rect x="488" y="210" width="4" height="5" fill="#e8e8e8"/>
+
+    <!-- ===== DEFENSE (red team) ===== -->
+
+    <!-- DE left -->
+    <rect x="498" y="100" width="6" height="4" fill="#d0c8b8"/>
+    <rect x="496" y="104" width="10" height="6" fill="#ff5555"/>
+    <rect x="496" y="110" width="4" height="5" fill="#ff5555"/>
+    <rect x="502" y="110" width="4" height="5" fill="#ff5555"/>
+
+    <!-- DT left -->
+    <rect x="498" y="126" width="6" height="4" fill="#d0c8b8"/>
+    <rect x="496" y="130" width="10" height="6" fill="#ff5555"/>
+    <rect x="496" y="136" width="4" height="5" fill="#ff5555"/>
+    <rect x="502" y="136" width="4" height="5" fill="#ff5555"/>
+
+    <!-- DT right -->
+    <rect x="498" y="154" width="6" height="4" fill="#d0c8b8"/>
+    <rect x="496" y="158" width="10" height="6" fill="#ff5555"/>
+    <rect x="496" y="164" width="4" height="5" fill="#ff5555"/>
+    <rect x="502" y="164" width="4" height="5" fill="#ff5555"/>
+
+    <!-- DE right -->
+    <rect x="498" y="182" width="6" height="4" fill="#d0c8b8"/>
+    <rect x="496" y="186" width="10" height="6" fill="#ff5555"/>
+    <rect x="496" y="192" width="4" height="5" fill="#ff5555"/>
+    <rect x="502" y="192" width="4" height="5" fill="#ff5555"/>
+
+    <!-- MLB -->
+    <rect x="522" y="140" width="6" height="4" fill="#d0c8b8"/>
+    <rect x="520" y="144" width="10" height="6" fill="#ff5555"/>
+    <rect x="520" y="150" width="4" height="5" fill="#ff5555"/>
+    <rect x="526" y="150" width="4" height="5" fill="#ff5555"/>
+
+    <!-- OLB top -->
+    <rect x="518" y="110" width="6" height="4" fill="#d0c8b8"/>
+    <rect x="516" y="114" width="10" height="6" fill="#ff5555"/>
+    <rect x="516" y="120" width="4" height="5" fill="#ff5555"/>
+    <rect x="522" y="120" width="4" height="5" fill="#ff5555"/>
+
+    <!-- OLB bottom -->
+    <rect x="518" y="172" width="6" height="4" fill="#d0c8b8"/>
+    <rect x="516" y="176" width="10" height="6" fill="#ff5555"/>
+    <rect x="516" y="182" width="4" height="5" fill="#ff5555"/>
+    <rect x="522" y="182" width="4" height="5" fill="#ff5555"/>
+
+    <!-- CB top -->
+    <rect x="556" y="74" width="6" height="4" fill="#d0c8b8"/>
+    <rect x="554" y="78" width="10" height="6" fill="#ff5555"/>
+    <rect x="554" y="84" width="4" height="5" fill="#ff5555"/>
+    <rect x="560" y="84" width="4" height="5" fill="#ff5555"/>
+
+    <!-- CB bottom -->
+    <rect x="556" y="212" width="6" height="4" fill="#d0c8b8"/>
+    <rect x="554" y="216" width="10" height="6" fill="#ff5555"/>
+    <rect x="554" y="222" width="4" height="5" fill="#ff5555"/>
+    <rect x="560" y="222" width="4" height="5" fill="#ff5555"/>
+
+    <!-- FS -->
+    <rect x="586" y="128" width="6" height="4" fill="#d0c8b8"/>
+    <rect x="584" y="132" width="10" height="6" fill="#ff5555"/>
+    <rect x="584" y="138" width="4" height="5" fill="#ff5555"/>
+    <rect x="590" y="138" width="4" height="5" fill="#ff5555"/>
+
+    <!-- SS -->
+    <rect x="580" y="160" width="6" height="4" fill="#d0c8b8"/>
+    <rect x="578" y="164" width="10" height="6" fill="#ff5555"/>
+    <rect x="578" y="170" width="4" height="5" fill="#ff5555"/>
+    <rect x="584" y="170" width="4" height="5" fill="#ff5555"/>
+  </g>
+
+  <!-- Line of scrimmage glow -->
+  <line x1="490" y1="60" x2="490" y2="240" stroke="#00D9A0" stroke-width="2" opacity="0.15"/>
+
+  <!-- Pixel "field number" markers - faint -->
+  <g opacity="0.05" fill="#4ade80" font-family="monospace" font-size="18" font-weight="bold">
+    <text x="155" y="280">2 0</text>
+    <text x="315" y="280">4 0</text>
+    <text x="475" y="280">5 0</text>
+    <text x="635" y="280">4 0</text>
+  </g>
+
+  <!-- Scattered pixel dust -->
+  <g opacity="0.05" fill="#4ade80">
+    <rect x="120" y="60" width="3" height="3"/>
+    <rect x="200" y="230" width="3" height="3"/>
+    <rect x="650" y="250" width="3" height="3"/>
+    <rect x="100" y="180" width="3" height="3"/>
+    <rect x="700" y="120" width="3" height="3"/>
+    <rect x="180" y="40" width="3" height="3"/>
+    <rect x="260" y="270" width="3" height="3"/>
+    <rect x="300" y="265" width="3" height="3"/>
+  </g>
+
+  <!-- Scanline overlay -->
+  <rect width="800" height="300" fill="url(#scanlines)"/>
+
+  <!-- Vignette -->
+  <rect width="800" height="300" fill="url(#vignette)"/>
+</svg>

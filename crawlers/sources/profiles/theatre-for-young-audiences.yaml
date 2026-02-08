@@ -9,4 +9,4 @@ discovery:
   urls:
   - https://www.alliancetheatre.org/family-programming/
 detail:
-  enabled: false
+  enabled: true

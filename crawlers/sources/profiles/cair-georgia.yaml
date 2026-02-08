@@ -8,5 +8,7 @@ discovery:
   type: html
   urls:
   - https://cairgeorgia.com/events
+  fetch:
+    render_js: true
 detail:
-  enabled: false
+  enabled: true

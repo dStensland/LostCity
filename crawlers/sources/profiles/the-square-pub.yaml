@@ -4,9 +4,9 @@ name: The Square Pub
 integration_method: html
 defaults: {}
 discovery:
-  enabled: true
-  type: list
+  enabled: false
+  type: html
   urls:
   - https://www.thesquarepub.com
 detail:
-  enabled: false
+  enabled: true

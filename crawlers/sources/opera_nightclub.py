@@ -65,6 +65,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             context = browser.new_context(
                 user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
                 viewport={"width": 1920, "height": 1080},
+                ignore_https_errors=True,
             )
             page = context.new_page()
 

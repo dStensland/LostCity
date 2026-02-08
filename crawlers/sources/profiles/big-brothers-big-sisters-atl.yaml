@@ -9,4 +9,4 @@ discovery:
   urls:
   - https://bbbsatl.org/events
 detail:
-  enabled: false
+  enabled: true

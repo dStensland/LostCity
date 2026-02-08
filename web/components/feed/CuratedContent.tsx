@@ -7,6 +7,9 @@ import TrendingNow from "@/components/TrendingNow";
 import TonightsPicksSkeleton from "@/components/TonightsPicksSkeleton";
 import TrendingNowSkeleton from "@/components/TrendingNowSkeleton";
 import HappeningNowCTA from "./HappeningNowCTA";
+import HolidayHero from "./HolidayHero";
+import MomentsSection from "./MomentsSection";
+import TimeContextSection from "./TimeContextSection";
 import BrowseByActivity from "@/components/BrowseByActivity";
 
 /** Delays showing skeleton by `delay` ms so fast loads don't flash placeholders */
@@ -25,15 +28,30 @@ interface CuratedContentProps {
 
 export default function CuratedContent({ portalSlug }: CuratedContentProps) {
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {/* Above-fold: Happening Now CTA - Priority load */}
       <Suspense fallback={null}>
         <HappeningNowCTA portalSlug={portalSlug} />
       </Suspense>
 
+      {/* Holiday hero: Super Bowl, etc. — big feature when active */}
+      <Suspense fallback={null}>
+        <HolidayHero portalSlug={portalSlug} />
+      </Suspense>
+
       {/* Above-fold: Tonight's Picks - Critical content */}
       <Suspense fallback={<DelayedFallback><TonightsPicksSkeleton /></DelayedFallback>}>
         <TonightsPicks portalSlug={portalSlug} />
+      </Suspense>
+
+      {/* Festival moments: takeover hero + imminent festivals */}
+      <Suspense fallback={null}>
+        <MomentsSection portalSlug={portalSlug} />
+      </Suspense>
+
+      {/* Time-of-day contextual section: "Patio SZN" / "After Hours" / "Brunch & Markets" */}
+      <Suspense fallback={null}>
+        <TimeContextSection portalSlug={portalSlug} />
       </Suspense>
 
       {/* Above-fold: Trending Now - High priority */}
@@ -57,7 +75,7 @@ export default function CuratedContent({ portalSlug }: CuratedContentProps) {
 // Skeleton loaders for better perceived performance
 function BrowseByActivitySkeleton() {
   return (
-    <section className="py-6">
+    <section>
       <div className="h-6 w-64 skeleton-shimmer rounded mb-4" />
       <div className="flex gap-2 mb-4">
         {[1, 2, 3].map((i) => (
@@ -75,7 +93,7 @@ function BrowseByActivitySkeleton() {
 
 function FeedViewSkeleton() {
   return (
-    <div className="space-y-4 py-6">
+    <div className="space-y-4">
       <div className="h-6 w-48 skeleton-shimmer rounded mb-4" />
       {[1, 2, 3, 4].map((i) => (
         <div key={i} className="h-32 skeleton-shimmer rounded-xl" />

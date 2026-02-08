@@ -24,7 +24,7 @@ class SelectorSet(BaseModel):
 class FetchConfig(BaseModel):
     render_js: bool = False
     wait_ms: int = 1500
-    timeout_ms: int = 15000
+    timeout_ms: int = 30000
     user_agent: Optional[str] = None
     wait_until: Literal["networkidle", "load", "domcontentloaded", "commit"] = "networkidle"
 
@@ -55,7 +55,7 @@ class DetailConfig(BaseModel):
     use_jsonld: bool = True
     use_open_graph: bool = True
     use_heuristic: bool = True
-    use_llm: bool = False
+    use_llm: bool = True
     jsonld_only: bool = False
     fetch: FetchConfig = Field(default_factory=FetchConfig)
 

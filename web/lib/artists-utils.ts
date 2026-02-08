@@ -67,6 +67,7 @@ export function getDisciplineColor(discipline: string): string {
     actor: "var(--coral)",
     speaker: "var(--gold)",
     filmmaker: "var(--neon-cyan)",
+    author: "var(--gold)",
   };
   return colors[discipline] || "var(--coral)";
 }
@@ -82,6 +83,43 @@ export function getDisciplineLabel(discipline: string): string {
     actor: "Actor",
     speaker: "Speaker",
     filmmaker: "Filmmaker",
+    author: "Author",
   };
   return labels[discipline] || discipline.replace(/_/g, " ");
+}
+
+/** Derive context-aware section labels from the dominant artist discipline */
+export function getLineupLabels(artists: EventArtist[]): {
+  sectionTitle: string;
+  headlinerLabel: string;
+  supportLabel: string;
+  artistNoun: string;
+} {
+  // Count disciplines across all artists
+  const counts: Record<string, number> = {};
+  for (const a of artists) {
+    const d = a.artist?.discipline || "unknown";
+    counts[d] = (counts[d] || 0) + 1;
+  }
+
+  // Find dominant discipline
+  let dominant = "unknown";
+  let max = 0;
+  for (const [d, c] of Object.entries(counts)) {
+    if (c > max) { dominant = d; max = c; }
+  }
+
+  const labelMap: Record<string, { sectionTitle: string; headlinerLabel: string; supportLabel: string; artistNoun: string }> = {
+    author:        { sectionTitle: "Featured Authors",  headlinerLabel: "Keynote Speakers", supportLabel: "Authors",    artistNoun: "authors" },
+    musician:      { sectionTitle: "Lineup",            headlinerLabel: "Headliners",       supportLabel: "Supporting", artistNoun: "artists" },
+    band:          { sectionTitle: "Lineup",            headlinerLabel: "Headliners",       supportLabel: "Supporting", artistNoun: "artists" },
+    dj:            { sectionTitle: "Lineup",            headlinerLabel: "Headliners",       supportLabel: "DJs",        artistNoun: "artists" },
+    comedian:      { sectionTitle: "Featured Comics",   headlinerLabel: "Headliners",       supportLabel: "Comics",     artistNoun: "comics" },
+    speaker:       { sectionTitle: "Speakers",          headlinerLabel: "Keynote Speakers", supportLabel: "Speakers",   artistNoun: "speakers" },
+    visual_artist: { sectionTitle: "Featured Artists",  headlinerLabel: "Featured",         supportLabel: "Artists",    artistNoun: "artists" },
+    actor:         { sectionTitle: "Cast",              headlinerLabel: "Starring",         supportLabel: "Cast",       artistNoun: "performers" },
+    filmmaker:     { sectionTitle: "Filmmakers",        headlinerLabel: "Featured",         supportLabel: "Filmmakers", artistNoun: "filmmakers" },
+  };
+
+  return labelMap[dominant] || { sectionTitle: "Featured Guests", headlinerLabel: "Featured", supportLabel: "Guests", artistNoun: "guests" };
 }

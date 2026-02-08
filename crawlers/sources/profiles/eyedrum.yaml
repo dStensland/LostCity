@@ -9,4 +9,4 @@ discovery:
   urls:
   - https://eyedrum.org/calendar-events-performances-art-music
 detail:
-  enabled: false
+  enabled: true

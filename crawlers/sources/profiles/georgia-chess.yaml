@@ -9,4 +9,4 @@ discovery:
   urls:
   - https://www.georgiachess.org
 detail:
-  enabled: false
+  enabled: true

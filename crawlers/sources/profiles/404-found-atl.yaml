@@ -8,5 +8,7 @@ discovery:
   type: list
   urls:
   - https://www.404foundatl.com/upcoming-events
+  fetch:
+    render_js: true
 detail:
-  enabled: false
+  enabled: true

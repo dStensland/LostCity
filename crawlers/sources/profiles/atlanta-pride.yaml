@@ -9,4 +9,4 @@ discovery:
   urls:
   - https://www.atlantapride.org
 detail:
-  enabled: false
+  enabled: true

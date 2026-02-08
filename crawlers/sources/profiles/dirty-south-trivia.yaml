@@ -4,8 +4,8 @@ name: Dirty South Trivia
 integration_method: jsonld_only
 defaults: {}
 discovery:
-  enabled: true
-  type: list
+  enabled: false
+  type: html
   urls:
   - https://www.dirtysouthtrivia.com/
 detail:

@@ -2,11 +2,12 @@ version: 1
 slug: landmark-midtown
 name: Landmark Midtown Art Cinema
 integration_method: html
-defaults: {}
+defaults:
+  category: film
 discovery:
   enabled: true
   type: list
   urls:
   - https://www.landmarktheatres.com/atlanta/midtown-art-cinema
 detail:
-  enabled: false
+  enabled: true

@@ -7,16 +7,17 @@ defaults:
   category: community
   subcategory: activism
   tags:
-    - community
-    - activism
-    - social-justice
+  - community
+  - activism
+  - social-justice
 discovery:
   enabled: true
   type: html
   urls:
   - https://c4atlanta.org/events
-  # Site may redirect — needs LLM with Playwright
   fetch:
     render_js: true
 detail:
-  enabled: false
+  enabled: true
+  fetch:
+    render_js: true

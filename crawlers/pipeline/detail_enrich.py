@@ -366,11 +366,19 @@ def enrich_from_detail(
         _collect_links(heur, "heuristic", url, links_by_key, link_order)
 
     if config.use_llm:
-        llm = extract_detail_with_llm(html, url, source_name)
-        for k, v in llm.items():
-            _merge_and_track(k, enriched.get(k), v, "llm", url, enriched, field_provenance, field_confidence)
-        _collect_images(llm, "llm", url, images_by_url, image_order)
-        _collect_links(llm, "llm", url, links_by_key, link_order)
+        # Only invoke LLM when prior steps left gaps — saves API tokens
+        desc = enriched.get("description") or ""
+        has_good_desc = len(str(desc)) > 50
+        has_image = bool(enriched.get("image_url") or image_order)
+        has_ticket = bool(enriched.get("ticket_url"))
+        has_time = bool(enriched.get("start_time"))
+        has_price = enriched.get("price_min") is not None or enriched.get("is_free")
+        if not (has_good_desc and has_image and has_ticket and has_time and has_price):
+            llm = extract_detail_with_llm(html, url, source_name)
+            for k, v in llm.items():
+                _merge_and_track(k, enriched.get(k), v, "llm", url, enriched, field_provenance, field_confidence)
+            _collect_images(llm, "llm", url, images_by_url, image_order)
+            _collect_links(llm, "llm", url, links_by_key, link_order)
 
     enriched = _normalize_urls(enriched, url)
     if image_order:

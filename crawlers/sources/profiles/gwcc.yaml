@@ -9,4 +9,4 @@ discovery:
   urls:
   - https://www.gwcca.org/event-calendar
 detail:
-  enabled: false
+  enabled: true

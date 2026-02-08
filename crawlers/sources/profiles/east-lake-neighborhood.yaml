@@ -9,4 +9,4 @@ discovery:
   urls:
   - https://eastlakefoundation.org
 detail:
-  enabled: false
+  enabled: true

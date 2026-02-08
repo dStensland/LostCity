@@ -9,4 +9,4 @@ discovery:
   urls:
   - https://gwinnettpl.libnet.info/events
 detail:
-  enabled: false
+  enabled: true

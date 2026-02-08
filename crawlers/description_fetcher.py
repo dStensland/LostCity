@@ -172,14 +172,46 @@ def fetch_detail_html_playwright(page, url: str) -> Optional[str]:
         return None
 
 
+def _generate_music_description(
+    venue_name: Optional[str],
+    artists: Optional[list[dict]],
+) -> str:
+    """Build a lineup-based description for music events."""
+    if not artists:
+        if venue_name:
+            return f"Live music at {venue_name}."
+        return "Live music performance."
+
+    headliner = artists[0]
+    support = artists[1:]
+    name = headliner.get("name", "")
+    genres = headliner.get("genres")
+
+    base = f"Live music at {venue_name}" if venue_name else "Live music"
+    if genres:
+        desc = f"{base} featuring {name} ({', '.join(genres[:3])})."
+    else:
+        desc = f"{base} featuring {name}."
+
+    if support:
+        names = [s.get("name") for s in support if s.get("name")]
+        if names:
+            desc += f" With {', '.join(names)}."
+
+    return desc
+
+
 def generate_synthetic_description(
     title: str,
     venue_name: Optional[str] = None,
     category: Optional[str] = None,
+    artists: Optional[list[dict]] = None,
 ) -> str:
     """Generate a basic synthetic description when no real one is available.
 
     Uses title, venue name, and category to produce a one-line description.
+    For music events, pass `artists` (list of dicts with name/genres) for
+    lineup-based descriptions instead of generic "Live music at X."
     """
     title = (title or "").strip()
     venue = (venue_name or "").strip()
@@ -187,9 +219,7 @@ def generate_synthetic_description(
 
     # Category-specific templates
     if cat == "music":
-        if venue:
-            return f"Live music at {venue}."
-        return "Live music performance."
+        return _generate_music_description(venue or None, artists)
 
     if cat == "comedy":
         if venue:

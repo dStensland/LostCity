@@ -9,4 +9,4 @@ discovery:
   urls:
   - https://www.wildasterbooks.com
 detail:
-  enabled: false
+  enabled: true

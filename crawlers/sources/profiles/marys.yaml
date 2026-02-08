@@ -9,4 +9,4 @@ discovery:
   urls:
   - https://www.instagram.com/marysatl/
 detail:
-  enabled: false
+  enabled: true

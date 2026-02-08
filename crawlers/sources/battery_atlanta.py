@@ -307,8 +307,14 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     # Determine category
                     category, subcategory, event_tags = determine_category(title, description, categories, tags)
 
-                    # Check for free events
-                    is_free = any(word in f"{title} {description}".lower() for word in ["free", "no cover", "complimentary"])
+                    # Check for free events and pricing
+                    combined_text = f"{title} {description}".lower()
+                    is_free = any(word in combined_text for word in ["free", "complimentary"])
+                    price_note = None
+
+                    # Check for "no cover" - means no door charge but not free (food/drink expected)
+                    if "no cover" in combined_text:
+                        price_note = "No cover"
 
                     # Check for pricing
                     price_match = re.search(r'\$(\d+(?:\.\d{2})?)', f"{title} {description}")
@@ -336,7 +342,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "tags": event_tags,
                         "price_min": price_min,
                         "price_max": price_max,
-                        "price_note": None,
+                        "price_note": price_note,
                         "is_free": is_free,
                         "source_url": source_url,
                         "ticket_url": source_url,

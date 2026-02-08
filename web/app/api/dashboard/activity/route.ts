@@ -32,6 +32,10 @@ type EventData = {
   id: number;
   title: string;
   start_date: string;
+  start_time: string | null;
+  is_all_day: boolean;
+  category: string | null;
+  image_url: string | null;
   venue: { name: string } | null;
 };
 
@@ -161,7 +165,7 @@ export async function GET(request: NextRequest) {
         status,
         created_at,
         user:profiles!event_rsvps_user_id_fkey(id, username, display_name, avatar_url),
-        event:events!event_rsvps_event_id_fkey(id, title, start_date, venue:venues(name))
+        event:events!event_rsvps_event_id_fkey(id, title, start_date, start_time, is_all_day, category, image_url, venue:venues(name))
       `)
       .in("user_id", friendIds)
       .in("status", ["going", "interested"])
@@ -191,14 +195,15 @@ export async function GET(request: NextRequest) {
 
     // 3. Saved events - friends saving events
     supabase
-      .from("saved_events")
+      .from("saved_items")
       .select(`
         id,
         created_at,
-        user:profiles!saved_events_user_id_fkey(id, username, display_name, avatar_url),
-        event:events!saved_events_event_id_fkey(id, title, start_date, venue:venues(name))
+        user:profiles!saved_items_user_id_fkey(id, username, display_name, avatar_url),
+        event:events(id, title, start_date, start_time, is_all_day, category, image_url, venue:venues(name))
       `)
       .in("user_id", friendIds)
+      .not("event_id", "is", null)
       .gte("created_at", fourteenDaysAgo)
       .lt("created_at", cursorDate ? cursorDate.toISOString() : now)
       .order("created_at", { ascending: false })

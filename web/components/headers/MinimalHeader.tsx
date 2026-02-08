@@ -6,6 +6,7 @@ import Image from "@/components/SmartImage";
 import Logo from "../Logo";
 import UserMenu from "../UserMenu";
 import HeaderSearchButton from "../HeaderSearchButton";
+import BackButton from "./BackButton";
 import { DEFAULT_PORTAL_SLUG } from "@/lib/portal-context";
 import type { HeaderConfig } from "@/lib/visual-presets";
 import type { PortalBranding } from "@/lib/portal-context";
@@ -15,7 +16,8 @@ interface MinimalHeaderProps {
   portalName: string;
   branding: PortalBranding;
   backLink?: {
-    href: string;
+    href?: string;
+    fallbackHref?: string;
     label: string;
   };
   hideNav?: boolean;
@@ -59,16 +61,11 @@ export default function MinimalHeader({
         {/* Left: Back button (optional) + Logo */}
         <div className="flex items-center gap-2 flex-shrink-0">
           {backLink && (
-            <Link
+            <BackButton
               href={backLink.href}
-              className="flex items-center gap-1.5 text-[var(--muted)] hover:text-[var(--cream)] transition-colors mr-1"
-              aria-label={`Back to ${backLink.label}`}
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-              </svg>
-              <span className="font-mono text-xs hidden sm:inline">{backLink.label}</span>
-            </Link>
+              fallbackHref={backLink.fallbackHref}
+              label={backLink.label}
+            />
           )}
 
           {branding?.logo_url ? (

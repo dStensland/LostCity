@@ -3,6 +3,8 @@
 import { useState, useMemo } from "react";
 import Link from "next/link";
 import type { FestivalSession, FestivalProgram } from "@/lib/festivals";
+import { getCategoryAccentColor } from "@/lib/moments-utils";
+import { decodeHtmlEntities } from "@/lib/formats";
 
 interface FestivalScheduleProps {
   sessions: FestivalSession[];
@@ -38,19 +40,7 @@ function formatTime(timeStr: string | null): string {
 }
 
 function getCategoryColor(category: string | null): string {
-  if (!category) return "var(--neon-magenta)";
-  const colors: Record<string, string> = {
-    music: "var(--neon-magenta)",
-    film: "var(--neon-cyan)",
-    theater: "var(--coral)",
-    art: "var(--gold)",
-    community: "var(--neon-green)",
-    food_drink: "var(--coral)",
-    words: "var(--neon-cyan)",
-    learning: "var(--gold)",
-    comedy: "var(--neon-amber)",
-  };
-  return colors[category] || "var(--neon-magenta)";
+  return getCategoryAccentColor(category);
 }
 
 export default function FestivalSchedule({
@@ -81,7 +71,14 @@ export default function FestivalSchedule({
     return Array.from(catSet).sort();
   }, [sessions]);
 
-  const [selectedDay, setSelectedDay] = useState(days[0] || "");
+  // Default to today if it's one of the festival days, otherwise first day
+  const todayStr = useMemo(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+  }, []);
+  const [selectedDay, setSelectedDay] = useState(
+    days.includes(todayStr) ? todayStr : days[0] || ""
+  );
   const [selectedVenue, setSelectedVenue] = useState<number | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedProgram, setSelectedProgram] = useState<string | null>(null);
@@ -112,71 +109,85 @@ export default function FestivalSchedule({
 
       {/* Day tabs */}
       {days.length > 1 && (
-        <div className="overflow-x-auto -mx-4 px-4 mb-4">
+        <div className="relative mb-4">
+          <div className="absolute left-0 top-0 bottom-0 w-6 bg-gradient-to-r from-[var(--void)] to-transparent z-10 pointer-events-none" />
+          <div className="absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-[var(--void)] to-transparent z-10 pointer-events-none" />
+          <div className="overflow-x-auto -mx-4 px-4">
           <div className="flex gap-2 min-w-min">
-            {days.map((day) => (
-              <button
-                key={day}
-                onClick={() => setSelectedDay(day)}
-                className={`px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
-                  selectedDay === day
-                    ? "bg-accent text-[var(--void)]"
-                    : "bg-[var(--twilight)]/30 text-[var(--soft)] hover:bg-[var(--twilight)]/60"
-                }`}
-              >
-                {formatShortDate(day)}
-              </button>
-            ))}
+            {days.map((day) => {
+              const isSelected = selectedDay === day;
+              const isToday = day === todayStr;
+              return (
+                <button
+                  key={day}
+                  onClick={() => setSelectedDay(day)}
+                  className={`relative px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
+                    isSelected
+                      ? "bg-accent-20 text-accent border border-accent-40"
+                      : "bg-[var(--twilight)]/30 text-[var(--soft)] hover:bg-[var(--twilight)]/60 border border-transparent"
+                  }`}
+                >
+                  {formatShortDate(day)}
+                  {isToday && (
+                    <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-accent shadow-[0_0_6px_rgba(255,107,122,0.6)]" />
+                  )}
+                </button>
+              );
+            })}
+          </div>
           </div>
         </div>
       )}
 
-      {/* Filter pills */}
+      {/* Filter chips */}
       {(venues.length > 1 || categories.length > 1 || programs.length > 1) && (
-        <div className="flex flex-wrap gap-2 mb-4">
-          {/* Venue filter */}
-          {venues.length > 1 && (
-            <select
-              value={selectedVenue ?? ""}
-              onChange={(e) => setSelectedVenue(e.target.value ? Number(e.target.value) : null)}
-              className="px-3 py-1.5 rounded-lg text-xs bg-[var(--void)] border border-[var(--twilight)] text-[var(--soft)] cursor-pointer"
+        <div className="flex flex-wrap gap-1.5 mb-4">
+          {/* Venue chips */}
+          {venues.length > 1 && venues.map((v) => (
+            <button
+              key={v.id}
+              onClick={() => setSelectedVenue(selectedVenue === v.id ? null : v.id)}
+              className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
+                selectedVenue === v.id
+                  ? "bg-accent-20 text-accent border border-accent-40"
+                  : "bg-[var(--twilight)]/20 text-[var(--muted)] border border-transparent hover:bg-[var(--twilight)]/40 hover:text-[var(--soft)]"
+              }`}
             >
-              <option value="">All Venues</option>
-              {venues.map((v) => (
-                <option key={v.id} value={v.id}>{v.name}</option>
-              ))}
-            </select>
-          )}
+              {v.name}
+            </button>
+          ))}
 
-          {/* Category filter */}
-          {categories.length > 1 && (
-            <select
-              value={selectedCategory ?? ""}
-              onChange={(e) => setSelectedCategory(e.target.value || null)}
-              className="px-3 py-1.5 rounded-lg text-xs bg-[var(--void)] border border-[var(--twilight)] text-[var(--soft)] cursor-pointer"
+          {/* Category chips */}
+          {categories.length > 1 && categories.map((c) => (
+            <button
+              key={c}
+              onClick={() => setSelectedCategory(selectedCategory === c ? null : c)}
+              className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
+                selectedCategory === c
+                  ? "bg-accent-20 text-accent border border-accent-40"
+                  : "bg-[var(--twilight)]/20 text-[var(--muted)] border border-transparent hover:bg-[var(--twilight)]/40 hover:text-[var(--soft)]"
+              }`}
             >
-              <option value="">All Categories</option>
-              {categories.map((c) => (
-                <option key={c} value={c}>{c.replace(/_/g, " ")}</option>
-              ))}
-            </select>
-          )}
+              {c.replace(/_/g, " ")}
+            </button>
+          ))}
 
-          {/* Program / Track filter */}
-          {programs.length > 1 && (
-            <select
-              value={selectedProgram ?? ""}
-              onChange={(e) => setSelectedProgram(e.target.value || null)}
-              className="px-3 py-1.5 rounded-lg text-xs bg-[var(--void)] border border-[var(--twilight)] text-[var(--soft)] cursor-pointer"
+          {/* Program chips — only show when manageable count */}
+          {programs.length > 1 && programs.length <= 8 && programs.map((p) => (
+            <button
+              key={p.id}
+              onClick={() => setSelectedProgram(selectedProgram === p.id ? null : p.id)}
+              className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
+                selectedProgram === p.id
+                  ? "bg-accent-20 text-accent border border-accent-40"
+                  : "bg-[var(--twilight)]/20 text-[var(--muted)] border border-transparent hover:bg-[var(--twilight)]/40 hover:text-[var(--soft)]"
+              }`}
             >
-              <option value="">All Programs</option>
-              {programs.map((p) => (
-                <option key={p.id} value={p.id}>{p.title}</option>
-              ))}
-            </select>
-          )}
+              {decodeHtmlEntities(p.title)}
+            </button>
+          ))}
 
-          {/* Clear filters */}
+          {/* Clear all */}
           {activeFilters > 0 && (
             <button
               onClick={() => {
@@ -184,9 +195,9 @@ export default function FestivalSchedule({
                 setSelectedCategory(null);
                 setSelectedProgram(null);
               }}
-              className="px-3 py-1.5 rounded-lg text-xs text-[var(--muted)] hover:text-[var(--cream)] border border-[var(--twilight)] hover:bg-[var(--twilight)]/30 transition-colors"
+              className="px-2.5 py-1 rounded-full text-xs text-[var(--muted)] hover:text-[var(--cream)] transition-colors"
             >
-              Clear filters
+              Clear
             </button>
           )}
         </div>
@@ -206,8 +217,8 @@ export default function FestivalSchedule({
                 className="flex items-start gap-4 px-4 py-3 hover:bg-[var(--card-bg-hover)] transition-colors"
               >
                 {/* Time */}
-                <div className="flex-shrink-0 w-20 pt-1">
-                  <span className="font-mono text-sm text-[var(--muted)]">
+                <div className="flex-shrink-0 w-14 sm:w-20 pt-1">
+                  <span className="font-mono text-xs sm:text-sm text-[var(--muted)]">
                     {formatTime(session.start_time) || "TBA"}
                   </span>
                 </div>
@@ -218,7 +229,7 @@ export default function FestivalSchedule({
                     href={`/${portalSlug}/events/${session.id}`}
                     className="font-medium text-[var(--cream)] hover:text-accent transition-colors line-clamp-2"
                   >
-                    {session.title}
+                    {decodeHtmlEntities(session.title)}
                   </Link>
 
                   <div className="flex flex-wrap items-center gap-2 mt-1">

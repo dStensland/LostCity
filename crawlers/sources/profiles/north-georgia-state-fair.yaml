@@ -1,0 +1,15 @@
+version: 1
+slug: north-georgia-state-fair
+name: North Georgia State Fair
+integration_method: playwright
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.northgeorgiastatefair.com
+  - https://www.bigtickets.com/e/northgeorgiastatefair/
+  fetch:
+    render_js: true
+detail:
+  enabled: false

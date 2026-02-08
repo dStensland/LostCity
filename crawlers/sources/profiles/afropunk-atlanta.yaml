@@ -1,0 +1,12 @@
+version: 1
+slug: afropunk-atlanta
+name: AFROPUNK Atlanta
+integration_method: festival_schedule
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://afropunk.com/atlanta/
+detail:
+  enabled: true

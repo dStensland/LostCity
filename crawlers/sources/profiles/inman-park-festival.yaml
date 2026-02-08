@@ -9,4 +9,4 @@ discovery:
   urls:
   - https://www.inmanparkfestival.org
 detail:
-  enabled: false
+  enabled: true

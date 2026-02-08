@@ -81,6 +81,7 @@ type RelatedEvent = {
   id: number;
   title: string;
   start_date: string;
+  end_date?: string | null;
   start_time: string | null;
   venue: { id: number; name: string; slug: string } | null;
   going_count?: number;

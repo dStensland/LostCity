@@ -3,7 +3,7 @@ export function sanitizeCssColor(value: string): string | null {
 
   if (/^#[0-9a-fA-F]{3,8}$/.test(value)) return value;
   if (/^[a-zA-Z]{3,20}$/.test(value)) return value;
-  if (/^var\\(--[a-zA-Z0-9-_]+\\)$/.test(value)) return value;
+  if (/^var\(--[a-zA-Z0-9-_]+\)$/.test(value)) return value;
   if (/^(rgb|hsl)a?\(\s*[0-9.,\s%]+\s*\)$/.test(value)) return value;
 
   return null;

@@ -3,9 +3,8 @@ import Link from "next/link";
 import { unstable_cache } from "next/cache";
 import { supabase } from "@/lib/supabase";
 import { getCachedPortalBySlug } from "@/lib/portal";
-import UnifiedHeader from "@/components/UnifiedHeader";
+import { PortalHeader } from "@/components/headers";
 import PortalFooter from "@/components/PortalFooter";
-import { PortalTheme } from "@/components/PortalTheme";
 import ScopedStylesServer from "@/components/ScopedStylesServer";
 import { createCssVarClass } from "@/lib/css-utils";
 import FollowButton from "@/components/FollowButton";
@@ -318,16 +317,15 @@ export default async function PortalOrganizerPage({ params }: Props) {
         dangerouslySetInnerHTML={{ __html: safeJsonLd(organizationSchema) }}
       />
 
-      {/* Portal-specific theming */}
-      {portal && <PortalTheme portal={portal} />}
+
 
       <ScopedStylesServer css={scopedCss} />
 
       <div className="min-h-screen">
-        <UnifiedHeader
+        <PortalHeader
           portalSlug={activePortalSlug}
           portalName={activePortalName}
-          backLink={{ href: `/${activePortalSlug}?view=community`, label: "Community" }}
+          hideNav
         />
 
         <main className="max-w-3xl mx-auto px-4 py-6 pb-28 space-y-8">
@@ -338,6 +336,7 @@ export default async function PortalOrganizerPage({ params }: Props) {
             title={organization.name}
             subtitle={locationDisplay}
             categoryColor={orgColor}
+            backFallbackHref={`/${activePortalSlug}`}
             categoryIcon={
               organization.categories?.[0] ? (
                 <CategoryIcon type={organization.categories[0]} size={48} />

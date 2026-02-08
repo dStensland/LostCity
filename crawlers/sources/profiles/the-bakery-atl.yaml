@@ -1,0 +1,12 @@
+version: 1
+slug: the-bakery-atl
+name: The Bakery
+integration_method: playwright
+defaults: {}
+discovery:
+  enabled: true
+  type: playwright
+  urls:
+  - https://www.thebakeryatlanta.com/events
+detail:
+  enabled: true

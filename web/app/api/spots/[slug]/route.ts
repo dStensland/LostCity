@@ -70,19 +70,19 @@ export async function GET(
   // Get today's date for filtering upcoming events
   const today = getLocalDateString();
 
-  // Fetch upcoming events at this venue
+  // Fetch upcoming events at this venue (include ongoing multi-day events)
   const { data: upcomingEvents } = await supabase
     .from("events")
     .select(`
-      id, title, start_date, start_time, end_time, is_free, price_min, category
+      id, title, start_date, end_date, start_time, end_time, is_free, price_min, category
     `)
     .eq("venue_id", spot.id)
-    .gte("start_date", today)
+    .or(`start_date.gte.${today},end_date.gte.${today}`)
     .order("start_date", { ascending: true })
     .order("start_time", { ascending: true })
     .limit(20);
 
-  const eventRows = (upcomingEvents || []) as { id: number; title: string; start_date: string; start_time: string | null; end_time: string | null; is_free: boolean | null; price_min: number | null; category: string | null }[];
+  const eventRows = (upcomingEvents || []) as { id: number; title: string; start_date: string; end_date: string | null; start_time: string | null; end_time: string | null; is_free: boolean | null; price_min: number | null; category: string | null }[];
   const upcomingEventIds = eventRows.map((event) => event.id);
   const upcomingCounts = await fetchSocialProofCounts(upcomingEventIds);
   const upcomingEventsWithCounts = eventRows.map((event) => {

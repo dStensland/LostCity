@@ -5,7 +5,7 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { usePortal } from "@/lib/portal-context";
 import Link from "next/link";
 import { NEIGHBORHOOD_NAMES, getNeighborhoodByName } from "@/config/neighborhoods";
-import UnifiedHeader from "@/components/UnifiedHeader";
+import { PortalHeader } from "@/components/headers";
 import CategoryFilterChips, { type FilterCategory } from "@/components/CategoryFilterChips";
 import EventCard from "@/components/EventCard";
 import SpotCard from "@/components/SpotCard";
@@ -242,10 +242,9 @@ export default function WhatsOpenPage() {
 
   return (
     <div className="min-h-screen bg-[var(--void)]">
-      <UnifiedHeader
+      <PortalHeader
         portalSlug={portal.slug}
         portalName={portal.name}
-        branding={portal.branding}
       />
 
       {/* Location Prompt Overlay */}

@@ -1,0 +1,12 @@
+version: 1
+slug: boggs-social
+name: Boggs Social & Supply
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: html
+  urls:
+  - https://www.boggssocial.com/events
+detail:
+  enabled: true

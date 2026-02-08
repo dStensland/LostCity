@@ -1,0 +1,23 @@
+version: 1
+slug: limelight-theater
+name: Limelight Theater
+integration_method: html
+defaults:
+  venue_name: Limelight Theater
+  category: arts
+  subcategory: film
+  tags:
+    - film
+    - indie
+    - performing-arts
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://limelight.tix.page/events
+detail:
+  enabled: true
+  use_jsonld: true
+  use_open_graph: true
+  use_heuristic: true
+  use_llm: false

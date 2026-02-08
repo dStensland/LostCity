@@ -4,9 +4,9 @@ name: Team Trivia
 integration_method: html
 defaults: {}
 discovery:
-  enabled: true
-  type: list
+  enabled: false
+  type: html
   urls:
   - https://www.teamtrivia.com/locations/
 detail:
-  enabled: false
+  enabled: true

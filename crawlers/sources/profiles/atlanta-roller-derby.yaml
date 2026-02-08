@@ -1,0 +1,12 @@
+version: 1
+slug: atlanta-roller-derby
+name: Atlanta Roller Derby
+integration_method: playwright_crawler
+defaults: {}
+discovery:
+  enabled: true
+  type: html
+  urls:
+  - https://atlantarollerderby.com/schedule
+detail:
+  enabled: false

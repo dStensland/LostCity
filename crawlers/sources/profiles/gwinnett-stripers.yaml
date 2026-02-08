@@ -9,6 +9,6 @@ discovery:
   urls:
   - https://www.gostripers.com/schedule
 detail:
-  enabled: false
+  enabled: true
   fetch:
     render_js: true

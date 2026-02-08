@@ -94,6 +94,47 @@ farmers_market, convention_center, venue, organization, festival, church,
 event_space, sports_bar, distillery, winery, hotel, rooftop, coworking,
 record_store, studio, fitness_center, community_center, college, university
 
+## Data Health Requirements
+
+Every crawler and import should produce data that meets our health targets. See `CRAWLER_STRATEGY.md` for full criteria. Run `python3 data_health.py` to check current scores.
+
+### Minimum Venue Data (when creating via `get_or_create_venue`)
+
+| Field | Required? | Notes |
+|-------|-----------|-------|
+| name | Yes | Real venue name, never an address |
+| slug | Yes | Auto-generated from name |
+| address | Yes | Full street address |
+| city, state | Yes | |
+| lat, lng | Yes | Both or neither. Critical for maps |
+| neighborhood | Yes | From coordinates or manual |
+| venue_type | Yes | From valid taxonomy above |
+| website | Strongly preferred | Enables image/description enrichment |
+| image_url | Preferred | From og:image or Google Places |
+
+### Minimum Event Data (when creating via `insert_event`)
+
+| Field | Required? | Notes |
+|-------|-----------|-------|
+| title | Yes | Validated by `validate_event_title()` |
+| start_date | Yes | YYYY-MM-DD format |
+| source_url | Yes | Link to original source |
+| venue_id | Yes | From `get_or_create_venue()` |
+| category | Yes | From valid category list |
+| start_time | Strongly preferred | Never infer is_all_day from missing time |
+| description | Preferred | From source page or LLM extraction |
+| image_url | Preferred | From source, OMDB (film), or Deezer (music) |
+
+### Enrichment Scripts
+
+| Script | Purpose |
+|--------|---------|
+| `venue_enrich.py` | Fill coordinates, neighborhoods, vibes via Google Places |
+| `scrape_venue_images.py` | Scrape hero images from venue websites |
+| `fetch_venue_photos_google.py` | Google Places photos for venues without websites |
+| `classify_venues.py` | Rules-based venue type classification and junk cleanup |
+| `data_health.py` | Run full health diagnostic across all entity types |
+
 ## Source Activation
 
 Sources must exist in the `sources` database table with `is_active = true` to run. The `main.py` auto-discovers crawler files and maps them to source slugs. To activate a new crawler:

@@ -9,4 +9,4 @@ discovery:
   urls:
   - https://www.spruillarts.org/
 detail:
-  enabled: false
+  enabled: true

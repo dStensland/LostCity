@@ -9,4 +9,4 @@ discovery:
   urls:
   - https://www.museumofdesign.org/events
 detail:
-  enabled: false
+  enabled: true

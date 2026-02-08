@@ -5,8 +5,10 @@ integration_method: html
 defaults: {}
 discovery:
   enabled: true
-  type: list
+  type: html
   urls:
   - https://www.cau.edu/events
+  fetch:
+    render_js: true
 detail:
-  enabled: false
+  enabled: true

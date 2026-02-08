@@ -4,9 +4,9 @@ name: Geeks Who Drink
 integration_method: llm_crawler
 defaults: {}
 discovery:
-  enabled: true
+  enabled: false
   type: html
   urls:
   - https://www.geekswhodrink.com/venues/?location=Atlanta%2C+GA
 detail:
-  enabled: false
+  enabled: true

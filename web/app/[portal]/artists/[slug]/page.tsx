@@ -2,9 +2,8 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { cache } from "react";
 import { format, parseISO } from "date-fns";
-import UnifiedHeader from "@/components/UnifiedHeader";
+import { PortalHeader } from "@/components/headers";
 import PortalFooter from "@/components/PortalFooter";
-import { PortalTheme } from "@/components/PortalTheme";
 import { getCachedPortalBySlug } from "@/lib/portal";
 import {
   getArtistBySlug,
@@ -140,14 +139,15 @@ export default async function PortalArtistPage({ params }: Props) {
         dangerouslySetInnerHTML={{ __html: safeJsonLd(artistSchema) }}
       />
 
-      {portal && <PortalTheme portal={portal} />}
+
 
       <ScopedStylesServer css={accentClass?.css || ""} />
 
       <div className={`min-h-screen ${accentClass?.className ?? ""}`}>
-        <UnifiedHeader
+        <PortalHeader
           portalSlug={activePortalSlug}
           portalName={activePortalName}
+          hideNav
         />
 
         <main className="max-w-3xl mx-auto px-4 py-4 sm:py-6 pb-28 space-y-5 sm:space-y-8">
@@ -158,6 +158,7 @@ export default async function PortalArtistPage({ params }: Props) {
             title={artist.name}
             subtitle={artist.hometown || getDisciplineLabel(artist.discipline)}
             categoryColor={accentColor}
+            backFallbackHref={`/${activePortalSlug}`}
             categoryIcon={
               <svg className="w-12 h-12 text-[var(--muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2z" />

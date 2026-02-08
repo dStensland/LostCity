@@ -9,4 +9,4 @@ discovery:
   urls:
   - https://www.kailinart.com
 detail:
-  enabled: false
+  enabled: true

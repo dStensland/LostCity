@@ -2,13 +2,16 @@ version: 1
 slug: studio-movie-grill-atlanta
 name: Studio Movie Grill Atlanta
 integration_method: playwright
-defaults: {}
+defaults:
+  category: film
 discovery:
   enabled: true
-  type: list
+  type: html
   urls:
   - https://www.studiomoviegrill.com
   fetch:
     render_js: true
 detail:
-  enabled: false
+  enabled: true
+  fetch:
+    render_js: true

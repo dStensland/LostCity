@@ -13,36 +13,54 @@ interface ArtistChipProps {
   variant?: "card" | "inline";
 }
 
-/** Discipline-based fallback icon SVG */
-function DisciplineFallback({ discipline }: { discipline: string }) {
-  // Simple music note fallback
-  const paths: Record<string, string> = {
-    musician: "M9 18V5l12-2v13",
-    band: "M9 18V5l12-2v13",
-    dj: "M12 3v18m-4-7h8",
-    comedian: "M8 14s1.5 2 4 2 4-2 4-2",
+/** Get initials from a display name (up to 2 chars) */
+function getInitials(name: string): string {
+  const parts = name.trim().split(/\s+/);
+  if (parts.length >= 2) {
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  }
+  return name.slice(0, 2).toUpperCase();
+}
+
+/** Deterministic hue offset from name for visual variety */
+function nameToHueShift(name: string): number {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return Math.abs(hash) % 40 - 20; // -20 to +20 degree shift
+}
+
+/** Initials on a discipline-colored gradient background */
+function InitialsFallback({ name, discipline, size = "sm" }: { name: string; discipline: string; size?: "sm" | "lg" }) {
+  const initials = getInitials(name);
+  const hueShift = nameToHueShift(name);
+  const textSize = size === "lg" ? "text-2xl" : "text-sm";
+
+  const gradients: Record<string, [string, string]> = {
+    musician:      ["#b8256e", "#d94a8e"],
+    band:          ["#b8256e", "#d94a8e"],
+    dj:            ["#1a8a8a", "#2cbcbc"],
+    comedian:      ["#c28a1e", "#e0a832"],
+    author:        ["#8b6914", "#b8941e"],
+    speaker:       ["#8b6914", "#b8941e"],
+    visual_artist: ["#7b4fb8", "#9b6fd8"],
+    actor:         ["#b8445a", "#d8647a"],
+    filmmaker:     ["#1a8a8a", "#2cbcbc"],
   };
 
+  const [from, to] = gradients[discipline] || ["#6b5a7a", "#8b7a9a"];
+
   return (
-    <svg
-      className="w-6 h-6 text-[var(--muted)]"
-      fill="none"
-      stroke="currentColor"
-      viewBox="0 0 24 24"
+    <div
+      className={`w-full h-full flex items-center justify-center ${textSize} font-bold text-white/90 select-none`}
+      style={{
+        background: `linear-gradient(135deg, ${from}, ${to})`,
+        filter: `hue-rotate(${hueShift}deg)`,
+      }}
     >
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth={1.5}
-        d={paths[discipline] || paths.musician}
-      />
-      {(discipline === "musician" || discipline === "band") && (
-        <>
-          <circle cx="6" cy="18" r="3" fill="none" stroke="currentColor" strokeWidth={1.5} />
-          <circle cx="18" cy="16" r="3" fill="none" stroke="currentColor" strokeWidth={1.5} />
-        </>
-      )}
-    </svg>
+      {initials}
+    </div>
   );
 }
 
@@ -72,7 +90,7 @@ export default function ArtistChip({ artist, portalSlug, variant = "card" }: Art
               unoptimized
             />
           ) : (
-            <DisciplineFallback discipline={discipline} />
+            <InitialsFallback name={displayName} discipline={discipline} size="sm" />
           )}
         </div>
         <div className="flex-1 min-w-0">
@@ -119,7 +137,7 @@ export default function ArtistChip({ artist, portalSlug, variant = "card" }: Art
             unoptimized
           />
         ) : (
-          <DisciplineFallback discipline={discipline} />
+          <InitialsFallback name={displayName} discipline={discipline} size={isHeadliner ? "lg" : "sm"} />
         )}
       </div>
 

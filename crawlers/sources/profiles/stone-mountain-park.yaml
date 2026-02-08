@@ -9,4 +9,4 @@ discovery:
   urls:
   - https://stonemountainpark.com/activities/events/
 detail:
-  enabled: false
+  enabled: true

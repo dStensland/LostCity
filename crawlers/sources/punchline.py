@@ -19,6 +19,7 @@ from utils import extract_images_from_page, extract_event_links, find_event_url
 logger = logging.getLogger(__name__)
 
 BASE_URL = "https://punchline.com"
+EVENTS_URL = BASE_URL
 
 VENUE_DATA = {
     "name": "Punchline Comedy Club",
@@ -187,7 +188,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     "price_note": None,
                     "is_free": False,
                     "source_url": event_url,
-                    "ticket_url": event_url if event_url != (EVENTS_URL if "EVENTS_URL" in dir() else BASE_URL) else None,
+                    "ticket_url": event_url if event_url != EVENTS_URL else None,
                     "image_url": image_map.get(title),
                     "raw_text": None,
                     "extraction_confidence": 0.85,

@@ -5,8 +5,8 @@ integration_method: html
 defaults: {}
 discovery:
   enabled: true
-  type: list
+  type: html
   urls:
   - https://www.piedmont.org/heart/healthcare-professionals/conferences
 detail:
-  enabled: false
+  enabled: true

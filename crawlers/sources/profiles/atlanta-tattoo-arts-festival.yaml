@@ -1,0 +1,12 @@
+version: 1
+slug: atlanta-tattoo-arts-festival
+name: Atlanta Tattoo Arts Festival
+integration_method: festival_schedule
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://villaininarts.com/atlanta-tattoo-arts-festival/
+detail:
+  enabled: true

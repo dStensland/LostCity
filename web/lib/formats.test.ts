@@ -113,16 +113,16 @@ describe("formats", () => {
       expect(formatPrice({ price_min: 10, price_max: 100 })).toBe("$10–100");
     });
 
-    it("formats estimated venue price", () => {
+    it("returns empty for venue price estimates", () => {
       expect(formatPrice({
         venue: { typical_price_min: 20, typical_price_max: 30 }
-      })).toBe("~$20–30");
+      })).toBe("");
     });
 
-    it("formats estimated single venue price", () => {
+    it("returns empty for single venue price estimate", () => {
       expect(formatPrice({
         venue: { typical_price_min: 15, typical_price_max: 15 }
-      })).toBe("~$15");
+      })).toBe("");
     });
 
     it("returns empty for unknown price", () => {
@@ -145,21 +145,21 @@ describe("formats", () => {
       expect(result.isEstimate).toBe(false);
     });
 
-    it("marks venue price as estimate", () => {
+    it("returns empty for venue price estimate", () => {
       const result = formatPriceDetailed({
         venue: { typical_price_min: 20 }
       });
-      expect(result.text).toBe("~$20");
-      expect(result.isEstimate).toBe(true);
+      expect(result.text).toBe("");
+      expect(result.isEstimate).toBe(false);
     });
 
-    it("marks free venue as estimate", () => {
+    it("returns empty for free venue estimate", () => {
       const result = formatPriceDetailed({
         venue: { typical_price_min: 0, typical_price_max: 0 }
       });
-      expect(result.text).toBe("Free");
-      expect(result.isFree).toBe(true);
-      expect(result.isEstimate).toBe(true);
+      expect(result.text).toBe("");
+      expect(result.isFree).toBe(false);
+      expect(result.isEstimate).toBe(false);
     });
   });
 

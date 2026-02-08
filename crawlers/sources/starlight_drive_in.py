@@ -18,11 +18,11 @@ from playwright.sync_api import sync_playwright
 
 from db import get_or_create_venue, insert_event, find_event_by_hash, remove_stale_source_events
 from dedupe import generate_content_hash
-from utils import extract_event_links, find_event_url
 
 logger = logging.getLogger(__name__)
 
 BASE_URL = "https://starlightdrivein.com"
+EVENTS_URL = BASE_URL
 
 VENUE_DATA = {
     "name": "Starlight Drive-In Theatre",
@@ -142,10 +142,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                         ticket_url = f"{BASE_URL}{movie_url}" if movie_url else None
 
-                        # Get specific event URL
-
-
-                        event_url = find_event_url(title, event_links, EVENTS_URL)
+                        event_url = ticket_url or EVENTS_URL
 
 
 

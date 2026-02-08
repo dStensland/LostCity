@@ -160,7 +160,7 @@ def create_tour_of_homes(source_id: int, venue_id: int) -> tuple[int, int]:
         "end_date": None,
         "end_time": "17:00",
         "is_all_day": False,
-        "category": "cultural",
+        "category": "community",
         "subcategory": "tour",
         "tags": ["ansley-park", "tour-of-homes", "historic", "architecture", "fundraiser"],
         "price_min": None,

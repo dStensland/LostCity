@@ -126,7 +126,7 @@ def create_museum_programs(source_id: int, venue_id: int) -> tuple[int, int]:
             "end_date": None,
             "end_time": "16:00",
             "is_all_day": False,
-            "category": "cultural",
+            "category": "community",
             "subcategory": "commemoration",
             "tags": ["kennesaw", "museum", "civil-war", "history", "the-general"],
             "price_min": None,

@@ -650,10 +650,7 @@ export default function ClassesView({
                       key={venue.venueId || venue.venueName}
                       venue={venue}
                       portalSlug={portalSlug}
-                      // Open first venue of first day, or venues with few classes
-                      defaultOpen={
-                        (dayIdx === 0 && venueIdx === 0) || venue.classes.length <= 2
-                      }
+                      defaultOpen={false}
                     />
                   ))}
                 </div>

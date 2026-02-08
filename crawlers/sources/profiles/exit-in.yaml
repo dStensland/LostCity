@@ -9,4 +9,4 @@ discovery:
   urls:
   - https://exitin.com/calendar/
 detail:
-  enabled: false
+  enabled: true

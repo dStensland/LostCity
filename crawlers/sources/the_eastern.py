@@ -16,7 +16,7 @@ from playwright.sync_api import sync_playwright
 
 from db import get_or_create_venue, insert_event, find_event_by_hash
 from dedupe import generate_content_hash
-from utils import extract_images_from_page, extract_event_links, find_event_url
+from utils import extract_images_from_page, extract_event_links, find_event_url, enrich_event_record
 
 logger = logging.getLogger(__name__)
 
@@ -176,7 +176,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "source_id": source_id,
                         "venue_id": venue_id,
                         "title": title,
-                        "description": f"Live at The Eastern",
+                        "description": None,
                         "start_date": start_date,
                         "start_time": start_time,
                         "end_date": None,
@@ -200,6 +200,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     }
 
                     try:
+                        enrich_event_record(event_record, "The Eastern")
                         insert_event(event_record)
                         events_new += 1
                         logger.info(f"Added: {title} on {start_date}")

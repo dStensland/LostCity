@@ -21,12 +21,15 @@ RULES:
 3. Keep description under 500 characters and preserve original phrasing.
 4. ticket_url should be a direct purchase or registration link when present.
 5. image_url should be the primary event image (not logos or icons).
+6. start_time/end_time must be "HH:MM" in 24-hour format. Look for "Doors", "Show", "Starts", or time ranges.
 
 OUTPUT JSON:
 {
   "description": string | null,
   "image_url": string | null,
   "ticket_url": string | null,
+  "start_time": "HH:MM" | null,
+  "end_time": "HH:MM" | null,
   "price_min": number | null,
   "price_max": number | null,
   "price_note": string | null,
@@ -62,7 +65,15 @@ Content:
             fixed = re.sub(r",\s*([}\]])", r"\1", json_str)
             data = json.loads(fixed)
 
-        return data if isinstance(data, dict) else {}
+        if not isinstance(data, dict):
+            return {}
+
+        # Normalize confidence to 0-1 range (LLM sometimes returns 85 instead of 0.85)
+        conf = data.get("confidence")
+        if conf is not None and conf > 1:
+            data["confidence"] = conf / 100.0
+
+        return data
 
     except Exception as e:
         logger.debug(f"LLM detail extraction failed for {url}: {e}")

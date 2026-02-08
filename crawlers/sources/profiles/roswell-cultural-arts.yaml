@@ -9,4 +9,4 @@ discovery:
   urls:
   - https://www.roswellgov.com/government/departments/recreation-parks-historic-cultural-affairs/cultural-arts
 detail:
-  enabled: false
+  enabled: true

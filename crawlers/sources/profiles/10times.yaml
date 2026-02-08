@@ -9,4 +9,4 @@ discovery:
   urls:
   - https://10times.com/atlanta-us/tradeshows
 detail:
-  enabled: false
+  enabled: true

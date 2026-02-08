@@ -8,5 +8,11 @@ discovery:
   type: list
   urls:
   - https://www.publix.com/aprons
+  fetch:
+    render_js: true
+    timeout_ms: 60000
+    wait_until: load
 detail:
-  enabled: false
+  enabled: true
+  fetch:
+    render_js: true

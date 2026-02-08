@@ -7,13 +7,12 @@ defaults:
   category: arts
   subcategory: theatre
   tags:
-    - theatre
-    - performing-arts
+  - theatre
+  - performing-arts
 discovery:
   enabled: true
   type: html
   urls:
   - https://get.org/25-26-season/
-  # Season overview page with unstructured show descriptions — needs LLM extraction
 detail:
-  enabled: false
+  enabled: true

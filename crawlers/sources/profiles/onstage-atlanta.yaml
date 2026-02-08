@@ -7,15 +7,16 @@ defaults:
   category: arts
   subcategory: theatre
   tags:
-    - theatre
-    - community-theatre
+  - theatre
+  - community-theatre
 discovery:
   enabled: true
   type: html
   urls:
   - https://www.onstageatlanta.com/our-shows/
-  # Custom WordPress page layouts — needs LLM extraction
   fetch:
     render_js: true
 detail:
-  enabled: false
+  enabled: true
+  fetch:
+    render_js: true

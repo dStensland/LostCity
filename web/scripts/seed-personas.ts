@@ -282,7 +282,7 @@ async function createSeedUser(persona: Persona): Promise<string | null> {
 
   // Generate avatar URL using DiceBear
   const avatarSeed = persona.avatar_seed || persona.username;
-  const avatarUrl = `https://api.dicebear.com/7.x/personas/svg?seed=${avatarSeed}`;
+  const avatarUrl = `https://api.dicebear.com/7.x/personas/png?seed=${avatarSeed}`;
 
   // Update profile (trigger may have already created it with minimal data)
   const { error: profileError } = await supabase.from("profiles").upsert({

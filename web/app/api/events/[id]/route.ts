@@ -105,12 +105,12 @@ export async function GET(
     const { data } = await supabase
       .from("events")
       .select(`
-        id, title, start_date, start_time, end_time,
+        id, title, start_date, end_date, start_time, end_time,
         venue:venues(id, name, slug)
       `)
       .eq("venue_id", eventData.venue_id)
       .neq("id", eventId)
-      .gte("start_date", today)
+      .or(`start_date.gte.${today},end_date.gte.${today}`)
       .order("start_date", { ascending: true })
       .limit(10);
 

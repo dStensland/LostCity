@@ -285,7 +285,7 @@ def crawl_location(
                 "end_date": None,
                 "end_time": end_time,
                 "is_all_day": False,
-                "category": "arts",
+                "category": "art",
                 "subcategory": "arts.workshop",
                 "tags": tags,
                 "price_min": None,  # Could be extracted from title or event page

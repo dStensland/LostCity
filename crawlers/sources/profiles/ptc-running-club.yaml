@@ -11,4 +11,4 @@ discovery:
   feed:
     format: rss
 detail:
-  enabled: false
+  enabled: true

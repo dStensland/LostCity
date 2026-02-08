@@ -9,4 +9,4 @@ discovery:
   urls:
   - https://buriedalivefilmfest.com
 detail:
-  enabled: false
+  enabled: true

@@ -2,11 +2,12 @@ version: 1
 slug: amc-atlanta
 name: AMC Theatres Atlanta
 integration_method: html
-defaults: {}
+defaults:
+  category: film
 discovery:
   enabled: true
   type: list
   urls:
   - https://www.amctheatres.com
 detail:
-  enabled: false
+  enabled: true

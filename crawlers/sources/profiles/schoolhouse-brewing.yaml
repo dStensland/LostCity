@@ -4,11 +4,13 @@ name: Schoolhouse Brewing
 integration_method: playwright
 defaults: {}
 discovery:
-  enabled: true
-  type: list
+  enabled: false
+  type: html
   urls:
   - https://schoolhousebrewing.com/events
   fetch:
     render_js: true
 detail:
-  enabled: false
+  enabled: true
+  fetch:
+    render_js: true

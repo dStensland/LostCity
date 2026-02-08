@@ -9,4 +9,4 @@ discovery:
   urls:
   - https://atlantamission.org/get-involved/volunteer
 detail:
-  enabled: false
+  enabled: true

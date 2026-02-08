@@ -4,9 +4,9 @@ name: Three Taverns Craft Brewery
 integration_method: html
 defaults: {}
 discovery:
-  enabled: true
+  enabled: false
   type: list
   urls:
   - https://www.threetavernsbrewery.com
 detail:
-  enabled: false
+  enabled: true

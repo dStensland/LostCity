@@ -1,0 +1,12 @@
+version: 1
+slug: dreamhack-atlanta
+name: DreamHack Atlanta
+integration_method: festival_schedule
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://dreamhack.com/atlanta/
+detail:
+  enabled: true

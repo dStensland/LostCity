@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { usePortal } from "@/lib/portal-context";
 import FeedSection, { type FeedSectionData, THEMED_SLUGS, HolidayGrid } from "./feed/FeedSection";
+import { getActiveHeroSlug } from "./feed/HolidayHero";
 import FestivalDebugPanel from "@/components/FestivalDebugPanel";
 
 
@@ -160,11 +161,15 @@ export default function FeedView() {
   }
 
   // Separate holiday sections from regular sections
-  const holidaySections = sections.filter(s => THEMED_SLUGS.includes(s.slug));
+  // Exclude any holiday that has hero treatment in HolidayHero to avoid duplication
+  const heroSlug = getActiveHeroSlug();
+  const holidaySections = sections.filter(
+    s => THEMED_SLUGS.includes(s.slug) && s.slug !== heroSlug
+  );
   const regularSections = sections.filter(s => !THEMED_SLUGS.includes(s.slug));
 
   return (
-    <div className="pt-1 pb-4">
+    <div>
       {showFestivalDebug && <FestivalDebugPanel portalSlug={portal.slug} />}
 
       {/* Holiday cards - 2-column grid */}

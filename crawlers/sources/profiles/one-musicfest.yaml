@@ -1,0 +1,12 @@
+version: 1
+slug: one-musicfest
+name: ONE Musicfest
+integration_method: festival_schedule
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.onemusicfest.com
+detail:
+  enabled: true

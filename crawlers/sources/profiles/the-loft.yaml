@@ -4,7 +4,7 @@ name: The Loft
 integration_method: playwright
 defaults: {}
 discovery:
-  enabled: false  # Domain parked — 2026-02-06 audit
+  enabled: true
   type: list
   urls:
   - https://www.theloftatl.com

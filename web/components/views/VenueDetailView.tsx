@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Image from "@/components/SmartImage";
 import { format, parseISO, isSameDay, isToday, isTomorrow, addDays, startOfDay } from "date-fns";
 import { formatTimeSplit } from "@/lib/formats";
+import { getEffectiveDate } from "@/lib/event-grouping";
 import { SPOT_TYPES, formatPriceLevel, getSpotTypeLabels, type SpotType } from "@/lib/spots-constants";
 import FollowButton from "@/components/FollowButton";
 import RecommendButton from "@/components/RecommendButton";
@@ -45,6 +46,7 @@ type UpcomingEvent = {
   id: number;
   title: string;
   start_date: string;
+  end_date?: string | null;
   start_time: string | null;
   is_free: boolean;
   price_min: number | null;
@@ -116,11 +118,11 @@ function VenueEventsSection({
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [datePickerValue, setDatePickerValue] = useState("");
 
-  // Group events by date
+  // Group events by effective date (ongoing multi-day events show as Today)
   const eventsByDate = useMemo(() => {
     const grouped = new Map<string, UpcomingEvent[]>();
     for (const event of events) {
-      const dateKey = event.start_date;
+      const dateKey = getEffectiveDate(event.start_date, event.end_date);
       if (!grouped.has(dateKey)) {
         grouped.set(dateKey, []);
       }

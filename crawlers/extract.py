@@ -20,7 +20,7 @@ RULES:
 3. Dates should be ISO 8601 format (YYYY-MM-DD).
 4. Times should be 24-hour format (HH:MM).
 5. If the listing contains multiple events, return an array.
-6. Set confidence score based on how complete/clear the source data was.
+6. Set confidence as a decimal between 0.0 and 1.0 (e.g. 0.85, not 85) based on how complete/clear the source data was.
 7. TIME VALIDATION: Be careful with AM/PM. Events between 1:00-5:00 AM are rare except for nightlife/music venues. If an event seems like daytime (workshops, volunteer events, family events) but parses to early AM, the source probably meant PM or there's an error - use null instead.
 8. ALL-DAY EVENTS: Set is_all_day=true ONLY for events that genuinely span the entire day (festivals, exhibitions, markets, open houses). Do NOT set is_all_day=true just because a specific time is unknown. "Night", "Evening", "Afternoon" events are NOT all-day - set is_all_day=false and start_time=null if time is unknown.
 9. YEAR INFERENCE: When a date has no year specified, use 2026 for dates from January-December. Only use a past year if the content explicitly shows a past year.
@@ -267,6 +267,11 @@ Content to extract:
             if event_data.get("series_hint"):
                 if event_data["series_hint"].get("genres") is None:
                     event_data["series_hint"]["genres"] = []
+
+            # Normalize confidence to 0-1 range (LLM sometimes returns percentages like 85)
+            conf = event_data.get("confidence")
+            if conf is not None and conf > 1:
+                event_data["confidence"] = conf / 100.0
 
             valid_events.append(event_data)
 

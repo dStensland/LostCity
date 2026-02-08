@@ -9,4 +9,4 @@ discovery:
   urls:
   - https://www.kennesaw-ga.gov
 detail:
-  enabled: false
+  enabled: true

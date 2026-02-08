@@ -9,4 +9,4 @@ discovery:
   urls:
   - https://www.treesatlanta.org/get-involved/events/
 detail:
-  enabled: false
+  enabled: true

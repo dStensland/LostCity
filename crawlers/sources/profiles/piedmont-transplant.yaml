@@ -9,4 +9,4 @@ discovery:
   urls:
   - https://www.piedmont.org/transplant/services-treatments/support-group
 detail:
-  enabled: false
+  enabled: true

@@ -14,6 +14,7 @@ from playwright.sync_api import sync_playwright
 
 from db import get_or_create_venue, insert_event, find_event_by_hash
 from dedupe import generate_content_hash
+from utils import enrich_event_record
 
 logger = logging.getLogger(__name__)
 
@@ -142,8 +143,10 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     events_updated += 1
                     continue
 
-                # Build description
-                description = event.get("description") or "Event at District Atlanta"
+                # Build description - check if it's substantial
+                description = event.get("description")
+                if description and len(description) < 50:
+                    description = None
 
                 # Use detail URL if available, otherwise events page
                 source_url = event.get("detailUrl") or EVENTS_URL
@@ -181,6 +184,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 }
 
                 try:
+                    enrich_event_record(event_record, "District Atlanta")
                     insert_event(event_record)
                     events_new += 1
                     logger.info(f"Added: {title} on {start_date} at {start_time}")

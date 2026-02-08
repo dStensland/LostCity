@@ -4,7 +4,7 @@ Historic zoo in Grant Park with special events and programs.
 
 Site uses JavaScript rendering - must use Playwright.
 URL: /visit/events/
-Format: TITLE, Date range, Description, "READ MORE"
+Format: Card-based layout with flip cards containing event details.
 """
 
 from __future__ import annotations
@@ -18,7 +18,6 @@ from playwright.sync_api import sync_playwright
 
 from db import get_or_create_venue, insert_event, find_event_by_hash
 from dedupe import generate_content_hash
-from utils import extract_images_from_page, extract_event_links, find_event_url
 
 logger = logging.getLogger(__name__)
 
@@ -40,41 +39,134 @@ VENUE_DATA = {
 }
 
 
-def parse_date(date_text: str) -> Optional[str]:
-    """Parse date from various formats like 'March 14, 2026' or 'April 26'."""
-    date_text = date_text.strip()
+def extract_background_image_url(element) -> Optional[str]:
+    """Extract URL from inline background-image style."""
+    try:
+        style = element.get_attribute("style")
+        if style:
+            match = re.search(r'url\(["\']?(.*?)["\']?\)', style)
+            if match:
+                url = match.group(1)
+                # Make absolute if relative
+                if url.startswith("/"):
+                    return BASE_URL + url
+                elif url.startswith("http"):
+                    return url
+    except Exception as e:
+        logger.debug(f"Error extracting background image: {e}")
+    return None
 
-    # Full date: "March 14, 2026"
-    match = re.search(r"(\w+)\s+(\d{1,2}),?\s*(\d{4})", date_text)
+
+def parse_multi_dates(date_text: str) -> list[str]:
+    """
+    Parse date strings that may contain multiple dates.
+
+    Examples:
+    - "February 14 and 15" -> ["2026-02-14", "2026-02-15"]
+    - "March 14, 2026" -> ["2026-03-14"]
+    - "July 11, July 18 & July 25" -> ["2026-07-11", "2026-07-18", "2026-07-25"]
+    - "October 17, 18, 24, 25 & 31" -> ["2026-10-17", "2026-10-18", ...]
+
+    Returns:
+        List of dates in YYYY-MM-DD format
+    """
+    dates = []
+    date_text = date_text.strip()
+    current_year = datetime.now().year
+
+    # Pattern 1: "Month Day, Year" (single explicit date)
+    match = re.match(r"^(\w+)\s+(\d{1,2}),?\s*(\d{4})$", date_text)
     if match:
         month, day, year = match.groups()
         try:
             dt = datetime.strptime(f"{month} {day} {year}", "%B %d %Y")
-            return dt.strftime("%Y-%m-%d")
+            return [dt.strftime("%Y-%m-%d")]
         except ValueError:
             pass
 
-    # Short month: "Feb. 14" or "Feb 14"
-    match = re.search(r"(\w+)\.?\s+(\d{1,2})", date_text)
+    # Pattern 2: "Month Day and Day" (e.g., "February 14 and 15")
+    match = re.match(r"^(\w+)\s+(\d{1,2})\s+and\s+(\d{1,2})$", date_text)
+    if match:
+        month, day1, day2 = match.groups()
+        year = current_year
+        for day in [day1, day2]:
+            try:
+                dt = datetime.strptime(f"{month} {day} {year}", "%B %d %Y")
+                if dt < datetime.now():
+                    dt = dt.replace(year=year + 1)
+                dates.append(dt.strftime("%Y-%m-%d"))
+            except ValueError:
+                continue
+        if dates:
+            return dates
+
+    # Pattern 3: "Month Day, Day, Day..." (e.g., "October 17, 18, 24, 25 & 31")
+    # Check this BEFORE the general "Month Day" pattern to catch the simpler case
+    match = re.match(r"^(\w+)\s+([\d,\s&]+)$", date_text)
+    if match:
+        month = match.group(1)
+        days_text = match.group(2)
+        # Extract all numbers
+        days = re.findall(r"\d+", days_text)
+        year = current_year
+
+        for day in days:
+            try:
+                dt = datetime.strptime(f"{month} {day} {year}", "%B %d %Y")
+                if dt < datetime.now():
+                    dt = dt.replace(year=year + 1)
+                dates.append(dt.strftime("%Y-%m-%d"))
+            except ValueError:
+                continue
+
+        if dates:
+            return dates
+
+    # Pattern 4: Multiple full dates with month repeated (e.g., "July 11, July 18 & July 25")
+    # Extract all "Month Day" pairs
+    month_day_pattern = r"(\w+)\s+(\d{1,2})"
+    matches = re.findall(month_day_pattern, date_text)
+    if matches and len(matches) > 1:  # Only use this if we found multiple month-day pairs
+        year = current_year
+        for month, day in matches:
+            try:
+                dt = datetime.strptime(f"{month} {day} {year}", "%B %d %Y")
+                if dt < datetime.now():
+                    dt = dt.replace(year=year + 1)
+                dates.append(dt.strftime("%Y-%m-%d"))
+            except ValueError:
+                # Try abbreviated month
+                try:
+                    dt = datetime.strptime(f"{month} {day} {year}", "%b %d %Y")
+                    if dt < datetime.now():
+                        dt = dt.replace(year=year + 1)
+                    dates.append(dt.strftime("%Y-%m-%d"))
+                except ValueError:
+                    continue
+
+        if dates:
+            return list(set(dates))  # Remove duplicates
+
+    # Fallback: try to parse as single date without year
+    match = re.match(r"^(\w+)\.?\s+(\d{1,2})$", date_text)
     if match:
         month, day = match.groups()
-        year = datetime.now().year
-        # Try full month name first
+        year = current_year
         for fmt in ["%B %d", "%b %d"]:
             try:
                 dt = datetime.strptime(f"{month} {day}", fmt)
                 dt = dt.replace(year=year)
                 if dt < datetime.now():
                     dt = dt.replace(year=year + 1)
-                return dt.strftime("%Y-%m-%d")
+                return [dt.strftime("%Y-%m-%d")]
             except ValueError:
                 continue
 
-    return None
+    return dates
 
 
 def crawl(source: dict) -> tuple[int, int, int]:
-    """Crawl Zoo Atlanta events using Playwright."""
+    """Crawl Zoo Atlanta events using Playwright with CSS selectors."""
     source_id = source["id"]
     events_found = 0
     events_new = 0
@@ -95,174 +187,163 @@ def crawl(source: dict) -> tuple[int, int, int]:
             page.goto(EVENTS_URL, wait_until="domcontentloaded", timeout=30000)
             page.wait_for_timeout(3000)
 
-            # Extract images from page
-            image_map = extract_images_from_page(page)
-
-            # Extract event links for specific URLs
-            event_links = extract_event_links(page, BASE_URL)
-
             # Scroll to load all content
             for _ in range(5):
                 page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
                 page.wait_for_timeout(1000)
 
-            # Get page text
-            body_text = page.inner_text("body")
-            lines = [l.strip() for l in body_text.split("\n") if l.strip()]
+            # Find all event cards using CSS selector
+            event_cards = page.query_selector_all("div.event.card")
+            logger.info(f"Found {len(event_cards)} event cards")
 
-            # Skip navigation items
-            skip_items = ["visit", "visit home", "zoo map", "experiences", "create an itinerary",
-                         "events", "groups", "support", "donate", "individual giving",
-                         "corporate giving", "volunteer", "beastly feast", "learn", "teachers",
-                         "parents", "teens", "adults", "schools", "animals", "conservation",
-                         "research", "plan an event", "panda legacy", "search", "today",
-                         "tickets", "membership", "read more", "last admission", "before you go",
-                         "getting here", "rules", "accessibility", "chill factors", "hot tips",
-                         "all free events", "events for adults", "events for kids",
-                         "member events", "educator events", "connect with your wild side",
-                         "about", "site map", "careers", "privacy policy", "press"]
-
-            i = 0
             seen_events = set()
 
-            while i < len(lines):
-                line = lines[i]
+            for card in event_cards:
+                try:
+                    # Extract title from h3 heading in the front of the card
+                    title_elem = card.query_selector(".front .container h3[role='heading']")
+                    if not title_elem:
+                        continue
 
-                # Skip nav/UI items
-                if line.lower() in skip_items or len(line) < 5:
-                    i += 1
+                    title = title_elem.inner_text().strip()
+                    if not title or len(title) < 3:
+                        continue
+
+                    # Extract date from em tag in front container
+                    date_elem = card.query_selector(".front .container em")
+                    if not date_elem:
+                        continue
+
+                    date_text = date_elem.inner_text().strip()
+
+                    # Parse potentially multiple dates
+                    parsed_dates = parse_multi_dates(date_text)
+                    if not parsed_dates:
+                        logger.debug(f"Could not parse date from: {date_text}")
+                        continue
+
+                    # Extract description from back of card
+                    description = None
+                    desc_elems = card.query_selector_all(".back .back-content p")
+                    if desc_elems and len(desc_elems) > 1:
+                        # Second p tag contains description (first is date bold)
+                        description = desc_elems[1].inner_text().strip()
+                        if description and len(description) > 500:
+                            description = description[:500]
+
+                    # Extract image URL from background style
+                    image_url = None
+                    image_elem = card.query_selector("div.featured-image[role='img']")
+                    if image_elem:
+                        image_url = extract_background_image_url(image_elem)
+
+                    # Extract event URL from "Read More" link
+                    event_url = EVENTS_URL
+                    link_elem = card.query_selector("a.read-more")
+                    if link_elem:
+                        href = link_elem.get_attribute("href")
+                        if href:
+                            if href.startswith("http"):
+                                event_url = href
+                            elif href.startswith("/"):
+                                event_url = BASE_URL + href
+
+                    # Determine category based on title
+                    title_lower = title.lower()
+                    if any(w in title_lower for w in ["brew", "sip", "night out"]):
+                        category = "food_drink"
+                        subcategory = "beer"
+                        tags = ["zoo-atlanta", "grant-park", "adults-only", "21+"]
+                    elif any(w in title_lower for w in ["run", "5k", "race"]):
+                        category = "fitness"
+                        subcategory = "running"
+                        tags = ["zoo-atlanta", "grant-park", "fitness", "running"]
+                    elif any(w in title_lower for w in ["gala", "beastly"]):
+                        category = "community"
+                        subcategory = "fundraiser"
+                        tags = ["zoo-atlanta", "grant-park", "gala", "fundraiser"]
+                    elif any(w in title_lower for w in ["educator", "teacher"]):
+                        category = "community"
+                        subcategory = "education"
+                        tags = ["zoo-atlanta", "grant-park", "education", "teachers"]
+                    elif any(w in title_lower for w in ["science", "bird"]):
+                        category = "community"
+                        subcategory = "education"
+                        tags = ["zoo-atlanta", "grant-park", "science", "family"]
+                    elif any(w in title_lower for w in ["illuminights", "lights"]):
+                        category = "family"
+                        subcategory = "holiday"
+                        tags = ["zoo-atlanta", "grant-park", "holiday", "lights", "family"]
+                        is_all_day = True
+                    else:
+                        category = "family"
+                        subcategory = "zoo"
+                        tags = ["zoo-atlanta", "grant-park", "family", "zoo", "animals"]
+
+                    # Determine if genuinely all-day
+                    # Only multi-day festivals and illuminights are all-day
+                    is_all_day = (
+                        "illuminights" in title_lower or
+                        "festival" in title_lower or
+                        len(parsed_dates) > 3  # Multi-day events with many dates
+                    )
+
+                    # Create an event for each parsed date
+                    for start_date in parsed_dates:
+                        # Check for duplicates
+                        event_key = f"{title}|{start_date}"
+                        if event_key in seen_events:
+                            continue
+                        seen_events.add(event_key)
+
+                        events_found += 1
+
+                        # Generate content hash
+                        content_hash = generate_content_hash(title, "Zoo Atlanta", start_date)
+
+                        # Check for existing
+                        existing = find_event_by_hash(content_hash)
+                        if existing:
+                            events_updated += 1
+                            continue
+
+                        event_record = {
+                            "source_id": source_id,
+                            "venue_id": venue_id,
+                            "title": title,
+                            "description": description,
+                            "start_date": start_date,
+                            "start_time": None,
+                            "end_date": None,
+                            "end_time": None,
+                            "is_all_day": is_all_day,
+                            "category": category,
+                            "subcategory": subcategory,
+                            "tags": tags,
+                            "price_min": None,
+                            "price_max": None,
+                            "price_note": "May require separate ticket",
+                            "is_free": False,
+                            "source_url": event_url,
+                            "ticket_url": event_url,
+                            "image_url": image_url,
+                            "raw_text": f"{title} - {date_text}",
+                            "extraction_confidence": 0.90,
+                            "is_recurring": False,
+                            "recurrence_rule": None,
+                            "content_hash": content_hash,
+                        }
+
+                        try:
+                            insert_event(event_record)
+                            events_new += 1
+                            logger.info(f"Added: {title} on {start_date}")
+                        except Exception as e:
+                            logger.error(f"Failed to insert: {title}: {e}")
+
+                except Exception as e:
+                    logger.warning(f"Error parsing event card: {e}")
                     continue
-
-                # Look for event titles (typically all caps or title case, followed by date)
-                # Events have: TITLE, date line, description, "READ MORE"
-                is_title_like = (
-                    len(line) > 10 and
-                    len(line) < 100 and
-                    not line.lower().startswith("select") and
-                    not re.match(r"^\d", line) and
-                    line[0].isupper()
-                )
-
-                if is_title_like:
-                    # Check if next line looks like a date
-                    if i + 1 < len(lines):
-                        next_line = lines[i + 1]
-
-                        # Date patterns: "Select nights, Nov. 21 - Jan. 18", "February 14 and 15", "March 14, 2026"
-                        date_found = False
-                        start_date = None
-
-                        # Check for explicit date with year
-                        if re.search(r"\d{4}", next_line):
-                            start_date = parse_date(next_line)
-                            date_found = start_date is not None
-                        # Check for month and day
-                        elif re.search(r"(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\.?\s+\d{1,2}", next_line, re.IGNORECASE):
-                            start_date = parse_date(next_line)
-                            date_found = start_date is not None
-
-                        if date_found and start_date:
-                            title = line
-
-                            # Get description (2 lines after title)
-                            description = None
-                            if i + 2 < len(lines):
-                                desc_line = lines[i + 2]
-                                if desc_line.lower() not in skip_items and len(desc_line) > 20:
-                                    description = desc_line[:500]
-
-                            # Check for duplicates
-                            event_key = f"{title}|{start_date}"
-                            if event_key in seen_events:
-                                i += 1
-                                continue
-                            seen_events.add(event_key)
-
-                            events_found += 1
-
-                            # Generate content hash
-                            content_hash = generate_content_hash(title, "Zoo Atlanta", start_date)
-
-                            # Check for existing
-                            existing = find_event_by_hash(content_hash)
-                            if existing:
-                                events_updated += 1
-                                i += 1
-                                continue
-
-                            # Determine category
-                            title_lower = title.lower()
-                            if any(w in title_lower for w in ["brew", "sip", "night out"]):
-                                category = "food_drink"
-                                subcategory = "beer"
-                                tags = ["zoo-atlanta", "grant-park", "adults-only", "21+"]
-                            elif any(w in title_lower for w in ["run", "5k", "race"]):
-                                category = "fitness"
-                                subcategory = "running"
-                                tags = ["zoo-atlanta", "grant-park", "fitness", "running"]
-                            elif any(w in title_lower for w in ["gala", "beastly"]):
-                                category = "community"
-                                subcategory = "fundraiser"
-                                tags = ["zoo-atlanta", "grant-park", "gala", "fundraiser"]
-                            elif any(w in title_lower for w in ["educator", "teacher"]):
-                                category = "community"
-                                subcategory = "education"
-                                tags = ["zoo-atlanta", "grant-park", "education", "teachers"]
-                            elif any(w in title_lower for w in ["science", "bird"]):
-                                category = "community"
-                                subcategory = "education"
-                                tags = ["zoo-atlanta", "grant-park", "science", "family"]
-                            elif any(w in title_lower for w in ["illuminights", "lights"]):
-                                category = "family"
-                                subcategory = "holiday"
-                                tags = ["zoo-atlanta", "grant-park", "holiday", "lights", "family"]
-                            else:
-                                category = "family"
-                                subcategory = "zoo"
-                                tags = ["zoo-atlanta", "grant-park", "family", "zoo", "animals"]
-
-                            # Get specific event URL
-
-
-                            event_url = find_event_url(title, event_links, EVENTS_URL)
-
-
-
-                            event_record = {
-                                "source_id": source_id,
-                                "venue_id": venue_id,
-                                "title": title,
-                                "description": description,
-                                "start_date": start_date,
-                                "start_time": None,
-                                "end_date": None,
-                                "end_time": None,
-                                "is_all_day": True,
-                                "category": category,
-                                "subcategory": subcategory,
-                                "tags": tags,
-                                "price_min": None,
-                                "price_max": None,
-                                "price_note": "May require separate ticket",
-                                "is_free": False,
-                                "source_url": event_url,
-                                "ticket_url": event_url,
-                                "image_url": image_map.get(title),
-                                "raw_text": f"{title} - {next_line}",
-                                "extraction_confidence": 0.85,
-                                "is_recurring": False,
-                                "recurrence_rule": None,
-                                "content_hash": content_hash,
-                            }
-
-                            try:
-                                insert_event(event_record)
-                                events_new += 1
-                                logger.info(f"Added: {title} on {start_date}")
-                            except Exception as e:
-                                logger.error(f"Failed to insert: {title}: {e}")
-
-                i += 1
 
             browser.close()
 

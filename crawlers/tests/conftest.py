@@ -48,6 +48,7 @@ def sample_event_data():
         "price_min": 25.0,
         "price_max": 50.0,
         "source_url": "https://example.com/event",
+        "source_id": 1,
     }
 
 

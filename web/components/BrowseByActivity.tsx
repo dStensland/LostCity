@@ -304,7 +304,7 @@ export default function BrowseByActivity({ portalSlug }: BrowseByActivityProps) 
     .filter((a) => a.count > 0);
 
   return (
-    <section className="py-3">
+    <section>
       {/* Section header with improved visual hierarchy */}
       <div className="mb-3">
         <h2 className="text-base font-display font-semibold text-[var(--cream)] mb-1 tracking-tight">

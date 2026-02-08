@@ -1,3 +1,4 @@
+import ScrollToTop from "@/components/ScrollToTop";
 import { getSpotBySlug, getUpcomingEventsForSpot, getNearbySpots, formatPriceLevel, getSpotTypeLabel, getSpotTypeLabels, SPOT_TYPES, type SpotType } from "@/lib/spots";
 import { getCachedPortalBySlug } from "@/lib/portal";
 import { notFound } from "next/navigation";
@@ -6,9 +7,8 @@ import type { Metadata } from "next";
 import { cache } from "react";
 import { format, parseISO } from "date-fns";
 import { formatTimeSplit, safeJsonLd } from "@/lib/formats";
-import UnifiedHeader from "@/components/UnifiedHeader";
+import { PortalHeader } from "@/components/headers";
 import PortalFooter from "@/components/PortalFooter";
-import { PortalTheme } from "@/components/PortalTheme";
 import ScopedStylesServer from "@/components/ScopedStylesServer";
 import { createCssVarClass } from "@/lib/css-utils";
 import VenueTagList from "@/components/VenueTagList";
@@ -153,25 +153,25 @@ export default async function PortalSpotPage({ params }: Props) {
 
   return (
     <>
+      <ScrollToTop />
       {/* Schema.org JSON-LD */}
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: safeJsonLd(schema) }}
       />
 
-      {/* Portal-specific theming */}
-      {portal && <PortalTheme portal={portal} />}
+
 
       <ScopedStylesServer css={spotTypeAccentClass?.css} />
 
       <div className="min-h-screen">
-        <UnifiedHeader
+        <PortalHeader
           portalSlug={activePortalSlug}
           portalName={activePortalName}
-          backLink={{ href: `/${activePortalSlug}?view=find&type=destinations`, label: "Destinations" }}
+          hideNav
         />
 
-        <main className="max-w-3xl mx-auto px-4 py-6 pb-28 space-y-8">
+        <main className="max-w-3xl mx-auto px-4 py-4 sm:py-6 pb-28 space-y-5 sm:space-y-8">
           {/* Hero Section */}
           <DetailHero
             mode={spot.image_url ? "image" : "fallback"}
@@ -179,6 +179,7 @@ export default async function PortalSpotPage({ params }: Props) {
             title={spot.name}
             subtitle={spot.neighborhood || spot.city}
             categoryColor={spotTypeColor}
+            backFallbackHref={`/${activePortalSlug}`}
             categoryIcon={
               <div className="text-6xl" role="img" aria-label={formatSpotType(spot.venue_type)}>
                 {getSpotTypeIcon(spot.venue_type)}
@@ -217,10 +218,10 @@ export default async function PortalSpotPage({ params }: Props) {
             {/* Metadata Grid */}
             <MetadataGrid
               items={[
-                {
+                ...(spot.hours_display ? [{
                   label: "Hours",
-                  value: formatHours(spot.hours_display) || "Unknown"
-                },
+                  value: formatHours(spot.hours_display)!
+                }] : []),
                 {
                   label: "Price",
                   value: priceDisplay || "N/A",

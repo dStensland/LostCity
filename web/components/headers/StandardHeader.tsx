@@ -6,6 +6,7 @@ import Link from "next/link";
 import Image from "@/components/SmartImage";
 import Logo from "../Logo";
 import UserMenu from "../UserMenu";
+import BackButton from "./BackButton";
 import HeaderSearchButton from "../HeaderSearchButton";
 import { usePortalOptional, DEFAULT_PORTAL, DEFAULT_PORTAL_SLUG } from "@/lib/portal-context";
 import { useAuth } from "@/lib/auth-context";
@@ -17,7 +18,8 @@ interface StandardHeaderProps {
   portalName: string;
   branding: PortalBranding;
   backLink?: {
-    href: string;
+    href?: string;
+    fallbackHref?: string;
     label: string;
   };
   hideNav?: boolean;
@@ -190,22 +192,76 @@ export default function StandardHeader({
       <header
         className="sticky top-0 z-[100] border-b border-[var(--twilight)]/30 bg-[var(--void)]/95 backdrop-blur-sm relative"
       >
+        {/* Atlanta atmospheric backdrop — inverted skyline, photo-negative feel */}
+        {portalSlug === "atlanta" && (
+          <div
+            aria-hidden="true"
+            className="absolute inset-0 pointer-events-none z-[1] overflow-hidden"
+          >
+            {/* Desktop: Inverted skyline silhouettes — buildings hang from top edge */}
+            <div
+              className="absolute inset-0 hidden sm:block"
+              style={{
+                backgroundImage: 'url("/portals/atlanta/header-skyline-collage.jpg")',
+                backgroundSize: "cover",
+                backgroundPosition: "center bottom",
+                backgroundRepeat: "no-repeat",
+                transform: "scaleY(-1)",
+                mixBlendMode: "screen",
+                opacity: 0.5,
+              }}
+            />
+            {/* Desktop: Cyan-magenta tint over the revealed buildings */}
+            <div
+              className="absolute inset-0 hidden sm:block"
+              style={{
+                background: "linear-gradient(135deg, hsl(185 100% 46% / 0.12) 0%, hsl(320 80% 62% / 0.08) 100%)",
+                mixBlendMode: "screen",
+                pointerEvents: "none",
+              }}
+            />
+            {/* Mobile: Inverted skyline silhouettes */}
+            <div
+              className="absolute inset-0 sm:hidden"
+              style={{
+                backgroundImage: 'url("/portals/atlanta/header-skyline-collage.jpg")',
+                backgroundSize: "cover",
+                backgroundPosition: "center bottom",
+                backgroundRepeat: "no-repeat",
+                transform: "scaleY(-1)",
+                mixBlendMode: "screen",
+                opacity: 0.35,
+              }}
+            />
+            {/* Mobile: Light cyan tint */}
+            <div
+              className="absolute inset-0 sm:hidden"
+              style={{
+                background: "linear-gradient(135deg, hsl(185 100% 46% / 0.06) 0%, hsl(320 80% 62% / 0.04) 100%)",
+                mixBlendMode: "screen",
+              }}
+            />
+            {/* Dark vignette — ensures text/icons always readable over bright skyline patches */}
+            <div
+              className="absolute inset-0"
+              style={{
+                background: "radial-gradient(ellipse 120% 100% at 50% 0%, rgba(0,0,0,0.35) 0%, transparent 70%)",
+                pointerEvents: "none",
+              }}
+            />
+          </div>
+        )}
         {/* Content layer */}
         <div className="relative z-10 flex flex-col">
         <div className="px-4 py-2 sm:py-3 flex items-center gap-3 relative">
           {/* Left: Back button (optional) + Logo */}
           <div className="flex items-center gap-2 flex-shrink-0">
             {backLink && (
-              <Link
+              <BackButton
                 href={backLink.href}
-                className="flex items-center gap-1.5 text-[var(--muted)] hover:text-[var(--cream)] transition-colors mr-1"
-                aria-label={`Back to ${backLink.label}`}
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                </svg>
-                <span className="font-mono text-xs hidden sm:inline">{backLink.label}</span>
-              </Link>
+                fallbackHref={backLink.fallbackHref}
+                label={backLink.label}
+              />
             )}
 
             {branding?.logo_url ? (
@@ -266,7 +322,7 @@ export default function StandardHeader({
           )}
 
           {/* Right: Search, User menu, Mobile menu */}
-          <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0 ml-auto">
+          <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0 ml-auto" style={{ filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.9)) drop-shadow(0 0 6px rgba(0,0,0,0.5))" }}>
             {headerConfig.show_search_in_header !== false && <HeaderSearchButton />}
             <UserMenu />
 
