@@ -11,7 +11,6 @@ from datetime import datetime
 
 from db import get_or_create_venue, insert_event, find_event_by_hash
 from dedupe import generate_content_hash
-from utils import extract_image_url
 
 logger = logging.getLogger(__name__)
 
@@ -99,7 +98,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
         "is_free": False,
         "source_url": BASE_URL,
         "ticket_url": f"{BASE_URL}/membership",
-        "image_url": extract_image_url(soup) if soup else None,
+        "image_url": None,
         "raw_text": None,
         "extraction_confidence": 0.95,
         "is_recurring": True,

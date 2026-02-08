@@ -222,6 +222,19 @@ _FESTIVAL_SOURCE_OVERRIDES = {
     "atlanta-tech-week": {"festival_type": "conference"},
     "render-atl": {"festival_type": "conference"},
     "piedmont-heart-conferences": {"festival_type": "conference"},
+    # Name→slug mismatches: source name doesn't slugify to source slug
+    # The festival_name here must match the festival record's name exactly
+    "shaky-knees": {"festival_name": "Shaky Knees"},
+    "juneteenth-atlanta": {"festival_name": "Juneteenth Atlanta"},
+    "a3c-festival": {"festival_name": "A3C Festival & Conference", "festival_type": "conference"},
+    "ajff": {"festival_name": "Atlanta Jewish Film Festival"},
+    "atlanta-dogwood": {"festival_name": "Atlanta Dogwood Festival"},
+    "atlanta-food-wine": {"festival_name": "Atlanta Food & Wine Festival"},
+    "buried-alive": {"festival_name": "Buried Alive Film Festival"},
+    "candler-park-fest": {"festival_name": "Candler Park Fall Fest"},
+    "ga-renaissance-festival": {"festival_name": "Georgia Renaissance Festival"},
+    "grant-park-festival": {"festival_name": "Grant Park Summer Shade Festival"},
+    "music-midtown": {"festival_name": "Music Midtown"},
 }
 
 _FESTIVAL_SOURCE_SLUGS = {
