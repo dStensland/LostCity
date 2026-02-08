@@ -47,7 +47,7 @@ export function buildCsp(nonce: string, options: CspOptions = {}): string {
     `font-src ${fontSrcParts.join(" ")}`,
     "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.sentry.io https://api.mapbox.com https://events.mapbox.com https://vitals.vercel-insights.com https://*.feedbask.com",
     "frame-ancestors 'none'",
-    "frame-src 'none'",
+    "frame-src https://*.feedbask.com",
     "object-src 'none'",
     "form-action 'self'",
     "base-uri 'self'",
