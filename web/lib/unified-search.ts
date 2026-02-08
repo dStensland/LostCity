@@ -1057,10 +1057,8 @@ async function searchFestivals(
         image_url,
         announced_start,
         announced_end,
-        category,
-        is_deactivated
+        primary_type
       `)
-      .or(`is_deactivated.is.null,is_deactivated.eq.false`)
       .or(`name.ilike.%${escapedQuery}%,description.ilike.%${escapedQuery}%`)
       .limit(options.limit)
       .range(options.offset, options.offset + options.limit - 1);
@@ -1077,15 +1075,14 @@ async function searchFestivals(
     }
 
     type FestivalRow = {
-      id: number;
+      id: string;
       name: string;
       slug: string;
       description: string | null;
       image_url: string | null;
       announced_start: string | null;
       announced_end: string | null;
-      category: string | null;
-      is_deactivated: boolean | null;
+      primary_type: string | null;
     };
     const typedData = data as FestivalRow[];
 
@@ -1121,7 +1118,7 @@ async function searchFestivals(
         href: `/festivals/${row.slug}`,
         score: similarity * 100 + bonus,
         metadata: {
-          category: row.category || undefined,
+          category: row.primary_type || undefined,
           date: row.announced_start || undefined,
         },
       };

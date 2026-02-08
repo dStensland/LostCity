@@ -41,13 +41,13 @@ WITH
     GROUP BY neighborhood
   ),
 
-  -- Event producers (non-hidden)
+  -- Organizations (non-hidden)
   producers AS (
     SELECT
       name AS text,
       'organizer' AS type,
       COALESCE(total_events_tracked, 1) AS frequency
-    FROM event_producers
+    FROM organizations
     WHERE hidden = false
   ),
 
@@ -91,12 +91,11 @@ WITH
 
   -- Festival names
   festival_names AS (
-    SELECT
+    SELECT DISTINCT
       name AS text,
       'festival' AS type,
       1::BIGINT AS frequency
     FROM festivals
-    WHERE is_deactivated IS NOT TRUE
   )
 
 SELECT text, type, frequency FROM event_titles WHERE text IS NOT NULL AND length(text) > 0
