@@ -123,7 +123,7 @@ export function useFriendship(targetUserId: string, targetUsername: string) {
     mutationFn: async () => {
       const result = await authFetch<SendRequestResponse>("/api/friend-requests", {
         method: "POST",
-        body: { inviter_id: targetUserId },
+        body: { invitee_id: targetUserId },
       });
 
       if (result.error) {
@@ -148,21 +148,20 @@ export function useFriendship(targetUserId: string, targetUsername: string) {
       return { previousData };
     },
     onSuccess: (response) => {
-      // Update with actual response
+      // Update with actual response - DON'T invalidate, trust the server response
       queryClient.setQueryData<FriendshipData>(queryKey, {
         relationship: response.accepted ? "friends" : "request_sent",
         requestId: response.request?.id || null,
       });
+      // Invalidate friend-requests lists to update dashboard
+      queryClient.invalidateQueries({ queryKey: ["friend-requests", "sent"] });
+      queryClient.invalidateQueries({ queryKey: ["friend-requests", "all"] });
     },
     onError: (_error, _variables, context) => {
       // Rollback to previous state
       if (context?.previousData) {
         queryClient.setQueryData(queryKey, context.previousData);
       }
-    },
-    onSettled: () => {
-      // Invalidate to ensure consistency
-      queryClient.invalidateQueries({ queryKey });
     },
   });
 
@@ -193,13 +192,15 @@ export function useFriendship(targetUserId: string, targetUsername: string) {
 
       return { previousData };
     },
+    onSuccess: () => {
+      // Keep the optimistic update, invalidate friend requests lists
+      queryClient.invalidateQueries({ queryKey: ["friend-requests", "received"] });
+      queryClient.invalidateQueries({ queryKey: ["friend-requests", "all"] });
+    },
     onError: (_error, _variables, context) => {
       if (context?.previousData) {
         queryClient.setQueryData(queryKey, context.previousData);
       }
-    },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey });
     },
   });
 
@@ -230,13 +231,15 @@ export function useFriendship(targetUserId: string, targetUsername: string) {
 
       return { previousData };
     },
+    onSuccess: () => {
+      // Keep the optimistic update, invalidate friend requests lists
+      queryClient.invalidateQueries({ queryKey: ["friend-requests", "received"] });
+      queryClient.invalidateQueries({ queryKey: ["friend-requests", "all"] });
+    },
     onError: (_error, _variables, context) => {
       if (context?.previousData) {
         queryClient.setQueryData(queryKey, context.previousData);
       }
-    },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey });
     },
   });
 
@@ -266,13 +269,15 @@ export function useFriendship(targetUserId: string, targetUsername: string) {
 
       return { previousData };
     },
+    onSuccess: () => {
+      // Keep the optimistic update, invalidate friend requests lists
+      queryClient.invalidateQueries({ queryKey: ["friend-requests", "sent"] });
+      queryClient.invalidateQueries({ queryKey: ["friend-requests", "all"] });
+    },
     onError: (_error, _variables, context) => {
       if (context?.previousData) {
         queryClient.setQueryData(queryKey, context.previousData);
       }
-    },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey });
     },
   });
 
@@ -312,6 +317,7 @@ export function useFriendship(targetUserId: string, targetUsername: string) {
     },
     onSuccess: (response) => {
       // Update with actual relationship (might be following/followed_by)
+      // No need to invalidate - we just set the correct value from the server
       queryClient.setQueryData<FriendshipData>(queryKey, {
         relationship: response.relationship,
         requestId: null,
@@ -321,9 +327,6 @@ export function useFriendship(targetUserId: string, targetUsername: string) {
       if (context?.previousData) {
         queryClient.setQueryData(queryKey, context.previousData);
       }
-    },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey });
     },
   });
 

@@ -162,8 +162,9 @@ export function useRealtimeFriendRequests() {
             }
           );
 
-          // Invalidate all friend-requests queries to ensure consistency
-          queryClient.invalidateQueries({ queryKey: ["friend-requests"] });
+          // Invalidate friendship queries for the inviter (the person who sent the request)
+          // This ensures their profile shows the correct "request_sent" status
+          queryClient.invalidateQueries({ queryKey: ["friendship", typedRequest.inviter_id] });
         }
       )
       .on(
@@ -221,8 +222,6 @@ export function useRealtimeFriendRequests() {
               };
             }
           );
-
-          queryClient.invalidateQueries({ queryKey: ["friend-requests"] });
         }
       )
       .on(
@@ -273,8 +272,6 @@ export function useRealtimeFriendRequests() {
               };
             }
           );
-
-          queryClient.invalidateQueries({ queryKey: ["friend-requests"] });
         }
       )
       .subscribe();
