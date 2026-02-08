@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import Script from "next/script";
 import { getCachedPortalBySlug } from "@/lib/portal";
 import { PortalProvider } from "@/lib/portal-context";
 import { PortalTheme } from "@/components/PortalTheme";
@@ -54,6 +55,14 @@ export default async function PortalLayout({ children, params }: Props) {
       <PortalTheme portal={portal} />
       <PortalThemeClient portal={portal} />
       {children}
+      {/* Feedbask feedback widget */}
+      <Script
+        src="https://cdn.feedbask.com/widget.js"
+        data-client-key="b49b831e-148e-42fc-b5a9-46beda4f91a6"
+        data-language="en"
+        id="feedbask-widget-script"
+        strategy="afterInteractive"
+      />
     </PortalProvider>
   );
 }

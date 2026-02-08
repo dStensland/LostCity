@@ -9,7 +9,7 @@ interface HolidayConfig {
   tag: string;
   title: string;
   subtitle: string;
-  ctaLabel: string;
+  ctaLabel?: string; // deprecated — kept for config compat
   /** Gradient: left to right */
   gradient: string;
   accentColor: string;
@@ -301,23 +301,9 @@ export default function HolidayHero({ portalSlug }: HolidayHeroProps) {
           {/* Subtitle */}
           <p className="text-sm text-[var(--soft)] mt-0.5">{holiday.subtitle}</p>
 
-          {/* CTA row */}
-          <div className="flex items-center gap-3 mt-3">
-            <span
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all group-hover:scale-105"
-              style={{
-                color: "#fff",
-                backgroundColor: holiday.glowColor,
-                boxShadow: `0 0 12px ${holiday.glowColor}40`,
-              }}
-            >
-              {holiday.ctaLabel}
-              <svg className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
-              </svg>
-            </span>
-
-            {eventCount !== null && eventCount > 0 && (
+          {/* Event count pill */}
+          {eventCount !== null && eventCount > 0 && (
+            <div className="flex items-center gap-3 mt-3">
               <span
                 className="font-mono text-xs font-medium px-2 py-0.5 rounded-full"
                 style={{
@@ -327,8 +313,8 @@ export default function HolidayHero({ portalSlug }: HolidayHeroProps) {
               >
                 {eventCount} {eventCount === 1 ? "event" : "events"}
               </span>
-            )}
-          </div>
+            </div>
+          )}
         </div>
 
         {/* Arrow */}

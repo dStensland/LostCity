@@ -4906,8 +4906,8 @@ textarea:focus-visible {
   border: 1px solid rgba(94, 240, 255, 0.5);
   border-radius: 3px;
   padding: 0.15em 0.4em;
-  align-self: flex-end;
-  margin-bottom: 0.2em;
+  align-self: center;
+  margin-bottom: 0;
   margin-left: 0.4em;
   text-shadow: 0 0 6px rgba(94, 240, 255, 0.8);
   box-shadow: 0 0 8px rgba(94, 240, 255, 0.2), inset 0 0 4px rgba(94, 240, 255, 0.05);
@@ -4925,14 +4925,14 @@ textarea:focus-visible {
 .logo-size-sm .logo-beta {
   font-size: 0.42rem;
   padding: 0.12em 0.35em;
-  margin-bottom: 0.15em;
+  margin-bottom: 0;
   margin-left: 0.3em;
 }
 
 .logo-size-lg .logo-beta {
   font-size: 0.65rem;
   padding: 0.1em 0.4em;
-  margin-bottom: 0.25em;
+  margin-bottom: 0;
   margin-left: 0.4em;
 }
 

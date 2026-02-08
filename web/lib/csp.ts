@@ -17,6 +17,7 @@ export function buildCsp(nonce: string, options: CspOptions = {}): string {
     "https://*.sentry.io",
     "https://*.supabase.co",
     "https://va.vercel-scripts.com",
+    "https://cdn.feedbask.com",
   ];
 
   if (isDev) {
@@ -44,7 +45,7 @@ export function buildCsp(nonce: string, options: CspOptions = {}): string {
     `style-src-attr ${styleSrcAttrParts.join(" ")}`,
     "img-src 'self' data: blob: https:",
     `font-src ${fontSrcParts.join(" ")}`,
-    "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.sentry.io https://api.mapbox.com https://events.mapbox.com https://vitals.vercel-insights.com",
+    "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.sentry.io https://api.mapbox.com https://events.mapbox.com https://vitals.vercel-insights.com https://*.feedbask.com",
     "frame-ancestors 'none'",
     "frame-src 'none'",
     "object-src 'none'",
