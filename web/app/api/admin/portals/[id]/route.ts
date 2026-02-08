@@ -4,7 +4,7 @@ import { DEFAULT_PORTAL_SLUG } from "@/lib/constants";
 import { isCustomDomainAvailable, generateDomainVerificationToken } from "@/lib/portal";
 import { invalidateDomainCache } from "@/lib/domain-cache";
 import { filterBrandingForPlan, canUseCustomDomain } from "@/lib/plan-features";
-import { errorResponse } from "@/lib/api-utils";
+import { errorResponse, checkBodySize } from "@/lib/api-utils";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier} from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
@@ -120,6 +120,9 @@ export async function GET(request: NextRequest, { params }: Props) {
 
 // PATCH /api/admin/portals/[id] - Update portal
 export async function PATCH(request: NextRequest, { params }: Props) {
+  const sizeCheck = checkBodySize(request);
+  if (sizeCheck) return sizeCheck;
+
   const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
   if (rateLimitResult) return rateLimitResult;
 
@@ -135,9 +138,10 @@ export async function PATCH(request: NextRequest, { params }: Props) {
   const body = await request.json();
 
   // Extended allowed fields to include new B2B columns
+  // Note: "plan" is intentionally excluded — plan changes must go through billing/super-admin only
   const allowedFields = [
     "name", "tagline", "status", "visibility", "filters", "branding", "settings",
-    "custom_domain", "plan", "parent_portal_id"
+    "custom_domain", "parent_portal_id"
   ];
 
   const updates: Record<string, unknown> = {};

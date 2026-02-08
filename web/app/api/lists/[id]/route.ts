@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
-import type { AnySupabase } from "@/lib/api-utils";
+import { checkBodySize, type AnySupabase } from "@/lib/api-utils";
 import { logger } from "@/lib/logger";
 
 type RouteContext = {
@@ -137,6 +137,9 @@ export async function GET(request: NextRequest, context: RouteContext) {
 
 // PATCH /api/lists/[id] - Update a list
 export async function PATCH(request: NextRequest, context: RouteContext) {
+  const sizeCheck = checkBodySize(request);
+  if (sizeCheck) return sizeCheck;
+
   // Apply rate limiting (write tier - updates data)
   const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
   if (rateLimitResult) return rateLimitResult;

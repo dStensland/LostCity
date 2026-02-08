@@ -4,9 +4,11 @@ Handles all Supabase interactions for events, venues, sources, and logs.
 """
 
 import re
+import html
 import time
 import logging
 import functools
+import threading
 from datetime import datetime, timedelta
 from typing import Optional, Tuple
 from supabase import create_client, Client
@@ -58,19 +60,36 @@ class ValidationStats:
         return "\n".join(lines)
 
 
-# Global validation stats (reset at start of each crawl run)
-_validation_stats = ValidationStats()
+# Thread-local validation stats — each worker thread gets its own instance
+# Prevents corruption when crawlers run in parallel via ThreadPoolExecutor
+_thread_local = threading.local()
 
 
 def reset_validation_stats():
-    """Reset validation statistics for a new crawl run."""
-    global _validation_stats
-    _validation_stats = ValidationStats()
+    """Reset validation statistics for a new crawl run (per-thread)."""
+    _thread_local.validation_stats = ValidationStats()
 
 
 def get_validation_stats() -> ValidationStats:
-    """Get current validation statistics."""
-    return _validation_stats
+    """Get current validation statistics (per-thread)."""
+    if not hasattr(_thread_local, 'validation_stats'):
+        _thread_local.validation_stats = ValidationStats()
+    return _thread_local.validation_stats
+
+
+# Module-level alias used throughout validate_event()
+# This property accessor ensures thread-safe access
+@property  # type: ignore
+def _validation_stats_property(self):
+    return get_validation_stats()
+
+# Keep _validation_stats as a module-level name that delegates to thread-local
+class _ValidationStatsProxy:
+    """Proxy that delegates attribute access to the thread-local ValidationStats."""
+    def __getattr__(self, name):
+        return getattr(get_validation_stats(), name)
+
+_validation_stats = _ValidationStatsProxy()
 
 _client: Optional[Client] = None
 _SOURCE_CACHE: dict[int, dict] = {}
@@ -418,7 +437,8 @@ def sanitize_text(text: str) -> str:
     """
     Sanitize text field by:
     - Stripping whitespace
-    - Removing HTML tags
+    - Removing HTML tags (robust: handles malformed tags)
+    - Escaping any remaining HTML entities to prevent stored XSS
     - Normalizing whitespace (collapse multiple spaces/newlines)
     """
     if not text:
@@ -427,8 +447,14 @@ def sanitize_text(text: str) -> str:
     # Strip leading/trailing whitespace
     text = text.strip()
 
-    # Remove HTML tags
-    text = re.sub(r'<[^>]+>', '', text)
+    # Remove HTML tags — use two passes to catch malformed/nested tags
+    # First pass: standard well-formed tags
+    text = re.sub(r'<[^>]*>', '', text)
+    # Second pass: catch unclosed tags like <img src=x onerror=alert(1)
+    text = re.sub(r'<[^>]*$', '', text)
+
+    # Escape any remaining HTML special chars to prevent stored XSS
+    text = html.escape(text, quote=False)
 
     # Normalize whitespace - collapse multiple spaces
     text = re.sub(r'\s+', ' ', text)
@@ -461,7 +487,6 @@ def validate_event(event_data: dict) -> Tuple[bool, Optional[str], list[str]]:
     - description should be under 5000 chars (truncate)
     - price_min/price_max should be reasonable (0-10000)
     """
-    global _validation_stats
     _validation_stats.total_validated += 1
 
     warnings = []
@@ -858,6 +883,14 @@ def insert_event(event_data: dict, series_hint: dict = None, genres: list = None
                     "description": film_metadata.plot,
                     "image_url": film_metadata.poster_url,
                 })
+            # Backfill NULL fields on recurring show / class series from crawler hints
+            if series_hint.get("series_type") in ("recurring_show", "class_series"):
+                backfill = {}
+                for field in ("description", "image_url", "day_of_week", "start_time", "frequency"):
+                    if series_hint.get(field):
+                        backfill[field] = series_hint[field]
+                if backfill:
+                    update_series_metadata(client, series_id, backfill)
 
     # Add genres for standalone events (events without a series)
     if genres and not event_data.get("series_id"):

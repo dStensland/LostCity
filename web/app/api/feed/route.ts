@@ -117,34 +117,36 @@ export async function GET(request: Request) {
   const followedOrganizations = followedOrganizationsData as { followed_organization_id: string | null }[] | null;
   const followedOrganizationIds = followedOrganizations?.map((f) => f.followed_organization_id).filter(Boolean) as string[] || [];
 
-  // Get sources that map to followed organizations (for querying events via source relationship)
-  // This is more reliable than querying events.organization_id directly, since that field
-  // may not be populated for all events
+  // Parallelize independent queries: producerSources and friend IDs
+  type GetFriendIdsResult = { friend_id: string }[];
+  const [producerSourcesResult, friendIdsResult] = await Promise.all([
+    // Get sources that map to followed organizations (for querying events via source relationship)
+    followedOrganizationIds.length > 0
+      ? supabase
+          .from("sources")
+          .select("id, organization_id")
+          .in("organization_id", followedOrganizationIds)
+      : Promise.resolve({ data: null }),
+    // Get friends using the friendships table
+    (supabase.rpc(
+      "get_friend_ids" as never,
+      { user_id: user.id } as never
+    ) as unknown) as Promise<{ data: GetFriendIdsResult | null }>,
+  ]);
+
+  // Extract producer sources data
   let producerSourceIds: number[] = [];
   const sourceOrganizationMap: Record<number, string> = {};
 
-  if (followedOrganizationIds.length > 0) {
-    const { data: producerSources } = await supabase
-      .from("sources")
-      .select("id, organization_id")
-      .in("organization_id", followedOrganizationIds);
-
-    if (producerSources) {
-      producerSourceIds = producerSources.map((s: { id: number }) => s.id);
-      for (const source of producerSources as { id: number; organization_id: string }[]) {
-        sourceOrganizationMap[source.id] = source.organization_id;
-      }
+  if (producerSourcesResult.data) {
+    producerSourceIds = producerSourcesResult.data.map((s: { id: number }) => s.id);
+    for (const source of producerSourcesResult.data as { id: number; organization_id: string }[]) {
+      sourceOrganizationMap[source.id] = source.organization_id;
     }
   }
 
-  // Get friends using the friendships table
-  type GetFriendIdsResult = { friend_id: string }[];
-  const { data: friendIdsData } = await supabase.rpc(
-    "get_friend_ids" as never,
-    { user_id: user.id } as never
-  ) as { data: GetFriendIdsResult | null };
-
-  const friendIds = (friendIdsData || []).map((row) => row.friend_id);
+  // Extract friend IDs
+  const friendIds = (friendIdsResult.data || []).map((row) => row.friend_id);
 
   // Get events friends are going to
   // Use local date (not UTC from toISOString)

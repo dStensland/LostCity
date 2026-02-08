@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient as createServerClient, getUser, isAdmin } from "@/lib/supabase/server";
-import { escapeSQLPattern, adminErrorResponse } from "@/lib/api-utils";
+import { escapeSQLPattern, adminErrorResponse, checkBodySize } from "@/lib/api-utils";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier} from "@/lib/rate-limit";
 
 // Username validation: lowercase alphanumeric + underscore, 3-30 chars
@@ -24,6 +24,9 @@ function validateUsername(username: string): { valid: boolean; error?: string } 
 
 // PATCH /api/admin/users - Update a user's profile
 export async function PATCH(request: Request) {
+  const sizeCheck = checkBodySize(request);
+  if (sizeCheck) return sizeCheck;
+
   const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
   if (rateLimitResult) return rateLimitResult;
 
@@ -94,6 +97,9 @@ export async function PATCH(request: Request) {
 
 // DELETE /api/admin/users - Delete a user (soft delete by deactivating)
 export async function DELETE(request: Request) {
+  const sizeCheck = checkBodySize(request);
+  if (sizeCheck) return sizeCheck;
+
   const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
   if (rateLimitResult) return rateLimitResult;
 

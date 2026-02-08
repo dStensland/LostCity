@@ -188,10 +188,19 @@ export async function middleware(request: NextRequest) {
     request.nextUrl.pathname.startsWith(path)
   );
 
-  // IMPORTANT: Always call getUser() to ensure session tokens are refreshed.
-  // getSession() only reads from cookies and won't refresh expired access tokens.
-  // getUser() validates with the server and triggers token refresh if needed.
-  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  // Only call getUser() when auth cookies are present or path requires auth.
+  // For anonymous visitors (no sb-* cookies on non-protected paths), skip the
+  // server roundtrip to validate a session that doesn't exist.
+  const hasAuthCookies = request.cookies.getAll().some(c => c.name.startsWith("sb-"));
+
+  let user: Awaited<ReturnType<typeof supabase.auth.getUser>>["data"]["user"] = null;
+  let authError: Awaited<ReturnType<typeof supabase.auth.getUser>>["error"] = null;
+
+  if (hasAuthCookies || isProtectedPath) {
+    const result = await supabase.auth.getUser();
+    user = result.data.user;
+    authError = result.error;
+  }
 
   // Only clear cookies for specific auth errors that indicate invalid/expired sessions.
   // DON'T clear on network errors, timeouts, or transient issues (which can happen during deploys).

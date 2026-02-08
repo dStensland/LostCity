@@ -1,9 +1,15 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
+import { checkBodySize, sanitizeString } from "@/lib/api-utils";
 import { logger } from "@/lib/logger";
 
+const MAX_MESSAGE_LENGTH = 1000;
+
 export async function POST(request: NextRequest) {
+  const sizeCheck = checkBodySize(request);
+  if (sizeCheck) return sizeCheck;
+
   const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
   if (rateLimitResult) return rateLimitResult;
   try {
@@ -14,6 +20,14 @@ export async function POST(request: NextRequest) {
     if (!entity_type || !entity_id || !message) {
       return NextResponse.json(
         { error: "Missing required fields: entity_type, entity_id, message" },
+        { status: 400 }
+      );
+    }
+
+    // Validate message length
+    if (typeof message !== "string" || message.trim().length === 0 || message.length > MAX_MESSAGE_LENGTH) {
+      return NextResponse.json(
+        { error: `Message must be between 1 and ${MAX_MESSAGE_LENGTH} characters` },
         { status: 400 }
       );
     }
@@ -37,7 +51,7 @@ export async function POST(request: NextRequest) {
       .insert({
         entity_type,
         entity_id: parseInt(entity_id, 10),
-        message: message.trim(),
+        message: sanitizeString(message.trim()),
         user_id: user?.id || null,
       })
       .select()

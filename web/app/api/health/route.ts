@@ -43,17 +43,24 @@ export async function GET(request: NextRequest) {
     logger.error("Health check DB timeout:", error);
   }
 
-  // Always return 200 OK - uptime monitors need a consistent success response
-  // The checks object shows component health details
+  // Determine overall health status
+  const isHealthy = checks.database === "ok";
+  const url = new URL(request.url);
+  const strict = url.searchParams.get("strict") === "true";
+
+  // In strict mode (for load balancers), return 503 on failure
+  // Default mode returns 200 for simple uptime monitors but includes check details
+  const statusCode = !isHealthy && strict ? 503 : 200;
+
   return NextResponse.json(
     {
-      status: "healthy",
+      status: isHealthy ? "healthy" : "degraded",
       timestamp,
       version: VERSION,
       checks,
     },
     {
-      status: 200,
+      status: statusCode,
       headers: {
         "Cache-Control": "public, s-maxage=10, stale-while-revalidate=30",
       },

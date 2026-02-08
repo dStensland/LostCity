@@ -309,6 +309,8 @@ export async function GET(request: NextRequest) {
 
     // Fetch events for today, tomorrow, and day after
     // Include both portal-specific AND public events (matching feed route pattern)
+    // Pre-filter for quality: require images (scoring requires them anyway)
+    // and prefer hip categories to increase ratio of high-scoring events
     const { data: events, error } = await supabase
       .from("events")
       .select(`
@@ -339,11 +341,12 @@ export async function GET(request: NextRequest) {
       `)
       .in("start_date", [today, tomorrow, dayAfter])
       .is("canonical_event_id", null)
+      .not("image_url", "is", null) // Require images (scoring filters out events without them anyway)
       .or("is_class.eq.false,is_class.is.null")
       .or(`portal_id.eq.${atlantaPortal.id},portal_id.is.null`)
       .order("start_date", { ascending: true })
       .order("start_time", { ascending: true })
-      .limit(500); // Need large limit — 200+ events per day
+      .limit(80); // Reduced from 500: scoring only returns 8, so 80 candidates gives ample diversity
 
     if (error || !events) {
       console.error("Failed to fetch tonight events:", error);

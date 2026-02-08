@@ -249,7 +249,7 @@ async function batchFetchVenueIds(filters: {
         supabase
           .from("venues")
           .select("id")
-          .ilike("name", `%${filters.searchTerm}%`)
+          .ilike("name", `%${escapePostgrestValue(filters.searchTerm)}%`)
       ).then(({ data }) => ({
         type: "search",
         ids: (data as { id: number }[] | null)?.map((v) => v.id) || [],
@@ -305,7 +305,7 @@ async function batchFetchVenueIds(filters: {
         supabase
           .from("venues")
           .select("id")
-          .ilike("city", filters.city)
+          .ilike("city", escapePostgrestValue(filters.city))
       ).then(({ data }) => ({
         type: "city",
         ids: (data as { id: number }[] | null)?.map((v) => v.id) || [],
@@ -1081,7 +1081,7 @@ export type SearchSuggestion = {
 export async function getSearchSuggestions(prefix: string): Promise<SearchSuggestion[]> {
   if (prefix.length < 2) return [];
 
-  const searchTerm = `${prefix}%`;
+  const searchTerm = `${escapePostgrestValue(prefix)}%`;
   // Use date-fns format to get local date (not UTC from toISOString)
   const today = format(startOfDay(new Date()), "yyyy-MM-dd");
 
@@ -1361,14 +1361,28 @@ export async function fetchSocialProofCounts(
     return counts;
   }
 
-  // Fetch RSVP counts grouped by event and status
-  // Only count public RSVPs for social proof
-  const { data: rsvpData } = await serviceClient
-    .from("event_rsvps")
-    .select("event_id, status")
-    .in("event_id", eventIds)
-    .in("status", ["going", "interested"])
-    .eq("visibility", "public");
+  // PERFORMANCE: Fetch RSVPs and recommendations in parallel to reduce DB load
+  const [rsvpResult, recResult] = await Promise.all([
+    // Fetch RSVP counts grouped by event and status
+    // Only count public RSVPs for social proof
+    serviceClient
+      .from("event_rsvps")
+      .select("event_id, status")
+      .in("event_id", eventIds)
+      .in("status", ["going", "interested"])
+      .eq("visibility", "public"),
+
+    // Fetch recommendation counts (only public ones)
+    serviceClient
+      .from("recommendations")
+      .select("event_id")
+      .in("event_id", eventIds)
+      .eq("visibility", "public")
+      .not("event_id", "is", null)
+  ]);
+
+  const rsvpData = rsvpResult.data;
+  const recData = recResult.data;
 
   if (rsvpData) {
     for (const rsvp of rsvpData as { event_id: number; status: string }[]) {
@@ -1382,14 +1396,6 @@ export async function fetchSocialProofCounts(
       }
     }
   }
-
-  // Fetch recommendation counts (only public ones)
-  const { data: recData } = await serviceClient
-    .from("recommendations")
-    .select("event_id")
-    .in("event_id", eventIds)
-    .eq("visibility", "public")
-    .not("event_id", "is", null);
 
   if (recData) {
     for (const rec of recData as { event_id: number | null }[]) {
