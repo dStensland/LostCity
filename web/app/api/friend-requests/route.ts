@@ -177,52 +177,58 @@ export const POST = withAuth(async (request, { user, supabase, serviceClient }) 
       );
     }
 
-    // Check for existing pending request in either direction
-    const { data: existingRequest } = await supabase
+    // Check for existing request in either direction (any status)
+    const { data: existingRequests } = await supabase
       .from("friend_requests" as never)
-      .select("id, status, inviter_id")
-      .eq("status", "pending")
+      .select("id, status, inviter_id, invitee_id")
       .or(
         `and(inviter_id.eq.${user.id},invitee_id.eq.${otherUserId}),and(inviter_id.eq.${otherUserId},invitee_id.eq.${user.id})`
-      )
-      .maybeSingle();
+      );
 
-    type ExistingRequestType = { id: string; status: string; inviter_id: string } | null;
-    const existingReq = existingRequest as ExistingRequestType;
+    type ExistingRequestType = { id: string; status: string; inviter_id: string; invitee_id: string };
+    const existingReqs = (existingRequests || []) as ExistingRequestType[];
 
-    if (existingReq) {
-      // If there's a pending request FROM the other user to us, auto-accept it
-      if (existingReq.inviter_id === otherUserId) {
-        const { error: acceptError } = await serviceClient
-          .from("friend_requests" as never)
-          .update({ status: "accepted" } as never)
-          .eq("id", existingReq.id);
+    for (const existingReq of existingReqs) {
+      if (existingReq.status === "pending") {
+        // If there's a pending request FROM the other user to us, auto-accept it
+        if (existingReq.inviter_id === otherUserId) {
+          const { error: acceptError } = await serviceClient
+            .from("friend_requests" as never)
+            .update({ status: "accepted" } as never)
+            .eq("id", existingReq.id);
 
-        if (acceptError) {
-          return errorResponse(acceptError, "friend-requests:POST:accept");
+          if (acceptError) {
+            return errorResponse(acceptError, "friend-requests:POST:accept");
+          }
+
+          // Create the friendship record
+          const { error: friendshipError } = await serviceClient.rpc(
+            "create_friendship" as never,
+            { user_a: user.id, user_b: otherUserId } as never
+          );
+
+          if (friendshipError) {
+            logger.error("Error creating friendship on auto-accept:", { error: friendshipError.message });
+          }
+
+          return NextResponse.json({
+            success: true,
+            message: "Friend request accepted - you are now friends",
+            accepted: true,
+          });
         }
 
-        // Create the friendship record
-        const { error: friendshipError } = await serviceClient.rpc(
-          "create_friendship" as never,
-          { user_a: user.id, user_b: otherUserId } as never
+        return NextResponse.json(
+          { error: "Friend request already pending" },
+          { status: 400 }
         );
-
-        if (friendshipError) {
-          logger.error("Error creating friendship on auto-accept:", { error: friendshipError.message });
-        }
-
-        return NextResponse.json({
-          success: true,
-          message: "Friend request accepted - you are now friends",
-          accepted: true,
-        });
       }
 
-      return NextResponse.json(
-        { error: "Friend request already pending" },
-        { status: 400 }
-      );
+      // Delete old declined/accepted requests so a fresh one can be created
+      await serviceClient
+        .from("friend_requests" as never)
+        .delete()
+        .eq("id", existingReq.id);
     }
 
     // Create the friend request
