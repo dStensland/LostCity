@@ -18,7 +18,7 @@ import { fetchSocialProofCounts } from "@/lib/search";
 
 export interface SearchResult {
   id: number | string;
-  type: "event" | "venue" | "organizer" | "series" | "list" | "neighborhood" | "category";
+  type: "event" | "venue" | "organizer" | "series" | "list" | "neighborhood" | "category" | "festival";
   title: string;
   subtitle?: string;
   href: string;
@@ -48,7 +48,7 @@ export interface SearchResult {
 
 export interface SearchOptions {
   query: string;
-  types?: ("event" | "venue" | "organizer" | "series" | "list")[];
+  types?: ("event" | "venue" | "organizer" | "series" | "list" | "festival")[];
   limit?: number;
   offset?: number;
   categories?: string[];
@@ -64,7 +64,7 @@ export interface SearchOptions {
 }
 
 export interface SearchFacet {
-  type: "event" | "venue" | "organizer" | "series" | "list";
+  type: "event" | "venue" | "organizer" | "series" | "list" | "festival";
   count: number;
 }
 
@@ -171,6 +171,7 @@ const SCORING = {
     // Default priority when no intent detected
     event: 5,
     venue: 4,
+    festival: 4,
     organizer: 3,
     series: 2,
     list: 1,
@@ -419,6 +420,16 @@ export async function unifiedSearch(
         limit: limitPerType,
         offset,
         portalId,
+      })
+    );
+  }
+
+  if (types.includes("festival")) {
+    searchTypes.push("festival");
+    searchPromises.push(
+      searchFestivals(client, trimmedQuery, {
+        limit: limitPerType,
+        offset,
       })
     );
   }
@@ -1024,6 +1035,120 @@ async function searchLists(
 }
 
 /**
+ * Search festivals using direct table query with trigram similarity.
+ */
+async function searchFestivals(
+  client: ReturnType<typeof createServiceClient>,
+  query: string,
+  options: {
+    limit: number;
+    offset: number;
+  }
+): Promise<SearchResult[]> {
+  try {
+    const escapedQuery = escapeSQLPattern(query);
+    const supabaseQuery = client
+      .from("festivals")
+      .select(`
+        id,
+        name,
+        slug,
+        description,
+        image_url,
+        announced_start,
+        announced_end,
+        category,
+        is_deactivated
+      `)
+      .or(`is_deactivated.is.null,is_deactivated.eq.false`)
+      .or(`name.ilike.%${escapedQuery}%,description.ilike.%${escapedQuery}%`)
+      .limit(options.limit)
+      .range(options.offset, options.offset + options.limit - 1);
+
+    const { data, error } = await supabaseQuery;
+
+    if (error) {
+      console.error("Error searching festivals:", error);
+      return [];
+    }
+
+    if (!data || data.length === 0) {
+      return [];
+    }
+
+    type FestivalRow = {
+      id: number;
+      name: string;
+      slug: string;
+      description: string | null;
+      image_url: string | null;
+      announced_start: string | null;
+      announced_end: string | null;
+      category: string | null;
+      is_deactivated: boolean | null;
+    };
+    const typedData = data as FestivalRow[];
+
+    return typedData.map((row) => {
+      const titleLower = row.name.toLowerCase();
+      const queryLower = query.toLowerCase();
+
+      // Base similarity score
+      let similarity = 0.3;
+      if (titleLower === queryLower) {
+        similarity = 1.0;
+      } else if (titleLower.startsWith(queryLower)) {
+        similarity = 0.9;
+      } else if (titleLower.includes(queryLower)) {
+        similarity = 0.6;
+      }
+
+      // Boost festivals with images and upcoming dates
+      let bonus = 0;
+      if (row.image_url) bonus += 5;
+      if (row.announced_start) {
+        const daysUntil = getDaysUntilDate(row.announced_start);
+        if (daysUntil >= 0 && daysUntil <= 90) bonus += 10;
+      }
+
+      return {
+        id: row.id,
+        type: "festival" as const,
+        title: row.name,
+        subtitle: row.announced_start
+          ? formatFestivalDateRange(row.announced_start, row.announced_end)
+          : undefined,
+        href: `/festivals/${row.slug}`,
+        score: similarity * 100 + bonus,
+        metadata: {
+          category: row.category || undefined,
+          date: row.announced_start || undefined,
+        },
+      };
+    });
+  } catch (error) {
+    console.error("Error in searchFestivals:", error);
+    return [];
+  }
+}
+
+/**
+ * Format festival date range for subtitle display.
+ */
+function formatFestivalDateRange(start: string, end: string | null): string {
+  try {
+    const startDate = new Date(start + "T00:00:00");
+    const startStr = startDate.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    if (!end || end === start) return startStr;
+    const endDate = new Date(end + "T00:00:00");
+    const endStr = endDate.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    return `${startStr} – ${endStr}`;
+  } catch {
+    return start;
+  }
+}
+
+/**
  * Get search facets (counts per entity type).
  */
 async function getSearchFacets(
@@ -1225,7 +1350,7 @@ export async function instantSearch(
   // Perform unified search with all types
   const searchResult = await unifiedSearch({
     query: trimmedQuery,
-    types: ["event", "venue", "organizer", "series", "list"],
+    types: ["event", "venue", "organizer", "series", "list", "festival"],
     limit: limit * 2, // Get more to split between suggestions and results
     portalId,
     useIntentAnalysis: true,

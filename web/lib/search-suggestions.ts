@@ -13,7 +13,7 @@ import { createServiceClient } from "./supabase/service";
 
 export interface SearchSuggestion {
   text: string;
-  type: "event" | "venue" | "neighborhood" | "organizer" | "category" | "tag" | "vibe";
+  type: "event" | "venue" | "neighborhood" | "organizer" | "category" | "tag" | "vibe" | "festival";
   frequency: number;
   similarity?: number;
 }
@@ -150,6 +150,7 @@ export async function getGroupedSuggestions(
     categories: [] as SearchSuggestion[],
     tags: [] as SearchSuggestion[],
     vibes: [] as SearchSuggestion[],
+    festivals: [] as SearchSuggestion[],
   };
 
   const typeLimits: Record<SearchSuggestion["type"], number> = {
@@ -160,6 +161,7 @@ export async function getGroupedSuggestions(
     category: limits.category ?? defaultLimit,
     tag: limits.tag ?? defaultLimit,
     vibe: limits.vibe ?? defaultLimit,
+    festival: limits.festival ?? defaultLimit,
   };
 
   for (const suggestion of allSuggestions) {
@@ -172,6 +174,7 @@ export async function getGroupedSuggestions(
       category: "categories",
       tag: "tags",
       vibe: "vibes",
+      festival: "festivals",
     };
 
     const resultKey = typeToKeyMap[suggestion.type];
@@ -231,6 +234,8 @@ function mapSuggestionType(type: string): SearchSuggestion["type"] {
       return "tag";
     case "vibe":
       return "vibe";
+    case "festival":
+      return "festival";
     default:
       return "event";
   }
@@ -255,6 +260,8 @@ export function getSuggestionIcon(type: SearchSuggestion["type"]): string {
       return "tag";
     case "vibe":
       return "sparkles";
+    case "festival":
+      return "flag";
     default:
       return "search";
   }
@@ -279,6 +286,8 @@ export function getSuggestionLabel(type: SearchSuggestion["type"]): string {
       return "Tag";
     case "vibe":
       return "Vibe";
+    case "festival":
+      return "Festival";
     default:
       return "Suggestion";
   }

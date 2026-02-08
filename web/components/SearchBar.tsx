@@ -242,6 +242,9 @@ export default function SearchBar() {
           // Lists go to their own page
           url = result.href || `/list/${slug || result.id}`;
           break;
+        case "festival":
+          url = `/${portalSlug}/festivals/${slug || result.id}`;
+          break;
         case "neighborhood":
           // Apply as filter
           url = `/${portalSlug}?view=find&type=events&neighborhoods=${encodeURIComponent(result.title)}`;
@@ -325,6 +328,7 @@ export default function SearchBar() {
         list: [],
         neighborhood: [],
         category: [],
+        festival: [],
       };
     }
     return groupResultsByType(suggestions);
@@ -557,7 +561,9 @@ export default function SearchBar() {
                     onViewAll={hasMore ? () => {
                       setShowDropdown(false);
                       setSelectedIndex(-1);
-                      if (type === "organizer") {
+                      if (type === "festival") {
+                        router.push(`/${portalSlug}/festivals?search=${encodeURIComponent(query)}`, { scroll: false });
+                      } else if (type === "organizer") {
                         router.push(`/${portalSlug}?view=community&search=${encodeURIComponent(query)}`, { scroll: false });
                       } else {
                         const findType = type === "venue" ? "destinations" : "events";

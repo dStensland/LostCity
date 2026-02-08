@@ -162,6 +162,17 @@ export function TypeIcon({ type, className = "" }: { type: SearchResult["type"];
           />
         </svg>
       );
+    case "festival":
+      return (
+        <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M3 21h3l2-9L5 4h4l2 3 2-3h4l-3 8 2 9h3M12 4v17"
+          />
+        </svg>
+      );
     default:
       return (
         <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -226,6 +237,12 @@ function getTypeConfig(type: SearchResult["type"]): TypeConfig {
         bgClass: "bg-[var(--muted)]/10",
         iconClass: "text-[var(--muted)]",
         hoverClass: "text-[var(--cream)]",
+      };
+    case "festival":
+      return {
+        bgClass: "bg-[var(--gold)]/10",
+        iconClass: "text-[var(--gold)]",
+        hoverClass: "text-[var(--gold)]",
       };
     default:
       return {
@@ -392,6 +409,9 @@ function getPortalAwareHref(result: SearchResult, portalSlug?: string): string {
   } else if (result.type === "series") {
     const slug = result.href.split("/").pop();
     return `/${portalSlug}?series=${slug}`;
+  } else if (result.type === "festival") {
+    const slug = result.href.split("/").pop();
+    return `/${portalSlug}/festivals/${slug}`;
   } else if (result.type === "list") {
     // Lists stay as full path
     return result.href;
@@ -424,6 +444,7 @@ export function SearchResultSection({
     list: "Lists",
     neighborhood: "Neighborhoods",
     category: "Categories",
+    festival: "Festivals",
   };
 
   const config = getTypeConfig(type);

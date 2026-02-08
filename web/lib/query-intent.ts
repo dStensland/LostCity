@@ -23,7 +23,7 @@ export interface QueryIntentResult {
   suggestions?: string[]; // Related search suggestions
 }
 
-export type SearchType = "event" | "venue" | "organizer" | "series" | "list" | "neighborhood" | "category";
+export type SearchType = "event" | "venue" | "organizer" | "series" | "list" | "neighborhood" | "category" | "festival";
 
 export type SearchTypePriority = {
   [K in SearchType]?: number; // Higher numbers = higher priority
@@ -226,6 +226,7 @@ function getDefaultPriority(): SearchTypePriority {
   return {
     event: 80, // Events are typically what users want
     venue: 70,
+    festival: 60,
     organizer: 50,
     series: 40,
     list: 30,

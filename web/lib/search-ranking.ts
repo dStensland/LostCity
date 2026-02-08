@@ -54,20 +54,22 @@ const CONTEXT_BOOSTS: Record<
       event: 10,
       venue: 10,
       organizer: 10,
+      festival: 10,
       series: 8,
       list: 5,
       neighborhood: 3,
       category: 2,
     },
-    events: { event: 10, venue: 10, organizer: 10, series: 8, list: 5, neighborhood: 3, category: 2 },
-    classes: { event: 10, venue: 10, organizer: 10, series: 8, list: 5, neighborhood: 3, category: 2 },
-    destinations: { event: 10, venue: 10, organizer: 10, series: 8, list: 5, neighborhood: 3, category: 2 },
+    events: { event: 10, venue: 10, organizer: 10, festival: 10, series: 8, list: 5, neighborhood: 3, category: 2 },
+    classes: { event: 10, venue: 10, organizer: 10, festival: 5, series: 8, list: 5, neighborhood: 3, category: 2 },
+    destinations: { event: 10, venue: 10, organizer: 10, festival: 8, series: 8, list: 5, neighborhood: 3, category: 2 },
   },
   find: {
     default: {
       event: 20,
       venue: 15,
       organizer: 10,
+      festival: 15,
       series: 10,
       list: 5,
       neighborhood: 8,
@@ -77,6 +79,7 @@ const CONTEXT_BOOSTS: Record<
       event: 30,
       venue: 10, // Venues are still useful for filtering
       organizer: 10,
+      festival: 15,
       series: 15,
       list: 5,
       neighborhood: 10,
@@ -86,6 +89,7 @@ const CONTEXT_BOOSTS: Record<
       venue: 30,
       event: 10, // Events at venues still relevant
       organizer: 5,
+      festival: 10,
       series: 5,
       list: 5,
       neighborhood: 15,
@@ -95,6 +99,7 @@ const CONTEXT_BOOSTS: Record<
       event: 25, // Classes are events
       venue: 20, // Studios/venues offering classes
       organizer: 15,
+      festival: 5,
       series: 15,
       list: 5,
       neighborhood: 10,
@@ -106,14 +111,15 @@ const CONTEXT_BOOSTS: Record<
       organizer: 25,
       list: 20,
       event: 10,
+      festival: 8,
       venue: 5,
       series: 10,
       neighborhood: 3,
       category: 3,
     },
-    events: { organizer: 25, list: 20, event: 10, venue: 5, series: 10, neighborhood: 3, category: 3 },
-    classes: { organizer: 25, list: 20, event: 10, venue: 5, series: 10, neighborhood: 3, category: 3 },
-    destinations: { organizer: 25, list: 20, event: 10, venue: 5, series: 10, neighborhood: 3, category: 3 },
+    events: { organizer: 25, list: 20, event: 10, festival: 8, venue: 5, series: 10, neighborhood: 3, category: 3 },
+    classes: { organizer: 25, list: 20, event: 10, festival: 5, venue: 5, series: 10, neighborhood: 3, category: 3 },
+    destinations: { organizer: 25, list: 20, event: 10, festival: 8, venue: 5, series: 10, neighborhood: 3, category: 3 },
   },
 };
 
@@ -379,6 +385,7 @@ export function groupResultsByType(
     list: [],
     neighborhood: [],
     category: [],
+    festival: [],
   };
 
   for (const result of results) {
@@ -395,18 +402,18 @@ export function getGroupDisplayOrder(context: SearchContext): ResultType[] {
   if (context.viewMode === "find") {
     switch (context.findType) {
       case "events":
-        return ["event", "venue", "organizer", "series", "neighborhood", "category", "list"];
+        return ["event", "festival", "venue", "organizer", "series", "neighborhood", "category", "list"];
       case "destinations":
-        return ["venue", "neighborhood", "event", "organizer", "series", "category", "list"];
+        return ["venue", "neighborhood", "festival", "event", "organizer", "series", "category", "list"];
       case "classes":
-        return ["event", "venue", "organizer", "series", "neighborhood", "category", "list"];
+        return ["event", "venue", "organizer", "series", "festival", "neighborhood", "category", "list"];
     }
   }
 
   if (context.viewMode === "community") {
-    return ["organizer", "list", "event", "venue", "series", "neighborhood", "category"];
+    return ["organizer", "list", "event", "festival", "venue", "series", "neighborhood", "category"];
   }
 
   // Feed: balanced display
-  return ["event", "venue", "organizer", "series", "list", "neighborhood", "category"];
+  return ["event", "festival", "venue", "organizer", "series", "list", "neighborhood", "category"];
 }
