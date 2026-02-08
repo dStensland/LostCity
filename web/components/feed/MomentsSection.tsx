@@ -49,11 +49,10 @@ export default function MomentsSection({ portalSlug }: MomentsSectionProps) {
       {imminent.length > 0 && (
         <div>
           <FeedSectionHeader
-            title="Coming Up"
-            priority="secondary"
+            title="Festivals and Conventions"
+            priority="tertiary"
             accentColor="var(--neon-cyan)"
             seeAllHref={`/${portalSlug}/festivals`}
-            seeAllLabel="All festivals"
           />
           <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide -mx-1 px-1">
             {imminent.map((m) => (

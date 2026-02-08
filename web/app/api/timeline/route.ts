@@ -55,59 +55,86 @@ export async function GET(request: Request) {
     );
     const events = await enrichEventsWithSocialProof(rawEvents);
 
-    // Fetch festivals based on event date range
-    const supabase = await createClient();
-    const today = getLocalDateString(new Date());
+    // Fetch festivals based on event date range.
+    // Skip festivals when event-specific filters are active that festivals
+    // can't match (tags, vibes, subcategories, venue) — showing unfiltered
+    // festivals alongside filtered events is confusing.
+    const hasEventOnlyFilters = !!(
+      filters.tags?.length ||
+      filters.vibes?.length ||
+      filters.subcategories?.length ||
+      filters.venue_id
+    );
 
-    let festivalQuery = supabase
-      .from("festivals")
-      .select("id, name, slug, website, location, neighborhood, categories, free, announced_start, announced_end, ticket_url, description, image_url, typical_month, typical_duration_days, festival_type, portal_id")
-      .not("announced_start", "is", null);
+    let festivals: Festival[] = [];
+    let festivalError: { message: string } | null = null;
 
-    // Determine date range for festivals
-    if (hasMore && events.length > 0) {
-      // Only fetch festivals up to the last event's date, plus currently happening festivals
-      const lastEventDate = events[events.length - 1].start_date;
-      festivalQuery = festivalQuery.or(
-        `and(announced_start.gte.${today},announced_start.lte.${lastEventDate}),` +
-        `and(announced_start.lte.${today},announced_end.gte.${today})`
-      );
-    } else {
-      // Fetch all future festivals
-      festivalQuery = festivalQuery.or(`announced_end.gte.${today},announced_end.is.null`);
+    if (!hasEventOnlyFilters) {
+      const supabase = await createClient();
+      const today = getLocalDateString(new Date());
+
+      let festivalQuery = supabase
+        .from("festivals")
+        .select("id, name, slug, website, location, neighborhood, categories, free, announced_start, announced_end, ticket_url, description, image_url, typical_month, typical_duration_days, festival_type, portal_id")
+        .not("announced_start", "is", null);
+
+      // Determine date range for festivals
+      if (hasMore && events.length > 0) {
+        // Only fetch festivals up to the last event's date, plus currently happening festivals
+        const lastEventDate = events[events.length - 1].start_date;
+        festivalQuery = festivalQuery.or(
+          `and(announced_start.gte.${today},announced_start.lte.${lastEventDate}),` +
+          `and(announced_start.lte.${today},announced_end.gte.${today})`
+        );
+      } else {
+        // Fetch all future festivals
+        festivalQuery = festivalQuery.or(`announced_end.gte.${today},announced_end.is.null`);
+      }
+
+      // Apply portal filter
+      if (portalId) {
+        festivalQuery = festivalQuery.eq("portal_id", portalId);
+      }
+
+      // Apply search filter
+      if (filters.search) {
+        const escapedSearch = escapeSQLPattern(filters.search);
+        festivalQuery = festivalQuery.ilike("name", `%${escapedSearch}%`);
+      }
+
+      // Apply category filter
+      if (filters.categories && filters.categories.length > 0) {
+        festivalQuery = festivalQuery.overlaps("categories", filters.categories);
+      }
+
+      // Apply price filter
+      if (filters.is_free) {
+        festivalQuery = festivalQuery.eq("free", true);
+      }
+
+      // Apply neighborhood filter
+      if (filters.neighborhoods && filters.neighborhoods.length > 0) {
+        festivalQuery = festivalQuery.in("neighborhood", filters.neighborhoods);
+      }
+
+      // Apply date filter
+      if (filters.date_filter) {
+        const today = getLocalDateString(new Date());
+        if (filters.date_filter === "today") {
+          festivalQuery = festivalQuery
+            .lte("announced_start", today)
+            .gte("announced_end", today);
+        }
+      }
+
+      festivalQuery = festivalQuery
+        .order("announced_start", { ascending: true })
+        .limit(50);
+
+      const result = await festivalQuery;
+      festivals = result.data || [];
+      festivalError = result.error;
     }
-
-    // Apply portal filter
-    if (portalId) {
-      festivalQuery = festivalQuery.eq("portal_id", portalId);
-    }
-
-    // Apply search filter
-    if (filters.search) {
-      const escapedSearch = escapeSQLPattern(filters.search);
-      festivalQuery = festivalQuery.ilike("name", `%${escapedSearch}%`);
-    }
-
-    // Apply category filter
-    if (filters.categories && filters.categories.length > 0) {
-      festivalQuery = festivalQuery.overlaps("categories", filters.categories);
-    }
-
-    // Apply price filter
-    if (filters.is_free) {
-      festivalQuery = festivalQuery.eq("free", true);
-    }
-
-    // Apply neighborhood filter
-    if (filters.neighborhoods && filters.neighborhoods.length > 0) {
-      festivalQuery = festivalQuery.in("neighborhood", filters.neighborhoods);
-    }
-
-    festivalQuery = festivalQuery
-      .order("announced_start", { ascending: true })
-      .limit(50);
-
-    const { data: festivals, error: festivalError } = await festivalQuery;
 
     if (festivalError) {
       logger.error("Error fetching festivals for timeline", { error: festivalError.message });

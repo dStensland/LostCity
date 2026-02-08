@@ -833,6 +833,59 @@ def run_source(slug: str, skip_circuit_breaker: bool = False) -> bool:
         return False
 
 
+def run_festival_schedules() -> dict:
+    """
+    Extract program sessions from festival schedule pages.
+
+    Uses structured parsing (JSON-LD, WordPress Events Calendar, HTML tables)
+    to find individual sessions on festival websites and link them via series.
+    No LLM calls — fast and cheap. Runs after individual source crawlers.
+
+    Returns:
+        Dict with stats: festivals_processed, festivals_with_data,
+        sessions_found, sessions_inserted
+    """
+    from crawl_festival_schedule import crawl_festival_schedule
+    from db import get_client
+
+    client = get_client()
+    result = (
+        client.table("festivals")
+        .select("slug,name,website")
+        .not_.is_("website", "null")
+        .order("name")
+    )
+    festivals = result.execute().data or []
+
+    stats = {
+        "festivals_processed": 0,
+        "festivals_with_data": 0,
+        "sessions_found": 0,
+        "sessions_inserted": 0,
+    }
+
+    for f in festivals:
+        slug = f["slug"]
+        website = f["website"]
+        stats["festivals_processed"] += 1
+
+        try:
+            found, new, _skipped = crawl_festival_schedule(
+                slug=slug, url=website, render_js=False, use_llm=False, dry_run=False,
+            )
+            stats["sessions_found"] += found
+            stats["sessions_inserted"] += new
+            if found > 0:
+                stats["festivals_with_data"] += 1
+                logger.info(f"  Festival {slug}: {found} sessions, {new} new")
+        except Exception as e:
+            logger.debug(f"  Festival {slug}: {e}")
+
+        time.sleep(0.5)
+
+    return stats
+
+
 def run_all_sources(parallel: bool = True, max_workers: int = MAX_WORKERS, adaptive: bool = True) -> dict[str, bool]:
     """
     Run crawlers for all active sources.
@@ -951,7 +1004,19 @@ def run_all_sources(parallel: bool = True, max_workers: int = MAX_WORKERS, adapt
     except Exception as e:
         logger.warning(f"Cleanup failed: {e}")
 
-    # 2. Backfill tags for any events missing venue-type-based tags
+    # 2. Festival schedule extraction (structured parsing, no LLM)
+    logger.info("Extracting festival program sessions...")
+    try:
+        festival_stats = run_festival_schedules()
+        logger.info(
+            f"Festival schedules: {festival_stats['sessions_found']} found, "
+            f"{festival_stats['sessions_inserted']} new across "
+            f"{festival_stats['festivals_with_data']}/{festival_stats['festivals_processed']} festivals"
+        )
+    except Exception as e:
+        logger.warning(f"Festival schedule extraction failed: {e}")
+
+    # 3. Backfill tags for any events missing venue-type-based tags
     logger.info("Running tag backfill...")
     try:
         from backfill_tags import backfill_tags
@@ -960,7 +1025,7 @@ def run_all_sources(parallel: bool = True, max_workers: int = MAX_WORKERS, adapt
     except Exception as e:
         logger.warning(f"Tag backfill failed: {e}")
 
-    # 3. Record daily analytics snapshot
+    # 4. Record daily analytics snapshot
     logger.info("Recording analytics snapshot...")
     try:
         snapshot = record_daily_snapshot()
@@ -968,7 +1033,7 @@ def run_all_sources(parallel: bool = True, max_workers: int = MAX_WORKERS, adapt
     except Exception as e:
         logger.warning(f"Analytics snapshot failed: {e}")
 
-    # 4. Generate HTML report
+    # 5. Generate HTML report
     logger.info("Generating post-crawl report...")
     try:
         report_path = save_html_report()

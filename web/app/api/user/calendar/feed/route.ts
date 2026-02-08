@@ -105,7 +105,7 @@ export async function GET(request: Request) {
       };
     };
 
-    // Fetch user's "going" RSVPs
+    // Fetch user's "going" and "interested" RSVPs
     const { data: rsvps, error } = await supabase
       .from("event_rsvps")
       .select(`
@@ -129,7 +129,7 @@ export async function GET(request: Request) {
         )
       `)
       .eq("user_id", authenticatedUserId)
-      .eq("status", "going")
+      .in("status", ["going", "interested"])
       .gte("event.start_date", startDate)
       .lte("event.start_date", endDate) as { data: FeedRsvpRow[] | null; error: Error | null };
 
@@ -141,6 +141,7 @@ export async function GET(request: Request) {
     // Generate iCal content
     const events = (rsvps || []).map((rsvp) => {
       const event = rsvp.event;
+      const icalStatus = rsvp.status === "going" ? "CONFIRMED" : "TENTATIVE";
 
       const location = event.venue
         ? [event.venue.name, event.venue.address, event.venue.city && event.venue.state ? `${event.venue.city}, ${event.venue.state}` : event.venue.city || event.venue.state]
@@ -187,7 +188,7 @@ export async function GET(request: Request) {
         `SUMMARY:${escapeICalText(event.title)}`,
         location ? `LOCATION:${escapeICalText(location)}` : null,
         `DESCRIPTION:${escapeICalText(description)}`,
-        "STATUS:CONFIRMED",
+        `STATUS:${icalStatus}`,
         "END:VEVENT",
       ].filter(Boolean);
 
@@ -202,7 +203,7 @@ export async function GET(request: Request) {
       "CALSCALE:GREGORIAN",
       "METHOD:PUBLISH",
       "X-WR-CALNAME:My Lost City Events",
-      "X-WR-CALDESC:Events you're attending from Lost City",
+      "X-WR-CALDESC:Events you're attending or interested in from Lost City",
       ...events,
       "END:VCALENDAR",
     ];

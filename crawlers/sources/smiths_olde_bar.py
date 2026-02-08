@@ -193,7 +193,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             else:
                                 # Get specific event URL
 
-                                event_url = find_event_url(title, event_links, EVENTS_URL)
+                                event_url = find_event_url(title, event_links, BASE_URL)
 
 
                                 event_record = {
@@ -214,7 +214,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                                     "price_note": None,
                                     "is_free": False,
                                     "source_url": event_url,
-                                    "ticket_url": event_url if event_url != (EVENTS_URL if "EVENTS_URL" in dir() else BASE_URL) else None,
+                                    "ticket_url": event_url if event_url != BASE_URL else None,
                                     "image_url": image_map.get(title),
                                     "raw_text": None,
                                     "extraction_confidence": 0.85,

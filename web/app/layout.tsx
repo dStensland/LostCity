@@ -11,6 +11,7 @@ import DarkHoursTheme from "@/components/DarkHoursTheme";
 import NavigationProgress from "@/components/NavigationProgress";
 import SkipLink from "@/components/SkipLink";
 import ClientEffects from "@/components/ClientEffects";
+import ScrollReset from "@/components/ScrollReset";
 import "./globals.css";
 
 // Primary sans-serif font - used globally
@@ -75,6 +76,10 @@ export default async function RootLayout({
             {/* Navigation progress bar */}
             <Suspense fallback={null}>
               <NavigationProgress />
+            </Suspense>
+            {/* Reset scroll on route/view changes */}
+            <Suspense fallback={null}>
+              <ScrollReset />
             </Suspense>
             {/* Ambient glow effect */}
             <div className="ambient-glow" aria-hidden="true" />
