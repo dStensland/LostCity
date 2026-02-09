@@ -163,11 +163,7 @@ const SeriesCard = memo(function SeriesCard({
   // Get total showtime count
   const totalShowtimes = venueGroups.reduce((sum, vg) => sum + vg.showtimes.length, 0);
 
-  // Get first showtime for the time display — try to find any showtime with an actual time
-  const firstShowtimeWithTime = venueGroups
-    .flatMap((vg) => vg.showtimes)
-    .find((st) => st.time);
-  const firstShowtime = firstShowtimeWithTime || venueGroups[0]?.showtimes[0];
+  const firstShowtime = venueGroups[0]?.showtimes[0];
   const firstVenue = venueGroups[0]?.venue;
 
   // Format the first showtime like EventCard does
@@ -217,7 +213,7 @@ const SeriesCard = memo(function SeriesCard({
                 <span className="font-mono text-[0.65rem] font-semibold text-[var(--coral)] leading-none uppercase tracking-wide">
                   {totalShowtimes} {series.series_type === "film" ? (totalShowtimes === 1 ? "show" : "shows") : (totalShowtimes === 1 ? "time" : "times")}
                 </span>
-                {timeParts ? (
+                {timeParts && (
                   <>
                     <span className="font-mono text-base font-bold text-[var(--cream)] leading-none tabular-nums mt-1">
                       {timeParts.time}
@@ -228,10 +224,6 @@ const SeriesCard = memo(function SeriesCard({
                       </span>
                     )}
                   </>
-                ) : (
-                  <span className="font-mono text-base font-bold text-[var(--cream)] leading-none tabular-nums mt-1">
-                    TBA
-                  </span>
                 )}
               </div>
 

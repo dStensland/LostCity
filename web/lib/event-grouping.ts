@@ -149,6 +149,9 @@ export function groupEventsForDisplay(
   events: EventWithLocation[],
   options: GroupDisplayOptions = {}
 ): DisplayItem[] {
+  // Filter out events with no start_time (unless all-day)
+  const filteredEvents = events.filter((e) => e.start_time || e.is_all_day);
+
   const items: DisplayItem[] = [];
   const usedEventIds = new Set<number>();
   const collapseFestivals = options.collapseFestivals ?? true;
@@ -159,7 +162,7 @@ export function groupEventsForDisplay(
   const sortByTime = options.sortByTime ?? true;
 
   const eventIndex = new Map<number, number>();
-  events.forEach((event, index) => {
+  filteredEvents.forEach((event, index) => {
     eventIndex.set(event.id, index);
   });
 
@@ -175,7 +178,7 @@ export function groupEventsForDisplay(
       { festival: FestivalInfo; events: EventWithLocation[]; sortIndex: number }
     >();
 
-    for (const event of events) {
+    for (const event of filteredEvents) {
       const festival = event.series?.festival;
       if (!festival) continue;
 
@@ -220,7 +223,7 @@ export function groupEventsForDisplay(
   // Series grouping takes priority over venue/category rollups
   const seriesGroups = new Map<string, { events: EventWithLocation[]; sortIndex: number }>();
 
-  for (const event of events) {
+  for (const event of filteredEvents) {
     if (usedEventIds.has(event.id)) continue;
     if (event.series_id && event.series) {
       if (!collapseFestivalPrograms && event.series.series_type === "festival_program") {
@@ -325,7 +328,7 @@ export function groupEventsForDisplay(
   // THIRD PASS: Find venue clusters (excluding series events)
   const venueGroups = new Map<number, EventWithLocation[]>();
 
-  for (const event of events) {
+  for (const event of filteredEvents) {
     if (usedEventIds.has(event.id)) continue;
     if (event.venue?.id) {
       const existing = venueGroups.get(event.venue.id) || [];
@@ -357,7 +360,7 @@ export function groupEventsForDisplay(
 
   // FOURTH PASS: Find category clusters (only for specific categories)
   const categoryGroups = new Map<string, EventWithLocation[]>();
-  for (const event of events) {
+  for (const event of filteredEvents) {
     if (usedEventIds.has(event.id)) continue;
     if (event.category_id && ROLLUP_CATEGORIES.includes(event.category_id)) {
       const existing = categoryGroups.get(event.category_id) || [];
@@ -389,7 +392,7 @@ export function groupEventsForDisplay(
   }
 
   // FIFTH PASS: Add remaining events as individual items
-  for (const event of events) {
+  for (const event of filteredEvents) {
     if (!usedEventIds.has(event.id)) {
       items.push({ type: "event", event });
     }
