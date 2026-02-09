@@ -1,16 +1,12 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import Link from "next/link";
-import { formatTimeSplit } from "@/lib/formats";
-import { format, parseISO, isToday, isTomorrow } from "date-fns";
-import CategoryIcon from "./CategoryIcon";
 import SeriesCard from "@/components/SeriesCard";
 import FestivalCard from "@/components/FestivalCard";
 import FeedSectionHeader from "@/components/feed/FeedSectionHeader";
 import { groupEventsForDisplay } from "@/lib/event-grouping";
 import type { EventWithLocation } from "@/lib/search";
-import { getReflectionClass, getSmartDateLabel } from "@/lib/card-utils";
+import { TrendingEventCard, type FeedEventData } from "@/components/EventCard";
 
 type TrendingEvent = {
   id: number;
@@ -137,7 +133,7 @@ export default function TrendingNow({ portalSlug }: { portalSlug?: string } = {}
           {displayItems.map((item) => {
             if (item.type === "event") {
               return (
-                <TrendingEventCard key={item.event.id} event={item.event as TrendingEvent} portalSlug={portalSlug} />
+                <TrendingEventCard key={item.event.id} event={item.event as FeedEventData} portalSlug={portalSlug} />
               );
             }
             if (item.type === "series-group") {
@@ -174,70 +170,3 @@ export default function TrendingNow({ portalSlug }: { portalSlug?: string } = {}
   );
 }
 
-function TrendingEventCard({ event, portalSlug }: { event: TrendingEvent; portalSlug?: string }) {
-  const { time, period } = formatTimeSplit(event.start_time, event.is_all_day);
-  const reflectionClass = getReflectionClass(event.category);
-  const smartDate = getSmartDateLabel(event.start_date);
-  const goingCount = event.going_count || 0;
-  const accentMode = event.category ? "category" : "trending";
-
-  return (
-    <Link
-      href={portalSlug ? `/${portalSlug}?event=${event.id}` : `/events/${event.id}`}
-      scroll={false}
-      data-category={event.category || undefined}
-      data-accent={accentMode}
-      className={`flex-shrink-0 w-72 p-3 bg-[var(--dusk)] rounded-xl border border-[var(--twilight)] transition-all duration-200 group card-atmospheric card-trending snap-start hover:border-[var(--twilight)]/80 hover:bg-[var(--dusk)]/80 glow-accent reflection-accent will-change-border-bg ${reflectionClass}`}
-    >
-      <div className="flex items-start gap-3">
-        {/* Trending indicator */}
-        <div className="flex-shrink-0 w-10 flex flex-col items-center justify-center">
-          <div className="w-8 h-8 rounded-full bg-[var(--neon-magenta)]/20 flex items-center justify-center">
-            <svg className="w-4 h-4 text-[var(--neon-magenta)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-            </svg>
-          </div>
-        </div>
-
-        {/* Content */}
-        <div className="flex-1 min-w-0">
-          <h3 className="font-sans text-sm font-medium text-[var(--cream)] line-clamp-2 group-hover:text-[var(--neon-magenta)] transition-colors">
-            {event.title}
-          </h3>
-
-          <div className="flex items-center gap-1.5 mt-1 text-[var(--muted)]">
-            <CategoryIcon type={event.category || "other"} size={12} />
-            <span className="font-mono text-[0.6rem]">
-              {smartDate} · {time}
-              {period && <span className="opacity-60">{period}</span>}
-            </span>
-          </div>
-
-          {event.venue?.name && (
-            <p className="font-mono text-[0.6rem] text-[var(--muted)] truncate mt-0.5">
-              {event.venue.name}
-            </p>
-          )}
-
-          {/* Trending stats — RSVP-button pill language */}
-          <div className="flex items-center gap-1.5 mt-2 flex-wrap">
-            {goingCount > 0 && (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-[var(--coral)]/10 border border-[var(--coral)]/20 font-mono text-[0.6rem] font-medium text-[var(--coral)]">
-                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
-                {goingCount} going
-              </span>
-            )}
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-[var(--gold)]/15 border border-[var(--gold)]/30 font-mono text-[0.6rem] font-medium text-[var(--gold)]">
-              <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 23c-3.6 0-7-1.4-7-5 0-2.5 1.8-4.6 3.5-6.4.6-.6 1.1-1.2 1.5-1.8-1.5 3.2.5 4.7 1.5 3.2.8-1.2.5-3-.5-5C13 5 16 2 17 1c-.5 3 1 5 2.5 7.5C21 11 22 13 22 15c0 5-4.5 8-10 8z" />
-              </svg>
-              Hot
-            </span>
-          </div>
-        </div>
-      </div>
-    </Link>
-  );
-}

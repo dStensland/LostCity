@@ -131,3 +131,26 @@
 :global(.mapboxgl-ctrl-attrib a) {
   color: var(--soft, #A1A1AA) !important;
 }
+
+/* Attribution compact toggle button */
+:global(.mapboxgl-ctrl-attrib-button) {
+  background-color: var(--dusk, #18181F) !important;
+  border: 1px solid var(--twilight, #252530) !important;
+  border-radius: 50% !important;
+}
+
+/* Mapbox logo — blend with dark theme */
+:global(.mapboxgl-ctrl-logo) {
+  opacity: 0.35 !important;
+}
+
+/* Light theme: keep logo fully visible */
+.mapContainer[data-theme="light"] :global(.mapboxgl-ctrl-logo) {
+  opacity: 0.7 !important;
+}
+
+/* Dark theme: invert logo for visibility without white box */
+.mapContainer[data-theme="dark"] :global(.mapboxgl-ctrl-logo) {
+  filter: invert(1) !important;
+  opacity: 0.3 !important;
+}

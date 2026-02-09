@@ -5,8 +5,11 @@ import Link from "next/link";
 import type { Event } from "@/lib/supabase";
 import { format, parseISO, isToday, isTomorrow, isThisWeek } from "date-fns";
 import { formatTimeSplit, formatCompactCount } from "@/lib/formats";
-import CategoryIcon from "@/components/CategoryIcon";
+import CategoryIcon, { getCategoryColor } from "@/components/CategoryIcon";
 import SeriesCard, { type SeriesInfo, type SeriesVenueGroup } from "@/components/SeriesCard";
+import ScopedStyles from "@/components/ScopedStyles";
+import { createCssVarClass } from "@/lib/css-utils";
+import { getReflectionClass } from "@/lib/card-utils";
 
 interface ClassesViewProps {
   portalId: string;
@@ -421,7 +424,7 @@ function ClassRow({
   );
 }
 
-// Venue section within a day
+// Venue section within a day — matches EventGroup card styling
 function VenueSection({
   venue,
   portalSlug,
@@ -433,74 +436,125 @@ function VenueSection({
 }) {
   const [isOpen, setIsOpen] = useState(defaultOpen);
 
-  return (
-    <div className="border border-[var(--twilight)] rounded-lg bg-[var(--card-bg)] overflow-hidden">
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between p-3 hover:bg-[var(--twilight)]/20 transition-colors"
-      >
-        <div className="min-w-0">
-          <div className="flex items-center gap-2">
-            <span className="text-[var(--cream)] font-medium">{venue.venueName}</span>
-            <span className="text-xs font-mono text-[var(--muted)] bg-[var(--twilight)]/50 px-1.5 py-0.5 rounded">
-              {venue.classes.length}
-            </span>
-          </div>
-          {venue.locations && venue.locations.length > 0 && (
-            <div className="text-[0.6rem] font-mono text-[var(--muted)] mt-1 truncate">
-              {formatLocationList(venue.locations)}
-            </div>
-          )}
-        </div>
-        <svg
-          className={`w-4 h-4 text-[var(--muted)] transition-transform duration-200 ${
-            isOpen ? "rotate-180" : ""
-          }`}
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 9l-7 7-7-7" />
-        </svg>
-      </button>
+  // Derive dominant category from classes for accent color
+  const dominantCategory = venue.classes[0]?.category || null;
+  const categoryColor = dominantCategory ? getCategoryColor(dominantCategory) : null;
+  const reflectionClass = getReflectionClass(dominantCategory);
+  const accentColor = categoryColor || "var(--neon-magenta)";
+  const accentClass = createCssVarClass("--accent-color", accentColor, "accent");
 
-      {isOpen && (
-        <div className="border-t border-[var(--twilight)] py-1">
-          {venue.locationGroups && venue.locationGroups.length > 0 ? (
-            <div className="space-y-2 py-1">
-              {venue.locationGroups.map((group) => (
-                <div key={group.location}>
-                  <div className="px-3 py-1 text-[0.6rem] font-mono uppercase tracking-wider text-[var(--muted)]">
-                    {group.location}
-                  </div>
-                  {group.classes.map((cls) => (
-                    <ClassRow key={cls.id} cls={cls} portalSlug={portalSlug} />
-                  ))}
-                </div>
-              ))}
+  // Earliest class time
+  const earliestClass = venue.classes[0];
+  const timeParts = earliestClass ? formatTimeSplit(earliestClass.start_time) : null;
+
+  return (
+    <>
+      <ScopedStyles css={accentClass?.css} />
+      <div
+        className={`rounded-sm border border-[var(--twilight)] overflow-hidden card-atmospheric glow-accent reflection-accent bg-[var(--card-bg)] ${reflectionClass} ${accentClass?.className ?? ""} ${
+          categoryColor ? "border-l-[3px] border-l-[var(--accent-color)]" : ""
+        }`}
+      >
+        {/* Header — matches EventGroup layout */}
+        <button
+          type="button"
+          onClick={() => setIsOpen(!isOpen)}
+          className="group w-full p-3 flex items-center gap-3 hover:bg-[var(--twilight)]/20 transition-colors"
+        >
+          {/* Time of earliest class */}
+          {timeParts && (
+            <div className="flex-shrink-0 w-14 flex flex-col items-center justify-center py-1">
+              <span className="font-mono text-base font-bold text-[var(--cream)] leading-none tabular-nums">
+                {timeParts.time}
+              </span>
+              {timeParts.period && (
+                <span className="font-mono text-[0.6rem] font-medium text-[var(--soft)] mt-0.5">{timeParts.period}</span>
+              )}
             </div>
-          ) : (
-            venue.classes.map((cls) => (
-              <ClassRow key={cls.id} cls={cls} portalSlug={portalSlug} />
-            ))
           )}
-        </div>
-      )}
-    </div>
+          {dominantCategory && (
+            <span className="flex-shrink-0 inline-flex items-center justify-center w-7 h-7 rounded bg-accent-20">
+              <CategoryIcon type={dominantCategory} size={18} glow="subtle" />
+            </span>
+          )}
+          <div className="flex-1 min-w-0 text-left">
+            {venue.venueSlug ? (
+              <Link
+                href={`/${portalSlug}?spot=${venue.venueSlug}`}
+                scroll={false}
+                onClick={(e) => e.stopPropagation()}
+                className="font-semibold text-lg text-[var(--cream)] hover:text-[var(--coral)] truncate block transition-colors leading-tight"
+              >
+                {venue.venueName}
+              </Link>
+            ) : (
+              <span className="font-semibold text-lg text-[var(--cream)] group-hover:text-[var(--glow-color,var(--neon-magenta))] truncate block transition-colors leading-tight">
+                {venue.venueName}
+              </span>
+            )}
+            {venue.locations && venue.locations.length > 0 && (
+              <span className="text-sm text-[var(--soft)] mt-0.5 block truncate">
+                {formatLocationList(venue.locations)}
+              </span>
+            )}
+          </div>
+          {/* Class count badge */}
+          <span
+            className={`font-mono text-xs px-2 py-1 rounded-full flex-shrink-0 whitespace-nowrap font-medium ${
+              categoryColor ? "bg-accent-20 text-accent" : "bg-[var(--twilight)] text-[var(--cream)]"
+            }`}
+          >
+            {venue.classes.length} {venue.classes.length === 1 ? "class" : "classes"}
+          </span>
+          <svg
+            className={`w-5 h-5 text-[var(--muted)] transition-transform flex-shrink-0 ${isOpen ? "rotate-180" : ""}`}
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+
+        {/* Expanded class list */}
+        {isOpen && (
+          <div className="border-t border-[var(--twilight)]/30 py-1">
+            {venue.locationGroups && venue.locationGroups.length > 0 ? (
+              <div className="space-y-2 py-1">
+                {venue.locationGroups.map((group) => (
+                  <div key={group.location}>
+                    <div className="px-3 py-1 text-[0.6rem] font-mono uppercase tracking-wider text-[var(--muted)]">
+                      {group.location}
+                    </div>
+                    {group.classes.map((cls) => (
+                      <ClassRow key={cls.id} cls={cls} portalSlug={portalSlug} />
+                    ))}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              venue.classes.map((cls) => (
+                <ClassRow key={cls.id} cls={cls} portalSlug={portalSlug} />
+              ))
+            )}
+          </div>
+        )}
+      </div>
+    </>
   );
 }
 
-// Day section header
+// Day section header — matches AnimatedEventList date header
 function DayHeader({ day }: { day: DayGroup }) {
   return (
-    <div className="flex items-center gap-3 py-2">
-      <h3 className="font-mono text-sm uppercase tracking-wider text-[var(--coral)]">
+    <div className="flex items-center gap-2 sm:gap-3 py-2 sm:py-3">
+      <span className="font-serif text-sm font-medium text-[var(--cream)] tracking-wide">
         {day.label}
-      </h3>
-      <div className="flex-1 h-px bg-[var(--twilight)]" />
-      <span className="font-mono text-xs text-[var(--muted)]">
+      </span>
+      <span className="font-mono text-[0.6rem] text-[var(--muted)] bg-[var(--twilight)]/50 px-2 py-0.5 rounded-full">
         {day.totalClasses} {day.totalClasses === 1 ? "class" : "classes"}
       </span>
+      <div className="flex-1 h-px bg-gradient-to-r from-[var(--twilight)]/50 to-transparent" />
     </div>
   );
 }
@@ -644,7 +698,7 @@ export default function ClassesView({
                 </div>
               )}
               {day.venues.length > 0 && (
-                <div className="space-y-2 mt-3">
+                <div className="space-y-3 mt-3">
                   {day.venues.map((venue, venueIdx) => (
                     <VenueSection
                       key={venue.venueId || venue.venueName}

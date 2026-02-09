@@ -6,6 +6,7 @@ import RSVPButton from "./RSVPButton";
 import AddToCalendar from "./AddToCalendar";
 import ShareEventButton from "./ShareEventButton";
 import InviteToEventButton from "./InviteToEventButton";
+import { isTicketingUrl } from "@/lib/card-utils";
 
 interface EventQuickActionsProps {
   event: {
@@ -30,32 +31,6 @@ interface EventQuickActionsProps {
   };
   isLive?: boolean;
   className?: string;
-}
-
-// Known ticketing platform domains
-const TICKETING_DOMAINS = [
-  "eventbrite.com",
-  "ticketmaster.com",
-  "axs.com",
-  "dice.fm",
-  "seetickets.us",
-  "etix.com",
-  "ticketweb.com",
-  "showclix.com",
-  "ticketfly.com",
-  "universe.com",
-  "resident-advisor.net",
-  "songkick.com",
-];
-
-function isTicketingUrl(url: string | null): boolean {
-  if (!url) return false;
-  try {
-    const hostname = new URL(url).hostname.toLowerCase();
-    return TICKETING_DOMAINS.some(domain => hostname.includes(domain));
-  } catch {
-    return false;
-  }
 }
 
 export default function EventQuickActions({ event, isLive, className = "" }: EventQuickActionsProps) {

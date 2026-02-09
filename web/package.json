@@ -24,6 +24,7 @@
     "@upstash/ratelimit": "^2.0.8",
     "@upstash/redis": "^1.36.1",
     "@vercel/analytics": "^1.6.1",
+    "blurhash": "^2.0.5",
     "date-fns": "^4.1.0",
     "mapbox-gl": "^3.18.1",
     "next": "^16.1.6",

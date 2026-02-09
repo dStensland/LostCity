@@ -5,6 +5,7 @@ import { getLocalDateString } from "@/lib/formats";
 import { escapeSQLPattern, errorResponse, isValidUUID } from "@/lib/api-utils";
 import { getChainVenueIds } from "@/lib/chain-venues";
 import { fetchSocialProofCounts } from "@/lib/search";
+import { format, startOfDay, addDays } from "date-fns";
 
 type RecommendationReason = {
   type: "followed_venue" | "followed_organization" | "neighborhood" | "price" | "friends_going" | "trending";
@@ -60,8 +61,14 @@ export async function GET(request: Request) {
 
     const supabase = await createClient();
 
-    // Get portal data and user preferences in parallel (independent queries)
-  const [portalResult, prefsResult] = await Promise.all([
+    // Calculate date range for trending events
+    const now = new Date();
+    const todayForTrending = format(startOfDay(now), "yyyy-MM-dd");
+    const weekFromNow = format(addDays(startOfDay(now), 7), "yyyy-MM-dd");
+    const hours48Ago = new Date(now.getTime() - 48 * 60 * 60 * 1000).toISOString();
+
+    // Get portal data, user preferences, and trending events in parallel (independent queries)
+  const [portalResult, prefsResult, trendingEventsResult] = await Promise.all([
     portalSlug
       ? supabase
           .from("portals")
@@ -75,6 +82,42 @@ export async function GET(request: Request) {
       .select("*")
       .eq("user_id", user.id)
       .maybeSingle(),
+    // Fetch trending events (same logic as /api/trending)
+    supabase
+      .from("events")
+      .select(`
+        id,
+        title,
+        start_date,
+        start_time,
+        end_date,
+        end_time,
+        is_all_day,
+        is_free,
+        category,
+        image_url,
+        blurhash,
+        series_id,
+        series:series_id(
+          id,
+          slug,
+          title,
+          series_type,
+          image_url,
+          blurhash,
+          frequency,
+          day_of_week,
+          festival:festivals(id, slug, name, image_url, blurhash, festival_type, location, neighborhood)
+        ),
+        venue:venues(id, name, slug, neighborhood, blurhash)
+      `)
+      .gte("start_date", todayForTrending)
+      .lte("start_date", weekFromNow)
+      .eq("is_active", true)
+      .is("canonical_event_id", null)
+      .is("portal_id", null)
+      .order("start_date", { ascending: true })
+      .limit(200),
   ]);
 
   let portalId: string | null = null;
@@ -193,34 +236,34 @@ export async function GET(request: Request) {
     }
   }
 
+  // Parallelize friend RSVPs and profiles into a single batch
   const friendsGoingMap: Record<number, { user_id: string; username: string; display_name: string | null }[]> = {};
 
   if (friendIds.length > 0) {
-    const { data: friendRsvps } = await supabase
-      .from("event_rsvps")
-      .select(`
-        event_id,
-        user_id
-      `)
-      .in("user_id", friendIds)
-      .in("status", ["going", "interested"]);
-
-    // Fetch profile data separately to avoid FK hint issues
-    const rsvpUserIds = [...new Set((friendRsvps || []).map((r: { user_id: string }) => r.user_id))];
-    const profilesMap: Record<string, { username: string; display_name: string | null }> = {};
-
-    if (rsvpUserIds.length > 0) {
-      const { data: profilesData } = await supabase
+    // Fetch RSVPs and profiles in parallel (independent queries)
+    const [friendRsvpsResult, profilesResult] = await Promise.all([
+      supabase
+        .from("event_rsvps")
+        .select("event_id, user_id")
+        .in("user_id", friendIds)
+        .in("status", ["going", "interested"]),
+      supabase
         .from("profiles")
         .select("id, username, display_name")
-        .in("id", rsvpUserIds);
+        .in("id", friendIds), // Fetch all friend profiles upfront
+    ]);
 
-      for (const p of (profilesData || []) as { id: string; username: string; display_name: string | null }[]) {
-        profilesMap[p.id] = { username: p.username, display_name: p.display_name };
-      }
+    const friendRsvps = friendRsvpsResult.data || [];
+    const profilesData = profilesResult.data || [];
+
+    // Build profiles map
+    const profilesMap: Record<string, { username: string; display_name: string | null }> = {};
+    for (const p of profilesData as { id: string; username: string; display_name: string | null }[]) {
+      profilesMap[p.id] = { username: p.username, display_name: p.display_name };
     }
 
-    for (const rsvp of (friendRsvps || []) as { event_id: number; user_id: string }[]) {
+    // Build friendsGoingMap
+    for (const rsvp of friendRsvps as { event_id: number; user_id: string }[]) {
       const profile = profilesMap[rsvp.user_id];
       if (!profile) continue;
 
@@ -255,6 +298,7 @@ export async function GET(request: Request) {
       subcategory,
       tags,
       image_url,
+      blurhash,
       ticket_url,
       organization_id,
       source_id,
@@ -266,11 +310,12 @@ export async function GET(request: Request) {
         title,
         series_type,
         image_url,
+        blurhash,
         frequency,
         day_of_week,
-        festival:festivals(id, slug, name, image_url, festival_type, location, neighborhood)
+        festival:festivals(id, slug, name, image_url, blurhash, festival_type, location, neighborhood)
       ),
-      venue:venues(id, name, neighborhood, slug)
+      venue:venues(id, name, neighborhood, slug, blurhash)
     `)
     .gte("start_date", startDateFilter)
     .is("canonical_event_id", null) // Only show canonical events, not duplicates
@@ -333,6 +378,7 @@ export async function GET(request: Request) {
     subcategory,
     tags,
     image_url,
+    blurhash,
     ticket_url,
     organization_id,
     source_id,
@@ -344,11 +390,12 @@ export async function GET(request: Request) {
       title,
       series_type,
       image_url,
+      blurhash,
       frequency,
       day_of_week,
-      festival:festivals(id, slug, name, image_url, festival_type, location, neighborhood)
+      festival:festivals(id, slug, name, image_url, blurhash, festival_type, location, neighborhood)
     ),
-    venue:venues(id, name, neighborhood, slug)
+    venue:venues(id, name, neighborhood, slug, blurhash)
   `;
 
   const favoriteNeighborhoods = prefs?.favorite_neighborhoods || [];
@@ -427,15 +474,29 @@ export async function GET(request: Request) {
     queryTypes.push("source");
   }
 
-  // Neighborhood venues lookup query (add to Promise.all batch)
-  let neighborhoodVenuesQuery = null;
+  // OPTIMIZATION: Fetch neighborhood events directly with venue join
+  // This avoids the sequential query pattern (venues -> venue_ids -> events)
   if (favoriteNeighborhoods.length > 0) {
-    neighborhoodVenuesQuery = supabase
-      .from("venues")
-      .select("id")
-      .in("neighborhood", favoriteNeighborhoods);
-    queries.push(neighborhoodVenuesQuery);
-    queryTypes.push("neighborhood_venues");
+    // Query events with venues in favorite neighborhoods
+    // We filter by joining venue data and checking neighborhood
+    let neighborhoodQuery = supabase
+      .from("events")
+      .select(`${eventSelect}, venue!inner(neighborhood)`)
+      .in("venue.neighborhood", favoriteNeighborhoods)
+      .gte("start_date", today)
+      .is("canonical_event_id", null)
+      .or("is_class.eq.false,is_class.is.null")
+      .order("start_date", { ascending: true })
+      .limit(50);
+
+    if (portalId) {
+      neighborhoodQuery = neighborhoodQuery.or(`portal_id.eq.${portalId},portal_id.is.null`);
+    } else {
+      neighborhoodQuery = neighborhoodQuery.is("portal_id", null);
+    }
+
+    queries.push(neighborhoodQuery);
+    queryTypes.push("neighborhood");
   }
 
   // Start getChainVenueIds in parallel with event queries (optimization)
@@ -478,7 +539,6 @@ export async function GET(request: Request) {
   let followedEventsData: typeof eventsData = [];
   let neighborhoodEventsData: typeof eventsData = [];
   let categoryEventsData: typeof eventsData = [];
-  let neighborhoodVenueIds: number[] = [];
 
   // Parse additional results based on query types
   for (let i = 1; i < results.length; i++) {
@@ -489,38 +549,14 @@ export async function GET(request: Request) {
     if (data) {
       if (queryType === "venue" || queryType === "org" || queryType === "source") {
         followedEventsData = [...followedEventsData, ...(data as typeof eventsData)];
-      } else if (queryType === "neighborhood_venues") {
-        // Extract venue IDs for follow-up neighborhood events query
-        neighborhoodVenueIds = (data as { id: number }[]).map((v) => v.id);
+      } else if (queryType === "neighborhood") {
+        neighborhoodEventsData = data as typeof eventsData;
       } else if (queryType === "category") {
         categoryEventsData = data as typeof eventsData;
       }
     }
   }
 
-  // Follow-up query for neighborhood events (runs after we have venue IDs)
-  if (neighborhoodVenueIds.length > 0) {
-    let neighborhoodQuery = supabase
-      .from("events")
-      .select(eventSelect)
-      .in("venue_id", neighborhoodVenueIds)
-      .gte("start_date", today)
-      .is("canonical_event_id", null)
-      .or("is_class.eq.false,is_class.is.null")
-      .order("start_date", { ascending: true })
-      .limit(50);
-
-    if (portalId) {
-      neighborhoodQuery = neighborhoodQuery.or(`portal_id.eq.${portalId},portal_id.is.null`);
-    } else {
-      neighborhoodQuery = neighborhoodQuery.is("portal_id", null);
-    }
-
-    const { data: neighborhoodData } = await neighborhoodQuery;
-    neighborhoodEventsData = neighborhoodData as typeof eventsData;
-  }
-
-  // Merge followed events, neighborhood events, and category events with main results
   const mainEventIds = new Set((eventsData || []).map((e: { id: number }) => e.id));
   const uniqueFollowedEvents = (followedEventsData || []).filter(
     (e: { id: number }) => !mainEventIds.has(e.id)
@@ -563,6 +599,7 @@ export async function GET(request: Request) {
     subcategory: string | null;
     tags: string[] | null;
     image_url: string | null;
+    blurhash: string | null;
     ticket_url: string | null;
     organization_id: string | null;
     source_id: number | null;
@@ -573,6 +610,7 @@ export async function GET(request: Request) {
       title: string;
       series_type: string;
       image_url: string | null;
+      blurhash: string | null;
       frequency: string | null;
       day_of_week: string | null;
       festival?: {
@@ -580,6 +618,7 @@ export async function GET(request: Request) {
         slug: string;
         name: string;
         image_url: string | null;
+        blurhash: string | null;
         festival_type?: string | null;
         location: string | null;
         neighborhood: string | null;
@@ -590,6 +629,7 @@ export async function GET(request: Request) {
       name: string;
       neighborhood: string | null;
       slug: string | null;
+      blurhash: string | null;
     } | null;
     score?: number;
     reasons?: RecommendationReason[];
@@ -794,10 +834,105 @@ export async function GET(request: Request) {
     isPersonalized: personalized,
   };
 
-  // Return results with cursor pagination
+  // Process trending events (same logic as /api/trending)
+  type TrendingEventData = {
+    id: number;
+    title: string;
+    start_date: string;
+    start_time: string | null;
+    end_date: string | null;
+    end_time: string | null;
+    is_all_day: boolean;
+    is_free: boolean;
+    category: string | null;
+    image_url: string | null;
+    series_id?: string | null;
+    series?: {
+      id: string;
+      slug: string;
+      title: string;
+      series_type: string;
+      image_url: string | null;
+      frequency: string | null;
+      day_of_week: string | null;
+      festival?: {
+        id: string;
+        slug: string;
+        name: string;
+        image_url: string | null;
+        festival_type?: string | null;
+        location: string | null;
+        neighborhood: string | null;
+      } | null;
+    } | null;
+    venue: { id: number; name: string; slug: string; neighborhood: string | null } | null;
+  };
+
+  const trendingEventsData = (trendingEventsResult.data || []) as TrendingEventData[];
+  let trendingEvents: (TrendingEventData & { score: number; going_count: number })[] = [];
+
+  if (trendingEventsData.length > 0) {
+    const trendingEventIds = trendingEventsData.map((e) => e.id);
+
+    // Get recent RSVPs and total going counts in parallel
+    const [recentRsvpsResult, goingCountsResult] = await Promise.all([
+      supabase
+        .from("event_rsvps")
+        .select("event_id")
+        .in("event_id", trendingEventIds)
+        .gte("created_at", hours48Ago),
+      supabase
+        .from("event_rsvps")
+        .select("event_id")
+        .in("event_id", trendingEventIds)
+        .eq("status", "going"),
+    ]);
+
+    // Count recent RSVPs per event
+    const recentRsvpCounts: Record<number, number> = {};
+    for (const rsvp of (recentRsvpsResult.data || []) as { event_id: number }[]) {
+      recentRsvpCounts[rsvp.event_id] = (recentRsvpCounts[rsvp.event_id] || 0) + 1;
+    }
+
+    // Count total going per event
+    const totalGoingCounts: Record<number, number> = {};
+    for (const rsvp of (goingCountsResult.data || []) as { event_id: number }[]) {
+      totalGoingCounts[rsvp.event_id] = (totalGoingCounts[rsvp.event_id] || 0) + 1;
+    }
+
+    // Score events based on recent activity + total interest
+    const scored = trendingEventsData.map((event) => ({
+      ...event,
+      score: (recentRsvpCounts[event.id] || 0) * 3 + (totalGoingCounts[event.id] || 0),
+      going_count: totalGoingCounts[event.id] || 0,
+    }));
+
+    // Sort by score descending, take top 6
+    scored.sort((a, b) => b.score - a.score);
+    trendingEvents = scored.slice(0, 6);
+  }
+
+  // Build preferences response object (matching /api/preferences format)
+  const preferencesResponse = prefs
+    ? {
+        favorite_categories: prefs.favorite_categories || [],
+        favorite_neighborhoods: prefs.favorite_neighborhoods || [],
+        favorite_vibes: prefs.favorite_vibes || [],
+        price_preference: prefs.price_preference || null,
+      }
+    : {
+        favorite_categories: [],
+        favorite_neighborhoods: [],
+        favorite_vibes: [],
+        price_preference: null,
+      };
+
+  // Return results with cursor pagination, trending, and preferences
   return NextResponse.json(
     {
       events: pageEventsWithCounts,
+      trending: trendingEvents,
+      preferences: preferencesResponse,
       cursor: nextCursor,
       hasMore,
       hasPreferences: !!(

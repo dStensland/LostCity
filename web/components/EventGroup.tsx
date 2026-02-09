@@ -145,7 +145,7 @@ export default function EventGroup({
           const { time, period } = formatTimeSplit(events[0]?.start_time);
           return (
             <div className="flex-shrink-0 w-14 flex flex-col items-center justify-center py-1">
-              <span className="font-mono text-base font-bold text-[var(--cream)] leading-none tabular-nums">
+              <span className="font-mono text-sm font-semibold text-[var(--cream)] leading-none tabular-nums">
                 {time}
               </span>
               {period && (
@@ -165,12 +165,12 @@ export default function EventGroup({
               href={portalSlug ? `/${portalSlug}?spot=${venueSlug}` : `/spots/${venueSlug}`}
               scroll={false}
               onClick={(e) => e.stopPropagation()}
-              className="font-semibold text-lg text-[var(--cream)] hover:text-[var(--coral)] truncate block transition-colors leading-tight"
+              className="font-semibold text-base text-[var(--cream)] hover:text-[var(--coral)] truncate block transition-colors leading-tight"
             >
               {title}
             </Link>
           ) : (
-            <span className="font-semibold text-lg text-[var(--cream)] group-hover:text-[var(--glow-color,var(--neon-magenta))] truncate block transition-colors leading-tight">{title}</span>
+            <span className="font-semibold text-base text-[var(--cream)] group-hover:text-[var(--glow-color,var(--neon-magenta))] truncate block transition-colors leading-tight">{title}</span>
           )}
           {subtitle && <span className="text-sm text-[var(--soft)] mt-0.5 block">{subtitle}</span>}
         </div>

@@ -41,6 +41,14 @@ export const MobileFilterSheet = memo(function MobileFilterSheet({
   const [isVisible, setIsVisible] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
   const sheetRef = useRef<HTMLDivElement>(null);
+  const dateInputRef = useRef<HTMLInputElement>(null);
+
+  const isSpecificDate = /^\d{4}-\d{2}-\d{2}$/.test(currentDateFilter);
+
+  const formatDateLabel = (dateStr: string): string => {
+    const d = new Date(dateStr + "T00:00:00");
+    return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  };
 
   // Handle open/close animation
   useEffect(() => {
@@ -166,6 +174,34 @@ export const MobileFilterSheet = memo(function MobileFilterSheet({
                     </button>
                   );
                 })}
+                <button
+                  onClick={() => {
+                    triggerHaptic("selection");
+                    dateInputRef.current?.showPicker();
+                  }}
+                  className={`min-h-[44px] col-span-2 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg font-mono text-sm font-medium transition-all ${
+                    isSpecificDate
+                      ? "bg-[var(--gold)] text-[var(--void)]"
+                      : "bg-[var(--twilight)] text-[var(--cream)] hover:bg-[var(--dusk)]"
+                  }`}
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  {isSpecificDate ? formatDateLabel(currentDateFilter) : "Pick a date"}
+                </button>
+                <input
+                  ref={dateInputRef}
+                  type="date"
+                  className="sr-only"
+                  min={new Date().toISOString().split("T")[0]}
+                  value={isSpecificDate ? currentDateFilter : ""}
+                  onChange={(e) => {
+                    if (e.target.value) {
+                      handleSetDateFilter(e.target.value);
+                    }
+                  }}
+                />
               </div>
             </div>
 

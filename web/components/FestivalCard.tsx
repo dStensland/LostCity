@@ -140,7 +140,7 @@ const FestivalCard = memo(function FestivalCard({
                 {contextLabel}
               </div>
             )}
-            <h3 className="text-[var(--cream)] font-bold text-lg leading-tight line-clamp-2 group-hover:text-[var(--glow-color)] transition-colors mb-1">
+            <h3 className="text-[var(--cream)] font-semibold text-base leading-tight line-clamp-2 group-hover:text-[var(--glow-color)] transition-colors mb-1">
               {festival.name}
             </h3>
           </div>
@@ -160,7 +160,7 @@ const FestivalCard = memo(function FestivalCard({
                   {typeLabel.charAt(0)}
                 </span>
               </span>
-              <span className="text-[var(--cream)] font-bold text-lg transition-colors line-clamp-1 group-hover:text-[var(--glow-color)]">
+              <span className="text-[var(--cream)] font-semibold text-base transition-colors line-clamp-1 group-hover:text-[var(--glow-color)]">
                 {festival.name}
               </span>
             </div>

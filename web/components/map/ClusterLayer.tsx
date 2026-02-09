@@ -1,164 +1,173 @@
 "use client";
 
-import { Source, Layer } from "react-map-gl";
-import type { CircleLayer, SymbolLayer } from "react-map-gl";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Source, Marker, useMap } from "react-map-gl";
 import type { GeoJSON } from "geojson";
-import type mapboxgl from "mapbox-gl";
+import MapPin from "./MapPin";
+import ClusterPin from "./ClusterPin";
 
-// Cluster circle — solid fill with white border and dark outer ring
-const clusterLayer: CircleLayer = {
-  id: "clusters",
-  type: "circle",
-  source: "events",
-  filter: ["has", "point_count"],
-  paint: {
-    "circle-color": [
-      "step",
-      ["get", "point_count"],
-      "#E8556A", // < 10: warm coral (more saturated)
-      10,
-      "#D946A8", // 10-30: magenta-pink
-      30,
-      "#C026D3", // 30+: vivid purple
-    ],
-    "circle-radius": [
-      "step",
-      ["get", "point_count"],
-      14,  // < 10: 28px diameter
-      10,
-      18,  // 10-30: 36px diameter
-      30,
-      22,  // 30+: 44px diameter
-    ],
-    "circle-stroke-width": 2.5,
-    "circle-stroke-color": "rgba(255, 255, 255, 0.95)",
-    "circle-opacity": 1,
-  },
-};
+interface VisibleCluster {
+  id: number; // cluster_id
+  lng: number;
+  lat: number;
+  count: number;
+}
 
-// Dark ring behind the white border for extra pop
-const clusterOuterRing: CircleLayer = {
-  id: "cluster-outer-ring",
-  type: "circle",
-  source: "events",
-  filter: ["has", "point_count"],
-  paint: {
-    "circle-color": "transparent",
-    "circle-radius": [
-      "step",
-      ["get", "point_count"],
-      17,
-      10,
-      21,
-      30,
-      25,
-    ],
-    "circle-stroke-width": 1,
-    "circle-stroke-color": "rgba(0, 0, 0, 0.3)",
-    "circle-opacity": 1,
-  },
-};
-
-// Cluster count text — white and bold for contrast
-const clusterCountLayer: SymbolLayer = {
-  id: "cluster-count",
-  type: "symbol",
-  source: "events",
-  filter: ["has", "point_count"],
-  layout: {
-    "text-field": ["get", "point_count_abbreviated"],
-    "text-font": ["DIN Pro Bold", "Arial Unicode MS Bold"],
-    "text-size": [
-      "step",
-      ["get", "point_count"],
-      13,
-      10,
-      14,
-      30,
-      16,
-    ],
-    "text-allow-overlap": true,
-  },
-  paint: {
-    "text-color": "#ffffff",
-    "text-halo-color": "rgba(0, 0, 0, 0.3)",
-    "text-halo-width": 1,
-  },
-};
-
-// Mapbox match expression: category → 7-family pin color
-// Must stay in sync with MAP_PIN_FAMILY_LOOKUP in category-config.ts
-// Brighter colors for dark map — synced with MAP_PIN_FAMILY_LOOKUP in category-config.ts
-const categoryColorMatch: mapboxgl.Expression = [
-  "match",
-  ["get", "category"],
-  // Rose — music, dance, nightlife
-  "music", "#FB7185", "dance", "#FB7185", "nightlife", "#FB7185",
-  "nightclub", "#FB7185", "lgbtq", "#FB7185", "music_venue", "#FB7185",
-  "club", "#FB7185", "record_store", "#FB7185",
-  // Vivid Orange — food & drink
-  "food_drink", "#FF9C52", "bar", "#FF9C52", "restaurant", "#FF9C52",
-  "brewery", "#FF9C52", "cooking", "#FF9C52", "cooking_school", "#FF9C52",
-  "coffee_shop", "#FF9C52", "distillery", "#FF9C52", "winery", "#FF9C52",
-  "food_hall", "#FF9C52", "farmers_market", "#FF9C52", "sports_bar", "#FF9C52",
-  // Amber — entertainment & attractions
-  "comedy", "#FCD34D", "comedy_club", "#FCD34D", "festival", "#FCD34D",
-  "markets", "#FCD34D", "attraction", "#FCD34D", "hotel", "#FCD34D",
-  "eatertainment", "#FCD34D",
-  // Mint — community & wellness
-  "community", "#34D399", "fitness", "#34D399", "fitness_center", "#34D399",
-  "wellness", "#34D399", "outdoors", "#34D399", "outdoor", "#34D399",
-  "park", "#34D399", "garden", "#34D399", "yoga", "#34D399",
-  "community_center", "#34D399",
-  // Cyan — sports & screen
-  "sports", "#22D3EE", "sports_venue", "#22D3EE", "film", "#22D3EE",
-  "cinema", "#22D3EE", "tours", "#22D3EE", "arena", "#22D3EE",
-  "convention_center", "#22D3EE",
-  // Bright Violet — arts & learning
-  "art", "#A78BFA", "theater", "#A78BFA", "gallery", "#A78BFA",
-  "museum", "#A78BFA", "learning", "#A78BFA", "words", "#A78BFA",
-  "religious", "#A78BFA", "church", "#A78BFA", "library", "#A78BFA",
-  "bookstore", "#A78BFA", "college", "#A78BFA", "university", "#A78BFA",
-  "studio", "#A78BFA",
-  // Default — coral
-  "#F87171",
-];
-
-// Unclustered point — shown when zoomed past clusterMaxZoom
-const unclusteredPointLayer: CircleLayer = {
-  id: "unclustered-point",
-  type: "circle",
-  source: "events",
-  filter: ["!", ["has", "point_count"]],
-  paint: {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    "circle-color": categoryColorMatch as any,
-    "circle-radius": 8,
-    "circle-stroke-width": 2,
-    "circle-stroke-color": "rgba(255, 255, 255, 0.9)",
-    "circle-opacity": 1,
-  },
-};
+interface VisiblePoint {
+  id: number; // event/spot id
+  lng: number;
+  lat: number;
+  category: string | null;
+  isLive: boolean;
+  itemType: "event" | "spot";
+}
 
 interface ClusterLayerProps {
   data: GeoJSON;
   onClusterClick: (clusterId: number, lng: number, lat: number) => void;
+  onPointClick?: (id: number, itemType: "event" | "spot") => void;
+  selectedItemId?: number | null;
+  hoveredItemId?: number | null;
 }
 
-export default function ClusterLayer({ data, onClusterClick: _onClusterClick }: ClusterLayerProps) {
+export default function ClusterLayer({
+  data,
+  onClusterClick,
+  onPointClick,
+  selectedItemId,
+  hoveredItemId,
+}: ClusterLayerProps) {
+  const { current: map } = useMap();
+  const [clusters, setClusters] = useState<VisibleCluster[]>([]);
+  const [points, setPoints] = useState<VisiblePoint[]>([]);
+  const rafRef = useRef<number>(0);
+
+  const updateFeatures = useCallback(() => {
+    const m = map?.getMap();
+    if (!m) return;
+
+    // Check if source is loaded
+    const source = m.getSource("events");
+    if (!source) return;
+
+    // Query all features from the source that are currently rendered
+    // We use querySourceFeatures for the geojson source with clustering
+    const features = m.querySourceFeatures("events");
+
+    const newClusters: VisibleCluster[] = [];
+    const newPoints: VisiblePoint[] = [];
+    const seenClusters = new Set<number>();
+    const seenPoints = new Set<number>();
+
+    for (const f of features) {
+      const props = f.properties;
+      if (!props) continue;
+
+      const [lng, lat] = (f.geometry as GeoJSON.Point).coordinates;
+
+      if (props.cluster) {
+        const clusterId = props.cluster_id as number;
+        if (seenClusters.has(clusterId)) continue;
+        seenClusters.add(clusterId);
+        newClusters.push({
+          id: clusterId,
+          lng,
+          lat,
+          count: props.point_count as number,
+        });
+      } else {
+        const pointId = props.id as number;
+        if (seenPoints.has(pointId)) continue;
+        seenPoints.add(pointId);
+        newPoints.push({
+          id: pointId,
+          lng,
+          lat,
+          category: (props.category as string) || null,
+          isLive: props.isLive === true || props.isLive === "true",
+          itemType: (props.itemType as "event" | "spot") || "event",
+        });
+      }
+    }
+
+    setClusters(newClusters);
+    setPoints(newPoints);
+  }, [map]);
+
+  // Debounced update on map events
+  const scheduleUpdate = useCallback(() => {
+    cancelAnimationFrame(rafRef.current);
+    rafRef.current = requestAnimationFrame(updateFeatures);
+  }, [updateFeatures]);
+
+  useEffect(() => {
+    const m = map?.getMap();
+    if (!m) return;
+
+    // Update on various map events
+    m.on("moveend", scheduleUpdate);
+    m.on("zoomend", scheduleUpdate);
+    m.on("sourcedata", scheduleUpdate);
+
+    // Initial update
+    scheduleUpdate();
+
+    return () => {
+      m.off("moveend", scheduleUpdate);
+      m.off("zoomend", scheduleUpdate);
+      m.off("sourcedata", scheduleUpdate);
+      cancelAnimationFrame(rafRef.current);
+    };
+  }, [map, scheduleUpdate]);
+
   return (
-    <Source
-      id="events"
-      type="geojson"
-      data={data}
-      cluster
-      clusterMaxZoom={15}
-      clusterRadius={50}
-    >
-      <Layer {...clusterOuterRing} />
-      <Layer {...clusterLayer} />
-      <Layer {...clusterCountLayer} />
-      <Layer {...unclusteredPointLayer} />
-    </Source>
+    <>
+      {/* Source with clustering enabled — no Layer elements needed */}
+      <Source
+        id="events"
+        type="geojson"
+        data={data}
+        cluster
+        clusterMaxZoom={15}
+        clusterRadius={50}
+      />
+
+      {/* Cluster markers — pin shape with count */}
+      {clusters.map((c) => (
+        <Marker
+          key={`cluster-${c.id}`}
+          longitude={c.lng}
+          latitude={c.lat}
+          anchor="bottom"
+          onClick={(e) => {
+            e.originalEvent.stopPropagation();
+            onClusterClick(c.id, c.lng, c.lat);
+          }}
+        >
+          <ClusterPin count={c.count} />
+        </Marker>
+      ))}
+
+      {/* Unclustered point markers — same MapPin as individual mode */}
+      {points.map((p) => (
+        <Marker
+          key={`point-${p.id}`}
+          longitude={p.lng}
+          latitude={p.lat}
+          anchor="bottom"
+          onClick={(e) => {
+            e.originalEvent.stopPropagation();
+            onPointClick?.(p.id, p.itemType);
+          }}
+        >
+          <MapPin
+            category={p.category}
+            isLive={p.isLive}
+            isSelected={p.id === selectedItemId}
+            isHovered={p.id === hoveredItemId}
+          />
+        </Marker>
+      ))}
+    </>
   );
 }

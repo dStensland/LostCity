@@ -38,6 +38,12 @@ export interface Festival {
   producer_id: string | null;
   festival_type?: string | null;
   portal_id?: string | null;
+  primary_type?: string | null;
+  experience_tags?: string[] | null;
+  audience?: string | null;
+  size_tier?: string | null;
+  indoor_outdoor?: string | null;
+  price_tier?: string | null;
 }
 
 export interface FestivalProgram {

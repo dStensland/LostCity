@@ -11,7 +11,7 @@ export const revalidate = 300;
 
 type Props = {
   params: Promise<{ portal: string }>;
-  searchParams: Promise<{ category?: string }>;
+  searchParams: Promise<{ type?: string }>;
 };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -65,7 +65,7 @@ export default async function FestivalsIndexPage({ params, searchParams }: Props
     params,
     searchParams,
   ]);
-  const selectedCategory = resolvedSearchParams.category || null;
+  const selectedType = resolvedSearchParams.type || null;
 
   const portal = await getCachedPortalBySlug(portalSlug);
   const festivals = await getAllFestivals(portal?.id);
@@ -83,16 +83,28 @@ export default async function FestivalsIndexPage({ params, searchParams }: Props
     (f) => f.announced_end && f.announced_end < now
   );
 
-  // Derive unique categories across all festivals
-  const allCategories = new Set<string>();
-  for (const f of festivals) {
-    if (f.categories) {
-      for (const cat of f.categories) {
-        allCategories.add(cat);
-      }
+  // Type filter groups: map primary_type values to user-friendly group labels
+  const TYPE_GROUPS: Record<string, { label: string; types: string[] }> = {
+    cons_gaming: { label: "Cons & Gaming", types: ["pop_culture_con", "tech_conference"] },
+    expos: { label: "Expos & Shows", types: ["hobby_expo"] },
+    markets: { label: "Markets", types: ["market", "fair"] },
+    music: { label: "Music", types: ["music_festival"] },
+    food_drink: { label: "Food & Drink", types: ["food_festival"] },
+    arts_culture: { label: "Arts & Culture", types: ["arts_festival", "cultural_festival", "film_festival", "performing_arts_festival"] },
+    community: { label: "Community", types: ["community_festival", "holiday_spectacle", "athletic_event"] },
+    lifestyle: { label: "Lifestyle", types: ["fashion_event", "wellness_festival", "comedy_festival"] },
+  };
+
+  // Derive which groups have festivals
+  const activeGroups: { key: string; label: string; types: string[] }[] = [];
+  for (const [key, group] of Object.entries(TYPE_GROUPS)) {
+    const hasMatch = festivals.some(
+      (f) => f.primary_type && group.types.includes(f.primary_type)
+    );
+    if (hasMatch) {
+      activeGroups.push({ key, ...group });
     }
   }
-  const categoryList = Array.from(allCategories).sort();
 
   // Sort upcoming festivals by effective date:
   // Ongoing festivals (started in the past) sort as "today" so they appear first
@@ -102,13 +114,14 @@ export default async function FestivalsIndexPage({ params, searchParams }: Props
     return effectiveA.localeCompare(effectiveB);
   });
 
-  // Filter by category if selected
-  if (selectedCategory) {
+  // Filter by type group if selected
+  if (selectedType && TYPE_GROUPS[selectedType]) {
+    const allowedTypes = TYPE_GROUPS[selectedType].types;
     upcoming = upcoming.filter(
-      (f) => f.categories && f.categories.includes(selectedCategory)
+      (f) => f.primary_type && allowedTypes.includes(f.primary_type)
     );
     past = past.filter(
-      (f) => f.categories && f.categories.includes(selectedCategory)
+      (f) => f.primary_type && allowedTypes.includes(f.primary_type)
     );
   }
 
@@ -139,30 +152,30 @@ export default async function FestivalsIndexPage({ params, searchParams }: Props
             </p>
           </div>
 
-          {/* Category filter chips */}
-          {categoryList.length > 1 && (
+          {/* Type filter chips */}
+          {activeGroups.length > 1 && (
             <div className="flex flex-wrap gap-2">
               <Link
                 href={`/${activePortalSlug}/festivals`}
                 className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
-                  !selectedCategory
+                  !selectedType
                     ? "bg-[var(--coral)] text-white border-[var(--coral)] shadow-sm shadow-[var(--coral)]/25"
                     : "border-[var(--twilight)] text-[var(--soft)] hover:text-[var(--cream)] hover:border-[var(--soft)]"
                 }`}
               >
                 All
               </Link>
-              {categoryList.map((cat) => (
+              {activeGroups.map((group) => (
                 <Link
-                  key={cat}
-                  href={`/${activePortalSlug}/festivals?category=${cat}`}
+                  key={group.key}
+                  href={`/${activePortalSlug}/festivals?type=${group.key}`}
                   className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
-                    selectedCategory === cat
+                    selectedType === group.key
                       ? "bg-[var(--coral)] text-white border-[var(--coral)] shadow-sm shadow-[var(--coral)]/25"
                       : "border-[var(--twilight)] text-[var(--soft)] hover:text-[var(--cream)] hover:border-[var(--soft)]"
                   }`}
                 >
-                  {cat.replace(/_/g, " ")}
+                  {group.label}
                 </Link>
               ))}
             </div>
@@ -243,8 +256,8 @@ export default async function FestivalsIndexPage({ params, searchParams }: Props
           {upcoming.length === 0 && past.length === 0 && (
             <div className="py-16 text-center">
               <p className="text-[var(--muted)]">
-                {selectedCategory
-                  ? `No ${selectedCategory.replace(/_/g, " ")} festivals found.`
+                {selectedType && TYPE_GROUPS[selectedType]
+                  ? `No ${TYPE_GROUPS[selectedType].label} festivals found.`
                   : "No festivals found."}
               </p>
             </div>
@@ -344,16 +357,13 @@ function FestivalCard({
             {festival.location}
           </p>
         )}
-        {festival.categories && festival.categories.length > 0 && (
+        {festival.primary_type && (
           <div className="flex flex-wrap gap-1 mt-2">
-            {festival.categories.slice(0, 3).map((cat) => (
-              <span
-                key={cat}
-                className="px-1.5 py-0.5 rounded text-[0.6rem] font-mono uppercase border border-[var(--twilight)] text-[var(--muted)]"
-              >
-                {cat.replace(/_/g, " ")}
-              </span>
-            ))}
+            <span
+              className="px-1.5 py-0.5 rounded text-[0.6rem] font-mono uppercase border border-[var(--twilight)] text-[var(--muted)]"
+            >
+              {festival.primary_type.replace(/_/g, " ")}
+            </span>
           </div>
         )}
       </div>

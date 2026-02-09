@@ -200,10 +200,23 @@ export default function SimpleFilterBar({ variant = "full" }: SimpleFilterBarPro
     });
   }, [updateParams]);
 
+  const dateInputRef = useRef<HTMLInputElement>(null);
+
+  // Format YYYY-MM-DD to short label like "Feb 14"
+  const formatDateLabel = (dateStr: string): string => {
+    const d = new Date(dateStr + "T00:00:00");
+    return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  };
+
+  // Check if current date filter is a specific date (YYYY-MM-DD)
+  const isSpecificDate = /^\d{4}-\d{2}-\d{2}$/.test(currentDateFilter);
+
   // Get display label for current date filter
-  const dateFilterLabel = currentDateFilter
-    ? SIMPLE_DATE_FILTERS.find(d => d.value === currentDateFilter)?.label || "When"
-    : "When";
+  const dateFilterLabel = !currentDateFilter
+    ? "When"
+    : isSpecificDate
+    ? formatDateLabel(currentDateFilter)
+    : SIMPLE_DATE_FILTERS.find(d => d.value === currentDateFilter)?.label || "When";
 
   // Get display label for categories
   const categoryLabel = currentCategories.length === 0
@@ -371,6 +384,37 @@ export default function SimpleFilterBar({ variant = "full" }: SimpleFilterBarPro
                         </button>
                       );
                     })}
+                    <div className="h-px bg-[var(--twilight)] my-1" />
+                    <button
+                      onClick={() => dateInputRef.current?.showPicker()}
+                      className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg font-mono text-xs font-medium transition-colors ${
+                        isSpecificDate
+                          ? "bg-[var(--gold)] text-[var(--void)]"
+                          : "text-[var(--cream)] hover:bg-[var(--twilight)]"
+                      }`}
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                      {isSpecificDate ? formatDateLabel(currentDateFilter) : "Pick date"}
+                      {isSpecificDate && (
+                        <svg className="w-3 h-3 ml-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                      )}
+                    </button>
+                    <input
+                      ref={dateInputRef}
+                      type="date"
+                      className="sr-only"
+                      min={new Date().toISOString().split("T")[0]}
+                      value={isSpecificDate ? currentDateFilter : ""}
+                      onChange={(e) => {
+                        if (e.target.value) {
+                          setDateFilter(e.target.value);
+                        }
+                      }}
+                    />
                   </div>
                 </div>
               )}

@@ -25,6 +25,9 @@ type TrendingEvent = FeedEvent & {
 type FeedResponse = {
   events: FeedEvent[];
   hasPreferences: boolean;
+  // New consolidated fields
+  trending?: TrendingEvent[];
+  preferences?: UserPreferences;
 };
 
 type TrendingResponse = {
@@ -386,13 +389,13 @@ interface ForYouFeedProps {
 export default function ForYouFeed({ portalSlug }: ForYouFeedProps) {
   const [quickFilter, setQuickFilter] = useState<QuickFilter>("all");
 
-  // Fetch feed events with React Query
+  // Fetch feed events with consolidated trending and preferences
   const {
     data: feedData,
     isLoading: feedLoading,
     error: feedError,
   } = useQuery<FeedResponse>({
-    queryKey: ["feed", "sections", portalSlug],
+    queryKey: ["feed", "consolidated", portalSlug],
     queryFn: async () => {
       const res = await fetch(`/api/feed?limit=100&portal=${portalSlug}`);
       if (!res.ok) {
@@ -403,8 +406,8 @@ export default function ForYouFeed({ portalSlug }: ForYouFeedProps) {
     },
   });
 
-  // Fetch trending events with React Query
-  const { data: trendingData } = useQuery<TrendingResponse>({
+  // Fallback to standalone trending endpoint if not in consolidated response
+  const { data: trendingFallbackData } = useQuery<TrendingResponse>({
     queryKey: ["trending", portalSlug],
     queryFn: async () => {
       const res = await fetch(`/api/trending?limit=10&portal=${portalSlug}`);
@@ -413,10 +416,11 @@ export default function ForYouFeed({ portalSlug }: ForYouFeedProps) {
       }
       return res.json();
     },
+    enabled: !feedData?.trending, // Only run if feed doesn't include trending
   });
 
-  // Fetch user preferences with React Query
-  const { data: preferences } = useQuery<UserPreferences | null>({
+  // Fallback to standalone preferences endpoint if not in consolidated response
+  const { data: preferencesFallbackData } = useQuery<UserPreferences | null>({
     queryKey: ["preferences"],
     queryFn: async () => {
       const res = await fetch(`/api/preferences`);
@@ -425,11 +429,15 @@ export default function ForYouFeed({ portalSlug }: ForYouFeedProps) {
       }
       return res.json();
     },
+    enabled: !feedData?.preferences, // Only run if feed doesn't include preferences
   });
 
   const events = feedData?.events || [];
   const hasPreferences = feedData?.hasPreferences || false;
-  const trendingEvents = trendingData?.events || [];
+  // Use consolidated trending or fallback to standalone
+  const trendingEvents = feedData?.trending || trendingFallbackData?.events || [];
+  // Use consolidated preferences or fallback to standalone
+  const preferences = feedData?.preferences || preferencesFallbackData;
   const loading = feedLoading;
   const error = feedError?.message || null;
 

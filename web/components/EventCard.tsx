@@ -71,6 +71,7 @@ export type FeedEventData = {
   category: string | null;
   subcategory?: string | null;
   image_url: string | null;
+  blurhash?: string | null;
   description: string | null;
   featured_blurb?: string | null;
   going_count?: number;
@@ -86,6 +87,7 @@ export type FeedEventData = {
     title: string;
     series_type: string;
     image_url?: string | null;
+    blurhash?: string | null;
     frequency?: string | null;
     day_of_week?: string | null;
   } | null;
@@ -94,6 +96,7 @@ export type FeedEventData = {
     name: string;
     neighborhood: string | null;
     slug?: string | null;
+    blurhash?: string | null;
   } | null;
 };
 
@@ -775,6 +778,7 @@ export const HeroEventCard = memo(function HeroEventCard({ event, portalSlug, hi
               fill
               className="object-cover"
               sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 800px"
+              blurhash={event.blurhash}
             />
           </div>
           <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/60 to-black/30" />
