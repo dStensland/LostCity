@@ -107,7 +107,7 @@ export async function GET(request: Request) {
           blurhash,
           frequency,
           day_of_week,
-          festival:festivals(id, slug, name, image_url, blurhash, festival_type, location, neighborhood)
+          festival:festivals(id, slug, name, image_url, festival_type, location, neighborhood)
         ),
         venue:venues(id, name, slug, neighborhood, blurhash)
       `)
@@ -313,7 +313,7 @@ export async function GET(request: Request) {
         blurhash,
         frequency,
         day_of_week,
-        festival:festivals(id, slug, name, image_url, blurhash, festival_type, location, neighborhood)
+        festival:festivals(id, slug, name, image_url, festival_type, location, neighborhood)
       ),
       venue:venues(id, name, neighborhood, slug, blurhash)
     `)
@@ -393,7 +393,7 @@ export async function GET(request: Request) {
       blurhash,
       frequency,
       day_of_week,
-      festival:festivals(id, slug, name, image_url, blurhash, festival_type, location, neighborhood)
+      festival:festivals(id, slug, name, image_url, festival_type, location, neighborhood)
     ),
     venue:venues(id, name, neighborhood, slug, blurhash)
   `;
