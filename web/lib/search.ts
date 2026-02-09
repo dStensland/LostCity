@@ -633,9 +633,9 @@ export async function getFilteredEventsWithSearch(
     .select(
       `
       *,
-      venue:venues(id, name, slug, address, neighborhood, city, state, lat, lng, typical_price_min, typical_price_max, venue_type),
+      venue:venues(id, name, slug, address, neighborhood, city, state, lat, lng, typical_price_min, typical_price_max, venue_type, blurhash),
       category_data:categories(typical_price_min, typical_price_max),
-      series:series(id, slug, title, series_type, image_url, frequency, day_of_week, festival:festivals(id, slug, name, image_url, festival_type, location, neighborhood))
+      series:series(id, slug, title, series_type, image_url, blurhash, frequency, day_of_week, festival:festivals(id, slug, name, image_url, blurhash, festival_type, location, neighborhood))
     `,
       { count: "estimated" }
     )
@@ -763,9 +763,9 @@ export async function getFilteredEventsWithCursor(
     .select(
       `
       *,
-      venue:venues(id, name, slug, address, neighborhood, city, state, lat, lng, typical_price_min, typical_price_max, venue_type),
+      venue:venues(id, name, slug, address, neighborhood, city, state, lat, lng, typical_price_min, typical_price_max, venue_type, blurhash),
       category_data:categories(typical_price_min, typical_price_max),
-      series:series(id, slug, title, series_type, image_url, frequency, day_of_week, festival:festivals(id, slug, name, image_url, festival_type, location, neighborhood))
+      series:series(id, slug, title, series_type, image_url, blurhash, frequency, day_of_week, festival:festivals(id, slug, name, image_url, blurhash, festival_type, location, neighborhood))
     `
     )
     .or(`start_date.gte.${today},end_date.gte.${today}`)

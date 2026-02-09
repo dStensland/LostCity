@@ -978,6 +978,11 @@ def insert_event(event_data: dict, series_hint: dict = None, genres: list = None
     result = client.table("events").insert(event_data).execute()
     event_id = result.data[0]["id"]
 
+    # TODO: Compute blurhash asynchronously for new events with image_url
+    # Don't do this synchronously during crawling as it would slow down crawls.
+    # The backfill script handles existing data; new events should be handled
+    # by a periodic background job that finds events with image_url but no blurhash.
+
     # Auto-populate event_artists from parsed lineup for music events
     if parsed_artists_for_insert:
         try:
