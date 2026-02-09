@@ -7,6 +7,7 @@ import UnifiedHeader from "@/components/UnifiedHeader";
 import ImageUploader from "@/components/ImageUploader";
 import { useAuth } from "@/lib/auth-context";
 import type { ProducerSubmissionData } from "@/lib/types";
+import PageFooter from "@/components/PageFooter";
 
 const ORG_TYPES = [
   { id: "arts_nonprofit", label: "Arts Nonprofit" },
@@ -584,6 +585,8 @@ export default function SubmitOrgPage() {
           </form>
         )}
       </main>
+
+      <PageFooter />
     </div>
   );
 }

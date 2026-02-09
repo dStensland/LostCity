@@ -11,6 +11,7 @@ import {
   DEFAULT_NOTIFICATION_SETTINGS,
   type NotificationSettings,
 } from "@/lib/notification-types";
+import PageFooter from "@/components/PageFooter";
 
 // Icon components
 function NotificationIcon({ type, className = "" }: { type: string; className?: string }) {
@@ -277,6 +278,8 @@ export default function NotificationsPage() {
           </Link>
         </div>
       </main>
+
+      <PageFooter />
     </div>
   );
 }

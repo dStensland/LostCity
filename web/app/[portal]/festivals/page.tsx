@@ -3,7 +3,6 @@ import { getCachedPortalBySlug } from "@/lib/portal";
 import { computeCountdown, getUrgencyColor } from "@/lib/moments-utils";
 import { getLocalDateString } from "@/lib/formats";
 import { PortalHeader } from "@/components/headers";
-import PortalFooter from "@/components/PortalFooter";
 import Link from "next/link";
 import Image from "@/components/SmartImage";
 import type { Metadata } from "next";
@@ -251,8 +250,6 @@ export default async function FestivalsIndexPage({ params, searchParams }: Props
             </div>
           )}
         </main>
-
-        <PortalFooter />
       </div>
     </>
   );

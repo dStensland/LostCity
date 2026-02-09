@@ -1,5 +1,4 @@
 import { PortalHeader } from "@/components/headers";
-import PortalFooter from "@/components/PortalFooter";
 import ListDetailView from "@/components/community/ListDetailView";
 
 // Revalidate every minute - community lists change infrequently
@@ -28,8 +27,6 @@ export default async function ListDetailPage({ params }: Props) {
       <div className="max-w-3xl mx-auto px-4 py-6 pb-28">
         <ListDetailView portalSlug={portalSlug} listSlug={slug} />
       </div>
-
-      <PortalFooter />
     </div>
   );
 }

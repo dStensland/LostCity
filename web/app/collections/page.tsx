@@ -4,6 +4,7 @@ import Link from "next/link";
 import Image from "@/components/SmartImage";
 import UnifiedHeader from "@/components/UnifiedHeader";
 import CreateCollectionButton from "@/components/CreateCollectionButton";
+import PageFooter from "@/components/PageFooter";
 
 export const metadata: Metadata = {
   title: "Collections | Lost City",
@@ -112,6 +113,8 @@ export default async function CollectionsPage() {
           </div>
         )}
       </main>
+
+      <PageFooter />
     </div>
   );
 }

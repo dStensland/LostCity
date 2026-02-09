@@ -9,6 +9,7 @@ import { useAuth } from "@/lib/auth-context";
 import { createClient } from "@/lib/supabase/client";
 import ScopedStyles from "@/components/ScopedStyles";
 import { createCssVarClass, createCssVarClassForLength } from "@/lib/css-utils";
+import PageFooter from "@/components/PageFooter";
 
 type Portal = {
   id: string;
@@ -544,6 +545,8 @@ function WelcomeContent() {
           )}
         </div>
       </main>
+
+      <PageFooter />
     </div>
   );
 }

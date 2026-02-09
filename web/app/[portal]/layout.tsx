@@ -4,6 +4,7 @@ import { PortalProvider } from "@/lib/portal-context";
 import { PortalTheme } from "@/components/PortalTheme";
 import PortalThemeClient from "@/components/PortalThemeClient";
 import CannyWidget from "@/components/CannyWidget";
+import PortalFooter from "@/components/PortalFooter";
 
 import type { Metadata } from "next";
 
@@ -55,6 +56,7 @@ export default async function PortalLayout({ children, params }: Props) {
       <PortalTheme portal={portal} />
       <PortalThemeClient portal={portal} />
       {children}
+      <PortalFooter />
       <CannyWidget />
     </PortalProvider>
   );

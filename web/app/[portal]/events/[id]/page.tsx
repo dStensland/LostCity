@@ -9,7 +9,6 @@ import FollowButton from "@/components/FollowButton";
 import FriendsGoing from "@/components/FriendsGoing";
 import WhosGoing from "@/components/WhosGoing";
 import { PortalHeader } from "@/components/headers";
-import PortalFooter from "@/components/PortalFooter";
 import { format, parseISO } from "date-fns";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -658,8 +657,6 @@ export default async function PortalEventPage({ params }: Props) {
             </RelatedSection>
           )}
         </main>
-
-        <PortalFooter />
       </div>
 
       {/* Sticky bottom bar with CTAs */}

@@ -10,6 +10,7 @@ import OrganizationAutocomplete from "@/components/OrganizationAutocomplete";
 import { useAuth } from "@/lib/auth-context";
 import type { EventSubmissionData, VenueSubmissionData } from "@/lib/types";
 import { VENUE_SUBMISSION_NEIGHBORHOODS } from "@/config/neighborhoods";
+import PageFooter from "@/components/PageFooter";
 
 const EVENT_CATEGORIES = [
   { id: "music", label: "Music" },
@@ -1024,6 +1025,8 @@ export default function SubmitEventPage() {
           </form>
         )}
       </main>
+
+      <PageFooter />
     </div>
   );
 }

@@ -4,6 +4,7 @@ import { CATEGORIES, SUBCATEGORIES } from "@/lib/search";
 import { SPOT_TYPES, VIBES, NEIGHBORHOODS } from "@/lib/spots";
 import { ITP_NEIGHBORHOODS } from "@/config/neighborhoods";
 import { PLACE_CATEGORIES } from "@/config/categories";
+import PageFooter from "@/components/PageFooter";
 
 export const metadata: Metadata = {
   title: "Data | Lost City",
@@ -129,10 +130,13 @@ export default async function DataPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[var(--night)] p-8">
-      <pre className="text-[var(--cream)] text-xs font-mono whitespace-pre-wrap">
-        {JSON.stringify(data, null, 2)}
-      </pre>
+    <div className="min-h-screen bg-[var(--night)]">
+      <div className="p-8">
+        <pre className="text-[var(--cream)] text-xs font-mono whitespace-pre-wrap">
+          {JSON.stringify(data, null, 2)}
+        </pre>
+      </div>
+      <PageFooter />
     </div>
   );
 }

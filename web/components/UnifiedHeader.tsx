@@ -209,7 +209,7 @@ function UnifiedHeaderInner({
             />
           </div>
         )}
-        <div className="relative z-[2] px-4 py-2 sm:py-3 flex items-center gap-4">
+        <div className="relative px-4 py-2 sm:py-3 flex items-center gap-4">
           {/* Left: Back button (optional) + Logo */}
           <div className="flex items-center gap-2 flex-shrink-0">
             {backLink && (
@@ -358,7 +358,7 @@ function UnifiedHeaderInner({
 
         {/* Mobile Nav Bar (below header on mobile) - compact to maximize content area */}
         {!hideNav && (
-          <nav className="sm:hidden relative z-[1] border-t border-[var(--twilight)]/30 bg-[var(--night)]/95">
+          <nav className="sm:hidden relative border-t border-[var(--twilight)]/30 bg-[var(--night)]/95">
             <div className="flex py-1.5 px-4">
               {TABS.map((tab) => {
                 const active = isActive(tab);

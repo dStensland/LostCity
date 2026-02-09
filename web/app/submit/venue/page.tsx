@@ -8,6 +8,7 @@ import { GooglePlaceAutocomplete } from "@/components/GooglePlaceAutocomplete";
 import { useAuth } from "@/lib/auth-context";
 import type { VenueSubmissionData } from "@/lib/types";
 import { VENUE_SUBMISSION_NEIGHBORHOODS } from "@/config/neighborhoods";
+import PageFooter from "@/components/PageFooter";
 
 const VENUE_TYPES = [
   { id: "bar", label: "Bar" },
@@ -611,6 +612,8 @@ export default function SubmitVenuePage() {
           </form>
         )}
       </main>
+
+      <PageFooter />
     </div>
   );
 }

@@ -7,6 +7,7 @@ import CategoryIcon from "@/components/CategoryIcon";
 import { formatTimeSplit } from "@/lib/formats";
 import { format, parseISO } from "date-fns";
 import type { Metadata } from "next";
+import PageFooter from "@/components/PageFooter";
 
 export const revalidate = 300;
 
@@ -222,6 +223,8 @@ export default async function CollectionPage({ params }: Props) {
           </div>
         )}
       </main>
+
+      <PageFooter />
     </div>
   );
 }

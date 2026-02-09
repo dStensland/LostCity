@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import UnifiedHeader from "@/components/UnifiedHeader";
 import { useAuth } from "@/lib/auth-context";
+import PageFooter from "@/components/PageFooter";
 
 type SubmissionCounts = {
   total: number;
@@ -252,6 +253,8 @@ export default function SubmitPage() {
           </ul>
         </div>
       </main>
+
+      <PageFooter />
     </div>
   );
 }

@@ -5,6 +5,7 @@ import Link from "next/link";
 import UnifiedHeader from "@/components/UnifiedHeader";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/lib/auth-context";
+import PageFooter from "@/components/PageFooter";
 
 export default function ProfileSettingsPage() {
   const { user, profile, refreshProfile } = useAuth();
@@ -261,6 +262,8 @@ export default function ProfileSettingsPage() {
           </div>
         )}
       </main>
+
+      <PageFooter />
     </div>
   );
 }

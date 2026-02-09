@@ -2,6 +2,7 @@ import Link from "next/link";
 import UnifiedHeader from "@/components/UnifiedHeader";
 import { getUser } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
+import PageFooter from "@/components/PageFooter";
 
 export const metadata = {
   title: "Settings | Lost City",
@@ -99,6 +100,8 @@ export default async function SettingsPage() {
           </div>
         </div>
       </main>
+
+      <PageFooter />
     </div>
   );
 }

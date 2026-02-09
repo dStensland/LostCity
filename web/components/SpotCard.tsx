@@ -5,6 +5,7 @@ import { formatCompactCount } from "@/lib/formats";
 import CategoryIcon, { getCategoryLabel } from "./CategoryIcon";
 import { EventsBadge } from "./Badge";
 import VenueTagBadges from "./VenueTagBadges";
+import { getSpotReflectionClass } from "@/lib/card-utils";
 
 // Tag data that can be passed from parent (batch-loaded) to avoid N+1 queries
 export type SpotTagData = {
@@ -13,25 +14,6 @@ export type SpotTagData = {
   tag_group: string;
   score: number;
 };
-
-// Get reflection color class based on spot type
-function getReflectionClass(spotType: string): string {
-  const reflectionMap: Record<string, string> = {
-    music_venue: "reflect-music",
-    comedy_club: "reflect-comedy",
-    art_gallery: "reflect-art",
-    theater: "reflect-theater",
-    movie_theater: "reflect-film",
-    community_space: "reflect-community",
-    restaurant: "reflect-food",
-    bar: "reflect-nightlife",
-    sports_venue: "reflect-sports",
-    fitness_studio: "reflect-fitness",
-    nightclub: "reflect-nightlife",
-    family_venue: "reflect-family",
-  };
-  return reflectionMap[spotType] || "";
-}
 
 interface Props {
   spot: Spot;
@@ -66,7 +48,7 @@ export default function SpotCard({ spot, index = 0, showDistance, portalSlug, ta
   const staggerClass = index < 10 ? `stagger-${index + 1}` : "";
   const priceDisplay = formatPriceLevel(spot.price_level);
   const venueType = spot.venue_type || "music_venue";
-  const reflectionClass = getReflectionClass(venueType);
+  const reflectionClass = getSpotReflectionClass(venueType);
 
   // Calculate distance if we have user location and spot coordinates
   const distance = showDistance && spot.lat && spot.lng

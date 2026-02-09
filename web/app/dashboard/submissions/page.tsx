@@ -6,6 +6,7 @@ import Link from "next/link";
 import UnifiedHeader from "@/components/UnifiedHeader";
 import { useAuth } from "@/lib/auth-context";
 import type { SubmissionWithProfile, SubmissionStatus, SubmissionType } from "@/lib/types";
+import PageFooter from "@/components/PageFooter";
 
 const STATUS_LABELS: Record<SubmissionStatus, { label: string; color: string }> = {
   pending: { label: "Pending Review", color: "yellow" },
@@ -368,6 +369,8 @@ export default function UserSubmissionsPage() {
           </div>
         )}
       </main>
+
+      <PageFooter />
     </div>
   );
 }

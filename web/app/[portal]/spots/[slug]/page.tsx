@@ -7,7 +7,6 @@ import type { Metadata } from "next";
 import { cache } from "react";
 import { safeJsonLd } from "@/lib/formats";
 import { PortalHeader } from "@/components/headers";
-import PortalFooter from "@/components/PortalFooter";
 import ScopedStylesServer from "@/components/ScopedStylesServer";
 import { createCssVarClass } from "@/lib/css-utils";
 import VenueTagList from "@/components/VenueTagList";
@@ -327,8 +326,6 @@ export default async function PortalSpotPage({ params }: Props) {
             </RelatedSection>
           )}
         </main>
-
-        <PortalFooter />
       </div>
 
       {/* Sticky bottom bar with CTAs */}

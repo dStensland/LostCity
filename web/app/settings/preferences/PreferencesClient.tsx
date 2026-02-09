@@ -15,6 +15,7 @@ import {
   PRICE_PREFERENCES,
 } from "@/lib/preferences";
 import { DEFAULT_PORTAL_SLUG } from "@/lib/constants";
+import PageFooter from "@/components/PageFooter";
 
 type PreferencesClientProps = {
   isWelcome: boolean;
@@ -387,6 +388,8 @@ export default function PreferencesClient({
           </p>
         </div>
       </main>
+
+      <PageFooter />
     </div>
   );
 }

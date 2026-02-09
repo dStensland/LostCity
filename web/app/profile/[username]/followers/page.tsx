@@ -3,6 +3,7 @@ import Link from "next/link";
 import UnifiedHeader from "@/components/UnifiedHeader";
 import UserList from "@/components/UserList";
 import { createClient } from "@/lib/supabase/server";
+import PageFooter from "@/components/PageFooter";
 
 type Props = {
   params: Promise<{ username: string }>;
@@ -80,6 +81,8 @@ export default async function FollowersPage({ params }: Props) {
           emptyMessage="No followers yet"
         />
       </main>
+
+      <PageFooter />
     </div>
   );
 }

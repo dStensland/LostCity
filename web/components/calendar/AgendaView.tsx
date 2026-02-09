@@ -6,6 +6,7 @@ import Image from "@/components/SmartImage";
 import { format, isToday, isTomorrow, isThisWeek, isBefore, parseISO } from "date-fns";
 import CategoryIcon from "@/components/CategoryIcon";
 import { formatTimeSplit, formatPriceDetailed, type PriceableEvent } from "@/lib/formats";
+import { getSmartDateLabel } from "@/lib/card-utils";
 
 interface CalendarEvent {
   id: number;
@@ -50,20 +51,6 @@ interface AgendaViewProps {
   eventsByDate: Map<string, CalendarEvent[]>;
   friendEventsByDate: Map<string, FriendCalendarEvent[]>;
   portalSlug?: string;
-}
-
-function getSmartDateLabel(dateStr: string): string {
-  const date = parseISO(dateStr);
-
-  if (isToday(date)) return "Today";
-  if (isTomorrow(date)) return "Tomorrow";
-
-  // Check if it's this week
-  if (isThisWeek(date, { weekStartsOn: 0 })) {
-    return format(date, "EEEE"); // "Wednesday", "Thursday", etc.
-  }
-
-  return format(date, "EEEE, MMMM d");
 }
 
 export default function AgendaView({

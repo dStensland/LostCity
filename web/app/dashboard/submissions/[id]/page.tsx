@@ -13,6 +13,7 @@ import type {
   VenueSubmissionData,
   ProducerSubmissionData,
 } from "@/lib/types";
+import PageFooter from "@/components/PageFooter";
 
 const STATUS_LABELS: Record<SubmissionStatus, { label: string; color: string }> = {
   pending: { label: "Pending Review", color: "yellow" },
@@ -306,6 +307,8 @@ export default function SubmissionDetailPage() {
           </div>
         )}
       </main>
+
+      <PageFooter />
     </div>
   );
 }

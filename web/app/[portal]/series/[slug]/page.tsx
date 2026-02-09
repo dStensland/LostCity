@@ -4,7 +4,6 @@ import type { ReactElement } from "react";
 import { cache } from "react";
 import ScrollToTop from "@/components/ScrollToTop";
 import { PortalHeader } from "@/components/headers";
-import PortalFooter from "@/components/PortalFooter";
 import { getCachedPortalBySlug } from "@/lib/portal";
 import {
   getSeriesBySlug,
@@ -740,8 +739,6 @@ export default async function PortalSeriesPage({ params }: Props) {
             </RelatedSection>
           )}
         </main>
-
-        <PortalFooter />
       </div>
 
       {/* Sticky bar with actions */}

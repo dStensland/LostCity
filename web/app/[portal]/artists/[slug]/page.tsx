@@ -3,7 +3,6 @@ import Link from "next/link";
 import { cache } from "react";
 import { format, parseISO } from "date-fns";
 import { PortalHeader } from "@/components/headers";
-import PortalFooter from "@/components/PortalFooter";
 import { getCachedPortalBySlug } from "@/lib/portal";
 import {
   getArtistBySlug,
@@ -280,8 +279,6 @@ export default async function PortalArtistPage({ params }: Props) {
             </RelatedSection>
           )}
         </main>
-
-        <PortalFooter />
       </div>
 
       {/* Sticky bar with external links */}

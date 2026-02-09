@@ -2,7 +2,6 @@ import { notFound } from "next/navigation";
 import { cache } from "react";
 import ScrollToTop from "@/components/ScrollToTop";
 import { PortalHeader } from "@/components/headers";
-import PortalFooter from "@/components/PortalFooter";
 import { getCachedPortalBySlug } from "@/lib/portal";
 import {
   getFestivalBySlug,
@@ -370,8 +369,6 @@ export default async function PortalFestivalPage({ params }: Props) {
             </RelatedSection>
           )}
         </main>
-
-        <PortalFooter />
       </div>
 
     </>

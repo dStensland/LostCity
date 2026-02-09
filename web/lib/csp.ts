@@ -63,6 +63,10 @@ export function buildCsp(nonce: string, options: CspOptions = {}): string {
     "https://upload.wikimedia.org",
     "https://user-images.githubusercontent.com",
     // Venue sites
+    "https://529atlanta.com",
+    "https://www.bigpeachrunningco.com",
+    "https://static.wixstatic.com",
+    "https://www.spelman.edu",
     "https://www.aso.org",
     "https://admin.paintingwithatwist.com",
     "https://14d14a1b70be1f7f7d4a-0863ae42a3340022d3e557e78745c047.ssl.cf5.rackcdn.com",

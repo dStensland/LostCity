@@ -20,6 +20,7 @@ import SeriesCard from "@/components/SeriesCard";
 import FestivalCard from "@/components/FestivalCard";
 import { groupEventsForDisplay, type DisplayItem } from "@/lib/event-grouping";
 import type { EventWithLocation } from "@/lib/search";
+import { getSmartDateLabel, getFeedEventStatus } from "@/lib/card-utils";
 
 // Types
 export type FeedEvent = {
@@ -94,42 +95,6 @@ type Props = {
   section: FeedSectionData;
   isFirst?: boolean;
 };
-
-// Helper: Get event status (live, soon, or null)
-function getEventStatus(date: string, time: string | null): "live" | "soon" | null {
-  if (!time) return null;
-
-  const eventDate = parseISO(date);
-  if (!isToday(eventDate)) return null;
-
-  const [hours, minutes] = time.split(":").map(Number);
-  const eventDateTime = new Date();
-  eventDateTime.setHours(hours, minutes, 0, 0);
-  const now = Date.now();
-
-  if (eventDateTime > new Date()) {
-    const minutesUntil = Math.round((eventDateTime.getTime() - now) / (1000 * 60));
-    if (minutesUntil <= 30) {
-      return "soon";
-    }
-  } else {
-    // Event started - check if still happening (within last 2 hours)
-    const minutesAgo = Math.round((now - eventDateTime.getTime()) / (1000 * 60));
-    if (minutesAgo <= 120) {
-      return "live";
-    }
-  }
-  return null;
-}
-
-
-// Helper: Get smart date display
-function getSmartDate(date: string): string {
-  const eventDate = parseISO(date);
-  if (isToday(eventDate)) return "Today";
-  if (isTomorrow(eventDate)) return "Tomorrow";
-  return format(eventDate, "EEE, MMM d");
-}
 
 // Helper: Build "See all" URL based on section filters
 function getSeeAllUrl(section: FeedSectionData, portalSlug: string): string {
@@ -509,7 +474,7 @@ function HeroBanner({ section, portalSlug, hideImages }: { section: FeedSectionD
 
           {/* Meta with smart time */}
           <div className="flex flex-wrap items-center gap-3 text-sm text-white/90 font-mono">
-            <span className="font-medium">{getSmartDate(event.start_date)}</span>
+            <span className="font-medium">{getSmartDateLabel(event.start_date)}</span>
             {event.start_time && (
               <>
                 <span className="opacity-40">·</span>
@@ -852,7 +817,7 @@ function EventCard({ event, isCarousel, portalSlug }: { event: FeedEvent; isCaro
   const interestedCount = event.interested_count || 0;
   const recommendationCount = event.recommendation_count || 0;
   const isPopular = goingCount >= 10;
-  const eventStatus = getEventStatus(event.start_date, event.start_time);
+  const eventStatus = getFeedEventStatus(event.start_date, event.start_time);
 
   return (
     <Link
@@ -871,7 +836,7 @@ function EventCard({ event, isCarousel, portalSlug }: { event: FeedEvent; isCaro
             <CategoryIcon type={event.category} size={12} />
           )}
           <span className="font-mono text-[0.65rem] text-[var(--muted)]">
-            {getSmartDate(event.start_date)}
+            {getSmartDateLabel(event.start_date)}
             {event.start_time && ` · ${formatTime(event.start_time)}`}
           </span>
           {isPopular && (
@@ -1022,7 +987,7 @@ function EventList({ section, portalSlug }: { section: FeedSectionData; portalSl
                 className="group flex items-center gap-3 mb-2 px-3 py-2 -mx-3 rounded-lg cursor-default transition-all hover:bg-[var(--twilight)]/20 card-atmospheric glow-accent reflection-accent"
               >
                 <span className="font-mono text-xs font-medium text-[var(--coral)] transition-all group-hover:text-glow">
-                  {getSmartDate(date)}
+                  {getSmartDateLabel(date)}
                 </span>
                 <div className="flex-1 h-px bg-[var(--twilight)]/50" />
               </div>
@@ -1051,7 +1016,7 @@ function EventListItem({ event, isAlternate, showDate = true, portalSlug }: { ev
   const recommendationCount = event.recommendation_count || 0;
   const isPopular = goingCount >= 10;
   const isTrending = event.is_trending || false;
-  const eventStatus = getEventStatus(event.start_date, event.start_time);
+  const eventStatus = getFeedEventStatus(event.start_date, event.start_time);
 
   // Visual hierarchy classes
   const hierarchyClass = isTrending ? "card-trending" : isPopular ? "card-popular" : "";
@@ -1098,7 +1063,7 @@ function EventListItem({ event, isAlternate, showDate = true, portalSlug }: { ev
         <div className="flex items-center gap-1.5 font-mono text-[0.65rem] text-[var(--muted)]">
           {showDate && (
             <>
-              <span>{getSmartDate(event.start_date)}</span>
+              <span>{getSmartDateLabel(event.start_date)}</span>
               {event.venue && <span className="opacity-40">·</span>}
             </>
           )}
@@ -1251,7 +1216,7 @@ function groupEventsByDate(events: VenueShowtime[]): { dateLabel: string; date: 
   const sorted = Array.from(dateMap.entries()).sort(([a], [b]) => a.localeCompare(b));
 
   return sorted.map(([date, evts]) => ({
-    dateLabel: getSmartDate(date),
+    dateLabel: getSmartDateLabel(date),
     date,
     events: evts.sort((a, b) => (a.start_time || "").localeCompare(b.start_time || "")),
   }));

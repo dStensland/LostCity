@@ -8,6 +8,7 @@ import DashboardFeed from "@/components/dashboard/DashboardFeed";
 import DashboardActivity from "@/components/dashboard/DashboardActivity";
 import DashboardPlanning from "@/components/dashboard/DashboardPlanning";
 import { usePortalOptional, DEFAULT_PORTAL_SLUG } from "@/lib/portal-context";
+import PageFooter from "@/components/PageFooter";
 
 type DashboardTab = "feed" | "activity" | "planning";
 
@@ -82,6 +83,7 @@ function DashboardContent() {
         {currentTab === "activity" && <DashboardActivity />}
         {currentTab === "planning" && <DashboardPlanning />}
       </DashboardShell>
+      <PageFooter />
     </>
   );
 }

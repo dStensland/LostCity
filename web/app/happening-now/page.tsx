@@ -8,6 +8,7 @@ import AroundMeCard from "@/components/AroundMeCard";
 import CategoryFilterChips, { type FilterCategory } from "@/components/CategoryFilterChips";
 import { NEIGHBORHOODS, type Spot } from "@/lib/spots-constants";
 import { DEFAULT_PORTAL_SLUG } from "@/lib/portal-context";
+import PageFooter from "@/components/PageFooter";
 
 // Dynamically import heavy components
 const GlassHeader = dynamic(() => import("@/components/GlassHeader"), { ssr: false });
@@ -503,6 +504,8 @@ export default function HappeningNowPage() {
           </div>
         )}
       </main>
+
+      <PageFooter />
     </div>
   );
 }

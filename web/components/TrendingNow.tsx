@@ -10,6 +10,7 @@ import FestivalCard from "@/components/FestivalCard";
 import FeedSectionHeader from "@/components/feed/FeedSectionHeader";
 import { groupEventsForDisplay } from "@/lib/event-grouping";
 import type { EventWithLocation } from "@/lib/search";
+import { getReflectionClass, getSmartDateLabel } from "@/lib/card-utils";
 
 type TrendingEvent = {
   id: number;
@@ -49,33 +50,6 @@ type TrendingEvent = {
     neighborhood: string | null;
   } | null;
 };
-
-// Get reflection color class based on category
-function getReflectionClass(category: string | null): string {
-  if (!category) return "";
-  const reflectionMap: Record<string, string> = {
-    music: "reflect-music",
-    comedy: "reflect-comedy",
-    art: "reflect-art",
-    theater: "reflect-theater",
-    film: "reflect-film",
-    community: "reflect-community",
-    food_drink: "reflect-food",
-    food: "reflect-food",
-    sports: "reflect-sports",
-    fitness: "reflect-fitness",
-    nightlife: "reflect-nightlife",
-    family: "reflect-family",
-  };
-  return reflectionMap[category] || "";
-}
-
-function getSmartDate(dateStr: string): string {
-  const date = parseISO(dateStr);
-  if (isToday(date)) return "Today";
-  if (isTomorrow(date)) return "Tomorrow";
-  return format(date, "EEE, MMM d");
-}
 
 export default function TrendingNow({ portalSlug }: { portalSlug?: string } = {}) {
   const [events, setEvents] = useState<TrendingEvent[]>([]);
@@ -203,7 +177,7 @@ export default function TrendingNow({ portalSlug }: { portalSlug?: string } = {}
 function TrendingEventCard({ event, portalSlug }: { event: TrendingEvent; portalSlug?: string }) {
   const { time, period } = formatTimeSplit(event.start_time, event.is_all_day);
   const reflectionClass = getReflectionClass(event.category);
-  const smartDate = getSmartDate(event.start_date);
+  const smartDate = getSmartDateLabel(event.start_date);
   const goingCount = event.going_count || 0;
   const accentMode = event.category ? "category" : "trending";
 

@@ -7,6 +7,7 @@ import { formatTime, formatTimeSplit } from "@/lib/formats";
 import CategoryIcon, { getCategoryColor } from "./CategoryIcon";
 import ScopedStyles from "@/components/ScopedStyles";
 import { createCssVarClass } from "@/lib/css-utils";
+import { getReflectionClass } from "@/lib/card-utils";
 
 // Map known venues to their primary category type
 const VENUE_CATEGORY_MAP: Record<string, string> = {
@@ -52,26 +53,6 @@ function getVenueCategory(venueName: string): string | null {
     }
   }
   return null;
-}
-
-// Get reflection color class based on category
-function getReflectionClass(category: string | null): string {
-  if (!category) return "";
-  const reflectionMap: Record<string, string> = {
-    music: "reflect-music",
-    comedy: "reflect-comedy",
-    art: "reflect-art",
-    theater: "reflect-theater",
-    film: "reflect-film",
-    community: "reflect-community",
-    food_drink: "reflect-food",
-    food: "reflect-food",
-    sports: "reflect-sports",
-    fitness: "reflect-fitness",
-    nightlife: "reflect-nightlife",
-    family: "reflect-family",
-  };
-  return reflectionMap[category] || "";
 }
 
 // Group events by title to combine showtimes

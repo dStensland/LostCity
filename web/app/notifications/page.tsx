@@ -8,6 +8,7 @@ import UnifiedHeader from "@/components/UnifiedHeader";
 import FriendRequestCard from "@/components/FriendRequestCard";
 import { useAuth } from "@/lib/auth-context";
 import { formatDistanceToNow } from "date-fns";
+import PageFooter from "@/components/PageFooter";
 
 type FriendRequest = {
   id: string;
@@ -265,6 +266,8 @@ export default function NotificationsPage() {
           </div>
         )}
       </main>
+
+      <PageFooter />
     </div>
   );
 }

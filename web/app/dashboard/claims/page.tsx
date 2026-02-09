@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import UnifiedHeader from "@/components/UnifiedHeader";
 import { useAuth } from "@/lib/auth-context";
+import PageFooter from "@/components/PageFooter";
 
 type ClaimStatus = "pending" | "needs_info" | "approved" | "rejected";
 
@@ -182,6 +183,8 @@ export default function UserClaimsPage() {
           </div>
         )}
       </main>
+
+      <PageFooter />
     </div>
   );
 }

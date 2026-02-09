@@ -18,6 +18,7 @@ import CategoryIcon from "./CategoryIcon";
 import { formatTimeSplit } from "@/lib/formats";
 import { DEFAULT_PORTAL_SLUG } from "@/lib/portal-context";
 import { useCalendarEvents, type CalendarEvent } from "@/lib/hooks/useCalendarEvents";
+import { getReflectionClass } from "@/lib/card-utils";
 
 interface DayData {
   date: Date;
@@ -25,26 +26,6 @@ interface DayData {
   isCurrentMonth: boolean;
   isToday: boolean;
   isPast: boolean;
-}
-
-// Get reflection color class based on category
-function getReflectionClass(category: string | null): string {
-  if (!category) return "";
-  const reflectionMap: Record<string, string> = {
-    music: "reflect-music",
-    comedy: "reflect-comedy",
-    art: "reflect-art",
-    theater: "reflect-theater",
-    film: "reflect-film",
-    community: "reflect-community",
-    food_drink: "reflect-food",
-    food: "reflect-food",
-    sports: "reflect-sports",
-    fitness: "reflect-fitness",
-    nightlife: "reflect-nightlife",
-    family: "reflect-family",
-  };
-  return reflectionMap[category] || "";
 }
 
 interface Props {

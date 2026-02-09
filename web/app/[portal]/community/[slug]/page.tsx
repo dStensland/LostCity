@@ -4,7 +4,6 @@ import { unstable_cache } from "next/cache";
 import { supabase } from "@/lib/supabase";
 import { getCachedPortalBySlug } from "@/lib/portal";
 import { PortalHeader } from "@/components/headers";
-import PortalFooter from "@/components/PortalFooter";
 import ScopedStylesServer from "@/components/ScopedStylesServer";
 import { createCssVarClass } from "@/lib/css-utils";
 import FollowButton from "@/components/FollowButton";
@@ -548,8 +547,6 @@ export default async function PortalOrganizerPage({ params }: Props) {
             </RelatedSection>
           )}
         </main>
-
-        <PortalFooter />
       </div>
 
       {/* Sticky bottom bar with CTAs */}

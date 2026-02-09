@@ -10,6 +10,7 @@ import { formatTimeSplit, formatSmartDate, formatPriceDetailed, formatCompactCou
 import CategoryIcon, { getCategoryColor } from "./CategoryIcon";
 import ScopedStyles from "@/components/ScopedStyles";
 import { createCssVarClass } from "@/lib/css-utils";
+import { getReflectionClass, isTicketingUrl, isReservationUrl, getLinkOutLabel } from "@/lib/card-utils";
 
 import SeriesBadge from "./SeriesBadge";
 import ReasonBadge, { getTopReasons, type RecommendationReason } from "./ReasonBadge";
@@ -69,87 +70,6 @@ interface Props {
   contextType?: "interests" | "venue" | "producer" | "neighborhood";
   /** Callback when user hides the event */
   onHide?: () => void;
-}
-
-// Get reflection color class based on category
-function getReflectionClass(category: string | null): string {
-  if (!category) return "";
-  const reflectionMap: Record<string, string> = {
-    music: "reflect-music",
-    comedy: "reflect-comedy",
-    art: "reflect-art",
-    theater: "reflect-theater",
-    film: "reflect-film",
-    community: "reflect-community",
-    food_drink: "reflect-food",
-    food: "reflect-food",
-    sports: "reflect-sports",
-    fitness: "reflect-fitness",
-    nightlife: "reflect-nightlife",
-    family: "reflect-family",
-  };
-  return reflectionMap[category] || "";
-}
-
-// Known ticketing platform domains
-const TICKETING_DOMAINS = [
-  "eventbrite.com",
-  "ticketmaster.com",
-  "axs.com",
-  "dice.fm",
-  "seetickets.us",
-  "etix.com",
-  "ticketweb.com",
-  "showclix.com",
-  "ticketfly.com",
-  "universe.com",
-  "resident-advisor.net",
-  "songkick.com",
-];
-
-// Common reservation platforms
-const RESERVATION_DOMAINS = [
-  "resy.com",
-  "opentable.com",
-  "tock.com",
-  "exploretock.com",
-  "sevenrooms.com",
-  "toasttab.com",
-];
-
-function isTicketingUrl(url: string | null): boolean {
-  if (!url) return false;
-  try {
-    const hostname = new URL(url).hostname.toLowerCase();
-    return TICKETING_DOMAINS.some((domain) => hostname.includes(domain));
-  } catch {
-    return false;
-  }
-}
-
-function isReservationUrl(url: string | null): boolean {
-  if (!url) return false;
-  try {
-    const hostname = new URL(url).hostname.toLowerCase();
-    return RESERVATION_DOMAINS.some((domain) => hostname.includes(domain));
-  } catch {
-    return false;
-  }
-}
-
-function getLinkOutLabel({
-  url,
-  hasTicketUrl,
-  isExternal,
-}: {
-  url: string;
-  hasTicketUrl: boolean;
-  isExternal: boolean;
-}): string {
-  if (isReservationUrl(url)) return "Reserve";
-  if (isTicketingUrl(url)) return "Tickets";
-  if (!isExternal) return "Details";
-  return hasTicketUrl ? "Tickets" : "Details";
 }
 
 function EventCard({ event, index = 0, skipAnimation = false, portalSlug, friendsGoing = [], reasons, contextType }: Props) {

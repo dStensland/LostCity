@@ -7,6 +7,7 @@ import { useAuth } from "@/lib/auth-context";
 import CategoryIcon, { getCategoryColor, CATEGORY_CONFIG, type CategoryType } from "@/components/CategoryIcon";
 import ScopedStyles from "@/components/ScopedStyles";
 import { createCssVarClass, createCssVarClassForLength } from "@/lib/css-utils";
+import PageFooter from "@/components/PageFooter";
 
 type ProfileData = {
   explicit: {
@@ -358,6 +359,8 @@ export default function TasteProfilePage() {
           )}
         </section>
       </main>
+
+      <PageFooter />
     </div>
   );
 }

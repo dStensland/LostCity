@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import UnifiedHeader from "@/components/UnifiedHeader";
 import { useAuth } from "@/lib/auth-context";
+import PageFooter from "@/components/PageFooter";
 
 const VERIFICATION_OPTIONS = [
   {
@@ -315,6 +316,8 @@ export default function ClaimPage() {
           </button>
         </form>
       </main>
+
+      <PageFooter />
     </div>
   );
 }

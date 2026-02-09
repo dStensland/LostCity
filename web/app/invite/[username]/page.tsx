@@ -7,6 +7,7 @@ import { useSearchParams } from "next/navigation";
 import Logo from "@/components/Logo";
 import { useAuth } from "@/lib/auth-context";
 import { DEFAULT_PORTAL_SLUG } from "@/lib/portal-context";
+import PageFooter from "@/components/PageFooter";
 
 type InviterProfile = {
   id: string;
@@ -251,6 +252,7 @@ export default function InvitePage({ params }: Props) {
     }
 
     return (
+      <>
       <div className="min-h-screen bg-[var(--night)] flex flex-col items-center justify-center p-4">
         <Logo className="mb-8" />
 
@@ -347,6 +349,8 @@ export default function InvitePage({ params }: Props) {
           </div>
         </div>
       </div>
+      <PageFooter />
+      </>
     );
   }
 

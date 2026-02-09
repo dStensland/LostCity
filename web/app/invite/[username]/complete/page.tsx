@@ -6,6 +6,7 @@ import Link from "next/link";
 import Logo from "@/components/Logo";
 import { useAuth } from "@/lib/auth-context";
 import { DEFAULT_PORTAL_SLUG } from "@/lib/portal-context";
+import PageFooter from "@/components/PageFooter";
 
 type Props = {
   params: Promise<{ username: string }>;
@@ -202,6 +203,7 @@ export default function InviteCompletePage({ params }: Props) {
           Explore Events
         </Link>
       </div>
+      <PageFooter />
     </div>
   );
 }

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { formatTimeSplit } from "@/lib/formats";
 import { format, parseISO, isToday, isTomorrow } from "date-fns";
 import CategoryIcon from "./CategoryIcon";
+import { getSmartDateLabel } from "@/lib/card-utils";
 
 type SerendipityEvent = {
   id: number;
@@ -86,13 +87,6 @@ const SERENDIPITY_CONFIGS: Record<SerendipityType, {
     gradient: "from-green-500/20 to-transparent",
   },
 };
-
-function getSmartDate(dateStr: string): string {
-  const date = parseISO(dateStr);
-  if (isToday(date)) return "Today";
-  if (isTomorrow(date)) return "Tomorrow";
-  return format(date, "EEE, MMM d");
-}
 
 interface Props {
   type: SerendipityType;
@@ -182,7 +176,7 @@ export default function SerendipityMoment({ type, event, portalSlug, onDismiss }
               </div>
 
               <div className="flex items-center gap-1.5 text-[0.65rem] text-[var(--muted)] font-mono">
-                <span>{getSmartDate(event.start_date)}</span>
+                <span>{getSmartDateLabel(event.start_date)}</span>
                 {event.venue && (
                   <>
                     <span className="opacity-40">·</span>

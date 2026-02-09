@@ -6,10 +6,6 @@ import { formatTimeSplit } from "@/lib/formats";
 import CategoryIcon, { getCategoryLabel } from "./CategoryIcon";
 import CategoryPlaceholder from "./CategoryPlaceholder";
 import FeedSectionHeader from "./feed/FeedSectionHeader";
-import SeriesCard from "@/components/SeriesCard";
-import FestivalCard from "@/components/FestivalCard";
-import { groupEventsForDisplay } from "@/lib/event-grouping";
-import type { EventWithLocation } from "@/lib/search";
 
 type TonightEvent = {
   id: number;
@@ -151,34 +147,8 @@ export default function TonightsPicks({ portalSlug }: { portalSlug?: string } = 
     fetchEvents();
   }, []);
 
-  const displayItems = useMemo(
-    () =>
-      groupEventsForDisplay(
-        events.map((event) => ({
-          ...event,
-          category_id: event.category,
-          subcategory_id: null,
-        })) as unknown as EventWithLocation[],
-        {
-          collapseFestivals: true,
-          collapseFestivalPrograms: true,
-          rollupVenues: false,
-          rollupCategories: false,
-          sortByTime: false,
-        }
-      ),
-    [events]
-  );
-
-  const eventItems = useMemo(
-    () =>
-      displayItems
-        .filter((item) => item.type === "event")
-        .map((item) => item.event as TonightEvent),
-    [displayItems]
-  );
-
-  const carouselEvents = eventItems.slice(0, 8);
+  // Curated picks are already ordered — no grouping/collapsing needed
+  const carouselEvents = events.slice(0, 10);
   const hasCarousel = carouselEvents.length > 1;
   const safeHeroIndex = heroIndex < carouselEvents.length ? heroIndex : 0;
 
@@ -213,13 +183,8 @@ export default function TonightsPicks({ portalSlug }: { portalSlug?: string } = 
     return null;
   }
 
-  if (displayItems.length === 0) {
-    return null;
-  }
-
   const heroEvent = carouselEvents[safeHeroIndex] ?? null;
   const heroCategory = heroEvent?.category || "other";
-  const fallbackHeroItem = heroEvent ? null : displayItems[0];
 
   return (
     <section className="-mx-4 px-4 relative overflow-hidden">
@@ -349,33 +314,7 @@ export default function TonightsPicks({ portalSlug }: { portalSlug?: string } = 
               </div>
             )}
           </div>
-        ) : (
-          <div className="mb-4">
-            {fallbackHeroItem?.type === "series-group" ? (
-              <SeriesCard
-                series={fallbackHeroItem.series}
-                venueGroups={fallbackHeroItem.venueGroups}
-                portalSlug={portalSlug}
-                skipAnimation
-                disableMargin
-                className="w-full"
-                contextLabel="Today's picks"
-                contextColor="var(--neon-amber)"
-              />
-            ) : fallbackHeroItem?.type === "festival-group" ? (
-              <FestivalCard
-                festival={fallbackHeroItem.festival}
-                summary={fallbackHeroItem.summary}
-                portalSlug={portalSlug}
-                skipAnimation
-                disableMargin
-                className="w-full"
-                contextLabel="Today's picks"
-                contextColor="var(--neon-amber)"
-              />
-            ) : null}
-          </div>
-        )}
+        ) : null}
 
         {carouselEvents.length > 1 && (
           <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1 snap-x snap-mandatory sm:mx-0 sm:px-0 sm:grid sm:grid-cols-4 sm:gap-3 sm:overflow-visible sm:snap-none mb-4">
