@@ -34,7 +34,11 @@ describe("security headers", () => {
     const csp = buildCsp(nonce, { isDev: false });
 
     expect(csp).toContain("default-src 'self'");
-    expect(csp).toContain(`script-src 'self'`);
+    // script-src uses 'unsafe-inline' (not nonce) because Next.js streaming
+    // injects inline scripts ($RC, $RS, __next_f) without nonce attributes
+    expect(csp).toContain("script-src 'self'");
+    expect(csp).toContain("'unsafe-inline'");
+    // Nonce is still used for style-src
     expect(csp).toContain(`'nonce-${nonce}'`);
     expect(csp).toContain(`style-src 'self'`);
     expect(csp).toContain(`style-src-elem 'self'`);
@@ -43,7 +47,6 @@ describe("security headers", () => {
     expect(csp).toContain("frame-ancestors 'none'");
     expect(csp).toContain("object-src 'none'");
     expect(csp).toContain("worker-src 'self' blob:");
-    expect(csp).not.toContain("'unsafe-inline'");
   });
 
   it("supports report-only CSP for inline style lockdown", () => {
@@ -59,6 +62,5 @@ describe("security headers", () => {
     expect(csp).toContain(`'nonce-${nonce}'`);
     expect(csp).toContain("style-src-attr 'none'");
     expect(csp).toContain("report-uri /api/csp-report");
-    expect(csp).not.toContain("'unsafe-inline'");
   });
 });

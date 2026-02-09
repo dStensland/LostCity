@@ -89,7 +89,11 @@ export function buildCsp(nonce: string, options: CspOptions = {}): string {
   const includeUpgradeInsecureRequests = options.includeUpgradeInsecureRequests ?? true;
 
   // Build dynamic parts (only nonce and conditional flags)
-  const scriptSrc = `script-src ${STATIC_SCRIPT_SRC_BASE} 'nonce-${nonce}'${isDev ? " 'unsafe-eval'" : ""}`;
+  // Note: 'unsafe-inline' is needed because Next.js streaming injects inline <script>
+  // tags ($RC, $RS, __next_f) without nonce attributes. 'unsafe-inline' is ignored by
+  // browsers when a nonce is present, so we must omit the nonce from script-src.
+  // Style nonces still work because Next.js does add nonces to <style> tags.
+  const scriptSrc = `script-src ${STATIC_SCRIPT_SRC_BASE} 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""}`;
 
   const styleSrc = `style-src ${STATIC_STYLE_SRC_BASE} 'nonce-${nonce}'${allowInlineStyles ? " 'unsafe-inline'" : ""}`;
   const styleSrcElem = `style-src-elem ${STATIC_STYLE_SRC_BASE} 'nonce-${nonce}'${allowInlineStyles ? " 'unsafe-inline'" : ""}`;
