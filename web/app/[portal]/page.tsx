@@ -9,6 +9,7 @@ import { GalleryTemplate } from "./_templates/gallery";
 import { TimelineTemplate } from "./_templates/timeline";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
+import { PortalTracker } from "./_components/PortalTracker";
 
 export const revalidate = 60;
 
@@ -123,6 +124,11 @@ export default async function PortalPage({ params, searchParams }: Props) {
         portalSlug={portal.slug}
         portalName={portal.name}
       />
+
+      {/* Portal analytics tracking */}
+      <Suspense fallback={null}>
+        <PortalTracker portalSlug={portal.slug} />
+      </Suspense>
 
       <main className={findDisplay === "map" && viewMode === "find" ? "" : "max-w-5xl mx-auto px-4 pb-20"}>
         {/* DetailViewRouter handles showing detail views (event, venue, series, org) as overlays.

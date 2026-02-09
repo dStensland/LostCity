@@ -65,6 +65,18 @@ export default async function PortalAdminLayout({ children, params }: Props) {
             Subscriptions
           </Link>
           <Link
+            href={`/${slug}/admin/qr`}
+            className="font-mono text-xs text-[var(--muted)] hover:text-[var(--cream)] transition-colors"
+          >
+            QR Codes
+          </Link>
+          <Link
+            href={`/${slug}/admin/analytics`}
+            className="font-mono text-xs text-[var(--muted)] hover:text-[var(--cream)] transition-colors"
+          >
+            Analytics
+          </Link>
+          <Link
             href={`/${slug}`}
             className="font-mono text-xs text-[var(--muted)] hover:text-[var(--cream)] transition-colors"
           >
