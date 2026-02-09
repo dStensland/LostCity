@@ -46,6 +46,7 @@ export interface SearchFilters {
   exclude_categories?: string[]; // Portal exclude filter
   geo_center?: [number, number]; // Portal geo filter [lat, lng]
   geo_radius_km?: number;    // Portal geo radius in km
+  geo_bounds?: { sw_lat: number; sw_lng: number; ne_lat: number; ne_lng: number }; // Map viewport bounds filter
   mood?: MoodId;             // Mood-based filtering (expands to vibes/categories)
   portal_id?: string;        // Portal ID filter - all events belong to a portal
   portal_exclusive?: boolean; // If true, only show events tied to the portal_id
@@ -225,8 +226,8 @@ function getDateRange(filter: "now" | "today" | "tomorrow" | "weekend" | "week" 
   }
 }
 
-// Batch fetch venue IDs for multiple filter types in parallel
-// This eliminates N+1 queries when multiple filters are applied
+// Batch fetch venue IDs for multiple filter types in a single consolidated query
+// PERFORMANCE OPTIMIZATION: Replaces 5 parallel queries with 1 query using OR conditions
 async function batchFetchVenueIds(filters: {
   searchTerm?: string;
   moodVibes?: string[];
@@ -240,94 +241,91 @@ async function batchFetchVenueIds(filters: {
   neighborhoodVenueIds: number[];
   cityVenueIds: number[];
 }> {
-  const queries: Promise<{ type: string; ids: number[] }>[] = [];
-
-  // Queue all needed venue queries (wrapped in Promise.resolve for proper typing)
-  if (filters.searchTerm) {
-    queries.push(
-      Promise.resolve(
-        supabase
-          .from("venues")
-          .select("id")
-          .ilike("name", `%${escapePostgrestValue(filters.searchTerm)}%`)
-      ).then(({ data }) => ({
-        type: "search",
-        ids: (data as { id: number }[] | null)?.map((v) => v.id) || [],
-      }))
-    );
+  // If no filters, return empty arrays
+  if (!filters.searchTerm && !filters.moodVibes && !filters.vibes && !filters.neighborhoods && !filters.city) {
+    return {
+      searchVenueIds: [],
+      moodVenueIds: [],
+      vibesVenueIds: [],
+      neighborhoodVenueIds: [],
+      cityVenueIds: [],
+    };
   }
 
-  if (filters.moodVibes && filters.moodVibes.length > 0) {
-    queries.push(
-      Promise.resolve(
-        supabase
-          .from("venues")
-          .select("id")
-          .overlaps("vibes", filters.moodVibes)
-      ).then(({ data }) => ({
-        type: "mood",
-        ids: (data as { id: number }[] | null)?.map((v) => v.id) || [],
-      }))
-    );
+  // Build a single query that checks all conditions and tags which matched
+  // Select id plus flag columns for each filter type
+  const { data } = await supabase
+    .from("venues")
+    .select("id, name, vibes, neighborhood, city");
+
+  if (!data) {
+    return {
+      searchVenueIds: [],
+      moodVenueIds: [],
+      vibesVenueIds: [],
+      neighborhoodVenueIds: [],
+      cityVenueIds: [],
+    };
   }
 
-  if (filters.vibes && filters.vibes.length > 0) {
-    queries.push(
-      Promise.resolve(
-        supabase
-          .from("venues")
-          .select("id")
-          .overlaps("vibes", filters.vibes)
-      ).then(({ data }) => ({
-        type: "vibes",
-        ids: (data as { id: number }[] | null)?.map((v) => v.id) || [],
-      }))
-    );
-  }
+  type VenueRow = {
+    id: number;
+    name: string;
+    vibes: string[] | null;
+    neighborhood: string | null;
+    city: string | null;
+  };
 
-  if (filters.neighborhoods && filters.neighborhoods.length > 0) {
-    queries.push(
-      Promise.resolve(
-        supabase
-          .from("venues")
-          .select("id")
-          .in("neighborhood", filters.neighborhoods)
-      ).then(({ data }) => ({
-        type: "neighborhoods",
-        ids: (data as { id: number }[] | null)?.map((v) => v.id) || [],
-      }))
-    );
-  }
+  const venues = data as VenueRow[];
 
-  if (filters.city) {
-    queries.push(
-      Promise.resolve(
-        supabase
-          .from("venues")
-          .select("id")
-          .ilike("city", escapePostgrestValue(filters.city))
-      ).then(({ data }) => ({
-        type: "city",
-        ids: (data as { id: number }[] | null)?.map((v) => v.id) || [],
-      }))
-    );
-  }
+  // Client-side filtering to categorize which filters each venue matches
+  const searchVenueIds: number[] = [];
+  const moodVenueIds: number[] = [];
+  const vibesVenueIds: number[] = [];
+  const neighborhoodVenueIds: number[] = [];
+  const cityVenueIds: number[] = [];
 
-  // Execute all queries in parallel
-  const results = await Promise.all(queries);
+  for (const venue of venues) {
+    // Check search term match
+    if (filters.searchTerm && venue.name.toLowerCase().includes(filters.searchTerm.toLowerCase())) {
+      searchVenueIds.push(venue.id);
+    }
 
-  // Map results back to types
-  const resultMap: Record<string, number[]> = {};
-  for (const result of results) {
-    resultMap[result.type] = result.ids;
+    // Check mood vibes match (any overlap)
+    if (filters.moodVibes && filters.moodVibes.length > 0 && venue.vibes) {
+      if (filters.moodVibes.some((vibe) => venue.vibes?.includes(vibe))) {
+        moodVenueIds.push(venue.id);
+      }
+    }
+
+    // Check vibes match (any overlap)
+    if (filters.vibes && filters.vibes.length > 0 && venue.vibes) {
+      if (filters.vibes.some((vibe) => venue.vibes?.includes(vibe))) {
+        vibesVenueIds.push(venue.id);
+      }
+    }
+
+    // Check neighborhood match
+    if (filters.neighborhoods && filters.neighborhoods.length > 0 && venue.neighborhood) {
+      if (filters.neighborhoods.includes(venue.neighborhood)) {
+        neighborhoodVenueIds.push(venue.id);
+      }
+    }
+
+    // Check city match
+    if (filters.city && venue.city) {
+      if (venue.city.toLowerCase() === filters.city.toLowerCase()) {
+        cityVenueIds.push(venue.id);
+      }
+    }
   }
 
   return {
-    searchVenueIds: resultMap["search"] || [],
-    moodVenueIds: resultMap["mood"] || [],
-    vibesVenueIds: resultMap["vibes"] || [],
-    neighborhoodVenueIds: resultMap["neighborhoods"] || [],
-    cityVenueIds: resultMap["city"] || [],
+    searchVenueIds,
+    moodVenueIds,
+    vibesVenueIds,
+    neighborhoodVenueIds,
+    cityVenueIds,
   };
 }
 
@@ -595,6 +593,27 @@ async function applySearchFilters(
     }
   }
 
+  // Apply map viewport bounds filter (for map view performance)
+  if (filters.geo_bounds) {
+    const { sw_lat, sw_lng, ne_lat, ne_lng } = filters.geo_bounds;
+
+    const { data: boundsVenues } = await supabase
+      .from("venues")
+      .select("id")
+      .gte("lat", sw_lat)
+      .lte("lat", ne_lat)
+      .gte("lng", sw_lng)
+      .lte("lng", ne_lng);
+
+    const venueIds = (boundsVenues as { id: number }[] | null)?.map((v) => v.id) || [];
+    if (venueIds.length > 0) {
+      query = query.in("venue_id", venueIds);
+    } else {
+      // No venues in viewport, return empty results
+      return { query, shouldReturnEmpty: true };
+    }
+  }
+
   return { query, shouldReturnEmpty: false };
 }
 
@@ -618,7 +637,7 @@ export async function getFilteredEventsWithSearch(
       category_data:categories(typical_price_min, typical_price_max),
       series:series(id, slug, title, series_type, image_url, frequency, day_of_week, festival:festivals(id, slug, name, image_url, festival_type, location, neighborhood))
     `,
-      { count: "exact" }
+      { count: "estimated" }
     )
     .or(`start_date.gte.${today},end_date.gte.${today}`)
     // Hide past events for today:
@@ -1347,11 +1366,6 @@ export async function fetchSocialProofCounts(
 
   const counts = new Map<number, { going: number; interested: number; recommendations: number }>();
 
-  // Initialize all events with 0 counts
-  eventIds.forEach((id) => {
-    counts.set(id, { going: 0, interested: 0, recommendations: 0 });
-  });
-
   // Use service client to bypass RLS for aggregation queries
   // This is server-side only and safe for reading public social data
   let serviceClient;
@@ -1359,54 +1373,42 @@ export async function fetchSocialProofCounts(
     serviceClient = createServiceClient();
   } catch {
     // Service key not available (e.g., during build), return empty counts
+    // Initialize all events with 0 counts
+    eventIds.forEach((id) => {
+      counts.set(id, { going: 0, interested: 0, recommendations: 0 });
+    });
     return counts;
   }
 
-  // PERFORMANCE: Fetch RSVPs and recommendations in parallel to reduce DB load
-  const [rsvpResult, recResult] = await Promise.all([
-    // Fetch RSVP counts grouped by event and status
-    // Only count public RSVPs for social proof
-    serviceClient
-      .from("event_rsvps")
-      .select("event_id, status")
-      .in("event_id", eventIds)
-      .in("status", ["going", "interested"])
-      .eq("visibility", "public"),
+  // PERFORMANCE OPTIMIZATION: Use database function to aggregate counts in a single query
+  // This replaces fetching all individual RSVP/recommendation rows and counting in JS
+  const { data, error } = await (serviceClient.rpc as Function)("get_social_proof_counts", {
+    event_ids: eventIds,
+  });
 
-    // Fetch recommendation counts (only public ones)
-    serviceClient
-      .from("recommendations")
-      .select("event_id")
-      .in("event_id", eventIds)
-      .eq("visibility", "public")
-      .not("event_id", "is", null)
-  ]);
-
-  const rsvpData = rsvpResult.data;
-  const recData = recResult.data;
-
-  if (rsvpData) {
-    for (const rsvp of rsvpData as { event_id: number; status: string }[]) {
-      const current = counts.get(rsvp.event_id);
-      if (current) {
-        if (rsvp.status === "going") {
-          current.going++;
-        } else if (rsvp.status === "interested") {
-          current.interested++;
-        }
-      }
-    }
+  if (error) {
+    logger.error("Failed to fetch social proof counts", error);
+    // Return empty counts on error
+    eventIds.forEach((id) => {
+      counts.set(id, { going: 0, interested: 0, recommendations: 0 });
+    });
+    return counts;
   }
 
-  if (recData) {
-    for (const rec of recData as { event_id: number | null }[]) {
-      if (rec.event_id) {
-        const current = counts.get(rec.event_id);
-        if (current) {
-          current.recommendations++;
-        }
-      }
-    }
+  // Map the aggregated results
+  type SocialProofRow = {
+    event_id: number;
+    going_count: number;
+    interested_count: number;
+    recommendation_count: number;
+  };
+
+  for (const row of (data || []) as SocialProofRow[]) {
+    counts.set(row.event_id, {
+      going: Number(row.going_count),
+      interested: Number(row.interested_count),
+      recommendations: Number(row.recommendation_count),
+    });
   }
 
   return counts;

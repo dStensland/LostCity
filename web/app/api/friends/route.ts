@@ -58,5 +58,9 @@ export async function GET(request: Request) {
   return NextResponse.json({
     friends: (profiles || []) as Profile[],
     count: (profiles || []).length,
+  }, {
+    headers: {
+      "Cache-Control": "private, max-age=60, stale-while-revalidate=120",
+    },
   });
 }

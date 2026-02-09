@@ -37,6 +37,24 @@ export async function GET(request: Request) {
     const dateParam = searchParams.get("date") || "";
     const dateSpecific = /^\d{4}-\d{2}-\d{2}$/.test(dateParam) ? dateParam : undefined;
 
+    // Parse map bounds for viewport filtering
+    const useMapBounds = searchParams.get("map_bounds") === "true";
+    const swLat = searchParams.get("sw_lat");
+    const swLng = searchParams.get("sw_lng");
+    const neLat = searchParams.get("ne_lat");
+    const neLng = searchParams.get("ne_lng");
+
+    // Build geo bounds filter if all coords present
+    let geoBounds: { sw_lat: number; sw_lng: number; ne_lat: number; ne_lng: number } | undefined;
+    if (useMapBounds && swLat && swLng && neLat && neLng) {
+      geoBounds = {
+        sw_lat: parseFloat(swLat),
+        sw_lng: parseFloat(swLng),
+        ne_lat: parseFloat(neLat),
+        ne_lng: parseFloat(neLng),
+      };
+    }
+
     const filters: SearchFilters = {
       search: searchParams.get("search") || undefined,
       categories: searchParams.get("categories")?.split(",").filter(Boolean) || undefined,
@@ -54,6 +72,7 @@ export async function GET(request: Request) {
       portal_id: portalId,
       portal_exclusive: portalExclusive,
       exclude_classes: true,
+      geo_bounds: geoBounds,
     };
 
     const pageSize = safeParseInt(searchParams.get("pageSize"), 20, 1, 500);

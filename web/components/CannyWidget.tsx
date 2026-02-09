@@ -2,7 +2,6 @@
 
 import { useState, useCallback, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
-import Script from "next/script";
 
 const BOARD_TOKEN = "a061ee84-f6bf-3a78-bab6-f28a78ebc912";
 
@@ -17,9 +16,25 @@ export default function CannyWidget() {
   const [sdkReady, setSdkReady] = useState(false);
   const [mounted, setMounted] = useState(false);
   const rendered = useRef(false);
+  const scriptLoading = useRef(false);
 
   // Wait for client mount before using createPortal
   useEffect(() => setMounted(true), []);
+
+  // Load Canny SDK only when user opens the panel
+  const loadCannySdk = useCallback(() => {
+    if (scriptLoading.current || window.Canny) {
+      if (window.Canny) setSdkReady(true);
+      return;
+    }
+    scriptLoading.current = true;
+    const script = document.createElement("script");
+    script.src = "https://sdk.canny.io/sdk.js";
+    script.id = "canny-jssdk";
+    script.async = true;
+    script.onload = () => setSdkReady(true);
+    document.head.appendChild(script);
+  }, []);
 
   const renderBoard = useCallback(() => {
     if (window.Canny && !rendered.current) {
@@ -51,12 +66,17 @@ export default function CannyWidget() {
     return () => document.removeEventListener("keydown", onKey);
   }, [open]);
 
+  const handleOpenPanel = useCallback(() => {
+    loadCannySdk();
+    setOpen(true);
+  }, [loadCannySdk]);
+
   const ui = (
     <>
       {/* Floating feedback button */}
       {!open && (
         <button
-          onClick={() => setOpen(true)}
+          onClick={handleOpenPanel}
           className="fixed bottom-4 right-4 z-[9999] flex items-center gap-2 px-4 py-2.5 rounded-full
             bg-[var(--twilight)] border border-[var(--neon-cyan)]/30 text-[var(--soft)]
             hover:text-[var(--cream)] hover:border-[var(--neon-cyan)]/60
@@ -105,12 +125,6 @@ export default function CannyWidget() {
 
   return (
     <>
-      <Script
-        src="https://sdk.canny.io/sdk.js"
-        id="canny-jssdk"
-        strategy="afterInteractive"
-        onLoad={() => setSdkReady(true)}
-      />
       {mounted ? createPortal(ui, document.body) : null}
     </>
   );

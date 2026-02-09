@@ -1,3 +1,16 @@
+/**
+ * Image proxy for unknown/untrusted external domains.
+ *
+ * NOTE: Known safe hosts (Supabase, TMDB, Eventbrite, etc.) bypass this proxy
+ * via lib/image-proxy.ts and go directly to /_next/image for optimization.
+ * This route only handles images from domains NOT in next.config.ts remotePatterns.
+ *
+ * Provides SSRF protection for unknown domains:
+ * - Blocks private IPs and internal hostnames
+ * - Validates content type
+ * - Enforces size limits
+ * - Rate limits per hostname
+ */
 import { NextRequest, NextResponse } from "next/server";
 import { lookup } from "dns/promises";
 import { isIP } from "net";

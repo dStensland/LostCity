@@ -3,10 +3,8 @@
 import { useRef, useState, useEffect, useCallback, Fragment, useMemo } from "react";
 import Link from "next/link";
 import Image from "@/components/SmartImage";
-import { format, parseISO, isToday, isTomorrow } from "date-fns";
-import CategoryIcon, { getCategoryColor, CATEGORY_CONFIG, type CategoryType } from "../CategoryIcon";
-import { LiveBadge, SoonBadge, FreeBadge } from "../Badge";
 import { formatTime } from "@/lib/formats";
+import CategoryIcon, { getCategoryColor } from "../CategoryIcon";
 import { usePortal } from "@/lib/portal-context";
 import { useScrollReveal } from "@/lib/hooks/useScrollReveal";
 import { FeaturedCarousel } from "./FeaturedCarousel";
@@ -20,7 +18,8 @@ import SeriesCard from "@/components/SeriesCard";
 import FestivalCard from "@/components/FestivalCard";
 import { groupEventsForDisplay, type DisplayItem } from "@/lib/event-grouping";
 import type { EventWithLocation } from "@/lib/search";
-import { getSmartDateLabel, getFeedEventStatus } from "@/lib/card-utils";
+import { getSmartDateLabel } from "@/lib/card-utils";
+import { GridEventCard, CompactEventCard, HeroEventCard, type FeedEventData } from "@/components/EventCard";
 
 // Types
 export type FeedEvent = {
@@ -359,48 +358,6 @@ function SectionHeader({
   );
 }
 
-// ============================================
-// SOCIAL PROOF BADGE - Shows popularity
-// ============================================
-
-// Trending/fire icon SVG
-const TrendingIcon = ({ className }: { className?: string }) => (
-  <svg className={className} viewBox="0 0 24 24" fill="currentColor">
-    <path d="M13.5.67s.74 2.65.74 4.8c0 2.06-1.35 3.73-3.41 3.73-2.07 0-3.63-1.67-3.63-3.73l.03-.36C5.21 7.51 4 10.62 4 14c0 4.42 3.58 8 8 8s8-3.58 8-8C20 8.61 17.41 3.8 13.5.67zM11.71 19c-1.78 0-3.22-1.4-3.22-3.14 0-1.62 1.05-2.76 2.81-3.12 1.77-.36 3.6-1.21 4.62-2.58.39 1.29.59 2.65.59 4.04 0 2.65-2.15 4.8-4.8 4.8z" />
-  </svg>
-);
-
-function SocialProofBadge({
-  count,
-  label = "going",
-  variant = "default",
-}: {
-  count: number;
-  label?: string;
-  variant?: "default" | "compact";
-}) {
-  if (count < 1) return null;
-
-  if (variant === "compact") {
-    return (
-      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-lg bg-[var(--coral)]/10 border border-[var(--coral)]/20 font-mono text-[0.6rem] font-medium text-[var(--coral)]">
-        <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-        </svg>
-        {count} {label}
-      </span>
-    );
-  }
-
-  return (
-    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[var(--coral)]/10 border border-[var(--coral)]/20 font-mono text-xs font-medium text-[var(--coral)]">
-      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-      </svg>
-      {count} {label}
-    </span>
-  );
-}
 
 // ============================================
 // HERO BANNER - Large featured event
@@ -408,124 +365,15 @@ function SocialProofBadge({
 
 function HeroBanner({ section, portalSlug, hideImages }: { section: FeedSectionData; portalSlug: string; hideImages?: boolean }) {
   const event = section.events[0];
-
-  // Don't render hero if no event
-  if (!event) {
-    return null;
-  }
-  const goingCount = event.going_count || 0;
-  const interestedCount = event.interested_count || 0;
-  const recommendationCount = event.recommendation_count || 0;
-
-  const hasImage = !hideImages && event.image_url;
+  if (!event) return null;
   return (
     <section className="mb-4 sm:mb-6">
-      <Link
-        href={`/${portalSlug}?event=${event.id}`}
-        className="block relative rounded-2xl overflow-hidden group hero-featured coral-glow-hover"
-        aria-label={`Featured event: ${event.title}`}
-      >
-        {/* Background - either image or gradient */}
-        {hasImage ? (
-          <>
-            <div className="absolute inset-0 bg-gradient-to-br from-[var(--twilight)] to-[var(--void)]">
-              <Image
-                src={event.image_url!}
-                alt=""
-                fill
-                className="object-cover"
-                sizes="100vw"
-                priority
-              />
-            </div>
-            {/* Gradient overlay for text readability */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/60 to-black/30" />
-          </>
-        ) : (
-          <div className="absolute inset-0 bg-gradient-to-br from-[var(--twilight)] to-[var(--void)]" />
-        )}
-
-        {/* Content */}
-        <div className="relative p-6 pt-36 sm:pt-44">
-          {/* Featured + Category badges */}
-          <div className="flex flex-wrap items-center gap-2 mb-3">
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[var(--gold)] text-[var(--void)] text-xs font-mono font-medium">
-              <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-              </svg>
-              Featured
-            </span>
-            {event.category && (
-              <span
-                data-category={event.category}
-                data-accent="category"
-                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-mono font-medium bg-accent text-[var(--void)]"
-              >
-                <CategoryIcon type={event.category} size={12} className="!text-[var(--void)]" glow="none" />
-                {CATEGORY_CONFIG[event.category as CategoryType]?.label || event.category}
-              </span>
-            )}
-          </div>
-
-          {/* Title */}
-          <h2 className="text-2xl sm:text-3xl font-semibold text-white mb-2 group-hover:text-[var(--coral)] transition-colors leading-tight">
-            {event.title}
-          </h2>
-
-          {/* Meta with smart time */}
-          <div className="flex flex-wrap items-center gap-3 text-sm text-white/90 font-mono">
-            <span className="font-medium">{getSmartDateLabel(event.start_date)}</span>
-            {event.start_time && (
-              <>
-                <span className="opacity-40">·</span>
-                <span>{formatTime(event.start_time)}</span>
-              </>
-            )}
-            {event.venue && (
-              <>
-                <span className="opacity-40">·</span>
-                <span>{event.venue.name}</span>
-              </>
-            )}
-          </div>
-
-          {/* Editorial blurb */}
-          {section.description && (
-            <p className="mt-3 text-sm text-white/80 italic leading-relaxed max-w-xl">
-              {section.description}
-            </p>
-          )}
-
-          {/* Price/Free + Social Proof badges */}
-          <div className="mt-4 flex flex-wrap items-center gap-2">
-            {event.is_free ? (
-              <span className="px-2.5 py-1 rounded-full bg-[var(--neon-green)] text-[var(--void)] text-xs font-mono font-medium">
-                FREE
-              </span>
-            ) : event.price_min !== null ? (
-              <span className="px-2.5 py-1 rounded-full bg-white/20 text-white text-xs font-mono">
-                From ${event.price_min}
-              </span>
-            ) : null}
-            {goingCount > 0 && (
-              <SocialProofBadge count={goingCount} label="going" />
-            )}
-            {interestedCount > 0 && (
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[var(--gold)]/15 border border-[var(--gold)]/30 font-mono text-xs font-medium text-[var(--gold)]">
-                {interestedCount} maybe
-              </span>
-            )}
-            {recommendationCount > 0 && (
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[var(--lavender)]/15 border border-[var(--lavender)]/30 font-mono text-xs font-medium text-[var(--lavender)]">
-                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
-                </svg>
-                {recommendationCount} rec&apos;d
-              </span>
-            )}
-          </div>
-        </div>
-      </Link>
+      <HeroEventCard
+        event={event as FeedEventData}
+        portalSlug={portalSlug}
+        hideImages={hideImages}
+        editorialBlurb={section.description}
+      />
     </section>
   );
 }
@@ -614,7 +462,7 @@ function EventCards({ section, portalSlug }: { section: FeedSectionData; portalS
   const renderDisplayItem = (item: DisplayItem) => {
     if (item.type === "event") {
       return (
-        <EventCard key={item.event.id} event={item.event as FeedEvent} isCarousel={isCarousel} portalSlug={portalSlug} />
+        <GridEventCard key={item.event.id} event={item.event as FeedEventData} isCarousel={isCarousel} portalSlug={portalSlug} />
       );
     }
 
@@ -812,86 +660,6 @@ function CollapsibleEvents({ section, portalSlug }: { section: FeedSectionData; 
   );
 }
 
-function EventCard({ event, isCarousel, portalSlug }: { event: FeedEvent; isCarousel?: boolean; portalSlug?: string }) {
-  const goingCount = event.going_count || 0;
-  const interestedCount = event.interested_count || 0;
-  const recommendationCount = event.recommendation_count || 0;
-  const isPopular = goingCount >= 10;
-  const eventStatus = getFeedEventStatus(event.start_date, event.start_time);
-
-  return (
-    <Link
-      href={portalSlug ? `/${portalSlug}?event=${event.id}` : `/events/${event.id}`}
-      data-category={event.category || "other"}
-      data-accent="category"
-      className={`group flex flex-col rounded-xl overflow-hidden border transition-all hover:border-[var(--coral)]/30 coral-glow-hover ${
-        isCarousel ? "flex-shrink-0 w-72 snap-start" : ""
-      } ${isPopular ? "border-[var(--coral)]/20 coral-glow" : "border-[var(--twilight)]"} bg-[var(--card-bg)]`}
-    >
-      {/* Content */}
-      <div className="flex-1 p-3">
-        {/* Category + Smart Date + Popular */}
-        <div className="flex items-center gap-2 mb-1.5">
-          {event.category && (
-            <CategoryIcon type={event.category} size={12} />
-          )}
-          <span className="font-mono text-[0.65rem] text-[var(--muted)]">
-            {getSmartDateLabel(event.start_date)}
-            {event.start_time && ` · ${formatTime(event.start_time)}`}
-          </span>
-          {isPopular && (
-            <span className="ml-auto flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-[var(--coral)] text-[var(--void)] text-[0.55rem] font-mono font-medium">
-              <TrendingIcon className="w-2.5 h-2.5" /> Popular
-            </span>
-          )}
-        </div>
-
-        {/* Title */}
-        <h4 className="font-medium text-sm text-[var(--cream)] line-clamp-2 group-hover:text-[var(--coral)] transition-colors leading-snug">
-          {event.title}
-        </h4>
-
-        {/* Venue */}
-        {event.venue && (
-          <p className="font-mono text-[0.6rem] text-[var(--muted)] mt-1.5 truncate">
-            {event.venue.name}
-            {event.venue.neighborhood && ` · ${event.venue.neighborhood}`}
-          </p>
-        )}
-
-        {/* Price/Free + Status badges */}
-        <div className="mt-2.5 flex items-center gap-2 flex-wrap">
-          {/* Live/Soon status badges */}
-          {eventStatus === "live" && <LiveBadge />}
-          {eventStatus === "soon" && <SoonBadge />}
-          {event.is_free ? (
-            <FreeBadge />
-          ) : event.price_min !== null ? (
-            <span className="text-[0.6rem] font-mono text-[var(--muted)]">
-              From ${event.price_min}
-            </span>
-          ) : null}
-          {goingCount > 0 && (
-            <SocialProofBadge count={goingCount} label="going" variant="compact" />
-          )}
-          {interestedCount > 0 && (
-            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-lg bg-[var(--gold)]/15 border border-[var(--gold)]/30 font-mono text-[0.6rem] font-medium text-[var(--gold)]">
-              {interestedCount} maybe
-            </span>
-          )}
-          {recommendationCount > 0 && (
-            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-lg bg-[var(--lavender)]/15 border border-[var(--lavender)]/30 font-mono text-[0.6rem] font-medium text-[var(--lavender)]">
-              <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
-              </svg>
-              {recommendationCount} rec&apos;d
-            </span>
-          )}
-        </div>
-      </div>
-    </Link>
-  );
-}
 
 // ============================================
 // EVENT LIST - Compact list layout
@@ -950,9 +718,9 @@ function EventList({ section, portalSlug }: { section: FeedSectionData; portalSl
       case "event":
       default:
         return (
-          <EventListItem
+          <CompactEventCard
             key={`event-${item.event.id}`}
-            event={item.event as unknown as FeedEvent}
+            event={item.event as unknown as FeedEventData}
             isAlternate={idx % 2 === 1}
             showDate={showDate}
             portalSlug={portalSlug}
@@ -1010,100 +778,6 @@ function EventList({ section, portalSlug }: { section: FeedSectionData; portalSl
   );
 }
 
-function EventListItem({ event, isAlternate, showDate = true, portalSlug }: { event: FeedEvent; isAlternate?: boolean; showDate?: boolean; portalSlug?: string }) {
-  const goingCount = event.going_count || 0;
-  const interestedCount = event.interested_count || 0;
-  const recommendationCount = event.recommendation_count || 0;
-  const isPopular = goingCount >= 10;
-  const isTrending = event.is_trending || false;
-  const eventStatus = getFeedEventStatus(event.start_date, event.start_time);
-
-  // Visual hierarchy classes
-  const hierarchyClass = isTrending ? "card-trending" : isPopular ? "card-popular" : "";
-
-  return (
-    <Link
-      href={portalSlug ? `/${portalSlug}?event=${event.id}` : `/events/${event.id}`}
-      data-category={event.category || "other"}
-      data-accent={event.category ? "category" : ""}
-      className={`flex items-center gap-3 px-3 py-3 rounded-lg border transition-all group card-atmospheric glow-accent reflection-accent ${hierarchyClass} hover:border-[var(--coral)]/30 ${
-        isPopular || isTrending
-          ? "border-[var(--coral)]/20"
-          : isAlternate
-            ? "border-transparent"
-            : "border-[var(--twilight)]"
-      } ${isPopular ? "bg-[var(--coral-bg)]" : "bg-[var(--card-bg)]"} ${
-        event.category ? "border-l-[3px] border-l-[var(--accent-color)]" : ""
-      }`}
-    >
-      {/* Smart Time */}
-      <div className="flex-shrink-0 w-16 font-mono text-sm text-[var(--soft)] text-center">
-        <div className="font-medium">{event.start_time ? formatTime(event.start_time) : "All day"}</div>
-      </div>
-
-      {/* Category icon */}
-      {event.category && (
-        <CategoryIcon type={event.category} size={16} className="flex-shrink-0 opacity-60" />
-      )}
-
-      {/* Content */}
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
-          <span
-            className="font-medium text-sm text-[var(--cream)] truncate transition-all group-hover:text-glow"
-          >
-            {event.title}
-          </span>
-          {isPopular && (
-            <span className="flex-shrink-0 text-[var(--coral)]">
-              <TrendingIcon className="w-3 h-3" />
-            </span>
-          )}
-        </div>
-        <div className="flex items-center gap-1.5 font-mono text-[0.65rem] text-[var(--muted)]">
-          {showDate && (
-            <>
-              <span>{getSmartDateLabel(event.start_date)}</span>
-              {event.venue && <span className="opacity-40">·</span>}
-            </>
-          )}
-          {event.venue && (
-            <span className="truncate">{event.venue.name}</span>
-          )}
-          {goingCount > 0 && (
-            <>
-              <span className="opacity-40">·</span>
-              <span className="text-[var(--coral)] font-medium">{goingCount} going</span>
-            </>
-          )}
-          {interestedCount > 0 && (
-            <>
-              <span className="opacity-40">·</span>
-              <span className="text-[var(--gold)] font-medium">{interestedCount} maybe</span>
-            </>
-          )}
-          {recommendationCount > 0 && (
-            <>
-              <span className="opacity-40">·</span>
-              <span className="text-[var(--lavender)] font-medium">{recommendationCount} rec&apos;d</span>
-            </>
-          )}
-        </div>
-      </div>
-
-      {/* Badges */}
-      <div className="flex-shrink-0 flex items-center gap-2">
-        {/* Live/Soon status badges */}
-        {eventStatus === "live" && <LiveBadge />}
-        {eventStatus === "soon" && <SoonBadge />}
-        {event.is_free && <FreeBadge />}
-        <svg className="w-4 h-4 text-[var(--muted)] opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-        </svg>
-      </div>
-    </Link>
-  );
-}
 
 // ============================================
 // CATEGORY GRID - Quick links to categories

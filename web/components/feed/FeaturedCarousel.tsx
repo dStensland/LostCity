@@ -3,6 +3,7 @@
 import { useRef, useState, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { format, parseISO } from "date-fns";
+import { formatTime } from "@/lib/formats";
 import { usePortal } from "@/lib/portal-context";
 import CategoryPlaceholder from "../CategoryPlaceholder";
 import LinkifyText from "../LinkifyText";
@@ -370,16 +371,6 @@ function FeaturedCard({ event, portalSlug }: { event: FeaturedEvent; portalSlug:
       )}
     </Link>
   );
-}
-
-// Helper function to format time
-function formatTime(time: string | null): string {
-  if (!time) return "";
-  const [hours, minutes] = time.split(":");
-  const hour = parseInt(hours, 10);
-  const ampm = hour >= 12 ? "PM" : "AM";
-  const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
-  return `${displayHour}:${minutes}${ampm}`;
 }
 
 export type { FeaturedEvent };

@@ -58,6 +58,10 @@ export async function GET(request: Request) {
   return NextResponse.json({
     notifications: data || [],
     unreadCount: unreadCount || 0,
+  }, {
+    headers: {
+      "Cache-Control": "private, max-age=10, stale-while-revalidate=30",
+    },
   });
 }
 

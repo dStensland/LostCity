@@ -8,8 +8,8 @@ const createQueryClient = () =>
   new QueryClient({
     defaultOptions: {
       queries: {
-        // Keep data fresh for 30 seconds (matches current API cache)
-        staleTime: 30 * 1000,
+        // Keep data fresh for 2 minutes - events rarely change in real-time
+        staleTime: 2 * 60 * 1000,
         // Keep unused data in cache for 5 minutes
         gcTime: 5 * 60 * 1000,
         // Retry failed requests up to 3 times with exponential backoff

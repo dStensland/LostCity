@@ -36,7 +36,11 @@ export const GET = withOptionalAuth(async (request, { user, serviceClient }) => 
 
     const { data } = await query.maybeSingle();
 
-    return NextResponse.json({ saved: !!data });
+    return NextResponse.json({ saved: !!data }, {
+      headers: {
+        "Cache-Control": "private, max-age=30, stale-while-revalidate=60",
+      },
+    });
   } catch (error) {
     logger.error("Saved check API error", error, { userId: user?.id, component: "saved" });
     return NextResponse.json({ saved: false }, { status: 200 });

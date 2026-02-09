@@ -1,8 +1,8 @@
 "use client";
 
 import { memo, useMemo } from "react";
+import type { CSSProperties } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
 import {
   CalendarBlank,
   FilmSlate,
@@ -16,9 +16,8 @@ import { getSeriesTypeColor } from "@/lib/series-utils";
 import { formatTimeSplit, formatCompactCount } from "@/lib/formats";
 import { formatRecurrence, type Frequency, type DayOfWeek } from "@/lib/recurrence";
 import SeriesBadge from "./SeriesBadge";
-import ScopedStyles from "@/components/ScopedStyles";
-import { createCssVarClass } from "@/lib/css-utils";
 import RSVPButton from "./RSVPButton";
+import { isTicketingUrl, getLinkOutLabel } from "@/lib/card-utils";
 
 export interface SeriesVenueGroup {
   venue: {
@@ -52,67 +51,6 @@ interface Props {
   disableMargin?: boolean;
   contextLabel?: string;
   contextColor?: string;
-}
-
-// Known ticketing platform domains
-const TICKETING_DOMAINS = [
-  "eventbrite.com",
-  "ticketmaster.com",
-  "axs.com",
-  "dice.fm",
-  "seetickets.us",
-  "etix.com",
-  "ticketweb.com",
-  "showclix.com",
-  "ticketfly.com",
-  "universe.com",
-  "resident-advisor.net",
-  "songkick.com",
-];
-
-// Common reservation platforms
-const RESERVATION_DOMAINS = [
-  "resy.com",
-  "opentable.com",
-  "tock.com",
-  "exploretock.com",
-  "sevenrooms.com",
-  "toasttab.com",
-];
-
-function isTicketingUrl(url: string | null): boolean {
-  if (!url) return false;
-  try {
-    const hostname = new URL(url).hostname.toLowerCase();
-    return TICKETING_DOMAINS.some((domain) => hostname.includes(domain));
-  } catch {
-    return false;
-  }
-}
-
-function isReservationUrl(url: string | null): boolean {
-  if (!url) return false;
-  try {
-    const hostname = new URL(url).hostname.toLowerCase();
-    return RESERVATION_DOMAINS.some((domain) => hostname.includes(domain));
-  } catch {
-    return false;
-  }
-}
-
-function getLinkOutLabel({
-  url,
-  hasTicketUrl,
-  isExternal,
-}: {
-  url: string;
-  hasTicketUrl: boolean;
-  isExternal: boolean;
-}): string {
-  if (isReservationUrl(url)) return "Reserve";
-  if (isTicketingUrl(url)) return "Tickets";
-  if (!isExternal) return "Details";
-  return hasTicketUrl ? "Tickets" : "Details";
 }
 
 function SeriesTypeIcon({
@@ -152,24 +90,11 @@ const SeriesCard = memo(function SeriesCard({
   contextLabel,
   contextColor,
 }: Props) {
-  const searchParams = useSearchParams();
   const typeColor = getSeriesTypeColor(series.series_type);
   const seriesUrl = useMemo(() => {
     if (!portalSlug) return `/series/${series.slug}`;
-    const params = new URLSearchParams(searchParams?.toString() || "");
-    params.delete("event");
-    params.delete("spot");
-    params.delete("series");
-    params.delete("festival");
-    params.delete("org");
-    params.set("series", series.slug);
-    return `/${portalSlug}?${params.toString()}`;
-  }, [portalSlug, series.slug, searchParams]);
-  const accentClass = createCssVarClass("--accent-color", typeColor, "accent");
-  const contextAccentClass = contextColor
-    ? createCssVarClass("--context-accent", contextColor, "context-accent")
-    : null;
-  const scopedCss = [accentClass?.css, contextAccentClass?.css].filter(Boolean).join("\n");
+    return `/${portalSlug}?series=${series.slug}`;
+  }, [portalSlug, series.slug]);
   const contextLabelClass = contextColor ? "text-[var(--context-accent)]" : "text-accent";
 
   // Get total showtime count
@@ -208,11 +133,15 @@ const SeriesCard = memo(function SeriesCard({
     : "Details";
 
   return (
-    <>
-      <ScopedStyles css={scopedCss} />
-      <div
-        className={`${disableMargin ? "" : "mb-2 sm:mb-4"} rounded-sm border border-[var(--twilight)] card-atmospheric glow-accent reflection-accent group overflow-hidden bg-[var(--card-bg)] border-l-[3px] border-l-[var(--accent-color)] ${accentClass?.className ?? ""} ${contextAccentClass?.className ?? ""} ${skipAnimation ? "" : "animate-card-emerge"} ${className ?? ""}`}
-      >
+    <div
+      className={`${disableMargin ? "" : "mb-2 sm:mb-4"} rounded-sm border border-[var(--twilight)] card-atmospheric glow-accent reflection-accent group overflow-hidden bg-[var(--card-bg)] border-l-[3px] border-l-[var(--accent-color)] ${skipAnimation ? "" : "animate-card-emerge"} ${className ?? ""}`}
+      style={
+        {
+          "--accent-color": typeColor,
+          "--context-accent": contextColor,
+        } as CSSProperties
+      }
+    >
         <div className="flex gap-2 sm:gap-3">
           <Link
             href={seriesUrl}
@@ -267,7 +196,7 @@ const SeriesCard = memo(function SeriesCard({
                       {contextLabel}
                     </div>
                   )}
-                  <h3 className="text-[var(--cream)] font-bold text-lg leading-tight line-clamp-2 group-hover:text-[var(--glow-color)] transition-colors mb-1">
+                  <h3 className="text-[var(--cream)] font-semibold text-base leading-tight line-clamp-2 group-hover:text-[var(--glow-color)] transition-colors mb-1">
                     {series.title}
                   </h3>
                 </div>
@@ -287,7 +216,7 @@ const SeriesCard = memo(function SeriesCard({
                         className="text-accent icon-neon-subtle"
                       />
                     </span>
-                    <span className="text-[var(--cream)] font-bold text-lg transition-colors line-clamp-1 group-hover:text-[var(--glow-color)]">
+                    <span className="text-[var(--cream)] font-semibold text-base transition-colors line-clamp-1 group-hover:text-[var(--glow-color)]">
                       {series.title}
                     </span>
                   </div>
@@ -426,8 +355,7 @@ const SeriesCard = memo(function SeriesCard({
             </div>
           )}
         </div>
-      </div>
-    </>
+    </div>
   );
 });
 

@@ -2,6 +2,7 @@
 
 import { Suspense, useRef, useEffect, useCallback } from "react";
 import Link from "next/link";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import SimpleFilterBar from "@/components/SimpleFilterBar";
 import { QuickTagsRow, SubcategoryRow, ActiveFiltersRow } from "@/components/filters";
 import PersonalizedIndicator from "./PersonalizedIndicator";
@@ -32,6 +33,7 @@ function EventSkeleton() {
 
 function ForYouViewInner({ portalSlug }: ForYouViewProps) {
   const loaderRef = useRef<HTMLDivElement>(null);
+  const parentRef = useRef<HTMLDivElement>(null);
   const { hasActiveFilters } = useForYouFilters();
 
   const {
@@ -44,6 +46,14 @@ function ForYouViewInner({ portalSlug }: ForYouViewProps) {
     loadMore,
     refresh,
   } = useForYouEvents({ portalSlug });
+
+  // Virtualize the event list for performance
+  const virtualizer = useVirtualizer({
+    count: events.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 200, // Average event card height
+    overscan: 5, // Render 5 items above/below viewport
+  });
 
   // Intersection observer for infinite scroll
   useEffect(() => {
@@ -192,21 +202,42 @@ function ForYouViewInner({ portalSlug }: ForYouViewProps) {
   }
 
   return (
-    <div className="space-y-0">
-      {/* Event list */}
-      <div className="space-y-1">
-        {events.map((event, idx) => (
-          <EventCard
-            key={event.id}
-            event={event}
-            index={idx}
-            portalSlug={portalSlug}
-            friendsGoing={convertFriendsGoing(event.friends_going)}
-            reasons={event.reasons}
-            contextType={getContextType(event)}
-            skipAnimation
-          />
-        ))}
+    <div ref={parentRef} className="space-y-0">
+      {/* Virtualized event list */}
+      <div
+        style={{
+          height: `${virtualizer.getTotalSize()}px`,
+          width: "100%",
+          position: "relative",
+        }}
+      >
+        {virtualizer.getVirtualItems().map((virtualItem) => {
+          const event = events[virtualItem.index];
+          return (
+            <div
+              key={event.id}
+              style={{
+                position: "absolute",
+                top: 0,
+                left: 0,
+                width: "100%",
+                transform: `translateY(${virtualItem.start}px)`,
+              }}
+              data-index={virtualItem.index}
+              ref={virtualizer.measureElement}
+            >
+              <EventCard
+                event={event}
+                index={virtualItem.index}
+                portalSlug={portalSlug}
+                friendsGoing={convertFriendsGoing(event.friends_going)}
+                reasons={event.reasons}
+                contextType={getContextType(event)}
+                skipAnimation
+              />
+            </div>
+          );
+        })}
       </div>
 
       {/* Infinite scroll loader */}

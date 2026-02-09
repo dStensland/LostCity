@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { Suspense } from "react";
-import { Outfit, JetBrains_Mono, Nunito } from "next/font/google";
+import { Outfit, JetBrains_Mono } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import { AuthProvider } from "@/lib/auth-context";
 import { ThemeProvider } from "@/lib/theme-context";
@@ -27,14 +27,6 @@ const outfit = Outfit({
 const jetbrainsMono = JetBrains_Mono({
   weight: ["400", "500"],
   variable: "--font-mono",
-  subsets: ["latin"],
-  display: "swap",
-});
-
-// Rounded friendly font - used for family-friendly portals (ATLittle)
-const nunito = Nunito({
-  weight: ["400", "600", "700"],
-  variable: "--font-nunito",
   subsets: ["latin"],
   display: "swap",
 });
@@ -68,7 +60,7 @@ export default async function RootLayout({
         <link rel="preconnect" href="https://s1.ticketm.net" />
         <link rel="dns-prefetch" href="https://images.unsplash.com" />
       </head>
-      <body className={`${outfit.variable} ${jetbrainsMono.variable} ${nunito.variable} antialiased`}>
+      <body className={`${outfit.variable} ${jetbrainsMono.variable} antialiased`}>
         <ThemeProvider>
           <QueryProvider>
             {/* Skip link for keyboard users */}

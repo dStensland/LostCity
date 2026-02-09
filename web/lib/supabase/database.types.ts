@@ -765,6 +765,13 @@ export type Database = {
           typical_month: number | null
           updated_at: string | null
           website: string | null
+          primary_type: string | null
+          experience_tags: string[] | null
+          audience: string | null
+          size_tier: string | null
+          indoor_outdoor: string | null
+          price_tier: string | null
+          portal_id: string | null
         }
         Insert: {
           announced_2026?: boolean | null
@@ -790,6 +797,13 @@ export type Database = {
           typical_month?: number | null
           updated_at?: string | null
           website?: string | null
+          primary_type?: string | null
+          experience_tags?: string[] | null
+          audience?: string | null
+          size_tier?: string | null
+          indoor_outdoor?: string | null
+          price_tier?: string | null
+          portal_id?: string | null
         }
         Update: {
           announced_2026?: boolean | null
@@ -815,6 +829,13 @@ export type Database = {
           typical_month?: number | null
           updated_at?: string | null
           website?: string | null
+          primary_type?: string | null
+          experience_tags?: string[] | null
+          audience?: string | null
+          size_tier?: string | null
+          indoor_outdoor?: string | null
+          price_tier?: string | null
+          portal_id?: string | null
         }
         Relationships: [
           {

@@ -97,12 +97,19 @@ export function useMapEvents(options: UseMapEventsOptions = {}) {
       params.set("portal_exclusive", "true");
     }
 
+    // Add map bounds for viewport filtering
+    params.set("map_bounds", "true");
+    params.set("sw_lat", bounds.south.toString());
+    params.set("sw_lng", bounds.west.toString());
+    params.set("ne_lat", bounds.north.toString());
+    params.set("ne_lng", bounds.east.toString());
+
     // Request more events for map view (no pagination, just limit)
     params.set("pageSize", "500");
     params.set("useCursor", "true"); // Use cursor-based to avoid COUNT(*)
 
     return params.toString();
-  }, [searchParams, portalId, portalExclusive]);
+  }, [searchParams, portalId, portalExclusive, bounds]);
 
   const query = useQuery<EventsResponse, Error>({
     queryKey: ["events", "map", filtersKey, boundsKey, portalId, portalExclusive],

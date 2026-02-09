@@ -1,12 +1,11 @@
 "use client";
 
-import { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import { useState, useMemo, useCallback, type CSSProperties } from "react";
+import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import EventCard from "@/components/EventCard";
 import { getLocalDateString, convertFriendsGoing, type FriendGoing } from "@/lib/formats";
 import type { FeedEvent } from "@/lib/hooks/useForYouEvents";
-import ScopedStyles from "@/components/ScopedStyles";
-import { createCssVarClass } from "@/lib/css-utils";
 import SeriesCard from "@/components/SeriesCard";
 import FestivalCard from "@/components/FestivalCard";
 import { groupEventsForDisplay, type DisplayItem } from "@/lib/event-grouping";
@@ -21,6 +20,15 @@ type UserPreferences = {
 
 type TrendingEvent = FeedEvent & {
   rsvp_count?: number;
+};
+
+type FeedResponse = {
+  events: FeedEvent[];
+  hasPreferences: boolean;
+};
+
+type TrendingResponse = {
+  events: TrendingEvent[];
 };
 
 // Lost City style SVG icons for each section
@@ -184,18 +192,15 @@ function FriendsGoingHighlight({
 }) {
   if (items.length === 0) return null;
   const contextLabel = ROLLUP_CONTEXT_LABELS.friendsGoing;
-
-  const accentClass = createCssVarClass(
-    "--accent-color",
-    SECTION_CONFIG.friendsGoing.color,
-    "friends-going"
-  );
+  const accentColor = SECTION_CONFIG.friendsGoing.color;
 
   return (
     <section className="mb-5 sm:mb-8">
-      <ScopedStyles css={accentClass?.css} />
       {/* Section header with cyan accent - improved spacing */}
-      <div className={`flex items-center gap-2 mb-4 px-1 ${accentClass?.className ?? ""}`}>
+      <div
+        className="flex items-center gap-2 mb-4 px-1"
+        style={{ "--accent-color": accentColor } as CSSProperties}
+      >
         <div className="w-1 h-5 rounded-full bg-accent" />
         <span className="icon-neon-subtle text-accent">{SECTION_CONFIG.friendsGoing.icon}</span>
         <h2 className="font-semibold text-sm text-accent">
@@ -284,7 +289,6 @@ function ExpandableSection({
   const visibleItems = showAll ? items : items.slice(0, initialVisible);
   const hiddenCount = items.length - initialVisible;
   const hasMore = hiddenCount > 0;
-  const accentClass = createCssVarClass("--accent-color", accentColor, "expandable-section");
   const contextLabel =
     rollupContextLabel ||
     (contextType ? ROLLUP_CONTEXT_LABELS[contextType] : undefined);
@@ -293,9 +297,11 @@ function ExpandableSection({
 
   return (
     <section className="mb-5 sm:mb-8">
-      <ScopedStyles css={accentClass?.css} />
       {/* Section header - always visible, improved spacing */}
-      <div className={`flex items-center gap-2 mb-4 px-1 ${accentClass?.className ?? ""}`}>
+      <div
+        className="flex items-center gap-2 mb-4 px-1"
+        style={{ "--accent-color": accentColor } as CSSProperties}
+      >
         <div className="w-1 h-5 rounded-full bg-accent" />
         <span className="icon-neon-subtle text-accent">{icon}</span>
         <h2 className="font-semibold text-sm text-accent">
@@ -363,9 +369,8 @@ function ExpandableSection({
       {!showAll && hasMore && (
         <button
           onClick={() => setShowAll(true)}
-          className={`w-full mt-2 py-2 text-center text-xs font-mono font-medium tracking-wider rounded-lg border transition-all hover:opacity-80 bg-accent-08 text-accent border-accent-40 ${
-            accentClass?.className ?? ""
-          }`}
+          className="w-full mt-2 py-2 text-center text-xs font-mono font-medium tracking-wider rounded-lg border transition-all hover:opacity-80 bg-accent-08 text-accent border-accent-40"
+          style={{ "--accent-color": accentColor } as CSSProperties}
         >
           Show {hiddenCount} more
         </button>
@@ -379,60 +384,54 @@ interface ForYouFeedProps {
 }
 
 export default function ForYouFeed({ portalSlug }: ForYouFeedProps) {
-  const [events, setEvents] = useState<FeedEvent[]>([]);
-  const [trendingEvents, setTrendingEvents] = useState<TrendingEvent[]>([]);
-  const [preferences, setPreferences] = useState<UserPreferences | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [hasPreferences, setHasPreferences] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [quickFilter, setQuickFilter] = useState<QuickFilter>("all");
-  const mountedRef = useRef(true);
 
-  const loadFeed = useCallback(async () => {
-    try {
-      setError(null);
-      setLoading(true);
-
-      const [feedRes, trendingRes, prefsRes] = await Promise.all([
-        fetch(`/api/feed?limit=100&portal=${portalSlug}`),
-        fetch(`/api/trending?limit=10&portal=${portalSlug}`),
-        fetch(`/api/preferences`),
-      ]);
-
-      if (!mountedRef.current) return;
-
-      if (!feedRes.ok) {
-        const errorData = await feedRes.json().catch(() => ({}));
-        throw new Error(errorData.error || `Failed to load feed (${feedRes.status})`);
+  // Fetch feed events with React Query
+  const {
+    data: feedData,
+    isLoading: feedLoading,
+    error: feedError,
+  } = useQuery<FeedResponse>({
+    queryKey: ["feed", "sections", portalSlug],
+    queryFn: async () => {
+      const res = await fetch(`/api/feed?limit=100&portal=${portalSlug}`);
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || `Failed to load feed (${res.status})`);
       }
+      return res.json();
+    },
+  });
 
-      const feedData = await feedRes.json();
-      const trendingData = trendingRes.ok ? await trendingRes.json() : { events: [] };
-      const prefsData = prefsRes.ok ? await prefsRes.json() : null;
-
-      if (mountedRef.current) {
-        setEvents(feedData.events || []);
-        setHasPreferences(feedData.hasPreferences);
-        setTrendingEvents(trendingData.events || []);
-        setPreferences(prefsData);
-        setLoading(false);
+  // Fetch trending events with React Query
+  const { data: trendingData } = useQuery<TrendingResponse>({
+    queryKey: ["trending", portalSlug],
+    queryFn: async () => {
+      const res = await fetch(`/api/trending?limit=10&portal=${portalSlug}`);
+      if (!res.ok) {
+        return { events: [] };
       }
-    } catch (err) {
-      if (!mountedRef.current) return;
-      console.error("Failed to load feed:", err);
-      setError("Failed to load feed");
-      setLoading(false);
-    }
-  }, [portalSlug]);
+      return res.json();
+    },
+  });
 
-  useEffect(() => {
-    mountedRef.current = true;
-    loadFeed();
+  // Fetch user preferences with React Query
+  const { data: preferences } = useQuery<UserPreferences | null>({
+    queryKey: ["preferences"],
+    queryFn: async () => {
+      const res = await fetch(`/api/preferences`);
+      if (!res.ok) {
+        return null;
+      }
+      return res.json();
+    },
+  });
 
-    return () => {
-      mountedRef.current = false;
-    };
-  }, [loadFeed]);
+  const events = feedData?.events || [];
+  const hasPreferences = feedData?.hasPreferences || false;
+  const trendingEvents = trendingData?.events || [];
+  const loading = feedLoading;
+  const error = feedError?.message || null;
 
   // Apply quick filter to events
   const filteredEvents = useMemo(() => {
@@ -566,7 +565,7 @@ export default function ForYouFeed({ portalSlug }: ForYouFeedProps) {
       <div className="p-6 bg-[var(--dusk)] border border-[var(--coral)] rounded-lg text-center">
         <p className="text-[var(--coral)] font-mono text-sm">{error}</p>
         <button
-          onClick={() => loadFeed()}
+          onClick={() => window.location.reload()}
           className="mt-3 px-4 py-2 bg-[var(--coral)] text-[var(--void)] font-mono text-xs font-medium rounded-lg hover:bg-[var(--rose)] transition-colors"
         >
           Try Again

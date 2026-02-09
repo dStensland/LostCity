@@ -34,15 +34,16 @@ describe("security headers", () => {
     const csp = buildCsp(nonce, { isDev: false });
 
     expect(csp).toContain("default-src 'self'");
-    expect(csp).toContain(`script-src 'self' 'nonce-${nonce}'`);
-    expect(csp).toContain(`style-src 'self' 'nonce-${nonce}' https://fonts.googleapis.com`);
-    expect(csp).toContain(`style-src-elem 'self' 'nonce-${nonce}' https://fonts.googleapis.com`);
+    expect(csp).toContain(`script-src 'self'`);
+    expect(csp).toContain(`'nonce-${nonce}'`);
+    expect(csp).toContain(`style-src 'self'`);
+    expect(csp).toContain(`style-src-elem 'self'`);
     expect(csp).toContain("style-src-attr 'none'");
     expect(csp).toContain("script-src-attr 'none'");
     expect(csp).toContain("frame-ancestors 'none'");
     expect(csp).toContain("object-src 'none'");
     expect(csp).toContain("worker-src 'self' blob:");
-    expect(csp).not.toContain("script-src 'self' 'unsafe-inline'");
+    expect(csp).not.toContain("'unsafe-inline'");
   });
 
   it("supports report-only CSP for inline style lockdown", () => {
@@ -54,7 +55,8 @@ describe("security headers", () => {
     });
 
     expect(csp).toContain("style-src 'self'");
-    expect(csp).toContain(`style-src-elem 'self' 'nonce-${nonce}' https://fonts.googleapis.com`);
+    expect(csp).toContain(`style-src-elem 'self'`);
+    expect(csp).toContain(`'nonce-${nonce}'`);
     expect(csp).toContain("style-src-attr 'none'");
     expect(csp).toContain("report-uri /api/csp-report");
     expect(csp).not.toContain("'unsafe-inline'");

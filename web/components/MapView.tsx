@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, useCallback, memo, useRef } from "react";
 import Map, { Marker, Popup, NavigationControl, GeolocateControl } from "react-map-gl";
-import type { MapRef, MapMouseEvent } from "react-map-gl";
+import type { MapRef } from "react-map-gl";
 import Link from "next/link";
 import type { EventWithLocation } from "@/lib/search";
 import type { Spot } from "@/lib/spots-constants";
@@ -13,8 +13,7 @@ import MapPopupCard from "@/components/map/MapPopupCard";
 import MobileMapSheet from "@/components/map/MobileMapSheet";
 import UserLocationDot from "@/components/map/UserLocationDot";
 import ClusterLayer from "@/components/map/ClusterLayer";
-
-import "mapbox-gl/dist/mapbox-gl.css";
+import styles from "@/components/map/MapView.module.css";
 
 export interface MapBounds {
   north: number;
@@ -187,6 +186,9 @@ export default function MapView({ events, spots = [], userLocation, viewRadius, 
 
   useEffect(() => {
     setMounted(true);
+    // Dynamically load Mapbox CSS only when map is rendered
+    // @ts-ignore - Dynamic CSS import
+    import("mapbox-gl/dist/mapbox-gl.css");
   }, []);
 
   useEffect(() => {
@@ -418,39 +420,22 @@ export default function MapView({ events, spots = [], userLocation, viewRadius, 
     onItemSelect?.({ type: "spot", id: spot.id });
   }, [onItemSelect]);
 
-  // Cluster layer click handler
-  const handleMapClick = useCallback((e: MapMouseEvent) => {
-    const map = mapRef.current;
-    if (!map) return;
-
-    // Check for cluster click
-    const clusterFeatures = map.queryRenderedFeatures(e.point, { layers: ["clusters"] });
-    if (clusterFeatures.length > 0) {
-      const clusterId = clusterFeatures[0].properties?.cluster_id;
-      if (clusterId !== undefined) {
-        const [lng, lat] = (clusterFeatures[0].geometry as GeoJSON.Point).coordinates;
-        handleClusterClick(clusterId, lng, lat);
-        return;
-      }
+  // Handle point click from cluster layer (unclustered points)
+  const handleClusterPointClick = useCallback((id: number, itemType: "event" | "spot") => {
+    if (itemType === "event") {
+      const event = mappableEvents.find((ev) => ev.id === id);
+      if (event) handleEventClick(event);
+    } else {
+      const spot = mappableSpots.find((s) => s.id === id);
+      if (spot) handleSpotClick(spot);
     }
+  }, [mappableEvents, mappableSpots, handleEventClick, handleSpotClick]);
 
-    // Check for unclustered point click
-    const pointFeatures = map.queryRenderedFeatures(e.point, { layers: ["unclustered-point"] });
-    if (pointFeatures.length > 0) {
-      const props = pointFeatures[0].properties;
-      if (props?.itemType === "event") {
-        const event = mappableEvents.find((ev) => ev.id === props.id);
-        if (event) { handleEventClick(event); return; }
-      } else if (props?.itemType === "spot") {
-        const spot = mappableSpots.find((s) => s.id === props.id);
-        if (spot) { handleSpotClick(spot); return; }
-      }
-    }
-
-    // Click on empty space -> dismiss selection
+  // Map click handler — dismiss selection on empty space
+  const handleMapClick = useCallback(() => {
     setSelectedEvent(null);
     setSelectedSpot(null);
-  }, [handleClusterClick, mappableEvents, mappableSpots, handleEventClick, handleSpotClick]);
+  }, []);
 
   const handleClosePopup = useCallback(() => {
     setSelectedEvent(null);
@@ -482,86 +467,7 @@ export default function MapView({ events, spots = [], userLocation, viewRadius, 
   const useClusterMode = totalMarkers > 20;
 
   return (
-    <div className="w-full h-full rounded-lg overflow-hidden border border-[var(--twilight)] relative bg-[var(--void)]">
-      <style>{`
-        @keyframes mapPinPulse {
-          0%, 100% { filter: drop-shadow(0 0 6px var(--pin-color, #E855A0)) drop-shadow(0 2px 4px rgba(0,0,0,0.5)); transform: scale(1); }
-          50% { filter: drop-shadow(0 0 16px var(--pin-color, #E855A0)) drop-shadow(0 0 6px var(--pin-color, #E855A0)) drop-shadow(0 2px 4px rgba(0,0,0,0.5)); transform: scale(1.08); }
-        }
-        @media (prefers-reduced-motion: reduce) {
-          @keyframes mapPinPulse { 0%, 100% { transform: none; } }
-        }
-        @keyframes userLocPulse {
-          0%, 100% { transform: scale(1); opacity: 0.6; }
-          50% { transform: scale(1.4); opacity: 0.2; }
-        }
-        .mapboxgl-popup-content {
-          background: transparent !important;
-          padding: 0 !important;
-          box-shadow: none !important;
-          border-radius: 12px !important;
-        }
-        .mapboxgl-popup-tip {
-          display: none !important;
-        }
-        .mapboxgl-popup-close-button {
-          color: var(--muted, #8B8B94) !important;
-          font-size: 16px !important;
-          right: 6px !important;
-          top: 6px !important;
-          width: 24px !important;
-          height: 24px !important;
-          display: flex !important;
-          align-items: center !important;
-          justify-content: center !important;
-          border-radius: 6px !important;
-          z-index: 10 !important;
-        }
-        .mapboxgl-popup-close-button:hover {
-          color: var(--cream, #FAFAF9) !important;
-          background: var(--twilight, #252530) !important;
-        }
-        .mapboxgl-ctrl-group {
-          background: var(--dusk, #18181F) !important;
-          border: 1px solid var(--twilight, #252530) !important;
-          border-radius: 12px !important;
-          overflow: hidden;
-          box-shadow: 0 8px 20px rgba(0, 0, 0, 0.45) !important;
-        }
-        .mapboxgl-ctrl-group button {
-          background: transparent !important;
-          border: 0 !important;
-          width: 44px !important;
-          height: 44px !important;
-        }
-        .mapboxgl-ctrl-group button + button {
-          border-top: 1px solid var(--twilight, #252530) !important;
-        }
-        .mapboxgl-ctrl-group button .mapboxgl-ctrl-icon {
-          filter: ${isLightTheme ? "none" : "invert(1)"};
-        }
-        .mapboxgl-ctrl-group button:hover .mapboxgl-ctrl-icon {
-          filter: ${isLightTheme ? "none" : "invert(1) hue-rotate(340deg) brightness(1.4)"};
-        }
-        .mapboxgl-ctrl-geolocate {
-          background: var(--dusk, #18181F) !important;
-          border: 1px solid var(--twilight, #252530) !important;
-          border-radius: 12px !important;
-          box-shadow: 0 8px 20px rgba(0, 0, 0, 0.45) !important;
-          width: 44px !important;
-          height: 44px !important;
-        }
-        .mapboxgl-ctrl-geolocate .mapboxgl-ctrl-icon {
-          filter: ${isLightTheme ? "none" : "invert(1)"};
-        }
-        .mapboxgl-ctrl-attrib {
-          background: var(--night, #0F0F14) !important;
-          color: var(--muted, #8B8B94) !important;
-        }
-        .mapboxgl-ctrl-attrib a {
-          color: var(--soft, #A1A1AA) !important;
-        }
-      `}</style>
+    <div className={`w-full h-full rounded-lg overflow-hidden border border-[var(--twilight)] relative bg-[var(--void)] ${styles.mapContainer}`} data-theme={isLightTheme ? 'light' : 'dark'}>
 
       <Map
         ref={mapRef}
@@ -582,7 +488,13 @@ export default function MapView({ events, spots = [], userLocation, viewRadius, 
 
         {/* Cluster layer for all markers when many */}
         {useClusterMode && (
-          <ClusterLayer data={markerGeoJSON} onClusterClick={handleClusterClick} />
+          <ClusterLayer
+            data={markerGeoJSON}
+            onClusterClick={handleClusterClick}
+            onPointClick={handleClusterPointClick}
+            selectedItemId={selectedItemId}
+            hoveredItemId={hoveredItemId}
+          />
         )}
 
         {/* Individual event markers when few */}

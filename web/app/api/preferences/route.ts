@@ -85,10 +85,18 @@ export async function GET(request: NextRequest) {
         favorite_neighborhoods: [],
         favorite_vibes: [],
         price_preference: null,
+      }, {
+        headers: {
+          "Cache-Control": "private, max-age=120, stale-while-revalidate=300",
+        },
       });
     }
 
-    return NextResponse.json(data);
+    return NextResponse.json(data, {
+      headers: {
+        "Cache-Control": "private, max-age=120, stale-while-revalidate=300",
+      },
+    });
   } catch (err) {
     return errorResponse(err, "GET /api/preferences");
   }

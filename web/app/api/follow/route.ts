@@ -49,7 +49,11 @@ export const GET = withOptionalAuth(async (request, { user, serviceClient }) => 
       return NextResponse.json({ isFollowing: false, error: "Failed to check follow status" });
     }
 
-    return NextResponse.json({ isFollowing: !!data });
+    return NextResponse.json({ isFollowing: !!data }, {
+      headers: {
+        "Cache-Control": "private, max-age=60, stale-while-revalidate=120",
+      },
+    });
   } catch (err) {
     logger.error("Follow check exception", err, { userId: user.id, component: "follow" });
     return NextResponse.json({ isFollowing: false, error: "Server error" });
