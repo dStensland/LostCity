@@ -289,17 +289,23 @@ export async function GET(request: NextRequest) {
 
     // Filter by spot types if category specified
     if (categoryFilter && categoryFilter.spotTypes.length > 0) {
-      const typeFilters = categoryFilter.spotTypes
-        .map((t) => `venue_type.eq.${t}`)
-        .join(",");
-      spotsQuery = spotsQuery.or(typeFilters);
+      // Validate each type against known venue types before building filter
+      const validTypes = categoryFilter.spotTypes.filter(t => t in VENUE_TYPES_MAP);
+      if (validTypes.length > 0) {
+        const typeFilters = validTypes.map((t) => `venue_type.eq.${t}`).join(",");
+        spotsQuery = spotsQuery.or(typeFilters);
+      }
     } else {
       // Default: only include "place" venue types (bars, restaurants, etc.)
       const placeTypes = Object.keys(DESTINATION_CATEGORIES).flatMap(
         (key) => DESTINATION_CATEGORIES[key as keyof typeof DESTINATION_CATEGORIES]
       );
-      const typeFilters = placeTypes.map((t) => `venue_type.eq.${t}`).join(",");
-      spotsQuery = spotsQuery.or(typeFilters);
+      // Validate types before building filter
+      const validPlaceTypes = placeTypes.filter(t => t in VENUE_TYPES_MAP);
+      if (validPlaceTypes.length > 0) {
+        const typeFilters = validPlaceTypes.map((t) => `venue_type.eq.${t}`).join(",");
+        spotsQuery = spotsQuery.or(typeFilters);
+      }
     }
 
     // Fetch live events
@@ -333,7 +339,8 @@ export async function GET(request: NextRequest) {
       .gte("start_date", new Date().toISOString().split("T")[0]);
 
     // Filter by portal to prevent cross-portal leakage
-    if (portalId) {
+    // Validate portalId before interpolation to prevent injection
+    if (portalId && isValidUUID(portalId)) {
       eventsQuery = eventsQuery.or(`portal_id.eq.${portalId},portal_id.is.null`);
     } else {
       eventsQuery = eventsQuery.is("portal_id", null);

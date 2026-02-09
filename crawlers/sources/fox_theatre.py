@@ -220,11 +220,20 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         tags.append("dance")
 
                     # Get specific event URL
-
-
                     event_url = find_event_url(title, event_links, EVENTS_URL)
 
+                    image_url = image_map.get(title)
 
+                    # Build series_hint for multi-night shows
+                    series_hint = None
+                    if end_date is not None:
+                        series_hint = {
+                            "series_type": "recurring_show",
+                            "series_title": title,
+                            "description": category_line,
+                        }
+                        if image_url:
+                            series_hint["image_url"] = image_url
 
                     event_record = {
                         "source_id": source_id,
@@ -245,7 +254,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "is_free": False,
                         "source_url": event_url,
                         "ticket_url": event_url,
-                        "image_url": image_map.get(title),
+                        "image_url": image_url,
                         "raw_text": f"{line} {title}",
                         "extraction_confidence": 0.90,
                         "is_recurring": end_date is not None,
@@ -254,7 +263,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     }
 
                     try:
-                        insert_event(event_record)
+                        insert_event(event_record, series_hint=series_hint)
                         events_new += 1
                         logger.info(f"Added: {title} on {start_date}")
                     except Exception as e:

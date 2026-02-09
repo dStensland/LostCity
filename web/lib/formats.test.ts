@@ -260,7 +260,7 @@ describe("formats", () => {
         description: "Show ends with </script><script>alert('xss')</script>",
       };
       const result = safeJsonLd(schema);
-      expect(result).toContain("<\\/script>");
+      expect(result).toContain("\\u003c/script\\u003e");
       expect(result).not.toContain("</script>");
     });
 
@@ -271,7 +271,7 @@ describe("formats", () => {
       const result = safeJsonLd(schema);
       const scriptTags = result.match(/<\/script>/gi);
       expect(scriptTags).toBe(null); // No unescaped closing tags
-      expect(result).toContain("<\\/script>");
+      expect(result).toContain("\\u003c/script\\u003e");
     });
 
     it("handles case-insensitive script tag matching", () => {
@@ -280,7 +280,7 @@ describe("formats", () => {
       };
       const result = safeJsonLd(schema);
       expect(result).not.toMatch(/<\/script>/i);
-      expect(result).toContain("<\\/");
+      expect(result).toContain("\\u003c/");
     });
 
     it("preserves other HTML tags", () => {
@@ -288,8 +288,11 @@ describe("formats", () => {
         description: "Event with <b>bold</b> and <i>italic</i> text",
       };
       const result = safeJsonLd(schema);
-      expect(result).toContain("<b>");
-      expect(result).toContain("<i>");
+      // All angle brackets are now escaped to unicode, including non-script HTML tags
+      expect(result).not.toContain("<b>");
+      expect(result).not.toContain("<i>");
+      expect(result).toContain("\\u003cb\\u003e");
+      expect(result).toContain("\\u003ci\\u003e");
     });
 
     it("handles nested objects", () => {
@@ -302,7 +305,7 @@ describe("formats", () => {
       };
       const result = safeJsonLd(schema);
       expect(result).not.toContain("</script>");
-      expect(result).toContain("<\\/script>");
+      expect(result).toContain("\\u003c/script\\u003e");
     });
 
     it("handles empty objects", () => {
@@ -316,7 +319,7 @@ describe("formats", () => {
       };
       const result = safeJsonLd(schema);
       expect(result).not.toContain("</script>");
-      expect(result).toContain("<\\/script>");
+      expect(result).toContain("\\u003c/script\\u003e");
     });
   });
 });

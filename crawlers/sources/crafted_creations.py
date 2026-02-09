@@ -176,8 +176,16 @@ async def crawl(source: dict) -> tuple[int, int, int]:
                         "class_category": "crafts",
                     }
 
+                    # Build series hint for class enrichment
+                    series_hint = {
+                        "series_type": "class_series",
+                        "series_title": class_info["title"],
+                    }
+                    if class_info.get("description"):
+                        series_hint["description"] = class_info["description"]
+
                     try:
-                        insert_event(event_record)
+                        insert_event(event_record, series_hint=series_hint)
                         events_new += 1
                         logger.info(
                             f"Added: {class_info['title']} on {start_date_str}"

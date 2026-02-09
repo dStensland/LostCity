@@ -62,6 +62,11 @@ def create_monthly_car_shows(source_id: int, venue_id: int) -> tuple[int, int]:
 
         title = "Caffeine and Octane"
         start_date = show_date.strftime("%Y-%m-%d")
+        description = (
+            "One of the largest recurring car shows in the Southeast. "
+            "2,500+ vehicles from classics to exotics, 30,000+ car enthusiasts. "
+            "Free admission, free parking. First Sunday of every month."
+        )
 
         content_hash = generate_content_hash(title, "Town Center at Cobb", start_date)
 
@@ -73,11 +78,7 @@ def create_monthly_car_shows(source_id: int, venue_id: int) -> tuple[int, int]:
             "source_id": source_id,
             "venue_id": venue_id,
             "title": title,
-            "description": (
-                "One of the largest recurring car shows in the Southeast. "
-                "2,500+ vehicles from classics to exotics, 30,000+ car enthusiasts. "
-                "Free admission, free parking. First Sunday of every month."
-            ),
+            "description": description,
             "start_date": start_date,
             "start_time": "09:00",
             "end_date": None,
@@ -100,8 +101,15 @@ def create_monthly_car_shows(source_id: int, venue_id: int) -> tuple[int, int]:
             "content_hash": content_hash,
         }
 
+        series_hint = {
+            "series_type": "recurring_show",
+            "series_title": title,
+            "frequency": "monthly",
+            "description": description,
+        }
+
         try:
-            insert_event(event_record)
+            insert_event(event_record, series_hint=series_hint)
             events_new += 1
             logger.info(f"Added: {title} on {start_date}")
         except Exception as e:

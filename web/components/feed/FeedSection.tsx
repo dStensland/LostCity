@@ -270,7 +270,7 @@ export function HolidayGrid({ sections, portalSlug }: { sections: FeedSectionDat
   if (sections.length === 0) return null;
 
   return (
-    <section className="mb-6">
+    <section className="mb-4 sm:mb-6">
       <FeedSectionHeader
         title="Holidays and Special Times"
         subtitle="Good excuses to go out and get together"
@@ -454,7 +454,7 @@ function HeroBanner({ section, portalSlug, hideImages }: { section: FeedSectionD
 
   const hasImage = !hideImages && event.image_url;
   return (
-    <section className="mb-6">
+    <section className="mb-4 sm:mb-6">
       <Link
         href={`/${portalSlug}?event=${event.id}`}
         className="block relative rounded-2xl overflow-hidden group hero-featured coral-glow-hover"
@@ -687,7 +687,7 @@ function EventCards({ section, portalSlug }: { section: FeedSectionData; portalS
   };
 
   return (
-    <section className="mb-6">
+    <section className="mb-4 sm:mb-6">
       <SectionHeader section={section} portalSlug={portalSlug} />
 
       {/* Cards container with carousel enhancements */}
@@ -1008,7 +1008,7 @@ function EventList({ section, portalSlug }: { section: FeedSectionData; portalSl
   const showDateHeaders = sortedDates.length > 1;
 
   return (
-    <section className="mb-6">
+    <section className="mb-4 sm:mb-6">
       <SectionHeader section={section} portalSlug={portalSlug} />
 
       {/* List grouped by date */}
@@ -1156,7 +1156,7 @@ function CategoryGrid({ section, portalSlug, isFirst }: { section: FeedSectionDa
   }
 
   return (
-    <section className={`mb-10 ${isFirst ? "" : "pt-2"}`}>
+    <section className={`mb-6 sm:mb-10 ${isFirst ? "" : "pt-2"}`}>
       {/* Header */}
       {section.title && (
         <h3 className="text-lg font-semibold tracking-tight text-[var(--cream)] mb-4">{section.title}</h3>
@@ -1307,7 +1307,7 @@ function VenueList({ section, portalSlug }: { section: FeedSectionData; portalSl
   const headerSubtitle = section.description || undefined;
 
   return (
-    <section className="mb-6">
+    <section className="mb-4 sm:mb-6">
       <FeedSectionHeader
         title={headerTitle}
         subtitle={headerSubtitle}
@@ -1479,7 +1479,7 @@ function Announcement({ section }: { section: FeedSectionData }) {
   );
 
   return (
-    <section className="mb-6">
+    <section className="mb-4 sm:mb-6">
       <ScopedStyles css={accent?.css} />
       <ScopedStyles css={bg?.css} />
       <ScopedStyles css={border?.css} />
@@ -1548,7 +1548,7 @@ function ExternalLink({ section }: { section: FeedSectionData }) {
   }
 
   return (
-    <section className="mb-6">
+    <section className="mb-4 sm:mb-6">
       <a
         href={content.url}
         target="_blank"

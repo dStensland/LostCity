@@ -139,7 +139,7 @@ export default function VenueEventsByDay({
     return (
       <div className="space-y-2">
         {selectedEvents.map((event) => (
-          <EventCard
+          <VenueEventCard
             key={event.id}
             event={event}
             onClick={onEventClick ? () => onEventClick(event.id) : undefined}
@@ -280,7 +280,7 @@ export default function VenueEventsByDay({
           </div>
         ) : (
           selectedEvents.map((event) => (
-            <EventCard
+            <VenueEventCard
               key={event.id}
               event={event}
               onClick={onEventClick ? () => onEventClick(event.id) : undefined}
@@ -294,8 +294,8 @@ export default function VenueEventsByDay({
   );
 }
 
-// Event card component
-function EventCard({
+// Event card component — exported for reuse in VenueShowtimes
+export function VenueEventCard({
   event,
   onClick,
   href,

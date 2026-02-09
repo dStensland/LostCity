@@ -19,7 +19,7 @@ export const GridFeed = memo(function GridFeed({
   return (
     <div className="grid-feed">
       {config.hero_style !== "none" && (
-        <div className="hero-section mb-6 col-span-full">
+        <div className="hero-section mb-4 sm:mb-6 col-span-full">
           {/* Hero content will be rendered by parent */}
         </div>
       )}

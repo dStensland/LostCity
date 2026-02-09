@@ -80,16 +80,18 @@ def create_npu_meetings(source_id: int, venue_id: int) -> tuple[int, int]:
             events_updated += 1
             continue
 
+        description = (
+            "NPU-V (Neighborhood Planning Unit V) monthly meeting. "
+            "Covers Mechanicsville, Adair Park, Pittsburgh, and surrounding areas. "
+            "Discuss zoning, development, public safety, and community issues. "
+            "All residents welcome to attend and participate."
+        )
+
         event_record = {
             "source_id": source_id,
             "venue_id": venue_id,
             "title": title,
-            "description": (
-                "NPU-V (Neighborhood Planning Unit V) monthly meeting. "
-                "Covers Mechanicsville, Adair Park, Pittsburgh, and surrounding areas. "
-                "Discuss zoning, development, public safety, and community issues. "
-                "All residents welcome to attend and participate."
-            ),
+            "description": description,
             "start_date": start_date,
             "start_time": "19:00",
             "end_date": None,
@@ -112,8 +114,16 @@ def create_npu_meetings(source_id: int, venue_id: int) -> tuple[int, int]:
             "content_hash": content_hash,
         }
 
+        series_hint = {
+            "series_type": "recurring_show",
+            "series_title": title,
+            "frequency": "monthly",
+            "day_of_week": "Monday",
+            "description": description,
+        }
+
         try:
-            insert_event(event_record)
+            insert_event(event_record, series_hint=series_hint)
             events_new += 1
             logger.info(f"Added: {title} on {start_date}")
         except Exception as e:

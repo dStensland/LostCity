@@ -1,7 +1,8 @@
 "use client";
 
-import { memo } from "react";
+import { memo, useMemo } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { format, parseISO, isSameDay } from "date-fns";
 import { getSeriesTypeColor } from "@/lib/series-utils";
 import type { FestivalInfo, FestivalSummary } from "@/lib/event-grouping";
@@ -47,8 +48,19 @@ const FestivalCard = memo(function FestivalCard({
       .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
       .join(" ");
   };
+  const searchParams = useSearchParams();
   const typeLabel = formatFestivalType(festival.festival_type);
-  const festivalUrl = portalSlug ? `/${portalSlug}?festival=${festival.slug}` : `/festivals/${festival.slug}`;
+  const festivalUrl = useMemo(() => {
+    if (!portalSlug) return `/festivals/${festival.slug}`;
+    const params = new URLSearchParams(searchParams?.toString() || "");
+    params.delete("event");
+    params.delete("spot");
+    params.delete("series");
+    params.delete("festival");
+    params.delete("org");
+    params.set("festival", festival.slug);
+    return `/${portalSlug}?${params.toString()}`;
+  }, [portalSlug, festival.slug, searchParams]);
   const accentClass = createCssVarClass("--accent-color", typeColor, "accent");
   const contextAccentClass = contextColor
     ? createCssVarClass("--context-accent", contextColor, "context-accent")

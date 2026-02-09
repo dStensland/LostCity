@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Image from "@/components/SmartImage";
 import CategoryIcon, { getCategoryColor } from "@/components/CategoryIcon";
 import FollowButton from "@/components/FollowButton";
@@ -137,6 +137,7 @@ function parseRecurrenceRule(rule: string | null | undefined): string | null {
 
 export default function EventDetailView({ eventId, portalSlug, onClose }: EventDetailViewProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [event, setEvent] = useState<EventData | null>(null);
   const [venueEvents, setVenueEvents] = useState<RelatedEvent[]>([]);
   const [nearbyEvents, setNearbyEvents] = useState<RelatedEvent[]>([]);
@@ -185,22 +186,23 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
     fetchEvent();
   }, [eventId]);
 
-  // Handle navigation to other events/spots within the view
-  const handleEventClick = (id: number) => {
-    router.push(`/${portalSlug}?event=${id}`, { scroll: false });
+  // Navigate to another detail view, clearing all detail params first
+  // so only one is active at a time. Each push adds to history for proper back nav.
+  const navigateToDetail = (param: string, value: string | number) => {
+    const params = new URLSearchParams(searchParams?.toString() || "");
+    params.delete("event");
+    params.delete("spot");
+    params.delete("series");
+    params.delete("festival");
+    params.delete("org");
+    params.set(param, String(value));
+    router.push(`/${portalSlug}?${params.toString()}`, { scroll: false });
   };
 
-  const handleSpotClick = (slug: string) => {
-    router.push(`/${portalSlug}?spot=${slug}`, { scroll: false });
-  };
-
-  const handleSeriesClick = (slug: string) => {
-    router.push(`/${portalSlug}?series=${slug}`, { scroll: false });
-  };
-
-  const handleFestivalClick = (slug: string) => {
-    router.push(`/${portalSlug}?festival=${slug}`, { scroll: false });
-  };
+  const handleEventClick = (id: number) => navigateToDetail("event", id);
+  const handleSpotClick = (slug: string) => navigateToDetail("spot", slug);
+  const handleSeriesClick = (slug: string) => navigateToDetail("series", slug);
+  const handleFestivalClick = (slug: string) => navigateToDetail("festival", slug);
 
   const toggleSection = (key: string) => {
     setExpandedSections(prev => ({ ...prev, [key]: !prev[key] }));

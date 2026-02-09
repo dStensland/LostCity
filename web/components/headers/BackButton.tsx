@@ -44,19 +44,12 @@ export default function BackButton({ href, fallbackHref, label, className, iconO
   }
 
   const handleBack = () => {
-    // Check if the user navigated here from within the app
-    const referrer = document.referrer;
-    const hasSameOriginHistory =
-      referrer !== "" &&
-      (() => {
-        try {
-          return new URL(referrer).origin === window.location.origin;
-        } catch {
-          return false;
-        }
-      })();
-
-    if (hasSameOriginHistory) {
+    // Use history length to detect if user has navigable history.
+    // In SPAs, document.referrer only tracks the last full page load,
+    // not client-side route changes, so it's unreliable.
+    // history.length > 1 means there's at least one entry to go back to.
+    // (A fresh tab starts at 1; each navigation adds an entry.)
+    if (window.history.length > 1) {
       router.back();
     } else if (fallbackHref) {
       router.replace(fallbackHref);

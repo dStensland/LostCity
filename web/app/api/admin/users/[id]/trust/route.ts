@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { getUser, isAdmin } from "@/lib/supabase/server";
-import { isValidUUID, adminErrorResponse } from "@/lib/api-utils";
+import { isValidUUID, adminErrorResponse, checkBodySize } from "@/lib/api-utils";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 
 type Props = {
@@ -12,6 +12,10 @@ const TRUST_TIERS = ["standard", "trusted_submitter"] as const;
 
 // POST /api/admin/users/[id]/trust - Update user trust tier
 export async function POST(request: NextRequest, { params }: Props) {
+  // Check body size
+  const bodySizeError = checkBodySize(request);
+  if (bodySizeError) return bodySizeError;
+
   const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
   if (rateLimitResult) return rateLimitResult;
 

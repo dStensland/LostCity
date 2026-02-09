@@ -36,8 +36,8 @@ describe("security headers", () => {
     expect(csp).toContain("default-src 'self'");
     expect(csp).toContain(`script-src 'self' 'nonce-${nonce}'`);
     expect(csp).toContain(`style-src 'self' 'nonce-${nonce}' https://fonts.googleapis.com`);
-    expect(csp).toContain("style-src-elem 'self' https://fonts.googleapis.com 'unsafe-inline'");
-    expect(csp).toContain("style-src-attr 'unsafe-inline'");
+    expect(csp).toContain(`style-src-elem 'self' 'nonce-${nonce}' https://fonts.googleapis.com`);
+    expect(csp).toContain("style-src-attr 'none'");
     expect(csp).toContain("script-src-attr 'none'");
     expect(csp).toContain("frame-ancestors 'none'");
     expect(csp).toContain("object-src 'none'");
@@ -54,7 +54,7 @@ describe("security headers", () => {
     });
 
     expect(csp).toContain("style-src 'self'");
-    expect(csp).toContain("style-src-elem 'self' https://fonts.googleapis.com");
+    expect(csp).toContain(`style-src-elem 'self' 'nonce-${nonce}' https://fonts.googleapis.com`);
     expect(csp).toContain("style-src-attr 'none'");
     expect(csp).toContain("report-uri /api/csp-report");
     expect(csp).not.toContain("'unsafe-inline'");

@@ -72,11 +72,21 @@ def crawl(source: dict) -> tuple[int, int, int]:
         logger.info(f"Sweet Auburn Springfest {year} already exists")
         return events_found, events_new, events_updated
 
+    description = "Atlanta's largest African-American street festival celebrating the historic Sweet Auburn district with live music, food, art, and cultural performances."
+
+    # Build series_hint
+    series_hint = {
+        "series_type": "recurring_show",
+        "series_title": title,
+        "frequency": "annual",
+        "description": description,
+    }
+
     event_record = {
         "source_id": source_id,
         "venue_id": venue_id,
         "title": title,
-        "description": "Atlanta's largest African-American street festival celebrating the historic Sweet Auburn district with live music, food, art, and cultural performances.",
+        "description": description,
         "start_date": start_date.strftime("%Y-%m-%d"),
         "start_time": "12:00",
         "end_date": end_date.strftime("%Y-%m-%d"),
@@ -107,7 +117,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     }
 
     try:
-        insert_event(event_record)
+        insert_event(event_record, series_hint=series_hint)
         events_new = 1
         logger.info(f"Added: {title}")
     except Exception as e:

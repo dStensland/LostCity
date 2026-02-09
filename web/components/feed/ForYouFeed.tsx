@@ -2,8 +2,8 @@
 
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import Link from "next/link";
-import EventCard, { type FriendGoing } from "@/components/EventCard";
-import { getLocalDateString } from "@/lib/formats";
+import EventCard from "@/components/EventCard";
+import { getLocalDateString, convertFriendsGoing, type FriendGoing } from "@/lib/formats";
 import type { FeedEvent } from "@/lib/hooks/useForYouEvents";
 import ScopedStyles from "@/components/ScopedStyles";
 import { createCssVarClass } from "@/lib/css-utils";
@@ -192,7 +192,7 @@ function FriendsGoingHighlight({
   );
 
   return (
-    <section className="mb-8">
+    <section className="mb-5 sm:mb-8">
       <ScopedStyles css={accentClass?.css} />
       {/* Section header with cyan accent - improved spacing */}
       <div className={`flex items-center gap-2 mb-4 px-1 ${accentClass?.className ?? ""}`}>
@@ -292,7 +292,7 @@ function ExpandableSection({
   if (items.length === 0) return null;
 
   return (
-    <section className="mb-8">
+    <section className="mb-5 sm:mb-8">
       <ScopedStyles css={accentClass?.css} />
       {/* Section header - always visible, improved spacing */}
       <div className={`flex items-center gap-2 mb-4 px-1 ${accentClass?.className ?? ""}`}>
@@ -376,23 +376,6 @@ function ExpandableSection({
 
 interface ForYouFeedProps {
   portalSlug: string;
-}
-
-// Convert API friends_going format to EventCard's FriendGoing format
-function convertFriendsGoing(
-  friends?: Array<{ user_id: string; username: string; display_name: string | null }>
-): FriendGoing[] | undefined {
-  if (!friends || friends.length === 0) return undefined;
-  return friends.map((f) => ({
-    user_id: f.user_id,
-    status: "going" as const,
-    user: {
-      id: f.user_id,
-      username: f.username,
-      display_name: f.display_name,
-      avatar_url: null,
-    },
-  }));
 }
 
 export default function ForYouFeed({ portalSlug }: ForYouFeedProps) {

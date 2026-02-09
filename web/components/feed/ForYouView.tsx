@@ -5,30 +5,14 @@ import Link from "next/link";
 import SimpleFilterBar from "@/components/SimpleFilterBar";
 import { QuickTagsRow, SubcategoryRow, ActiveFiltersRow } from "@/components/filters";
 import PersonalizedIndicator from "./PersonalizedIndicator";
-import EventCard, { type FriendGoing } from "@/components/EventCard";
+import EventCard from "@/components/EventCard";
 import { useForYouFilters } from "@/lib/hooks/useForYouFilters";
 import { useForYouEvents, type FeedEvent } from "@/lib/hooks/useForYouEvents";
+import { convertFriendsGoing } from "@/lib/formats";
 
 interface ForYouViewProps {
   portalSlug: string;
   portalId: string;
-}
-
-// Convert API friends_going format to EventCard's FriendGoing format
-function convertFriendsGoing(
-  friends?: Array<{ user_id: string; username: string; display_name: string | null }>
-): FriendGoing[] | undefined {
-  if (!friends || friends.length === 0) return undefined;
-  return friends.map((f) => ({
-    user_id: f.user_id,
-    status: "going" as const,
-    user: {
-      id: f.user_id,
-      username: f.username,
-      display_name: f.display_name,
-      avatar_url: null,
-    },
-  }));
 }
 
 // Loading skeleton for events
@@ -258,7 +242,7 @@ export default function ForYouView(props: ForYouViewProps) {
       <Suspense fallback={<div className="h-10 bg-[var(--night)]" />}>
         <SimpleFilterBar variant="full" />
         {/* Layered filter rows */}
-        <div className="sticky top-[156px] z-10 bg-[var(--night)] border-b border-[var(--twilight)]">
+        <div className="sticky top-14 z-10 bg-[var(--night)] border-b border-[var(--twilight)]">
           <div className="max-w-5xl mx-auto">
             {/* Quick Tags - always visible */}
             <QuickTagsRow />

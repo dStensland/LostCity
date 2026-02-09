@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Image from "@/components/SmartImage";
 import { format, parseISO } from "date-fns";
 import LinkifyText from "../LinkifyText";
@@ -132,6 +132,7 @@ const NeonFloatingBackButton = ({ onClose }: { onClose: () => void }) => (
 
 export default function SeriesDetailView({ slug, portalSlug, onClose }: SeriesDetailViewProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const portalContext = usePortalOptional();
   const portalId = portalContext?.portal?.id || null;
   const [series, setSeries] = useState<SeriesData | null>(null);
@@ -165,17 +166,20 @@ export default function SeriesDetailView({ slug, portalSlug, onClose }: SeriesDe
     fetchSeries();
   }, [slug, portalId]);
 
-  const handleEventClick = (id: number) => {
-    router.push(`/${portalSlug}?event=${id}`, { scroll: false });
+  const navigateToDetail = (param: string, value: string | number) => {
+    const params = new URLSearchParams(searchParams?.toString() || "");
+    params.delete("event");
+    params.delete("spot");
+    params.delete("series");
+    params.delete("festival");
+    params.delete("org");
+    params.set(param, String(value));
+    router.push(`/${portalSlug}?${params.toString()}`, { scroll: false });
   };
 
-  const handleVenueClick = (venueSlug: string) => {
-    router.push(`/${portalSlug}?spot=${venueSlug}`, { scroll: false });
-  };
-
-  const handleFestivalClick = (festivalSlug: string) => {
-    router.push(`/${portalSlug}?festival=${festivalSlug}`, { scroll: false });
-  };
+  const handleEventClick = (id: number) => navigateToDetail("event", id);
+  const handleVenueClick = (venueSlug: string) => navigateToDetail("spot", venueSlug);
+  const handleFestivalClick = (festivalSlug: string) => navigateToDetail("festival", festivalSlug);
 
   if (loading) {
     return (

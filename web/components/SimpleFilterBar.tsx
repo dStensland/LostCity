@@ -215,7 +215,7 @@ export default function SimpleFilterBar({ variant = "full" }: SimpleFilterBarPro
   return (
     <>
       {/* Desktop view (>= 640px) */}
-      <div className="hidden sm:block sticky top-[112px] z-40 filter-bar-surface">
+      <div className="hidden sm:block sticky top-14 z-40 filter-bar-surface">
         <div className={`max-w-5xl mx-auto px-4 ${variant === "compact" ? "py-1.5" : "py-2"}`}>
           <div className="flex items-center gap-2">
             {/* Category dropdown */}

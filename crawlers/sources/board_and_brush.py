@@ -304,8 +304,16 @@ def crawl_location(
                 "class_category": "woodworking",
             }
 
+            # Build series hint for class enrichment
+            series_hint = {
+                "series_type": "class_series",
+                "series_title": title,
+            }
+            if image_url:
+                series_hint["image_url"] = image_url
+
             try:
-                insert_event(event_record)
+                insert_event(event_record, series_hint=series_hint)
                 events_new += 1
                 logger.info(f"  Added: {title} on {event_date} at {start_time or 'TBD'}")
             except Exception as e:

@@ -287,10 +287,15 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         continue
 
                     # Create series hint for the show run
-                    series_hint = {
-                        "name": title,
-                        "venue_id": venue_id,
-                    }
+                    series_hint = None
+                    if end_date and end_date != start_date:
+                        series_hint = {
+                            "series_type": "recurring_show",
+                            "series_title": title,
+                        }
+                        if description:
+                            series_hint["description"] = description
+                        # No image_url available for georgia_ensemble
 
                     event_record = {
                         "source_id": source_id,

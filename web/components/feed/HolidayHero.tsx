@@ -9,36 +9,76 @@ interface HolidayConfig {
   tag: string;
   title: string;
   subtitle: string;
-  ctaLabel?: string; // deprecated — kept for config compat
   /** Gradient: left to right */
   gradient: string;
   accentColor: string;
   glowColor: string;
-  icon: string; // path to icon in /public/icons/ or "lx-logo" for inline SVG
+  icon: string; // path to image in /public/ (starts with /) or emoji string
   bgImage?: string; // optional background image path
   /** Show between these dates [month, day] inclusive */
   showFrom: [number, number];
   showUntil: [number, number];
   /** When does the event actually happen? For countdown */
   eventDate: [number, number, number]; // [year, month, day]
+  /** Override countdown text (e.g. "ALL MONTH" for month-long observances) */
+  countdownOverride?: string;
 }
 
-// Holiday configs — add new holidays here
+// Holiday configs — first match wins, order by specificity
 const HOLIDAYS: HolidayConfig[] = [
   {
-    slug: "super-bowl",
-    tag: "super-bowl",
-    title: "Super Bowl LX",
-    subtitle: "Watch parties & game day events across Atlanta",
-    ctaLabel: "Find Watch Parties",
-    gradient: "linear-gradient(135deg, #0a2e1a 0%, #0d3320 30%, #143d28 60%, #091a0f 100%)",
-    accentColor: "var(--neon-green)",
-    glowColor: "#00D9A0",
-    icon: "lx-logo", // inline SVG logo
-    bgImage: "/images/super-bowl-tecmo.svg",
-    showFrom: [2, 2],
-    showUntil: [2, 9],
-    eventDate: [2026, 2, 8],
+    slug: "valentines-day",
+    tag: "valentines",
+    title: "Valentine's Day",
+    subtitle: "The heart has reasons that reason cannot know",
+    gradient: "linear-gradient(135deg, #1a0a1e 0%, #2d0a2e 30%, #1e0a28 60%, #0f0a1a 100%)",
+    accentColor: "#ff4da6",
+    glowColor: "#ff4da6",
+    icon: "/images/valentines-heart-neon.gif",
+    showFrom: [2, 8],
+    showUntil: [2, 14],
+    eventDate: [2026, 2, 14],
+  },
+  {
+    slug: "mardi-gras",
+    tag: "mardi-gras",
+    title: "Mardi Gras",
+    subtitle: "Laissez les bons temps rouler",
+    gradient: "linear-gradient(135deg, #0d0520 0%, #1a0a35 30%, #15082a 60%, #0d0520 100%)",
+    accentColor: "#f0c420",
+    glowColor: "#9b59b6",
+    icon: "\u269C\uFE0F",
+    showFrom: [2, 15],
+    showUntil: [2, 17],
+    eventDate: [2026, 2, 17],
+  },
+  {
+    slug: "lunar-new-year",
+    tag: "lunar-new-year",
+    title: "Lunar New Year",
+    subtitle: "G\u014Dng x\u01D0 f\u0101 c\u00E1i \u2014 Year of the Horse",
+    gradient: "linear-gradient(135deg, #1a0505 0%, #350a0a 30%, #2a0808 60%, #1a0303 100%)",
+    accentColor: "#ff4444",
+    glowColor: "#cc0000",
+    icon: "\uD83C\uDFEE",
+    showFrom: [2, 18],
+    showUntil: [2, 22],
+    eventDate: [2026, 2, 17],
+    countdownOverride: "YEAR OF THE HORSE",
+  },
+  {
+    slug: "black-history-month",
+    tag: "black-history",
+    title: "Black History Month",
+    subtitle: "Honoring Black culture, art & community in Atlanta",
+    gradient: "linear-gradient(135deg, #0a0a05 0%, #1a1508 30%, #0f0d05 60%, #0a0a05 100%)",
+    accentColor: "#d4a017",
+    glowColor: "#c8960e",
+    icon: "\u270A\uD83C\uDFFF",
+    showFrom: [2, 1],
+    showUntil: [2, 28],
+    eventDate: [2026, 2, 1],
+    countdownOverride: "ALL MONTH",
   },
 ];
 
@@ -76,10 +116,17 @@ function getActiveHoliday(): (HolidayConfig & { countdown: string; daysUntil: nu
       const diff = Math.ceil((eventDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
 
       let countdown: string;
-      if (diff < 0) countdown = "Game Over";
-      else if (diff === 0) countdown = "GAME DAY";
-      else if (diff === 1) countdown = "TOMORROW";
-      else countdown = `IN ${diff} DAYS`;
+      if (h.countdownOverride) {
+        countdown = h.countdownOverride;
+      } else if (diff < 0) {
+        countdown = "IT'S OVER";
+      } else if (diff === 0) {
+        countdown = "TODAY";
+      } else if (diff === 1) {
+        countdown = "TOMORROW";
+      } else {
+        countdown = `IN ${diff} DAYS`;
+      }
 
       return { ...h, countdown, daysUntil: diff };
     }
@@ -117,10 +164,10 @@ export default function HolidayHero({ portalSlug }: HolidayHeroProps) {
     fetchCount();
   }, [portalSlug, holiday]);
 
-  if (!holiday || holiday.daysUntil < 0) return null;
+  if (!holiday || (!holiday.countdownOverride && holiday.daysUntil < 0)) return null;
 
-  const isGameDay = holiday.daysUntil === 0;
-  const isTomorrow = holiday.daysUntil === 1;
+  const isToday = !holiday.countdownOverride && holiday.daysUntil === 0;
+  const isTomorrow = !holiday.countdownOverride && holiday.daysUntil === 1;
 
   return (
     <Link
@@ -128,7 +175,7 @@ export default function HolidayHero({ portalSlug }: HolidayHeroProps) {
       className="block relative rounded-2xl overflow-hidden group"
       style={{ background: holiday.gradient }}
     >
-      {/* Tecmo Bowl background image */}
+      {/* Background image */}
       {holiday.bgImage && (
         <div
           className="absolute inset-0 pointer-events-none"
@@ -137,9 +184,24 @@ export default function HolidayHero({ portalSlug }: HolidayHeroProps) {
             backgroundSize: "cover",
             backgroundPosition: "center",
             opacity: 0.7,
-            imageRendering: "pixelated",
           }}
         />
+      )}
+
+      {/* Valentine's: blurred neon heart background glow */}
+      {holiday.slug === "valentines-day" && (
+        <div className="absolute inset-0 pointer-events-none overflow-hidden">
+          <div
+            className="absolute -right-8 -top-8 w-[200px] h-[200px] sm:w-[280px] sm:h-[280px] opacity-30 animate-[heartbeat_2s_ease-in-out_infinite]"
+            style={{
+              backgroundImage: `url(${holiday.icon})`,
+              backgroundSize: "contain",
+              backgroundRepeat: "no-repeat",
+              backgroundPosition: "center",
+              filter: "blur(30px) saturate(1.5)",
+            }}
+          />
+        </div>
       )}
 
       {/* Glow accents */}
@@ -151,8 +213,8 @@ export default function HolidayHero({ portalSlug }: HolidayHeroProps) {
         }}
       />
 
-      {/* Scan line animation for game day / tomorrow */}
-      {(isGameDay || isTomorrow) && (
+      {/* Shimmer animation for urgent days */}
+      {(isToday || isTomorrow) && (
         <div className="absolute inset-0 pointer-events-none overflow-hidden">
           <div
             className="absolute inset-y-0 w-[200%] animate-[shimmer_8s_ease-in-out_infinite]"
@@ -164,93 +226,45 @@ export default function HolidayHero({ portalSlug }: HolidayHeroProps) {
       )}
 
       <div className="relative flex items-center gap-5 px-5 py-5 sm:px-6 sm:py-6">
-        {/* LX Logo */}
+        {/* Icon */}
         <div className="flex-shrink-0 relative">
           <div
             className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl flex items-center justify-center overflow-hidden"
             style={{
               backgroundColor: `color-mix(in srgb, ${holiday.glowColor} 12%, transparent)`,
-              boxShadow: isGameDay
+              boxShadow: isToday
                 ? `0 0 30px ${holiday.glowColor}30`
                 : `0 0 20px ${holiday.glowColor}15`,
               backdropFilter: "blur(8px)",
             }}
           >
-            {holiday.icon === "lx-logo" ? (
-              <svg
-                viewBox="0 0 80 80"
-                className="w-16 h-16 sm:w-20 sm:h-20"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <defs>
-                  <filter id="lx-glow">
-                    <feGaussianBlur stdDeviation="2" result="blur" />
-                    <feMerge>
-                      <feMergeNode in="blur" />
-                      <feMergeNode in="SourceGraphic" />
-                    </feMerge>
-                  </filter>
-                </defs>
-                {/* Shield fill - subtle */}
-                <path
-                  d="M40 4 L70 17 L70 46 Q70 65 40 78 Q10 65 10 46 L10 17 Z"
-                  fill={`${holiday.glowColor}10`}
-                  stroke={holiday.glowColor}
-                  strokeWidth="1.5"
-                  opacity="0.4"
-                />
-                {/* L - bold white */}
-                <text
-                  x="16"
-                  y="58"
-                  fontFamily="'Impact', 'Arial Black', sans-serif"
-                  fontSize="44"
-                  fontWeight="900"
-                  fill="#ffffff"
-                  filter="url(#lx-glow)"
-                >
-                  L
-                </text>
-                {/* X - bold accent */}
-                <text
-                  x="40"
-                  y="58"
-                  fontFamily="'Impact', 'Arial Black', sans-serif"
-                  fontSize="44"
-                  fontWeight="900"
-                  fill={holiday.glowColor}
-                  filter="url(#lx-glow)"
-                >
-                  X
-                </text>
-                {/* Star above */}
-                <polygon
-                  points="40,8 42.5,14 49,14 44,18 45.5,24 40,20.5 34.5,24 36,18 31,14 37.5,14"
-                  fill={holiday.glowColor}
-                  opacity="0.7"
-                />
-                {/* Tiny football laces accent below */}
-                <line x1="32" y1="66" x2="48" y2="66" stroke={holiday.glowColor} strokeWidth="1" opacity="0.3" />
-                <line x1="37" y1="64" x2="37" y2="68" stroke={holiday.glowColor} strokeWidth="0.8" opacity="0.25" />
-                <line x1="40" y1="64" x2="40" y2="68" stroke={holiday.glowColor} strokeWidth="0.8" opacity="0.25" />
-                <line x1="43" y1="64" x2="43" y2="68" stroke={holiday.glowColor} strokeWidth="0.8" opacity="0.25" />
-              </svg>
-            ) : (
+            {holiday.icon.startsWith("/") ? (
               <Image
                 src={holiday.icon}
                 alt=""
-                width={80}
-                height={80}
-                className="w-16 h-16 sm:w-20 sm:h-20 object-contain"
+                width={150}
+                height={150}
+                unoptimized={holiday.icon.endsWith(".gif")}
+                className="w-20 h-20 sm:w-24 sm:h-24 object-cover scale-125"
               />
+            ) : (
+              <span className="text-5xl sm:text-6xl leading-none select-none">
+                {holiday.icon}
+              </span>
             )}
           </div>
-          {/* Pulse ring on game day */}
-          {isGameDay && (
+          {/* Pulse ring on event day */}
+          {isToday && (
             <span
               className="absolute -inset-1 rounded-2xl animate-[ping_3s_cubic-bezier(0,0,0.2,1)_infinite] opacity-20"
               style={{ backgroundColor: holiday.glowColor }}
+            />
+          )}
+          {/* Heartbeat glow ring for valentines */}
+          {holiday.slug === "valentines-day" && (
+            <span
+              className="absolute -inset-1.5 rounded-2xl animate-[heartbeat_2s_ease-in-out_infinite] opacity-40"
+              style={{ boxShadow: `0 0 20px ${holiday.glowColor}, 0 0 40px ${holiday.glowColor}40` }}
             />
           )}
         </div>
@@ -262,24 +276,24 @@ export default function HolidayHero({ portalSlug }: HolidayHeroProps) {
             <span
               className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full font-mono text-xs font-bold uppercase tracking-wider"
               style={{
-                color: isGameDay || isTomorrow ? "#fff" : holiday.accentColor,
-                backgroundColor: isGameDay
+                color: isToday || isTomorrow ? "#fff" : holiday.accentColor,
+                backgroundColor: isToday
                   ? holiday.glowColor
                   : `color-mix(in srgb, ${holiday.glowColor} 20%, transparent)`,
-                boxShadow: isGameDay
+                boxShadow: isToday
                   ? `0 0 16px ${holiday.glowColor}60`
                   : undefined,
               }}
             >
-              {(isGameDay || isTomorrow) && (
+              {(isToday || isTomorrow) && (
                 <span className="relative flex h-2 w-2">
                   <span
                     className="absolute inline-flex h-full w-full rounded-full opacity-75 animate-[ping_3s_cubic-bezier(0,0,0.2,1)_infinite]"
-                    style={{ backgroundColor: isGameDay ? "#fff" : holiday.glowColor }}
+                    style={{ backgroundColor: isToday ? "#fff" : holiday.glowColor }}
                   />
                   <span
                     className="relative inline-flex h-2 w-2 rounded-full"
-                    style={{ backgroundColor: isGameDay ? "#fff" : holiday.glowColor }}
+                    style={{ backgroundColor: isToday ? "#fff" : holiday.glowColor }}
                   />
                 </span>
               )}
@@ -299,7 +313,7 @@ export default function HolidayHero({ portalSlug }: HolidayHeroProps) {
           </h3>
 
           {/* Subtitle */}
-          <p className="text-sm text-[var(--soft)] mt-0.5">{holiday.subtitle}</p>
+          <p className="text-sm text-[var(--soft)] mt-0.5 italic">{holiday.subtitle}</p>
 
           {/* Event count pill */}
           {eventCount !== null && eventCount > 0 && (

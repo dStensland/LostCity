@@ -85,7 +85,7 @@ export default function UserMenu() {
       </div>
 
       {/* Avatar and dropdown */}
-      <div className="relative flex items-center z-[1000]" ref={menuRef}>
+      <div className="relative flex items-center" ref={menuRef}>
         {/* Avatar - clicks through to profile (or settings if no profile) */}
         <Link
           href={profile?.username ? `/profile/${profile.username}` : "/settings"}
@@ -122,7 +122,7 @@ export default function UserMenu() {
 
       {/* Dropdown menu */}
       {isOpen && (
-        <div className="absolute right-0 top-full mt-2 w-64 bg-[var(--dusk)] border border-[var(--twilight)] rounded-xl shadow-2xl shadow-black/30 z-[1050] overflow-hidden">
+        <div className="absolute right-0 top-full mt-2 w-64 bg-[var(--dusk)] border border-[var(--twilight)] rounded-xl shadow-2xl shadow-black/30 z-[200] overflow-hidden">
           {/* Header with avatar and name */}
           <div className="p-4 bg-gradient-to-br from-[var(--twilight)]/50 to-transparent">
             <div className="flex items-center gap-3">

@@ -1035,7 +1035,8 @@ export async function getVenuesWithEvents(): Promise<VenueWithCount[]> {
     .from("events")
     .select("venue_id, venue:venues(id, name, neighborhood)")
     .or(`start_date.gte.${today},end_date.gte.${today}`)
-    .not("venue_id", "is", null);
+    .not("venue_id", "is", null)
+    .limit(500);
 
   if (error || !events) {
     logger.error("Failed to fetch venues with events", error);
@@ -1535,7 +1536,7 @@ export async function getPopularEvents(limit = 6): Promise<EventWithLocation[]> 
     .lte("start_date", weekFromNow)
     .eq("is_active", true)
     .order("start_date", { ascending: true })
-    .limit(100);
+    .limit(200);
 
   if (!events || events.length === 0) {
     return [];
@@ -1599,25 +1600,30 @@ export async function getTrendingEvents(limit = 6): Promise<EventWithLocation[]>
   const typedEvents = events as unknown as EventWithLocation[];
   const eventIds = typedEvents.map((e) => e.id);
 
-  // Get recent RSVPs (last 48 hours) - this shows momentum
-  const { data: recentRsvpsData } = await serviceClient
-    .from("event_rsvps")
-    .select("event_id, status, created_at")
-    .in("event_id", eventIds)
-    .eq("visibility", "public")
-    .gte("created_at", hours48Ago);
+  // PERFORMANCE: Fetch recent activity in parallel instead of sequentially
+  const [recentRsvpsData, recentRecsData] = await Promise.all([
+    // Get recent RSVPs (last 48 hours) - this shows momentum
+    serviceClient
+      .from("event_rsvps")
+      .select("event_id, status, created_at")
+      .in("event_id", eventIds)
+      .eq("visibility", "public")
+      .gte("created_at", hours48Ago)
+      .limit(1000), // Limit to prevent unbounded queries
 
-  // Get recent recommendations (last 48 hours)
-  const { data: recentRecsData } = await serviceClient
-    .from("recommendations")
-    .select("event_id, created_at")
-    .in("event_id", eventIds)
-    .eq("visibility", "public")
-    .gte("created_at", hours48Ago);
+    // Get recent recommendations (last 48 hours)
+    serviceClient
+      .from("recommendations")
+      .select("event_id, created_at")
+      .in("event_id", eventIds)
+      .eq("visibility", "public")
+      .gte("created_at", hours48Ago)
+      .limit(1000), // Limit to prevent unbounded queries
+  ]);
 
   // Cast to expected types
-  const recentRsvps = (recentRsvpsData || []) as { event_id: number; status: string; created_at: string }[];
-  const recentRecs = (recentRecsData || []) as { event_id: number; created_at: string }[];
+  const recentRsvps = (recentRsvpsData.data || []) as { event_id: number; status: string; created_at: string }[];
+  const recentRecs = (recentRecsData.data || []) as { event_id: number; created_at: string }[];
 
   // Count recent activity per event
   const recentActivity = new Map<number, { rsvps: number; recs: number; goingRecent: number }>();

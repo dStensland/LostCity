@@ -77,10 +77,15 @@ def parse_date_tag(date_text: str) -> Optional[str]:
     if not month_num:
         return None
 
-    # Determine year - if month is before current month, it's next year
+    # Determine year — only bump to next year if >60 days in the past
+    # (avoids pushing recent-past events like Jan 30 to 2027 when crawled in Feb)
     year = current_year
-    if month_num < current_month or (month_num == current_month and int(day) < datetime.now().day):
-        year = current_year + 1
+    try:
+        candidate = datetime(current_year, month_num, int(day))
+        if (datetime.now() - candidate).days > 60:
+            year = current_year + 1
+    except ValueError:
+        pass
 
     try:
         dt = datetime(year, month_num, int(day))

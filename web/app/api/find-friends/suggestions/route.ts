@@ -1,12 +1,17 @@
 import { NextResponse } from "next/server";
 import { withAuth } from "@/lib/api-middleware";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
+import { isValidUUID } from "@/lib/api-utils";
 
 export const GET = withAuth(async (request, { user, serviceClient }) => {
   const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.read, getClientIdentifier(request));
   if (rateLimitResult) return rateLimitResult;
 
   // Get current user's friends via the friendships table (user_a_id / user_b_id)
+  // Validate user ID before interpolation
+  if (!isValidUUID(user.id)) {
+    return NextResponse.json({ error: "Invalid user ID" }, { status: 400 });
+  }
   const { data: friendships } = await serviceClient
     .from("friendships")
     .select("user_a_id, user_b_id")
@@ -19,6 +24,7 @@ export const GET = withAuth(async (request, { user, serviceClient }) => {
   }
 
   // Get pending friend requests to exclude (inviter_id / invitee_id)
+  // user.id already validated above
   const { data: pendingRequests } = await serviceClient
     .from("friend_requests")
     .select("inviter_id, invitee_id")
@@ -47,54 +53,58 @@ export const GET = withAuth(async (request, { user, serviceClient }) => {
   // Strategy 1: Friends-of-friends
   if (friendIds.size > 0) {
     const friendIdArray = Array.from(friendIds);
-    const { data: fofData } = await serviceClient
-      .from("friendships")
-      .select("user_a_id, user_b_id")
-      .or(
-        friendIdArray.map((id) => `user_a_id.eq.${id}`).join(",") +
-        "," +
-        friendIdArray.map((id) => `user_b_id.eq.${id}`).join(",")
-      );
+    // Validate all friend IDs before interpolation
+    const validFriendIds = friendIdArray.filter(id => isValidUUID(id));
+    if (validFriendIds.length > 0) {
+      const { data: fofData } = await serviceClient
+        .from("friendships")
+        .select("user_a_id, user_b_id")
+        .or(
+          validFriendIds.map((id) => `user_a_id.eq.${id}`).join(",") +
+          "," +
+          validFriendIds.map((id) => `user_b_id.eq.${id}`).join(",")
+        );
 
-    // Count mutual friends per candidate
-    // Each row is a friendship where at least one side is our friend.
-    // We want the OTHER person — the one who isn't already our friend.
-    const mutualCounts = new Map<string, number>();
-    for (const f of (fofData || []) as Array<{ user_a_id: string; user_b_id: string }>) {
-      const candidates = [f.user_a_id, f.user_b_id].filter(
-        (id) => !excludeIds.has(id) && !friendIds.has(id)
-      );
-      for (const candidateId of candidates) {
-        mutualCounts.set(candidateId, (mutualCounts.get(candidateId) || 0) + 1);
+        // Count mutual friends per candidate
+      // Each row is a friendship where at least one side is our friend.
+      // We want the OTHER person — the one who isn't already our friend.
+      const mutualCounts = new Map<string, number>();
+      for (const f of (fofData || []) as Array<{ user_a_id: string; user_b_id: string }>) {
+        const candidates = [f.user_a_id, f.user_b_id].filter(
+          (id) => !excludeIds.has(id) && !friendIds.has(id)
+        );
+        for (const candidateId of candidates) {
+          mutualCounts.set(candidateId, (mutualCounts.get(candidateId) || 0) + 1);
+        }
       }
-    }
 
-    // Get top candidates by mutual friend count
-    const topCandidates = Array.from(mutualCounts.entries())
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 10);
+      // Get top candidates by mutual friend count
+      const topCandidates = Array.from(mutualCounts.entries())
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 10);
 
-    if (topCandidates.length > 0) {
-      const candidateIds = topCandidates.map(([id]) => id);
-      const { data: profiles } = await serviceClient
-        .from("profiles")
-        .select("id, username, display_name, avatar_url, bio")
-        .in("id", candidateIds);
+      if (topCandidates.length > 0) {
+        const candidateIds = topCandidates.map(([id]) => id);
+        const { data: profiles } = await serviceClient
+          .from("profiles")
+          .select("id, username, display_name, avatar_url, bio")
+          .in("id", candidateIds);
 
-      for (const p of (profiles || []) as Array<{
-        id: string;
-        username: string;
-        display_name: string | null;
-        avatar_url: string | null;
-        bio: string | null;
-      }>) {
-        if (!seenIds.has(p.id)) {
-          seenIds.add(p.id);
-          suggestions.push({
-            ...p,
-            mutual_friends_count: mutualCounts.get(p.id) || 0,
-            suggestion_reason: "mutual_friends",
-          });
+        for (const p of (profiles || []) as Array<{
+          id: string;
+          username: string;
+          display_name: string | null;
+          avatar_url: string | null;
+          bio: string | null;
+        }>) {
+          if (!seenIds.has(p.id)) {
+            seenIds.add(p.id);
+            suggestions.push({
+              ...p,
+              mutual_friends_count: mutualCounts.get(p.id) || 0,
+              suggestion_reason: "mutual_friends",
+            });
+          }
         }
       }
     }

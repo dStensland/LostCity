@@ -57,7 +57,7 @@ export default function FeedSectionHeader({
         return {
           titleClass: "section-header-primary text-2xl",
           subtitleClass: "font-mono text-[0.75rem] text-[var(--muted)] mt-0.5",
-          containerClass: "mb-5 pb-2",
+          containerClass: "mb-3 sm:mb-5 pb-2",
           iconSize: "w-6 h-6",
           defaultAccent: "var(--gold)",
           showDefaultIcon: true,
@@ -66,7 +66,7 @@ export default function FeedSectionHeader({
         return {
           titleClass: "section-header-secondary text-xl",
           subtitleClass: "font-mono text-[0.7rem] text-[var(--muted)] mt-0.5",
-          containerClass: "mb-4",
+          containerClass: "mb-2 sm:mb-4",
           iconSize: "w-5 h-5",
           defaultAccent: accentColor || "var(--coral)",
           showDefaultIcon: false,
@@ -75,7 +75,7 @@ export default function FeedSectionHeader({
         return {
           titleClass: "section-header-tertiary text-lg",
           subtitleClass: "font-mono text-[0.6rem] text-[var(--muted)] mt-0.5 normal-case tracking-normal",
-          containerClass: "mb-3",
+          containerClass: "mb-2 sm:mb-3",
           iconSize: "w-4 h-4",
           defaultAccent: "var(--muted)",
           showDefaultIcon: false,
@@ -101,10 +101,8 @@ export default function FeedSectionHeader({
     ? "section-header-icon section-header-icon-primary"
     : "section-header-icon section-header-icon-secondary";
 
-  // See-all button class based on priority
-  const seeAllClass = priority === "primary"
-    ? "section-header-see-all section-header-see-all-primary"
-    : "section-header-see-all";
+  // See-all button class
+  const seeAllClass = "section-header-see-all section-header-see-all-primary";
 
   return (
     <div

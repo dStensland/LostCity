@@ -130,11 +130,14 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
 
 
+                    description = "Weekly farmers market featuring local produce, artisan goods, prepared foods, and live cooking demonstrations. Georgia Fresh For Less: EBT dollars get double the value!"
+                    image_url = image_map.get(title)
+
                     event_record = {
                         "source_id": source_id,
                         "venue_id": venue_id,
                         "title": title,
-                        "description": "Weekly farmers market featuring local produce, artisan goods, prepared foods, and live cooking demonstrations. Georgia Fresh For Less: EBT dollars get double the value!",
+                        "description": description,
                         "start_date": start_date_str,
                         "start_time": "16:00",  # 4pm
                         "end_date": start_date_str,
@@ -149,7 +152,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "is_free": True,
                         "source_url": event_url,
                         "ticket_url": event_url if event_url != (EVENTS_URL if "EVENTS_URL" in dir() else BASE_URL) else None,
-                        "image_url": image_map.get(title),
+                        "image_url": image_url,
                         "raw_text": f"EAV Farmers Market - {start_date_str} 4-8pm",
                         "extraction_confidence": 0.95,
                         "is_recurring": True,
@@ -157,8 +160,18 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "content_hash": content_hash,
                     }
 
+                    series_hint = {
+                        "series_type": "recurring_show",
+                        "series_title": title,
+                        "frequency": "weekly",
+                        "day_of_week": "Thursday",
+                        "description": description,
+                    }
+                    if image_url:
+                        series_hint["image_url"] = image_url
+
                     try:
-                        insert_event(event_record)
+                        insert_event(event_record, series_hint=series_hint)
                         events_new += 1
                         logger.info(f"Added: {title} on {start_date_str}")
                     except Exception as e:

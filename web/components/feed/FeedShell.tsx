@@ -122,7 +122,7 @@ function FeedShellInner({ portalId, portalSlug, activeTab, curatedContent }: Fee
   return (
     <div className="py-6">
       {/* Sub-navigation tabs with improved styling */}
-      <div className="mb-6">
+      <div className="mb-4 sm:mb-6">
         <div className="flex gap-1 p-1 bg-[var(--night)] rounded-xl border border-[var(--twilight)]/30">
           {TABS.map((tab) => {
             const isActive = activeTab === tab.key;

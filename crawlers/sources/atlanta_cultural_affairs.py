@@ -88,14 +88,18 @@ def generate_annual_events(source_id: int, year: int) -> list[dict]:
     sat_datetime = datetime.strptime(sat_date, "%Y-%m-%d").date()
 
     if sat_datetime >= today:
+        title = f"Atlanta Jazz Festival {year}"
+        description = f"Free outdoor jazz festival at Piedmont Park, presented by the City of Atlanta Mayor's Office of Cultural Affairs. Performances featuring local, national, and international jazz artists."
+
         for day_date, day_name in [(sat_date, "Saturday"), (sun_date, "Sunday")]:
             content_hash = generate_content_hash(f"Atlanta Jazz Festival {year} - {day_name}", "Piedmont Park", day_date)
+            day_description = f"{description} {day_name} performances."
 
-            events.append({
+            event_data = {
                 "source_id": source_id,
                 "venue_id": piedmont_venue_id,
-                "title": f"Atlanta Jazz Festival {year}",
-                "description": f"Free outdoor jazz festival at Piedmont Park, presented by the City of Atlanta Mayor's Office of Cultural Affairs. {day_name} performances featuring local, national, and international jazz artists.",
+                "title": title,
+                "description": day_description,
                 "start_date": day_date,
                 "start_time": "12:00",
                 "end_date": None,
@@ -116,7 +120,14 @@ def generate_annual_events(source_id: int, year: int) -> list[dict]:
                 "is_recurring": True,
                 "recurrence_rule": "Annual - Memorial Day Weekend",
                 "content_hash": content_hash,
-            })
+                "series_hint": {
+                    "series_type": "recurring_show",
+                    "series_title": title,
+                    "frequency": "yearly",
+                    "description": description,
+                }
+            }
+            events.append(event_data)
 
     return events
 
@@ -161,7 +172,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 continue
 
             try:
-                insert_event(event_record)
+                series_hint = event_record.pop("series_hint", None)
+                insert_event(event_record, series_hint=series_hint)
                 events_new += 1
             except Exception as e:
                 logger.error(f"Failed to insert {event_record['title']}: {e}")

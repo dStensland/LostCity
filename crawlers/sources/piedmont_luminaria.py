@@ -170,11 +170,19 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         description = "Annual Piedmont Luminaria gala benefiting Piedmont Healthcare's cancer programs. Features a luminary ceremony, dinner, and silent auction."
 
                     # Get specific event URL
+                    event_url = find_event_url(title, event_links, BASE_URL)
 
+                    image_url = image_map.get(title)
 
-                    event_url = find_event_url(title, event_links, EVENTS_URL)
-
-
+                    # Build series_hint
+                    series_hint = {
+                        "series_type": "recurring_show",
+                        "series_title": title,
+                        "frequency": "annual",
+                        "description": description,
+                    }
+                    if image_url:
+                        series_hint["image_url"] = image_url
 
                     event_record = {
                         "source_id": source_id,
@@ -196,7 +204,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "is_free": False,
                         "source_url": event_url,
                         "ticket_url": event_url,
-                        "image_url": image_map.get(title),
+                        "image_url": image_url,
                         "raw_text": f"{title} - {start_date}",
                         "extraction_confidence": 0.9,
                         "is_recurring": True,
@@ -205,7 +213,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     }
 
                     try:
-                        insert_event(event_record)
+                        insert_event(event_record, series_hint=series_hint)
                         events_new += 1
                         logger.info(f"Added: {title} on {start_date}")
                     except Exception as e:

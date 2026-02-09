@@ -178,6 +178,14 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     logger.debug(f"Event already exists: {title} at {location['name']} on {event_date}")
                     continue
 
+                # Build series_hint
+                series_hint = {
+                    "series_type": "class_series",
+                    "series_title": title,
+                    "frequency": "monthly",
+                    "description": description,
+                }
+
                 event_record = {
                     "source_id": source_id,
                     "venue_id": venue_id,
@@ -217,7 +225,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 }
 
                 try:
-                    insert_event(event_record)
+                    insert_event(event_record, series_hint=series_hint)
                     events_new += 1
                     logger.info(f"Added: {title} at {location['name']} on {event_date}")
                 except Exception as e:

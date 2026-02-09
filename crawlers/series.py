@@ -237,9 +237,11 @@ def get_or_create_series(client: Client, series_hint: dict, category: str = None
         if imdb_id:
             series_data["imdb_id"] = imdb_id
 
-    # Add recurring show fields
-    if series_type == "recurring_show" and series_hint.get("frequency"):
-        series_data["frequency"] = series_hint["frequency"]
+    # Add recurring show / class series fields
+    if series_type in ("recurring_show", "class_series"):
+        for field in ("frequency", "day_of_week", "start_time", "description", "image_url"):
+            if series_hint.get(field):
+                series_data[field] = series_hint[field]
 
     # Add genres if provided
     if series_hint.get("genres"):

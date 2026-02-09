@@ -62,13 +62,15 @@ def parse_date(date_str: str) -> Optional[str]:
         except ValueError:
             continue
 
-    # Try partial formats
+    # Try partial formats (no year in source text)
     current_year = datetime.now().year
     for fmt in ["%B %d", "%b %d"]:
         try:
             dt = datetime.strptime(date_str.strip(), fmt)
             dt = dt.replace(year=current_year)
-            if dt < datetime.now():
+            # Only bump to next year if >60 days in the past
+            # (avoids pushing recent-past events to wrong year)
+            if (datetime.now() - dt).days > 60:
                 dt = dt.replace(year=current_year + 1)
             return dt.strftime("%Y-%m-%d")
         except ValueError:

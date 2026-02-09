@@ -96,13 +96,20 @@ export default function ActiveFiltersRow({ className = "" }: ActiveFiltersRowPro
 
     // Date filter
     const dateParam = searchParams.get("date");
-    if (dateParam && DATE_LABELS[dateParam]) {
-      filters.push({
-        type: "date",
-        value: dateParam,
-        label: DATE_LABELS[dateParam],
-        variant: "date",
-      });
+    if (dateParam) {
+      let dateLabel = DATE_LABELS[dateParam];
+      if (!dateLabel && /^\d{4}-\d{2}-\d{2}$/.test(dateParam)) {
+        const d = new Date(dateParam + "T12:00:00");
+        dateLabel = d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+      }
+      if (dateLabel) {
+        filters.push({
+          type: "date",
+          value: dateParam,
+          label: dateLabel,
+          variant: "date",
+        });
+      }
     }
 
     // Free only

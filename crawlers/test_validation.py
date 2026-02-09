@@ -22,6 +22,7 @@ def test_validation():
         "title": "Live Music at Terminal West",
         "description": "Great show!",
         "start_date": (datetime.now() + timedelta(days=7)).strftime("%Y-%m-%d"),
+        "start_time": "20:00:00",
         "source_id": 1,
     }
     is_valid, reason, warnings = validate_event(valid_event)
@@ -87,6 +88,7 @@ def test_validation():
     caps_event = {
         "title": "LIVE MUSIC TONIGHT",
         "start_date": "2026-03-01",
+        "start_time": "20:00:00",
         "source_id": 1,
     }
     is_valid, reason, warnings = validate_event(caps_event)
@@ -100,6 +102,7 @@ def test_validation():
     past_event = {
         "title": "Past Event",
         "start_date": (datetime.now() - timedelta(days=7)).strftime("%Y-%m-%d"),
+        "start_time": "20:00:00",
         "source_id": 1,
     }
     is_valid, reason, warnings = validate_event(past_event)
@@ -107,17 +110,18 @@ def test_validation():
     assert is_valid, "Past event should be accepted with warning"
     assert len(warnings) > 0, "Should have warnings"
 
-    # Test 9: Far future date (warning only)
-    print("\n9. Far future date (should warn):")
+    # Test 9: Far future date (rejected as likely parsing bug)
+    print("\n9. Far future date (should reject):")
     future_event = {
         "title": "Future Event",
         "start_date": (datetime.now() + timedelta(days=400)).strftime("%Y-%m-%d"),
+        "start_time": "20:00:00",
         "source_id": 1,
     }
     is_valid, reason, warnings = validate_event(future_event)
     print(f"   Valid: {is_valid}, Reason: {reason}, Warnings: {warnings}")
-    assert is_valid, "Future event should be accepted with warning"
-    assert len(warnings) > 0, "Should have warnings"
+    assert not is_valid, "Event >1 year in future should be rejected"
+    assert "future" in reason.lower(), "Reason should mention future"
 
     # Test 10: Long description (should truncate)
     print("\n10. Long description (should truncate):")
@@ -125,6 +129,7 @@ def test_validation():
         "title": "Test Event",
         "description": "A" * 6000,
         "start_date": "2026-03-01",
+        "start_time": "20:00:00",
         "source_id": 1,
     }
     is_valid, reason, warnings = validate_event(long_desc_event)
@@ -138,6 +143,7 @@ def test_validation():
     bad_price_event = {
         "title": "Test Event",
         "start_date": "2026-03-01",
+        "start_time": "20:00:00",
         "source_id": 1,
         "price_min": 50000,  # Unrealistic price
     }
@@ -153,6 +159,7 @@ def test_validation():
         "title": "  <b>Live Music</b> Tonight  ",
         "description": "  <p>Join us for <strong>great</strong> music!</p>\n\n\n  ",
         "start_date": "2026-03-01",
+        "start_time": "20:00:00",
         "source_id": 1,
     }
     is_valid, reason, warnings = validate_event(html_event)

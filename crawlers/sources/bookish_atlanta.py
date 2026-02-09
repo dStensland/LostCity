@@ -107,12 +107,13 @@ def generate_book_club_events(source_id: int, months_ahead: int = 3) -> list[dic
 
             start_date = event_date.strftime("%Y-%m-%d")
             content_hash = generate_content_hash(title, "Bookish Atlanta", start_date)
+            description = "Monthly book club hosted by Bookish Atlanta. Join fellow readers for discussion and community."
 
             events.append({
                 "source_id": source_id,
                 "venue_id": venue_id,
                 "title": title,
-                "description": "Monthly book club hosted by Bookish Atlanta. Join fellow readers for discussion and community.",
+                "description": description,
                 "start_date": start_date,
                 "start_time": time,
                 "end_date": None,
@@ -133,6 +134,12 @@ def generate_book_club_events(source_id: int, months_ahead: int = 3) -> list[dic
                 "is_recurring": True,
                 "recurrence_rule": None,
                 "content_hash": content_hash,
+                "series_hint": {
+                    "series_type": "recurring_show",
+                    "series_title": title,
+                    "frequency": "monthly",
+                    "description": description,
+                },
             })
 
     return events
@@ -156,8 +163,11 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 events_updated += 1
                 continue
 
+            # Extract series_hint if present
+            series_hint = event_record.pop("series_hint", None)
+
             try:
-                insert_event(event_record)
+                insert_event(event_record, series_hint=series_hint)
                 events_new += 1
             except Exception as e:
                 logger.error(f"Failed to insert {event_record['title']}: {e}")

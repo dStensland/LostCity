@@ -172,11 +172,14 @@ def crawl(source: dict) -> tuple[int, int, int]:
                                 i += 1
                                 continue
 
+                            description = "Learn how to make your own soy candle in an 8oz tin, create your custom scent, and choose crystals to add to the top. Includes wax melts. BYOB welcome with complimentary drinks provided."
+                            image_url = f"{BASE_URL}/cdn/shop/files/crystaljarsandtins.jpg"
+
                             event_record = {
                                 "source_id": source_id,
                                 "venue_id": venue_id,
                                 "title": title,
-                                "description": "Learn how to make your own soy candle in an 8oz tin, create your custom scent, and choose crystals to add to the top. Includes wax melts. BYOB welcome with complimentary drinks provided.",
+                                "description": description,
                                 "start_date": start_date,
                                 "start_time": start_time,
                                 "end_date": None,
@@ -200,16 +203,28 @@ def crawl(source: dict) -> tuple[int, int, int]:
                                 "is_free": False,
                                 "source_url": CLASS_URL,
                                 "ticket_url": CLASS_URL,
-                                "image_url": f"{BASE_URL}/cdn/shop/files/crystaljarsandtins.jpg",
+                                "image_url": image_url,
                                 "raw_text": f"{title} - {start_date} {start_time or ''}",
                                 "extraction_confidence": 0.85,
                                 "is_recurring": False,
                                 "recurrence_rule": None,
                                 "content_hash": content_hash,
+                                "is_class": True,
+                                "class_category": "candle-making",
                             }
 
+                            # Build series hint for class enrichment
+                            series_hint = {
+                                "series_type": "class_series",
+                                "series_title": title,
+                            }
+                            if description:
+                                series_hint["description"] = description
+                            if image_url:
+                                series_hint["image_url"] = image_url
+
                             try:
-                                insert_event(event_record)
+                                insert_event(event_record, series_hint=series_hint)
                                 events_new += 1
                                 logger.info(f"Added: {title} on {start_date} {start_time or 'TBD'}")
                             except Exception as e:

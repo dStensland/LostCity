@@ -78,15 +78,17 @@ def create_farmers_market_events(source_id: int, venue_id: int) -> tuple[int, in
                 saturday += timedelta(days=7)
                 continue
 
+            description = (
+                "Weekly farmers market at Snellville Towne Green. "
+                "Fresh local produce, farm-raised meats, baked goods, "
+                "honey, artisan products, and more from local vendors."
+            )
+
             event_record = {
                 "source_id": source_id,
                 "venue_id": venue_id,
                 "title": title,
-                "description": (
-                    "Weekly farmers market at Snellville Towne Green. "
-                    "Fresh local produce, farm-raised meats, baked goods, "
-                    "honey, artisan products, and more from local vendors."
-                ),
+                "description": description,
                 "start_date": start_date,
                 "start_time": "08:30",
                 "end_date": None,
@@ -109,8 +111,16 @@ def create_farmers_market_events(source_id: int, venue_id: int) -> tuple[int, in
                 "content_hash": content_hash,
             }
 
+            series_hint = {
+                "series_type": "recurring_show",
+                "series_title": title,
+                "frequency": "weekly",
+                "day_of_week": "Saturday",
+                "description": description,
+            }
+
             try:
-                insert_event(event_record)
+                insert_event(event_record, series_hint=series_hint)
                 events_new += 1
                 logger.info(f"Added: {title} on {start_date}")
             except Exception as e:

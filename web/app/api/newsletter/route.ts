@@ -1,4 +1,4 @@
-import { checkBodySize, errorResponse, isValidString } from "@/lib/api-utils";
+import { checkBodySize, errorResponse, isValidString, isValidUUID } from "@/lib/api-utils";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 import { createServiceClient } from "@/lib/supabase/service";
 import { NextResponse } from "next/server";
@@ -32,6 +32,23 @@ export async function POST(request: Request) {
     if (!emailRegex.test(normalizedEmail)) {
       return NextResponse.json(
         { error: "Invalid email format" },
+        { status: 400 }
+      );
+    }
+
+    // Validate portal_id as UUID if provided
+    if (portal_id && !isValidUUID(portal_id)) {
+      return NextResponse.json(
+        { error: "Invalid portal_id" },
+        { status: 400 }
+      );
+    }
+
+    // Validate source against allowlist
+    const ALLOWED_SOURCES = ["website", "footer", "popup", "modal", "landing"];
+    if (source && !ALLOWED_SOURCES.includes(source)) {
+      return NextResponse.json(
+        { error: "Invalid source" },
         { status: 400 }
       );
     }

@@ -89,15 +89,17 @@ def create_monthly_meetings(source_id: int, venue_id: int) -> tuple[int, int]:
             events_updated += 1
             continue
 
+        description = (
+            "Piedmont Heights Civic Association monthly board meeting. "
+            "Discuss neighborhood issues, Piedmont Park coordination, development updates, "
+            "and community initiatives. All PiHi residents welcome."
+        )
+
         event_record = {
             "source_id": source_id,
             "venue_id": venue_id,
             "title": title,
-            "description": (
-                "Piedmont Heights Civic Association monthly board meeting. "
-                "Discuss neighborhood issues, Piedmont Park coordination, development updates, "
-                "and community initiatives. All PiHi residents welcome."
-            ),
+            "description": description,
             "start_date": start_date,
             "start_time": "19:00",
             "end_date": None,
@@ -120,8 +122,16 @@ def create_monthly_meetings(source_id: int, venue_id: int) -> tuple[int, int]:
             "content_hash": content_hash,
         }
 
+        series_hint = {
+            "series_type": "recurring_show",
+            "series_title": title,
+            "frequency": "monthly",
+            "day_of_week": "Monday",
+            "description": description,
+        }
+
         try:
-            insert_event(event_record)
+            insert_event(event_record, series_hint=series_hint)
             events_new += 1
             logger.info(f"Added: {title} on {start_date}")
         except Exception as e:
@@ -159,16 +169,18 @@ def create_npu_f_meetings(source_id: int, venue_id: int) -> tuple[int, int]:
             events_updated += 1
             continue
 
+        description = (
+            "NPU-F (Neighborhood Planning Unit F) monthly meeting. "
+            "Covers Piedmont Heights, Ansley Park, Sherwood Forest, and surrounding areas. "
+            "Discuss zoning, development, public safety, and community issues. "
+            "All residents welcome to attend and participate."
+        )
+
         event_record = {
             "source_id": source_id,
             "venue_id": venue_id,
             "title": title,
-            "description": (
-                "NPU-F (Neighborhood Planning Unit F) monthly meeting. "
-                "Covers Piedmont Heights, Ansley Park, Sherwood Forest, and surrounding areas. "
-                "Discuss zoning, development, public safety, and community issues. "
-                "All residents welcome to attend and participate."
-            ),
+            "description": description,
             "start_date": start_date,
             "start_time": "19:00",
             "end_date": None,
@@ -191,8 +203,16 @@ def create_npu_f_meetings(source_id: int, venue_id: int) -> tuple[int, int]:
             "content_hash": content_hash,
         }
 
+        series_hint = {
+            "series_type": "recurring_show",
+            "series_title": title,
+            "frequency": "monthly",
+            "day_of_week": "Wednesday",
+            "description": description,
+        }
+
         try:
-            insert_event(event_record)
+            insert_event(event_record, series_hint=series_hint)
             events_new += 1
             logger.info(f"Added: {title} on {start_date}")
         except Exception as e:
@@ -232,15 +252,17 @@ def create_community_cleanup(source_id: int, venue_id: int) -> tuple[int, int]:
             events_updated += 1
             continue
 
+        description = (
+            "Quarterly community cleanup in Piedmont Heights. "
+            "Help beautify the neighborhood by picking up litter, clearing invasive plants, "
+            "and maintaining common areas. Tools and bags provided. All ages welcome."
+        )
+
         event_record = {
             "source_id": source_id,
             "venue_id": venue_id,
             "title": title,
-            "description": (
-                "Quarterly community cleanup in Piedmont Heights. "
-                "Help beautify the neighborhood by picking up litter, clearing invasive plants, "
-                "and maintaining common areas. Tools and bags provided. All ages welcome."
-            ),
+            "description": description,
             "start_date": start_date,
             "start_time": "09:00",
             "end_date": None,
@@ -263,8 +285,16 @@ def create_community_cleanup(source_id: int, venue_id: int) -> tuple[int, int]:
             "content_hash": content_hash,
         }
 
+        series_hint = {
+            "series_type": "recurring_show",
+            "series_title": title,
+            "frequency": "quarterly",
+            "day_of_week": "Saturday",
+            "description": description,
+        }
+
         try:
-            insert_event(event_record)
+            insert_event(event_record, series_hint=series_hint)
             events_new += 1
             logger.info(f"Added: {title} on {start_date}")
         except Exception as e:

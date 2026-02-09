@@ -176,6 +176,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 time_display = format_time_display(time_24h)
 
                 title = f"Free Poker Night at {venue_name}"
+                description = f"Free Texas Hold'em poker tournament hosted by Freeroll Atlanta at {venue_name}. No buy-in required. Registration cut-off is one hour after start time. All skill levels welcome!"
                 events_found += 1
 
                 content_hash = generate_content_hash(title, venue_name, start_date)
@@ -188,7 +189,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     "source_id": source_id,
                     "venue_id": venue_id,
                     "title": title,
-                    "description": f"Free Texas Hold'em poker tournament hosted by Freeroll Atlanta at {venue_name}. No buy-in required. Registration cut-off is one hour after start time. All skill levels welcome!",
+                    "description": description,
                     "start_date": start_date,
                     "start_time": time_24h,
                     "end_date": None,
@@ -218,8 +219,17 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     "content_hash": content_hash,
                 }
 
+                day_names = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+                series_hint = {
+                    "series_type": "recurring_show",
+                    "series_title": title,
+                    "frequency": "weekly",
+                    "day_of_week": day_names[day_of_week],
+                    "description": description,
+                }
+
                 try:
-                    insert_event(event_record)
+                    insert_event(event_record, series_hint=series_hint)
                     events_new += 1
                     logger.info(f"Added: {title} on {start_date} at {time_display}")
                 except Exception as e:

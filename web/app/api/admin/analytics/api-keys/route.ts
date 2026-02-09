@@ -2,7 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { isAdmin, getUser } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 import { createHash, randomBytes } from "crypto";
-import { adminErrorResponse } from "@/lib/api-utils";
+import { adminErrorResponse, checkBodySize } from "@/lib/api-utils";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier} from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
@@ -99,6 +99,10 @@ export async function GET(request: NextRequest) {
 
 // POST: Create new API key
 export async function POST(request: NextRequest) {
+  // Check body size
+  const bodySizeError = checkBodySize(request);
+  if (bodySizeError) return bodySizeError;
+
   const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.standard, getClientIdentifier(request));
   if (rateLimitResult) return rateLimitResult;
 
@@ -208,6 +212,10 @@ export async function DELETE(request: NextRequest) {
 
 // PATCH: Update an API key (name, scopes, expiry)
 export async function PATCH(request: NextRequest) {
+  // Check body size
+  const bodySizeError = checkBodySize(request);
+  if (bodySizeError) return bodySizeError;
+
   const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.standard, getClientIdentifier(request));
   if (rateLimitResult) return rateLimitResult;
 

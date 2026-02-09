@@ -166,7 +166,7 @@ function UnifiedHeaderInner({
         {portalSlug === "atlanta" && (
           <div
             aria-hidden="true"
-            className="absolute inset-0 pointer-events-none z-[1] overflow-hidden"
+            className="absolute inset-0 pointer-events-none overflow-hidden"
           >
             <div
               className="absolute inset-0 hidden sm:block"
@@ -209,7 +209,7 @@ function UnifiedHeaderInner({
             />
           </div>
         )}
-        <div className="relative z-10 px-4 py-2 sm:py-3 flex items-center gap-4">
+        <div className="relative z-[2] px-4 py-2 sm:py-3 flex items-center gap-4">
           {/* Left: Back button (optional) + Logo */}
           <div className="flex items-center gap-2 flex-shrink-0">
             {backLink && (
@@ -274,7 +274,7 @@ function UnifiedHeaderInner({
           )}
 
           {/* Right: Search, User menu, Mobile menu */}
-          <div className="flex items-center gap-2 flex-shrink-0 ml-auto">
+          <div className="relative flex items-center gap-2 flex-shrink-0 ml-auto">
             <HeaderSearchButton />
             <UserMenu />
 
@@ -298,7 +298,7 @@ function UnifiedHeaderInner({
               </button>
 
               {mobileMenuOpen && (
-                <div className="absolute right-0 top-full mt-2 w-56 py-2 bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg shadow-xl z-50">
+                <div className="absolute right-0 top-full mt-2 w-56 py-2 bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg shadow-xl z-[200]">
                   <div className="px-3 py-1.5 text-[0.65rem] font-mono text-[var(--muted)] uppercase tracking-wider">
                     Quick Links
                   </div>
@@ -358,7 +358,7 @@ function UnifiedHeaderInner({
 
         {/* Mobile Nav Bar (below header on mobile) - compact to maximize content area */}
         {!hideNav && (
-          <nav className="sm:hidden border-t border-[var(--twilight)]/30 bg-[var(--night)]/95">
+          <nav className="sm:hidden relative z-[1] border-t border-[var(--twilight)]/30 bg-[var(--night)]/95">
             <div className="flex py-1.5 px-4">
               {TABS.map((tab) => {
                 const active = isActive(tab);

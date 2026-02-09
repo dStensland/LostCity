@@ -19,7 +19,7 @@ export const VerticalFeed = memo(function VerticalFeed({
   return (
     <div className="vertical-feed">
       {config.hero_style !== "none" && (
-        <div className="hero-section mb-6">
+        <div className="hero-section mb-4 sm:mb-6">
           {/* Hero content will be rendered by parent */}
         </div>
       )}

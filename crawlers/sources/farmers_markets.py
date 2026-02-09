@@ -264,8 +264,23 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 "content_hash": content_hash,
             }
 
+            # Build series_hint with description from market data
+            day_names = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+            market = next((m for m in MARKET_SCHEDULES if m["venue_slug"] == event_data["venue_slug"]), None)
+            if market:
+                series_hint = {
+                    "series_type": "recurring_show",
+                    "series_title": event_data["title"],
+                    "frequency": "weekly",
+                    "day_of_week": day_names[market["day_of_week"]],
+                }
+                if event_data.get("description"):
+                    series_hint["description"] = event_data["description"]
+            else:
+                series_hint = None
+
             try:
-                insert_event(event_record)
+                insert_event(event_record, series_hint=series_hint)
                 events_new += 1
                 logger.debug(
                     f"Added: {event_data['title']} on {event_data['start_date']}"

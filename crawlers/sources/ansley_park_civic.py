@@ -146,15 +146,25 @@ def create_tour_of_homes(source_id: int, venue_id: int) -> tuple[int, int]:
         events_updated += 1
         return events_new, events_updated
 
+    description = (
+        "Annual self-guided tour of historic Ansley Park homes. "
+        "Explore beautifully preserved and renovated residences in one of Atlanta's "
+        "most architecturally significant neighborhoods. APCA's signature fundraiser."
+    )
+
+    # Build series_hint (this is an annual event, so it should be recurring)
+    series_hint = {
+        "series_type": "recurring_show",
+        "series_title": title,
+        "frequency": "annual",
+        "description": description,
+    }
+
     event_record = {
         "source_id": source_id,
         "venue_id": venue_id,
         "title": title,
-        "description": (
-            "Annual self-guided tour of historic Ansley Park homes. "
-            "Explore beautifully preserved and renovated residences in one of Atlanta's "
-            "most architecturally significant neighborhoods. APCA's signature fundraiser."
-        ),
+        "description": description,
         "start_date": start_date,
         "start_time": "12:00",
         "end_date": None,
@@ -172,13 +182,13 @@ def create_tour_of_homes(source_id: int, venue_id: int) -> tuple[int, int]:
         "image_url": None,
         "raw_text": None,
         "extraction_confidence": 0.85,
-        "is_recurring": False,
+        "is_recurring": True,
         "recurrence_rule": None,
         "content_hash": content_hash,
     }
 
     try:
-        insert_event(event_record)
+        insert_event(event_record, series_hint=series_hint)
         events_new += 1
         logger.info(f"Added: {title} on {start_date}")
     except Exception as e:

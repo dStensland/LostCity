@@ -225,13 +225,21 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     event_url = find_event_url(title, event_links, EVENTS_URL)
 
-
+                    # Build series hint for show runs
+                    description = f"{title} at Atlanta Comedy Theater"
+                    series_hint = None
+                    if end_date and end_date != start_date:
+                        series_hint = {
+                            "series_type": "recurring_show",
+                            "series_title": title,
+                            "description": description,
+                        }
 
                     event_record = {
                         "source_id": source_id,
                         "venue_id": venue_id,
                         "title": title,
-                        "description": f"{title} at Atlanta Comedy Theater",
+                        "description": description,
                         "start_date": start_date,
                         "start_time": "20:00",  # Most shows at 8pm
                         "end_date": end_date if end_date != start_date else None,
@@ -255,7 +263,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     }
 
                     try:
-                        insert_event(event_record)
+                        insert_event(event_record, series_hint=series_hint)
                         events_new += 1
                         logger.info(f"Added: {title} ({start_date} to {end_date})")
                     except Exception as e:

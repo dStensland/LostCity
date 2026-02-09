@@ -216,7 +216,7 @@ export default function BrandedHeader({
             </button>
 
             {mobileMenuOpen && (
-              <div className={`absolute right-0 top-full mt-2 w-56 py-2 border rounded-lg shadow-xl z-50 ${
+              <div className={`absolute right-0 top-full mt-2 w-56 py-2 border rounded-lg shadow-xl z-[200] ${
                 isLightTheme
                   ? "bg-white border-gray-200"
                   : "bg-[var(--dusk)] border-[var(--twilight)]"

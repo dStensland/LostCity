@@ -5,8 +5,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { cache } from "react";
-import { format, parseISO } from "date-fns";
-import { formatTimeSplit, safeJsonLd } from "@/lib/formats";
+import { safeJsonLd } from "@/lib/formats";
 import { PortalHeader } from "@/components/headers";
 import PortalFooter from "@/components/PortalFooter";
 import ScopedStylesServer from "@/components/ScopedStylesServer";
@@ -16,7 +15,6 @@ import FlagButton from "@/components/FlagButton";
 import FollowButton from "@/components/FollowButton";
 import RecommendButton from "@/components/RecommendButton";
 import { SaveToListButton } from "@/components/SaveToListButton";
-import CategoryIcon, { getCategoryColor } from "@/components/CategoryIcon";
 import {
   DetailHero,
   InfoCard,
@@ -26,6 +24,7 @@ import {
   RelatedCard,
   DetailStickyBar,
 } from "@/components/detail";
+import VenueShowtimes from "@/components/VenueShowtimes";
 
 export const revalidate = 60;
 
@@ -117,9 +116,13 @@ export default async function PortalSpotPage({ params }: Props) {
   const activePortalSlug = portal?.slug || portalSlug;
   const activePortalName = portal?.name || portalSlug.charAt(0).toUpperCase() + portalSlug.slice(1);
 
+  // High-event venues (cinemas, theaters) need more events to show full schedule
+  const HIGH_EVENT_TYPES = new Set(["cinema", "theater", "music_venue", "arena", "comedy_club"]);
+  const eventLimit = HIGH_EVENT_TYPES.has(spot.venue_type ?? "") ? 100 : 30;
+
   // Stage 2: Fetch events and nearby spots in parallel (depends on spot.id)
   const [upcomingEvents, nearbySpots] = await Promise.all([
-    getUpcomingEventsForSpot(spot.id, 20),
+    getUpcomingEventsForSpot(spot.id, eventLimit),
     spot.id ? getNearbySpots(spot.id) : Promise.resolve([]),
   ]);
   const primaryType = spot.venue_type as SpotType | null;
@@ -291,36 +294,13 @@ export default async function PortalSpotPage({ params }: Props) {
             />
           </InfoCard>
 
-          {/* Upcoming Events */}
+          {/* Upcoming Events / Showtimes */}
           {upcomingEvents.length > 0 && (
-            <RelatedSection
-              title="Upcoming Events"
-              count={upcomingEvents.length}
-              emptyMessage="No upcoming events at this venue"
-            >
-              {upcomingEvents.map((event) => {
-                const dateObj = parseISO(event.start_date);
-                const eventColor = event.category ? getCategoryColor(event.category) : "var(--coral)";
-
-                let subtitle = format(dateObj, "EEE, MMM d");
-                if (event.start_time) {
-                  const { time, period } = formatTimeSplit(event.start_time);
-                  subtitle += ` · ${time} ${period}`;
-                }
-
-                return (
-                  <RelatedCard
-                    key={event.id}
-                    variant="compact"
-                    href={`/${activePortalSlug}/events/${event.id}`}
-                    title={event.title}
-                    subtitle={subtitle}
-                    icon={<CategoryIcon type={event.category || "other"} size={20} />}
-                    accentColor={eventColor}
-                  />
-                );
-              })}
-            </RelatedSection>
+            <VenueShowtimes
+              events={upcomingEvents}
+              portalSlug={activePortalSlug}
+              venueType={spot.venue_type}
+            />
           )}
 
           {/* Nearby Spots */}

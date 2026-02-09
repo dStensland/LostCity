@@ -153,11 +153,13 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         events_updated += 1
                         continue
 
+                    description = text[:1000] if len(text) > len(title) else None
+
                     event_record = {
                         "source_id": source_id,
                         "venue_id": venue_id,
                         "title": title,
-                        "description": text[:1000] if len(text) > len(title) else None,
+                        "description": description,
                         "start_date": start_date,
                         "start_time": None,
                         "end_date": None,
@@ -182,8 +184,16 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "class_category": "pottery",
                     }
 
+                    # Build series hint for class enrichment
+                    series_hint = {
+                        "series_type": "class_series",
+                        "series_title": title,
+                    }
+                    if description:
+                        series_hint["description"] = description
+
                     try:
-                        insert_event(event_record)
+                        insert_event(event_record, series_hint=series_hint)
                         events_new += 1
                         logger.info(f"Added: {title} on {start_date}")
                     except Exception as e:

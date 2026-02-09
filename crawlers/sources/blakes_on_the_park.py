@@ -117,8 +117,17 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 "content_hash": content_hash,
             }
 
+            day_names = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+            series_hint = {
+                "series_type": "recurring_show",
+                "series_title": event_template["title"],
+                "frequency": "weekly",
+                "day_of_week": day_names[event_template["day"]],
+                "description": event_template["description"],
+            }
+
             try:
-                insert_event(event_record)
+                insert_event(event_record, series_hint=series_hint)
                 events_new += 1
                 logger.info(f"Added: {event_template['title']} on {start_date}")
             except Exception as e:

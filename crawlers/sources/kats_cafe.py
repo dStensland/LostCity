@@ -68,6 +68,7 @@ def generate_recurring_events(source_id: int, venue_id: int, weeks_ahead: int = 
 
             start_date = event_date.strftime("%Y-%m-%d")
             content_hash = generate_content_hash(recurring["title"], VENUE_DATA["name"], start_date)
+            day_names = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
 
             events.append({
                 "source_id": source_id,
@@ -94,6 +95,13 @@ def generate_recurring_events(source_id: int, venue_id: int, weeks_ahead: int = 
                 "is_recurring": True,
                 "recurrence_rule": None,
                 "content_hash": content_hash,
+                "series_hint": {
+                    "series_type": "recurring_show",
+                    "series_title": recurring["title"],
+                    "frequency": "weekly",
+                    "day_of_week": day_names[recurring["weekday"]],
+                    "description": recurring["description"],
+                },
             })
 
     return events
@@ -119,8 +127,11 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 events_updated += 1
                 continue
 
+            # Extract series_hint if present
+            series_hint = event_record.pop("series_hint", None)
+
             try:
-                insert_event(event_record)
+                insert_event(event_record, series_hint=series_hint)
                 events_new += 1
             except Exception as e:
                 logger.error(f"Failed to insert {event_record['title']}: {e}")

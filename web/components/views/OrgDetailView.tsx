@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Image from "@/components/SmartImage";
 import { format, parseISO } from "date-fns";
 import { formatTimeSplit } from "@/lib/formats";
@@ -98,6 +98,7 @@ const NeonBackButton = ({ onClose }: { onClose: () => void }) => (
 
 export default function OrgDetailView({ slug, portalSlug, onClose }: OrgDetailViewProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [producer, setProducer] = useState<ProducerData | null>(null);
   const [events, setEvents] = useState<EventData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -128,9 +129,18 @@ export default function OrgDetailView({ slug, portalSlug, onClose }: OrgDetailVi
     fetchProducer();
   }, [slug]);
 
-  const handleEventClick = (id: number) => {
-    router.push(`/${portalSlug}?event=${id}`, { scroll: false });
+  const navigateToDetail = (param: string, value: string | number) => {
+    const params = new URLSearchParams(searchParams?.toString() || "");
+    params.delete("event");
+    params.delete("spot");
+    params.delete("series");
+    params.delete("festival");
+    params.delete("org");
+    params.set(param, String(value));
+    router.push(`/${portalSlug}?${params.toString()}`, { scroll: false });
   };
+
+  const handleEventClick = (id: number) => navigateToDetail("event", id);
 
   if (loading) {
     return (

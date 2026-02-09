@@ -91,3 +91,56 @@ export function getCategoryColor(type: string): string {
 export function getCategoryLabel(type: string): string {
   return CATEGORY_CONFIG[type as CategoryType]?.label || type;
 }
+
+// ─── Map Pin Color Families ───────────────────────────────────────────────────
+// 7 high-contrast colors optimized for dark map backgrounds.
+// Used ONLY for map pins — cards/badges keep using getCategoryColor().
+
+const MAP_PIN_FAMILY_LOOKUP: Record<string, string> = {
+  // Rose #FB7185 — music, dance, nightlife (brighter, pops on dark)
+  music: "#FB7185", dance: "#FB7185", nightlife: "#FB7185", nightclub: "#FB7185",
+  lgbtq: "#FB7185", music_venue: "#FB7185", club: "#FB7185", record_store: "#FB7185",
+
+  // Vivid Orange #FF9C52 — food & drink (warmer, more saturated)
+  food_drink: "#FF9C52", bar: "#FF9C52", restaurant: "#FF9C52", brewery: "#FF9C52",
+  cooking: "#FF9C52", cooking_school: "#FF9C52", coffee_shop: "#FF9C52",
+  distillery: "#FF9C52", winery: "#FF9C52", food_hall: "#FF9C52",
+  farmers_market: "#FF9C52", sports_bar: "#FF9C52",
+
+  // Amber #FCD34D — entertainment & attractions (brighter gold)
+  comedy: "#FCD34D", comedy_club: "#FCD34D", festival: "#FCD34D", markets: "#FCD34D",
+  attraction: "#FCD34D", hotel: "#FCD34D", eatertainment: "#FCD34D",
+
+  // Mint #34D399 — community & wellness (brighter, more visible)
+  community: "#34D399", fitness: "#34D399", fitness_center: "#34D399",
+  wellness: "#34D399", outdoors: "#34D399", outdoor: "#34D399", park: "#34D399",
+  garden: "#34D399", yoga: "#34D399", community_center: "#34D399",
+
+  // Cyan #22D3EE — sports & screen (more saturated, distinct from violet)
+  sports: "#22D3EE", sports_venue: "#22D3EE", film: "#22D3EE", cinema: "#22D3EE",
+  tours: "#22D3EE", arena: "#22D3EE", convention_center: "#22D3EE",
+
+  // Bright Violet #A78BFA — arts & learning (brighter, more visible)
+  art: "#A78BFA", theater: "#A78BFA", gallery: "#A78BFA", museum: "#A78BFA",
+  learning: "#A78BFA", words: "#A78BFA", religious: "#A78BFA", church: "#A78BFA",
+  library: "#A78BFA", bookstore: "#A78BFA", college: "#A78BFA",
+  university: "#A78BFA", studio: "#A78BFA",
+
+  // Coral #F87171 — everything else
+  family: "#F87171", meetup: "#F87171", activism: "#F87171", gaming: "#F87171",
+  games: "#F87171", haunted: "#F87171", rooftop: "#F87171", coworking: "#F87171",
+  venue: "#F87171", organization: "#F87171", event_space: "#F87171",
+  healthcare: "#F87171", hospital: "#F87171", other: "#F87171",
+};
+
+const MAP_PIN_DEFAULT = "#F87171";
+
+/** High-contrast pin color for map display (7 families). */
+export function getMapPinColor(type: string): string {
+  return MAP_PIN_FAMILY_LOOKUP[type] || MAP_PIN_DEFAULT;
+}
+
+/** All 7 unique map pin family hex values. Useful for Mapbox match expressions. */
+export const MAP_PIN_COLORS = [
+  "#FB7185", "#FF9C52", "#FCD34D", "#34D399", "#22D3EE", "#A78BFA", "#F87171",
+] as const;

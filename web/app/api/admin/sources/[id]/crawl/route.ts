@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier} from "@/lib/rate-limit";
 import { logger } from "@/lib/logger";
+import { checkBodySize } from "@/lib/api-utils";
 
 export const dynamic = "force-dynamic";
 
@@ -26,6 +27,10 @@ type CrawlLogRow = {
 
 // POST /api/admin/sources/[id]/crawl - Trigger a manual crawl for a source
 export async function POST(request: NextRequest, { params }: Props) {
+  // Check body size
+  const bodySizeError = checkBodySize(request);
+  if (bodySizeError) return bodySizeError;
+
   const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.standard, getClientIdentifier(request));
   if (rateLimitResult) return rateLimitResult;
 

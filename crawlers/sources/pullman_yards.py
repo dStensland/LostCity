@@ -86,8 +86,7 @@ def parse_date_range(date_str: str) -> tuple[Optional[str], Optional[str]]:
         year = single_match.group(3)
         try:
             dt = datetime.strptime(f"{month_str} {day} {year}", "%b %d %Y")
-            if dt.date() < now.date():
-                dt = dt.replace(year=now.year + 1)
+            # Year was explicitly parsed from source — don't override it
             return dt.strftime("%Y-%m-%d"), None
         except ValueError:
             pass

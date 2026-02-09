@@ -62,11 +62,12 @@ def generate_annual_events(source_id: int, venue_id: int) -> list[dict]:
     valentines_date = f"{current_year}-02-14"
     if datetime.strptime(valentines_date, "%Y-%m-%d").date() >= today:
         content_hash = generate_content_hash("Valentine's Day Dinner", VENUE_DATA["name"], valentines_date)
+        description = "Celebrate Valentine's Day 700+ feet above Atlanta with a special prix fixe menu and 360-degree rotating views of the city."
         events.append({
             "source_id": source_id,
             "venue_id": venue_id,
             "title": "Valentine's Day Dinner at Sun Dial",
-            "description": "Celebrate Valentine's Day 700+ feet above Atlanta with a special prix fixe menu and 360-degree rotating views of the city.",
+            "description": description,
             "start_date": valentines_date,
             "start_time": "17:00",
             "end_date": None,
@@ -87,17 +88,24 @@ def generate_annual_events(source_id: int, venue_id: int) -> list[dict]:
             "is_recurring": True,
             "recurrence_rule": "Annual - February 14",
             "content_hash": content_hash,
+            "series_hint": {
+                "series_type": "recurring_show",
+                "series_title": "Valentine's Day Dinner at Sun Dial",
+                "frequency": "yearly",
+                "description": description,
+            },
         })
 
     # New Year's Eve (Dec 31)
     nye_date = f"{current_year}-12-31"
     if datetime.strptime(nye_date, "%Y-%m-%d").date() >= today:
         content_hash = generate_content_hash("New Year's Eve Celebration", VENUE_DATA["name"], nye_date)
+        description = f"Ring in {current_year + 1} at the top of Atlanta! Watch fireworks and the city lights from 700+ feet above with special dinner and celebration."
         events.append({
             "source_id": source_id,
             "venue_id": venue_id,
             "title": f"New Year's Eve {current_year + 1} Celebration",
-            "description": f"Ring in {current_year + 1} at the top of Atlanta! Watch fireworks and the city lights from 700+ feet above with special dinner and celebration.",
+            "description": description,
             "start_date": nye_date,
             "start_time": "20:00",
             "end_date": None,
@@ -118,6 +126,12 @@ def generate_annual_events(source_id: int, venue_id: int) -> list[dict]:
             "is_recurring": True,
             "recurrence_rule": "Annual - December 31",
             "content_hash": content_hash,
+            "series_hint": {
+                "series_type": "recurring_show",
+                "series_title": "New Year's Eve Celebration at Sun Dial",
+                "frequency": "yearly",
+                "description": description,
+            },
         })
 
     return events
@@ -209,8 +223,11 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 events_updated += 1
                 continue
 
+            # Extract series_hint if present
+            series_hint = event_record.pop("series_hint", None)
+
             try:
-                insert_event(event_record)
+                insert_event(event_record, series_hint=series_hint)
                 events_new += 1
             except Exception as e:
                 logger.error(f"Failed to insert {event_record['title']}: {e}")

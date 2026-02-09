@@ -210,6 +210,11 @@ def crawl(source: dict) -> tuple[int, int, int]:
                                 if not description:
                                     description = f"{title} at APEX Museum"
 
+                                # Get image
+                                image_url = event_data.get("image")
+                                if isinstance(image_url, list):
+                                    image_url = image_url[0] if image_url else None
+
                                 # Check for sold out status
                                 is_sold_out = False
                                 offers = event_data.get("offers", [])
@@ -250,11 +255,6 @@ def crawl(source: dict) -> tuple[int, int, int]:
                                         price_max = max(prices)
                                         is_free = price_min == 0
 
-                                # Get image
-                                image_url = event_data.get("image")
-                                if isinstance(image_url, list):
-                                    image_url = image_url[0] if image_url else None
-
                                 events_found += 1
 
                                 # Generate content hash
@@ -270,6 +270,17 @@ def crawl(source: dict) -> tuple[int, int, int]:
                                 # Add sold-out tag if applicable
                                 if is_sold_out:
                                     tags.append("sold-out")
+
+                                # Build series_hint for recurring events
+                                series_hint = None
+                                if is_recurring:
+                                    series_hint = {
+                                        "series_type": "recurring_show",
+                                        "series_title": title,
+                                        "description": description[:500] if description else None,
+                                    }
+                                    if image_url:
+                                        series_hint["image_url"] = image_url
 
                                 event_record = {
                                     "source_id": source_id,
@@ -299,7 +310,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                                 }
 
                                 try:
-                                    insert_event(event_record)
+                                    insert_event(event_record, series_hint=series_hint)
                                     events_new += 1
                                     sold_status = " (SOLD OUT)" if is_sold_out else ""
                                     logger.info(f"Added: {title} on {start_date}{sold_status}")

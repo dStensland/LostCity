@@ -217,6 +217,18 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 if group["is_virtual"]:
                     description += " This group meets virtually via Zoom."
 
+                image_url = image_map.get(title)
+
+                # Build series_hint
+                series_hint = {
+                    "series_type": "recurring_show",
+                    "series_title": title,
+                    "frequency": "monthly",
+                    "description": description,
+                }
+                if image_url:
+                    series_hint["image_url"] = image_url
+
                 event_record = {
                     "source_id": source_id,
                     "venue_id": venue_id,
@@ -237,7 +249,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     "is_free": True,
                     "source_url": SUPPORT_GROUP_URL,
                     "ticket_url": SUPPORT_GROUP_URL,
-                    "image_url": image_map.get(title),
+                    "image_url": image_url,
                     "raw_text": f"{title} - {start_date}",
                     "extraction_confidence": 0.9,
                     "is_recurring": True,
@@ -246,7 +258,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 }
 
                 try:
-                    insert_event(event_record)
+                    insert_event(event_record, series_hint=series_hint)
                     events_new += 1
                     logger.info(f"Added: {title} on {start_date}")
                 except Exception as e:

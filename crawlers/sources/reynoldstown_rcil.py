@@ -95,15 +95,17 @@ def create_wheelbarrow_festival(source_id: int, venue_id: int, year: int) -> tup
         logger.info(f"Wheelbarrow Festival {year} already exists")
         return 0, events_updated
 
+    description = (
+        "The legendary Reynoldstown Wheelbarrow Festival features the famous .5K race, "
+        "live music, yard games, food trucks, kids activities, and the annual Tour of Homes. "
+        "A 20+ year neighborhood tradition benefiting the Reynoldstown Civic Improvement League."
+    )
+
     event_record = {
         "source_id": source_id,
         "venue_id": venue_id,
         "title": title,
-        "description": (
-            "The legendary Reynoldstown Wheelbarrow Festival features the famous .5K race, "
-            "live music, yard games, food trucks, kids activities, and the annual Tour of Homes. "
-            "A 20+ year neighborhood tradition benefiting the Reynoldstown Civic Improvement League."
-        ),
+        "description": description,
         "start_date": start_date,
         "start_time": "10:00",
         "end_date": start_date,
@@ -132,8 +134,15 @@ def create_wheelbarrow_festival(source_id: int, venue_id: int, year: int) -> tup
         "content_hash": content_hash,
     }
 
+    series_hint = {
+        "series_type": "recurring_show",
+        "series_title": title,
+        "frequency": "yearly",
+        "description": description,
+    }
+
     try:
-        insert_event(event_record)
+        insert_event(event_record, series_hint=series_hint)
         events_new = 1
         logger.info(f"Added: {title}")
     except Exception as e:
@@ -202,11 +211,12 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                             if not find_event_by_hash(content_hash):
                                 events_found += 1
+                                description = "Monthly meeting of the Reynoldstown Civic Improvement League. Open to all residents."
                                 event_record = {
                                     "source_id": source_id,
                                     "venue_id": venue_id,
                                     "title": title,
-                                    "description": "Monthly meeting of the Reynoldstown Civic Improvement League. Open to all residents.",
+                                    "description": description,
                                     "start_date": start_date,
                                     "start_time": "19:00",
                                     "end_date": None,
@@ -229,8 +239,16 @@ def crawl(source: dict) -> tuple[int, int, int]:
                                     "content_hash": content_hash,
                                 }
 
+                                series_hint = {
+                                    "series_type": "recurring_show",
+                                    "series_title": title,
+                                    "frequency": "monthly",
+                                    "day_of_week": "Thursday",
+                                    "description": description,
+                                }
+
                                 try:
-                                    insert_event(event_record)
+                                    insert_event(event_record, series_hint=series_hint)
                                     events_new += 1
                                     logger.info(f"Added: {title}")
                                 except Exception as e:

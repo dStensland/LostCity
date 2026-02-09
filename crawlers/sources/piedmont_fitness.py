@@ -247,12 +247,23 @@ def crawl_pdf_schedule(pdf_url: str, venue_data: dict, source_id: int, portal_id
                             cat_info = get_class_category(class_name)
                             base_tags = ["piedmont", "fitness", "class", venue_data.get("neighborhood", "").lower()]
 
+                            description = f"Group fitness class at {venue_data['name']}. Drop-in welcome for members."
+
+                            # Build series_hint
+                            series_hint = {
+                                "series_type": "class_series",
+                                "series_title": class_name,
+                                "frequency": "weekly",
+                                "day_of_week": day_name.capitalize(),
+                                "description": description,
+                            }
+
                             event_record = {
                                 "source_id": source_id,
                                 "venue_id": venue_id,
                                 "portal_id": portal_id,
                                 "title": class_name,
-                                "description": f"Group fitness class at {venue_data['name']}. Drop-in welcome for members.",
+                                "description": description,
                                 "start_date": start_date,
                                 "start_time": start_time,
                                 "end_date": None,
@@ -276,7 +287,7 @@ def crawl_pdf_schedule(pdf_url: str, venue_data: dict, source_id: int, portal_id
                             }
 
                             try:
-                                insert_event(event_record)
+                                insert_event(event_record, series_hint=series_hint)
                                 events_new += 1
                                 logger.info(f"Added: {class_name} on {day_name} at {start_time}")
                             except Exception as e:
@@ -444,6 +455,18 @@ def crawl_fayetteville_calendar(venue_data: dict, source_id: int, portal_id: Opt
                         if class_type:
                             description += f". Type: {class_type}"
 
+                        image_url = image_map.get(class_name)
+
+                        # Build series_hint
+                        series_hint = {
+                            "series_type": "class_series",
+                            "series_title": class_name,
+                            "frequency": "weekly",
+                            "description": description,
+                        }
+                        if image_url:
+                            series_hint["image_url"] = image_url
+
                         event_record = {
                             "source_id": source_id,
                             "venue_id": venue_id,
@@ -465,7 +488,7 @@ def crawl_fayetteville_calendar(venue_data: dict, source_id: int, portal_id: Opt
                             "is_free": False,
                             "source_url": calendar_url,
                             "ticket_url": venue_data["website"],
-                            "image_url": image_map.get(class_name),
+                            "image_url": image_url,
                             "raw_text": f"{class_name} - {start_date} {start_time}",
                             "extraction_confidence": 0.85,
                             "is_recurring": True,
@@ -474,7 +497,7 @@ def crawl_fayetteville_calendar(venue_data: dict, source_id: int, portal_id: Opt
                         }
 
                         try:
-                            insert_event(event_record)
+                            insert_event(event_record, series_hint=series_hint)
                             events_new += 1
                             logger.info(f"Added: {class_name} on {start_date} at {start_time}")
                         except Exception as e:

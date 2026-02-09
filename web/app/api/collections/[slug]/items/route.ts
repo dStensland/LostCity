@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
-import { errorResponse } from "@/lib/api-utils";
+import { errorResponse, checkBodySize } from "@/lib/api-utils";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
@@ -13,6 +13,10 @@ type CollectionRow = { id: number; user_id: string | null };
 
 // POST /api/collections/[slug]/items - Add event to collection
 export async function POST(request: NextRequest, { params }: Props) {
+  // Check body size
+  const bodySizeError = checkBodySize(request);
+  if (bodySizeError) return bodySizeError;
+
   // Apply rate limiting (write tier - adds data)
   const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
   if (rateLimitResult) return rateLimitResult;

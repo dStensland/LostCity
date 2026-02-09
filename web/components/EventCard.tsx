@@ -1,8 +1,9 @@
 "use client";
 
-import { memo, useState, useCallback } from "react";
+import { memo, useState, useCallback, useMemo } from "react";
 import type { CSSProperties } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import type { Event } from "@/lib/supabase";
 import { AvatarStack } from "./UserAvatar";
 import { formatTimeSplit, formatSmartDate, formatPriceDetailed, formatCompactCount } from "@/lib/formats";
@@ -152,6 +153,7 @@ function getLinkOutLabel({
 }
 
 function EventCard({ event, index = 0, skipAnimation = false, portalSlug, friendsGoing = [], reasons, contextType }: Props) {
+  const searchParams = useSearchParams();
   const { time, period } = formatTimeSplit(event.start_time, event.is_all_day);
   const dateInfo = formatSmartDate(event.start_date);
   const isLive = event.is_live || false;
@@ -187,8 +189,20 @@ function EventCard({ event, index = 0, skipAnimation = false, portalSlug, friend
   const hasSocialProof = goingCount > 0 || interestedCount > 0 || recommendationCount > 0;
   const isPopular = goingCount >= POPULAR_THRESHOLD;
 
-  // Use query param navigation for in-app detail views (preserves auth state)
-  const eventHref = portalSlug ? `/${portalSlug}?event=${event.id}` : `/events/${event.id}`;
+  // Build detail href preserving current context params (view, type, filters)
+  // so closing the detail returns to the correct view
+  const eventHref = useMemo(() => {
+    if (!portalSlug) return `/events/${event.id}`;
+    const params = new URLSearchParams(searchParams?.toString() || "");
+    // Clear any existing detail params
+    params.delete("event");
+    params.delete("spot");
+    params.delete("series");
+    params.delete("festival");
+    params.delete("org");
+    params.set("event", String(event.id));
+    return `/${portalSlug}?${params.toString()}`;
+  }, [portalSlug, event.id, searchParams]);
   const linkOutUrl = event.ticket_url || event.source_url || eventHref;
   const isExternalLinkOut = Boolean(event.ticket_url || event.source_url);
   const linkOutLabel = getLinkOutLabel({
@@ -202,7 +216,7 @@ function EventCard({ event, index = 0, skipAnimation = false, portalSlug, friend
     <>
       <ScopedStyles css={accentClass?.css} />
       <div
-        className={`mb-4 rounded-sm border border-[var(--twilight)] card-atmospheric glow-accent reflection-accent ${reflectionClass} ${animationClass} ${staggerClass} bg-[var(--card-bg)] overflow-hidden group hover:scale-[1.008] transition-transform ${accentClass?.className ?? ""} ${
+        className={`mb-2 sm:mb-4 rounded-sm border border-[var(--twilight)] card-atmospheric glow-accent reflection-accent ${reflectionClass} ${animationClass} ${staggerClass} bg-[var(--card-bg)] overflow-hidden group hover:scale-[1.008] transition-transform ${accentClass?.className ?? ""} ${
           event.category ? "border-l-[3px] border-l-[var(--accent-color)]" : ""
         }`}
         style={
@@ -212,13 +226,13 @@ function EventCard({ event, index = 0, skipAnimation = false, portalSlug, friend
           } as CSSProperties
         }
       >
-        <div className="flex gap-3">
+        <div className="flex gap-2 sm:gap-3">
           <Link
             href={eventHref}
             scroll={false}
-            className="block flex-1 min-w-0 p-3"
+            className="block flex-1 min-w-0 p-2.5 sm:p-3"
           >
-            <div className="flex gap-3">
+            <div className="flex gap-2 sm:gap-3">
             {/* Time cell - hidden on mobile (inlined instead), visible on desktop */}
             <div className="hidden sm:flex flex-shrink-0 w-14 flex-col items-center justify-center py-1">
               <span className={`font-mono text-[0.65rem] font-semibold leading-none uppercase tracking-wide ${
@@ -515,7 +529,7 @@ function EventCard({ event, index = 0, skipAnimation = false, portalSlug, friend
             </div>
           </Link>
 
-          <div className="flex items-start gap-2 pt-3 pr-3 pb-3 flex-shrink-0">
+          <div className="flex items-start gap-1.5 sm:gap-2 pt-2.5 pr-2.5 pb-2.5 sm:pt-3 sm:pr-3 sm:pb-3 flex-shrink-0">
             <RSVPButton eventId={event.id} variant="compact" onRSVPChange={handleRSVPChange} />
             {isExternalLinkOut && (
               <a
@@ -523,7 +537,7 @@ function EventCard({ event, index = 0, skipAnimation = false, portalSlug, friend
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label={linkOutLabel}
-                className="w-11 h-11 inline-flex items-center justify-center rounded-xl border border-[var(--twilight)]/80 bg-[var(--dusk)]/70 text-[var(--muted)] backdrop-blur-[2px] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.02)] hover:text-[var(--cream)] hover:border-[var(--cta-border,rgba(255,107,122,0.7))] hover:shadow-[0_0_18px_var(--cta-glow,rgba(255,107,122,0.25))] transition-all"
+                className="hidden sm:inline-flex w-11 h-11 items-center justify-center rounded-xl border border-[var(--twilight)]/80 bg-[var(--dusk)]/70 text-[var(--muted)] backdrop-blur-[2px] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.02)] hover:text-[var(--cream)] hover:border-[var(--cta-border,rgba(255,107,122,0.7))] hover:shadow-[0_0_18px_var(--cta-glow,rgba(255,107,122,0.25))] transition-all"
               >
                 {isTicketLinkOut ? (
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

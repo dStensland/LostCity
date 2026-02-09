@@ -208,7 +208,13 @@ def extract_shows(page: Page, source_id: int, venue_id: int) -> tuple[int, int, 
 
                     event_url = find_event_url(title, event_links, EVENTS_URL)
 
-
+                    # Build series hint for show runs
+                    series_hint = None
+                    if current_show.get("end_date"):
+                        series_hint = {
+                            "series_type": "recurring_show",
+                            "series_title": current_show["title"],
+                        }
 
                     event_record = {
                         "source_id": source_id,
@@ -238,7 +244,7 @@ def extract_shows(page: Page, source_id: int, venue_id: int) -> tuple[int, int, 
                     }
 
                     try:
-                        insert_event(event_record)
+                        insert_event(event_record, series_hint=series_hint)
                         events_new += 1
                         logger.info(f"Added: {current_show['title']} on {current_show['start_date']}")
                     except Exception as e:

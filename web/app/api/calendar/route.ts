@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { startOfMonth, endOfMonth, startOfWeek, endOfWeek, format } from "date-fns";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 import { logger } from "@/lib/logger";
-import { parseIntParam } from "@/lib/api-utils";
+import { parseIntParam, isValidUUID } from "@/lib/api-utils";
 
 /**
  * Calendar API - Optimized endpoint for calendar view
@@ -121,8 +121,8 @@ export async function GET(request: NextRequest) {
       query = query.gte("price_min", 75);
     }
 
-    // Apply portal filter
-    if (portalId) {
+    // Apply portal filter - validate UUID before interpolation
+    if (portalId && isValidUUID(portalId)) {
       if (portalExclusive) {
         query = query.eq("portal_id", portalId);
       } else {

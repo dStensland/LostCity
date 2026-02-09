@@ -75,7 +75,8 @@ def parse_datetime(datetime_text: str) -> tuple[Optional[str], Optional[str], Op
 
         try:
             start_dt = datetime.strptime(f"{start_month} {start_day} {current_year}", "%B %d %Y")
-            if start_dt.date() < datetime.now().date():
+            # Only bump to next year if >60 days in the past
+            if (datetime.now() - start_dt).days > 60:
                 start_dt = datetime.strptime(f"{start_month} {start_day} {current_year + 1}", "%B %d %Y")
 
             start_date = start_dt.strftime("%Y-%m-%d")
@@ -128,8 +129,8 @@ def parse_datetime(datetime_text: str) -> tuple[Optional[str], Optional[str], Op
         try:
             dt = datetime.strptime(f"{month_name} {day} {current_year}", "%B %d %Y")
 
-            # If date is in the past, assume next year
-            if dt.date() < datetime.now().date():
+            # Only bump to next year if >60 days in the past
+            if (datetime.now() - dt).days > 60:
                 dt = datetime.strptime(f"{month_name} {day} {current_year + 1}", "%B %d %Y")
 
             start_date = dt.strftime("%Y-%m-%d")

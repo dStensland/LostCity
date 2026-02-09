@@ -34,6 +34,9 @@ export async function GET(request: Request) {
     const portalId = searchParams.get("portal_id") || undefined;
     const portalExclusive = searchParams.get("portal_exclusive") === "true";
 
+    const dateParam = searchParams.get("date") || "";
+    const dateSpecific = /^\d{4}-\d{2}-\d{2}$/.test(dateParam) ? dateParam : undefined;
+
     const filters: SearchFilters = {
       search: searchParams.get("search") || undefined,
       categories: searchParams.get("categories")?.split(",").filter(Boolean) || undefined,
@@ -43,16 +46,17 @@ export async function GET(request: Request) {
       neighborhoods: searchParams.get("neighborhoods")?.split(",").filter(Boolean) || undefined,
       is_free: isFree,
       price_max: priceMax,
-      date_filter: (searchParams.get("date") as "today" | "weekend" | "week") || undefined,
+      date_filter: (!dateParam || dateSpecific) ? undefined : (dateParam as SearchFilters["date_filter"]),
+      date_range_start: dateSpecific,
+      date_range_end: dateSpecific,
       venue_id: venueId || undefined,
       mood: (searchParams.get("mood") as MoodId) || undefined,
       portal_id: portalId,
       portal_exclusive: portalExclusive,
       exclude_classes: true,
-      // All events belong to a portal, filter directly by portal_id
     };
 
-    const pageSize = 20;
+    const pageSize = safeParseInt(searchParams.get("pageSize"), 20, 1, 500);
     const cursor = searchParams.get("cursor");
 
     // Use cursor-based pagination if cursor provided, otherwise fall back to offset pagination

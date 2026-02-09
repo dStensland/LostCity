@@ -253,16 +253,16 @@ export default async function Home() {
           </p>
           <div className="flex flex-wrap justify-center gap-2.5 md:gap-3 mb-8">
             {[
-              { label: "Music", icon: "music", href: `/${DEFAULT_PORTAL_SLUG}?categories=music`, color: "cyan" },
-              { label: "Comedy", icon: "comedy", href: `/${DEFAULT_PORTAL_SLUG}?categories=comedy`, color: "pink" },
-              { label: "Art", icon: "art", href: `/${DEFAULT_PORTAL_SLUG}?categories=art`, color: "purple" },
-              { label: "Theater", icon: "theater", href: `/${DEFAULT_PORTAL_SLUG}?categories=theater`, color: "cyan" },
-              { label: "Food & Drink", icon: "food_drink", href: `/${DEFAULT_PORTAL_SLUG}?categories=food_drink`, color: "pink" },
-              { label: "Nightlife", icon: "nightlife", href: `/${DEFAULT_PORTAL_SLUG}?categories=nightlife`, color: "purple" },
-              { label: "Sports", icon: "sports", href: `/${DEFAULT_PORTAL_SLUG}?categories=sports`, color: "cyan" },
-              { label: "Outdoors", icon: "outdoors", href: `/${DEFAULT_PORTAL_SLUG}?categories=outdoors`, color: "pink" },
-              { label: "Community", icon: "community", href: `/${DEFAULT_PORTAL_SLUG}?categories=community`, color: "purple" },
-              { label: "Free", icon: "other", href: `/${DEFAULT_PORTAL_SLUG}?free=1`, color: "cyan" },
+              { label: "Music", icon: "music", href: `/${DEFAULT_PORTAL_SLUG}?view=find&categories=music`, color: "cyan" },
+              { label: "Comedy", icon: "comedy", href: `/${DEFAULT_PORTAL_SLUG}?view=find&categories=comedy`, color: "pink" },
+              { label: "Art", icon: "art", href: `/${DEFAULT_PORTAL_SLUG}?view=find&categories=art`, color: "purple" },
+              { label: "Theater", icon: "theater", href: `/${DEFAULT_PORTAL_SLUG}?view=find&categories=theater`, color: "cyan" },
+              { label: "Food & Drink", icon: "food_drink", href: `/${DEFAULT_PORTAL_SLUG}?view=find&categories=food_drink`, color: "pink" },
+              { label: "Nightlife", icon: "nightlife", href: `/${DEFAULT_PORTAL_SLUG}?view=find&categories=nightlife`, color: "purple" },
+              { label: "Sports", icon: "sports", href: `/${DEFAULT_PORTAL_SLUG}?view=find&categories=sports`, color: "cyan" },
+              { label: "Outdoors", icon: "outdoors", href: `/${DEFAULT_PORTAL_SLUG}?view=find&categories=outdoors`, color: "pink" },
+              { label: "Community", icon: "community", href: `/${DEFAULT_PORTAL_SLUG}?view=find&categories=community`, color: "purple" },
+              { label: "Free", icon: "other", href: `/${DEFAULT_PORTAL_SLUG}?view=find&free=1`, color: "cyan" },
             ].map((cat, i) => (
               <ScrollReveal key={cat.label} direction="fade" delay={i * 40}>
                 <Link
@@ -294,7 +294,7 @@ export default async function Home() {
           </div>
           <ScrollReveal direction="up" delay={400}>
             <Link
-              href={`/${DEFAULT_PORTAL_SLUG}?date=today`}
+              href={`/${DEFAULT_PORTAL_SLUG}?view=find&date=today`}
               className="inline-flex items-center gap-3 text-base font-medium transition-all duration-300 hover:gap-4 home-gradient-text-animated rounded-lg px-2 py-1 -mx-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00e5ff]/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[#08080c]"
             >
               See what&apos;s happening today

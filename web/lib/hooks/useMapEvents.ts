@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { useSearchParams } from "next/navigation";
 import { useMemo, useState, useCallback, useRef, useEffect } from "react";
 import type { EventWithLocation } from "@/lib/search";
@@ -116,6 +116,8 @@ export function useMapEvents(options: UseMapEventsOptions = {}) {
       return res.json();
     },
     enabled,
+    // Keep showing previous events while new filter results load
+    placeholderData: keepPreviousData,
     // Map data can be stale for a bit since it's a visual overview
     staleTime: 60 * 1000, // 1 minute
     // Don't refetch on window focus for map
@@ -175,7 +177,9 @@ export function useMapEvents(options: UseMapEventsOptions = {}) {
     bounds,
     updateBounds,
     isLoading: query.isLoading,
+    isFetching: query.isFetching,
     isRefetching: query.isRefetching,
+    isPlaceholderData: query.isPlaceholderData,
     error: query.error?.message || null,
     refetch: query.refetch,
     // Expose raw query for advanced use cases

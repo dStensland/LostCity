@@ -4,6 +4,7 @@ Prevents repeated failures from wasting resources on consistently failing source
 """
 
 import logging
+import re
 from datetime import datetime, timedelta
 from typing import Optional
 from dataclasses import dataclass
@@ -68,7 +69,10 @@ def get_source_health(source_id: int, slug: str) -> CircuitState:
         if log["status"] == "error":
             consecutive_failures += 1
             if last_failure is None:
-                last_failure = datetime.fromisoformat(log["started_at"].replace("Z", "+00:00"))
+                ts = log["started_at"].replace("Z", "+00:00")
+                # Normalize fractional seconds to 6 digits for Python 3.9 compat
+                ts = re.sub(r'(\.\d{1,6})\d*', lambda m: m.group(1).ljust(7, '0'), ts)
+                last_failure = datetime.fromisoformat(ts)
         else:
             break  # Hit a success, stop counting
 

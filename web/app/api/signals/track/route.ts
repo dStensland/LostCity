@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, getUser } from "@/lib/supabase/server";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
-import { errorResponse } from "@/lib/api-utils";
+import { errorResponse, checkBodySize } from "@/lib/api-utils";
 import { logger } from "@/lib/logger";
 
 type ActionType = "view" | "save" | "share" | "rsvp_going" | "rsvp_interested" | "went";
@@ -33,6 +33,10 @@ const ACTION_WEIGHTS: Record<ActionType, number> = {
 };
 
 export async function POST(request: NextRequest) {
+  // Check body size
+  const bodySizeError = checkBodySize(request);
+  if (bodySizeError) return bodySizeError;
+
   const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
   if (rateLimitResult) return rateLimitResult;
 

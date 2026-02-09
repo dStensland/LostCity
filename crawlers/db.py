@@ -93,6 +93,7 @@ _validation_stats = _ValidationStatsProxy()
 
 _client: Optional[Client] = None
 _SOURCE_CACHE: dict[int, dict] = {}
+_VENUE_CACHE: dict[int, dict] = {}
 
 
 def retry_on_network_error(max_retries: int = 3, base_delay: float = 0.5):
@@ -422,6 +423,22 @@ def get_venue_by_id(venue_id: int) -> Optional[dict]:
     return None
 
 
+def get_venue_by_id_cached(venue_id: int) -> Optional[dict]:
+    """Fetch a venue by its ID with per-crawl-run caching."""
+    if venue_id in _VENUE_CACHE:
+        return _VENUE_CACHE[venue_id]
+
+    venue = get_venue_by_id(venue_id)
+    if venue:
+        _VENUE_CACHE[venue_id] = venue
+    return venue
+
+
+def clear_venue_cache() -> None:
+    """Clear the venue cache. Call this at the start of each crawl run."""
+    _VENUE_CACHE.clear()
+
+
 def get_venue_by_slug(slug: str) -> Optional[dict]:
     """Fetch a venue by its slug."""
     client = get_client()
@@ -523,15 +540,25 @@ def validate_event(event_data: dict) -> Tuple[bool, Optional[str], list[str]]:
         _validation_stats.record_rejection("missing_source_id")
         return False, "Missing source_id", warnings
 
-    # ===== DATA QUALITY CHECKS (warnings only) =====
+    # ===== HARD REJECTION CHECKS =====
 
     today = datetime.now().date()
     event_date = date_obj.date()
 
-    # Check if date is too far in future (more than 1 year)
-    if event_date > today + timedelta(days=365):
-        warnings.append(f"Date is more than 1 year in future: {start_date}")
-        _validation_stats.record_warning("future_date")
+    # Reject events more than 270 days (~9 months) in future (year parsing bug)
+    # Most venues don't list events more than 6 months out
+    if event_date > today + timedelta(days=270):
+        _validation_stats.record_rejection("date_too_far_future")
+        return False, f"Date >1 year in future (likely parsing bug): {start_date} - {title}", warnings
+
+    # Reject events missing start_time (unless genuinely all-day)
+    start_time = event_data.get("start_time")
+    is_all_day = event_data.get("is_all_day", False)
+    if not start_time and not is_all_day:
+        _validation_stats.record_rejection("missing_start_time")
+        return False, f"Missing start_time (not all-day): {title}", warnings
+
+    # ===== DATA QUALITY CHECKS (warnings only) =====
 
     # Check if date is in the past (more than 1 day ago)
     if event_date < today - timedelta(days=1):
@@ -766,7 +793,7 @@ def insert_event(event_data: dict, series_hint: dict = None, genres: list = None
     venue_vibes = []
     venue_type = None
     if event_data.get("venue_id"):
-        venue = get_venue_by_id(event_data["venue_id"])
+        venue = get_venue_by_id_cached(event_data["venue_id"])
         if venue:
             venue_vibes = venue.get("vibes") or []
             venue_type = venue.get("venue_type")
@@ -905,7 +932,7 @@ def insert_event(event_data: dict, series_hint: dict = None, genres: list = None
     if not event_data.get("description"):
         venue_name = None
         if event_data.get("venue_id"):
-            v = get_venue_by_id(event_data["venue_id"])
+            v = get_venue_by_id_cached(event_data["venue_id"])
             if v:
                 venue_name = v.get("name")
         # For music events with parsed lineup, generate lineup-based description

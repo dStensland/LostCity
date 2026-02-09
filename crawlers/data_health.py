@@ -50,7 +50,7 @@ def get_total_count(client, table: str, filter_condition: Optional[Dict] = None)
         print(f"Error counting {table}: {e}")
         return 0
 
-def get_field_fill_rate(client, table: str, field: str, filter_condition: Optional[Dict] = None) -> float:
+def get_field_fill_rate(client, table: str, field: str, filter_condition: Optional[Dict] = None, exclude_filter: Optional[Dict] = None) -> float:
     """Get fill rate (0-100) for a specific field."""
     try:
         # Get total count
@@ -58,6 +58,9 @@ def get_field_fill_rate(client, table: str, field: str, filter_condition: Option
         if filter_condition:
             for key, value in filter_condition.items():
                 total_query = total_query.eq(key, value)
+        if exclude_filter:
+            for key, value in exclude_filter.items():
+                total_query = total_query.neq(key, value)
         total_result = total_query.limit(1).execute()
         total = total_result.count or 0
 
@@ -69,6 +72,9 @@ def get_field_fill_rate(client, table: str, field: str, filter_condition: Option
         if filter_condition:
             for key, value in filter_condition.items():
                 filled_query = filled_query.eq(key, value)
+        if exclude_filter:
+            for key, value in exclude_filter.items():
+                filled_query = filled_query.neq(key, value)
         filled_result = filled_query.limit(1).execute()
         filled = filled_result.count or 0
 
@@ -303,11 +309,19 @@ def check_classes_health(client) -> Dict:
     }
 
 def check_series_health(client) -> Dict:
-    """Check health metrics for series table."""
+    """Check health metrics for series table.
+
+    Excludes festival_program series from scoring — those are internal
+    modeling constructs (not user-discoverable) and would drag down the
+    score with their intentionally sparse data.
+    """
     print_header("SERIES Health Report")
 
-    total = get_total_count(client, "series")
-    print(f"Total series: {total}")
+    # Exclude festival_program — they're backend scaffolding, not discoverable
+    total_all = get_total_count(client, "series")
+    total_festival = get_total_count(client, "series", {"series_type": "festival_program"})
+    total = total_all - total_festival
+    print(f"Total series: {total}  (excludes {total_festival} festival programs)")
 
     if total == 0:
         print("No series found in database.")
@@ -320,8 +334,7 @@ def check_series_health(client) -> Dict:
         "description": 15,
         "image_url": 15,
         "category": 10,
-        "venue_id": 10,
-        "genres": 10,
+        "genres": 20,
     }
 
     print_subheader("Field Fill Rates")
@@ -330,7 +343,7 @@ def check_series_health(client) -> Dict:
     weighted_score = 0.0
 
     for field, weight in field_weights.items():
-        rate = get_field_fill_rate(client, "series", field)
+        rate = get_field_fill_rate(client, "series", field, exclude_filter={"series_type": "festival_program"})
         fill_rates[field] = rate
         weighted_score += (rate * weight / 100)
 

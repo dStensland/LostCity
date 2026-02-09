@@ -321,15 +321,15 @@ function GroupedEventCard({ group }: { group: GroupedActivity }) {
       <ScopedStyles css={accentClass?.css} />
       <Link
         href={`/events/${event.id}`}
-        className={`block p-3 rounded-lg glass border border-[var(--twilight)]/50 hover:border-[var(--coral)]/30 transition-all group relative ${accentClass?.className ?? ""} ${
+        className={`block p-2.5 sm:p-3 rounded-lg glass border border-[var(--twilight)]/50 hover:border-[var(--coral)]/30 transition-all group relative ${accentClass?.className ?? ""} ${
           categoryColor ? "border-l-[3px] border-l-[var(--accent-color)]" : ""
         }`}
       >
       {/* Hover glow effect */}
       <div className="absolute inset-0 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none blur-xl hover-glow-coral-magenta" />
-      <div className="flex flex-col sm:flex-row gap-3 relative z-10">
+      <div className="flex gap-2 sm:gap-3 relative z-10">
         {/* Time cell - like EventCard */}
-        <div className="flex-shrink-0 w-14 flex flex-col items-center justify-center py-1">
+        <div className="flex-shrink-0 w-12 sm:w-14 flex flex-col items-center justify-center py-1">
           <span className="font-mono text-[0.55rem] font-medium leading-none text-[var(--muted)]">
             {dayLabel}
           </span>
@@ -446,7 +446,7 @@ function ActivityCard({ activity }: { activity: ActivityItem }) {
         <ScopedStyles css={accentClass?.css} />
         <Link
           href={`/events/${activity.event.id}`}
-          className={`block p-3 rounded-lg glass border border-[var(--twilight)]/50 hover:border-[var(--neon-magenta)]/30 transition-all group relative ${accentClass?.className ?? ""} ${
+          className={`block p-2.5 sm:p-3 rounded-lg glass border border-[var(--twilight)]/50 hover:border-[var(--neon-magenta)]/30 transition-all group relative ${accentClass?.className ?? ""} ${
             categoryColor ? "border-l-[3px] border-l-[var(--accent-color)]" : ""
           }`}
         >

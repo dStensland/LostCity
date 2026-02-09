@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, isAdmin, getUser } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
-import { isValidUUID, adminErrorResponse } from "@/lib/api-utils";
+import { isValidUUID, adminErrorResponse, checkBodySize } from "@/lib/api-utils";
 import type { EventSubmissionData, VenueSubmissionData, ProducerSubmissionData, Submission } from "@/lib/types";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 import { logger } from "@/lib/logger";
@@ -17,6 +17,10 @@ type Props = {
 
 // POST /api/admin/submissions/[id]/approve - Approve a submission
 export async function POST(request: NextRequest, { params }: Props) {
+  // Check body size
+  const bodySizeError = checkBodySize(request);
+  if (bodySizeError) return bodySizeError;
+
   // Apply rate limiting (write tier - admin endpoint)
   const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
   if (rateLimitResult) return rateLimitResult;

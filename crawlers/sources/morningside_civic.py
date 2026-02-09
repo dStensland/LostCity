@@ -79,15 +79,17 @@ def create_monthly_meetings(source_id: int, venue_id: int) -> tuple[int, int]:
             events_updated += 1
             continue
 
+        description = (
+            "Morningside Lenox Park Association monthly board meeting. "
+            "Discuss neighborhood issues, zoning updates, community events, "
+            "and park improvements. All Morningside residents welcome."
+        )
+
         event_record = {
             "source_id": source_id,
             "venue_id": venue_id,
             "title": title,
-            "description": (
-                "Morningside Lenox Park Association monthly board meeting. "
-                "Discuss neighborhood issues, zoning updates, community events, "
-                "and park improvements. All Morningside residents welcome."
-            ),
+            "description": description,
             "start_date": start_date,
             "start_time": "19:30",
             "end_date": None,
@@ -110,8 +112,16 @@ def create_monthly_meetings(source_id: int, venue_id: int) -> tuple[int, int]:
             "content_hash": content_hash,
         }
 
+        series_hint = {
+            "series_type": "recurring_show",
+            "series_title": title,
+            "frequency": "monthly",
+            "day_of_week": "Tuesday",
+            "description": description,
+        }
+
         try:
-            insert_event(event_record)
+            insert_event(event_record, series_hint=series_hint)
             events_new += 1
             logger.info(f"Added: {title} on {start_date}")
         except Exception as e:
@@ -219,15 +229,17 @@ def create_concerts_in_park(source_id: int, venue_id: int) -> tuple[int, int]:
             events_updated += 1
             continue
 
+        description = (
+            "Free outdoor concert series at Sidney Marcus Park. "
+            "Bring blankets and picnics, enjoy live music with neighbors. "
+            "Family-friendly community gathering."
+        )
+
         event_record = {
             "source_id": source_id,
             "venue_id": venue_id,
             "title": title,
-            "description": (
-                "Free outdoor concert series at Sidney Marcus Park. "
-                "Bring blankets and picnics, enjoy live music with neighbors. "
-                "Family-friendly community gathering."
-            ),
+            "description": description,
             "start_date": start_date,
             "start_time": "18:00",
             "end_date": None,
@@ -250,8 +262,16 @@ def create_concerts_in_park(source_id: int, venue_id: int) -> tuple[int, int]:
             "content_hash": content_hash,
         }
 
+        series_hint = {
+            "series_type": "recurring_show",
+            "series_title": title,
+            "frequency": "monthly",
+            "day_of_week": "Friday",
+            "description": description,
+        }
+
         try:
-            insert_event(event_record)
+            insert_event(event_record, series_hint=series_hint)
             events_new += 1
             logger.info(f"Added: {title} on {start_date}")
         except Exception as e:

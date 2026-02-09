@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useMemo } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Image from "@/components/SmartImage";
 import { format, parseISO, isSameDay, isToday, isTomorrow, addDays, startOfDay } from "date-fns";
 import { formatTimeSplit } from "@/lib/formats";
@@ -360,6 +360,7 @@ function VenueEventsSection({
 
 export default function VenueDetailView({ slug, portalSlug, onClose }: VenueDetailViewProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [spot, setSpot] = useState<SpotData | null>(null);
   const [upcomingEvents, setUpcomingEvents] = useState<UpcomingEvent[]>([]);
   const [nearbyDestinations, setNearbyDestinations] = useState<NearbyDestinations | null>(null);
@@ -393,13 +394,19 @@ export default function VenueDetailView({ slug, portalSlug, onClose }: VenueDeta
     fetchSpot();
   }, [slug]);
 
-  const handleEventClick = (id: number) => {
-    router.push(`/${portalSlug}?event=${id}`, { scroll: false });
+  const navigateToDetail = (param: string, value: string | number) => {
+    const params = new URLSearchParams(searchParams?.toString() || "");
+    params.delete("event");
+    params.delete("spot");
+    params.delete("series");
+    params.delete("festival");
+    params.delete("org");
+    params.set(param, String(value));
+    router.push(`/${portalSlug}?${params.toString()}`, { scroll: false });
   };
 
-  const handleSpotClick = (spotSlug: string) => {
-    router.push(`/${portalSlug}?spot=${spotSlug}`, { scroll: false });
-  };
+  const handleEventClick = (id: number) => navigateToDetail("event", id);
+  const handleSpotClick = (spotSlug: string) => navigateToDetail("spot", spotSlug);
 
   if (loading) {
     return (

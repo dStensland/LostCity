@@ -67,15 +67,17 @@ def create_monthly_meetings(source_id: int, venue_id: int) -> tuple[int, int]:
             events_updated += 1
             continue
 
+        description = (
+            "East Lake Neighbors monthly community meeting. "
+            "Discuss neighborhood issues, park improvements, and upcoming events. "
+            "All East Lake residents welcome."
+        )
+
         event_record = {
             "source_id": source_id,
             "venue_id": venue_id,
             "title": title,
-            "description": (
-                "East Lake Neighbors monthly community meeting. "
-                "Discuss neighborhood issues, park improvements, and upcoming events. "
-                "All East Lake residents welcome."
-            ),
+            "description": description,
             "start_date": start_date,
             "start_time": "19:00",
             "end_date": None,
@@ -98,8 +100,16 @@ def create_monthly_meetings(source_id: int, venue_id: int) -> tuple[int, int]:
             "content_hash": content_hash,
         }
 
+        series_hint = {
+            "series_type": "recurring_show",
+            "series_title": title,
+            "frequency": "monthly",
+            "day_of_week": "Thursday",
+            "description": description,
+        }
+
         try:
-            insert_event(event_record)
+            insert_event(event_record, series_hint=series_hint)
             events_new += 1
             logger.info(f"Added: {title} on {start_date}")
         except Exception as e:

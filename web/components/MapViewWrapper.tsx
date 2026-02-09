@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 import { useMapEvents } from "@/lib/hooks/useMapEvents";
 import type { EventWithLocation } from "@/lib/search";
 import type { Spot } from "@/lib/spots-constants";
+import type { MapBounds } from "./MapView";
 
 const MapView = dynamic(() => import("./MapView"), {
   ssr: false,
@@ -37,9 +38,33 @@ interface Props {
   // If no events provided, fetch using these params
   portalId?: string;
   portalExclusive?: boolean;
+  // Loading state — suppress empty overlay when refetching
+  isFetching?: boolean;
+  // Whether to show MobileMapSheet on pin tap (disable when MapBottomSheet handles it)
+  showMobileSheet?: boolean;
+  // Drawer integration props
+  onBoundsChange?: (bounds: MapBounds) => void;
+  selectedItemId?: number | null;
+  hoveredItemId?: number | null;
+  onItemSelect?: (item: { type: "event" | "spot"; id: number } | null) => void;
 }
 
-export default function MapViewWrapper({ events: providedEvents, spots, userLocation, viewRadius, centerPoint, fitAllMarkers, portalId, portalExclusive }: Props) {
+export default function MapViewWrapper({
+  events: providedEvents,
+  spots,
+  userLocation,
+  viewRadius,
+  centerPoint,
+  fitAllMarkers,
+  portalId,
+  portalExclusive,
+  isFetching: externalFetching,
+  showMobileSheet,
+  onBoundsChange,
+  selectedItemId,
+  hoveredItemId,
+  onItemSelect,
+}: Props) {
   // Only use the hook if events aren't provided directly
   const { events: fetchedEvents, isLoading } = useMapEvents({
     portalId,
@@ -69,5 +94,20 @@ export default function MapViewWrapper({ events: providedEvents, spots, userLoca
     );
   }
 
-  return <MapView events={events} spots={spots} userLocation={userLocation} viewRadius={viewRadius} centerPoint={centerPoint} fitAllMarkers={fitAllMarkers} />;
+  return (
+    <MapView
+      events={events}
+      spots={spots}
+      userLocation={userLocation}
+      viewRadius={viewRadius}
+      centerPoint={centerPoint}
+      fitAllMarkers={fitAllMarkers}
+      isFetching={externalFetching || loading}
+      showMobileSheet={showMobileSheet}
+      onBoundsChange={onBoundsChange}
+      selectedItemId={selectedItemId}
+      hoveredItemId={hoveredItemId}
+      onItemSelect={onItemSelect}
+    />
+  );
 }

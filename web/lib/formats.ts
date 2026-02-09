@@ -109,6 +109,46 @@ export function formatDuration(
 }
 
 // ============================================================================
+// EVENT STATUS
+// ============================================================================
+
+export type EventStatus = {
+  label: string;
+  color: string;
+};
+
+/**
+ * Compute a contextual status for an event based on its date/time.
+ * Returns "NOW" (live), "Soon" (<60 min), or null for everything else.
+ * Only shows urgency signals — not passive labels for distant events.
+ */
+export function getEventStatus(
+  startDate: string | null,
+  startTime: string | null,
+  isAllDay?: boolean,
+  isLive?: boolean,
+): EventStatus | null {
+  if (isLive) return { label: "NOW", color: "#EF4444" };
+  if (!startDate || !startTime || isAllDay) return null;
+
+  const today = new Date();
+  const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+
+  if (startDate !== todayStr) return null;
+
+  const [h, m] = startTime.split(":").map(Number);
+  if (isNaN(h) || isNaN(m)) return null;
+
+  const eventMinutes = h * 60 + m;
+  const nowMinutes = today.getHours() * 60 + today.getMinutes();
+  const diff = eventMinutes - nowMinutes;
+
+  if (diff < 0) return null; // already started (but not marked live)
+  if (diff <= 60) return { label: "Soon", color: "#EAB308" };
+  return null;
+}
+
+// ============================================================================
 // PRICE FORMATTING
 // ============================================================================
 
@@ -279,13 +319,53 @@ export function decodeHtmlEntities(str: string): string {
 }
 
 // ============================================================================
+// SOCIAL PROOF UTILITIES
+// ============================================================================
+
+/**
+ * FriendGoing type matching EventCard's expectations
+ */
+export interface FriendGoing {
+  user_id: string;
+  status: "going";
+  user: {
+    id: string;
+    username: string;
+    display_name: string | null;
+    avatar_url: string | null;
+  };
+}
+
+/**
+ * Convert API friends_going format to EventCard's FriendGoing format.
+ * Centralized to avoid duplication across feed components.
+ */
+export function convertFriendsGoing(
+  friends?: Array<{ user_id: string; username: string; display_name: string | null }>
+): FriendGoing[] | undefined {
+  if (!friends || friends.length === 0) return undefined;
+  return friends.map((f) => ({
+    user_id: f.user_id,
+    status: "going" as const,
+    user: {
+      id: f.user_id,
+      username: f.username,
+      display_name: f.display_name,
+      avatar_url: null,
+    },
+  }));
+}
+
+// ============================================================================
 // SECURITY UTILITIES
 // ============================================================================
 
 /**
  * Safely encode JSON-LD schema for use in <script type="application/ld+json">.
- * Escapes </script> sequences to prevent XSS if database values contain that string.
+ * Escapes < and > to prevent XSS if database values contain HTML tags.
  */
 export function safeJsonLd(schema: object): string {
-  return JSON.stringify(schema).replace(/<\/script>/gi, "<\\/script>");
+  return JSON.stringify(schema)
+    .replace(/</g, "\\u003c")
+    .replace(/>/g, "\\u003e");
 }

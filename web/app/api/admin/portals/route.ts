@@ -3,7 +3,7 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { NextRequest, NextResponse } from "next/server";
 import { createSubscription, refreshPortalSourceAccess } from "@/lib/federation";
 import { hasFeature } from "@/lib/plan-features";
-import { errorResponse } from "@/lib/api-utils";
+import { errorResponse, checkBodySize } from "@/lib/api-utils";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
@@ -118,6 +118,10 @@ export async function GET(request: NextRequest) {
 
 // POST /api/admin/portals - Create a new portal
 export async function POST(request: NextRequest) {
+  // Check body size
+  const bodySizeError = checkBodySize(request);
+  if (bodySizeError) return bodySizeError;
+
   // Apply rate limiting (write tier - admin endpoint)
   const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
   if (rateLimitResult) return rateLimitResult;

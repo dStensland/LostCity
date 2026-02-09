@@ -83,7 +83,7 @@ class TestInsertEvent:
     """Tests for insert_event function."""
 
     @patch("db.get_festival_source_hint", return_value=None)
-    @patch("db.get_venue_by_id")
+    @patch("db.get_venue_by_id_cached")
     @patch("db.get_client")
     def test_inserts_event_with_tags(
         self, mock_get_client, mock_get_venue, mock_festival_hint, sample_event_data
@@ -111,7 +111,7 @@ class TestInsertEvent:
         assert "tags" in inserted_data
 
     @patch("db.get_festival_source_hint", return_value=None)
-    @patch("db.get_venue_by_id")
+    @patch("db.get_venue_by_id_cached")
     @patch("db.get_client")
     def test_inherits_venue_vibes(
         self, mock_get_client, mock_get_venue, mock_festival_hint, sample_event_data

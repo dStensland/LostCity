@@ -296,12 +296,25 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     events_updated += 1
                     continue
 
+                description = event_template["description"]
+                image_url = image_map.get(title)
+
+                # Build series_hint
+                series_hint = {
+                    "series_type": "recurring_show",
+                    "series_title": title,
+                    "frequency": "weekly" if "weekly" in event_template["schedule"] else "monthly",
+                    "description": description,
+                }
+                if image_url:
+                    series_hint["image_url"] = image_url
+
                 event_record = {
                     "source_id": source_id,
                     "venue_id": venue_id,
                     "portal_id": portal_id,
                     "title": title,
-                    "description": event_template["description"],
+                    "description": description,
                     "start_date": start_date,
                     "start_time": event_template["time"],
                     "end_date": None,
@@ -316,7 +329,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     "is_free": True,
                     "source_url": ATHENS_CHAPEL_URL,
                     "ticket_url": ATHENS_CHAPEL_URL,
-                    "image_url": image_map.get(title),
+                    "image_url": image_url,
                     "raw_text": f"{title} - {start_date}",
                     "extraction_confidence": 0.9,
                     "is_recurring": True,
@@ -325,7 +338,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 }
 
                 try:
-                    insert_event(event_record)
+                    insert_event(event_record, series_hint=series_hint)
                     events_new += 1
                     logger.info(f"Added: {title} on {start_date}")
                 except Exception as e:

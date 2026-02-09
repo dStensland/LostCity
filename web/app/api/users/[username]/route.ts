@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier} from "@/lib/rate-limit";
+import { isValidUUID } from "@/lib/api-utils";
 
 type ProfileData = {
   id: string;
@@ -78,6 +79,10 @@ export async function GET(
     }
 
     // Check follow status (separate from friendship)
+    // Validate UUIDs before interpolation to prevent injection
+    if (!isValidUUID(currentUser.id) || !isValidUUID(profile.id)) {
+      return NextResponse.json({ error: "Invalid user ID" }, { status: 400 });
+    }
     const { data: follows } = await supabase
       .from("follows")
       .select("follower_id, followed_user_id")
@@ -96,6 +101,7 @@ export async function GET(
     // If not friends, determine relationship based on follows and friend requests
     if (!relationship) {
       // Check for pending friend request first
+      // UUIDs already validated above
       const { data: pendingRequest } = await supabase
         .from("friend_requests" as never)
         .select("id, inviter_id, invitee_id, status")

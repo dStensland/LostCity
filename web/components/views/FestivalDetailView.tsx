@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "@/components/SmartImage";
 import ScopedStyles from "@/components/ScopedStyles";
@@ -102,6 +102,7 @@ export default function FestivalDetailView({
   showOpenPageLink = true,
 }: FestivalDetailViewProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const portalContext = usePortalOptional();
   const portalId = portalContext?.portal?.id || null;
   const [festival, setFestival] = useState<FestivalData | null>(null);
@@ -157,13 +158,19 @@ export default function FestivalDetailView({
 
   const accentClass = createCssVarClass("--accent-color", FESTIVAL_ACCENT, "accent");
 
-  const handleSessionClick = (id: number) => {
-    router.push(`/${portalSlug}?event=${id}`, { scroll: false });
+  const navigateToDetail = (param: string, value: string | number) => {
+    const params = new URLSearchParams(searchParams?.toString() || "");
+    params.delete("event");
+    params.delete("spot");
+    params.delete("series");
+    params.delete("festival");
+    params.delete("org");
+    params.set(param, String(value));
+    router.push(`/${portalSlug}?${params.toString()}`, { scroll: false });
   };
 
-  const handleProgramClick = (slug: string) => {
-    router.push(`/${portalSlug}?series=${slug}`, { scroll: false });
-  };
+  const handleSessionClick = (id: number) => navigateToDetail("event", id);
+  const handleProgramClick = (slug: string) => navigateToDetail("series", slug);
 
   if (loading) {
     return (

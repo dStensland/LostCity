@@ -172,6 +172,16 @@ def crawl(source: dict) -> tuple[int, int, int]:
                                 i += 1
                                 continue
 
+                            image_url = image_map.get(show_title)
+
+                            # Build series_hint
+                            series_hint = {
+                                "series_type": "recurring_show",
+                                "series_title": show_title,
+                            }
+                            if image_url:
+                                series_hint["image_url"] = image_url
+
                             event_record = {
                                 "source_id": source_id,
                                 "venue_id": venue_id,
@@ -196,7 +206,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                                 "is_free": False,
                                 "source_url": CALENDAR_URL,
                                 "ticket_url": None,
-                                "image_url": image_map.get(show_title),
+                                "image_url": image_url,
                                 "raw_text": None,
                                 "extraction_confidence": 0.85,
                                 "is_recurring": True,
@@ -205,7 +215,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             }
 
                             try:
-                                insert_event(event_record)
+                                insert_event(event_record, series_hint=series_hint)
                                 events_new += 1
                                 logger.info(f"Added: {show_title} on {start_date}")
                             except Exception as e:

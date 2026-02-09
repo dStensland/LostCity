@@ -1,7 +1,8 @@
 "use client";
 
-import { memo } from "react";
+import { memo, useMemo } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import {
   CalendarBlank,
   FilmSlate,
@@ -151,8 +152,19 @@ const SeriesCard = memo(function SeriesCard({
   contextLabel,
   contextColor,
 }: Props) {
+  const searchParams = useSearchParams();
   const typeColor = getSeriesTypeColor(series.series_type);
-  const seriesUrl = portalSlug ? `/${portalSlug}?series=${series.slug}` : `/series/${series.slug}`;
+  const seriesUrl = useMemo(() => {
+    if (!portalSlug) return `/series/${series.slug}`;
+    const params = new URLSearchParams(searchParams?.toString() || "");
+    params.delete("event");
+    params.delete("spot");
+    params.delete("series");
+    params.delete("festival");
+    params.delete("org");
+    params.set("series", series.slug);
+    return `/${portalSlug}?${params.toString()}`;
+  }, [portalSlug, series.slug, searchParams]);
   const accentClass = createCssVarClass("--accent-color", typeColor, "accent");
   const contextAccentClass = contextColor
     ? createCssVarClass("--context-accent", contextColor, "context-accent")
@@ -199,17 +211,17 @@ const SeriesCard = memo(function SeriesCard({
     <>
       <ScopedStyles css={scopedCss} />
       <div
-        className={`${disableMargin ? "" : "mb-4"} rounded-sm border border-[var(--twilight)] card-atmospheric glow-accent reflection-accent group overflow-hidden bg-[var(--card-bg)] border-l-[3px] border-l-[var(--accent-color)] ${accentClass?.className ?? ""} ${contextAccentClass?.className ?? ""} ${skipAnimation ? "" : "animate-card-emerge"} ${className ?? ""}`}
+        className={`${disableMargin ? "" : "mb-2 sm:mb-4"} rounded-sm border border-[var(--twilight)] card-atmospheric glow-accent reflection-accent group overflow-hidden bg-[var(--card-bg)] border-l-[3px] border-l-[var(--accent-color)] ${accentClass?.className ?? ""} ${contextAccentClass?.className ?? ""} ${skipAnimation ? "" : "animate-card-emerge"} ${className ?? ""}`}
       >
-        <div className="flex gap-3">
+        <div className="flex gap-2 sm:gap-3">
           <Link
             href={seriesUrl}
             scroll={false}
-            className="block flex-1 min-w-0 p-3"
+            className="block flex-1 min-w-0 p-2.5 sm:p-3"
           >
-            <div className="flex gap-3">
+            <div className="flex gap-2 sm:gap-3">
               {/* Time cell - matches EventCard typography */}
-              <div className="flex-shrink-0 w-14 flex flex-col items-center justify-center py-1">
+              <div className="hidden sm:flex flex-shrink-0 w-14 flex-col items-center justify-center py-1">
                 <span className="font-mono text-[0.65rem] font-semibold text-[var(--coral)] leading-none uppercase tracking-wide">
                   {totalShowtimes} {series.series_type === "film" ? (totalShowtimes === 1 ? "show" : "shows") : (totalShowtimes === 1 ? "time" : "times")}
                 </span>
@@ -238,6 +250,16 @@ const SeriesCard = memo(function SeriesCard({
                         size={18}
                         className="text-accent icon-neon-subtle"
                       />
+                    </span>
+                    <span className="inline-flex items-baseline gap-0.5 font-mono text-sm font-bold leading-none text-[var(--coral)]">
+                      {totalShowtimes} {totalShowtimes === 1 ? "show" : "times"}
+                      {timeParts && (
+                        <>
+                          <span className="text-[var(--muted)] mx-0.5">@</span>
+                          <span className="text-[var(--cream)]">{timeParts.time}</span>
+                          {timeParts.period && <span className="text-[0.6rem] font-medium text-[var(--soft)]">{timeParts.period}</span>}
+                        </>
+                      )}
                     </span>
                   </div>
                   {contextLabel && (
@@ -290,13 +312,15 @@ const SeriesCard = memo(function SeriesCard({
                       <span className="truncate">{firstVenue.neighborhood}</span>
                     </>
                   )}
-                  <span className="opacity-40">·</span>
-                  <SeriesBadge
-                    seriesType={series.series_type}
-                    frequency={series.frequency as Frequency}
-                    dayOfWeek={series.day_of_week as DayOfWeek}
-                    compact
-                  />
+                  <span className="hidden sm:contents">
+                    <span className="opacity-40">·</span>
+                    <SeriesBadge
+                      seriesType={series.series_type}
+                      frequency={series.frequency as Frequency}
+                      dayOfWeek={series.day_of_week as DayOfWeek}
+                      compact
+                    />
+                  </span>
                 </div>
 
                 {/* Recurrence, showtime, and social proof pills */}
@@ -315,34 +339,69 @@ const SeriesCard = memo(function SeriesCard({
                         {totalShowtimes} showtimes
                       </span>
                     )}
-                    {goingCount > 0 && (
-                      <span className="inline-flex items-center gap-1 font-mono text-[0.6rem] font-medium px-1.5 py-0.5 rounded-lg bg-[var(--coral)]/10 border border-[var(--coral)]/20 text-[var(--coral)]">
-                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                        </svg>
-                        {formatCompactCount(goingCount)} going
-                      </span>
-                    )}
-                    {interestedCount > 0 && (
-                      <span className="inline-flex items-center gap-1 font-mono text-[0.6rem] font-medium px-1.5 py-0.5 rounded-lg bg-[var(--gold)]/15 border border-[var(--gold)]/30 text-[var(--gold)]">
-                        {formatCompactCount(interestedCount)} maybe
-                      </span>
-                    )}
-                    {recommendationCount > 0 && (
-                      <span className="inline-flex items-center gap-1 font-mono text-[0.6rem] font-medium px-1.5 py-0.5 rounded-lg bg-[var(--lavender)]/15 border border-[var(--lavender)]/30 text-[var(--lavender)]">
-                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
-                        </svg>
-                        {formatCompactCount(recommendationCount)} rec&apos;d
-                      </span>
-                    )}
+                    {/* Mobile: collapsed social proof — single summary pill */}
+                    {hasSocialProof && (() => {
+                      const counts = [
+                        { type: "going" as const, count: goingCount, label: "going", color: "coral" },
+                        { type: "interested" as const, count: interestedCount, label: "maybe", color: "gold" },
+                        { type: "recommended" as const, count: recommendationCount, label: "rec'd", color: "lavender" },
+                      ];
+                      const dominant = counts.reduce((a, b) => (b.count > a.count ? b : a));
+                      const totalCount = goingCount + interestedCount + recommendationCount;
+                      if (totalCount <= 0) return null;
+                      return (
+                        <span className={`sm:hidden inline-flex items-center gap-1 font-mono text-[0.6rem] font-medium px-1.5 py-0.5 rounded-lg ${
+                          dominant.color === "coral"
+                            ? "bg-[var(--coral)]/10 border border-[var(--coral)]/20 text-[var(--coral)]"
+                            : dominant.color === "gold"
+                              ? "bg-[var(--gold)]/15 border border-[var(--gold)]/30 text-[var(--gold)]"
+                              : "bg-[var(--lavender)]/15 border border-[var(--lavender)]/30 text-[var(--lavender)]"
+                        }`}>
+                          {dominant.type === "going" && (
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
+                          )}
+                          {dominant.type === "recommended" && (
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+                            </svg>
+                          )}
+                          {formatCompactCount(totalCount)} {dominant.label}
+                        </span>
+                      );
+                    })()}
+                    {/* Desktop: separate pills */}
+                    <span className="hidden sm:contents">
+                      {goingCount > 0 && (
+                        <span className="inline-flex items-center gap-1 font-mono text-[0.6rem] font-medium px-1.5 py-0.5 rounded-lg bg-[var(--coral)]/10 border border-[var(--coral)]/20 text-[var(--coral)]">
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                          {formatCompactCount(goingCount)} going
+                        </span>
+                      )}
+                      {interestedCount > 0 && (
+                        <span className="inline-flex items-center gap-1 font-mono text-[0.6rem] font-medium px-1.5 py-0.5 rounded-lg bg-[var(--gold)]/15 border border-[var(--gold)]/30 text-[var(--gold)]">
+                          {formatCompactCount(interestedCount)} maybe
+                        </span>
+                      )}
+                      {recommendationCount > 0 && (
+                        <span className="inline-flex items-center gap-1 font-mono text-[0.6rem] font-medium px-1.5 py-0.5 rounded-lg bg-[var(--lavender)]/15 border border-[var(--lavender)]/30 text-[var(--lavender)]">
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+                          </svg>
+                          {formatCompactCount(recommendationCount)} rec&apos;d
+                        </span>
+                      )}
+                    </span>
                   </div>
                 )}
               </div>
             </div>
           </Link>
           {primaryEventId && (
-            <div className="flex items-start gap-2 pt-3 pr-3 pb-3 flex-shrink-0">
+            <div className="flex items-start gap-1.5 sm:gap-2 pt-2.5 pr-2.5 pb-2.5 sm:pt-3 sm:pr-3 sm:pb-3 flex-shrink-0">
               <RSVPButton eventId={primaryEventId} variant="compact" />
               {isExternalLinkOut && linkOutUrl && (
                 <a
@@ -350,7 +409,7 @@ const SeriesCard = memo(function SeriesCard({
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label={linkOutLabel}
-                  className="w-11 h-11 inline-flex items-center justify-center rounded-xl border border-[var(--twilight)]/80 bg-[var(--dusk)]/70 text-[var(--muted)] backdrop-blur-[2px] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.02)] hover:text-[var(--cream)] hover:border-[var(--cta-border,rgba(255,107,122,0.7))] hover:shadow-[0_0_18px_var(--cta-glow,rgba(255,107,122,0.25))] transition-all"
+                  className="hidden sm:inline-flex w-11 h-11 items-center justify-center rounded-xl border border-[var(--twilight)]/80 bg-[var(--dusk)]/70 text-[var(--muted)] backdrop-blur-[2px] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.02)] hover:text-[var(--cream)] hover:border-[var(--cta-border,rgba(255,107,122,0.7))] hover:shadow-[0_0_18px_var(--cta-glow,rgba(255,107,122,0.25))] transition-all"
                 >
                   {isTicketLinkOut ? (
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

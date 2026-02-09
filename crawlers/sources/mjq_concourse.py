@@ -129,7 +129,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     try:
                         month_str = month[:3] if len(month) > 3 else month
                         dt = datetime.strptime(f"{month_str} {day} {year}", "%b %d %Y")
-                        if dt.date() < datetime.now().date():
+                        # Only bump to next year if >60 days in the past
+                        if (datetime.now() - dt).days > 60:
                             dt = datetime.strptime(f"{month_str} {day} {int(year) + 1}", "%b %d %Y")
                         start_date = dt.strftime("%Y-%m-%d")
                     except ValueError:

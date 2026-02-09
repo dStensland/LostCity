@@ -196,7 +196,7 @@ export default function StandardHeader({
         {portalSlug === "atlanta" && (
           <div
             aria-hidden="true"
-            className="absolute inset-0 pointer-events-none z-[1] overflow-hidden"
+            className="absolute inset-0 pointer-events-none overflow-hidden"
           >
             {/* Desktop: Inverted skyline silhouettes — buildings hang from top edge */}
             <div
@@ -252,7 +252,7 @@ export default function StandardHeader({
           </div>
         )}
         {/* Content layer */}
-        <div className="relative z-10 flex flex-col">
+        <div className="relative flex flex-col">
         <div className="px-4 py-2 sm:py-3 flex items-center gap-3 relative">
           {/* Left: Back button (optional) + Logo */}
           <div className="flex items-center gap-2 flex-shrink-0">
@@ -306,7 +306,7 @@ export default function StandardHeader({
                     className={`nav-tab relative flex-1 text-center px-3 py-1.5 rounded-md font-mono text-xs whitespace-nowrap transition-all duration-300 ${
                       active
                         ? "nav-tab-active text-[var(--void)] font-medium"
-                        : "text-[var(--cream)] hover:text-[var(--neon-amber)] border border-transparent font-semibold nav-tab-shadow"
+                        : "text-[var(--muted)] hover:text-[var(--neon-amber)] border border-transparent"
                     }`}
                     role="tab"
                     aria-selected={active}
@@ -346,7 +346,7 @@ export default function StandardHeader({
               </button>
 
               {mobileMenuOpen && (
-                <div className="absolute right-0 top-full mt-2 w-56 py-2 bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg shadow-xl z-50">
+                <div className="absolute right-0 top-full mt-2 w-56 py-2 bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg shadow-xl z-[200]">
                   <div className="px-3 py-1.5 text-[0.65rem] font-mono text-[var(--muted)] uppercase tracking-wider">
                     Quick Links
                   </div>
@@ -421,7 +421,7 @@ export default function StandardHeader({
                     className={`nav-tab relative flex-1 text-center py-1 rounded-md font-mono text-[0.65rem] whitespace-nowrap transition-all duration-300 ${
                       active
                         ? "nav-tab-active text-[var(--void)] font-medium"
-                        : "text-[var(--cream)] hover:text-[var(--neon-amber)] border border-transparent font-semibold"
+                        : "text-[var(--muted)] hover:text-[var(--neon-amber)] border border-transparent"
                     }`}
                     role="tab"
                     aria-selected={active}

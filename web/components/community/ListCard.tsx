@@ -71,9 +71,9 @@ export default function ListCard({ list, portalSlug }: ListCardProps) {
       <ScopedStyles css={accentClass?.css} />
       <Link
         href={`/${portalSlug}/lists/${list.slug}`}
-        className={`block p-4 rounded-xl border border-[var(--twilight)] card-atmospheric glow-accent group bg-[var(--card-bg)] ${accentClass?.className ?? ""}`}
+        className={`block p-3 sm:p-4 rounded-xl border border-[var(--twilight)] card-atmospheric glow-accent group bg-[var(--card-bg)] ${accentClass?.className ?? ""}`}
       >
-      <div className="flex items-start gap-4">
+      <div className="flex items-start gap-3 sm:gap-4">
         {/* Thumbnails or Category icon */}
         {thumbnails.length > 0 ? (
           <div className="relative flex-shrink-0 w-14 h-14">

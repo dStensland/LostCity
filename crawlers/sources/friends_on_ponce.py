@@ -87,6 +87,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 events_found += 1
                 start_date_str = current.strftime("%Y-%m-%d")
                 title = "Mixed Tape Sundays"
+                description = "Mixed Tape Sundays at Friends on Ponce. Throwback music and good vibes every Sunday."
 
                 content_hash = generate_content_hash(title, "Friends on Ponce", start_date_str)
 
@@ -95,12 +96,13 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     event_url = find_event_url(title, event_links, EVENTS_URL)
 
+                    image_url = image_map.get(title)
 
                     event_record = {
                         "source_id": source_id,
                         "venue_id": venue_id,
                         "title": title,
-                        "description": "Mixed Tape Sundays at Friends on Ponce. Throwback music and good vibes every Sunday.",
+                        "description": description,
                         "start_date": start_date_str,
                         "start_time": "16:00",
                         "end_date": None,
@@ -115,7 +117,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "is_free": True,
                         "source_url": event_url,
                         "ticket_url": event_url if event_url != (EVENTS_URL if "EVENTS_URL" in dir() else BASE_URL) else None,
-                        "image_url": image_map.get(title),
+                        "image_url": image_url,
                         "raw_text": f"{title} at Friends on Ponce - {start_date_str}",
                         "extraction_confidence": 0.90,
                         "is_recurring": True,
@@ -123,8 +125,18 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "content_hash": content_hash,
                     }
 
+                    series_hint = {
+                        "series_type": "recurring_show",
+                        "series_title": title,
+                        "frequency": "weekly",
+                        "day_of_week": "Sunday",
+                        "description": description,
+                    }
+                    if image_url:
+                        series_hint["image_url"] = image_url
+
                     try:
-                        insert_event(event_record)
+                        insert_event(event_record, series_hint=series_hint)
                         events_new += 1
                         logger.info(f"Added: {title} on {start_date_str}")
                     except Exception as e:
@@ -144,6 +156,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 events_found += 1
                 start_date_str = current.strftime("%Y-%m-%d")
                 title = "Sip and Sing Karaoke"
+                description = "Sip and Sing Karaoke at Friends on Ponce. Sing your heart out with Atlanta's friendliest crowd."
 
                 content_hash = generate_content_hash(title, "Friends on Ponce", start_date_str)
 
@@ -152,12 +165,13 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     event_url = find_event_url(title, event_links, EVENTS_URL)
 
+                    image_url = image_map.get(title)
 
                     event_record = {
                         "source_id": source_id,
                         "venue_id": venue_id,
                         "title": title,
-                        "description": "Sip and Sing Karaoke at Friends on Ponce. Sing your heart out with Atlanta's friendliest crowd.",
+                        "description": description,
                         "start_date": start_date_str,
                         "start_time": "21:00",
                         "end_date": None,
@@ -172,7 +186,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "is_free": True,
                         "source_url": event_url,
                         "ticket_url": event_url if event_url != (EVENTS_URL if "EVENTS_URL" in dir() else BASE_URL) else None,
-                        "image_url": image_map.get(title),
+                        "image_url": image_url,
                         "raw_text": f"{title} at Friends on Ponce - {start_date_str}",
                         "extraction_confidence": 0.85,
                         "is_recurring": True,
@@ -180,8 +194,18 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "content_hash": content_hash,
                     }
 
+                    series_hint = {
+                        "series_type": "recurring_show",
+                        "series_title": title,
+                        "frequency": "weekly",
+                        "day_of_week": "Wednesday",
+                        "description": description,
+                    }
+                    if image_url:
+                        series_hint["image_url"] = image_url
+
                     try:
-                        insert_event(event_record)
+                        insert_event(event_record, series_hint=series_hint)
                         events_new += 1
                         logger.info(f"Added: {title} on {start_date_str}")
                     except Exception as e:
@@ -206,6 +230,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 events_found += 1
                 start_date_str = second_sunday.strftime("%Y-%m-%d")
                 title = "New Faces Amateur Drag Competition"
+                description = "New Faces Amateur Drag Competition at Friends on Ponce. The longest-running amateur drag competition in Atlanta, launching careers since the 1990s. Hosted by Charmaine Sinclair Dupree."
 
                 content_hash = generate_content_hash(title, "Friends on Ponce", start_date_str)
 
@@ -214,12 +239,13 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     event_url = find_event_url(title, event_links, EVENTS_URL)
 
+                    image_url = image_map.get(title)
 
                     event_record = {
                         "source_id": source_id,
                         "venue_id": venue_id,
                         "title": title,
-                        "description": "New Faces Amateur Drag Competition at Friends on Ponce. The longest-running amateur drag competition in Atlanta, launching careers since the 1990s. Hosted by Charmaine Sinclair Dupree.",
+                        "description": description,
                         "start_date": start_date_str,
                         "start_time": "21:00",
                         "end_date": None,
@@ -234,7 +260,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "is_free": True,
                         "source_url": f"{BASE_URL}/events",
                         "ticket_url": event_url if event_url != (EVENTS_URL if "EVENTS_URL" in dir() else BASE_URL) else None,
-                        "image_url": image_map.get(title),
+                        "image_url": image_url,
                         "raw_text": f"{title} at Friends on Ponce - {start_date_str}",
                         "extraction_confidence": 0.90,
                         "is_recurring": True,
@@ -242,8 +268,17 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "content_hash": content_hash,
                     }
 
+                    series_hint = {
+                        "series_type": "recurring_show",
+                        "series_title": title,
+                        "frequency": "monthly",
+                        "description": description,
+                    }
+                    if image_url:
+                        series_hint["image_url"] = image_url
+
                     try:
-                        insert_event(event_record)
+                        insert_event(event_record, series_hint=series_hint)
                         events_new += 1
                         logger.info(f"Added: {title} on {start_date_str}")
                     except Exception as e:

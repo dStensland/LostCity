@@ -164,7 +164,7 @@ export default function NotificationDropdown() {
   if (authLoading || !user) return null;
 
   return (
-    <div className="relative z-[1000]" ref={dropdownRef}>
+    <div className="relative" ref={dropdownRef}>
       {/* Bell button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
@@ -190,7 +190,7 @@ export default function NotificationDropdown() {
 
       {/* Dropdown */}
       {isOpen && (
-        <div className="absolute top-full mt-2 right-0 w-80 max-h-96 overflow-y-auto bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg shadow-xl z-[1050]">
+        <div className="absolute top-full mt-2 right-0 w-80 max-h-96 overflow-y-auto bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg shadow-xl z-[200]">
           {/* Header */}
           <div className="p-3 border-b border-[var(--twilight)] flex items-center justify-between">
             <h3 className="font-mono text-xs font-medium text-[var(--cream)] uppercase tracking-wider">

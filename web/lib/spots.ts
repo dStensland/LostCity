@@ -189,7 +189,8 @@ export async function getUpcomingEventsForSpot(
     .select(
       `
       *,
-      venue:venues(id, name, slug, address, neighborhood, city, state)
+      venue:venues(id, name, slug, address, neighborhood, city, state),
+      series:series(id, slug, title, series_type, image_url)
     `
     )
     .eq("venue_id", venueId)

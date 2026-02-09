@@ -215,6 +215,18 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         events_updated += 1
                         continue
 
+                    # Build series hint for show runs
+                    series_hint = None
+                    if end_date and end_date != start_date:
+                        series_hint = {
+                            "series_type": "recurring_show",
+                            "series_title": title,
+                        }
+                        if description:
+                            series_hint["description"] = description
+                        if image_url:
+                            series_hint["image_url"] = image_url
+
                     event_record = {
                         "source_id": source_id,
                         "venue_id": venue_id,
@@ -243,7 +255,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     }
 
                     try:
-                        insert_event(event_record)
+                        insert_event(event_record, series_hint=series_hint)
                         events_new += 1
                         logger.info(f"Added: {title} ({start_date} to {end_date})")
                     except Exception as e:

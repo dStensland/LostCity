@@ -19,12 +19,12 @@ export const HorizontalFeed = memo(function HorizontalFeed({
   return (
     <div className="horizontal-feed">
       {config.hero_style !== "none" && (
-        <div className="hero-section mb-6">
+        <div className="hero-section mb-4 sm:mb-6">
           {/* Hero content will be rendered by parent */}
         </div>
       )}
 
-      <div className="feed-content space-y-6">
+      <div className="feed-content space-y-4 sm:space-y-6">
         {/* Sections will render as horizontal scrolling rows */}
         {children}
       </div>
