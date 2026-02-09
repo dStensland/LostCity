@@ -98,6 +98,7 @@ export default function ListCreateModal({
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("");
   const [isPublic, setIsPublic] = useState(true);
+  const [allowContributions, setAllowContributions] = useState(false);
   const [saving, setSaving] = useState(false);
 
   // Handle escape key
@@ -134,6 +135,7 @@ export default function ListCreateModal({
           description: description.trim() || null,
           category,
           is_public: isPublic,
+          allow_contributions: allowContributions,
         }),
       });
 
@@ -356,6 +358,46 @@ export default function ListCreateModal({
                   />
                 </button>
               </div>
+
+              {/* Allow contributions toggle */}
+              {isPublic && (
+                <div className="flex items-center justify-between py-2 px-3 bg-[var(--night)] rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-[var(--twilight)] flex items-center justify-center">
+                      {allowContributions ? (
+                        <svg className="w-4 h-4 text-[var(--coral)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                        </svg>
+                      ) : (
+                        <svg className="w-4 h-4 text-[var(--muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                        </svg>
+                      )}
+                    </div>
+                    <div>
+                      <div className="text-sm text-[var(--cream)]">
+                        Allow contributions
+                      </div>
+                      <div className="text-xs text-[var(--muted)]">
+                        Others can add items to this list
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setAllowContributions(!allowContributions)}
+                    className={`relative w-11 h-6 rounded-full transition-colors ${
+                      allowContributions ? "bg-[var(--coral)]" : "bg-[var(--twilight)]"
+                    }`}
+                  >
+                    <span
+                      className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${
+                        allowContributions ? "translate-x-5" : ""
+                      }`}
+                    />
+                  </button>
+                </div>
+              )}
             </div>
           )}
 

@@ -74,17 +74,26 @@ export async function POST(request: NextRequest, context: RouteContext) {
   }
 
   try {
-    // Check list ownership
-    const { data: list } = await supabase
+    // Check list ownership or contribution permission
+    let serviceClient: AnySupabase;
+    try {
+      serviceClient = createServiceClient() as AnySupabase;
+    } catch {
+      return NextResponse.json({ error: "Service unavailable" }, { status: 500 });
+    }
+
+    const { data: list } = await serviceClient
       .from("lists")
-      .select("creator_id")
+      .select("creator_id, allow_contributions, status")
       .eq("id", listId)
       .maybeSingle();
 
-    if (!list) {
+    if (!list || list.status !== "active") {
       return NextResponse.json({ error: "List not found" }, { status: 404 });
     }
-    if (list.creator_id !== user.id) {
+
+    const isOwner = list.creator_id === user.id;
+    if (!isOwner && !list.allow_contributions) {
       return NextResponse.json({ error: "Not authorized to add items to this list" }, { status: 403 });
     }
 
@@ -101,7 +110,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
     }
 
     // Get the next position
-    const { data: lastItem } = await supabase
+    const { data: lastItem } = await serviceClient
       .from("list_items")
       .select("position")
       .eq("list_id", listId)
@@ -110,14 +119,6 @@ export async function POST(request: NextRequest, context: RouteContext) {
       .maybeSingle();
 
     const nextPosition = (lastItem?.position ?? 0) + 1;
-
-    // Use service client to bypass RLS - auth already validated above
-    let serviceClient: AnySupabase;
-    try {
-      serviceClient = createServiceClient() as AnySupabase;
-    } catch {
-      return NextResponse.json({ error: "Service unavailable" }, { status: 500 });
-    }
 
     const { data: item, error } = await serviceClient
       .from("list_items")

@@ -163,8 +163,11 @@ const SeriesCard = memo(function SeriesCard({
   // Get total showtime count
   const totalShowtimes = venueGroups.reduce((sum, vg) => sum + vg.showtimes.length, 0);
 
-  // Get first showtime for the time display
-  const firstShowtime = venueGroups[0]?.showtimes[0];
+  // Get first showtime for the time display — try to find any showtime with an actual time
+  const firstShowtimeWithTime = venueGroups
+    .flatMap((vg) => vg.showtimes)
+    .find((st) => st.time);
+  const firstShowtime = firstShowtimeWithTime || venueGroups[0]?.showtimes[0];
   const firstVenue = venueGroups[0]?.venue;
 
   // Format the first showtime like EventCard does
@@ -211,8 +214,8 @@ const SeriesCard = memo(function SeriesCard({
             <div className="flex gap-3">
               {/* Time cell - matches EventCard typography */}
               <div className="flex-shrink-0 w-14 flex flex-col items-center justify-center py-1">
-                <span className="font-mono text-[0.65rem] font-semibold text-[var(--muted)] leading-none uppercase tracking-wide">
-                  {totalShowtimes} {totalShowtimes === 1 ? "date" : "dates"}
+                <span className="font-mono text-[0.65rem] font-semibold text-[var(--coral)] leading-none uppercase tracking-wide">
+                  {totalShowtimes} {series.series_type === "film" ? (totalShowtimes === 1 ? "show" : "shows") : (totalShowtimes === 1 ? "time" : "times")}
                 </span>
                 {timeParts ? (
                   <>
@@ -226,8 +229,8 @@ const SeriesCard = memo(function SeriesCard({
                     )}
                   </>
                 ) : (
-                  <span className="font-mono text-[0.65rem] font-semibold text-[var(--soft)] leading-none mt-1 uppercase tracking-wide">
-                    Times vary
+                  <span className="font-mono text-base font-bold text-[var(--cream)] leading-none tabular-nums mt-1">
+                    TBA
                   </span>
                 )}
               </div>

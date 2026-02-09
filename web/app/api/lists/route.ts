@@ -47,6 +47,7 @@ export async function GET(request: NextRequest) {
             custom_name,
             custom_description,
             position,
+            added_by,
             venue:venues(id, name, slug, neighborhood, venue_type, image_url),
             event:events(id, title, start_date, image_url, venue:venues(name))
           )
@@ -140,9 +141,32 @@ export async function GET(request: NextRequest) {
         custom_name: string | null;
         custom_description: string | null;
         position: number;
+        added_by: string | null;
         venue?: unknown;
         event?: unknown;
         organization?: unknown;
+      }
+
+      // Fetch contributor profiles for items added by non-creators
+      const contributorIds = [
+        ...new Set(
+          (list.items || [])
+            .map((item: ListItemRaw) => item.added_by)
+            .filter((id: string | null): id is string => !!id && id !== list.creator_id)
+        ),
+      ];
+
+      let contributorMap = new Map<string, { username: string; display_name: string | null }>();
+      if (contributorIds.length > 0) {
+        const { data: contributors } = await svcSingle
+          .from("profiles")
+          .select("id, username, display_name")
+          .in("id", contributorIds);
+        if (contributors) {
+          contributorMap = new Map(
+            contributors.map((c: { id: string; username: string; display_name: string | null }) => [c.id, c])
+          );
+        }
       }
 
       const transformedItems = list.items?.map((item: ListItemRaw) => ({
@@ -150,6 +174,9 @@ export async function GET(request: NextRequest) {
         list_id: list.id,
         vote_count: voteCountMap[item.id] || 0,
         user_vote: userVoteMap[item.id] || null,
+        added_by_profile: item.added_by && item.added_by !== list.creator_id
+          ? contributorMap.get(item.added_by) || null
+          : null,
       })) || [];
 
       // Get total vote count for the list
@@ -328,7 +355,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { portal_id, title, description, category, is_public } = body;
+    const { portal_id, title, description, category, is_public, allow_contributions } = body;
 
     if (!title?.trim()) {
       return NextResponse.json({ error: "Title is required" }, { status: 400 });
@@ -351,6 +378,7 @@ export async function POST(request: NextRequest) {
         description: description?.trim() || null,
         category: category || null,
         is_public: is_public !== false,
+        allow_contributions: allow_contributions === true,
       })
       .select("*")
       .maybeSingle();

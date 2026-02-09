@@ -15,6 +15,7 @@ export type List = {
   description: string | null;
   category: string | null;
   is_public: boolean;
+  allow_contributions: boolean;
   status: string;
   created_at: string;
   item_count: number;
@@ -31,17 +32,6 @@ interface ListsViewProps {
   portalId: string;
   portalSlug: string;
 }
-
-const CATEGORIES = [
-  { value: "all", label: "All" },
-  { value: "best_of", label: "Best Of" },
-  { value: "hidden_gems", label: "Hidden Gems" },
-  { value: "date_night", label: "Date Night" },
-  { value: "with_friends", label: "With Friends" },
-  { value: "solo", label: "Solo" },
-  { value: "budget", label: "Budget-Friendly" },
-  { value: "special_occasion", label: "Special Occasion" },
-];
 
 const CATEGORY_ICONS: Record<string, React.ReactNode> = {
   best_of: (
@@ -88,7 +78,6 @@ export default function ListsView({ portalId, portalSlug }: ListsViewProps) {
   const [loading, setLoading] = useState(true);
   const [trendingLoading, setTrendingLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedCategory, setSelectedCategory] = useState("all");
   const [showCreateModal, setShowCreateModal] = useState(false);
 
   // Fetch trending lists
@@ -119,12 +108,7 @@ export default function ListsView({ portalId, portalSlug }: ListsViewProps) {
     async function fetchLists() {
       try {
         setLoading(true);
-        const params = new URLSearchParams({ portal_id: portalId });
-        if (selectedCategory !== "all") {
-          params.set("category", selectedCategory);
-        }
-
-        const res = await fetch(`/api/lists?${params}`);
+        const res = await fetch(`/api/lists?portal_id=${portalId}`);
         if (!res.ok) throw new Error("Failed to load lists");
 
         const data = await res.json();
@@ -137,7 +121,7 @@ export default function ListsView({ portalId, portalSlug }: ListsViewProps) {
     }
 
     fetchLists();
-  }, [portalId, selectedCategory]);
+  }, [portalId]);
 
   const handleListCreated = (newList: List) => {
     setLists((prev) => [newList, ...prev]);
@@ -179,14 +163,7 @@ export default function ListsView({ portalId, portalSlug }: ListsViewProps) {
         </p>
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
           <button
-            onClick={() => {
-              setError(null);
-              setLoading(true);
-              // Trigger re-fetch by toggling category
-              const current = selectedCategory;
-              setSelectedCategory("__refresh__");
-              setTimeout(() => setSelectedCategory(current), 0);
-            }}
+            onClick={() => window.location.reload()}
             className="inline-flex items-center gap-2 px-5 py-2.5 bg-[var(--coral)] text-[var(--void)] rounded-lg font-mono text-sm font-medium hover:bg-[var(--rose)] transition-colors"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -237,7 +214,7 @@ export default function ListsView({ portalId, portalSlug }: ListsViewProps) {
       </div>
 
       {/* Trending section */}
-      {!trendingLoading && trendingLists.length > 0 && selectedCategory === "all" && (
+      {!trendingLoading && trendingLists.length > 0 && (
         <div className="mb-8">
           <div className="flex items-center gap-2 mb-4">
             <svg className="w-5 h-5 text-[var(--coral)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -297,23 +274,6 @@ export default function ListsView({ portalId, portalSlug }: ListsViewProps) {
         </div>
       )}
 
-      {/* Category filter */}
-      <div className="flex gap-2 mb-6 overflow-x-auto pb-2 scrollbar-hide">
-        {CATEGORIES.map((cat) => (
-          <button
-            key={cat.value}
-            onClick={() => setSelectedCategory(cat.value)}
-            className={`px-3 py-1.5 rounded-full font-mono text-xs whitespace-nowrap transition-all ${
-              selectedCategory === cat.value
-                ? "bg-[var(--coral)] text-[var(--void)] font-medium"
-                : "bg-[var(--twilight)]/50 text-[var(--muted)] hover:text-[var(--cream)]"
-            }`}
-          >
-            {cat.label}
-          </button>
-        ))}
-      </div>
-
       {/* All Lists */}
       {lists.length === 0 ? (
         <div className="py-12 px-6 rounded-xl bg-gradient-to-br from-[var(--dusk)] to-[var(--night)] border border-[var(--twilight)] text-center">
@@ -323,17 +283,14 @@ export default function ListsView({ portalId, portalSlug }: ListsViewProps) {
             </svg>
           </div>
           <h3 className="font-serif text-xl text-[var(--cream)] mb-2">
-            {selectedCategory !== "all" ? "Nothing here yet" : "Know something we don't?"}
+            Know something we don&apos;t?
           </h3>
           <p className="text-sm text-[var(--soft)] mb-3 max-w-md mx-auto">
-            {selectedCategory !== "all"
-              ? "Be the first to drop a list in this category."
-              : "Make a list of your favorite spots. The places you'd actually send a friend."}
+            Make a list of your favorite spots. The places you&apos;d actually send a friend.
           </p>
 
           {/* Example categories for inspiration */}
-          {selectedCategory === "all" && (
-            <div className="mb-6 max-w-lg mx-auto">
+          <div className="mb-6 max-w-lg mx-auto">
               <p className="text-xs font-mono text-[var(--muted)] uppercase tracking-wider mb-3">
                 Ideas to get you started
               </p>
@@ -357,7 +314,6 @@ export default function ListsView({ portalId, portalSlug }: ListsViewProps) {
                 ))}
               </div>
             </div>
-          )}
 
           {user ? (
             <button

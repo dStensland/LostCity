@@ -887,6 +887,7 @@ export interface List {
   description: string | null;
   category: ListCategory | null;
   is_public: boolean;
+  allow_contributions: boolean;
   status: "active" | "archived" | "deleted";
   created_at: string;
   updated_at: string;

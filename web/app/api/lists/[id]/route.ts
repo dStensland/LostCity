@@ -175,6 +175,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     if (body.description !== undefined) updates.description = body.description?.trim() || null;
     if (body.category !== undefined) updates.category = body.category;
     if (body.is_public !== undefined) updates.is_public = body.is_public;
+    if (body.allow_contributions !== undefined) updates.allow_contributions = body.allow_contributions;
     if (body.status !== undefined) {
       // Validate status against allowlist
       const VALID_STATUSES = ["active", "archived", "deleted"];

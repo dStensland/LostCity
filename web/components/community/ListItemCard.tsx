@@ -17,6 +17,11 @@ export type ListItem = {
   custom_name: string | null;
   custom_description: string | null;
   note?: string | null;
+  added_by?: string | null;
+  added_by_profile?: {
+    username: string;
+    display_name: string | null;
+  } | null;
   position: number;
   vote_count: number;
   user_vote: "up" | "down" | null;
@@ -240,6 +245,14 @@ export default function ListItemCard({
           {display.subtitle && <span>{display.subtitle}</span>}
           {display.subtitle && display.location && <span className="opacity-40">·</span>}
           {display.location && <span>{display.location}</span>}
+          {item.added_by_profile && (
+            <>
+              {(display.subtitle || display.location) && <span className="opacity-40">·</span>}
+              <span className="text-[var(--soft)]">
+                Added by {item.added_by_profile.display_name || `@${item.added_by_profile.username}`}
+              </span>
+            </>
+          )}
         </div>
 
         {/* Note */}
