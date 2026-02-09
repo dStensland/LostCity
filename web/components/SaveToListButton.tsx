@@ -2,7 +2,9 @@
 
 import { useState, useEffect, useRef, memo, useCallback } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
+import { usePortalSlug } from "@/lib/portal-context";
 import { IconButton } from "./ui/Button";
 
 interface SaveToListButtonProps {
@@ -29,6 +31,8 @@ export const SaveToListButton = memo(function SaveToListButton({
 }: SaveToListButtonProps) {
   // Use AuthContext for auth state - syncs across tabs and components
   const { user } = useAuth();
+  const router = useRouter();
+  const portalSlug = usePortalSlug();
 
   const [isOpen, setIsOpen] = useState(false);
   const [lists, setLists] = useState<UserList[]>([]);
@@ -150,6 +154,9 @@ export const SaveToListButton = memo(function SaveToListButton({
         throw new Error("Failed to add item to list");
       }
 
+      // Find the list we just added to
+      const addedList = lists.find(l => l.id === listId);
+
       // Update local state
       setLists(lists.map(list =>
         list.id === listId
@@ -157,10 +164,11 @@ export const SaveToListButton = memo(function SaveToListButton({
           : list
       ));
 
-      // Close dropdown after a brief delay
-      setTimeout(() => {
-        setIsOpen(false);
-      }, 500);
+      // Navigate back to the list
+      setIsOpen(false);
+      if (addedList) {
+        router.push(`/${portalSlug}/lists/${addedList.slug}`);
+      }
     } catch (err) {
       console.error("Error toggling list item:", err);
       setError("Failed to update list");
