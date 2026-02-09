@@ -62,3 +62,52 @@ htmlcov/
 
 # Private scripts (discovery scrapers, not for public)
 crawlers/scripts/private/
+
+# Scratch/temporary analysis files
+tmp/
+crawlers/tmp/
+web/tmp/
+crawl_assessment*.txt
+crawlers/crawl_assessment*.txt
+
+# Generated reports (timestamped, regenerated frequently)
+crawlers/reports/*.html
+crawlers/reports/crawl_report_*.html
+crawlers/reports/latest.html
+
+# Exported data files
+crawlers/*.csv
+crawlers/february_*.csv
+crawlers/*_holiday_events.csv
+
+# Scratch Python scripts (one-off analysis/debugging)
+crawlers/search_*.py
+crawlers/verify_*.py
+crawlers/investigate_*.py
+crawlers/backfill_*.py
+crawlers/export_*.py
+crawlers/generate_*.py
+crawlers/holiday_*.py
+crawlers/apply_*.py
+
+# One-off SQL migration scripts (not in migrations directory)
+crawlers/*.sql
+crawlers/*_migration.sql
+
+# Generated images and debug assets
+web/generated-images/
+web/public/portals/*/debug-*.jpg
+web/public/portals/*/crown-*.jpg
+web/public/portals/*/build-collage.py
+
+# Auto-generated docs (if applicable)
+web/docs/auto-generated/
+
+# Temporary documentation files
+web/SECURITY_FIXES_*.md
+web/API_OPTIMIZATION_SUMMARY.md
+API_OPTIMIZATION_SUMMARY.md
+HOLIDAY_TAG_EXAMPLES.md
+FEBRUARY_HOLIDAY_TAGGING_REPORT.md
+crawlers/HOLIDAY_TAG_EXAMPLES.md
+crawlers/FEBRUARY_HOLIDAY_TAGGING_REPORT.md

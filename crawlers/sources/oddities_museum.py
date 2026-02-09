@@ -207,6 +207,12 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         logger.debug(f"Could not parse date for: {title}")
                         continue
 
+                    # Skip past events
+                    today = datetime.now().strftime('%Y-%m-%d')
+                    if start_date < today:
+                        logger.debug(f"Skipping past event: {title[:40]} on {start_date}")
+                        continue
+
                     events_found += 1
 
                     start_time = parse_time(start_time_text)
