@@ -83,7 +83,7 @@ export async function GET(request: NextRequest) {
       query = query.overlaps("vibes", vibes);
     }
 
-    query = query.order("name");
+    query = query.order("name").limit(5000);
 
     const { data: venues, error: venuesError } = await query;
 
@@ -111,7 +111,7 @@ export async function GET(request: NextRequest) {
       eventsQuery = eventsQuery.or(`portal_id.eq.${portalId},portal_id.is.null`);
     }
 
-    const { data: events } = await eventsQuery;
+    const { data: events } = await eventsQuery.limit(10000);
 
     // Count events per venue
     const eventCounts = new Map<number, number>();
