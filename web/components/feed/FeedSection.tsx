@@ -197,6 +197,12 @@ const THEMED_SECTION_ICONS: Record<string, { icon: React.ReactNode; color: strin
       <Image src="/icons/valentines-heart.png" alt="" width={32} height={32} className="w-full h-full object-cover" />
     ),
   },
+  "friday-the-13th": {
+    color: "#00ff41",
+    icon: (
+      <span className="text-3xl leading-none select-none">🔪</span>
+    ),
+  },
   "lunar-new-year": {
     color: "#DC143C", // Crimson red
     icon: (
@@ -226,10 +232,39 @@ const THEMED_SECTION_ICONS: Record<string, { icon: React.ReactNode; color: strin
   },
 };
 
+// Holiday card styling - gradient backgrounds and glow effects
+const HOLIDAY_CARD_STYLES: Record<string, { gradient: string; glowColor: string; subtitle: string }> = {
+  "valentines-day": {
+    gradient: "linear-gradient(135deg, #1a0a1e 0%, #2d0a2e 30%, #1e0a28 60%, #0f0a1a 100%)",
+    glowColor: "#ff4da6",
+    subtitle: "The heart has reasons that reason cannot know",
+  },
+  "friday-the-13th": {
+    gradient: "linear-gradient(135deg, #050a05 0%, #0a1a0a 30%, #051005 60%, #030a03 100%)",
+    glowColor: "#00ff41",
+    subtitle: "Embrace the unlucky",
+  },
+  "mardi-gras": {
+    gradient: "linear-gradient(135deg, #0d0520 0%, #1a0a35 30%, #15082a 60%, #0d0520 100%)",
+    glowColor: "#9b59b6",
+    subtitle: "Laissez les bons temps rouler",
+  },
+  "lunar-new-year": {
+    gradient: "linear-gradient(135deg, #1a0505 0%, #350a0a 30%, #2a0808 60%, #1a0303 100%)",
+    glowColor: "#cc0000",
+    subtitle: "Year of the Horse",
+  },
+  "black-history-month": {
+    gradient: "linear-gradient(135deg, #0a0a05 0%, #1a1508 30%, #0f0d05 60%, #0a0a05 100%)",
+    glowColor: "#c8960e",
+    subtitle: "Honoring Black culture, art & community",
+  },
+};
+
 // Export themed slugs for holiday grouping
 export const THEMED_SLUGS = Object.keys(THEMED_SECTION_ICONS);
 
-// Holiday grid - renders holiday sections as horizontal cards
+// Holiday grid - renders holiday sections as horizontal cards with rich styling
 export function HolidayGrid({ sections, portalSlug }: { sections: FeedSectionData[]; portalSlug: string }) {
   if (sections.length === 0) return null;
 
@@ -246,8 +281,9 @@ export function HolidayGrid({ sections, portalSlug }: { sections: FeedSectionDat
       <div className="space-y-2">
         {sections.map((section) => {
           const themed = THEMED_SECTION_ICONS[section.slug];
+          const cardStyle = HOLIDAY_CARD_STYLES[section.slug];
           const accentColor = themed?.color || "var(--coral)";
-          const accent = createCssVarClass("--accent-color", accentColor, "accent");
+          const glowColor = cardStyle?.glowColor || accentColor;
           const tag = section.auto_filter?.tags?.[0];
           const filterUrl = tag
             ? `/${portalSlug}?tags=${tag}&view=find`
@@ -255,51 +291,62 @@ export function HolidayGrid({ sections, portalSlug }: { sections: FeedSectionDat
           const eventCount = section.events.length;
 
           return (
-            <Fragment key={section.id}>
-              <ScopedStyles css={accent?.css} />
-              <Link
-                href={filterUrl}
-                data-accent
-                className={`flex items-center gap-4 px-4 py-3 rounded-xl border border-[var(--twilight)] hover:border-opacity-60 transition-all group bg-[var(--card-bg)] border-l-[3px] border-l-[var(--accent-color)] ${accent?.className ?? ""}`}
-              >
-                {/* Large icon on left */}
-                {themed?.icon && (
-                  <div
-                    className="w-16 h-16 flex-shrink-0 rounded-xl flex items-center justify-center overflow-hidden bg-accent-15"
-                    style={themed.iconBg ? { backgroundColor: themed.iconBg } : undefined}
-                  >
-                    <div className="w-16 h-16 text-accent">
-                      {themed.icon}
-                    </div>
-                  </div>
-                )}
+            <Link
+              key={section.id}
+              href={filterUrl}
+              className="block relative rounded-2xl overflow-hidden group"
+              style={{ background: cardStyle?.gradient || "var(--card-bg)" }}
+            >
+              {/* Glow accents */}
+              <div
+                className="absolute inset-0 opacity-20 pointer-events-none"
+                style={{
+                  background: `radial-gradient(ellipse at 20% 50%, ${glowColor}40 0%, transparent 60%),
+                               radial-gradient(ellipse at 80% 80%, ${glowColor}20 0%, transparent 50%)`,
+                }}
+              />
 
-                {/* Title */}
+              <div className="relative flex items-center gap-4 px-5 py-4">
+                {/* Icon with glow */}
+                <div
+                  className="w-14 h-14 flex-shrink-0 rounded-xl flex items-center justify-center overflow-hidden"
+                  style={{
+                    backgroundColor: `color-mix(in srgb, ${glowColor} 12%, transparent)`,
+                    boxShadow: `0 0 20px ${glowColor}15`,
+                  }}
+                >
+                  <div className="w-14 h-14 flex items-center justify-center">
+                    {themed?.icon}
+                  </div>
+                </div>
+
+                {/* Content */}
                 <div className="flex-1 min-w-0">
-                  <h4 className="font-semibold text-base text-[var(--cream)] group-hover:text-[var(--coral)] transition-colors truncate">
+                  <h4 className="font-semibold text-base text-[var(--cream)] group-hover:text-white transition-colors truncate">
                     {section.title}
                   </h4>
-                  {section.description && (
-                    <p className="text-xs text-[var(--muted)] mt-0.5 truncate">{section.description}</p>
+                  {cardStyle?.subtitle && (
+                    <p className="text-xs text-[var(--soft)] mt-0.5 italic truncate">{cardStyle.subtitle}</p>
                   )}
                 </div>
 
-                {/* Event count + arrow CTA */}
+                {/* Event count + arrow */}
                 <div className="flex items-center gap-2 flex-shrink-0">
-                  <span className="font-mono text-sm font-medium px-2 py-0.5 rounded-full text-accent bg-accent-15">
+                  <span
+                    className="font-mono text-sm font-medium px-2 py-0.5 rounded-full"
+                    style={{
+                      color: accentColor,
+                      backgroundColor: `color-mix(in srgb, ${glowColor} 15%, transparent)`,
+                    }}
+                  >
                     {eventCount}
                   </span>
-                  <svg
-                    className="w-5 h-5 text-[var(--muted)] group-hover:text-[var(--coral)] transition-colors"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
+                  <svg className="w-5 h-5 text-[var(--muted)] group-hover:text-[var(--cream)] transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                   </svg>
                 </div>
-              </Link>
-            </Fragment>
+              </div>
+            </Link>
           );
         })}
       </div>

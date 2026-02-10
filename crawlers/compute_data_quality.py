@@ -75,7 +75,7 @@ FESTIVAL_WEIGHTS = {
     "description": 20,
     "website": 10,
     "image_url": 20,
-    "announced_start": 15,
+    "date_confidence": 15,
     "neighborhood": 8,
     "organization_id": 10,
     "categories": 7,
@@ -101,6 +101,11 @@ def score_record(record: dict, weights: Dict[str, int]) -> int:
     score = 0
     for field, points in weights.items():
         value = record.get(field)
+        # date_confidence: only award points when >= 70 (verified dates)
+        if field == "date_confidence":
+            if isinstance(value, (int, float)) and value >= 70:
+                score += points
+            continue
         if value is not None and value != "" and value != [] and value != {}:
             # For boolean fields, True counts as filled
             if isinstance(value, bool):

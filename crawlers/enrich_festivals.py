@@ -31,6 +31,7 @@ load_dotenv(env_path)
 sys.path.insert(0, str(Path(__file__).parent))
 
 from db import get_client
+from festival_date_confidence import classify_url, compute_confidence, should_update
 from pipeline.fetch import fetch_html
 from pipeline.detail_enrich import enrich_from_detail
 from pipeline.models import DetailConfig, FetchConfig
@@ -88,12 +89,13 @@ def _safe_date(year: int, month: int, day: int) -> Optional[str]:
         return None
 
 
-def extract_festival_dates(html: str, default_year: int = 2026) -> tuple[Optional[str], Optional[str]]:
+def extract_festival_dates(html: str, default_year: int = 2026) -> tuple[Optional[str], Optional[str], str]:
     """
     Extract start/end dates from festival HTML.
 
-    Tries JSON-LD startDate/endDate first, then regex on visible text.
-    Returns (start_date, end_date) in YYYY-MM-DD format or (None, None).
+    Tries JSON-LD startDate/endDate first, then <time>/<meta>, then regex.
+    Returns (start_date, end_date, method) where method is one of:
+    'jsonld', 'time', 'meta', 'regex-cross', 'regex-range', 'regex-single', or ''.
     """
     from bs4 import BeautifulSoup
     import json
@@ -114,24 +116,26 @@ def extract_festival_dates(html: str, default_year: int = 2026) -> tuple[Optiona
                     start_str = str(start)[:10]
                     end_str = str(end)[:10] if end else start_str
                     if re.match(r"\d{4}-\d{2}-\d{2}", start_str):
-                        return start_str, end_str if re.match(r"\d{4}-\d{2}-\d{2}", end_str) else start_str
+                        valid_end = end_str if re.match(r"\d{4}-\d{2}-\d{2}", end_str) else start_str
+                        return start_str, valid_end, "jsonld"
         except (json.JSONDecodeError, TypeError):
             continue
 
-    # 2. <time> / <meta> with datetime
+    # 2. <time> with datetime
     for tag in soup.find_all("time"):
         dt = tag.get("datetime")
         if dt and len(dt) >= 10 and re.match(r"\d{4}-\d{2}-\d{2}", dt):
-            return dt[:10], dt[:10]
+            return dt[:10], dt[:10], "time"
 
+    # 3. <meta> with date content
     for meta in soup.find_all("meta"):
         prop = meta.get("property", "") or meta.get("name", "")
         if "date" in prop.lower() and meta.get("content"):
             content = meta["content"].strip()
             if len(content) >= 10 and re.match(r"\d{4}-\d{2}-\d{2}", content):
-                return content[:10], content[:10]
+                return content[:10], content[:10], "meta"
 
-    # 3. Regex on page text
+    # 4. Regex on page text
     text = soup.get_text(" ", strip=True)
 
     # Cross-month first (more specific)
@@ -146,7 +150,7 @@ def extract_festival_dates(html: str, default_year: int = 2026) -> tuple[Optiona
             start = _safe_date(year, m1, d1)
             end = _safe_date(year, m2, d2)
             if start and end:
-                return start, end
+                return start, end, "regex-cross"
 
     # Same month range
     m = SAME_MONTH_RE.search(text)
@@ -159,7 +163,7 @@ def extract_festival_dates(html: str, default_year: int = 2026) -> tuple[Optiona
             start = _safe_date(year, month, d1)
             end = _safe_date(year, month, d2)
             if start and end:
-                return start, end
+                return start, end, "regex-range"
 
     # Single date
     m = SINGLE_DATE_RE.search(text)
@@ -170,9 +174,9 @@ def extract_festival_dates(html: str, default_year: int = 2026) -> tuple[Optiona
         if month:
             d = _safe_date(year, month, day)
             if d:
-                return d, d
+                return d, d, "regex-single"
 
-    return None, None
+    return None, None, ""
 
 
 # ---------------------------------------------------------------------------
@@ -190,7 +194,7 @@ def enrich_festivals(
     # Query all festivals with websites
     query = (
         client.table("festivals")
-        .select("id,slug,name,website,image_url,ticket_url,announced_start,announced_end")
+        .select("id,slug,name,website,image_url,ticket_url,announced_start,announced_end,typical_month,date_confidence,date_source,pending_start,pending_end")
         .not_.is_("website", "null")
     )
     if slug:
@@ -252,8 +256,8 @@ def enrich_festivals(
         # Run extraction stack
         enriched = enrich_from_detail(html, website, f["slug"], detail_cfg)
 
-        # Extract dates separately
-        start_date, end_date = extract_festival_dates(html)
+        # Extract dates separately (now returns method too)
+        start_date, end_date, method = extract_festival_dates(html)
 
         # Build update dict — only fill NULL fields (unless --force)
         updates: dict = {}
@@ -277,13 +281,41 @@ def enrich_festivals(
         else:
             markers.append("ticket \u2717")
 
-        # Dates
-        if start_date and (force or not f.get("announced_start")):
-            updates["announced_start"] = start_date
-            if end_date:
-                updates["announced_end"] = end_date
-            markers.append("dates \u2713")
-            stats["dates"] += 1
+        # Dates — confidence-based staging
+        if start_date and method:
+            url_type = classify_url(website, f["slug"])
+            extracted_month = int(start_date[5:7])
+            typical_month = f.get("typical_month")
+            confidence = compute_confidence(method, url_type, typical_month, extracted_month)
+
+            existing_source = f.get("date_source")
+            existing_confidence = f.get("date_confidence")
+
+            if should_update(existing_source, existing_confidence, method, confidence):
+                updates["date_confidence"] = confidence
+                updates["date_source"] = method
+
+                # High confidence + month match → promote to announced
+                months_ok = True
+                if typical_month and extracted_month:
+                    diff = abs(typical_month - extracted_month)
+                    if diff > 6:
+                        diff = 12 - diff
+                    months_ok = diff <= 1
+
+                if confidence >= 70 and months_ok:
+                    updates["announced_start"] = start_date
+                    if end_date:
+                        updates["announced_end"] = end_date
+                    markers.append(f"dates \u2713 ({method} c={confidence})")
+                else:
+                    updates["pending_start"] = start_date
+                    if end_date:
+                        updates["pending_end"] = end_date
+                    markers.append(f"dates pending ({method} c={confidence} {url_type})")
+                stats["dates"] += 1
+            else:
+                markers.append(f"dates skip (existing {existing_source} c={existing_confidence})")
         else:
             markers.append("dates \u2717")
 

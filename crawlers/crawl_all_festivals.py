@@ -50,13 +50,28 @@ def _ensure_source_record(festival: dict) -> Optional[dict]:
     if not website:
         return None
 
+    # Check for URL overlap with existing active sources (dupe prevention)
+    existing = (
+        client.table("sources")
+        .select("id,slug,name")
+        .eq("url", website)
+        .execute()
+    )
+    if existing.data:
+        existing_slug = existing.data[0]["slug"]
+        logger.warning(
+            f"  SKIP source creation for {festival['slug']} — "
+            f"URL already used by source '{existing_slug}'"
+        )
+        return None
+
     # Auto-create a minimal source record
     source_data = {
         "slug": festival["slug"],
         "name": festival["name"],
         "url": website,
         "source_type": "website",
-        "crawl_method": "llm",
+        "integration_method": "llm",
         "is_active": False,  # Don't auto-run in regular pipeline
     }
     try:

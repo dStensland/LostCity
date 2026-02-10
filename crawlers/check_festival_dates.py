@@ -33,6 +33,7 @@ load_dotenv(env_path)
 
 sys.path.insert(0, str(Path(__file__).parent))
 from db import get_client
+from festival_date_confidence import classify_url, compute_confidence, should_update
 
 logging.basicConfig(level=logging.INFO, format="%(message)s")
 logger = logging.getLogger(__name__)
@@ -173,18 +174,30 @@ def check_festival_dates(
     dry_run: bool = False,
     month_range: Optional[tuple[int, int]] = None,
     soon_only: bool = False,
+    promote_pending: bool = False,
 ):
     client = get_client()
 
-    # Get festivals missing announced_start that have websites
-    result = (
-        client.table("festivals")
-        .select("id,slug,name,website,typical_month,announced_start")
-        .is_("announced_start", "null")
-        .not_.is_("website", "null")
-        .order("typical_month")
-        .execute()
-    )
+    if promote_pending:
+        # Review pending_start rows: re-fetch and try to promote
+        result = (
+            client.table("festivals")
+            .select("id,slug,name,website,typical_month,announced_start,pending_start,pending_end,date_confidence,date_source")
+            .not_.is_("pending_start", "null")
+            .not_.is_("website", "null")
+            .order("typical_month")
+            .execute()
+        )
+    else:
+        # Get festivals missing announced_start that have websites
+        result = (
+            client.table("festivals")
+            .select("id,slug,name,website,typical_month,announced_start,date_confidence,date_source")
+            .is_("announced_start", "null")
+            .not_.is_("website", "null")
+            .order("typical_month")
+            .execute()
+        )
     festivals = result.data or []
 
     # Filter by month range
@@ -212,18 +225,22 @@ def check_festival_dates(
         logger.info("No festivals to check.")
         return
 
-    logger.info(f"Festival Date Checker")
+    mode_label = "PROMOTE PENDING" if promote_pending else "CHECK MISSING"
+    logger.info(f"Festival Date Checker — {mode_label}")
     logger.info(f"{'=' * 70}")
     logger.info(f"Checking {len(festivals)} festivals | Mode: {'DRY RUN' if dry_run else 'LIVE'}")
     logger.info(f"{'=' * 70}\n")
 
     found_count = 0
+    promoted_count = 0
+    pending_count = 0
     failed_count = 0
 
     for i, f in enumerate(festivals, 1):
         name = f["name"]
         website = f["website"]
-        month = f.get("typical_month") or "?"
+        typical_month = f.get("typical_month")
+        month = typical_month or "?"
         prefix = f"[{i:3d}/{len(festivals)}] {name[:40]:<40} (mo={month})"
 
         try:
@@ -237,22 +254,63 @@ def check_festival_dates(
 
         start, end, method = extract_dates_from_html(html)
 
-        if start:
+        if start and method:
             found_count += 1
-            logger.info(f"{prefix}  FOUND: {start} to {end}  ({method})")
+            url_type = classify_url(website, f["slug"])
+            extracted_month = int(start[5:7])
+            confidence = compute_confidence(method, url_type, typical_month, extracted_month)
 
-            if not dry_run:
-                updates = {"announced_start": start}
-                if end:
-                    updates["announced_end"] = end
-                client.table("festivals").update(updates).eq("id", f["id"]).execute()
+            existing_source = f.get("date_source")
+            existing_confidence = f.get("date_confidence")
+
+            if not should_update(existing_source, existing_confidence, method, confidence):
+                logger.info(f"{prefix}  SKIP (existing {existing_source} c={existing_confidence})")
+                time.sleep(0.5)
+                continue
+
+            # Check month match for promotion decision
+            months_ok = True
+            if typical_month and extracted_month:
+                diff = abs(typical_month - extracted_month)
+                if diff > 6:
+                    diff = 12 - diff
+                months_ok = diff <= 1
+
+            if confidence >= 70 and months_ok:
+                promoted_count += 1
+                logger.info(f"{prefix}  PROMOTED: {start} to {end}  ({method} c={confidence})")
+                if not dry_run:
+                    updates = {
+                        "announced_start": start,
+                        "date_confidence": confidence,
+                        "date_source": method,
+                    }
+                    if end:
+                        updates["announced_end"] = end
+                    # Clear pending if promoting
+                    if promote_pending:
+                        updates["pending_start"] = None
+                        updates["pending_end"] = None
+                    client.table("festivals").update(updates).eq("id", f["id"]).execute()
+            else:
+                pending_count += 1
+                logger.info(f"{prefix}  PENDING: {start} to {end}  ({method} c={confidence} {url_type})")
+                if not dry_run:
+                    updates = {
+                        "pending_start": start,
+                        "date_confidence": confidence,
+                        "date_source": method,
+                    }
+                    if end:
+                        updates["pending_end"] = end
+                    client.table("festivals").update(updates).eq("id", f["id"]).execute()
         else:
             logger.info(f"{prefix}  --")
 
         time.sleep(0.5)
 
     logger.info(f"\n{'=' * 70}")
-    logger.info(f"Checked: {len(festivals)} | Found dates: {found_count} | Failed: {failed_count}")
+    logger.info(f"Checked: {len(festivals)} | Found: {found_count} | Promoted: {promoted_count} | Pending: {pending_count} | Failed: {failed_count}")
     if dry_run:
         logger.info("DRY RUN — no changes written")
 
@@ -262,6 +320,7 @@ def main():
     parser.add_argument("--dry-run", action="store_true", help="Preview without writing")
     parser.add_argument("--months", type=str, help="Month range, e.g. '1-4' for Jan-Apr")
     parser.add_argument("--soon", action="store_true", help="Only check festivals within 3 months")
+    parser.add_argument("--promote-pending", action="store_true", help="Re-check pending_start rows and promote if confidence improves")
     args = parser.parse_args()
 
     month_range = None
@@ -273,6 +332,7 @@ def main():
         dry_run=args.dry_run,
         month_range=month_range,
         soon_only=args.soon,
+        promote_pending=args.promote_pending,
     )
 
 

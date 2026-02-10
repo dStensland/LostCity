@@ -27,6 +27,19 @@ interface HolidayConfig {
 // Holiday configs — first match wins, order by specificity
 const HOLIDAYS: HolidayConfig[] = [
   {
+    slug: "friday-the-13th",
+    tag: "friday-13",
+    title: "Friday the 13th",
+    subtitle: "Embrace the unlucky",
+    gradient: "linear-gradient(135deg, #050a05 0%, #0a1a0a 30%, #051005 60%, #030a03 100%)",
+    accentColor: "#00ff41",
+    glowColor: "#00ff41",
+    icon: "🔪",
+    showFrom: [2, 10],
+    showUntil: [2, 13],
+    eventDate: [2026, 2, 13],
+  },
+  {
     slug: "valentines-day",
     tag: "valentines",
     title: "Valentine's Day",

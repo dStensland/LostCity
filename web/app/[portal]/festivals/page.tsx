@@ -125,12 +125,6 @@ export default async function FestivalsIndexPage({ params, searchParams }: Props
     );
   }
 
-  // Pick featured: first upcoming with image
-  const featured = upcoming.find((f) => f.image_url);
-  const upcomingGrid = featured
-    ? upcoming.filter((f) => f.id !== featured.id)
-    : upcoming;
-
   return (
     <>
       <div className="min-h-screen">
@@ -181,48 +175,14 @@ export default async function FestivalsIndexPage({ params, searchParams }: Props
             </div>
           )}
 
-          {/* Featured hero */}
-          {featured && (
-            <Link
-              href={`/${activePortalSlug}/festivals/${featured.slug}`}
-              className="block relative rounded-2xl overflow-hidden group"
-            >
-              <div className="relative h-[240px] sm:h-[300px] w-full">
-                <Image
-                  src={featured.image_url!}
-                  alt={featured.name}
-                  fill
-                  className="object-cover transition-transform duration-500 group-hover:scale-105"
-                  sizes="(max-width: 768px) 100vw, 900px"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
-              </div>
-              <div className="absolute bottom-0 left-0 right-0 p-5 sm:p-6">
-                <FestivalCountdownBadge festival={featured} today={today} />
-                <h3 className="text-2xl sm:text-3xl font-bold text-[var(--cream)] mt-2 leading-tight">
-                  {featured.name}
-                </h3>
-                <p className="text-sm font-mono text-[var(--soft)] mt-1">
-                  {formatFestivalDates(featured)}
-                </p>
-                {featured.location && (
-                  <p className="text-xs text-[var(--muted)] mt-0.5">{featured.location}</p>
-                )}
-              </div>
-              <span className="absolute top-4 left-4 px-2.5 py-1 rounded text-[0.65rem] font-mono uppercase tracking-wider bg-accent/20 text-accent border border-accent/30 backdrop-blur-sm">
-                Featured
-              </span>
-            </Link>
-          )}
-
           {/* Upcoming grid */}
-          {upcomingGrid.length > 0 && (
+          {upcoming.length > 0 && (
             <section>
               <h2 className="text-lg font-semibold text-[var(--cream)] mb-4">
-                {featured ? "More Upcoming" : "Upcoming & Ongoing"}
+                Upcoming & Ongoing
               </h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {upcomingGrid.map((festival) => (
+                {upcoming.map((festival) => (
                   <FestivalCard
                     key={festival.id}
                     festival={festival}

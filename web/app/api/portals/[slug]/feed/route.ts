@@ -574,6 +574,39 @@ export async function GET(request: NextRequest, { params }: Props) {
     (currentMonth === 3 && currentDay <= 5); // Early March for Mardi Gras
 
   if (showHolidaySections) {
+    // Friday the 13th section (Feb 10-13)
+    if (currentMonth === 2 && currentDay >= 10 && currentDay <= 13) {
+      holidaySections.push({
+        id: `friday-the-13th-${currentYear}`,
+        title: "Friday the 13th",
+        slug: "friday-the-13th",
+        description: "Embrace the unlucky",
+        section_type: "auto",
+        block_type: "collapsible_events",
+        layout: "grid",
+        items_per_row: 2,
+        max_items: 20,
+        auto_filter: {
+          tags: ["friday-13"],
+          date_filter: "next_7_days",
+          sort_by: "date",
+        },
+        block_content: null,
+        display_order: -8,
+        is_visible: true,
+        schedule_start: null,
+        schedule_end: null,
+        show_on_days: null,
+        show_after_time: null,
+        show_before_time: null,
+        style: {
+          accent_color: "#00ff41", // Matrix green
+          icon: "knife",
+        },
+        portal_section_items: [],
+      });
+    }
+
     // Valentine's Day section (Jan 20 - Feb 16)
     if ((currentMonth === 1 && currentDay >= 20) || (currentMonth === 2 && currentDay <= 16)) {
       holidaySections.push({
@@ -602,6 +635,39 @@ export async function GET(request: NextRequest, { params }: Props) {
         style: {
           accent_color: "#FF69B4", // Neon pink
           icon: "anatomical-heart",
+        },
+        portal_section_items: [],
+      });
+    }
+
+    // Mardi Gras section (Feb 12-18 for Fat Tuesday Feb 17, 2026)
+    if (currentMonth === 2 && currentDay >= 12 && currentDay <= 18) {
+      holidaySections.push({
+        id: `mardi-gras-${currentYear}`,
+        title: "Mardi Gras",
+        slug: "mardi-gras",
+        description: "Laissez les bons temps rouler",
+        section_type: "auto",
+        block_type: "collapsible_events",
+        layout: "grid",
+        items_per_row: 2,
+        max_items: 20,
+        auto_filter: {
+          tags: ["mardi-gras"],
+          date_filter: "next_7_days",
+          sort_by: "date",
+        },
+        block_content: null,
+        display_order: -3,
+        is_visible: true,
+        schedule_start: null,
+        schedule_end: null,
+        show_on_days: null,
+        show_after_time: null,
+        show_before_time: null,
+        style: {
+          accent_color: "#9b59b6", // Purple
+          icon: "fleur-de-lis",
         },
         portal_section_items: [],
       });
