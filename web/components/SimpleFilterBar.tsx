@@ -6,6 +6,7 @@ import { CATEGORIES } from "@/lib/search-constants";
 import CategoryIcon from "./CategoryIcon";
 import { useAuth } from "@/lib/auth-context";
 import { MobileFilterSheet } from "./MobileFilterSheet";
+import { formatGenre } from "@/lib/series-utils";
 
 // Group categories into logical sections
 const CATEGORY_GROUPS = {
@@ -69,9 +70,16 @@ export default function SimpleFilterBar({ variant = "full" }: SimpleFilterBarPro
     }
   }, [urlView, optimisticView]);
 
+  // Genre pills state
+  const [genreOptions, setGenreOptions] = useState<{ genre: string; display_order: number | null; is_format: boolean | null }[]>([]);
+
   // Current filter values
   const currentCategories = useMemo(
     () => searchParams.get("categories")?.split(",").filter(Boolean) || [],
+    [searchParams]
+  );
+  const currentGenres = useMemo(
+    () => searchParams.get("genres")?.split(",").filter(Boolean) || [],
     [searchParams]
   );
   const currentDateFilter = searchParams.get("date") || "";
@@ -142,6 +150,41 @@ export default function SimpleFilterBar({ variant = "full" }: SimpleFilterBarPro
     [router, pathname, searchParams, startTransition]
   );
 
+  // Fetch genre options when exactly 1 category is selected
+  const prevCategoriesRef = useRef<string[]>([]);
+  useEffect(() => {
+    const prevCategories = prevCategoriesRef.current;
+    prevCategoriesRef.current = currentCategories;
+
+    if (currentCategories.length === 1) {
+      const category = currentCategories[0];
+      fetch(`/api/genres?category=${encodeURIComponent(category)}`)
+        .then((res) => res.json())
+        .then((data) => {
+          setGenreOptions(data.genres || []);
+        })
+        .catch(() => setGenreOptions([]));
+    } else {
+      setGenreOptions([]);
+      // Clear genres param when category changes away from single selection
+      if (prevCategories.length === 1 && currentGenres.length > 0) {
+        updateParams({ genres: null });
+      }
+    }
+  }, [currentCategories]); // eslint-disable-line react-hooks/exhaustive-deps -- only re-run on category change
+
+  const toggleGenre = useCallback(
+    (genre: string) => {
+      const newGenres = currentGenres.includes(genre)
+        ? currentGenres.filter((g) => g !== genre)
+        : [...currentGenres, genre];
+      updateParams({
+        genres: newGenres.length > 0 ? newGenres.join(",") : null,
+      });
+    },
+    [currentGenres, updateParams]
+  );
+
   const toggleCategory = useCallback(
     (category: string) => {
       const newCategories = currentCategories.includes(category)
@@ -188,11 +231,12 @@ export default function SimpleFilterBar({ variant = "full" }: SimpleFilterBarPro
     [updateParams]
   );
 
-  const hasFilters = currentCategories.length > 0 || currentDateFilter || currentFreeOnly || currentFeedMode !== "all";
+  const hasFilters = currentCategories.length > 0 || currentGenres.length > 0 || currentDateFilter || currentFreeOnly || currentFeedMode !== "all";
 
   const clearAll = useCallback(() => {
     updateParams({
       categories: null,
+      genres: null,
       date: null,
       free: null,
       price: null,
@@ -597,6 +641,58 @@ export default function SimpleFilterBar({ variant = "full" }: SimpleFilterBarPro
           </div>
         </div>
       </div>
+
+      {/* Genre pills row — shows when exactly 1 category is selected */}
+      {genreOptions.length > 0 && (
+        <div className="hidden sm:block sticky top-[calc(3.5rem+2.75rem)] z-39 bg-[var(--night)]/95 backdrop-blur-sm border-b border-[var(--twilight)]/50">
+          <div className="max-w-5xl mx-auto px-4 py-1.5">
+            <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide">
+              <span className="flex-shrink-0 text-[0.6rem] font-mono uppercase tracking-wider text-[var(--muted)] mr-1">Genre</span>
+              {genreOptions.map((opt) => {
+                const isActive = currentGenres.includes(opt.genre);
+                return (
+                  <button
+                    key={opt.genre}
+                    onClick={() => toggleGenre(opt.genre)}
+                    className={`flex-shrink-0 px-2.5 py-1 rounded-full font-mono text-xs font-medium transition-all border ${
+                      isActive
+                        ? "bg-[var(--coral)] text-[var(--void)] border-[var(--coral)]/40 shadow-sm"
+                        : "bg-[var(--dusk)]/80 text-[var(--cream)]/70 border-[var(--twilight)]/60 hover:text-[var(--cream)] hover:border-[var(--coral)]/30"
+                    }`}
+                  >
+                    {formatGenre(opt.genre)}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Genre pills — mobile horizontal scroll */}
+      {genreOptions.length > 0 && (
+        <div className="sm:hidden bg-[var(--night)] border-b border-[var(--twilight)]/50">
+          <div className="flex items-center gap-2 overflow-x-auto px-4 py-1.5 scrollbar-hide">
+            <span className="flex-shrink-0 text-[0.6rem] font-mono uppercase tracking-wider text-[var(--muted)]">Genre</span>
+            {genreOptions.map((opt) => {
+              const isActive = currentGenres.includes(opt.genre);
+              return (
+                <button
+                  key={opt.genre}
+                  onClick={() => toggleGenre(opt.genre)}
+                  className={`flex-shrink-0 min-h-[36px] px-3 py-1.5 rounded-full font-mono text-xs font-medium transition-all ${
+                    isActive
+                      ? "bg-[var(--coral)] text-[var(--void)]"
+                      : "bg-[var(--twilight)] text-[var(--cream)]"
+                  }`}
+                >
+                  {formatGenre(opt.genre)}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Mobile view (< 640px) - Horizontal scrolling pills (NOT sticky to maximize content area) */}
       <div className="sm:hidden bg-[var(--night)] border-b border-[var(--twilight)]">

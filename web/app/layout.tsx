@@ -50,7 +50,7 @@ export default async function RootLayout({
   const nonce = (await headers()).get("x-nonce") ?? "";
 
   return (
-    <html lang="en">
+    <html lang="en" style={{ backgroundColor: "#09090B" }}>
       <head>
         <meta name="csp-nonce" content={nonce} />
         {/* Preconnect to external domains for faster resource loading */}

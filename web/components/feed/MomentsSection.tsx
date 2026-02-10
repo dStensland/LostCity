@@ -49,7 +49,7 @@ export default function MomentsSection({ portalSlug }: MomentsSectionProps) {
       {imminent.length > 0 && (
         <div>
           <FeedSectionHeader
-            title="Festivals and Conventions"
+            title="Upcoming Festivals and Conventions"
             priority="tertiary"
             accentColor="var(--neon-cyan)"
             seeAllHref={`/${portalSlug}/festivals`}

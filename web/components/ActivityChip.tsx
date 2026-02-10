@@ -3,10 +3,11 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { getCategoryColor } from "./CategoryIcon";
+import { formatGenre } from "@/lib/series-utils";
 
 export interface ActivityChipProps {
   label: string;
-  type: "subcategory" | "tag" | "category";
+  type: "tag" | "category";
   value: string;
   count?: number;
   portalSlug?: string;
@@ -32,7 +33,7 @@ export function getActivityColor(iconType: string): string {
 
 // Build URL for activity filter
 function buildActivityUrl(
-  type: "subcategory" | "tag" | "category",
+  type: "tag" | "category",
   value: string,
   portalSlug?: string,
   existingParams?: URLSearchParams
@@ -40,14 +41,11 @@ function buildActivityUrl(
   const params = new URLSearchParams(existingParams?.toString() || "");
 
   // Clear any existing activity filters to avoid conflicts
-  params.delete("subcategories");
   params.delete("tags");
   params.delete("categories");
 
   // Set the appropriate filter (use plural param names to match convention)
-  if (type === "subcategory") {
-    params.set("subcategories", value);
-  } else if (type === "tag") {
+  if (type === "tag") {
     params.set("tags", value);
   } else if (type === "category") {
     params.set("categories", value);
@@ -76,9 +74,7 @@ export default function ActivityChip({
 
   // Check if this chip is currently active
   const isActive = selected || (() => {
-    if (type === "subcategory") {
-      return searchParams.get("subcategories")?.split(",").includes(value);
-    } else if (type === "tag") {
+    if (type === "tag") {
       return searchParams.get("tags")?.split(",").includes(value);
     } else if (type === "category") {
       return searchParams.get("categories")?.split(",").includes(value);
@@ -140,18 +136,25 @@ export default function ActivityChip({
   );
 }
 
-// Compact version for inline use (e.g., on EventCard — uses button to avoid nested <a> inside card links)
-export function SubcategoryChip({
-  label,
-  value,
+
+// Compact genre chip for inline use (e.g., on EventCard — uses button to avoid nested <a> inside card links)
+export function GenreChip({
+  genre,
+  category,
   portalSlug,
 }: {
-  label: string;
-  value: string;
+  genre: string;
+  category?: string | null;
   portalSlug?: string;
 }) {
   const router = useRouter();
-  const href = buildActivityUrl("subcategory", value, portalSlug);
+  const params = new URLSearchParams();
+  params.set("view", "find");
+  params.set("type", "events");
+  if (category) params.set("categories", category);
+  params.set("genres", genre);
+  const basePath = portalSlug ? `/${portalSlug}` : "";
+  const href = `${basePath}?${params.toString()}`;
 
   return (
     <button
@@ -164,86 +167,8 @@ export function SubcategoryChip({
         router.push(href);
       }}
     >
-      {label}
+      {formatGenre(genre)}
     </button>
   );
 }
 
-// Get display label for a subcategory value
-export function getSubcategoryLabel(subcategory: string): string | null {
-  const labels: Record<string, string> = {
-    // Nightlife
-    "nightlife.trivia": "Trivia",
-    "nightlife.dj": "DJ Night",
-    "nightlife.karaoke": "Karaoke",
-    "nightlife.open_mic": "Open Mic",
-    "nightlife.drag": "Drag Show",
-    "nightlife.happy_hour": "Happy Hour",
-    "nightlife.dance_party": "Dance Party",
-    "nightlife.burlesque": "Burlesque",
-    // Comedy
-    "comedy.standup": "Stand-Up",
-    "comedy.improv": "Improv",
-    "comedy.sketch": "Sketch",
-    "comedy.open_mic": "Comedy Open Mic",
-    // Music
-    "music.jazz": "Jazz",
-    "music.electronic": "Electronic",
-    "music.hip_hop": "Hip Hop",
-    "music.rock": "Rock",
-    "music.indie": "Indie",
-    "music.classical": "Classical",
-    "music.country": "Country",
-    "music.r_and_b": "R&B",
-    "music.open_mic": "Open Mic",
-    // Art
-    "art.opening": "Art Opening",
-    "art.gallery": "Gallery",
-    "art.workshop": "Workshop",
-    // Community
-    "community.meetup": "Meetup",
-    "community.networking": "Networking",
-    "community.workshop": "Workshop",
-    // Food & Drink
-    "food_drink.tasting": "Tasting",
-    "food_drink.brunch": "Brunch",
-    "food_drink.dinner": "Dinner",
-    "food_drink.popup": "Pop-Up",
-    // Fitness
-    "fitness.yoga": "Yoga",
-    "fitness.running": "Running",
-    "fitness.cycling": "Cycling",
-    "fitness.dance": "Dance",
-  };
-
-  return labels[subcategory] || null;
-}
-
-// Check if a subcategory should be displayed (adds useful info)
-export function shouldShowSubcategory(subcategory: string | null, category: string | null): boolean {
-  if (!subcategory) return false;
-
-  // Skip generic subcategories that don't add info
-  const skipList = [
-    "music.live", // redundant for music category
-    "nightlife.bar", // too generic
-    "community.general", // too generic
-  ];
-
-  if (skipList.includes(subcategory)) return false;
-
-  // Skip subcategories that are redundant with the category
-  // e.g., don't show "Jazz" for a music event since category already indicates music
-  if (category && subcategory.startsWith(`${category}.`)) {
-    // Only skip if it's just the basic type, not a specific activity
-    const specificPart = subcategory.replace(`${category}.`, "");
-    // Activities like trivia, dj, karaoke are valuable to show
-    const valueAddSubtypes = ["trivia", "dj", "karaoke", "open_mic", "drag", "happy_hour", "standup", "improv"];
-    if (!valueAddSubtypes.includes(specificPart)) {
-      return false;
-    }
-  }
-
-  // Check if we have a display label for it
-  return getSubcategoryLabel(subcategory) !== null;
-}

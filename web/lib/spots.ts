@@ -239,8 +239,10 @@ export async function getOpenSpots(
     return [];
   }
 
-  // Filter to only open spots
+  // Filter to only open spots, excluding address-as-name venues
+  const addressNamePattern = /^\d+\s+[\w\s]+(St|Street|Ave|Avenue|Blvd|Boulevard|Rd|Road|Dr|Drive|Ln|Lane|Way|Ct|Court|Pl|Place|Pkwy|Parkway|Hwy|Highway|Pike|Circle|Trail)\b/i;
   const openSpots = (data || []).filter((spot: Spot & { hours?: HoursData; is_24_hours?: boolean }) => {
+    if (addressNamePattern.test(spot.name)) return false;
     const { isOpen } = isSpotOpen(spot.hours || null, spot.is_24_hours);
     return isOpen;
   });

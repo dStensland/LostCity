@@ -232,7 +232,7 @@ export function groupEventsByDay(sessions: FestivalSession[]): Map<string, Festi
   }
 
   // Sort events within each day by time
-  for (const [_, events] of groups) {
+  for (const events of groups.values()) {
     events.sort((a, b) => {
       return (a.start_time || "").localeCompare(b.start_time || "");
     });

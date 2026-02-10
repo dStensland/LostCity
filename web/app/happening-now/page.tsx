@@ -195,6 +195,7 @@ export default function HappeningNowPage() {
           instagram: null,
           hours_display: null,
           vibes: spot.vibes,
+          genres: null,
           image_url: spot.image_url,
           featured: false,
         } as Spot;

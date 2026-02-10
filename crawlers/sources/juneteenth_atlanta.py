@@ -95,7 +95,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
         "is_all_day": False,
         "category": "community",
         "subcategory": "festival",
-        "tags": ["juneteenth", "music-festival", "parade", "cultural", "piedmont-park", "black-history"],
+        "tags": ["juneteenth", "music-festival", "parade", "cultural", "piedmont-park", "black-history-month"],
         "price_min": None,
         "price_max": None,
         "price_note": "Free admission",

@@ -43,7 +43,7 @@ Findings from comprehensive security, architecture, and performance audits. Crit
 
 **S3. Email addresses logged in plain text** (`web/app/api/find-friends/send-invites/route.ts:131`) — Redact to `email.slice(0,3)***`.
 
-**S4. `img-src` CSP allows all HTTPS** (`web/lib/csp.ts:46`) — Route external images through image proxy, tighten to specific domains.
+**S4. `img-src` CSP allows all HTTPS** (`web/lib/csp.ts`) — Intentional decision. We pull event/venue images from 500+ crawled domains; an allowlist breaks images silently every time a new source is added. The security value of `img-src` restrictions is minimal (no XSS/clickjacking risk from images). Do not tighten — focus CSP hardening on `script-src` and `frame-ancestors` instead.
 
 **S5. Admin users route uses user-session client** (`web/app/api/admin/users/route.ts`) — Should use `createServiceClient()` after `isAdmin()` check.
 
@@ -104,3 +104,39 @@ Findings from comprehensive security, architecture, and performance audits. Crit
 **P11. Portal layout double-fetch** (`web/app/[portal]/layout.tsx`) — Known Next.js limitation. Remove fallback retry logic post-B2B migration.
 
 **P12. Service client singleton persistence** (`web/lib/supabase/service.ts:24`) — Monitor for stale connections.
+
+---
+
+## Crawler & Pipeline Health
+
+Migrated from SYSTEM_HEALTH_ROADMAP.md. Not urgent — the system works. But this is the investment that makes 500+ sources sustainably maintainable. Address after initial sales push.
+
+**Principle**: Every time we touch the database to fix data by hand, ask: "What validation rule or crawler fix would prevent this from happening again?" Then do that instead.
+
+### Crawler-Level Health
+
+**CH1. Zero-event runs silently succeed** — Should warn, not pass silently.
+
+**CH2. No per-source output baselines** — Track events_found over time. Significant drops = site likely changed.
+
+**CH3. No auto-disable for broken crawlers** — Auto-disable after N consecutive failures, surface for repair.
+
+**CH4. Silent garbage production** — Crawler output should fail loudly with clear errors, not silently produce garbage.
+
+### Pipeline-Level Validation
+
+**PV1. Weak pre-insert validation** (`crawlers/db.py`) — Validate date sanity, venue existence, category validity before `insert_event()`, not just title.
+
+**PV2. No rejection logging with attribution** — Log "crawler X produced Y rejected events" as signal to fix crawler.
+
+**PV3. Validation rules not additive** — Every manual data fix should produce a new validation rule preventing that class of error upstream.
+
+### System-Level Monitoring
+
+**SM1. No source health dashboard** — Need: active / degrading / broken / disabled per source.
+
+**SM2. No trend tracking** — events_found, events_new, rejection_rate over time per source.
+
+**SM3. No anomaly alerts** — Source that usually finds 50 events now finds 3 should trigger alert.
+
+**SM4. No weekly digest** — "5 sources degraded, 2 broke, 488 healthy" summary.

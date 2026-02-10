@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import UnifiedHeader from "@/components/UnifiedHeader";
@@ -13,6 +13,10 @@ import {
   PREFERENCE_NEIGHBORHOODS,
   PREFERENCE_VIBES,
   PRICE_PREFERENCES,
+  PREFERENCE_NEEDS_ACCESSIBILITY,
+  PREFERENCE_NEEDS_DIETARY,
+  PREFERENCE_NEEDS_FAMILY,
+  getGenreDisplayLabel,
 } from "@/lib/preferences";
 import { DEFAULT_PORTAL_SLUG } from "@/lib/constants";
 import PageFooter from "@/components/PageFooter";
@@ -24,8 +28,20 @@ type PreferencesClientProps = {
     neighborhoods: string[];
     vibes: string[];
     pricePreference: string;
+    genres: Record<string, string[]>;
+    needsAccessibility: string[];
+    needsDietary: string[];
+    needsFamily: string[];
   };
 };
+
+interface GenreOption {
+  genre: string;
+  display_order: number;
+  is_format: boolean;
+}
+
+const MAX_GENRES_PER_CATEGORY = 10;
 
 export default function PreferencesClient({
   isWelcome,
@@ -38,6 +54,36 @@ export default function PreferencesClient({
   const [selectedNeighborhoods, setSelectedNeighborhoods] = useState<string[]>(initialPreferences.neighborhoods);
   const [selectedVibes, setSelectedVibes] = useState<string[]>(initialPreferences.vibes);
   const [pricePreference, setPricePreference] = useState<string>(initialPreferences.pricePreference);
+  const [selectedGenres, setSelectedGenres] = useState<Record<string, string[]>>(initialPreferences.genres);
+  const [needsAccessibility, setNeedsAccessibility] = useState<string[]>(initialPreferences.needsAccessibility);
+  const [needsDietary, setNeedsDietary] = useState<string[]>(initialPreferences.needsDietary);
+  const [needsFamily, setNeedsFamily] = useState<string[]>(initialPreferences.needsFamily);
+
+  // Genre options fetched from API
+  const [genresByCategory, setGenresByCategory] = useState<Record<string, GenreOption[]>>({});
+  const [genresLoading, setGenresLoading] = useState(false);
+
+  // Fetch genres when categories change
+  const fetchGenres = useCallback(async (categories: string[]) => {
+    if (categories.length === 0) {
+      setGenresByCategory({});
+      return;
+    }
+    setGenresLoading(true);
+    try {
+      const res = await fetch(`/api/genres?categories=${categories.join(",")}`);
+      const data = await res.json();
+      setGenresByCategory(data.genres || {});
+    } catch (err) {
+      console.error("Failed to fetch genres:", err);
+    } finally {
+      setGenresLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchGenres(selectedCategories);
+  }, [selectedCategories, fetchGenres]);
 
   const categoryAccentClasses = Object.fromEntries(
     PREFERENCE_CATEGORIES.map((cat) => [
@@ -82,6 +128,29 @@ export default function PreferencesClient({
     );
   };
 
+  const toggleGenre = (category: string, genre: string) => {
+    setSelectedGenres((prev) => {
+      const current = prev[category] || [];
+      const updated = current.includes(genre)
+        ? current.filter((g) => g !== genre)
+        : [...current, genre];
+      if (updated.length === 0) {
+        const { [category]: _, ...rest } = prev;
+        return rest;
+      }
+      return { ...prev, [category]: updated };
+    });
+  };
+
+  const toggleNeed = (
+    setter: React.Dispatch<React.SetStateAction<string[]>>,
+    value: string
+  ) => {
+    setter((prev) =>
+      prev.includes(value) ? prev.filter((n) => n !== value) : [...prev, value]
+    );
+  };
+
   const handleSave = async () => {
     setSaving(true);
 
@@ -94,6 +163,10 @@ export default function PreferencesClient({
           favorite_neighborhoods: selectedNeighborhoods,
           favorite_vibes: selectedVibes,
           price_preference: pricePreference,
+          favorite_genres: Object.keys(selectedGenres).length > 0 ? selectedGenres : null,
+          needs_accessibility: needsAccessibility,
+          needs_dietary: needsDietary,
+          needs_family: needsFamily,
         }),
       });
 
@@ -104,7 +177,6 @@ export default function PreferencesClient({
         return;
       }
 
-      // Navigate after successful save
       if (isWelcome) {
         router.push("/foryou");
       } else {
@@ -117,6 +189,20 @@ export default function PreferencesClient({
   };
 
   const totalSelected = selectedCategories.length + selectedNeighborhoods.length + selectedVibes.length;
+  const totalGenres = Object.values(selectedGenres).reduce((sum, g) => sum + g.length, 0);
+  const totalNeeds = needsAccessibility.length + needsDietary.length + needsFamily.length;
+
+  // Get category info for genre section headers
+  const getCategoryInfo = (value: string) =>
+    PREFERENCE_CATEGORIES.find((c) => c.value === value);
+
+  // Filter genres: remove formats, cap count
+  const getDisplayGenres = (category: string): GenreOption[] => {
+    const genres = genresByCategory[category] || [];
+    return genres.filter((g) => !g.is_format).slice(0, MAX_GENRES_PER_CATEGORY);
+  };
+
+  const hasNeeds = totalNeeds > 0;
 
   return (
     <div className="min-h-screen">
@@ -151,9 +237,9 @@ export default function PreferencesClient({
             <h1 className="text-2xl sm:text-3xl font-semibold text-[var(--cream)]">
               {isWelcome ? "What are you into?" : "Your Preferences"}
             </h1>
-            {totalSelected > 0 && (
+            {(totalSelected + totalGenres) > 0 && (
               <span className="px-3 py-1 rounded-full bg-[var(--coral)]/20 text-[var(--coral)] font-mono text-xs">
-                {totalSelected} selected
+                {totalSelected + totalGenres} selected
               </span>
             )}
           </div>
@@ -211,6 +297,87 @@ export default function PreferencesClient({
               })}
             </div>
           </section>
+
+          {/* Genres Section — only show when categories selected */}
+          {selectedCategories.length > 0 && (
+            <section className="p-5 rounded-xl bg-[var(--dusk)]/50 border border-[var(--twilight)]">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h2 className="font-sans text-base font-medium text-[var(--cream)] flex items-center gap-2">
+                    <span className="w-6 h-6 rounded-lg bg-[var(--coral)]/20 flex items-center justify-center">
+                      <svg className="w-3.5 h-3.5 text-[var(--coral)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                      </svg>
+                    </span>
+                    Genres
+                  </h2>
+                  <p className="font-mono text-xs text-[var(--muted)] mt-1">
+                    Dial in your taste
+                  </p>
+                </div>
+                {totalGenres > 0 && (
+                  <span className="font-mono text-xs text-[var(--soft)]">
+                    {totalGenres} selected
+                  </span>
+                )}
+              </div>
+
+              {genresLoading ? (
+                <div className="space-y-4">
+                  {[1, 2].map((i) => (
+                    <div key={i} className="space-y-2">
+                      <div className="h-4 w-20 bg-[var(--twilight)] rounded animate-pulse" />
+                      <div className="flex flex-wrap gap-2">
+                        {[1, 2, 3, 4].map((j) => (
+                          <div
+                            key={j}
+                            className="h-9 rounded-full bg-[var(--twilight)] animate-pulse"
+                            style={{ width: `${55 + j * 10}px` }}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {selectedCategories.map((category) => {
+                    const genres = getDisplayGenres(category);
+                    if (genres.length === 0) return null;
+                    const info = getCategoryInfo(category);
+                    return (
+                      <div key={category}>
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="text-sm">{info?.emoji}</span>
+                          <span className="font-mono text-xs text-[var(--soft)] uppercase tracking-wider">
+                            {info?.label || category}
+                          </span>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          {genres.map((g) => {
+                            const isActive = (selectedGenres[category] || []).includes(g.genre);
+                            return (
+                              <button
+                                key={g.genre}
+                                onClick={() => toggleGenre(category, g.genre)}
+                                className={`px-3.5 py-2 rounded-full font-mono text-sm transition-all duration-200 ${
+                                  isActive
+                                    ? "border-2 border-[var(--coral)] bg-[var(--coral)]/10 text-[var(--cream)] font-medium"
+                                    : "border-2 border-[var(--twilight)] text-[var(--muted)] hover:border-[var(--coral)]/50 hover:text-[var(--cream)]"
+                                }`}
+                              >
+                                {getGenreDisplayLabel(g.genre)}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </section>
+          )}
 
           {/* Neighborhoods Section */}
           <section className="p-5 rounded-xl bg-[var(--dusk)]/50 border border-[var(--twilight)]">
@@ -340,6 +507,107 @@ export default function PreferencesClient({
                   </button>
                 );
               })}
+            </div>
+          </section>
+
+          {/* Needs Section */}
+          <section className="p-5 rounded-xl bg-[var(--dusk)]/50 border border-[var(--twilight)]">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="font-sans text-base font-medium text-[var(--cream)] flex items-center gap-2">
+                  <span className="w-6 h-6 rounded-lg bg-[var(--neon-cyan)]/20 flex items-center justify-center">
+                    <svg className="w-3.5 h-3.5 text-[var(--neon-cyan)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                    </svg>
+                  </span>
+                  Anything We Should Know?
+                </h2>
+                <p className="font-mono text-xs text-[var(--muted)] mt-1">
+                  Applied everywhere — every portal, every city
+                </p>
+              </div>
+              {hasNeeds && (
+                <span className="font-mono text-xs text-[var(--soft)]">
+                  {totalNeeds} selected
+                </span>
+              )}
+            </div>
+
+            <div className="space-y-4">
+              {/* Accessibility */}
+              <div>
+                <span className="font-mono text-xs text-[var(--soft)] uppercase tracking-wider mb-2 block">
+                  Accessibility
+                </span>
+                <div className="flex flex-wrap gap-2">
+                  {PREFERENCE_NEEDS_ACCESSIBILITY.map((need) => {
+                    const isActive = needsAccessibility.includes(need.value);
+                    return (
+                      <button
+                        key={need.value}
+                        onClick={() => toggleNeed(setNeedsAccessibility, need.value)}
+                        className={`px-3.5 py-2 rounded-full font-mono text-sm transition-all duration-200 ${
+                          isActive
+                            ? "border-2 border-[var(--neon-cyan)] bg-[var(--neon-cyan)]/10 text-[var(--cream)] font-medium"
+                            : "border-2 border-[var(--twilight)] text-[var(--muted)] hover:border-[var(--neon-cyan)]/50 hover:text-[var(--cream)]"
+                        }`}
+                      >
+                        {need.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Dietary */}
+              <div>
+                <span className="font-mono text-xs text-[var(--soft)] uppercase tracking-wider mb-2 block">
+                  Dietary
+                </span>
+                <div className="flex flex-wrap gap-2">
+                  {PREFERENCE_NEEDS_DIETARY.map((need) => {
+                    const isActive = needsDietary.includes(need.value);
+                    return (
+                      <button
+                        key={need.value}
+                        onClick={() => toggleNeed(setNeedsDietary, need.value)}
+                        className={`px-3.5 py-2 rounded-full font-mono text-sm transition-all duration-200 ${
+                          isActive
+                            ? "border-2 border-[var(--neon-cyan)] bg-[var(--neon-cyan)]/10 text-[var(--cream)] font-medium"
+                            : "border-2 border-[var(--twilight)] text-[var(--muted)] hover:border-[var(--neon-cyan)]/50 hover:text-[var(--cream)]"
+                        }`}
+                      >
+                        {need.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Family */}
+              <div>
+                <span className="font-mono text-xs text-[var(--soft)] uppercase tracking-wider mb-2 block">
+                  Family
+                </span>
+                <div className="flex flex-wrap gap-2">
+                  {PREFERENCE_NEEDS_FAMILY.map((need) => {
+                    const isActive = needsFamily.includes(need.value);
+                    return (
+                      <button
+                        key={need.value}
+                        onClick={() => toggleNeed(setNeedsFamily, need.value)}
+                        className={`px-3.5 py-2 rounded-full font-mono text-sm transition-all duration-200 ${
+                          isActive
+                            ? "border-2 border-[var(--neon-cyan)] bg-[var(--neon-cyan)]/10 text-[var(--cream)] font-medium"
+                            : "border-2 border-[var(--twilight)] text-[var(--muted)] hover:border-[var(--neon-cyan)]/50 hover:text-[var(--cream)]"
+                        }`}
+                      >
+                        {need.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
           </section>
 

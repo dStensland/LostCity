@@ -253,6 +253,8 @@ export type Portal = {
   };
   branding: PortalBranding;
   settings: {
+    /** Portal vertical/industry type - determines UI/UX treatment */
+    vertical?: "city" | "hotel" | "film" | "hospital" | "community";
     nav_labels?: {
       feed?: string;
       events?: string;
@@ -365,4 +367,11 @@ export function usePortalName() {
 export function usePortalCity() {
   const { portal } = usePortal();
   return portal.filters.city || portal.name;
+}
+
+/**
+ * Get the portal vertical type (defaults to "city" if not set)
+ */
+export function getPortalVertical(portal: Portal): "city" | "hotel" | "film" | "hospital" | "community" {
+  return portal.settings?.vertical || "city";
 }

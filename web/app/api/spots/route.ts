@@ -27,6 +27,7 @@ export async function GET(request: NextRequest) {
   const venueTypes = searchParams.get("venue_type")?.split(",").filter(Boolean);
   const neighborhoods = searchParams.get("neighborhood")?.split(",").filter(Boolean);
   const vibes = searchParams.get("vibes")?.split(",").filter(Boolean);
+  const genres = searchParams.get("genres")?.split(",").filter(Boolean);
   const search = searchParams.get("q")?.toLowerCase().trim();
 
   const today = getLocalDateString();
@@ -46,6 +47,7 @@ export async function GET(request: NextRequest) {
       hours_display: string | null;
       vibes: string[] | null;
       short_description: string | null;
+      genres: string[] | null;
     };
 
     type EventRow = {
@@ -57,7 +59,7 @@ export async function GET(request: NextRequest) {
     // TODO: Add portal-based geographic filtering when portals define their cities
     let query = supabase
       .from("venues")
-      .select("id, name, slug, address, neighborhood, venue_type, city, image_url, price_level, hours, hours_display, vibes, short_description")
+      .select("id, name, slug, address, neighborhood, venue_type, city, image_url, price_level, hours, hours_display, vibes, short_description, genres")
       .neq("active", false); // Exclude deactivated venues
 
     // Apply venue type filter
@@ -81,6 +83,11 @@ export async function GET(request: NextRequest) {
     // Apply vibes filter (array contains)
     if (vibes && vibes.length > 0) {
       query = query.overlaps("vibes", vibes);
+    }
+
+    // Apply genres filter (array overlap)
+    if (genres && genres.length > 0) {
+      query = query.overlaps("genres", genres);
     }
 
     query = query.order("name").limit(5000);
@@ -141,6 +148,7 @@ export async function GET(request: NextRequest) {
         is_24_hours: false,
         vibes: venue.vibes,
         short_description: venue.short_description,
+        genres: venue.genres,
         is_open: openStatus.isOpen,
         closes_at: openStatus.closesAt,
       };
@@ -193,6 +201,10 @@ export async function GET(request: NextRequest) {
     if (openNow) {
       spots = spots.filter(s => s.is_open);
     }
+
+    // Hide venues whose name is just a street address (e.g. "1483 Chattahoochee Ave NW")
+    const addressNamePattern = /^\d+\s+[\w\s]+(St|Street|Ave|Avenue|Blvd|Boulevard|Rd|Road|Dr|Drive|Ln|Lane|Way|Ct|Court|Pl|Place|Pkwy|Parkway|Hwy|Highway|Pike|Circle|Trail)\b/i;
+    spots = spots.filter(s => !addressNamePattern.test(s.name));
 
     // Apply text search filter (client-side for now)
     if (search) {

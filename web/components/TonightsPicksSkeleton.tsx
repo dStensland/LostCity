@@ -9,6 +9,13 @@ export default function TonightsPicksSkeleton() {
       <div className="absolute inset-0 opacity-20 tonight-picks-glow" />
 
       <div className="relative max-w-3xl mx-auto">
+        {/* Tab bar skeleton */}
+        <div className="flex gap-1 p-1 bg-[var(--night)] rounded-xl border border-[var(--twilight)]/30 mb-4">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="flex-1 h-9 skeleton-shimmer rounded-lg" />
+          ))}
+        </div>
+
         {/* Section header skeleton */}
         <div className="flex items-center gap-3 mb-4">
           <div className="w-10 h-10 rounded-full skeleton-shimmer" />

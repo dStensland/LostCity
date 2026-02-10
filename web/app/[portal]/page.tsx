@@ -1,12 +1,13 @@
-import { getCachedPortalBySlug } from "@/lib/portal";
+import { getCachedPortalBySlug, getPortalVertical } from "@/lib/portal";
 import { PortalHeader } from "@/components/headers";
 import { AmbientBackground } from "@/components/ambient";
-import FindView from "@/components/find/FindView";
+import FindView from "@/components/find/FindViewLazy";
 import CommunityView from "@/components/community/CommunityView";
 import DetailViewRouter from "@/components/views/DetailViewRouter";
 import { DefaultTemplate } from "./_templates/default";
 import { GalleryTemplate } from "./_templates/gallery";
 import { TimelineTemplate } from "./_templates/timeline";
+import { HotelTemplate } from "./_templates/hotel";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { PortalTracker } from "./_components/PortalTracker";
@@ -24,6 +25,7 @@ type Props = {
     search?: string;
     categories?: string;
     subcategories?: string;
+    genres?: string;
     tags?: string;
     vibes?: string;
     neighborhoods?: string;
@@ -52,6 +54,15 @@ export default async function PortalPage({ params, searchParams }: Props) {
 
   if (!portal) {
     notFound();
+  }
+
+  // Check vertical type for hotel/specialty portals
+  const vertical = getPortalVertical(portal);
+  const isHotel = vertical === "hotel";
+
+  // Hotel portals always show the hotel feed (no view switching)
+  if (isHotel) {
+    return <HotelTemplate portal={portal} />;
   }
 
   // Parse view mode - support legacy views for backwards compatibility
@@ -105,6 +116,7 @@ export default async function PortalPage({ params, searchParams }: Props) {
     searchParamsData.search ||
     searchParamsData.categories ||
     searchParamsData.subcategories ||
+    searchParamsData.genres ||
     searchParamsData.tags ||
     searchParamsData.vibes ||
     searchParamsData.neighborhoods ||

@@ -1066,6 +1066,7 @@ body {
 /* Smooth scrolling for better UX */
 html {
   scroll-behavior: smooth;
+  background-color: #09090B;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -5515,4 +5516,183 @@ textarea:focus-visible {
   box-shadow:
     0 0 20px color-mix(in srgb, var(--gold) 50%, transparent),
     0 -5px 25px color-mix(in srgb, var(--placeholder-color) 19%, transparent);
+}
+
+/* ============================================
+   HOTEL PORTAL VERTICAL
+   Luxury concierge theme for hotel properties
+   ============================================ */
+
+[data-vertical="hotel"] {
+  /* Color Palette - Warm, Sophisticated */
+  --hotel-ivory: #FDFBF7;
+  --hotel-cream: #F5F3EE;
+  --hotel-sand: #E8E4DD;
+  --hotel-stone: #9B968C;
+  --hotel-charcoal: #2F2D2A;
+  --hotel-ink: #1A1816;
+  
+  /* Accents */
+  --hotel-champagne: #D4AF7A;
+  --hotel-rose-gold: #C9A88A;
+  --hotel-brass: #B8956A;
+  
+  /* Semantic Colors */
+  --hotel-sage: #8A9A8B;
+  --hotel-slate: #6B7C8C;
+  --hotel-terracotta: #C18B73;
+  
+  /* Category Colors - Muted */
+  --hotel-cat-music: #B39B8A;
+  --hotel-cat-wellness: #8A9A8B;
+  --hotel-cat-dining: #A8836B;
+  --hotel-cat-art: #7A7A8C;
+  --hotel-cat-fitness: #6B8A7A;
+  --hotel-cat-culture: #9B8A9B;
+  
+  /* Shadows - Soft, No Glow */
+  --hotel-shadow-soft: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
+  --hotel-shadow-medium: 0 4px 8px rgba(0, 0, 0, 0.06), 0 2px 4px rgba(0, 0, 0, 0.03);
+  --hotel-shadow-strong: 0 8px 16px rgba(0, 0, 0, 0.08), 0 4px 8px rgba(0, 0, 0, 0.04);
+  
+  /* Overlays */
+  --hotel-overlay-light: rgba(47, 45, 42, 0.04);
+  --hotel-overlay-medium: rgba(47, 45, 42, 0.08);
+  
+  /* Timing */
+  --hotel-ease-elegant: cubic-bezier(0.16, 1, 0.3, 1);
+  --hotel-ease-refined: cubic-bezier(0.33, 0, 0.2, 1);
+  --hotel-duration-fast: 250ms;
+  --hotel-duration-base: 400ms;
+  --hotel-duration-slow: 600ms;
+  --hotel-duration-lazy: 800ms;
+  
+  /* Spacing - Generous */
+  --hotel-space-2xs: 0.25rem;
+  --hotel-space-xs: 0.5rem;
+  --hotel-space-sm: 0.75rem;
+  --hotel-space-md: 1rem;
+  --hotel-space-lg: 1.5rem;
+  --hotel-space-xl: 2.5rem;
+  --hotel-space-2xl: 4rem;
+  --hotel-space-3xl: 6rem;
+  --hotel-space-4xl: 8rem;
+  
+  /* Type Scale */
+  --hotel-text-xs: 0.75rem;      /* 12px */
+  --hotel-text-sm: 0.875rem;     /* 14px */
+  --hotel-text-base: 1rem;       /* 16px */
+  --hotel-text-lg: 1.125rem;     /* 18px */
+  --hotel-text-xl: 1.5rem;       /* 24px */
+  --hotel-text-2xl: 2rem;        /* 32px */
+  --hotel-text-3xl: 2.5rem;      /* 40px */
+  --hotel-text-4xl: 3rem;        /* 48px */
+  
+  /* Apply theme colors to standard CSS vars */
+  --background: var(--hotel-ivory);
+  --foreground: var(--hotel-charcoal);
+  --muted: var(--hotel-stone);
+  --accent: var(--hotel-champagne);
+  --card: var(--hotel-cream);
+  --card-border: var(--hotel-sand);
+  
+  /* Override neon colors for hotel context */
+  --neon-magenta: var(--hotel-champagne);
+  --neon-cyan: var(--hotel-brass);
+  --neon-amber: var(--hotel-rose-gold);
+  
+  /* Disable ambient effects */
+  --grain-opacity: 0;
+  color-scheme: light;
+}
+
+/* Hotel Animations */
+@keyframes hotel-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes hotel-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+[data-vertical="hotel"] .hotel-enter {
+  animation: hotel-fade-in 800ms var(--hotel-ease-elegant);
+}
+
+[data-vertical="hotel"] .hotel-card-enter {
+  animation: hotel-fade-up 600ms var(--hotel-ease-elegant);
+}
+
+/* Stagger children */
+[data-vertical="hotel"] .hotel-grid > * {
+  animation: hotel-fade-up 600ms var(--hotel-ease-elegant);
+}
+
+[data-vertical="hotel"] .hotel-grid > *:nth-child(1) { animation-delay: 0ms; }
+[data-vertical="hotel"] .hotel-grid > *:nth-child(2) { animation-delay: 100ms; }
+[data-vertical="hotel"] .hotel-grid > *:nth-child(3) { animation-delay: 200ms; }
+[data-vertical="hotel"] .hotel-grid > *:nth-child(4) { animation-delay: 300ms; }
+[data-vertical="hotel"] .hotel-grid > *:nth-child(5) { animation-delay: 400ms; }
+[data-vertical="hotel"] .hotel-grid > *:nth-child(6) { animation-delay: 500ms; }
+
+/* Disable all glow effects for hotel vertical */
+[data-vertical="hotel"] .icon-neon,
+[data-vertical="hotel"] .icon-neon-subtle,
+[data-vertical="hotel"] .icon-neon-intense,
+[data-vertical="hotel"] .icon-neon-pulse,
+[data-vertical="hotel"] .icon-neon-flicker,
+[data-vertical="hotel"] .ambient-glow {
+  filter: none !important;
+  animation: none !important;
+  opacity: 0 !important;
+}
+
+/* Hide glass effects and particle fields */
+[data-vertical="hotel"] .glass-panel,
+[data-vertical="hotel"] .particle-field {
+  display: none !important;
+}
+
+/* Hotel Carousel */
+[data-vertical="hotel"] .hotel-carousel {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  -webkit-mask-image: linear-gradient(to right, transparent, black 16px, black calc(100% - 40px), transparent);
+  mask-image: linear-gradient(to right, transparent, black 16px, black calc(100% - 40px), transparent);
+}
+[data-vertical="hotel"] .hotel-carousel::-webkit-scrollbar {
+  display: none;
+}
+
+/* Hotel Category Pills */
+[data-vertical="hotel"] .hotel-pill {
+  border: 1px solid var(--hotel-sand);
+  white-space: nowrap;
+}
+[data-vertical="hotel"] .hotel-pill-active {
+  border-color: var(--hotel-charcoal);
+}
+
+/* Hotel Hero Gradient */
+[data-vertical="hotel"] .hotel-hero-gradient {
+  background: linear-gradient(to top, rgba(26, 24, 22, 0.85) 0%, rgba(26, 24, 22, 0.4) 40%, transparent 70%);
+}
+
+/* Hotel Section Divider */
+[data-vertical="hotel"] .hotel-divider {
+  height: 1px;
+  background: linear-gradient(to right, transparent, var(--hotel-sand) 20%, var(--hotel-sand) 80%, transparent);
+  margin: 0 0 3rem 0;
 }

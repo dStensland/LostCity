@@ -9,8 +9,8 @@ import { useCallback, useMemo } from "react";
 export interface EventFilters {
   search?: string;
   categories?: string[];
-  subcategories?: string[];
   tags?: string[];
+  genres?: string[];
   vibes?: string[];
   neighborhoods?: string[];
   price?: string;
@@ -25,8 +25,8 @@ export interface EventFilters {
 const SHARED_FILTER_KEYS = [
   "search",
   "categories",
-  "subcategories",
   "tags",
+  "genres",
   "vibes",
   "neighborhoods",
   "price",
@@ -56,8 +56,8 @@ export function useEventFilters() {
     return {
       search: searchParams.get("search") || undefined,
       categories: searchParams.get("categories")?.split(",").filter(Boolean) || undefined,
-      subcategories: searchParams.get("subcategories")?.split(",").filter(Boolean) || undefined,
       tags: searchParams.get("tags")?.split(",").filter(Boolean) || undefined,
+      genres: searchParams.get("genres")?.split(",").filter(Boolean) || undefined,
       vibes: searchParams.get("vibes")?.split(",").filter(Boolean) || undefined,
       neighborhoods: searchParams.get("neighborhoods")?.split(",").filter(Boolean) || undefined,
       price: searchParams.get("price") || undefined,
@@ -72,8 +72,8 @@ export function useEventFilters() {
     return !!(
       filters.search ||
       filters.categories?.length ||
-      filters.subcategories?.length ||
       filters.tags?.length ||
+      filters.genres?.length ||
       filters.vibes?.length ||
       filters.neighborhoods?.length ||
       filters.price ||
@@ -176,7 +176,7 @@ export function useEventFilters() {
 
   // Toggle a value in an array filter
   const toggleArrayFilter = useCallback(
-    (key: "categories" | "subcategories" | "tags" | "vibes" | "neighborhoods", value: string) => {
+    (key: "categories" | "tags" | "genres" | "vibes" | "neighborhoods", value: string) => {
       const current = filters[key] || [];
       const newValues = current.includes(value)
         ? current.filter((v) => v !== value)

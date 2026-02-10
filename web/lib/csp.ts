@@ -20,51 +20,12 @@ const STATIC_SCRIPT_SRC_BASE = [
 const STATIC_STYLE_SRC_BASE = ["'self'", "https://fonts.googleapis.com"].join(" ");
 const STATIC_FONT_SRC = ["'self'", "data:", "https://fonts.gstatic.com"].join(" ");
 
-const STATIC_IMG_SRC = [
-  "'self'",
-  "data:",
-  "blob:",
-  // Supabase storage
-  "https://*.supabase.co",
-  // Event platforms
-  "https://img.evbuc.com",
-  "https://cdn.evbuc.com",
-  "https://s1.ticketm.net",
-  "https://s1.ticketmaster.com",
-  // Image CDNs
-  "https://images.unsplash.com",
-  "https://res.cloudinary.com",
-  "https://i.imgur.com",
-  "https://static.imgix.net",
-  "https://indy-systems.imgix.net",
-  // Media databases
-  "https://image.tmdb.org",
-  "https://upload.wikimedia.org",
-  "https://user-images.githubusercontent.com",
-  // Venue sites
-  "https://529atlanta.com",
-  "https://www.bigpeachrunningco.com",
-  "https://static.wixstatic.com",
-  "https://www.spelman.edu",
-  "https://www.aso.org",
-  "https://admin.paintingwithatwist.com",
-  "https://14d14a1b70be1f7f7d4a-0863ae42a3340022d3e557e78745c047.ssl.cf5.rackcdn.com",
-  "https://images.squarespace-cdn.com",
-  "https://static1.squarespace.com",
-  "https://*.squarespace.com",
-  "https://www.foxtheatre.org",
-  "https://www.dadsgaragetheatre.com",
-  "https://alliancetheatre.org",
-  "https://high.org",
-  "https://atlantahistorycenter.com",
-  "https://www.atlantabg.org",
-  "https://centerstage.net",
-  // Mapbox
-  "https://*.tiles.mapbox.com",
-  // Google Places photos
-  "https://maps.googleapis.com",
-  "https://lh3.googleusercontent.com",
-].join(" ");
+// img-src: Allow any HTTPS image. We pull event/venue images from 500+ domains
+// (venue websites, ticketing platforms, CDNs, Google Places, etc.) and maintaining
+// an allowlist breaks images silently every time a new crawler is added.
+// The security value of img-src restrictions is minimal — script-src and
+// frame-ancestors are the directives that actually prevent XSS/clickjacking.
+const STATIC_IMG_SRC = "'self' data: blob: https:";
 
 const STATIC_CONNECT_SRC = "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.sentry.io https://api.mapbox.com https://events.mapbox.com https://*.tiles.mapbox.com https://vitals.vercel-insights.com https://*.canny.io";
 

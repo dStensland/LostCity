@@ -83,6 +83,36 @@ def get_field_fill_rate(client, table: str, field: str, filter_condition: Option
         print(f"Error calculating fill rate for {table}.{field}: {e}")
         return 0.0
 
+def print_tag_health(client, table="events", filter_condition=None):
+    """Analyze tag coverage quality for events."""
+    print_subheader("Tag Health")
+
+    query = client.table(table).select("tags, genres, category, is_class")
+    if filter_condition:
+        for key, value in filter_condition.items():
+            query = query.eq(key, value)
+    sample = query.limit(2000).execute()
+    rows = sample.data or []
+    total = len(rows)
+
+    if total == 0:
+        print("  No data available")
+        return
+
+    EXPERIENTIAL = {"date-night", "chill", "high-energy", "intimate", "rowdy"}
+
+    has_tags = sum(1 for r in rows if r.get("tags"))
+    has_3_plus = sum(1 for r in rows if r.get("tags") and len(r["tags"]) >= 3)
+    has_exp = sum(1 for r in rows if r.get("tags") and set(r["tags"]) & EXPERIENTIAL)
+    has_genres = sum(1 for r in rows if r.get("genres"))
+
+    print(f"  Sample size:              {total}")
+    print(f"  With any tags:            {has_tags/total*100:.1f}%")
+    print(f"  With 3+ tags:             {has_3_plus/total*100:.1f}%")
+    print(f"  With experiential tags:   {has_exp/total*100:.1f}%")
+    print(f"  With genres:              {has_genres/total*100:.1f}%")
+
+
 def check_venues_health(client) -> Dict:
     """Check health metrics for venues table."""
     print_header("DESTINATIONS (Venues) Health Report")
@@ -247,6 +277,8 @@ def check_events_health(client) -> Dict:
     missing_category = total - int(total * fill_rates.get("category", 0) / 100)
     print(f"  Missing category: {missing_category}")
 
+    print_tag_health(client, "events")
+
     print_subheader("Overall Health Score")
     score_str = f"{weighted_score:.1f}/100"
     colored_score = colorize(score_str, weighted_score)
@@ -296,6 +328,8 @@ def check_classes_health(client) -> Dict:
         rate_str = f"{rate:.1f}%".rjust(6)
         colored_rate = colorize(rate_str, rate)
         print(f"  {field.ljust(20)} {colored_rate}")
+
+    print_tag_health(client, "events", {"is_class": True})
 
     print_subheader("Overall Health Score")
     score_str = f"{weighted_score:.1f}/100"

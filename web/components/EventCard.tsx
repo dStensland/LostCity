@@ -12,7 +12,7 @@ import { LiveBadge, SoonBadge, FreeBadge } from "./Badge";
 import Image from "@/components/SmartImage";
 import SeriesBadge from "./SeriesBadge";
 import ReasonBadge, { getTopReasons, type RecommendationReason } from "./ReasonBadge";
-import { SubcategoryChip, getSubcategoryLabel, shouldShowSubcategory } from "./ActivityChip";
+import { GenreChip } from "./ActivityChip";
 import type { Frequency, DayOfWeek } from "@/lib/recurrence";
 import RSVPButton, { type RSVPStatus } from "./RSVPButton";
 import AnimatedCount from "./AnimatedCount";
@@ -275,17 +275,17 @@ function EventCard({ event, index = 0, skipAnimation = false, portalSlug, friend
                 {event.venue && (
                   <span className="truncate max-w-[60%] sm:max-w-[40%] font-medium" title={event.venue.name}>{event.venue.name}</span>
                 )}
-                {/* Subcategory chip - desktop only for cleaner mobile */}
-                {shouldShowSubcategory(event.subcategory, event.category) && (
+                {/* Genre or subcategory chips - desktop only for cleaner mobile */}
+                {event.genres && event.genres.length > 0 ? (
                   <span className="hidden sm:contents">
-                    <span className="opacity-40">·</span>
-                    <SubcategoryChip
-                      label={getSubcategoryLabel(event.subcategory!)!}
-                      value={event.subcategory!}
-                      portalSlug={portalSlug}
-                    />
+                    {event.genres.slice(0, 2).map((genre) => (
+                      <span key={genre} className="contents">
+                        <span className="opacity-40">·</span>
+                        <GenreChip genre={genre} category={event.category} portalSlug={portalSlug} />
+                      </span>
+                    ))}
                   </span>
-                )}
+                ) : null}
                 {/* Neighborhood - desktop only for cleaner mobile */}
                 {event.venue?.neighborhood && (
                   <span className="hidden sm:contents">

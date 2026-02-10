@@ -127,7 +127,7 @@ def determine_category_and_tags(title: str, description: str) -> tuple[str, Opti
 
     # Check if it's MLK-related (important historical events)
     if any(kw in text for kw in ["mlk", "martin luther king", "civil rights"]):
-        tags.extend(["mlk", "civil-rights", "black-history"])
+        tags.extend(["mlk", "civil-rights", "black-history-month"])
         if "birthday" in text or "celebration" in text:
             return "community", "celebration", tags
 

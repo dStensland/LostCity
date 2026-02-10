@@ -44,8 +44,6 @@ export default function AdminPortalsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<"all" | "city" | "event" | "business" | "personal">("all");
-  const [showCreateModal, setShowCreateModal] = useState(false);
-
   useEffect(() => {
     loadData();
   }, []);
@@ -74,12 +72,12 @@ export default function AdminPortalsPage() {
     <div className="max-w-6xl mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-semibold text-[var(--cream)]">Portals</h1>
-          <button
-            onClick={() => setShowCreateModal(true)}
+          <Link
+            href="/admin/portals/create"
             className="px-4 py-2 bg-[var(--coral)] text-[var(--void)] font-mono text-sm rounded hover:opacity-90 transition-opacity"
           >
             + New Portal
-          </button>
+          </Link>
         </div>
 
         {/* Summary Cards */}
@@ -156,17 +154,6 @@ export default function AdminPortalsPage() {
             </table>
           </div>
         )}
-
-      {/* Create Modal */}
-      {showCreateModal && (
-        <CreatePortalModal
-          onClose={() => setShowCreateModal(false)}
-          onCreated={() => {
-            setShowCreateModal(false);
-            loadData();
-          }}
-        />
-      )}
     </div>
   );
 }
@@ -262,152 +249,5 @@ function PortalRow({ portal, onRefresh }: { portal: Portal; onRefresh: () => voi
         </div>
       </td>
     </tr>
-  );
-}
-
-function CreatePortalModal({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
-  const [name, setName] = useState("");
-  const [slug, setSlug] = useState("");
-  const [tagline, setTagline] = useState("");
-  const [portalType, setPortalType] = useState<"city" | "event" | "business" | "personal">("city");
-  const [cityFilter, setCityFilter] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  // Auto-generate slug from name
-  useEffect(() => {
-    if (name && !slug) {
-      setSlug(name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""));
-    }
-  }, [name, slug]);
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setSubmitting(true);
-    setError(null);
-
-    try {
-      const filters: Record<string, unknown> = {};
-      if (portalType === "city" && cityFilter) {
-        filters.city = cityFilter;
-      }
-
-      const res = await fetch("/api/admin/portals", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name,
-          slug,
-          tagline: tagline || null,
-          portal_type: portalType,
-          filters,
-        }),
-      });
-
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Failed to create portal");
-      }
-
-      onCreated();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create");
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
-  return (
-    <div className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50">
-      <div className="bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg max-w-md w-full p-6">
-        <h2 className="text-xl font-semibold text-[var(--cream)] mb-4">Create Portal</h2>
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block font-mono text-xs text-[var(--muted)] uppercase mb-1">Type</label>
-            <select
-              value={portalType}
-              onChange={(e) => setPortalType(e.target.value as typeof portalType)}
-              className="w-full px-3 py-2 bg-[var(--night)] border border-[var(--twilight)] rounded font-mono text-sm text-[var(--cream)] focus:outline-none focus:border-[var(--coral)]"
-            >
-              <option value="city">City</option>
-              <option value="event">Event</option>
-              <option value="business">Business</option>
-              <option value="personal">Personal</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block font-mono text-xs text-[var(--muted)] uppercase mb-1">Name</label>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder={portalType === "city" ? "Denver" : "My Portal"}
-              className="w-full px-3 py-2 bg-[var(--night)] border border-[var(--twilight)] rounded font-mono text-sm text-[var(--cream)] focus:outline-none focus:border-[var(--coral)]"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block font-mono text-xs text-[var(--muted)] uppercase mb-1">Slug</label>
-            <input
-              type="text"
-              value={slug}
-              onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))}
-              placeholder="denver"
-              className="w-full px-3 py-2 bg-[var(--night)] border border-[var(--twilight)] rounded font-mono text-sm text-[var(--cream)] focus:outline-none focus:border-[var(--coral)]"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block font-mono text-xs text-[var(--muted)] uppercase mb-1">Tagline</label>
-            <input
-              type="text"
-              value={tagline}
-              onChange={(e) => setTagline(e.target.value)}
-              placeholder="The real Denver, found"
-              className="w-full px-3 py-2 bg-[var(--night)] border border-[var(--twilight)] rounded font-mono text-sm text-[var(--cream)] focus:outline-none focus:border-[var(--coral)]"
-            />
-          </div>
-
-          {portalType === "city" && (
-            <div>
-              <label className="block font-mono text-xs text-[var(--muted)] uppercase mb-1">City Filter</label>
-              <input
-                type="text"
-                value={cityFilter}
-                onChange={(e) => setCityFilter(e.target.value)}
-                placeholder="Denver"
-                className="w-full px-3 py-2 bg-[var(--night)] border border-[var(--twilight)] rounded font-mono text-sm text-[var(--cream)] focus:outline-none focus:border-[var(--coral)]"
-              />
-              <p className="font-mono text-xs text-[var(--muted)] mt-1">Events will be filtered to this city</p>
-            </div>
-          )}
-
-          {error && (
-            <p className="text-red-400 font-mono text-sm">{error}</p>
-          )}
-
-          <div className="flex gap-3 pt-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 px-4 py-2 border border-[var(--twilight)] text-[var(--muted)] font-mono text-sm rounded hover:text-[var(--cream)] transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={submitting || !name || !slug}
-              className="flex-1 px-4 py-2 bg-[var(--coral)] text-[var(--void)] font-mono text-sm rounded hover:opacity-90 transition-opacity disabled:opacity-50"
-            >
-              {submitting ? "Creating..." : "Create Portal"}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
   );
 }

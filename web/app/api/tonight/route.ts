@@ -1,7 +1,9 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
-import { format, startOfDay } from "date-fns";
+import { format, startOfDay, addDays, startOfWeek, startOfMonth } from "date-fns";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
+
+type HighlightsPeriod = "today" | "week" | "month";
 
 type TonightEvent = {
   id: number;
@@ -44,6 +46,13 @@ type TonightEvent = {
 type ScoredEvent = TonightEvent & {
   quality_score: number;
   rsvp_count: number;
+};
+
+// Period-specific configuration
+const PERIOD_CONFIG: Record<HighlightsPeriod, { limit: number; candidateLimit: number; cacheSMaxAge: number; cacheStaleWhileRevalidate: number }> = {
+  today: { limit: 10, candidateLimit: 80, cacheSMaxAge: 300, cacheStaleWhileRevalidate: 600 },
+  week: { limit: 12, candidateLimit: 150, cacheSMaxAge: 900, cacheStaleWhileRevalidate: 1800 },
+  month: { limit: 16, candidateLimit: 200, cacheSMaxAge: 1800, cacheStaleWhileRevalidate: 3600 },
 };
 
 // Categories that appeal to young hip crowd
@@ -94,7 +103,8 @@ function calculateQualityScore(
   event: TonightEvent,
   rsvpCounts: Map<number, { going: number; interested: number }>,
   venueRecCounts: Map<number, number>,
-  currentHour: number
+  currentHour: number,
+  period: HighlightsPeriod
 ): number {
   let score = 0;
   const venueName = event.venue?.name || "";
@@ -202,7 +212,8 @@ function calculateQualityScore(
     score -= 15;
   }
 
-  // === TIME RELEVANCE ===
+  // === TIME RELEVANCE (reduced weight for week/month) ===
+  const timeWeight = period === "today" ? 1.0 : period === "week" ? 0.3 : 0.1;
 
   const isEvening = currentHour >= 17 || currentHour < 4;
 
@@ -210,7 +221,7 @@ function calculateQualityScore(
   if (isEvening && event.start_time) {
     const eventHour = parseInt(event.start_time.split(":")[0]);
     if (eventHour >= 19 || eventHour < 4) {
-      score += 5; // Late night events
+      score += 5 * timeWeight; // Late night events
     }
   }
 
@@ -227,41 +238,86 @@ function calculateQualityScore(
   return score;
 }
 
+/** Calculate date range and curated_picks lookup date for a given period */
+function getDateRange(period: HighlightsPeriod, now: Date): { dates: string[]; curatedDate: string } {
+  const today = format(startOfDay(now), "yyyy-MM-dd");
+
+  if (period === "today") {
+    // Today + 2-day fallback
+    const tomorrow = format(addDays(now, 1), "yyyy-MM-dd");
+    const dayAfter = format(addDays(now, 2), "yyyy-MM-dd");
+    return { dates: [today, tomorrow, dayAfter], curatedDate: today };
+  }
+
+  if (period === "week") {
+    // Next 7 days from today
+    const dates: string[] = [];
+    for (let i = 0; i < 7; i++) {
+      dates.push(format(addDays(now, i), "yyyy-MM-dd"));
+    }
+    // Curated picks for week use Monday of the current week
+    const monday = format(startOfWeek(now, { weekStartsOn: 1 }), "yyyy-MM-dd");
+    return { dates, curatedDate: monday };
+  }
+
+  // month: next 30 days
+  const dates: string[] = [];
+  for (let i = 0; i < 30; i++) {
+    dates.push(format(addDays(now, i), "yyyy-MM-dd"));
+  }
+  // Curated picks for month use 1st of the current month
+  const firstOfMonth = format(startOfMonth(now), "yyyy-MM-dd");
+  return { dates, curatedDate: firstOfMonth };
+}
+
+const EVENT_SELECT = `
+  id, title, start_date, start_time, end_date, end_time,
+  is_all_day, is_free, category, image_url, description, venue_id,
+  series_id,
+  series:series_id(
+    id, slug, title, series_type, image_url, frequency, day_of_week,
+    festival:festivals(id, slug, name, image_url, festival_type, location, neighborhood)
+  ),
+  venue:venues(name, neighborhood)
+`;
+
 export async function GET(request: NextRequest) {
   const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.read, getClientIdentifier(request));
   if (rateLimitResult) return rateLimitResult;
 
   try {
-    const today = format(startOfDay(new Date()), "yyyy-MM-dd");
-    const tomorrow = format(new Date(Date.now() + 24 * 60 * 60 * 1000), "yyyy-MM-dd");
-    const dayAfter = format(new Date(Date.now() + 2 * 24 * 60 * 60 * 1000), "yyyy-MM-dd");
+    // Parse period param
+    const periodParam = request.nextUrl.searchParams.get("period") || "today";
+    const period: HighlightsPeriod = (["today", "week", "month"] as const).includes(periodParam as HighlightsPeriod)
+      ? (periodParam as HighlightsPeriod)
+      : "today";
+
+    const config = PERIOD_CONFIG[period];
     const now = new Date();
     const currentHour = now.getHours();
+    const today = format(startOfDay(now), "yyyy-MM-dd");
+    const { dates, curatedDate } = getDateRange(period, now);
+
+    const cacheHeaders = {
+      "Cache-Control": `public, s-maxage=${config.cacheSMaxAge}, stale-while-revalidate=${config.cacheStaleWhileRevalidate}`,
+    };
 
     const supabase = await createClient();
 
-    // Check for curated picks first — if editor-curated picks exist for today,
+    // Check for curated picks first — if editor-curated picks exist for this period,
     // return those directly instead of running the scoring algorithm
     const { data: curatedPicks } = await supabase
       .from("curated_picks")
       .select("event_id, position")
-      .eq("pick_date", today)
+      .eq("pick_date", curatedDate)
+      .eq("period", period)
       .order("position", { ascending: true });
 
     if (curatedPicks && curatedPicks.length > 0) {
       const curatedIds = (curatedPicks as { event_id: number; position: number }[]).map(p => p.event_id);
       const { data: curatedEvents } = await supabase
         .from("events")
-        .select(`
-          id, title, start_date, start_time, end_date, end_time,
-          is_all_day, is_free, category, image_url, description, venue_id,
-          series_id,
-          series:series_id(
-            id, slug, title, series_type, image_url, frequency, day_of_week,
-            festival:festivals(id, slug, name, image_url, festival_type, location, neighborhood)
-          ),
-          venue:venues(name, neighborhood)
-        `)
+        .select(EVENT_SELECT)
         .in("id", curatedIds);
 
       if (curatedEvents && curatedEvents.length > 0) {
@@ -289,9 +345,7 @@ export async function GET(request: NextRequest) {
           rsvp_count: (cRsvpCounts.get(event.id) || 0) > 0 ? cRsvpCounts.get(event.id) : undefined,
         }));
 
-        return NextResponse.json({ events: result }, {
-          headers: { "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600" }
-        });
+        return NextResponse.json({ events: result, period }, { headers: cacheHeaders });
       }
     }
 
@@ -304,53 +358,25 @@ export async function GET(request: NextRequest) {
 
     if (!atlantaPortal) {
       console.error("Atlanta portal not found");
-      return NextResponse.json({ events: [] }, { status: 500 });
+      return NextResponse.json({ events: [], period }, { status: 500 });
     }
 
-    // Fetch events for today, tomorrow, and day after
-    // Include both portal-specific AND public events (matching feed route pattern)
-    // Pre-filter for quality: require images (scoring requires them anyway)
-    // and prefer hip categories to increase ratio of high-scoring events
+    // Fetch events for the date range
     const { data: events, error } = await supabase
       .from("events")
-      .select(`
-        id,
-        title,
-        start_date,
-        start_time,
-        end_date,
-        end_time,
-        is_all_day,
-        is_free,
-        category,
-        image_url,
-        description,
-        venue_id,
-        series_id,
-        series:series_id(
-          id,
-          slug,
-          title,
-          series_type,
-          image_url,
-          frequency,
-          day_of_week,
-          festival:festivals(id, slug, name, image_url, festival_type, location, neighborhood)
-        ),
-        venue:venues(name, neighborhood)
-      `)
-      .in("start_date", [today, tomorrow, dayAfter])
+      .select(EVENT_SELECT)
+      .in("start_date", dates)
       .is("canonical_event_id", null)
-      .not("image_url", "is", null) // Require images (scoring filters out events without them anyway)
+      .not("image_url", "is", null)
       .or("is_class.eq.false,is_class.is.null")
       .or(`portal_id.eq.${atlantaPortal.id},portal_id.is.null`)
       .order("start_date", { ascending: true })
       .order("start_time", { ascending: true })
-      .limit(80); // Reduced from 500: scoring only returns 8, so 80 candidates gives ample diversity
+      .limit(config.candidateLimit);
 
     if (error || !events) {
       console.error("Failed to fetch tonight events:", error);
-      return NextResponse.json({ events: [] }, {
+      return NextResponse.json({ events: [], period }, {
         headers: { "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120" }
       });
     }
@@ -358,7 +384,7 @@ export async function GET(request: NextRequest) {
     const allEvents = events as unknown as TonightEvent[];
 
     // Filter out today's events that already happened (started > 2 hours ago)
-    // At early morning hours (before 6 AM), show all of today's events since they're upcoming
+    // Only applies to today's date — future dates always included
     const isEarlyMorning = currentHour < 6;
     const twoHoursAgo = format(new Date(now.getTime() - 2 * 60 * 60 * 1000), "HH:mm:ss");
     const typedEvents = allEvents.filter(event => {
@@ -373,9 +399,7 @@ export async function GET(request: NextRequest) {
     });
 
     if (typedEvents.length === 0) {
-      return NextResponse.json({ events: [] }, {
-        headers: { "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600" }
-      });
+      return NextResponse.json({ events: [], period }, { headers: cacheHeaders });
     }
 
     // Fetch RSVP counts for these events
@@ -418,10 +442,10 @@ export async function GET(request: NextRequest) {
     // Score all events
     const scoredEvents: ScoredEvent[] = typedEvents.map(event => {
       const rsvps = rsvpCounts.get(event.id);
-      let score = calculateQualityScore(event, rsvpCounts, venueRecCounts, currentHour);
+      let score = calculateQualityScore(event, rsvpCounts, venueRecCounts, currentHour, period);
 
-      // Bonus for today's events
-      if (event.start_date === today) {
+      // Bonus for today's events (only relevant for today period)
+      if (period === "today" && event.start_date === today) {
         score += 5;
       }
 
@@ -467,18 +491,15 @@ export async function GET(request: NextRequest) {
     const selectedIds = new Set<number>();
 
     // Pass 1: Pick top-scoring event from each hip category (ensures variety)
-    // Only include if the event meets a quality bar (score >= 20)
     const MIN_FEATURED_SCORE = 20;
     const hipCategoriesSeen = new Set<string>();
     for (const event of qualityEvents) {
       const cat = event.category || "other";
       const venueName = normalizeVenueName(event.venue?.name || "");
 
-      // Only pick from hip categories in pass 1
       if (!HIP_CATEGORIES.includes(cat)) continue;
       if (hipCategoriesSeen.has(cat)) continue;
       if (venueName && venuesSeen.has(venueName)) continue;
-      // Don't force a weak event just for diversity
       if (event.quality_score < MIN_FEATURED_SCORE) continue;
 
       selected.push(event);
@@ -486,11 +507,11 @@ export async function GET(request: NextRequest) {
       hipCategoriesSeen.add(cat);
       if (venueName) venuesSeen.add(venueName);
 
-      if (selected.length >= 8) break;
+      if (selected.length >= config.limit) break;
     }
 
     // Pass 2: Fill remaining slots with highest-scoring events (unique venues, any category)
-    if (selected.length < 8) {
+    if (selected.length < config.limit) {
       for (const event of qualityEvents) {
         if (selectedIds.has(event.id)) continue;
         const venueName = normalizeVenueName(event.venue?.name || "");
@@ -500,42 +521,32 @@ export async function GET(request: NextRequest) {
         selectedIds.add(event.id);
         if (venueName) venuesSeen.add(venueName);
 
-        if (selected.length >= 8) break;
+        if (selected.length >= config.limit) break;
       }
     }
 
     // If still not enough, fall back to any events (but sorted by score)
     if (selected.length < 3) {
       scoredEvents.sort((a, b) => b.quality_score - a.quality_score);
-      const selectedIds = new Set(selected.map(e => e.id));
+      const fallbackIds = new Set(selected.map(e => e.id));
       for (const event of scoredEvents) {
-        if (!selectedIds.has(event.id)) {
+        if (!fallbackIds.has(event.id)) {
           selected.push(event);
-          if (selected.length >= 8) break;
+          if (selected.length >= config.limit) break;
         }
       }
-    }
-
-    // Pin: move The Masqueraders to front (best poster/image)
-    const pinIdx = selected.findIndex(e => /masqueraders/i.test(e.title));
-    if (pinIdx > 0) {
-      const [pinned] = selected.splice(pinIdx, 1);
-      selected.unshift(pinned);
     }
 
     // Strip internal scoring fields before returning
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const result = selected.map(({ quality_score: _, rsvp_count, description: _d, venue_id: _v, ...event }) => ({
       ...event,
-      // Include rsvp_count for display if desired
       rsvp_count: rsvp_count > 0 ? rsvp_count : undefined,
     }));
 
-    return NextResponse.json({ events: result }, {
-      headers: { "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600" }
-    });
+    return NextResponse.json({ events: result, period }, { headers: cacheHeaders });
   } catch (error) {
     console.error("Error in tonight API:", error);
-    return NextResponse.json({ events: [] }, { status: 500 });
+    return NextResponse.json({ events: [], period: "today" }, { status: 500 });
   }
 }

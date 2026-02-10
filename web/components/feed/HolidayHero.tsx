@@ -22,23 +22,14 @@ interface HolidayConfig {
   eventDate: [number, number, number]; // [year, month, day]
   /** Override countdown text (e.g. "ALL MONTH" for month-long observances) */
   countdownOverride?: string;
+  /** Enable blurred background glow effect using the icon image (like Valentine's) */
+  iconBgGlow?: boolean;
+  /** Enable pulsing glow ring around the icon (like Valentine's heartbeat) */
+  iconGlowRing?: boolean;
 }
 
-// Holiday configs — first match wins, order by specificity
+// Holiday configs — Valentine's first (hero position), then specifics, then broad
 const HOLIDAYS: HolidayConfig[] = [
-  {
-    slug: "friday-the-13th",
-    tag: "friday-13",
-    title: "Friday the 13th",
-    subtitle: "Embrace the unlucky",
-    gradient: "linear-gradient(135deg, #050a05 0%, #0a1a0a 30%, #051005 60%, #030a03 100%)",
-    accentColor: "#00ff41",
-    glowColor: "#00ff41",
-    icon: "🔪",
-    showFrom: [2, 10],
-    showUntil: [2, 13],
-    eventDate: [2026, 2, 13],
-  },
   {
     slug: "valentines-day",
     tag: "valentines",
@@ -51,6 +42,23 @@ const HOLIDAYS: HolidayConfig[] = [
     showFrom: [2, 8],
     showUntil: [2, 14],
     eventDate: [2026, 2, 14],
+    iconBgGlow: true,
+    iconGlowRing: true,
+  },
+  {
+    slug: "friday-the-13th",
+    tag: "friday-13",
+    title: "Friday the 13th",
+    subtitle: "Toss your favorite body through a window to celebrate",
+    gradient: "linear-gradient(135deg, #050a05 0%, #0a1a0a 30%, #051005 60%, #030a03 100%)",
+    accentColor: "#00ff41",
+    glowColor: "#00ff41",
+    icon: "/images/friday13-jason.gif",
+    showFrom: [2, 10],
+    showUntil: [2, 13],
+    eventDate: [2026, 2, 13],
+    iconBgGlow: true,
+    iconGlowRing: true,
   },
   {
     slug: "mardi-gras",
@@ -81,7 +89,7 @@ const HOLIDAYS: HolidayConfig[] = [
   },
   {
     slug: "black-history-month",
-    tag: "black-history",
+    tag: "black-history-month",
     title: "Black History Month",
     subtitle: "Honoring Black culture, art & community in Atlanta",
     gradient: "linear-gradient(135deg, #0a0a05 0%, #1a1508 30%, #0f0d05 60%, #0a0a05 100%)",
@@ -111,83 +119,67 @@ export function getActiveHeroSlug(): string | null {
   return null;
 }
 
-function getActiveHoliday(): (HolidayConfig & { countdown: string; daysUntil: number }) | null {
+function isHolidayActive(h: HolidayConfig): boolean {
   const now = new Date();
   const month = now.getMonth() + 1;
   const day = now.getDate();
+  const [fromM, fromD] = h.showFrom;
+  const [untilM, untilD] = h.showUntil;
+  const afterStart = month > fromM || (month === fromM && day >= fromD);
+  const beforeEnd = month < untilM || (month === untilM && day <= untilD);
+  return afterStart && beforeEnd;
+}
 
+function computeCountdown(h: HolidayConfig): { countdown: string; daysUntil: number } {
+  const now = new Date();
+  const eventDate = new Date(h.eventDate[0], h.eventDate[1] - 1, h.eventDate[2]);
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const diff = Math.ceil((eventDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+
+  let countdown: string;
+  if (h.countdownOverride) {
+    countdown = h.countdownOverride;
+  } else if (diff < 0) {
+    countdown = "IT'S OVER";
+  } else if (diff === 0) {
+    countdown = "TODAY";
+  } else if (diff === 1) {
+    countdown = "TOMORROW";
+  } else {
+    countdown = `IN ${diff} DAYS`;
+  }
+
+  return { countdown, daysUntil: diff };
+}
+
+function getActiveHoliday(slug?: string): (HolidayConfig & { countdown: string; daysUntil: number }) | null {
   for (const h of HOLIDAYS) {
-    const [fromM, fromD] = h.showFrom;
-    const [untilM, untilD] = h.showUntil;
+    if (slug && h.slug !== slug) continue;
+    if (!isHolidayActive(h)) continue;
 
-    const afterStart = month > fromM || (month === fromM && day >= fromD);
-    const beforeEnd = month < untilM || (month === untilM && day <= untilD);
-
-    if (afterStart && beforeEnd) {
-      const eventDate = new Date(h.eventDate[0], h.eventDate[1] - 1, h.eventDate[2]);
-      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-      const diff = Math.ceil((eventDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-
-      let countdown: string;
-      if (h.countdownOverride) {
-        countdown = h.countdownOverride;
-      } else if (diff < 0) {
-        countdown = "IT'S OVER";
-      } else if (diff === 0) {
-        countdown = "TODAY";
-      } else if (diff === 1) {
-        countdown = "TOMORROW";
-      } else {
-        countdown = `IN ${diff} DAYS`;
-      }
-
-      return { ...h, countdown, daysUntil: diff };
-    }
+    const { countdown, daysUntil } = computeCountdown(h);
+    return { ...h, countdown, daysUntil };
   }
   return null;
 }
 
-interface HolidayHeroProps {
-  portalSlug: string;
-}
+// ============================================================================
+// Shared card renderer — used by both HolidayHero and HolidayHeroBanner
+// ============================================================================
 
-export default function HolidayHero({ portalSlug }: HolidayHeroProps) {
-  const [eventCount, setEventCount] = useState<number | null>(null);
-  const holiday = getActiveHoliday();
-
-  useEffect(() => {
-    if (!holiday) return;
-
-    async function fetchCount() {
-      try {
-        const res = await fetch(`/api/portals/${portalSlug}/feed`);
-        if (!res.ok) return;
-        const data = await res.json();
-        const sections = data?.sections ?? [];
-        const section = sections.find(
-          (s: { slug?: string }) => s.slug === holiday!.slug
-        );
-        if (section?.events) {
-          setEventCount(section.events.length);
-        }
-      } catch {
-        // Silently fail — hero still renders without count
-      }
-    }
-    fetchCount();
-  }, [portalSlug, holiday]);
-
-  if (!holiday || (!holiday.countdownOverride && holiday.daysUntil < 0)) return null;
-
+function HolidayCard({
+  holiday,
+  eventCount,
+}: {
+  holiday: HolidayConfig & { countdown: string; daysUntil: number };
+  eventCount: number | null;
+}) {
   const isToday = !holiday.countdownOverride && holiday.daysUntil === 0;
   const isTomorrow = !holiday.countdownOverride && holiday.daysUntil === 1;
+  const hasImageIcon = holiday.icon.startsWith("/");
 
   return (
-    <Link
-      href={`/${portalSlug}?tags=${holiday.tag}&view=find`}
-      className="block relative rounded-2xl overflow-hidden group"
-      style={{ background: holiday.gradient }}
-    >
+    <>
       {/* Background image */}
       {holiday.bgImage && (
         <div
@@ -201,8 +193,8 @@ export default function HolidayHero({ portalSlug }: HolidayHeroProps) {
         />
       )}
 
-      {/* Valentine's: blurred neon heart background glow */}
-      {holiday.slug === "valentines-day" && (
+      {/* Blurred icon background glow (Valentine's / Friday 13th style) */}
+      {holiday.iconBgGlow && hasImageIcon && (
         <div className="absolute inset-0 pointer-events-none overflow-hidden">
           <div
             className="absolute -right-8 -top-8 w-[200px] h-[200px] sm:w-[280px] sm:h-[280px] opacity-30 animate-[heartbeat_2s_ease-in-out_infinite]"
@@ -251,7 +243,7 @@ export default function HolidayHero({ portalSlug }: HolidayHeroProps) {
               backdropFilter: "blur(8px)",
             }}
           >
-            {holiday.icon.startsWith("/") ? (
+            {hasImageIcon ? (
               <Image
                 src={holiday.icon}
                 alt=""
@@ -273,8 +265,8 @@ export default function HolidayHero({ portalSlug }: HolidayHeroProps) {
               style={{ backgroundColor: holiday.glowColor }}
             />
           )}
-          {/* Heartbeat glow ring for valentines */}
-          {holiday.slug === "valentines-day" && (
+          {/* Pulsing glow ring (Valentine's / Friday 13th style) */}
+          {holiday.iconGlowRing && (
             <span
               className="absolute -inset-1.5 rounded-2xl animate-[heartbeat_2s_ease-in-out_infinite] opacity-40"
               style={{ boxShadow: `0 0 20px ${holiday.glowColor}, 0 0 40px ${holiday.glowColor}40` }}
@@ -354,6 +346,71 @@ export default function HolidayHero({ portalSlug }: HolidayHeroProps) {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
         </svg>
       </div>
+    </>
+  );
+}
+
+// ============================================================================
+// HolidayHero — shows the first active holiday (Valentine's gets priority)
+// ============================================================================
+
+interface HolidayHeroProps {
+  portalSlug: string;
+  /** If set, only show this specific holiday slug */
+  slug?: string;
+  /** Slugs to exclude from matching (used when a holiday is shown elsewhere) */
+  exclude?: string[];
+}
+
+export default function HolidayHero({ portalSlug, slug, exclude }: HolidayHeroProps) {
+  const [eventCount, setEventCount] = useState<number | null>(null);
+
+  // Find the right holiday
+  let holiday: ReturnType<typeof getActiveHoliday> = null;
+  if (slug) {
+    holiday = getActiveHoliday(slug);
+  } else {
+    // First active match, skipping excluded slugs
+    for (const h of HOLIDAYS) {
+      if (exclude?.includes(h.slug)) continue;
+      if (!isHolidayActive(h)) continue;
+      const { countdown, daysUntil } = computeCountdown(h);
+      holiday = { ...h, countdown, daysUntil };
+      break;
+    }
+  }
+
+  useEffect(() => {
+    if (!holiday) return;
+
+    async function fetchCount() {
+      try {
+        const res = await fetch(`/api/portals/${portalSlug}/feed`);
+        if (!res.ok) return;
+        const data = await res.json();
+        const sections = data?.sections ?? [];
+        const section = sections.find(
+          (s: { slug?: string }) => s.slug === holiday!.slug
+        );
+        if (section?.events) {
+          setEventCount(section.events.length);
+        }
+      } catch {
+        // Silently fail — hero still renders without count
+      }
+    }
+    fetchCount();
+  }, [portalSlug, holiday]);
+
+  if (!holiday || (!holiday.countdownOverride && holiday.daysUntil < 0)) return null;
+
+  return (
+    <Link
+      href={`/${portalSlug}?tags=${holiday.tag}&view=find`}
+      className="block relative rounded-2xl overflow-hidden group"
+      style={{ background: holiday.gradient }}
+    >
+      <HolidayCard holiday={holiday} eventCount={eventCount} />
     </Link>
   );
 }

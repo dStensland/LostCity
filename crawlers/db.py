@@ -13,11 +13,14 @@ from datetime import datetime, timedelta
 from typing import Optional, Tuple
 from supabase import create_client, Client
 from config import get_config
-from tag_inference import infer_tags, infer_is_class
+from tags import VALID_CATEGORIES, VALID_VENUE_TYPES, VALID_VIBES
+from tag_inference import infer_tags, infer_is_class, infer_genres
+from genre_normalize import normalize_genres
 from description_fetcher import generate_synthetic_description
 from series import get_or_create_series, update_series_metadata
 from posters import get_metadata_for_film_event
 from artist_images import get_info_for_music_event
+from date_utils import MAX_FUTURE_DAYS_DEFAULT
 
 logger = logging.getLogger(__name__)
 
@@ -389,6 +392,31 @@ def get_producer_id_for_source(source_id: int) -> Optional[str]:
     return None
 
 
+def _fetch_venue_description(url: str) -> Optional[str]:
+    """Quick meta description extraction for new venues. Non-blocking, short timeout."""
+    try:
+        import requests
+        from bs4 import BeautifulSoup
+        resp = requests.get(url, timeout=5, allow_redirects=True, headers={
+            "User-Agent": "Mozilla/5.0 (compatible; LostCity/1.0)"
+        })
+        if resp.status_code != 200:
+            return None
+        soup = BeautifulSoup(resp.text, "html.parser")
+        for attr_key, attr_val in [("name", "description"), ("property", "og:description"), ("name", "twitter:description")]:
+            meta = soup.find("meta", attrs={attr_key: attr_val})
+            if meta and meta.get("content", "").strip():
+                desc = meta["content"].strip()
+                if len(desc) >= 30:
+                    lower = desc.lower()
+                    if any(lower.startswith(p) for p in ["welcome to", "just another", "coming soon", "page not found"]):
+                        continue
+                    return desc[:500]
+    except Exception:
+        pass
+    return None
+
+
 @retry_on_network_error(max_retries=3, base_delay=0.5)
 def get_or_create_venue(venue_data: dict) -> int:
     """Get existing venue or create new one. Returns venue ID."""
@@ -407,6 +435,29 @@ def get_or_create_venue(venue_data: dict) -> int:
         result = client.table("venues").select("id").eq("name", name).execute()
         if result.data and len(result.data) > 0:
             return result.data[0]["id"]
+
+    # Auto-fetch description for new venues with websites
+    if venue_data.get("website") and not venue_data.get("description"):
+        try:
+            desc = _fetch_venue_description(venue_data["website"])
+            if desc:
+                venue_data["description"] = desc
+                logger.debug("Auto-fetched description for %s", venue_data.get("name", "unknown"))
+        except Exception:
+            pass  # Never block venue creation on description fetch
+
+    # Validate venue_type (warn, don't reject)
+    vtype = venue_data.get("venue_type")
+    if vtype and vtype not in VALID_VENUE_TYPES:
+        logger.warning(f"Unknown venue_type '{vtype}' for '{venue_data.get('name', '?')}'")
+
+    # Filter invalid vibes
+    if venue_data.get("vibes"):
+        valid = [v for v in venue_data["vibes"] if v in VALID_VIBES]
+        removed = set(venue_data["vibes"]) - set(valid)
+        if removed:
+            logger.warning(f"Removed invalid vibes {removed} from '{venue_data.get('name', '?')}'")
+        venue_data["vibes"] = valid or None
 
     # Create new venue
     result = client.table("venues").insert(venue_data).execute()
@@ -498,7 +549,7 @@ def validate_event(event_data: dict) -> Tuple[bool, Optional[str], list[str]]:
     - source_id: must be present
 
     Data quality checks (log warning but still insert):
-    - start_date should not be more than 1 year in future
+    - start_date should not be more than configured future window
     - start_date should not be more than 1 day in past
     - title should not be all-caps (fix it)
     - description should be under 5000 chars (truncate)
@@ -545,11 +596,13 @@ def validate_event(event_data: dict) -> Tuple[bool, Optional[str], list[str]]:
     today = datetime.now().date()
     event_date = date_obj.date()
 
-    # Reject events more than 270 days (~9 months) in future (year parsing bug)
-    # Most venues don't list events more than 6 months out
-    if event_date > today + timedelta(days=270):
+    # Reject events beyond the future window (usually year parsing bugs).
+    if event_date > today + timedelta(days=MAX_FUTURE_DAYS_DEFAULT):
         _validation_stats.record_rejection("date_too_far_future")
-        return False, f"Date >1 year in future (likely parsing bug): {start_date} - {title}", warnings
+        return False, (
+            f"Date >{MAX_FUTURE_DAYS_DEFAULT} days in future "
+            f"(likely parsing bug): {start_date} - {title}"
+        ), warnings
 
     # Reject events missing start_time (unless genuinely all-day)
     start_time = event_data.get("start_time")
@@ -569,7 +622,7 @@ def validate_event(event_data: dict) -> Tuple[bool, Optional[str], list[str]]:
     if title.isupper() and len(title) > 5:
         # Title-case it
         event_data["title"] = title.title()
-        warnings.append(f"All-caps title converted to title case")
+        warnings.append("All-caps title converted to title case")
         _validation_stats.record_warning("all_caps_title")
 
     # Check description length
@@ -606,6 +659,12 @@ def validate_event(event_data: dict) -> Tuple[bool, Optional[str], list[str]]:
             warnings.append(f"Invalid price_max: {price_max}")
             _validation_stats.record_warning("invalid_price_max")
             event_data["price_max"] = None
+
+    # Category validity check (runs after normalize_category in insert_event)
+    category = event_data.get("category")
+    if category and category not in VALID_CATEGORIES:
+        _validation_stats.record_rejection("invalid_category")
+        return False, f"Invalid category: {category}", warnings
 
     # ===== SANITIZATION (fix and insert) =====
 
@@ -845,7 +904,10 @@ def insert_event(event_data: dict, series_hint: dict = None, genres: list = None
             else:
                 series_type = "festival_program"
 
-            series_title = infer_program_title(event_data.get("title")) or event_data.get("title") or festival_hint.get("festival_name")
+            # For festival programs, avoid falling back to event title:
+            # that creates one "program" series per session and confuses UI grouping.
+            inferred_program = infer_program_title(event_data.get("title"))
+            series_title = inferred_program or festival_hint.get("festival_name") or event_data.get("title")
             series_hint = {
                 "series_type": series_type,
                 "series_title": series_title,
@@ -872,8 +934,25 @@ def insert_event(event_data: dict, series_hint: dict = None, genres: list = None
             "series_title": event_data.get("title"),
         }
 
-    # Infer and merge tags
-    event_data["tags"] = infer_tags(event_data, venue_vibes, venue_type=venue_type)
+    # Infer genres FIRST so tags can use genre context
+    venue_genres = None
+    if event_data.get("venue_id"):
+        venue = get_venue_by_id_cached(event_data["venue_id"])
+        if venue:
+            venue_genres = venue.get("genres")
+    inferred_genres = infer_genres(event_data, venue_genres=venue_genres)
+    explicit_genres = normalize_genres(genres or [])
+    merged_genres = list(dict.fromkeys(explicit_genres + inferred_genres))
+
+    # Infer and merge tags (now with genre context)
+    event_data["tags"] = infer_tags(
+        event_data, venue_vibes, venue_type=venue_type,
+        genres=merged_genres,
+    )
+
+    # Update genres variable for downstream use
+    if merged_genres:
+        genres = merged_genres
 
     # Enrich series_hint with OMDB metadata for film events
     if film_metadata and series_hint and series_hint.get("series_type") == "film":
@@ -972,8 +1051,9 @@ def insert_event(event_data: dict, series_hint: dict = None, genres: list = None
     if event_data.get("price_min") is not None and event_data["price_min"] > 0:
         event_data["is_free"] = False
 
-    # Pop transient fields before DB insert
+    # Pop transient and deprecated fields before DB insert
     parsed_artists_for_insert = event_data.pop("_parsed_artists", None)
+    event_data.pop("subcategory", None)  # DEPRECATED: migrated to genres[]
 
     result = client.table("events").insert(event_data).execute()
     event_id = result.data[0]["id"]

@@ -30,28 +30,29 @@ BROWSE_URLS = [
 ]
 
 # Category mapping from Eventbrite to Lost City
+# Maps Eventbrite category → (lostcity_category, genre_list)
 CATEGORY_MAP = {
-    "Music": ("music", "concert"),
-    "Business & Professional": ("business", "networking"),
-    "Food & Drink": ("food", "dining"),
-    "Community & Culture": ("community", "cultural"),
-    "Performing & Visual Arts": ("art", "performance"),
-    "Film, Media & Entertainment": ("film", "screening"),
-    "Sports & Fitness": ("sports", "fitness"),
-    "Health & Wellness": ("wellness", "health"),
-    "Science & Technology": ("tech", "meetup"),
-    "Travel & Outdoor": ("outdoors", "adventure"),
-    "Charity & Causes": ("community", "charity"),
-    "Religion & Spirituality": ("community", "spiritual"),
-    "Family & Education": ("family", "kids"),
-    "Seasonal & Holiday": ("community", "holiday"),
-    "Government & Politics": ("community", "civic"),
-    "Fashion & Beauty": ("lifestyle", "fashion"),
-    "Home & Lifestyle": ("lifestyle", "home"),
-    "Auto, Boat & Air": ("lifestyle", "automotive"),
-    "Hobbies & Special Interest": ("community", "hobby"),
-    "Other": ("community", "other"),
-    "Nightlife": ("nightlife", "party"),
+    "Music": ("music", []),
+    "Business & Professional": ("learning", ["networking"]),
+    "Food & Drink": ("food_drink", []),
+    "Community & Culture": ("community", ["cultural"]),
+    "Performing & Visual Arts": ("art", []),
+    "Film, Media & Entertainment": ("film", []),
+    "Sports & Fitness": ("sports", []),
+    "Health & Wellness": ("fitness", ["yoga"]),
+    "Science & Technology": ("learning", ["seminar"]),
+    "Travel & Outdoor": ("outdoor", ["adventure"]),
+    "Charity & Causes": ("community", ["volunteer"]),
+    "Religion & Spirituality": ("community", ["faith"]),
+    "Family & Education": ("family", []),
+    "Seasonal & Holiday": ("community", ["cultural"]),
+    "Government & Politics": ("community", ["activism"]),
+    "Fashion & Beauty": ("community", []),
+    "Home & Lifestyle": ("community", []),
+    "Auto, Boat & Air": ("community", []),
+    "Hobbies & Special Interest": ("community", []),
+    "Other": ("community", []),
+    "Nightlife": ("nightlife", []),
 }
 
 
@@ -174,11 +175,11 @@ def parse_datetime(dt_str: str) -> tuple[Optional[str], Optional[str]]:
         return None, None
 
 
-def get_category(eventbrite_category: Optional[str]) -> tuple[str, str]:
-    """Map Eventbrite category to Lost City category/subcategory."""
+def get_category(eventbrite_category: Optional[str]) -> tuple[str, list[str]]:
+    """Map Eventbrite category to Lost City category and genre list."""
     if not eventbrite_category:
-        return "community", "other"
-    return CATEGORY_MAP.get(eventbrite_category, ("community", "other"))
+        return "community", []
+    return CATEGORY_MAP.get(eventbrite_category, ("community", []))
 
 
 def process_event(event_data: dict, source_id: int, producer_id: Optional[int]) -> Optional[dict]:
@@ -234,7 +235,7 @@ def process_event(event_data: dict, source_id: int, producer_id: Optional[int]) 
         # Get category
         category_data = event_data.get("category") or {}
         category_name = category_data.get("name") if category_data else None
-        category, subcategory = get_category(category_name)
+        category, genres = get_category(category_name)
 
         # Check if free
         is_free = event_data.get("is_free", False)
@@ -281,7 +282,7 @@ def process_event(event_data: dict, source_id: int, producer_id: Optional[int]) 
             "end_time": end_time,
             "is_all_day": False,
             "category": category,
-            "subcategory": subcategory,
+            "genres": genres,
             "tags": tags,
             "price_min": None,
             "price_max": None,
@@ -339,7 +340,7 @@ def parse_event_for_pipeline(event_data: dict) -> dict | None:
         # Category
         category_data = event_data.get("category") or {}
         category_name = category_data.get("name") if category_data else None
-        category, subcategory = get_category(category_name)
+        category, genres = get_category(category_name)
 
         # Image
         logo = event_data.get("logo") or {}
@@ -359,7 +360,7 @@ def parse_event_for_pipeline(event_data: dict) -> dict | None:
             "ticket_url": event_url,
             "image_url": image_url,
             "category": category,
-            "subcategory": subcategory,
+            "genres": genres,
             "price_min": None,
             "price_max": None,
             "venue": venue_dict,

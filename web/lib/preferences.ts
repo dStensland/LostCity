@@ -111,6 +111,64 @@ export type PreferenceNeighborhood = (typeof PREFERENCE_NEIGHBORHOODS)[number];
 export type PreferenceVibe = (typeof PREFERENCE_VIBES)[number]["value"];
 export type PricePreference = (typeof PRICE_PREFERENCES)[number]["value"];
 
+// Genre display labels for prettier rendering of slugs
+export const GENRE_DISPLAY_LABELS: Record<string, string> = {
+  "r-and-b": "R&B",
+  "hip-hop": "Hip-Hop",
+  "lo-fi": "Lo-Fi",
+  "dj-set": "DJ Set",
+  "sci-fi": "Sci-Fi",
+  "k-pop": "K-Pop",
+  "j-pop": "J-Pop",
+  "neo-soul": "Neo-Soul",
+  "open-mic": "Open Mic",
+  "stand-up": "Stand-Up",
+  "pop-up": "Pop-Up",
+  "drag-show": "Drag Show",
+  "watch-party": "Watch Party",
+  "happy-hour": "Happy Hour",
+  "spoken-word": "Spoken Word",
+  "singer-songwriter": "Singer-Songwriter",
+};
+
+/**
+ * Returns a display-friendly label for a genre slug.
+ * Falls back to title-casing the slug if no override exists.
+ */
+export function getGenreDisplayLabel(slug: string): string {
+  if (GENRE_DISPLAY_LABELS[slug]) return GENRE_DISPLAY_LABELS[slug];
+  return slug
+    .split("-")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+}
+
+// Needs preferences — accessibility, dietary, family
+export const PREFERENCE_NEEDS_ACCESSIBILITY = [
+  { value: "wheelchair", label: "Wheelchair Accessible" },
+  { value: "elevator", label: "Elevator Access" },
+  { value: "hearing-loop", label: "Hearing Loop" },
+  { value: "asl", label: "ASL Interpreted" },
+  { value: "sensory-friendly", label: "Sensory-Friendly" },
+  { value: "service-animals", label: "Service Animals Welcome" },
+] as const;
+
+export const PREFERENCE_NEEDS_DIETARY = [
+  { value: "gluten-free", label: "Gluten-Free" },
+  { value: "vegan", label: "Vegan" },
+  { value: "vegetarian", label: "Vegetarian" },
+  { value: "halal", label: "Halal" },
+  { value: "kosher", label: "Kosher" },
+  { value: "nut-free", label: "Nut-Free" },
+] as const;
+
+export const PREFERENCE_NEEDS_FAMILY = [
+  { value: "kid-friendly", label: "Kid-Friendly" },
+  { value: "stroller", label: "Stroller Accessible" },
+  { value: "changing-table", label: "Changing Table" },
+  { value: "nursing-room", label: "Nursing Room" },
+] as const;
+
 // Discovery Mode onboarding mood mappings
 export type OnboardingMood = "chill" | "wild" | "social" | "culture";
 

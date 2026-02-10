@@ -85,8 +85,6 @@ export async function POST(req: NextRequest) {
   for (const hood of neighborhoods) {
     for (const cat of categories) {
       try {
-        console.log(`Fetching ${cat.id} in ${hood.name}...`);
-
         const places = await searchNearbyPlaces({
           lat: hood.lat,
           lng: hood.lng,

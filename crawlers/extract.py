@@ -6,8 +6,10 @@ Converts raw HTML/text into structured event data.
 import json
 import logging
 from typing import Optional
+from datetime import datetime
 from pydantic import BaseModel
 
+from date_utils import normalize_iso_date, parse_human_date
 from llm_client import generate_text
 
 logger = logging.getLogger(__name__)
@@ -239,10 +241,50 @@ Content to extract:
         # Clean up event data - filter out events with missing required fields
         valid_events = []
         for event_data in data.get("events", []):
-            # Skip events without a date
-            if not event_data.get("start_date"):
+            raw_start_date = event_data.get("start_date")
+            if not raw_start_date:
                 logger.debug(f"Skipping event without date: {event_data.get('title', 'Unknown')}")
                 continue
+
+            context_text = " ".join(
+                filter(
+                    None,
+                    [
+                        str(event_data.get("title") or ""),
+                        str(event_data.get("description") or ""),
+                    ],
+                )
+            )
+
+            # Normalize dates and heal common +1 year rollover artifacts.
+            normalized_start = normalize_iso_date(raw_start_date) or parse_human_date(
+                str(raw_start_date),
+                context_text=context_text,
+            )
+            if not normalized_start:
+                logger.debug(f"Skipping event with invalid/unusable date: {event_data.get('title', 'Unknown')} ({raw_start_date})")
+                continue
+            event_data["start_date"] = normalized_start
+
+            raw_end_date = event_data.get("end_date")
+            if raw_end_date:
+                normalized_end = normalize_iso_date(raw_end_date) or parse_human_date(
+                    str(raw_end_date),
+                    context_text=context_text,
+                )
+                if normalized_end:
+                    event_data["end_date"] = normalized_end
+                else:
+                    event_data["end_date"] = None
+
+            if event_data.get("end_date"):
+                try:
+                    start_dt = datetime.strptime(event_data["start_date"], "%Y-%m-%d").date()
+                    end_dt = datetime.strptime(event_data["end_date"], "%Y-%m-%d").date()
+                    if end_dt < start_dt:
+                        event_data["end_date"] = None
+                except (TypeError, ValueError):
+                    event_data["end_date"] = None
 
             # Ensure venue has a name
             if event_data.get("venue") and not event_data["venue"].get("name"):

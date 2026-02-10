@@ -1,158 +1,180 @@
-# Lost City Feature Backlog
+# LostCity Product Roadmap
 
-Features from the Lovable redesign to implement in the Next.js codebase.
-
----
-
-## UI/UX Improvements
-
-### Event Cards Redesign
-- [x] Time column layout (large time on left)
-- [x] Live event indicator with pulsing dot
-- [x] Category-colored badges using new neon palette
-- [x] "Featured" and "Trending" badge indicators
-- [x] Friends going avatar stack
-- [x] Hover glow effect using `.card-interactive`
-- [x] Price display integration
-
-### Filter System Overhaul
-- [x] Horizontal scroll filter chips (Today, Tomorrow, Weekend, categories)
-- [x] Active chip with neon glow effect
-- [x] Full-screen filter drawer (slide from right)
-- [x] Filter sections: When, Neighborhood, Price, Social
-- [x] "Show X Events" counter in filter footer
-
-### Search Experience
-- [x] Full-screen search overlay with backdrop blur
-- [x] Popular searches as quick chips
-- [x] Results grouped by: Events, Venues, Neighborhoods
-- [x] Live search with instant results
-- [x] ESC to close keyboard hint
-
-### Header Updates
-- [x] Glass effect on scroll
-- [x] Gradient underline on logo
-- [x] Pill-style navigation (Events | Collections)
-- [x] Icon buttons: Search, Map, Bookmarks, User
+Active initiatives, prioritized by what's needed to sell and scale.
 
 ---
 
-## New Features
+## Tier 1: Demo Sprint
 
-### Social Proof
-- [x] Add `attendee_count` to events table
-- [x] "X interested" display on event cards
-- [x] Friends going feature (requires follow system integration)
-- [x] "Who's Going" section on event detail page
+What we need to walk into a sales meeting. The portal system is largely built (admin dashboard, branding, federation, analytics, QR codes, feed sections). These are the gaps.
 
-### Live Events
-- [x] Add `is_live` field to events
-- [x] Pulsing live indicator badge
-- [x] Filter for "Happening Now"
-- [x] Real-time status updates
+### 1.1 Demo Portal for First Vertical (Hotel Concierge)
+- [ ] Add `vertical` field to portal settings
+- [ ] Create hotel-specific route group with independent layout
+- [ ] Hotel concierge UI: tonight's picks, neighborhood guides, "ask concierge" CTA
+- [ ] Distinct visual language from default city portal
+- [ ] Demo data: configure FORTH Hotel portal with curated sections
 
-### Featured & Trending
-- [x] Add `is_featured` and `is_trending` fields
-- [x] Admin UI to mark events as featured
-- [x] Trending algorithm based on saves/views
-- [x] Featured badge with star icon
-- [x] Trending badge with fire icon
+### 1.2 Portal Onboarding Flow
+- [ ] Step-by-step setup wizard (replace single create modal)
+- [ ] Steps: name/type -> branding/colors -> filters/location -> sections -> preview -> launch
+- [ ] Template presets by vertical (hotel, film, community, etc.)
+- [ ] Live preview during setup
 
-### Collections Enhancement
-- [x] Collection cover images
-- [x] Collection descriptions
-- [x] Public/private toggle
-- [x] Browse collections page
-- [x] "Date Night Picks", "Free This Week" etc.
+### 1.3 Portal Admin UI Polish
+- [ ] Portal member management UI (invite, roles, remove)
+- [ ] Gallery page template (stub exists, needs implementation)
+- [ ] Timeline page template (stub exists, needs implementation)
+- [ ] Content moderation UI for user submissions
 
-### Venue Pages
-- [x] Dedicated venue detail page (`/spots/[slug]`)
-- [x] Venue vibes/tags (Underground, Live Music, Rooftop, etc.)
-- [x] Upcoming events count
-- [x] Venue description
-- [x] Related events at venue
+### 1.4 Personalization & Tagging Audit
+- [ ] Audit current tagging taxonomy: event categories, venue types, vibes, spot_type — are they consistent and complete?
+- [ ] Assess tag coverage: what % of events/venues have meaningful tags vs. generic/missing?
+- [ ] Review user preference model: how are inferred_preferences built, what signals feed them?
+- [ ] Evaluate "For You" feed quality: does personalization produce meaningfully different results per user?
+- [ ] Identify tag gaps: are there categories/vibes users would filter by that we don't capture?
+- [ ] Assess tag inference pipeline (tag_inference.py): accuracy, coverage, false positives
+- [ ] Review how tags flow from crawlers → DB → API → frontend filters → personalization
+- [ ] Recommend taxonomy cleanup: merge redundant tags, add missing ones, standardize naming
+- [ ] Audit venue_tag_definitions vs vibes array — are these two systems in sync or fragmented?
+- [ ] Assess community tag voting/moderation pipeline (venue_tags, venue_tag_votes, venue_tag_suggestions) — is it functional and surfaced in UI?
 
-### View Toggle
-- [x] Events / Venues / Map view toggle
-- [x] Persist view preference
-- [x] Map view with event markers
+### 1.5 Data Quality & Crawler Health Assessment
+- [ ] Run `python data_health.py` and assess all entity health scores (venues, events, series, festivals, organizations)
+- [ ] Run data quality queries from CRAWLER_STRATEGY.md: category distribution, duplicate detection, missing data by source, source health
+- [ ] Identify top 20 broken/degraded crawlers (success rate < 90%, zero recent events, last crawl > 7 days)
+- [ ] Assess event field coverage vs targets: start_time (>98%), description (>80%), image_url (>75%), is_free (>95%)
+- [ ] Assess venue field coverage vs targets: lat/lng (>95%), neighborhood (>90%), image_url (>80%), website (>70%)
+- [ ] Audit content hash dedup effectiveness — what's the actual duplicate rate?
+- [ ] Review extraction confidence scores — are they trending up or down?
+- [ ] Identify sources producing the lowest quality data (most missing fields, worst descriptions)
+- [ ] Check pre-insert validation gaps per PV1-PV3 in TECH_DEBT.md
+- [ ] Produce actionable report: which crawlers to fix, disable, or rewrite
 
----
+### 1.6 Venue Specials, Happy Hours & Time-Boxed Content
+Restaurants and bars have recurring time-sensitive offerings (happy hours, daily specials, taco tuesdays) that are distinct from events. Museums and galleries have temporary exhibits that are time-boxed but not single-day events. We need a data model and crawling strategy for these.
 
-## Data Model Changes (Completed)
+**Data Model**
+- [ ] Design `venue_specials` table (or equivalent) for time-boxed venue features
+  - Types: `happy_hour`, `daily_special`, `recurring_deal`, `exhibit`, `installation`, `seasonal_menu`, `pop_up`
+  - Timing: `time_start`/`time_end` (daily window), `days_of_week` (recurring), `start_date`/`end_date` (seasonal/exhibit bounds)
+  - Recurrence: iCal-style RRULE or simple `days_of_week` array
+  - Content: title, description, image_url, price/discount info
+- [ ] Decide relationship to events table — specials are NOT events (no dedup, no content hash, no ticket_url) but may appear in feeds alongside events
+- [ ] Add API endpoint(s) to surface specials: per-venue detail, filterable lists ("happy hours near me right now")
+- [ ] Design frontend display: inline on venue cards, dedicated "Specials" section in hotel/city feeds, time-aware visibility (only show happy hour card during/near happy hour window)
 
-### Events Table
-```sql
-ALTER TABLE events ADD COLUMN IF NOT EXISTS attendee_count INTEGER DEFAULT 0;
-ALTER TABLE events ADD COLUMN IF NOT EXISTS is_live BOOLEAN DEFAULT false;
-ALTER TABLE events ADD COLUMN IF NOT EXISTS is_featured BOOLEAN DEFAULT false;
-ALTER TABLE events ADD COLUMN IF NOT EXISTS is_trending BOOLEAN DEFAULT false;
-```
+**Crawling Strategy**
+- [ ] Audit which existing bar/restaurant crawlers could also capture specials (many venue websites have a "specials" or "happy hour" page)
+- [ ] Research structured data sources for specials: Google Business profiles, Yelp, BeerMenus, Untappd
+- [ ] Design crawler pattern for specials extraction (separate from event extraction — different page, different schema)
+- [ ] For museums/galleries: identify exhibit pages to crawl (High Museum, MOCA GA, Atlanta Contemporary, etc.)
+- [ ] Determine update frequency — specials change less often than events, maybe weekly crawl vs daily
 
-### Venues Table
-```sql
-ALTER TABLE venues ADD COLUMN IF NOT EXISTS vibes TEXT[];
-ALTER TABLE venues ADD COLUMN IF NOT EXISTS description TEXT;
-```
+**Integration with Hotel Concierge**
+- [ ] Surface happy hours in "Where to Drink" carousel (badge: "Happy Hour 5-7pm")
+- [ ] Surface current exhibits in "Explore" category of neighborhood section
+- [ ] Add "Happy Hour Now" section to concierge feed (time-aware, only shows during relevant hours)
 
----
-
-## Animation & Polish
-
-- [x] Add Framer Motion for page transitions
-- [x] Staggered fade-up on event list load
-- [x] Smooth drawer open/close animations
-- [x] Search overlay transitions
-- [x] Card hover lift effect
-
----
-
-## Priority Order (Suggested)
-
-1. **High Impact, Low Effort** - DONE
-   - ~~Event card hover glow (CSS only)~~
-   - ~~Status badges (Live, Featured, Trending)~~
-   - ~~Filter chip redesign~~
-
-2. **High Impact, Medium Effort** - DONE
-   - ~~Search overlay~~
-   - ~~Venue pages~~
-   - ~~Social proof (attendee counts)~~
-
-3. **Medium Impact, Higher Effort** - DONE
-   - ~~Full filter drawer~~
-   - ~~Friends going feature~~
-   - ~~Map view~~
+### 1.7 Main Product Polish
+- [ ] Audit and fix any rough edges in core event/venue experience
+- [ ] Ensure portal branding looks great across all page types
+- [ ] Test custom domain flow end-to-end
+- [ ] Mobile responsiveness audit on portal pages
 
 ---
 
-## Design System (Completed)
+## Tier 2: Close-Critical
 
-- [x] Neon color palette (magenta, cyan, amber, green)
-- [x] Glow effects (.glow, .glow-sm, .glow-lg)
-- [x] Text glow (.text-glow)
-- [x] Gradient text (.gradient-text-neon)
-- [x] Interactive cards (.card-interactive)
-- [x] Glass effect (.glass)
-- [x] Status badges (.badge-live, .badge-trending, etc.)
-- [x] New animations (fade-up, scale-in, pulse-glow, shimmer)
-- [x] Space Grotesk display font
+What converts a demo into a paying customer. Not needed for first meeting, needed before signing.
+
+### 2.1 Portal Analytics (Basic)
+- [x] Page views, traffic sources, top events (exists in portal admin)
+- [ ] Export capability (CSV/PDF)
+- [ ] Engagement metrics: saves, RSVPs, shares per portal
+- [ ] Comparative metrics: this week vs. last week
+
+### 2.2 Self-Service Portal Creation
+- [ ] Public-facing "Create Your Portal" flow (not just admin)
+- [ ] Plan selection with feature comparison
+- [ ] Stripe billing integration (can defer, invoice manually initially)
 
 ---
 
-## Remaining Items
+## Tier 3: Network Effect Layer
 
-### Quick Wins
-- [x] Glass effect on header scroll
-- [x] Gradient underline on logo hover
-- [x] Filter for "Happening Now" (live events)
+What makes the platform compound. Build after first paying customers.
 
-### Medium Effort
-- [x] Friends going avatar stack on event cards
-- [x] "Who's Going" section on event detail
-- [x] Admin UI to mark events as featured
+### 3.1 Cross-Portal Enrichment Routing
+- [ ] Audit portal_content: which actions are facts vs. preferences
+- [ ] Route fact-type enrichments to global tables with `contributed_by_portal_id`
+- [ ] Keep display-order and pinning in portal_content
+- [ ] Add `enrichment_source` column to venue_tags
 
-### Larger Features
-- [x] Framer Motion page transitions
-- [x] View toggle (Events/Venues/Map)
-- [x] Collections enhancements
+### 3.2 Venue Self-Service
+- [ ] Post-claim venue management dashboard
+- [ ] Edit venue details (hours, description, images, vibes, accessibility)
+- [ ] Submit events directly (bypass crawler for claimed venues)
+- [ ] View analytics (portal appearances, view counts, saves)
+- [ ] "Verified" badge displayed across all portals
+
+### 3.3 Cross-Portal User Graph
+- [ ] Add portal_id to activities and inferred_preferences for attribution
+- [ ] "For You" feed reflects full cross-portal taste profile
+- [ ] Privacy: users can see which portals have their data
+
+---
+
+## Tier 4: Shelved
+
+Validated ideas, not needed yet. Revisit after revenue.
+
+### 4.1 Billing Integration
+- Stripe subscriptions per portal mapped to plan tier
+- Webhook handler for subscription lifecycle events
+- Plan limits enforced at API level
+- Usage-based billing for API product
+
+### 4.2 Embeddable Widget
+- Lightweight embed for hospitals, apartments, etc. who don't want a full portal
+- Configurable: event list, calendar, or map view
+- Script tag or iframe with branding options
+
+### 4.3 Public Developer API
+- `withApiKey()` middleware alongside `withAuth()`
+- Rate limits by plan: free (1k/day) -> enterprise (unlimited)
+- OpenAPI spec auto-generated from route definitions
+- Developer portal at /developers
+
+### 4.4 Multi-City Expansion
+- Nashville, Charlotte, Austin as next cities
+- Crawler strategy for new cities (see CRAWLER_STRATEGY.md)
+- Per-city portal templates
+
+### 4.5 Additional Vertical Layouts
+- Film festival (schedule builder, screening rooms, Q&A sessions)
+- Hospital/corporate (proximity-focused, accessible, employee engagement)
+- Community/neighborhood (enrichment-focused, low-cost)
+- Fitness/wellness (class schedules, instructor profiles)
+
+### 4.6 System Health Dashboard
+- Source health: active / degrading / broken / disabled
+- Trend tracking: events_found, rejection_rate over time
+- Weekly digest emails
+- Anomaly detection and alerts
+- See TECH_DEBT.md for details
+
+---
+
+## Reference Documents
+
+| Document | Purpose |
+|----------|---------|
+| STRATEGIC_PRINCIPLES.md | Core hypotheses and decision framework |
+| ARCHITECTURE_PLAN.md | Gap analysis and implementation phases |
+| TECH_DEBT.md | Code-level debt and system health items |
+| COMPETITIVE_INTEL.md | Competitor analysis and battle cards |
+| GTM_STRATEGY.md | Go-to-market sequencing and target prioritization |
+| NOVEL_TARGETS.md | 15 novel B2B target segments |
+| MONETIZATION_PLAYBOOK.md | Revenue models beyond portal subscriptions |
+| SALES_ENABLEMENT.md | Demo scripts, one-pagers, objection handlers |

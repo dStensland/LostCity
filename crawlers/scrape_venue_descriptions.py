@@ -108,6 +108,14 @@ def extract_description(url: str) -> Optional[str]:
             if desc:
                 return desc
 
+        # Priority 4: First substantial <p> from body text
+        for p in soup.find_all("p"):
+            text = p.get_text(strip=True)
+            if len(text) >= 40:
+                desc = clean_description(text)
+                if desc:
+                    return desc
+
         return None
 
     except Exception as e:
@@ -124,19 +132,22 @@ def scrape_descriptions(
     client = get_client()
 
     # Build query: active venues with website, missing description
+    # Fetch all with websites, filter client-side to catch both null and empty string
     query = (
         client.table("venues")
         .select("id,name,slug,website,venue_type,description")
         .eq("active", True)
         .not_.is_("website", "null")
-        .is_("description", "null")
     )
 
     if venue_type:
         query = query.eq("venue_type", venue_type)
 
-    result = query.order("name").limit(limit).execute()
-    venues = result.data or []
+    result = query.order("name").limit(5000).execute()
+    # Filter to venues missing descriptions (null or empty string)
+    all_venues = result.data or []
+    venues = [v for v in all_venues if not (v.get("description") or "").strip()]
+    venues = venues[:limit]
 
     stats = {"total": len(venues), "found": 0, "failed": 0, "skipped": 0}
 
@@ -157,7 +168,17 @@ def scrape_descriptions(
         if desc:
             logger.info(f"  FOUND: {desc[:80]}...")
             if not dry_run:
-                client.table("venues").update({"description": desc}).eq("id", v["id"]).execute()
+                for attempt in range(3):
+                    try:
+                        client.table("venues").update({"description": desc}).eq("id", v["id"]).execute()
+                        break
+                    except Exception as db_err:
+                        if attempt < 2:
+                            logger.debug(f"  DB retry {attempt+1}: {db_err}")
+                            time.sleep(1)
+                            client = get_client()
+                        else:
+                            logger.warning(f"  DB write failed: {db_err}")
             stats["found"] += 1
         else:
             logger.info(f"  No description found")

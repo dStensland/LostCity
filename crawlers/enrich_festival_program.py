@@ -22,7 +22,7 @@ import logging
 import re
 import sys
 import time
-from datetime import date, datetime
+from datetime import date
 from pathlib import Path
 from typing import Optional
 from urllib.parse import urljoin, urlparse
@@ -32,15 +32,9 @@ from bs4 import BeautifulSoup
 
 from dotenv import load_dotenv
 
-env_path = Path(__file__).parent.parent / ".env"
-load_dotenv(env_path)
-
-sys.path.insert(0, str(Path(__file__).parent))
-
 from config import get_config
 from db import (
     get_client,
-    get_or_create_venue,
     get_source_by_slug,
     insert_event,
     find_event_by_hash,
@@ -50,6 +44,9 @@ from artists import get_or_create_artist
 from dedupe import generate_content_hash
 from llm_client import generate_text
 from utils import setup_logging, slugify
+
+env_path = Path(__file__).parent.parent / ".env"
+load_dotenv(env_path)
 
 logger = logging.getLogger(__name__)
 
@@ -168,6 +165,7 @@ This could be a conference (with panel sessions and keynotes) OR a cultural/ente
 Return a JSON array of sessions. Each session should have:
 {
   "title": "Event or activity title",
+  "program_title": "Program/track/stage grouping name" (null if not available),
   "date": "YYYY-MM-DD",
   "start_time": "HH:MM" (24h format, null if not available),
   "end_time": "HH:MM" (24h format, null if not available),
@@ -186,6 +184,7 @@ Rules:
 - Use 24-hour time format
 - Mark headline/main events with is_keynote: true
 - If the year isn't specified, use 2026
+- Use a stable program_title to group related sessions when possible
 - Return ONLY the JSON array, no other text
 - If the page has no scheduled events or activities, return []"""
 
@@ -212,6 +211,7 @@ EXPERIENCE_SYSTEM_PROMPT = """You are a data extraction assistant. Extract ALL s
 Return a JSON array of experiences. Each should have:
 {
   "title": "Experience title",
+  "program_title": "Program/track/stage grouping name" (null if not available),
   "date": "YYYY-MM-DD",
   "start_time": "HH:MM" (24h format, null if not available),
   "end_time": "HH:MM" (24h format, null if not available),
@@ -228,6 +228,7 @@ Rules:
 - Use 24-hour time format
 - Price should be numeric (no $ sign)
 - If the year isn't specified, use 2026
+- Use a stable program_title to group related experiences when possible
 - Return ONLY the JSON array, no other text"""
 
 
@@ -301,9 +302,37 @@ def extract_experiences(html: str, festival_dates: dict) -> list[dict]:
 # Database insertion
 # ---------------------------------------------------------------------------
 
-def ensure_festival_series(festival: dict) -> str:
-    """Get or create the festival_program series for a festival. Returns series UUID."""
+def _clean_program_title(value: Optional[str]) -> Optional[str]:
+    if not value:
+        return None
+    normalized = re.sub(r"\s+", " ", value).strip(" -:|")
+    return normalized[:120] if normalized else None
+
+
+def infer_session_program_title(session: dict) -> str:
+    """Infer program title from extracted session fields."""
+    for key in ("program_title", "program", "program_name", "track", "stage"):
+        title = _clean_program_title(session.get(key))
+        if title:
+            return title
+    if session.get("is_keynote"):
+        return "Keynotes"
+    return "General Program"
+
+
+def infer_experience_program_title(exp: dict) -> str:
+    """Infer program title from extracted experience fields."""
+    for key in ("program_title", "program", "program_name", "track", "stage"):
+        title = _clean_program_title(exp.get(key))
+        if title:
+            return title
+    return "Experiences"
+
+
+def ensure_program_series(festival: dict, program_title: str) -> str:
+    """Get or create a festival_program series for a specific program title."""
     client = get_client()
+    program_title = _clean_program_title(program_title) or "General Program"
 
     # Check for existing series
     result = (
@@ -311,22 +340,39 @@ def ensure_festival_series(festival: dict) -> str:
         .select("id")
         .eq("festival_id", festival["id"])
         .eq("series_type", "festival_program")
+        .eq("title", program_title)
+        .limit(1)
         .execute()
     )
     if result.data:
         return result.data[0]["id"]
 
-    # Create new series
-    from utils import slugify
+    # Create new per-program series
+    base_slug = slugify(f"{festival.get('slug', festival['name'])}-{program_title}")
+    candidate_slug = base_slug
+    counter = 2
+    while True:
+        existing_slug = (
+            client.table("series")
+            .select("id")
+            .eq("slug", candidate_slug)
+            .limit(1)
+            .execute()
+        )
+        if not existing_slug.data:
+            break
+        candidate_slug = f"{base_slug}-{counter}"
+        counter += 1
+
     series_data = {
-        "title": festival["name"],
-        "slug": slugify(festival["name"]),
+        "title": program_title,
+        "slug": candidate_slug,
         "series_type": "festival_program",
         "festival_id": festival["id"],
         "category": (festival.get("categories") or ["community"])[0],
-        "description": festival.get("description"),
+        "description": f"{program_title} program at {festival['name']}",
         "image_url": festival.get("image_url"),
-        "tags": ["festival"],
+        "tags": ["festival", "program"],
         "is_active": True,
     }
     result = client.table("series").insert(series_data).execute()
@@ -339,6 +385,7 @@ def insert_session_event(
     source_id: int,
     venue_id: int,
     series_id: str,
+    program_title: str,
     dry_run: bool = False,
 ) -> Optional[int]:
     """Insert a single session as an event. Returns event ID or None."""
@@ -368,7 +415,7 @@ def insert_session_event(
         panelists = session.get("panelists", [])
         logger.info(
             f"  [DRY RUN] {title} | {start_date} {session.get('start_time', '??:??')} | "
-            f"room={session.get('room', '-')} | {len(panelists)} panelists"
+            f"program={program_title} | room={session.get('room', '-')} | {len(panelists)} panelists"
         )
         return -1
 
@@ -442,6 +489,7 @@ def insert_experience_event(
     source_id: int,
     venue_id: int,
     series_id: str,
+    program_title: str,
     dry_run: bool = False,
 ) -> Optional[int]:
     """Insert a special experience as an event. Returns event ID or None."""
@@ -470,7 +518,7 @@ def insert_experience_event(
         price = exp.get("price")
         logger.info(
             f"  [DRY RUN] Experience: {title} | {start_date} {exp.get('start_time', '??:??')} | "
-            f"${price or '?'}"
+            f"program={program_title} | ${price or '?'}"
         )
         return -1
 
@@ -622,9 +670,6 @@ def enrich_festival_program(
     if not venue_id:
         raise ValueError(f"No venue resolved for festival: {slug}")
 
-    # 4. Ensure series exists
-    series_id = ensure_festival_series(festival)
-
     # Festival date context
     festival_dates = {
         "start": festival.get("announced_start"),
@@ -643,7 +688,9 @@ def enrich_festival_program(
         "sessions_inserted": 0,
         "experiences_found": 0,
         "experiences_inserted": 0,
+        "programs_grouped": 0,
     }
+    program_series_map: dict[str, str] = {}
 
     logger.info(f"Festival Program Enrichment: {festival['name']}")
     logger.info(f"{'=' * 70}")
@@ -734,8 +781,27 @@ def enrich_festival_program(
 
         stats["sessions_found"] = len(sessions)
         for session in sessions:
+            program_title = infer_session_program_title(session)
+            if program_title not in program_series_map:
+                if dry_run:
+                    program_series_map[program_title] = f"dry-run-{slugify(program_title)}"
+                else:
+                    try:
+                        program_series_map[program_title] = ensure_program_series(festival, program_title)
+                    except Exception as e:
+                        logger.warning(
+                            f"Failed to ensure program series '{program_title}', using fallback: {e}"
+                        )
+                        program_series_map[program_title] = ensure_program_series(festival, "General Program")
+
             result = insert_session_event(
-                session, festival, source_id, venue_id, series_id, dry_run
+                session,
+                festival,
+                source_id,
+                venue_id,
+                program_series_map[program_title],
+                program_title,
+                dry_run,
             )
             if result is not None:
                 stats["sessions_inserted"] += 1
@@ -753,8 +819,29 @@ def enrich_festival_program(
                 logger.info(f"  Found {len(experiences)} experiences")
 
                 for exp in experiences:
+                    program_title = infer_experience_program_title(exp)
+                    if program_title not in program_series_map:
+                        if dry_run:
+                            program_series_map[program_title] = f"dry-run-{slugify(program_title)}"
+                        else:
+                            try:
+                                program_series_map[program_title] = ensure_program_series(festival, program_title)
+                            except Exception as e:
+                                logger.warning(
+                                    f"Failed to ensure program series '{program_title}', using fallback: {e}"
+                                )
+                                program_series_map[program_title] = ensure_program_series(
+                                    festival, "Experiences"
+                                )
+
                     result = insert_experience_event(
-                        exp, festival, source_id, venue_id, series_id, dry_run
+                        exp,
+                        festival,
+                        source_id,
+                        venue_id,
+                        program_series_map[program_title],
+                        program_title,
+                        dry_run,
                     )
                     if result is not None:
                         stats["experiences_inserted"] += 1
@@ -763,9 +850,11 @@ def enrich_festival_program(
         else:
             logger.info("\nNo experience page found")
 
+    stats["programs_grouped"] = len(program_series_map)
+
     # Summary
     logger.info(f"\n{'=' * 70}")
-    logger.info(f"ENRICHMENT RESULTS")
+    logger.info("ENRICHMENT RESULTS")
     logger.info(f"{'=' * 70}")
     logger.info(f"Pages crawled:        {stats['pages_crawled']}")
     logger.info(f"Authors found:        {stats['authors_found']}")
@@ -774,8 +863,12 @@ def enrich_festival_program(
     logger.info(f"Sessions inserted:    {stats['sessions_inserted']}")
     logger.info(f"Experiences found:    {stats['experiences_found']}")
     logger.info(f"Experiences inserted: {stats['experiences_inserted']}")
+    logger.info(f"Programs grouped:     {stats['programs_grouped']}")
+    if program_series_map:
+        top_programs = ", ".join(sorted(program_series_map.keys())[:12])
+        logger.info(f"Program buckets:      {top_programs}")
     if dry_run:
-        logger.info(f"\nDRY RUN — no data written to database")
+        logger.info("\nDRY RUN — no data written to database")
 
     return stats
 

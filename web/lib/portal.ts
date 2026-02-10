@@ -4,6 +4,16 @@ import type { Portal } from "@/lib/portal-context";
 import { getCachedDomain, setCachedDomain } from "@/lib/domain-cache";
 import crypto from "crypto";
 
+export type PortalVertical = "city" | "hotel" | "film" | "hospital" | "community";
+
+/**
+ * Get the portal vertical type (defaults to "city" if not set).
+ * Server-safe version — can be used in server components and layouts.
+ */
+export function getPortalVertical(portal: Portal): PortalVertical {
+  return (portal.settings?.vertical as PortalVertical) || "city";
+}
+
 // Base columns that always exist in the portals table
 const BASE_PORTAL_COLUMNS = `
   id,

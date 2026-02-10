@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Spot } from "@/lib/spots-constants";
 import { formatPriceLevel } from "@/lib/spots-constants";
 import { formatCompactCount } from "@/lib/formats";
+import { formatGenre } from "@/lib/series-utils";
 import CategoryIcon, { getCategoryLabel } from "./CategoryIcon";
 import { EventsBadge } from "./Badge";
 import VenueTagBadges from "./VenueTagBadges";
@@ -88,6 +89,20 @@ export default function SpotCard({ spot, index = 0, showDistance, portalSlug, ta
           <p className="text-sm text-[var(--muted)] mt-1.5 line-clamp-1">
             {spot.short_description}
           </p>
+        )}
+
+        {/* Genre chips */}
+        {spot.genres && spot.genres.length > 0 && (
+          <div className="flex items-center gap-1 mt-1.5 flex-wrap">
+            {spot.genres.slice(0, 3).map((genre) => (
+              <span
+                key={genre}
+                className="inline-flex items-center px-1.5 py-0.5 rounded text-[0.55rem] font-mono bg-[var(--twilight)]/60 text-[var(--muted)]"
+              >
+                {formatGenre(genre)}
+              </span>
+            ))}
+          </div>
         )}
 
         {/* Community tags - use pre-loaded tags if available, otherwise fetch (N+1 fallback) */}

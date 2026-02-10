@@ -1,12 +1,28 @@
 import { notFound } from "next/navigation";
-import { getCachedPortalBySlug } from "@/lib/portal";
+import { getCachedPortalBySlug, getPortalVertical } from "@/lib/portal";
 import { PortalProvider } from "@/lib/portal-context";
 import { PortalTheme } from "@/components/PortalTheme";
 import PortalThemeClient from "@/components/PortalThemeClient";
 import CannyWidget from "@/components/CannyWidget";
 import PortalFooter from "@/components/PortalFooter";
+import { Cormorant_Garamond, Inter } from "next/font/google";
 
 import type { Metadata } from "next";
+
+// Hotel vertical fonts
+const cormorantGaramond = Cormorant_Garamond({
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-display",
+  subsets: ["latin"],
+  display: "swap",
+});
+
+const inter = Inter({
+  weight: ["400", "500", "600"],
+  variable: "--font-body",
+  subsets: ["latin"],
+  display: "swap",
+});
 
 type Props = {
   children: React.ReactNode;
@@ -51,13 +67,22 @@ export default async function PortalLayout({ children, params }: Props) {
     notFound();
   }
 
+  // Detect vertical type to apply appropriate styling and components
+  const vertical = getPortalVertical(portal);
+  const isHotel = vertical === "hotel";
+
   return (
     <PortalProvider portal={portal}>
       <PortalTheme portal={portal} />
       <PortalThemeClient portal={portal} />
-      {children}
-      <PortalFooter />
-      <CannyWidget />
+      <div
+        data-vertical={vertical}
+        className={isHotel ? `${cormorantGaramond.variable} ${inter.variable}` : ""}
+      >
+        {children}
+        <PortalFooter />
+        <CannyWidget />
+      </div>
     </PortalProvider>
   );
 }

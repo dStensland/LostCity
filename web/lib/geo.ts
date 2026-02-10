@@ -58,3 +58,45 @@ export function isWithinRadius(
   const distance = getDistanceMiles(centerLat, centerLng, pointLat, pointLng);
   return distance <= radiusMiles;
 }
+
+// ============================================================================
+// PROXIMITY TIERS — for hotel/portal distance-based content curation
+// ============================================================================
+
+export type ProximityTier = "walkable" | "close" | "destination";
+
+const WALK_SPEED_KMH = 5;
+
+/**
+ * Get proximity tier based on distance in km.
+ * - walkable: < 1.2km (~15 min walk) — show everything
+ * - close: 1.2-3km — filter to notable venues
+ * - destination: 3km+ — marquee only
+ */
+export function getProximityTier(distanceKm: number): ProximityTier {
+  if (distanceKm < 1.2) return "walkable";
+  if (distanceKm < 3) return "close";
+  return "destination";
+}
+
+/**
+ * Get walking time in minutes from distance in km.
+ * Assumes 5 km/h average walking speed.
+ */
+export function getWalkingMinutes(distanceKm: number): number {
+  return Math.round((distanceKm / WALK_SPEED_KMH) * 60);
+}
+
+/**
+ * Human-readable proximity label.
+ * "4 min walk", "18 min walk", "Short ride", "12 min drive"
+ */
+export function getProximityLabel(distanceKm: number): string {
+  const walkMin = getWalkingMinutes(distanceKm);
+  if (walkMin <= 15) return `${walkMin} min walk`;
+  if (walkMin <= 30) return `${walkMin} min walk`;
+  // Assume ~30 km/h average driving in the city
+  const driveMin = Math.max(5, Math.round((distanceKm / 30) * 60));
+  if (driveMin <= 10) return "Short ride";
+  return `${driveMin} min drive`;
+}

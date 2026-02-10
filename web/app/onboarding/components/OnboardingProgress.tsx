@@ -6,14 +6,10 @@ import { createCssVarClassForLength } from "@/lib/css-utils";
 
 interface OnboardingProgressProps {
   currentStep: OnboardingStep;
-  showSubcategories: boolean;
 }
 
-export function OnboardingProgress({ currentStep, showSubcategories }: OnboardingProgressProps) {
-  // Build the steps array based on whether subcategories are shown
-  const steps: OnboardingStep[] = showSubcategories
-    ? ["categories", "subcategories", "neighborhoods"]
-    : ["categories", "neighborhoods"];
+export function OnboardingProgress({ currentStep }: OnboardingProgressProps) {
+  const steps: OnboardingStep[] = ["categories", "genres"];
 
   const currentIndex = steps.indexOf(currentStep);
   const totalSteps = steps.length;

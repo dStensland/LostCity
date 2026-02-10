@@ -149,8 +149,9 @@
   opacity: 0.7 !important;
 }
 
-/* Dark theme: invert logo for visibility without white box */
+/* Dark theme: eliminate white box by blending into dark background */
 .mapContainer[data-theme="dark"] :global(.mapboxgl-ctrl-logo) {
-  filter: invert(1) !important;
-  opacity: 0.3 !important;
+  filter: invert(1) brightness(2) !important;
+  opacity: 0.25 !important;
+  mix-blend-mode: screen !important;
 }

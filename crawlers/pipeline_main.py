@@ -341,7 +341,7 @@ def run_profile(slug: str, dry_run: bool, limit: int | None) -> CrawlResult:
                 "end_time": enriched.get("end_time") or seed.get("end_time"),
                 "is_all_day": False,
                 "category": category,
-                "subcategory": profile.defaults.subcategory,
+                # subcategory deprecated — genres[] used instead
                 "tags": _merge_tags(enriched.get("tags"), profile.defaults.tags),
                 "price_min": enriched.get("price_min"),
                 "price_max": enriched.get("price_max"),
@@ -505,7 +505,7 @@ def run_profile(slug: str, dry_run: bool, limit: int | None) -> CrawlResult:
             "end_time": enriched.get("end_time") or seed.get("end_time"),
             "is_all_day": False,
             "category": category,
-            "subcategory": profile.defaults.subcategory,
+            # subcategory deprecated — genres[] used instead
             "tags": _merge_tags(enriched.get("tags"), profile.defaults.tags),
             "price_min": enriched.get("price_min"),
             "price_max": enriched.get("price_max"),
@@ -666,7 +666,7 @@ def _process_llm_discovery(profile, source, default_venue_id: int | None, dry_ru
             "end_time": enriched.get("end_time") or event.get("end_time"),
             "is_all_day": bool(event.get("is_all_day")),
             "category": category,
-            "subcategory": event.get("subcategory") or profile.defaults.subcategory,
+            # subcategory deprecated — genres[] used instead
             "tags": _merge_tags(event.get("tags"), profile.defaults.tags),
             "price_min": enriched.get("price_min") or event.get("price_min"),
             "price_max": enriched.get("price_max") or event.get("price_max"),
@@ -786,7 +786,7 @@ def _process_api_events(events: list[dict], source: dict, profile, default_venue
             "end_time": None,
             "is_all_day": False,
             "category": event.get("category") or profile.defaults.category,
-            "subcategory": event.get("subcategory") or profile.defaults.subcategory,
+            # subcategory deprecated — genres[] used instead
             "tags": tags,
             "price_min": event.get("price_min"),
             "price_max": event.get("price_max"),

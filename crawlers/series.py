@@ -7,6 +7,7 @@ import re
 import logging
 from typing import Optional
 from supabase import Client
+from tags import VALID_CATEGORIES, VALID_FESTIVAL_TYPES
 
 logger = logging.getLogger(__name__)
 
@@ -54,6 +55,10 @@ def create_festival(
     base_slug = slugify(festival_name)
     slug = _ensure_festival_slug(client, base_slug)
     festival_id = slug
+
+    if festival_type and festival_type not in VALID_FESTIVAL_TYPES:
+        logger.warning(f"Invalid festival_type '{festival_type}' for '{festival_name}'")
+        festival_type = None
 
     festival_data = {
         "id": festival_id,
@@ -134,18 +139,29 @@ def normalize_title(title: str) -> str:
     return title.strip()
 
 
-def find_series_by_title(client: Client, title: str, series_type: str) -> Optional[dict]:
+def find_series_by_title(
+    client: Client,
+    title: str,
+    series_type: str,
+    festival_id: Optional[str] = None,
+) -> Optional[dict]:
     """Find an existing series by title and type."""
     normalized = normalize_title(title)
+    query = client.table("series").select("*").eq("series_type", series_type)
+    if series_type == "festival_program" and festival_id:
+        query = query.eq("festival_id", festival_id)
 
     # Try exact match first
-    result = client.table("series").select("*").eq("title", title).eq("series_type", series_type).execute()
+    result = query.eq("title", title).execute()
     if result.data:
         return result.data[0]
 
     # Try normalized match via slug
     slug = slugify(normalized)
-    result = client.table("series").select("*").eq("slug", slug).eq("series_type", series_type).execute()
+    query = client.table("series").select("*").eq("series_type", series_type)
+    if series_type == "festival_program" and festival_id:
+        query = query.eq("festival_id", festival_id)
+    result = query.eq("slug", slug).execute()
     if result.data:
         return result.data[0]
 
@@ -205,7 +221,12 @@ def get_or_create_series(client: Client, series_hint: dict, category: str = None
     )
 
     # Check for existing series
-    existing = find_series_by_title(client, series_title, series_type)
+    existing = find_series_by_title(
+        client,
+        series_title,
+        series_type,
+        festival_id=festival_id,
+    )
     if existing:
         # Backfill festival_id if missing
         if festival_id and not existing.get("festival_id"):
@@ -219,6 +240,11 @@ def get_or_create_series(client: Client, series_hint: dict, category: str = None
         existing = find_series_by_imdb(client, imdb_id)
         if existing:
             return existing["id"]
+
+    # Validate category
+    if category and category not in VALID_CATEGORIES:
+        logger.warning(f"Invalid series category '{category}' for '{series_title}' - setting to None")
+        category = None
 
     # Create new series
     series_data = {

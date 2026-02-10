@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { supabase } from "@/lib/supabase";
-import { CATEGORIES, SUBCATEGORIES } from "@/lib/search";
+import { CATEGORIES } from "@/lib/search";
 import { SPOT_TYPES, VIBES, NEIGHBORHOODS } from "@/lib/spots";
 import { ITP_NEIGHBORHOODS } from "@/config/neighborhoods";
 import { PLACE_CATEGORIES } from "@/config/categories";
@@ -84,7 +84,6 @@ export default async function DataPage() {
     })),
     eventCategories: {
       main: CATEGORIES.map((c) => ({ id: c.value, label: c.label })),
-      subcategories: SUBCATEGORIES,
       fromDatabase: dbCategories,
     },
     spotTypes: Object.entries(SPOT_TYPES).map(([id, info]) => ({

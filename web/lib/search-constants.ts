@@ -113,6 +113,7 @@ export const TAG_GROUPS = {
     { value: "chill", label: "Chill" },
     { value: "high-energy", label: "High Energy" },
     { value: "intimate", label: "Intimate" },
+    { value: "rowdy", label: "Rowdy" },
   ],
   Access: [
     { value: "free", label: "Free" },
@@ -123,18 +124,37 @@ export const TAG_GROUPS = {
     { value: "accessible", label: "Accessible" },
     { value: "outdoor", label: "Outdoor" },
   ],
+  Type: [
+    { value: "live-music", label: "Live Music" },
+    { value: "class", label: "Class" },
+    { value: "educational", label: "Educational" },
+    { value: "hands-on", label: "Hands-On" },
+    { value: "community", label: "Community" },
+    { value: "volunteer", label: "Volunteer" },
+  ],
   Special: [
     { value: "local-artist", label: "Local Artist" },
     { value: "touring", label: "Touring" },
     { value: "album-release", label: "Album Release" },
     { value: "one-night-only", label: "One Night Only" },
     { value: "opening-night", label: "Opening Night" },
+    { value: "closing-night", label: "Closing Night" },
+    { value: "debut", label: "Debut" },
     { value: "holiday", label: "Holiday" },
+    { value: "seasonal", label: "Seasonal" },
+  ],
+  Logistics: [
+    { value: "ticketed", label: "Ticketed" },
+    { value: "rsvp-required", label: "RSVP Required" },
+    { value: "sold-out", label: "Sold Out" },
+    { value: "limited-seating", label: "Limited Seating" },
   ],
 } as const;
 
 export const ALL_TAGS = [
   ...TAG_GROUPS.Vibe,
   ...TAG_GROUPS.Access,
+  ...TAG_GROUPS.Type,
   ...TAG_GROUPS.Special,
+  ...TAG_GROUPS.Logistics,
 ] as const;

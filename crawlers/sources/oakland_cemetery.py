@@ -109,7 +109,7 @@ def categorize_event(title: str, description: str) -> tuple[str, str, list[str]]
         tags = ["historic", "tours", "outdoor", "educational"]
 
         if any(w in title_lower for w in ["black magnolias", "we shall overcome", "african american"]):
-            tags.append("black-history")
+            tags.append("black-history-month")
         elif "jewish" in title_lower:
             tags.append("jewish-heritage")
         elif "crime" in title_lower:

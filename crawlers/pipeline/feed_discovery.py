@@ -11,6 +11,7 @@ from urllib.parse import urljoin
 
 from dateutil import parser as dateparser
 
+from date_utils import normalize_event_date
 from pipeline.models import DiscoveryConfig
 
 logger = logging.getLogger(__name__)
@@ -44,9 +45,15 @@ def _parse_datetime(value: Any) -> tuple[Optional[str], Optional[str]]:
         return None, None
 
     if isinstance(value, datetime):
-        return value.date().isoformat(), value.strftime("%H:%M")
+        normalized_date = normalize_event_date(value.date(), assume_explicit_year=True)
+        if not normalized_date:
+            return None, None
+        return normalized_date.isoformat(), value.strftime("%H:%M")
     if isinstance(value, date):
-        return value.isoformat(), None
+        normalized_date = normalize_event_date(value, assume_explicit_year=True)
+        if not normalized_date:
+            return None, None
+        return normalized_date.isoformat(), None
 
     if isinstance(value, str):
         try:
@@ -57,9 +64,12 @@ def _parse_datetime(value: Any) -> tuple[Optional[str], Optional[str]]:
             return None, None
         import re
 
+        normalized_date = normalize_event_date(dt.date(), raw_text=value)
+        if not normalized_date:
+            return None, None
         has_time = bool(re.search(r"(\d{1,2}):(\d{2})|(\d{1,2})\s*(AM|PM)", value, re.IGNORECASE))
         time_str = dt.strftime("%H:%M") if has_time else None
-        return dt.date().isoformat(), time_str
+        return normalized_date.isoformat(), time_str
 
     return None, None
 

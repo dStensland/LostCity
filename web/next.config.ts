@@ -63,6 +63,10 @@ const imageHosts = new Set([
   "image.tmdb.org",
   "upload.wikimedia.org",
   "user-images.githubusercontent.com",
+  // Google user content (Places photos, etc.)
+  "lh3.googleusercontent.com",
+  // Sports
+  "images.mlssoccer.com",
   // Atlanta venue/org sites
   "www.aso.org",
   "admin.paintingwithatwist.com",
@@ -74,8 +78,15 @@ const imageHosts = new Set([
   "alliancetheatre.org",
   "high.org",
   "atlantahistorycenter.com",
+  "www.atlantahistorycenter.com",
+  "atlantabg.org",
   "www.atlantabg.org",
   "centerstage.net",
+  "atlblackexpo.com",
+  "citysprings.com",
+  "www.atlantaonthecheap.com",
+  "badearl.com",
+  "static.wixstatic.com",
   ...extraImageHosts,
 ]);
 
@@ -84,6 +95,7 @@ if (supabaseHost) {
 }
 
 const nextConfig: NextConfig = {
+  devIndicators: false,
   async headers() {
     return [
       {

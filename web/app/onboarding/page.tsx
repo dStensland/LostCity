@@ -8,8 +8,7 @@ import { useAuth } from "@/lib/auth-context";
 import { createClient } from "@/lib/supabase/client";
 import { OnboardingProgress } from "./components/OnboardingProgress";
 import { CategoryPicker } from "./steps/CategoryPicker";
-import { SubcategoryPicker } from "./steps/SubcategoryPicker";
-import { NeighborhoodPicker } from "./steps/NeighborhoodPicker";
+import { GenrePicker } from "./steps/GenrePicker";
 import type { OnboardingStep } from "@/lib/types";
 
 type Portal = {
@@ -31,9 +30,7 @@ function OnboardingContent() {
   // State
   const [step, setStep] = useState<OnboardingStep>("categories");
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
-  const [selectedSubcategories, setSelectedSubcategories] = useState<string[]>([]);
-  const [selectedNeighborhoods, setSelectedNeighborhoods] = useState<string[]>([]);
-  const [showSubcategories, setShowSubcategories] = useState(false);
+  const [selectedGenres, setSelectedGenres] = useState<Record<string, string[]>>({});
   const [portal, setPortal] = useState<Portal | null>(null);
 
   // Redirect if not logged in
@@ -64,49 +61,33 @@ function OnboardingContent() {
 
   // Step handlers
   const handleCategoryComplete = useCallback(
-    (categories: string[], hasSubcategories: boolean) => {
+    (categories: string[]) => {
       setSelectedCategories(categories);
-      setShowSubcategories(hasSubcategories);
-
-      if (hasSubcategories && categories.length > 0) {
-        setStep("subcategories");
-      } else {
-        setStep("neighborhoods");
-      }
+      setStep("genres");
     },
     []
   );
 
   const handleCategorySkip = useCallback(() => {
-    setShowSubcategories(false);
-    setStep("neighborhoods");
+    setStep("genres");
   }, []);
 
-  const handleSubcategoryComplete = useCallback((subcategories: string[]) => {
-    setSelectedSubcategories(subcategories);
-    setStep("neighborhoods");
-  }, []);
-
-  const handleSubcategorySkip = useCallback(() => {
-    setStep("neighborhoods");
-  }, []);
-
-  const handleNeighborhoodComplete = useCallback(
-    async (neighborhoods: string[]) => {
-      setSelectedNeighborhoods(neighborhoods);
-      await completeOnboarding(neighborhoods);
+  const handleGenreComplete = useCallback(
+    async (genres: Record<string, string[]>) => {
+      setSelectedGenres(genres);
+      await completeOnboarding(genres);
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [selectedCategories, selectedSubcategories]
+    [selectedCategories]
   );
 
-  const handleNeighborhoodSkip = useCallback(async () => {
-    await completeOnboarding([]);
+  const handleGenreSkip = useCallback(async () => {
+    await completeOnboarding({});
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedCategories, selectedSubcategories]);
+  }, [selectedCategories]);
 
   // Complete onboarding and save preferences
-  const completeOnboarding = async (neighborhoods: string[]) => {
+  const completeOnboarding = async (genres: Record<string, string[]>) => {
     if (!user) return;
 
     try {
@@ -115,13 +96,11 @@ function OnboardingContent() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           selectedCategories,
-          selectedSubcategories,
-          selectedNeighborhoods: neighborhoods,
+          selectedGenres: genres,
         }),
       });
     } catch (err) {
       console.error("Failed to save onboarding data:", err);
-      // Continue anyway - don't block the user
     }
 
     // Navigate to feed
@@ -135,14 +114,14 @@ function OnboardingContent() {
   // Handle exit (X button)
   const handleExit = useCallback(() => {
     // Save partial progress if we have any selections
-    if (user && (selectedCategories.length > 0 || selectedNeighborhoods.length > 0)) {
+    const hasGenres = Object.values(selectedGenres).some((g) => g.length > 0);
+    if (user && (selectedCategories.length > 0 || hasGenres)) {
       fetch("/api/onboarding/complete", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           selectedCategories,
-          selectedSubcategories,
-          selectedNeighborhoods,
+          selectedGenres,
         }),
       }).catch(console.error);
     }
@@ -153,7 +132,7 @@ function OnboardingContent() {
     } else {
       router.push("/atlanta");
     }
-  }, [user, selectedCategories, selectedSubcategories, selectedNeighborhoods, portalSlug, router]);
+  }, [user, selectedCategories, selectedGenres, portalSlug, router]);
 
   // Loading state
   if (authLoading || !user) {
@@ -198,7 +177,7 @@ function OnboardingContent() {
       </header>
 
       {/* Progress bar */}
-      <OnboardingProgress currentStep={step} showSubcategories={showSubcategories} />
+      <OnboardingProgress currentStep={step} />
 
       {/* Main content */}
       <main className="flex-1">
@@ -209,18 +188,11 @@ function OnboardingContent() {
           />
         )}
 
-        {step === "subcategories" && (
-          <SubcategoryPicker
+        {step === "genres" && (
+          <GenrePicker
+            onComplete={handleGenreComplete}
+            onSkip={handleGenreSkip}
             selectedCategories={selectedCategories}
-            onComplete={handleSubcategoryComplete}
-            onSkip={handleSubcategorySkip}
-          />
-        )}
-
-        {step === "neighborhoods" && (
-          <NeighborhoodPicker
-            onComplete={handleNeighborhoodComplete}
-            onSkip={handleNeighborhoodSkip}
           />
         )}
       </main>

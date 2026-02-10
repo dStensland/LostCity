@@ -180,6 +180,23 @@ def extract_festival_dates(html: str, default_year: int = 2026) -> tuple[Optiona
 
 
 # ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+def _extract_meta_description(html: str) -> Optional[str]:
+    """Extract og:description / meta description from HTML."""
+    from bs4 import BeautifulSoup
+    soup = BeautifulSoup(html, "html.parser")
+    for tag_name in ["og:description", "description", "twitter:description"]:
+        meta_tag = soup.find("meta", attrs={"property": tag_name}) or soup.find("meta", attrs={"name": tag_name})
+        if meta_tag and meta_tag.get("content", "").strip():
+            candidate = meta_tag["content"].strip()
+            if len(candidate) >= 30:
+                return candidate
+    return None
+
+
+# ---------------------------------------------------------------------------
 # Main pipeline
 # ---------------------------------------------------------------------------
 
@@ -194,7 +211,7 @@ def enrich_festivals(
     # Query all festivals with websites
     query = (
         client.table("festivals")
-        .select("id,slug,name,website,image_url,ticket_url,announced_start,announced_end,typical_month,date_confidence,date_source,pending_start,pending_end")
+        .select("id,slug,name,website,description,image_url,ticket_url,announced_start,announced_end,typical_month,date_confidence,date_source,pending_start,pending_end")
         .not_.is_("website", "null")
     )
     if slug:
@@ -207,16 +224,18 @@ def enrich_festivals(
         # Filter to those missing at least one field
         festivals = [
             f for f in all_festivals
-            if not f.get("image_url") or not f.get("ticket_url") or not f.get("announced_start")
+            if not f.get("image_url") or not f.get("ticket_url") or not f.get("announced_start") or not f.get("description")
         ]
     else:
         festivals = all_festivals
 
     stats = {
         "total": len(festivals),
+        "description": 0,
         "image": 0,
         "ticket": 0,
         "dates": 0,
+        "js_retry": 0,
         "failed": 0,
         "skipped": 0,
     }
@@ -242,11 +261,13 @@ def enrich_festivals(
         prefix = f"[{i:3d}/{len(festivals)}] {name[:35]:<35}"
 
         # Fetch HTML
+        used_js = render_js
         html, err = fetch_html(website, fetch_cfg)
         if err or not html:
             # Retry with Playwright if initial fetch failed and not already using it
             if not render_js:
                 html, err = fetch_html(website, FetchConfig(timeout_ms=20000, render_js=True, wait_until="domcontentloaded"))
+                used_js = True
             if err or not html:
                 logger.info(f"{prefix} FAIL ({err or 'empty'})")
                 stats["failed"] += 1
@@ -255,13 +276,39 @@ def enrich_festivals(
 
         # Run extraction stack
         enriched = enrich_from_detail(html, website, f["slug"], detail_cfg)
-
-        # Extract dates separately (now returns method too)
         start_date, end_date, method = extract_festival_dates(html)
+        meta_desc = _extract_meta_description(html)
+
+        # Smart JS retry: if plain fetch yielded no useful data, retry with Playwright
+        has_useful = (
+            enriched.get("description") or meta_desc
+            or enriched.get("image_url")
+            or enriched.get("ticket_url")
+            or start_date
+        )
+        if not has_useful and not used_js:
+            logger.info(f"{prefix} no data from plain fetch, retrying with JS...")
+            html_js, err_js = fetch_html(website, FetchConfig(timeout_ms=20000, render_js=True, wait_until="domcontentloaded"))
+            if html_js and not err_js:
+                html = html_js
+                enriched = enrich_from_detail(html, website, f["slug"], detail_cfg)
+                start_date, end_date, method = extract_festival_dates(html)
+                meta_desc = _extract_meta_description(html)
+                used_js = True
+                stats["js_retry"] += 1
 
         # Build update dict — only fill NULL fields (unless --force)
         updates: dict = {}
         markers: list[str] = []
+
+        # Description
+        desc = enriched.get("description") or meta_desc
+        if desc and len(str(desc)) >= 30 and (force or not f.get("description")):
+            updates["description"] = str(desc)[:500]
+            markers.append("desc \u2713")
+            stats["description"] += 1
+        else:
+            markers.append("desc \u2717")
 
         # Image
         img = enriched.get("image_url")
@@ -336,9 +383,11 @@ def enrich_festivals(
     logger.info(f"RESULTS")
     logger.info(f"{'=' * 70}")
     logger.info(f"Processed:  {stats['total']}")
+    logger.info(f"Descriptions: {stats['description']}")
     logger.info(f"Images:     {stats['image']}")
     logger.info(f"Tickets:    {stats['ticket']}")
     logger.info(f"Dates:      {stats['dates']}")
+    logger.info(f"JS retries: {stats['js_retry']}")
     logger.info(f"Failed:     {stats['failed']}")
     logger.info(f"Skipped:    {stats['skipped']} (already complete)")
     if dry_run:

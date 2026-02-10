@@ -208,6 +208,7 @@ export type Spot = {
   instagram: string | null;
   hours_display: string | null;
   vibes: string[] | null;
+  genres: string[] | null;
   image_url: string | null;
   featured: boolean;
   active: boolean;

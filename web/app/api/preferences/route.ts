@@ -18,7 +18,11 @@ export async function POST(request: NextRequest) {
       favorite_categories,
       favorite_neighborhoods,
       favorite_vibes,
+      favorite_genres,
       price_preference,
+      needs_accessibility,
+      needs_dietary,
+      needs_family,
     } = body;
 
     const supabase = await createClient();
@@ -33,6 +37,10 @@ export async function POST(request: NextRequest) {
           favorite_neighborhoods: favorite_neighborhoods || [],
           favorite_vibes: favorite_vibes || [],
           price_preference: price_preference || "any",
+          ...(favorite_genres !== undefined && { favorite_genres }),
+          ...(needs_accessibility !== undefined && { needs_accessibility }),
+          ...(needs_dietary !== undefined && { needs_dietary }),
+          ...(needs_family !== undefined && { needs_family }),
         },
         { onConflict: "user_id" }
       );
@@ -70,7 +78,6 @@ export async function GET(request: NextRequest) {
       .maybeSingle();
 
     if (error && error.code !== "PGRST116") {
-      // PGRST116 = no rows found
       logger.error("Error fetching preferences", error);
       return NextResponse.json(
         { error: "Failed to fetch preferences" },
@@ -78,13 +85,16 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Return empty preferences if no row exists
     if (!data) {
       return NextResponse.json({
         favorite_categories: [],
         favorite_neighborhoods: [],
         favorite_vibes: [],
+        favorite_genres: null,
         price_preference: null,
+        needs_accessibility: [],
+        needs_dietary: [],
+        needs_family: [],
       }, {
         headers: {
           "Cache-Control": "private, max-age=120, stale-while-revalidate=300",

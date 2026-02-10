@@ -24,14 +24,14 @@ import type { Frequency, DayOfWeek } from "./recurrence";
 
 const logger = createLogger("search");
 
-export { CATEGORIES, SUBCATEGORIES, DATE_FILTERS, PRICE_FILTERS, TAG_GROUPS, ALL_TAGS };
+export { CATEGORIES, DATE_FILTERS, PRICE_FILTERS, TAG_GROUPS, ALL_TAGS };
 
 
 export interface SearchFilters {
   search?: string;
   categories?: string[];
-  subcategories?: string[];
   tags?: string[];
+  genres?: string[];
   is_free?: boolean;
   price_max?: number;
   date_filter?: "now" | "today" | "tomorrow" | "weekend" | "week" | "month";
@@ -464,22 +464,14 @@ async function applySearchFilters(
     query = query.in("category_id", filters.categories);
   }
 
-  // Apply subcategory filter
-  // If event has a subcategory, it must match one of the selected subcategories
-  // If event has no subcategory, include it if its category matches the parent category
-  if (filters.subcategories && filters.subcategories.length > 0) {
-    // Extract parent categories from subcategory values (e.g., "music.live" -> "music")
-    const parentCategories = [...new Set(filters.subcategories.map((sub) => sub.split(".")[0]))];
-
-    // Build OR condition: exact subcategory match OR (parent category match AND subcategory is null)
-    const subcatFilter = `subcategory.in.(${filters.subcategories.join(",")})`;
-    const parentFilter = `and(category_id.in.(${parentCategories.join(",")}),subcategory.is.null)`;
-    query = query.or(`${subcatFilter},${parentFilter}`);
-  }
-
   // Apply tag filter (events with ANY of the selected tags)
   if (filters.tags && filters.tags.length > 0) {
     query = query.overlaps("tags", filters.tags);
+  }
+
+  // Apply genres filter (events with ANY of the selected genres)
+  if (filters.genres && filters.genres.length > 0) {
+    query = query.overlaps("genres", filters.genres);
   }
 
   // Apply vibes filter (venue attribute) - uses pre-fetched IDs
@@ -1382,7 +1374,12 @@ export async function fetchSocialProofCounts(
 
   // PERFORMANCE OPTIMIZATION: Use database function to aggregate counts in a single query
   // This replaces fetching all individual RSVP/recommendation rows and counting in JS
-  const { data, error } = await (serviceClient.rpc as Function)("get_social_proof_counts", {
+  const { data, error } = await (
+    serviceClient.rpc as unknown as (
+      name: string,
+      params?: Record<string, unknown>
+    ) => Promise<{ data: unknown; error: unknown }>
+  )("get_social_proof_counts", {
     event_ids: eventIds,
   });
 

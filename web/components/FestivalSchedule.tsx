@@ -12,15 +12,6 @@ interface FestivalScheduleProps {
   portalSlug: string;
 }
 
-function formatDate(dateStr: string): string {
-  const date = new Date(dateStr + "T00:00:00");
-  return date.toLocaleDateString("en-US", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-  });
-}
-
 function formatShortDate(dateStr: string): string {
   const date = new Date(dateStr + "T00:00:00");
   return date.toLocaleDateString("en-US", {
@@ -70,6 +61,10 @@ export default function FestivalSchedule({
     const catSet = new Set(sessions.map((s) => s.category).filter(Boolean) as string[]);
     return Array.from(catSet).sort();
   }, [sessions]);
+
+  const sortedPrograms = useMemo(() => {
+    return [...programs].sort((a, b) => a.title.localeCompare(b.title));
+  }, [programs]);
 
   // Default to today if it's one of the festival days, otherwise first day
   const todayStr = useMemo(() => {
@@ -173,7 +168,7 @@ export default function FestivalSchedule({
           ))}
 
           {/* Program chips — only show when manageable count */}
-          {programs.length > 1 && programs.length <= 8 && programs.map((p) => (
+          {sortedPrograms.length > 1 && sortedPrograms.length <= 8 && sortedPrograms.map((p) => (
             <button
               key={p.id}
               onClick={() => setSelectedProgram(selectedProgram === p.id ? null : p.id)}
@@ -186,6 +181,25 @@ export default function FestivalSchedule({
               {decodeHtmlEntities(p.title)}
             </button>
           ))}
+
+          {/* Program select for larger festivals */}
+          {sortedPrograms.length > 8 && (
+            <label className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full text-xs border border-[var(--twilight)]/40 bg-[var(--twilight)]/10 text-[var(--soft)]">
+              Program
+              <select
+                value={selectedProgram ?? ""}
+                onChange={(e) => setSelectedProgram(e.target.value || null)}
+                className="bg-transparent text-xs text-[var(--cream)] border-none focus:outline-none cursor-pointer max-w-[180px]"
+              >
+                <option value="">All programs</option>
+                {sortedPrograms.map((p) => (
+                  <option key={p.id} value={p.id} className="text-black">
+                    {decodeHtmlEntities(p.title)}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
 
           {/* Clear all */}
           {activeFilters > 0 && (

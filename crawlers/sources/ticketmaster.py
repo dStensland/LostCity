@@ -41,19 +41,27 @@ SEGMENT_MAP = {
     "Undefined": "other",
 }
 
-# Genre to subcategory mapping
+# Genre to canonical genre slug mapping (used for genres[] field)
 GENRE_MAP = {
     "Rock": "rock",
     "Pop": "pop",
-    "Hip-Hop/Rap": "hiphop",
-    "R&B": "rnb",
+    "Hip-Hop/Rap": "hip-hop",
+    "R&B": "r-and-b",
     "Country": "country",
     "Jazz": "jazz",
     "Classical": "classical",
-    "Comedy": "comedy",
+    "Comedy": "stand-up",
     "Alternative": "alternative",
     "Metal": "metal",
     "Electronic": "electronic",
+    "Folk": "folk",
+    "Blues": "blues",
+    "Latin": "latin",
+    "Reggae": "reggae",
+    "World": "world",
+    "Soul/Funk": "soul",
+    "Gospel/Christian": "gospel",
+    "Punk": "punk",
 }
 
 
@@ -163,7 +171,7 @@ def parse_event(event_data: dict) -> Optional[dict]:
         # Category from segment
         classifications = event_data.get("classifications", [])
         category = "other"
-        subcategory = None
+        genres = []
         genre = None
 
         if classifications:
@@ -174,7 +182,9 @@ def parse_event(event_data: dict) -> Optional[dict]:
             genre_data = c.get("genre", {})
             genre = genre_data.get("name")
             if genre:
-                subcategory = GENRE_MAP.get(genre)
+                mapped = GENRE_MAP.get(genre)
+                if mapped:
+                    genres = [mapped]
 
         # Prices
         price_ranges = event_data.get("priceRanges", [])
@@ -248,8 +258,7 @@ def parse_event(event_data: dict) -> Optional[dict]:
             "images": images_list,
             "links": links,
             "category": category,
-            "subcategory": subcategory,
-            "genre": genre,
+            "genres": genres,
             "price_min": price_min,
             "price_max": price_max,
             "venue": venue_data,
@@ -349,7 +358,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     "end_time": None,
                     "is_all_day": parsed.get("start_time") is None,
                     "category": parsed.get("category", "other"),
-                    "subcategory": parsed.get("subcategory"),
+                    "genres": parsed.get("genres") or [],
                     "tags": tags,
                     "price_min": parsed.get("price_min"),
                     "price_max": parsed.get("price_max"),

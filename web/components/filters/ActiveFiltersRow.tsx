@@ -3,7 +3,8 @@
 import { useCallback, useMemo } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import FilterChip, { getTagVariant, type FilterChipVariant } from "./FilterChip";
-import { CATEGORIES, SUBCATEGORIES, TAG_GROUPS } from "@/lib/search-constants";
+import { CATEGORIES, TAG_GROUPS } from "@/lib/search-constants";
+import { formatGenre } from "@/lib/series-utils";
 
 // Date filter display labels
 const DATE_LABELS: Record<string, string> = {
@@ -14,7 +15,7 @@ const DATE_LABELS: Record<string, string> = {
 };
 
 interface ActiveFilter {
-  type: "category" | "subcategory" | "tag" | "date" | "free";
+  type: "category" | "tag" | "genre" | "date" | "free";
   value: string;
   label: string;
   variant: FilterChipVariant;
@@ -48,29 +49,6 @@ export default function ActiveFiltersRow({ className = "" }: ActiveFiltersRowPro
       }
     }
 
-    // Subcategories
-    const subcatParam = searchParams.get("subcategories");
-    if (subcatParam) {
-      const subcatValues = subcatParam.split(",").filter(Boolean);
-      for (const value of subcatValues) {
-        // Find the subcategory label from SUBCATEGORIES
-        let label = value;
-        for (const subs of Object.values(SUBCATEGORIES)) {
-          const found = subs.find((s) => s.value === value);
-          if (found) {
-            label = found.label;
-            break;
-          }
-        }
-        filters.push({
-          type: "subcategory",
-          value,
-          label,
-          variant: "subcategory",
-        });
-      }
-    }
-
     // Tags
     const tagsParam = searchParams.get("tags");
     if (tagsParam) {
@@ -90,6 +68,20 @@ export default function ActiveFiltersRow({ className = "" }: ActiveFiltersRowPro
           value,
           label,
           variant: getTagVariant(value),
+        });
+      }
+    }
+
+    // Genres
+    const genresParam = searchParams.get("genres");
+    if (genresParam) {
+      const genreValues = genresParam.split(",").filter(Boolean);
+      for (const value of genreValues) {
+        filters.push({
+          type: "genre",
+          value,
+          label: formatGenre(value),
+          variant: "subcategory",
         });
       }
     }
@@ -140,24 +132,6 @@ export default function ActiveFiltersRow({ className = "" }: ActiveFiltersRowPro
           } else {
             params.delete("categories");
           }
-          // Also clear subcategories for this category when category is removed
-          const subcats = params.get("subcategories")?.split(",").filter(Boolean) || [];
-          const filteredSubcats = subcats.filter((s) => !s.startsWith(`${filter.value}.`));
-          if (filteredSubcats.length > 0) {
-            params.set("subcategories", filteredSubcats.join(","));
-          } else {
-            params.delete("subcategories");
-          }
-          break;
-        }
-        case "subcategory": {
-          const subcats = params.get("subcategories")?.split(",").filter(Boolean) || [];
-          const newSubcats = subcats.filter((s) => s !== filter.value);
-          if (newSubcats.length > 0) {
-            params.set("subcategories", newSubcats.join(","));
-          } else {
-            params.delete("subcategories");
-          }
           break;
         }
         case "tag": {
@@ -167,6 +141,16 @@ export default function ActiveFiltersRow({ className = "" }: ActiveFiltersRowPro
             params.set("tags", newTags.join(","));
           } else {
             params.delete("tags");
+          }
+          break;
+        }
+        case "genre": {
+          const genres = params.get("genres")?.split(",").filter(Boolean) || [];
+          const newGenres = genres.filter((g) => g !== filter.value);
+          if (newGenres.length > 0) {
+            params.set("genres", newGenres.join(","));
+          } else {
+            params.delete("genres");
           }
           break;
         }
@@ -194,8 +178,8 @@ export default function ActiveFiltersRow({ className = "" }: ActiveFiltersRowPro
 
     // Remove all filter params
     params.delete("categories");
-    params.delete("subcategories");
     params.delete("tags");
+    params.delete("genres");
     params.delete("date");
     params.delete("free");
     params.delete("price");

@@ -2,7 +2,7 @@
 
 import { Suspense, useState, useEffect, type ReactNode } from "react";
 import FeedView from "@/components/FeedView";
-import TonightsPicks from "@/components/TonightsPicks";
+import HighlightsPicks from "@/components/highlights/HighlightsPicks";
 import TrendingNow from "@/components/TrendingNow";
 import TonightsPicksSkeleton from "@/components/TonightsPicksSkeleton";
 import TrendingNowSkeleton from "@/components/TrendingNowSkeleton";
@@ -34,19 +34,24 @@ export default function CuratedContent({ portalSlug }: CuratedContentProps) {
         <HappeningNowCTA portalSlug={portalSlug} />
       </Suspense>
 
-      {/* Holiday hero: Super Bowl, etc. — big feature when active */}
+      {/* Holiday hero: Valentine's Day at top (priority) */}
       <Suspense fallback={null}>
-        <HolidayHero portalSlug={portalSlug} />
+        <HolidayHero portalSlug={portalSlug} slug="valentines-day" />
       </Suspense>
 
       {/* Above-fold: Tonight's Picks - Critical content */}
       <Suspense fallback={<DelayedFallback><TonightsPicksSkeleton /></DelayedFallback>}>
-        <TonightsPicks portalSlug={portalSlug} />
+        <HighlightsPicks portalSlug={portalSlug} />
       </Suspense>
 
       {/* Festival moments: takeover hero + imminent festivals */}
       <Suspense fallback={null}>
         <MomentsSection portalSlug={portalSlug} />
+      </Suspense>
+
+      {/* Friday the 13th + other holidays (below festivals) */}
+      <Suspense fallback={null}>
+        <HolidayHero portalSlug={portalSlug} exclude={["valentines-day"]} />
       </Suspense>
 
       {/* Time-of-day contextual section: "Patio SZN" / "After Hours" / "Brunch & Markets" */}

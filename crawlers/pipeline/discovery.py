@@ -12,6 +12,7 @@ from typing import Optional
 from bs4 import BeautifulSoup
 from dateutil import parser as dateparser
 
+from date_utils import parse_human_date
 from extractors.selectors import extract_from_element
 from pipeline.models import DiscoveryConfig, SelectorSet
 
@@ -19,23 +20,7 @@ logger = logging.getLogger(__name__)
 
 
 def _parse_date(text: Optional[str]) -> Optional[str]:
-    if not text:
-        return None
-    try:
-        dt = dateparser.parse(text, fuzzy=True, default=datetime.now())
-        if not dt:
-            return None
-
-        # If no explicit year and parsed date is in the past, roll to next year
-        has_year = bool(re.search(r"\b(19|20)\d{2}\b", text))
-        if not has_year:
-            today = datetime.now().date()
-            if dt.date() < today:
-                dt = dt.replace(year=dt.year + 1)
-
-        return dt.date().isoformat()
-    except Exception:
-        return None
+    return parse_human_date(text)
 
 
 def _parse_time(text: Optional[str]) -> Optional[str]:

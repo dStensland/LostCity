@@ -98,7 +98,6 @@ export async function GET(request: NextRequest, { params }: Props) {
     subscribers = subsData || [];
   } catch {
     // Federation tables don't exist - that's okay, return basic data
-    console.log("Federation tables not available - returning basic source data");
   }
 
   // Build the source object with whatever data we have

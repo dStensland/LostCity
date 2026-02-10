@@ -28,9 +28,38 @@ CREATE TABLE venues (
   lng DECIMAL(11, 8),
   venue_type TEXT,
   website TEXT,
+  menu_url TEXT,
+  reservation_url TEXT,
   aliases TEXT[],
+  last_verified_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Venue specials: time-sensitive offerings (happy hours, daily specials, recurring deals)
+CREATE TABLE venue_specials (
+  id SERIAL PRIMARY KEY,
+  venue_id INTEGER NOT NULL REFERENCES venues(id) ON DELETE CASCADE,
+  title TEXT NOT NULL,
+  type TEXT NOT NULL,
+  description TEXT,
+  days_of_week INTEGER[],
+  time_start TIME,
+  time_end TIME,
+  start_date DATE,
+  end_date DATE,
+  image_url TEXT,
+  price_note TEXT,
+  confidence TEXT DEFAULT 'medium',
+  source_url TEXT,
+  is_active BOOLEAN DEFAULT true,
+  last_verified_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX idx_venue_specials_venue ON venue_specials(venue_id);
+CREATE INDEX idx_venue_specials_type ON venue_specials(type);
+CREATE INDEX idx_venue_specials_active ON venue_specials(is_active) WHERE is_active = true;
 
 -- Events table: the core event data
 CREATE TABLE events (

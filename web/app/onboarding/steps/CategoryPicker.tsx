@@ -1,10 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { PREFERENCE_CATEGORIES, CATEGORIES_WITH_SUBCATEGORIES } from "@/lib/preferences";
+import { PREFERENCE_CATEGORIES } from "@/lib/preferences";
 
 interface CategoryPickerProps {
-  onComplete: (categories: string[], hasSubcategories: boolean) => void;
+  onComplete: (categories: string[]) => void;
   onSkip: () => void;
 }
 
@@ -20,11 +20,7 @@ export function CategoryPicker({ onComplete, onSkip }: CategoryPickerProps) {
   };
 
   const handleContinue = () => {
-    // Check if any selected categories have subcategories
-    const hasSubcategories = selectedCategories.some((cat) =>
-      CATEGORIES_WITH_SUBCATEGORIES.includes(cat)
-    );
-    onComplete(selectedCategories, hasSubcategories);
+    onComplete(selectedCategories);
   };
 
   return (
