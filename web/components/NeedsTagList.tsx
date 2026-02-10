@@ -21,6 +21,8 @@ interface NeedsTagListProps {
   tagGroups?: string[];
 }
 
+const DEFAULT_TAG_GROUPS = ["accessibility", "dietary", "family"];
+
 /**
  * NeedsTagList - Display community-verified needs tags
  *
@@ -34,7 +36,7 @@ export function NeedsTagList({
   entityType,
   entityId,
   title = "Accessibility & Needs",
-  tagGroups = ["accessibility", "dietary", "family"],
+  tagGroups = DEFAULT_TAG_GROUPS,
 }: NeedsTagListProps) {
   const [tags, setTags] = useState<EntityTag[]>([]);
   const [isLoading, setIsLoading] = useState(true);

@@ -183,7 +183,7 @@ export async function middleware(request: NextRequest) {
   );
 
   // Protected routes that require authentication
-  const protectedPaths = ["/dashboard", "/admin", "/settings", "/onboarding", "/foryou", "/saved"];
+  const protectedPaths = ["/dashboard", "/admin", "/settings", "/onboarding", "/foryou", "/saved", "/venue"];
   const isProtectedPath = protectedPaths.some((path) =>
     request.nextUrl.pathname.startsWith(path)
   );

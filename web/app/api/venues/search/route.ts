@@ -27,6 +27,8 @@ export async function GET(request: NextRequest) {
   // Normalize and sanitize search query
   const normalizedQuery = query.toLowerCase().trim();
   const sanitizedQuery = escapeSQLPattern(normalizedQuery);
+  // Sanitize for PostgREST array syntax (remove {, }, ,, ", \)
+  const sanitizedArrayQuery = normalizedQuery.replace(/[{},"\\/]/g, "");
 
   // Search venues by name, aliases, and address
   // Use a combination of exact match, prefix match, and fuzzy matching
@@ -48,7 +50,7 @@ export async function GET(request: NextRequest) {
     .or(
       `name.ilike.%${sanitizedQuery}%,` +
         `address.ilike.%${sanitizedQuery}%,` +
-        `aliases.cs.{${normalizedQuery}}`
+        `aliases.cs.{${sanitizedArrayQuery}}`
     )
     .order("name")
     .limit(limit);

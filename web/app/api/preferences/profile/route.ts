@@ -132,7 +132,10 @@ export async function GET(request: Request) {
 }
 
 // DELETE - Reset learned preferences
-export async function DELETE() {
+export async function DELETE(request: Request) {
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
+  if (rateLimitResult) return rateLimitResult;
+
   try {
     const user = await getUser();
     if (!user) {

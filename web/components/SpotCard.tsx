@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { memo } from "react";
 import type { Spot } from "@/lib/spots-constants";
 import { formatPriceLevel } from "@/lib/spots-constants";
 import { formatCompactCount } from "@/lib/formats";
@@ -44,7 +45,7 @@ function formatDistance(miles: number): string {
   return `${Math.round(miles)} mi`;
 }
 
-export default function SpotCard({ spot, index = 0, showDistance, portalSlug, tags }: Props) {
+function SpotCard({ spot, index = 0, showDistance, portalSlug, tags }: Props) {
   // Stagger animation class
   const staggerClass = index < 10 ? `stagger-${index + 1}` : "";
   const priceDisplay = formatPriceLevel(spot.price_level);
@@ -65,7 +66,7 @@ export default function SpotCard({ spot, index = 0, showDistance, portalSlug, ta
       scroll={false}
       data-category={venueType}
       data-accent="category"
-      className={`event-item animate-fade-in ${staggerClass} group card-atmospheric glow-accent reflection-accent ${reflectionClass}`}
+      className={`event-item animate-fade-in ${staggerClass} group card-atmospheric glow-accent reflection-accent ${reflectionClass} card-hover-lift`}
     >
       {/* Icon column */}
       <div className="w-10 flex-shrink-0 flex items-center justify-center">
@@ -190,3 +191,5 @@ export default function SpotCard({ spot, index = 0, showDistance, portalSlug, ta
     </Link>
   );
 }
+
+export default memo(SpotCard);

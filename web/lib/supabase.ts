@@ -102,6 +102,7 @@ export type Venue = {
   state: string;
   vibes?: string[] | null;
   description?: string | null;
+  venue_type?: string | null;
 };
 
 export type Producer = {
@@ -128,7 +129,7 @@ export async function getEventById(id: number): Promise<EventWithProducer | null
     .select(
       `
       *,
-      venue:venues(id, name, slug, address, neighborhood, city, state, vibes, description),
+      venue:venues(id, name, slug, address, neighborhood, city, state, vibes, description, venue_type),
       organization:organizations(id, name, slug, org_type, website, instagram, logo_url, description),
       series:series_id(
         id,

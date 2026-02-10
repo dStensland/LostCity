@@ -17,7 +17,7 @@ import {
   InfoCard,
   MetadataGrid,
   SectionHeader,
-  RelatedSection,
+  DetailStickyBar,
   RelatedCard,
 } from "@/components/detail";
 import { safeJsonLd, decodeHtmlEntities } from "@/lib/formats";
@@ -158,6 +158,21 @@ function formatFestivalDates(festival: NonNullable<Awaited<ReturnType<typeof get
   return "Dates coming soon";
 }
 
+function getDurationLabel(festival: NonNullable<Awaited<ReturnType<typeof getFestivalBySlug>>>): string {
+  if (festival.announced_start && festival.announced_end) {
+    const start = new Date(festival.announced_start + "T00:00:00").getTime();
+    const end = new Date(festival.announced_end + "T00:00:00").getTime();
+    const days = Math.max(1, Math.floor((end - start) / (1000 * 60 * 60 * 24)) + 1);
+    return `${days} day${days > 1 ? "s" : ""}`;
+  }
+
+  if (festival.typical_duration_days) {
+    return `${festival.typical_duration_days} day${festival.typical_duration_days > 1 ? "s" : ""}`;
+  }
+
+  return "Varies";
+}
+
 export default async function PortalFestivalPage({ params }: Props) {
   const { slug, portal: portalSlug } = await params;
   const festival = await getCachedFestivalBySlug(slug);
@@ -179,6 +194,13 @@ export default async function PortalFestivalPage({ params }: Props) {
   const accentColor = getCategoryAccentColor(festival.categories?.[0]);
   const festivalAccentClass = createCssVarClass("--accent-color", accentColor, "festival");
   const festivalSchema = generateFestivalSchema(festival, sessions);
+  const primaryActionUrl = festival.ticket_url || festival.website || undefined;
+  const primaryActionLabel = festival.ticket_url ? "Get Tickets" : "Visit Website";
+  const programPages = programs.filter(
+    (program) =>
+      (program.event_count ?? 0) > 0 &&
+      decodeHtmlEntities(program.title).trim().toLowerCase() !== "general program"
+  );
 
   // Build subtitle for hero
   const heroSubtitle = formatFestivalDates(festival);
@@ -203,7 +225,11 @@ export default async function PortalFestivalPage({ params }: Props) {
           hideNav
         />
 
-        <main className="max-w-3xl mx-auto px-4 py-4 sm:py-6 pb-12 space-y-5 sm:space-y-8">
+        <main
+          className={`max-w-3xl mx-auto px-4 py-4 sm:py-6 ${
+            primaryActionUrl ? "pb-28 sm:pb-24" : "pb-12"
+          } space-y-5 sm:space-y-8`}
+        >
           {/* Hero Section */}
           <DetailHero
             mode="image"
@@ -258,12 +284,33 @@ export default async function PortalFestivalPage({ params }: Props) {
           )}
 
           {/* Interactive Schedule — high up for immediate engagement */}
-          {sessions.length > 0 && (
+          {sessions.length > 0 ? (
             <FestivalSchedule
               sessions={sessions}
               programs={programs}
               portalSlug={activePortalSlug}
             />
+          ) : (
+            <section className="rounded-lg border border-[var(--twilight)] bg-[var(--card-bg)] p-5 sm:p-6">
+              <h2 className="text-lg font-semibold text-[var(--cream)] mb-2">Schedule Coming Soon</h2>
+              <p className="text-sm text-[var(--soft)] leading-relaxed">
+                Session times and program details have not been published yet. Check back soon, or use the official
+                festival link for the latest updates.
+              </p>
+              {primaryActionUrl && (
+                <a
+                  href={primaryActionUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 mt-4 text-sm font-medium text-accent hover:text-[var(--rose)] transition-colors"
+                >
+                  {primaryActionLabel}
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                  </svg>
+                </a>
+              )}
+            </section>
           )}
 
           {/* Main Content Card */}
@@ -273,9 +320,7 @@ export default async function PortalFestivalPage({ params }: Props) {
               items={[
                 {
                   label: "Duration",
-                  value: festival.typical_duration_days
-                    ? `${festival.typical_duration_days} day${festival.typical_duration_days > 1 ? "s" : ""}`
-                    : "Varies",
+                  value: getDurationLabel(festival),
                 },
                 {
                   label: "Location",
@@ -338,37 +383,48 @@ export default async function PortalFestivalPage({ params }: Props) {
           {/* Multi-venue map */}
           <FestivalMap sessions={sessions} portalSlug={activePortalSlug} />
 
-          {/* Programs Section — capped at 9 */}
-          {programs.length > 1 && (
-            <RelatedSection
-              title="Festival Programs"
-              count={programs.length}
-              emptyMessage="No programs scheduled"
-            >
-              {programs.slice(0, 9).map((program) => (
-                <RelatedCard
-                  key={program.id}
-                  variant="image"
-                  href={`/${activePortalSlug}/series/${program.slug}`}
-                  title={decodeHtmlEntities(program.title)}
-                  subtitle={program.event_count ? `${program.event_count} session${program.event_count !== 1 ? "s" : ""}` : "Program"}
-                  imageUrl={program.image_url || undefined}
-                  icon={
-                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={1.5}
-                        d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
-                      />
-                    </svg>
-                  }
-                  accentColor={accentColor}
-                />
-              ))}
-            </RelatedSection>
+          {/* Program Pages — secondary to schedule filters */}
+          {programPages.length > 0 && (
+            <section>
+              <SectionHeader title="Program Pages" count={programPages.length} />
+              <p className="text-xs text-[var(--muted)] mb-3">
+                Use schedule filters above for exact times. Program pages are editorial groupings.
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {programPages.map((program) => (
+                  <RelatedCard
+                    key={program.id}
+                    variant="compact"
+                    href={`/${activePortalSlug}/series/${program.slug}`}
+                    title={decodeHtmlEntities(program.title)}
+                    subtitle={`${program.event_count} session${program.event_count !== 1 ? "s" : ""}`}
+                    accentColor={accentColor}
+                  />
+                ))}
+              </div>
+            </section>
           )}
         </main>
+
+        {primaryActionUrl && (
+          <DetailStickyBar
+            primaryAction={{
+              label: primaryActionLabel,
+              href: primaryActionUrl,
+            }}
+            secondaryActions={
+              sessions.length > 0 ? (
+                <a
+                  href="#schedule"
+                  className="inline-flex items-center justify-center px-4 py-2.5 rounded-lg border border-[var(--twilight)] text-sm text-[var(--soft)] hover:text-[var(--cream)] hover:border-[var(--soft)] transition-colors"
+                >
+                  Schedule
+                </a>
+              ) : undefined
+            }
+            scrollThreshold={220}
+          />
+        )}
       </div>
 
     </>

@@ -13,7 +13,7 @@
   --space-3xl: 4rem;     /* 64px */
 
   /* ============================================
-     TYPOGRAPHY SCALE
+     TYPOGRAPHY SCALE (1.25 ratio, magazine quality)
      ============================================ */
   --text-2xs: 0.625rem;   /* 10px - micro labels */
   --text-xs: 0.6875rem;   /* 11px - badges, mono labels */
@@ -24,14 +24,68 @@
   --text-2xl: 1.5rem;     /* 24px - section headers primary */
   --text-3xl: 1.875rem;   /* 30px - page titles */
 
-  /* Underground dark palette */
-  --void: #09090B;
-  --night: #0F0F14;
-  --dusk: #18181F;
-  --twilight: #252530;
-  --muted: #8B8B94; /* WCAG AA compliant on dark backgrounds */
-  --soft: #A1A1AA;
-  --cream: #FAFAF9;
+  /* LINE HEIGHT SYSTEM - optimized for readability */
+  --leading-tight: 1.2;   /* Headings, tight vertical rhythm */
+  --leading-snug: 1.375;  /* Subheadings, UI elements */
+  --leading-normal: 1.5;  /* Card content, labels */
+  --leading-relaxed: 1.6; /* Body text, descriptions */
+  --leading-loose: 1.75;  /* Long-form content */
+
+  /* LETTER SPACING SYSTEM */
+  --tracking-tighter: -0.02em; /* Large headings */
+  --tracking-tight: -0.01em;   /* Medium headings */
+  --tracking-normal: 0;        /* Body text */
+  --tracking-wide: 0.025em;    /* UI labels */
+  --tracking-wider: 0.05em;    /* Small caps, badges */
+
+  /* TEXT MAX-WIDTH for optimal readability */
+  --text-measure: 65ch;        /* Optimal line length for prose */
+  --text-measure-narrow: 45ch; /* Short-form content */
+  --text-measure-wide: 80ch;   /* Wide layouts */
+
+  /* ============================================
+     SHADOW SYSTEM - premium depth hierarchy
+     ============================================ */
+  /* Subtle shadows for dark mode */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.5),
+               inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.6),
+               0 2px 4px -2px rgba(0, 0, 0, 0.4),
+               inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.7),
+               0 4px 6px -4px rgba(0, 0, 0, 0.5),
+               inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.8),
+               0 8px 10px -6px rgba(0, 0, 0, 0.6),
+               inset 0 1px 0 rgba(255, 255, 255, 0.06);
+
+  /* Glow shadows for accents */
+  --shadow-glow-sm: 0 0 10px rgba(255, 107, 122, 0.15);
+  --shadow-glow-md: 0 0 20px rgba(255, 107, 122, 0.25);
+  --shadow-glow-lg: 0 0 30px rgba(255, 107, 122, 0.35);
+
+  /* Inner glow for cards (rim-light effect) */
+  --inner-glow: inset 0 1px 1px rgba(255, 255, 255, 0.05),
+                inset 0 -1px 1px rgba(0, 0, 0, 0.1);
+
+  /* ============================================
+     BORDER RADIUS SYSTEM - consistent corners
+     ============================================ */
+  --radius-sm: 6px;   /* Small elements, pills */
+  --radius-md: 8px;   /* Buttons, inputs */
+  --radius-lg: 12px;  /* Cards, panels */
+  --radius-xl: 16px;  /* Large cards, modals */
+  --radius-2xl: 24px; /* Hero elements */
+  --radius-full: 9999px; /* Circular elements */
+
+  /* Underground dark palette - refined for depth */
+  --void: #09090B;        /* Deepest background */
+  --night: #0F0F14;       /* Raised surface (cards) */
+  --dusk: #18181F;        /* Elevated surface (modals, popovers) */
+  --twilight: #252530;    /* Borders, dividers */
+  --muted: #8B8B94;       /* WCAG AA compliant on dark backgrounds - tertiary text */
+  --soft: #A1A1AA;        /* Secondary text */
+  --cream: #F5F5F3;       /* Primary text - slightly dimmed from pure white for reduced eye strain */
 
   /* Brand colors */
   --rose: #FF6B7A;
@@ -198,11 +252,11 @@
   --surface-raised: var(--night);
   --surface-elevated: var(--dusk);
 
-  /* Text */
-  --text-primary: var(--cream);
-  --text-secondary: var(--soft);
-  --text-muted: var(--muted);
-  --text-inverse: var(--void);
+  /* Text - refined hierarchy for dark mode */
+  --text-primary: var(--cream);     /* F5F5F3 - main headings, key info */
+  --text-secondary: var(--soft);    /* A1A1AA - subheadings, labels */
+  --text-tertiary: var(--muted);    /* 8B8B94 - metadata, timestamps */
+  --text-inverse: var(--void);      /* For light text on dark */
   --text-link: var(--brand-secondary);
   --text-link-hover: var(--action-secondary-hover);
 
@@ -220,10 +274,11 @@
   --nav-tab-active: var(--brand-primary);
   --nav-indicator: var(--brand-primary);
 
-  /* Cards */
+  /* Cards - refined surface treatment */
   --card-bg: var(--surface-raised);
-  --card-border: var(--twilight);
-  --card-border-hover: var(--brand-secondary);
+  --card-bg-hover: var(--dusk);
+  --card-border: rgba(255, 255, 255, 0.06);
+  --card-border-hover: rgba(255, 255, 255, 0.1);
 
   /* Badges */
   --badge-bg: var(--surface-elevated);
@@ -776,6 +831,179 @@
       color-mix(in srgb, var(--accent-color) 4%, transparent)
     );
   }
+
+  /* ============================================
+     TYPOGRAPHY UTILITIES - editorial quality
+     ============================================ */
+
+  /* Line height utilities */
+  .leading-tight { line-height: var(--leading-tight); }
+  .leading-snug { line-height: var(--leading-snug); }
+  .leading-normal { line-height: var(--leading-normal); }
+  .leading-relaxed { line-height: var(--leading-relaxed); }
+  .leading-loose { line-height: var(--leading-loose); }
+
+  /* Letter spacing utilities */
+  .tracking-tighter { letter-spacing: var(--tracking-tighter); }
+  .tracking-tight { letter-spacing: var(--tracking-tight); }
+  .tracking-normal { letter-spacing: var(--tracking-normal); }
+  .tracking-wide { letter-spacing: var(--tracking-wide); }
+  .tracking-wider { letter-spacing: var(--tracking-wider); }
+
+  /* Text measure utilities for readability */
+  .max-w-measure { max-width: var(--text-measure); }
+  .max-w-measure-narrow { max-width: var(--text-measure-narrow); }
+  .max-w-measure-wide { max-width: var(--text-measure-wide); }
+
+  /* Heading styles with refined spacing and weight */
+  h1, .h1 {
+    font-size: var(--text-3xl);
+    line-height: var(--leading-tight);
+    letter-spacing: var(--tracking-tighter);
+    font-weight: 600;
+  }
+
+  h2, .h2 {
+    font-size: var(--text-2xl);
+    line-height: var(--leading-tight);
+    letter-spacing: var(--tracking-tight);
+    font-weight: 600;
+  }
+
+  h3, .h3 {
+    font-size: var(--text-xl);
+    line-height: var(--leading-snug);
+    letter-spacing: var(--tracking-tight);
+    font-weight: 600;
+  }
+
+  h4, .h4 {
+    font-size: var(--text-lg);
+    line-height: var(--leading-snug);
+    letter-spacing: var(--tracking-normal);
+    font-weight: 600;
+  }
+
+  /* Description text - optimal for reading */
+  .text-description {
+    line-height: var(--leading-relaxed);
+    max-width: var(--text-measure);
+  }
+
+  /* ============================================
+     SHADOW UTILITIES - premium depth
+     ============================================ */
+
+  .shadow-card-sm {
+    box-shadow: var(--shadow-sm);
+  }
+
+  .shadow-card-md {
+    box-shadow: var(--shadow-md);
+  }
+
+  .shadow-card-lg {
+    box-shadow: var(--shadow-lg);
+  }
+
+  .shadow-card-xl {
+    box-shadow: var(--shadow-xl);
+  }
+
+  .shadow-glow-sm {
+    box-shadow: var(--shadow-glow-sm);
+  }
+
+  .shadow-glow-md {
+    box-shadow: var(--shadow-glow-md);
+  }
+
+  .shadow-glow-lg {
+    box-shadow: var(--shadow-glow-lg);
+  }
+
+  .inner-glow {
+    box-shadow: var(--inner-glow);
+  }
+
+  /* Hover lift effect for cards */
+  .hover-lift {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .hover-lift:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+  }
+
+  .hover-lift:active {
+    transform: translateY(0);
+  }
+
+  /* ============================================
+     BORDER RADIUS UTILITIES
+     ============================================ */
+
+  .rounded-card { border-radius: var(--radius-lg); }
+  .rounded-card-xl { border-radius: var(--radius-xl); }
+  .rounded-pill { border-radius: var(--radius-full); }
+
+  /* ============================================
+     REFINED SURFACE LAYERS - dark mode depth
+     ============================================ */
+
+  /* Base surface - deepest background */
+  .surface-base {
+    background-color: var(--void);
+  }
+
+  /* Raised surface - cards, slightly lighter */
+  .surface-raised {
+    background-color: var(--night);
+    box-shadow: var(--inner-glow);
+  }
+
+  /* Elevated surface - modals, popovers, highest layer */
+  .surface-elevated {
+    background-color: var(--dusk);
+    box-shadow: var(--shadow-md);
+  }
+
+  /* Premium card treatment */
+  .card-premium {
+    background-color: var(--night);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-md);
+    transition: all 0.2s ease;
+  }
+
+  .card-premium:hover {
+    border-color: rgba(255, 255, 255, 0.1);
+    box-shadow: var(--shadow-lg);
+    transform: translateY(-1px);
+  }
+
+  /* Subtle border refinement */
+  .border-subtle {
+    border-color: rgba(255, 255, 255, 0.06);
+  }
+
+  .border-subtle-hover {
+    border-color: rgba(255, 255, 255, 0.1);
+  }
+
+  /* ============================================
+     TEXT COLOR UTILITIES - semantic hierarchy
+     ============================================ */
+
+  .text-primary { color: var(--text-primary); }
+  .text-secondary { color: var(--text-secondary); }
+  .text-tertiary { color: var(--text-tertiary); }
+
+  /* Dimmed variants for subtle hierarchy */
+  .text-primary-dimmed { color: rgba(245, 245, 243, 0.9); }
+  .text-secondary-dimmed { color: rgba(161, 161, 170, 0.8); }
 }
 
 /* Light theme */
@@ -1056,6 +1284,7 @@ body {
   background: var(--void);
   color: var(--cream);
   font-family: var(--font-sans), system-ui, sans-serif;
+  line-height: var(--leading-relaxed);
   min-height: 100vh;
   font-feature-settings: 'ss01' on, 'cv01' on;
   /* Performance optimizations for smooth scrolling */
@@ -4157,22 +4386,173 @@ textarea:focus-visible {
 }
 
 /* ============================================
+   MICRO-INTERACTIONS
+   Subtle, tasteful animations for UI polish
+   ============================================ */
+
+/* Card hover lift - gentle elevation on desktop */
+.card-hover-lift {
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+              box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.card-hover-lift:hover {
+  transform: translateY(-2px);
+}
+
+/* Mobile touch scale - subtle feedback */
+@media (hover: none) and (pointer: coarse) {
+  .card-hover-lift:active {
+    transform: scale(0.98);
+  }
+}
+
+/* Button press feedback - universal */
+.btn-press {
+  transition: transform 0.1s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.btn-press:active {
+  transform: scale(0.97);
+}
+
+/* Bouncy scale animation for filter pills */
+@keyframes bouncy-select {
+  0% { transform: scale(1); }
+  40% { transform: scale(0.95); }
+  70% { transform: scale(1.02); }
+  100% { transform: scale(1); }
+}
+
+.animate-bouncy-select {
+  animation: bouncy-select 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Smooth heart fill animation */
+@keyframes heart-fill {
+  0% {
+    transform: scale(1);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.animate-heart-fill {
+  animation: heart-fill 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Image lazy-load fade in */
+@keyframes image-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-image-fade {
+  animation: image-fade-in 0.3s ease-out;
+}
+
+/* Loading dots animation */
+@keyframes loading-dots {
+  0%, 80%, 100% {
+    opacity: 0.3;
+    transform: scale(0.8);
+  }
+  40% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-loading-dot-1 {
+  animation: loading-dots 1.4s ease-in-out infinite;
+  animation-delay: 0s;
+}
+
+.animate-loading-dot-2 {
+  animation: loading-dots 1.4s ease-in-out infinite;
+  animation-delay: 0.2s;
+}
+
+.animate-loading-dot-3 {
+  animation: loading-dots 1.4s ease-in-out infinite;
+  animation-delay: 0.4s;
+}
+
+/* Enhanced shimmer for skeletons - improved shimmer effect */
+@keyframes enhanced-shimmer {
+  0% {
+    background-position: -200% center;
+  }
+  100% {
+    background-position: 200% center;
+  }
+}
+
+.skeleton-shimmer-enhanced {
+  background: linear-gradient(
+    90deg,
+    var(--twilight) 0%,
+    var(--twilight) 30%,
+    color-mix(in srgb, var(--twilight) 60%, var(--muted) 40%) 50%,
+    var(--twilight) 70%,
+    var(--twilight) 100%
+  );
+  background-size: 200% 100%;
+  animation: enhanced-shimmer 2s ease-in-out infinite;
+}
+
+/* Disable all micro-interactions for reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .card-hover-lift,
+  .btn-press,
+  .animate-bouncy-select,
+  .animate-heart-fill,
+  .animate-image-fade,
+  .animate-loading-dot-1,
+  .animate-loading-dot-2,
+  .animate-loading-dot-3,
+  .skeleton-shimmer-enhanced {
+    animation: none !important;
+    transition: none !important;
+  }
+
+  .card-hover-lift:hover,
+  .card-hover-lift:active,
+  .btn-press:active {
+    transform: none !important;
+  }
+}
+
+/* ============================================
    SECTION HEADER HIERARCHY
    ============================================ */
 
 .section-header-primary {
-  font-family: var(--font-serif);
+  font-family: var(--font-outfit), system-ui, sans-serif;
   font-size: var(--text-2xl);
   font-weight: 600;
-  letter-spacing: -0.02em;
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-tighter);
   color: var(--cream);
 }
 
 .section-header-secondary {
-  font-family: var(--font-serif);
+  font-family: var(--font-outfit), system-ui, sans-serif;
   font-size: var(--text-xl);
   font-weight: 600;
-  letter-spacing: -0.01em;
+  line-height: var(--leading-snug);
+  letter-spacing: var(--tracking-tight);
   color: var(--cream);
 }
 
@@ -4180,8 +4560,9 @@ textarea:focus-visible {
   font-family: var(--font-mono), monospace;
   font-size: var(--text-base);
   font-weight: 500;
+  line-height: var(--leading-normal);
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: var(--tracking-wider);
   color: var(--soft);
 }
 

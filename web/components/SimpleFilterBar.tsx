@@ -282,7 +282,7 @@ export default function SimpleFilterBar({ variant = "full" }: SimpleFilterBarPro
                   setCategoryDropdownOpen(!categoryDropdownOpen);
                   setDateDropdownOpen(false);
                 }}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full font-mono text-xs font-medium transition-all border ${
+                className={`btn-press flex items-center gap-1.5 px-3 py-1.5 rounded-full font-mono text-xs font-medium transition-all border ${
                   currentCategories.length > 0
                     ? "bg-[var(--coral)] text-[var(--void)] border-[var(--coral)]/40 shadow-sm"
                     : "bg-[var(--dusk)]/80 text-[var(--cream)]/80 border-[var(--twilight)]/80 hover:text-[var(--cream)] hover:border-[var(--coral)]/30"
@@ -391,7 +391,7 @@ export default function SimpleFilterBar({ variant = "full" }: SimpleFilterBarPro
                   setDateDropdownOpen(!dateDropdownOpen);
                   setCategoryDropdownOpen(false);
                 }}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full font-mono text-xs font-medium transition-all border ${
+                className={`btn-press flex items-center gap-1.5 px-3 py-1.5 rounded-full font-mono text-xs font-medium transition-all border ${
                   currentDateFilter
                     ? "bg-[var(--gold)] text-[var(--void)] border-[var(--gold)]/40 shadow-sm"
                     : "bg-[var(--dusk)]/80 text-[var(--cream)]/80 border-[var(--twilight)]/80 hover:text-[var(--cream)] hover:border-[var(--coral)]/30"
@@ -484,7 +484,7 @@ export default function SimpleFilterBar({ variant = "full" }: SimpleFilterBarPro
             {/* Free only toggle */}
             <button
               onClick={toggleFreeOnly}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full font-mono text-xs font-medium transition-all border ${
+              className={`btn-press flex items-center gap-1.5 px-3 py-1.5 rounded-full font-mono text-xs font-medium transition-all border ${
                 currentFreeOnly
                   ? "bg-[var(--neon-green)] text-[var(--void)] border-[var(--neon-green)]/40 shadow-sm"
                 : "bg-[var(--dusk)]/80 text-[var(--cream)]/80 border-[var(--twilight)]/80 hover:text-[var(--cream)] hover:border-[var(--coral)]/30"

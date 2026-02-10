@@ -17,7 +17,7 @@ export default function Skeleton({ className = "", delay }: Props) {
     <>
       <ScopedStyles css={delayClass?.css} />
       <div
-        className={`skeleton-shimmer ${delay ? "skeleton-delay" : ""} ${delayClass?.className ?? ""} ${className}`}
+        className={`skeleton-shimmer-enhanced ${delay ? "skeleton-delay" : ""} ${delayClass?.className ?? ""} ${className}`}
       />
     </>
   );

@@ -23,10 +23,12 @@ interface EventQuickActionsProps {
     price_max: number | null;
     category: string | null;
     venue?: {
+      id?: number;
       name?: string;
       address?: string | null;
       city?: string;
       state?: string;
+      venue_type?: string | null;
     } | null;
   };
   isLive?: boolean;
@@ -139,12 +141,25 @@ export default function EventQuickActions({ event, isLive, className = "" }: Eve
             {event.is_free ? "RSVP Free" : "Learn More"}
           </a>
         ) : (
-          <RSVPButton eventId={event.id} variant="primary" className="flex-1 justify-center py-3.5 text-base" />
+          <RSVPButton
+            eventId={event.id}
+            venueId={event.venue?.id}
+            venueName={event.venue?.name}
+            venueType={event.venue?.venue_type}
+            variant="primary"
+            className="flex-1 justify-center py-3.5 text-base"
+          />
         )}
 
         {/* RSVP as secondary when there's a ticket URL or source URL */}
         {(event.ticket_url || event.source_url) && (
-          <RSVPButton eventId={event.id} variant="compact" />
+          <RSVPButton
+            eventId={event.id}
+            venueId={event.venue?.id}
+            venueName={event.venue?.name}
+            venueType={event.venue?.venue_type}
+            variant="compact"
+          />
         )}
 
         {/* Mobile secondary actions */}

@@ -64,6 +64,11 @@ export async function POST(request: NextRequest, { params }: Props) {
 
   // If tagId is provided, add existing tag
   if (body.tagId) {
+    // Validate tagId format
+    if (typeof body.tagId !== "string" || body.tagId.length < 1 || body.tagId.length > 100 || !/^[a-z0-9_-]+$/.test(body.tagId)) {
+      return NextResponse.json({ error: "Invalid tagId format" }, { status: 400 });
+    }
+
     const result = await addTagToVenue(venueId, body.tagId, user.id);
 
     if (!result.success) {
@@ -87,9 +92,21 @@ export async function POST(request: NextRequest, { params }: Props) {
       return NextResponse.json({ error: "Invalid tag group" }, { status: 400 });
     }
 
+    // Validate suggestedLabel
+    if (typeof body.suggestedLabel !== "string" || body.suggestedLabel.length < 1 || body.suggestedLabel.length > 100) {
+      return NextResponse.json({ error: "Label must be 1-100 characters" }, { status: 400 });
+    }
+
+    // Sanitize suggestedLabel (strip HTML tags)
+    const sanitizedLabel = body.suggestedLabel.replace(/<[^>]*>/g, "").trim();
+
+    if (sanitizedLabel.length < 1) {
+      return NextResponse.json({ error: "Label cannot be empty after sanitization" }, { status: 400 });
+    }
+
     const result = await suggestTag(
       venueId,
-      body.suggestedLabel,
+      sanitizedLabel,
       body.suggestedTagGroup as TagGroup,
       user.id,
       "venue"
@@ -114,12 +131,20 @@ export async function POST(request: NextRequest, { params }: Props) {
 
 // DELETE /api/venues/[id]/tags?tagId=xxx - Remove your own tag
 export async function DELETE(request: NextRequest, { params }: Props) {
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
+  if (rateLimitResult) return rateLimitResult;
+
   const { id } = await params;
   const { searchParams } = new URL(request.url);
   const tagId = searchParams.get("tagId");
 
   if (!tagId) {
     return NextResponse.json({ error: "tagId required" }, { status: 400 });
+  }
+
+  // Validate tagId format
+  if (tagId.length < 1 || tagId.length > 100 || !/^[a-z0-9_-]+$/.test(tagId)) {
+    return NextResponse.json({ error: "Invalid tagId format" }, { status: 400 });
   }
 
   const venueId = parseInt(id);

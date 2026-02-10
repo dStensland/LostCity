@@ -38,6 +38,7 @@ import {
 import VenueEventsByDay from "@/components/VenueEventsByDay";
 import ScopedStylesServer from "@/components/ScopedStylesServer";
 import { createCssVarClass } from "@/lib/css-utils";
+import { cache } from "react";
 
 export const revalidate = 60;
 
@@ -45,9 +46,12 @@ type Props = {
   params: Promise<{ portal: string; id: string }>;
 };
 
+// Cache getEventById to prevent duplicate queries in generateMetadata and page component
+const getCachedEventById = cache(getEventById);
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id, portal: portalSlug } = await params;
-  const event = await getEventById(parseInt(id, 10));
+  const event = await getCachedEventById(parseInt(id, 10));
   const portal = await getCachedPortalBySlug(portalSlug);
 
   if (!event) {
@@ -238,7 +242,7 @@ function parseRecurrenceRule(rule: string | null | undefined): string | null {
 
 export default async function PortalEventPage({ params }: Props) {
   const { id, portal: portalSlug } = await params;
-  const event = await getEventById(parseInt(id, 10));
+  const event = await getCachedEventById(parseInt(id, 10));
   const portal = await getCachedPortalBySlug(portalSlug);
 
   if (!event) {
@@ -675,7 +679,13 @@ export default async function PortalEventPage({ params }: Props) {
               state={event.venue?.state}
               variant="icon"
             />
-            <RSVPButton eventId={event.id} variant="compact" />
+            <RSVPButton
+              eventId={event.id}
+              venueId={event.venue?.id}
+              venueName={event.venue?.name}
+              venueType={event.venue?.venue_type}
+              variant="compact"
+            />
           </>
         }
         primaryAction={

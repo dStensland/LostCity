@@ -10,6 +10,7 @@ import { PortalHeader } from "@/components/headers";
 import ScopedStylesServer from "@/components/ScopedStylesServer";
 import { createCssVarClass } from "@/lib/css-utils";
 import VenueTagList from "@/components/VenueTagList";
+import { NeedsTagList } from "@/components/NeedsTagList";
 import FlagButton from "@/components/FlagButton";
 import FollowButton from "@/components/FollowButton";
 import RecommendButton from "@/components/RecommendButton";
@@ -206,12 +207,22 @@ export default async function PortalSpotPage({ params }: Props) {
             <div className="flex items-center gap-2 mt-3">
               <FollowButton targetVenueId={spot.id} size="sm" />
               <RecommendButton venueId={spot.id} size="sm" />
-              <Link
-                href={claimHref}
-                className="text-[var(--muted)] hover:text-[var(--cream)] font-mono text-xs"
-              >
-                Claim this venue
-              </Link>
+              {!spot.claimed_by && (
+                <Link
+                  href={`/venue/${spot.slug}/claim`}
+                  className="text-[var(--muted)] hover:text-[var(--cream)] font-mono text-xs"
+                >
+                  Claim this venue
+                </Link>
+              )}
+              {spot.claimed_by && spot.is_verified && (
+                <span className="text-[var(--neon-green)] font-mono text-xs flex items-center gap-1">
+                  <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                  Verified
+                </span>
+              )}
             </div>
           </DetailHero>
 
@@ -265,6 +276,12 @@ export default async function PortalSpotPage({ params }: Props) {
                 </div>
               </>
             )}
+
+            {/* Community Verified Needs */}
+            <SectionHeader title="Community Verified" />
+            <div className="mb-6">
+              <NeedsTagList entityType="venue" entityId={spot.id} title="" />
+            </div>
 
             {/* Community Tags */}
             <SectionHeader title="Community Tags" />

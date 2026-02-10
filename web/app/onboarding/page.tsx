@@ -31,6 +31,11 @@ function OnboardingContent() {
   const [step, setStep] = useState<OnboardingStep>("categories");
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [selectedGenres, setSelectedGenres] = useState<Record<string, string[]>>({});
+  const [selectedNeeds, setSelectedNeeds] = useState<{
+    accessibility: string[];
+    dietary: string[];
+    family: string[];
+  }>({ accessibility: [], dietary: [], family: [] });
   const [portal, setPortal] = useState<Portal | null>(null);
 
   // Redirect if not logged in
@@ -73,21 +78,25 @@ function OnboardingContent() {
   }, []);
 
   const handleGenreComplete = useCallback(
-    async (genres: Record<string, string[]>) => {
+    async (genres: Record<string, string[]>, needs: { accessibility: string[]; dietary: string[]; family: string[] }) => {
       setSelectedGenres(genres);
-      await completeOnboarding(genres);
+      setSelectedNeeds(needs);
+      await completeOnboarding(genres, needs);
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [selectedCategories]
   );
 
   const handleGenreSkip = useCallback(async () => {
-    await completeOnboarding({});
+    await completeOnboarding({}, { accessibility: [], dietary: [], family: [] });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedCategories]);
 
   // Complete onboarding and save preferences
-  const completeOnboarding = async (genres: Record<string, string[]>) => {
+  const completeOnboarding = async (
+    genres: Record<string, string[]>,
+    needs: { accessibility: string[]; dietary: string[]; family: string[] }
+  ) => {
     if (!user) return;
 
     try {
@@ -97,6 +106,7 @@ function OnboardingContent() {
         body: JSON.stringify({
           selectedCategories,
           selectedGenres: genres,
+          selectedNeeds: needs,
         }),
       });
     } catch (err) {
@@ -115,13 +125,15 @@ function OnboardingContent() {
   const handleExit = useCallback(() => {
     // Save partial progress if we have any selections
     const hasGenres = Object.values(selectedGenres).some((g) => g.length > 0);
-    if (user && (selectedCategories.length > 0 || hasGenres)) {
+    const hasNeeds = Object.values(selectedNeeds).some((n) => n.length > 0);
+    if (user && (selectedCategories.length > 0 || hasGenres || hasNeeds)) {
       fetch("/api/onboarding/complete", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           selectedCategories,
           selectedGenres,
+          selectedNeeds,
         }),
       }).catch(console.error);
     }
@@ -132,7 +144,7 @@ function OnboardingContent() {
     } else {
       router.push("/atlanta");
     }
-  }, [user, selectedCategories, selectedGenres, portalSlug, router]);
+  }, [user, selectedCategories, selectedGenres, selectedNeeds, portalSlug, router]);
 
   // Loading state
   if (authLoading || !user) {

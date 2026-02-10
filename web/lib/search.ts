@@ -226,8 +226,8 @@ function getDateRange(filter: "now" | "today" | "tomorrow" | "weekend" | "week" 
   }
 }
 
-// Batch fetch venue IDs for multiple filter types in a single consolidated query
-// PERFORMANCE OPTIMIZATION: Replaces 5 parallel queries with 1 query using OR conditions
+// Batch fetch venue IDs for multiple filter types using targeted parallel queries
+// PERFORMANCE OPTIMIZATION: Replaced full table scan with targeted queries that use indexes
 async function batchFetchVenueIds(filters: {
   searchTerm?: string;
   moodVibes?: string[];
@@ -252,80 +252,107 @@ async function batchFetchVenueIds(filters: {
     };
   }
 
-  // Build a single query that checks all conditions and tags which matched
-  // Select id plus flag columns for each filter type
-  const { data } = await supabase
-    .from("venues")
-    .select("id, name, vibes, neighborhood, city");
+  // Build parallel targeted queries - only fetch IDs that match specific filters
+  const queries: Promise<number[]>[] = [];
+  const queryTypes: ('search' | 'moodVibes' | 'vibes' | 'neighborhoods' | 'city')[] = [];
 
-  if (!data) {
-    return {
-      searchVenueIds: [],
-      moodVenueIds: [],
-      vibesVenueIds: [],
-      neighborhoodVenueIds: [],
-      cityVenueIds: [],
-    };
+  // Search term - use ilike for name matching
+  if (filters.searchTerm) {
+    const escapedTerm = escapePostgrestValue(filters.searchTerm);
+    queries.push(
+      (async () => {
+        const { data } = await supabase
+          .from("venues")
+          .select("id")
+          .ilike("name", `%${escapedTerm}%`);
+        return (data || []).map((v: { id: number }) => v.id);
+      })()
+    );
+    queryTypes.push('search');
   }
 
-  type VenueRow = {
-    id: number;
-    name: string;
-    vibes: string[] | null;
-    neighborhood: string | null;
-    city: string | null;
+  // Mood vibes - use overlaps for array matching
+  if (filters.moodVibes && filters.moodVibes.length > 0) {
+    const moodVibes = filters.moodVibes; // Local reference for type safety
+    queries.push(
+      (async () => {
+        const { data } = await supabase
+          .from("venues")
+          .select("id")
+          .overlaps("vibes", moodVibes);
+        return (data || []).map((v: { id: number }) => v.id);
+      })()
+    );
+    queryTypes.push('moodVibes');
+  }
+
+  // Regular vibes - use overlaps for array matching
+  if (filters.vibes && filters.vibes.length > 0) {
+    const vibes = filters.vibes; // Local reference for type safety
+    queries.push(
+      (async () => {
+        const { data } = await supabase
+          .from("venues")
+          .select("id")
+          .overlaps("vibes", vibes);
+        return (data || []).map((v: { id: number }) => v.id);
+      })()
+    );
+    queryTypes.push('vibes');
+  }
+
+  // Neighborhoods - use in for exact matching
+  if (filters.neighborhoods && filters.neighborhoods.length > 0) {
+    const neighborhoods = filters.neighborhoods; // Local reference for type safety
+    queries.push(
+      (async () => {
+        const { data } = await supabase
+          .from("venues")
+          .select("id")
+          .in("neighborhood", neighborhoods);
+        return (data || []).map((v: { id: number }) => v.id);
+      })()
+    );
+    queryTypes.push('neighborhoods');
+  }
+
+  // City - use eq for exact matching
+  if (filters.city) {
+    const city = filters.city; // Local reference for type safety
+    queries.push(
+      (async () => {
+        const { data } = await supabase
+          .from("venues")
+          .select("id")
+          .eq("city", city);
+        return (data || []).map((v: { id: number }) => v.id);
+      })()
+    );
+    queryTypes.push('city');
+  }
+
+  // Execute all queries in parallel
+  const results = await Promise.all(queries);
+
+  // Map results back to their respective arrays
+  const resultMap: Record<string, number[]> = {
+    search: [],
+    moodVibes: [],
+    vibes: [],
+    neighborhoods: [],
+    city: [],
   };
 
-  const venues = data as VenueRow[];
-
-  // Client-side filtering to categorize which filters each venue matches
-  const searchVenueIds: number[] = [];
-  const moodVenueIds: number[] = [];
-  const vibesVenueIds: number[] = [];
-  const neighborhoodVenueIds: number[] = [];
-  const cityVenueIds: number[] = [];
-
-  for (const venue of venues) {
-    // Check search term match
-    if (filters.searchTerm && venue.name.toLowerCase().includes(filters.searchTerm.toLowerCase())) {
-      searchVenueIds.push(venue.id);
-    }
-
-    // Check mood vibes match (any overlap)
-    if (filters.moodVibes && filters.moodVibes.length > 0 && venue.vibes) {
-      if (filters.moodVibes.some((vibe) => venue.vibes?.includes(vibe))) {
-        moodVenueIds.push(venue.id);
-      }
-    }
-
-    // Check vibes match (any overlap)
-    if (filters.vibes && filters.vibes.length > 0 && venue.vibes) {
-      if (filters.vibes.some((vibe) => venue.vibes?.includes(vibe))) {
-        vibesVenueIds.push(venue.id);
-      }
-    }
-
-    // Check neighborhood match
-    if (filters.neighborhoods && filters.neighborhoods.length > 0 && venue.neighborhood) {
-      if (filters.neighborhoods.includes(venue.neighborhood)) {
-        neighborhoodVenueIds.push(venue.id);
-      }
-    }
-
-    // Check city match
-    if (filters.city && venue.city) {
-      if (venue.city.toLowerCase() === filters.city.toLowerCase()) {
-        cityVenueIds.push(venue.id);
-      }
-    }
-  }
+  queryTypes.forEach((type, index) => {
+    resultMap[type] = results[index];
+  });
 
   return {
-    searchVenueIds,
-    moodVenueIds,
-    vibesVenueIds,
-    neighborhoodVenueIds,
-    cityVenueIds,
+    searchVenueIds: resultMap.search,
+    moodVenueIds: resultMap.moodVibes,
+    vibesVenueIds: resultMap.vibes,
+    neighborhoodVenueIds: resultMap.neighborhoods,
+    cityVenueIds: resultMap.city,
   };
 }
 

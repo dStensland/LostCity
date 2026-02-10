@@ -67,7 +67,7 @@ export function ReviewStep({ draft, onBack, onLaunch }: Props) {
               rel="noopener noreferrer"
               className="font-mono text-sm text-[var(--coral)] hover:opacity-80 transition-opacity"
             >
-              {window.location.origin}{previewUrl}
+              {typeof window !== "undefined" ? window.location.origin : ""}{previewUrl}
             </a>
           </div>
         )}

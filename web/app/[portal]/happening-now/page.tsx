@@ -212,6 +212,8 @@ export default function WhatsOpenPage() {
           hours_display: null,
           vibes: spotData.vibes,
           genres: null,
+          claimed_by: null,
+          is_verified: null,
           image_url: spotData.image_url,
           featured: false,
           active: true,
@@ -511,6 +513,8 @@ export default function WhatsOpenPage() {
                       image_url: s.image_url,
                       featured: false,
                       active: true,
+                      claimed_by: null,
+                      is_verified: null,
                     }}
                   />
                 );

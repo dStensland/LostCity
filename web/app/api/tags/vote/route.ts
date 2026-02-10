@@ -69,7 +69,7 @@ export const POST = withAuth(async (request, { user, serviceClient }) => {
 
     // Verify tag applies to this entity type
     if (!tagDef.entity_types || !tagDef.entity_types.includes(entity_type)) {
-      return validationError(`Tag ${tag_slug} does not apply to ${entity_type}`);
+      return validationError("This tag does not apply to the specified entity type");
     }
 
     // Upsert the vote
@@ -186,6 +186,9 @@ export const DELETE = withAuth(async (request, { user, serviceClient }) => {
  * Get tag votes/counts for a specific entity
  */
 export async function GET(request: NextRequest) {
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.read, getClientIdentifier(request));
+  if (rateLimitResult) return rateLimitResult;
+
   try {
     const { searchParams } = new URL(request.url);
     const entity_type = searchParams.get("entity_type");

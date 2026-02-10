@@ -8,11 +8,15 @@ import { useToast } from "@/components/Toast";
 import { VISIBILITY_OPTIONS, DEFAULT_VISIBILITY, type Visibility } from "@/lib/visibility";
 import Lasers from "./ui/Lasers";
 import Sparkles from "./ui/Sparkles";
+import { PostRsvpNeedsPrompt } from "./PostRsvpNeedsPrompt";
 
 export type RSVPStatus = "going" | "interested" | "went" | null;
 
 type RSVPButtonProps = {
   eventId: number;
+  venueId?: number;
+  venueName?: string;
+  venueType?: string | null;
   size?: "sm" | "md";
   variant?: "default" | "compact" | "primary";
   className?: string;
@@ -28,6 +32,9 @@ const STATUS_CONFIG = {
 
 export default function RSVPButton({
   eventId,
+  venueId,
+  venueName,
+  venueType,
   size = "md",
   variant = "default",
   className = "",
@@ -49,6 +56,7 @@ export default function RSVPButton({
   const [showLasers, setShowLasers] = useState(false);
   const [showSparkles, setShowSparkles] = useState(false);
   const [menuPos, setMenuPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
+  const [showNeedsPrompt, setShowNeedsPrompt] = useState(false);
 
   const statusOptions = Object.keys(STATUS_CONFIG) as (keyof typeof STATUS_CONFIG)[];
   const menuItemCount = statusOptions.length + (status ? 1 : 0); // +1 for "Remove RSVP"
@@ -285,6 +293,11 @@ export default function RSVPButton({
 
       setMenuOpen(false);
 
+      // Show needs prompt after first-time RSVP (going status only, with venue data)
+      if (newStatus === "going" && previousStatus === null && venueId && venueName) {
+        setTimeout(() => setShowNeedsPrompt(true), 800); // Delay to let RSVP animation complete
+      }
+
       // Notify parent of successful status change
       if (onRSVPChange) {
         onRSVPChange(newStatus, previousStatus);
@@ -442,10 +455,11 @@ export default function RSVPButton({
   };
 
   return (
-    <div className={`relative ${className}`} ref={menuRef}>
-      <Lasers isActive={showLasers} originRef={buttonRef} />
-      <Sparkles isActive={showSparkles} originRef={buttonRef} />
-      <button
+    <>
+      <div className={`relative ${className}`} ref={menuRef}>
+        <Lasers isActive={showLasers} originRef={buttonRef} />
+        <Sparkles isActive={showSparkles} originRef={buttonRef} />
+        <button
         ref={buttonRef}
         onClick={(e) => {
           // Prevent parent cards/cells from treating this as a navigation click.
@@ -580,7 +594,18 @@ export default function RSVPButton({
           </>,
           document.body
         )}
-    </div>
+      </div>
+
+      {/* Post-RSVP needs prompt */}
+      {showNeedsPrompt && venueId && venueName && (
+        <PostRsvpNeedsPrompt
+          venueId={venueId}
+          venueName={venueName}
+          venueType={venueType || null}
+          onDismiss={() => setShowNeedsPrompt(false)}
+        />
+      )}
+    </>
   );
 }
 

@@ -90,7 +90,7 @@ export default function ActivityChip({
   };
 
   const baseClasses = `
-    inline-flex items-center gap-1.5 rounded-full font-medium transition-all
+    inline-flex items-center gap-1.5 rounded-full font-medium transition-all btn-press
     focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--coral)]
     ${sizeClasses[size]}
   `;

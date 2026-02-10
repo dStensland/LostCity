@@ -14,6 +14,7 @@ type UserPreferences = Database["public"]["Tables"]["user_preferences"]["Row"] &
   needs_accessibility?: string[] | null;
   needs_dietary?: string[] | null;
   needs_family?: string[] | null;
+  cross_portal_recommendations?: boolean | null;
 };
 
 type Props = {
@@ -40,6 +41,37 @@ export default async function PreferencesPage({ searchParams }: Props) {
 
   const prefs = prefsData as UserPreferences | null;
 
+  // Get count of user preferences to show they have a taste profile
+  const { count: preferencesCount } = await supabase
+    .from("inferred_preferences")
+    .select("*", { count: "exact", head: true })
+    .eq("user_id", user.id);
+
+  // Show active portals (simplified - just show available portals as examples)
+  // In a real implementation, you might track which portals the user has visited
+  const portalActivity: { portalSlug: string; portalName: string; viewCount: number }[] = [];
+
+  // If user has preferences, show example portals to demonstrate cross-portal reach
+  if (!isWelcome && (preferencesCount ?? 0) > 0) {
+    const { data: examplePortals } = await supabase
+      .from("portals")
+      .select("slug, name")
+      .eq("is_active", true)
+      .in("portal_type", ["city", "neighborhood"])
+      .limit(4);
+
+    if (examplePortals) {
+      type PortalRow = { slug: string; name: string };
+      portalActivity.push(
+        ...(examplePortals as PortalRow[]).map(p => ({
+          portalSlug: p.slug,
+          portalName: p.name,
+          viewCount: 0, // We don't track individual views per user
+        }))
+      );
+    }
+  }
+
   return (
     <PreferencesClient
       isWelcome={isWelcome}
@@ -52,7 +84,9 @@ export default async function PreferencesPage({ searchParams }: Props) {
         needsAccessibility: prefs?.needs_accessibility || [],
         needsDietary: prefs?.needs_dietary || [],
         needsFamily: prefs?.needs_family || [],
+        crossPortalRecommendations: prefs?.cross_portal_recommendations ?? true,
       }}
+      portalActivity={portalActivity}
     />
   );
 }

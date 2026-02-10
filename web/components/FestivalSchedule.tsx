@@ -77,6 +77,8 @@ export default function FestivalSchedule({
   const [selectedVenue, setSelectedVenue] = useState<number | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedProgram, setSelectedProgram] = useState<string | null>(null);
+  const hasDayTabs = days.length > 1;
+  const hasFilterControls = venues.length > 1 || categories.length > 1 || programs.length > 1;
 
   const filtered = useMemo(() => {
     return sessions.filter((s) => {
@@ -102,46 +104,50 @@ export default function FestivalSchedule({
         </span>
       </h2>
 
-      {/* Day tabs */}
-      {days.length > 1 && (
-        <div className="relative mb-4">
-          <div className="absolute left-0 top-0 bottom-0 w-6 bg-gradient-to-r from-[var(--void)] to-transparent z-10 pointer-events-none" />
-          <div className="absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-[var(--void)] to-transparent z-10 pointer-events-none" />
-          <div className="overflow-x-auto -mx-4 px-4">
-          <div className="flex gap-2 min-w-min">
-            {days.map((day) => {
-              const isSelected = selectedDay === day;
-              const isToday = day === todayStr;
-              return (
-                <button
-                  key={day}
-                  onClick={() => setSelectedDay(day)}
-                  className={`relative px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
-                    isSelected
-                      ? "bg-accent-20 text-accent border border-accent-40"
-                      : "bg-[var(--twilight)]/30 text-[var(--soft)] hover:bg-[var(--twilight)]/60 border border-transparent"
-                  }`}
-                >
-                  {formatShortDate(day)}
-                  {isToday && (
-                    <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-accent shadow-[0_0_6px_rgba(255,107,122,0.6)]" />
-                  )}
-                </button>
-              );
-            })}
-          </div>
-          </div>
-        </div>
-      )}
+      {/* Mobile sticky controls + desktop static controls */}
+      {(hasDayTabs || hasFilterControls) && (
+        <div className="sticky top-[56px] z-30 -mx-4 px-4 py-2 mb-4 border-y border-[var(--twilight)]/30 bg-[var(--void)]/95 backdrop-blur-sm sm:static sm:mx-0 sm:px-0 sm:py-0 sm:mb-4 sm:border-0 sm:bg-transparent sm:backdrop-blur-none">
+          {/* Day tabs */}
+          {hasDayTabs && (
+            <div className="relative mb-2 sm:mb-4">
+              <div className="absolute left-0 top-0 bottom-0 w-6 bg-gradient-to-r from-[var(--void)] to-transparent z-10 pointer-events-none sm:hidden" />
+              <div className="absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-[var(--void)] to-transparent z-10 pointer-events-none sm:hidden" />
+              <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
+                <div className="flex gap-2 min-w-min">
+                  {days.map((day) => {
+                    const isSelected = selectedDay === day;
+                    const isToday = day === todayStr;
+                    return (
+                      <button
+                        key={day}
+                        onClick={() => setSelectedDay(day)}
+                        className={`relative px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
+                          isSelected
+                            ? "bg-accent-20 text-accent border border-accent-40"
+                            : "bg-[var(--twilight)]/30 text-[var(--soft)] hover:bg-[var(--twilight)]/60 border border-transparent"
+                        }`}
+                      >
+                        {formatShortDate(day)}
+                        {isToday && (
+                          <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-accent shadow-[0_0_6px_rgba(255,107,122,0.6)]" />
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
 
-      {/* Filter chips */}
-      {(venues.length > 1 || categories.length > 1 || programs.length > 1) && (
-        <div className="flex flex-wrap gap-1.5 mb-4">
+          {/* Filter chips */}
+          {hasFilterControls && (
+            <div className="flex flex-wrap gap-1.5">
           {/* Venue chips */}
           {venues.length > 1 && venues.map((v) => (
             <button
               key={v.id}
               onClick={() => setSelectedVenue(selectedVenue === v.id ? null : v.id)}
+              aria-pressed={selectedVenue === v.id}
               className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
                 selectedVenue === v.id
                   ? "bg-accent-20 text-accent border border-accent-40"
@@ -157,6 +163,7 @@ export default function FestivalSchedule({
             <button
               key={c}
               onClick={() => setSelectedCategory(selectedCategory === c ? null : c)}
+              aria-pressed={selectedCategory === c}
               className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
                 selectedCategory === c
                   ? "bg-accent-20 text-accent border border-accent-40"
@@ -172,6 +179,7 @@ export default function FestivalSchedule({
             <button
               key={p.id}
               onClick={() => setSelectedProgram(selectedProgram === p.id ? null : p.id)}
+              aria-pressed={selectedProgram === p.id}
               className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
                 selectedProgram === p.id
                   ? "bg-accent-20 text-accent border border-accent-40"
@@ -214,6 +222,8 @@ export default function FestivalSchedule({
               Clear
             </button>
           )}
+            </div>
+          )}
         </div>
       )}
 
@@ -228,11 +238,11 @@ export default function FestivalSchedule({
             {filtered.map((session) => (
               <div
                 key={session.id}
-                className="flex items-start gap-4 px-4 py-3 hover:bg-[var(--card-bg-hover)] transition-colors"
+                className="flex items-start gap-3 px-3 py-2.5 hover:bg-[var(--card-bg-hover)] transition-colors sm:gap-4 sm:px-4 sm:py-3"
               >
                 {/* Time */}
-                <div className="flex-shrink-0 w-14 sm:w-20 pt-1">
-                  <span className="font-mono text-xs sm:text-sm text-[var(--muted)]">
+                <div className="flex-shrink-0 w-14 sm:w-20 pt-0.5 sm:pt-1">
+                  <span className="inline-flex rounded px-1.5 py-0.5 font-mono text-[11px] sm:text-sm text-[var(--muted)] bg-[var(--twilight)]/25">
                     {formatTime(session.start_time) || "TBA"}
                   </span>
                 </div>
@@ -241,16 +251,16 @@ export default function FestivalSchedule({
                 <div className="flex-1 min-w-0">
                   <Link
                     href={`/${portalSlug}/events/${session.id}`}
-                    className="font-medium text-[var(--cream)] hover:text-accent transition-colors line-clamp-2"
+                    className="font-medium text-sm sm:text-base text-[var(--cream)] hover:text-accent transition-colors line-clamp-2"
                   >
                     {decodeHtmlEntities(session.title)}
                   </Link>
 
-                  <div className="flex flex-wrap items-center gap-2 mt-1">
+                  <div className="flex flex-wrap items-center gap-1.5 mt-1">
                     {session.venue && (
                       <Link
                         href={`/${portalSlug}/spots/${session.venue.slug}`}
-                        className="text-xs text-[var(--soft)] hover:text-[var(--coral)] transition-colors inline-flex items-center gap-1"
+                        className="text-[11px] sm:text-xs text-[var(--soft)] hover:text-[var(--coral)] transition-colors inline-flex items-center gap-1"
                       >
                         <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
@@ -262,7 +272,7 @@ export default function FestivalSchedule({
 
                     {session.category && (
                       <span
-                        className="px-2 py-0.5 rounded-full text-xs font-medium border"
+                        className="px-1.5 sm:px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-medium border"
                         style={{
                           borderColor: getCategoryColor(session.category),
                           color: getCategoryColor(session.category),
@@ -275,12 +285,6 @@ export default function FestivalSchedule({
                   </div>
                 </div>
 
-                {/* Arrow */}
-                <Link href={`/${portalSlug}/events/${session.id}`} className="flex-shrink-0 pt-1">
-                  <svg className="w-5 h-5 text-[var(--muted)] hover:text-accent transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </Link>
               </div>
             ))}
           </div>

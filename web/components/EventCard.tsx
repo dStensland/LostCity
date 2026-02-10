@@ -165,7 +165,7 @@ function EventCard({ event, index = 0, skipAnimation = false, portalSlug, friend
 
   return (
     <div
-      className={`mb-2 sm:mb-4 rounded-sm border border-[var(--twilight)] card-atmospheric glow-accent reflection-accent ${reflectionClass} ${animationClass} ${staggerClass} bg-[var(--card-bg)] overflow-hidden group hover:scale-[1.008] transition-transform ${
+      className={`mb-2 sm:mb-4 rounded-sm border border-[var(--twilight)] card-atmospheric glow-accent reflection-accent ${reflectionClass} ${animationClass} ${staggerClass} bg-[var(--card-bg)] overflow-hidden group card-hover-lift ${
         event.category ? "border-l-[3px] border-l-[var(--accent-color)]" : ""
       }`}
       style={

@@ -304,14 +304,32 @@ export async function GET(request: NextRequest) {
 
     const supabase = await createClient();
 
-    // Check for curated picks first — if editor-curated picks exist for this period,
-    // return those directly instead of running the scoring algorithm
-    const { data: curatedPicks } = await supabase
-      .from("curated_picks")
-      .select("event_id, position")
-      .eq("pick_date", curatedDate)
-      .eq("period", period)
-      .order("position", { ascending: true });
+    // PERFORMANCE: Run portal lookup and curated picks fetch in parallel
+    const [curatedPicksResult, atlantaPortalResult] = await Promise.all([
+      // Check for curated picks first — if editor-curated picks exist for this period,
+      // return those directly instead of running the scoring algorithm
+      supabase
+        .from("curated_picks")
+        .select("event_id, position")
+        .eq("pick_date", curatedDate)
+        .eq("period", period)
+        .order("position", { ascending: true }),
+
+      // Get the main Atlanta portal ID
+      supabase
+        .from("portals")
+        .select("id")
+        .eq("slug", "atlanta")
+        .single<{ id: string }>()
+    ]);
+
+    const { data: curatedPicks } = curatedPicksResult;
+    const { data: atlantaPortal } = atlantaPortalResult;
+
+    if (!atlantaPortal) {
+      console.error("Atlanta portal not found");
+      return NextResponse.json({ events: [], period }, { status: 500 });
+    }
 
     if (curatedPicks && curatedPicks.length > 0) {
       const curatedIds = (curatedPicks as { event_id: number; position: number }[]).map(p => p.event_id);
@@ -347,18 +365,6 @@ export async function GET(request: NextRequest) {
 
         return NextResponse.json({ events: result, period }, { headers: cacheHeaders });
       }
-    }
-
-    // Get the main Atlanta portal ID
-    const { data: atlantaPortal } = await supabase
-      .from("portals")
-      .select("id")
-      .eq("slug", "atlanta")
-      .single<{ id: string }>();
-
-    if (!atlantaPortal) {
-      console.error("Atlanta portal not found");
-      return NextResponse.json({ events: [], period }, { status: 500 });
     }
 
     // Fetch events for the date range
@@ -402,17 +408,31 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ events: [], period }, { headers: cacheHeaders });
     }
 
-    // Fetch RSVP counts for these events
+    // PERFORMANCE: Fetch RSVP counts and venue recommendations in parallel
     const eventIds = typedEvents.map(e => e.id);
-    const { data: rsvpData } = await supabase
-      .from("event_rsvps")
-      .select("event_id, status")
-      .in("event_id", eventIds)
-      .in("status", ["going", "interested"]);
+    const venueIds = typedEvents.map(e => e.venue_id).filter((id): id is number => id !== null);
+
+    const [rsvpResult, recResult] = await Promise.all([
+      // Fetch RSVP counts for these events
+      supabase
+        .from("event_rsvps")
+        .select("event_id, status")
+        .in("event_id", eventIds)
+        .in("status", ["going", "interested"]),
+
+      // Fetch venue recommendation counts
+      venueIds.length > 0
+        ? supabase
+            .from("recommendations")
+            .select("venue_id")
+            .in("venue_id", venueIds)
+            .eq("visibility", "public")
+        : Promise.resolve({ data: [] })
+    ]);
 
     // Aggregate RSVP counts
     const rsvpCounts = new Map<number, { going: number; interested: number }>();
-    const typedRsvps = (rsvpData || []) as { event_id: number; status: string }[];
+    const typedRsvps = (rsvpResult.data || []) as { event_id: number; status: string }[];
     for (const rsvp of typedRsvps) {
       const counts = rsvpCounts.get(rsvp.event_id) || { going: 0, interested: 0 };
       if (rsvp.status === "going") counts.going++;
@@ -420,22 +440,12 @@ export async function GET(request: NextRequest) {
       rsvpCounts.set(rsvp.event_id, counts);
     }
 
-    // Fetch venue recommendation counts
-    const venueIds = typedEvents.map(e => e.venue_id).filter((id): id is number => id !== null);
+    // Aggregate venue recommendation counts
     const venueRecCounts = new Map<number, number>();
-
-    if (venueIds.length > 0) {
-      const { data: recData } = await supabase
-        .from("recommendations")
-        .select("venue_id")
-        .in("venue_id", venueIds)
-        .eq("visibility", "public");
-
-      const typedRecs = (recData || []) as { venue_id: number }[];
-      for (const rec of typedRecs) {
-        if (rec.venue_id) {
-          venueRecCounts.set(rec.venue_id, (venueRecCounts.get(rec.venue_id) || 0) + 1);
-        }
+    const typedRecs = (recResult.data || []) as { venue_id: number }[];
+    for (const rec of typedRecs) {
+      if (rec.venue_id) {
+        venueRecCounts.set(rec.venue_id, (venueRecCounts.get(rec.venue_id) || 0) + 1);
       }
     }
 

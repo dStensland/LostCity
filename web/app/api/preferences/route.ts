@@ -1,10 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, getUser } from "@/lib/supabase/server";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
-import { errorResponse } from "@/lib/api-utils";
+import { errorResponse, checkBodySize } from "@/lib/api-utils";
 import { logger } from "@/lib/logger";
 
+// Valid categories from search-constants.ts
+const VALID_CATEGORIES = [
+  "music", "film", "comedy", "theater", "art", "sports", "food_drink", "nightlife",
+  "community", "fitness", "family", "learning", "dance", "tours", "meetup", "words",
+  "religious", "markets", "wellness", "gaming", "outdoors", "other"
+];
+
 export async function POST(request: NextRequest) {
+  const bodySizeResult = checkBodySize(request);
+  if (bodySizeResult) return bodySizeResult;
+
   const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
   if (rateLimitResult) return rateLimitResult;
   try {
@@ -14,16 +24,31 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const {
-      favorite_categories,
-      favorite_neighborhoods,
-      favorite_vibes,
-      favorite_genres,
-      price_preference,
-      needs_accessibility,
-      needs_dietary,
-      needs_family,
-    } = body;
+
+    // Validate and sanitize all array fields (max 30 items, strings only)
+    const sanitizeArray = (val: unknown, max = 30): string[] =>
+      Array.isArray(val) ? val.filter((v): v is string => typeof v === "string").slice(0, max) : [];
+
+    // Validate genre strings (alphanumeric, hyphens, underscores, dots only)
+    const isValidGenre = (g: string): boolean => /^[a-z0-9._-]+$/i.test(g);
+
+    const favorite_categories = sanitizeArray(body.favorite_categories).filter(c => VALID_CATEGORIES.includes(c));
+    const favorite_neighborhoods = sanitizeArray(body.favorite_neighborhoods);
+    const favorite_vibes = sanitizeArray(body.favorite_vibes);
+    const needs_accessibility = sanitizeArray(body.needs_accessibility);
+    const needs_dietary = sanitizeArray(body.needs_dietary);
+    const needs_family = sanitizeArray(body.needs_family);
+    const price_preference = typeof body.price_preference === "string" ? body.price_preference : "any";
+    const favorite_genres = body.favorite_genres && typeof body.favorite_genres === "object" && !Array.isArray(body.favorite_genres)
+      ? Object.fromEntries(
+          Object.entries(body.favorite_genres as Record<string, unknown>)
+            .filter(([k, v]) => VALID_CATEGORIES.includes(k) && Array.isArray(v))
+            .map(([k, v]) => [k, (v as string[]).filter((g) => typeof g === "string" && isValidGenre(g)).slice(0, 30)])
+        )
+      : undefined;
+    const cross_portal_recommendations = typeof body.cross_portal_recommendations === "boolean"
+      ? body.cross_portal_recommendations
+      : true;
 
     const supabase = await createClient();
 
@@ -37,6 +62,7 @@ export async function POST(request: NextRequest) {
           favorite_neighborhoods: favorite_neighborhoods || [],
           favorite_vibes: favorite_vibes || [],
           price_preference: price_preference || "any",
+          cross_portal_recommendations,
           ...(favorite_genres !== undefined && { favorite_genres }),
           ...(needs_accessibility !== undefined && { needs_accessibility }),
           ...(needs_dietary !== undefined && { needs_dietary }),
@@ -95,6 +121,7 @@ export async function GET(request: NextRequest) {
         needs_accessibility: [],
         needs_dietary: [],
         needs_family: [],
+        cross_portal_recommendations: true,
       }, {
         headers: {
           "Cache-Control": "private, max-age=120, stale-while-revalidate=300",

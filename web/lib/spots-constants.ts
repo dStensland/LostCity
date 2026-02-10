@@ -212,6 +212,8 @@ export type Spot = {
   image_url: string | null;
   featured: boolean;
   active: boolean;
+  claimed_by: string | null;
+  is_verified: boolean | null;
   event_count?: number;
   follower_count?: number;
   recommendation_count?: number;

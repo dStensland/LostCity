@@ -13,7 +13,7 @@ interface GenreOption {
 }
 
 interface GenrePickerProps {
-  onComplete: (genres: Record<string, string[]>) => void;
+  onComplete: (genres: Record<string, string[]>, needs: { accessibility: string[]; dietary: string[]; family: string[] }) => void;
   onSkip: () => void;
   selectedCategories: string[];
 }
@@ -22,6 +22,11 @@ export function GenrePicker({ onComplete, onSkip, selectedCategories }: GenrePic
   const [selectedGenres, setSelectedGenres] = useState<Record<string, string[]>>({});
   const [genresByCategory, setGenresByCategory] = useState<Record<string, GenreOption[]>>({});
   const [loading, setLoading] = useState(true);
+  const [selectedNeeds, setSelectedNeeds] = useState<{
+    accessibility: string[];
+    dietary: string[];
+    family: string[];
+  }>({ accessibility: [], dietary: [], family: [] });
 
   const categoriesToFetch =
     selectedCategories.length > 0 ? selectedCategories : DEFAULT_CATEGORIES;
@@ -56,10 +61,20 @@ export function GenrePicker({ onComplete, onSkip, selectedCategories }: GenrePic
     });
   };
 
+  const toggleNeed = (group: keyof typeof selectedNeeds, value: string) => {
+    setSelectedNeeds((prev) => {
+      const current = prev[group];
+      const updated = current.includes(value)
+        ? current.filter((v) => v !== value)
+        : [...current, value];
+      return { ...prev, [group]: updated };
+    });
+  };
+
   const totalSelected = Object.values(selectedGenres).reduce((sum, g) => sum + g.length, 0);
 
   const handleFinish = () => {
-    onComplete(selectedGenres);
+    onComplete(selectedGenres, selectedNeeds);
   };
 
   // Get category config (emoji, label) from PREFERENCE_CATEGORIES
@@ -152,6 +167,58 @@ export function GenrePicker({ onComplete, onSkip, selectedCategories }: GenrePic
             })
           )}
         </div>
+
+        {/* Needs section - compact toggles at bottom */}
+        {!loading && (
+          <div className="border-t border-[var(--twilight)] pt-6 mt-6">
+            <div className="mb-3">
+              <p className="font-mono text-xs text-[var(--soft)] uppercase tracking-wider">
+                Anything we should know?
+              </p>
+              <p className="text-xs text-[var(--muted)] mt-1">
+                Help us show you accessible, inclusive spots
+              </p>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              {/* Wheelchair access */}
+              <button
+                onClick={() => toggleNeed("accessibility", "wheelchair")}
+                className={`px-3 py-1.5 rounded-full border font-mono text-xs transition-all ${
+                  selectedNeeds.accessibility.includes("wheelchair")
+                    ? "border-[var(--neon-cyan)] bg-[var(--neon-cyan)]/10 text-[var(--cream)]"
+                    : "border-[var(--twilight)] text-[var(--soft)] hover:border-[var(--neon-cyan)]/50"
+                }`}
+              >
+                ♿ Wheelchair access
+              </button>
+
+              {/* Dietary */}
+              <button
+                onClick={() => toggleNeed("dietary", "vegan")}
+                className={`px-3 py-1.5 rounded-full border font-mono text-xs transition-all ${
+                  selectedNeeds.dietary.includes("vegan")
+                    ? "border-[var(--neon-cyan)] bg-[var(--neon-cyan)]/10 text-[var(--cream)]"
+                    : "border-[var(--twilight)] text-[var(--soft)] hover:border-[var(--neon-cyan)]/50"
+                }`}
+              >
+                🌱 Vegan options
+              </button>
+
+              {/* Family */}
+              <button
+                onClick={() => toggleNeed("family", "kid-friendly")}
+                className={`px-3 py-1.5 rounded-full border font-mono text-xs transition-all ${
+                  selectedNeeds.family.includes("kid-friendly")
+                    ? "border-[var(--neon-cyan)] bg-[var(--neon-cyan)]/10 text-[var(--cream)]"
+                    : "border-[var(--twilight)] text-[var(--soft)] hover:border-[var(--neon-cyan)]/50"
+                }`}
+              >
+                👨‍👩‍👧 Family-friendly
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Actions */}
         <div className="space-y-3">

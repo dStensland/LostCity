@@ -32,7 +32,13 @@ type PreferencesClientProps = {
     needsAccessibility: string[];
     needsDietary: string[];
     needsFamily: string[];
+    crossPortalRecommendations: boolean;
   };
+  portalActivity?: {
+    portalSlug: string;
+    portalName: string;
+    viewCount: number;
+  }[];
 };
 
 interface GenreOption {
@@ -46,6 +52,7 @@ const MAX_GENRES_PER_CATEGORY = 10;
 export default function PreferencesClient({
   isWelcome,
   initialPreferences,
+  portalActivity = [],
 }: PreferencesClientProps) {
   const router = useRouter();
 
@@ -58,6 +65,7 @@ export default function PreferencesClient({
   const [needsAccessibility, setNeedsAccessibility] = useState<string[]>(initialPreferences.needsAccessibility);
   const [needsDietary, setNeedsDietary] = useState<string[]>(initialPreferences.needsDietary);
   const [needsFamily, setNeedsFamily] = useState<string[]>(initialPreferences.needsFamily);
+  const [crossPortalRecommendations, setCrossPortalRecommendations] = useState<boolean>(initialPreferences.crossPortalRecommendations);
 
   // Genre options fetched from API
   const [genresByCategory, setGenresByCategory] = useState<Record<string, GenreOption[]>>({});
@@ -167,6 +175,7 @@ export default function PreferencesClient({
           needs_accessibility: needsAccessibility,
           needs_dietary: needsDietary,
           needs_family: needsFamily,
+          cross_portal_recommendations: crossPortalRecommendations,
         }),
       });
 
@@ -610,6 +619,84 @@ export default function PreferencesClient({
               </div>
             </div>
           </section>
+
+          {/* Cross-Portal Activity & Privacy */}
+          {!isWelcome && (
+            <section className="p-5 rounded-xl bg-[var(--dusk)]/50 border border-[var(--twilight)]">
+              <div className="mb-4">
+                <h2 className="font-sans text-base font-medium text-[var(--cream)] flex items-center gap-2">
+                  <span className="w-6 h-6 rounded-lg bg-[var(--lavender)]/20 flex items-center justify-center">
+                    <svg className="w-3.5 h-3.5 text-[var(--lavender)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+                    </svg>
+                  </span>
+                  Your Activity Across Portals
+                </h2>
+                <p className="font-mono text-xs text-[var(--muted)] mt-1">
+                  Your taste profile follows you everywhere
+                </p>
+              </div>
+
+              <div className="space-y-4">
+                {/* Portal Activity Summary */}
+                {portalActivity.length > 0 ? (
+                  <div className="space-y-2">
+                    <p className="font-mono text-xs text-[var(--soft)] mb-3">
+                      Your preferences work across all portals, including:
+                    </p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {portalActivity.slice(0, 4).map((portal) => (
+                        <div
+                          key={portal.portalSlug}
+                          className="px-3 py-2 rounded-lg bg-[var(--night)] border border-[var(--twilight)] flex items-center gap-2"
+                        >
+                          <svg className="w-3.5 h-3.5 text-[var(--coral)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                          <span className="font-mono text-xs text-[var(--cream)]">
+                            {portal.portalName}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                    <p className="font-mono text-xs text-[var(--muted)] text-center pt-2">
+                      ...and everywhere else on Lost City
+                    </p>
+                  </div>
+                ) : (
+                  <div className="px-4 py-3 rounded-lg bg-[var(--night)]/50 border border-[var(--twilight)]/50">
+                    <p className="font-mono text-xs text-[var(--muted)] text-center">
+                      Set your preferences above to get personalized recommendations across all portals
+                    </p>
+                  </div>
+                )}
+
+                {/* Privacy Toggle */}
+                <div className="pt-2 border-t border-[var(--twilight)]">
+                  <label className="flex items-center gap-3 cursor-pointer group">
+                    <div className="relative flex-shrink-0">
+                      <input
+                        type="checkbox"
+                        checked={crossPortalRecommendations}
+                        onChange={(e) => setCrossPortalRecommendations(e.target.checked)}
+                        className="sr-only peer"
+                      />
+                      <div className="w-11 h-6 bg-[var(--twilight)] rounded-full peer-checked:bg-[var(--coral)] transition-colors" />
+                      <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition-transform peer-checked:translate-x-5" />
+                    </div>
+                    <div className="flex-1">
+                      <span className="font-mono text-sm text-[var(--cream)] group-hover:text-[var(--coral)] transition-colors">
+                        Use activity across all portals for recommendations
+                      </span>
+                      <p className="font-mono text-xs text-[var(--muted)] mt-0.5">
+                        When off, only activity from the current portal is used
+                      </p>
+                    </div>
+                  </label>
+                </div>
+              </div>
+            </section>
+          )}
 
           {/* Actions */}
           <div className="flex items-center gap-3 pt-4">

@@ -1,13 +1,29 @@
 import { createClient } from "@/lib/supabase/server";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier} from "@/lib/rate-limit";
+import { checkBodySize } from "@/lib/api-utils";
 import { logger } from "@/lib/logger";
+
+// Valid categories from search-constants.ts
+const VALID_CATEGORIES = [
+  "music", "film", "comedy", "theater", "art", "sports", "food_drink", "nightlife",
+  "community", "fitness", "family", "learning", "dance", "tours", "meetup", "words",
+  "religious", "markets", "wellness", "gaming", "outdoors", "other"
+];
 
 interface OnboardingCompleteRequest {
   selectedCategories: string[];
   selectedGenres?: Record<string, string[]>;
+  selectedNeeds?: {
+    accessibility: string[];
+    dietary: string[];
+    family: string[];
+  };
 }
 
 export async function POST(request: Request) {
+  const bodySizeResult = checkBodySize(request);
+  if (bodySizeResult) return bodySizeResult;
+
   const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
   if (rateLimitResult) return rateLimitResult;
 
@@ -24,8 +40,37 @@ export async function POST(request: Request) {
       return Response.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const body: OnboardingCompleteRequest = await request.json();
-    const { selectedCategories, selectedGenres } = body;
+    const body = await request.json();
+
+    // Validate genre strings (alphanumeric, hyphens, underscores, dots only)
+    const isValidGenre = (g: string): boolean => /^[a-z0-9._-]+$/i.test(g);
+
+    // Validate input
+    const selectedCategories = Array.isArray(body.selectedCategories)
+      ? body.selectedCategories.filter((c: unknown) => typeof c === "string" && VALID_CATEGORIES.includes(c)).slice(0, 20)
+      : [];
+    const selectedGenres: Record<string, string[]> | undefined =
+      body.selectedGenres && typeof body.selectedGenres === "object" && !Array.isArray(body.selectedGenres)
+        ? Object.fromEntries(
+            Object.entries(body.selectedGenres as Record<string, unknown>)
+              .filter(([k, v]) => VALID_CATEGORIES.includes(k) && Array.isArray(v))
+              .map(([k, v]) => [k, (v as string[]).filter((g) => typeof g === "string" && isValidGenre(g)).slice(0, 20)])
+              .slice(0, 20)
+          )
+        : undefined;
+    const selectedNeeds = body.selectedNeeds && typeof body.selectedNeeds === "object"
+      ? {
+          accessibility: Array.isArray(body.selectedNeeds.accessibility)
+            ? body.selectedNeeds.accessibility.filter((n: unknown) => typeof n === "string").slice(0, 10)
+            : [],
+          dietary: Array.isArray(body.selectedNeeds.dietary)
+            ? body.selectedNeeds.dietary.filter((n: unknown) => typeof n === "string").slice(0, 10)
+            : [],
+          family: Array.isArray(body.selectedNeeds.family)
+            ? body.selectedNeeds.family.filter((n: unknown) => typeof n === "string").slice(0, 10)
+            : [],
+        }
+      : { accessibility: [], dietary: [], family: [] };
 
     // Update user preferences with onboarding data
     const prefsData = {
@@ -36,6 +81,15 @@ export async function POST(request: Request) {
       }),
       ...(selectedGenres && Object.keys(selectedGenres).length > 0 && {
         favorite_genres: selectedGenres,
+      }),
+      ...(selectedNeeds.accessibility.length > 0 && {
+        needs_accessibility: selectedNeeds.accessibility,
+      }),
+      ...(selectedNeeds.dietary.length > 0 && {
+        needs_dietary: selectedNeeds.dietary,
+      }),
+      ...(selectedNeeds.family.length > 0 && {
+        needs_family: selectedNeeds.family,
       }),
     };
 
@@ -49,7 +103,7 @@ export async function POST(request: Request) {
 
     // Build preference signal rows
     const preferenceRows = [
-      ...selectedCategories.map((category) => ({
+      ...selectedCategories.map((category: string) => ({
         user_id: user.id,
         signal_type: "category",
         signal_value: category,
