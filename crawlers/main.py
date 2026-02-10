@@ -27,6 +27,7 @@ from db import (
     reset_validation_stats,
     get_validation_stats,
     clear_venue_cache,
+    deactivate_tba_events,
 )
 from utils import setup_logging
 from circuit_breaker import should_skip_source, get_all_circuit_states
@@ -409,7 +410,16 @@ def run_all_sources(parallel: bool = True, max_workers: int = MAX_WORKERS, adapt
     except Exception as e:
         logger.warning(f"Festival schedule extraction failed: {e}")
 
-    # 3. Backfill tags for any events missing venue-type-based tags
+    # 3. Deactivate TBA events (missing start_time after enrichment)
+    logger.info("Deactivating TBA events (missing start_time)...")
+    try:
+        tba_count = deactivate_tba_events()
+        if tba_count > 0:
+            logger.info(f"Deactivated {tba_count} TBA events")
+    except Exception as e:
+        logger.warning(f"TBA deactivation failed: {e}")
+
+    # 4. Backfill tags for any events missing venue-type-based tags
     logger.info("Running tag backfill...")
     try:
         from backfill_tags import backfill_tags
@@ -418,7 +428,7 @@ def run_all_sources(parallel: bool = True, max_workers: int = MAX_WORKERS, adapt
     except Exception as e:
         logger.warning(f"Tag backfill failed: {e}")
 
-    # 4. Record daily analytics snapshot
+    # 5. Record daily analytics snapshot
     logger.info("Recording analytics snapshot...")
     try:
         snapshot = record_daily_snapshot()
@@ -426,7 +436,7 @@ def run_all_sources(parallel: bool = True, max_workers: int = MAX_WORKERS, adapt
     except Exception as e:
         logger.warning(f"Analytics snapshot failed: {e}")
 
-    # 5. Generate HTML report
+    # 6. Generate HTML report
     logger.info("Generating post-crawl report...")
     try:
         report_path = save_html_report()

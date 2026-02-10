@@ -1,15 +1,16 @@
 """
 Normalize non-standard event categories to the valid taxonomy.
 
-Valid categories (from CRAWLER_STRATEGY.md):
-  music, comedy, theater, film, art, food_drink, sports, community,
-  nightlife, fitness, family, literary, tech, outdoor, holiday,
-  lgbtq, wellness, learning
+Valid categories (from web app):
+  music, comedy, art, theater, film, nightlife, food_drink, sports,
+  fitness, outdoor, family, community, learning, words
 
 This script handles:
-1. Direct remaps (outdoors -> outdoor, performing-arts -> theater, etc.)
+1. Direct remaps (wellness -> fitness, meetup -> community, etc.)
 2. Venue-type-based inference for 'other' category events
-3. Title keyword inference for remaining 'other' events
+3. Title/description keyword inference for remaining 'other' events
+
+Run this script after crawls to clean up any invalid categories.
 """
 
 import sys
@@ -29,6 +30,15 @@ DIRECT_REMAPS = {
     "markets": "food_drink",
     "fashion": "art",
     "gaming": "community",
+    # New junk category mappings
+    "wellness": "fitness",
+    "meetup": "community",
+    "activism": "community",
+    "tech": "learning",
+    "business": "learning",
+    "play": "family",
+    "tours": "community",
+    "holiday": "community",
 }
 
 # Venue-type -> category mapping for 'other' events
@@ -51,7 +61,7 @@ VENUE_TYPE_TO_CATEGORY = {
     "park": "outdoor",
     "garden": "outdoor",
     "library": "community",
-    "bookstore": "literary",
+    "bookstore": "words",
     "church": "community",
     "community_center": "community",
     "fitness_center": "fitness",
@@ -60,22 +70,28 @@ VENUE_TYPE_TO_CATEGORY = {
 
 # Title keyword patterns for remaining 'other' events
 TITLE_KEYWORDS = {
-    "sports": ["vs ", "vs.", "game", "match", "tournament", "baseball", "basketball", "football", "soccer", "hockey", "predators", "hawks", "braves", "falcons", "titans", "nashville sc", "gladiators"],
-    "music": ["concert", "live music", "dj ", "band", "orchestra", "symphony", "choir"],
-    "comedy": ["comedy", "stand-up", "stand up", "improv", "comedian"],
+    "sports": ["vs ", "vs.", "game", "match", "tournament", "baseball", "basketball", "football", "soccer", "hockey", "predators", "hawks", "braves", "falcons", "titans", "nashville sc", "gladiators", "round ", "playoff", "championship", "training event", "molly b's pass"],
+    "music": ["concert", "live music", "dj ", "band", "orchestra", "symphony", "choir", "greasy chicken", "groove night", "mix tape"],
+    "comedy": ["comedy", "stand-up", "stand up", "improv", "comedian", "idol"],
     "food_drink": ["tasting", "dinner", "brunch", "food", "wine", "beer", "cocktail", "chef"],
-    "community": ["meetup", "meet up", "networking", "volunteer", "fundraiser", "gala", "benefit"],
+    "community": ["meetup", "meet up", "networking", "volunteer", "fundraiser", "gala", "benefit", "convention", "expo", "gun show", "auto show", "tattoo", "vendor applications", "reframe", "queer idol", "days of the dead", "frolicon", "tvd festival"],
     "art": ["exhibit", "exhibition", "gallery", "art show", "opening reception"],
+    "words": ["book shop", "independent book", "& jenn lyons", "& julie olivia"],
     "family": ["kids", "children", "family", "storytime"],
     "fitness": ["run ", "race", "marathon", "5k", "10k", "yoga", "workout"],
+    "nightlife": ["18+ event", "ages 21+", "21+"],
 }
 
 
-def infer_from_title(title: str):
+def infer_from_title(title: str, description: str = ""):
+    """Infer category from title and optionally description."""
     title_lower = title.lower()
+    desc_lower = description.lower() if description else ""
+    combined = f"{title_lower} {desc_lower}"
+
     for category, keywords in TITLE_KEYWORDS.items():
         for kw in keywords:
-            if kw in title_lower:
+            if kw in combined:
                 return category
     return None
 
@@ -142,7 +158,7 @@ def main():
 
     # Step 5: Recategorize 'other' using venue type
     print("\n=== Step 5: Recategorize 'other' via venue type ===")
-    r = client.table("events").select("id,title,venue_id").gte("start_date", "2026-02-09").eq("category", "other").execute()
+    r = client.table("events").select("id,title,description,venue_id").gte("start_date", "2026-02-09").eq("category", "other").execute()
     other_events = r.data
     print(f"  Total 'other' events: {len(other_events)}")
 
@@ -161,8 +177,8 @@ def main():
         vt = venue_types.get(e.get("venue_id"))
         new_cat = VENUE_TYPE_TO_CATEGORY.get(vt)
         if not new_cat:
-            # Try title inference
-            new_cat = infer_from_title(e.get("title", ""))
+            # Try title + description inference
+            new_cat = infer_from_title(e.get("title", ""), e.get("description", ""))
         if new_cat:
             by_new_cat.setdefault(new_cat, []).append(e["id"])
         else:

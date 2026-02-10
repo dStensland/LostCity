@@ -604,12 +604,12 @@ def validate_event(event_data: dict) -> Tuple[bool, Optional[str], list[str]]:
             f"(likely parsing bug): {start_date} - {title}"
         ), warnings
 
-    # Reject events missing start_time (unless genuinely all-day)
+    # Warn on missing start_time (unless genuinely all-day)
     start_time = event_data.get("start_time")
     is_all_day = event_data.get("is_all_day", False)
     if not start_time and not is_all_day:
-        _validation_stats.record_rejection("missing_start_time")
-        return False, f"Missing start_time (not all-day): {title}", warnings
+        warnings.append(f"Missing start_time (not all-day): {title}")
+        _validation_stats.record_warning("missing_start_time")
 
     # ===== DATA QUALITY CHECKS (warnings only) =====
 
@@ -940,7 +940,7 @@ def insert_event(event_data: dict, series_hint: dict = None, genres: list = None
         venue = get_venue_by_id_cached(event_data["venue_id"])
         if venue:
             venue_genres = venue.get("genres")
-    inferred_genres = infer_genres(event_data, venue_genres=venue_genres)
+    inferred_genres = normalize_genres(infer_genres(event_data, venue_genres=venue_genres))
     explicit_genres = normalize_genres(genres or [])
     merged_genres = list(dict.fromkeys(explicit_genres + inferred_genres))
 
@@ -1694,3 +1694,28 @@ def get_source_health_tags(source_id: int) -> tuple[list[str], Optional[list[int
     except Exception:
         pass
     return [], None
+
+
+def deactivate_tba_events() -> int:
+    """
+    Report future events that still have no start_time after enrichment.
+
+    TBA events are filtered at the web API level (search.ts adds
+    or(start_time.not.is.null,is_all_day.eq.true) to queries) so they
+    don't appear in feeds. This function just logs the count for visibility.
+
+    Returns:
+        Number of TBA events found
+    """
+    client = get_client()
+    today = datetime.now().strftime("%Y-%m-%d")
+
+    result = client.table("events").select("id", count="exact", head=True).gte(
+        "start_date", today
+    ).is_("start_time", "null").eq("is_all_day", False).execute()
+
+    tba_count = result.count or 0
+    if tba_count > 0:
+        logger.info(f"Found {tba_count} TBA events (missing start_time) — hidden from feeds via API filter")
+
+    return tba_count

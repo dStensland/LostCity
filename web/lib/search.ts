@@ -666,6 +666,8 @@ export async function getFilteredEventsWithSearch(
     // - Show if end_time is null but start_time hasn't passed yet
     // - Show all-day events
     .or(`start_date.gt.${today},end_date.gt.${today},end_time.gte.${currentTime},and(end_time.is.null,start_time.gte.${currentTime}),is_all_day.eq.true`)
+    // Hide TBA events (no start_time, not all-day) — they don't present well
+    .or("start_time.not.is.null,is_all_day.eq.true")
     .is("canonical_event_id", null); // Only show canonical events, not duplicates
 
   // Apply portal restriction filter
@@ -790,6 +792,8 @@ export async function getFilteredEventsWithCursor(
     .or(`start_date.gte.${today},end_date.gte.${today}`)
     // Hide past events for today
     .or(`start_date.gt.${today},end_date.gt.${today},end_time.gte.${currentTime},and(end_time.is.null,start_time.gte.${currentTime}),is_all_day.eq.true`)
+    // Hide TBA events (no start_time, not all-day)
+    .or("start_time.not.is.null,is_all_day.eq.true")
     .is("canonical_event_id", null); // Only show canonical events, not duplicates
 
   // Apply portal restriction filter - all events belong to a portal
@@ -952,6 +956,8 @@ export async function getEventsForMap(
     `
     )
     .or(`start_date.gte.${today},end_date.gte.${today}`)
+    // Hide TBA events (no start_time, not all-day)
+    .or("start_time.not.is.null,is_all_day.eq.true")
     .not("venues.lat", "is", null)
     .not("venues.lng", "is", null)
     .is("canonical_event_id", null); // Only show canonical events, not duplicates
@@ -1073,6 +1079,8 @@ export async function getVenuesWithEvents(): Promise<VenueWithCount[]> {
     .from("events")
     .select("venue_id, venue:venues(id, name, neighborhood)")
     .or(`start_date.gte.${today},end_date.gte.${today}`)
+    // Hide TBA events (no start_time, not all-day)
+    .or("start_time.not.is.null,is_all_day.eq.true")
     .not("venue_id", "is", null)
     .limit(500);
 

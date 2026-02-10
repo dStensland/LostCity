@@ -236,48 +236,6 @@ export async function GET(request: Request) {
     }
   }
 
-  // Parallelize friend RSVPs and profiles into a single batch
-  const friendsGoingMap: Record<number, { user_id: string; username: string; display_name: string | null }[]> = {};
-
-  if (friendIds.length > 0) {
-    // Fetch RSVPs and profiles in parallel (independent queries)
-    const [friendRsvpsResult, profilesResult] = await Promise.all([
-      supabase
-        .from("event_rsvps")
-        .select("event_id, user_id")
-        .in("user_id", friendIds)
-        .in("status", ["going", "interested"]),
-      supabase
-        .from("profiles")
-        .select("id, username, display_name")
-        .in("id", friendIds), // Fetch all friend profiles upfront
-    ]);
-
-    const friendRsvps = friendRsvpsResult.data || [];
-    const profilesData = profilesResult.data || [];
-
-    // Build profiles map
-    const profilesMap: Record<string, { username: string; display_name: string | null }> = {};
-    for (const p of profilesData as { id: string; username: string; display_name: string | null }[]) {
-      profilesMap[p.id] = { username: p.username, display_name: p.display_name };
-    }
-
-    // Build friendsGoingMap
-    for (const rsvp of friendRsvps as { event_id: number; user_id: string }[]) {
-      const profile = profilesMap[rsvp.user_id];
-      if (!profile) continue;
-
-      if (!friendsGoingMap[rsvp.event_id]) {
-        friendsGoingMap[rsvp.event_id] = [];
-      }
-      friendsGoingMap[rsvp.event_id].push({
-        user_id: rsvp.user_id,
-        username: profile.username,
-        display_name: profile.display_name,
-      });
-    }
-  }
-
   // Build personalized event query - fetch broadly, score later
   // When personalized=true, we pre-filter to followed entities
   // When personalized=false, we show all events (with additional filters)
@@ -583,6 +541,50 @@ export async function GET(request: Request) {
   );
 
   const mergedEventsData = [...(eventsData || []), ...uniqueFollowedEvents, ...uniqueNeighborhoodEvents, ...uniqueCategoryEvents];
+
+  const friendsGoingMap: Record<number, { user_id: string; username: string; display_name: string | null }[]> = {};
+  if (friendIds.length > 0 && mergedEventsData.length > 0) {
+    const candidateEventIds = [...new Set((mergedEventsData as { id: number }[]).map((e) => e.id))];
+    const { data: friendRsvpsData } = await supabase
+      .from("event_rsvps")
+      .select("event_id, user_id")
+      .in("event_id", candidateEventIds)
+      .in("user_id", friendIds)
+      .in("status", ["going", "interested"]);
+
+    const friendRsvps = (friendRsvpsData || []) as { event_id: number; user_id: string }[];
+    const rsvpUserIds = [...new Set(friendRsvps.map((rsvp) => rsvp.user_id))];
+
+    let profilesMap: Record<string, { username: string; display_name: string | null }> = {};
+    if (rsvpUserIds.length > 0) {
+      const { data: profilesData } = await supabase
+        .from("profiles")
+        .select("id, username, display_name")
+        .in("id", rsvpUserIds);
+
+      profilesMap = (profilesData || []).reduce((acc, p) => {
+        const profile = p as { id: string; username: string; display_name: string | null };
+        acc[profile.id] = {
+          username: profile.username,
+          display_name: profile.display_name,
+        };
+        return acc;
+      }, {} as Record<string, { username: string; display_name: string | null }>);
+    }
+
+    for (const rsvp of friendRsvps) {
+      const profile = profilesMap[rsvp.user_id];
+      if (!profile) continue;
+      if (!friendsGoingMap[rsvp.event_id]) {
+        friendsGoingMap[rsvp.event_id] = [];
+      }
+      friendsGoingMap[rsvp.event_id].push({
+        user_id: rsvp.user_id,
+        username: profile.username,
+        display_name: profile.display_name,
+      });
+    }
+  }
 
   type EventResult = {
     id: number;
