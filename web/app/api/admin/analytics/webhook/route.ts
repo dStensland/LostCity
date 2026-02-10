@@ -1,4 +1,3 @@
-import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { NextRequest, NextResponse } from "next/server";
 import { createHash, timingSafeEqual } from "crypto";
@@ -109,7 +108,7 @@ export async function GET(request: NextRequest) {
   const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.standard, getClientIdentifier(request));
   if (rateLimitResult) return rateLimitResult;
 
-  const supabase = await createClient();
+  const supabase = createServiceClient();
 
   // Validate API key
   const auth = await validateApiKey(request);
@@ -160,27 +159,27 @@ export async function GET(request: NextRequest) {
   const { data: analyticsData, error } = await query;
 
   if (error) {
-    // Table may not exist yet - return schema with empty data
+    if (error.code === "42P01") {
+      return NextResponse.json(
+        { error: "Analytics tables not initialized" },
+        { status: 503 }
+      );
+    }
     return NextResponse.json({
-      schema: getSchema(),
-      meta: {
-        period: { start: startDate, end: endDate },
-        record_count: 0,
-        generated_at: new Date().toISOString(),
-        portal_scope: portalFilter,
-      },
-      data: [],
-    });
+      error: "Failed to fetch analytics data",
+    }, { status: 500 });
   }
 
   const metrics = (analyticsData || []) as DailyMetric[];
 
   // Get portal names for enrichment
   const portalIds = [...new Set(metrics.map(m => m.portal_id))];
-  const { data: portals } = await supabase
-    .from("portals")
-    .select("id, name, slug")
-    .in("id", portalIds);
+  const { data: portals } = portalIds.length > 0
+    ? await supabase
+        .from("portals")
+        .select("id, name, slug")
+        .in("id", portalIds)
+    : { data: [] };
 
   const portalMap = new Map<string, { name: string; slug: string }>();
   for (const p of (portals || []) as { id: string; name: string; slug: string }[]) {

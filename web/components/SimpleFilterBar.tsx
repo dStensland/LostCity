@@ -165,13 +165,14 @@ export default function SimpleFilterBar({ variant = "full" }: SimpleFilterBarPro
         })
         .catch(() => setGenreOptions([]));
     } else {
-      setGenreOptions([]);
       // Clear genres param when category changes away from single selection
       if (prevCategories.length === 1 && currentGenres.length > 0) {
         updateParams({ genres: null });
       }
     }
   }, [currentCategories]); // eslint-disable-line react-hooks/exhaustive-deps -- only re-run on category change
+
+  const visibleGenreOptions = currentCategories.length === 1 ? genreOptions : [];
 
   const toggleGenre = useCallback(
     (genre: string) => {
@@ -291,8 +292,8 @@ export default function SimpleFilterBar({ variant = "full" }: SimpleFilterBarPro
                 }}
                 className={`btn-press flex items-center gap-1.5 px-3 py-1.5 rounded-full font-mono text-xs font-medium transition-all border ${
                   currentCategories.length > 0
-                    ? "bg-[var(--coral)] text-[var(--void)] border-[var(--coral)]/40 shadow-sm"
-                    : "bg-[var(--dusk)]/80 text-[var(--cream)]/80 border-[var(--twilight)]/80 hover:text-[var(--cream)] hover:border-[var(--coral)]/30"
+                    ? "bg-[var(--action-primary)] text-[var(--btn-primary-text)] border-[var(--action-primary)]/40 shadow-sm"
+                    : "bg-[var(--dusk)]/80 text-[var(--cream)]/80 border-[var(--twilight)]/80 hover:text-[var(--cream)] hover:border-[var(--action-primary)]/30"
                 }`}
               >
                 {categoryLabel}
@@ -323,7 +324,7 @@ export default function SimpleFilterBar({ variant = "full" }: SimpleFilterBarPro
                               onClick={() => toggleCategory(cat.value)}
                               className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg font-mono text-xs font-medium transition-colors ${
                                 isActive
-                                  ? "bg-[var(--coral)] text-[var(--void)]"
+                                  ? "bg-[var(--action-primary)] text-[var(--btn-primary-text)]"
                                   : "text-[var(--cream)] hover:bg-[var(--twilight)]"
                               }`}
                             >
@@ -365,7 +366,7 @@ export default function SimpleFilterBar({ variant = "full" }: SimpleFilterBarPro
                               onClick={() => toggleCategory(cat.value)}
                               className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg font-mono text-xs font-medium transition-colors ${
                                 isActive
-                                  ? "bg-[var(--coral)] text-[var(--void)]"
+                                  ? "bg-[var(--action-primary)] text-[var(--btn-primary-text)]"
                                   : "text-[var(--cream)] hover:bg-[var(--twilight)]"
                               }`}
                             >
@@ -401,7 +402,7 @@ export default function SimpleFilterBar({ variant = "full" }: SimpleFilterBarPro
                 className={`btn-press flex items-center gap-1.5 px-3 py-1.5 rounded-full font-mono text-xs font-medium transition-all border ${
                   currentDateFilter
                     ? "bg-[var(--gold)] text-[var(--void)] border-[var(--gold)]/40 shadow-sm"
-                    : "bg-[var(--dusk)]/80 text-[var(--cream)]/80 border-[var(--twilight)]/80 hover:text-[var(--cream)] hover:border-[var(--coral)]/30"
+                    : "bg-[var(--dusk)]/80 text-[var(--cream)]/80 border-[var(--twilight)]/80 hover:text-[var(--cream)] hover:border-[var(--action-primary)]/30"
                 }`}
               >
                 {dateFilterLabel}
@@ -477,7 +478,7 @@ export default function SimpleFilterBar({ variant = "full" }: SimpleFilterBarPro
                 onClick={() => toggleFeedMode(currentFeedMode === "following" ? "all" : "following")}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full font-mono text-xs font-medium transition-all ${
                   currentFeedMode === "following"
-                    ? "bg-[var(--coral)] text-[var(--void)]"
+                    ? "bg-[var(--action-primary)] text-[var(--btn-primary-text)]"
                     : "bg-[var(--twilight)] text-[var(--muted)] hover:text-[var(--cream)]"
                 }`}
               >
@@ -494,7 +495,7 @@ export default function SimpleFilterBar({ variant = "full" }: SimpleFilterBarPro
               className={`btn-press flex items-center gap-1.5 px-3 py-1.5 rounded-full font-mono text-xs font-medium transition-all border ${
                 currentFreeOnly
                   ? "bg-[var(--neon-green)] text-[var(--void)] border-[var(--neon-green)]/40 shadow-sm"
-                : "bg-[var(--dusk)]/80 text-[var(--cream)]/80 border-[var(--twilight)]/80 hover:text-[var(--cream)] hover:border-[var(--coral)]/30"
+                : "bg-[var(--dusk)]/80 text-[var(--cream)]/80 border-[var(--twilight)]/80 hover:text-[var(--cream)] hover:border-[var(--action-primary)]/30"
               }`}
             >
               <span className={`w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center ${
@@ -518,12 +519,12 @@ export default function SimpleFilterBar({ variant = "full" }: SimpleFilterBarPro
                   return (
                     <span
                       key={cat}
-                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[var(--coral)]/20 text-[var(--coral)] text-xs font-mono"
+                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[var(--action-primary)]/20 text-[var(--action-primary)] text-xs font-mono"
                     >
                       {category?.label || cat}
                       <button
                         onClick={() => toggleCategory(cat)}
-                        className="hover:bg-[var(--coral)]/30 rounded-full p-0.5 transition-colors"
+                        className="hover:bg-[var(--action-primary)]/30 rounded-full p-0.5 transition-colors"
                         aria-label={`Remove ${category?.label || cat} filter`}
                       >
                         <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -571,11 +572,11 @@ export default function SimpleFilterBar({ variant = "full" }: SimpleFilterBarPro
                 )}
                 {/* Following chip */}
                 {currentFeedMode === "following" && (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[var(--coral)]/20 text-[var(--coral)] text-xs font-mono">
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[var(--action-primary)]/20 text-[var(--action-primary)] text-xs font-mono">
                     Following
                     <button
                       onClick={() => toggleFeedMode("all")}
-                      className="hover:bg-[var(--coral)]/30 rounded-full p-0.5 transition-colors"
+                      className="hover:bg-[var(--action-primary)]/30 rounded-full p-0.5 transition-colors"
                       aria-label="Remove following filter"
                     >
                       <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -594,7 +595,7 @@ export default function SimpleFilterBar({ variant = "full" }: SimpleFilterBarPro
             {hasFilters && (
               <button
                 onClick={clearAll}
-                className="px-2 py-1 font-mono text-[0.65rem] text-[var(--coral)] hover:text-[var(--rose)] whitespace-nowrap"
+                className="px-2 py-1 font-mono text-[0.65rem] text-[var(--action-primary)] hover:text-[var(--action-primary-hover)] whitespace-nowrap"
               >
                 Clear
               </button>
@@ -650,12 +651,12 @@ export default function SimpleFilterBar({ variant = "full" }: SimpleFilterBarPro
       </div>
 
       {/* Genre pills row — shows when exactly 1 category is selected */}
-      {genreOptions.length > 0 && (
+      {visibleGenreOptions.length > 0 && (
         <div className="hidden sm:block sticky top-[calc(3.5rem+2.75rem)] z-39 bg-[var(--night)]/95 backdrop-blur-sm border-b border-[var(--twilight)]/50">
           <div className="max-w-5xl mx-auto px-4 py-1.5">
             <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide">
               <span className="flex-shrink-0 text-[0.6rem] font-mono uppercase tracking-wider text-[var(--muted)] mr-1">Genre</span>
-              {genreOptions.map((opt) => {
+              {visibleGenreOptions.map((opt) => {
                 const isActive = currentGenres.includes(opt.genre);
                 return (
                   <button
@@ -663,8 +664,8 @@ export default function SimpleFilterBar({ variant = "full" }: SimpleFilterBarPro
                     onClick={() => toggleGenre(opt.genre)}
                     className={`flex-shrink-0 px-2.5 py-1 rounded-full font-mono text-xs font-medium transition-all border ${
                       isActive
-                        ? "bg-[var(--coral)] text-[var(--void)] border-[var(--coral)]/40 shadow-sm"
-                        : "bg-[var(--dusk)]/80 text-[var(--cream)]/70 border-[var(--twilight)]/60 hover:text-[var(--cream)] hover:border-[var(--coral)]/30"
+                        ? "bg-[var(--action-primary)] text-[var(--btn-primary-text)] border-[var(--action-primary)]/40 shadow-sm"
+                        : "bg-[var(--dusk)]/80 text-[var(--cream)]/70 border-[var(--twilight)]/60 hover:text-[var(--cream)] hover:border-[var(--action-primary)]/30"
                     }`}
                   >
                     {formatGenre(opt.genre)}
@@ -677,7 +678,7 @@ export default function SimpleFilterBar({ variant = "full" }: SimpleFilterBarPro
       )}
 
       {/* Genre pills — mobile horizontal scroll */}
-      {genreOptions.length > 0 && (
+      {visibleGenreOptions.length > 0 && (
         <div className="sm:hidden bg-[var(--night)] border-b border-[var(--twilight)]/50">
           <div
             className="flex items-center gap-2 overflow-x-auto px-4 py-1.5 scrollbar-hide scroll-touch scroll-padding-x"
@@ -687,7 +688,7 @@ export default function SimpleFilterBar({ variant = "full" }: SimpleFilterBarPro
             }}
           >
             <span className="flex-shrink-0 text-[0.6rem] font-mono uppercase tracking-wider text-[var(--muted)]">Genre</span>
-            {genreOptions.map((opt) => {
+            {visibleGenreOptions.map((opt) => {
               const isActive = currentGenres.includes(opt.genre);
               return (
                 <button
@@ -695,7 +696,7 @@ export default function SimpleFilterBar({ variant = "full" }: SimpleFilterBarPro
                   onClick={() => toggleGenre(opt.genre)}
                   className={`flex-shrink-0 min-h-[36px] px-3 py-1.5 rounded-full font-mono text-xs font-medium transition-all ${
                     isActive
-                      ? "bg-[var(--coral)] text-[var(--void)]"
+                      ? "bg-[var(--action-primary)] text-[var(--btn-primary-text)]"
                       : "bg-[var(--twilight)] text-[var(--cream)]"
                   }`}
                 >
@@ -773,7 +774,7 @@ export default function SimpleFilterBar({ variant = "full" }: SimpleFilterBarPro
                   <button
                     key={catValue}
                     onClick={() => toggleCategory(catValue)}
-                    className="flex-shrink-0 min-h-[44px] flex items-center gap-2 px-4 py-2.5 rounded-full font-mono text-xs font-medium bg-[var(--coral)] text-[var(--void)] transition-all snap-start"
+                    className="flex-shrink-0 min-h-[44px] flex items-center gap-2 px-4 py-2.5 rounded-full font-mono text-xs font-medium bg-[var(--action-primary)] text-[var(--btn-primary-text)] transition-all snap-start"
                   >
                     <CategoryIcon
                       type={catValue}
@@ -817,7 +818,7 @@ export default function SimpleFilterBar({ variant = "full" }: SimpleFilterBarPro
               </svg>
               More
               {hasFilters && (
-                <span className="ml-1.5 flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-[var(--coral)] text-[var(--void)] text-[0.6rem] font-bold animate-pulse">
+                <span className="ml-1.5 flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-[var(--action-primary)] text-[var(--btn-primary-text)] text-[0.6rem] font-bold animate-pulse">
                   {currentCategories.length + (currentDateFilter ? 1 : 0) + (currentFreeOnly ? 1 : 0)}
                 </span>
               )}

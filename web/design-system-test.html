@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en" style="background-color: #09090B;">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Design System Test - LostCity</title>
+  <style>
+    /* Import the new design tokens */
+    :root {
+      /* Typography scale */
+      --text-2xs: 0.625rem;
+      --text-xs: 0.6875rem;
+      --text-sm: 0.8125rem;
+      --text-base: 0.9375rem;
+      --text-lg: 1.125rem;
+      --text-xl: 1.25rem;
+      --text-2xl: 1.5rem;
+      --text-3xl: 1.875rem;
+
+      /* Line heights */
+      --leading-tight: 1.2;
+      --leading-snug: 1.375;
+      --leading-normal: 1.5;
+      --leading-relaxed: 1.6;
+      --leading-loose: 1.75;
+
+      /* Letter spacing */
+      --tracking-tighter: -0.02em;
+      --tracking-tight: -0.01em;
+      --tracking-normal: 0;
+      --tracking-wide: 0.025em;
+      --tracking-wider: 0.05em;
+
+      /* Shadows */
+      --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.03);
+      --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.6), 0 2px 4px -2px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+      --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.7), 0 4px 6px -4px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+      --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.8), 0 8px 10px -6px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+      --inner-glow: inset 0 1px 1px rgba(255, 255, 255, 0.05), inset 0 -1px 1px rgba(0, 0, 0, 0.1);
+
+      /* Border radius */
+      --radius-sm: 6px;
+      --radius-md: 8px;
+      --radius-lg: 12px;
+      --radius-xl: 16px;
+      --radius-2xl: 24px;
+
+      /* Colors */
+      --void: #09090B;
+      --night: #0F0F14;
+      --dusk: #18181F;
+      --twilight: #252530;
+      --muted: #8B8B94;
+      --soft: #A1A1AA;
+      --cream: #F5F5F3;
+      --coral: #FF6B7A;
+      --neon-cyan: #00D4E8;
+    }
+
+    body {
+      margin: 0;
+      padding: 2rem;
+      background: var(--void);
+      color: var(--cream);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      line-height: var(--leading-relaxed);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      font-size: var(--text-3xl);
+      line-height: var(--leading-tight);
+      letter-spacing: var(--tracking-tighter);
+      font-weight: 600;
+      margin: 0 0 1rem;
+    }
+
+    h2 {
+      font-size: var(--text-2xl);
+      line-height: var(--leading-tight);
+      letter-spacing: var(--tracking-tight);
+      font-weight: 600;
+      margin: 2rem 0 1rem;
+      color: var(--cream);
+    }
+
+    h3 {
+      font-size: var(--text-xl);
+      line-height: var(--leading-snug);
+      letter-spacing: var(--tracking-tight);
+      font-weight: 600;
+      margin: 1.5rem 0 0.5rem;
+    }
+
+    .text-secondary {
+      color: var(--soft);
+    }
+
+    .text-tertiary {
+      color: var(--muted);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 1.5rem;
+      margin: 2rem 0;
+    }
+
+    .card {
+      background-color: var(--night);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: var(--radius-lg);
+      padding: 1.5rem;
+      box-shadow: var(--shadow-md);
+      transition: all 0.2s ease;
+    }
+
+    .card:hover {
+      border-color: rgba(255, 255, 255, 0.1);
+      box-shadow: var(--shadow-lg);
+      transform: translateY(-2px);
+    }
+
+    .card-title {
+      font-size: var(--text-lg);
+      line-height: var(--leading-snug);
+      font-weight: 600;
+      margin: 0 0 0.5rem;
+    }
+
+    .card-meta {
+      font-size: var(--text-sm);
+      color: var(--soft);
+      margin: 0 0 0.75rem;
+    }
+
+    .card-description {
+      font-size: var(--text-base);
+      line-height: var(--leading-relaxed);
+      color: var(--cream);
+      max-width: 65ch;
+    }
+
+    .badge {
+      display: inline-block;
+      font-size: var(--text-xs);
+      font-weight: 600;
+      padding: 0.25rem 0.5rem;
+      border-radius: var(--radius-sm);
+      background-color: rgba(255, 107, 122, 0.15);
+      color: var(--coral);
+      letter-spacing: var(--tracking-wider);
+      text-transform: uppercase;
+    }
+
+    .surface-elevated {
+      background-color: var(--dusk);
+      box-shadow: var(--shadow-md);
+      border-radius: var(--radius-xl);
+      padding: 2rem;
+      margin: 2rem 0;
+    }
+
+    .shadow-comparison {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1.5rem;
+      margin: 2rem 0;
+    }
+
+    .shadow-box {
+      background: var(--night);
+      padding: 2rem;
+      border-radius: var(--radius-lg);
+      text-align: center;
+    }
+
+    .shadow-sm { box-shadow: var(--shadow-sm); }
+    .shadow-md { box-shadow: var(--shadow-md); }
+    .shadow-lg { box-shadow: var(--shadow-lg); }
+    .shadow-xl { box-shadow: var(--shadow-xl); }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Design System Elevation Test</h1>
+    <p class="text-secondary">Testing magazine-quality typography, refined dark mode surfaces, and premium shadow system</p>
+
+    <h2>Typography Hierarchy</h2>
+    <div class="surface-elevated">
+      <h1>Page Title (text-3xl, tight, tighter)</h1>
+      <h2>Section Header (text-2xl, tight, tight)</h2>
+      <h3>Subsection Header (text-xl, snug, tight)</h3>
+      <p class="text-secondary">Secondary text using --soft color (#A1A1AA)</p>
+      <p class="text-tertiary">Tertiary text using --muted color (#8B8B94)</p>
+      <p style="line-height: var(--leading-relaxed); max-width: 65ch;">
+        This is body text using relaxed line-height (1.6) and a maximum width of 65 characters for optimal readability.
+        The slightly dimmed cream color (#F5F5F3) reduces eye strain compared to pure white on dark backgrounds.
+      </p>
+    </div>
+
+    <h2>Shadow System Comparison</h2>
+    <div class="shadow-comparison">
+      <div class="shadow-box shadow-sm">
+        <p style="font-weight: 600; margin: 0;">shadow-sm</p>
+        <p style="font-size: var(--text-xs); color: var(--muted); margin: 0.5rem 0 0;">Subtle</p>
+      </div>
+      <div class="shadow-box shadow-md">
+        <p style="font-weight: 600; margin: 0;">shadow-md</p>
+        <p style="font-size: var(--text-xs); color: var(--muted); margin: 0.5rem 0 0;">Cards</p>
+      </div>
+      <div class="shadow-box shadow-lg">
+        <p style="font-weight: 600; margin: 0;">shadow-lg</p>
+        <p style="font-size: var(--text-xs); color: var(--muted); margin: 0.5rem 0 0;">Hover</p>
+      </div>
+      <div class="shadow-box shadow-xl">
+        <p style="font-weight: 600; margin: 0;">shadow-xl</p>
+        <p style="font-size: var(--text-xs); color: var(--muted); margin: 0.5rem 0 0;">Modals</p>
+      </div>
+    </div>
+
+    <h2>Card Components</h2>
+    <p class="text-secondary">Premium card treatment with subtle borders, inner glow, and hover lift effect</p>
+
+    <div class="grid">
+      <div class="card">
+        <div class="card-title">Live Music at The EARL</div>
+        <div class="card-meta">Tonight • 9:00 PM • Little Five Points</div>
+        <div class="card-description">
+          Experience an intimate evening of indie rock in one of Atlanta's most beloved dive bars. This event features local bands and a laid-back atmosphere.
+        </div>
+        <div style="margin-top: 1rem;">
+          <span class="badge">Live Music</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Art Gallery Opening</div>
+        <div class="card-meta">Friday • 7:00 PM • West Midtown</div>
+        <div class="card-description">
+          Discover emerging artists at this curated exhibition showcasing contemporary works from Atlanta's thriving art scene.
+        </div>
+        <div style="margin-top: 1rem;">
+          <span class="badge">Free</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Rooftop Comedy Night</div>
+        <div class="card-meta">Saturday • 8:00 PM • Ponce City Market</div>
+        <div class="card-description">
+          Laugh under the stars with Atlanta's funniest comedians. Bring friends for an unforgettable night of entertainment.
+        </div>
+        <div style="margin-top: 1rem;">
+          <span class="badge">Comedy</span>
+        </div>
+      </div>
+    </div>
+
+    <h2>Surface Layers</h2>
+    <p class="text-secondary">Demonstrating depth through background color hierarchy</p>
+
+    <div style="background: var(--void); padding: 2rem; border-radius: var(--radius-lg);">
+      <p style="margin: 0 0 1rem; font-weight: 600;">Base Surface (--void: #09090B)</p>
+      <div style="background: var(--night); padding: 1.5rem; border-radius: var(--radius-lg); box-shadow: var(--inner-glow);">
+        <p style="margin: 0 0 1rem; font-weight: 600;">Raised Surface (--night: #0F0F14)</p>
+        <div style="background: var(--dusk); padding: 1.5rem; border-radius: var(--radius-lg); box-shadow: var(--shadow-md);">
+          <p style="margin: 0; font-weight: 600;">Elevated Surface (--dusk: #18181F)</p>
+          <p class="text-tertiary" style="margin: 0.5rem 0 0; font-size: var(--text-sm);">Each layer is subtly lighter, creating depth without harsh contrasts</p>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin: 3rem 0; padding: 1.5rem; background: var(--dusk); border-radius: var(--radius-lg); border: 1px solid rgba(255, 107, 122, 0.3);">
+      <h3 style="margin: 0 0 0.5rem; color: var(--coral);">Design System Summary</h3>
+      <ul style="color: var(--soft); line-height: var(--leading-relaxed); margin: 0; padding-left: 1.5rem;">
+        <li>Typography: 1.25 ratio scale with optimized line-heights for each use case</li>
+        <li>Spacing: Letter-spacing ranges from -0.02em (headings) to 0.05em (badges)</li>
+        <li>Colors: Cream (#F5F5F3) dimmed from pure white for reduced eye strain</li>
+        <li>Shadows: Multi-layer shadows with inner rim-light for premium depth</li>
+        <li>Borders: Subtle rgba(255,255,255,0.06) instead of harsh solid colors</li>
+        <li>Cards: Hover lift effect with smooth transitions</li>
+      </ul>
+    </div>
+  </div>
+</body>
+</html>

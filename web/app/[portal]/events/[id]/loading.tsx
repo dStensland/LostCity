@@ -6,7 +6,10 @@ export default function EventLoading() {
     <div className="min-h-screen">
       <UnifiedHeader />
 
-      <main className="max-w-3xl mx-auto px-4 py-8">
+      <main
+        className="max-w-3xl mx-auto px-4 py-8 animate-fade-in"
+        style={{ animationDelay: "100ms", animationFillMode: "backwards" }}
+      >
         {/* Image skeleton */}
         <div className="aspect-video bg-[var(--twilight)]/30 rounded-lg mb-6 skeleton-shimmer" />
 

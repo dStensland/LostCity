@@ -357,6 +357,28 @@ export function convertFriendsGoing(
 }
 
 // ============================================================================
+// RELATIVE TIME FORMATTING
+// ============================================================================
+
+/**
+ * Format a timestamp as relative time: "2h ago", "3d ago", "2w ago"
+ * Used for data freshness indicators on events.
+ */
+export function formatRelativeTime(dateStr: string): string {
+  const date = new Date(dateStr);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+  const diffDays = Math.floor(diffHours / 24);
+
+  if (diffHours < 1) return "just now";
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays < 7) return `${diffDays}d ago`;
+  if (diffDays < 30) return `${Math.floor(diffDays / 7)}w ago`;
+  return `${Math.floor(diffDays / 30)}mo ago`;
+}
+
+// ============================================================================
 // SECURITY UTILITIES
 // ============================================================================
 

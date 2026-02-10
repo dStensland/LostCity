@@ -315,6 +315,7 @@ export default function FestivalSchedule({
                     <Link
                       href={`/${portalSlug}/events/${session.id}`}
                       prefetch
+                      scroll={false}
                       className="font-medium text-sm sm:text-base text-[var(--cream)] hover:text-accent transition-colors line-clamp-2"
                     >
                       {decodeHtmlEntities(session.title)}

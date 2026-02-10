@@ -90,6 +90,7 @@ export type Event = {
   skill_level?: string | null;
   instructor?: string | null;
   capacity?: number | null;
+  updated_at?: string | null;
 };
 
 export type Venue = {

@@ -55,6 +55,10 @@ function isPrivateIpv4(ip: string): boolean {
 function isPrivateIpv6(ip: string): boolean {
   const lower = ip.toLowerCase();
   if (lower === "::1" || lower === "::") return true;
+  if (lower.startsWith("::ffff:")) {
+    // IPv4-mapped IPv6 (e.g. ::ffff:127.0.0.1)
+    return isPrivateIpv4(lower.replace("::ffff:", ""));
+  }
   if (lower.startsWith("fc") || lower.startsWith("fd")) return true; // fc00::/7
   if (lower.startsWith("fe80")) return true; // link-local
   return false;
@@ -121,6 +125,11 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Invalid URL protocol" }, { status: 400 });
   }
 
+  const port = target.port ? Number(target.port) : target.protocol === "https:" ? 443 : 80;
+  if (!Number.isFinite(port) || (port !== 80 && port !== 443)) {
+    return NextResponse.json({ error: "Invalid URL port" }, { status: 400 });
+  }
+
   try {
     await assertPublicHostname(target.hostname);
   } catch {
@@ -134,6 +143,7 @@ export async function GET(request: NextRequest) {
   try {
     upstream = await fetch(target.toString(), {
       signal: controller.signal,
+      redirect: "manual",
       headers: {
         "User-Agent": "LostCityImageProxy/1.0",
         Accept: "image/*",
@@ -147,6 +157,9 @@ export async function GET(request: NextRequest) {
   }
 
   if (!upstream.ok) {
+    if (upstream.status >= 300 && upstream.status < 400) {
+      return NextResponse.json({ error: "Redirects are not allowed" }, { status: 403 });
+    }
     return NextResponse.json({ error: "Upstream error" }, { status: 502 });
   }
 

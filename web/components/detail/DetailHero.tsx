@@ -32,7 +32,7 @@ export function DetailHero({
   title,
   subtitle,
   category,
-  categoryColor = "var(--coral)",
+  categoryColor = "var(--action-primary)",
   categoryIcon,
   badge,
   isLive,
@@ -118,7 +118,7 @@ export function DetailHero({
             </h1>
 
             {subtitle && (
-              <p className="text-base text-[var(--soft)] font-serif mb-4">{subtitle}</p>
+              <p className="text-base text-[var(--text-secondary)] mb-4">{subtitle}</p>
             )}
 
             {children}
@@ -194,8 +194,8 @@ function HeroOverlay({
         <div className="flex items-center gap-2 mb-2">
           {badge}
           {isLive && (
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-mono uppercase tracking-wider bg-[var(--neon-red)]/20 text-[var(--neon-red)] border border-[var(--neon-red)]/30">
-              <span className="w-1.5 h-1.5 rounded-full bg-[var(--neon-red)] animate-pulse-glow" />
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-mono uppercase tracking-wider bg-[var(--state-live-bg)] text-[var(--state-live)] border border-[var(--state-live-border)]">
+              <span className="w-1.5 h-1.5 rounded-full bg-[var(--state-live)] animate-pulse-glow" />
               Live
             </span>
           )}
@@ -209,7 +209,7 @@ function HeroOverlay({
 
         {subtitle && (
           <p
-            className="text-sm text-[var(--soft)] font-serif detail-hero-subtitle-shadow"
+            className="text-sm text-[var(--text-secondary)] detail-hero-subtitle-shadow"
           >
             {subtitle}
           </p>

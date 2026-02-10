@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState, useRef, useMemo, useEffect, useCallback } from "react";
+import { Suspense, useState, useRef, useMemo, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import SimpleFilterBar from "@/components/SimpleFilterBar";
 import EventList from "@/components/EventList";
@@ -15,7 +15,6 @@ import { getNeighborhoodByName, NEIGHBORHOOD_NAMES } from "@/config/neighborhood
 import { useMapEvents } from "@/lib/hooks/useMapEvents";
 import { useViewportFilter } from "@/lib/hooks/useViewportFilter";
 import MapListDrawer from "@/components/map/MapListDrawer";
-import MapListItem from "@/components/map/MapListItem";
 import MapBottomSheet from "@/components/map/MapBottomSheet";
 import MapDatePills from "@/components/map/MapDatePills";
 
@@ -79,18 +78,17 @@ function FindViewInner({
   // Location selector state (map-specific)
   type LocationMode = "all" | "nearby" | string; // string = neighborhood name
   const [locationMode, setLocationMode] = useState<LocationMode>("all");
-  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
-  const [locationLoading, setLocationLoading] = useState(false);
-
-  // Load cached GPS location on mount
-  useEffect(() => {
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(() => {
+    if (typeof window === "undefined") return null;
     const saved = localStorage.getItem("userLocation");
-    if (saved) {
-      try {
-        setUserLocation(JSON.parse(saved));
-      } catch { /* ignore */ }
+    if (!saved) return null;
+    try {
+      return JSON.parse(saved) as { lat: number; lng: number };
+    } catch {
+      return null;
     }
-  }, []);
+  });
+  const [locationLoading, setLocationLoading] = useState(false);
 
   const requestLocation = useCallback(() => {
     if (!navigator.geolocation) return;
@@ -164,7 +162,7 @@ function FindViewInner({
   const isMapMode = displayMode === "map" && (findType === "events" || findType === "destinations");
 
   // Lift useMapEvents for events map mode so we can pass events to both map and drawer
-  const { events: mapEvents, isLoading: mapEventsLoading, isFetching: mapEventsFetching } = useMapEvents({
+  const { events: mapEvents, isFetching: mapEventsFetching } = useMapEvents({
     portalId,
     portalExclusive,
     enabled: isMapMode && findType === "events",
@@ -528,8 +526,6 @@ function FindViewInner({
 }
 
 export default function FindView(props: FindViewProps) {
-  const searchParams = useSearchParams();
-  const searchKey = searchParams?.get("search") || "";
   return (
     <Suspense
       fallback={
@@ -547,7 +543,7 @@ export default function FindView(props: FindViewProps) {
         </div>
       }
     >
-      <FindViewInner key={searchKey} {...props} />
+      <FindViewInner {...props} />
     </Suspense>
   );
 }

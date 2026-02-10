@@ -16,7 +16,7 @@ import type { Metadata } from "next";
 import DirectionsDropdown from "@/components/DirectionsDropdown";
 import VenueVibes from "@/components/VenueVibes";
 import LinkifyText from "@/components/LinkifyText";
-import { formatTimeSplit, formatPriceDetailed, safeJsonLd } from "@/lib/formats";
+import { formatTimeSplit, formatPriceDetailed, safeJsonLd, formatRelativeTime } from "@/lib/formats";
 import VenueTagList from "@/components/VenueTagList";
 import FlagButton from "@/components/FlagButton";
 import LiveIndicator from "@/components/LiveIndicator";
@@ -588,6 +588,31 @@ export default async function PortalEventPage({ params }: Props) {
             <div className="mb-6">
               <EntityTagList entityType="event" entityId={event.id} />
             </div>
+
+            {/* Data Freshness — subtle provenance hint */}
+            {(event.source_url || event.updated_at) && (
+              <div className="flex items-center gap-2 text-[0.65rem] font-mono text-[var(--muted)] mb-4 pb-4 border-b border-[var(--twilight)]/30">
+                <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span>
+                  {event.updated_at && (
+                    <>Last verified {formatRelativeTime(event.updated_at)}</>
+                  )}
+                  {event.source_url && event.updated_at && <span className="opacity-40"> · </span>}
+                  {event.source_url && (
+                    <a
+                      href={event.source_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="hover:text-[var(--soft)] transition-colors underline decoration-dotted underline-offset-2"
+                    >
+                      View source
+                    </a>
+                  )}
+                </span>
+              </div>
+            )}
 
             {/* Flag for QA */}
             <SectionHeader title="Report an Issue" />

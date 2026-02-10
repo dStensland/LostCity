@@ -173,6 +173,7 @@ Validated ideas, not needed yet. Revisit after revenue.
 | STRATEGIC_PRINCIPLES.md | Core hypotheses and decision framework |
 | ARCHITECTURE_PLAN.md | Gap analysis and implementation phases |
 | TECH_DEBT.md | Code-level debt and system health items |
+| PORTAL_PREMIUM_UX_BACKLOG.md | Agent-optimized premium UX execution spec (Atlanta-first, parallel dispatch) |
 | COMPETITIVE_INTEL.md | Competitor analysis and battle cards |
 | GTM_STRATEGY.md | Go-to-market sequencing and target prioritization |
 | NOVEL_TARGETS.md | 15 novel B2B target segments |

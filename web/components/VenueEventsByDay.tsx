@@ -41,6 +41,7 @@ interface VenueEventsByDayProps {
   maxDates?: number; // Limit visible date tabs (default: 7)
   showDatePicker?: boolean; // Show "jump to date" option (default: false)
   compact?: boolean; // Smaller variant for detail pages (default: false)
+  previewLimit?: number; // Limit visible events per date (default: 5)
 }
 
 export default function VenueEventsByDay({
@@ -51,6 +52,7 @@ export default function VenueEventsByDay({
   maxDates = 7,
   showDatePicker = false,
   compact = false,
+  previewLimit = 5,
 }: VenueEventsByDayProps) {
   // Build getEventHref from prop or portalSlug fallback (safe for server components)
   const getEventHref = getEventHrefProp ?? (portalSlug ? (id: number) => `/${portalSlug}/events/${id}` : undefined);
@@ -58,6 +60,7 @@ export default function VenueEventsByDay({
   const scrollRef = useRef<HTMLDivElement>(null);
   const [showDatePickerInput, setShowDatePickerInput] = useState(false);
   const [datePickerValue, setDatePickerValue] = useState("");
+  const [expanded, setExpanded] = useState(false);
 
   // Group events by effective date (ongoing multi-day events show as Today)
   const eventsByDate = useMemo(() => {
@@ -90,6 +93,14 @@ export default function VenueEventsByDay({
     const dateKey = format(selectedDate, "yyyy-MM-dd");
     return eventsByDate.get(dateKey) || [];
   }, [selectedDate, eventsByDate]);
+
+  // Progressive disclosure: show limited events by default
+  const isPreviewEnabled = previewLimit > 0;
+  const visibleEvents = useMemo(
+    () => (!isPreviewEnabled || expanded ? selectedEvents : selectedEvents.slice(0, previewLimit)),
+    [isPreviewEnabled, expanded, selectedEvents, previewLimit]
+  );
+  const hasMoreEvents = isPreviewEnabled && selectedEvents.length > previewLimit;
 
   // Format date label
   const formatDateLabel = (date: Date) => {
@@ -167,7 +178,10 @@ export default function VenueEventsByDay({
             return (
               <button
                 key={date.toISOString()}
-                onClick={() => setSelectedDate(date)}
+                onClick={() => {
+                  setSelectedDate(date);
+                  setExpanded(false); // Reset expanded state when switching dates
+                }}
                 className={`flex-shrink-0 flex flex-col items-center rounded-lg border transition-all ${
                   compact ? "px-2 py-1.5" : "px-3 py-2"
                 } ${
@@ -279,15 +293,38 @@ export default function VenueEventsByDay({
             No events on this date
           </div>
         ) : (
-          selectedEvents.map((event) => (
-            <VenueEventCard
-              key={event.id}
-              event={event}
-              onClick={onEventClick ? () => onEventClick(event.id) : undefined}
-              href={getEventHref ? getEventHref(event.id) : undefined}
-              compact={compact}
-            />
-          ))
+          <>
+            {hasMoreEvents && (
+              <p className="text-xs text-[var(--muted)]">
+                Showing {visibleEvents.length} of {selectedEvents.length} events
+              </p>
+            )}
+            {visibleEvents.map((event) => (
+              <VenueEventCard
+                key={event.id}
+                event={event}
+                onClick={onEventClick ? () => onEventClick(event.id) : undefined}
+                href={getEventHref ? getEventHref(event.id) : undefined}
+                compact={compact}
+              />
+            ))}
+            {hasMoreEvents && (
+              <button
+                onClick={() => setExpanded((prev) => !prev)}
+                className="w-full py-2.5 text-sm font-medium text-accent hover:text-[var(--cream)] border border-[var(--twilight)] rounded-lg hover:bg-[var(--card-bg-hover)] transition-colors flex items-center justify-center gap-2"
+              >
+                {expanded ? "Show fewer events" : `See all ${selectedEvents.length} events`}
+                <svg
+                  className={`w-4 h-4 transition-transform ${expanded ? "rotate-180" : ""}`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+            )}
+          </>
         )}
       </div>
     </div>

@@ -19,30 +19,32 @@ type FeedTab = "curated" | "foryou";
 type FindType = "events" | "classes" | "destinations";
 type FindDisplay = "list" | "map" | "calendar";
 
+type PortalSearchParams = {
+  search?: string;
+  categories?: string;
+  subcategories?: string;
+  genres?: string;
+  tags?: string;
+  vibes?: string;
+  neighborhoods?: string;
+  price?: string;
+  free?: string;
+  date?: string;
+  view?: string;
+  tab?: string;
+  type?: string;
+  display?: string;
+  mood?: string;
+  // Detail view params
+  event?: string;
+  spot?: string;
+  series?: string;
+  org?: string;
+};
+
 type Props = {
   params: Promise<{ portal: string }>;
-  searchParams: Promise<{
-    search?: string;
-    categories?: string;
-    subcategories?: string;
-    genres?: string;
-    tags?: string;
-    vibes?: string;
-    neighborhoods?: string;
-    price?: string;
-    free?: string;
-    date?: string;
-    view?: string;
-    tab?: string;
-    type?: string;
-    display?: string;
-    mood?: string;
-    // Detail view params
-    event?: string;
-    spot?: string;
-    series?: string;
-    org?: string;
-  }>;
+  searchParams: Promise<PortalSearchParams>;
 };
 
 export default async function PortalPage({ params, searchParams }: Props) {
@@ -65,17 +67,39 @@ export default async function PortalPage({ params, searchParams }: Props) {
     return <HotelTemplate portal={portal} />;
   }
 
-  // Parse view mode - support legacy views for backwards compatibility
   const viewParam = searchParamsData.view;
-  let viewMode: ViewMode = "feed";
+  const findTypeParam = searchParamsData.type;
+  const findDisplayParam = searchParamsData.display;
+  const hasFindSignals = Boolean(
+    findTypeParam ||
+      findDisplayParam ||
+      searchParamsData.search ||
+      searchParamsData.categories ||
+      searchParamsData.subcategories ||
+      searchParamsData.genres ||
+      searchParamsData.tags ||
+      searchParamsData.vibes ||
+      searchParamsData.neighborhoods ||
+      searchParamsData.price ||
+      searchParamsData.free ||
+      searchParamsData.date ||
+      searchParamsData.mood
+  );
 
-  // Map legacy view params to new structure
-  if (viewParam === "find" || viewParam === "events" || viewParam === "spots" || viewParam === "map" || viewParam === "calendar") {
-    viewMode = "find";
-  } else if (viewParam === "community") {
+  // Parse view mode with deterministic fallback behavior.
+  // If filter/display/type signals are present without explicit `view`, prefer Find.
+  let viewMode: ViewMode = "feed";
+  if (viewParam === "community") {
     viewMode = "community";
-  } else if (viewParam === "feed" || !viewParam) {
-    viewMode = "feed";
+  } else if (
+    viewParam === "find" ||
+    viewParam === "events" ||
+    viewParam === "spots" ||
+    viewParam === "map" ||
+    viewParam === "calendar" ||
+    hasFindSignals
+  ) {
+    viewMode = "find";
   }
 
   // Parse sub-parameters - handle legacy "activity" tab by treating it as curated
@@ -87,16 +111,16 @@ export default async function PortalPage({ params, searchParams }: Props) {
   // Determine find type - support legacy view params
   // Note: "orgs" was moved to community view, redirect to events
   let findType: FindType = "events";
-  if (searchParamsData.type && searchParamsData.type !== "orgs") {
-    findType = searchParamsData.type as FindType;
+  if (findTypeParam && findTypeParam !== "orgs") {
+    findType = findTypeParam as FindType;
   } else if (viewParam === "spots") {
     findType = "destinations";
   }
 
   // Determine display mode - support legacy view params
   let findDisplay: FindDisplay = "list";
-  if (searchParamsData.display) {
-    findDisplay = searchParamsData.display as FindDisplay;
+  if (findDisplayParam) {
+    findDisplay = findDisplayParam as FindDisplay;
   } else if (viewParam === "map") {
     findDisplay = "map";
   } else if (viewParam === "calendar") {

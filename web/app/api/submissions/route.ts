@@ -6,6 +6,7 @@ import {
   isValidEnum,
   isValidString,
   isValidUUID,
+  checkBodySize,
 } from "@/lib/api-utils";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier} from "@/lib/rate-limit";
 import type {
@@ -142,6 +143,9 @@ export async function GET(request: NextRequest) {
 
 // POST /api/submissions - Create a new submission
 export async function POST(request: NextRequest) {
+  const bodySizeCheck = checkBodySize(request, 1024 * 50);
+  if (bodySizeCheck) return bodySizeCheck;
+
   const user = await getUser();
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -152,20 +156,26 @@ export async function POST(request: NextRequest) {
   const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write, identifier);
   if (rateLimitResult) return rateLimitResult;
 
-  const body = await request.json();
-  const {
-    submission_type,
-    data,
-    portal_id,
-    duplicate_acknowledged,
-    image_urls,
-  } = body as {
+  let body: {
     submission_type: SubmissionType | "producer" | "organization";
     data: EventSubmissionData | VenueSubmissionData | ProducerSubmissionData;
     portal_id?: string;
     duplicate_acknowledged?: boolean;
     image_urls?: string[];
   };
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+  }
+
+  const {
+    submission_type,
+    data,
+    portal_id,
+    duplicate_acknowledged,
+    image_urls,
+  } = body;
 
   const normalizedSubmissionType =
     submission_type === "organization" ? "producer" : submission_type;

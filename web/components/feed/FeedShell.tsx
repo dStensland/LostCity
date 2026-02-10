@@ -42,10 +42,10 @@ function AuthLoadingSkeleton() {
 // Compact inline sign-up prompt for For You tab when signed out
 function ForYouSignUpPrompt({ portalSlug }: { portalSlug: string }) {
   return (
-    <div className="mb-4 p-4 rounded-xl bg-gradient-to-r from-[var(--coral)]/10 via-[var(--rose)]/5 to-transparent border border-[var(--coral)]/20">
+    <div className="mb-4 p-4 rounded-xl bg-gradient-to-r from-[var(--action-primary)]/10 via-[var(--action-primary-hover)]/5 to-transparent border border-[var(--action-primary)]/20">
       <div className="flex items-center gap-4">
-        <div className="w-10 h-10 rounded-lg bg-[var(--coral)]/15 flex items-center justify-center flex-shrink-0">
-          <svg className="w-5 h-5 text-[var(--coral)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="w-10 h-10 rounded-lg bg-[var(--action-primary)]/15 flex items-center justify-center flex-shrink-0">
+          <svg className="w-5 h-5 text-[var(--action-primary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.975 7.975 0 0120 13a7.975 7.975 0 01-2.343 5.657z" />
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.879 16.121A3 3 0 1012.015 11L11 14H9c0 .768.293 1.536.879 2.121z" />
           </svg>
@@ -60,7 +60,7 @@ function ForYouSignUpPrompt({ portalSlug }: { portalSlug: string }) {
         </div>
         <Link
           href={`/auth/signup?redirect=/${portalSlug}?view=feed&tab=foryou`}
-          className="flex-shrink-0 flex items-center gap-1.5 px-4 py-2 bg-[var(--coral)] text-[var(--void)] rounded-lg font-mono text-xs font-medium hover:bg-[var(--rose)] transition-colors"
+          className="flex-shrink-0 flex items-center gap-1.5 px-4 py-2 bg-[var(--action-primary)] text-[var(--btn-primary-text)] rounded-lg font-mono text-xs font-medium hover:bg-[var(--action-primary-hover)] transition-colors"
         >
           Join
           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -134,7 +134,7 @@ function FeedShellInner({ portalId, portalSlug, activeTab, curatedContent }: Fee
                 onClick={() => handleTabChange(tab.key)}
                 className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg font-mono text-xs font-medium transition-all duration-200 ${
                   isActive
-                    ? "bg-[var(--twilight)] text-[var(--coral)] border border-[var(--coral)]/20"
+                    ? "bg-[var(--twilight)] text-[var(--action-primary)] border border-[var(--action-primary)]/20"
                     : "text-[var(--muted)] hover:text-[var(--cream)] hover:bg-[var(--twilight)]/50"
                 }`}
               >

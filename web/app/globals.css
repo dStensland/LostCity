@@ -245,6 +245,11 @@
   /* States */
   --state-selected: var(--brand-secondary);
   --state-selected-bg: hsl(var(--neon-cyan-hsl) / 0.1);
+  --state-live: var(--neon-red);
+  --state-live-bg: hsl(var(--neon-red-hsl) / 0.2);
+  --state-live-border: hsl(var(--neon-red-hsl) / 0.35);
+  --state-success: var(--neon-green);
+  --state-success-bg: hsl(var(--neon-green-hsl) / 0.2);
   --focus-ring-color: var(--brand-secondary);
 
   /* Surfaces */

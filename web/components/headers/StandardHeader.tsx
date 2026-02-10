@@ -29,7 +29,6 @@ interface StandardHeaderProps {
 type NavTab = {
   key: "feed" | "find" | "community";
   defaultLabel: string;
-  href: string;
   authRequired?: boolean;
   icon?: React.ReactNode;
 };
@@ -38,7 +37,6 @@ const DEFAULT_TABS: NavTab[] = [
   {
     key: "feed",
     defaultLabel: "Feed",
-    href: "feed",
     icon: (
       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
@@ -48,7 +46,6 @@ const DEFAULT_TABS: NavTab[] = [
   {
     key: "find",
     defaultLabel: "Find",
-    href: "find",
     icon: (
       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -58,7 +55,6 @@ const DEFAULT_TABS: NavTab[] = [
   {
     key: "community",
     defaultLabel: "Community",
-    href: "community",
     icon: (
       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
@@ -99,7 +95,7 @@ export default function StandardHeader({
       label: navLabels[tab.key] || tab.defaultLabel,
     }));
 
-  const currentView = searchParams?.get("view") || "feed";
+  const currentView = searchParams?.get("view");
 
   // Get nav style class
   const getNavStyleClass = () => {
@@ -131,23 +127,55 @@ export default function StandardHeader({
 
 
   const getHref = useCallback((tab: typeof TABS[0]) => {
+    const params = new URLSearchParams(searchParams?.toString() || "");
+    params.delete("event");
+    params.delete("spot");
+    params.delete("series");
+    params.delete("festival");
+    params.delete("org");
+
     if (tab.key === "feed") {
-      return `/${portalSlug}`;
+      params.delete("view");
+      params.delete("type");
+      params.delete("display");
+      params.delete("tab");
+    } else if (tab.key === "find") {
+      params.set("view", "find");
+      params.delete("tab");
+    } else {
+      params.set("view", "community");
+      params.delete("type");
+      params.delete("display");
+      if (!params.get("tab")) params.set("tab", "people");
     }
-    return `/${portalSlug}?view=${tab.key}`;
-  }, [portalSlug]);
+
+    const query = params.toString();
+    return query ? `/${portalSlug}?${query}` : `/${portalSlug}`;
+  }, [portalSlug, searchParams]);
 
   const isActive = (tab: typeof TABS[0]) => {
     const isPortalPage = pathname === `/${portalSlug}`;
+    const isFindRoute = pathname === `/${portalSlug}/find`;
+    const isCommunityRoute = pathname === `/${portalSlug}/community`;
+    const isFeedRoute = isPortalPage || pathname === `/${portalSlug}/feed`;
 
     if (tab.key === "feed") {
-      return isPortalPage && (!currentView || currentView === "feed");
+      return isFeedRoute && (!currentView || currentView === "feed");
     }
     if (tab.key === "find") {
-      return isPortalPage && (currentView === "find" || currentView === "events" || currentView === "spots" || currentView === "map" || currentView === "calendar");
+      return (
+        isFindRoute ||
+        (isPortalPage && (
+          currentView === "find" ||
+          currentView === "events" ||
+          currentView === "spots" ||
+          currentView === "map" ||
+          currentView === "calendar"
+        ))
+      );
     }
     if (tab.key === "community") {
-      return isPortalPage && currentView === "community";
+      return isCommunityRoute || (isPortalPage && currentView === "community");
     }
     return false;
   };
@@ -361,7 +389,7 @@ export default function StandardHeader({
                     Events
                   </Link>
                   <Link
-                    href={`/${portalSlug}?view=find&type=places`}
+                    href={`/${portalSlug}?view=find&type=destinations`}
                     onClick={() => setMobileMenuOpen(false)}
                     className="flex items-center gap-2 px-3 py-2 font-mono text-sm text-[var(--muted)] hover:text-[var(--neon-amber)] hover:bg-[var(--twilight)]/30"
                   >

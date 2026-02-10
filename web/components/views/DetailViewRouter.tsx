@@ -1,7 +1,7 @@
 "use client";
 
-import { useSearchParams, useRouter } from "next/navigation";
-import { useCallback, useEffect, useState, useRef } from "react";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
+import { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import EventDetailView from "./EventDetailView";
 import VenueDetailView from "./VenueDetailView";
 import SeriesDetailView from "./SeriesDetailView";
@@ -13,11 +13,11 @@ interface DetailViewRouterProps {
   children: React.ReactNode;
 }
 
-function AnimatedDetailWrapper({ children }: {
+function AnimatedDetailWrapper({ children, onNavigateClose }: {
   children: React.ReactNode;
+  onNavigateClose: () => void;
 }) {
   const [closing, setClosing] = useState(false);
-  const router = useRouter();
   const navigatingRef = useRef(false);
 
   const handleAnimatedClose = useCallback(() => {
@@ -28,12 +28,9 @@ function AnimatedDetailWrapper({ children }: {
   const handleAnimationEnd = useCallback(() => {
     if (closing && !navigatingRef.current) {
       navigatingRef.current = true;
-      // Use router.back() to walk the navigation chain correctly:
-      // e.g., List → Event → Venue → close → Event → close → List
-      // Each detail open pushes a history entry, so back() reverses the chain.
-      router.back();
+      onNavigateClose();
     }
-  }, [closing, router]);
+  }, [closing, onNavigateClose]);
 
   return (
     <div
@@ -56,6 +53,7 @@ function AnimatedDetailWrapper({ children }: {
 export default function DetailViewRouter({ portalSlug, children }: DetailViewRouterProps) {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const pathname = usePathname();
 
   // Check for detail view params
   const eventId = searchParams.get("event");
@@ -71,17 +69,36 @@ export default function DetailViewRouter({ portalSlug, children }: DetailViewRou
     window.scrollTo({ top: 0, left: 0, behavior: "auto" });
   }, [eventId, spotSlug, seriesSlug, festivalSlug, orgSlug]);
 
+  const closeFallbackUrl = useMemo(() => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("event");
+    params.delete("spot");
+    params.delete("series");
+    params.delete("festival");
+    params.delete("org");
+    const query = params.toString();
+    return query ? `${pathname}?${query}` : pathname;
+  }, [pathname, searchParams]);
+
+  const navigateClose = useCallback(() => {
+    if (typeof window !== "undefined" && window.history.length > 1) {
+      router.back();
+      return;
+    }
+    router.replace(closeFallbackUrl, { scroll: false });
+  }, [router, closeFallbackUrl]);
+
   // Close handler navigates back through the history chain
   const handleClose = useCallback(() => {
-    router.back();
-  }, [router]);
+    navigateClose();
+  }, [navigateClose]);
 
   // If we have a detail param, show the detail view with animated wrapper
   if (eventId) {
     const id = parseInt(eventId, 10);
     if (!isNaN(id)) {
       return (
-        <AnimatedDetailWrapper>
+        <AnimatedDetailWrapper onNavigateClose={navigateClose}>
           <EventDetailView
             eventId={id}
             portalSlug={portalSlug}
@@ -94,7 +111,7 @@ export default function DetailViewRouter({ portalSlug, children }: DetailViewRou
 
   if (spotSlug) {
     return (
-      <AnimatedDetailWrapper>
+      <AnimatedDetailWrapper onNavigateClose={navigateClose}>
         <VenueDetailView
           slug={spotSlug}
           portalSlug={portalSlug}
@@ -106,7 +123,7 @@ export default function DetailViewRouter({ portalSlug, children }: DetailViewRou
 
   if (seriesSlug) {
     return (
-      <AnimatedDetailWrapper>
+      <AnimatedDetailWrapper onNavigateClose={navigateClose}>
         <SeriesDetailView
           slug={seriesSlug}
           portalSlug={portalSlug}
@@ -118,7 +135,7 @@ export default function DetailViewRouter({ portalSlug, children }: DetailViewRou
 
   if (festivalSlug) {
     return (
-      <AnimatedDetailWrapper>
+      <AnimatedDetailWrapper onNavigateClose={navigateClose}>
         <FestivalDetailView
           slug={festivalSlug}
           portalSlug={portalSlug}
@@ -130,7 +147,7 @@ export default function DetailViewRouter({ portalSlug, children }: DetailViewRou
 
   if (orgSlug) {
     return (
-      <AnimatedDetailWrapper>
+      <AnimatedDetailWrapper onNavigateClose={navigateClose}>
         <OrgDetailView
           slug={orgSlug}
           portalSlug={portalSlug}

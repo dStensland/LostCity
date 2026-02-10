@@ -20,7 +20,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
     // First, check list visibility and ownership
     const { data: list, error: listError } = await supabase
       .from("lists")
-      .select("visibility, creator_id")
+      .select("is_public, creator_id")
       .eq("id", listId)
       .maybeSingle();
 
@@ -29,7 +29,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
     }
 
     // If list is not public, verify the requesting user is the owner
-    if (list.visibility !== "public") {
+    if (!list.is_public) {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user || user.id !== list.creator_id) {
         return NextResponse.json({ error: "List not found" }, { status: 404 });
@@ -42,7 +42,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
         *,
         venue:venues(id, name, slug, neighborhood, venue_type),
         event:events(id, title, start_date, venue:venues(name)),
-        organization:producers(id, name, slug)
+        organization:organizations(id, name, slug)
       `)
       .eq("list_id", listId)
       .order("position", { ascending: true });
