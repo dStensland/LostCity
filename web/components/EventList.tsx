@@ -6,6 +6,7 @@ import Link from "next/link";
 import AnimatedEventList from "./AnimatedEventList";
 import { EventCardSkeletonList } from "./EventCardSkeleton";
 import PullToRefresh from "./PullToRefresh";
+import SmartEmptyState from "./SmartEmptyState";
 import { useTimeline } from "@/lib/hooks/useTimeline";
 import { useEventFilters } from "@/lib/hooks/useEventFilters";
 import { useFriendsGoing } from "@/lib/hooks/use-friends-going";
@@ -40,7 +41,11 @@ export default function EventList({
   const loaderRef = useRef<HTMLDivElement>(null);
 
   // Unified timeline hook — events + festivals in one stream
-  const { hasActiveFilters, filters } = useEventFilters();
+  // Enable smart defaults and persistence for better UX
+  const { hasActiveFilters, filters } = useEventFilters({
+    enableSmartDefaults: true,
+    enablePersistence: true,
+  });
   const {
     events,
     festivals,
@@ -113,8 +118,14 @@ export default function EventList({
     );
   }
 
-  // Empty state
+  // Empty state - use smart empty state when filters are active
   if (events.length === 0 && !isLoading) {
+    // Smart empty state with suggestions when filters are active
+    if (hasActiveFilters) {
+      return <SmartEmptyState filters={filters} portalSlug={portalSlug} />;
+    }
+
+    // Generic empty state when no filters
     return (
       <div className="text-center py-16">
         {/* Illustrated empty state with gentle animation */}
@@ -127,62 +138,29 @@ export default function EventList({
         </div>
 
         <h3 className="text-[var(--cream)] text-xl font-medium mb-2">
-          {hasActiveFilters ? "Nothing matches that vibe" : "The calendar is empty"}
+          The calendar is empty
         </h3>
 
         <p className="text-[var(--muted)] text-sm mb-6 max-w-xs mx-auto">
-          {hasActiveFilters
-            ? "Try broadening your search or exploring something new"
-            : "We're always adding fresh events. Check back soon or explore what's out there!"}
+          We're always adding fresh events. Check back soon or explore what's out there!
         </p>
 
-        {hasActiveFilters ? (
-          <div className="space-y-4">
-            <Link
-              href={pathname}
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-[var(--coral)] text-[var(--void)] hover:bg-[var(--rose)] transition-all hover:scale-105 font-mono text-sm font-medium shadow-lg shadow-[var(--coral)]/20"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-              Clear filters
-            </Link>
-
-            <div className="pt-4 border-t border-[var(--twilight)]/30">
-              <p className="text-[var(--muted)]/60 text-xs mb-3 uppercase tracking-wider font-mono">
-                Or try these
-              </p>
-              <div className="flex flex-wrap justify-center gap-2">
-                {suggestedCategories.map((cat) => (
-                  <Link
-                    key={cat.value}
-                    href={`${pathname}?categories=${cat.value}`}
-                    className="px-3 py-1.5 rounded-full bg-[var(--twilight)]/40 text-[var(--muted)] hover:bg-[var(--twilight)] hover:text-[var(--cream)] transition-all text-sm border border-[var(--twilight)] hover:border-[var(--coral)]/30 hover:shadow-sm"
-                  >
-                    {cat.label}
-                  </Link>
-                ))}
-              </div>
-            </div>
+        <div className="pt-4 border-t border-[var(--twilight)]/30">
+          <p className="text-[var(--muted)]/60 text-xs mb-3 uppercase tracking-wider font-mono">
+            Or try these
+          </p>
+          <div className="flex flex-wrap justify-center gap-2">
+            {suggestedCategories.map((cat) => (
+              <Link
+                key={cat.value}
+                href={`${pathname}?categories=${cat.value}`}
+                className="px-3 py-1.5 rounded-full bg-[var(--twilight)]/40 text-[var(--muted)] hover:bg-[var(--twilight)] hover:text-[var(--cream)] transition-all text-sm border border-[var(--twilight)] hover:border-[var(--coral)]/30 hover:shadow-sm"
+              >
+                {cat.label}
+              </Link>
+            ))}
           </div>
-        ) : (
-          <div className="space-y-4">
-            <p className="text-[var(--muted)]/60 text-sm font-medium">
-              What are you feeling?
-            </p>
-            <div className="flex flex-wrap justify-center gap-2">
-              {suggestedCategories.map((cat) => (
-                <Link
-                  key={cat.value}
-                  href={`${pathname}?categories=${cat.value}`}
-                  className="px-4 py-2 rounded-lg bg-[var(--twilight)]/40 text-[var(--muted)] hover:bg-[var(--twilight)] hover:text-[var(--cream)] transition-all text-sm border border-[var(--twilight)] hover:border-[var(--coral)]/30 hover:shadow-md hover:scale-105"
-                >
-                  {cat.label}
-                </Link>
-              ))}
-            </div>
-          </div>
-        )}
+        </div>
       </div>
     );
   }

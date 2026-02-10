@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import type { FestivalSession, FestivalProgram } from "@/lib/festivals";
 import { getCategoryAccentColor } from "@/lib/moments-utils";
 import { decodeHtmlEntities } from "@/lib/formats";
@@ -10,6 +11,10 @@ interface FestivalScheduleProps {
   sessions: FestivalSession[];
   programs: FestivalProgram[];
   portalSlug: string;
+  previewLimit?: number;
+  prefetchLimit?: number;
+  fullScheduleHref?: string;
+  fullScheduleLabel?: string;
 }
 
 function formatShortDate(dateStr: string): string {
@@ -38,7 +43,14 @@ export default function FestivalSchedule({
   sessions,
   programs,
   portalSlug,
+  previewLimit = 12,
+  prefetchLimit = 10,
+  fullScheduleHref,
+  fullScheduleLabel = "Open Full View",
 }: FestivalScheduleProps) {
+  const router = useRouter();
+  const isPreviewEnabled = previewLimit > 0;
+
   // Extract unique days
   const days = useMemo(() => {
     const daySet = new Set(sessions.map((s) => s.start_date));
@@ -77,6 +89,8 @@ export default function FestivalSchedule({
   const [selectedVenue, setSelectedVenue] = useState<number | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedProgram, setSelectedProgram] = useState<string | null>(null);
+  const [expanded, setExpanded] = useState(!isPreviewEnabled);
+  const resetExpanded = () => setExpanded(!isPreviewEnabled);
   const hasDayTabs = days.length > 1;
   const hasFilterControls = venues.length > 1 || categories.length > 1 || programs.length > 1;
 
@@ -90,19 +104,46 @@ export default function FestivalSchedule({
     });
   }, [sessions, selectedDay, selectedVenue, selectedCategory, selectedProgram]);
 
+  const visibleSessions = useMemo(
+    () => (!isPreviewEnabled || expanded ? filtered : filtered.slice(0, previewLimit)),
+    [isPreviewEnabled, expanded, filtered, previewLimit]
+  );
+
+  const hasMoreSessions = isPreviewEnabled && filtered.length > previewLimit;
+
+  useEffect(() => {
+    // Warm next event pages so festival -> detail navigation feels instant.
+    for (const session of visibleSessions.slice(0, prefetchLimit)) {
+      router.prefetch(`/${portalSlug}/events/${session.id}`);
+    }
+  }, [router, portalSlug, visibleSessions, prefetchLimit]);
+
   const activeFilters = [selectedVenue, selectedCategory, selectedProgram].filter((v) => v !== null).length;
 
   return (
     <div id="schedule">
-      <h2 className="text-lg font-semibold text-[var(--cream)] mb-4 flex items-center gap-2">
-        <svg className="w-5 h-5 text-[var(--muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-        </svg>
-        Schedule
-        <span className="text-sm font-normal text-[var(--muted)]">
-          ({filtered.length} session{filtered.length !== 1 ? "s" : ""})
-        </span>
-      </h2>
+      <div className="flex items-center justify-between gap-3 mb-4">
+        <h2 className="text-lg font-semibold text-[var(--cream)] flex items-center gap-2">
+          <svg className="w-5 h-5 text-[var(--muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+          </svg>
+          Schedule
+          <span className="text-sm font-normal text-[var(--muted)]">
+            ({filtered.length} session{filtered.length !== 1 ? "s" : ""})
+          </span>
+        </h2>
+        {fullScheduleHref && (
+          <Link
+            href={fullScheduleHref}
+            className="inline-flex items-center gap-1 text-xs sm:text-sm text-accent hover:text-[var(--cream)] transition-colors whitespace-nowrap"
+          >
+            {fullScheduleLabel}
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+            </svg>
+          </Link>
+        )}
+      </div>
 
       {/* Mobile sticky controls + desktop static controls */}
       {(hasDayTabs || hasFilterControls) && (
@@ -120,7 +161,10 @@ export default function FestivalSchedule({
                     return (
                       <button
                         key={day}
-                        onClick={() => setSelectedDay(day)}
+                        onClick={() => {
+                          setSelectedDay(day);
+                          resetExpanded();
+                        }}
                         className={`relative px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
                           isSelected
                             ? "bg-accent-20 text-accent border border-accent-40"
@@ -146,7 +190,10 @@ export default function FestivalSchedule({
           {venues.length > 1 && venues.map((v) => (
             <button
               key={v.id}
-              onClick={() => setSelectedVenue(selectedVenue === v.id ? null : v.id)}
+              onClick={() => {
+                setSelectedVenue(selectedVenue === v.id ? null : v.id);
+                resetExpanded();
+              }}
               aria-pressed={selectedVenue === v.id}
               className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
                 selectedVenue === v.id
@@ -162,7 +209,10 @@ export default function FestivalSchedule({
           {categories.length > 1 && categories.map((c) => (
             <button
               key={c}
-              onClick={() => setSelectedCategory(selectedCategory === c ? null : c)}
+              onClick={() => {
+                setSelectedCategory(selectedCategory === c ? null : c);
+                resetExpanded();
+              }}
               aria-pressed={selectedCategory === c}
               className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
                 selectedCategory === c
@@ -178,7 +228,10 @@ export default function FestivalSchedule({
           {sortedPrograms.length > 1 && sortedPrograms.length <= 8 && sortedPrograms.map((p) => (
             <button
               key={p.id}
-              onClick={() => setSelectedProgram(selectedProgram === p.id ? null : p.id)}
+              onClick={() => {
+                setSelectedProgram(selectedProgram === p.id ? null : p.id);
+                resetExpanded();
+              }}
               aria-pressed={selectedProgram === p.id}
               className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
                 selectedProgram === p.id
@@ -196,7 +249,10 @@ export default function FestivalSchedule({
               Program
               <select
                 value={selectedProgram ?? ""}
-                onChange={(e) => setSelectedProgram(e.target.value || null)}
+                onChange={(e) => {
+                  setSelectedProgram(e.target.value || null);
+                  resetExpanded();
+                }}
                 className="bg-transparent text-xs text-[var(--cream)] border-none focus:outline-none cursor-pointer max-w-[180px]"
               >
                 <option value="">All programs</option>
@@ -216,6 +272,7 @@ export default function FestivalSchedule({
                 setSelectedVenue(null);
                 setSelectedCategory(null);
                 setSelectedProgram(null);
+                resetExpanded();
               }}
               className="px-2.5 py-1 rounded-full text-xs text-[var(--muted)] hover:text-[var(--cream)] transition-colors"
             >
@@ -233,61 +290,85 @@ export default function FestivalSchedule({
           <p className="text-sm text-[var(--muted)]">No sessions match your filters</p>
         </div>
       ) : (
-        <div className="rounded-lg border border-[var(--twilight)] overflow-hidden bg-[var(--card-bg)]">
-          <div className="divide-y divide-[var(--twilight)]/30">
-            {filtered.map((session) => (
-              <div
-                key={session.id}
-                className="flex items-start gap-3 px-3 py-2.5 hover:bg-[var(--card-bg-hover)] transition-colors sm:gap-4 sm:px-4 sm:py-3"
-              >
-                {/* Time */}
-                <div className="flex-shrink-0 w-14 sm:w-20 pt-0.5 sm:pt-1">
-                  <span className="inline-flex rounded px-1.5 py-0.5 font-mono text-[11px] sm:text-sm text-[var(--muted)] bg-[var(--twilight)]/25">
-                    {formatTime(session.start_time) || "TBA"}
-                  </span>
-                </div>
+        <div className="space-y-3">
+          {hasMoreSessions && (
+            <p className="text-xs text-[var(--muted)]">
+              Showing {visibleSessions.length} of {filtered.length} sessions
+            </p>
+          )}
+          <div className="rounded-lg border border-[var(--twilight)] overflow-hidden bg-[var(--card-bg)]">
+            <div className="divide-y divide-[var(--twilight)]/30">
+              {visibleSessions.map((session) => (
+                <div
+                  key={session.id}
+                  className="flex items-start gap-3 px-3 py-2.5 hover:bg-[var(--card-bg-hover)] transition-colors sm:gap-4 sm:px-4 sm:py-3"
+                >
+                  {/* Time */}
+                  <div className="flex-shrink-0 w-14 sm:w-20 pt-0.5 sm:pt-1">
+                    <span className="inline-flex rounded px-1.5 py-0.5 font-mono text-[11px] sm:text-sm text-[var(--muted)] bg-[var(--twilight)]/25">
+                      {formatTime(session.start_time) || "TBA"}
+                    </span>
+                  </div>
 
-                {/* Event details */}
-                <div className="flex-1 min-w-0">
-                  <Link
-                    href={`/${portalSlug}/events/${session.id}`}
-                    className="font-medium text-sm sm:text-base text-[var(--cream)] hover:text-accent transition-colors line-clamp-2"
-                  >
-                    {decodeHtmlEntities(session.title)}
-                  </Link>
+                  {/* Event details */}
+                  <div className="flex-1 min-w-0">
+                    <Link
+                      href={`/${portalSlug}/events/${session.id}`}
+                      prefetch
+                      className="font-medium text-sm sm:text-base text-[var(--cream)] hover:text-accent transition-colors line-clamp-2"
+                    >
+                      {decodeHtmlEntities(session.title)}
+                    </Link>
 
-                  <div className="flex flex-wrap items-center gap-1.5 mt-1">
-                    {session.venue && (
-                      <Link
-                        href={`/${portalSlug}/spots/${session.venue.slug}`}
-                        className="text-[11px] sm:text-xs text-[var(--soft)] hover:text-[var(--coral)] transition-colors inline-flex items-center gap-1"
-                      >
-                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                        </svg>
-                        {session.venue.name}
-                      </Link>
-                    )}
+                    <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                      {session.venue && (
+                        <Link
+                          href={`/${portalSlug}/spots/${session.venue.slug}`}
+                          className="text-[11px] sm:text-xs text-[var(--soft)] hover:text-[var(--coral)] transition-colors inline-flex items-center gap-1"
+                        >
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                          </svg>
+                          {session.venue.name}
+                        </Link>
+                      )}
 
-                    {session.category && (
-                      <span
-                        className="px-1.5 sm:px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-medium border"
-                        style={{
-                          borderColor: getCategoryColor(session.category),
-                          color: getCategoryColor(session.category),
-                          backgroundColor: `color-mix(in srgb, ${getCategoryColor(session.category)} 12%, transparent)`,
-                        }}
-                      >
-                        {session.category.replace(/_/g, " ")}
-                      </span>
-                    )}
+                      {session.category && (
+                        <span
+                          className="px-1.5 sm:px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-medium border"
+                          style={{
+                            borderColor: getCategoryColor(session.category),
+                            color: getCategoryColor(session.category),
+                            backgroundColor: `color-mix(in srgb, ${getCategoryColor(session.category)} 12%, transparent)`,
+                          }}
+                        >
+                          {session.category.replace(/_/g, " ")}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
-
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
+
+          {hasMoreSessions && (
+            <button
+              onClick={() => setExpanded((prev) => !prev)}
+              className="w-full py-2.5 text-sm font-medium text-accent hover:text-[var(--cream)] border border-[var(--twilight)] rounded-lg hover:bg-[var(--card-bg-hover)] transition-colors flex items-center justify-center gap-2"
+            >
+              {expanded ? "Show fewer sessions" : `See all ${filtered.length} sessions`}
+              <svg
+                className={`w-4 h-4 transition-transform ${expanded ? "rotate-180" : ""}`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+          )}
         </div>
       )}
     </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useEffect } from "react";
 
 /**
  * Filter state parsed from URL
@@ -17,6 +17,85 @@ export interface EventFilters {
   date?: "today" | "weekend" | "week";
   mood?: string;
   view?: "events" | "calendar" | "map";
+}
+
+/**
+ * Get smart default date filter based on current time
+ * - After 5pm on weekdays → "today" (Tonight)
+ * - Weekends → "weekend" (This Weekend)
+ * - Before 5pm on weekdays → "week" (This Week)
+ *
+ * @param portalVertical - Portal vertical type for context-specific defaults
+ */
+function getSmartDateDefault(portalVertical?: string): "today" | "weekend" | "week" | undefined {
+  const now = new Date();
+  const hour = now.getHours();
+  const day = now.getDay(); // 0 = Sunday, 6 = Saturday
+
+  // Hotel portals default to "today" (what's happening now/tonight)
+  if (portalVertical === "hotel") {
+    return "today";
+  }
+
+  // Weekend (Friday evening through Sunday)
+  if (day === 0 || day === 6 || (day === 5 && hour >= 17)) {
+    return "weekend";
+  }
+
+  // Weekday after 5pm → Tonight
+  if (hour >= 17) {
+    return "today";
+  }
+
+  // Weekday before 5pm → This Week
+  return "week";
+}
+
+/**
+ * LocalStorage keys for filter persistence
+ */
+const STORAGE_KEY_PREFIX = "lostcity-filters";
+
+/**
+ * Get saved filters from localStorage
+ */
+function getSavedFilters(): Partial<EventFilters> {
+  if (typeof window === "undefined") return {};
+
+  try {
+    const saved = localStorage.getItem(`${STORAGE_KEY_PREFIX}-last`);
+    if (!saved) return {};
+
+    const parsed = JSON.parse(saved);
+
+    // Only restore category/genre/neighborhood filters, not search or date
+    return {
+      categories: parsed.categories,
+      genres: parsed.genres,
+      neighborhoods: parsed.neighborhoods,
+    };
+  } catch {
+    return {};
+  }
+}
+
+/**
+ * Save filters to localStorage
+ */
+function saveFilters(filters: EventFilters) {
+  if (typeof window === "undefined") return;
+
+  try {
+    // Only save category/genre/neighborhood filters
+    const toSave = {
+      categories: filters.categories,
+      genres: filters.genres,
+      neighborhoods: filters.neighborhoods,
+    };
+    localStorage.setItem(`${STORAGE_KEY_PREFIX}-last`, JSON.stringify(toSave));
+  } catch {
+    // Silently fail if localStorage is unavailable
+  }
 }
 
 /**
@@ -45,8 +124,16 @@ const VIEW_SPECIFIC_KEYS: Record<string, string[]> = {
 /**
  * Hook for managing event filters via URL parameters
  * Provides type-safe access to filters and update functions
+ *
+ * @param options.enableSmartDefaults - Apply time-aware date defaults (default: false)
+ * @param options.enablePersistence - Remember last-used filters (default: false)
+ * @param options.portalVertical - Portal vertical type for context-specific defaults
  */
-export function useEventFilters() {
+export function useEventFilters(options?: {
+  enableSmartDefaults?: boolean;
+  enablePersistence?: boolean;
+  portalVertical?: string;
+}) {
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
@@ -66,6 +153,60 @@ export function useEventFilters() {
       view: (searchParams.get("view") as EventFilters["view"]) || undefined,
     };
   }, [searchParams]);
+
+  // Apply smart defaults on initial load (if enabled and no filters are set)
+  useEffect(() => {
+    if (!options?.enableSmartDefaults) return;
+
+    const hasAnyFilters = !!(
+      filters.search ||
+      filters.categories?.length ||
+      filters.tags?.length ||
+      filters.genres?.length ||
+      filters.vibes?.length ||
+      filters.neighborhoods?.length ||
+      filters.price ||
+      filters.date ||
+      filters.mood
+    );
+
+    // Only apply defaults if there are no active filters
+    if (hasAnyFilters) return;
+
+    const params = new URLSearchParams(searchParams.toString());
+    let needsUpdate = false;
+
+    // Apply saved filters if persistence is enabled
+    if (options?.enablePersistence) {
+      const saved = getSavedFilters();
+      if (saved.categories?.length) {
+        params.set("categories", saved.categories.join(","));
+        needsUpdate = true;
+      }
+      if (saved.genres?.length) {
+        params.set("genres", saved.genres.join(","));
+        needsUpdate = true;
+      }
+      if (saved.neighborhoods?.length) {
+        params.set("neighborhoods", saved.neighborhoods.join(","));
+        needsUpdate = true;
+      }
+    }
+
+    // Apply smart date default if no date filter is set
+    if (!filters.date) {
+      const smartDefault = getSmartDateDefault(options?.portalVertical);
+      if (smartDefault) {
+        params.set("date", smartDefault);
+        needsUpdate = true;
+      }
+    }
+
+    if (needsUpdate) {
+      const queryString = params.toString();
+      router.replace(queryString ? `${pathname}?${queryString}` : pathname, { scroll: false });
+    }
+  }, []); // Only run on mount
 
   // Check if any filters are active (excluding view)
   const hasActiveFilters = useMemo(() => {
@@ -148,9 +289,33 @@ export function useEventFilters() {
       }
       const queryString = params.toString();
       router.push(queryString ? `${pathname}?${queryString}` : pathname, { scroll: false });
+
+      // Clear saved filters from localStorage
+      if (options?.enablePersistence) {
+        try {
+          localStorage.removeItem(`${STORAGE_KEY_PREFIX}-last`);
+        } catch {
+          // Silently fail
+        }
+      }
     },
-    [searchParams, router, pathname]
+    [searchParams, router, pathname, options?.enablePersistence]
   );
+
+  // Save filters to localStorage when they change
+  useEffect(() => {
+    if (!options?.enablePersistence) return;
+
+    const hasFiltersToSave = !!(
+      filters.categories?.length ||
+      filters.genres?.length ||
+      filters.neighborhoods?.length
+    );
+
+    if (hasFiltersToSave) {
+      saveFilters(filters);
+    }
+  }, [filters.categories, filters.genres, filters.neighborhoods, options?.enablePersistence]);
 
   // Switch view while preserving shared filters
   const switchView = useCallback(

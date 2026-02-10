@@ -366,7 +366,7 @@ export default function RSVPButton({
 
   // Variant-specific styles
   const getButtonClasses = () => {
-    const baseClasses = "font-mono font-medium rounded-xl transition-all duration-150 flex items-center gap-2 active:scale-[0.98]";
+    const baseClasses = "font-mono font-medium rounded-xl transition-all duration-150 flex items-center gap-2 active:scale-[0.98] touch-action-manipulation";
     const animationClass = isAnimating ? "scale-95" : "scale-100";
 
     if (variant === "compact") {
@@ -475,6 +475,7 @@ export default function RSVPButton({
         disabled={actionLoading}
         aria-haspopup="menu"
         aria-expanded={menuOpen}
+        style={{ touchAction: 'manipulation' }}
         className={getButtonClasses()}
       >
         {renderButtonContent()}

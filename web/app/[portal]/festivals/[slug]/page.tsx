@@ -289,6 +289,7 @@ export default async function PortalFestivalPage({ params }: Props) {
               sessions={sessions}
               programs={programs}
               portalSlug={activePortalSlug}
+              fullScheduleHref={`/${activePortalSlug}/festivals/${festival.slug}/schedule`}
             />
           ) : (
             <section className="rounded-lg border border-[var(--twilight)] bg-[var(--card-bg)] p-5 sm:p-6">

@@ -85,13 +85,14 @@ export default function ActivityChip({
   const href = buildActivityUrl(type, value, portalSlug, searchParams);
 
   const sizeClasses = {
-    sm: "px-2.5 py-1 text-xs",
-    md: "px-3 py-1.5 text-sm",
+    sm: "px-2.5 py-1 text-xs min-h-[44px] sm:min-h-[32px]",
+    md: "px-3 py-1.5 text-sm min-h-[44px] sm:min-h-[36px]",
   };
 
   const baseClasses = `
     inline-flex items-center gap-1.5 rounded-full font-medium transition-all btn-press
     focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--coral)]
+    touch-action-manipulation
     ${sizeClasses[size]}
   `;
 
@@ -118,6 +119,7 @@ export default function ActivityChip({
       <button
         onClick={onClick}
         className={`${baseClasses} ${activeClasses}`}
+        style={{ touchAction: 'manipulation' }}
         aria-pressed={isActive}
       >
         {content}
@@ -129,6 +131,7 @@ export default function ActivityChip({
     <Link
       href={href}
       className={`${baseClasses} ${activeClasses}`}
+      style={{ touchAction: 'manipulation' }}
       aria-current={isActive ? "page" : undefined}
     >
       {content}
@@ -160,7 +163,8 @@ export function GenreChip({
     <button
       className="inline-flex items-center px-1.5 py-0.5 rounded text-[0.65rem] font-mono
         bg-[var(--twilight)] text-[var(--muted)] hover:text-[var(--cream)] hover:bg-[var(--dusk)]
-        transition-colors border border-[var(--twilight)]"
+        transition-colors border border-[var(--twilight)] min-h-[28px] sm:min-h-[24px]"
+      style={{ touchAction: 'manipulation' }}
       onClick={(e) => {
         e.preventDefault();
         e.stopPropagation();

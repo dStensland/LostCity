@@ -1737,6 +1737,29 @@ body::after {
   display: none;
 }
 
+/* Horizontal scroll optimization for mobile */
+.scroll-touch {
+  -webkit-overflow-scrolling: touch; /* iOS momentum scrolling */
+  scroll-behavior: smooth;
+}
+
+.scroll-padding-x {
+  scroll-padding-left: 1rem;
+  scroll-padding-right: 1rem;
+}
+
+.scroll-snap-x {
+  scroll-snap-type: x mandatory;
+}
+
+.scroll-snap-start {
+  scroll-snap-align: start;
+}
+
+.scroll-snap-proximity {
+  scroll-snap-type: x proximity;
+}
+
 /* ============================================
    BUTTON SYSTEM - Consistent hierarchy
    ============================================ */
@@ -4410,6 +4433,7 @@ textarea:focus-visible {
 /* Button press feedback - universal */
 .btn-press {
   transition: transform 0.1s cubic-bezier(0.4, 0, 0.2, 1);
+  touch-action: manipulation; /* Prevent double-tap zoom on mobile */
 }
 
 .btn-press:active {
@@ -6076,4 +6100,147 @@ textarea:focus-visible {
   height: 1px;
   background: linear-gradient(to right, transparent, var(--hotel-sand) 20%, var(--hotel-sand) 80%, transparent);
   margin: 0 0 3rem 0;
+}
+/* ============================================
+   ONBOARDING ANIMATIONS
+   ============================================ */
+
+/* First selection celebration pulse */
+@keyframes celebration-pulse {
+  0% {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  20% {
+    opacity: 1;
+    transform: scale(1.1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+}
+
+.animate-celebration-pulse {
+  animation: celebration-pulse 1.5s ease-out forwards;
+}
+
+/* Category card selection bounce */
+@keyframes category-select {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.animate-category-select {
+  animation: category-select 0.3s ease-out;
+}
+
+/* Genre pill selection bounce */
+@keyframes genre-select {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.08);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.animate-genre-select {
+  animation: genre-select 0.25s ease-out;
+}
+
+/* Step transition - slide out */
+@keyframes step-slide-out {
+  0% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(-30px);
+  }
+}
+
+.animate-step-slide-out {
+  animation: step-slide-out 0.3s ease-in forwards;
+}
+
+/* Step transition - slide in */
+@keyframes step-slide-in {
+  0% {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.animate-step-slide-in {
+  animation: step-slide-in 0.3s ease-out forwards;
+}
+
+/* Progress dot pulse */
+@keyframes onboarding-dot-pulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 var(--coral);
+  }
+  50% {
+    transform: scale(1.1);
+    box-shadow: 0 0 0 4px rgba(255, 112, 112, 0.2);
+  }
+}
+
+.animate-onboarding-dot-pulse {
+  animation: onboarding-dot-pulse 2s ease-in-out infinite;
+}
+
+/* Completion celebration checkmark */
+@keyframes celebration-checkmark {
+  0% {
+    opacity: 0;
+    transform: scale(0.5) rotate(-10deg);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.1) rotate(5deg);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+.animate-celebration-checkmark {
+  animation: celebration-checkmark 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+/* Respect reduced motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  .animate-celebration-pulse,
+  .animate-category-select,
+  .animate-genre-select,
+  .animate-step-slide-out,
+  .animate-step-slide-in,
+  .animate-onboarding-dot-pulse,
+  .animate-celebration-checkmark {
+    animation: none !important;
+    transition: none !important;
+  }
 }

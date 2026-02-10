@@ -38,8 +38,15 @@ export default function LineupSection({
     (a) => !a.is_headliner && a.billing_order !== 1
   );
 
-  const displaySupport = expanded ? support : support.slice(0, maxDisplay - headliners.length);
-  const hasMore = !expanded && support.length > displaySupport.length;
+  const previewHeadliners = headliners.slice(0, maxDisplay);
+  const previewSlotsLeft = Math.max(0, maxDisplay - previewHeadliners.length);
+  const previewSupport = support.slice(0, previewSlotsLeft);
+
+  const displayHeadliners = expanded ? headliners : previewHeadliners;
+  const displaySupport = expanded ? support : previewSupport;
+  const displayCount = displayHeadliners.length + displaySupport.length;
+  const hasMore = artists.length > displayCount;
+  const canCollapse = expanded && artists.length > maxDisplay;
 
   return (
     <section>
@@ -54,20 +61,20 @@ export default function LineupSection({
       </h2>
 
       {/* Headliners - larger, prominent display */}
-      {headliners.length > 0 && (
+      {displayHeadliners.length > 0 && (
         <>
           <p className="text-[0.65rem] font-mono uppercase tracking-widest text-accent mb-3">
             {resolvedHeadliner}
           </p>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-6 justify-items-center mb-6">
-            {headliners.map((artist) => (
-            <ArtistChip
-              key={artist.id}
-              artist={artist}
-              portalSlug={portalSlug}
-              variant="card"
-            />
-          ))}
+            {displayHeadliners.map((artist) => (
+              <ArtistChip
+                key={artist.id}
+                artist={artist}
+                portalSlug={portalSlug}
+                variant="card"
+              />
+            ))}
           </div>
         </>
       )}
@@ -75,7 +82,7 @@ export default function LineupSection({
       {/* Supporting artists - compact grid */}
       {displaySupport.length > 0 && (
         <>
-          {headliners.length > 0 && (
+          {displayHeadliners.length > 0 && (
             <div className="border-t border-[var(--twilight)] my-4" />
           )}
           <p className="text-[0.65rem] font-mono uppercase tracking-widest text-[var(--muted)] mb-3">
@@ -102,6 +109,18 @@ export default function LineupSection({
         >
           See all {artists.length} {labels.artistNoun}
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+      )}
+
+      {canCollapse && (
+        <button
+          onClick={() => setExpanded(false)}
+          className="mt-3 w-full py-2.5 text-sm font-medium text-[var(--muted)] hover:text-[var(--cream)] border border-[var(--twilight)] rounded-lg hover:bg-[var(--card-bg-hover)] transition-colors flex items-center justify-center gap-2"
+        >
+          Show fewer
+          <svg className="w-4 h-4 rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
           </svg>
         </button>

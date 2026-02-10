@@ -71,8 +71,8 @@ const VARIANT_STYLES: Record<FilterChipVariant, { active: string; inactive: stri
 const FilterChip = forwardRef<HTMLButtonElement, FilterChipProps>(
   ({ label, variant = "default", active = false, removable = false, size = "md", count, onClick, onRemove, className = "" }, ref) => {
     const sizeClasses = size === "sm"
-      ? "min-h-[32px] px-2.5 text-[0.6rem]"
-      : "min-h-[36px] px-3 text-[0.65rem]";
+      ? "min-h-[44px] sm:min-h-[32px] px-3 sm:px-2.5 py-2 sm:py-1 text-[0.6rem]"
+      : "min-h-[44px] sm:min-h-[36px] px-3.5 sm:px-3 py-2.5 sm:py-1.5 text-[0.65rem]";
 
     const styles = VARIANT_STYLES[variant];
     const variantClasses = active ? styles.active : styles.inactive;
@@ -92,13 +92,15 @@ const FilterChip = forwardRef<HTMLButtonElement, FilterChipProps>(
         onClick={onClick}
         className={`
           inline-flex items-center gap-1.5 rounded-full border font-mono font-medium
-          transition-all duration-150 ease-out active:animate-chip-toggle
+          transition-all duration-150 ease-out active:scale-95
           focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--coral)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--night)]
+          touch-action-manipulation
           ${sizeClasses}
           ${variantClasses}
           ${glowClasses}
           ${className}
         `}
+        style={{ touchAction: 'manipulation' }}
         aria-pressed={active}
       >
         <span className="whitespace-nowrap">{label}</span>

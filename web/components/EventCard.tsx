@@ -3,6 +3,7 @@
 import { memo, useState, useCallback, useMemo } from "react";
 import type { CSSProperties } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import type { Event } from "@/lib/supabase";
 import { AvatarStack } from "./UserAvatar";
 import { formatTimeSplit, formatSmartDate, formatPriceDetailed, formatCompactCount, formatTime } from "@/lib/formats";
@@ -115,6 +116,7 @@ interface Props {
 }
 
 function EventCard({ event, index = 0, skipAnimation = false, portalSlug, friendsGoing = [], reasons, contextType }: Props) {
+  const router = useRouter();
   const { time, period } = formatTimeSplit(event.start_time, event.is_all_day);
   const dateInfo = formatSmartDate(event.start_date);
   const isLive = event.is_live || false;
@@ -124,6 +126,26 @@ function EventCard({ event, index = 0, skipAnimation = false, portalSlug, friend
   const accentColor = event.category ? getCategoryColor(event.category) : "var(--neon-magenta)";
   const reflectionClass = getReflectionClass(event.category);
   const price = formatPriceDetailed(event);
+
+  // Build "More Like This" filter URL
+  const moreLikeThisUrl = useMemo(() => {
+    if (!portalSlug) return null;
+
+    const params = new URLSearchParams();
+    if (event.category) params.set("categories", event.category);
+    if (event.genres?.length) params.set("genres", event.genres.join(","));
+    if (event.venue?.neighborhood) params.set("neighborhoods", event.venue.neighborhood);
+
+    return `/${portalSlug}?view=events&${params.toString()}`;
+  }, [event.category, event.genres, event.venue?.neighborhood, portalSlug]);
+
+  const handleMoreLikeThis = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (moreLikeThisUrl) {
+      router.push(moreLikeThisUrl);
+    }
+  }, [router, moreLikeThisUrl]);
 
   // Optimistic RSVP count adjustments — user's own RSVP immediately ticks the count
   const [countAdjust, setCountAdjust] = useState({ going: 0, interested: 0, recommendation: 0 });
@@ -165,7 +187,7 @@ function EventCard({ event, index = 0, skipAnimation = false, portalSlug, friend
 
   return (
     <div
-      className={`mb-2 sm:mb-4 rounded-sm border border-[var(--twilight)] card-atmospheric glow-accent reflection-accent ${reflectionClass} ${animationClass} ${staggerClass} bg-[var(--card-bg)] overflow-hidden group card-hover-lift ${
+      className={`mb-2 sm:mb-4 rounded-xl border border-subtle card-atmospheric glow-accent reflection-accent ${reflectionClass} ${animationClass} ${staggerClass} surface-raised overflow-hidden group card-hover-lift shadow-card-sm hover:shadow-card-md ${
         event.category ? "border-l-[3px] border-l-[var(--accent-color)]" : ""
       }`}
       style={
@@ -241,7 +263,7 @@ function EventCard({ event, index = 0, skipAnimation = false, portalSlug, friend
                   )}
                 </div>
                 {/* Title row: full width - larger and bolder */}
-                <h3 className="text-[var(--cream)] font-bold text-lg leading-tight line-clamp-2 group-hover:text-[var(--glow-color,var(--neon-magenta))] transition-colors mb-1">
+                <h3 className="text-[var(--text-primary)] font-semibold text-base leading-tight line-clamp-2 group-hover:text-[var(--glow-color,var(--neon-magenta))] transition-colors mb-1">
                   {event.title}
                 </h3>
               </div>
@@ -254,7 +276,7 @@ function EventCard({ event, index = 0, skipAnimation = false, portalSlug, friend
                   </span>
                 )}
                 <span
-                  className="text-[var(--cream)] font-bold text-lg transition-colors line-clamp-1 group-hover:text-[var(--glow-color,var(--neon-magenta))]"
+                  className="text-[var(--text-primary)] font-semibold text-base transition-colors line-clamp-1 group-hover:text-[var(--glow-color,var(--neon-magenta))]"
                 >
                   {event.title}
                 </span>
@@ -271,9 +293,17 @@ function EventCard({ event, index = 0, skipAnimation = false, portalSlug, friend
 
               {/* Details row - venue and metadata with better hierarchy */}
               {/* Mobile: show only venue + price; Desktop: show all metadata */}
-              <div className="flex items-center gap-1.5 text-sm text-[var(--soft)] mt-1">
+              <div className="flex items-center gap-1.5 text-sm text-[var(--text-secondary)] mt-1.5 leading-relaxed">
                 {event.venue && (
-                  <span className="truncate max-w-[60%] sm:max-w-[40%] font-medium" title={event.venue.name}>{event.venue.name}</span>
+                  <>
+                    <span className="truncate max-w-[60%] sm:max-w-[40%] font-medium text-[var(--text-base)]" title={event.venue.name}>{event.venue.name}</span>
+                    {event.venue.neighborhood && (
+                      <>
+                        <span className="opacity-40">·</span>
+                        <span className="hidden sm:inline truncate" title={event.venue.neighborhood}>{event.venue.neighborhood}</span>
+                      </>
+                    )}
+                  </>
                 )}
                 {/* Genre or subcategory chips - desktop only for cleaner mobile */}
                 {event.genres && event.genres.length > 0 ? (
@@ -286,13 +316,6 @@ function EventCard({ event, index = 0, skipAnimation = false, portalSlug, friend
                     ))}
                   </span>
                 ) : null}
-                {/* Neighborhood - desktop only for cleaner mobile */}
-                {event.venue?.neighborhood && (
-                  <span className="hidden sm:contents">
-                    <span className="opacity-40">·</span>
-                    <span className="truncate" title={event.venue.neighborhood}>{event.venue.neighborhood}</span>
-                  </span>
-                )}
                 {price && price.text && (
                   <>
                     <span className="opacity-40">·</span>
@@ -372,6 +395,21 @@ function EventCard({ event, index = 0, skipAnimation = false, portalSlug, friend
                   ).map((reason, idx) => (
                     <ReasonBadge key={`${reason.type}-${idx}`} reason={reason} size="sm" />
                   ))}
+                </div>
+              )}
+
+              {/* More Like This button - subtle, appears on hover */}
+              {moreLikeThisUrl && (
+                <div className="mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button
+                    onClick={handleMoreLikeThis}
+                    className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-mono text-[var(--muted)] hover:text-[var(--coral)] hover:bg-[var(--twilight)]/50 transition-colors"
+                  >
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                    </svg>
+                    More like this
+                  </button>
                 </div>
               )}
 
@@ -487,7 +525,8 @@ function EventCard({ event, index = 0, skipAnimation = false, portalSlug, friend
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label={linkOutLabel}
-                className="hidden sm:inline-flex w-11 h-11 items-center justify-center rounded-xl border border-[var(--twilight)]/80 bg-[var(--dusk)]/70 text-[var(--muted)] backdrop-blur-[2px] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.02)] hover:text-[var(--cream)] hover:border-[var(--cta-border,rgba(255,107,122,0.7))] hover:shadow-[0_0_18px_var(--cta-glow,rgba(255,107,122,0.25))] transition-all"
+                style={{ touchAction: 'manipulation' }}
+                className="hidden sm:inline-flex w-11 h-11 items-center justify-center rounded-xl border border-[var(--twilight)]/80 bg-[var(--dusk)]/70 text-[var(--muted)] backdrop-blur-[2px] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.02)] hover:text-[var(--cream)] hover:border-[var(--cta-border,rgba(255,107,122,0.7))] hover:shadow-[0_0_18px_var(--cta-glow,rgba(255,107,122,0.25))] transition-all active:scale-95"
               >
                 {isTicketLinkOut ? (
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

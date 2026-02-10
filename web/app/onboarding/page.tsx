@@ -37,6 +37,8 @@ function OnboardingContent() {
     family: string[];
   }>({ accessibility: [], dietary: [], family: [] });
   const [portal, setPortal] = useState<Portal | null>(null);
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  const [showCelebration, setShowCelebration] = useState(false);
 
   // Redirect if not logged in
   useEffect(() => {
@@ -68,19 +70,31 @@ function OnboardingContent() {
   const handleCategoryComplete = useCallback(
     (categories: string[]) => {
       setSelectedCategories(categories);
-      setStep("genres");
+      // Trigger smooth transition to next step
+      setIsTransitioning(true);
+      setTimeout(() => {
+        setStep("genres");
+        setIsTransitioning(false);
+      }, 300);
     },
     []
   );
 
   const handleCategorySkip = useCallback(() => {
-    setStep("genres");
+    setIsTransitioning(true);
+    setTimeout(() => {
+      setStep("genres");
+      setIsTransitioning(false);
+    }, 300);
   }, []);
 
   const handleGenreComplete = useCallback(
     async (genres: Record<string, string[]>, needs: { accessibility: string[]; dietary: string[]; family: string[] }) => {
       setSelectedGenres(genres);
       setSelectedNeeds(needs);
+      // Show celebration before redirect
+      setShowCelebration(true);
+      await new Promise((resolve) => setTimeout(resolve, 1200));
       await completeOnboarding(genres, needs);
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -88,6 +102,8 @@ function OnboardingContent() {
   );
 
   const handleGenreSkip = useCallback(async () => {
+    setShowCelebration(true);
+    await new Promise((resolve) => setTimeout(resolve, 1200));
     await completeOnboarding({}, { accessibility: [], dietary: [], family: [] });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedCategories]);
@@ -192,21 +208,50 @@ function OnboardingContent() {
       <OnboardingProgress currentStep={step} />
 
       {/* Main content */}
-      <main className="flex-1">
-        {step === "categories" && (
-          <CategoryPicker
-            onComplete={handleCategoryComplete}
-            onSkip={handleCategorySkip}
-          />
+      <main className="flex-1 relative overflow-hidden">
+        {/* Celebration overlay */}
+        {showCelebration && (
+          <div className="absolute inset-0 z-50 flex items-center justify-center bg-[var(--void)]/80 backdrop-blur-sm animate-fadeIn">
+            <div className="text-center animate-celebration-checkmark">
+              <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-[var(--coral)] flex items-center justify-center">
+                <svg
+                  className="w-12 h-12 text-[var(--void)]"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+              </div>
+              <p className="font-mono text-xl text-[var(--cream)]">You're all set!</p>
+            </div>
+          </div>
         )}
 
-        {step === "genres" && (
-          <GenrePicker
-            onComplete={handleGenreComplete}
-            onSkip={handleGenreSkip}
-            selectedCategories={selectedCategories}
-          />
-        )}
+        {/* Step transitions */}
+        <div className={isTransitioning ? "animate-step-slide-out" : ""}>
+          {step === "categories" && (
+            <div className="animate-step-slide-in">
+              <CategoryPicker
+                onComplete={handleCategoryComplete}
+                onSkip={handleCategorySkip}
+              />
+            </div>
+          )}
+
+          {step === "genres" && (
+            <div className="animate-step-slide-in">
+              <GenrePicker
+                onComplete={handleGenreComplete}
+                onSkip={handleGenreSkip}
+                selectedCategories={selectedCategories}
+              />
+            </div>
+          )}
+        </div>
       </main>
     </div>
   );

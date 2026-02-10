@@ -23,6 +23,17 @@ export function CategoryPicker({ onComplete, onSkip }: CategoryPickerProps) {
     onComplete(selectedCategories);
   };
 
+  // First selection celebration
+  const [showCelebration, setShowCelebration] = useState(false);
+  const [hasShownCelebration, setHasShownCelebration] = useState(false);
+
+  // Show celebration on first selection
+  if (selectedCategories.length === 1 && !hasShownCelebration) {
+    setHasShownCelebration(true);
+    setShowCelebration(true);
+    setTimeout(() => setShowCelebration(false), 1500);
+  }
+
   return (
     <div className="flex flex-col items-center justify-center min-h-[calc(100vh-120px)] px-4 py-8">
       <div className="w-full max-w-lg animate-fadeIn">
@@ -32,8 +43,15 @@ export function CategoryPicker({ onComplete, onSkip }: CategoryPickerProps) {
             What are you into?
           </h1>
           <p className="text-[var(--soft)] text-sm">
-            Pick your favorites (or skip to see everything)
+            Pick as many as you want — you can always change these later
           </p>
+
+          {/* First selection celebration */}
+          {showCelebration && (
+            <p className="text-[var(--coral)] text-lg font-mono mt-4 animate-celebration-pulse">
+              Nice! 🎉
+            </p>
+          )}
         </div>
 
         {/* Category grid */}
@@ -46,8 +64,8 @@ export function CategoryPicker({ onComplete, onSkip }: CategoryPickerProps) {
                 onClick={() => toggleCategory(category.value)}
                 className={`group relative p-4 rounded-xl border-2 transition-all duration-200 text-left ${
                   isSelected
-                    ? "border-[var(--coral)] bg-[var(--coral)]/10"
-                    : "border-[var(--twilight)] bg-[var(--dusk)]/50 hover:border-[var(--coral)]/50"
+                    ? "border-[var(--coral)] bg-[var(--coral)]/10 animate-category-select"
+                    : "border-[var(--twilight)] bg-[var(--dusk)]/50 hover:border-[var(--coral)]/50 hover:scale-105"
                 }`}
               >
                 {/* Emoji */}
@@ -105,7 +123,7 @@ export function CategoryPicker({ onComplete, onSkip }: CategoryPickerProps) {
             onClick={onSkip}
             className="w-full py-3 text-center font-mono text-sm text-[var(--soft)] hover:text-[var(--cream)] transition-colors"
           >
-            Skip — show me everything
+            Just show me everything
           </button>
         </div>
       </div>

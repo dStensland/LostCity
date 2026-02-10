@@ -103,7 +103,7 @@ export function GenrePicker({ onComplete, onSkip, selectedCategories }: GenrePic
             Dial it in
           </h1>
           <p className="text-[var(--soft)] text-sm">
-            Pick the stuff you love (or skip to see everything)
+            Pick as many as you want — you can always change these later
           </p>
         </div>
 
@@ -153,8 +153,8 @@ export function GenrePicker({ onComplete, onSkip, selectedCategories }: GenrePic
                           onClick={() => toggleGenre(category, g.genre)}
                           className={`px-4 py-2 rounded-full border-2 font-mono text-sm transition-all ${
                             isSelected
-                              ? "border-[var(--coral)] bg-[var(--coral)]/10 text-[var(--cream)]"
-                              : "border-[var(--twilight)] text-[var(--soft)] hover:border-[var(--coral)]/50 hover:text-[var(--cream)]"
+                              ? "border-[var(--coral)] bg-[var(--coral)]/10 text-[var(--cream)] animate-genre-select"
+                              : "border-[var(--twilight)] text-[var(--soft)] hover:border-[var(--coral)]/50 hover:text-[var(--cream)] hover:scale-105"
                           }`}
                         >
                           {getGenreDisplayLabel(g.genre)}
@@ -226,11 +226,11 @@ export function GenrePicker({ onComplete, onSkip, selectedCategories }: GenrePic
             onClick={handleFinish}
             className={`w-full py-3 px-6 rounded-xl font-mono text-sm transition-all ${
               totalSelected > 0
-                ? "bg-[var(--coral)] text-[var(--void)] hover:bg-[var(--rose)]"
+                ? "bg-[var(--coral)] text-[var(--void)] hover:bg-[var(--rose)] hover:scale-105"
                 : "bg-[var(--twilight)] text-[var(--cream)] hover:bg-[var(--twilight)]/80"
             }`}
           >
-            {totalSelected > 0 ? `Finish (${totalSelected})` : "Finish without selecting"}
+            {totalSelected > 0 ? `Let's go! (${totalSelected})` : "Let's go!"}
           </button>
 
           <button

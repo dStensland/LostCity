@@ -242,6 +242,13 @@ export default function SimpleFilterBar({ variant = "full" }: SimpleFilterBarPro
       price: null,
       feed: null,
     });
+
+    // Clear saved filters from localStorage
+    try {
+      localStorage.removeItem("lostcity-filters-last");
+    } catch {
+      // Silently fail if localStorage unavailable
+    }
   }, [updateParams]);
 
   const dateInputRef = useRef<HTMLInputElement>(null);
@@ -672,7 +679,13 @@ export default function SimpleFilterBar({ variant = "full" }: SimpleFilterBarPro
       {/* Genre pills — mobile horizontal scroll */}
       {genreOptions.length > 0 && (
         <div className="sm:hidden bg-[var(--night)] border-b border-[var(--twilight)]/50">
-          <div className="flex items-center gap-2 overflow-x-auto px-4 py-1.5 scrollbar-hide">
+          <div
+            className="flex items-center gap-2 overflow-x-auto px-4 py-1.5 scrollbar-hide scroll-touch scroll-padding-x"
+            style={{
+              WebkitOverflowScrolling: 'touch',
+              scrollSnapType: 'x proximity'
+            }}
+          >
             <span className="flex-shrink-0 text-[0.6rem] font-mono uppercase tracking-wider text-[var(--muted)]">Genre</span>
             {genreOptions.map((opt) => {
               const isActive = currentGenres.includes(opt.genre);
@@ -709,7 +722,11 @@ export default function SimpleFilterBar({ variant = "full" }: SimpleFilterBarPro
             {/* Scrollable pills container */}
             <div
               ref={scrollContainerRef}
-              className="flex items-center gap-2 overflow-x-auto px-4 pb-1 scrollbar-hide scroll-smooth snap-x snap-proximity scroll-touch scrollbar-none"
+              className="flex items-center gap-2 overflow-x-auto px-4 pb-1 scrollbar-hide scroll-smooth scroll-touch scroll-padding-x"
+              style={{
+                WebkitOverflowScrolling: 'touch',
+                scrollSnapType: 'x proximity'
+              }}
             >
               {/* Weekend pill */}
               <button
