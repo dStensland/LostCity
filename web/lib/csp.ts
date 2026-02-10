@@ -58,7 +58,10 @@ export function buildCsp(nonce: string, options: CspOptions = {}): string {
 
   const styleSrc = `style-src ${STATIC_STYLE_SRC_BASE} 'nonce-${nonce}'${allowInlineStyles ? " 'unsafe-inline'" : ""}`;
   const styleSrcElem = `style-src-elem ${STATIC_STYLE_SRC_BASE} 'nonce-${nonce}'${allowInlineStyles ? " 'unsafe-inline'" : ""}`;
-  const styleSrcAttr = `style-src-attr ${allowInlineStyles ? "'unsafe-inline'" : "'none'"}`;
+  // Always allow inline style attributes — React components use style={{ }} extensively
+  // (Mapbox, skeletons, progress bars, dynamic layouts). style-src-attr doesn't enable
+  // script execution, so 'unsafe-inline' here has minimal security impact.
+  const styleSrcAttr = "style-src-attr 'unsafe-inline'";
 
   const imgSrc = `img-src ${STATIC_IMG_SRC}`;
   const fontSrc = `font-src ${STATIC_FONT_SRC}`;

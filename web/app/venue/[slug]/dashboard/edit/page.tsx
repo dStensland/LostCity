@@ -81,7 +81,7 @@ export default function VenueEditPage({
     setError(null);
 
     try {
-      const response = await fetch(`/api/venues/${params.slug}/edit`, {
+      const response = await fetch(`/api/venues/by-slug/${params.slug}/edit`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",

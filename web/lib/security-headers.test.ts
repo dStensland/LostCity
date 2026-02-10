@@ -42,7 +42,7 @@ describe("security headers", () => {
     expect(csp).toContain(`'nonce-${nonce}'`);
     expect(csp).toContain(`style-src 'self'`);
     expect(csp).toContain(`style-src-elem 'self'`);
-    expect(csp).toContain("style-src-attr 'none'");
+    expect(csp).toContain("style-src-attr 'unsafe-inline'");
     expect(csp).toContain("script-src-attr 'none'");
     expect(csp).toContain("frame-ancestors 'none'");
     expect(csp).toContain("object-src 'none'");
@@ -60,7 +60,7 @@ describe("security headers", () => {
     expect(csp).toContain("style-src 'self'");
     expect(csp).toContain(`style-src-elem 'self'`);
     expect(csp).toContain(`'nonce-${nonce}'`);
-    expect(csp).toContain("style-src-attr 'none'");
+    expect(csp).toContain("style-src-attr 'unsafe-inline'");
     expect(csp).toContain("report-uri /api/csp-report");
   });
 });

@@ -105,7 +105,7 @@ export default function SubmitEventPage({
         price_note: formData.price_note || undefined,
       };
 
-      const response = await fetch(`/api/venues/${params.slug}/submit-event`, {
+      const response = await fetch(`/api/venues/by-slug/${params.slug}/submit-event`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
