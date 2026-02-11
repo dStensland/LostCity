@@ -62,7 +62,21 @@ export async function GET(request: NextRequest) {
   }
 
   // Group by film (series_id when available, otherwise by title)
-  type ShowtimeEvent = NonNullable<typeof events>[number];
+  type ShowtimeVenue = { id: number; name: string; slug: string; neighborhood: string | null };
+  type ShowtimeSeries = { id: string; title: string; image_url: string | null };
+  type ShowtimeEvent = {
+    id: number;
+    title: string;
+    start_time: string | null;
+    image_url: string | null;
+    tags: string[] | null;
+    series_id: string | null;
+    venue: ShowtimeVenue | null;
+    series: ShowtimeSeries | null;
+  };
+
+  // Supabase client typing can regress to `never` when schema inference is unavailable.
+  const typedEvents = (events as unknown as ShowtimeEvent[] | null) || [];
 
   const filmMap = new Map<
     string,
@@ -83,11 +97,11 @@ export async function GET(request: NextRequest) {
     }
   >();
 
-  for (const event of events || []) {
-    const venue = event.venue as { id: number; name: string; slug: string; neighborhood: string | null } | null;
+  for (const event of typedEvents) {
+    const venue = event.venue;
     if (!venue) continue;
 
-    const series = event.series as { id: string; title: string; image_url: string | null } | null;
+    const series = event.series;
 
     // Group key: prefer series_id for accurate grouping across venues
     const groupKey = event.series_id || `title:${event.title.toLowerCase().trim()}`;

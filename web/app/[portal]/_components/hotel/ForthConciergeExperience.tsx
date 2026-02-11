@@ -1602,10 +1602,11 @@ export default function ForthConciergeExperience({ portal }: ForthConciergeExper
       }
 
       if (step.venueTypes && step.venueTypes.length > 0) {
+        const venueTypes = step.venueTypes;
         pickCandidate((candidate) => (
           candidate.kind === "destination" &&
           !!candidate.venueType &&
-          step.venueTypes?.includes(candidate.venueType)
+          venueTypes.includes(candidate.venueType)
         ));
       } else {
         pickCandidate((candidate) => candidate.kind === "destination");

@@ -12,6 +12,7 @@ type LiveEventRow = {
   is_all_day: boolean;
   category: string | null;
   subcategory: string | null;
+  tags: string[] | null;
   price_min: number | null;
   price_max: number | null;
   is_free: boolean;

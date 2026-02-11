@@ -139,7 +139,7 @@ function EventCard({
   const venueName = event.venue?.name ? decodeHtmlEntities(event.venue.name) : null;
   const venueNeighborhood = event.venue?.neighborhood ? decodeHtmlEntities(event.venue.neighborhood) : null;
   const instructorName = event.instructor ? decodeHtmlEntities(event.instructor) : null;
-  const railImageUrl = event.image_url || event.series?.image_url || null;
+  const railImageUrl = event.image_url ?? event.series?.image_url ?? undefined;
   const railBlurhash = event.blurhash || event.series?.blurhash || null;
   const hasRailImage = Boolean(railImageUrl);
 
@@ -287,7 +287,7 @@ function EventCard({
               }`}
               style={{ borderTopLeftRadius: "inherit", borderBottomLeftRadius: "inherit" }}
             >
-              {hasRailImage && (
+              {railImageUrl && (
                 <>
                   <Image
                     src={railImageUrl}

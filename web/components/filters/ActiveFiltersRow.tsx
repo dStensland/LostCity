@@ -42,10 +42,13 @@ export default function ActiveFiltersRow({ className = "" }: ActiveFiltersRowPro
     return map;
   }, []);
 
-  const moodLabelMap = useMemo(
-    () => new Map(MOODS.map((mood) => [mood.id, mood.name])),
-    []
-  );
+  const moodLabelMap = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const mood of MOODS) {
+      map.set(mood.id, mood.name);
+    }
+    return map;
+  }, []);
 
   // Build list of all active filters
   const activeFilters = useMemo(() => {

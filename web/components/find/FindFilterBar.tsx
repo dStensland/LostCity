@@ -47,7 +47,7 @@ function humanize(value: string): string {
     .join(" ");
 }
 
-const MOOD_LABELS = new Map(MOOD_OPTIONS.map((option) => [option.value, option.label]));
+const MOOD_LABELS = new Map<string, string>(MOOD_OPTIONS.map((option) => [option.value, option.label]));
 
 export default function FindFilterBar({ variant = "full" }: FindFilterBarProps) {
   const router = useRouter();

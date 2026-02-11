@@ -109,7 +109,7 @@ const SeriesCard = memo(function SeriesCard({
   const firstVenue = venueGroups[0]?.venue;
   const firstVenueName = firstVenue?.name ? decodeHtmlEntities(firstVenue.name) : null;
   const firstVenueNeighborhood = firstVenue?.neighborhood ? decodeHtmlEntities(firstVenue.neighborhood) : null;
-  const railImageUrl = series.image_url;
+  const railImageUrl = series.image_url ?? undefined;
   const railBlurhash = series.blurhash || null;
   const hasRailImage = Boolean(railImageUrl);
 
@@ -243,7 +243,7 @@ const SeriesCard = memo(function SeriesCard({
                 }`}
                 style={{ borderTopLeftRadius: "inherit", borderBottomLeftRadius: "inherit" }}
               >
-                {hasRailImage && (
+                {railImageUrl && (
                   <>
                     <Image
                       src={railImageUrl}
