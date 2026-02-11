@@ -3,18 +3,18 @@ Crawler for Chattahoochee Riverkeeper (chattahoochee.org).
 Environmental advocacy organization protecting the Chattahoochee River.
 Hosts river cleanups, paddle trips, advocacy events, and educational programs.
 
-STATUS: BROKEN — Tribe Events REST API returns 500 Internal Server Error
-as of 2026-02-10. Their WordPress installation may have a plugin issue.
-Retry periodically — may resolve when they update their site.
+Uses the iCal feed (Tribe Events Calendar export) which works reliably
+even when the REST API returns 500 errors.
 """
 
 from __future__ import annotations
 
 import logging
 import re
-from datetime import datetime
+from datetime import datetime, date
 from typing import Optional
 import requests
+from icalendar import Calendar
 
 from db import get_or_create_venue, insert_event, find_event_by_hash
 from dedupe import generate_content_hash
@@ -22,7 +22,7 @@ from dedupe import generate_content_hash
 logger = logging.getLogger(__name__)
 
 BASE_URL = "https://chattahoochee.org"
-API_URL = f"{BASE_URL}/wp-json/tribe/events/v1/events"
+ICAL_URL = f"{BASE_URL}/events/?ical=1"
 
 VENUE_DATA = {
     "name": "Chattahoochee Riverkeeper",
@@ -41,99 +41,52 @@ VENUE_DATA = {
 }
 
 
-def parse_event_datetime(event_data: dict) -> tuple[Optional[str], Optional[str], Optional[str], Optional[str]]:
-    """
-    Parse event datetime from Tribe Events API response.
+def determine_category(title: str, description: str) -> tuple[str, Optional[str], list[str]]:
+    """Determine event category based on title and description."""
+    combined = f"{title} {description}".lower()
 
-    Args:
-        event_data: Event object from API
-
-    Returns:
-        Tuple of (start_date, start_time, end_date, end_time)
-    """
-    try:
-        start_date_str = event_data.get("start_date", "")
-        end_date_str = event_data.get("end_date", "")
-        is_all_day = event_data.get("all_day", False)
-
-        if not start_date_str:
-            return None, None, None, None
-
-        # Parse start datetime
-        start_dt = datetime.strptime(start_date_str, "%Y-%m-%d %H:%M:%S")
-        start_date = start_dt.strftime("%Y-%m-%d")
-        start_time = None if is_all_day else start_dt.strftime("%H:%M")
-
-        # Parse end datetime if exists
-        end_date = None
-        end_time = None
-
-        if end_date_str:
-            end_dt = datetime.strptime(end_date_str, "%Y-%m-%d %H:%M:%S")
-            end_date = end_dt.strftime("%Y-%m-%d")
-            if not is_all_day:
-                end_time = end_dt.strftime("%H:%M")
-
-        return start_date, start_time, end_date, end_time
-
-    except (ValueError, KeyError) as e:
-        logger.warning(f"Failed to parse event datetime: {e}")
-        return None, None, None, None
-
-
-def determine_category(event_data: dict) -> tuple[str, Optional[str], list[str]]:
-    """
-    Determine category based on event data.
-
-    Args:
-        event_data: Event object from API
-
-    Returns:
-        Tuple of (category, subcategory, tags)
-    """
-    title = event_data.get("title", "").lower()
-    description = event_data.get("description", "").lower()
-    combined = f"{title} {description}"
-
-    # Base tags for environmental org
     event_tags = ["environmental", "chattahoochee"]
 
-    # Check if volunteer event
     if any(word in combined for word in ["cleanup", "clean up", "volunteer", "service"]):
         event_tags.append("volunteer")
         return "community", "volunteer", event_tags
 
-    # Outdoor recreation
     if any(word in combined for word in ["paddle", "kayak", "canoe", "float", "river trip", "boat"]):
         event_tags.extend(["outdoors", "water-sports"])
         return "outdoors", "paddle", event_tags
 
-    # Educational programs
     if any(word in combined for word in ["workshop", "training", "class", "learn", "education"]):
         event_tags.append("education")
         return "learning", "workshop", event_tags
 
-    # Advocacy and policy
-    if any(word in combined for word in ["advocacy", "policy", "meeting", "hearing", "community meeting"]):
+    if any(word in combined for word in ["advocacy", "policy", "capitol", "legislat", "hearing", "conservation day"]):
         event_tags.append("advocacy")
         return "community", "meeting", event_tags
 
-    # Tours and hikes
     if any(word in combined for word in ["tour", "hike", "walk", "trail"]):
         event_tags.append("outdoors")
         return "outdoors", "tour", event_tags
 
-    # Social events
     if any(word in combined for word in ["happy hour", "fundraiser", "gala", "party", "celebration"]):
         event_tags.append("social")
         return "community", "social", event_tags
 
-    # Default to community/environmental
     return "community", "environmental", event_tags
 
 
+def clean_ical_text(text: str) -> str:
+    """Clean text from iCal fields."""
+    if not text:
+        return ""
+    text = re.sub(r'<[^>]+>', '', text)
+    text = re.sub(r'\\n', '\n', text)
+    text = re.sub(r'\\,', ',', text)
+    text = re.sub(r'\s+', ' ', text).strip()
+    return text
+
+
 def crawl(source: dict) -> tuple[int, int, int]:
-    """Crawl Chattahoochee Riverkeeper events using Tribe Events REST API."""
+    """Crawl Chattahoochee Riverkeeper events via iCal feed."""
     source_id = source["id"]
     events_found = 0
     events_new = 0
@@ -142,160 +95,124 @@ def crawl(source: dict) -> tuple[int, int, int]:
     try:
         venue_id = get_or_create_venue(VENUE_DATA)
 
-        # Fetch upcoming events from API
-        today = datetime.now().strftime("%Y-%m-%d")
-        params = {
-            "per_page": 50,
-            "start_date": f"{today} 00:00:00",
-            "status": "publish",
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+            "Accept": "text/calendar",
         }
 
-        page = 1
-        max_pages = 10
+        logger.info(f"Fetching Chattahoochee Riverkeeper iCal feed: {ICAL_URL}")
+        response = requests.get(ICAL_URL, headers=headers, timeout=30)
+        response.raise_for_status()
 
-        while page <= max_pages:
-            params["page"] = page
+        cal = Calendar.from_ical(response.content)
+        today = date.today()
 
-            headers = {
-                "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-                "Accept": "application/json",
-                "Referer": f"{BASE_URL}/events/",
-            }
+        for component in cal.walk():
+            if component.name != "VEVENT":
+                continue
 
-            logger.info(f"Fetching Chattahoochee Riverkeeper events page {page}: {API_URL}")
-            response = requests.get(API_URL, params=params, headers=headers, timeout=30)
-            response.raise_for_status()
-
-            data = response.json()
-            events_data = data.get("events", [])
-
-            if not events_data:
-                logger.info(f"No more events found on page {page}")
-                break
-
-            logger.info(f"Found {len(events_data)} events on page {page}")
-
-            for event_data in events_data:
-                try:
-                    # Extract basic info
-                    title = event_data.get("title", "")
-                    if not title:
-                        continue
-
-                    # Clean HTML entities
-                    title = re.sub(r'&#\d+;', '', title)
-                    title = re.sub(r'&[a-z]+;', '', title)
-                    title = title.strip()
-
-                    # Parse dates
-                    start_date, start_time, end_date, end_time = parse_event_datetime(event_data)
-
-                    if not start_date:
-                        logger.warning(f"No start date for: {title}")
-                        continue
-
-                    # Skip past events
-                    try:
-                        check_date = end_date or start_date
-                        if datetime.strptime(check_date, "%Y-%m-%d").date() < datetime.now().date():
-                            logger.debug(f"Skipping past event: {title}")
-                            continue
-                    except ValueError:
-                        pass
-
-                    # Determine category
-                    category, subcategory, event_tags = determine_category(event_data)
-
-                    # Get description
-                    description = event_data.get("description", "")
-                    # Remove HTML tags
-                    description = re.sub(r'<[^>]+>', '', description)
-                    description = description.strip()
-
-                    if not description or len(description) < 10:
-                        description = f"{title} hosted by Chattahoochee Riverkeeper"
-
-                    # Get event URL
-                    source_url = event_data.get("url", f"{BASE_URL}/events/")
-
-                    # Check for pricing
-                    cost = event_data.get("cost", "")
-                    is_free = not cost or "free" in cost.lower()
-                    price_min = None
-                    price_max = None
-
-                    if cost and not is_free:
-                        # Try to extract price from cost string
-                        price_match = re.search(r'\$?(\d+(?:\.\d{2})?)', cost)
-                        if price_match:
-                            price_min = float(price_match.group(1))
-                            price_max = price_min
-
-                    # Image
-                    image_url = None
-                    if event_data.get("image"):
-                        if isinstance(event_data["image"], dict):
-                            image_url = event_data["image"].get("url")
-                        elif isinstance(event_data["image"], str):
-                            image_url = event_data["image"]
-
-                    events_found += 1
-
-                    # Generate content hash
-                    content_hash = generate_content_hash(title, "Chattahoochee Riverkeeper", start_date)
-
-                    # Check for existing event
-                    if find_event_by_hash(content_hash):
-                        events_updated += 1
-                        continue
-
-                    # Check if all-day
-                    is_all_day = event_data.get("all_day", False)
-
-                    event_record = {
-                        "source_id": source_id,
-                        "venue_id": venue_id,
-                        "title": title,
-                        "description": description[:1000],
-                        "start_date": start_date,
-                        "start_time": start_time,
-                        "end_date": end_date,
-                        "end_time": end_time,
-                        "is_all_day": is_all_day,
-                        "category": category,
-                        "subcategory": subcategory,
-                        "tags": event_tags,
-                        "price_min": price_min,
-                        "price_max": price_max,
-                        "price_note": cost if cost else None,
-                        "is_free": is_free,
-                        "source_url": source_url,
-                        "ticket_url": source_url,
-                        "image_url": image_url,
-                        "raw_text": f"{title} - {description[:200]}",
-                        "extraction_confidence": 0.95,
-                        "is_recurring": False,
-                        "recurrence_rule": None,
-                        "content_hash": content_hash,
-                    }
-
-                    try:
-                        insert_event(event_record)
-                        events_new += 1
-                        logger.info(f"Added: {title} on {start_date}")
-                    except Exception as e:
-                        logger.error(f"Failed to insert event '{title}': {e}")
-
-                except Exception as e:
-                    logger.error(f"Error processing event: {e}")
+            try:
+                title = str(component.get("SUMMARY", "")).strip()
+                if not title:
                     continue
 
-            # Check if there are more pages
-            total_pages = data.get("total_pages", 1)
-            if page >= total_pages:
-                break
+                # Parse start date/time
+                dtstart = component.get("DTSTART")
+                if not dtstart:
+                    continue
 
-            page += 1
+                dt_val = dtstart.dt
+                if isinstance(dt_val, datetime):
+                    start_date = dt_val.strftime("%Y-%m-%d")
+                    start_time = dt_val.strftime("%H:%M")
+                    is_all_day = False
+                elif isinstance(dt_val, date):
+                    start_date = dt_val.strftime("%Y-%m-%d")
+                    start_time = None
+                    is_all_day = True
+                else:
+                    continue
+
+                # Skip past events
+                event_date = dt_val.date() if isinstance(dt_val, datetime) else dt_val
+                if event_date < today:
+                    continue
+
+                # Parse end date/time
+                end_date = None
+                end_time = None
+                dtend = component.get("DTEND")
+                if dtend:
+                    end_val = dtend.dt
+                    if isinstance(end_val, datetime):
+                        end_date = end_val.strftime("%Y-%m-%d")
+                        end_time = end_val.strftime("%H:%M")
+                    elif isinstance(end_val, date):
+                        end_date = end_val.strftime("%Y-%m-%d")
+
+                # Description
+                description = clean_ical_text(str(component.get("DESCRIPTION", "")))
+                if not description or len(description) < 10:
+                    description = f"{title} hosted by Chattahoochee Riverkeeper"
+
+                # URL
+                source_url = str(component.get("URL", f"{BASE_URL}/events/"))
+
+                # Image from ATTACH
+                image_url = None
+                attach = component.get("ATTACH")
+                if attach:
+                    attach_str = str(attach)
+                    if attach_str.startswith("http") and any(ext in attach_str.lower() for ext in [".png", ".jpg", ".jpeg", ".webp"]):
+                        image_url = attach_str
+
+                events_found += 1
+
+                category, subcategory, event_tags = determine_category(title, description)
+
+                content_hash = generate_content_hash(title, "Chattahoochee Riverkeeper", start_date)
+
+                if find_event_by_hash(content_hash):
+                    events_updated += 1
+                    continue
+
+                event_record = {
+                    "source_id": source_id,
+                    "venue_id": venue_id,
+                    "title": title,
+                    "description": description[:1000],
+                    "start_date": start_date,
+                    "start_time": start_time,
+                    "end_date": end_date,
+                    "end_time": end_time,
+                    "is_all_day": is_all_day,
+                    "category": category,
+                    "subcategory": subcategory,
+                    "tags": event_tags,
+                    "price_min": None,
+                    "price_max": None,
+                    "price_note": None,
+                    "is_free": True,
+                    "source_url": source_url,
+                    "ticket_url": source_url,
+                    "image_url": image_url,
+                    "raw_text": f"{title} - {description[:200]}",
+                    "extraction_confidence": 0.95,
+                    "is_recurring": False,
+                    "recurrence_rule": None,
+                    "content_hash": content_hash,
+                }
+
+                try:
+                    insert_event(event_record)
+                    events_new += 1
+                    logger.info(f"Added: {title} on {start_date}")
+                except Exception as e:
+                    logger.error(f"Failed to insert event '{title}': {e}")
+
+            except Exception as e:
+                logger.error(f"Error processing iCal event: {e}")
+                continue
 
         logger.info(
             f"Chattahoochee Riverkeeper crawl complete: {events_found} found, {events_new} new, {events_updated} updated"
