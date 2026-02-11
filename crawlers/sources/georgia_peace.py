@@ -27,9 +27,15 @@ EVENTS_URL = f"{BASE_URL}/events"
 GPJC_HQ = {
     "name": "Georgia Peace and Justice Coalition",
     "slug": "georgia-peace-justice-coalition",
+    "address": "Atlanta Metro Area",
+    "neighborhood": "Various Locations",
     "city": "Atlanta",
     "state": "GA",
+    "zip": "30303",
+    "lat": 33.7490,
+    "lng": -84.3880,
     "venue_type": "nonprofit",
+    "spot_type": "nonprofit",
     "website": BASE_URL,
 }
 
@@ -300,7 +306,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             "start_time": time_info,
                             "end_date": None,
                             "end_time": None,
-                            "is_all_day": time_info is None,
+                            "is_all_day": False,
                             "category": category,
                             "subcategory": None,
                             "tags": tags,
@@ -395,7 +401,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                                 "start_time": time_info,
                                 "end_date": None,
                                 "end_time": None,
-                                "is_all_day": time_info is None,
+                                "is_all_day": False,
                                 "category": category,
                                 "subcategory": None,
                                 "tags": tags,

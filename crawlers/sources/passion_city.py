@@ -1,9 +1,9 @@
 """
-Crawler for Ebenezer Baptist Church public events.
-https://www.ebenezeratl.org/upcoming-events/
+Crawler for Passion City Church public events.
+https://passioncitychurch.com/atlanta/events/
 
-Historic church founded by Martin Luther King Sr. in 1886.
-Focuses on PUBLIC community events - Bible studies, lectures, concerts.
+Major events include Passion Conference (40K+ at Mercedes-Benz Stadium),
+The Rising worship gatherings, youth camps. Focus on BIG public events only.
 """
 
 from __future__ import annotations
@@ -21,42 +21,36 @@ from utils import extract_images_from_page, extract_event_links, find_event_url
 
 logger = logging.getLogger(__name__)
 
-BASE_URL = "https://www.ebenezeratl.org"
-EVENTS_URL = f"{BASE_URL}/upcoming-events/"
+BASE_URL = "https://passioncitychurch.com"
+EVENTS_URL = f"{BASE_URL}/atlanta/events/"
 
 VENUE_DATA = {
-    "name": "Ebenezer Baptist Church",
-    "slug": "ebenezer-baptist-church",
-    "address": "101 Jackson St NE",
-    "neighborhood": "Sweet Auburn",
+    "name": "Passion City Church",
+    "slug": "passion-city-church-515",
+    "address": "515 Garson Dr NE",
+    "neighborhood": "Midtown",
     "city": "Atlanta",
     "state": "GA",
-    "zip": "30312",
-    "lat": 33.7561,
-    "lng": -84.3728,
+    "zip": "30324",
+    "lat": 33.7992,
+    "lng": -84.3686,
     "venue_type": "church",
     "spot_type": "church",
     "website": BASE_URL,
-    "vibes": ["faith-christian", "baptist", "historic"],
+    "vibes": ["faith-christian", "nondenominational", "all-ages"],
 }
 
-# Skip congregation-specific events (bible studies, prayer groups, internal business)
+# Skip small internal events - only target BIG public events
 SKIP_KEYWORDS = [
-    "member", "congregation", "deacon", "trustee", "pastor search",
-    "business meeting", "board meeting", "staff meeting",
-    "bible study", "prayer and bible", "prayer call", "prayer calls",
-    "ministry leaders", "ministry retreat", "leaders retreat",
-    "rsvp for", "small group", "new member",
+    "small group", "member", "staff meeting", "volunteer meeting",
+    "bible study", "prayer group", "deacon", "board meeting"
 ]
 
-# Only include events with clear public-facing indicators
+# Major public event indicators
 PUBLIC_KEYWORDS = [
-    "community", "public", "all are welcome", "open to",
-    "lecture", "concert", "symposium", "mlk", "martin luther king",
-    "movie day", "film", "screening", "celebration", "festival",
-    "performance", "recital", "exhibit", "gallery",
-    "health fair", "food drive", "service day",
-    "navigating our world",  # Their public lecture series
+    "conference", "passion conference", "the rising", "worship night",
+    "youth camp", "concert", "stadium", "all are welcome", "open to all",
+    "public", "community"
 ]
 
 
@@ -126,80 +120,73 @@ def parse_date_string(date_str: str) -> Optional[str]:
         except ValueError:
             pass
 
+    # Try YYYY-MM-DD format
+    date_match = re.search(r"(\d{4})-(\d{2})-(\d{2})", date_str)
+    if date_match:
+        return date_str
+
     return None
 
 
 def determine_category_and_tags(title: str, description: str) -> tuple[str, Optional[str], list[str]]:
     """Determine category based on title and description."""
     text = f"{title} {description}".lower()
-    tags = ["ebenezer-baptist", "faith", "sweet-auburn"]
+    tags = ["passion-city", "faith", "midtown"]
 
-    # Check if it's MLK-related (important historical events)
-    if any(kw in text for kw in ["mlk", "martin luther king", "civil rights"]):
-        tags.extend(["mlk", "civil-rights", "black-history-month"])
-        if "birthday" in text or "celebration" in text:
-            return "community", "celebration", tags
+    # Passion Conference
+    if "passion conference" in text or "passion 20" in text:
+        tags.extend(["conference", "worship", "young-adults", "18-35"])
+        return "community", "conference", tags
 
-    # Bible study
-    if "bible study" in text:
-        tags.extend(["bible-study", "education"])
-        return "community", "education", tags
+    # The Rising worship gatherings
+    if "rising" in text or "worship night" in text:
+        tags.extend(["worship", "live-music", "gospel"])
+        return "music", "worship", tags
 
-    # Prayer groups
-    if "prayer" in text:
-        tags.extend(["prayer", "spirituality"])
-        return "community", "spiritual", tags
-
-    # Youth/Young Adult events
-    if any(kw in text for kw in ["youth", "young adult", "yam"]):
-        tags.extend(["young-adults", "18-35"])
+    # Youth/camp events
+    if any(kw in text for kw in ["youth", "camp", "students", "young adult"]):
+        tags.extend(["youth", "18-35", "young-adults"])
         return "community", "youth", tags
 
     # Music/Concert
-    if any(kw in text for kw in ["concert", "choir", "music", "symphony"]):
-        tags.extend(["music", "live-music"])
-        return "music", "gospel", tags
+    if any(kw in text for kw in ["concert", "music", "worship"]):
+        tags.extend(["music", "live-music", "worship"])
+        return "music", "worship", tags
 
-    # Lecture/Educational
-    if any(kw in text for kw in ["lecture", "symposium", "talk", "discussion"]):
-        tags.extend(["education", "lecture"])
-        return "community", "education", tags
+    # Conferences/gatherings
+    if any(kw in text for kw in ["conference", "gathering", "summit"]):
+        tags.extend(["conference", "worship"])
+        return "community", "conference", tags
 
-    # Default to faith/community
+    # Default to community
     return "community", "faith", tags
 
 
-def is_public_event(title: str, description: str) -> bool:
-    """Determine if event is public/community-facing vs. member-only.
-
-    Default is FALSE — only include events with clear public indicators.
-    Churches post many congregation-specific items (bible studies, prayer groups,
-    ministry retreats) that aren't meaningful for general discovery.
+def is_public_major_event(title: str, description: str) -> bool:
+    """
+    Determine if event is a BIG public event worth including.
+    Skip small groups, internal meetings, etc.
     """
     text = f"{title} {description}".lower()
 
-    # Explicit skip keywords — always exclude
+    # Explicit skip keywords for small/internal events
     if any(kw in text for kw in SKIP_KEYWORDS):
         return False
 
-    # Explicit public indicators
+    # Explicit major public event indicators
     if any(kw in text for kw in PUBLIC_KEYWORDS):
         return True
 
-    # MLK events are public (this is Ebenezer — MLK's church)
-    if "mlk" in text or "martin luther king" in text:
+    # Large-scale event indicators
+    if any(kw in text for kw in ["conference", "stadium", "thousands", "worship night"]):
         return True
 
-    # Concerts/music events are usually public
-    if any(kw in text for kw in ["concert", "music", "performance", "symphony", "choir"]):
-        return True
-
-    # Default: assume congregation-specific unless proven otherwise
+    # Default: skip unless explicitly public
     return False
 
 
 def crawl(source: dict) -> tuple[int, int, int]:
-    """Crawl Ebenezer Baptist Church public events using Playwright."""
+    """Crawl Passion City Church major public events using Playwright."""
     source_id = source["id"]
     events_found = 0
     events_new = 0
@@ -216,7 +203,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             venue_id = get_or_create_venue(VENUE_DATA)
 
-            logger.info(f"Fetching Ebenezer Baptist Church: {EVENTS_URL}")
+            logger.info(f"Fetching Passion City Church: {EVENTS_URL}")
             page.goto(EVENTS_URL, wait_until="domcontentloaded", timeout=30000)
             page.wait_for_timeout(3000)
 
@@ -231,10 +218,24 @@ def crawl(source: dict) -> tuple[int, int, int]:
             # Extract event links for specific URLs
             event_links = extract_event_links(page, BASE_URL)
 
-            # This site uses Divi/Elegant Themes builder with .et_pb_text blocks for events
-            # Each event is in its own .et_pb_text div
-            event_elements = page.query_selector_all(".et_pb_text")
-            logger.info(f"Found {len(event_elements)} .et_pb_text blocks on page")
+            # Try common event selectors
+            event_selectors = [
+                ".event-item",
+                ".tribe-events-list-event-title",
+                ".eventlist-event",
+                "[class*='event']",
+                "article.event",
+                ".event",
+                ".card",
+            ]
+
+            event_elements = []
+            for selector in event_selectors:
+                elements = page.query_selector_all(selector)
+                if elements:
+                    logger.info(f"Found {len(elements)} events using selector: {selector}")
+                    event_elements = elements
+                    break
 
             seen_events = set()
 
@@ -295,9 +296,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                         description = " ".join(description_parts[:3])
 
-                        # Check if public
-                        if not is_public_event(title, description):
-                            logger.debug(f"Skipping member-only event: {title}")
+                        # Check if BIG public event
+                        if not is_public_major_event(title, description):
+                            logger.debug(f"Skipping small/internal event: {title}")
                             continue
 
                         # Dedupe
@@ -310,7 +311,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                         # Generate content hash
                         content_hash = generate_content_hash(
-                            title, "Ebenezer Baptist Church", start_date
+                            title, "Passion City Church", start_date
                         )
 
                         # Check for existing
@@ -322,21 +323,10 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         # Determine category and tags
                         category, subcategory, tags = determine_category_and_tags(title, description)
 
-                        # Look for recurrence patterns
-                        recurrence_pattern = None
-                        elem_text_lower = elem_text.lower()
-                        if any(kw in elem_text_lower for kw in ["every", "each", "weekly", "monthly"]):
-                            for line in lines:
-                                if re.search(r"(monday|tuesday|wednesday|thursday|friday|saturday|sunday)", line, re.IGNORECASE):
-                                    recurrence_pattern = line
-                                    break
-
-                        # Build event record
-                        # Get specific event URL
-
+                        # Look for event URL
                         event_url = find_event_url(title, event_links, EVENTS_URL)
 
-
+                        # Build event record
                         event_record = {
                             "source_id": source_id,
                             "venue_id": venue_id,
@@ -352,15 +342,15 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             "tags": tags,
                             "price_min": None,
                             "price_max": None,
-                            "price_note": "Free - donations welcome",
+                            "price_note": None,
                             "is_free": True,
                             "source_url": event_url,
                             "ticket_url": event_url,
                             "image_url": image_map.get(title),
                             "raw_text": f"{title} {description}"[:500],
                             "extraction_confidence": 0.85,
-                            "is_recurring": bool(recurrence_pattern),
-                            "recurrence_rule": recurrence_pattern,
+                            "is_recurring": False,
+                            "recurrence_rule": None,
                             "content_hash": content_hash,
                         }
 
@@ -375,15 +365,14 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         logger.error(f"Error processing event element: {e}")
                         continue
 
-
             browser.close()
 
         logger.info(
-            f"Ebenezer Baptist Church crawl complete: {events_found} found, {events_new} new, {events_updated} updated"
+            f"Passion City Church crawl complete: {events_found} found, {events_new} new, {events_updated} updated"
         )
 
     except Exception as e:
-        logger.error(f"Failed to crawl Ebenezer Baptist Church: {e}")
+        logger.error(f"Failed to crawl Passion City Church: {e}")
         raise
 
     return events_found, events_new, events_updated

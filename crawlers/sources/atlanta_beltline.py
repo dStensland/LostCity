@@ -20,8 +20,8 @@ from utils import extract_images_from_page, extract_event_links, find_event_url
 
 logger = logging.getLogger(__name__)
 
-BASE_URL = "https://www.beltline.org"
-EVENTS_URL = f"{BASE_URL}/events"
+BASE_URL = "https://beltline.org"
+EVENTS_URL = f"{BASE_URL}/events/"
 
 # Atlanta BeltLine HQ venue
 BELTLINE_HQ = {

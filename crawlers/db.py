@@ -29,6 +29,7 @@ logger = logging.getLogger(__name__)
 # ===== VALIDATION STATISTICS TRACKING =====
 class ValidationStats:
     """Track validation statistics during a crawl run."""
+
     def __init__(self):
         self.total_validated = 0
         self.passed = 0
@@ -55,7 +56,9 @@ class ValidationStats:
         ]
         if self.rejection_reasons:
             lines.append("Rejections:")
-            for reason, count in sorted(self.rejection_reasons.items(), key=lambda x: -x[1]):
+            for reason, count in sorted(
+                self.rejection_reasons.items(), key=lambda x: -x[1]
+            ):
                 lines.append(f"  - {reason}: {count}")
         if self.warning_types:
             lines.append("Warnings:")
@@ -76,7 +79,7 @@ def reset_validation_stats():
 
 def get_validation_stats() -> ValidationStats:
     """Get current validation statistics (per-thread)."""
-    if not hasattr(_thread_local, 'validation_stats'):
+    if not hasattr(_thread_local, "validation_stats"):
         _thread_local.validation_stats = ValidationStats()
     return _thread_local.validation_stats
 
@@ -87,11 +90,14 @@ def get_validation_stats() -> ValidationStats:
 def _validation_stats_property(self):
     return get_validation_stats()
 
+
 # Keep _validation_stats as a module-level name that delegates to thread-local
 class _ValidationStatsProxy:
     """Proxy that delegates attribute access to the thread-local ValidationStats."""
+
     def __getattr__(self, name):
         return getattr(get_validation_stats(), name)
+
 
 _validation_stats = _ValidationStatsProxy()
 
@@ -109,6 +115,7 @@ def retry_on_network_error(max_retries: int = 3, base_delay: float = 0.5):
     - [Errno 11] Resource temporarily unavailable (Linux)
     - Connection reset errors
     """
+
     def decorator(func):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
@@ -118,26 +125,38 @@ def retry_on_network_error(max_retries: int = 3, base_delay: float = 0.5):
                     return func(*args, **kwargs)
                 except OSError as e:
                     # Errno 35 (macOS) or 11 (Linux) = Resource temporarily unavailable
-                    if e.errno in (35, 11) or "Resource temporarily unavailable" in str(e):
+                    if e.errno in (35, 11) or "Resource temporarily unavailable" in str(
+                        e
+                    ):
                         last_error = e
-                        delay = base_delay * (2 ** attempt)  # Exponential backoff
-                        logger.debug(f"Network error in {func.__name__}, retrying in {delay}s (attempt {attempt + 1}/{max_retries})")
+                        delay = base_delay * (2**attempt)  # Exponential backoff
+                        logger.debug(
+                            f"Network error in {func.__name__}, retrying in {delay}s (attempt {attempt + 1}/{max_retries})"
+                        )
                         time.sleep(delay)
                     else:
                         raise
                 except Exception as e:
                     error_str = str(e)
-                    if "Resource temporarily unavailable" in error_str or "Connection reset" in error_str:
+                    if (
+                        "Resource temporarily unavailable" in error_str
+                        or "Connection reset" in error_str
+                    ):
                         last_error = e
-                        delay = base_delay * (2 ** attempt)
-                        logger.debug(f"Network error in {func.__name__}, retrying in {delay}s (attempt {attempt + 1}/{max_retries})")
+                        delay = base_delay * (2**attempt)
+                        logger.debug(
+                            f"Network error in {func.__name__}, retrying in {delay}s (attempt {attempt + 1}/{max_retries})"
+                        )
                         time.sleep(delay)
                     else:
                         raise
             # All retries exhausted
             raise last_error
+
         return wrapper
+
     return decorator
+
 
 # Virtual venue for online events
 VIRTUAL_VENUE_SLUG = "online-virtual"
@@ -153,7 +172,9 @@ VIRTUAL_VENUE_DATA = {
 def get_or_create_virtual_venue() -> int:
     """Get or create canonical virtual venue. Returns venue ID."""
     client = get_client()
-    result = client.table("venues").select("id").eq("slug", VIRTUAL_VENUE_SLUG).execute()
+    result = (
+        client.table("venues").select("id").eq("slug", VIRTUAL_VENUE_SLUG).execute()
+    )
     if result.data:
         return result.data[0]["id"]
     result = client.table("venues").insert(VIRTUAL_VENUE_DATA).execute()
@@ -166,8 +187,7 @@ def get_client() -> Client:
     if _client is None:
         cfg = get_config()
         _client = create_client(
-            cfg.database.supabase_url,
-            cfg.database.supabase_service_key
+            cfg.database.supabase_url, cfg.database.supabase_service_key
         )
     return _client
 
@@ -225,22 +245,22 @@ def get_active_sources() -> list[dict]:
 # Hardcoded source slug to producer_id mapping used as fallback when
 # sources.producer_id is not populated.
 _SOURCE_PRODUCER_MAP = {
-    'atlanta-film-society': 'atlanta-film-society',
-    'out-on-film': 'out-on-film',
-    'ajff': 'atlanta-jewish-film',
-    'atlanta-opera': 'atlanta-opera',
-    'atlanta-ballet': 'atlanta-ballet',
-    'atlanta-pride': 'atlanta-pride',
-    'beltline': 'atlanta-beltline-inc',
-    'atlanta-contemporary': 'atlanta-contemporary',
-    'callanwolde': 'callanwolde',
-    'atlanta-track-club': 'atlanta-track-club',
-    'arts-atl': 'artsatl',
-    'atlanta-cultural-affairs': 'atlanta-cultural-affairs',
-    'community-foundation-atl': 'community-foundation-atl',
-    'high-museum': 'woodruff-arts',
-    'decatur-arts-festival': 'decatur-arts',
-    'taste-of-atlanta': 'taste-of-atlanta',
+    "atlanta-film-society": "atlanta-film-society",
+    "out-on-film": "out-on-film",
+    "ajff": "atlanta-jewish-film",
+    "atlanta-opera": "atlanta-opera",
+    "atlanta-ballet": "atlanta-ballet",
+    "atlanta-pride": "atlanta-pride",
+    "beltline": "atlanta-beltline-inc",
+    "atlanta-contemporary": "atlanta-contemporary",
+    "callanwolde": "callanwolde",
+    "atlanta-track-club": "atlanta-track-club",
+    "arts-atl": "artsatl",
+    "atlanta-cultural-affairs": "atlanta-cultural-affairs",
+    "community-foundation-atl": "community-foundation-atl",
+    "high-museum": "woodruff-arts",
+    "decatur-arts-festival": "decatur-arts",
+    "taste-of-atlanta": "taste-of-atlanta",
 }
 
 # Festival/conference source overrides for rollup + festival linking
@@ -260,7 +280,10 @@ _FESTIVAL_SOURCE_OVERRIDES = {
     # The festival_name here must match the festival record's name exactly
     "shaky-knees": {"festival_name": "Shaky Knees"},
     "juneteenth-atlanta": {"festival_name": "Juneteenth Atlanta"},
-    "a3c-festival": {"festival_name": "A3C Festival & Conference", "festival_type": "conference"},
+    "a3c-festival": {
+        "festival_name": "A3C Festival & Conference",
+        "festival_type": "conference",
+    },
     "ajff": {"festival_name": "Atlanta Jewish Film Festival"},
     "atlanta-dogwood": {"festival_name": "Atlanta Dogwood Festival"},
     "atlanta-food-wine": {"festival_name": "Atlanta Food & Wine Festival"},
@@ -329,9 +352,22 @@ _FESTIVAL_CONVENTION_PATTERN = re.compile(
 )
 
 _PROGRAM_TITLE_KEYWORDS = {
-    "track", "program", "stage", "room", "hall", "session", "panel",
-    "workshop", "keynote", "talk", "lecture", "summit", "forum",
-    "expo", "screening", "showcase",
+    "track",
+    "program",
+    "stage",
+    "room",
+    "hall",
+    "session",
+    "panel",
+    "workshop",
+    "keynote",
+    "talk",
+    "lecture",
+    "summit",
+    "forum",
+    "expo",
+    "screening",
+    "showcase",
 }
 
 
@@ -346,7 +382,9 @@ def infer_festival_type_from_name(name: Optional[str]) -> Optional[str]:
     return None
 
 
-def get_festival_source_hint(source_slug: Optional[str], source_name: Optional[str]) -> Optional[dict]:
+def get_festival_source_hint(
+    source_slug: Optional[str], source_name: Optional[str]
+) -> Optional[dict]:
     """Return festival metadata hint if the source looks like a festival/conference."""
     slug = source_slug or ""
     if slug in _FESTIVAL_SOURCE_OVERRIDES or slug in _FESTIVAL_SOURCE_SLUGS:
@@ -354,7 +392,8 @@ def get_festival_source_hint(source_slug: Optional[str], source_name: Optional[s
         name = override.get("festival_name") or source_name
         return {
             "festival_name": name,
-            "festival_type": override.get("festival_type") or infer_festival_type_from_name(name),
+            "festival_type": override.get("festival_type")
+            or infer_festival_type_from_name(name),
         }
 
     if source_name and _FESTIVAL_NAME_PATTERN.search(source_name):
@@ -414,14 +453,18 @@ def get_producer_id_for_source(source_id: int) -> Optional[str]:
 def _compute_and_save_event_blurhash(event_id: int, image_url: str) -> None:
     """Best-effort async blurhash generation for newly inserted events."""
     try:
-        from backfill_blurhash import compute_blurhash  # local import to keep crawler startup fast
+        from backfill_blurhash import (
+            compute_blurhash,
+        )  # local import to keep crawler startup fast
 
         blurhash = compute_blurhash(image_url)
         if not blurhash:
             return
 
         client = get_client()
-        client.table("events").update({"blurhash": blurhash}).eq("id", event_id).execute()
+        client.table("events").update({"blurhash": blurhash}).eq(
+            "id", event_id
+        ).execute()
         logger.debug(f"Stored blurhash for event {event_id}")
     except Exception as e:
         logger.debug(f"Blurhash generation skipped for event {event_id}: {e}")
@@ -439,19 +482,35 @@ def _fetch_venue_description(url: str) -> Optional[str]:
     try:
         import requests
         from bs4 import BeautifulSoup
-        resp = requests.get(url, timeout=5, allow_redirects=True, headers={
-            "User-Agent": "Mozilla/5.0 (compatible; LostCity/1.0)"
-        })
+
+        resp = requests.get(
+            url,
+            timeout=5,
+            allow_redirects=True,
+            headers={"User-Agent": "Mozilla/5.0 (compatible; LostCity/1.0)"},
+        )
         if resp.status_code != 200:
             return None
         soup = BeautifulSoup(resp.text, "html.parser")
-        for attr_key, attr_val in [("name", "description"), ("property", "og:description"), ("name", "twitter:description")]:
+        for attr_key, attr_val in [
+            ("name", "description"),
+            ("property", "og:description"),
+            ("name", "twitter:description"),
+        ]:
             meta = soup.find("meta", attrs={attr_key: attr_val})
             if meta and meta.get("content", "").strip():
                 desc = meta["content"].strip()
                 if len(desc) >= 30:
                     lower = desc.lower()
-                    if any(lower.startswith(p) for p in ["welcome to", "just another", "coming soon", "page not found"]):
+                    if any(
+                        lower.startswith(p)
+                        for p in [
+                            "welcome to",
+                            "just another",
+                            "coming soon",
+                            "page not found",
+                        ]
+                    ):
                         continue
                     return desc[:500]
     except Exception:
@@ -484,21 +543,27 @@ def get_or_create_venue(venue_data: dict) -> int:
             desc = _fetch_venue_description(venue_data["website"])
             if desc:
                 venue_data["description"] = desc
-                logger.debug("Auto-fetched description for %s", venue_data.get("name", "unknown"))
+                logger.debug(
+                    "Auto-fetched description for %s", venue_data.get("name", "unknown")
+                )
         except Exception:
             pass  # Never block venue creation on description fetch
 
     # Validate venue_type (warn, don't reject)
     vtype = venue_data.get("venue_type")
     if vtype and vtype not in VALID_VENUE_TYPES:
-        logger.warning(f"Unknown venue_type '{vtype}' for '{venue_data.get('name', '?')}'")
+        logger.warning(
+            f"Unknown venue_type '{vtype}' for '{venue_data.get('name', '?')}'"
+        )
 
     # Filter invalid vibes
     if venue_data.get("vibes"):
         valid = [v for v in venue_data["vibes"] if v in VALID_VIBES]
         removed = set(venue_data["vibes"]) - set(valid)
         if removed:
-            logger.warning(f"Removed invalid vibes {removed} from '{venue_data.get('name', '?')}'")
+            logger.warning(
+                f"Removed invalid vibes {removed} from '{venue_data.get('name', '?')}'"
+            )
         venue_data["vibes"] = valid or None
 
     # Create new venue
@@ -543,6 +608,7 @@ def get_venue_by_slug(slug: str) -> Optional[dict]:
 
 # ===== DATA VALIDATION FUNCTIONS =====
 
+
 def sanitize_text(text: str) -> str:
     """
     Sanitize text field by:
@@ -559,18 +625,18 @@ def sanitize_text(text: str) -> str:
 
     # Remove HTML tags — use two passes to catch malformed/nested tags
     # First pass: standard well-formed tags
-    text = re.sub(r'<[^>]*>', '', text)
+    text = re.sub(r"<[^>]*>", "", text)
     # Second pass: catch unclosed tags like <img src=x onerror=alert(1)
-    text = re.sub(r'<[^>]*$', '', text)
+    text = re.sub(r"<[^>]*$", "", text)
 
     # Escape any remaining HTML special chars to prevent stored XSS
     text = html.escape(text, quote=False)
 
     # Normalize whitespace - collapse multiple spaces
-    text = re.sub(r'\s+', ' ', text)
+    text = re.sub(r"\s+", " ", text)
 
     # Collapse multiple newlines (preserve intentional line breaks)
-    text = re.sub(r'\n\s*\n\s*\n+', '\n\n', text)
+    text = re.sub(r"\n\s*\n\s*\n+", "\n\n", text)
 
     return text.strip()
 
@@ -626,7 +692,11 @@ def validate_event(event_data: dict) -> Tuple[bool, Optional[str], list[str]]:
         date_obj = datetime.strptime(start_date, "%Y-%m-%d")
     except (ValueError, TypeError):
         _validation_stats.record_rejection("invalid_date_format")
-        return False, f"Invalid date format: {start_date} (expected YYYY-MM-DD)", warnings
+        return (
+            False,
+            f"Invalid date format: {start_date} (expected YYYY-MM-DD)",
+            warnings,
+        )
 
     # Check source_id
     if not event_data.get("source_id"):
@@ -641,10 +711,14 @@ def validate_event(event_data: dict) -> Tuple[bool, Optional[str], list[str]]:
     # Reject events beyond the future window (usually year parsing bugs).
     if event_date > today + timedelta(days=MAX_FUTURE_DAYS_DEFAULT):
         _validation_stats.record_rejection("date_too_far_future")
-        return False, (
-            f"Date >{MAX_FUTURE_DAYS_DEFAULT} days in future "
-            f"(likely parsing bug): {start_date} - {title}"
-        ), warnings
+        return (
+            False,
+            (
+                f"Date >{MAX_FUTURE_DAYS_DEFAULT} days in future "
+                f"(likely parsing bug): {start_date} - {title}"
+            ),
+            warnings,
+        )
 
     # Warn on missing start_time (unless genuinely all-day)
     start_time = event_data.get("start_time")
@@ -749,25 +823,74 @@ def validate_event_title(title: str) -> bool:
 
     # Exact-match junk (nav/UI elements scraped as titles)
     junk_exact = {
-        "learn more", "host an event", "upcoming events", "see details",
-        "buy tickets", "click here", "read more", "view all", "sign up",
-        "subscribe", "follow us", "contact us", "more info", "register",
-        "rsvp", "get tickets", "see more", "shows", "about us",
-        "skip to content", "google calendar", "event calendar",
-        "events list view", "upcoming shows", "all dates", "all events",
-        "all locations", "event type", "event location", "this month",
-        "select date.", "sold out", "our calendar of shows and events",
-        "corporate partnerships", "big futures", "match resources",
+        "learn more",
+        "host an event",
+        "upcoming events",
+        "see details",
+        "buy tickets",
+        "click here",
+        "read more",
+        "view all",
+        "sign up",
+        "subscribe",
+        "follow us",
+        "contact us",
+        "more info",
+        "register",
+        "rsvp",
+        "get tickets",
+        "see more",
+        "shows",
+        "about us",
+        "skip to content",
+        "google calendar",
+        "event calendar",
+        "events list view",
+        "upcoming shows",
+        "all dates",
+        "all events",
+        "all locations",
+        "event type",
+        "event location",
+        "this month",
+        "select date.",
+        "sold out",
+        "our calendar of shows and events",
+        "corporate partnerships",
+        "big futures",
+        "match resources",
         # Placeholder/TBA titles
-        "tba", "tbd", "tbc", "t.b.a.", "t.b.d.", "to be announced",
-        "to be determined", "to be confirmed", "event tba", "event tbd",
-        "show tba", "show tbd", "artist tba", "performer tba",
-        "special event", "special event tba", "private event",
-        "closed", "closed for private event", "n/a", "none",
-        "book now", "buy now", "get tickets now", "reserve now",
+        "tba",
+        "tbd",
+        "tbc",
+        "t.b.a.",
+        "t.b.d.",
+        "to be announced",
+        "to be determined",
+        "to be confirmed",
+        "event tba",
+        "event tbd",
+        "show tba",
+        "show tbd",
+        "artist tba",
+        "performer tba",
+        "special event",
+        "special event tba",
+        "private event",
+        "closed",
+        "closed for private event",
+        "n/a",
+        "none",
+        "book now",
+        "buy now",
+        "get tickets now",
+        "reserve now",
         # Concession/promo items scraped as events
-        "view fullsize", "more details", "gnashcash",
-        "value pack hot dog & soda", "value pack hot dog and soda",
+        "view fullsize",
+        "more details",
+        "gnashcash",
+        "value pack hot dog & soda",
+        "value pack hot dog and soda",
     }
     if title.lower().strip() in junk_exact:
         return False
@@ -790,27 +913,46 @@ def validate_event_title(title: str) -> bool:
         return False
 
     # Day-of-week only titles
-    if re.match(r"^(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)$", title, re.IGNORECASE):
+    if re.match(
+        r"^(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)$",
+        title,
+        re.IGNORECASE,
+    ):
         return False
 
     # Date-only titles ("Thursday, February 5")
-    if re.match(r"^(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday),?\s+"
-                r"(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2}$",
-                title, re.IGNORECASE):
+    if re.match(
+        r"^(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday),?\s+"
+        r"(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2}$",
+        title,
+        re.IGNORECASE,
+    ):
         return False
 
     # Month-label titles ("January Activities", "January 2026")
-    if re.match(r"^(January|February|March|April|May|June|July|August|September|October|November|December)\s+"
-                r"(Activities|Events|Calendar|Schedule|Programs|Classes|\d{4})$", title, re.IGNORECASE):
+    if re.match(
+        r"^(January|February|March|April|May|June|July|August|September|October|November|December)\s+"
+        r"(Activities|Events|Calendar|Schedule|Programs|Classes|\d{4})$",
+        title,
+        re.IGNORECASE,
+    ):
         return False
 
     # Titles starting with description-like patterns
     desc_starts = [
-        "every monday", "every tuesday", "every wednesday", "every thursday",
-        "every friday", "every saturday", "every sunday",
-        "join us for \"navigating", "registration for this free event",
-        "keep your pet happy", "come join the tipsy",
-        "viewing 1-", "click here to download",
+        "every monday",
+        "every tuesday",
+        "every wednesday",
+        "every thursday",
+        "every friday",
+        "every saturday",
+        "every sunday",
+        'join us for "navigating',
+        "registration for this free event",
+        "keep your pet happy",
+        "come join the tipsy",
+        "viewing 1-",
+        "click here to download",
     ]
     title_lower = title.lower()
     for pattern in desc_starts:
@@ -825,6 +967,7 @@ def validate_event_title(title: str) -> bool:
 # ---------------------------------------------------------------------------
 _CATEGORY_NORMALIZATION_MAP: dict[str, str] = {
     "arts": "art",
+    "activism": "community",
     "cultural": "community",
     "haunted": "nightlife",
     "eatertainment": "nightlife",
@@ -843,9 +986,13 @@ def normalize_category(category):
     return _CATEGORY_NORMALIZATION_MAP.get(category, category)
 
 
-def insert_event(event_data: dict, series_hint: dict = None, genres: list = None) -> int:
+def insert_event(
+    event_data: dict, series_hint: dict = None, genres: list = None
+) -> int:
     """Insert a new event with inferred tags, series linking, and genres. Returns event ID."""
     client = get_client()
+
+    original_category = event_data.get("category")
 
     # Normalize category to canonical taxonomy
     if event_data.get("category"):
@@ -857,19 +1004,23 @@ def insert_event(event_data: dict, series_hint: dict = None, genres: list = None
 
     if not is_valid:
         # Log rejection and skip insertion
-        logger.warning(f"Event rejected: {rejection_reason} - Title: \"{event_data.get('title', 'N/A')[:80]}\"")
+        logger.warning(
+            f"Event rejected: {rejection_reason} - Title: \"{event_data.get('title', 'N/A')[:80]}\""
+        )
         raise ValueError(f"Event validation failed: {rejection_reason}")
 
     # Log warnings if any
     if warnings:
         for warning in warnings:
-            logger.debug(f"Event validation warning: {warning} - Title: \"{event_data.get('title', 'N/A')[:50]}\"")
+            logger.debug(
+                f"Event validation warning: {warning} - Title: \"{event_data.get('title', 'N/A')[:50]}\""
+            )
 
     # Additional title quality check (existing validation)
     title = event_data.get("title", "")
     if not validate_event_title(title):
-        logger.warning(f"Rejected bad title: \"{title[:80]}\"")
-        raise ValueError(f"Invalid event title: \"{title[:50]}\"")
+        logger.warning(f'Rejected bad title: "{title[:80]}"')
+        raise ValueError(f'Invalid event title: "{title[:50]}"')
 
     # Remove producer_id if present (not a database column)
     if "producer_id" in event_data:
@@ -903,8 +1054,7 @@ def insert_event(event_data: dict, series_hint: dict = None, genres: list = None
     film_metadata = None
     if event_data.get("category") == "film":
         film_metadata = get_metadata_for_film_event(
-            event_data.get("title", ""),
-            event_data.get("image_url")
+            event_data.get("title", ""), event_data.get("image_url")
         )
         if film_metadata and not event_data.get("image_url"):
             event_data["image_url"] = film_metadata.poster_url
@@ -914,7 +1064,7 @@ def insert_event(event_data: dict, series_hint: dict = None, genres: list = None
         music_info = get_info_for_music_event(
             event_data.get("title", ""),
             event_data.get("image_url"),
-            genres  # Pass existing genres if any
+            genres,  # Pass existing genres if any
         )
         if music_info.image_url and not event_data.get("image_url"):
             event_data["image_url"] = music_info.image_url
@@ -949,7 +1099,11 @@ def insert_event(event_data: dict, series_hint: dict = None, genres: list = None
             # For festival programs, avoid falling back to event title:
             # that creates one "program" series per session and confuses UI grouping.
             inferred_program = infer_program_title(event_data.get("title"))
-            series_title = inferred_program or festival_hint.get("festival_name") or event_data.get("title")
+            series_title = (
+                inferred_program
+                or festival_hint.get("festival_name")
+                or event_data.get("title")
+            )
             series_hint = {
                 "series_type": series_type,
                 "series_title": series_title,
@@ -982,13 +1136,19 @@ def insert_event(event_data: dict, series_hint: dict = None, genres: list = None
         venue = get_venue_by_id_cached(event_data["venue_id"])
         if venue:
             venue_genres = venue.get("genres")
-    inferred_genres = normalize_genres(infer_genres(event_data, venue_genres=venue_genres))
+    inferred_genres = normalize_genres(
+        infer_genres(event_data, venue_genres=venue_genres)
+    )
     explicit_genres = normalize_genres(genres or [])
     merged_genres = list(dict.fromkeys(explicit_genres + inferred_genres))
+    if original_category == "activism" and "activism" not in merged_genres:
+        merged_genres.append("activism")
 
     # Infer and merge tags (now with genre context)
     event_data["tags"] = infer_tags(
-        event_data, venue_vibes, venue_type=venue_type,
+        event_data,
+        venue_vibes,
+        venue_type=venue_type,
         genres=merged_genres,
     )
 
@@ -1014,27 +1174,45 @@ def insert_event(event_data: dict, series_hint: dict = None, genres: list = None
 
     # Process series association if hint provided — but only if no series_id already set
     if series_hint and not event_data.get("series_id"):
-        series_id = get_or_create_series(client, series_hint, event_data.get("category"))
+        # Inject inferred genres into series_hint so new series get genres at creation
+        if genres and not series_hint.get("genres"):
+            series_hint["genres"] = genres
+        series_id = get_or_create_series(
+            client, series_hint, event_data.get("category")
+        )
         if series_id:
             event_data["series_id"] = series_id
+            # Backfill genres on existing series that are missing them
+            if genres:
+                update_series_metadata(client, series_id, {"genres": genres})
             # Don't store genres on event if it has a series (genres live on series)
             genres = None
             # Backfill NULL fields on existing series with OMDB metadata
             if film_metadata and series_hint.get("series_type") == "film":
-                update_series_metadata(client, series_id, {
-                    "director": film_metadata.director,
-                    "runtime_minutes": film_metadata.runtime_minutes,
-                    "year": film_metadata.year,
-                    "rating": film_metadata.rating,
-                    "imdb_id": film_metadata.imdb_id,
-                    "genres": film_metadata.genres,
-                    "description": film_metadata.plot,
-                    "image_url": film_metadata.poster_url,
-                })
+                update_series_metadata(
+                    client,
+                    series_id,
+                    {
+                        "director": film_metadata.director,
+                        "runtime_minutes": film_metadata.runtime_minutes,
+                        "year": film_metadata.year,
+                        "rating": film_metadata.rating,
+                        "imdb_id": film_metadata.imdb_id,
+                        "genres": film_metadata.genres,
+                        "description": film_metadata.plot,
+                        "image_url": film_metadata.poster_url,
+                    },
+                )
             # Backfill NULL fields on recurring show / class series from crawler hints
             if series_hint.get("series_type") in ("recurring_show", "class_series"):
                 backfill = {}
-                for field in ("description", "image_url", "day_of_week", "start_time", "frequency"):
+                for field in (
+                    "description",
+                    "image_url",
+                    "day_of_week",
+                    "start_time",
+                    "frequency",
+                ):
                     if series_hint.get(field):
                         backfill[field] = series_hint[field]
                 if backfill:
@@ -1061,6 +1239,7 @@ def insert_event(event_data: dict, series_hint: dict = None, genres: list = None
         if event_data.get("category") == "music" and parsed_artists:
             # Enrich parsed artists with cached Deezer genres for description
             from artist_images import fetch_artist_info as _fetch_info
+
             enriched = []
             for pa in parsed_artists:
                 entry = dict(pa)
@@ -1082,7 +1261,11 @@ def insert_event(event_data: dict, series_hint: dict = None, genres: list = None
             )
 
     # Inherit portal_id from source if not explicitly set
-    if not event_data.get("portal_id") and source_info and source_info.get("owner_portal_id"):
+    if (
+        not event_data.get("portal_id")
+        and source_info
+        and source_info.get("owner_portal_id")
+    ):
         event_data["portal_id"] = source_info["owner_portal_id"]
 
     # Persist is_class flag to database
@@ -1211,6 +1394,7 @@ def upsert_event_artists(event_id: int, artists: list) -> None:
     # Resolve canonical artist records and set artist_id FK
     try:
         from artists import resolve_and_link_event_artists
+
         resolve_and_link_event_artists(event_id)
     except Exception as e:
         logger.debug(f"Artist resolution failed for event {event_id}: {e}")
@@ -1318,7 +1502,9 @@ def upsert_event_links(event_id: int, links: list) -> None:
         return
 
     client = get_client()
-    client.table("event_links").upsert(payload, on_conflict="event_id,type,url").execute()
+    client.table("event_links").upsert(
+        payload, on_conflict="event_id,type,url"
+    ).execute()
 
 
 def update_event_extraction_metadata(
@@ -1372,7 +1558,12 @@ def _filter_users_with_event_updates(user_ids: list[str]) -> list[str]:
         return []
     client = get_client()
     try:
-        result = client.table("profiles").select("id,notification_settings").in_("id", user_ids).execute()
+        result = (
+            client.table("profiles")
+            .select("id,notification_settings")
+            .in_("id", user_ids)
+            .execute()
+        )
     except Exception as e:
         logger.warning(
             "Failed to load notification_settings; defaulting to all users",
@@ -1380,7 +1571,7 @@ def _filter_users_with_event_updates(user_ids: list[str]) -> list[str]:
         )
         return user_ids
     allowed: list[str] = []
-    for row in (result.data or []):
+    for row in result.data or []:
         settings = row.get("notification_settings") or {}
         if settings.get("event_updates", True):
             allowed.append(row["id"])
@@ -1392,7 +1583,12 @@ def create_event_update_notifications(event_id: int, message: str) -> int:
     client = get_client()
 
     # RSVP users (going/interested)
-    rsvp_result = client.table("event_rsvps").select("user_id,status").eq("event_id", event_id).execute()
+    rsvp_result = (
+        client.table("event_rsvps")
+        .select("user_id,status")
+        .eq("event_id", event_id)
+        .execute()
+    )
     rsvp_users = {
         row["user_id"]
         for row in (rsvp_result.data or [])
@@ -1400,8 +1596,12 @@ def create_event_update_notifications(event_id: int, message: str) -> int:
     }
 
     # Saved users
-    saved_result = client.table("saved_items").select("user_id").eq("event_id", event_id).execute()
-    saved_users = {row["user_id"] for row in (saved_result.data or []) if row.get("user_id")}
+    saved_result = (
+        client.table("saved_items").select("user_id").eq("event_id", event_id).execute()
+    )
+    saved_users = {
+        row["user_id"] for row in (saved_result.data or []) if row.get("user_id")
+    }
 
     user_ids = list(rsvp_users | saved_users)
     user_ids = _filter_users_with_event_updates(user_ids)
@@ -1423,29 +1623,41 @@ def create_event_update_notifications(event_id: int, message: str) -> int:
     return len(payload)
 
 
-def compute_event_update(existing: dict, incoming: dict) -> tuple[dict, list[str], bool]:
+def compute_event_update(
+    existing: dict, incoming: dict
+) -> tuple[dict, list[str], bool]:
     """Compute update fields and a change summary for notifications."""
     update_data: dict = {}
     changes: list[str] = []
 
     # Time/date changes
-    if incoming.get("start_date") and incoming.get("start_date") != existing.get("start_date"):
+    if incoming.get("start_date") and incoming.get("start_date") != existing.get(
+        "start_date"
+    ):
         changes.append(
             f"date {existing.get('start_date')} → {incoming.get('start_date')}"
         )
         update_data["start_date"] = incoming.get("start_date")
-    if incoming.get("start_time") and incoming.get("start_time") != existing.get("start_time"):
+    if incoming.get("start_time") and incoming.get("start_time") != existing.get(
+        "start_time"
+    ):
         changes.append(
             f"time {existing.get('start_time') or 'TBA'} → {incoming.get('start_time')}"
         )
         update_data["start_time"] = incoming.get("start_time")
-    if incoming.get("end_date") and incoming.get("end_date") != existing.get("end_date"):
+    if incoming.get("end_date") and incoming.get("end_date") != existing.get(
+        "end_date"
+    ):
         update_data["end_date"] = incoming.get("end_date")
-    if incoming.get("end_time") and incoming.get("end_time") != existing.get("end_time"):
+    if incoming.get("end_time") and incoming.get("end_time") != existing.get(
+        "end_time"
+    ):
         update_data["end_time"] = incoming.get("end_time")
 
     # Venue change
-    if incoming.get("venue_id") and incoming.get("venue_id") != existing.get("venue_id"):
+    if incoming.get("venue_id") and incoming.get("venue_id") != existing.get(
+        "venue_id"
+    ):
         changes.append("venue updated")
         update_data["venue_id"] = incoming.get("venue_id")
 
@@ -1458,7 +1670,8 @@ def compute_event_update(existing: dict, incoming: dict) -> tuple[dict, list[str
     # Description (prefer longer)
     incoming_desc = incoming.get("description")
     if incoming_desc and (
-        not existing.get("description") or len(incoming_desc) > len(existing.get("description", ""))
+        not existing.get("description")
+        or len(incoming_desc) > len(existing.get("description", ""))
     ):
         update_data["description"] = incoming_desc
 
@@ -1470,9 +1683,9 @@ def compute_event_update(existing: dict, incoming: dict) -> tuple[dict, list[str
         if incoming.get(field) is not None and existing.get(field) is None:
             update_data[field] = incoming.get(field)
 
-    cancelled = _event_looks_cancelled(incoming.get("title"), incoming.get("description")) and not _event_looks_cancelled(
-        existing.get("title"), existing.get("description")
-    )
+    cancelled = _event_looks_cancelled(
+        incoming.get("title"), incoming.get("description")
+    ) and not _event_looks_cancelled(existing.get("title"), existing.get("description"))
 
     return update_data, changes, cancelled
 
@@ -1481,7 +1694,9 @@ def compute_event_update(existing: dict, incoming: dict) -> tuple[dict, list[str
 def find_event_by_hash(content_hash: str) -> Optional[dict]:
     """Find event by content hash for deduplication."""
     client = get_client()
-    result = client.table("events").select("*").eq("content_hash", content_hash).execute()
+    result = (
+        client.table("events").select("*").eq("content_hash", content_hash).execute()
+    )
     if result.data and len(result.data) > 0:
         return result.data[0]
     return None
@@ -1505,17 +1720,20 @@ def remove_stale_source_events(source_id: int, current_hashes: set[str]) -> int:
     today = datetime.now().strftime("%Y-%m-%d")
 
     # Get all future events from this source
-    result = client.table("events").select("id,content_hash").eq(
-        "source_id", source_id
-    ).gte("start_date", today).execute()
+    result = (
+        client.table("events")
+        .select("id,content_hash")
+        .eq("source_id", source_id)
+        .gte("start_date", today)
+        .execute()
+    )
 
     if not result.data:
         return 0
 
     # Find events whose hash wasn't seen in this crawl
     stale_ids = [
-        e["id"] for e in result.data
-        if e["content_hash"] not in current_hashes
+        e["id"] for e in result.data if e["content_hash"] not in current_hashes
     ]
 
     if not stale_ids:
@@ -1523,15 +1741,15 @@ def remove_stale_source_events(source_id: int, current_hashes: set[str]) -> int:
 
     # Clear canonical references pointing to stale events
     for stale_id in stale_ids:
-        client.table("events").update(
-            {"canonical_event_id": None}
-        ).eq("canonical_event_id", stale_id).execute()
+        client.table("events").update({"canonical_event_id": None}).eq(
+            "canonical_event_id", stale_id
+        ).execute()
 
     # Delete in batches
     deleted = 0
     batch_size = 50
     for i in range(0, len(stale_ids), batch_size):
-        batch = stale_ids[i:i + batch_size]
+        batch = stale_ids[i : i + batch_size]
         client.table("events").delete().in_("id", batch).execute()
         deleted += len(batch)
 
@@ -1572,7 +1790,9 @@ def get_sibling_venue_ids(venue_id: int) -> list[int]:
     # Check if this is a Masquerade room
     if "masquerade" in venue_name:
         # Find all Masquerade venues
-        result = client.table("venues").select("id").ilike("name", "%masquerade%").execute()
+        result = (
+            client.table("venues").select("id").ilike("name", "%masquerade%").execute()
+        )
         if result.data:
             return [v["id"] for v in result.data]
 
@@ -1602,7 +1822,7 @@ def find_events_by_date_and_venue_family(date: str, venue_id: int) -> list[dict]
 
     # Add venue_name to results for similarity calculation
     events = []
-    for event in (result.data or []):
+    for event in result.data or []:
         event["venue_name"] = event.get("venue", {}).get("name", "")
         events.append(event)
 
@@ -1612,11 +1832,17 @@ def find_events_by_date_and_venue_family(date: str, venue_id: int) -> list[dict]
 def create_crawl_log(source_id: int) -> int:
     """Create a new crawl log entry. Returns log ID."""
     client = get_client()
-    result = client.table("crawl_logs").insert({
-        "source_id": source_id,
-        "started_at": datetime.utcnow().isoformat(),
-        "status": "running"
-    }).execute()
+    result = (
+        client.table("crawl_logs")
+        .insert(
+            {
+                "source_id": source_id,
+                "started_at": datetime.utcnow().isoformat(),
+                "status": "running",
+            }
+        )
+        .execute()
+    )
     return result.data[0]["id"]
 
 
@@ -1646,7 +1872,7 @@ def update_crawl_log(
     events_new: int = 0,
     events_updated: int = 0,
     events_rejected: int = 0,
-    error_message: Optional[str] = None
+    error_message: Optional[str] = None,
 ) -> None:
     """Update crawl log with results."""
     client = get_client()
@@ -1691,7 +1917,9 @@ def refresh_available_filters() -> bool:
         return False
 
 
-def update_source_health_tags(source_id: int, health_tags: list[str], active_months: Optional[list[int]] = None) -> bool:
+def update_source_health_tags(
+    source_id: int, health_tags: list[str], active_months: Optional[list[int]] = None
+) -> bool:
     """
     Update the health_tags and optionally active_months for a source.
 
@@ -1725,11 +1953,16 @@ def get_source_health_tags(source_id: int) -> tuple[list[str], Optional[list[int
     """
     client = get_client()
     try:
-        result = client.table("sources").select("health_tags, active_months").eq("id", source_id).execute()
+        result = (
+            client.table("sources")
+            .select("health_tags, active_months")
+            .eq("id", source_id)
+            .execute()
+        )
         if result.data and len(result.data) > 0:
             return (
                 result.data[0].get("health_tags") or [],
-                result.data[0].get("active_months")
+                result.data[0].get("active_months"),
             )
     except Exception:
         pass
@@ -1750,12 +1983,19 @@ def deactivate_tba_events() -> int:
     client = get_client()
     today = datetime.now().strftime("%Y-%m-%d")
 
-    result = client.table("events").select("id", count="exact", head=True).gte(
-        "start_date", today
-    ).is_("start_time", "null").eq("is_all_day", False).execute()
+    result = (
+        client.table("events")
+        .select("id", count="exact", head=True)
+        .gte("start_date", today)
+        .is_("start_time", "null")
+        .eq("is_all_day", False)
+        .execute()
+    )
 
     tba_count = result.count or 0
     if tba_count > 0:
-        logger.info(f"Found {tba_count} TBA events (missing start_time) — hidden from feeds via API filter")
+        logger.info(
+            f"Found {tba_count} TBA events (missing start_time) — hidden from feeds via API filter"
+        )
 
     return tba_count

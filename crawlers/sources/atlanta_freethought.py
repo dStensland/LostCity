@@ -33,7 +33,8 @@ AFS_VENUE = {
     "city": "Smyrna",
     "state": "GA",
     "zip": "30080",
-    "venue_type": "community",
+    "venue_type": "community_center",
+    "spot_type": "community_center",
     "website": BASE_URL,
 }
 

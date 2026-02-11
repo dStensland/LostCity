@@ -38,11 +38,12 @@ VENUE_DATA = {
 
 def parse_datetime(date_str: str, time_str: str = None) -> tuple[Optional[str], Optional[str]]:
     """
-    Parse date and time from WordPress Events Calendar format.
+    Parse date and time from ACLU Georgia event format.
 
     Examples:
-    - "February 15, 2026"
+    - "Feb 03, 2026 | 6:00 PM"
     - "January 28 @ 6:00 pm"
+    - "February 15, 2026"
     """
     current_year = datetime.now().year
     start_date = None
@@ -51,9 +52,26 @@ def parse_datetime(date_str: str, time_str: str = None) -> tuple[Optional[str], 
     # Try various date formats
     date_str = date_str.strip()
 
-    # Check if date includes time (e.g., "January 28 @ 6:00 pm")
+    # Check if date includes time with pipe separator (e.g., "Feb 03, 2026 | 6:00 PM")
+    pipe_match = re.search(r'(.+?)\s*\|\s*(\d{1,2}):(\d{2})\s*(am|pm)', date_str, re.IGNORECASE)
+    if pipe_match:
+        date_part = pipe_match.group(1).strip()
+        hour = int(pipe_match.group(2))
+        minute = pipe_match.group(3)
+        period = pipe_match.group(4).lower()
+
+        # Convert to 24-hour format
+        if period == "pm" and hour != 12:
+            hour += 12
+        elif period == "am" and hour == 12:
+            hour = 0
+
+        start_time = f"{hour:02d}:{minute}"
+        date_str = date_part
+
+    # Check if date includes time with @ separator (e.g., "January 28 @ 6:00 pm")
     at_match = re.search(r'(.+?)\s*@\s*(\d{1,2}):(\d{2})\s*(am|pm)', date_str, re.IGNORECASE)
-    if at_match:
+    if at_match and not start_time:
         date_part = at_match.group(1).strip()
         hour = int(at_match.group(2))
         minute = at_match.group(3)
@@ -131,12 +149,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             soup = BeautifulSoup(response.text, 'html.parser')
 
-            # Find event items - WordPress typically uses article.post or .event
-            event_items = soup.select('article.post, article.event, .event-item, article[class*="event"]')
-
-            # If no standard selectors work, try generic articles
-            if not event_items:
-                event_items = soup.select('article')
+            # Find event items - ACLU uses .card--common divs
+            event_items = soup.select('.card--common')
 
             if not event_items:
                 logger.debug(f"No events found on page {page_num}")
@@ -148,38 +162,27 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             for item in event_items:
                 try:
-                    # Extract title
-                    title_elem = item.find(['h1', 'h2', 'h3', 'h4'], class_=re.compile(r'title|entry-title|event-title'))
-                    if not title_elem:
-                        title_elem = item.find(['h1', 'h2', 'h3', 'h4'])
-
+                    # Extract title from h3
+                    title_elem = item.find('h3')
                     if not title_elem:
                         continue
 
                     title = title_elem.get_text(strip=True)
 
-                    # Get event URL
-                    link = title_elem.find('a')
+                    # Get event URL from card-overlay-link
+                    link = item.find('a', class_='card-overlay-link')
                     source_url = link.get('href', EVENTS_URL) if link else EVENTS_URL
                     if source_url.startswith('/'):
                         source_url = BASE_URL + source_url
 
-                    # Extract date/time
-                    date_elem = item.find(class_=re.compile(r'date|time|event-date|event-time'))
-                    if not date_elem:
-                        # Try to find time element
-                        date_elem = item.find('time')
-
+                    # Extract date/time from <span class="font-bold">
+                    # Format: "Feb 03, 2026 | 6:00 PM"
+                    date_elem = item.find('span', class_='font-bold')
                     if not date_elem:
                         logger.debug(f"No date found for: {title}")
                         continue
 
                     date_text = date_elem.get_text(strip=True)
-
-                    # Check datetime attribute if present
-                    datetime_attr = date_elem.get('datetime')
-                    if datetime_attr:
-                        date_text = datetime_attr
 
                     start_date, start_time = parse_datetime(date_text)
 
@@ -190,10 +193,10 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     page_has_events = True
                     events_found += 1
 
-                    # Extract description
-                    desc_elem = item.find(class_=re.compile(r'excerpt|summary|description|content'))
+                    # Extract description from .line-clamp-3 div (contains description text)
+                    desc_elem = item.find('div', class_=re.compile(r'line-clamp'))
                     if not desc_elem:
-                        desc_elem = item.find('p')
+                        desc_elem = item.find('div', class_=re.compile(r'color-secondary'))
 
                     description = desc_elem.get_text(strip=True) if desc_elem else ""
                     if len(description) > 500:
@@ -204,7 +207,13 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     # Extract image
                     img_elem = item.find('img')
-                    image_url = img_elem.get('src') if img_elem else None
+                    if img_elem:
+                        image_url = img_elem.get('src')
+                        # Convert relative URLs
+                        if image_url and image_url.startswith('/'):
+                            image_url = BASE_URL + image_url
+                    else:
+                        image_url = None
 
                     # Generate content hash
                     content_hash = generate_content_hash(title, VENUE_DATA["name"], start_date)

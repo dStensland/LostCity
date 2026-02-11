@@ -33,7 +33,10 @@ PROJECT_SOUTH_HQ = {
     "city": "Atlanta",
     "state": "GA",
     "zip": "30315",
+    "lat": 33.7357,
+    "lng": -84.4135,
     "venue_type": "nonprofit",
+    "spot_type": "nonprofit",
     "website": BASE_URL,
 }
 

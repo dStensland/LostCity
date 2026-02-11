@@ -33,7 +33,10 @@ HOSEA_HELPS_HQ = {
     "city": "Atlanta",
     "state": "GA",
     "zip": "30354",
+    "lat": 33.6854,
+    "lng": -84.3517,
     "venue_type": "nonprofit",
+    "spot_type": "nonprofit",
     "website": BASE_URL,
 }
 
@@ -289,7 +292,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                                         "start_time": date_data["start_time"],
                                         "end_date": None,
                                         "end_time": None,
-                                        "is_all_day": date_data["start_time"] is None,
+                                        "is_all_day": False,
                                         "category": category,
                                         "subcategory": None,
                                         "tags": tags,
@@ -358,7 +361,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                                     "start_time": date_data["start_time"],
                                     "end_date": None,
                                     "end_time": None,
-                                    "is_all_day": date_data["start_time"] is None,
+                                    "is_all_day": False,
                                     "category": category,
                                     "subcategory": None,
                                     "tags": tags,

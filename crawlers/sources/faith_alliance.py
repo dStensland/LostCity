@@ -29,8 +29,10 @@ FAMA_HQ = {
     "slug": "faith-alliance-metro-atlanta",
     "city": "Atlanta",
     "state": "GA",
-    "venue_type": "nonprofit",
+    "venue_type": "nonprofit_hq",
+    "spot_type": "community_center",
     "website": BASE_URL,
+    "vibes": ["faith-interfaith"],
 }
 
 

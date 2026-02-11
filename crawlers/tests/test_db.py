@@ -135,6 +135,35 @@ class TestInsertEvent:
         assert "intimate" in inserted_data["tags"]
         assert "all-ages" in inserted_data["tags"]
 
+    @patch("db.get_festival_source_hint", return_value=None)
+    @patch("db.get_venue_by_id_cached")
+    @patch("db.get_client")
+    def test_normalizes_activism_category_to_community_with_genre(
+        self, mock_get_client, mock_get_venue, mock_festival_hint, sample_event_data
+    ):
+        """Should map activism category to community and preserve activism as a genre signal."""
+        client = MagicMock()
+        mock_get_client.return_value = client
+        mock_get_venue.return_value = {"vibes": []}
+
+        table = MagicMock()
+        client.table.return_value = table
+        table.insert.return_value = table
+        table.execute.return_value = MagicMock(data=[{"id": 999}])
+
+        from db import insert_event
+
+        event_data = dict(sample_event_data)
+        event_data["category"] = "activism"
+        event_data["tags"] = ["activism"]
+        event_data["title"] = "Community Organizing Rally"
+
+        insert_event(event_data)
+
+        inserted_data = table.insert.call_args_list[0][0][0]
+        assert inserted_data["category"] == "community"
+        assert "activism" in (inserted_data.get("genres") or [])
+
 
 class TestFindEventByHash:
     """Tests for find_event_by_hash function."""

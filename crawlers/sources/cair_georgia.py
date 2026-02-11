@@ -33,8 +33,10 @@ VENUE_DATA = {
     "city": "Riverdale",
     "state": "GA",
     "zip": "30274",
-    "venue_type": "nonprofit",
+    "venue_type": "nonprofit_hq",
+    "spot_type": "community_center",
     "website": BASE_URL,
+    "vibes": ["faith-muslim"],
 }
 
 

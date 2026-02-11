@@ -2,7 +2,7 @@
 Tests for tag inference logic in tag_inference.py.
 """
 
-from tag_inference import infer_tags, merge_tags
+from tag_inference import infer_tags, infer_genres, merge_tags
 
 
 class TestInferTags:
@@ -24,7 +24,10 @@ class TestInferTags:
         assert "ticketed" in tags
 
     def test_album_release_tag(self):
-        event = {"title": "Album Release Party", "description": "Celebrating the new record"}
+        event = {
+            "title": "Album Release Party",
+            "description": "Celebrating the new record",
+        }
         tags = infer_tags(event)
         assert "album-release" in tags
 
@@ -224,3 +227,25 @@ class TestMergeTags:
         new = ["21+", "touring"]
         merged = merge_tags(existing, new)
         assert merged == sorted(merged)
+
+
+class TestInferGenres:
+    """Tests for community genre inference edge cases."""
+
+    def test_community_activism_with_specific_terms(self):
+        event = {
+            "title": "Community Phone Bank",
+            "description": "Join our civic engagement canvass kickoff.",
+            "category": "community",
+        }
+        genres = infer_genres(event)
+        assert "activism" in genres
+
+    def test_community_activism_not_triggered_by_generic_civic(self):
+        event = {
+            "title": "Neighborhood Civic Association Monthly Meeting",
+            "description": "General updates and announcements.",
+            "category": "community",
+        }
+        genres = infer_genres(event)
+        assert "activism" not in genres

@@ -27,9 +27,15 @@ EVENTS_URL = f"{BASE_URL}/events"
 C4_ATLANTA_HQ = {
     "name": "C4 Atlanta",
     "slug": "c4-atlanta",
+    "address": "Atlanta Metro Area",
+    "neighborhood": "Various Locations",
     "city": "Atlanta",
     "state": "GA",
+    "zip": "30303",
+    "lat": 33.7490,
+    "lng": -84.3880,
     "venue_type": "nonprofit",
+    "spot_type": "nonprofit",
     "website": BASE_URL,
 }
 

@@ -33,7 +33,10 @@ NEW_GEORGIA_PROJECT_HQ = {
     "city": "Atlanta",
     "state": "GA",
     "zip": "30303",
+    "lat": 33.7568,
+    "lng": -84.3822,
     "venue_type": "nonprofit",
+    "spot_type": "nonprofit",
     "website": BASE_URL,
 }
 

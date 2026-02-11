@@ -1,8 +1,9 @@
 """
-Crawler for Atlanta Mission (atlantamission.org).
+Crawler for Open Hand Atlanta (openhandatlanta.org).
 
-Largest provider of homeless services in Georgia, offering shelter, recovery programs,
-and volunteer opportunities. Site uses JavaScript rendering - must use Playwright.
+Provides medically tailored meals and nutrition services to people with serious illnesses.
+Offers volunteer opportunities for meal prep, delivery, and community events.
+Site uses JavaScript rendering - must use Playwright.
 """
 
 from __future__ import annotations
@@ -20,30 +21,31 @@ from utils import extract_images_from_page
 
 logger = logging.getLogger(__name__)
 
-BASE_URL = "https://atlantamission.org"
-VOLUNTEER_URL = f"{BASE_URL}/get-involved/volunteer"
-EVENTS_URL = f"{BASE_URL}/events"
+BASE_URL = "https://www.openhandatlanta.org"
+EVENTS_URL = f"{BASE_URL}/events/"
+VOLUNTEER_URL = f"{BASE_URL}/get-involved/volunteer/"
 
-# Atlanta Mission main location
-ATLANTA_MISSION_HQ = {
-    "name": "Atlanta Mission",
-    "slug": "atlanta-mission",
-    "address": "921 Howell Mill Rd NW",
-    "neighborhood": "Westside",
+# Open Hand Atlanta main location
+OPEN_HAND_HQ = {
+    "name": "Open Hand Atlanta",
+    "slug": "open-hand-atlanta",
+    "address": "181 Armour Dr NE",
+    "neighborhood": "Lindbergh",
     "city": "Atlanta",
     "state": "GA",
-    "zip": "30318",
-    "lat": 33.7867,
-    "lng": -84.4149,
+    "zip": "30324",
+    "lat": 33.8098,
+    "lng": -84.3631,
     "venue_type": "nonprofit",
     "spot_type": "nonprofit",
     "website": BASE_URL,
+    "vibes": ["volunteer", "food"],
 }
 
 
 def parse_event_date(date_text: str) -> Optional[dict]:
     """
-    Parse various date formats from Atlanta Mission events.
+    Parse various date formats from Open Hand Atlanta events.
     Examples:
     - "February 15, 2026"
     - "March 1, 2026 at 6:00 PM"
@@ -110,18 +112,14 @@ def determine_category(title: str, description: str = "") -> str:
     """Determine event category based on title and description."""
     text = f"{title} {description}".lower()
 
-    if any(word in text for word in ["volunteer", "serve", "help", "service project"]):
+    if any(word in text for word in ["volunteer", "meal prep", "delivery", "serve", "help"]):
         return "community"
-    if any(word in text for word in ["meal service", "food", "kitchen", "serve meals"]):
+    if any(word in text for word in ["gala", "fundraiser", "benefit", "auction"]):
         return "community"
-    if any(word in text for word in ["recovery", "addiction", "sobriety"]):
-        return "community"
-    if any(word in text for word in ["fundraiser", "gala", "benefit", "donation"]):
-        return "community"
-    if any(word in text for word in ["workshop", "training", "class", "seminar"]):
-        return "education"
-    if any(word in text for word in ["worship", "chapel", "prayer", "spiritual"]):
-        return "community"
+    if any(word in text for word in ["nutrition", "cooking", "class", "workshop", "training"]):
+        return "learning"
+    if any(word in text for word in ["run", "walk", "race", "5k"]):
+        return "sports"
 
     return "community"
 
@@ -129,30 +127,28 @@ def determine_category(title: str, description: str = "") -> str:
 def extract_tags(title: str, description: str = "") -> list[str]:
     """Extract relevant tags from event content."""
     text = f"{title} {description}".lower()
-    tags = ["volunteer", "homelessness", "charity"]  # Default tags
+    tags = []
 
-    if any(word in text for word in ["food", "meal", "kitchen", "serve meals"]):
+    if any(word in text for word in ["volunteer", "serve", "help"]):
+        tags.append("volunteer")
+    if any(word in text for word in ["food", "meal", "cooking", "kitchen", "nutrition"]):
         tags.append("food")
-    if any(word in text for word in ["clothing", "clothes", "apparel", "donations"]):
-        tags.append("clothing-drive")
-    if any(word in text for word in ["shelter", "housing", "overnight"]):
-        tags.append("shelter")
-    if any(word in text for word in ["recovery", "addiction", "sobriety", "rehabilitation"]):
-        tags.append("recovery")
-    if any(word in text for word in ["youth", "children", "kids", "family"]):
-        tags.append("family-friendly")
-    if any(word in text for word in ["veteran", "military"]):
-        tags.append("veterans")
-    if any(word in text for word in ["women", "mothers"]):
-        tags.append("women")
-    if any(word in text for word in ["men", "fathers"]):
-        tags.append("men")
-    if any(word in text for word in ["spiritual", "faith", "christian", "chapel"]):
-        tags.append("faith-based")
-    if any(word in text for word in ["emergency", "crisis"]):
-        tags.append("emergency-relief")
+    if any(word in text for word in ["health", "wellness", "medical", "illness"]):
+        tags.append("health")
+    if any(word in text for word in ["fundraiser", "gala", "benefit", "donation"]):
+        tags.append("fundraiser")
+    if any(word in text for word in ["hiv", "aids", "cancer", "illness"]):
+        tags.append("health")
+    if any(word in text for word in ["delivery", "driver"]):
+        tags.append("volunteer")
+    if any(word in text for word in ["senior", "elderly"]):
+        tags.append("seniors")
+    if any(word in text for word in ["lgbtq", "pride", "queer"]):
+        tags.append("lgbtq-friendly")
     if any(word in text for word in ["free", "no cost"]):
         tags.append("free")
+    if any(word in text for word in ["charity", "nonprofit"]):
+        tags.append("charity")
 
     return list(set(tags))
 
@@ -171,20 +167,34 @@ def is_free_event(title: str, description: str = "") -> bool:
 
     # Check for paid indicators
     if any(word in text for word in ["$", "ticket", "registration fee", "cost:", "price:"]):
-        # Fundraisers might mention $ without being paid to attend
-        if "fundraiser" in text or "gala" in text or "benefit" in text:
+        # But galas/fundraisers have tickets
+        if "gala" in text or "fundraiser" in text or "benefit" in text:
             return False
         return False
 
-    # Default to True for Atlanta Mission volunteer events
+    # Default to True for Open Hand volunteer events
+    return True
+
+
+def is_public_event(title: str, description: str = "") -> bool:
+    """Filter out internal staff meetings and private events."""
+    text = f"{title} {description}".lower()
+
+    # Skip internal/private events
+    if any(word in text for word in [
+        "staff meeting", "board meeting", "internal", "private",
+        "employees only", "staff only", "team meeting"
+    ]):
+        return False
+
     return True
 
 
 def crawl(source: dict) -> tuple[int, int, int]:
     """
-    Crawl Atlanta Mission volunteer opportunities and events using Playwright.
+    Crawl Open Hand Atlanta volunteer opportunities and events using Playwright.
 
-    Checks both /volunteer and /events pages.
+    Checks both /events and /volunteer pages for public events.
     """
     source_id = source["id"]
     events_found = 0
@@ -200,15 +210,15 @@ def crawl(source: dict) -> tuple[int, int, int]:
             )
             page = context.new_page()
 
-            # Get venue ID for Atlanta Mission HQ
-            venue_id = get_or_create_venue(ATLANTA_MISSION_HQ)
+            # Get venue ID for Open Hand HQ
+            venue_id = get_or_create_venue(OPEN_HAND_HQ)
 
-            # Try both volunteer and events pages
-            urls_to_check = [VOLUNTEER_URL, EVENTS_URL]
+            # Try both events and volunteer pages
+            urls_to_check = [EVENTS_URL, VOLUNTEER_URL]
 
             for url in urls_to_check:
                 try:
-                    logger.info(f"Fetching Atlanta Mission page: {url}")
+                    logger.info(f"Fetching Open Hand Atlanta page: {url}")
                     page.goto(url, wait_until="domcontentloaded", timeout=30000)
                     page.wait_for_timeout(5000)
 
@@ -229,6 +239,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "article[class*='event']",
                         ".post-type-event",
                         ".opportunity",
+                        ".calendar-event",
                     ]
 
                     events = []
@@ -278,7 +289,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                                     if len(potential_desc) > 20:
                                         description = potential_desc
 
-                                if title:
+                                if title and is_public_event(title, description):
                                     events_found += 1
 
                                     category = determine_category(title, description)
@@ -286,7 +297,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                                     is_free = is_free_event(title, description)
 
                                     content_hash = generate_content_hash(
-                                        title, "Atlanta Mission", date_data["start_date"]
+                                        title, "Open Hand Atlanta", date_data["start_date"]
                                     )
 
                                     if find_event_by_hash(content_hash):
@@ -349,6 +360,10 @@ def crawl(source: dict) -> tuple[int, int, int]:
                                         description = line
                                         break
 
+                                # Filter out private events
+                                if not is_public_event(title, description):
+                                    continue
+
                                 events_found += 1
 
                                 category = determine_category(title, description)
@@ -356,7 +371,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                                 is_free = is_free_event(title, description)
 
                                 content_hash = generate_content_hash(
-                                    title, "Atlanta Mission", date_data["start_date"]
+                                    title, "Open Hand Atlanta", date_data["start_date"]
                                 )
 
                                 if find_event_by_hash(content_hash):
@@ -408,14 +423,14 @@ def crawl(source: dict) -> tuple[int, int, int]:
             browser.close()
 
         logger.info(
-            f"Atlanta Mission crawl complete: {events_found} found, {events_new} new, {events_updated} updated"
+            f"Open Hand Atlanta crawl complete: {events_found} found, {events_new} new, {events_updated} updated"
         )
 
     except PlaywrightTimeout as e:
-        logger.error(f"Timeout fetching Atlanta Mission: {e}")
+        logger.error(f"Timeout fetching Open Hand Atlanta: {e}")
         raise
     except Exception as e:
-        logger.error(f"Failed to crawl Atlanta Mission: {e}")
+        logger.error(f"Failed to crawl Open Hand Atlanta: {e}")
         raise
 
     return events_found, events_new, events_updated

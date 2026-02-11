@@ -33,7 +33,10 @@ EWA_VENUE = {
     "city": "Atlanta",
     "state": "GA",
     "zip": "30303",
+    "lat": 33.7574,
+    "lng": -84.3883,
     "venue_type": "nonprofit",
+    "spot_type": "nonprofit",
     "website": BASE_URL,
 }
 

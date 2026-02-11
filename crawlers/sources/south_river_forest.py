@@ -33,9 +33,15 @@ DEFAULT_EVENTS_URL = f"{DEFAULT_BASE_URL}/events"
 SRFC_VENUE = {
     "name": "South River Forest Coalition",
     "slug": "south-river-forest-coalition",
+    "address": "South River Forest",
+    "neighborhood": "Southeast Atlanta",
     "city": "Atlanta",
     "state": "GA",
+    "zip": "30316",
+    "lat": 33.6942,
+    "lng": -84.3234,
     "venue_type": "nonprofit",
+    "spot_type": "nonprofit",
     "website": DEFAULT_BASE_URL,
 }
 
@@ -337,7 +343,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             "start_time": time_info,
                             "end_date": None,
                             "end_time": None,
-                            "is_all_day": time_info is None,
+                            "is_all_day": False,
                             "category": category,
                             "subcategory": None,
                             "tags": tags,
@@ -432,7 +438,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                                 "start_time": time_info,
                                 "end_date": None,
                                 "end_time": None,
-                                "is_all_day": time_info is None,
+                                "is_all_day": False,
                                 "category": category,
                                 "subcategory": None,
                                 "tags": tags,
