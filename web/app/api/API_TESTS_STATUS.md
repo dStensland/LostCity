@@ -36,7 +36,7 @@ Coverage includes:
 
 **Key Pattern**: Uses mocked `@/lib/search` module functions instead of deep Supabase mocking, which makes tests fast and reliable.
 
-## TODO - Remaining Routes
+## Remaining Routes
 
 The following routes need test coverage with simpler mocking strategies:
 

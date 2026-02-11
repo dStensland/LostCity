@@ -120,7 +120,7 @@ async function resolveCustomDomainInMiddleware(
  * - Rewrites root requests from {slug}.lostcity.ai to /{slug} portal page
  * - Other routes (events, collections, etc.) work globally on any subdomain
  */
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const nonce = generateNonce();
   const isDev = process.env.NODE_ENV !== "production";
   const csp = buildCsp(nonce, { isDev });

@@ -22,6 +22,12 @@ CLAUDE_PRICING = {
 DEFAULT_MODEL = 'claude-3-haiku-20240307'
 
 
+def is_seasonal_peak(date: datetime) -> bool:
+    """Return True during peak event months for crawl-frequency learning."""
+    # Spring festivals + summer events + holiday season.
+    return date.month in {3, 4, 5, 6, 10, 11, 12}
+
+
 class MetricsCollector:
     """
     Collects detailed metrics during a crawl for analysis and optimization.
@@ -372,7 +378,7 @@ def record_frequency_observation(
         'day_of_week': now.weekday(),  # Python: 0=Monday, 6=Sunday (adjust if needed)
         'hour_of_day': now.hour,
         'is_beginning_of_month': now.day <= 7,
-        'is_seasonal_peak': False,  # TODO: Implement seasonal detection
+        'is_seasonal_peak': is_seasonal_peak(now),
     }
     
     try:

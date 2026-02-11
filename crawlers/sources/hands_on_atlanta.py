@@ -136,6 +136,7 @@ def fetch_opportunities_via_page() -> list[dict]:
                     # Title is the next line
                     if idx < len(lines):
                         opp["title"] = lines[idx]
+                        opp["image_url"] = image_map.get(lines[idx])
                         idx += 1
 
                     # Organization is next
@@ -265,6 +266,7 @@ def parse_opportunity(opp: dict) -> Optional[dict]:
             "interests": opp.get("interests", []),
             "source_url": url,
             "is_free": True,
+            "image_url": opp.get("image_url"),
         }
 
     except Exception as e:
@@ -360,7 +362,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 "is_free": True,
                 "source_url": parsed["source_url"],
                 "ticket_url": parsed["source_url"],
-                "image_url": None,  # TODO: propagate image_map from fetch_opportunities_via_page
+                "image_url": parsed.get("image_url"),
                 "raw_text": None,
                 "extraction_confidence": 0.80,
                 "is_recurring": False,

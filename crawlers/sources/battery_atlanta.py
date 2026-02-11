@@ -240,6 +240,29 @@ def crawl(source: dict) -> tuple[int, int, int]:
             page.wait_for_timeout(5000)  # Wait for JS to render events
             page.wait_for_timeout(3000)
 
+            # Load paginated results when a "Load More" control is present.
+            for _ in range(8):
+                load_more = page.query_selector(
+                    ".tribe-events-c-load-more button, "
+                    ".tribe-events-c-load-more a, "
+                    "button:has-text('Load More'), "
+                    "a:has-text('Load More')"
+                )
+                if not load_more:
+                    break
+
+                before_count = page.locator("article.tribe-events-calendar-list__event").count()
+                try:
+                    load_more.click(timeout=5000)
+                    page.wait_for_timeout(2000)
+                    page.wait_for_load_state("domcontentloaded", timeout=10000)
+                except Exception:
+                    break
+
+                after_count = page.locator("article.tribe-events-calendar-list__event").count()
+                if after_count <= before_count:
+                    break
+
             content = page.content()
             soup = BeautifulSoup(content, 'html.parser')
 
@@ -365,11 +388,6 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 except Exception as e:
                     logger.error(f"Error processing event: {e}")
                     continue
-
-            # TODO: Handle pagination - check for "Load More" button or next page links
-            # The site uses AJAX loading, so we might need to:
-            # 1. Click "Load More" button multiple times
-            # 2. Or fetch additional pages from /events-calendar/list/page/2/, etc.
 
             browser.close()
 

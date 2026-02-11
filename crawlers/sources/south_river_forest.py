@@ -26,9 +26,8 @@ from utils import extract_images_from_page, extract_event_links, find_event_url
 
 logger = logging.getLogger(__name__)
 
-# TODO: Update this URL when the correct site is confirmed
-BASE_URL = "https://defendatlantaforest.org"
-EVENTS_URL = f"{BASE_URL}/events"
+DEFAULT_BASE_URL = "https://defendatlantaforest.org"
+DEFAULT_EVENTS_URL = f"{DEFAULT_BASE_URL}/events"
 
 # Coalition organizing venue (virtual/TBD since they organize at various locations)
 SRFC_VENUE = {
@@ -37,7 +36,7 @@ SRFC_VENUE = {
     "city": "Atlanta",
     "state": "GA",
     "venue_type": "nonprofit",
-    "website": BASE_URL,
+    "website": DEFAULT_BASE_URL,
 }
 
 
@@ -204,6 +203,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
     This crawler attempts to find event listings in common formats.
     """
     source_id = source["id"]
+    base_url = (source.get("url") or DEFAULT_BASE_URL).rstrip("/")
+    events_url = f"{base_url}/events"
     events_found = 0
     events_new = 0
     events_updated = 0
@@ -218,23 +219,24 @@ def crawl(source: dict) -> tuple[int, int, int]:
             page = context.new_page()
 
             # Get venue ID for coalition
-            venue_id = get_or_create_venue(SRFC_VENUE)
+            venue_data = {**SRFC_VENUE, "website": base_url}
+            venue_id = get_or_create_venue(venue_data)
 
-            logger.info(f"Fetching South River Forest Coalition events: {EVENTS_URL}")
+            logger.info(f"Fetching South River Forest Coalition events: {events_url}")
 
             try:
-                page.goto(EVENTS_URL, wait_until="domcontentloaded", timeout=30000)
+                page.goto(events_url, wait_until="domcontentloaded", timeout=30000)
                 page.wait_for_timeout(5000)
             except Exception as e:
                 # Try alternate URLs if /events doesn't work
                 logger.warning(f"Failed to load /events, trying /calendar: {e}")
                 try:
-                    page.goto(f"{BASE_URL}/calendar", wait_until="domcontentloaded", timeout=30000)
+                    page.goto(f"{base_url}/calendar", wait_until="domcontentloaded", timeout=30000)
                     page.wait_for_timeout(5000)
                 except Exception as e2:
                     logger.warning(f"Failed to load /calendar, trying /actions: {e2}")
                     try:
-                        page.goto(f"{BASE_URL}/actions", wait_until="domcontentloaded", timeout=30000)
+                        page.goto(f"{base_url}/actions", wait_until="domcontentloaded", timeout=30000)
                         page.wait_for_timeout(5000)
                     except Exception as e3:
                         logger.error(f"Failed to load any page: {e3}")
@@ -245,7 +247,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             image_map = extract_images_from_page(page)
 
             # Extract event links for specific URLs
-            event_links = extract_event_links(page, BASE_URL)
+            event_links = extract_event_links(page, base_url)
 
             # Scroll to load all content
             for _ in range(3):
@@ -322,7 +324,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         # Get specific event URL
 
 
-                        event_url = find_event_url(title, event_links, EVENTS_URL)
+                        event_url = find_event_url(title, event_links, events_url)
 
 
 
@@ -344,7 +346,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             "price_note": None,
                             "is_free": is_free,
                             "source_url": event_url,
-                            "ticket_url": event_url if event_url != (EVENTS_URL if "EVENTS_URL" in dir() else BASE_URL) else None,
+                            "ticket_url": event_url if event_url != events_url else None,
                             "image_url": image_map.get(title),
                             "raw_text": f"{title} | {elem_text[:400]}"[:500],
                             "extraction_confidence": 0.80,
@@ -417,7 +419,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             # Get specific event URL
 
 
-                            event_url = find_event_url(title, event_links, EVENTS_URL)
+                            event_url = find_event_url(title, event_links, events_url)
 
 
 
@@ -439,7 +441,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                                 "price_note": None,
                                 "is_free": is_free,
                                 "source_url": event_url,
-                                "ticket_url": event_url if event_url != (EVENTS_URL if "EVENTS_URL" in dir() else BASE_URL) else None,
+                                "ticket_url": event_url if event_url != events_url else None,
                                 "image_url": image_map.get(title),
                                 "raw_text": f"{title} | {description[:200]}"[:500],
                                 "extraction_confidence": 0.75,

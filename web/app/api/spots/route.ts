@@ -54,13 +54,49 @@ export async function GET(request: NextRequest) {
       venue_id: number;
     };
 
+    type PortalFilters = {
+      city?: string;
+      cities?: string[];
+    };
+
+    let portalCityFilter: string[] = [];
+    if (portalId && portalId !== "default") {
+      const { data: portalRow } = await supabase
+        .from("portals")
+        .select("filters")
+        .eq("id", portalId)
+        .maybeSingle();
+
+      const rawFilters = (portalRow as { filters?: PortalFilters | string | null } | null)?.filters;
+      let filters: PortalFilters = {};
+
+      if (typeof rawFilters === "string") {
+        try {
+          filters = JSON.parse(rawFilters) as PortalFilters;
+        } catch {
+          filters = {};
+        }
+      } else if (rawFilters && typeof rawFilters === "object") {
+        filters = rawFilters as PortalFilters;
+      }
+
+      const fromCities = Array.isArray(filters.cities) ? filters.cities : [];
+      const fromCity = filters.city ? [filters.city] : [];
+      portalCityFilter = Array.from(
+        new Set([...fromCities, ...fromCity].map((c) => c?.trim()).filter(Boolean) as string[])
+      );
+    }
+
     // Fetch all active venues with enhanced data
     // Note: is_24_hours column may not exist in all environments
-    // TODO: Add portal-based geographic filtering when portals define their cities
     let query = supabase
       .from("venues")
       .select("id, name, slug, address, neighborhood, venue_type, city, image_url, price_level, hours, hours_display, vibes, short_description, genres")
       .neq("active", false); // Exclude deactivated venues
+
+    if (portalCityFilter.length > 0) {
+      query = query.in("city", portalCityFilter);
+    }
 
     // Apply venue type filter
     if (venueTypes && venueTypes.length > 0) {

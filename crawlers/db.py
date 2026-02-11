@@ -9,6 +9,7 @@ import time
 import logging
 import functools
 import threading
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta
 from typing import Optional, Tuple
 from supabase import create_client, Client
@@ -97,6 +98,7 @@ _validation_stats = _ValidationStatsProxy()
 _client: Optional[Client] = None
 _SOURCE_CACHE: dict[int, dict] = {}
 _VENUE_CACHE: dict[int, dict] = {}
+_BLURHASH_EXECUTOR = ThreadPoolExecutor(max_workers=2, thread_name_prefix="blurhash")
 
 
 def retry_on_network_error(max_retries: int = 3, base_delay: float = 0.5):
@@ -176,12 +178,21 @@ def get_source_info(source_id: int) -> Optional[dict]:
         return _SOURCE_CACHE[source_id]
 
     client = get_client()
-    result = (
-        client.table("sources")
-        .select("id, slug, name, url, owner_portal_id")
-        .eq("id", source_id)
-        .execute()
-    )
+    try:
+        result = (
+            client.table("sources")
+            .select("id, slug, name, url, owner_portal_id, producer_id")
+            .eq("id", source_id)
+            .execute()
+        )
+    except Exception:
+        # Backward-compatible fallback for environments where producer_id isn't present.
+        result = (
+            client.table("sources")
+            .select("id, slug, name, url, owner_portal_id")
+            .eq("id", source_id)
+            .execute()
+        )
     if result.data:
         _SOURCE_CACHE[source_id] = result.data[0]
         return result.data[0]
@@ -211,8 +222,8 @@ def get_active_sources() -> list[dict]:
     return result.data or []
 
 
-# Hardcoded source slug to producer_id mapping
-# TODO: Move to sources table when migration 025 is applied
+# Hardcoded source slug to producer_id mapping used as fallback when
+# sources.producer_id is not populated.
 _SOURCE_PRODUCER_MAP = {
     'atlanta-film-society': 'atlanta-film-society',
     'out-on-film': 'out-on-film',
@@ -377,12 +388,20 @@ def infer_program_title(title: Optional[str]) -> Optional[str]:
 
 def get_producer_id_for_source(source_id: int) -> Optional[str]:
     """Get the producer_id associated with a source, if any."""
-    client = get_client()
+    source_info = get_source_info(source_id)
+    if source_info:
+        producer_id = source_info.get("producer_id")
+        if producer_id:
+            return producer_id
 
-    # Get source slug to look up in mapping
+    # Fallback to legacy slug mapping.
     try:
+        if source_info and source_info.get("slug"):
+            return _SOURCE_PRODUCER_MAP.get(source_info["slug"])
+
+        client = get_client()
         result = client.table("sources").select("slug").eq("id", source_id).execute()
-        if result.data and len(result.data) > 0:
+        if result.data:
             slug = result.data[0].get("slug")
             if slug:
                 return _SOURCE_PRODUCER_MAP.get(slug)
@@ -390,6 +409,29 @@ def get_producer_id_for_source(source_id: int) -> Optional[str]:
         pass
 
     return None
+
+
+def _compute_and_save_event_blurhash(event_id: int, image_url: str) -> None:
+    """Best-effort async blurhash generation for newly inserted events."""
+    try:
+        from backfill_blurhash import compute_blurhash  # local import to keep crawler startup fast
+
+        blurhash = compute_blurhash(image_url)
+        if not blurhash:
+            return
+
+        client = get_client()
+        client.table("events").update({"blurhash": blurhash}).eq("id", event_id).execute()
+        logger.debug(f"Stored blurhash for event {event_id}")
+    except Exception as e:
+        logger.debug(f"Blurhash generation skipped for event {event_id}: {e}")
+
+
+def _queue_event_blurhash(event_id: int, image_url: Optional[str]) -> None:
+    """Queue background blurhash generation without blocking crawler writes."""
+    if not image_url:
+        return
+    _BLURHASH_EXECUTOR.submit(_compute_and_save_event_blurhash, event_id, image_url)
 
 
 def _fetch_venue_description(url: str) -> Optional[str]:
@@ -1058,10 +1100,8 @@ def insert_event(event_data: dict, series_hint: dict = None, genres: list = None
     result = client.table("events").insert(event_data).execute()
     event_id = result.data[0]["id"]
 
-    # TODO: Compute blurhash asynchronously for new events with image_url
-    # Don't do this synchronously during crawling as it would slow down crawls.
-    # The backfill script handles existing data; new events should be handled
-    # by a periodic background job that finds events with image_url but no blurhash.
+    # Generate blurhash in background to avoid slowing crawl throughput.
+    _queue_event_blurhash(event_id, event_data.get("image_url"))
 
     # Auto-populate event_artists from parsed lineup for music events
     if parsed_artists_for_insert:

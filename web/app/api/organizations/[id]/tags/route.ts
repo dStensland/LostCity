@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import {
   getEntityTagsWithUserStatus,
+  getAllTagDefinitions,
   addTagToEntity,
   removeTagFromEntity,
 } from "@/lib/venue-tags";
@@ -13,6 +14,14 @@ export const dynamic = "force-dynamic";
 type Props = {
   params: Promise<{ id: string }>;
 };
+
+function normalizeTagSlug(label: string): string {
+  return label
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+}
 
 // GET /api/organizations/[id]/tags - Get all tags for an organization
 export async function GET(request: NextRequest, { params }: Props) {
@@ -75,14 +84,35 @@ export async function POST(request: NextRequest, { params }: Props) {
       return NextResponse.json({ error: "Invalid tag group" }, { status: 400 });
     }
 
-    // For org tags, we need to parse the id and pass it to suggestTag
-    // Since suggestTag currently expects a venue_id number, we'll need to handle orgs differently
-    // For now, return not implemented for tag suggestions on orgs
-    // TODO: Extend suggestTag to handle org entity type
-    return NextResponse.json(
-      { error: "Tag suggestions for organizations not yet supported" },
-      { status: 501 }
-    );
+    const label = String(body.suggestedLabel).trim();
+    if (label.length < 2 || label.length > 64) {
+      return NextResponse.json({ error: "Suggested label must be 2-64 characters" }, { status: 400 });
+    }
+
+    const slug = normalizeTagSlug(label);
+    if (!slug) {
+      return NextResponse.json({ error: "Invalid suggested label" }, { status: 400 });
+    }
+
+    const definitions = await getAllTagDefinitions("org");
+    const matchingDef = definitions.find((def) => {
+      if (def.tag_group !== body.suggestedTagGroup) return false;
+      return def.slug === slug || normalizeTagSlug(def.label) === slug;
+    });
+
+    if (!matchingDef) {
+      return NextResponse.json(
+        { error: "No matching organization tag exists yet. Ask an admin to add this definition first." },
+        { status: 400 }
+      );
+    }
+
+    const attachResult = await addTagToEntity("org", id, matchingDef.id, user.id);
+    if (!attachResult.success) {
+      return NextResponse.json({ error: attachResult.error || "Failed to add tag" }, { status: 400 });
+    }
+
+    return NextResponse.json({ success: true, tagId: matchingDef.id });
   }
 
   return NextResponse.json(

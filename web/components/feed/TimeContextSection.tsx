@@ -66,8 +66,34 @@ export default function TimeContextSection({ portalSlug }: TimeContextSectionPro
     fetchMoments();
   }, [portalSlug]);
 
-  // TODO: When this section fetches and displays events matching
-  // timeContext.sectionCategories, re-enable rendering.
-  // Until then, hide the empty section (no event content to show).
-  return null;
+  const context = data?.timeContext;
+  if (!context?.sectionLabel || context.sectionCategories.length === 0) {
+    return null;
+  }
+
+  const accent = getSectionAccent(context.sectionLabel);
+  const seeAllHref = `/${portalSlug}?view=find&type=events&categories=${encodeURIComponent(context.sectionCategories.join(","))}`;
+
+  return (
+    <section className="space-y-3">
+      <FeedSectionHeader
+        title={context.sectionLabel}
+        subtitle={`${context.season} • ${context.isWeekend ? "weekend" : "weekday"} • ${context.timeOfDay}`}
+        priority="secondary"
+        accentColor={accent}
+        icon={getSectionIcon(context.sectionLabel)}
+        seeAllHref={seeAllHref}
+      />
+      <div className="flex flex-wrap gap-2">
+        {context.sectionCategories.map((category) => (
+          <span
+            key={category}
+            className="inline-flex items-center rounded-full border border-[var(--twilight)] bg-[var(--dusk)]/70 px-2.5 py-1 font-mono text-[0.65rem] uppercase tracking-wide text-[var(--text-secondary)]"
+          >
+            {category.replace(/_/g, " ")}
+          </span>
+        ))}
+      </div>
+    </section>
+  );
 }
