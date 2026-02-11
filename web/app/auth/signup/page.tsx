@@ -7,19 +7,11 @@ import Logo from "@/components/Logo";
 import { PasswordStrength } from "@/components/PasswordStrength";
 import { createClient } from "@/lib/supabase/client";
 import { getAuthErrorMessage } from "@/lib/auth-errors";
-import { getSafeRedirectUrl } from "@/lib/auth-utils";
-
-// Extract portal slug from redirect URL (e.g., "/piedmont/events" -> "piedmont")
-function extractPortalFromRedirect(redirect: string): string | null {
-  // Known non-portal routes that start with a slug-like segment
-  const nonPortalRoutes = ["auth", "api", "events", "spots", "profile", "settings", "friends", "people", "foryou", "welcome", "community", "saved", "notifications"];
-
-  const match = redirect.match(/^\/([a-z0-9-]+)/);
-  if (match && !nonPortalRoutes.includes(match[1])) {
-    return match[1];
-  }
-  return null;
-}
+import {
+  getSafeRedirectUrl,
+  extractPortalFromRedirect,
+  getRememberedPortalSlug,
+} from "@/lib/auth-utils";
 
 function SignupForm() {
   const router = useRouter();
@@ -28,7 +20,10 @@ function SignupForm() {
   const redirect = getSafeRedirectUrl(rawRedirect);
 
   // Capture portal context for onboarding
-  const portalSlug = searchParams.get("portal") || extractPortalFromRedirect(rawRedirect || "/");
+  const portalSlug =
+    searchParams.get("portal") ||
+    extractPortalFromRedirect(rawRedirect || "/") ||
+    getRememberedPortalSlug();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -92,13 +87,22 @@ function SignupForm() {
     setLoading(true);
 
     // Sign up the user - profile is created automatically by database trigger
+    const callbackParams = new URLSearchParams({
+      redirect,
+      new: "true",
+    });
+    if (portalSlug) {
+      callbackParams.set("portal", portalSlug);
+    }
+
     const { data: authData, error: signUpError } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback?redirect=${encodeURIComponent(redirect)}&new=true`,
+        emailRedirectTo: `${window.location.origin}/auth/callback?${callbackParams.toString()}`,
         data: {
           username, // Passed to trigger via raw_user_meta_data
+          signup_portal_slug: portalSlug || undefined,
         },
       },
     });
@@ -113,6 +117,16 @@ function SignupForm() {
     if (authData.session && authData.user) {
       // Email confirmation is disabled - user is logged in immediately
       // Profile is created automatically by database trigger (handle_new_user)
+      if (portalSlug) {
+        await fetch("/api/auth/signup-attribution", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ portal_slug: portalSlug }),
+        }).catch(() => {
+          // Non-blocking attribution; continue onboarding if this fails.
+        });
+      }
+
       const onboardingUrl = portalSlug ? `/onboarding?portal=${portalSlug}` : "/onboarding";
       router.push(onboardingUrl);
       router.refresh();
@@ -128,10 +142,18 @@ function SignupForm() {
     setError(null);
     setLoading(true);
 
+    const callbackParams = new URLSearchParams({
+      redirect,
+      new: "true",
+    });
+    if (portalSlug) {
+      callbackParams.set("portal", portalSlug);
+    }
+
     const { error: oauthError } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${window.location.origin}/auth/callback?redirect=${encodeURIComponent(redirect)}&new=true`,
+        redirectTo: `${window.location.origin}/auth/callback?${callbackParams.toString()}`,
       },
     });
 

@@ -10,10 +10,32 @@ interface PortalThemeClientProps {
 
 export default function PortalThemeClient({ portal }: PortalThemeClientProps) {
   const branding = portal.branding || {};
+  const settings = portal.settings || {};
   const resolvedBranding = applyPreset(branding as PortalBranding);
   const componentStyle = resolvedBranding.component_style;
   const themeMode = (branding.theme_mode as string) || "dark";
   const isLight = themeMode === "light";
+  const vertical = typeof settings.vertical === "string" ? settings.vertical : undefined;
+  const experienceVariant = typeof settings.experience_variant === "string"
+    ? settings.experience_variant.toLowerCase()
+    : "";
+  const isForthVariant = portal.slug === "forth" || experienceVariant === "forth" || experienceVariant === "forth_signature";
+  const forthBackgroundModeRaw = typeof settings.forth_background_mode === "string"
+    ? settings.forth_background_mode.toLowerCase()
+    : "";
+  const forthBackgroundMode = forthBackgroundModeRaw === "off" || forthBackgroundModeRaw === "none"
+    ? "off"
+    : forthBackgroundModeRaw === "subtle"
+      ? "subtle"
+      : "off";
+  const forthMotionModeRaw = typeof settings.forth_motion_mode === "string"
+    ? settings.forth_motion_mode.toLowerCase()
+    : "";
+  const forthMotionMode = forthMotionModeRaw === "cinematic"
+    ? "cinematic"
+    : forthMotionModeRaw === "minimal" || forthMotionModeRaw === "off"
+      ? "minimal"
+      : "subtle";
 
   // Validate color contrast in development
   useEffect(() => {
@@ -93,6 +115,22 @@ export default function PortalThemeClient({ portal }: PortalThemeClientProps) {
       delete body.dataset.theme;
     }
 
+    // Expose portal vertical at body-level for global pseudo-elements.
+    if (vertical) {
+      body.dataset.vertical = vertical;
+    } else {
+      delete body.dataset.vertical;
+    }
+
+    // FORTH-specific background mode (off/subtle), configurable per portal settings.
+    if (isForthVariant) {
+      body.dataset.forthBg = forthBackgroundMode;
+      body.dataset.forthMotion = forthMotionMode;
+    } else {
+      delete body.dataset.forthBg;
+      delete body.dataset.forthMotion;
+    }
+
     // Cleanup on unmount
     return () => {
       delete body.dataset.cardStyle;
@@ -101,8 +139,11 @@ export default function PortalThemeClient({ portal }: PortalThemeClientProps) {
       delete body.dataset.glass;
       delete body.dataset.animations;
       delete body.dataset.theme;
+      delete body.dataset.vertical;
+      delete body.dataset.forthBg;
+      delete body.dataset.forthMotion;
     };
-  }, [componentStyle, isLight]);
+  }, [componentStyle, forthBackgroundMode, forthMotionMode, isForthVariant, isLight, vertical]);
 
   return null;
 }

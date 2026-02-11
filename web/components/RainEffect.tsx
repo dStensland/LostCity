@@ -15,10 +15,34 @@ export default function RainEffect() {
   const [isEnabled, setIsEnabled] = useState(true);
   const [mounted, setMounted] = useState(false);
   const [designTesterActive, setDesignTesterActive] = useState(false);
+  const [portalSuppressed, setPortalSuppressed] = useState(false);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- SSR hydration pattern
     setMounted(true);
+
+    const syncPortalSuppression = () => {
+      const body = document.body;
+      const explicitVertical = body.dataset.vertical;
+      const inferredVertical = document.querySelector<HTMLElement>("[data-vertical]")?.dataset.vertical;
+      const vertical = explicitVertical || inferredVertical;
+      const forthBg = body.dataset.forthBg;
+      const hasForthExperience = Boolean(document.querySelector("[data-forth-experience='true']"));
+      const shouldSuppress = vertical === "hotel" || forthBg === "off" || hasForthExperience;
+      setPortalSuppressed(shouldSuppress);
+    };
+    syncPortalSuppression();
+
+    // Observe portal attributes and route-level tree changes.
+    const observer = new MutationObserver(() => {
+      syncPortalSuppression();
+    });
+    observer.observe(document.documentElement, {
+      attributes: true,
+      childList: true,
+      subtree: true,
+      attributeFilter: ["data-vertical", "data-forth-bg", "data-forth-experience"],
+    });
 
     // Check if design tester has overrides
     const checkDesignTester = () => {
@@ -75,16 +99,22 @@ export default function RainEffect() {
     return () => {
       window.removeEventListener("storage", handleStorageChange);
       window.removeEventListener("designOverridesChanged", handleDesignChange);
+      observer.disconnect();
     };
   }, []);
 
-  // Don't render until mounted to avoid hydration mismatch
+  // Don't render until mounted to avoid hydration mismatch.
   if (!mounted) {
-    return <div className="rain-overlay" aria-hidden="true" />;
+    return null;
   }
 
   // Hide if design tester is controlling ambient effects
   if (designTesterActive) {
+    return null;
+  }
+
+  // Hide for portals that explicitly suppress rain (e.g., hotel/FORTH).
+  if (portalSuppressed) {
     return null;
   }
 

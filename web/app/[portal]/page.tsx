@@ -8,9 +8,10 @@ import { DefaultTemplate } from "./_templates/default";
 import { GalleryTemplate } from "./_templates/gallery";
 import { TimelineTemplate } from "./_templates/timeline";
 import { HotelTemplate } from "./_templates/hotel";
+import { HospitalTemplate } from "./_templates/hospital";
+import { normalizeHospitalMode } from "@/lib/hospital-modes";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
-import { PortalTracker } from "./_components/PortalTracker";
 
 export const revalidate = 60;
 
@@ -35,6 +36,7 @@ type PortalSearchParams = {
   type?: string;
   display?: string;
   mood?: string;
+  mode?: string;
   // Detail view params
   event?: string;
   spot?: string;
@@ -61,10 +63,19 @@ export default async function PortalPage({ params, searchParams }: Props) {
   // Check vertical type for hotel/specialty portals
   const vertical = getPortalVertical(portal);
   const isHotel = vertical === "hotel";
+  const isHospital = vertical === "hospital";
 
   // Hotel portals always show the hotel feed (no view switching)
   if (isHotel) {
-    return <HotelTemplate portal={portal} />;
+    return (
+      <div className="min-h-screen">
+        <Suspense fallback={null}>
+          <DetailViewRouter portalSlug={portal.slug}>
+            <HotelTemplate portal={portal} />
+          </DetailViewRouter>
+        </Suspense>
+      </div>
+    );
   }
 
   const viewParam = searchParamsData.view;
@@ -149,6 +160,7 @@ export default async function PortalPage({ params, searchParams }: Props) {
     searchParamsData.date ||
     searchParamsData.mood
   );
+  const hospitalMode = normalizeHospitalMode(searchParamsData.mode);
 
   return (
     <div className="min-h-screen">
@@ -161,12 +173,15 @@ export default async function PortalPage({ params, searchParams }: Props) {
         portalName={portal.name}
       />
 
-      {/* Portal analytics tracking */}
-      <Suspense fallback={null}>
-        <PortalTracker portalSlug={portal.slug} />
-      </Suspense>
-
-      <main className={findDisplay === "map" && viewMode === "find" ? "" : "max-w-5xl mx-auto px-4 pb-20"}>
+      <main
+        className={
+          viewMode === "find" && findDisplay === "map"
+            ? ""
+            : viewMode === "find" && findDisplay === "calendar"
+              ? "max-w-[1500px] mx-auto px-4 pb-20"
+              : "max-w-5xl mx-auto px-4 pb-20"
+        }
+      >
         {/* DetailViewRouter handles showing detail views (event, venue, series, org) as overlays.
             It uses useSearchParams which requires Suspense, but we use a minimal fallback since
             each content view below has its own appropriate skeleton. */}
@@ -182,14 +197,18 @@ export default async function PortalPage({ params, searchParams }: Props) {
                 <>
                   {viewMode === "feed" && (
                     <Suspense fallback={<FeedSkeleton />}>
-                      {/* Template system - select based on portal.page_template */}
-                      {portal.page_template === "gallery" ? (
-                        <GalleryTemplate portal={portal} />
-                      ) : portal.page_template === "timeline" ? (
-                        <TimelineTemplate portal={portal} />
+                      {isHospital ? (
+                        <HospitalTemplate portal={portal} feedTab={feedTab} mode={hospitalMode} />
                       ) : (
-                        /* Default template for backwards compatibility */
-                        <DefaultTemplate portal={portal} feedTab={feedTab} />
+                        /* Template system - select based on portal.page_template */
+                        portal.page_template === "gallery" ? (
+                          <GalleryTemplate portal={portal} />
+                        ) : portal.page_template === "timeline" ? (
+                          <TimelineTemplate portal={portal} />
+                        ) : (
+                          /* Default template for backwards compatibility */
+                          <DefaultTemplate portal={portal} feedTab={feedTab} />
+                        )
                       )}
                     </Suspense>
                   )}

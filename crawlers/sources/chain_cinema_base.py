@@ -198,7 +198,7 @@ class ChainCinemaCrawler:
                             "is_all_day": False,
                             "category": "film",
                             "subcategory": "cinema",
-                            "tags": ["film", "cinema", "chain-cinema", self.CHAIN_TAG],
+                            "tags": ["film", "cinema", "chain-cinema", "showtime", self.CHAIN_TAG],
                             "price_min": None,
                             "price_max": None,
                             "price_note": None,

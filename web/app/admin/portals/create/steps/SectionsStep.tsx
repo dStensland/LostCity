@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { applyPortalExperience, type ExperienceSpec } from "@/lib/experience-compiler";
 
 type PortalSection = {
   slug: string;
@@ -60,29 +61,27 @@ export function SectionsStep({ draft, updateDraft, onNext, onBack }: Props) {
     setError(null);
 
     try {
-      // Create sections via API
-      for (let i = 0; i < sections.length; i++) {
-        const section = sections[i];
-        const res = await fetch(`/api/admin/portals/${draft.id}/sections`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            ...section,
-            display_order: i,
-            is_visible: true,
-          }),
-        });
+      const spec: ExperienceSpec = {
+        sections: sections.map((section) => ({
+          slug: section.slug,
+          title: section.title,
+          description: section.description,
+          section_type: section.section_type,
+          auto_filter: section.auto_filter,
+          is_visible: true,
+        })),
+      };
 
-        if (!res.ok) {
-          const data = await res.json();
-          throw new Error(data.error || `Failed to create section: ${section.title}`);
-        }
-      }
+      await applyPortalExperience(draft.id, spec, {
+        apply: true,
+        sync_sections: true,
+        replace_sections: true,
+      });
 
       updateDraft({ sections });
       onNext();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create sections");
+      setError(err instanceof Error ? err.message : "Failed to configure sections");
     } finally {
       setUpdating(false);
     }

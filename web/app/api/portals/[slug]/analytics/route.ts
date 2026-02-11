@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient, canManagePortal } from "@/lib/supabase/server";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 import { errorResponse } from "@/lib/api-utils";
+import type { AnySupabase } from "@/lib/api-utils";
+import { fetchPortalInteractionRows, summarizeInteractionRows } from "@/lib/analytics/portal-interaction-metrics";
+
+const PAGE_SIZE = 5000;
 
 // GET /api/portals/[slug]/analytics - Portal analytics dashboard data
 export async function GET(
@@ -40,28 +44,47 @@ export async function GET(
   const sinceDate = new Date();
   sinceDate.setDate(sinceDate.getDate() - days);
   const sinceISO = sinceDate.toISOString();
+  const nowISO = new Date().toISOString();
 
-  // Fetch all page views in the window
-  const { data: views, error: viewsError } = await supabase
-    .from("portal_page_views")
-    .select("page_type, entity_id, utm_source, utm_medium, user_agent, created_at")
-    .eq("portal_id", portalData.id)
-    .gte("created_at", sinceISO)
-    .order("created_at", { ascending: true })
-    .limit(10000);
-
-  if (viewsError) {
-    return errorResponse(viewsError, "portal analytics");
-  }
-
-  const allViews = (views || []) as {
+  // Fetch all page views in pages to avoid silent truncation at high traffic.
+  const allViews: {
     page_type: string;
     entity_id: number | null;
     utm_source: string | null;
     utm_medium: string | null;
     user_agent: string | null;
     created_at: string;
-  }[];
+  }[] = [];
+
+  let offset = 0;
+  while (true) {
+    const { data: pageViews, error: viewsError } = await supabase
+      .from("portal_page_views")
+      .select("page_type, entity_id, utm_source, utm_medium, user_agent, created_at")
+      .eq("portal_id", portalData.id)
+      .gte("created_at", sinceISO)
+      .order("created_at", { ascending: true })
+      .range(offset, offset + PAGE_SIZE - 1);
+
+    if (viewsError) {
+      return errorResponse(viewsError, "portal analytics");
+    }
+
+    const batch = (pageViews || []) as {
+      page_type: string;
+      entity_id: number | null;
+      utm_source: string | null;
+      utm_medium: string | null;
+      user_agent: string | null;
+      created_at: string;
+    }[];
+
+    allViews.push(...batch);
+    if (batch.length < PAGE_SIZE) {
+      break;
+    }
+    offset += PAGE_SIZE;
+  }
 
   // KPIs
   const totalViews = allViews.length;
@@ -108,6 +131,34 @@ export async function GET(
     .map(([source, count]) => ({ source, count }))
     .sort((a, b) => b.count - a.count);
 
+  let interactionSummary = {
+    total_interactions: 0,
+    mode_selected: 0,
+    wayfinding_opened: 0,
+    resource_clicked: 0,
+    wayfinding_open_rate: 0,
+    resource_click_rate: 0,
+    mode_breakdown: [] as Array<{ mode: string; count: number }>,
+    interactions_by_day: [] as Array<{ date: string; count: number }>,
+  };
+
+  try {
+    const interactionRows = await fetchPortalInteractionRows(
+      supabase as unknown as AnySupabase,
+      {
+        portalIds: [portalData.id],
+        startTimestamp: sinceISO,
+        endTimestamp: nowISO,
+      }
+    );
+    interactionSummary = summarizeInteractionRows(interactionRows, totalViews);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "";
+    if (!message.includes("does not exist")) {
+      return errorResponse(error, "portal interaction analytics");
+    }
+  }
+
   return NextResponse.json({
     period: { days, since: sinceISO },
     kpis: {
@@ -117,7 +168,17 @@ export async function GET(
       views_by_type: viewsByType,
     },
     time_series: timeSeries,
+    interaction_time_series: interactionSummary.interactions_by_day,
     top_events: topEvents,
     utm_sources: utmSources,
+    interaction_kpis: {
+      total_interactions: interactionSummary.total_interactions,
+      mode_selected: interactionSummary.mode_selected,
+      wayfinding_opened: interactionSummary.wayfinding_opened,
+      resource_clicked: interactionSummary.resource_clicked,
+      wayfinding_open_rate: interactionSummary.wayfinding_open_rate,
+      resource_click_rate: interactionSummary.resource_click_rate,
+      mode_breakdown: interactionSummary.mode_breakdown,
+    },
   });
 }

@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useEffect, useRef, useState, useMemo, useCallback } from "react";
+import React, { useEffect, useRef, useState, useMemo, useCallback, type CSSProperties } from "react";
 import Link from "next/link";
-import CategoryIcon, { getCategoryLabel } from "./CategoryIcon";
+import CategoryIcon, { getCategoryColor, getCategoryLabel } from "./CategoryIcon";
 import CategorySkeleton from "./CategorySkeleton";
 import LazyImage from "./LazyImage";
 import { OpenStatusBadge } from "./HoursSection";
@@ -125,98 +125,126 @@ function SpotCard({ spot, portalSlug }: { spot: Spot; portalSlug: string }) {
   const hasImage = spot.image_url && !imageError;
   const isFeatured = (spot.event_count ?? 0) >= FEATURED_EVENT_THRESHOLD;
   const categoryKey = spot.venue_type || "other";
+  const accentColor = getCategoryColor(categoryKey);
+  const placeTypeLabel = getCategoryLabel(categoryKey);
 
   return (
     <Link
       href={`/${portalSlug}?spot=${spot.slug}`}
       scroll={false}
       data-category={categoryKey}
-      data-accent="category"
-      className="block p-3 rounded-lg border border-[var(--twilight)] bg-[var(--card-bg)] hover:border-[var(--coral)]/50 hover:bg-[var(--card-bg-hover)] transition-all group glow-category"
+      className="find-row-card block rounded-2xl border border-[var(--twilight)]/75 border-l-[2px] border-l-[var(--accent-color)] overflow-hidden group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-color)]/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--void)]"
+      style={
+        {
+          "--accent-color": accentColor,
+          background:
+            "linear-gradient(180deg, color-mix(in srgb, var(--night) 84%, transparent), color-mix(in srgb, var(--dusk) 72%, transparent))",
+        } as CSSProperties
+      }
     >
-      <div className="flex items-start gap-3">
-        {/* Thumbnail */}
-        <div
-          className={`flex-shrink-0 w-14 h-14 rounded-lg overflow-hidden border border-[var(--twilight)] flex items-center justify-center ${
-            hasImage ? "" : "bg-accent-gradient"
-          }`}
-        >
-          {hasImage ? (
-            <LazyImage
-              src={spot.image_url!}
-              alt=""
-              fill
-              sizes="56px"
-              className="w-full h-full object-cover"
-              placeholderColor="color-mix(in srgb, var(--accent-color) 15%, transparent)"
-              onError={() => setImageError(true)}
-            />
-          ) : (
-            <CategoryIcon type={spot.venue_type || "venue"} size={24} glow="subtle" />
-          )}
+      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-2 sm:gap-3">
+        <div className="min-w-0 p-3.5 sm:p-4">
+          <div className="flex gap-3 sm:gap-4">
+            <div className={`hidden sm:flex flex-shrink-0 self-stretch ${hasImage ? "relative w-[124px] -ml-3.5 sm:-ml-4 -my-3.5 sm:-my-4 overflow-hidden list-rail-media border-r border-[var(--twilight)]/60" : "w-[72px] flex-col items-start justify-center gap-1.5 pr-3 border-r border-[var(--twilight)]/60"}`}>
+              {hasImage ? (
+                <>
+                  <LazyImage
+                    src={spot.image_url!}
+                    alt={spot.name}
+                    fill
+                    sizes="124px"
+                    className="w-full h-full object-cover scale-[1.03]"
+                    placeholderColor="color-mix(in srgb, var(--accent-color) 15%, transparent)"
+                    onError={() => setImageError(true)}
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/56 to-black/20 pointer-events-none" />
+                </>
+              ) : null}
+              <div className={`relative z-10 flex flex-col items-start justify-center gap-1.5 ${hasImage ? "h-full pl-3 pr-2 py-3 sm:py-4" : ""}`}>
+                <span className={`font-mono text-[0.62rem] font-semibold leading-none uppercase tracking-[0.12em] ${hasImage ? "text-[var(--accent-color)]" : "text-[var(--accent-color)]"}`}>
+                  {placeTypeLabel}
+                </span>
+                <span className={`font-mono text-[0.66rem] leading-none uppercase tracking-[0.1em] ${hasImage ? "text-white/82" : "text-[var(--soft)]"}`}>
+                  {spot.neighborhood || "Atlanta"}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex-1 min-w-0">
+              <div className="sm:hidden flex items-center gap-2 mb-2">
+                <span className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-accent-20 border border-[var(--twilight)]/50">
+                  <CategoryIcon type={spot.venue_type || "venue"} size={14} glow="subtle" />
+                </span>
+                <span className="font-mono text-[0.66rem] font-semibold uppercase tracking-[0.1em] text-[var(--accent-color)] truncate">
+                  {placeTypeLabel}
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2.5 mb-1">
+                <span className="hidden sm:inline-flex flex-shrink-0 items-center justify-center w-9 h-9 rounded-lg bg-accent-20 border border-[var(--twilight)]/55">
+                  <CategoryIcon type={spot.venue_type || "venue"} size={18} glow="subtle" />
+                </span>
+                <span className="text-[var(--cream)] font-semibold text-[1.05rem] sm:text-[1.2rem] transition-colors line-clamp-1 group-hover:text-[var(--accent-color)] leading-tight">
+                  {spot.name}
+                </span>
+                {spot.is_open !== undefined && (
+                  <span className="hidden sm:inline-flex">
+                    <OpenStatusBadge hours={spot.hours || null} is24Hours={spot.is_24_hours || false} />
+                  </span>
+                )}
+                {isFeatured && (
+                  <span className="inline-flex flex-shrink-0 px-1.5 py-0.5 rounded font-mono text-[0.5rem] font-medium uppercase bg-accent-25 text-accent border border-accent-40">
+                    Hot
+                  </span>
+                )}
+              </div>
+
+              {spot.short_description && (
+                <p className="text-xs text-[var(--soft)] mt-0.5 line-clamp-1">{spot.short_description}</p>
+              )}
+
+              <div className="flex items-center gap-1.5 text-sm text-[var(--text-secondary)] mt-1.5 leading-relaxed flex-wrap">
+                {spot.neighborhood && (
+                  <span className="truncate max-w-[65%] sm:max-w-[45%] font-medium text-[var(--text-base)]">{spot.neighborhood}</span>
+                )}
+                {spot.price_level && (
+                  <>
+                    <span className="opacity-40">·</span>
+                    <span className="text-[var(--gold)] font-mono text-[0.72rem]">{formatPriceLevel(spot.price_level)}</span>
+                  </>
+                )}
+                {spot.is_open && spot.closes_at && (
+                  <>
+                    <span className="opacity-40">·</span>
+                    <span className="text-[var(--neon-green)] font-mono text-[0.72rem]">til {formatCloseTime(spot.closes_at)}</span>
+                  </>
+                )}
+                {(spot.event_count ?? 0) > 0 && (
+                  <>
+                    <span className="opacity-40">·</span>
+                    <span className="text-[var(--coral)] font-mono text-[0.72rem]">
+                      {spot.event_count} event{spot.event_count !== 1 ? "s" : ""}
+                    </span>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
 
-        {/* Content */}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="font-medium text-[var(--cream)] group-hover:text-[var(--glow-color)] transition-colors truncate">
-              {spot.name}
-            </span>
-            {spot.is_open !== undefined && (
+        <div className="flex flex-col items-end gap-2 pt-3 pr-3 pb-3 sm:pt-4 sm:pr-4 sm:pb-4 flex-shrink-0">
+          {spot.is_open !== undefined && (
+            <span className="sm:hidden inline-flex">
               <OpenStatusBadge hours={spot.hours || null} is24Hours={spot.is_24_hours || false} />
-            )}
-            {isFeatured && (
-              <span
-                className="flex-shrink-0 px-1.5 py-0.5 rounded font-mono text-[0.5rem] font-medium uppercase bg-accent-25 text-accent border border-accent-40"
-              >
-                Hot
-              </span>
-            )}
-          </div>
-
-          {spot.short_description && (
-            <p className="text-xs text-[var(--soft)] mt-0.5 line-clamp-1">{spot.short_description}</p>
+            </span>
           )}
-
-          <div className="flex items-center gap-2 font-mono text-[0.65rem] text-[var(--muted)] mt-1 flex-wrap">
-            {spot.venue_type && (
-              <span data-category={spot.venue_type} className="text-category">
-                {getCategoryLabel(spot.venue_type)}
-              </span>
-            )}
-            {spot.neighborhood && (
-              <>
-                <span className="opacity-40">·</span>
-                <span className="truncate">{spot.neighborhood}</span>
-              </>
-            )}
-            {spot.price_level && (
-              <>
-                <span className="opacity-40">·</span>
-                <span className="text-[var(--gold)]">{formatPriceLevel(spot.price_level)}</span>
-              </>
-            )}
-            {spot.is_open && spot.closes_at && (
-              <>
-                <span className="opacity-40">·</span>
-                <span className="text-[var(--neon-green)]">til {formatCloseTime(spot.closes_at)}</span>
-              </>
-            )}
-            {(spot.event_count ?? 0) > 0 && (
-              <>
-                <span className="opacity-40">·</span>
-                <span className="text-[var(--coral)]">{spot.event_count} event{spot.event_count !== 1 ? "s" : ""}</span>
-              </>
-            )}
-          </div>
+          <span className="inline-flex w-9 h-9 items-center justify-center rounded-lg border border-[var(--twilight)]/75 bg-[var(--dusk)]/72 text-[var(--muted)] group-hover:text-[var(--cream)] group-hover:border-[var(--accent-color)]/55 transition-all">
+            <svg className="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 3h7v7m0-7L10 14" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10v8a1 1 0 001 1h8" />
+            </svg>
+          </span>
         </div>
-
-        <svg
-          className="w-4 h-4 text-[var(--muted)] group-hover:text-[var(--coral)] transition-colors flex-shrink-0 mt-1"
-          fill="none" stroke="currentColor" viewBox="0 0 24 24"
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-        </svg>
       </div>
     </Link>
   );
@@ -377,7 +405,7 @@ function FilterDeck({
   // Category options built from QUICK_VENUE_TYPES + "All"
   const categoryOptions = [
     { key: "all", label: "All Types", icon: "other" as string },
-    ...QUICK_VENUE_TYPES.map(({ key, label, types }) => ({
+    ...QUICK_VENUE_TYPES.map(({ label, types }) => ({
       key: types.join(","),
       label,
       icon: types[0],
@@ -401,7 +429,7 @@ function FilterDeck({
     filters.search || filters.withEvents;
 
   return (
-    <div className="mb-6 space-y-3">
+    <div className="space-y-3">
       {/* Filter Row: Dropdowns + Toggles + Search */}
       <div className="flex items-center gap-2 flex-wrap">
         {/* Neighborhood Dropdown */}
@@ -517,6 +545,8 @@ function FilterDeck({
 export default function PortalSpotsView({ portalId, portalSlug, isExclusive = false }: Props) {
   const [spots, setSpots] = useState<Spot[]>([]);
   const [loading, setLoading] = useState(true);
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [sortBy, setSortBy] = useState<SortOption>("category");
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set(["music_venue", "bar", "restaurant"]));
   const [meta, setMeta] = useState<{ openCount: number; neighborhoods: string[] }>({ openCount: 0, neighborhoods: [] });
@@ -541,6 +571,17 @@ export default function PortalSpotsView({ portalId, portalSlug, isExclusive = fa
     });
   };
 
+  // Debounce search input — wait 300ms after typing stops before hitting API
+  useEffect(() => {
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    searchTimerRef.current = setTimeout(() => {
+      setDebouncedSearch(filters.search);
+    }, 300);
+    return () => {
+      if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    };
+  }, [filters.search]);
+
   // Build query params from filters
   const buildQueryParams = useCallback(() => {
     const params = new URLSearchParams();
@@ -551,9 +592,9 @@ export default function PortalSpotsView({ portalId, portalSlug, isExclusive = fa
     if (filters.priceLevel.length > 0) params.set("price_level", filters.priceLevel.join(","));
     if (filters.venueTypes.length > 0) params.set("venue_type", filters.venueTypes.join(","));
     if (filters.neighborhoods.length > 0) params.set("neighborhood", filters.neighborhoods.join(","));
-    if (filters.search) params.set("q", filters.search);
+    if (debouncedSearch) params.set("q", debouncedSearch);
     return params;
-  }, [portalId, isExclusive, filters]);
+  }, [portalId, isExclusive, filters.openNow, filters.withEvents, filters.priceLevel, filters.venueTypes, filters.neighborhoods, debouncedSearch]);
 
   useEffect(() => {
     async function fetchSpots() {
@@ -642,9 +683,8 @@ export default function PortalSpotsView({ portalId, portalSlug, isExclusive = fa
   }
 
   return (
-    <div className="py-6">
-      {/* Header */}
-      <div className="mb-4">
+    <div className="py-3">
+      <section className="mb-4 rounded-2xl border border-[var(--twilight)]/80 bg-[var(--void)]/70 backdrop-blur-md p-3 sm:p-4">
         <div className="flex items-start justify-between gap-4">
           <div>
             <h2 className="text-xl font-semibold text-[var(--cream)]">Destinations</h2>
@@ -687,15 +727,15 @@ export default function PortalSpotsView({ portalId, portalSlug, isExclusive = fa
             </div>
           </div>
         </div>
-      </div>
-
-      {/* Filter Deck */}
-      <FilterDeck
-        filters={filters}
-        setFilters={setFilters}
-        openCount={meta.openCount}
-        neighborhoods={meta.neighborhoods}
-      />
+        <div className="mt-3 pt-3 border-t border-[var(--twilight)]/65">
+          <FilterDeck
+            filters={filters}
+            setFilters={setFilters}
+            openCount={meta.openCount}
+            neighborhoods={meta.neighborhoods}
+          />
+        </div>
+      </section>
 
       {/* Empty state */}
       {spots.length === 0 && !loading && (
@@ -719,7 +759,7 @@ export default function PortalSpotsView({ portalId, portalSlug, isExclusive = fa
 
       {/* Spots list */}
       {groupedSpots ? (
-        <div className="space-y-2">
+        <div className="space-y-3">
           {groupedSpots.map(({ type, spots: groupSpots, config }) => {
             const isExpanded = expandedCategories.has(type);
             const accent = createCssVarClass("--accent-color", config.color, "accent");
@@ -745,7 +785,7 @@ export default function PortalSpotsView({ portalId, portalSlug, isExclusive = fa
                   </svg>
                 </button>
                 {isExpanded && (
-                  <div className="space-y-2 pb-4">
+                  <div className="space-y-3 pb-4">
                     {groupSpots.map((spot) => <SpotCard key={spot.id} spot={spot} portalSlug={portalSlug} />)}
                   </div>
                 )}
@@ -754,7 +794,7 @@ export default function PortalSpotsView({ portalId, portalSlug, isExclusive = fa
           })}
         </div>
       ) : (
-        <div className="space-y-2">
+        <div className="space-y-3">
           {sortedSpots.map((spot) => <SpotCard key={spot.id} spot={spot} portalSlug={portalSlug} />)}
         </div>
       )}

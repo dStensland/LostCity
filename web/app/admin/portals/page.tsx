@@ -227,7 +227,7 @@ function PortalRow({ portal, onRefresh }: { portal: Portal; onRefresh: () => voi
       <td className="px-4 py-3 text-right">
         <div className="flex items-center justify-end gap-2">
           <Link
-            href={`/portal/${portal.slug}`}
+            href={`/${portal.slug}`}
             className="font-mono text-xs text-[var(--muted)] hover:text-[var(--cream)]"
             target="_blank"
           >

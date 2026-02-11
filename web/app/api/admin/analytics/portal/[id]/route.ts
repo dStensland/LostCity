@@ -3,26 +3,14 @@ import { isAdmin, canManagePortal } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 import { getLocalDateString } from "@/lib/formats";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
+import { computeAttributedDailyMetrics, type DailyMetric } from "@/lib/analytics/attributed-metrics";
+import type { AnySupabase } from "@/lib/api-utils";
+import { fetchPortalInteractionRows, summarizeInteractionRows } from "@/lib/analytics/portal-interaction-metrics";
 
 export const dynamic = "force-dynamic";
 
 type Props = {
   params: Promise<{ id: string }>;
-};
-
-type DailyMetric = {
-  date: string;
-  event_views: number;
-  event_rsvps: number;
-  event_saves: number;
-  event_shares: number;
-  new_signups: number;
-  active_users: number;
-  events_total: number;
-  events_created: number;
-  sources_active: number;
-  crawl_runs: number;
-  crawl_success_rate: number;
 };
 
 export async function GET(request: NextRequest, { params }: Props) {
@@ -48,6 +36,9 @@ export async function GET(request: NextRequest, { params }: Props) {
   const startDate = new Date();
   startDate.setDate(startDate.getDate() - days);
   const startDateStr = getLocalDateString(startDate);
+  const endDateStr = getLocalDateString();
+  const startTimestamp = `${startDateStr}T00:00:00`;
+  const endTimestamp = `${endDateStr}T23:59:59.999`;
 
   // Get portal info
   const { data: portal, error: portalError } = await supabase
@@ -63,18 +54,25 @@ export async function GET(request: NextRequest, { params }: Props) {
   // Get analytics data
   const { data: analyticsData, error: analyticsError } = await supabase
     .from("analytics_daily_portal")
-    .select("date, event_views, event_rsvps, event_saves, event_shares, new_signups, active_users, events_total, events_created, sources_active, crawl_runs, crawl_success_rate")
+    .select("date, portal_id, event_views, event_rsvps, event_saves, event_shares, new_signups, active_users, events_total, events_created, sources_active, crawl_runs, crawl_success_rate")
     .eq("portal_id", portalId)
     .gte("date", startDateStr)
+    .lte("date", endDateStr)
     .order("date", { ascending: true });
 
   let metrics: DailyMetric[] = [];
 
   if (analyticsError || !analyticsData || analyticsData.length === 0) {
-    // Fallback: compute from source tables
-    metrics = await computePortalMetrics(portalId, startDateStr);
+    metrics = await computeAttributedDailyMetrics(supabase, {
+      portalIds: [portalId],
+      startDate: startDateStr,
+      endDate: endDateStr,
+    });
   } else {
-    metrics = analyticsData as DailyMetric[];
+    metrics = (analyticsData as DailyMetric[]).map((row) => ({
+      ...row,
+      portal_id: portalId,
+    }));
   }
 
   // Calculate KPIs
@@ -86,6 +84,37 @@ export async function GET(request: NextRequest, { params }: Props) {
   const avgActiveUsers = metrics.length > 0
     ? Math.round(metrics.reduce((sum, m) => sum + (m.active_users || 0), 0) / metrics.length)
     : 0;
+  const sharesPerThousandViews = totalViews > 0
+    ? Number(((totalShares / totalViews) * 1000).toFixed(1))
+    : 0;
+
+  let interactionSummary = {
+    total_interactions: 0,
+    mode_selected: 0,
+    wayfinding_opened: 0,
+    resource_clicked: 0,
+    wayfinding_open_rate: 0,
+    resource_click_rate: 0,
+    mode_breakdown: [] as Array<{ mode: string; count: number }>,
+    interactions_by_day: [] as Array<{ date: string; count: number }>,
+  };
+
+  try {
+    const rows = await fetchPortalInteractionRows(
+      supabase as unknown as AnySupabase,
+      {
+        portalIds: [portalId],
+        startTimestamp,
+        endTimestamp,
+      }
+    );
+    interactionSummary = summarizeInteractionRows(rows, totalViews);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "";
+    if (!message.includes("does not exist")) {
+      return NextResponse.json({ error: "Failed to fetch interaction analytics" }, { status: 500 });
+    }
+  }
 
   // Calculate trends (last 7 days vs previous 7 days)
   const sevenDaysAgo = new Date();
@@ -141,6 +170,7 @@ export async function GET(request: NextRequest, { params }: Props) {
     signups: metrics.map(m => ({ date: m.date, value: m.new_signups || 0 })),
     activeUsers: metrics.map(m => ({ date: m.date, value: m.active_users || 0 })),
     crawlSuccess: metrics.map(m => ({ date: m.date, value: m.crawl_success_rate || 0 })),
+    interactions: interactionSummary.interactions_by_day.map((m) => ({ date: m.date, value: m.count })),
   };
 
   return NextResponse.json({
@@ -153,7 +183,7 @@ export async function GET(request: NextRequest, { params }: Props) {
     },
     period: {
       start: startDateStr,
-      end: getLocalDateString(),
+      end: endDateStr,
       days,
     },
     kpis: {
@@ -165,102 +195,21 @@ export async function GET(request: NextRequest, { params }: Props) {
       avg_active_users: avgActiveUsers,
       trends,
     },
+    attribution: {
+      tracked_event_shares: totalShares,
+      shares_per_1k_views: sharesPerThousandViews,
+      attributed_signups: totalSignups,
+    },
+    interaction_kpis: {
+      total_interactions: interactionSummary.total_interactions,
+      mode_selected: interactionSummary.mode_selected,
+      wayfinding_opened: interactionSummary.wayfinding_opened,
+      resource_clicked: interactionSummary.resource_clicked,
+      wayfinding_open_rate: interactionSummary.wayfinding_open_rate,
+      resource_click_rate: interactionSummary.resource_click_rate,
+      mode_breakdown: interactionSummary.mode_breakdown,
+    },
     content: contentStats,
     time_series: timeSeries,
   });
-}
-
-// Compute metrics from source tables for a specific portal
-async function computePortalMetrics(portalId: string, startDate: string): Promise<DailyMetric[]> {
-  const supabase = await createClient();
-  const metrics: DailyMetric[] = [];
-
-  // Get RSVPs by date (portal-agnostic for now)
-  const { data: rsvps } = await supabase
-    .from("event_rsvps")
-    .select("created_at")
-    .gte("created_at", startDate);
-
-  // Get signups by date
-  const { data: profiles } = await supabase
-    .from("profiles")
-    .select("created_at")
-    .gte("created_at", startDate);
-
-  // Get activities by date
-  const { data: activities } = await supabase
-    .from("activities")
-    .select("created_at, user_id")
-    .gte("created_at", startDate);
-
-  // Get crawl stats
-  const { data: crawlLogs } = await supabase
-    .from("crawl_logs")
-    .select("started_at, status")
-    .gte("started_at", startDate);
-
-  // Group by date
-  const rsvpsByDate = new Map<string, number>();
-  for (const r of (rsvps || [])) {
-    const date = (r as { created_at: string }).created_at.split("T")[0];
-    rsvpsByDate.set(date, (rsvpsByDate.get(date) || 0) + 1);
-  }
-
-  const signupsByDate = new Map<string, number>();
-  for (const p of (profiles || [])) {
-    const date = (p as { created_at: string }).created_at.split("T")[0];
-    signupsByDate.set(date, (signupsByDate.get(date) || 0) + 1);
-  }
-
-  const activeUsersByDate = new Map<string, Set<string>>();
-  for (const a of (activities || [])) {
-    const act = a as { created_at: string; user_id: string };
-    const date = act.created_at.split("T")[0];
-    if (!activeUsersByDate.has(date)) {
-      activeUsersByDate.set(date, new Set());
-    }
-    activeUsersByDate.get(date)!.add(act.user_id);
-  }
-
-  const crawlsByDate = new Map<string, { runs: number; success: number }>();
-  for (const c of (crawlLogs || [])) {
-    const log = c as { started_at: string; status: string };
-    const date = log.started_at.split("T")[0];
-    const existing = crawlsByDate.get(date) || { runs: 0, success: 0 };
-    existing.runs++;
-    if (log.status === "success") existing.success++;
-    crawlsByDate.set(date, existing);
-  }
-
-  // Generate date range
-  const start = new Date(startDate);
-  const end = new Date();
-  const current = new Date(start);
-
-  while (current <= end) {
-    const dateStr = getLocalDateString(current);
-    const crawlStats = crawlsByDate.get(dateStr) || { runs: 0, success: 0 };
-    const successRate = crawlStats.runs > 0
-      ? (crawlStats.success / crawlStats.runs) * 100
-      : 0;
-
-    metrics.push({
-      date: dateStr,
-      event_views: Math.floor(Math.random() * 50), // Placeholder
-      event_rsvps: rsvpsByDate.get(dateStr) || 0,
-      event_saves: 0,
-      event_shares: 0,
-      new_signups: signupsByDate.get(dateStr) || 0,
-      active_users: activeUsersByDate.get(dateStr)?.size || 0,
-      events_total: 0,
-      events_created: 0,
-      sources_active: 0,
-      crawl_runs: crawlStats.runs,
-      crawl_success_rate: successRate,
-    });
-
-    current.setDate(current.getDate() + 1);
-  }
-
-  return metrics;
 }

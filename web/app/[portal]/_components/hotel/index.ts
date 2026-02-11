@@ -1,9 +1,11 @@
 export { default as HotelFeed } from "./HotelFeed";
 export { default as HotelFeedClient } from "./HotelFeedClient";
 export { default as HotelConciergeFeed } from "./HotelConciergeFeed";
+export { default as ForthConciergeExperience } from "./ForthConciergeExperience";
 export { default as HotelHeader } from "./HotelHeader";
 export { default as HotelEventCard } from "./HotelEventCard";
 export { default as HotelVenueCard } from "./HotelVenueCard";
+export { default as HotelDestinationCard } from "./HotelDestinationCard";
 export { default as HotelSection } from "./HotelSection";
 export { default as HotelCarousel } from "./HotelCarousel";
 export { default as HotelHeroCard } from "./HotelHeroCard";

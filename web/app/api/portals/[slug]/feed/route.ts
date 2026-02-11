@@ -5,7 +5,6 @@ import { getLocalDateString } from "@/lib/formats";
 import { getPortalSourceAccess } from "@/lib/federation";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 import { errorResponse, isValidUUID } from "@/lib/api-utils";
-import { getChainVenueIds } from "@/lib/chain-venues";
 import { fetchSocialProofCounts } from "@/lib/search";
 
 // Cache feed for 5 minutes at CDN, allow stale for 1 hour while revalidating
@@ -80,6 +79,7 @@ type Event = {
   going_count?: number;
   interested_count?: number;
   recommendation_count?: number;
+  tags?: string[] | null;
   source_id?: number | null;
   series_id?: string | null;
   series?: {
@@ -197,7 +197,9 @@ function getDateRange(filter: string): { start: string; end: string } {
 }
 
 function excludeClassEvents(query: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
-  return query.or("is_class.eq.false,is_class.is.null");
+  return query
+    .or("is_class.eq.false,is_class.is.null")
+    .or("is_sensitive.eq.false,is_sensitive.is.null");
 }
 
 // GET /api/portals/[slug]/feed - Get feed content for a portal
@@ -347,6 +349,7 @@ export async function GET(request: NextRequest, { params }: Props) {
         image_url,
         description,
         featured_blurb,
+        tags,
         series_id,
         series:series_id(
           id,
@@ -363,7 +366,8 @@ export async function GET(request: NextRequest, { params }: Props) {
       .in("id", Array.from(eventIds))
       .gte("start_date", getLocalDateString())
       .is("canonical_event_id", null)
-      .or("is_class.eq.false,is_class.is.null"); // Only show canonical non-class events
+      .or("is_class.eq.false,is_class.is.null") // Only show canonical non-class events
+      .or("is_sensitive.eq.false,is_sensitive.is.null");
 
     for (const event of (eventsData || []) as Event[]) {
       eventMap.set(event.id, event);
@@ -405,6 +409,7 @@ export async function GET(request: NextRequest, { params }: Props) {
         image_url,
         description,
         featured_blurb,
+        tags,
         series_id,
         series:series_id(
           id,
@@ -420,7 +425,8 @@ export async function GET(request: NextRequest, { params }: Props) {
       `)
       .in("id", Array.from(pinnedEventIds))
       .is("canonical_event_id", null)
-      .or("is_class.eq.false,is_class.is.null"); // Only show canonical non-class events
+      .or("is_class.eq.false,is_class.is.null") // Only show canonical non-class events
+      .or("is_sensitive.eq.false,is_sensitive.is.null");
 
     for (const event of (pinnedEvents || []) as Event[]) {
       eventMap.set(event.id, event);
@@ -439,6 +445,19 @@ export async function GET(request: NextRequest, { params }: Props) {
   const autoEventPool = new Map<number, Event>();
 
   if (sectionsNeedingAutoEvents.length > 0) {
+    // Source/venue-constrained sections can be starved by a globally limited pool.
+    // Track explicit constraints so we can merge a targeted supplement query.
+    const constrainedSourceIds = Array.from(
+      new Set(
+        sectionsNeedingAutoEvents.flatMap(section => section.auto_filter?.source_ids || [])
+      )
+    );
+    const constrainedVenueIds = Array.from(
+      new Set(
+        sectionsNeedingAutoEvents.flatMap(section => section.auto_filter?.venue_ids || [])
+      )
+    );
+
     // Find the widest date range needed across all sections
     let maxEndDate = getLocalDateString(addDays(new Date(), 14)); // Default 2 weeks
 
@@ -474,6 +493,7 @@ export async function GET(request: NextRequest, { params }: Props) {
         image_url,
         description,
         featured_blurb,
+        tags,
         series_id,
         series:series_id(
           id,
@@ -491,7 +511,8 @@ export async function GET(request: NextRequest, { params }: Props) {
       .gte("start_date", today)
       .lte("start_date", maxEndDate)
       .is("canonical_event_id", null)
-      .or("is_class.eq.false,is_class.is.null"); // Only show canonical non-class events
+      .or("is_class.eq.false,is_class.is.null") // Only show canonical non-class events
+      .or("is_sensitive.eq.false,is_sensitive.is.null");
 
     // Apply portal filter with federation support
     if (isExclusivePortal) {
@@ -532,14 +553,101 @@ export async function GET(request: NextRequest, { params }: Props) {
       autoEventPool.set(event.id, event);
     }
 
-    // Filter chain venues from the auto event pool
-    // Chain cinemas are searchable and on maps but excluded from curated feed
-    const chainVenueIds = await getChainVenueIds(supabase);
-    if (chainVenueIds.length > 0) {
-      for (const [eventId, event] of autoEventPool) {
-        if (event.venue?.id && chainVenueIds.includes(event.venue.id)) {
-          autoEventPool.delete(eventId);
+    // Supplemental query: explicitly pull from constrained sources/venues so those
+    // sections always have a fair candidate pool before section-level filtering.
+    if (constrainedSourceIds.length > 0 || constrainedVenueIds.length > 0) {
+      let constrainedQuery = supabase
+        .from("events")
+        .select(`
+          id,
+          title,
+          start_date,
+          start_time,
+          end_date,
+          end_time,
+          is_all_day,
+          is_free,
+          price_min,
+          price_max,
+          category,
+          subcategory,
+          image_url,
+          description,
+          featured_blurb,
+          tags,
+          series_id,
+          series:series_id(
+            id,
+            slug,
+            title,
+            series_type,
+            image_url,
+            frequency,
+            day_of_week,
+            festival:festivals(id, slug, name, image_url, festival_type, location, neighborhood)
+          ),
+          source_id,
+          venue:venues(id, name, neighborhood, slug)
+        `)
+        .gte("start_date", today)
+        .lte("start_date", maxEndDate)
+        .is("canonical_event_id", null)
+        .or("is_class.eq.false,is_class.is.null")
+        .or("is_sensitive.eq.false,is_sensitive.is.null");
+
+      if (constrainedSourceIds.length > 0 && constrainedVenueIds.length > 0) {
+        constrainedQuery = constrainedQuery.or(
+          `source_id.in.(${constrainedSourceIds.join(",")}),venue_id.in.(${constrainedVenueIds.join(",")})`
+        );
+      } else if (constrainedSourceIds.length > 0) {
+        constrainedQuery = constrainedQuery.in("source_id", constrainedSourceIds);
+      } else if (constrainedVenueIds.length > 0) {
+        constrainedQuery = constrainedQuery.in("venue_id", constrainedVenueIds);
+      }
+
+      // Re-apply portal federation visibility guardrails
+      if (isExclusivePortal) {
+        if (hasSubscribedSources) {
+          const sourceIdList = federationAccess.sourceIds.join(",");
+          constrainedQuery = constrainedQuery.or(`portal_id.eq.${portal.id},source_id.in.(${sourceIdList})`);
+        } else {
+          constrainedQuery = constrainedQuery.eq("portal_id", portal.id);
         }
+      } else {
+        if (hasSubscribedSources) {
+          const sourceIdList = federationAccess.sourceIds.join(",");
+          constrainedQuery = constrainedQuery.or(`portal_id.eq.${portal.id},portal_id.is.null,source_id.in.(${sourceIdList})`);
+        } else {
+          constrainedQuery = constrainedQuery.or(`portal_id.eq.${portal.id},portal_id.is.null`);
+        }
+      }
+
+      const supplementalLimit = Math.min(
+        400,
+        Math.max(constrainedSourceIds.length * 40, constrainedVenueIds.length * 30, 80)
+      );
+
+      const { data: constrainedEvents } = await constrainedQuery
+        .order("start_date", { ascending: true })
+        .order("start_time", { ascending: true })
+        .limit(supplementalLimit);
+
+      for (const event of (constrainedEvents || []) as Event[]) {
+        if (event.source_id && federationAccess.categoryConstraints.has(event.source_id)) {
+          const allowedCategories = federationAccess.categoryConstraints.get(event.source_id);
+          if (allowedCategories !== null && allowedCategories !== undefined && event.category && !allowedCategories.includes(event.category)) {
+            continue;
+          }
+        }
+        autoEventPool.set(event.id, event);
+      }
+    }
+
+    // Filter regular showtimes from the auto event pool
+    // Showtimes belong in the dedicated showtimes rollup, not curated feeds
+    for (const [eventId, event] of autoEventPool) {
+      if (event.tags?.includes("showtime")) {
+        autoEventPool.delete(eventId);
       }
     }
   }
@@ -822,6 +930,7 @@ export async function GET(request: NextRequest, { params }: Props) {
       .lte("start_date", getLocalDateString(addDays(new Date(), 30)))
       .is("canonical_event_id", null)
       .or("is_class.eq.false,is_class.is.null")
+      .or("is_sensitive.eq.false,is_sensitive.is.null")
       .order("start_date", { ascending: true });
 
       // Group events by tag
@@ -898,6 +1007,30 @@ export async function GET(request: NextRequest, { params }: Props) {
       // Apply category filter
       if (filter.categories?.length) {
         filtered = filtered.filter(e => e.category && filter.categories!.includes(e.category));
+      }
+
+      // Restrict to specific source IDs (strict portal attribution)
+      if (filter.source_ids?.length) {
+        const sourceSet = new Set(filter.source_ids);
+        filtered = filtered.filter(e => e.source_id !== null && e.source_id !== undefined && sourceSet.has(e.source_id));
+      }
+
+      // Restrict to specific venue IDs
+      if (filter.venue_ids?.length) {
+        const venueSet = new Set(filter.venue_ids);
+        filtered = filtered.filter(e => e.venue?.id !== null && e.venue?.id !== undefined && venueSet.has(e.venue.id));
+      }
+
+      // Restrict to specific neighborhoods
+      if (filter.neighborhoods?.length) {
+        const neighborhoods = new Set(filter.neighborhoods.map(n => n.toLowerCase()));
+        filtered = filtered.filter(e => e.venue?.neighborhood && neighborhoods.has(e.venue.neighborhood.toLowerCase()));
+      }
+
+      // Match events that include at least one requested tag
+      if (filter.tags?.length) {
+        const tagSet = new Set(filter.tags);
+        filtered = filtered.filter(e => Array.isArray(e.tags) && e.tags.some(tag => tagSet.has(tag)));
       }
 
       // Exclude categories

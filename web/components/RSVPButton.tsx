@@ -366,15 +366,15 @@ export default function RSVPButton({
 
   // Variant-specific styles
   const getButtonClasses = () => {
-    const baseClasses = "font-mono font-medium rounded-xl transition-all duration-150 flex items-center gap-2 active:scale-[0.98] touch-action-manipulation";
+    const baseClasses = "font-mono font-medium rounded-xl transition-all duration-150 flex items-center gap-2 active:scale-[0.98] touch-action-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--coral)]/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--void)]";
     const animationClass = isAnimating ? "scale-95" : "scale-100";
 
     if (variant === "compact") {
       // Icon-only button for sticky bar
-      return `${baseClasses} w-11 h-11 justify-center border backdrop-blur-[2px] ${
+      return `${baseClasses} w-10 h-10 justify-center border backdrop-blur-[2px] ${
         status
-          ? `${currentConfig?.color} text-[var(--void)] border-transparent shadow-[0_0_12px_var(--cta-glow,rgba(255,107,122,0.25))]`
-          : "bg-[var(--dusk)]/70 text-[var(--muted)] border-[var(--twilight)]/80 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.02)] hover:text-[var(--cream)] hover:border-[var(--cta-border,rgba(255,107,122,0.7))] hover:shadow-[0_0_18px_var(--cta-glow,rgba(255,107,122,0.25))]"
+          ? `${currentConfig?.color} text-[var(--void)] border-transparent shadow-[0_8px_18px_rgba(0,0,0,0.28),0_0_10px_var(--cta-glow,rgba(255,107,122,0.2))]`
+          : "bg-[var(--dusk)]/72 text-[var(--muted)] border-[var(--twilight)]/75 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.02)] hover:text-[var(--cream)] hover:border-[var(--cta-border,rgba(255,107,122,0.7))] hover:shadow-[0_0_16px_var(--cta-glow,rgba(255,107,122,0.2))]"
       } ${animationClass}`;
     }
 
@@ -413,8 +413,8 @@ export default function RSVPButton({
       return status ? (
         <StatusIcon status={status} />
       ) : (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+        <svg className="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v14M5 12h14" />
         </svg>
       );
     }

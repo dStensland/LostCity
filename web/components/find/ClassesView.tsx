@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, type CSSProperties } from "react";
 import Link from "next/link";
 import type { Event } from "@/lib/supabase";
 import { format, parseISO, isToday, isTomorrow, isThisWeek } from "date-fns";
-import { formatTimeSplit, formatCompactCount } from "@/lib/formats";
-import CategoryIcon, { getCategoryColor } from "@/components/CategoryIcon";
+import { formatTimeSplit } from "@/lib/formats";
+import CategoryIcon, { getCategoryColor, getCategoryLabel } from "@/components/CategoryIcon";
 import SeriesCard, { type SeriesInfo, type SeriesVenueGroup } from "@/components/SeriesCard";
 import ScopedStyles from "@/components/ScopedStyles";
 import { createCssVarClass } from "@/lib/css-utils";
@@ -305,10 +305,10 @@ function CategoryDropdown({
   }, [open]);
 
   return (
-    <div ref={dropdownRef} className="relative mb-4">
+    <div ref={dropdownRef} className="relative">
       <button
         onClick={() => setOpen(!open)}
-        className="flex items-center gap-2 bg-[var(--night)] border border-[var(--twilight)] rounded-lg px-3 py-2 font-mono text-xs cursor-pointer hover:border-[var(--coral)]/50 transition-colors"
+        className="h-9 inline-flex items-center gap-2 bg-[var(--night)]/78 border border-[var(--twilight)]/80 rounded-full px-3.5 font-mono text-xs cursor-pointer hover:border-[var(--coral)]/50 hover:bg-[var(--dusk)]/70 transition-colors"
       >
         <span data-category={selected.icon} className="category-icon">
           <CategoryIcon type={selected.icon} size={14} glow="subtle" />
@@ -325,7 +325,7 @@ function CategoryDropdown({
       </button>
 
       {open && (
-        <div className="absolute z-50 mt-1 w-52 bg-[var(--night)] border border-[var(--twilight)] rounded-lg shadow-xl shadow-black/40 overflow-hidden">
+        <div className="absolute z-50 mt-1 w-56 bg-[var(--night)] border border-[var(--twilight)] rounded-lg shadow-xl shadow-black/40 overflow-hidden">
           {CLASS_CATEGORIES.map((cat) => (
             <button
               key={cat.key}
@@ -360,66 +360,35 @@ function ClassRow({
   portalSlug: string;
 }) {
   const { time, period } = formatTimeSplit(cls.start_time);
-  const goingCount = cls.going_count ?? 0;
-  const interestedCount = cls.interested_count ?? 0;
-  const recommendationCount = cls.recommendation_count ?? 0;
-  const hasSocialProof = goingCount > 0 || interestedCount > 0 || recommendationCount > 0;
+  const timeLabel = cls.is_all_day ? "All Day" : `${time}${period ? ` ${period}` : ""}`;
+  const categoryLabel = getCategoryLabel(cls.class_category || cls.category || "learning");
+  const rowAccentColor = getCategoryColor(cls.class_category || cls.category || "learning");
 
   return (
     <Link
       href={`/${portalSlug}?event=${cls.id}`}
       scroll={false}
-      className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-[var(--twilight)]/30 transition-colors group"
+      className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 px-3 py-2.5 rounded-lg border border-[var(--twilight)]/55 bg-[var(--void)]/35 hover:bg-[var(--twilight)]/22 hover:border-[var(--accent-color)]/45 transition-all group"
+      style={{ "--accent-color": rowAccentColor } as CSSProperties}
     >
-      {/* Time */}
-      <div className="w-16 flex-shrink-0 font-mono text-sm text-[var(--soft)]">
-        {time}
-        <span className="text-[var(--muted)] text-xs">{period}</span>
+      <div className="flex items-center gap-2.5 min-w-0">
+        <span className="flex-shrink-0 font-mono text-[0.7rem] font-semibold uppercase tracking-[0.1em] text-[var(--accent-color)] min-w-[72px]">
+          {timeLabel}
+        </span>
+        <span className="flex-1 min-w-0 truncate text-sm text-[var(--cream)] group-hover:text-[var(--accent-color,var(--coral))] transition-colors">
+          {cls.title}
+        </span>
+        <span className="max-w-[86px] sm:max-w-[120px] truncate flex-shrink-0 font-mono text-[0.62rem] font-medium uppercase tracking-[0.08em] text-[var(--muted)]">
+          {categoryLabel}
+        </span>
       </div>
 
-      {/* Category icon */}
-      {cls.category && (
-        <span
-          data-category={cls.category}
-          className="flex-shrink-0 w-5 h-5 rounded flex items-center justify-center class-row-category"
-        >
-          <CategoryIcon type={cls.category} size={12} />
-        </span>
-      )}
-
-      {/* Title */}
-      <span className="flex-1 text-sm text-[var(--cream)] truncate group-hover:text-[var(--coral)] transition-colors">
-        {cls.title}
+      <span className="inline-flex w-8 h-8 items-center justify-center rounded-lg border border-[var(--twilight)]/70 bg-[var(--dusk)]/72 text-[var(--muted)] group-hover:text-[var(--cream)] group-hover:border-[var(--accent-color)]/55 transition-all">
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 3h7v7m0-7L10 14" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10v8a1 1 0 001 1h8" />
+        </svg>
       </span>
-
-      {/* Price */}
-      <span className="flex-shrink-0 text-xs font-mono text-[var(--muted)]">
-        {cls.is_free ? (
-          <span className="text-[var(--neon-green)]">Free</span>
-        ) : cls.price_min ? (
-          `$${cls.price_min}`
-        ) : null}
-      </span>
-
-      {hasSocialProof && (
-        <span className="flex-shrink-0 flex items-center gap-1.5">
-          {goingCount > 0 && (
-            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-[var(--coral)]/10 border border-[var(--coral)]/20 font-mono text-[0.6rem] font-medium text-[var(--coral)]">
-              {formatCompactCount(goingCount)} going
-            </span>
-          )}
-          {interestedCount > 0 && (
-            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-[var(--gold)]/15 border border-[var(--gold)]/30 font-mono text-[0.6rem] font-medium text-[var(--gold)]">
-              {formatCompactCount(interestedCount)} maybe
-            </span>
-          )}
-          {recommendationCount > 0 && (
-            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-[var(--lavender)]/15 border border-[var(--lavender)]/30 font-mono text-[0.6rem] font-medium text-[var(--lavender)]">
-              {formatCompactCount(recommendationCount)} rec&apos;d
-            </span>
-          )}
-        </span>
-      )}
     </Link>
   );
 }
@@ -451,69 +420,101 @@ function VenueSection({
     <>
       <ScopedStyles css={accentClass?.css} />
       <div
-        className={`rounded-sm border border-[var(--twilight)] overflow-hidden card-atmospheric glow-accent reflection-accent bg-[var(--card-bg)] ${reflectionClass} ${accentClass?.className ?? ""} ${
-          categoryColor ? "border-l-[3px] border-l-[var(--accent-color)]" : ""
+        className={`find-row-card rounded-2xl border border-[var(--twilight)]/75 overflow-hidden ${reflectionClass} ${accentClass?.className ?? ""} ${
+          categoryColor ? "border-l-[2px] border-l-[var(--accent-color)]" : ""
         }`}
       >
         {/* Header — matches EventGroup layout */}
         <button
           type="button"
           onClick={() => setIsOpen(!isOpen)}
-          className="group w-full p-3 flex items-center gap-3 hover:bg-[var(--twilight)]/20 transition-colors"
+          className="group w-full"
         >
-          {/* Time of earliest class */}
-          {timeParts && (
-            <div className="flex-shrink-0 w-14 flex flex-col items-center justify-center py-1">
-              <span className="font-mono text-base font-bold text-[var(--cream)] leading-none tabular-nums">
-                {timeParts.time}
-              </span>
-              {timeParts.period && (
-                <span className="font-mono text-[0.6rem] font-medium text-[var(--soft)] mt-0.5">{timeParts.period}</span>
-              )}
+          <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-2 sm:gap-3">
+            <div className="min-w-0 p-3.5 sm:p-4 group-hover:bg-[var(--twilight)]/10 transition-colors">
+              <div className="flex gap-3 sm:gap-4">
+                <div className="hidden sm:flex flex-shrink-0 self-stretch relative w-[124px] -ml-3.5 sm:-ml-4 -my-3.5 sm:-my-4 overflow-hidden list-rail-media border-r border-[var(--twilight)]/60">
+                  <div className="absolute inset-0 bg-gradient-to-r from-black/56 via-black/36 to-black/10 pointer-events-none" />
+                  <div className="relative z-10 flex h-full flex-col items-start justify-center gap-1.5 pl-3 pr-2 py-3 sm:py-4">
+                    <span className="font-mono text-[0.62rem] font-semibold text-[var(--accent-color)] leading-none uppercase tracking-[0.12em]">
+                      {venue.classes.length} {venue.classes.length === 1 ? "class" : "classes"}
+                    </span>
+                    <span className="font-mono text-[1.42rem] font-bold leading-none tabular-nums text-[var(--cream)]">
+                      {timeParts?.time || "TBA"}
+                    </span>
+                    {timeParts?.period && (
+                      <span className="font-mono text-[0.58rem] font-medium uppercase tracking-[0.12em] text-[var(--soft)]">
+                        {timeParts.period}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex-1 min-w-0 text-left">
+                  <div className="sm:hidden flex items-center gap-2 mb-2">
+                    <span className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-accent-20 border border-[var(--twilight)]/50">
+                      <CategoryIcon type={dominantCategory || "learning"} size={14} glow="subtle" />
+                    </span>
+                    <span className="font-mono text-[0.66rem] font-semibold uppercase tracking-[0.1em] text-[var(--accent-color)] truncate">
+                      {timeParts?.time || "TBA"}{timeParts?.period ? ` ${timeParts.period}` : ""}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-2.5 mb-1">
+                    <span className="hidden sm:inline-flex flex-shrink-0 items-center justify-center w-9 h-9 rounded-lg bg-accent-20 border border-[var(--twilight)]/55">
+                      <CategoryIcon type={dominantCategory || "learning"} size={18} glow="subtle" />
+                    </span>
+                    {venue.venueSlug ? (
+                      <Link
+                        href={`/${portalSlug}?spot=${venue.venueSlug}`}
+                        scroll={false}
+                        onClick={(e) => e.stopPropagation()}
+                        className="font-semibold text-[1.05rem] sm:text-[1.24rem] text-[var(--cream)] hover:text-[var(--accent-color)] truncate block transition-colors leading-tight"
+                      >
+                        {venue.venueName}
+                      </Link>
+                    ) : (
+                      <span className="font-semibold text-[1.05rem] sm:text-[1.24rem] text-[var(--cream)] group-hover:text-[var(--accent-color)] truncate block transition-colors leading-tight">
+                        {venue.venueName}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-1.5 text-sm text-[var(--text-secondary)] mt-1.5 leading-relaxed flex-wrap">
+                    {venue.locations && venue.locations.length > 0 && (
+                      <span className="truncate max-w-[75%] sm:max-w-[55%] text-[var(--text-base)]" title={formatLocationList(venue.locations)}>
+                        {formatLocationList(venue.locations)}
+                      </span>
+                    )}
+                    <span className="opacity-40">·</span>
+                    <span className="font-mono text-[0.66rem] uppercase tracking-[0.08em] text-[var(--muted)]">
+                      rollup
+                    </span>
+                  </div>
+                </div>
+              </div>
             </div>
-          )}
-          {dominantCategory && (
-            <span className="flex-shrink-0 inline-flex items-center justify-center w-7 h-7 rounded bg-accent-20">
-              <CategoryIcon type={dominantCategory} size={18} glow="subtle" />
-            </span>
-          )}
-          <div className="flex-1 min-w-0 text-left">
-            {venue.venueSlug ? (
-              <Link
-                href={`/${portalSlug}?spot=${venue.venueSlug}`}
-                scroll={false}
-                onClick={(e) => e.stopPropagation()}
-                className="font-semibold text-lg text-[var(--cream)] hover:text-[var(--coral)] truncate block transition-colors leading-tight"
+
+            <div className="flex flex-col items-end gap-2 pt-3 pr-3 pb-3 sm:pt-4 sm:pr-4 sm:pb-4 flex-shrink-0">
+              <span
+                className={`font-mono text-[0.62rem] px-2 py-1 rounded-full whitespace-nowrap font-medium ${
+                  categoryColor ? "bg-accent-20 text-accent border border-[var(--twilight)]/45" : "bg-[var(--twilight)] text-[var(--cream)] border border-[var(--twilight)]/60"
+                }`}
               >
-                {venue.venueName}
-              </Link>
-            ) : (
-              <span className="font-semibold text-lg text-[var(--cream)] group-hover:text-[var(--glow-color,var(--neon-magenta))] truncate block transition-colors leading-tight">
-                {venue.venueName}
+                {venue.classes.length}
               </span>
-            )}
-            {venue.locations && venue.locations.length > 0 && (
-              <span className="text-sm text-[var(--soft)] mt-0.5 block truncate">
-                {formatLocationList(venue.locations)}
+              <span className="inline-flex w-9 h-9 items-center justify-center rounded-lg border border-[var(--twilight)]/75 bg-[var(--dusk)]/72 text-[var(--muted)] group-hover:text-[var(--cream)] group-hover:border-[var(--accent-color)]/55 transition-all">
+                <svg
+                  className={`w-4.5 h-4.5 transition-transform ${isOpen ? "rotate-180" : ""}`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
               </span>
-            )}
+            </div>
           </div>
-          {/* Class count badge */}
-          <span
-            className={`font-mono text-xs px-2 py-1 rounded-full flex-shrink-0 whitespace-nowrap font-medium ${
-              categoryColor ? "bg-accent-20 text-accent" : "bg-[var(--twilight)] text-[var(--cream)]"
-            }`}
-          >
-            {venue.classes.length} {venue.classes.length === 1 ? "class" : "classes"}
-          </span>
-          <svg
-            className={`w-5 h-5 text-[var(--muted)] transition-transform flex-shrink-0 ${isOpen ? "rotate-180" : ""}`}
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-          </svg>
         </button>
 
         {/* Expanded class list */}
@@ -547,14 +548,23 @@ function VenueSection({
 // Day section header — matches AnimatedEventList date header
 function DayHeader({ day }: { day: DayGroup }) {
   return (
-    <div className="flex items-center gap-2 sm:gap-3 py-2 sm:py-3">
-      <span className="font-serif text-sm font-medium text-[var(--cream)] tracking-wide">
-        {day.label}
-      </span>
-      <span className="font-mono text-[0.6rem] text-[var(--muted)] bg-[var(--twilight)]/50 px-2 py-0.5 rounded-full">
-        {day.totalClasses} {day.totalClasses === 1 ? "class" : "classes"}
-      </span>
-      <div className="flex-1 h-px bg-gradient-to-r from-[var(--twilight)]/50 to-transparent" />
+    <div
+      className="sticky z-20 -mx-4 px-4 py-2.5 sm:py-3 bg-[var(--void)]/90 backdrop-blur-md border-b border-[var(--twilight)]/45"
+      style={{ top: "var(--find-list-sticky-top, 52px)" }}
+    >
+      <div className="flex items-end justify-between gap-3">
+        <div className="min-w-0">
+          <h2 className="font-mono text-[1.08rem] sm:text-[1.2rem] font-semibold text-[var(--cream)] tracking-tight truncate">
+            {day.label}
+          </h2>
+          <p className="font-mono text-[0.62rem] text-[var(--muted)] uppercase tracking-[0.12em] mt-0.5">
+            Class timeline
+          </p>
+        </div>
+        <span className="inline-flex items-center px-2.5 py-1 rounded-full border border-[var(--twilight)]/70 bg-[var(--dusk)]/82 font-mono text-[0.62rem] text-[var(--soft)] whitespace-nowrap">
+          {day.totalClasses} {day.totalClasses === 1 ? "class" : "classes"}
+        </span>
+      </div>
     </div>
   );
 }
@@ -654,16 +664,17 @@ export default function ClassesView({
 
   return (
     <div>
-      {/* Category filter dropdown */}
-      <CategoryDropdown category={category} onSelect={setCategory} />
-
-      {/* Results count */}
-      {!loading && (
-        <div className="text-xs font-mono text-[var(--muted)] mb-4">
-          {total} {total === 1 ? "class" : "classes"} across {dayGroups.length}{" "}
-          {dayGroups.length === 1 ? "day" : "days"}
+      <section className="mb-4 rounded-2xl border border-[var(--twilight)]/80 bg-[var(--void)]/70 backdrop-blur-md p-3 sm:p-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <CategoryDropdown category={category} onSelect={setCategory} />
+          {!loading && (
+            <span className="inline-flex items-center px-2.5 py-1 rounded-full border border-[var(--twilight)]/70 bg-[var(--dusk)]/82 font-mono text-[0.62rem] text-[var(--soft)] whitespace-nowrap">
+              {total} {total === 1 ? "class" : "classes"} across {dayGroups.length}{" "}
+              {dayGroups.length === 1 ? "day" : "days"}
+            </span>
+          )}
         </div>
-      )}
+      </section>
 
       {/* Loading state */}
       {loading && (
@@ -681,7 +692,7 @@ export default function ClassesView({
       {/* Classes grouped by day, then venue */}
       {!loading && dayGroups.length > 0 && (
         <div className="space-y-6">
-          {dayGroups.map((day, dayIdx) => (
+          {dayGroups.map((day) => (
             <div key={day.date}>
               <DayHeader day={day} />
               {day.seriesGroups.length > 0 && (
@@ -699,7 +710,7 @@ export default function ClassesView({
               )}
               {day.venues.length > 0 && (
                 <div className="space-y-3 mt-3">
-                  {day.venues.map((venue, venueIdx) => (
+                  {day.venues.map((venue) => (
                     <VenueSection
                       key={venue.venueId || venue.venueName}
                       venue={venue}

@@ -231,7 +231,7 @@ def extract_movies_for_date(
                     "is_all_day": False,
                     "category": "film",
                     "subcategory": "cinema",
-                    "tags": ["film", "cinema", "arthouse", "landmark"],
+                    "tags": ["film", "cinema", "arthouse", "showtime", "landmark"],
                     "price_min": None,
                     "price_max": None,
                     "price_note": None,

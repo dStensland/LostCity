@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { VisualPresetId, VISUAL_PRESETS } from "@/lib/visual-presets";
+import { applyPortalExperience, type ExperienceSpec } from "@/lib/experience-compiler";
 
 type PortalDraft = {
   id?: string;
@@ -52,35 +53,30 @@ export function BrandingStep({ draft, updateDraft, onNext, onBack }: Props) {
     setError(null);
 
     try {
-      // Build branding object
       const preset = VISUAL_PRESETS[visualPreset];
-      const branding: Record<string, unknown> = {
-        visual_preset: visualPreset,
-        theme_mode: themeMode,
-        ...preset.colors,
+      const spec: ExperienceSpec = {
+        branding: {
+          visual_preset: visualPreset,
+          theme_mode: themeMode,
+          ...preset.colors,
+        },
       };
 
       // Override primary color if set
       if (primaryColor) {
-        branding.primary_color = primaryColor;
+        spec.branding!.primary_color = primaryColor;
       }
 
       // Add logo if set
       if (logoUrl) {
-        branding.logo_url = logoUrl;
+        spec.branding!.logo_url = logoUrl;
       }
 
-      // Update portal
-      const res = await fetch(`/api/admin/portals/${draft.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ branding }),
+      await applyPortalExperience(draft.id, spec, {
+        apply: true,
+        sync_sections: false,
+        replace_sections: false,
       });
-
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Failed to update portal");
-      }
 
       updateDraft({
         visual_preset: visualPreset,

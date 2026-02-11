@@ -56,6 +56,7 @@ interface AnimatedEventListProps {
   getFriendsForEvent?: (eventId: number) => FriendGoing[];
   collapseFestivals?: boolean;
   collapseFestivalPrograms?: boolean;
+  density?: "comfortable" | "compact";
 }
 
 /**
@@ -73,6 +74,7 @@ export default function AnimatedEventList({
   getFriendsForEvent,
   collapseFestivals = true,
   collapseFestivalPrograms,
+  density = "comfortable",
 }: AnimatedEventListProps) {
   // Track initial events for animation purposes (use state since we read during render)
   const [initialEventIds, setInitialEventIds] = useState<Set<number>>(new Set());
@@ -156,7 +158,11 @@ export default function AnimatedEventList({
   const showDimmed = isRefetching && events.length > 0;
 
   return (
-    <div className={showDimmed ? "opacity-60 transition-opacity duration-200" : "animate-fade-in"}>
+    <div
+      className={showDimmed ? "opacity-60 transition-opacity duration-200" : "animate-fade-in"}
+      data-list-density={density}
+      onKeyDownCapture={handleListKeyDownCapture}
+    >
       {allDates.map((date) => {
         const displayItems = displayItemsByDate[date] || [];
         const timePeriods = groupByTimePeriod(displayItems);
@@ -167,36 +173,43 @@ export default function AnimatedEventList({
         return (
           <section
             key={date}
-            className="animate-fade-in"
+            className={`animate-fade-in ${density === "compact" ? "mb-3 sm:mb-4" : "mb-4 sm:mb-5"}`}
           >
-            {/* Date header - improved typography hierarchy */}
-            <div className="sticky top-[84px] sm:top-[100px] bg-[var(--void)]/95 backdrop-blur-sm z-20 py-2 sm:py-3 -mx-4 px-4 border-b border-[var(--twilight)]/30">
-              <div className="flex items-center gap-2 sm:gap-3">
-                <span className="font-serif text-sm font-medium text-[var(--cream)] tracking-wide">
-                  {getDateLabel(date)}
-                </span>
-                <span className="font-mono text-[0.6rem] text-[var(--muted)] bg-[var(--twilight)]/50 px-2 py-0.5 rounded-full">
+            {/* Date header */}
+            <div
+              className="sticky z-20 -mx-4 px-4 py-2.5 sm:py-3 bg-[var(--void)]/90 backdrop-blur-md border-b border-[var(--twilight)]/45"
+              style={{ top: "var(--find-list-sticky-top, 52px)" }}
+            >
+              <div className="flex items-end justify-between gap-3">
+                <div className="min-w-0">
+                  <h2 className="font-mono text-[1.08rem] sm:text-[1.2rem] font-semibold text-[var(--cream)] tracking-tight truncate">
+                    {getDateLabel(date)}
+                  </h2>
+                  <p className="font-mono text-[0.62rem] text-[var(--muted)] uppercase tracking-[0.12em] mt-0.5">
+                    Curated timeline
+                  </p>
+                </div>
+                <span className="inline-flex items-center px-2.5 py-1 rounded-full border border-[var(--twilight)]/70 bg-[var(--dusk)]/82 font-mono text-[0.62rem] text-[var(--soft)] whitespace-nowrap">
                   {totalCount} {totalCount !== 1 ? "items" : "item"}
                 </span>
-                <div className="flex-1 h-px bg-gradient-to-r from-[var(--twilight)]/50 to-transparent" />
               </div>
             </div>
 
             {/* Events grouped by time period */}
-            <div className="pt-2">
+            <div className={`pt-1 ${density === "compact" ? "space-y-1.5 sm:space-y-2" : "space-y-2 sm:space-y-3"}`}>
               {timePeriods.map(({ period, items }) => (
                 <div key={period}>
                   {/* Time period divider - only show if multiple periods */}
                   {timePeriods.length > 1 && (
-                    <div className="flex items-center gap-2 py-1.5 mt-2 sm:py-2 sm:mt-3">
-                      <span className="text-[var(--muted)]/50">
+                    <div className="flex items-center gap-2 py-1 mt-1.5">
+                      <span className="text-[var(--muted)]/55">
                         {TIME_PERIOD_ICONS[period]}
                       </span>
-                      <span className="font-mono text-[0.55rem] text-[var(--muted)]/70 uppercase tracking-wider">
+                      <span className="font-mono text-[0.54rem] text-[var(--muted)]/80 uppercase tracking-[0.12em]">
                         {TIME_PERIOD_LABELS[period]}
                       </span>
-                      <div className="flex-1 h-px bg-[var(--twilight)]/30" />
-                      <span className="font-mono text-[0.5rem] text-[var(--muted)]/50">
+                      <div className="flex-1 h-px bg-[var(--twilight)]/35" />
+                      <span className="font-mono text-[0.52rem] text-[var(--muted)]/60">
                         {items.length}
                       </span>
                     </div>
@@ -230,7 +243,7 @@ export default function AnimatedEventList({
                         key={key}
                         className={isInfiniteScrollItem ? "" : "animate-card-emerge"}
                       >
-                        {renderItem(item, idx, portalSlug, isInfiniteScrollItem, getFriendsForEvent)}
+                        {renderItem(item, idx, portalSlug, isInfiniteScrollItem, getFriendsForEvent, density)}
                       </div>
                     );
                   })}
@@ -259,7 +272,8 @@ function renderItem(
   index: number,
   portalSlug?: string,
   skipAnimation?: boolean,
-  getFriendsForEvent?: (eventId: number) => FriendGoing[]
+  getFriendsForEvent?: (eventId: number) => FriendGoing[],
+  density: "comfortable" | "compact" = "comfortable"
 ) {
   if (item.type === "series-group") {
     return (
@@ -268,6 +282,7 @@ function renderItem(
         venueGroups={item.venueGroups}
         portalSlug={portalSlug}
         skipAnimation={skipAnimation}
+        density={density}
       />
     );
   }
@@ -279,6 +294,7 @@ function renderItem(
         summary={item.summary}
         portalSlug={portalSlug}
         skipAnimation={skipAnimation}
+        density={density}
       />
     );
   }
@@ -293,6 +309,7 @@ function renderItem(
         skipAnimation={skipAnimation}
         portalSlug={portalSlug}
         venueSlug={item.venueSlug}
+        density={density}
       />
     );
   }
@@ -305,6 +322,7 @@ function renderItem(
         events={item.events}
         skipAnimation={skipAnimation}
         portalSlug={portalSlug}
+        density={density}
       />
     );
   }
@@ -317,6 +335,66 @@ function renderItem(
       portalSlug={portalSlug}
       friendsGoing={getFriendsForEvent?.(item.event.id)}
       reasons={item.event.reasons}
+      density={density}
     />
   );
 }
+  const handleListKeyDownCapture = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    const target = event.target as HTMLElement | null;
+    const row = target?.closest<HTMLElement>('[data-list-row="true"]') ?? null;
+    if (!row || target !== row) return;
+    if (event.altKey || event.metaKey || event.ctrlKey) return;
+
+    const allRows = Array.from(
+      event.currentTarget.querySelectorAll<HTMLElement>('[data-list-row="true"]')
+    );
+    const idx = allRows.indexOf(row);
+    const focusRow = (nextIdx: number) => {
+      const next = allRows[nextIdx];
+      if (!next) return;
+      next.focus();
+      next.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    };
+    const clickFirst = (selector: string) => {
+      const node = row.matches(selector) ? row : row.querySelector<HTMLElement>(selector);
+      node?.click();
+    };
+
+    switch (event.key) {
+      case "ArrowDown": {
+        event.preventDefault();
+        focusRow(Math.min(allRows.length - 1, idx + 1));
+        break;
+      }
+      case "ArrowUp": {
+        event.preventDefault();
+        focusRow(Math.max(0, idx - 1));
+        break;
+      }
+      case "Enter":
+      case " ": {
+        event.preventDefault();
+        clickFirst('[data-row-primary-link="true"]');
+        break;
+      }
+      case "s":
+      case "S": {
+        event.preventDefault();
+        clickFirst('[data-row-save-action="true"] button');
+        break;
+      }
+      case "o":
+      case "O": {
+        event.preventDefault();
+        const openNode = row.querySelector<HTMLElement>('[data-row-open-action="true"]');
+        if (openNode) {
+          openNode.click();
+        } else {
+          clickFirst('[data-row-primary-link="true"]');
+        }
+        break;
+      }
+      default:
+        break;
+    }
+  };

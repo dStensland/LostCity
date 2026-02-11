@@ -1,12 +1,12 @@
 /* Map pin pulse animation */
 @keyframes mapPinPulse {
   0%, 100% {
-    filter: drop-shadow(0 0 6px var(--pin-color, #E855A0)) drop-shadow(0 2px 4px rgba(0,0,0,0.5));
+    filter: drop-shadow(0 0 4px var(--pin-color, #E855A0)) drop-shadow(0 2px 4px rgba(0,0,0,0.5));
     transform: scale(1);
   }
   50% {
-    filter: drop-shadow(0 0 16px var(--pin-color, #E855A0)) drop-shadow(0 0 6px var(--pin-color, #E855A0)) drop-shadow(0 2px 4px rgba(0,0,0,0.5));
-    transform: scale(1.08);
+    filter: drop-shadow(0 0 10px var(--pin-color, #E855A0)) drop-shadow(0 2px 5px rgba(0,0,0,0.5));
+    transform: scale(1.05);
   }
 }
 
@@ -28,6 +28,30 @@
   }
 }
 
+.mapContainer {
+  isolation: isolate;
+}
+
+.mapContainer::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(120% 72% at 50% -10%, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0) 64%),
+    linear-gradient(to bottom, rgba(0, 0, 0, 0.13), rgba(0, 0, 0, 0.02) 24%, rgba(0, 0, 0, 0.16) 100%);
+}
+
+.mapContainer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border: 1px solid color-mix(in srgb, var(--twilight, #252530) 88%, transparent);
+  border-radius: inherit;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), inset 0 -22px 30px rgba(0, 0, 0, 0.16);
+}
+
 /* Mapbox popup overrides */
 :global(.mapboxgl-popup-content) {
   background: none !important;
@@ -39,6 +63,7 @@
 
 :global(.mapboxgl-popup) {
   background: none !important;
+  transition: opacity 160ms ease;
 }
 
 :global(.mapboxgl-popup-tip) {
@@ -65,12 +90,23 @@
 }
 
 /* Mapbox control styling - shared */
+:global(.mapboxgl-ctrl-top-right) {
+  margin-top: max(12px, env(safe-area-inset-top, 0px)) !important;
+  margin-right: max(12px, env(safe-area-inset-right, 0px)) !important;
+  margin-bottom: 0 !important;
+  margin-left: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 8px !important;
+}
+
 :global(.mapboxgl-ctrl-group) {
-  background: var(--dusk, #18181F) !important;
-  border: 1px solid var(--twilight, #252530) !important;
-  border-radius: 12px !important;
+  background: color-mix(in srgb, var(--dusk, #18181F) 84%, transparent) !important;
+  border: 1px solid color-mix(in srgb, var(--twilight, #252530) 90%, transparent) !important;
+  border-radius: 14px !important;
   overflow: hidden;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.45) !important;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.42) !important;
+  backdrop-filter: blur(10px) saturate(1.08);
 }
 
 :global(.mapboxgl-ctrl-group button) {
@@ -82,6 +118,10 @@
 
 :global(.mapboxgl-ctrl-group button + button) {
   border-top: 1px solid var(--twilight, #252530) !important;
+}
+
+:global(.mapboxgl-ctrl-group button:hover) {
+  background: color-mix(in srgb, var(--twilight, #252530) 66%, transparent) !important;
 }
 
 /* Light theme - no filter */
@@ -104,12 +144,22 @@
 
 /* Geolocate control - shared */
 :global(.mapboxgl-ctrl-geolocate) {
-  background: var(--dusk, #18181F) !important;
-  border: 1px solid var(--twilight, #252530) !important;
-  border-radius: 12px !important;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.45) !important;
+  background: linear-gradient(
+    140deg,
+    color-mix(in srgb, var(--coral, #F87171) 21%, var(--dusk, #18181F)) 0%,
+    color-mix(in srgb, var(--gold, #F6C85F) 14%, var(--dusk, #18181F)) 100%
+  ) !important;
+  border: 1px solid color-mix(in srgb, var(--coral, #F87171) 38%, var(--twilight, #252530)) !important;
+  border-radius: 14px !important;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.42) !important;
   width: 44px !important;
   height: 44px !important;
+  transition: transform 160ms ease, box-shadow 160ms ease;
+}
+
+:global(.mapboxgl-ctrl-geolocate:hover) {
+  transform: translateY(-1px);
+  box-shadow: 0 14px 28px rgba(0, 0, 0, 0.5) !important;
 }
 
 /* Light theme geolocate */
@@ -139,6 +189,11 @@
   border-radius: 50% !important;
 }
 
+:global(.mapboxgl-ctrl-bottom-right) {
+  margin-right: max(8px, env(safe-area-inset-right, 0px)) !important;
+  margin-bottom: max(8px, env(safe-area-inset-bottom, 0px)) !important;
+}
+
 /* Mapbox logo — blend with dark theme */
 :global(.mapboxgl-ctrl-logo) {
   opacity: 0.35 !important;
@@ -154,4 +209,12 @@
   filter: invert(1) brightness(2) !important;
   opacity: 0.25 !important;
   mix-blend-mode: screen !important;
+}
+
+@media (pointer: coarse) {
+  :global(.mapboxgl-ctrl-group button),
+  :global(.mapboxgl-ctrl-geolocate) {
+    width: 46px !important;
+    height: 46px !important;
+  }
 }

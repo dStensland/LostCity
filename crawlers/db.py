@@ -201,18 +201,27 @@ def get_source_info(source_id: int) -> Optional[dict]:
     try:
         result = (
             client.table("sources")
-            .select("id, slug, name, url, owner_portal_id, producer_id")
+            .select("id, slug, name, url, owner_portal_id, producer_id, is_sensitive")
             .eq("id", source_id)
             .execute()
         )
     except Exception:
-        # Backward-compatible fallback for environments where producer_id isn't present.
-        result = (
-            client.table("sources")
-            .select("id, slug, name, url, owner_portal_id")
-            .eq("id", source_id)
-            .execute()
-        )
+        try:
+            # Backward-compatible fallback for environments where producer_id isn't present.
+            result = (
+                client.table("sources")
+                .select("id, slug, name, url, owner_portal_id, is_sensitive")
+                .eq("id", source_id)
+                .execute()
+            )
+        except Exception:
+            # Backward-compatible fallback for environments where is_sensitive isn't present.
+            result = (
+                client.table("sources")
+                .select("id, slug, name, url, owner_portal_id")
+                .eq("id", source_id)
+                .execute()
+            )
     if result.data:
         _SOURCE_CACHE[source_id] = result.data[0]
         return result.data[0]
@@ -843,6 +852,8 @@ def validate_event_title(title: str) -> bool:
         "shows",
         "about us",
         "skip to content",
+        "skip to main content",
+        "events search and views navigation",
         "google calendar",
         "event calendar",
         "events list view",
@@ -1029,6 +1040,9 @@ def insert_event(
     # Extract is_class flag (will be re-added before insert)
     is_class_flag = event_data.pop("is_class", None)
 
+    # Extract is_sensitive flag (will be re-added before insert)
+    is_sensitive_flag = event_data.pop("is_sensitive", None)
+
     # Fetch source info once for class/festival inference and portal linking
     source_info = None
     source_slug = None
@@ -1040,6 +1054,10 @@ def insert_event(
             source_slug = source_info.get("slug")
             source_name = source_info.get("name")
             source_url = source_info.get("url")
+
+    # Inherit is_sensitive from source if not explicitly set on event
+    if not is_sensitive_flag and source_info and source_info.get("is_sensitive"):
+        is_sensitive_flag = True
 
     # Get venue info for tag inheritance
     venue_vibes = []
@@ -1137,7 +1155,12 @@ def insert_event(
         if venue:
             venue_genres = venue.get("genres")
     inferred_genres = normalize_genres(
-        infer_genres(event_data, venue_genres=venue_genres)
+        infer_genres(
+            event_data,
+            venue_genres=venue_genres,
+            venue_vibes=venue_vibes,
+            venue_type=venue_type,
+        )
     )
     explicit_genres = normalize_genres(genres or [])
     merged_genres = list(dict.fromkeys(explicit_genres + inferred_genres))
@@ -1271,6 +1294,10 @@ def insert_event(
     # Persist is_class flag to database
     if is_class_flag:
         event_data["is_class"] = True
+
+    # Persist is_sensitive flag to database
+    if is_sensitive_flag:
+        event_data["is_sensitive"] = True
 
     # Safety guard: an event with a real price can never be free
     if event_data.get("price_min") is not None and event_data["price_min"] > 0:

@@ -42,7 +42,7 @@ import {
   ForkKnife as Knife,
 
   // Sports & Fitness
-  Lightning,
+  PersonSimpleRun,
   Barbell,
   Trophy,
   Television,
@@ -135,7 +135,7 @@ const ICON_MAP: Record<string, ComponentType<IconProps>> = {
   eatertainment: Knife,
 
   // Sports & Fitness - dynamic energy
-  sports: Lightning,
+  sports: PersonSimpleRun,
   fitness: Barbell,
   fitness_center: Barbell,
   arena: Trophy,

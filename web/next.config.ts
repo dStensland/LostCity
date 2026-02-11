@@ -96,6 +96,20 @@ if (supabaseHost) {
 
 const nextConfig: NextConfig = {
   devIndicators: false,
+  async redirects() {
+    return [
+      {
+        source: "/emory",
+        destination: "/emory-demo",
+        permanent: false,
+      },
+      {
+        source: "/emory/:path*",
+        destination: "/emory-demo/:path*",
+        permanent: false,
+      },
+    ];
+  },
   async headers() {
     return [
       {
@@ -132,6 +146,10 @@ const nextConfig: NextConfig = {
       {
         protocol: "http" as const,
         hostname: "**.squarespace.com",
+      },
+      {
+        protocol: "http" as const,
+        hostname: "res.cloudinary.com",
       },
     ],
   },

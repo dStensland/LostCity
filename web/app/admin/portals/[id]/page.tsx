@@ -7,6 +7,11 @@ import Logo from "@/components/Logo";
 import { DEFAULT_PORTAL_SLUG } from "@/lib/portal-context";
 import ScopedStyles from "@/components/ScopedStyles";
 import { createCssVarClass } from "@/lib/css-utils";
+import {
+  applyPortalExperience,
+  type ExperienceApiResponse,
+  type ExperienceSpec,
+} from "@/lib/experience-compiler";
 
 type PortalBranding = {
   logo_url?: string;
@@ -124,6 +129,24 @@ type Portal = {
   updated_at: string;
 };
 
+const DEFAULT_EXPERIENCE_SPEC = `{
+  "vertical": "hotel",
+  "audience": {
+    "city": "Atlanta",
+    "geo_center": [33.756, -84.389],
+    "geo_radius_km": 4,
+    "categories": ["food_drink", "nightlife"]
+  },
+  "feed": {
+    "feed_type": "destination_specials",
+    "items_per_section": 18,
+    "default_layout": "vertical"
+  },
+  "branding": {
+    "visual_preset": "corporate_clean"
+  }
+}`;
+
 export default function EditPortalPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
@@ -158,6 +181,12 @@ export default function EditPortalPage({ params }: { params: Promise<{ id: strin
     token: string | null;
   } | null>(null);
   const [verifyingDomain, setVerifyingDomain] = useState(false);
+  const [experienceSpecInput, setExperienceSpecInput] = useState(DEFAULT_EXPERIENCE_SPEC);
+  const [experienceSyncSections, setExperienceSyncSections] = useState(true);
+  const [experienceReplaceSections, setExperienceReplaceSections] = useState(true);
+  const [experienceCompiling, setExperienceCompiling] = useState(false);
+  const [experienceApplying, setExperienceApplying] = useState(false);
+  const [experienceResult, setExperienceResult] = useState<ExperienceApiResponse | null>(null);
 
   const previewBgClass = createCssVarClass(
     "--preview-bg",
@@ -287,6 +316,66 @@ export default function EditPortalPage({ params }: { params: Promise<{ id: strin
     }
   }
 
+  function parseExperienceSpecInput(): ExperienceSpec | null {
+    try {
+      const parsed = JSON.parse(experienceSpecInput);
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+        throw new Error("Experience spec must be a JSON object");
+      }
+      return parsed as ExperienceSpec;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Invalid experience spec JSON");
+      return null;
+    }
+  }
+
+  async function handleCompileExperience() {
+    const spec = parseExperienceSpecInput();
+    if (!spec) return;
+
+    setExperienceCompiling(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const result = await applyPortalExperience(id, spec, {
+        apply: false,
+        sync_sections: experienceSyncSections,
+        replace_sections: experienceReplaceSections,
+      });
+      setExperienceResult(result);
+      setSuccess("Experience compiled (dry run). Review warnings before applying.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to compile experience");
+    } finally {
+      setExperienceCompiling(false);
+    }
+  }
+
+  async function handleApplyExperience() {
+    const spec = parseExperienceSpecInput();
+    if (!spec) return;
+
+    setExperienceApplying(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const result = await applyPortalExperience(id, spec, {
+        apply: true,
+        sync_sections: experienceSyncSections,
+        replace_sections: experienceReplaceSections,
+      });
+      setExperienceResult(result);
+      setSuccess("Experience applied successfully.");
+      await loadPortal();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to apply experience");
+    } finally {
+      setExperienceApplying(false);
+    }
+  }
+
   async function handleSave() {
     setSaving(true);
     setError(null);
@@ -391,7 +480,7 @@ export default function EditPortalPage({ params }: { params: Promise<{ id: strin
           <Link href="/admin/portals" className="font-mono text-xs text-[var(--muted)] hover:text-[var(--cream)]">
             Portals
           </Link>
-          <Link href={`/portal/${portal.slug}`} className="font-mono text-xs text-[var(--coral)] hover:opacity-80" target="_blank">
+          <Link href={`/${portal.slug}`} className="font-mono text-xs text-[var(--coral)] hover:opacity-80" target="_blank">
             View Live
           </Link>
         </nav>
@@ -481,6 +570,106 @@ export default function EditPortalPage({ params }: { params: Promise<{ id: strin
                   </select>
                 </div>
               </div>
+            </div>
+          </section>
+
+          {/* Experience Compiler */}
+          <section className="bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg p-6">
+            <h2 className="font-mono text-xs text-[var(--muted)] uppercase tracking-wider mb-4">
+              Experience Compiler
+            </h2>
+            <p className="font-mono text-xs text-[var(--soft)] mb-4">
+              Paste AI-generated experience JSON, run a dry compile, then apply to this portal.
+            </p>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block font-mono text-xs text-[var(--muted)] uppercase mb-1">
+                  Experience Spec (JSON)
+                </label>
+                <textarea
+                  value={experienceSpecInput}
+                  onChange={(e) => setExperienceSpecInput(e.target.value)}
+                  rows={16}
+                  className="w-full px-3 py-2 bg-[var(--night)] border border-[var(--twilight)] rounded font-mono text-xs text-[var(--cream)] focus:outline-none focus:border-[var(--coral)]"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={experienceSyncSections}
+                    onChange={(e) => setExperienceSyncSections(e.target.checked)}
+                    className="w-4 h-4 rounded border-[var(--twilight)] bg-[var(--night)] text-[var(--coral)] focus:ring-[var(--coral)]"
+                  />
+                  <span className="font-mono text-xs text-[var(--cream)]">Sync sections</span>
+                </label>
+
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={experienceReplaceSections}
+                    onChange={(e) => setExperienceReplaceSections(e.target.checked)}
+                    disabled={!experienceSyncSections}
+                    className="w-4 h-4 rounded border-[var(--twilight)] bg-[var(--night)] text-[var(--coral)] focus:ring-[var(--coral)] disabled:opacity-50"
+                  />
+                  <span className="font-mono text-xs text-[var(--cream)]">
+                    Replace sections (instead of upsert by slug)
+                  </span>
+                </label>
+              </div>
+
+              <div className="flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  onClick={handleCompileExperience}
+                  disabled={experienceCompiling || experienceApplying}
+                  className="px-4 py-2 border border-[var(--twilight)] text-[var(--cream)] font-mono text-xs rounded hover:border-[var(--coral)] disabled:opacity-50"
+                >
+                  {experienceCompiling ? "Compiling..." : "Compile Dry Run"}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleApplyExperience}
+                  disabled={experienceApplying || experienceCompiling}
+                  className="px-4 py-2 bg-[var(--coral)] text-[var(--void)] font-mono text-xs rounded hover:opacity-90 disabled:opacity-50"
+                >
+                  {experienceApplying ? "Applying..." : "Apply Experience"}
+                </button>
+              </div>
+
+              {experienceResult && (
+                <div className="p-3 bg-[var(--night)] border border-[var(--twilight)] rounded">
+                  <div className="font-mono text-xs text-[var(--soft)] mb-2">
+                    Result: <span className="text-[var(--cream)]">{experienceResult.mode || "unknown"}</span>
+                  </div>
+
+                  {Array.isArray(experienceResult.warnings) && experienceResult.warnings.length > 0 && (
+                    <div className="mb-3">
+                      <div className="font-mono text-[0.65rem] text-yellow-300 uppercase mb-1">
+                        Warnings
+                      </div>
+                      <ul className="space-y-1">
+                        {experienceResult.warnings.map((warning, idx) => (
+                          <li key={`${warning.code || "warning"}-${idx}`} className="font-mono text-[0.7rem] text-[var(--muted)]">
+                            {warning.code ? `[${warning.code}] ` : ""}{warning.message || "Unknown warning"}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  <details>
+                    <summary className="font-mono text-[0.7rem] text-[var(--coral)] cursor-pointer">
+                      View Response JSON
+                    </summary>
+                    <pre className="mt-2 p-2 overflow-auto max-h-80 rounded bg-[var(--void)] border border-[var(--twilight)] font-mono text-[0.65rem] text-[var(--soft)]">
+                      {JSON.stringify(experienceResult, null, 2)}
+                    </pre>
+                  </details>
+                </div>
+              )}
             </div>
           </section>
 

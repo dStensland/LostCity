@@ -3,7 +3,7 @@ Crawler for Central Presbyterian Church public events.
 https://cpcatlanta.org/events-calendar/
 
 Historic downtown church hosting "Concerts with a Cause" series,
-Saturday master classes, worship concerts. Focus on PUBLIC music/cultural events.
+Saturday master classes, worship concerts, and community programs.
 """
 
 from __future__ import annotations
@@ -40,18 +40,13 @@ VENUE_DATA = {
     "vibes": ["faith-christian", "presbyterian", "live-music", "historic"],
 }
 
-# Skip member-only or internal church business
+# Skip member-only, internal church business, or non-event entries
 SKIP_KEYWORDS = [
     "member", "deacon", "trustee", "pastor search", "session meeting",
     "business meeting", "board meeting", "staff meeting", "committee",
-    "bible study", "prayer group", "small group", "worship service",
-    "sunday school", "choir rehearsal",
-]
-
-# Public event indicators
-PUBLIC_KEYWORDS = [
-    "concert", "master class", "concerts with a cause", "recital",
-    "all are welcome", "open to", "public", "community", "performance"
+    "bible study", "prayer group", "small group",
+    "sunday school", "choir rehearsal", "staff retreat",
+    "budget", "annual meeting", "congregational meeting",
 ]
 
 
@@ -132,56 +127,124 @@ def parse_date_string(date_str: str) -> Optional[str]:
 def determine_category_and_tags(title: str, description: str) -> tuple[str, Optional[str], list[str]]:
     """Determine category based on title and description."""
     text = f"{title} {description}".lower()
-    tags = ["central-presbyterian", "faith", "downtown", "historic"]
+    tags = ["central-presbyterian", "downtown", "historic"]
+
+    # --- Music events (must have explicit music keywords) ---
 
     # Concerts with a Cause series
-    if "concerts with a cause" in text or "concert" in text:
-        tags.extend(["concert-series", "live-music", "charity"])
+    if "concerts with a cause" in text:
+        tags.extend(["live-music", "charity", "concert-series"])
         return "music", "classical", tags
 
-    # Master classes
-    if "master class" in text or "masterclass" in text:
-        tags.extend(["education", "music-education", "workshop"])
-        return "music", "education", tags
+    # Explicit concert/recital/performance
+    if any(kw in text for kw in [
+        "concert", "recital", "symphony", "orchestra", "quartet",
+        "ensemble", "sonata", "cantata", "chorale",
+    ]):
+        tags.append("live-music")
+        return "music", "classical", tags
 
-    # Recitals/performances
-    if any(kw in text for kw in ["recital", "performance", "symphony", "choir"]):
+    # Organ music (common in historic churches)
+    if "organ" in text and any(kw in text for kw in [
+        "recital", "concert", "music", "play", "perform",
+    ]):
         tags.extend(["live-music", "classical"])
         return "music", "classical", tags
 
-    # Worship concerts
+    # Worship concerts (distinct from regular worship)
     if "worship concert" in text:
-        tags.extend(["worship", "gospel", "live-music"])
+        tags.extend(["live-music", "gospel"])
         return "music", "worship", tags
 
-    # Organ concerts (common in historic churches)
-    if "organ" in text:
-        tags.extend(["organ", "classical", "live-music"])
-        return "music", "classical", tags
+    # Master classes (music education)
+    if "master class" in text or "masterclass" in text:
+        tags.extend(["class", "hands-on"])
+        return "learning", "workshop", tags
 
-    # Lectures/educational
-    if any(kw in text for kw in ["lecture", "talk", "discussion", "symposium"]):
-        tags.extend(["education", "lecture"])
-        return "community", "education", tags
+    # --- Religious events ---
 
-    # Default to music (this is primarily a music venue)
-    return "music", "classical", tags
+    if any(kw in text for kw in [
+        "worship", "service", "sermon", "prayer", "vespers", "advent",
+        "lent", "ash wednesday", "easter", "christmas eve", "palm sunday",
+        "holy week", "communion", "eucharist", "baptism", "confirmation",
+        "ordination", "memorial service", "funeral",
+    ]):
+        tags.append("community")
+        return "religious", None, tags
+
+    # --- Community / social services ---
+
+    if any(kw in text for kw in [
+        "shelter", "night shelter", "homeless", "food pantry", "food bank",
+        "meal", "soup kitchen", "clothing", "donation drive",
+    ]):
+        tags.extend(["volunteer", "community"])
+        return "community", "service", tags
+
+    # --- Advocacy / civic ---
+
+    if any(kw in text for kw in [
+        "advocacy", "council", "aging", "civic", "rally", "march",
+        "justice", "rights", "policy", "legislative", "voter",
+        "organizing", "activist",
+    ]):
+        tags.extend(["activism", "community"])
+        return "community", "advocacy", tags
+
+    # --- Education / lectures ---
+
+    if any(kw in text for kw in [
+        "lecture", "talk", "discussion", "symposium", "seminar",
+        "class", "workshop", "lesson", "training", "presentation",
+        "art of the", "history of",
+    ]):
+        tags.append("educational")
+        return "learning", "lecture", tags
+
+    # --- Art / exhibitions ---
+
+    if any(kw in text for kw in [
+        "exhibition", "exhibit", "gallery", "art show", "sculpture",
+    ]):
+        return "art", "exhibition", tags
+
+    # --- Default to community (it's a church, not a music venue) ---
+    tags.append("community")
+    return "community", None, tags
 
 
 def is_public_event(title: str, description: str) -> bool:
     """Determine if event is public/community-facing vs. member-only."""
     text = f"{title} {description}".lower()
 
-    # Explicit skip keywords
+    # Explicit skip keywords — always filter these out
     if any(kw in text for kw in SKIP_KEYWORDS):
         return False
 
-    # Explicit public indicators
-    if any(kw in text for kw in PUBLIC_KEYWORDS):
+    # Music/performance events are public
+    if any(kw in text for kw in [
+        "concert", "recital", "performance", "master class", "masterclass",
+        "symphony", "orchestra", "ensemble", "worship concert",
+    ]):
         return True
 
-    # Music events are generally public
-    if any(kw in text for kw in ["concert", "recital", "performance", "master class"]):
+    # Community programs open to the public
+    if any(kw in text for kw in [
+        "all are welcome", "open to the public", "free and open",
+        "shelter", "food pantry", "advocacy day",
+        "council on aging", "community meal",
+    ]):
+        return True
+
+    # Educational events / discussions
+    if any(kw in text for kw in [
+        "lecture", "symposium", "workshop", "seminar", "presentation",
+        "discussion", "panel",
+    ]):
+        return True
+
+    # Art exhibitions
+    if any(kw in text for kw in ["exhibition", "exhibit", "gallery", "art show"]):
         return True
 
     # Default: assume member-only unless explicitly public

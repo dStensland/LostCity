@@ -286,7 +286,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "is_all_day": False,
                         "category": "film",
                         "subcategory": "cinema",
-                        "tags": ["film", "cinema", "independent", "dine-in", "springs-cinema"],
+                        "tags": ["film", "cinema", "independent", "showtime", "dine-in", "springs-cinema"],
                         "price_min": None,
                         "price_max": None,
                         "price_note": None,

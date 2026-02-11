@@ -10,6 +10,8 @@ type PortalSummary = {
   total_rsvps: number;
   total_signups: number;
   avg_active_users: number;
+  wayfinding_opened: number;
+  resource_clicked: number;
 };
 
 type SortColumn = "views" | "rsvps" | "signups" | "active";
@@ -84,6 +86,12 @@ export default function PortalStatsTable({ portals, sortBy = "views", onSort }: 
             <SortHeader column="rsvps" label="RSVPs" sortBy={sortBy} onSort={onSort} />
             <SortHeader column="signups" label="Signups" sortBy={sortBy} onSort={onSort} />
             <SortHeader column="active" label="Avg Active" sortBy={sortBy} onSort={onSort} />
+            <th className="text-right px-4 py-3 font-mono text-xs text-[var(--muted)] uppercase tracking-wide">
+              Wayfinding
+            </th>
+            <th className="text-right px-4 py-3 font-mono text-xs text-[var(--muted)] uppercase tracking-wide">
+              Resources
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -114,6 +122,12 @@ export default function PortalStatsTable({ portals, sortBy = "views", onSort }: 
               </td>
               <td className="text-right px-4 py-3 font-mono text-sm text-[var(--cream)]">
                 {formatNumber(portal.avg_active_users)}
+              </td>
+              <td className="text-right px-4 py-3 font-mono text-sm text-[var(--cream)]">
+                {formatNumber(portal.wayfinding_opened)}
+              </td>
+              <td className="text-right px-4 py-3 font-mono text-sm text-[var(--cream)]">
+                {formatNumber(portal.resource_clicked)}
               </td>
             </tr>
           ))}

@@ -81,6 +81,12 @@ function formatLabel(key: string): string {
     .join(" ");
 }
 
+function subactivityKeyToGenre(key: string): string {
+  if (!key.includes(".")) return key;
+  const parts = key.split(".");
+  return parts.slice(1).join(".");
+}
+
 // Helper to chunk array into groups of n
 function chunkArray<T>(array: T[], size: number): T[][] {
   const chunks: T[][] = [];
@@ -237,8 +243,10 @@ export default function BrowseByActivity({ portalSlug }: BrowseByActivityProps) 
 
     if (subcats && subcats.length > 0) {
       params.set("subcategories", subcats.join(","));
+      params.set("genres", subcats.map(subactivityKeyToGenre).join(","));
     } else if (activity.type === "subcategory") {
       params.set("subcategories", activity.value);
+      params.set("genres", subactivityKeyToGenre(activity.value));
     } else {
       params.set("categories", activity.value);
     }

@@ -1,5 +1,15 @@
 # Architecture Plan: Portal Federation & Bespoke Frontends
 
+## Execution Update (2026-02-11)
+
+This architecture remains directionally correct, but execution order is now constrained:
+
+1. **Strict portal attribution is launch-critical** and takes precedence over feature expansion.
+2. **Atlanta usage + quality proof** is the primary validation loop before broad productization.
+3. **Vertical demos are operator-led** (FORTH first, then additional demos), not self-serve.
+4. **Self-serve portal onboarding/admin expansion is deferred** until customer pull.
+5. **Public Developer API is iceboxed until post-launch traction.**
+
 ## Current State Assessment
 
 ### What's Already Built (and it's a lot)
@@ -90,7 +100,7 @@ When a portal admin tags a venue as "wheelchair accessible," that should go to `
 ---
 
 #### Gap 3: Public Developer API
-**Status**: Table exists, no product
+**Status**: Table exists, no product (**Iceboxed until post-launch**)
 **What we have**: `api_keys` table with scopes, portal_id, expiry, key_hash. The internal API routes handle auth and rate limiting.
 **What's missing**: No external-facing API documentation, no developer onboarding, no separate rate limit tiers for API consumers vs. web users.
 
@@ -107,6 +117,8 @@ When a portal admin tags a venue as "wheelchair accessible," that should go to `
 - [ ] Expose subset of read endpoints under `/api/v1/` prefix
 - [ ] Auto-generate OpenAPI spec from route definitions
 - [ ] Developer portal page at `/developers`
+
+**Execution note**: keep existing analytics/API-key plumbing for internal and admin use only until launch metrics validate expansion.
 
 ---
 
@@ -313,14 +325,14 @@ User visits City Portal:
 
 ## Implementation Priority
 
-### Phase 1: Foundation (Weeks 1-4)
-Things that unblock sales demos and first customers.
+### Phase 1: Attribution + Launch Proof (Weeks 1-4)
+Things that unblock trustworthy sales demos and hypothesis validation.
 
-- [ ] Add `vertical` field to portal settings
-- [ ] Build one demo vertical layout (hotel concierge UI) as route group
-- [ ] Ensure cross-portal user preferences aggregate correctly
-- [ ] Build basic portal admin analytics (events count, source health)
-- [ ] Create portal onboarding flow (create portal → configure → launch)
+- [ ] Enforce strict portal attribution across behavior, enrichment, and analytics writes
+- [ ] Ensure cross-portal preference aggregation is portal-attributed and auditable
+- [ ] Improve Atlanta usage/quality metrics and reporting (core sales proof)
+- [ ] Complete FORTH hotel demo polish with attribution QA
+- [ ] Build one additional high-priority demo vertical (film or hospital)
 
 ### Phase 2: Enrichment Layer (Weeks 5-8)
 Things that activate the network effect.
@@ -332,15 +344,21 @@ Things that activate the network effect.
 - [ ] Venue event submission (bypass crawlers for claimed venues)
 
 ### Phase 3: Revenue Infrastructure (Weeks 9-12)
-Things that let you charge money.
+Things that let you charge money without premature platform expansion.
 
 - [ ] Stripe billing integration (subscriptions per portal)
 - [ ] Plan enforcement at API level
+- [ ] Portal analytics improvements used directly in sales and renewal conversations
+
+### Phase 4: Post-Launch Platform Expansion
+Activate only after launch traction and first customer pull.
+
 - [ ] Public API with key auth, rate limits, docs
 - [ ] Developer portal page
+- [ ] Self-serve portal onboarding and broad admin productization
 - [ ] Portal analytics dashboard for paying customers
 
-### Phase 4: Scale (Weeks 13+)
+### Phase 5: Scale (Weeks 13+)
 Things that compound the network.
 
 - [ ] Additional vertical layouts (film, hospital, community, fitness)

@@ -3,22 +3,18 @@
 import { memo, useState, useCallback, useMemo } from "react";
 import type { CSSProperties } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import type { Event } from "@/lib/supabase";
 import { AvatarStack } from "./UserAvatar";
-import { formatTimeSplit, formatSmartDate, formatPriceDetailed, formatCompactCount, formatTime } from "@/lib/formats";
-import CategoryIcon, { getCategoryColor, CATEGORY_CONFIG, type CategoryType } from "./CategoryIcon";
-import { getReflectionClass, isTicketingUrl, isReservationUrl, getLinkOutLabel, getSmartDateLabel, getFeedEventStatus } from "@/lib/card-utils";
+import { decodeHtmlEntities, formatTimeSplit, formatSmartDate, formatPriceDetailed, formatCompactCount, formatTime } from "@/lib/formats";
+import CategoryIcon, { getCategoryColor, getCategoryLabel, CATEGORY_CONFIG, type CategoryType } from "./CategoryIcon";
+import { getReflectionClass, isTicketingUrl, getLinkOutLabel, getSmartDateLabel, getFeedEventStatus } from "@/lib/card-utils";
 import { LiveBadge, SoonBadge, FreeBadge } from "./Badge";
 import Image from "@/components/SmartImage";
 import SeriesBadge from "./SeriesBadge";
 import ReasonBadge, { getTopReasons, type RecommendationReason } from "./ReasonBadge";
-import { GenreChip } from "./ActivityChip";
 import type { Frequency, DayOfWeek } from "@/lib/recurrence";
 import RSVPButton, { type RSVPStatus } from "./RSVPButton";
 import AnimatedCount from "./AnimatedCount";
-
-const POPULAR_THRESHOLD = 10;
 
 type EventCardEvent = Event & {
   is_live?: boolean;
@@ -34,9 +30,12 @@ type EventCardEvent = Event & {
     id: string;
     title: string;
     series_type: string;
+    image_url?: string | null;
+    blurhash?: string | null;
     frequency?: Frequency;
     day_of_week?: DayOfWeek;
   } | null;
+  blurhash?: string | null;
   is_class?: boolean;
   class_category?: string | null;
   skill_level?: string | null;
@@ -113,10 +112,20 @@ interface Props {
   contextType?: "interests" | "venue" | "producer" | "neighborhood";
   /** Callback when user hides the event */
   onHide?: () => void;
+  /** List density mode */
+  density?: "comfortable" | "compact";
 }
 
-function EventCard({ event, index = 0, skipAnimation = false, portalSlug, friendsGoing = [], reasons, contextType }: Props) {
-  const router = useRouter();
+function EventCard({
+  event,
+  index = 0,
+  skipAnimation = false,
+  portalSlug,
+  friendsGoing = [],
+  reasons,
+  contextType,
+  density = "comfortable",
+}: Props) {
   const { time, period } = formatTimeSplit(event.start_time, event.is_all_day);
   const dateInfo = formatSmartDate(event.start_date);
   const isLive = event.is_live || false;
@@ -126,26 +135,13 @@ function EventCard({ event, index = 0, skipAnimation = false, portalSlug, friend
   const accentColor = event.category ? getCategoryColor(event.category) : "var(--neon-magenta)";
   const reflectionClass = getReflectionClass(event.category);
   const price = formatPriceDetailed(event);
-
-  // Build "More Like This" filter URL
-  const moreLikeThisUrl = useMemo(() => {
-    if (!portalSlug) return null;
-
-    const params = new URLSearchParams();
-    if (event.category) params.set("categories", event.category);
-    if (event.genres?.length) params.set("genres", event.genres.join(","));
-    if (event.venue?.neighborhood) params.set("neighborhoods", event.venue.neighborhood);
-
-    return `/${portalSlug}?view=events&${params.toString()}`;
-  }, [event.category, event.genres, event.venue?.neighborhood, portalSlug]);
-
-  const handleMoreLikeThis = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (moreLikeThisUrl) {
-      router.push(moreLikeThisUrl);
-    }
-  }, [router, moreLikeThisUrl]);
+  const eventTitle = decodeHtmlEntities(event.title);
+  const venueName = event.venue?.name ? decodeHtmlEntities(event.venue.name) : null;
+  const venueNeighborhood = event.venue?.neighborhood ? decodeHtmlEntities(event.venue.neighborhood) : null;
+  const instructorName = event.instructor ? decodeHtmlEntities(event.instructor) : null;
+  const railImageUrl = event.image_url || event.series?.image_url || null;
+  const railBlurhash = event.blurhash || event.series?.blurhash || null;
+  const hasRailImage = Boolean(railImageUrl);
 
   // Optimistic RSVP count adjustments — user's own RSVP immediately ticks the count
   const [countAdjust, setCountAdjust] = useState({ going: 0, interested: 0, recommendation: 0 });
@@ -169,7 +165,6 @@ function EventCard({ event, index = 0, skipAnimation = false, portalSlug, friend
   const interestedCount = (event.interested_count ?? 0) + countAdjust.interested;
   const recommendationCount = (event.recommendation_count ?? 0) + countAdjust.recommendation;
   const hasSocialProof = goingCount > 0 || interestedCount > 0 || recommendationCount > 0;
-  const isPopular = goingCount >= POPULAR_THRESHOLD;
 
   // Build detail href - use portal context to show detail modal
   const eventHref = useMemo(() => {
@@ -184,48 +179,148 @@ function EventCard({ event, index = 0, skipAnimation = false, portalSlug, friend
     isExternal: isExternalLinkOut,
   });
   const isTicketLinkOut = Boolean(event.ticket_url) || isTicketingUrl(event.source_url);
+  const compactTimeLabel = event.is_all_day ? "All Day" : `${time}${period ? ` ${period}` : ""}`;
+  const compactCategoryLabel = event.category ? getCategoryLabel(event.category as CategoryType) : null;
+
+  if (density === "compact") {
+    return (
+      <div
+        className={`find-row-card mb-2.5 rounded-xl border border-[var(--twilight)]/75 ${reflectionClass} ${animationClass} ${staggerClass} overflow-hidden group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-color)]/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--void)] ${
+          event.category ? "border-l-[2px] border-l-[var(--accent-color)]" : ""
+        }`}
+        tabIndex={0}
+        data-list-row="true"
+        aria-label={`${eventTitle}, ${dateInfo.label} ${event.is_all_day ? "all day" : `${time} ${period || ""}`}`}
+        style={
+          {
+            "--accent-color": accentColor,
+            "--cta-border": "color-mix(in srgb, var(--accent-color) 70%, transparent)",
+            "--cta-glow": "color-mix(in srgb, var(--accent-color) 35%, transparent)",
+            background:
+              "linear-gradient(180deg, color-mix(in srgb, var(--night) 84%, transparent), color-mix(in srgb, var(--dusk) 72%, transparent))",
+          } as CSSProperties
+        }
+      >
+        <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 px-3 py-2.5">
+          <Link
+            href={eventHref}
+            scroll={false}
+            data-row-primary-link="true"
+            className="min-w-0"
+          >
+            <div className="flex items-center gap-2.5 min-w-0">
+              <span className="flex-shrink-0 font-mono text-[0.72rem] font-semibold uppercase tracking-[0.1em] text-[var(--accent-color)] min-w-[76px] sm:min-w-[82px]">
+                {compactTimeLabel}
+              </span>
+              <span className="truncate text-[0.94rem] sm:text-[0.98rem] font-medium text-[var(--cream)] group-hover:text-[var(--accent-color)] transition-colors">
+                {eventTitle}
+              </span>
+              {compactCategoryLabel && (
+                <span className="inline-block max-w-[84px] sm:max-w-[120px] truncate flex-shrink-0 font-mono text-[0.62rem] font-medium uppercase tracking-[0.08em] text-[var(--muted)]">
+                  {compactCategoryLabel}
+                </span>
+              )}
+            </div>
+          </Link>
+
+          <div className="flex items-center gap-1.5">
+            <div data-row-save-action="true">
+              <RSVPButton eventId={event.id} variant="compact" onRSVPChange={handleRSVPChange} className="list-save-trigger" />
+            </div>
+            {isExternalLinkOut && (
+              <a
+                href={linkOutUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={linkOutLabel}
+                data-row-open-action="true"
+                className="hidden sm:inline-flex w-9 h-9 items-center justify-center rounded-lg border border-[var(--twilight)]/75 bg-[var(--dusk)]/72 text-[var(--muted)] hover:text-[var(--cream)] hover:border-[var(--cta-border,rgba(255,107,122,0.7))] hover:shadow-[0_0_14px_var(--cta-glow,rgba(255,107,122,0.2))] transition-all"
+              >
+                {isTicketLinkOut ? (
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+                  </svg>
+                ) : (
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 3h7v7m0-7L10 14" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10v8a1 1 0 001 1h8" />
+                  </svg>
+                )}
+              </a>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
-      className={`mb-2 sm:mb-4 rounded-xl border border-subtle card-atmospheric glow-accent reflection-accent ${reflectionClass} ${animationClass} ${staggerClass} surface-raised overflow-hidden group card-hover-lift shadow-card-sm hover:shadow-card-md ${
-        event.category ? "border-l-[3px] border-l-[var(--accent-color)]" : ""
+      className={`find-row-card mb-3 sm:mb-4 rounded-2xl border border-[var(--twilight)]/75 ${reflectionClass} ${animationClass} ${staggerClass} overflow-hidden group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-color)]/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--void)] ${
+        event.category ? "border-l-[2px] border-l-[var(--accent-color)]" : ""
       }`}
+      tabIndex={0}
+      data-list-row="true"
+      aria-label={`${eventTitle}, ${dateInfo.label} ${event.is_all_day ? "all day" : `${time} ${period || ""}`}`}
       style={
         {
           "--accent-color": accentColor,
           "--cta-border": "color-mix(in srgb, var(--accent-color) 70%, transparent)",
           "--cta-glow": "color-mix(in srgb, var(--accent-color) 35%, transparent)",
+          background:
+            "linear-gradient(180deg, color-mix(in srgb, var(--night) 84%, transparent), color-mix(in srgb, var(--dusk) 72%, transparent))",
         } as CSSProperties
       }
     >
-        <div className="flex gap-2 sm:gap-3">
+        <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-2 sm:gap-3">
           <Link
             href={eventHref}
             scroll={false}
-            className="block flex-1 min-w-0 p-2.5 sm:p-3"
+            data-row-primary-link="true"
+            className="block min-w-0 p-3.5 sm:p-4"
           >
-            <div className="flex gap-2 sm:gap-3">
+            <div className="flex gap-3 sm:gap-4">
             {/* Time cell - hidden on mobile (inlined instead), visible on desktop */}
-            <div className="hidden sm:flex flex-shrink-0 w-14 flex-col items-center justify-center py-1">
-              <span className={`font-mono text-[0.65rem] font-semibold leading-none uppercase tracking-wide ${
-                dateInfo.isHighlight ? "text-[var(--coral)]" : "text-[var(--muted)]"
-              }`}>
-                {dateInfo.label}
-              </span>
-              {event.is_all_day ? (
-                <span className="font-mono text-[0.65rem] font-semibold text-[var(--soft)] leading-none mt-1 uppercase tracking-wide">
-                  All Day
-                </span>
-              ) : (
+            <div
+              className={`hidden sm:flex flex-shrink-0 self-stretch relative w-[124px] -ml-3.5 sm:-ml-4 -my-3.5 sm:-my-4 overflow-hidden border-r border-[var(--twilight)]/60 ${
+                hasRailImage ? "list-rail-media" : "bg-[var(--night)]/44"
+              }`}
+              style={{ borderTopLeftRadius: "inherit", borderBottomLeftRadius: "inherit" }}
+            >
+              {hasRailImage && (
                 <>
-                  <span className="font-mono text-base font-bold text-[var(--cream)] leading-none tabular-nums mt-1">
-                    {time}
-                  </span>
-                  {period && (
-                    <span className="font-mono text-[0.6rem] font-medium text-[var(--soft)] mt-0.5">{period}</span>
-                  )}
+                  <Image
+                    src={railImageUrl}
+                    alt={eventTitle}
+                    fill
+                    blurhash={railBlurhash}
+                    sizes="124px"
+                    className="object-cover scale-[1.03] transform-gpu will-change-transform"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/56 to-black/20 pointer-events-none" />
                 </>
               )}
+              <div className="relative z-10 flex h-full flex-col items-start justify-center gap-1.5 pl-3 pr-2 py-3 sm:py-4">
+                <span className={`font-mono text-[0.62rem] font-semibold leading-none uppercase tracking-[0.12em] ${
+                  dateInfo.isHighlight ? "text-[var(--accent-color)]" : hasRailImage ? "text-[var(--cream)]/85" : "text-[var(--muted)]"
+                }`}>
+                  {dateInfo.label}
+                </span>
+                {event.is_all_day ? (
+                  <span className={`font-mono text-[0.62rem] font-semibold leading-none uppercase tracking-[0.12em] ${hasRailImage ? "text-white/82" : "text-[var(--soft)]"}`}>
+                    All Day
+                  </span>
+                ) : (
+                  <>
+                    <span className={`font-mono text-[1.42rem] font-bold leading-none tabular-nums ${hasRailImage ? "text-white" : "text-[var(--cream)]"}`}>
+                      {time}
+                    </span>
+                    {period && (
+                      <span className={`font-mono text-[0.58rem] font-medium uppercase tracking-[0.12em] ${hasRailImage ? "text-white/78" : "text-[var(--soft)]"}`}>{period}</span>
+                    )}
+                  </>
+                )}
+              </div>
             </div>
 
             {/* Content */}
@@ -233,23 +328,23 @@ function EventCard({ event, index = 0, skipAnimation = false, portalSlug, friend
               {/* Mobile: Stacked layout for more title space */}
               <div className="sm:hidden">
                 {/* Top row: inline time + category + live badge */}
-                <div className="flex items-center gap-2 mb-1.5">
+                <div className="flex items-center gap-2 mb-2">
                   {/* Inline time badge — replaces the hidden time column on mobile */}
-                  <span className={`inline-flex items-baseline gap-0.5 font-mono text-sm font-bold leading-none ${
-                    dateInfo.isHighlight ? "text-[var(--coral)]" : "text-[var(--cream)]"
+                  <span className={`inline-flex items-baseline gap-1 font-mono text-[0.98rem] font-bold leading-none ${
+                    dateInfo.isHighlight ? "text-[var(--accent-color)]" : "text-[var(--cream)]"
                   }`}>
                     {event.is_all_day ? (
-                      <span className="text-[0.65rem] font-semibold text-[var(--soft)] uppercase tracking-wide">All Day</span>
+                      <span className="text-[0.62rem] font-semibold text-[var(--soft)] uppercase tracking-[0.12em]">All Day</span>
                     ) : (
                       <>
                         {time}
-                        {period && <span className="text-[0.6rem] font-medium text-[var(--soft)]">{period}</span>}
+                        {period && <span className="text-[0.58rem] font-medium text-[var(--soft)] uppercase tracking-[0.1em]">{period}</span>}
                       </>
                     )}
                   </span>
                   {event.category && (
-                    <span className="inline-flex items-center justify-center w-7 h-7 rounded bg-accent-20">
-                      <CategoryIcon type={event.category} size={18} glow="subtle" />
+                    <span className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-accent-20 border border-[var(--twilight)]/50">
+                      <CategoryIcon type={event.category} size={16} glow="subtle" />
                     </span>
                   )}
                   {isLive && (
@@ -263,22 +358,22 @@ function EventCard({ event, index = 0, skipAnimation = false, portalSlug, friend
                   )}
                 </div>
                 {/* Title row: full width - larger and bolder */}
-                <h3 className="text-[var(--text-primary)] font-semibold text-base leading-tight line-clamp-2 group-hover:text-[var(--glow-color,var(--neon-magenta))] transition-colors mb-1">
-                  {event.title}
+                <h3 className="text-[var(--text-primary)] font-semibold text-[1.03rem] leading-tight line-clamp-2 group-hover:text-[var(--accent-color)] transition-colors mb-1.5">
+                  {eventTitle}
                 </h3>
               </div>
 
               {/* Desktop: Inline layout */}
-              <div className="hidden sm:flex items-center gap-2 mb-0.5">
+              <div className="hidden sm:flex items-center gap-2.5 mb-1">
                 {event.category && (
-                  <span className="flex-shrink-0 inline-flex items-center justify-center w-8 h-8 rounded bg-accent-20">
-                    <CategoryIcon type={event.category} size={20} glow="subtle" />
+                  <span className="flex-shrink-0 inline-flex items-center justify-center w-9 h-9 rounded-lg bg-accent-20 border border-[var(--twilight)]/55">
+                    <CategoryIcon type={event.category} size={18} glow="subtle" />
                   </span>
                 )}
                 <span
-                  className="text-[var(--text-primary)] font-semibold text-base transition-colors line-clamp-1 group-hover:text-[var(--glow-color,var(--neon-magenta))]"
+                  className="text-[var(--text-primary)] font-semibold text-[1.3rem] transition-colors line-clamp-1 group-hover:text-[var(--accent-color)] leading-tight"
                 >
-                  {event.title}
+                  {eventTitle}
                 </span>
                 {isLive && (
                   <span className="flex-shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 rounded border bg-[var(--neon-red)]/15 border-[var(--neon-red)]/30">
@@ -293,29 +388,19 @@ function EventCard({ event, index = 0, skipAnimation = false, portalSlug, friend
 
               {/* Details row - venue and metadata with better hierarchy */}
               {/* Mobile: show only venue + price; Desktop: show all metadata */}
-              <div className="flex items-center gap-1.5 text-sm text-[var(--text-secondary)] mt-1.5 leading-relaxed">
-                {event.venue && (
+              <div className="flex items-center gap-1.5 text-sm text-[var(--text-secondary)] mt-1.5 leading-relaxed flex-wrap">
+                {venueName && (
                   <>
-                    <span className="truncate max-w-[60%] sm:max-w-[40%] font-medium text-[var(--text-base)]" title={event.venue.name}>{event.venue.name}</span>
-                    {event.venue.neighborhood && (
+                    <span className="truncate max-w-[70%] sm:max-w-[45%] font-medium text-[var(--text-base)]" title={venueName}>{venueName}</span>
+                    {venueNeighborhood && (
                       <>
                         <span className="opacity-40">·</span>
-                        <span className="hidden sm:inline truncate" title={event.venue.neighborhood}>{event.venue.neighborhood}</span>
+                        <span className="truncate text-[var(--text-tertiary)]" title={venueNeighborhood}>{venueNeighborhood}</span>
                       </>
                     )}
                   </>
                 )}
                 {/* Genre or subcategory chips - desktop only for cleaner mobile */}
-                {event.genres && event.genres.length > 0 ? (
-                  <span className="hidden sm:contents">
-                    {event.genres.slice(0, 2).map((genre) => (
-                      <span key={genre} className="contents">
-                        <span className="opacity-40">·</span>
-                        <GenreChip genre={genre} category={event.category} portalSlug={portalSlug} />
-                      </span>
-                    ))}
-                  </span>
-                ) : null}
                 {price && price.text && (
                   <>
                     <span className="opacity-40">·</span>
@@ -360,11 +445,11 @@ function EventCard({ event, index = 0, skipAnimation = false, portalSlug, friend
                   </span>
                 )}
                 {/* Instructor - desktop only */}
-                {event.instructor && (
+                {instructorName && (
                   <span className="hidden sm:contents">
                     <span className="opacity-40">·</span>
-                    <span className="truncate text-[var(--muted)] text-xs" title={event.instructor}>
-                      w/ {event.instructor}
+                    <span className="truncate text-[var(--muted)] text-xs" title={instructorName}>
+                      w/ {instructorName}
                     </span>
                   </span>
                 )}
@@ -395,21 +480,6 @@ function EventCard({ event, index = 0, skipAnimation = false, portalSlug, friend
                   ).map((reason, idx) => (
                     <ReasonBadge key={`${reason.type}-${idx}`} reason={reason} size="sm" />
                   ))}
-                </div>
-              )}
-
-              {/* More Like This button - subtle, appears on hover */}
-              {moreLikeThisUrl && (
-                <div className="mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button
-                    onClick={handleMoreLikeThis}
-                    className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-mono text-[var(--muted)] hover:text-[var(--coral)] hover:bg-[var(--twilight)]/50 transition-colors"
-                  >
-                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                    </svg>
-                    More like this
-                  </button>
                 </div>
               )}
 
@@ -517,29 +587,34 @@ function EventCard({ event, index = 0, skipAnimation = false, portalSlug, friend
             </div>
           </Link>
 
-          <div className="flex items-start gap-1.5 sm:gap-2 pt-2.5 pr-2.5 pb-2.5 sm:pt-3 sm:pr-3 sm:pb-3 flex-shrink-0">
-            <RSVPButton eventId={event.id} variant="compact" onRSVPChange={handleRSVPChange} />
-            {isExternalLinkOut && (
-              <a
-                href={linkOutUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label={linkOutLabel}
-                style={{ touchAction: 'manipulation' }}
-                className="hidden sm:inline-flex w-11 h-11 items-center justify-center rounded-xl border border-[var(--twilight)]/80 bg-[var(--dusk)]/70 text-[var(--muted)] backdrop-blur-[2px] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.02)] hover:text-[var(--cream)] hover:border-[var(--cta-border,rgba(255,107,122,0.7))] hover:shadow-[0_0_18px_var(--cta-glow,rgba(255,107,122,0.25))] transition-all active:scale-95"
-              >
-                {isTicketLinkOut ? (
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
-                  </svg>
-                ) : (
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 3h7v7m0-7L10 14" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10v8a1 1 0 001 1h8" />
-                  </svg>
-                )}
-              </a>
-            )}
+          <div className="flex flex-col items-end gap-2 pt-3 pr-3 pb-3 sm:pt-4 sm:pr-4 sm:pb-4 flex-shrink-0">
+            <div className="flex items-start gap-1.5 sm:gap-2">
+              <div data-row-save-action="true">
+                <RSVPButton eventId={event.id} variant="compact" onRSVPChange={handleRSVPChange} className="list-save-trigger" />
+              </div>
+              {isExternalLinkOut && (
+                <a
+                  href={linkOutUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={linkOutLabel}
+                  data-row-open-action="true"
+                  style={{ touchAction: "manipulation" }}
+                  className="hidden sm:inline-flex w-10 h-10 items-center justify-center rounded-xl border border-[var(--twilight)]/75 bg-[var(--dusk)]/72 text-[var(--muted)] backdrop-blur-[2px] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.02)] hover:text-[var(--cream)] hover:border-[var(--cta-border,rgba(255,107,122,0.7))] hover:shadow-[0_0_18px_var(--cta-glow,rgba(255,107,122,0.25))] transition-all active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-color)]/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--void)]"
+                >
+                  {isTicketLinkOut ? (
+                    <svg className="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+                    </svg>
+                  ) : (
+                    <svg className="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 3h7v7m0-7L10 14" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10v8a1 1 0 001 1h8" />
+                    </svg>
+                  )}
+                </a>
+              )}
+            </div>
           </div>
         </div>
     </div>

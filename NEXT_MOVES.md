@@ -5,6 +5,31 @@
 
 **Goal:** Transform from "good local discovery app" to "the most beloved discovery platform in the world" by building defensible competitive moats and elevating design to elite tier.
 
+**Execution gate (2026-02-11):**
+- Strict portal attribution and Atlanta usage proof take precedence over all optional platform expansion.
+- Public Developer API and broad self-serve portal productization are deferred until post-launch traction.
+- Demo work is prioritized for FORTH + targeted vertical sales demos, not generalized self-serve features.
+
+### Launch Iteration Sprint (2026-02-11)
+**Objective:** tighten attribution fidelity + launch auditability before scaling self-serve.
+
+1. **Close remaining event share attribution gaps**
+- Instrument event detail sticky-share surface to write portal-attributed share telemetry.
+- Keep attribution strict by validating portal/event ownership server-side.
+
+2. **Harden signup attribution continuity**
+- Persist last portal context during anonymous browsing.
+- Use portal query, redirect parsing, and remembered portal context fallback during signup/callback.
+- Ensure signup attribution remains one-time-set (`signup_portal_id` immutable after first write).
+
+3. **Strengthen admin launch observability**
+- Add attribution-health metrics in admin analytics (signup attribution %, unattributed signups, tracked shares, shares per 1k views).
+- Surface portal-level share efficiency metrics for demo/sales proof loops.
+
+4. **Operational checks (always-on)**
+- Keep daily aggregation scheduled and idempotent.
+- Run periodic smoke checks for signup/share ingestion and dashboard rollups.
+
 ---
 
 ## Track 1: Strategic Moat Builders

@@ -1,7 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier} from "@/lib/rate-limit";
 import { getPortalBySlug } from "@/lib/portal";
-import { getChainVenueIds } from "@/lib/chain-venues";
 import { isValidUUID } from "@/lib/api-utils";
 import { logger } from "@/lib/logger";
 
@@ -60,6 +59,7 @@ export async function GET(request: Request) {
         is_all_day,
         category,
         subcategory,
+        tags,
         price_min,
         price_max,
         is_free,
@@ -113,14 +113,13 @@ export async function GET(request: Request) {
       }
     }
 
-    // Filter out chain venue events from live events
-    const chainVenueIds = await getChainVenueIds(supabase);
-    const nonChainEvents = chainVenueIds.length > 0
-      ? (events || []).filter((event) => !event.venue?.id || !chainVenueIds.includes(event.venue.id))
-      : (events || []);
+    // Filter regular showtimes from live events
+    const nonShowtimeEvents = (events || []).filter(
+      (event) => !event.tags?.includes("showtime")
+    );
 
     // Enrich events with counts
-    const enrichedEvents = nonChainEvents.map((event) => ({
+    const enrichedEvents = nonShowtimeEvents.map((event) => ({
       ...event,
       going_count: goingCounts[event.id] || 0,
     }));

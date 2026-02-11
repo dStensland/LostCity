@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getPortalBySlug } from "@/lib/portal";
 import { getLocalDateString } from "@/lib/formats";
-import { getChainVenueIds } from "@/lib/chain-venues";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier} from "@/lib/rate-limit";
 import { isValidUUID } from "@/lib/api-utils";
 import { isSpotOpen, DESTINATION_CATEGORIES } from "@/lib/spots";
@@ -54,6 +53,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
         end_time,
         is_all_day,
         category,
+        tags,
         image_url,
         venue:venues(id, name, slug, neighborhood)
       `, { count: countOnly ? "exact" : undefined, head: countOnly })
@@ -144,13 +144,10 @@ export async function GET(request: NextRequest, context: RouteContext) {
       return currentMinutes < assumedEndMinutes;
     });
 
-    // Filter out chain venue events from happening now
-    const chainVenueIds = await getChainVenueIds(supabase);
-    const filteredEvents = chainVenueIds.length > 0
-      ? liveEvents.filter((event: EventRow & { venue?: { id: number } | null }) =>
-          !event.venue || !("id" in event.venue) || !chainVenueIds.includes(event.venue.id)
-        )
-      : liveEvents;
+    // Filter regular showtimes from happening now
+    const filteredEvents = liveEvents.filter(
+      (event: EventRow & { tags?: string[] | null }) => !event.tags?.includes("showtime")
+    );
 
     return NextResponse.json(
       {

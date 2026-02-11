@@ -22,6 +22,7 @@ interface Props {
   portalId?: string;
   portalExclusive?: boolean;
   portalSlug?: string;
+  density?: "comfortable" | "compact";
 }
 
 /**
@@ -36,6 +37,7 @@ export default function EventList({
   portalId,
   portalExclusive,
   portalSlug,
+  density = "comfortable",
 }: Props) {
   const pathname = usePathname();
   const loaderRef = useRef<HTMLDivElement>(null);
@@ -142,7 +144,7 @@ export default function EventList({
         </h3>
 
         <p className="text-[var(--muted)] text-sm mb-6 max-w-xs mx-auto">
-          We're always adding fresh events. Check back soon or explore what's out there!
+          We&apos;re always adding fresh events. Check back soon or explore what&apos;s out there!
         </p>
 
         <div className="pt-4 border-t border-[var(--twilight)]/30">
@@ -178,6 +180,7 @@ export default function EventList({
         getFriendsForEvent={getFriendsForEvent}
         collapseFestivals={!filters.search}
         collapseFestivalPrograms={!filters.search}
+        density={density}
       />
 
       {/* Error state */}

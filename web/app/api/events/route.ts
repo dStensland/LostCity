@@ -55,11 +55,18 @@ export async function GET(request: Request) {
       };
     }
 
+    const subcategories = searchParams.get("subcategories")?.split(",").filter(Boolean) || [];
+    const subcategoryGenres = subcategories
+      .map((sub) => sub.includes(".") ? sub.split(".").slice(1).join(".") : sub)
+      .filter(Boolean);
+    const genres = searchParams.get("genres")?.split(",").filter(Boolean) || [];
+    const mergedGenres = Array.from(new Set([...genres, ...subcategoryGenres]));
+
     const filters: SearchFilters = {
       search: searchParams.get("search") || undefined,
       categories: searchParams.get("categories")?.split(",").filter(Boolean) || undefined,
       tags: searchParams.get("tags")?.split(",").filter(Boolean) || undefined,
-      genres: searchParams.get("genres")?.split(",").filter(Boolean) || undefined,
+      genres: mergedGenres.length > 0 ? mergedGenres : undefined,
       vibes: searchParams.get("vibes")?.split(",").filter(Boolean) || undefined,
       neighborhoods: searchParams.get("neighborhoods")?.split(",").filter(Boolean) || undefined,
       is_free: isFree,

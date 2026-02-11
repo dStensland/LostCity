@@ -1,15 +1,10 @@
--- Migration 181: Deactivate crawlers with upstream issues
--- These sources have site-side problems that prevent crawling.
--- Re-enable when the issues are resolved.
+-- Migration 181: Originally deactivated broken crawlers.
+-- All three have been fixed:
+--   - concrete-jungle: Now uses Airtable CSV download via Playwright
+--   - lifeline-animal-project: Now uses iCal feed (/events/?ical=1)
+--   - chattahoochee-riverkeeper: Now uses iCal feed (/events/?ical=1)
+-- Keeping all active. No-op migration.
 
 BEGIN;
-
-UPDATE sources
-SET is_active = false
-WHERE slug IN (
-  'concrete-jungle',         -- Uses Airtable embed, needs API integration
-  'lifeline-animal-project', -- reCAPTCHA bot protection blocks all requests
-  'chattahoochee-riverkeeper' -- Tribe Events API returning 500 errors
-);
-
+-- No changes needed — all sources are active and working.
 COMMIT;

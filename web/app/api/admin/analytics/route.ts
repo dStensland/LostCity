@@ -2,26 +2,16 @@ import { createClient } from "@/lib/supabase/server";
 import { isAdmin } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 import { getLocalDateString } from "@/lib/formats";
-import { adminErrorResponse } from "@/lib/api-utils";
+import { adminErrorResponse, type AnySupabase } from "@/lib/api-utils";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier} from "@/lib/rate-limit";
+import { computeAttributedDailyMetrics, type DailyMetric } from "@/lib/analytics/attributed-metrics";
+import {
+  fetchPortalInteractionRows,
+  summarizeInteractionRows,
+  summarizeRowsByPortal,
+} from "@/lib/analytics/portal-interaction-metrics";
 
 export const dynamic = "force-dynamic";
-
-type DailyMetric = {
-  date: string;
-  portal_id: string;
-  event_views: number;
-  event_rsvps: number;
-  event_saves: number;
-  event_shares: number;
-  new_signups: number;
-  active_users: number;
-  events_total: number;
-  events_created: number;
-  sources_active: number;
-  crawl_runs: number;
-  crawl_success_rate: number;
-};
 
 type Portal = {
   id: string;
@@ -38,6 +28,9 @@ type PortalSummary = {
   total_rsvps: number;
   total_signups: number;
   avg_active_users: number;
+  mode_selected: number;
+  wayfinding_opened: number;
+  resource_clicked: number;
 };
 
 export async function GET(request: NextRequest) {
@@ -60,6 +53,9 @@ export async function GET(request: NextRequest) {
   const startDate = new Date();
   startDate.setDate(startDate.getDate() - days);
   const startDateStr = getLocalDateString(startDate);
+  const endDateStr = getLocalDateString();
+  const startTimestamp = `${startDateStr}T00:00:00`;
+  const endTimestamp = `${endDateStr}T23:59:59.999`;
 
   // Get portals
   const { data: portals, error: portalsError } = await supabase
@@ -72,11 +68,17 @@ export async function GET(request: NextRequest) {
     return adminErrorResponse(portalsError, "GET /api/admin/analytics - portals query");
   }
 
+  const activePortals = (portals as Portal[]) || [];
+  const targetPortalIds = portalId
+    ? activePortals.filter((p) => p.id === portalId).map((p) => p.id)
+    : activePortals.map((p) => p.id);
+
   // Build analytics query
   let analyticsQuery = supabase
     .from("analytics_daily_portal")
     .select("date, portal_id, event_views, event_rsvps, event_saves, event_shares, new_signups, active_users, events_total, events_created, sources_active, crawl_runs, crawl_success_rate")
     .gte("date", startDateStr)
+    .lte("date", endDateStr)
     .order("date", { ascending: true });
 
   if (portalId) {
@@ -85,21 +87,86 @@ export async function GET(request: NextRequest) {
 
   const { data: analyticsData, error: analyticsError } = await analyticsQuery;
 
-  // If analytics table doesn't exist or is empty, compute from source tables
+  // If analytics table doesn't exist or has no rows for this range, compute from attributed source tables.
   let metrics: DailyMetric[] = (analyticsData as DailyMetric[]) || [];
 
   if (analyticsError || metrics.length === 0) {
-    // Fallback: compute metrics from source tables
-    metrics = await computeMetricsFromSources(startDateStr, portalId, portals as Portal[]);
+    metrics = await computeAttributedDailyMetrics(supabase, {
+      portalIds: targetPortalIds,
+      startDate: startDateStr,
+      endDate: endDateStr,
+    });
   }
 
   // Aggregate KPIs
   const totalViews = metrics.reduce((sum, m) => sum + (m.event_views || 0), 0);
   const totalRsvps = metrics.reduce((sum, m) => sum + (m.event_rsvps || 0), 0);
+  const totalShares = metrics.reduce((sum, m) => sum + (m.event_shares || 0), 0);
   const totalSignups = metrics.reduce((sum, m) => sum + (m.new_signups || 0), 0);
   const avgActiveUsers = metrics.length > 0
     ? Math.round(metrics.reduce((sum, m) => sum + (m.active_users || 0), 0) / metrics.length)
     : 0;
+
+  let rawNewProfiles: number | null = null;
+  if (!portalId) {
+    const { count, error: profileCountError } = await supabase
+      .from("profiles")
+      .select("id", { head: true, count: "exact" })
+      .gte("created_at", `${startDateStr}T00:00:00`)
+      .lte("created_at", `${endDateStr}T23:59:59.999`);
+
+    if (!profileCountError) {
+      rawNewProfiles = count ?? 0;
+    }
+  }
+
+  const unattributedSignups = rawNewProfiles === null
+    ? null
+    : Math.max(rawNewProfiles - totalSignups, 0);
+  const signupAttributionRate = rawNewProfiles && rawNewProfiles > 0
+    ? Number(((totalSignups / rawNewProfiles) * 100).toFixed(1))
+    : null;
+  const sharesPerThousandViews = totalViews > 0
+    ? Number(((totalShares / totalViews) * 1000).toFixed(1))
+    : 0;
+
+  let interactionSummary = {
+    total_interactions: 0,
+    mode_selected: 0,
+    wayfinding_opened: 0,
+    resource_clicked: 0,
+    wayfinding_open_rate: 0,
+    resource_click_rate: 0,
+    mode_breakdown: [] as Array<{ mode: string; count: number }>,
+    interactions_by_day: [] as Array<{ date: string; count: number }>,
+  };
+
+  let interactionsByPortal = new Map<string, {
+    total_interactions: number;
+    mode_selected: number;
+    wayfinding_opened: number;
+    resource_clicked: number;
+    mode_breakdown: Array<{ mode: string; count: number }>;
+    interactions_by_day: Array<{ date: string; count: number }>;
+  }>();
+
+  try {
+    const rows = await fetchPortalInteractionRows(
+      supabase as unknown as AnySupabase,
+      {
+        portalIds: targetPortalIds,
+        startTimestamp,
+        endTimestamp,
+      }
+    );
+    interactionSummary = summarizeInteractionRows(rows, totalViews);
+    interactionsByPortal = summarizeRowsByPortal(rows);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "";
+    if (!message.includes("does not exist")) {
+      return adminErrorResponse(error, "GET /api/admin/analytics - interaction query");
+    }
+  }
 
   // Calculate trends (compare last 7 days vs previous 7 days)
   const sevenDaysAgo = new Date();
@@ -173,6 +240,9 @@ export async function GET(request: NextRequest) {
         total_rsvps: pMetrics.reduce((sum, m) => sum + (m.event_rsvps || 0), 0),
         total_signups: pMetrics.reduce((sum, m) => sum + (m.new_signups || 0), 0),
         avg_active_users: Math.round(pMetrics.reduce((sum, m) => sum + (m.active_users || 0), 0) / pMetrics.length),
+        mode_selected: interactionsByPortal.get(pid)?.mode_selected || 0,
+        wayfinding_opened: interactionsByPortal.get(pid)?.wayfinding_opened || 0,
+        resource_clicked: interactionsByPortal.get(pid)?.resource_clicked || 0,
       });
     }
 
@@ -183,7 +253,7 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({
     period: {
       start: startDateStr,
-      end: getLocalDateString(),
+      end: endDateStr,
       days,
     },
     kpis: {
@@ -197,116 +267,27 @@ export async function GET(request: NextRequest) {
         signups: signupsTrend,
       },
     },
+    attribution: {
+      scope: portalId ? "portal" : "platform",
+      raw_new_profiles: rawNewProfiles,
+      attributed_signups: totalSignups,
+      unattributed_signups: unattributedSignups,
+      signup_attribution_rate: signupAttributionRate,
+      tracked_event_shares: totalShares,
+      shares_per_1k_views: sharesPerThousandViews,
+    },
+    interaction_kpis: {
+      total_interactions: interactionSummary.total_interactions,
+      mode_selected: interactionSummary.mode_selected,
+      wayfinding_opened: interactionSummary.wayfinding_opened,
+      resource_clicked: interactionSummary.resource_clicked,
+      wayfinding_open_rate: interactionSummary.wayfinding_open_rate,
+      resource_click_rate: interactionSummary.resource_click_rate,
+      mode_breakdown: interactionSummary.mode_breakdown,
+    },
+    interaction_time_series: interactionSummary.interactions_by_day,
     time_series: timeSeries,
     portals: portalSummaries,
-    portal_count: (portals as Portal[]).length,
+    portal_count: activePortals.length,
   });
-}
-
-// Compute metrics from source tables when analytics_daily_portal is empty
-async function computeMetricsFromSources(
-  startDate: string,
-  portalId: string | null,
-  portals: Portal[]
-): Promise<DailyMetric[]> {
-  const supabase = await createClient();
-  const metrics: DailyMetric[] = [];
-
-  // Get RSVPs by date
-  const { data: rsvps } = await supabase
-    .from("event_rsvps")
-    .select("created_at")
-    .gte("created_at", startDate);
-
-  // Get signups by date
-  const { data: profiles } = await supabase
-    .from("profiles")
-    .select("created_at")
-    .gte("created_at", startDate);
-
-  // Get activities by date (for active users)
-  const { data: activities } = await supabase
-    .from("activities")
-    .select("created_at, user_id")
-    .gte("created_at", startDate);
-
-  // Get crawl stats by date
-  const { data: crawlLogs } = await supabase
-    .from("crawl_logs")
-    .select("started_at, status")
-    .gte("started_at", startDate);
-
-  // Group by date
-  const rsvpsByDate = new Map<string, number>();
-  for (const r of (rsvps || [])) {
-    const date = (r as { created_at: string }).created_at.split("T")[0];
-    rsvpsByDate.set(date, (rsvpsByDate.get(date) || 0) + 1);
-  }
-
-  const signupsByDate = new Map<string, number>();
-  for (const p of (profiles || [])) {
-    const date = (p as { created_at: string }).created_at.split("T")[0];
-    signupsByDate.set(date, (signupsByDate.get(date) || 0) + 1);
-  }
-
-  const activeUsersByDate = new Map<string, Set<string>>();
-  for (const a of (activities || [])) {
-    const act = a as { created_at: string; user_id: string };
-    const date = act.created_at.split("T")[0];
-    if (!activeUsersByDate.has(date)) {
-      activeUsersByDate.set(date, new Set());
-    }
-    activeUsersByDate.get(date)!.add(act.user_id);
-  }
-
-  const crawlsByDate = new Map<string, { runs: number; success: number }>();
-  for (const c of (crawlLogs || [])) {
-    const log = c as { started_at: string; status: string };
-    const date = log.started_at.split("T")[0];
-    const existing = crawlsByDate.get(date) || { runs: 0, success: 0 };
-    existing.runs++;
-    if (log.status === "success") existing.success++;
-    crawlsByDate.set(date, existing);
-  }
-
-  // Generate date range
-  const start = new Date(startDate);
-  const end = new Date();
-  const current = new Date(start);
-
-  // For each portal, create metrics for each date
-  const targetPortals = portalId
-    ? portals.filter(p => p.id === portalId)
-    : portals;
-
-  while (current <= end) {
-    const dateStr = getLocalDateString(current);
-
-    for (const portal of targetPortals) {
-      const crawlStats = crawlsByDate.get(dateStr) || { runs: 0, success: 0 };
-      const successRate = crawlStats.runs > 0
-        ? (crawlStats.success / crawlStats.runs) * 100
-        : 0;
-
-      metrics.push({
-        date: dateStr,
-        portal_id: portal.id,
-        event_views: Math.floor(Math.random() * 100), // Placeholder - would need view tracking
-        event_rsvps: rsvpsByDate.get(dateStr) || 0,
-        event_saves: 0,
-        event_shares: 0,
-        new_signups: signupsByDate.get(dateStr) || 0,
-        active_users: activeUsersByDate.get(dateStr)?.size || 0,
-        events_total: 0,
-        events_created: 0,
-        sources_active: 0,
-        crawl_runs: crawlStats.runs,
-        crawl_success_rate: successRate,
-      });
-    }
-
-    current.setDate(current.getDate() + 1);
-  }
-
-  return metrics;
 }

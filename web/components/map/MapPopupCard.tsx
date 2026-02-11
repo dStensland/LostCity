@@ -58,7 +58,7 @@ function EventPopupContent({
   return (
     <div
       data-category={categoryKey}
-      className="min-w-[260px] max-w-[320px] p-4 pr-8 rounded-xl bg-[var(--dusk)]/95 backdrop-blur-md border border-[var(--twilight)] shadow-[0_8px_30px_rgba(0,0,0,0.5)]"
+      className="min-w-[260px] max-w-[320px] p-4 pr-8 rounded-2xl bg-gradient-to-b from-[var(--dusk)]/96 to-[var(--night)]/95 backdrop-blur-md border border-[var(--twilight)] shadow-[0_10px_34px_rgba(0,0,0,0.52)]"
     >
       <div className="flex items-center justify-between mb-2">
         {category && (
@@ -123,7 +123,7 @@ function EventPopupContent({
         <Link
           href={`/${portalSlug}?event=${id}`}
           scroll={false}
-          className="ml-auto text-[0.65rem] font-mono text-[var(--coral)] hover:underline"
+          className="ml-auto inline-flex items-center px-2 py-1 rounded-full bg-[var(--coral)]/15 border border-[var(--coral)]/35 text-[0.65rem] font-mono text-[var(--coral)] hover:bg-[var(--coral)]/20"
         >
           View details &rarr;
         </Link>
@@ -145,7 +145,7 @@ function SpotPopupContent({
   return (
     <div
       data-category={categoryKey}
-      className="min-w-[240px] max-w-[300px] p-4 pr-8 rounded-xl bg-[var(--dusk)]/95 backdrop-blur-md border border-[var(--twilight)] shadow-[0_8px_30px_rgba(0,0,0,0.5)]"
+      className="min-w-[240px] max-w-[300px] p-4 pr-8 rounded-2xl bg-gradient-to-b from-[var(--dusk)]/96 to-[var(--night)]/95 backdrop-blur-md border border-[var(--twilight)] shadow-[0_10px_34px_rgba(0,0,0,0.52)]"
     >
       <div className="flex items-center justify-between mb-2">
         {venueType && (
@@ -159,8 +159,8 @@ function SpotPopupContent({
             {getCategoryLabel(categoryKey)}
           </span>
         )}
-        <span className="flex-shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 text-[0.6rem] font-mono font-medium bg-[var(--neon-green)]/20 text-[var(--neon-green)] rounded">
-          OPEN
+        <span className="flex-shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 text-[0.6rem] font-mono font-medium bg-[var(--twilight)]/80 text-[var(--soft)] rounded">
+          DESTINATION
         </span>
       </div>
 
@@ -189,7 +189,7 @@ function SpotPopupContent({
       <div className="mt-3">
         <Link
           href={`/${portalSlug}/spots/${slug}`}
-          className="text-[0.65rem] font-mono text-[var(--coral)] hover:underline"
+          className="inline-flex items-center px-2 py-1 rounded-full bg-[var(--coral)]/15 border border-[var(--coral)]/35 text-[0.65rem] font-mono text-[var(--coral)] hover:bg-[var(--coral)]/20"
         >
           View details &rarr;
         </Link>

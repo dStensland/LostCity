@@ -1,10 +1,10 @@
 "use client";
 
-import { useRef, useState, useCallback, useEffect } from "react";
+import { useRef, useState, useCallback, useEffect, useMemo } from "react";
 import type { EventWithLocation } from "@/lib/search";
 import type { Spot } from "@/lib/spots-constants";
-import { getMapPinColor } from "@/lib/category-config";
-import { formatTime, getEventStatus } from "@/lib/formats";
+import { getCategoryColor } from "@/lib/category-config";
+import { decodeHtmlEntities, formatTime } from "@/lib/formats";
 import MapListItem from "./MapListItem";
 
 interface MapBottomSheetProps {
@@ -16,10 +16,11 @@ interface MapBottomSheetProps {
   onItemHover: (id: number | null) => void;
 }
 
-// Snap points as vh percentages
-const SNAP_COLLAPSED = 18; // Pill + header + preview card
-const SNAP_HALF = 50;
-const SNAP_FULL = 88;
+// Snap points as vh percentages.
+const SNAP_COLLAPSED = 20;
+const SNAP_HALF = 56;
+const SNAP_FULL = 90;
+const PREVIEW_LIMIT = 3;
 
 export default function MapBottomSheet({
   events,
@@ -31,11 +32,13 @@ export default function MapBottomSheet({
 }: MapBottomSheetProps) {
   const sheetRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<{ startY: number; startHeight: number } | null>(null);
+  const didDragRef = useRef(false);
   const [heightVh, setHeightVh] = useState(SNAP_COLLAPSED);
   const [isDragging, setIsDragging] = useState(false);
   const totalCount = events.length + spots.length;
+  const isCollapsed = heightVh <= SNAP_COLLAPSED + 4;
+  const isHalfOpen = heightVh > SNAP_COLLAPSED + 4 && heightVh < SNAP_FULL - 4;
 
-  // Snap to nearest snap point
   const snapTo = useCallback((vh: number) => {
     const dists = [
       { snap: SNAP_COLLAPSED, d: Math.abs(vh - SNAP_COLLAPSED) },
@@ -46,19 +49,33 @@ export default function MapBottomSheet({
     setHeightVh(dists[0].snap);
   }, []);
 
-  // Touch drag handlers
+  const cycleSnapPoint = useCallback(() => {
+    if (isCollapsed) {
+      setHeightVh(SNAP_HALF);
+      return;
+    }
+    if (isHalfOpen) {
+      setHeightVh(SNAP_FULL);
+      return;
+    }
+    setHeightVh(SNAP_COLLAPSED);
+  }, [isCollapsed, isHalfOpen]);
+
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
     const touch = e.touches[0];
     dragRef.current = { startY: touch.clientY, startHeight: heightVh };
+    didDragRef.current = false;
     setIsDragging(true);
   }, [heightVh]);
 
   const handleTouchMove = useCallback((e: React.TouchEvent) => {
     if (!dragRef.current) return;
+    e.preventDefault();
     const touch = e.touches[0];
     const deltaY = dragRef.current.startY - touch.clientY;
     const deltaVh = (deltaY / window.innerHeight) * 100;
-    const newHeight = Math.min(SNAP_FULL, Math.max(10, dragRef.current.startHeight + deltaVh));
+    if (Math.abs(deltaVh) > 1) didDragRef.current = true;
+    const newHeight = Math.min(SNAP_FULL, Math.max(SNAP_COLLAPSED - 6, dragRef.current.startHeight + deltaVh));
     setHeightVh(newHeight);
   }, []);
 
@@ -69,78 +86,100 @@ export default function MapBottomSheet({
     snapTo(heightVh);
   }, [heightVh, snapTo]);
 
-  // Click the handle to toggle between collapsed and half
-  const handleToggle = useCallback(() => {
-    if (heightVh <= SNAP_COLLAPSED + 5) {
-      setHeightVh(SNAP_HALF);
-    } else {
-      setHeightVh(SNAP_COLLAPSED);
+  const handleHeaderClick = useCallback(() => {
+    if (didDragRef.current) {
+      didDragRef.current = false;
+      return;
     }
-  }, [heightVh]);
+    cycleSnapPoint();
+  }, [cycleSnapPoint]);
 
-  // Auto-expand when an item is selected from the map
+  // Auto-expand when an item is selected from the map.
   useEffect(() => {
-    if (selectedItemId != null && heightVh <= SNAP_COLLAPSED + 5) {
+    if (selectedItemId != null && isCollapsed) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Intentional UX behavior when a map pin is selected.
       setHeightVh(SNAP_HALF);
     }
-  }, [selectedItemId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [selectedItemId, isCollapsed]);
 
-  const isExpanded = heightVh > SNAP_COLLAPSED + 5;
+  const previewItems = useMemo(() => {
+    const eventCards = events.slice(0, PREVIEW_LIMIT).map((event) => ({
+      type: "event" as const,
+      id: event.id,
+      title: decodeHtmlEntities(event.title),
+      subtitle: [event.venue?.name ? decodeHtmlEntities(event.venue.name) : null, formatTime(event.start_time ?? null, event.is_all_day)].filter(Boolean).join(" · "),
+      accent: getCategoryColor(event.venue?.venue_type || event.category || "other"),
+    }));
 
-  // Preview card data — first event for collapsed state
-  const previewEvent = events[0] ?? null;
-  const previewColor = previewEvent ? getMapPinColor(previewEvent.venue?.venue_type || previewEvent.category || "other") : null;
-  const previewTime = previewEvent ? formatTime(previewEvent.start_time ?? null, previewEvent.is_all_day) : null;
-  const previewStatus = previewEvent ? getEventStatus(previewEvent.start_date, previewEvent.start_time, previewEvent.is_all_day, previewEvent.is_live) : null;
+    const openSlots = PREVIEW_LIMIT - eventCards.length;
+    if (openSlots <= 0) return eventCards;
+
+    const spotCards = spots.slice(0, openSlots).map((spot) => ({
+      type: "spot" as const,
+      id: spot.id,
+      title: decodeHtmlEntities(spot.name),
+      subtitle: spot.neighborhood ? decodeHtmlEntities(spot.neighborhood) : "Destination",
+      accent: getCategoryColor(spot.venue_type || "other"),
+    }));
+
+    return [...eventCards, ...spotCards];
+  }, [events, spots]);
 
   return (
     <div
       ref={sheetRef}
-      className={`absolute bottom-0 left-0 right-0 z-10 bg-[var(--night)] border-t border-[var(--twilight)] rounded-t-2xl shadow-[0_-8px_30px_rgba(0,0,0,0.5)] ${
+      className={`absolute bottom-0 left-0 right-0 z-10 bg-gradient-to-b from-[var(--night)] to-[var(--void)] border-t border-[var(--twilight)] rounded-t-2xl shadow-[0_-12px_34px_rgba(0,0,0,0.52)] backdrop-blur-md ${
         isDragging ? "" : "transition-[height] duration-300 ease-out motion-reduce:duration-0"
       }`}
-      style={{ height: `${heightVh}vh` }}
+      style={{ height: `${heightVh}vh`, paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
     >
-      {/* Drag handle — drag-only, no click toggle */}
-      <div
-        className="flex flex-col items-center justify-center h-6 cursor-grab active:cursor-grabbing touch-none pt-2"
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-        role="separator"
-        aria-label="Drag to resize list"
-        aria-orientation="horizontal"
-      >
-        <div className="w-10 h-1 rounded-full bg-[var(--twilight)]" />
-      </div>
-
-      {/* Tap target to toggle expand/collapse */}
       <button
-        className="w-full flex items-center justify-between px-5 py-1.5"
-        onClick={handleToggle}
-        aria-label={isExpanded ? "Collapse list" : "Expand list"}
+        className="w-full touch-none select-none"
+        type="button"
+        onClick={handleHeaderClick}
+        aria-label={isCollapsed ? "Expand list" : "Change list size"}
       >
-        <span className="font-mono text-[11px] font-semibold text-[var(--soft)] uppercase tracking-widest">
-          {isExpanded ? "In view" : totalCount > 0 ? `${totalCount} nearby` : "Events"}
-        </span>
-        <div className="flex items-center gap-2">
-          {isLoading && totalCount > 0 && (
-            <div className="w-3 h-3 rounded-full border-2 border-[var(--coral)] border-t-transparent animate-spin" />
-          )}
-          {totalCount > 0 && (
-            <span className="font-mono text-xs font-bold text-[var(--cream)] bg-[var(--twilight)] px-2.5 py-0.5 rounded-full min-w-[28px] text-center">
-              {totalCount}
-            </span>
-          )}
-          <svg className={`w-4 h-4 text-[var(--muted)] transition-transform ${isExpanded ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-          </svg>
+        <div
+          className="flex flex-col items-center justify-center h-7 cursor-grab active:cursor-grabbing pt-2"
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+          role="separator"
+          aria-label="Drag to resize list"
+          aria-orientation="horizontal"
+        >
+          <div className="w-10 h-1 rounded-full bg-[var(--twilight)]" />
+        </div>
+        <div className="flex items-center justify-between px-4 py-1.5">
+          <span className="font-mono text-[11px] font-semibold text-[var(--soft)] uppercase tracking-widest">
+            In view
+          </span>
+          <div className="flex items-center gap-2">
+            {isLoading && totalCount > 0 && (
+              <div className="w-3 h-3 rounded-full border-2 border-[var(--coral)] border-t-transparent animate-spin" />
+            )}
+            {totalCount > 0 && (
+              <span className="font-mono text-xs font-bold text-[var(--cream)] bg-[var(--twilight)] px-2.5 py-0.5 rounded-full min-w-[28px] text-center">
+                {totalCount}
+              </span>
+            )}
+            <svg
+              className={`w-4 h-4 text-[var(--muted)] transition-transform ${
+                isCollapsed ? "" : isHalfOpen ? "rotate-180" : "rotate-[270deg]"
+              }`}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+            </svg>
+          </div>
         </div>
       </button>
 
-      {/* Collapsed state: preview card */}
-      {!isExpanded && (
-        <div className="px-4 pb-2">
+      {/* Collapsed state: richer in-view preview. */}
+      {isCollapsed && (
+        <div className="px-4 pb-2.5">
           {totalCount === 0 && isLoading ? (
             <div className="flex items-center justify-center gap-2 py-1">
               <div className="w-3 h-3 rounded-full border-2 border-[var(--coral)] border-t-transparent animate-spin" />
@@ -150,69 +189,45 @@ export default function MapBottomSheet({
             <p className="text-xs text-[var(--muted)] font-mono text-center py-1">
               Zoom out or pan to discover more
             </p>
-          ) : previewEvent ? (
-            <button
-              className="w-full flex items-center gap-3 p-2.5 bg-[var(--twilight)]/40 rounded-xl text-left active:bg-[var(--twilight)]/60"
-              onClick={() => onItemSelect({ type: "event", id: previewEvent.id })}
-            >
-              <span
-                className="w-[10px] h-[10px] rounded-full flex-shrink-0"
-                style={{ backgroundColor: previewColor! }}
-                aria-hidden="true"
-              />
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold text-[var(--cream)] truncate">{previewEvent.title}</p>
-                <p className="text-[11px] text-[var(--muted)] truncate">
-                  {previewEvent.venue?.name || ""}
-                  {previewEvent.venue?.name && previewTime ? " · " : ""}
-                  {previewTime}
-                </p>
-              </div>
-              <div className="flex items-center gap-1.5 flex-shrink-0">
-                {previewStatus && (
+          ) : (
+            <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide snap-x snap-proximity">
+              {previewItems.map((item) => (
+                <button
+                  key={`${item.type}-${item.id}`}
+                  className="snap-start min-w-[200px] max-w-[236px] flex-1 flex items-start gap-2.5 p-3 bg-[var(--twilight)]/36 border border-[var(--twilight)]/80 rounded-xl text-left active:bg-[var(--twilight)]/65 transition-colors"
+                  onClick={() => onItemSelect({ type: item.type, id: item.id })}
+                >
                   <span
-                    className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded"
-                    style={{ color: previewStatus.color, backgroundColor: `${previewStatus.color}20` }}
-                  >
-                    {previewStatus.label}
-                  </span>
-                )}
-                {previewEvent.is_free && (
-                  <span className="text-[10px] font-mono font-bold text-[var(--neon-green)] bg-[var(--neon-green)]/15 px-1.5 py-0.5 rounded">
-                    Free
-                  </span>
-                )}
-                {/* Chevron up hint */}
-                <svg className="w-4 h-4 text-[var(--muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-                </svg>
-              </div>
-            </button>
-          ) : spots.length > 0 ? (
-            <div className="flex items-center justify-between px-1">
-              <span className="font-mono text-[10px] text-[var(--muted)] uppercase tracking-wider">
-                {spots.length} destination{spots.length !== 1 ? "s" : ""} nearby
-              </span>
-              <svg className="w-4 h-4 text-[var(--muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-              </svg>
+                    className="w-[10px] h-[10px] mt-1 rounded-full flex-shrink-0"
+                    style={{ backgroundColor: item.accent }}
+                    aria-hidden="true"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-[var(--cream)] truncate">{item.title}</p>
+                    <p className="text-[11px] text-[var(--muted)] truncate">{item.subtitle}</p>
+                  </div>
+                </button>
+              ))}
             </div>
-          ) : null}
-          {totalCount > 1 && previewEvent && (
+          )}
+          {totalCount > previewItems.length && (
             <p className="text-[10px] text-[var(--muted)] font-mono text-center mt-1.5">
-              +{totalCount - 1} more nearby
+              +{totalCount - previewItems.length} more
             </p>
           )}
         </div>
       )}
 
-      {/* Expanded: full scrollable list */}
-      {isExpanded && (
+      {/* Expanded: full scrollable list. */}
+      {!isCollapsed && (
         <>
           <div className="border-t border-[var(--twilight)]/50" />
           <div
-            className="overflow-y-auto overscroll-contain p-2"
-            style={{ height: `calc(${heightVh}vh - 86px)` }}
+            className="overflow-y-auto overscroll-contain p-3"
+            style={{
+              height: `calc(${heightVh}vh - 90px)`,
+              WebkitOverflowScrolling: "touch",
+            }}
             role="listbox"
             aria-label="Map items"
           >
@@ -237,26 +252,27 @@ export default function MapBottomSheet({
             ) : (
               <>
                 {events.map((event) => (
-                  <MapListItem
-                    key={`e-${event.id}`}
-                    id={event.id}
-                    type="event"
-                    title={event.title}
-                    category={event.venue?.venue_type || event.category}
-                    venueName={event.venue?.name || null}
-                    neighborhood={event.venue?.neighborhood || null}
-                    startDate={event.start_date}
-                    startTime={event.start_time}
-                    isAllDay={event.is_all_day}
-                    isFree={event.is_free}
-                    isLive={event.is_live}
-                    isSelected={event.id === selectedItemId}
-                    onSelect={onItemSelect}
-                    onHover={onItemHover}
-                  />
+                  <div key={`e-${event.id}`} className="py-1">
+                    <MapListItem
+                      id={event.id}
+                      type="event"
+                      title={event.title}
+                      category={event.venue?.venue_type || event.category}
+                      venueName={event.venue?.name || null}
+                      neighborhood={event.venue?.neighborhood || null}
+                      startDate={event.start_date}
+                      startTime={event.start_time}
+                      isAllDay={event.is_all_day}
+                      isFree={event.is_free}
+                      isLive={event.is_live}
+                      isSelected={event.id === selectedItemId}
+                      onSelect={onItemSelect}
+                      onHover={onItemHover}
+                    />
+                  </div>
                 ))}
                 {spots.length > 0 && events.length > 0 && (
-                  <div className="flex items-center gap-2 px-3 pt-2 pb-1" aria-hidden="true">
+                  <div className="flex items-center gap-2 px-4 pt-3 pb-1.5" aria-hidden="true">
                     <span className="font-mono text-[10px] font-semibold text-[var(--soft)] uppercase tracking-widest">
                       Destinations
                     </span>
@@ -264,18 +280,19 @@ export default function MapBottomSheet({
                   </div>
                 )}
                 {spots.map((spot) => (
-                  <MapListItem
-                    key={`s-${spot.id}`}
-                    id={spot.id}
-                    type="spot"
-                    title={spot.name}
-                    category={spot.venue_type}
-                    venueName={null}
-                    neighborhood={spot.neighborhood}
-                    isSelected={spot.id === selectedItemId}
-                    onSelect={onItemSelect}
-                    onHover={onItemHover}
-                  />
+                  <div key={`s-${spot.id}`} className="py-1">
+                    <MapListItem
+                      id={spot.id}
+                      type="spot"
+                      title={spot.name}
+                      category={spot.venue_type}
+                      venueName={null}
+                      neighborhood={spot.neighborhood}
+                      isSelected={spot.id === selectedItemId}
+                      onSelect={onItemSelect}
+                      onHover={onItemHover}
+                    />
+                  </div>
                 ))}
               </>
             )}

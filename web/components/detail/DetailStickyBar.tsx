@@ -3,8 +3,13 @@
 import { useState, useEffect, type ReactNode } from "react";
 
 export interface DetailStickyBarProps {
-  onShare?: () => void;
+  onShare?: () => void | Promise<void>;
   shareLabel?: string;
+  showShareButton?: boolean;
+  shareTracking?: {
+    portalSlug: string;
+    eventId: number;
+  };
   secondaryActions?: ReactNode;
   primaryAction?: {
     label: string;
@@ -19,6 +24,8 @@ export interface DetailStickyBarProps {
 export function DetailStickyBar({
   onShare,
   shareLabel = "Share",
+  showShareButton = false,
+  shareTracking,
   secondaryActions,
   primaryAction,
   className = "",
@@ -37,23 +44,42 @@ export function DetailStickyBar({
     return () => window.removeEventListener("scroll", handleScroll);
   }, [scrollThreshold]);
 
-  const handleShare = async () => {
-    if (onShare) {
-      onShare();
-      return;
-    }
+  const trackEventShare = async (method: "native" | "clipboard" | "unknown") => {
+    if (!shareTracking) return;
 
-    try {
+    await fetch(`/api/portals/${shareTracking.portalSlug}/share`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        event_id: shareTracking.eventId,
+        method,
+      }),
+    }).catch(() => {
+      // Non-blocking analytics call.
+    });
+  };
+
+  const handleShare = async () => {
+    let shareMethod: "native" | "clipboard" | "unknown" | null = null;
+
+    if (onShare) {
+      await onShare();
+      shareMethod = "unknown";
+    } else {
       if (navigator.share) {
         await navigator.share({
           title: document.title,
           url: window.location.href,
         });
+        shareMethod = "native";
       } else {
         await navigator.clipboard.writeText(window.location.href);
+        shareMethod = "clipboard";
       }
-    } catch {
-      // User cancelled or error - ignore
+    }
+
+    if (shareMethod) {
+      void trackEventShare(shareMethod);
     }
   };
 
@@ -68,9 +94,13 @@ export function DetailStickyBar({
       <div className="bg-[var(--void)]/95 backdrop-blur-md border-t border-[var(--twilight)] px-4 py-3 safe-area-bottom">
         <div className="max-w-3xl mx-auto flex items-center gap-3">
           {/* Share button */}
-          {onShare !== undefined && (
+          {showShareButton && (
             <button
-              onClick={handleShare}
+              onClick={() => {
+                handleShare().catch(() => {
+                  // User cancelled share or share failed.
+                });
+              }}
               className="flex-shrink-0 w-11 h-11 flex items-center justify-center rounded-lg border border-[var(--twilight)] text-[var(--muted)] hover:text-[var(--cream)] hover:border-[var(--soft)] transition-colors"
               aria-label={shareLabel}
             >

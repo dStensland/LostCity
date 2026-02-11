@@ -56,8 +56,15 @@ export function buildCsp(nonce: string, options: CspOptions = {}): string {
   // Style nonces still work because Next.js does add nonces to <style> tags.
   const scriptSrc = `script-src ${STATIC_SCRIPT_SRC_BASE} 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""}`;
 
-  const styleSrc = `style-src ${STATIC_STYLE_SRC_BASE} 'nonce-${nonce}'${allowInlineStyles ? " 'unsafe-inline'" : ""}`;
-  const styleSrcElem = `style-src-elem ${STATIC_STYLE_SRC_BASE} 'nonce-${nonce}'${allowInlineStyles ? " 'unsafe-inline'" : ""}`;
+  // In development, toolchains/devtools inject <style> tags without a nonce.
+  // A nonce + 'unsafe-inline' still blocks them (unsafe-inline is ignored when nonce exists),
+  // so we switch to an inline-friendly policy only in dev.
+  const styleSrc = isDev
+    ? `style-src ${STATIC_STYLE_SRC_BASE} 'unsafe-inline'`
+    : `style-src ${STATIC_STYLE_SRC_BASE} 'nonce-${nonce}'${allowInlineStyles ? " 'unsafe-inline'" : ""}`;
+  const styleSrcElem = isDev
+    ? `style-src-elem ${STATIC_STYLE_SRC_BASE} 'unsafe-inline'`
+    : `style-src-elem ${STATIC_STYLE_SRC_BASE} 'nonce-${nonce}'${allowInlineStyles ? " 'unsafe-inline'" : ""}`;
   // Always allow inline style attributes — React components use style={{ }} extensively
   // (Mapbox, skeletons, progress bars, dynamic layouts). style-src-attr doesn't enable
   // script execution, so 'unsafe-inline' here has minimal security impact.

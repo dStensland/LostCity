@@ -35,9 +35,28 @@ Each phase is a self-contained block of work an agent can pick up cold. Phases w
 | H: User Profile & Preferences UX | Done | 2026-02-10 | UX |
 | I: Discovery UX (genre filter pills, cross-entity search) | Done (pre-existing) | 2026-02-10 | UX |
 | J: Hotel Concierge Demo | Done | 2026-02-10 | Demo |
-| K: Portal Onboarding Flow | Done | 2026-02-10 | Demo |
+| K: Portal Onboarding Flow | Delivered (Paused) | 2026-02-10 | Demo |
 | L: API Route Test Coverage | Done (events route) | 2026-02-10 | Eng Health |
 | M: Community Needs Tags | Done | 2026-02-10 | Network |
+| N: Strict Portal Attribution Hardening | In Progress | 2026-02-11 | Foundation |
+| O: Atlanta Usage + Quality Proof | Planned | 2026-02-11 | Launch |
+| P: Demo Portfolio (FORTH + 2 verticals) | Planned | 2026-02-11 | Launch |
+| Q: Scale Guardrails (Isolation/Perf/Test) | Planned | 2026-02-11 | Foundation |
+| R: Public Developer API | Iceboxed (Post-Launch) | 2026-02-11 | Platform |
+
+---
+
+## Reprioritization (2026-02-11)
+
+Execution is now constrained by the launch hypothesis:
+
+1. **Strict portal attribution first** across data, behavior, enrichment, and analytics.
+2. **Atlanta usage and quality proof** before productizing self-serve workflows.
+3. **Demo quality over demo quantity** (FORTH first, then 1-2 high-signal vertical demos).
+4. **Self-serve portal onboarding/admin expansion paused** until customer pull is real.
+5. **Public Developer API iceboxed** until after launch traction.
+
+This means completed work like Phase K remains available but is not an active investment area until reprioritized.
 
 ---
 
@@ -299,7 +318,7 @@ Applied two migrations to add all taxonomy + personalization columns:
 
 ---
 
-## Tier 4: Demo Sprint
+## Tier 4: Demo Sprint (Operator-led)
 
 ### Phase J: Hotel Concierge Demo
 
@@ -327,19 +346,82 @@ Applied two migrations to add all taxonomy + personalization columns:
 
 ### Phase K: Portal Onboarding Flow
 
-**Goal:** Step-by-step portal setup wizard.
+**Goal:** Keep existing wizard functional, but pause major self-serve expansion.
 
-**Why:** Backlog 1.2. Self-serve portal creation for long-tail customers.
+**Why:** Self-serve is intentionally deferred until post-launch customer pull. Current priority is attribution, Atlanta usage, and demo quality.
 
 **Reference:** `prds/002-portal-onboarding-wizard.md`
 
-**Steps:** Name/type → Branding/colors → Filters/location → Sections → Preview → Launch. Template presets by vertical.
+**Scope now:**
+1. Maintain current flow for internal operator use.
+2. Fix critical defects only.
+3. Do not invest in broad UX polish or public self-serve growth features.
 
-**Verification:** Can create a new portal through the wizard flow end-to-end.
+**Verification:** Existing internal portal creation flow continues to work without regressions.
 
 ---
 
-## Tier 5: Engineering Health
+## Tier 5: Launch Foundation (Current Priority)
+
+### Phase N: Strict Portal Attribution Hardening
+
+**Goal:** Make portal attribution explicit and enforceable across all critical write paths.
+
+**Why:** Attribution correctness is a launch blocker and the foundation for trustworthy cross-portal analytics/personalization.
+
+**Core tasks:**
+1. Add/propagate `portal_id` attribution in behavioral writes (`signals`, `activities`, relevant preference writes).
+2. Ensure portal-context writes to `inferred_preferences` include portal attribution.
+3. Add schema/app-level guardrails preventing unattributed writes where attribution is required.
+4. Add audits and alerts for attribution drift (missing/invalid `portal_id` by table).
+5. Add tests for portal isolation and attribution invariants.
+
+**Verification:** No critical attribution writes are missing portal context in audit queries; test suite covers portal attribution invariants.
+
+### Phase O: Atlanta Usage + Quality Proof
+
+**Goal:** Improve Atlanta engagement and reliability metrics used in sales narratives.
+
+**Why:** Launch thesis depends on proving user value in the core city product.
+
+**Core tasks:**
+1. Tighten feed/search quality and ranking consistency.
+2. Reduce low-quality/duplicate/noisy event surfacing.
+3. Improve conversion flows (RSVP/save/follow/return behavior).
+4. Instrument and track weekly usage metrics for sales proof.
+
+**Verification:** Atlanta usage dashboards show measurable week-over-week improvement in engagement quality metrics.
+
+### Phase P: Demo Portfolio Expansion
+
+**Goal:** Deliver polished demo experiences for high-priority vertical sales motions.
+
+**Why:** Near-term growth is sales-led, not self-serve-led.
+
+**Core tasks:**
+1. Complete FORTH demo polish and attribution QA.
+2. Build one film-focused demo experience.
+3. Build one hospital-visitor-focused demo experience.
+
+**Verification:** Each demo is presentation-ready with stable flows and a documented walkthrough script.
+
+### Phase Q: Scale Guardrails (Isolation/Perf/Test)
+
+**Goal:** Build scale resilience before broad customer rollout.
+
+**Why:** We are deferring self-serve UX but not deferring backend scalability and correctness.
+
+**Core tasks:**
+1. Harden portal-isolation query patterns and indexes.
+2. Expand API and DB tests around portal access boundaries.
+3. Improve operational observability for crawler, attribution, and portal health.
+4. Keep integration methods/profile alignment and source health reporting current.
+
+**Verification:** Performance and correctness checks pass for portal-scoped queries at current production scale.
+
+---
+
+## Tier 6: Engineering Health
 
 ### Phase L: API Route Test Coverage
 
@@ -355,7 +437,7 @@ Applied two migrations to add all taxonomy + personalization columns:
 
 ---
 
-## Tier 6: Network Effects
+## Tier 7: Network Effects
 
 ### Phase M: Community Needs Tags
 
@@ -394,7 +476,10 @@ Each phase is designed so an agent can:
 - **D** and **E** are sequential (D first, then E)
 - **F** (migrations) must complete before G, H, I
 - **G**, **H**, **I** can run in parallel after F
-- **J** and **K** are independent of each other, but wait for G/H/I
+- **J** is active; **K** is maintenance-only until reprioritized
+- **N** should run before O/P in any launch-critical branch
+- **O** and **P** can run in parallel once N guardrails are in place
+- **Q** can run in parallel with O/P after N starts
 - **L** (API tests) is independent of everything
 - **M** can start after F
 

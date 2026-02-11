@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { format } from "date-fns";
 
+const DEFAULT_EVENT_IMAGE = "https://forthatlanta.com/hubfs/Forth/Website/Images/Club/hero-banner-club-faq-desktop.jpg";
+
 /** Convert "HH:MM:SS" to "1:00 PM" style */
 function formatTime(time: string): string {
   const [hours, minutes] = time.split(":");
@@ -37,7 +39,7 @@ interface HotelEventCardProps {
  * from event images across many external domains.
  */
 export default function HotelEventCard({ event, portalSlug, variant = "featured" }: HotelEventCardProps) {
-  const eventUrl = `/${portalSlug}?event=${event.id}`;
+  const eventUrl = `/${portalSlug}/events/${event.id}`;
 
   // Format distance if available
   const distanceText = event.distance_km
@@ -60,9 +62,20 @@ export default function HotelEventCard({ event, portalSlug, variant = "featured"
               alt={event.title}
               className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
               loading="lazy"
+              onError={(e) => {
+                const img = e.currentTarget;
+                if (img.src !== DEFAULT_EVENT_IMAGE) {
+                  img.src = DEFAULT_EVENT_IMAGE;
+                }
+              }}
             />
           ) : (
-            <div className="w-full h-full bg-[var(--hotel-sand)]" />
+            <img
+              src={DEFAULT_EVENT_IMAGE}
+              alt={event.title}
+              className="absolute inset-0 w-full h-full object-cover"
+              loading="lazy"
+            />
           )}
         </div>
 
@@ -106,9 +119,20 @@ export default function HotelEventCard({ event, portalSlug, variant = "featured"
             alt={event.title}
             className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
             loading="lazy"
+            onError={(e) => {
+              const img = e.currentTarget;
+              if (img.src !== DEFAULT_EVENT_IMAGE) {
+                img.src = DEFAULT_EVENT_IMAGE;
+              }
+            }}
           />
         ) : (
-          <div className="w-full h-full bg-[var(--hotel-sand)]" />
+          <img
+            src={DEFAULT_EVENT_IMAGE}
+            alt={event.title}
+            className="absolute inset-0 w-full h-full object-cover"
+            loading="lazy"
+          />
         )}
       </div>
 

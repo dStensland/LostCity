@@ -6,6 +6,7 @@ Also infers genres from event title/description using the unified taxonomy.
 
 from __future__ import annotations
 
+from datetime import date, datetime
 from typing import Optional
 from tags import INHERITABLE_VIBES, VIBE_TO_TAG, ALL_TAGS, GENRE_TO_TAGS
 from genre_normalize import normalize_genres, VALID_GENRES
@@ -221,6 +222,20 @@ def infer_tags(
 
     if any(
         phrase in text
+        for phrase in [
+            "18+",
+            "18 and over",
+            "ages 18",
+            "18 & over",
+            "18 and up",
+            "must be 18",
+            "over 18",
+        ]
+    ):
+        tags.add("18+")
+
+    if any(
+        phrase in text
         for phrase in ["all ages", "all-ages", "any age", "open to all ages"]
     ):
         tags.add("all-ages")
@@ -343,6 +358,72 @@ def infer_tags(
     ]
     if any(holiday in text for holiday in holidays):
         tags.add("holiday")
+
+    # --- Specific cultural/holiday tags ---
+
+    # Valentine's Day (Feb events with valentine references)
+    if any(kw in text for kw in ["valentine", "galentine", "love day"]):
+        tags.add("valentines")
+        tags.add("holiday")
+
+    # Mardi Gras
+    if any(kw in text for kw in ["mardi gras", "fat tuesday", "krewe", "king cake"]):
+        tags.add("mardi-gras")
+        tags.add("holiday")
+
+    # Lunar New Year
+    if any(kw in text for kw in [
+        "lunar new year", "chinese new year", "lunar celebration",
+        "year of the snake", "year of the horse", "year of the dragon",
+        "year of the rabbit", "year of the tiger", "year of the ox",
+        "year of the rat", "year of the pig", "year of the dog",
+        "year of the rooster", "year of the monkey", "year of the goat",
+        "tet festival", "seollal", "losar",
+        "lion dance", "dragon dance", "red envelope", "lunar fest",
+    ]):
+        tags.add("lunar-new-year")
+        tags.add("holiday")
+
+    # Black History Month (February events with BHM references)
+    start_date_str = event.get("start_date") or ""
+    event_month = 0
+    if start_date_str:
+        try:
+            event_month = int(start_date_str[5:7])
+        except (ValueError, IndexError):
+            pass
+
+    bhm_keywords = [
+        "black history", "african american", "african-american",
+        "civil rights", "martin luther king", "mlk ",
+        "black heritage", "black culture", "black excellence",
+        "black joy", "black love", "black voices", "black stories",
+        "black experience", "black changemaker", "black entertainment",
+        "african diaspora", "pan-african", "black film festival",
+        "black art", "afro-american", "negro spiritual",
+    ]
+    if any(kw in text for kw in bhm_keywords):
+        if event_month == 2:
+            tags.add("black-history-month")
+        tags.add("holiday")
+
+    # Friday the 13th (date-aware)
+    if start_date_str:
+        try:
+            event_date = date.fromisoformat(start_date_str)
+            if event_date.weekday() == 4 and event_date.day == 13:  # Friday + 13th
+                fri13_keywords = [
+                    "friday the 13", "friday 13", "tattoo flash",
+                    "horror", "haunted", "ghost", "spooky", "serial killer",
+                    "murder", "macabre", "occult", "supernatural", "paranormal",
+                    "cemetery", "graveyard", "zombie", "vampire",
+                    "goth", "gothic", "curse", "death", "dead",
+                    "bloodbath", "seance", "tarot",
+                ]
+                if any(kw in text for kw in fri13_keywords):
+                    tags.add("friday-13")
+        except (ValueError, TypeError):
+            pass
 
     # Seasonal
     seasonal_terms = [
@@ -612,17 +693,22 @@ def merge_tags(existing: list[str], new: list[str]) -> list[str]:
 def infer_genres(
     event: dict,
     venue_genres: list[str] | None = None,
+    venue_vibes: list[str] | None = None,
+    venue_type: str | None = None,
 ) -> list[str]:
     """
     Infer genre slugs from event data (title, description, category, existing genres).
 
     Uses pattern matching on title/description scoped by category to infer
     the most specific genre(s). Also normalizes any existing genres on the event
-    and inherits relevant venue genres.
+    and inherits relevant venue genres. Falls back to venue vibes/type when no
+    genres can be inferred from event content.
 
     Args:
         event: Event dict with title, description, category, genres (optional)
         venue_genres: Optional list of genres from the event's venue
+        venue_vibes: Optional list of vibes from the event's venue
+        venue_type: Optional venue type string
 
     Returns:
         Deduplicated list of canonical genre slugs
@@ -1163,6 +1249,54 @@ def infer_genres(
         # Only inherit if event has no genres yet (don't override explicit genres)
         if not genres and normalized_venue:
             genres.update(normalized_venue)
+
+    # --- Fallback: infer from venue vibes/type when no genres found ---
+    if not genres and (venue_vibes or venue_type):
+        vibe_genre_map = {
+            "paint-and-sip": "painting",
+            "painting": "painting",
+            "pottery": "pottery",
+            "crafts": "crafts",
+            "karaoke": "karaoke",
+            "trivia": "trivia",
+            "drag": "drag",
+            "burlesque": "burlesque",
+            "open-mic": "open-mic",
+            "comedy": "stand-up",
+            "jazz": "jazz",
+            "blues": "blues",
+            "dj": "electronic",
+            "latin-dance": "latin",
+            "salsa": "latin",
+            "hip-hop": "hip-hop",
+            "country": "country",
+            "board-games": "board-games",
+            "arcade": "arcade",
+            "yoga": "yoga",
+            "fitness": "fitness",
+            "meditation": "meditation",
+            "wine": "wine-tasting",
+            "wine-tasting": "wine-tasting",
+            "beer-tasting": "beer-tasting",
+            "craft-beer": "beer-tasting",
+            "cocktails": "cocktails",
+        }
+        type_genre_map = {
+            "comedy_club": "stand-up",
+            "gallery": "visual-art",
+            "brewery": "beer-tasting",
+            "winery": "wine-tasting",
+            "distillery": "cocktails",
+            "yoga_studio": "yoga",
+            "fitness_center": "fitness",
+            "record_store": "vinyl",
+            "bookstore": "book-club",
+        }
+        for vibe in (venue_vibes or []):
+            if vibe in vibe_genre_map:
+                genres.add(vibe_genre_map[vibe])
+        if not genres and venue_type and venue_type in type_genre_map:
+            genres.add(type_genre_map[venue_type])
 
     return sorted(genres)
 

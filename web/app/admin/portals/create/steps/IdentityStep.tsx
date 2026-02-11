@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { VerticalId, getVerticalTemplate } from "@/lib/vertical-templates";
+import { applyPortalExperience, type ExperienceSpec } from "@/lib/experience-compiler";
 
 type PortalDraft = {
   id?: string;
@@ -88,10 +89,30 @@ export function IdentityStep({ draft, updateDraft, onNext }: Props) {
 
       const data = await res.json();
 
+      const template = vertical ? getVerticalTemplate(vertical) : null;
+
+      const experienceSpec: ExperienceSpec = {
+        name,
+        tagline: tagline || undefined,
+        portal_type: portalType,
+        vertical,
+      };
+
+      if (template) {
+        experienceSpec.branding = {
+          visual_preset: template.visual_preset,
+        };
+      }
+
+      await applyPortalExperience(data.portal.id, experienceSpec, {
+        apply: true,
+        sync_sections: false,
+        replace_sections: false,
+      });
+
       // Apply vertical template defaults
       let templateDefaults = {};
-      if (vertical) {
-        const template = getVerticalTemplate(vertical);
+      if (template) {
         templateDefaults = {
           categories: template.default_filters.categories || [],
           neighborhoods: template.default_filters.neighborhoods || [],

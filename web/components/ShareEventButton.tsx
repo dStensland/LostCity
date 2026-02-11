@@ -30,6 +30,22 @@ export default function ShareEventButton({
 
   // Use provided slug, or get from context, or fall back to default
   const portalSlug = portalSlugProp ?? portalContext?.portal?.slug ?? DEFAULT_PORTAL_SLUG;
+  const attributionPortalSlug = portalSlugProp ?? portalContext?.portal?.slug ?? null;
+
+  const trackShare = async (method: "native" | "clipboard") => {
+    if (!attributionPortalSlug) return;
+
+    await fetch(`/api/portals/${attributionPortalSlug}/share`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        event_id: eventId,
+        method,
+      }),
+    }).catch(() => {
+      // Non-blocking analytics call.
+    });
+  };
 
   const handleShare = async () => {
     // Use portal-aware URL structure: /{portal}?event={id}
@@ -49,10 +65,12 @@ export default function ShareEventButton({
       // Try native share API first (mobile)
       if (navigator.share && navigator.canShare?.(shareData)) {
         await navigator.share(shareData);
+        void trackShare("native");
         showToast("Shared!");
       } else {
         // Fallback to clipboard
         await navigator.clipboard.writeText(url);
+        void trackShare("clipboard");
         showToast("Link copied!");
       }
     } catch (error) {
@@ -61,6 +79,7 @@ export default function ShareEventButton({
         // Try clipboard as fallback
         try {
           await navigator.clipboard.writeText(url);
+          void trackShare("clipboard");
           showToast("Link copied!");
         } catch {
           showToast("Failed to share", "error");

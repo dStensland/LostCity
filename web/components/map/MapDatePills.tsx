@@ -2,12 +2,10 @@
 
 import { useMemo } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
-import { addDays, format, isToday, isTomorrow } from "date-fns";
+import { addDays, format } from "date-fns";
 
 function getDayLabel(date: Date): string {
-  if (isToday(date)) return "Today";
-  if (isTomorrow(date)) return "Tmrw";
-  return format(date, "EEE d");
+  return format(date, "MMM d");
 }
 
 export default function MapDatePills() {
@@ -40,17 +38,17 @@ export default function MapDatePills() {
   };
 
   return (
-    <div className="flex gap-1.5 overflow-x-auto scrollbar-hide -mx-1 px-1 py-0.5">
+    <div className="flex gap-2 overflow-x-auto scrollbar-hide -mx-1 px-1 py-0.5">
       {days.map((day) => {
         const isActive = activeDateParam === day.value;
         return (
           <button
             key={day.value}
             onClick={() => handleDateClick(day.value)}
-            className={`flex-shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-full font-mono text-[11px] whitespace-nowrap transition-all ${
+            className={`flex-shrink-0 h-9 min-w-[64px] flex items-center justify-center gap-1.5 px-3 rounded-full font-mono text-[11px] whitespace-nowrap transition-all duration-200 border ${
               isActive
-                ? "bg-[var(--gold)] text-[var(--void)] font-semibold"
-                : "bg-[var(--twilight)]/60 text-[var(--soft)] hover:bg-[var(--twilight)] hover:text-[var(--cream)]"
+                ? "bg-gradient-to-br from-[var(--gold)] to-[var(--coral)] text-[var(--void)] font-semibold border-[var(--gold)]/45 shadow-[0_7px_18px_rgba(0,0,0,0.3)]"
+                : "bg-[var(--twilight)]/45 text-[var(--soft)] border-[var(--twilight)]/80 hover:bg-[var(--twilight)]/70 hover:text-[var(--cream)] hover:border-[var(--soft)]/45"
             }`}
           >
             {day.label}

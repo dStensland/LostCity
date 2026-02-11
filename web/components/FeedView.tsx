@@ -22,10 +22,12 @@ export default function FeedView() {
   const { portal } = usePortal();
   const searchParams = useSearchParams();
   const showFestivalDebug = searchParams?.get("debug") === "festivals";
+  const INITIAL_VISIBLE_SECTIONS = 5;
 
   const [sections, setSections] = useState<FeedSectionData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showAllSections, setShowAllSections] = useState(false);
 
   const loadFeed = useCallback(async (signal: AbortSignal) => {
     try {
@@ -59,6 +61,11 @@ export default function FeedView() {
     loadFeed(controller.signal);
     return () => controller.abort();
   }, [loadFeed]);
+
+  // Reset progressive disclosure after data refresh.
+  useEffect(() => {
+    setShowAllSections(false);
+  }, [sections.length]);
 
   // Loading state - matches actual feed layout with shimmer
   if (loading) {
@@ -167,6 +174,10 @@ export default function FeedView() {
     s => THEMED_SLUGS.includes(s.slug) && s.slug !== heroSlug
   );
   const regularSections = sections.filter(s => !THEMED_SLUGS.includes(s.slug));
+  const visibleRegularSections = showAllSections
+    ? regularSections
+    : regularSections.slice(0, INITIAL_VISIBLE_SECTIONS);
+  const hiddenSectionCount = Math.max(regularSections.length - visibleRegularSections.length, 0);
 
   return (
     <div>
@@ -176,11 +187,35 @@ export default function FeedView() {
       <HolidayGrid sections={holidaySections} portalSlug={portal.slug} />
 
       {/* Regular feed sections */}
-      {regularSections.map((section, index) => (
+      {visibleRegularSections.map((section, index) => (
         <div key={section.id}>
           <FeedSection section={section} isFirst={index === 0} />
         </div>
       ))}
+
+      {hiddenSectionCount > 0 && (
+        <div className="pt-3 pb-1">
+          <button
+            type="button"
+            onClick={() => setShowAllSections(true)}
+            className="w-full rounded-xl border border-[var(--twilight)]/50 bg-[var(--night)]/55 px-4 py-3 text-left transition-all duration-200 hover:border-[var(--coral)]/45 hover:bg-[var(--night)]/75 hover:shadow-[0_12px_32px_rgba(0,0,0,0.3)]"
+          >
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="font-mono text-[0.62rem] uppercase tracking-[0.2em] text-[var(--muted)]">
+                  Continue Browsing
+                </p>
+                <p className="text-sm text-[var(--cream)] font-medium">
+                  Show {hiddenSectionCount} more {hiddenSectionCount === 1 ? "section" : "sections"}
+                </p>
+              </div>
+              <span className="inline-flex h-8 min-w-8 items-center justify-center rounded-full border border-[var(--coral)]/40 px-2 font-mono text-xs text-[var(--coral)]">
+                +{hiddenSectionCount}
+              </span>
+            </div>
+          </button>
+        </div>
+      )}
     </div>
   );
 }

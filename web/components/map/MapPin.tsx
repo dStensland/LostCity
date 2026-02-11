@@ -1,8 +1,8 @@
 "use client";
 
-import { memo } from "react";
-import { getMapPinColor } from "@/lib/category-config";
-import { ICON_PATHS, DEFAULT_ICON_PATH } from "./icon-paths";
+import { memo, useId } from "react";
+import CategoryIcon from "@/components/CategoryIcon";
+import { getCategoryColor, normalizeCategoryType } from "@/lib/category-config";
 
 interface MapPinProps {
   category: string | null;
@@ -11,18 +11,15 @@ interface MapPinProps {
   isHovered?: boolean;
 }
 
-const PIN_W = 34;
-const PIN_H = 42;
+const PIN_W = 36;
+const PIN_H = 44;
 
 const MapPin = memo(function MapPin({ category, isLive, isSelected, isHovered }: MapPinProps) {
-  const normalizedType = category?.toLowerCase().replace(/-/g, "_") || null;
-  const iconPath =
-    normalizedType && ICON_PATHS[normalizedType]
-      ? ICON_PATHS[normalizedType]
-      : DEFAULT_ICON_PATH;
-  const color = normalizedType ? getMapPinColor(normalizedType) : "#F87171";
-
-  const scale = isSelected ? "scale-[1.4]" : isHovered ? "scale-110" : "";
+  const gradientId = `pin-dark-${useId().replace(/:/g, "")}`;
+  const normalizedType = normalizeCategoryType(category);
+  const iconType = normalizedType === "markets" ? "farmers_market" : normalizedType;
+  const color = getCategoryColor(normalizedType);
+  const scale = isSelected ? "scale-[1.18]" : isHovered ? "scale-[1.07]" : "";
 
   return (
     <div
@@ -35,56 +32,72 @@ const MapPin = memo(function MapPin({ category, isLive, isSelected, isHovered }:
         } as React.CSSProperties
       }
     >
-      {/* Pin shape — SVG for pixel-perfect rendering */}
+      {/* Pin shape */}
       <svg
         width={PIN_W}
         height={PIN_H}
         viewBox={`0 0 ${PIN_W} ${PIN_H}`}
         fill="none"
-        className={`transition-transform duration-200 motion-reduce:transition-none group-hover:scale-110 ${scale}`}
+        className={`transition-transform duration-200 ease-out motion-reduce:transition-none group-hover:scale-[1.05] ${scale}`}
         style={{
           filter: isLive
-            ? `drop-shadow(0 0 12px ${color}) drop-shadow(0 0 4px ${color}AA) drop-shadow(0 2px 4px rgba(0,0,0,0.6))`
+            ? `drop-shadow(0 0 8px ${color}7A) drop-shadow(0 3px 8px rgba(0,0,0,0.58))`
             : isSelected
-              ? `drop-shadow(0 0 8px ${color}AA) drop-shadow(0 2px 6px rgba(0,0,0,0.6))`
+              ? `drop-shadow(0 0 6px ${color}66) drop-shadow(0 3px 8px rgba(0,0,0,0.56))`
               : isHovered
-                ? `drop-shadow(0 0 6px ${color}88) drop-shadow(0 2px 4px rgba(0,0,0,0.5))`
-                : `drop-shadow(0 2px 5px rgba(0,0,0,0.6)) drop-shadow(0 0 3px ${color}55)`,
+                ? `drop-shadow(0 0 4px ${color}4D) drop-shadow(0 3px 7px rgba(0,0,0,0.52))`
+                : `drop-shadow(0 3px 7px rgba(0,0,0,0.56))`,
           ...(isLive ? { animation: "mapPinPulse 1.2s ease-in-out infinite" } : {}),
         }}
       >
-        {/* Pin body — rounded top, pointed bottom */}
+        <defs>
+          <linearGradient id={gradientId} x1="18" y1="4" x2="18" y2="42" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stopColor="#232734" />
+            <stop offset="64%" stopColor="#121622" />
+            <stop offset="100%" stopColor="#0B0F17" />
+          </linearGradient>
+        </defs>
+
+        {/* Body + tip */}
         <path
-          d={`M${PIN_W / 2} ${PIN_H}L${PIN_W * 0.18} ${PIN_H * 0.58}A${PIN_W * 0.41} ${PIN_W * 0.41} 0 1 1 ${PIN_W * 0.82} ${PIN_H * 0.58}Z`}
-          fill={color}
-          stroke="white"
-          strokeWidth="2.5"
+          d="M18 42C18 42 6.2 29.2 6.2 16.9C6.2 9.9 11.55 4.4 18 4.4C24.45 4.4 29.8 9.9 29.8 16.9C29.8 29.2 18 42 18 42Z"
+          fill={`url(#${gradientId})`}
+          stroke={color}
+          strokeOpacity="0.94"
+          strokeWidth="2"
         />
-
-        {/* Dark inner disc — provides contrast behind icon */}
-        <circle
-          cx={PIN_W / 2}
-          cy={PIN_H * 0.36}
-          r={PIN_W * 0.26}
-          fill="rgba(0,0,0,0.25)"
+        <path
+          d="M10.2 10.3C12.4 8.4 15 7.5 18 7.5C21 7.5 23.6 8.4 25.8 10.3"
+          stroke="rgba(255,255,255,0.22)"
+          strokeWidth="1"
+          strokeLinecap="round"
         />
-
-        {/* Category icon — white on dark disc */}
-        <g transform={`translate(${PIN_W / 2 - 10}, ${PIN_H * 0.36 - 10})`}>
-          <svg viewBox="0 0 256 256" width="20" height="20">
-            <path d={iconPath} fill="white" />
-          </svg>
-        </g>
+        {/* Base shadow at tip */}
+        <ellipse cx="18" cy="41.4" rx="3.2" ry="1.2" fill="rgba(0,0,0,0.22)" />
       </svg>
 
-      {/* Selected / hovered ring glow */}
+      {/* Shared category icon set for consistency with the rest of the app */}
+      <div
+        className="absolute left-1/2 top-[8.2px] -translate-x-1/2 pointer-events-none"
+        style={{ color }}
+      >
+        <CategoryIcon
+          type={iconType}
+          size={14.5}
+          glow="none"
+          weight="light"
+          className="drop-shadow-[0_1px_1px_rgba(0,0,0,0.5)]"
+        />
+      </div>
+
+      {/* Selection halo */}
       {(isSelected || isHovered) && (
         <div
-          className="absolute top-[2px] left-1/2 -translate-x-1/2 rounded-full pointer-events-none motion-reduce:hidden"
+          className="absolute top-0 left-1/2 -translate-x-1/2 rounded-full pointer-events-none motion-reduce:hidden"
           style={{
-            width: PIN_W + 8,
-            height: PIN_W + 8,
-            background: `radial-gradient(circle, ${color}${isSelected ? "50" : "30"} 0%, transparent 70%)`,
+            width: PIN_W + (isSelected ? 18 : 12),
+            height: PIN_W + (isSelected ? 18 : 12),
+            background: `radial-gradient(circle, ${color}${isSelected ? "42" : "28"} 0%, transparent 72%)`,
           }}
         />
       )}

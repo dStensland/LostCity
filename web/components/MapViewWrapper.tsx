@@ -9,7 +9,7 @@ import type { MapBounds } from "./MapView";
 const MapView = dynamic(() => import("./MapView"), {
   ssr: false,
   loading: () => (
-    <div className="w-full h-full bg-[var(--night)] rounded-lg border border-[var(--twilight)] relative overflow-hidden">
+    <div className="w-full h-full bg-[var(--night)] border border-[var(--twilight)] relative overflow-hidden">
       <div className="absolute inset-0 opacity-[0.04] map-grid-lines" />
       <div className="absolute inset-0 skeleton-shimmer" />
       <div className="absolute inset-0 flex items-center justify-center">
@@ -78,7 +78,7 @@ export default function MapViewWrapper({
 
   if (loading && events.length === 0) {
     return (
-      <div className="w-full h-full bg-[var(--night)] rounded-lg border border-[var(--twilight)] relative overflow-hidden">
+      <div className="w-full h-full bg-[var(--night)] border border-[var(--twilight)] relative overflow-hidden">
         {/* Skeleton map grid lines */}
         <div className="absolute inset-0 opacity-[0.04] map-grid-lines" />
         {/* Shimmer overlay */}

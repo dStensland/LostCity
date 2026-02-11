@@ -1,6 +1,7 @@
 "use client";
 
 import { memo, useEffect, useState, useRef } from "react";
+import { createPortal } from "react-dom";
 import { CATEGORIES } from "@/lib/search-constants";
 import CategoryIcon from "./CategoryIcon";
 import { triggerHaptic } from "@/lib/haptics";
@@ -13,15 +14,34 @@ const SIMPLE_DATE_FILTERS = [
   { value: "week", label: "This Week" },
 ] as const;
 
+type FilterOption = {
+  value: string;
+  label: string;
+};
+
+type FilterGroup = {
+  group: string;
+  options: FilterOption[];
+};
+
 interface MobileFilterSheetProps {
   isOpen: boolean;
   onClose: () => void;
   currentCategories: string[];
   currentDateFilter: string;
   currentFreeOnly: boolean;
+  currentTags?: string[];
+  currentVibes?: string[];
+  currentMood?: string;
+  tagGroups?: FilterGroup[];
+  vibeGroups?: FilterGroup[];
+  moodOptions?: FilterOption[];
   onToggleCategory: (category: string) => void;
   onSetDateFilter: (date: string) => void;
   onToggleFreeOnly: () => void;
+  onToggleTag?: (tag: string) => void;
+  onToggleVibe?: (vibe: string) => void;
+  onSetMood?: (mood: string) => void;
   onClearAll: () => void;
   resultCount?: number;
 }
@@ -32,9 +52,18 @@ export const MobileFilterSheet = memo(function MobileFilterSheet({
   currentCategories,
   currentDateFilter,
   currentFreeOnly,
+  currentTags = [],
+  currentVibes = [],
+  currentMood = "",
+  tagGroups = [],
+  vibeGroups = [],
+  moodOptions = [],
   onToggleCategory,
   onSetDateFilter,
   onToggleFreeOnly,
+  onToggleTag,
+  onToggleVibe,
+  onSetMood,
   onClearAll,
   resultCount,
 }: MobileFilterSheetProps) {
@@ -94,6 +123,24 @@ export const MobileFilterSheet = memo(function MobileFilterSheet({
     onToggleFreeOnly();
   };
 
+  const handleToggleTag = (tag: string) => {
+    if (!onToggleTag) return;
+    triggerHaptic("selection");
+    onToggleTag(tag);
+  };
+
+  const handleToggleVibe = (vibe: string) => {
+    if (!onToggleVibe) return;
+    triggerHaptic("selection");
+    onToggleVibe(vibe);
+  };
+
+  const handleSetMood = (mood: string) => {
+    if (!onSetMood) return;
+    triggerHaptic("selection");
+    onSetMood(mood);
+  };
+
   const handleClearAll = () => {
     triggerHaptic("medium");
     onClearAll();
@@ -115,21 +162,31 @@ export const MobileFilterSheet = memo(function MobileFilterSheet({
     return () => document.removeEventListener("keydown", handleEscape);
   }, [isOpen, onClose]);
 
-  if (!isVisible) return null;
+  if (typeof document === "undefined" || !isVisible) return null;
 
-  const hasFilters = currentCategories.length > 0 || currentDateFilter || currentFreeOnly;
+  const hasFilters =
+    currentCategories.length > 0 ||
+    currentDateFilter ||
+    currentFreeOnly ||
+    currentTags.length > 0 ||
+    currentVibes.length > 0 ||
+    Boolean(currentMood);
 
-  return (
+  return createPortal(
     <div
-      className={`fixed inset-0 z-50 transition-colors duration-300 ${
+      className={`fixed inset-0 z-[140] transition-colors duration-300 ${
         isAnimating ? "bg-black/50" : "bg-transparent"
       }`}
       onClick={handleBackdropClick}
+      role="dialog"
+      aria-modal="true"
     >
       <div
         ref={sheetRef}
-        className={`fixed bottom-0 left-0 right-0 bg-[var(--void)] border-t border-[var(--twilight)] rounded-t-2xl shadow-2xl max-h-[85vh] transition-transform duration-300 ${
-          isAnimating ? "translate-y-0" : "translate-y-full"
+        className={`fixed bottom-0 left-0 right-0 bg-[var(--void)] border-t border-[var(--twilight)] rounded-t-2xl shadow-2xl max-h-[85vh] transition-transform duration-300 md:top-0 md:bottom-0 md:left-auto md:right-0 md:w-[420px] md:max-h-none md:rounded-none md:border-t-0 md:border-l ${
+          isAnimating
+            ? "translate-y-0 md:translate-y-0 md:translate-x-0"
+            : "translate-y-full md:translate-y-0 md:translate-x-full"
         }`}
       >
         {/* Drag handle */}
@@ -239,6 +296,99 @@ export const MobileFilterSheet = memo(function MobileFilterSheet({
               </div>
             </div>
 
+            {/* Mood Section */}
+            {moodOptions.length > 0 && onSetMood && (
+              <div>
+                <h3 className="font-mono text-sm font-semibold text-[var(--cream)] mb-3">Mood</h3>
+                <div className="grid grid-cols-2 gap-2">
+                  {moodOptions.map((mood) => {
+                    const isActive = currentMood === mood.value;
+                    return (
+                      <button
+                        key={mood.value}
+                        onClick={() => handleSetMood(mood.value)}
+                        className={`min-h-[44px] px-4 py-2.5 rounded-lg font-mono text-sm font-medium transition-all ${
+                          isActive
+                            ? "bg-[#7C3AED] text-[var(--cream)]"
+                            : "bg-[var(--twilight)] text-[var(--cream)] hover:bg-[var(--dusk)]"
+                        }`}
+                      >
+                        {mood.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Tags Section */}
+            {tagGroups.length > 0 && onToggleTag && (
+              <div>
+                <h3 className="font-mono text-sm font-semibold text-[var(--cream)] mb-3">Tags</h3>
+                <div className="space-y-3">
+                  {tagGroups.map((group) => (
+                    <div key={group.group}>
+                      <p className="mb-2 font-mono text-[10px] uppercase tracking-wider text-[var(--muted)]">
+                        {group.group}
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {group.options.map((tag) => {
+                          const isActive = currentTags.includes(tag.value);
+                          return (
+                            <button
+                              key={tag.value}
+                              onClick={() => handleToggleTag(tag.value)}
+                              className={`min-h-[36px] px-3 py-1.5 rounded-full font-mono text-xs font-medium transition-all ${
+                                isActive
+                                  ? "bg-[var(--coral)] text-[var(--void)]"
+                                  : "bg-[var(--twilight)] text-[var(--cream)] hover:bg-[var(--dusk)]"
+                              }`}
+                            >
+                              {tag.label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Vibes Section */}
+            {vibeGroups.length > 0 && onToggleVibe && (
+              <div>
+                <h3 className="font-mono text-sm font-semibold text-[var(--cream)] mb-3">Vibes</h3>
+                <div className="space-y-3">
+                  {vibeGroups.map((group) => (
+                    <div key={group.group}>
+                      <p className="mb-2 font-mono text-[10px] uppercase tracking-wider text-[var(--muted)]">
+                        {group.group}
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {group.options.map((vibe) => {
+                          const isActive = currentVibes.includes(vibe.value);
+                          return (
+                            <button
+                              key={vibe.value}
+                              onClick={() => handleToggleVibe(vibe.value)}
+                              className={`min-h-[36px] px-3 py-1.5 rounded-full font-mono text-xs font-medium transition-all ${
+                                isActive
+                                  ? "bg-[var(--neon-cyan)] text-[var(--void)]"
+                                  : "bg-[var(--twilight)] text-[var(--cream)] hover:bg-[var(--dusk)]"
+                              }`}
+                            >
+                              {vibe.label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Price Section */}
             <div>
               <h3 className="font-mono text-sm font-semibold text-[var(--cream)] mb-3">Price</h3>
@@ -283,7 +433,8 @@ export const MobileFilterSheet = memo(function MobileFilterSheet({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 });
 

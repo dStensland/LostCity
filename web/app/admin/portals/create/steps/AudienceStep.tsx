@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { PREFERENCE_CATEGORIES } from "@/lib/preferences";
 import { PREFERENCE_NEIGHBORHOOD_NAMES } from "@/config/neighborhoods";
+import { applyPortalExperience, type ExperienceSpec } from "@/lib/experience-compiler";
 
 type PortalDraft = {
   id?: string;
@@ -69,27 +70,23 @@ export function AudienceStep({ draft, updateDraft, onNext, onBack }: Props) {
     setError(null);
 
     try {
-      // Build filters object
-      const filters: Record<string, unknown> = {};
-      if (city) filters.city = city;
-      if (neighborhoods.length > 0) filters.neighborhoods = neighborhoods;
-      if (categories.length > 0) filters.categories = categories;
+      const spec: ExperienceSpec = {
+        audience: {},
+      };
+
+      if (city) spec.audience!.city = city;
+      if (neighborhoods.length > 0) spec.audience!.neighborhoods = neighborhoods;
+      if (categories.length > 0) spec.audience!.categories = categories;
       if (draft.geo_center) {
-        filters.geo_center = draft.geo_center;
-        filters.geo_radius_km = radius;
+        spec.audience!.geo_center = [draft.geo_center.lat, draft.geo_center.lng];
+        spec.audience!.geo_radius_km = radius;
       }
 
-      // Update portal
-      const res = await fetch(`/api/admin/portals/${draft.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ filters }),
+      await applyPortalExperience(draft.id, spec, {
+        apply: true,
+        sync_sections: false,
+        replace_sections: false,
       });
-
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Failed to update portal");
-      }
 
       updateDraft({
         city,

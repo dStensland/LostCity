@@ -1,168 +1,124 @@
 # LostCity Product Roadmap
 
-Active initiatives, prioritized by what's needed to sell and scale.
+Active initiatives, reprioritized for launch proof and sales readiness.
 
 ---
 
-## Tier 1: Demo Sprint
+## Current Operating Decision (2026-02-11)
 
-What we need to walk into a sales meeting. The portal system is largely built (admin dashboard, branding, federation, analytics, QR codes, feed sections). These are the gaps.
-
-### 1.1 Demo Portal for First Vertical (Hotel Concierge)
-- [ ] Add `vertical` field to portal settings
-- [ ] Create hotel-specific route group with independent layout
-- [ ] Hotel concierge UI: tonight's picks, neighborhood guides, "ask concierge" CTA
-- [ ] Distinct visual language from default city portal
-- [ ] Demo data: configure FORTH Hotel portal with curated sections
-
-### 1.2 Portal Onboarding Flow
-- [ ] Step-by-step setup wizard (replace single create modal)
-- [ ] Steps: name/type -> branding/colors -> filters/location -> sections -> preview -> launch
-- [ ] Template presets by vertical (hotel, film, community, etc.)
-- [ ] Live preview during setup
-
-### 1.3 Portal Admin UI Polish
-- [ ] Portal member management UI (invite, roles, remove)
-- [ ] Gallery page template (stub exists, needs implementation)
-- [ ] Timeline page template (stub exists, needs implementation)
-- [ ] Content moderation UI for user submissions
-
-### 1.4 Personalization & Tagging Audit
-- [ ] Audit current tagging taxonomy: event categories, venue types, vibes, spot_type — are they consistent and complete?
-- [ ] Assess tag coverage: what % of events/venues have meaningful tags vs. generic/missing?
-- [ ] Review user preference model: how are inferred_preferences built, what signals feed them?
-- [ ] Evaluate "For You" feed quality: does personalization produce meaningfully different results per user?
-- [ ] Identify tag gaps: are there categories/vibes users would filter by that we don't capture?
-- [ ] Assess tag inference pipeline (tag_inference.py): accuracy, coverage, false positives
-- [ ] Review how tags flow from crawlers → DB → API → frontend filters → personalization
-- [ ] Recommend taxonomy cleanup: merge redundant tags, add missing ones, standardize naming
-- [ ] Audit venue_tag_definitions vs vibes array — are these two systems in sync or fragmented?
-- [ ] Assess community tag voting/moderation pipeline (venue_tags, venue_tag_votes, venue_tag_suggestions) — is it functional and surfaced in UI?
-
-### 1.5 Data Quality & Crawler Health Assessment
-- [ ] Run `python data_health.py` and assess all entity health scores (venues, events, series, festivals, organizations)
-- [ ] Run data quality queries from CRAWLER_STRATEGY.md: category distribution, duplicate detection, missing data by source, source health
-- [ ] Identify top 20 broken/degraded crawlers (success rate < 90%, zero recent events, last crawl > 7 days)
-- [ ] Assess event field coverage vs targets: start_time (>98%), description (>80%), image_url (>75%), is_free (>95%)
-- [ ] Assess venue field coverage vs targets: lat/lng (>95%), neighborhood (>90%), image_url (>80%), website (>70%)
-- [ ] Audit content hash dedup effectiveness — what's the actual duplicate rate?
-- [ ] Review extraction confidence scores — are they trending up or down?
-- [ ] Identify sources producing the lowest quality data (most missing fields, worst descriptions)
-- [ ] Check pre-insert validation gaps per PV1-PV3 in TECH_DEBT.md
-- [ ] Produce actionable report: which crawlers to fix, disable, or rewrite
-
-### 1.6 Venue Specials, Happy Hours & Time-Boxed Content
-Restaurants and bars have recurring time-sensitive offerings (happy hours, daily specials, taco tuesdays) that are distinct from events. Museums and galleries have temporary exhibits that are time-boxed but not single-day events. We need a data model and crawling strategy for these.
-
-**Data Model**
-- [ ] Design `venue_specials` table (or equivalent) for time-boxed venue features
-  - Types: `happy_hour`, `daily_special`, `recurring_deal`, `exhibit`, `installation`, `seasonal_menu`, `pop_up`
-  - Timing: `time_start`/`time_end` (daily window), `days_of_week` (recurring), `start_date`/`end_date` (seasonal/exhibit bounds)
-  - Recurrence: iCal-style RRULE or simple `days_of_week` array
-  - Content: title, description, image_url, price/discount info
-- [ ] Decide relationship to events table — specials are NOT events (no dedup, no content hash, no ticket_url) but may appear in feeds alongside events
-- [ ] Add API endpoint(s) to surface specials: per-venue detail, filterable lists ("happy hours near me right now")
-- [ ] Design frontend display: inline on venue cards, dedicated "Specials" section in hotel/city feeds, time-aware visibility (only show happy hour card during/near happy hour window)
-
-**Crawling Strategy**
-- [ ] Audit which existing bar/restaurant crawlers could also capture specials (many venue websites have a "specials" or "happy hour" page)
-- [ ] Research structured data sources for specials: Google Business profiles, Yelp, BeerMenus, Untappd
-- [ ] Design crawler pattern for specials extraction (separate from event extraction — different page, different schema)
-- [ ] For museums/galleries: identify exhibit pages to crawl (High Museum, MOCA GA, Atlanta Contemporary, etc.)
-- [ ] Determine update frequency — specials change less often than events, maybe weekly crawl vs daily
-
-**Integration with Hotel Concierge**
-- [ ] Surface happy hours in "Where to Drink" carousel (badge: "Happy Hour 5-7pm")
-- [ ] Surface current exhibits in "Explore" category of neighborhood section
-- [ ] Add "Happy Hour Now" section to concierge feed (time-aware, only shows during relevant hours)
-
-### 1.7 Main Product Polish
-- [ ] Audit and fix any rough edges in core event/venue experience
-- [ ] Ensure portal branding looks great across all page types
-- [ ] Test custom domain flow end-to-end
-- [ ] Mobile responsiveness audit on portal pages
+1. **Non-negotiable:** strict portal attribution everywhere (events, preferences, activities, enrichments, analytics).
+2. **Launch focus:** increase Atlanta usage and quality to validate the core hypothesis.
+3. **Sales focus:** ship high-quality vertical demos (FORTH first, then 1-2 additional demo verticals).
+4. **Defer:** self-serve portal creation/admin expansion until real customers require it.
+5. **Icebox:** Public Developer API until after launch traction.
 
 ---
 
-## Tier 2: Close-Critical
+## Tier 0: Attribution + Data Integrity (Do First)
 
-What converts a demo into a paying customer. Not needed for first meeting, needed before signing.
+### 0.1 Strict Portal Attribution Hardening
+- [ ] Add `portal_id` attribution to all user activity writes that feed personalization and analytics (`activities`, inferred preference signals, recommendation signals).
+- [ ] Ensure onboarding and behavioral signal ingestion write `inferred_preferences.portal_id` when in a portal context.
+- [ ] Enforce attribution guardrails in DB (constraints/triggers where possible, plus app-level validation where not).
+- [ ] Add attribution lineage for global enrichments (`contributed_by_portal_id`, `enrichment_source`) across tags/claims flows.
+- [ ] Add attribution audit checks (daily report: rows with missing/invalid portal attribution by table).
 
-### 2.1 Portal Analytics (Basic)
-- [x] Page views, traffic sources, top events (exists in portal admin)
-- [ ] Export capability (CSV/PDF)
-- [ ] Engagement metrics: saves, RSVPs, shares per portal
-- [ ] Comparative metrics: this week vs. last week
-
-### 2.2 Self-Service Portal Creation
-- [ ] Public-facing "Create Your Portal" flow (not just admin)
-- [ ] Plan selection with feature comparison
-- [ ] Stripe billing integration (can defer, invoice manually initially)
-
----
-
-## Tier 3: Network Effect Layer
-
-What makes the platform compound. Build after first paying customers.
-
-### 3.1 Cross-Portal Enrichment Routing
-- [ ] Audit portal_content: which actions are facts vs. preferences
-- [ ] Route fact-type enrichments to global tables with `contributed_by_portal_id`
-- [ ] Keep display-order and pinning in portal_content
-- [ ] Add `enrichment_source` column to venue_tags
-
-### 3.2 Venue Self-Service
-- [ ] Post-claim venue management dashboard
-- [ ] Edit venue details (hours, description, images, vibes, accessibility)
-- [ ] Submit events directly (bypass crawler for claimed venues)
-- [ ] View analytics (portal appearances, view counts, saves)
-- [ ] "Verified" badge displayed across all portals
-
-### 3.3 Cross-Portal User Graph
-- [ ] Add portal_id to activities and inferred_preferences for attribution
-- [ ] "For You" feed reflects full cross-portal taste profile
-- [ ] Privacy: users can see which portals have their data
+### 0.2 Data Quality as Sales Readiness
+- [ ] Run `python data_health.py` weekly and track trendline.
+- [ ] Identify and fix/disable top 20 degraded crawlers.
+- [ ] Enforce field coverage targets for events and venues (time, description, image, geo, tags).
+- [ ] Add quality gates for demo-critical sources used in Atlanta + FORTH experiences.
 
 ---
 
-## Tier 4: Shelved
+## Tier 1: Launch Proof (Atlanta + Demos)
 
-Validated ideas, not needed yet. Revisit after revenue.
+### 1.1 Atlanta Usage Engine (Primary Product Surface)
+- [ ] Tighten Atlanta feed quality: ranking, dedupe quality, dead-content suppression, stronger "tonight/weekend" relevance.
+- [ ] Improve conversion loops: RSVP/save/follow flows, recommendation visibility, clearer "For You" value.
+- [ ] Strengthen Atlanta analytics for sales proof: growth, retention proxies, engagement depth.
+- [ ] Resolve rough edges on core event/venue UX and mobile responsiveness.
 
-### 4.1 Billing Integration
-- Stripe subscriptions per portal mapped to plan tier
-- Webhook handler for subscription lifecycle events
-- Plan limits enforced at API level
-- Usage-based billing for API product
+### 1.2 FORTH Hotel Demo (In Development)
+- [ ] Finish FORTH-specific concierge experience polish (tonight picks, neighborhood blocks, concierge CTA, specials context).
+- [ ] Verify attribution behavior in FORTH end-to-end (views/signals/preferences tied to portal context).
+- [ ] Produce demo-ready storyline and QA checklist for live sales walkthroughs.
 
-### 4.2 Embeddable Widget
-- Lightweight embed for hospitals, apartments, etc. who don't want a full portal
-- Configurable: event list, calendar, or map view
-- Script tag or iframe with branding options
+### 1.3 Next Demo Verticals (Suggested)
+- [ ] **Film Festival Demo:** schedule-first UX, screening/venue-aware discovery, series/program framing.
+- [ ] **Hospital Visitor Demo:** proximity + time-aware + accessibility-first recommendations.
+- [ ] Build as curated demo experiences (not self-serve productization yet).
 
-### 4.3 Public Developer API
-- `withApiKey()` middleware alongside `withAuth()`
-- Rate limits by plan: free (1k/day) -> enterprise (unlimited)
-- OpenAPI spec auto-generated from route definitions
-- Developer portal at /developers
+### 1.4 Venue Specials / Time-Boxed Content
+- [ ] Finalize `venue_specials` model and API integration for concierge-style discovery ("happy hour now", exhibits, recurring deals).
+- [ ] Add targeted crawler patterns for specials/exhibits from high-impact Atlanta sources.
+- [ ] Surface specials in Atlanta and hotel demo feeds.
 
-### 4.4 Multi-City Expansion
-- Nashville, Charlotte, Austin as next cities
-- Crawler strategy for new cities (see CRAWLER_STRATEGY.md)
-- Per-city portal templates
+---
 
-### 4.5 Additional Vertical Layouts
-- Film festival (schedule builder, screening rooms, Q&A sessions)
-- Hospital/corporate (proximity-focused, accessible, employee engagement)
-- Community/neighborhood (enrichment-focused, low-cost)
-- Fitness/wellness (class schedules, instructor profiles)
+## Tier 2: Scale Foundations (Before Broad Customer Rollout)
 
-### 4.6 System Health Dashboard
-- Source health: active / degrading / broken / disabled
-- Trend tracking: events_found, rejection_rate over time
-- Weekly digest emails
-- Anomaly detection and alerts
-- See TECH_DEBT.md for details
+### 2.1 Architecture for Scale (Without Premature Self-Serve)
+- [ ] Standardize portal-aware query patterns across feeds/search/recommendation paths.
+- [ ] Improve indexing and query performance for portal-scoped reads/writes.
+- [ ] Expand API route tests for attribution invariants and portal isolation behavior.
+- [ ] Add operational dashboards for source health + attribution health + portal engagement.
+
+### 2.2 Portal Operations (Internal-first)
+- [ ] Keep portal creation/admin workflows internal/operator-led for now.
+- [ ] Improve only the minimum admin capabilities needed to support active demos and first customers.
+- [ ] Postpone broad UX polish for portal onboarding/self-serve until customer pull is clear.
+
+---
+
+## Tier 3: Post-Launch / Post-Customer Pull
+
+### 3.1 Self-Serve Portal Creation
+- Public-facing "Create Your Portal" flow
+- Plan selection and automated provisioning
+- Expanded non-technical portal setup UX
+
+### 3.2 Expanded Portal Admin Productization
+- Team management UX polish
+- Moderation workflows
+- Advanced analytics exports and comparative reporting
+
+### 3.3 Billing Productization
+- Stripe lifecycle automation
+- Plan enforcement at API and data boundaries
+- Usage billing where relevant
+
+---
+
+## Tier 4: Iceboxed Until After Launch
+
+### 4.1 Public Developer API
+- `withApiKey()` middleware for general product endpoints
+- Public `/api/v1/*` surface
+- OpenAPI docs + developer portal
+- External partner programs
+
+### 4.2 Broader Platform Surfaces
+- Embeddable widget productization
+- Multi-city expansion at scale
+- Long-tail vertical templates beyond active sales priorities
+
+### 4.3 Religious Venue Service Times
+- Add `service_times` JSON field on venues (weekly schedule like `hours`): `{"sunday": ["09:00", "11:00"], "friday": ["13:00"]}`
+- Enrichment pass: scrape/LLM-extract service schedules from religious venue websites
+- Surface in Spots view — "Services Today" filter, "Next service: Sunday 11am" on venue cards
+- Venue detail page shows full weekly service schedule alongside hours
+- Works naturally with concierge portals (same pattern as happy hours on venue pages)
+- Covers church, temple, mosque, synagogue, monastery venue types + denomination vibes
+
+### 4.4 Social Layer: Profiles, Friend Finder, Check-ins
+A connected set of features for helping people find likeminded people and share what they're up to. **All features require privacy controls** — users must control what's public, friends-only, or private.
+
+- **Influencer / Curator profiles:** Users who want to share their taste can curate public lists, "what I'm going to this week", favorite spots. Think local tastemaker, not celebrity. Profile as a discovery surface.
+- **Friend finder:** Match people by overlapping interests, favorite venues, event attendance patterns. "People who like the same stuff as you." Opt-in discovery — only visible if you want to be found.
+- **Following people:** Re-introduce follow model (was in app previously, removed). Follow curators or friends to see their activity in your feed. Privacy-gated: users choose what followers can see.
+- **Destination check-ins:** Check in to a venue as a hangout. Visibility levels: private (just tracking for yourself), friends-only ("I'm at Mary's"), or public/open ("I'm here and open to meeting people"). Solves the "I'm at a bar alone and want company" use case.
+- **Privacy controls (prerequisite):** Granular visibility settings across all social features. Some of this infra may already exist. Audit existing privacy model before building.
 
 ---
 

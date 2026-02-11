@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, use } from "react";
-import { usePortal } from "@/lib/portal-context";
 
 type AnalyticsData = {
   period: { days: number; since: string };
@@ -12,8 +11,18 @@ type AnalyticsData = {
     views_by_type: Record<string, number>;
   };
   time_series: { date: string; count: number }[];
+  interaction_time_series: { date: string; count: number }[];
   top_events: { event_id: number; views: number }[];
   utm_sources: { source: string; count: number }[];
+  interaction_kpis: {
+    total_interactions: number;
+    mode_selected: number;
+    wayfinding_opened: number;
+    resource_clicked: number;
+    wayfinding_open_rate: number;
+    resource_click_rate: number;
+    mode_breakdown: { mode: string; count: number }[];
+  };
 };
 
 const DATE_RANGES = [
@@ -24,14 +33,12 @@ const DATE_RANGES = [
 
 export default function AnalyticsPage({ params }: { params: Promise<{ portal: string }> }) {
   const { portal: slug } = use(params);
-  const { portal } = usePortal();
 
   const [days, setDays] = useState(30);
   const [data, setData] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    setLoading(true);
     fetch(`/api/portals/${slug}/analytics?days=${days}`)
       .then((res) => (res.ok ? res.json() : null))
       .then((d) => setData(d))
@@ -41,6 +48,9 @@ export default function AnalyticsPage({ params }: { params: Promise<{ portal: st
 
   const maxDayViews = data?.time_series
     ? Math.max(...data.time_series.map((d) => d.count), 1)
+    : 1;
+  const maxDayInteractions = data?.interaction_time_series
+    ? Math.max(...data.interaction_time_series.map((d) => d.count), 1)
     : 1;
 
   return (
@@ -58,7 +68,10 @@ export default function AnalyticsPage({ params }: { params: Promise<{ portal: st
           {DATE_RANGES.map((r) => (
             <button
               key={r.value}
-              onClick={() => setDays(r.value)}
+              onClick={() => {
+                setLoading(true);
+                setDays(r.value);
+              }}
               className={`px-3 py-1.5 rounded-lg font-mono text-xs transition-colors ${
                 days === r.value
                   ? "bg-[var(--coral)] text-[var(--void)]"
@@ -103,6 +116,16 @@ export default function AnalyticsPage({ params }: { params: Promise<{ portal: st
             />
           </div>
 
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <KPICard label="Mode Selections" value={data.interaction_kpis.mode_selected} />
+            <KPICard label="Wayfinding Opens" value={data.interaction_kpis.wayfinding_opened} />
+            <KPICard label="Resource Clicks" value={data.interaction_kpis.resource_clicked} />
+            <KPICard
+              label="Wayfinding / 100 Views"
+              value={data.interaction_kpis.wayfinding_open_rate.toFixed(2)}
+            />
+          </div>
+
           {/* Daily Views Chart (CSS-only bar chart) */}
           <div className="bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg p-6">
             <h2 className="font-mono text-sm text-[var(--cream)] mb-4">
@@ -134,6 +157,58 @@ export default function AnalyticsPage({ params }: { params: Promise<{ portal: st
               </div>
             )}
           </div>
+
+          {/* Daily Interactions Chart */}
+          <div className="bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg p-6">
+            <h2 className="font-mono text-sm text-[var(--cream)] mb-4">
+              Daily Interactions
+            </h2>
+            {data.interaction_time_series.length === 0 ? (
+              <p className="font-mono text-xs text-[var(--muted)]">
+                No interaction events yet in this period
+              </p>
+            ) : (
+              <div className="flex items-end gap-1 h-32">
+                {data.interaction_time_series.map((day) => (
+                  <div
+                    key={day.date}
+                    className="flex-1 min-w-[4px] group relative"
+                    style={{ height: "100%" }}
+                  >
+                    <div
+                      className="absolute bottom-0 w-full bg-[var(--neon-amber)] rounded-t transition-all hover:opacity-80"
+                      style={{
+                        height: `${Math.max((day.count / maxDayInteractions) * 100, 4)}%`,
+                      }}
+                    />
+                    <div className="absolute -top-6 left-1/2 -translate-x-1/2 hidden group-hover:block bg-[var(--night)] text-[var(--cream)] font-mono text-[10px] px-1.5 py-0.5 rounded whitespace-nowrap z-10">
+                      {day.date.slice(5)}: {day.count}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {data.interaction_kpis.mode_breakdown.length > 0 && (
+            <div className="bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg p-6">
+              <h2 className="font-mono text-sm text-[var(--cream)] mb-4">
+                Hospital Mode Selection
+              </h2>
+              <div className="space-y-2">
+                {data.interaction_kpis.mode_breakdown.map((modeEntry) => (
+                  <div key={modeEntry.mode} className="flex items-center justify-between">
+                    <span className="font-mono text-xs text-[var(--muted)] capitalize">
+                      {modeEntry.mode}
+                    </span>
+                    <span className="font-mono text-xs text-[var(--cream)]">
+                      {modeEntry.count}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Views by Type */}
           <div className="bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg p-6">

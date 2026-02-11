@@ -60,3 +60,83 @@ export function isValidRedirect(redirect: string): boolean {
     redirect.startsWith("/") && !redirect.startsWith("//") && !redirect.includes(":")
   );
 }
+
+const NON_PORTAL_ROUTES = new Set([
+  "auth",
+  "api",
+  "admin",
+  "calendar",
+  "claim",
+  "collections",
+  "community",
+  "dashboard",
+  "data",
+  "events",
+  "festivals",
+  "find-friends",
+  "foryou",
+  "friends",
+  "happening-now",
+  "invite",
+  "invite-friends",
+  "logo-concepts",
+  "notifications",
+  "onboarding",
+  "people",
+  "privacy",
+  "spots",
+  "profile",
+  "saved",
+  "series",
+  "settings",
+  "submit",
+  "terms",
+  "venue",
+  "welcome",
+]);
+
+const PORTAL_SLUG_REGEX = /^[a-z0-9-]{2,80}$/;
+export const PORTAL_CONTEXT_COOKIE = "lc_last_portal_slug";
+
+export function isValidPortalSlug(slug: string | null | undefined): slug is string {
+  return typeof slug === "string" && PORTAL_SLUG_REGEX.test(slug);
+}
+
+/**
+ * Extract a portal slug from a redirect path (e.g. "/piedmont/events" -> "piedmont").
+ */
+export function extractPortalFromRedirect(redirect: string | null | undefined): string | null {
+  if (!redirect || !redirect.startsWith("/")) return null;
+
+  const match = redirect.match(/^\/([a-z0-9-]+)/);
+  if (!match) return null;
+
+  const slug = match[1];
+  if (NON_PORTAL_ROUTES.has(slug)) return null;
+  return isValidPortalSlug(slug) ? slug : null;
+}
+
+export function getRememberedPortalSlug(): string | null {
+  if (typeof window === "undefined") return null;
+
+  try {
+    const storageSlug = window.localStorage.getItem(PORTAL_CONTEXT_COOKIE);
+    if (isValidPortalSlug(storageSlug)) {
+      return storageSlug;
+    }
+  } catch {
+    // Ignore localStorage access failures (e.g. private mode restrictions).
+  }
+
+  const cookieMatch = document.cookie.match(
+    new RegExp(`(?:^|; )${PORTAL_CONTEXT_COOKIE}=([^;]+)`)
+  );
+  if (!cookieMatch) return null;
+
+  try {
+    const cookieSlug = decodeURIComponent(cookieMatch[1] || "");
+    return isValidPortalSlug(cookieSlug) ? cookieSlug : null;
+  } catch {
+    return null;
+  }
+}

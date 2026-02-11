@@ -18,7 +18,8 @@ EXPERIENTIAL_TAGS = {
 PRACTICAL_TAGS = {
     "free",  # No cost
     "ticketed",  # Requires tickets
-    "21+",  # Age restricted
+    "18+",  # Age restricted (18+)
+    "21+",  # Age restricted (21+)
     "all-ages",  # No age restrictions
     "family-friendly",  # Good for kids
     "outdoor",  # Outside event
@@ -49,7 +50,7 @@ CONTENT_TAGS = {
     "volunteer",  # Volunteer opportunity
     "activism",  # Civic engagement / organizing
     "community",  # Community gathering/meetup
-    "super-bowl",  # Super Bowl related
+
     "valentines",  # Valentine's Day related
     "black-history-month",  # Black History Month
     "lunar-new-year",  # Lunar New Year
@@ -60,6 +61,8 @@ CONTENT_TAGS = {
     "cobb",  # Cobb County location
     "live-music",  # Music performance (not a class)
     "class",  # Class/workshop/lesson
+    "showtime",  # Regular cinema showtime (filtered from curated feeds)
+    "friday-13",  # Friday the 13th themed/spooky
 }
 
 # Combined set of all valid tags
@@ -106,66 +109,83 @@ VALID_CATEGORIES = {
 
 # Canonical valid venue types (union of CLAUDE.md + web spots-constants.ts)
 VALID_VENUE_TYPES = {
-    "bar",
-    "restaurant",
+    # Entertainment
     "music_venue",
-    "nightclub",
+    "theater",
     "comedy_club",
-    "gallery",
-    "museum",
-    "brewery",
-    "coffee_shop",
-    "bookstore",
-    "library",
+    "club",
     "arena",
     "cinema",
-    "park",
-    "garden",
+    "attraction",
+    "amphitheater",
+    "stadium",
+    # Food & Drink
+    "bar",
+    "restaurant",
+    "coffee_shop",
+    "brewery",
+    "distillery",
+    "winery",
+    "rooftop",
+    "sports_bar",
     "food_hall",
-    "farmers_market",
+    "wine_bar",
+    "cocktail_bar",
+    "lounge",
+    "eatertainment",
+    # Cultural
+    "gallery",
+    "museum",
+    "studio",
+    "record_store",
+    # Education
+    "college",
+    "university",
+    "library",
+    "bookstore",
+    "cooking_school",
+    "dance_studio",
+    # Community & Events
     "convention_center",
+    "community_center",
+    "event_space",
+    "coworking",
+    "nonprofit_hq",
     "venue",
     "organization",
     "festival",
+    # Recreation
+    "games",
+    "arcade",
+    "karaoke",
+    "park",
+    "garden",
+    "outdoor_venue",
+    "farmers_market",
+    "fitness_center",
+    "bowling",
+    "pool_hall",
+    "recreation",
+    "plaza",
+    "zoo",
+    "aquarium",
+    # Healthcare
+    "healthcare",
+    "hospital",
+    # Hospitality
+    "hotel",
+    # Religious
     "church",
     "temple",
     "mosque",
     "monastery",
     "synagogue",
     "community_center_religious",
-    "event_space",
-    "sports_bar",
-    "distillery",
-    "winery",
-    "hotel",
-    "rooftop",
-    "coworking",
-    "record_store",
-    "studio",
-    "fitness_center",
-    "community_center",
-    "college",
-    "university",
-    "theater",
-    "club",
-    "attraction",
-    "arcade",
-    "karaoke",
-    "nonprofit_hq",
-    "cooking_school",
-    "dance_studio",
-    "amphitheater",
-    "outdoor_venue",
-    "wine_bar",
-    "cocktail_bar",
-    "lounge",
-    "plaza",
-    "recreation",
-    "zoo",
-    "aquarium",
-    "stadium",
-    "bowling",
-    "pool_hall",
+    # Identity
+    "lgbtq",
+    # Nightlife-specific
+    "nightclub",
+    # Virtual
     "virtual",
 }
 

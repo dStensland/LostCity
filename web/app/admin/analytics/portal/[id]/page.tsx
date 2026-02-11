@@ -37,6 +37,20 @@ type PortalAnalytics = {
       active_users: number;
     };
   };
+  attribution: {
+    tracked_event_shares: number;
+    shares_per_1k_views: number;
+    attributed_signups: number;
+  };
+  interaction_kpis: {
+    total_interactions: number;
+    mode_selected: number;
+    wayfinding_opened: number;
+    resource_clicked: number;
+    wayfinding_open_rate: number;
+    resource_click_rate: number;
+    mode_breakdown: { mode: string; count: number }[];
+  };
   content: {
     events_total: number;
     sources_active: number;
@@ -49,6 +63,7 @@ type PortalAnalytics = {
     signups: TimeSeriesPoint[];
     activeUsers: TimeSeriesPoint[];
     crawlSuccess: TimeSeriesPoint[];
+    interactions: TimeSeriesPoint[];
   };
 };
 
@@ -226,7 +241,7 @@ export default function PortalAnalyticsPage({ params }: Props) {
           <h2 className="font-mono text-xs text-[var(--muted)] uppercase tracking-wide mb-4">
             Engagement
           </h2>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
             <AnalyticsKPICard
               label="Total Views"
               value={data.kpis.total_views}
@@ -246,6 +261,10 @@ export default function PortalAnalyticsPage({ params }: Props) {
             <AnalyticsKPICard
               label="Shares"
               value={data.kpis.total_shares}
+            />
+            <AnalyticsKPICard
+              label="Shares / 1K Views"
+              value={data.attribution.shares_per_1k_views.toFixed(1)}
             />
           </div>
         </div>
@@ -301,6 +320,31 @@ export default function PortalAnalyticsPage({ params }: Props) {
           </div>
         </div>
 
+        {/* Interaction KPIs */}
+        <div className="mb-8">
+          <h2 className="font-mono text-xs text-[var(--muted)] uppercase tracking-wide mb-4">
+            Interaction Health
+          </h2>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <AnalyticsKPICard
+              label="Mode Selections"
+              value={data.interaction_kpis.mode_selected}
+            />
+            <AnalyticsKPICard
+              label="Wayfinding Opens"
+              value={data.interaction_kpis.wayfinding_opened}
+            />
+            <AnalyticsKPICard
+              label="Resource Clicks"
+              value={data.interaction_kpis.resource_clicked}
+            />
+            <AnalyticsKPICard
+              label="Wayfinding / 100 Views"
+              value={data.interaction_kpis.wayfinding_open_rate}
+            />
+          </div>
+        </div>
+
         {/* Charts */}
         <div className="mb-8">
           <h2 className="font-mono text-xs text-[var(--muted)] uppercase tracking-wide mb-4">
@@ -331,6 +375,12 @@ export default function PortalAnalyticsPage({ params }: Props) {
               color="var(--neon-amber)"
               height={200}
               format="percentage"
+            />
+            <AnalyticsChart
+              data={data.time_series.interactions}
+              title="Tracked Interactions"
+              color="var(--neon-cyan)"
+              height={200}
             />
           </div>
         </div>

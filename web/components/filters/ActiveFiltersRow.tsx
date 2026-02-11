@@ -4,6 +4,8 @@ import { useCallback, useMemo } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import FilterChip, { getTagVariant, type FilterChipVariant } from "./FilterChip";
 import { CATEGORIES, TAG_GROUPS } from "@/lib/search-constants";
+import { VIBE_GROUPS } from "@/lib/spots-constants";
+import { MOODS } from "@/lib/moods";
 import { formatGenre } from "@/lib/series-utils";
 
 // Date filter display labels
@@ -15,7 +17,7 @@ const DATE_LABELS: Record<string, string> = {
 };
 
 interface ActiveFilter {
-  type: "category" | "tag" | "genre" | "date" | "free";
+  type: "category" | "tag" | "genre" | "date" | "free" | "vibe" | "mood";
   value: string;
   label: string;
   variant: FilterChipVariant;
@@ -29,6 +31,21 @@ export default function ActiveFiltersRow({ className = "" }: ActiveFiltersRowPro
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+
+  const vibeLabelMap = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const group of Object.values(VIBE_GROUPS)) {
+      for (const vibe of group) {
+        map.set(vibe.value, vibe.label);
+      }
+    }
+    return map;
+  }, []);
+
+  const moodLabelMap = useMemo(
+    () => new Map(MOODS.map((mood) => [mood.id, mood.name])),
+    []
+  );
 
   // Build list of all active filters
   const activeFilters = useMemo(() => {
@@ -115,8 +132,33 @@ export default function ActiveFiltersRow({ className = "" }: ActiveFiltersRowPro
       });
     }
 
+    // Venue vibes
+    const vibesParam = searchParams.get("vibes");
+    if (vibesParam) {
+      const vibeValues = vibesParam.split(",").filter(Boolean);
+      for (const value of vibeValues) {
+        filters.push({
+          type: "vibe",
+          value,
+          label: vibeLabelMap.get(value) || value.replace(/[-_]/g, " "),
+          variant: "vibe",
+        });
+      }
+    }
+
+    // Mood
+    const moodParam = searchParams.get("mood");
+    if (moodParam) {
+      filters.push({
+        type: "mood",
+        value: moodParam,
+        label: moodLabelMap.get(moodParam) || moodParam,
+        variant: "vibe",
+      });
+    }
+
     return filters;
-  }, [searchParams]);
+  }, [searchParams, vibeLabelMap, moodLabelMap]);
 
   // Remove a specific filter
   const removeFilter = useCallback(
@@ -161,6 +203,19 @@ export default function ActiveFiltersRow({ className = "" }: ActiveFiltersRowPro
           params.delete("free");
           params.delete("price");
           break;
+        case "vibe": {
+          const vibes = params.get("vibes")?.split(",").filter(Boolean) || [];
+          const newVibes = vibes.filter((v) => v !== filter.value);
+          if (newVibes.length > 0) {
+            params.set("vibes", newVibes.join(","));
+          } else {
+            params.delete("vibes");
+          }
+          break;
+        }
+        case "mood":
+          params.delete("mood");
+          break;
       }
 
       // Reset pagination
@@ -183,6 +238,8 @@ export default function ActiveFiltersRow({ className = "" }: ActiveFiltersRowPro
     params.delete("date");
     params.delete("free");
     params.delete("price");
+    params.delete("vibes");
+    params.delete("mood");
     params.delete("feed");
     params.delete("page");
 

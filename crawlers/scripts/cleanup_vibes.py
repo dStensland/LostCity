@@ -1,31 +1,9 @@
 """
 Clean up venue vibes in the database.
 
-This script removes invalid vibes (neighborhoods, venue types, activities) and
-normalizes vibes to a curated list of valid atmosphere, scene, social, and feature tags.
-
-Valid vibes categories:
-- Atmosphere: chill, upscale, intimate, high-energy, artsy, cozy, gritty, trendy, historic, eclectic, etc.
-- Scene: dive-bar, speakeasy, rooftop, patio, late-night, neighborhood-spot, destination, hidden-gem, etc.
-- Social: date-spot, group-friendly, solo-friendly, lgbtq-friendly, family-friendly, locals-hangout, etc.
-- Features: live-music, outdoor-seating, dog-friendly, craft-beer, natural-wine, dancing, good-coffee, etc.
-- Ownership: black-owned, woman-owned, veteran-owned, locally-owned
-- Other: iconic, indie, boutique, vintage, tours, comics, records, vinyl, etc.
-
-Removes:
-- Neighborhood names (midtown, buckhead, decatur, etc.)
-- Venue types (brewery, museum, restaurant, etc. - these go in venue_type field)
-- Activities (trivia, karaoke, bingo, etc. - these go in genres/categories)
-- Editorial tags (curator-vetted, atlanta-institution, eater-nashville-38, etc.)
-- Meaningless tags (unique, community-focused, fun, popular, etc.)
-
-Normalizes:
-- "cocktails" -> "craft-cocktails"
-- "local" -> "locals-hangout"
-- "lgbtq" -> "lgbtq-friendly"
-- "neighborhood" -> "neighborhood-spot"
-- "kids" -> "family-friendly"
-- etc.
+Uses the canonical VALID_VIBES from tags.py as the single source of truth.
+Normalizes non-canonical vibes to canonical ones where possible, converts
+activity-type vibes to venue genres, and removes everything else.
 
 Usage:
     # Dry run (show changes without applying them)
@@ -33,26 +11,22 @@ Usage:
 
     # Apply changes to database
     python3 scripts/cleanup_vibes.py
-
-Example output:
-    Total venues processed: 1172
-    Venues updated: 678
-    Vibes kept: 2175
-    Vibes normalized: 44
-    Vibes removed: 722
 """
+
+from __future__ import annotations
 
 import sys
 import os
 import argparse
 import logging
-from typing import Dict, List, Set, Tuple
+from typing import Dict, List, Optional, Set, Tuple
 from collections import defaultdict
 
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from db import get_client
+from tags import VALID_VIBES
 from dotenv import load_dotenv
 
 # Load environment variables
@@ -66,59 +40,75 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-# Valid vibes to KEEP (curated list)
-VALID_VIBES: Set[str] = {
-    # Atmosphere
-    "chill", "upscale", "intimate", "high-energy", "artsy", "cozy", "gritty",
-    "trendy", "historic", "eclectic", "casual", "laid-back", "vibrant", "lively",
-    "quirky", "vintage", "classic", "modern", "industrial", "bohemian", "creative",
-    # Scene
-    "dive-bar", "speakeasy", "rooftop", "patio", "late-night", "neighborhood-spot",
-    "destination", "hidden-gem", "local-favorite", "tourist-friendly", "hole-in-the-wall",
-    # Social
-    "date-spot", "date-night", "group-friendly", "solo-friendly", "lgbtq-friendly",
-    "family-friendly", "locals-hangout", "group-activity",
-    # Features
-    "live-music", "outdoor-seating", "dog-friendly", "craft-beer", "natural-wine",
-    "dancing", "good-coffee", "craft-cocktails", "cheap-eats", "games", "game-night",
-    "outdoor", "patio-dining", "wheelchair-accessible", "late-night-eats", "brunch",
-    "happy-hour", "dj", "pool", "darts", "free-wifi", "parking", "valet",
-    # Activity/Experience
-    "hands-on", "workshop", "interactive", "educational", "browsing", "treasure-hunting",
-    "24-hour", "paint-and-sip", "escape-room", "byob", "karaoke", "trivia",
-    # Ownership/Culture
-    "black-owned", "woman-owned", "veteran-owned", "locally-owned",
-    # Other
-    "dive", "divey", "indie", "boutique", "antiques", "good-for-groups",
-    "iconic", "tours", "comics", "records", "vinyl",
-}
-
-
-# Normalization map for vibes that need renaming
+# Normalization map: non-canonical vibe -> canonical vibe
 VIBE_NORMALIZATION: Dict[str, str] = {
-    "lively-energy": "high-energy",
-    "cozy-atmosphere": "cozy",
+    # Atmosphere synonyms
+    "chill": "casual",
+    "cozy": "intimate",
+    "gritty": "divey",
+    "eclectic": "artsy",
+    "laid-back": "casual",
+    "quirky": "artsy",
+    "vintage": "historic",
+    "classic": "historic",
+    "industrial": "artsy",
+    "bohemian": "artsy",
+    "creative": "artsy",
+    "indie": "artsy",
+    # Scene → canonical
+    "dive-bar": "divey",
+    "dive": "divey",
+    "dive-y": "divey",
+    "hole-in-the-wall": "divey",
+    "boutique": "upscale",
+    # Social synonyms
     "romantic-ambiance": "date-spot",
     "romantic": "date-spot",
     "date-friendly": "date-spot",
+    "date-night": "date-spot",
+    "group-friendly": "good-for-groups",
+    "groups": "good-for-groups",
+    "group-hangout": "good-for-groups",
+    "group-activity": "good-for-groups",
     "family": "family-friendly",
+    "kid-friendly": "family-friendly",
+    "kids": "family-friendly",
     "lgbtq": "lgbtq-friendly",
     "queer-friendly": "lgbtq-friendly",
     "gay-bar": "lgbtq-friendly",
-    "kid-friendly": "family-friendly",
-    "kids": "family-friendly",
-    "local": "locals-hangout",
-    "neighborhood": "neighborhood-spot",
+    # Feature synonyms
     "cocktails": "craft-cocktails",
-    "beer-garden": "craft-beer",
-    "beer": "craft-beer",
-    "wine": "natural-wine",
-    "wine-bar": "natural-wine",
-    "dive-y": "divey",
-    "groups": "good-for-groups",
-    "group-hangout": "good-for-groups",
+    "outdoor": "outdoor-seating",
+    "patio-dining": "patio",
+    "late-night-eats": "late-night",
+    "parking": "free-parking",
+    "lively-energy": "casual",
+    "cozy-atmosphere": "intimate",
+    # Ownership near-synonyms
+    "local": "casual",  # "local" is too vague for a vibe
+    "locally-owned": "casual",  # not in canonical, closest match
 }
 
+# Activity vibes that should be converted to venue genres instead
+VIBE_TO_GENRE: Dict[str, str] = {
+    "dj": "dj",
+    "karaoke": "karaoke",
+    "trivia": "trivia",
+    "games": "game-night",
+    "game-night": "game-night",
+    "dancing": "dance-party",
+    "craft-beer": "beer",
+    "natural-wine": "wine",
+    "paint-and-sip": "painting",
+    "escape-room": "escape-room",
+    "brunch": "brunch",
+    "happy-hour": "happy-hour",
+    "open-mic": "open-mic",
+    "poetry-slam": "poetry",
+    "bingo": "bingo",
+    "pool": "pool",
+    "darts": "darts",
+}
 
 # Vibes to explicitly REMOVE (invalid categories)
 INVALID_VIBES: Set[str] = {
@@ -132,69 +122,91 @@ INVALID_VIBES: Set[str] = {
     "theater", "cinema", "arena", "stadium", "park", "garden", "library", "bookstore",
     "coffee-shop", "restaurant", "bar", "nightclub", "music-venue", "comedy-club",
     "fitness", "fitness-center", "gym", "studio", "entertainment-center", "diner",
-    # Activities (belong in genres or categories)
+    "speakeasy",
+    # Activities that don't map to genres
     "roller-derby", "roller-skating", "women-sports", "live-sports", "sports",
-    "bingo", "open-mic", "poetry-slam",
     # Meaningless/generic
     "unique", "curator-vetted", "community-focused", "community", "cars", "entertainment",
-    "venue", "events", "fun", "exciting", "amazing", "popular",
+    "venue", "events", "fun", "exciting", "amazing", "popular", "trendy", "vibrant",
+    "lively", "modern", "high-energy", "rowdy",
+    "neighborhood-spot", "destination", "hidden-gem", "local-favorite", "tourist-friendly",
+    "locals-hangout", "solo-friendly",
+    "good-coffee", "cheap-eats", "free-wifi", "valet", "24-hour", "byob",
+    "hands-on", "workshop", "interactive", "educational", "browsing", "treasure-hunting",
+    "veteran-owned",
+    "iconic", "tours", "comics", "records", "vinyl", "antiques", "boutique",
     # Editorial/list-specific tags
     "atlanta-institution", "nashville-institution", "eater-nashville-38",
     "eater-atlanta-38", "michelin", "best-of", "top-rated", "award-winning",
 }
 
 
-def normalize_vibe(vibe: str) -> Tuple[str, str]:
+def normalize_vibe(vibe: str) -> Tuple[str, str, Optional[str]]:
     """
     Normalize a single vibe.
 
     Returns:
-        Tuple of (normalized_vibe, action) where action is:
-        - "keep": vibe is valid, keep as-is
-        - "normalize": vibe was normalized to a different value
-        - "remove": vibe should be removed
+        Tuple of (normalized_vibe, action, genre_value) where:
+        - action: "keep", "normalize", "to_genre", or "remove"
+        - genre_value: if action is "to_genre", the genre slug to add
     """
     vibe = vibe.strip().lower()
 
     # Check if it should be normalized to a different vibe
     if vibe in VIBE_NORMALIZATION:
-        return VIBE_NORMALIZATION[vibe], "normalize"
+        target = VIBE_NORMALIZATION[vibe]
+        if target in VALID_VIBES:
+            return target, "normalize", None
+        else:
+            return vibe, "remove", None
+
+    # Check if it should be converted to a genre
+    if vibe in VIBE_TO_GENRE:
+        return vibe, "to_genre", VIBE_TO_GENRE[vibe]
 
     # Check if it's explicitly invalid
     if vibe in INVALID_VIBES:
-        return vibe, "remove"
+        return vibe, "remove", None
 
-    # Check if it's in the valid list
+    # Check if it's in the canonical valid list
     if vibe in VALID_VIBES:
-        return vibe, "keep"
+        return vibe, "keep", None
 
     # Unknown vibe - remove to be safe
-    return vibe, "remove"
+    return vibe, "remove", None
 
 
-def clean_venue_vibes(vibes: List[str]) -> Tuple[List[str], Dict[str, int]]:
+def clean_venue_vibes(vibes: List[str]) -> Tuple[List[str], List[str], Dict[str, int]]:
     """
     Clean a venue's vibes array.
 
     Returns:
-        Tuple of (cleaned_vibes, action_counts) where action_counts is a dict
-        with keys "kept", "normalized", "removed"
+        Tuple of (cleaned_vibes, new_genres, action_counts)
     """
     if not vibes:
-        return [], {"kept": 0, "normalized": 0, "removed": 0}
+        return [], [], {"kept": 0, "normalized": 0, "to_genre": 0, "removed": 0}
 
     cleaned = []
-    seen = set()
-    action_counts = {"kept": 0, "normalized": 0, "removed": 0}
+    new_genres = []
+    seen_vibes = set()
+    seen_genres = set()
+    action_counts = {"kept": 0, "normalized": 0, "to_genre": 0, "removed": 0}
 
     for vibe in vibes:
         if not vibe or not isinstance(vibe, str):
             continue
 
-        normalized, action = normalize_vibe(vibe)
+        normalized, action, genre_value = normalize_vibe(vibe)
 
         if action == "remove":
             action_counts["removed"] += 1
+            continue
+
+        if action == "to_genre":
+            action_counts["to_genre"] += 1
+            if genre_value and genre_value not in seen_genres:
+                seen_genres.add(genre_value)
+                new_genres.append(genre_value)
             continue
 
         if action == "normalize":
@@ -202,36 +214,30 @@ def clean_venue_vibes(vibes: List[str]) -> Tuple[List[str], Dict[str, int]]:
         else:
             action_counts["kept"] += 1
 
-        # Dedupe - if we've already added this vibe, skip
-        if normalized in seen:
-            continue
+        if normalized not in seen_vibes:
+            seen_vibes.add(normalized)
+            cleaned.append(normalized)
 
-        seen.add(normalized)
-        cleaned.append(normalized)
-
-    # Sort for consistency
     cleaned.sort()
+    new_genres.sort()
 
-    return cleaned, action_counts
+    return cleaned, new_genres, action_counts
 
 
-def update_venue_with_retry(client, venue_id: int, new_vibes: List[str], max_retries: int = 3) -> bool:
-    """
-    Update a venue's vibes with retry logic for stale connections.
-
-    Returns:
-        True on success, False on failure
-    """
+def update_venue_with_retry(client, venue_id: int, new_vibes: List[str], new_genres: Optional[List[str]], max_retries: int = 3) -> bool:
+    """Update a venue's vibes (and optionally genres) with retry logic."""
     for attempt in range(max_retries):
         try:
-            client.table("venues").update({"vibes": new_vibes}).eq("id", venue_id).execute()
+            updates: dict = {"vibes": new_vibes or None}
+            if new_genres is not None:
+                updates["genres"] = new_genres or None
+            client.table("venues").update(updates).eq("id", venue_id).execute()
             return True
         except Exception as e:
             error_msg = str(e).lower()
             if "connection" in error_msg or "timeout" in error_msg:
                 if attempt < max_retries - 1:
                     logger.debug(f"Connection error on venue {venue_id}, retrying (attempt {attempt + 1}/{max_retries})")
-                    # Get a fresh client
                     client = get_client()
                     continue
             logger.error(f"Failed to update venue {venue_id}: {e}")
@@ -258,8 +264,8 @@ def main():
     logger.info("Fetching venues with vibes from database...")
     client = get_client()
 
-    # Fetch all active venues with vibes
-    result = client.table("venues").select("id,name,vibes").not_.is_("vibes", "null").execute()
+    # Fetch all active venues with vibes (include genres for merging)
+    result = client.table("venues").select("id,name,vibes,genres").not_.is_("vibes", "null").execute()
     venues = result.data
 
     logger.info(f"Found {len(venues)} venues with vibes")
@@ -269,52 +275,75 @@ def main():
     total_venues_updated = 0
     total_vibes_kept = 0
     total_vibes_normalized = 0
+    total_vibes_to_genre = 0
     total_vibes_removed = 0
 
-    # Track specific vibes that were removed/normalized for reporting
     removed_vibes_counter = defaultdict(int)
     normalized_vibes_counter = defaultdict(int)
+    genre_conversion_counter = defaultdict(int)
 
-    # Process each venue
     for idx, venue in enumerate(venues, 1):
         venue_id = venue["id"]
         venue_name = venue["name"]
         original_vibes = venue.get("vibes") or []
+        existing_genres = venue.get("genres") or []
 
         if not original_vibes:
             continue
 
         total_venues_processed += 1
 
-        # Clean the vibes
-        cleaned_vibes, action_counts = clean_venue_vibes(original_vibes)
+        cleaned_vibes, new_genres, action_counts = clean_venue_vibes(original_vibes)
 
-        # Track removed/normalized vibes for reporting
+        # Track changes for reporting
         for vibe in original_vibes:
             if not vibe:
                 continue
-            normalized, action = normalize_vibe(vibe)
+            _, action, genre_value = normalize_vibe(vibe)
             if action == "remove":
                 removed_vibes_counter[vibe] += 1
             elif action == "normalize":
-                normalized_vibes_counter[f"{vibe} -> {normalized}"] += 1
+                target = VIBE_NORMALIZATION[vibe]
+                normalized_vibes_counter[f"{vibe} -> {target}"] += 1
+            elif action == "to_genre" and genre_value:
+                genre_conversion_counter[f"{vibe} -> genre:{genre_value}"] += 1
 
-        # Update counters
         total_vibes_kept += action_counts["kept"]
         total_vibes_normalized += action_counts["normalized"]
+        total_vibes_to_genre += action_counts["to_genre"]
         total_vibes_removed += action_counts["removed"]
 
+        # Merge new genres with existing
+        merged_genres = None
+        if new_genres:
+            all_genres = list(set(existing_genres + new_genres))
+            all_genres.sort()
+            if all_genres != existing_genres:
+                merged_genres = all_genres
+
         # Check if anything changed
-        if cleaned_vibes != original_vibes:
+        vibes_changed = cleaned_vibes != original_vibes
+        genres_changed = merged_genres is not None
+
+        if vibes_changed or genres_changed:
             total_venues_updated += 1
 
             if args.dry_run:
-                logger.debug(
-                    f"[{idx}/{len(venues)}] Would update {venue_name} (ID: {venue_id}): "
-                    f"{original_vibes} -> {cleaned_vibes}"
-                )
+                if vibes_changed:
+                    logger.debug(
+                        f"[{idx}/{len(venues)}] Would update vibes for {venue_name}: "
+                        f"{original_vibes} -> {cleaned_vibes}"
+                    )
+                if genres_changed:
+                    logger.debug(
+                        f"[{idx}/{len(venues)}] Would add genres for {venue_name}: "
+                        f"{existing_genres} -> {merged_genres}"
+                    )
             else:
-                success = update_venue_with_retry(client, venue_id, cleaned_vibes)
+                success = update_venue_with_retry(
+                    client, venue_id, cleaned_vibes,
+                    merged_genres if genres_changed else None
+                )
                 if success:
                     logger.debug(
                         f"[{idx}/{len(venues)}] Updated {venue_name} (ID: {venue_id}): "
@@ -322,8 +351,6 @@ def main():
                     )
                 else:
                     logger.error(f"Failed to update venue {venue_id}")
-        else:
-            logger.debug(f"[{idx}/{len(venues)}] No changes needed for {venue_name}")
 
     # Print summary
     logger.info("\n" + "=" * 80)
@@ -333,6 +360,7 @@ def main():
     logger.info(f"Venues updated: {total_venues_updated}")
     logger.info(f"Vibes kept: {total_vibes_kept}")
     logger.info(f"Vibes normalized: {total_vibes_normalized}")
+    logger.info(f"Vibes converted to genres: {total_vibes_to_genre}")
     logger.info(f"Vibes removed: {total_vibes_removed}")
 
     if removed_vibes_counter:
@@ -343,6 +371,11 @@ def main():
     if normalized_vibes_counter:
         logger.info("\nNormalized vibes:")
         for transformation, count in sorted(normalized_vibes_counter.items(), key=lambda x: -x[1]):
+            logger.info(f"  - {transformation}: {count} occurrences")
+
+    if genre_conversion_counter:
+        logger.info("\nConverted to genres:")
+        for transformation, count in sorted(genre_conversion_counter.items(), key=lambda x: -x[1]):
             logger.info(f"  - {transformation}: {count} occurrences")
 
     if args.dry_run:

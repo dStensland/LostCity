@@ -691,6 +691,11 @@ export default async function PortalEventPage({ params }: Props) {
       {/* Sticky bottom bar with CTAs */}
       <DetailStickyBar
         shareLabel="Share Event"
+        showShareButton
+        shareTracking={{
+          portalSlug: activePortalSlug,
+          eventId: event.id,
+        }}
         secondaryActions={
           <>
             <SaveToListButton itemType="event" itemId={event.id} />

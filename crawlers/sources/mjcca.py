@@ -117,8 +117,8 @@ def categorize_event(title: str) -> str:
     if any(word in title_lower for word in ['concert', 'music', 'orchestra', 'choir', 'band', 'symphony']):
         return 'music'
 
-    # Theater/performance
-    if any(word in title_lower for word in ['theater', 'theatre', 'play', 'performance', 'drama', 'musical']):
+    # Theater/performance (avoid false positives like "Open Play", "Playgroup")
+    if any(word in title_lower for word in ['theater', 'theatre', 'performance', 'drama', 'musical theater', 'musical theatre', 'stage']):
         return 'theater'
 
     # Film

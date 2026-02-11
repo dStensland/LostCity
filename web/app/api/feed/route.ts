@@ -3,7 +3,7 @@ import { createClient, getUser } from "@/lib/supabase/server";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier} from "@/lib/rate-limit";
 import { getLocalDateString } from "@/lib/formats";
 import { escapeSQLPattern, errorResponse, isValidUUID } from "@/lib/api-utils";
-import { getChainVenueIds } from "@/lib/chain-venues";
+
 import { fetchSocialProofCounts } from "@/lib/search";
 import { format, startOfDay, addDays } from "date-fns";
 
@@ -278,6 +278,7 @@ export async function GET(request: Request) {
     .gte("start_date", startDateFilter)
     .is("canonical_event_id", null) // Only show canonical events, not duplicates
     .or("is_class.eq.false,is_class.is.null")
+    .or("is_sensitive.eq.false,is_sensitive.is.null")
     .order("start_date", { ascending: true });
 
   // Apply end date filter if specified
@@ -375,6 +376,7 @@ export async function GET(request: Request) {
       .gte("start_date", today)
       .is("canonical_event_id", null)
       .or("is_class.eq.false,is_class.is.null")
+    .or("is_sensitive.eq.false,is_sensitive.is.null")
       .order("start_date", { ascending: true })
       .limit(50);
 
@@ -397,6 +399,7 @@ export async function GET(request: Request) {
       .gte("start_date", today)
       .is("canonical_event_id", null)
       .or("is_class.eq.false,is_class.is.null")
+    .or("is_sensitive.eq.false,is_sensitive.is.null")
       .order("start_date", { ascending: true })
       .limit(50);
 
@@ -419,6 +422,7 @@ export async function GET(request: Request) {
       .gte("start_date", today)
       .is("canonical_event_id", null)
       .or("is_class.eq.false,is_class.is.null")
+    .or("is_sensitive.eq.false,is_sensitive.is.null")
       .order("start_date", { ascending: true })
       .limit(50);
 
@@ -444,6 +448,7 @@ export async function GET(request: Request) {
       .gte("start_date", today)
       .is("canonical_event_id", null)
       .or("is_class.eq.false,is_class.is.null")
+    .or("is_sensitive.eq.false,is_sensitive.is.null")
       .order("start_date", { ascending: true })
       .limit(50);
 
@@ -457,9 +462,6 @@ export async function GET(request: Request) {
     queryTypes.push("neighborhood");
   }
 
-  // Start getChainVenueIds in parallel with event queries (optimization)
-  const chainVenueIdsPromise = getChainVenueIds(supabase);
-
   // Category events query
   if (favoriteCategories.length > 0) {
     let categoryQuery = supabase
@@ -469,6 +471,7 @@ export async function GET(request: Request) {
       .gte("start_date", today)
       .is("canonical_event_id", null)
       .or("is_class.eq.false,is_class.is.null")
+    .or("is_sensitive.eq.false,is_sensitive.is.null")
       .order("start_date", { ascending: true })
       .limit(50);
 
@@ -753,13 +756,13 @@ export async function GET(request: Request) {
     });
   }
 
-  // Filter out chain venue events from the feed
-  // Chain cinemas are searchable and on maps but excluded from curated feed
-  // Use the promise we started earlier in parallel with event queries
-  const chainVenueIds = await chainVenueIdsPromise;
-  if (chainVenueIds.length > 0) {
-    events = events.filter((event) => !event.venue?.id || !chainVenueIds.includes(event.venue.id));
-  }
+  // Filter regular showtimes from curated feed (they belong in the showtimes rollup)
+  // Followed venues bypass the filter so users see showtimes from theaters they follow
+  events = events.filter((event) => {
+    if (!event.tags?.includes("showtime")) return true;
+    if (event.venue?.id && followedVenueIds.includes(event.venue.id)) return true;
+    return false;
+  });
 
   // When personalized mode is ON, filter to only events from followed entities
   // or matching user preferences (unless user has explicitly applied other filters)

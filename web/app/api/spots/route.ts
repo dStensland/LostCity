@@ -3,7 +3,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getLocalDateString } from "@/lib/formats";
 import { isOpenAt, type HoursData } from "@/lib/hours";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier} from "@/lib/rate-limit";
-import { errorResponse, isValidUUID } from "@/lib/api-utils";
+import { errorResponse, isValidUUID, parseFloatParam } from "@/lib/api-utils";
+import { haversineDistanceKm, getWalkingMinutes, getProximityTier, getProximityLabel } from "@/lib/geo";
 import { logger } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
@@ -29,6 +30,18 @@ export async function GET(request: NextRequest) {
   const vibes = searchParams.get("vibes")?.split(",").filter(Boolean);
   const genres = searchParams.get("genres")?.split(",").filter(Boolean);
   const search = searchParams.get("q")?.toLowerCase().trim();
+  const centerLat = parseFloatParam(searchParams.get("center_lat"));
+  const centerLng = parseFloatParam(searchParams.get("center_lng"));
+  const radiusKm = parseFloatParam(searchParams.get("radius_km"));
+  const sortBy = searchParams.get("sort"); // distance | special_relevance | hybrid
+
+  const hasCenter = centerLat !== null && centerLng !== null;
+
+  if (hasCenter) {
+    if (centerLat! < -90 || centerLat! > 90 || centerLng! < -180 || centerLng! > 180) {
+      return NextResponse.json({ error: "Invalid center coordinates" }, { status: 400 });
+    }
+  }
 
   const today = getLocalDateString();
 
@@ -42,6 +55,8 @@ export async function GET(request: NextRequest) {
       venue_type: string | null;
       city: string;
       image_url: string | null;
+      lat: number | null;
+      lng: number | null;
       price_level: number | null;
       hours: HoursData | null;
       hours_display: string | null;
@@ -91,7 +106,7 @@ export async function GET(request: NextRequest) {
     // Note: is_24_hours column may not exist in all environments
     let query = supabase
       .from("venues")
-      .select("id, name, slug, address, neighborhood, venue_type, city, image_url, price_level, hours, hours_display, vibes, short_description, genres")
+      .select("id, name, slug, address, neighborhood, venue_type, city, image_url, lat, lng, price_level, hours, hours_display, vibes, short_description, genres")
       .neq("active", false); // Exclude deactivated venues
 
     if (portalCityFilter.length > 0) {
@@ -169,6 +184,10 @@ export async function GET(request: NextRequest) {
     const now = new Date();
     let spots = (venues as VenueRow[]).map(venue => {
       const openStatus = isOpenAt(venue.hours, now, false);
+      const distanceKm = hasCenter && venue.lat !== null && venue.lng !== null
+        ? haversineDistanceKm(centerLat!, centerLng!, venue.lat, venue.lng)
+        : null;
+
       return {
         id: venue.id,
         name: venue.name,
@@ -179,6 +198,8 @@ export async function GET(request: NextRequest) {
         image_url: venue.image_url,
         event_count: eventCounts.get(venue.id) || 0,
         price_level: venue.price_level,
+        lat: venue.lat,
+        lng: venue.lng,
         hours: venue.hours,
         hours_display: venue.hours_display,
         is_24_hours: false,
@@ -187,6 +208,10 @@ export async function GET(request: NextRequest) {
         genres: venue.genres,
         is_open: openStatus.isOpen,
         closes_at: openStatus.closesAt,
+        distance_km: distanceKm !== null ? Math.round(distanceKm * 100) / 100 : null,
+        walking_minutes: distanceKm !== null ? getWalkingMinutes(distanceKm) : null,
+        proximity_tier: distanceKm !== null ? getProximityTier(distanceKm) : null,
+        proximity_label: distanceKm !== null ? getProximityLabel(distanceKm) : null,
       };
     });
 
@@ -238,6 +263,11 @@ export async function GET(request: NextRequest) {
       spots = spots.filter(s => s.is_open);
     }
 
+    // Filter by distance radius if geo center provided
+    if (hasCenter && radiusKm !== null) {
+      spots = spots.filter((s) => s.distance_km !== null && s.distance_km <= radiusKm);
+    }
+
     // Hide venues whose name is just a street address (e.g. "1483 Chattahoochee Ave NW")
     const addressNamePattern = /^\d+\s+[\w\s]+(St|Street|Ave|Avenue|Blvd|Boulevard|Rd|Road|Dr|Drive|Ln|Lane|Way|Ct|Court|Pl|Place|Pkwy|Parkway|Hwy|Highway|Pike|Circle|Trail)\b/i;
     spots = spots.filter(s => !addressNamePattern.test(s.name));
@@ -258,12 +288,39 @@ export async function GET(request: NextRequest) {
       recommendation_count: recommendationCounts.get(spot.id) || 0,
     }));
 
-    spots.sort((a, b) => {
-      if (a.event_count !== b.event_count) {
-        return b.event_count - a.event_count;
-      }
-      return a.name.localeCompare(b.name);
-    });
+    if (hasCenter && sortBy === "distance") {
+      spots.sort((a, b) => {
+        if (a.distance_km === null && b.distance_km === null) return a.name.localeCompare(b.name);
+        if (a.distance_km === null) return 1;
+        if (b.distance_km === null) return -1;
+        if (a.distance_km !== b.distance_km) return a.distance_km - b.distance_km;
+        return a.name.localeCompare(b.name);
+      });
+    } else if (hasCenter && (sortBy === "hybrid" || sortBy === "special_relevance")) {
+      spots.sort((a, b) => {
+        const tierWeight = (tier: string | null | undefined) => {
+          if (tier === "walkable") return 30;
+          if (tier === "close") return 20;
+          if (tier === "destination") return 10;
+          return 0;
+        };
+        const aScore = tierWeight(a.proximity_tier) + Math.min(a.event_count || 0, 20) + (a.is_open ? 5 : 0);
+        const bScore = tierWeight(b.proximity_tier) + Math.min(b.event_count || 0, 20) + (b.is_open ? 5 : 0);
+        if (bScore !== aScore) return bScore - aScore;
+        if (a.distance_km === null && b.distance_km === null) return a.name.localeCompare(b.name);
+        if (a.distance_km === null) return 1;
+        if (b.distance_km === null) return -1;
+        if (a.distance_km !== b.distance_km) return a.distance_km - b.distance_km;
+        return a.name.localeCompare(b.name);
+      });
+    } else {
+      spots.sort((a, b) => {
+        if (a.event_count !== b.event_count) {
+          return b.event_count - a.event_count;
+        }
+        return a.name.localeCompare(b.name);
+      });
+    }
 
     // Compute metadata for filter UI (from full unfiltered data)
     const allNeighborhoods = [...new Set((venues as VenueRow[]).map(v => v.neighborhood).filter(Boolean))] as string[];

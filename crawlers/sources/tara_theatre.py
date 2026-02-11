@@ -263,7 +263,7 @@ def extract_movies_for_date(
                     "is_all_day": False,
                     "category": "film",
                     "subcategory": "cinema",
-                    "tags": ["film", "cinema", "arthouse", "tara-theatre"],
+                    "tags": ["film", "cinema", "arthouse", "showtime", "tara-theatre"],
                     "price_min": None,
                     "price_max": None,
                     "price_note": None,

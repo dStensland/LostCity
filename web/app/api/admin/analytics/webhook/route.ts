@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createHash, timingSafeEqual } from "crypto";
 import { getLocalDateString } from "@/lib/formats";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier} from "@/lib/rate-limit";
+import { ENABLE_EXTERNAL_ANALYTICS_API } from "@/lib/launch-flags";
 
 export const dynamic = "force-dynamic";
 
@@ -104,6 +105,13 @@ async function validateApiKey(request: NextRequest): Promise<{ valid: boolean; p
 }
 
 export async function GET(request: NextRequest) {
+  if (!ENABLE_EXTERNAL_ANALYTICS_API) {
+    return NextResponse.json(
+      { error: "External analytics API is disabled until post-launch." },
+      { status: 404 }
+    );
+  }
+
   // Apply rate limiting
   const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.standard, getClientIdentifier(request));
   if (rateLimitResult) return rateLimitResult;

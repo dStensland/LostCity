@@ -9,6 +9,9 @@ export const VENUE_TYPES_MAP = {
   arena: { label: "Arena", icon: "🏟️" },
   cinema: { label: "Cinema", icon: "🎬" },
   attraction: { label: "Attraction", icon: "🎢" },
+  amphitheater: { label: "Amphitheater", icon: "🎭" },
+  stadium: { label: "Stadium", icon: "🏟️" },
+  nightclub: { label: "Nightclub", icon: "🪩" },
 
   // Food & Drink
   bar: { label: "Bar", icon: "🍺" },
@@ -17,6 +20,9 @@ export const VENUE_TYPES_MAP = {
   brewery: { label: "Brewery", icon: "🍻" },
   distillery: { label: "Distillery", icon: "🥃" },
   winery: { label: "Winery", icon: "🍷" },
+  wine_bar: { label: "Wine Bar", icon: "🍷" },
+  cocktail_bar: { label: "Cocktail Bar", icon: "🍸" },
+  lounge: { label: "Lounge", icon: "🛋️" },
   rooftop: { label: "Rooftop", icon: "🌃" },
   sports_bar: { label: "Sports Bar", icon: "📺" },
   food_hall: { label: "Food Hall", icon: "🍴" },
@@ -26,6 +32,7 @@ export const VENUE_TYPES_MAP = {
   gallery: { label: "Gallery", icon: "🖼️" },
   museum: { label: "Museum", icon: "🏛️" },
   studio: { label: "Studio", icon: "🎬" },
+  record_store: { label: "Record Store", icon: "🎵" },
 
   // Education
   college: { label: "College", icon: "🎓" },
@@ -33,6 +40,7 @@ export const VENUE_TYPES_MAP = {
   library: { label: "Library", icon: "📚" },
   bookstore: { label: "Bookstore", icon: "📖" },
   cooking_school: { label: "Cooking School", icon: "👨‍🍳" },
+  dance_studio: { label: "Dance Studio", icon: "💃" },
 
   // Community & Events
   convention_center: { label: "Convention", icon: "🏢" },
@@ -49,9 +57,15 @@ export const VENUE_TYPES_MAP = {
   karaoke: { label: "Karaoke", icon: "🎤" },
   park: { label: "Park", icon: "🌳" },
   garden: { label: "Garden", icon: "🌷" },
-  outdoor: { label: "Outdoor", icon: "⛰️" },
+  outdoor_venue: { label: "Outdoor", icon: "⛰️" },
   farmers_market: { label: "Farmers Market", icon: "🥬" },
   fitness_center: { label: "Fitness Center", icon: "💪" },
+  bowling: { label: "Bowling", icon: "🎳" },
+  pool_hall: { label: "Pool Hall", icon: "🎱" },
+  recreation: { label: "Recreation", icon: "🏃" },
+  plaza: { label: "Plaza", icon: "🏛️" },
+  zoo: { label: "Zoo", icon: "🦁" },
+  aquarium: { label: "Aquarium", icon: "🐠" },
 
   // Healthcare
   healthcare: { label: "Healthcare", icon: "🏥" },

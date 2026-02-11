@@ -86,7 +86,7 @@ export default async function Home() {
           <div className="flex items-center justify-center gap-4 mb-6">
             <div className="h-px flex-1 max-w-16 bg-gradient-to-r from-transparent to-[#00e5ff]/40" />
             <span className="text-[0.65rem] uppercase tracking-[0.4em] text-[#00e5ff]/85">
-              GET OFF YOUR BUTT
+              GO BE COMMUNITY
             </span>
             <div className="h-px flex-1 max-w-16 bg-gradient-to-l from-transparent to-[#00e5ff]/40" />
           </div>

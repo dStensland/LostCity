@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname, useSearchParams } from "next/navigation";
+import { useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { getProxiedImageSrc } from "@/lib/image-proxy";
 
 interface HotelHeaderProps {
   portalSlug: string;
@@ -15,14 +17,20 @@ interface HotelHeaderProps {
  * Light background with thin border, hotel logo, and minimal navigation
  */
 export default function HotelHeader({ portalSlug, portalName, logoUrl }: HotelHeaderProps) {
-  const pathname = usePathname();
   const searchParams = useSearchParams();
   const view = searchParams.get("view") || "feed";
+  const findType = searchParams.get("type") || "events";
+  const [logoFailed, setLogoFailed] = useState(false);
+  const resolvedLogoSrc = useMemo(() => {
+    if (!logoUrl) return null;
+    const proxied = getProxiedImageSrc(logoUrl);
+    return typeof proxied === "string" ? proxied : null;
+  }, [logoUrl]);
 
   const navLinks = [
-    { href: `/${portalSlug}`, label: "Tonight", active: view === "feed" },
-    { href: `/${portalSlug}#neighborhood`, label: "Neighborhood", active: false },
-    { href: `/${portalSlug}?view=find&type=events`, label: "Events", active: view === "find" },
+    { href: `/${portalSlug}`, label: "Live", active: view === "feed" },
+    { href: `/${portalSlug}?view=find&type=events`, label: "Tonight", active: view === "find" && findType === "events" },
+    { href: `/${portalSlug}?view=find&type=destinations`, label: "Explore", active: view === "find" && findType === "destinations" },
   ];
 
   return (
@@ -30,15 +38,18 @@ export default function HotelHeader({ portalSlug, portalName, logoUrl }: HotelHe
       <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
         {/* Hotel branding */}
         <Link href={`/${portalSlug}`} className="flex items-center gap-3">
-          {logoUrl ? (
+          {resolvedLogoSrc && !logoFailed ? (
             <div className="relative h-8 w-auto">
               <Image
-                src={logoUrl}
+                src={resolvedLogoSrc}
                 alt={portalName}
                 height={32}
                 width={120}
                 className="object-contain"
                 style={{ height: "32px", width: "auto" }}
+                onError={() => {
+                  setLogoFailed(true);
+                }}
               />
             </div>
           ) : (

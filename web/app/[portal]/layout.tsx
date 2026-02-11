@@ -5,7 +5,9 @@ import { PortalTheme } from "@/components/PortalTheme";
 import PortalThemeClient from "@/components/PortalThemeClient";
 import CannyWidget from "@/components/CannyWidget";
 import PortalFooter from "@/components/PortalFooter";
+import { PortalTracker } from "./_components/PortalTracker";
 import { Cormorant_Garamond, Inter } from "next/font/google";
+import { Suspense } from "react";
 
 import type { Metadata } from "next";
 
@@ -79,6 +81,9 @@ export default async function PortalLayout({ children, params }: Props) {
         data-vertical={vertical}
         className={isHotel ? `${cormorantGaramond.variable} ${inter.variable}` : ""}
       >
+        <Suspense fallback={null}>
+          <PortalTracker portalSlug={portal.slug} />
+        </Suspense>
         {children}
         <PortalFooter />
         <CannyWidget />

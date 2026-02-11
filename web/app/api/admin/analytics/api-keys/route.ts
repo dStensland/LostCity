@@ -4,8 +4,16 @@ import { NextRequest, NextResponse } from "next/server";
 import { createHash, randomBytes } from "crypto";
 import { adminErrorResponse, checkBodySize } from "@/lib/api-utils";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier} from "@/lib/rate-limit";
+import { ENABLE_EXTERNAL_ANALYTICS_API } from "@/lib/launch-flags";
 
 export const dynamic = "force-dynamic";
+
+function apiDisabledResponse() {
+  return NextResponse.json(
+    { error: "External analytics API is disabled until post-launch." },
+    { status: 404 }
+  );
+}
 
 type ApiKeyRecord = {
   id: string;
@@ -24,6 +32,8 @@ type ApiKeyRecord = {
 
 // GET: List all API keys
 export async function GET(request: NextRequest) {
+  if (!ENABLE_EXTERNAL_ANALYTICS_API) return apiDisabledResponse();
+
   const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.standard, getClientIdentifier(request));
   if (rateLimitResult) return rateLimitResult;
 
@@ -99,6 +109,8 @@ export async function GET(request: NextRequest) {
 
 // POST: Create new API key
 export async function POST(request: NextRequest) {
+  if (!ENABLE_EXTERNAL_ANALYTICS_API) return apiDisabledResponse();
+
   // Check body size
   const bodySizeError = checkBodySize(request);
   if (bodySizeError) return bodySizeError;
@@ -179,6 +191,8 @@ export async function POST(request: NextRequest) {
 
 // DELETE: Revoke an API key
 export async function DELETE(request: NextRequest) {
+  if (!ENABLE_EXTERNAL_ANALYTICS_API) return apiDisabledResponse();
+
   const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.standard, getClientIdentifier(request));
   if (rateLimitResult) return rateLimitResult;
 
@@ -212,6 +226,8 @@ export async function DELETE(request: NextRequest) {
 
 // PATCH: Update an API key (name, scopes, expiry)
 export async function PATCH(request: NextRequest) {
+  if (!ENABLE_EXTERNAL_ANALYTICS_API) return apiDisabledResponse();
+
   // Check body size
   const bodySizeError = checkBodySize(request);
   if (bodySizeError) return bodySizeError;

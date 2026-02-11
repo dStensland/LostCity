@@ -57,34 +57,10 @@ export async function GET(request: NextRequest) {
     // This matches the logic in search.ts to ensure counts match what users see
     const timeFilter = `start_date.gt.${today},end_time.gte.${currentTime},and(end_time.is.null,start_time.gte.${currentTime}),is_all_day.eq.true`;
 
-    // Query subcategory counts with same filters as search:
-    // - Time filter (hide past events)
-    // - Dedup filter (canonical_event_id is null)
-    let subQuery = client
+    // Query activity dimensions with same filters as search
+    let activityQuery = client
       .from("events")
-      .select("subcategory")
-      .gte("start_date", today)
-      .lte("start_date", endDate)
-      .is("canonical_event_id", null)
-      .or(timeFilter)
-      .not("subcategory", "is", null);
-
-    if (portalId) {
-      subQuery = subQuery.or(`portal_id.eq.${portalId},portal_id.is.null`);
-    } else {
-      subQuery = subQuery.is("portal_id", null);
-    }
-
-    const { data: subcategoryCounts, error: subError } = await subQuery;
-
-    if (subError) {
-      logger.error("Error fetching subcategory counts:", subError);
-    }
-
-    // Query category counts with same filters
-    let catQuery = client
-      .from("events")
-      .select("category, subcategory")
+      .select("category, subcategory, genres")
       .gte("start_date", today)
       .lte("start_date", endDate)
       .is("canonical_event_id", null)
@@ -92,15 +68,15 @@ export async function GET(request: NextRequest) {
       .not("category", "is", null);
 
     if (portalId) {
-      catQuery = catQuery.or(`portal_id.eq.${portalId},portal_id.is.null`);
+      activityQuery = activityQuery.or(`portal_id.eq.${portalId},portal_id.is.null`);
     } else {
-      catQuery = catQuery.is("portal_id", null);
+      activityQuery = activityQuery.is("portal_id", null);
     }
 
-    const { data: categoryCounts, error: catError } = await catQuery;
+    const { data: activityRows, error: activityError } = await activityQuery;
 
-    if (catError) {
-      logger.error("Error fetching category counts:", catError);
+    if (activityError) {
+      logger.error("Error fetching activity counts:", activityError);
     }
 
     // Aggregate counts by category
@@ -108,22 +84,33 @@ export async function GET(request: NextRequest) {
     // Aggregate counts by subcategory (e.g., "music.live": 30)
     const subcategory_counts: Record<string, number> = {};
 
-    // Count subcategories for the subcategory_counts object
-    if (subcategoryCounts) {
-      const typedSubcategoryCounts = subcategoryCounts as Array<{ subcategory: string | null }>;
-      for (const row of typedSubcategoryCounts) {
-        if (row.subcategory) {
-          subcategory_counts[row.subcategory] = (subcategory_counts[row.subcategory] || 0) + 1;
-        }
-      }
-    }
-
-    // Count categories (this counts all events per category, not just those with subcategories)
-    if (categoryCounts) {
-      const typedCategoryCounts = categoryCounts as Array<{ category: string | null; subcategory: string | null }>;
-      for (const row of typedCategoryCounts) {
+    // Count categories and subactivities.
+    // Subactivity keys are normalized to "category.genre" format.
+    if (activityRows) {
+      const typedActivityRows = activityRows as Array<{
+        category: string | null;
+        subcategory: string | null;
+        genres: string[] | null;
+      }>;
+      for (const row of typedActivityRows) {
         if (row.category) {
           counts[row.category] = (counts[row.category] || 0) + 1;
+
+          const rowGenres = Array.isArray(row.genres)
+            ? row.genres.filter((genre): genre is string => typeof genre === "string" && genre.length > 0)
+            : [];
+
+          if (rowGenres.length > 0) {
+            for (const genre of rowGenres) {
+              const subactivityKey = `${row.category}.${genre}`;
+              subcategory_counts[subactivityKey] = (subcategory_counts[subactivityKey] || 0) + 1;
+            }
+          } else if (row.subcategory) {
+            const subactivityKey = row.subcategory.includes(".")
+              ? row.subcategory
+              : `${row.category}.${row.subcategory}`;
+            subcategory_counts[subactivityKey] = (subcategory_counts[subactivityKey] || 0) + 1;
+          }
         }
       }
     }

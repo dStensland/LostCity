@@ -21,7 +21,7 @@ type FlatItem =
   | { kind: "event"; event: EventWithLocation }
   | { kind: "spot"; spot: Spot };
 
-const ROW_HEIGHT = 56;
+const ROW_HEIGHT = 88;
 const HEADER_HEIGHT = 36;
 const VIRTUALIZE_THRESHOLD = 60;
 
@@ -112,6 +112,12 @@ export default function MapListDrawer({
     [focusIndex, selectableItems, onItemHover, onItemSelect, useVirtual, virtualizer]
   );
 
+  const handleDrawerFocus = useCallback(() => {
+    if (selectableItems.length === 0 || focusIndex >= 0) return;
+    setFocusIndex(0);
+    onItemHover(selectableItems[0].id);
+  }, [focusIndex, selectableItems, onItemHover]);
+
   // Auto-scroll selected item into view
   useEffect(() => {
     if (selectedItemId == null) return;
@@ -131,7 +137,7 @@ export default function MapListDrawer({
   function renderItem(item: FlatItem, key: string) {
     if (item.kind === "header") {
       return (
-        <div key={key} className="flex items-center gap-2 px-3 pt-3 pb-1.5" aria-hidden="true">
+        <div key={key} className="flex items-center gap-2 px-4 pt-3 pb-1.5" aria-hidden="true">
           <span className="font-mono text-[11px] font-semibold text-[var(--soft)] uppercase tracking-widest">
             {item.label}
           </span>
@@ -143,10 +149,11 @@ export default function MapListDrawer({
     if (item.kind === "event") {
       const isSelected = item.event.id === selectedItemId;
       return (
-        <div key={key} ref={!useVirtual && isSelected ? selectedRef : undefined}>
+        <div key={key} ref={!useVirtual && isSelected ? selectedRef : undefined} className="py-0.5">
           <MapListItem
             id={item.event.id}
             type="event"
+            optionId={`map-item-event-${item.event.id}`}
             title={item.event.title}
             category={item.event.venue?.venue_type || item.event.category}
             venueName={item.event.venue?.name || null}
@@ -166,10 +173,11 @@ export default function MapListDrawer({
     // spot
     const isSelected = item.spot.id === selectedItemId;
     return (
-      <div key={key} ref={!useVirtual && isSelected ? selectedRef : undefined}>
+      <div key={key} ref={!useVirtual && isSelected ? selectedRef : undefined} className="py-0.5">
         <MapListItem
           id={item.spot.id}
           type="spot"
+          optionId={`map-item-spot-${item.spot.id}`}
           title={item.spot.name}
           category={item.spot.venue_type}
           venueName={null}
@@ -184,13 +192,16 @@ export default function MapListDrawer({
 
   return (
     <div
-      className="flex flex-col h-full bg-[var(--night)] border-r border-[var(--twilight)]"
+      className="flex flex-col h-full bg-gradient-to-b from-[var(--night)] to-[var(--void)] border-r border-[var(--twilight)] focus-within:ring-1 focus-within:ring-[var(--coral)]/50"
       role="region"
       aria-label="Events and destinations in view"
+      aria-describedby="map-drawer-keyboard-hint"
+      tabIndex={0}
       onKeyDown={handleKeyDown}
+      onFocus={handleDrawerFocus}
     >
       {/* Header */}
-      <div className="flex items-center justify-between px-5 py-3 border-b border-[var(--twilight)] bg-[var(--void)]">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--twilight)]/80 bg-[var(--void)]/92 backdrop-blur-md">
         <span className="font-mono text-[11px] font-semibold text-[var(--soft)] uppercase tracking-widest">
           In view
         </span>
@@ -198,14 +209,17 @@ export default function MapListDrawer({
           {isLoading && totalCount > 0 && (
             <div className="w-3 h-3 rounded-full border-2 border-[var(--coral)] border-t-transparent animate-spin" />
           )}
-          <span className="font-mono text-sm font-bold text-[var(--cream)] bg-[var(--twilight)] px-2.5 py-0.5 rounded-full min-w-[28px] text-center" aria-live="polite">
+          <span className="font-mono text-sm font-bold text-[var(--cream)] bg-[var(--dusk)] px-2.5 py-0.5 rounded-full min-w-[28px] text-center border border-[var(--twilight)]/75" aria-live="polite">
             {totalCount}
           </span>
         </div>
       </div>
+      <span id="map-drawer-keyboard-hint" className="sr-only">
+        Use arrow keys to browse map items, enter to select, and escape to clear selection.
+      </span>
 
       {/* Scrollable list */}
-      <div ref={scrollRef} className="flex-1 overflow-y-auto overscroll-contain" role="listbox" aria-label="Map items">
+      <div ref={scrollRef} className="flex-1 overflow-y-auto overscroll-contain px-2 py-1.5" role="listbox" aria-label="Map items">
         {totalCount === 0 && isLoading ? (
           /* Loading state */
           <div className="flex flex-col items-center justify-center h-full px-6">
@@ -247,7 +261,7 @@ export default function MapListDrawer({
           </div>
         ) : (
           /* Standard list for <60 items */
-          <div className="p-2">
+          <div className="px-2 py-2">
             {flatItems.map((item) => {
               const key = item.kind === "header" ? `header-${item.label}` :
                 item.kind === "event" ? `e-${item.event.id}` : `s-${item.spot.id}`;

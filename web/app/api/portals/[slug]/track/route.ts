@@ -32,6 +32,11 @@ export async function POST(
     return new Response(null, { status: 400 });
   }
 
+  const rawEntityId = body.entity_id;
+  const entityId = typeof rawEntityId === "number" && Number.isInteger(rawEntityId) && rawEntityId > 0
+    ? rawEntityId
+    : null;
+
   // Look up portal
   const supabase = createServiceClient();
   const { data: portal } = await supabase
@@ -47,11 +52,41 @@ export async function POST(
 
   const portalData = portal as { id: string };
 
+  // Validate entity attribution for event tracking so cross-portal IDs cannot be injected.
+  if (pageType === "event") {
+    if (!entityId) {
+      return new Response(null, { status: 400 });
+    }
+
+    const { data: event } = await supabase
+      .from("events")
+      .select("id")
+      .eq("id", entityId)
+      .eq("portal_id", portalData.id)
+      .maybeSingle();
+
+    if (!event) {
+      return new Response(null, { status: 400 });
+    }
+  }
+
+  if (pageType === "spot" && entityId) {
+    const { data: venue } = await supabase
+      .from("venues")
+      .select("id")
+      .eq("id", entityId)
+      .maybeSingle();
+
+    if (!venue) {
+      return new Response(null, { status: 400 });
+    }
+  }
+
   // Insert page view
   await supabase.from("portal_page_views").insert({
     portal_id: portalData.id,
     page_type: pageType,
-    entity_id: typeof body.entity_id === "number" ? body.entity_id : null,
+    entity_id: entityId,
     referrer: typeof body.referrer === "string" ? sanitizeString(body.referrer).slice(0, 500) : null,
     utm_source: typeof body.utm_source === "string" ? sanitizeString(body.utm_source).slice(0, 100) : null,
     utm_medium: typeof body.utm_medium === "string" ? sanitizeString(body.utm_medium).slice(0, 100) : null,

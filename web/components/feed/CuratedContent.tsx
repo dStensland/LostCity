@@ -26,53 +26,104 @@ interface CuratedContentProps {
   portalSlug: string;
 }
 
+interface FeedBandProps {
+  eyebrow: string;
+  title: string;
+  subtitle: string;
+  children: ReactNode;
+  className?: string;
+}
+
+function FeedBand({ eyebrow, title, subtitle, children, className = "" }: FeedBandProps) {
+  return (
+    <section className={`space-y-4 ${className}`}>
+      <header className="flex items-end justify-between gap-3">
+        <div className="min-w-0">
+          <p className="font-mono text-[0.65rem] uppercase tracking-[0.22em] text-[var(--muted)]">
+            {eyebrow}
+          </p>
+          <h2 className="text-[clamp(1.15rem,2vw,1.65rem)] font-semibold tracking-tight text-[var(--cream)]">
+            {title}
+          </h2>
+          <p className="text-[0.8rem] text-[var(--text-secondary)] mt-0.5">
+            {subtitle}
+          </p>
+        </div>
+      </header>
+      <div className="space-y-5">
+        {children}
+      </div>
+    </section>
+  );
+}
+
 export default function CuratedContent({ portalSlug }: CuratedContentProps) {
   return (
-    <div className="space-y-6">
-      {/* Above-fold: Happening Now CTA - Priority load */}
-      <Suspense fallback={null}>
-        <HappeningNowCTA portalSlug={portalSlug} />
-      </Suspense>
+    <div className="space-y-8 sm:space-y-10">
+      <FeedBand
+        eyebrow="Now"
+        title="Live Pulse"
+        subtitle="What is active and worth opening right now."
+      >
+        {/* Above-fold: Happening Now CTA - Priority load */}
+        <Suspense fallback={null}>
+          <HappeningNowCTA portalSlug={portalSlug} />
+        </Suspense>
 
-      {/* Holiday hero: Valentine's Day at top (priority) */}
-      <Suspense fallback={null}>
-        <HolidayHero portalSlug={portalSlug} slug="valentines-day" />
-      </Suspense>
+        {/* Holiday hero: Valentine's Day at top (priority) */}
+        <Suspense fallback={null}>
+          <HolidayHero portalSlug={portalSlug} slug="valentines-day" />
+        </Suspense>
 
-      {/* Above-fold: Tonight's Picks - Critical content */}
-      <Suspense fallback={<DelayedFallback><TonightsPicksSkeleton /></DelayedFallback>}>
-        <HighlightsPicks portalSlug={portalSlug} />
-      </Suspense>
+        {/* Above-fold: Tonight's Picks - Critical content */}
+        <Suspense fallback={<DelayedFallback><TonightsPicksSkeleton /></DelayedFallback>}>
+          <HighlightsPicks portalSlug={portalSlug} />
+        </Suspense>
+      </FeedBand>
 
-      {/* Festival moments: takeover hero + imminent festivals */}
-      <Suspense fallback={null}>
-        <MomentsSection portalSlug={portalSlug} />
-      </Suspense>
+      <FeedBand
+        eyebrow="Soon"
+        title="Coming Up"
+        subtitle="Contextual highlights for this week and seasonal moments."
+        className="pt-4 border-t border-[var(--twilight)]/40"
+      >
+        {/* Festival moments: takeover hero + imminent festivals */}
+        <Suspense fallback={null}>
+          <MomentsSection portalSlug={portalSlug} />
+        </Suspense>
 
-      {/* Friday the 13th + other holidays (below festivals) */}
-      <Suspense fallback={null}>
-        <HolidayHero portalSlug={portalSlug} exclude={["valentines-day"]} />
-      </Suspense>
+        {/* Friday the 13th + other holidays (below festivals) */}
+        <Suspense fallback={null}>
+          <HolidayHero portalSlug={portalSlug} exclude={["valentines-day"]} />
+        </Suspense>
 
-      {/* Time-of-day contextual section: "Patio SZN" / "After Hours" / "Brunch & Markets" */}
-      <Suspense fallback={null}>
-        <TimeContextSection portalSlug={portalSlug} />
-      </Suspense>
+        {/* Time-of-day contextual section: "Patio SZN" / "After Hours" / "Brunch & Markets" */}
+        <Suspense fallback={null}>
+          <TimeContextSection portalSlug={portalSlug} />
+        </Suspense>
 
-      {/* Above-fold: Trending Now - High priority */}
-      <Suspense fallback={<DelayedFallback><TrendingNowSkeleton /></DelayedFallback>}>
-        <TrendingNow portalSlug={portalSlug} />
-      </Suspense>
+        {/* Above-fold: Trending Now - High priority */}
+        <Suspense fallback={<DelayedFallback><TrendingNowSkeleton /></DelayedFallback>}>
+          <TrendingNow portalSlug={portalSlug} />
+        </Suspense>
+      </FeedBand>
 
-      {/* Below-fold: Main Feed - Deferred load */}
-      <Suspense fallback={<DelayedFallback><FeedViewSkeleton /></DelayedFallback>}>
-        <FeedView />
-      </Suspense>
+      <FeedBand
+        eyebrow="Browse"
+        title="Deep Dive"
+        subtitle="Extended collections and category-driven exploration."
+        className="pt-4 border-t border-[var(--twilight)]/40"
+      >
+        {/* Below-fold: Main Feed - Deferred load */}
+        <Suspense fallback={<DelayedFallback><FeedViewSkeleton /></DelayedFallback>}>
+          <FeedView />
+        </Suspense>
 
-      {/* Below-fold: Browse by Activity - Lazy loaded */}
-      <Suspense fallback={<DelayedFallback><BrowseByActivitySkeleton /></DelayedFallback>}>
-        <BrowseByActivity portalSlug={portalSlug} />
-      </Suspense>
+        {/* Below-fold: Browse by Activity - Lazy loaded */}
+        <Suspense fallback={<DelayedFallback><BrowseByActivitySkeleton /></DelayedFallback>}>
+          <BrowseByActivity portalSlug={portalSlug} />
+        </Suspense>
+      </FeedBand>
     </div>
   );
 }

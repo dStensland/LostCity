@@ -59,6 +59,9 @@ export async function GET(request: NextRequest) {
     searchQuery = searchQuery.eq("is_class", true);
   }
 
+  // Always exclude sensitive content from public search
+  searchQuery = searchQuery.or("is_sensitive.eq.false,is_sensitive.is.null");
+
   // Filter by portal to prevent cross-portal leakage
   if (portalId) {
     searchQuery = searchQuery.or(`portal_id.eq.${portalId},portal_id.is.null`);

@@ -84,12 +84,52 @@ export const CATEGORY_CONFIG = {
 
 export type CategoryType = keyof typeof CATEGORY_CONFIG;
 
-export function getCategoryColor(type: string): string {
-  return CATEGORY_CONFIG[type as CategoryType]?.color || "#8B8B94";
+const CATEGORY_ALIASES: Record<string, string> = {
+  food_and_drink: "food_drink",
+  fooddrink: "food_drink",
+  farmersmarket: "farmers_market",
+  farmer_market: "farmers_market",
+  musicvenue: "music_venue",
+  coffee: "coffee_shop",
+  organisation: "organization",
+  eventspace: "event_space",
+  performing_arts: "theater",
+  performing_art: "theater",
+  live_music: "music",
+  movie: "film",
+  movie_theater: "cinema",
+  night_club: "nightclub",
+  co_working: "coworking",
+};
+
+function formatFallbackLabel(type: string): string {
+  return type
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
-export function getCategoryLabel(type: string): string {
-  return CATEGORY_CONFIG[type as CategoryType]?.label || type;
+export function normalizeCategoryType(type: string | null | undefined): string {
+  if (!type) return "other";
+  const normalized = type
+    .toLowerCase()
+    .trim()
+    .replace(/&/g, " and ")
+    .replace(/['’]/g, "")
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .replace(/_+/g, "_");
+  const compact = normalized.replace(/_/g, "");
+  return CATEGORY_ALIASES[normalized] || CATEGORY_ALIASES[compact] || normalized || "other";
+}
+
+export function getCategoryColor(type: string | null | undefined): string {
+  const normalized = normalizeCategoryType(type);
+  return CATEGORY_CONFIG[normalized as CategoryType]?.color || "#8B8B94";
+}
+
+export function getCategoryLabel(type: string | null | undefined): string {
+  const normalized = normalizeCategoryType(type);
+  return CATEGORY_CONFIG[normalized as CategoryType]?.label || formatFallbackLabel(normalized);
 }
 
 // ─── Map Pin Color Families ───────────────────────────────────────────────────
@@ -136,8 +176,8 @@ const MAP_PIN_FAMILY_LOOKUP: Record<string, string> = {
 const MAP_PIN_DEFAULT = "#F87171";
 
 /** High-contrast pin color for map display (7 families). */
-export function getMapPinColor(type: string): string {
-  return MAP_PIN_FAMILY_LOOKUP[type] || MAP_PIN_DEFAULT;
+export function getMapPinColor(type: string | null | undefined): string {
+  return MAP_PIN_FAMILY_LOOKUP[normalizeCategoryType(type)] || MAP_PIN_DEFAULT;
 }
 
 /** All 7 unique map pin family hex values. Useful for Mapbox match expressions. */

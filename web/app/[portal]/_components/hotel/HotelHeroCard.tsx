@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { format } from "date-fns";
 
+const DEFAULT_EVENT_IMAGE = "https://forthatlanta.com/hubfs/Forth/Website/Images/Club/hero-banner-club-faq-desktop.jpg";
+
 /** Convert "HH:MM:SS" to "1:00 PM" style */
 function formatTime(time: string): string {
   const [hours, minutes] = time.split(":");
@@ -30,7 +32,7 @@ interface HotelHeroCardProps {
  * 16:9 image with dark gradient overlay, serif title
  */
 export default function HotelHeroCard({ event, portalSlug }: HotelHeroCardProps) {
-  const eventUrl = `/${portalSlug}?event=${event.id}`;
+  const eventUrl = `/${portalSlug}/events/${event.id}`;
 
   return (
     <Link
@@ -44,9 +46,21 @@ export default function HotelHeroCard({ event, portalSlug }: HotelHeroCardProps)
             src={event.image_url}
             alt={event.title}
             className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+            loading="lazy"
+            onError={(e) => {
+              const img = e.currentTarget;
+              if (img.src !== DEFAULT_EVENT_IMAGE) {
+                img.src = DEFAULT_EVENT_IMAGE;
+              }
+            }}
           />
         ) : (
-          <div className="w-full h-full bg-[var(--hotel-sand)]" />
+          <img
+            src={DEFAULT_EVENT_IMAGE}
+            alt={event.title}
+            className="absolute inset-0 w-full h-full object-cover"
+            loading="lazy"
+          />
         )}
 
         {/* Gradient overlay */}

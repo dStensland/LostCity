@@ -158,7 +158,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             "is_all_day": False,
                             "category": "film",
                             "subcategory": "drive_in",
-                            "tags": ["film", "cinema", "drive-in", "outdoor", "starlight-drive-in", "independent"],
+                            "tags": ["film", "cinema", "drive-in", "outdoor", "showtime", "starlight-drive-in", "independent"],
                             "price_min": None,
                             "price_max": None,
                             "price_note": None,

@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback } from "react";
 import AnalyticsKPICard from "@/components/admin/AnalyticsKPICard";
 import AnalyticsChart from "@/components/admin/AnalyticsChart";
 import PortalStatsTable from "@/components/admin/PortalStatsTable";
-import APIKeyManager from "@/components/admin/APIKeyManager";
 
 type TimeSeriesPoint = {
   date: string;
@@ -19,6 +18,9 @@ type PortalSummary = {
   total_rsvps: number;
   total_signups: number;
   avg_active_users: number;
+  mode_selected: number;
+  wayfinding_opened: number;
+  resource_clicked: number;
 };
 
 type Portal = {
@@ -44,6 +46,25 @@ type AnalyticsData = {
       signups: number;
     };
   };
+  attribution: {
+    scope: "platform" | "portal";
+    raw_new_profiles: number | null;
+    attributed_signups: number;
+    unattributed_signups: number | null;
+    signup_attribution_rate: number | null;
+    tracked_event_shares: number;
+    shares_per_1k_views: number;
+  };
+  interaction_kpis: {
+    total_interactions: number;
+    mode_selected: number;
+    wayfinding_opened: number;
+    resource_clicked: number;
+    wayfinding_open_rate: number;
+    resource_click_rate: number;
+    mode_breakdown: { mode: string; count: number }[];
+  };
+  interaction_time_series: TimeSeriesPoint[];
   time_series: {
     views: TimeSeriesPoint[];
     rsvps: TimeSeriesPoint[];
@@ -62,7 +83,7 @@ export default function AnalyticsDashboardPage() {
   const [days, setDays] = useState(30);
   const [selectedPortal, setSelectedPortal] = useState<string>("");
   const [sortBy, setSortBy] = useState<"views" | "rsvps" | "signups" | "active">("views");
-  const [activeTab, setActiveTab] = useState<"overview" | "portals" | "api">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "portals">("overview");
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -202,7 +223,7 @@ export default function AnalyticsDashboardPage() {
 
         {/* Tabs */}
         <div className="flex items-center gap-1 mb-6 border-b border-[var(--twilight)]">
-          {(["overview", "portals", "api"] as const).map((tab) => (
+          {(["overview", "portals"] as const).map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -212,7 +233,7 @@ export default function AnalyticsDashboardPage() {
                   : "text-[var(--muted)] hover:text-[var(--cream)]"
               }`}
             >
-              {tab === "overview" ? "Overview" : tab === "portals" ? "Portals" : "API Keys"}
+              {tab === "overview" ? "Overview" : "Portals"}
             </button>
           ))}
         </div>
@@ -255,6 +276,56 @@ export default function AnalyticsDashboardPage() {
                   />
                 </div>
 
+                {/* Attribution Health */}
+                <div>
+                  <h2 className="font-mono text-xs text-[var(--muted)] uppercase tracking-wide mb-4">
+                    Attribution Health
+                  </h2>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    <AnalyticsKPICard
+                      label="Signup Attribution"
+                      value={data.attribution.signup_attribution_rate ?? "--"}
+                      format={typeof data.attribution.signup_attribution_rate === "number" ? "percentage" : "number"}
+                    />
+                    <AnalyticsKPICard
+                      label="Unattributed Signups"
+                      value={data.attribution.unattributed_signups ?? "--"}
+                    />
+                    <AnalyticsKPICard
+                      label="Tracked Shares"
+                      value={data.attribution.tracked_event_shares}
+                    />
+                    <AnalyticsKPICard
+                      label="Shares / 1K Views"
+                      value={data.attribution.shares_per_1k_views.toFixed(1)}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <h2 className="font-mono text-xs text-[var(--muted)] uppercase tracking-wide mb-4">
+                    Interaction Health
+                  </h2>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    <AnalyticsKPICard
+                      label="Mode Selections"
+                      value={data.interaction_kpis.mode_selected}
+                    />
+                    <AnalyticsKPICard
+                      label="Wayfinding Opens"
+                      value={data.interaction_kpis.wayfinding_opened}
+                    />
+                    <AnalyticsKPICard
+                      label="Resource Clicks"
+                      value={data.interaction_kpis.resource_clicked}
+                    />
+                    <AnalyticsKPICard
+                      label="Wayfinding / 100 Views"
+                      value={data.interaction_kpis.wayfinding_open_rate}
+                    />
+                  </div>
+                </div>
+
                 {/* Charts */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <AnalyticsChart
@@ -281,6 +352,12 @@ export default function AnalyticsDashboardPage() {
                     color="var(--soft)"
                     height={200}
                   />
+                  <AnalyticsChart
+                    data={data.interaction_time_series}
+                    title="Tracked Interactions"
+                    color="var(--neon-amber)"
+                    height={200}
+                  />
                 </div>
 
                 {/* Period Info */}
@@ -305,10 +382,6 @@ export default function AnalyticsDashboardPage() {
                   onSort={setSortBy}
                 />
               </div>
-            )}
-
-            {activeTab === "api" && (
-              <APIKeyManager portals={portals} />
             )}
           </>
         )}

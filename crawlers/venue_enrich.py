@@ -16,6 +16,7 @@ from anthropic import Anthropic
 from db import get_client
 from utils import fetch_page, extract_text_content
 from config import get_config
+from tags import VALID_VIBES, VALID_VENUE_TYPES as CANONICAL_VENUE_TYPES
 
 logger = logging.getLogger(__name__)
 
@@ -94,33 +95,47 @@ GOOGLE_TYPE_MAP = {
     "pub": "bar",
 }
 
-# Valid venue_type values (from GOOGLE_TYPE_MAP)
-VALID_VENUE_TYPES = list(set(GOOGLE_TYPE_MAP.values())) + [
-    "music_venue", "event_space", "hotel", "church", "community_center",
-    "comedy_club", "coworking", "food_hall"
-]
+# Use canonical VALID_VENUE_TYPES from tags.py (imported as CANONICAL_VENUE_TYPES)
+# Plus Google-mapped types to ensure backwards compatibility
+VALID_VENUE_TYPES = list(CANONICAL_VENUE_TYPES | set(GOOGLE_TYPE_MAP.values()))
 
-# Standardized vibes taxonomy
-VALID_VIBES = [
-    # Atmosphere
-    "intimate", "chill", "high-energy", "rowdy", "upscale", "divey", "artsy",
-    # Features
-    "outdoor-seating", "rooftop", "patio", "live-music", "dj", "karaoke",
-    "trivia", "games", "dancing", "craft-cocktails", "craft-beer",
-    # Audience
-    "date-spot", "late-night", "family-friendly", "dog-friendly", "lgbtq-friendly",
-]
+# Use canonical VALID_VIBES imported from tags.py (atmosphere, amenities,
+# accessibility, identity vibes). Activity-type things (dj, karaoke, trivia,
+# games, dancing) belong in venue genres, not vibes.
 
-WEBSITE_ANALYSIS_PROMPT = """You are a venue analyst. Given text from a venue's website, extract structured information about the venue.
+# Activity vibes that LLM might suggest — these get stored as venue genres
+ACTIVITY_GENRE_MAP = {
+    "dj": "dj",
+    "karaoke": "karaoke",
+    "trivia": "trivia",
+    "games": "game-night",
+    "dancing": "dance-party",
+    "craft-beer": "beer",
+    "live-music": "live-music",  # also valid as a vibe, kept for both
+}
+
+_CANONICAL_VIBES_STR = ", ".join(sorted(
+    v for v in VALID_VIBES
+    if not v.startswith("faith-") and v not in (
+        "episcopal", "baptist", "methodist", "presbyterian",
+        "catholic", "nondenominational", "ame",
+    )
+))
+
+WEBSITE_ANALYSIS_PROMPT = f"""You are a venue analyst. Given text from a venue's website, extract structured information about the venue.
 
 RULES:
 1. Extract ONLY information explicitly stated or clearly implied. Never invent details.
 2. If a field is unclear or missing, use null.
-3. For vibes, only use values from the allowed list.
-4. Set confidence (0.0-1.0) based on how clear the website content was.
+3. For vibes, only use values from the allowed list. Vibes are ATMOSPHERE and IDENTITY traits.
+4. For activities, use the activities list. Activities are things the venue OFFERS (dj nights, karaoke, trivia, etc).
+5. Set confidence (0.0-1.0) based on how clear the website content was.
 
-VIBES (pick all that apply from this list only):
-intimate, chill, high-energy, rowdy, upscale, divey, artsy, outdoor-seating, rooftop, patio, live-music, dj, karaoke, trivia, games, dancing, craft-cocktails, craft-beer, date-spot, late-night, family-friendly, dog-friendly, lgbtq-friendly
+VIBES (atmosphere/identity — pick all that apply from this list only):
+{_CANONICAL_VIBES_STR}
+
+ACTIVITIES (what the venue offers — pick all that apply):
+dj, karaoke, trivia, games, dancing, craft-beer, live-music, paint-and-sip, open-mic, comedy, drag, burlesque, wine-tasting, beer-tasting, yoga, meditation
 
 SPOT_TYPE (pick ONE primary type):
 bar, restaurant, coffee_shop, music_venue, theater, cinema, gallery, museum, arena, club, brewery, park, fitness, wellness, bookstore, library, games, event_space, hotel, church, community_center, comedy_club, coworking, food_hall
@@ -143,14 +158,15 @@ If the venue clearly hosts scheduled public events (concerts, comedy shows, art 
 
 OUTPUT FORMAT:
 Return valid JSON matching this schema:
-{
+{{
   "vibes": ["vibe1", "vibe2"] | null,
+  "activities": ["activity1", "activity2"] | null,
   "venue_type": "type" | null,
   "price_level": 1-4 | null,
   "is_event_venue": true | false | null,
   "confidence": 0.0-1.0,
   "reasoning": "Brief explanation of findings"
-}"""
+}}"""
 
 # Anthropic client singleton
 _anthropic_client: Optional[Anthropic] = None
@@ -349,11 +365,22 @@ Website Content:
 
         data = json.loads(json_str)
 
-        # Validate vibes
+        # Validate vibes against canonical set
         if data.get("vibes"):
             data["vibes"] = [v for v in data["vibes"] if v in VALID_VIBES]
             if not data["vibes"]:
                 data["vibes"] = None
+
+        # Convert activities to genres
+        if data.get("activities"):
+            genres = []
+            for activity in data["activities"]:
+                mapped = ACTIVITY_GENRE_MAP.get(activity, activity)
+                genres.append(mapped)
+            data["genres"] = genres
+            del data["activities"]
+        else:
+            data["genres"] = None
 
         # Validate venue_type
         if data.get("venue_type") and data["venue_type"] not in VALID_VENUE_TYPES:
@@ -662,6 +689,15 @@ def enrich_websites_only(limit: int = 50, dry_run: bool = False) -> dict:
                 if combined_vibes != existing_vibes:
                     updates["vibes"] = combined_vibes
                     print(f"  Vibes: {combined_vibes}")
+
+            # Genres (from activities): union of existing + new
+            new_genres = extracted.get("genres")
+            if new_genres:
+                existing_genres = venue.get("genres") or []
+                combined_genres = list(set(existing_genres + new_genres))
+                if combined_genres != existing_genres:
+                    updates["genres"] = combined_genres
+                    print(f"  Genres: {combined_genres}")
 
             # venue_type: use new if missing
             new_venue_type = extracted.get("venue_type")

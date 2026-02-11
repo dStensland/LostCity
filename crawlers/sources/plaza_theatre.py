@@ -231,7 +231,7 @@ def extract_movies_for_date(
                 enrichment = enrich_movie_data(movie_title, letterboxd_movies) or {}
 
                 # Build tags
-                tags = ["film", "cinema", "independent", "plaza-theatre"]
+                tags = ["film", "cinema", "independent", "showtime", "plaza-theatre"]
                 if enrichment.get("special_event"):
                     tags.append(enrichment["special_event"])
 
@@ -383,7 +383,7 @@ def _extract_movies_from_text(
             continue
 
         enrichment = enrich_movie_data(title, letterboxd_movies) or {}
-        tags = ["film", "cinema", "independent", "plaza-theatre"]
+        tags = ["film", "cinema", "independent", "showtime", "plaza-theatre"]
         if enrichment.get("special_event"):
             tags.append(enrichment["special_event"])
         image_url = enrichment.get("image_url") or find_image_for_movie(title, image_map)
