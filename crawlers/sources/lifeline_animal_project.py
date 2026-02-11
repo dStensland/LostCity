@@ -3,19 +3,19 @@ Crawler for LifeLine Animal Project (lifelineanimal.org).
 Runs Fulton County Animal Services and DeKalb County Animal Services shelters.
 Volunteer events, adoption events, foster programs, and shelter shifts.
 
-STATUS: BROKEN — Site has reCAPTCHA bot verification that blocks all
-requests (both API and page loads). The Tribe Events REST API returns
-HTML (the CAPTCHA page) instead of JSON. Needs Playwright with CAPTCHA
-bypass or a different data source to fix.
+Uses the iCal feed (Tribe Events Calendar export) which bypasses the site's
+reCAPTCHA bot protection. The REST API and HTML pages are blocked by CAPTCHA,
+but the .ics feed is served directly.
 """
 
 from __future__ import annotations
 
 import logging
 import re
-from datetime import datetime
+from datetime import datetime, date
 from typing import Optional
 import requests
+from icalendar import Calendar
 
 from db import get_or_create_venue, insert_event, find_event_by_hash
 from dedupe import generate_content_hash
@@ -23,7 +23,7 @@ from dedupe import generate_content_hash
 logger = logging.getLogger(__name__)
 
 BASE_URL = "https://lifelineanimal.org"
-API_URL = f"{BASE_URL}/wp-json/tribe/events/v1/events"
+ICAL_URL = f"{BASE_URL}/events/?ical=1"
 
 VENUE_DATA = {
     "name": "LifeLine Animal Project",
@@ -42,67 +42,22 @@ VENUE_DATA = {
 }
 
 
-def parse_event_datetime(event_data: dict) -> tuple[Optional[str], Optional[str], Optional[str], Optional[str]]:
-    """
-    Parse event datetime from Tribe Events API response.
+def determine_category(title: str, description: str, categories: list[str]) -> tuple[str, Optional[str], list[str]]:
+    """Determine event category based on title, description, and iCal categories."""
+    combined = f"{title} {description}".lower()
+    ical_cats = " ".join(c.lower() for c in categories)
 
-    Args:
-        event_data: Event object from API
-
-    Returns:
-        Tuple of (start_date, start_time, end_date, end_time)
-    """
-    try:
-        start_date_str = event_data.get("start_date", "")
-        end_date_str = event_data.get("end_date", "")
-        is_all_day = event_data.get("all_day", False)
-
-        if not start_date_str:
-            return None, None, None, None
-
-        # Parse start datetime
-        start_dt = datetime.strptime(start_date_str, "%Y-%m-%d %H:%M:%S")
-        start_date = start_dt.strftime("%Y-%m-%d")
-        start_time = None if is_all_day else start_dt.strftime("%H:%M")
-
-        # Parse end datetime if exists
-        end_date = None
-        end_time = None
-
-        if end_date_str:
-            end_dt = datetime.strptime(end_date_str, "%Y-%m-%d %H:%M:%S")
-            end_date = end_dt.strftime("%Y-%m-%d")
-            if not is_all_day:
-                end_time = end_dt.strftime("%H:%M")
-
-        return start_date, start_time, end_date, end_time
-
-    except (ValueError, KeyError) as e:
-        logger.warning(f"Failed to parse event datetime: {e}")
-        return None, None, None, None
-
-
-def determine_category(event_data: dict) -> tuple[str, Optional[str], list[str]]:
-    """
-    Determine category based on event data.
-
-    Args:
-        event_data: Event object from API
-
-    Returns:
-        Tuple of (category, subcategory, tags)
-    """
-    title = event_data.get("title", "").lower()
-    description = event_data.get("description", "").lower()
-    combined = f"{title} {description}"
-
-    # Base tags for animal shelter
     event_tags = ["animals", "lifeline"]
 
     # Adoption events
-    if any(word in combined for word in ["adoption", "adopt", "meet the pets", "meet & greet"]):
+    if "adoption" in ical_cats or any(word in combined for word in ["adoption", "adopt", "meet the pets", "meet & greet"]):
         event_tags.extend(["adoption", "family-friendly"])
         return "family", "adoption-event", event_tags
+
+    # Vaccine clinics
+    if "vaccine" in ical_cats or any(word in combined for word in ["vaccine", "vaccination", "clinic", "spay", "neuter"]):
+        event_tags.extend(["pets", "family-friendly"])
+        return "family", "pet-clinic", event_tags
 
     # Volunteer orientation or shifts
     if any(word in combined for word in ["volunteer", "orientation", "training", "shelter shift"]):
@@ -115,7 +70,7 @@ def determine_category(event_data: dict) -> tuple[str, Optional[str], list[str]]
         return "community", "foster", event_tags
 
     # Fundraising events
-    if any(word in combined for word in ["fundraiser", "gala", "benefit", "donation", "fundraising"]):
+    if any(word in combined for word in ["fundraiser", "gala", "benefit", "donation", "fundraising", "bingo"]):
         event_tags.append("fundraiser")
         return "community", "fundraiser", event_tags
 
@@ -124,18 +79,24 @@ def determine_category(event_data: dict) -> tuple[str, Optional[str], list[str]]
         event_tags.extend(["education", "family-friendly"])
         return "learning", "workshop", event_tags
 
-    # Community outreach
-    if any(word in combined for word in ["outreach", "community", "fair", "festival"]):
-        event_tags.append("family-friendly")
-        return "community", "outreach", event_tags
-
     # Default to family event
     event_tags.append("family-friendly")
     return "family", "animal-event", event_tags
 
 
+def clean_ical_text(text: str) -> str:
+    """Clean text from iCal fields — remove HTML tags and excessive whitespace."""
+    if not text:
+        return ""
+    text = re.sub(r'<[^>]+>', '', text)
+    text = re.sub(r'\\n', '\n', text)
+    text = re.sub(r'\\,', ',', text)
+    text = re.sub(r'\s+', ' ', text).strip()
+    return text
+
+
 def crawl(source: dict) -> tuple[int, int, int]:
-    """Crawl LifeLine Animal Project events using Tribe Events REST API."""
+    """Crawl LifeLine Animal Project events via iCal feed."""
     source_id = source["id"]
     events_found = 0
     events_new = 0
@@ -144,160 +105,138 @@ def crawl(source: dict) -> tuple[int, int, int]:
     try:
         venue_id = get_or_create_venue(VENUE_DATA)
 
-        # Fetch upcoming events from API
-        today = datetime.now().strftime("%Y-%m-%d")
-        params = {
-            "per_page": 50,
-            "start_date": f"{today} 00:00:00",
-            "status": "publish",
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+            "Accept": "text/calendar",
         }
 
-        page = 1
-        max_pages = 10
+        logger.info(f"Fetching LifeLine Animal Project iCal feed: {ICAL_URL}")
+        response = requests.get(ICAL_URL, headers=headers, timeout=30)
+        response.raise_for_status()
 
-        while page <= max_pages:
-            params["page"] = page
+        cal = Calendar.from_ical(response.content)
+        today = date.today()
 
-            headers = {
-                "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-                "Accept": "application/json",
-                "Referer": f"{BASE_URL}/events/",
-            }
+        for component in cal.walk():
+            if component.name != "VEVENT":
+                continue
 
-            logger.info(f"Fetching LifeLine Animal Project events page {page}: {API_URL}")
-            response = requests.get(API_URL, params=params, headers=headers, timeout=30)
-            response.raise_for_status()
-
-            data = response.json()
-            events_data = data.get("events", [])
-
-            if not events_data:
-                logger.info(f"No more events found on page {page}")
-                break
-
-            logger.info(f"Found {len(events_data)} events on page {page}")
-
-            for event_data in events_data:
-                try:
-                    # Extract basic info
-                    title = event_data.get("title", "")
-                    if not title:
-                        continue
-
-                    # Clean HTML entities
-                    title = re.sub(r'&#\d+;', '', title)
-                    title = re.sub(r'&[a-z]+;', '', title)
-                    title = title.strip()
-
-                    # Parse dates
-                    start_date, start_time, end_date, end_time = parse_event_datetime(event_data)
-
-                    if not start_date:
-                        logger.warning(f"No start date for: {title}")
-                        continue
-
-                    # Skip past events
-                    try:
-                        check_date = end_date or start_date
-                        if datetime.strptime(check_date, "%Y-%m-%d").date() < datetime.now().date():
-                            logger.debug(f"Skipping past event: {title}")
-                            continue
-                    except ValueError:
-                        pass
-
-                    # Determine category
-                    category, subcategory, event_tags = determine_category(event_data)
-
-                    # Get description
-                    description = event_data.get("description", "")
-                    # Remove HTML tags
-                    description = re.sub(r'<[^>]+>', '', description)
-                    description = description.strip()
-
-                    if not description or len(description) < 10:
-                        description = f"{title} hosted by LifeLine Animal Project"
-
-                    # Get event URL
-                    source_url = event_data.get("url", f"{BASE_URL}/events/")
-
-                    # Check for pricing
-                    cost = event_data.get("cost", "")
-                    is_free = not cost or "free" in cost.lower()
-                    price_min = None
-                    price_max = None
-
-                    if cost and not is_free:
-                        # Try to extract price from cost string
-                        price_match = re.search(r'\$?(\d+(?:\.\d{2})?)', cost)
-                        if price_match:
-                            price_min = float(price_match.group(1))
-                            price_max = price_min
-
-                    # Image
-                    image_url = None
-                    if event_data.get("image"):
-                        if isinstance(event_data["image"], dict):
-                            image_url = event_data["image"].get("url")
-                        elif isinstance(event_data["image"], str):
-                            image_url = event_data["image"]
-
-                    events_found += 1
-
-                    # Generate content hash
-                    content_hash = generate_content_hash(title, "LifeLine Animal Project", start_date)
-
-                    # Check for existing event
-                    if find_event_by_hash(content_hash):
-                        events_updated += 1
-                        continue
-
-                    # Check if all-day
-                    is_all_day = event_data.get("all_day", False)
-
-                    event_record = {
-                        "source_id": source_id,
-                        "venue_id": venue_id,
-                        "title": title,
-                        "description": description[:1000],
-                        "start_date": start_date,
-                        "start_time": start_time,
-                        "end_date": end_date,
-                        "end_time": end_time,
-                        "is_all_day": is_all_day,
-                        "category": category,
-                        "subcategory": subcategory,
-                        "tags": event_tags,
-                        "price_min": price_min,
-                        "price_max": price_max,
-                        "price_note": cost if cost else None,
-                        "is_free": is_free,
-                        "source_url": source_url,
-                        "ticket_url": source_url,
-                        "image_url": image_url,
-                        "raw_text": f"{title} - {description[:200]}",
-                        "extraction_confidence": 0.95,
-                        "is_recurring": False,
-                        "recurrence_rule": None,
-                        "content_hash": content_hash,
-                    }
-
-                    try:
-                        insert_event(event_record)
-                        events_new += 1
-                        logger.info(f"Added: {title} on {start_date}")
-                    except Exception as e:
-                        logger.error(f"Failed to insert event '{title}': {e}")
-
-                except Exception as e:
-                    logger.error(f"Error processing event: {e}")
+            try:
+                # Extract title
+                title = str(component.get("SUMMARY", "")).strip()
+                if not title:
                     continue
 
-            # Check if there are more pages
-            total_pages = data.get("total_pages", 1)
-            if page >= total_pages:
-                break
+                # Parse start date/time
+                dtstart = component.get("DTSTART")
+                if not dtstart:
+                    continue
 
-            page += 1
+                dt_val = dtstart.dt
+                if isinstance(dt_val, datetime):
+                    start_date = dt_val.strftime("%Y-%m-%d")
+                    start_time = dt_val.strftime("%H:%M")
+                    is_all_day = False
+                elif isinstance(dt_val, date):
+                    start_date = dt_val.strftime("%Y-%m-%d")
+                    start_time = None
+                    is_all_day = True
+                else:
+                    continue
+
+                # Skip past events
+                event_date = dt_val.date() if isinstance(dt_val, datetime) else dt_val
+                if event_date < today:
+                    continue
+
+                # Parse end date/time
+                end_date = None
+                end_time = None
+                dtend = component.get("DTEND")
+                if dtend:
+                    end_val = dtend.dt
+                    if isinstance(end_val, datetime):
+                        end_date = end_val.strftime("%Y-%m-%d")
+                        end_time = end_val.strftime("%H:%M")
+                    elif isinstance(end_val, date):
+                        end_date = end_val.strftime("%Y-%m-%d")
+
+                # Description
+                description = clean_ical_text(str(component.get("DESCRIPTION", "")))
+                if not description or len(description) < 10:
+                    description = f"{title} hosted by LifeLine Animal Project"
+
+                # URL
+                source_url = str(component.get("URL", f"{BASE_URL}/events/"))
+
+                # Image from ATTACH
+                image_url = None
+                attach = component.get("ATTACH")
+                if attach:
+                    attach_str = str(attach)
+                    if attach_str.startswith("http") and any(ext in attach_str.lower() for ext in [".png", ".jpg", ".jpeg", ".webp"]):
+                        image_url = attach_str
+
+                # Categories from iCal CATEGORIES field
+                ical_categories = []
+                cats = component.get("CATEGORIES")
+                if cats:
+                    if hasattr(cats, 'cats'):
+                        ical_categories = [str(c) for c in cats.cats]
+                    elif isinstance(cats, list):
+                        for cat_group in cats:
+                            if hasattr(cat_group, 'cats'):
+                                ical_categories.extend(str(c) for c in cat_group.cats)
+
+                events_found += 1
+
+                # Determine category
+                category, subcategory, event_tags = determine_category(title, description, ical_categories)
+
+                # Content hash for dedup
+                content_hash = generate_content_hash(title, "LifeLine Animal Project", start_date)
+
+                if find_event_by_hash(content_hash):
+                    events_updated += 1
+                    continue
+
+                event_record = {
+                    "source_id": source_id,
+                    "venue_id": venue_id,
+                    "title": title,
+                    "description": description[:1000],
+                    "start_date": start_date,
+                    "start_time": start_time,
+                    "end_date": end_date,
+                    "end_time": end_time,
+                    "is_all_day": is_all_day,
+                    "category": category,
+                    "subcategory": subcategory,
+                    "tags": event_tags,
+                    "price_min": None,
+                    "price_max": None,
+                    "price_note": None,
+                    "is_free": True,
+                    "source_url": source_url,
+                    "ticket_url": source_url,
+                    "image_url": image_url,
+                    "raw_text": f"{title} - {description[:200]}",
+                    "extraction_confidence": 0.95,
+                    "is_recurring": False,
+                    "recurrence_rule": None,
+                    "content_hash": content_hash,
+                }
+
+                try:
+                    insert_event(event_record)
+                    events_new += 1
+                    logger.info(f"Added: {title} on {start_date}")
+                except Exception as e:
+                    logger.error(f"Failed to insert event '{title}': {e}")
+
+            except Exception as e:
+                logger.error(f"Error processing iCal event: {e}")
+                continue
 
         logger.info(
             f"LifeLine Animal Project crawl complete: {events_found} found, {events_new} new, {events_updated} updated"
