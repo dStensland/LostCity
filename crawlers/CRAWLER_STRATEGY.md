@@ -129,10 +129,12 @@ START: Analyzing a new source
 │   │
 │   └─► NO → Continue...
 │
-├─► Does it have a structured feed (ICS/RSS)?
-│   ├─► YES → Use feed ingestion
+├─► Does it have a structured feed (ICS/iCal/RSS)?
+│   ├─► YES → Use feed ingestion (see iCal Discovery below)
 │   │         • Low maintenance, high precision
-│   │         • Confidence: 0.85-0.95
+│   │         • Single HTTP request, no pagination
+│   │         • Bypasses bot protection and CAPTCHA
+│   │         • Confidence: 0.90-0.95
 │   │
 │   └─► NO → Continue...
 │
@@ -168,6 +170,74 @@ START: Analyzing a new source
 
 Note: if static HTML is available, prefer LLM extraction over Playwright. Use Playwright only when content is JS-only or requires interaction to render events.
 
+### iCal Feed Discovery
+
+**Always check for iCal/ICS feeds when evaluating any new source.** Many sites expose calendar feeds that provide structured, reliable data — even when their API is broken, their HTML is JS-rendered, or they have bot protection.
+
+#### Where to look
+
+Check these URLs in order (replace `example.org/events` with the site's events page):
+
+```
+# WordPress + The Events Calendar (Tribe Events) — very common
+https://example.org/events/?ical=1
+
+# Generic iCal/webcal links
+Look for: "Subscribe", "Add to Calendar", "Export", "iCal", "webcal://" links
+Check: <link rel="alternate" type="text/calendar"> in page <head>
+
+# Google Calendar embeds
+Look for: iframe src containing calendar.google.com
+Feed URL: https://calendar.google.com/calendar/ical/{id}/public/basic.ics
+
+# Other CMS patterns
+Squarespace: /events?format=ical
+Drupal: /events/calendar.ics
+LibCal: /ical_subscribe/{id}
+```
+
+Quick probe with curl:
+```bash
+curl -sL "https://example.org/events/?ical=1" -o /dev/null -w "%{http_code} %{content_type}"
+# Success: "200 text/calendar; charset=UTF-8"
+```
+
+#### Why prefer iCal
+
+| Advantage | Detail |
+|-----------|--------|
+| **Bypasses bot protection** | CAPTCHA, Cloudflare, rate limiting don't apply to .ics feeds |
+| **Survives API breakage** | Feed works even when REST API returns 500 errors |
+| **Single request** | No pagination, no session management, no JS rendering |
+| **Rich data** | Title, dates, times, description, URL, location, categories, images (ATTACH) |
+| **Stable format** | ICS spec (RFC 5545) doesn't change — crawlers rarely break |
+| **Simpler code** | ~130 lines vs ~300 for API or ~400 for Playwright |
+
+#### Data quality from iCal feeds
+
+Based on production feeds (LifeLine Animal Project, Chattahoochee Riverkeeper):
+
+| Field | Typical coverage | Maps to |
+|-------|-----------------|---------|
+| SUMMARY | 100% | title |
+| DTSTART | 100% | start_date + start_time |
+| DTEND | 95-100% | end_date + end_time |
+| DESCRIPTION | 90-100% | description (may contain HTML) |
+| URL | 95-100% | source_url |
+| CATEGORIES | 80-100% | helps determine category/tags |
+| ATTACH | 70-100% | image_url |
+| LOCATION | 0-100% | varies (we use our own venue data) |
+
+**Known gaps:** No price/cost field in iCal spec. Most community/volunteer events are free anyway. For paid events, parse description text or link to source_url.
+
+#### When iCal isn't enough
+
+Fall back to API or Playwright when:
+- Feed exists but has < 5 events (site may truncate the feed)
+- Feed lacks descriptions or images that the HTML page provides
+- You need price data that only appears on the website
+- Feed doesn't exist (check all URL patterns first)
+
 ### When to Use Each Approach
 
 **Playwright (34 crawlers currently):**
@@ -183,6 +253,13 @@ Note: if static HTML is available, prefer LLM extraction over Playwright. Use Pl
 - Simple event listings
 - API responses that return HTML
 - Lower resource cost, faster execution
+
+**iCal/ICS Feed (2 crawlers currently):**
+- WordPress sites with The Events Calendar (Tribe Events) plugin
+- Any site with "Subscribe to Calendar" / "Export" links
+- Google Calendar embeds
+- Best resilience — bypasses CAPTCHA, survives API outages
+- Use `icalendar` library for parsing
 
 **API-based:**
 - Ticketmaster, Eventbrite, Meetup
@@ -385,7 +462,24 @@ Key patterns:
 
 See: `creative_loafing.py`
 
-### Template 5: Recurring Event Source
+### Template 5: iCal/ICS Feed
+Best for: Any site with a calendar feed — especially WordPress + Tribe Events
+
+```python
+Key patterns:
+- Fetch feed URL with requests (single HTTP call)
+- Parse with icalendar.Calendar.from_ical()
+- Walk VEVENT components for events
+- Handle both datetime (timed) and date (all-day) DTSTART values
+- Extract image from ATTACH field
+- Extract categories from CATEGORIES field
+- Clean description HTML with regex
+- Compare .date() not raw dt values (timezone-aware vs naive)
+```
+
+See: `lifeline_animal_project.py`, `chattahoochee_riverkeeper.py`
+
+### Template 6: Recurring Event Source
 Best for: Dance studios, weekly events
 
 ```python
@@ -420,6 +514,7 @@ Before building crawlers, research:
 - [ ] Does Ticketmaster cover the market?
 - [ ] Is there Eventbrite activity?
 - [ ] Do major venues have APIs?
+- [ ] **Do venue/org sites have iCal feeds?** (Check `/events/?ical=1` for WordPress, look for subscribe/export links)
 - [ ] What CMS do venue sites use? (WordPress, Squarespace, custom)
 - [ ] Are there city-specific ticketing platforms?
 
