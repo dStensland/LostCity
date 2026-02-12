@@ -100,7 +100,9 @@ export default async function PortalPage({ params, searchParams }: Props) {
   // Parse view mode with deterministic fallback behavior.
   // If filter/display/type signals are present without explicit `view`, prefer Find.
   let viewMode: ViewMode = "feed";
-  if (viewParam === "community") {
+  if (viewParam === "feed") {
+    viewMode = "feed";
+  } else if (viewParam === "community") {
     viewMode = "community";
   } else if (
     viewParam === "find" ||

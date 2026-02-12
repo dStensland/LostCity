@@ -91,7 +91,8 @@ function FeedShellInner({ portalId, portalSlug, activeTab, curatedContent }: Fee
     const params = new URLSearchParams(searchParams?.toString() || "");
     if (tab === "curated") {
       params.delete("tab");
-      params.delete("view");
+      // Explicitly force feed so stale Find filter params don't flip viewMode back to Find.
+      params.set("view", "feed");
     } else {
       params.set("view", "feed");
       params.set("tab", tab);

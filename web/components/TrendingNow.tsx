@@ -101,72 +101,69 @@ export default function TrendingNow({ portalSlug }: { portalSlug?: string } = {}
 
   return (
     <section className="py-6 border-b border-[var(--twilight)]/50">
-      <div className="max-w-3xl mx-auto px-4">
-        <FeedSectionHeader
-          title="Trending Now"
-          subtitle="Most popular this week"
-          priority="tertiary"
-          accentColor="var(--neon-magenta)"
-          badge="Hot"
-          icon={
-            <svg viewBox="0 0 24 24" fill="none" className="w-5 h-5">
-              <path
-                d="M4 14l5-5 4 4 7-7"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-              <path
-                d="M14 6h6v6"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          }
-        />
+      <FeedSectionHeader
+        title="Trending Now"
+        subtitle="Most popular this week"
+        priority="tertiary"
+        accentColor="var(--neon-magenta)"
+        badge="Hot"
+        icon={
+          <svg viewBox="0 0 24 24" fill="none" className="w-5 h-5">
+            <path
+              d="M4 14l5-5 4 4 7-7"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+            <path
+              d="M14 6h6v6"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        }
+      />
 
-        {/* Horizontal scroll container with scroll snap on mobile */}
-        <div className="flex gap-3 overflow-x-auto pb-3 -mx-4 px-4 scrollbar-hide snap-x snap-mandatory md:snap-none">
-          {displayItems.map((item) => {
-            if (item.type === "event") {
-              return (
-                <TrendingEventCard key={item.event.id} event={item.event as FeedEventData} portalSlug={portalSlug} />
-              );
-            }
-            if (item.type === "series-group") {
-              return (
-                <SeriesCard
-                  key={`series-${item.seriesId}`}
-                  series={item.series}
-                  venueGroups={item.venueGroups}
-                  portalSlug={portalSlug}
-                  skipAnimation
-                  disableMargin
-                  className="flex-shrink-0 w-72 snap-start"
-                />
-              );
-            }
-            if (item.type === "festival-group") {
-              return (
-                <FestivalCard
-                  key={`festival-${item.festivalId}`}
-                  festival={item.festival}
-                  summary={item.summary}
-                  portalSlug={portalSlug}
-                  skipAnimation
-                  disableMargin
-                  className="flex-shrink-0 w-72 snap-start"
-                />
-              );
-            }
-            return null;
-          })}
-        </div>
+      {/* Horizontal scroll container with scroll snap on mobile */}
+      <div className="flex gap-3 overflow-x-auto pb-3 -mx-4 px-4 scrollbar-hide snap-x snap-mandatory md:snap-none">
+        {displayItems.map((item) => {
+          if (item.type === "event") {
+            return (
+              <TrendingEventCard key={item.event.id} event={item.event as FeedEventData} portalSlug={portalSlug} />
+            );
+          }
+          if (item.type === "series-group") {
+            return (
+              <SeriesCard
+                key={`series-${item.seriesId}`}
+                series={item.series}
+                venueGroups={item.venueGroups}
+                portalSlug={portalSlug}
+                skipAnimation
+                disableMargin
+                className="flex-shrink-0 w-72 snap-start"
+              />
+            );
+          }
+          if (item.type === "festival-group") {
+            return (
+              <FestivalCard
+                key={`festival-${item.festivalId}`}
+                festival={item.festival}
+                summary={item.summary}
+                portalSlug={portalSlug}
+                skipAnimation
+                disableMargin
+                className="flex-shrink-0 w-72 snap-start"
+              />
+            );
+          }
+          return null;
+        })}
       </div>
     </section>
   );
 }
-
